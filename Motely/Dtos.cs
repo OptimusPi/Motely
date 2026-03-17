@@ -202,3 +202,12 @@ public sealed class PackStreamDto
     [JsonPropertyName("generatedFirstPack")]
     public bool GeneratedFirstPack { get; set; }
 }
+
+public sealed class ItemStreamDto
+{
+    [JsonPropertyName("results")]
+    public string[] Results { get; set; } = [];
+
+    [JsonPropertyName("nextState")]
+    public double[] NextState { get; set; } = [];
+}

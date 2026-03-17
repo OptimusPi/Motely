@@ -6,6 +6,8 @@ namespace Motely.Analysis;
 /// </summary>
 public static class MotelySeedStreamer
 {
+    internal delegate void StreamCallback(ref MotelySingleSearchContext ctx);
+
     // ── Tier 1: Simple event streams (single double cursor) ─────────────
 
     /// <summary>
@@ -328,13 +330,265 @@ public static class MotelySeedStreamer
         return (results!, nextState);
     }
 
+    // ── Tier 3: Multi-cursor streams ────────────────────────────────────
+
+    public static (string[] Results, double[] NextState) StreamTarot(
+        string seed,
+        MotelyDeck deck,
+        MotelyStake stake,
+        int ante,
+        string source,
+        double[]? state,
+        int take
+    )
+    {
+        string[]? results = null;
+        double[]? nextState = null;
+
+        RunStream(seed, deck, stake, (ref MotelySingleSearchContext ctx) =>
+        {
+            var stream = state != null
+                ? new MotelySingleTarotStream(
+                    MotelyPrngKeys.Tarot + source + ante,
+                    new MotelySingleResampleStream { InitialPrngStream = new(state[0]) },
+                    state.Length > 1 && state[1] >= 0
+                        ? new MotelySinglePrngStream(state[1])
+                        : MotelySinglePrngStream.Invalid
+                  )
+                : source switch
+                {
+                    "arcana" => ctx.CreateArcanaPackTarotStream(ante),
+                    "shop" => ctx.CreateShopTarotStream(ante),
+                    "emperor" => ctx.CreateEmperorTarotStream(ante),
+                    "purpleSeal" => ctx.CreatePurpleSealTarotStream(ante),
+                    _ => ctx.CreateShopTarotStream(ante),
+                };
+
+            results = new string[take];
+            for (int i = 0; i < take; i++)
+                results[i] = FormatUtils.FormatItem(ctx.GetNextTarot(ref stream));
+
+            nextState =
+            [
+                stream.ResampleStream.InitialPrngStream.State,
+                stream.IsSoulable ? stream.SoulPrngStream.State : -1,
+            ];
+        });
+
+        return (results!, nextState!);
+    }
+
+    public static (string[] Results, double[] NextState) StreamPlanet(
+        string seed,
+        MotelyDeck deck,
+        MotelyStake stake,
+        int ante,
+        string source,
+        double[]? state,
+        int take
+    )
+    {
+        string[]? results = null;
+        double[]? nextState = null;
+
+        RunStream(seed, deck, stake, (ref MotelySingleSearchContext ctx) =>
+        {
+            var stream = state != null
+                ? new MotelySinglePlanetStream(
+                    MotelyPrngKeys.Planet + source + ante,
+                    new MotelySingleResampleStream { InitialPrngStream = new(state[0]) },
+                    state.Length > 1 && state[1] >= 0
+                        ? new MotelySinglePrngStream(state[1])
+                        : MotelySinglePrngStream.Invalid
+                  )
+                : source switch
+                {
+                    "celestial" => ctx.CreateCelestialPackPlanetStream(ante),
+                    "shop" => ctx.CreateShopPlanetStream(ante),
+                    _ => ctx.CreateShopPlanetStream(ante),
+                };
+
+            results = new string[take];
+            for (int i = 0; i < take; i++)
+                results[i] = FormatUtils.FormatItem(ctx.GetNextPlanet(ref stream));
+
+            nextState =
+            [
+                stream.ResampleStream.InitialPrngStream.State,
+                stream.IsBlackHoleable ? stream.BlackHolePrngStream.State : -1,
+            ];
+        });
+
+        return (results!, nextState!);
+    }
+
+    public static (string[] Results, double[] NextState) StreamSpectral(
+        string seed,
+        MotelyDeck deck,
+        MotelyStake stake,
+        int ante,
+        string source,
+        double[]? state,
+        int take
+    )
+    {
+        string[]? results = null;
+        double[]? nextState = null;
+
+        RunStream(seed, deck, stake, (ref MotelySingleSearchContext ctx) =>
+        {
+            var stream = state != null
+                ? new MotelySingleSpectralStream(
+                    MotelyPrngKeys.Spectral + source + ante,
+                    new MotelySingleResampleStream { InitialPrngStream = new(state[0]) },
+                    state.Length > 1 && state[1] >= 0
+                        ? new MotelySinglePrngStream(state[1])
+                        : MotelySinglePrngStream.Invalid
+                  )
+                : source switch
+                {
+                    "spectral" => ctx.CreateSpectralPackSpectralStream(ante),
+                    "shop" => ctx.CreateShopSpectralStream(ante),
+                    "sixthSense" => ctx.CreateSixthSenseSpectralStream(ante),
+                    "seance" => ctx.CreateSeanceSpectralStream(ante),
+                    _ => ctx.CreateShopSpectralStream(ante),
+                };
+
+            results = new string[take];
+            for (int i = 0; i < take; i++)
+                results[i] = FormatUtils.FormatItem(ctx.GetNextSpectral(ref stream));
+
+            nextState =
+            [
+                stream.ResampleStream.InitialPrngStream.State,
+                stream.IsSoulBlackHoleable ? stream.SoulBlackHolePrngStream.State : -1,
+            ];
+        });
+
+        return (results!, nextState!);
+    }
+
+    public static (string[] Results, double[] NextState) StreamStandardCards(
+        string seed,
+        MotelyDeck deck,
+        MotelyStake stake,
+        int ante,
+        int flags,
+        double[]? state,
+        int take
+    )
+    {
+        string[]? results = null;
+        double[]? nextState = null;
+
+        RunStream(seed, deck, stake, (ref MotelySingleSearchContext ctx) =>
+        {
+            MotelySingleStandardCardStream stream;
+            if (state != null && state.Length >= 6)
+            {
+                stream = new()
+                {
+                    CardPrngStream = new(state[0]),
+                    HasEnhancementPrngStream = state[1] >= 0 ? new(state[1]) : MotelySinglePrngStream.Invalid,
+                    EnhancementPrngStream = state[2] >= 0 ? new(state[2]) : MotelySinglePrngStream.Invalid,
+                    EditionPrngStream = state[3] >= 0 ? new(state[3]) : MotelySinglePrngStream.Invalid,
+                    HasSealPrngStream = state[4] >= 0 ? new(state[4]) : MotelySinglePrngStream.Invalid,
+                    SealPrngStream = state[5] >= 0 ? new(state[5]) : MotelySinglePrngStream.Invalid,
+                };
+            }
+            else
+            {
+                stream = ctx.CreateStandardPackCardStream(ante, (MotelyStandardCardStreamFlags)flags);
+            }
+
+            results = new string[take];
+            for (int i = 0; i < take; i++)
+                results[i] = FormatUtils.FormatItem(ctx.GetNextStandardCard(ref stream));
+
+            nextState =
+            [
+                stream.CardPrngStream.State,
+                stream.HasEnhancementPrngStream.IsInvalid ? -1 : stream.HasEnhancementPrngStream.State,
+                stream.EnhancementPrngStream.IsInvalid ? -1 : stream.EnhancementPrngStream.State,
+                stream.EditionPrngStream.IsInvalid ? -1 : stream.EditionPrngStream.State,
+                stream.HasSealPrngStream.IsInvalid ? -1 : stream.HasSealPrngStream.State,
+                stream.SealPrngStream.IsInvalid ? -1 : stream.SealPrngStream.State,
+            ];
+        });
+
+        return (results!, nextState!);
+    }
+
+    public static (string[] Results, double[] NextState) StreamJokers(
+        string seed,
+        MotelyDeck deck,
+        MotelyStake stake,
+        int ante,
+        string source,
+        int flags,
+        double[]? state,
+        int take
+    )
+    {
+        string[]? results = null;
+        double[]? nextState = null;
+
+        RunStream(seed, deck, stake, (ref MotelySingleSearchContext ctx) =>
+        {
+            MotelySingleJokerStream stream;
+            if (state != null && state.Length >= 7)
+            {
+                stream = new()
+                {
+                    StreamSuffix = source + ante,
+                    EditionPrngStream = state[0] >= 0 ? new(state[0]) : MotelySinglePrngStream.Invalid,
+                    RarityPrngStream = state[1] >= 0 ? new(state[1]) : MotelySinglePrngStream.Invalid,
+                    EternalPerishablePrngStream = state[2] >= 0 ? new(state[2]) : MotelySinglePrngStream.Invalid,
+                    RentalPrngStream = state[3] >= 0 ? new(state[3]) : MotelySinglePrngStream.Invalid,
+                    CommonJokerPrngStream = new(state[4]),
+                    UncommonJokerPrngStream = new(state[5]),
+                    RareJokerPrngStream = new(state[6]),
+                };
+            }
+            else
+            {
+                var jokerFlags = (MotelyJokerStreamFlags)flags;
+                stream = source switch
+                {
+                    "shop" => ctx.CreateShopJokerStream(ante, jokerFlags),
+                    "buffoon" => ctx.CreateBuffoonPackJokerStream(ante, jokerFlags),
+                    "judgement" => ctx.CreateJudgementJokerStream(ante, jokerFlags),
+                    "wraith" => ctx.CreateWraithJokerStream(ante, jokerFlags),
+                    _ => ctx.CreateShopJokerStream(ante, jokerFlags),
+                };
+            }
+
+            results = new string[take];
+            for (int i = 0; i < take; i++)
+                results[i] = FormatUtils.FormatItem(ctx.GetNextJoker(ref stream));
+
+            nextState =
+            [
+                stream.EditionPrngStream.IsInvalid ? -1 : stream.EditionPrngStream.State,
+                stream.RarityPrngStream.IsInvalid ? -1 : stream.RarityPrngStream.State,
+                stream.EternalPerishablePrngStream.IsInvalid ? -1 : stream.EternalPerishablePrngStream.State,
+                stream.RentalPrngStream.IsInvalid ? -1 : stream.RentalPrngStream.State,
+                stream.CommonJokerPrngStream.State,
+                stream.UncommonJokerPrngStream.State,
+                stream.RareJokerPrngStream.State,
+            ];
+        });
+
+        return (results!, nextState!);
+    }
+
     // ── Infrastructure ──────────────────────────────────────────────────
 
     private static void RunStream(
         string seed,
         MotelyDeck deck,
         MotelyStake stake,
-        StreamFilterDesc.StreamCallback callback
+        StreamCallback callback
     )
     {
         var filterDesc = new StreamFilterDesc(callback);
@@ -356,11 +610,11 @@ public static class MotelySeedStreamer
 /// </summary>
 file sealed class StreamFilterDesc : IMotelySeedFilterDesc<StreamFilterDesc.StreamFilter>
 {
-    public delegate void StreamCallback(ref MotelySingleSearchContext ctx);
+    // StreamCallback delegate lives in MotelySeedStreamer
 
-    private readonly StreamCallback _callback;
+    private readonly MotelySeedStreamer.StreamCallback _callback;
 
-    public StreamFilterDesc(StreamCallback callback)
+    public StreamFilterDesc(MotelySeedStreamer.StreamCallback callback)
     {
         _callback = callback;
     }

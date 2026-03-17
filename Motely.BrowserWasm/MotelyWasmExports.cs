@@ -350,6 +350,80 @@ public static partial class MotelyWasmExports
         }
     }
 
+    // ── Tier 3: Multi-cursor streams ──
+
+    [JSExport]
+    public static Task<string> StreamTarotAsync(
+        string seed, string deck, string stake,
+        int ante, string source, string stateJson, int take)
+    {
+        return StreamItemEvent(seed, deck, stake, stateJson, take,
+            (s, d, st, cs, t) => MotelySeedStreamer.StreamTarot(s, d, st, ante, source, cs, t));
+    }
+
+    [JSExport]
+    public static Task<string> StreamPlanetAsync(
+        string seed, string deck, string stake,
+        int ante, string source, string stateJson, int take)
+    {
+        return StreamItemEvent(seed, deck, stake, stateJson, take,
+            (s, d, st, cs, t) => MotelySeedStreamer.StreamPlanet(s, d, st, ante, source, cs, t));
+    }
+
+    [JSExport]
+    public static Task<string> StreamSpectralAsync(
+        string seed, string deck, string stake,
+        int ante, string source, string stateJson, int take)
+    {
+        return StreamItemEvent(seed, deck, stake, stateJson, take,
+            (s, d, st, cs, t) => MotelySeedStreamer.StreamSpectral(s, d, st, ante, source, cs, t));
+    }
+
+    [JSExport]
+    public static Task<string> StreamStandardCardsAsync(
+        string seed, string deck, string stake,
+        int ante, int flags, string stateJson, int take)
+    {
+        return StreamItemEvent(seed, deck, stake, stateJson, take,
+            (s, d, st, cs, t) => MotelySeedStreamer.StreamStandardCards(s, d, st, ante, flags, cs, t));
+    }
+
+    [JSExport]
+    public static Task<string> StreamJokersAsync(
+        string seed, string deck, string stake,
+        int ante, string source, int flags, string stateJson, int take)
+    {
+        return StreamItemEvent(seed, deck, stake, stateJson, take,
+            (s, d, st, cs, t) => MotelySeedStreamer.StreamJokers(s, d, st, ante, source, flags, cs, t));
+    }
+
+    // ── Stream helpers ── (multi-cursor)
+
+    private static Task<string> StreamItemEvent(
+        string seed, string deck, string stake, string stateJson, int take,
+        Func<string, MotelyDeck, MotelyStake, double[]?, int, (string[] Results, double[] NextState)> streamer)
+    {
+        try
+        {
+            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var error))
+                return Task.FromResult(error);
+
+            double[]? cursorState = string.IsNullOrEmpty(stateJson) || stateJson == "null"
+                ? null
+                : JsonSerializer.Deserialize<double[]>(stateJson);
+
+            var (results, nextState) = streamer(seed, deckEnum, stakeEnum, cursorState, take);
+
+            var dto = new ItemStreamDto { Results = results, NextState = nextState };
+            return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.ItemStreamDto));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(JsonSerializer.Serialize(
+                new ErrorDto { Error = ex.Message }, MotelyJsonContext.Default.ErrorDto));
+        }
+    }
+
     // ──────────────────────────────── JAML Validation ────────────────────────────────
 
     /// <summary>
