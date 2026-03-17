@@ -138,7 +138,7 @@ globalThis.duckDbQuery = async function (sql) {
 globalThis.duckDbQueryParquet = async function (parquetUrl, sqlWhere, orderBy, limit) {
     const safeUrl = _escapeSql(parquetUrl); // URL is a value → escape it
     const whereClause = sqlWhere ? ` WHERE ${sqlWhere}` : '';
-    const orderClause = orderBy ? ` ORDER BY ${orderBy}` : ' ORDER BY score DESC';
+    const orderClause = orderBy ? ` ORDER BY ${orderBy}` : '';
     const safeLimit = (limit > 0) ? Math.floor(limit) : 1000;
     const sql = `SELECT * FROM read_parquet('${safeUrl}')${whereClause}${orderClause} LIMIT ${safeLimit}`;
     return globalThis.duckDbQuery(sql);
