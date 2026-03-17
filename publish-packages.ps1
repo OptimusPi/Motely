@@ -22,6 +22,15 @@ $vnode.InnerText = $version
 $xml.Save($propsPath)
 Write-Host "$old → $version" -ForegroundColor Cyan
 
+# Sync version to both package.json files
+@('Motely.NodeAddon\package.json','motely-wasm\package.json') | ForEach-Object {
+  $p = Join-Path $root $_
+  $json = Get-Content $p -Raw | ConvertFrom-Json
+  $json.version = $version
+  $json | ConvertTo-Json -Depth 10 | Set-Content $p -Encoding UTF8
+  Write-Host "  $($json.name): $version" -ForegroundColor DarkGray
+}
+
 # ── 2. Clean ──────────────────────────────────────────────────────────────────
 if (-not $SkipClean) {
   @(
@@ -79,6 +88,10 @@ Stage-Framework (Join-Path $root 'Motely.BrowserWasm\bin\Release\net10.0-browser
                 (Join-Path $root 'motely-wasm\_framework')
 
 # ── 4. BrowserWasm — single-thread ───────────────────────────────────────────
+# Nuke obj/ — threaded build left assembly attributes that conflict with single-thread config
+$objDir = Join-Path $root 'Motely.BrowserWasm\obj'
+if (Test-Path $objDir) { Remove-Item -Recurse -Force $objDir; Write-Host "  rm Motely.BrowserWasm\obj (between builds)" -ForegroundColor DarkGray }
+
 Write-Host "`n[wasm/single-thread] dotnet publish" -ForegroundColor Yellow
 $stPub = Join-Path $root 'Motely.BrowserWasm\bin\Release\net10.0-browser-st\publish'
 dotnet publish (Join-Path $root 'Motely.BrowserWasm\Motely.BrowserWasm.csproj') -c Release `
