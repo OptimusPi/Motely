@@ -163,3 +163,42 @@ public sealed class ErrorDto
     [JsonPropertyName("error")]
     public string? Error { get; set; }
 }
+
+public sealed class LuckyMoneyStreamDto
+{
+    [JsonPropertyName("results")]
+    public bool[] Results { get; set; } = [];
+
+    [JsonPropertyName("nextState")]
+    public double NextState { get; set; }
+}
+
+public sealed class IntStreamDto
+{
+    [JsonPropertyName("results")]
+    public int[] Results { get; set; } = [];
+
+    [JsonPropertyName("nextState")]
+    public double NextState { get; set; }
+}
+
+public sealed class StringStreamDto
+{
+    [JsonPropertyName("results")]
+    public string[] Results { get; set; } = [];
+
+    [JsonPropertyName("nextState")]
+    public double NextState { get; set; }
+}
+
+public sealed class PackStreamDto
+{
+    [JsonPropertyName("results")]
+    public string[] Results { get; set; } = [];
+
+    [JsonPropertyName("nextState")]
+    public double NextState { get; set; }
+
+    [JsonPropertyName("generatedFirstPack")]
+    public bool GeneratedFirstPack { get; set; }
+}

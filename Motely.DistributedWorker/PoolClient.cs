@@ -45,10 +45,10 @@ internal sealed class PoolClient : IDisposable
     }
 
     /// <summary>POST /api/search/helper action=submit — submit results for a completed batch range.</summary>
-    public async Task<SubmitResponseDto> SubmitResultsAsync(string sessionId, SubmitResultsDto results, CancellationToken ct = default)
+    public async Task<SubmitResponseDto> SubmitResultsAsync(string filterId, SubmitResultsDto results, CancellationToken ct = default)
     {
         var url = _poolUrl;
-        results.FilterId = sessionId; // Attach filterId to the DTO
+        results.FilterId = filterId; // Attach filterId to the DTO
         var resp = await _http.PostAsJsonAsync(url, results, WorkerJsonContext.Default.SubmitResultsDto, ct);
         if (!resp.IsSuccessStatusCode)
         {

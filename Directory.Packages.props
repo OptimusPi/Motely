@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>3.15.1</MotelyVersion>
+    <MotelyVersion>3.15.2</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- MinVer: auto-version from git tags -->

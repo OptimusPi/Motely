@@ -83,35 +83,147 @@ public static class MotelyNodeExports
         };
     }
 
-    // ── Shop PRNG Stream ─────────────────────────────────────────────────────
+    // ── Stream Cursors ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// Infinite shop item stream hook-in. The shop PRNG sub-stream for a given
-    /// seed/deck/stake/ante is deterministic and unbounded — call this with
-    /// skip=0,count=50 to get the first 50 potential shop items, then skip=50,count=50
-    /// for the next 50, etc. Each call is O(skip+count): the context is created once
-    /// per call, fast-forwarded, then count items are collected in one pass.
+    /// Stream Lucky Money results with cursor pattern.
+    /// state &lt; 0 → start fresh. state = savedDouble → resume.
+    /// Returns { results: bool[], nextState: double }.
     /// </summary>
     [JSExport]
-    public static ShopItemDto[] GetShopItems(
+    public static LuckyMoneyStreamDto StreamLuckyMoney(
         string seed,
         string deck,
         string stake,
-        int ante,
-        int skip,
-        int count
+        double state,
+        int take,
+        double baseLuck = 1
     )
     {
         if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
             throw new ArgumentException($"Unknown deck: '{deck}'", nameof(deck));
         if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
             throw new ArgumentException($"Unknown stake: '{stake}'", nameof(stake));
-        if (skip < 0)
-            throw new ArgumentOutOfRangeException(nameof(skip), "skip must be >= 0.");
-        if (count <= 0)
-            throw new ArgumentOutOfRangeException(nameof(count), "count must be > 0.");
 
-        return MotelyShopCursor.GetRange(seed, deckEnum, stakeEnum, ante, skip, count);
+        double? cursorState = state < 0 ? null : state;
+
+        var (results, nextState) = MotelySeedStreamer.StreamLuckyMoney(
+            seed, deckEnum, stakeEnum, cursorState, take, baseLuck);
+
+        return new LuckyMoneyStreamDto
+        {
+            Results = results,
+            NextState = nextState,
+        };
+    }
+
+    [JSExport]
+    public static LuckyMoneyStreamDto StreamLuckyMult(
+        string seed, string deck, string stake,
+        double state, int take, double baseLuck = 1)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamLuckyMult(seed, d, s, cs, take, baseLuck);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static IntStreamDto StreamMisprint(
+        string seed, string deck, string stake,
+        double state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamMisprint(seed, d, s, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static LuckyMoneyStreamDto StreamCavendish(
+        string seed, string deck, string stake,
+        double state, int take, double baseLuck = 1)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamCavendish(seed, d, s, cs, take, baseLuck);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static LuckyMoneyStreamDto StreamGrosMichel(
+        string seed, string deck, string stake,
+        double state, int take, double baseLuck = 1)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamGrosMichel(seed, d, s, cs, take, baseLuck);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static StringStreamDto StreamErraticDeck(
+        string seed, string deck, string stake,
+        double state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamErraticDeck(seed, d, s, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static StringStreamDto StreamWheelOfFortune(
+        string seed, string deck, string stake,
+        double state, int take, double baseLuck = 1)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamWheelOfFortune(seed, d, s, cs, take, baseLuck);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static StringStreamDto StreamTags(
+        string seed, string deck, string stake,
+        int ante, double state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamTags(seed, d, s, ante, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static PackStreamDto StreamBoosterPacks(
+        string seed, string deck, string stake,
+        int ante, double state, bool generatedFirstPack, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState, nextGen) = MotelySeedStreamer.StreamBoosterPacks(
+            seed, d, s, ante, cs, generatedFirstPack, take);
+        return new() { Results = results, NextState = nextState, GeneratedFirstPack = nextGen };
+    }
+
+    [JSExport]
+    public static StringStreamDto StreamVouchers(
+        string seed, string deck, string stake,
+        int ante, int voucherBitfield, double state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double? cs = state < 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamVouchers(seed, d, s, ante, voucherBitfield, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    private static void ParseEnums(string deck, string stake,
+        out MotelyDeck deckEnum, out MotelyStake stakeEnum)
+    {
+        if (!Enum.TryParse<MotelyDeck>(deck, true, out deckEnum))
+            throw new ArgumentException($"Unknown deck: '{deck}'", nameof(deck));
+        if (!Enum.TryParse<MotelyStake>(stake, true, out stakeEnum))
+            throw new ArgumentException($"Unknown stake: '{stake}'", nameof(stake));
     }
 
     // ── Searches ─────────────────────────────────────────────────────────────
@@ -344,7 +456,7 @@ public static class MotelyNodeExports
         if (_cachedFeatures is not null)
             return _cachedFeatures;
 
-        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate", "shop-stream" };
+        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate", "lucky-money-stream" };
         if (IsSimdEnabled())
             features.Add("simd");
         features.Add("threads");

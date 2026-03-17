@@ -67,8 +67,10 @@ public sealed class JamlConfig
     public JamlClauseSet Should { get; set; } = new();
     public JamlClauseSet MustNot { get; set; } = new();
 
-    public bool HasAnyClauses =>
-        Must.HasAnyClauses || Should.HasAnyClauses || MustNot.HasAnyClauses;
+    public bool HasAnyClauses { get; set; }
+
+    /// <summary>Normalized filter name used as the runtime identifier for this config.</summary>
+    public string FilterId { get; set; } = "";
 }
 
 // Flat data bags for YamlDotNet deserialization. Match jaml.schema.json.
@@ -463,6 +465,10 @@ public static class JamlConfigLoader
 
             // MUSTNOT → negation filters
             PopulateClauses(config.MustNot, dto.MustNot, defaultAntes, dto.Defaults);
+
+            // Set once — config is immutable after load
+            config.FilterId = (config.Name ?? "unnamed").Trim().ToLowerInvariant().Replace(' ', '-');
+            config.HasAnyClauses = config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
 
             return true;
         }
