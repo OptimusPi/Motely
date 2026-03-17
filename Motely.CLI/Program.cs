@@ -542,7 +542,6 @@ partial class Program
                         Deck = d.ToString(),
                         Stake = s.ToString(),
                         ErraticDeckComposition = erratic,
-                        Twos = erratic.Count(c => c.StartsWith("2_")),
                         Error = analysis.Error,
                         Antes = analysis
                             .Antes.Select(a => new AnteAnalysisDto
@@ -620,7 +619,6 @@ partial class Program
                 Deck = d.ToString(),
                 Stake = s.ToString(),
                 ErraticDeckComposition = erratic,
-                Twos = erratic.Count(c => c.StartsWith("2_")),
                 Error = analysis.Error,
                 Antes = analysis
                     .Antes.Select(a => new AnteAnalysisDto

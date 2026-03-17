@@ -46,7 +46,7 @@ public static class MotelySearchOrchestrator
         if (modeError != null)
             return (null, null, modeError);
 
-        return (plan, MotelyRuntimeIds.GenerateFilterId(config), null);
+        return (plan, config.FilterId, null);
     }
 
     public static string? ValidateRequest(MotelySearchRequest request)
@@ -131,5 +131,5 @@ public static class MotelySearchOrchestrator
     }
 
     public static string GenerateFilterId(JamlConfig config) =>
-        MotelyRuntimeIds.GenerateFilterId(config);
+        config.FilterId;
 }

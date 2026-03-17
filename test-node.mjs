@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Path to the extracted _framework
-const frameworkPath = join(__dirname, 'Motely.npm', 'test-extract', 'package', '_framework');
+const frameworkPath = join(__dirname, 'motely-wasm', 'test-extract', 'package', '_framework');
 const dotnetJsPath = join(frameworkPath, 'dotnet.js');
 
 console.log('══════════════════════════════════════════════════════════════');

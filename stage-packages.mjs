@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 const browserFrameworkSource = join(__dirname, 'Motely.BrowserWasm', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
 const targets = {
   browser: [
-    { source: browserFrameworkSource, destination: join(__dirname, 'Motely.npm', '_framework') },
+    { source: browserFrameworkSource, destination: join(__dirname, 'motely-wasm', '_framework') },
   ],
 };
 
