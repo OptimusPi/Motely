@@ -54,7 +54,7 @@ internal sealed class ErrorDto
     public string? Error { get; set; }
 }
 
-/// <summary>POST body for /api/search/helper</summary>
+/// <summary>POST body for /api/search/helper action=request</summary>
 internal sealed class PoolClaimRequestDto
 {
     [JsonPropertyName("action")]
@@ -62,6 +62,13 @@ internal sealed class PoolClaimRequestDto
 
     [JsonPropertyName("workerId")]
     public string? WorkerId { get; set; }
+
+    /// <summary>
+    /// Optional: target a specific filter ("GIMMIE WORK FOR FILTER:X").
+    /// If null, server picks whatever active session needs help most ("GIMMIE WORK").
+    /// </summary>
+    [JsonPropertyName("filterId")]
+    public string? FilterId { get; set; }
 
     [JsonPropertyName("estimatedBlocks")]
     public int EstimatedBlocks { get; set; } = 1;

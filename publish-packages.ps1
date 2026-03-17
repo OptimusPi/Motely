@@ -23,7 +23,7 @@ $xml.Save($propsPath)
 Write-Host "$old → $version" -ForegroundColor Cyan
 
 # Sync version to both package.json files
-@('Motely.NodeAddon\package.json','motely-wasm\package.json') | ForEach-Object {
+@('motely-node\package.json', 'motely-wasm\package.json') | ForEach-Object {
   $p = Join-Path $root $_
   $json = Get-Content $p -Raw | ConvertFrom-Json
   $json.version = $version
@@ -34,12 +34,12 @@ Write-Host "$old → $version" -ForegroundColor Cyan
 # ── 2. Clean ──────────────────────────────────────────────────────────────────
 if (-not $SkipClean) {
   @(
-    'Motely\bin','Motely\obj',
-    'Motely.Orchestration\bin','Motely.Orchestration\obj',
-    'Motely.BrowserWasm\bin','Motely.BrowserWasm\obj',
-    'Motely.NodeAddon\bin','Motely.NodeAddon\obj',
-    'motely-wasm\_framework','motely-wasm\_framework_st',
-    'motely-node\bin','motely-node\pkg'
+    'Motely\bin', 'Motely\obj',
+    'Motely.Orchestration\bin', 'Motely.Orchestration\obj',
+    'Motely.BrowserWasm\bin', 'Motely.BrowserWasm\obj',
+    'Motely.NodeAddon\bin', 'Motely.NodeAddon\obj',
+    'motely-wasm\_framework', 'motely-wasm\_framework_st',
+    'motely-node\bin', 'motely-node\pkg'
   ) | ForEach-Object {
     $d = Join-Path $root $_
     if (Test-Path $d) { Remove-Item -Recurse -Force $d; Write-Host "  rm $_" -ForegroundColor DarkGray }
@@ -64,15 +64,15 @@ function Stage-Framework([string]$publishRoot, [string]$dst) {
 
   $count = 0
   Get-ChildItem $src -Recurse -File |
-    Where-Object { $_.Extension -notin '.br','.gz' } |
-    ForEach-Object {
-      $rel = $_.FullName.Substring($src.Length).TrimStart('\','/')
-      $target = Join-Path $dst $rel
-      $dir = Split-Path $target
-      if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
-      Copy-Item $_.FullName $target -Force
-      $count++
-    }
+  Where-Object { $_.Extension -notin '.br', '.gz' } |
+  ForEach-Object {
+    $rel = $_.FullName.Substring($src.Length).TrimStart('\', '/')
+    $target = Join-Path $dst $rel
+    $dir = Split-Path $target
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+    Copy-Item $_.FullName $target -Force
+    $count++
+  }
 
   # Restore worker.js
   if ($workerBackup) { Set-Content $workerPath $workerBackup -NoNewline }
@@ -85,7 +85,7 @@ Write-Host "`n[wasm/threaded] dotnet publish" -ForegroundColor Yellow
 dotnet publish (Join-Path $root 'Motely.BrowserWasm\Motely.BrowserWasm.csproj') -c Release
 if ($LASTEXITCODE) { throw "BrowserWasm threaded publish failed" }
 Stage-Framework (Join-Path $root 'Motely.BrowserWasm\bin\Release\net10.0-browser\publish') `
-                (Join-Path $root 'motely-wasm\_framework')
+(Join-Path $root 'motely-wasm\_framework')
 
 # ── 4. BrowserWasm — single-thread ───────────────────────────────────────────
 # Nuke obj/ — threaded build left assembly attributes that conflict with single-thread config
@@ -104,21 +104,41 @@ Write-Host "`n[motely-wasm] npm install + build + pack" -ForegroundColor Yellow
 Push-Location (Join-Path $root 'motely-wasm')
 try {
   npm install --ignore-scripts; if ($LASTEXITCODE) { throw "npm install failed" }
-  npm run build;               if ($LASTEXITCODE) { throw "npm run build failed" }
-  npm pack;                    if ($LASTEXITCODE) { throw "npm pack failed" }
-} finally { Pop-Location }
+  npm run build; if ($LASTEXITCODE) { throw "npm run build failed" }
+  npm pack; if ($LASTEXITCODE) { throw "npm pack failed" }
+}
+finally { Pop-Location }
 
 $wasmTgz = (Get-ChildItem (Join-Path $root 'motely-wasm\motely-wasm-*.tgz') |
   Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 
-# ── 6. motely-node: win-x64 + linux-x64 ──────────────────────────────────────
+# ── 6. motely-node: linux-x64 only via Docker ────────────────────────────────
 if (-not $SkipNode) {
-  Write-Host "`n[motely-node] dotnet publish win-x64" -ForegroundColor Yellow
-  dotnet publish (Join-Path $root 'Motely.NodeAddon\Motely.NodeAddon.csproj') -c Release -r win-x64
-  if ($LASTEXITCODE) { throw "NodeAddon win-x64 failed" }
-  # linux-x64 is triggered automatically by PublishLinuxX64 MSBuild target via Docker
+  # Copy jaml-schema files from motely-wasm so motely-node also ships them
+  $wasmDir = Join-Path $root 'motely-wasm'
+  $nodeDir = Join-Path $root 'motely-node'
+  foreach ($f in @('jaml-schema.js', 'jaml-schema.d.ts', 'jaml.schema.json')) {
+    Copy-Item (Join-Path $wasmDir $f) (Join-Path $nodeDir $f) -Force
+    Write-Host "  copied $f → motely-node" -ForegroundColor DarkGray
+  }
 
-  $nodeTgz = (Get-ChildItem (Join-Path $root 'motely-node\pkg\motely-node-*.tgz') |
+  Write-Host "`n[motely-node] building linux-x64 via Docker" -ForegroundColor Yellow
+  Push-Location $root
+  try { & (Join-Path $root 'build-linux.ps1') }
+  finally { Pop-Location }
+
+  $nodeAddon = Join-Path $root 'motely-node\bin\linux-x64\Motely.NodeAddon.node'
+  if (-not (Test-Path $nodeAddon)) { throw "linux-x64 binary missing: $nodeAddon" }
+  Write-Host "  ✓ $nodeAddon" -ForegroundColor DarkGray
+
+  Write-Host "`n[motely-node] npm pack" -ForegroundColor Yellow
+  Push-Location $nodeDir
+  try {
+    npm pack; if ($LASTEXITCODE) { throw "npm pack failed" }
+  }
+  finally { Pop-Location }
+
+  $nodeTgz = (Get-ChildItem (Join-Path $nodeDir 'motely-node-*.tgz') |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 }
 
@@ -132,7 +152,8 @@ if ($Publish) {
   npm publish $wasmTgz --access public
   if (-not $SkipNode) { npm publish $nodeTgz --access public }
   Write-Host "`nPublished v$version" -ForegroundColor Green
-} else {
+}
+else {
   Write-Host "`nTo publish:" -ForegroundColor Yellow
   Write-Host "  npm publish `"$wasmTgz`" --access public"
   if (-not $SkipNode) { Write-Host "  npm publish `"$nodeTgz`" --access public" }

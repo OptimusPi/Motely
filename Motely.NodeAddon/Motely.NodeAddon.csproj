@@ -13,8 +13,7 @@
     <PublishNodeModule>true</PublishNodeModule>
     <PublishMultiPlatformNodeModule>true</PublishMultiPlatformNodeModule>
     <PublishDir>$(MSBuildProjectDirectory)\..\motely-node\bin</PublishDir>
-    <PackNpmPackage>true</PackNpmPackage>
-    <PackageOutputPath>$(MSBuildProjectDirectory)\..\motely-node\pkg</PackageOutputPath>
+    <!-- PackNpmPackage disabled — publish-packages.ps1 runs npm pack from motely-node/ directly -->
     <IsAotCompatible>true</IsAotCompatible>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <!-- No libicu needed; smaller image, fewer deps, perf tip -->
@@ -39,11 +38,5 @@
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
   </ItemGroup>
 
-  <!-- After win-x64 publish, automatically build linux-x64 via Docker -->
-  <Target Name="PublishLinuxX64" AfterTargets="Publish"
-          Condition="'$(RuntimeIdentifier)' == 'win-x64' AND '$([MSBuild]::IsOSPlatform(Windows))' == 'true'">
-    <Message Text="Building linux-x64 via Docker..." Importance="High" />
-    <Exec Command="powershell -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\build-linux.ps1&quot;"
-          WorkingDirectory="$(MSBuildProjectDirectory)\.." />
-  </Target>
+  <!-- Linux-x64 build is handled by publish-packages.ps1 calling build-linux.ps1 directly -->
 </Project>
