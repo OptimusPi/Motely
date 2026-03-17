@@ -82,3 +82,4 @@ motely-node/jaml-schema.js
 /motely-node/addon
 /CUserspifre
 /CUserspifre/.dotnet/packs
+/motely-wasm/_framework_st
