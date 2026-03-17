@@ -410,7 +410,7 @@ public static partial class MotelyWasmExports
 
             double[]? cursorState = string.IsNullOrEmpty(stateJson) || stateJson == "null"
                 ? null
-                : JsonSerializer.Deserialize<double[]>(stateJson);
+                : JsonSerializer.Deserialize(stateJson, MotelyJsonContext.Default.DoubleArray);
 
             var (results, nextState) = streamer(seed, deckEnum, stakeEnum, cursorState, take);
 
