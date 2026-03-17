@@ -217,6 +217,61 @@ public static class MotelyNodeExports
         return new() { Results = results, NextState = nextState };
     }
 
+    [JSExport]
+    public static ItemStreamDto StreamTarot(
+        string seed, string deck, string stake,
+        int ante, string source, double[] state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double[]? cs = state.Length == 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamTarot(seed, d, s, ante, source, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static ItemStreamDto StreamPlanet(
+        string seed, string deck, string stake,
+        int ante, string source, double[] state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double[]? cs = state.Length == 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamPlanet(seed, d, s, ante, source, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static ItemStreamDto StreamSpectral(
+        string seed, string deck, string stake,
+        int ante, string source, double[] state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double[]? cs = state.Length == 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamSpectral(seed, d, s, ante, source, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static ItemStreamDto StreamStandardCards(
+        string seed, string deck, string stake,
+        int ante, int flags, double[] state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double[]? cs = state.Length == 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamStandardCards(seed, d, s, ante, flags, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
+    [JSExport]
+    public static ItemStreamDto StreamJokers(
+        string seed, string deck, string stake,
+        int ante, string source, int flags, double[] state, int take)
+    {
+        ParseEnums(deck, stake, out var d, out var s);
+        double[]? cs = state.Length == 0 ? null : state;
+        var (results, nextState) = MotelySeedStreamer.StreamJokers(seed, d, s, ante, source, flags, cs, take);
+        return new() { Results = results, NextState = nextState };
+    }
+
     private static void ParseEnums(string deck, string stake,
         out MotelyDeck deckEnum, out MotelyStake stakeEnum)
     {
