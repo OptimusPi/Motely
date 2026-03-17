@@ -13,7 +13,10 @@
 
     <!-- AOT & Naive Build -->
     <WasmBuildNative>true</WasmBuildNative>
-    <WasmEnableThreads>true</WasmEnableThreads>
+    <!-- Pass -p:SingleThread=true to publish without threading (browsers without SharedArrayBuffer) -->
+    <SingleThread Condition="'$(SingleThread)' == ''">false</SingleThread>
+    <WasmEnableThreads Condition="'$(SingleThread)' != 'true'">true</WasmEnableThreads>
+    <WasmEnableThreads Condition="'$(SingleThread)' == 'true'">false</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
 
     <!-- Trimming & Optimization -->
