@@ -65,15 +65,28 @@ public sealed class MotelyResultsDb : IDisposable
     public static async Task<List<ResultRow>> QueryRemoteLakeAsync(
         string parquetUrl,
         string? whereClause = null,
+        string orderBy = "",
         int limit = 1000)
     {
         var json = await DuckDbWasmInterop.QueryParquetAsync(
             parquetUrl,
             whereClause ?? "",
-            "score DESC",
+            orderBy,
             limit);
 
         return ParseQueryResults(json);
+    }
+
+    /// <summary>
+    /// Fetch seed strings from an Ice Lake Parquet on R2.
+    /// Ice Lake files contain only seed values (pre-sorted into rank/suit buckets).
+    /// </summary>
+    public static async Task<List<string>> QueryIceLakeSeedsAsync(
+        string parquetUrl,
+        int limit = 1000)
+    {
+        var json = await DuckDbWasmInterop.QueryParquetAsync(parquetUrl, "", "", limit);
+        return ParseSeedColumn(json);
     }
 
     /// <summary>
@@ -190,6 +203,36 @@ public sealed class MotelyResultsDb : IDisposable
         }
 
         return results;
+    }
+
+    private static List<string> ParseSeedColumn(string json)
+    {
+        var seeds = new List<string>();
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("error", out var err) && err.ValueKind == JsonValueKind.String)
+                return seeds;
+
+            if (!root.TryGetProperty("rows", out var rows))
+                return seeds;
+
+            foreach (var row in rows.EnumerateArray())
+            {
+                var enumerator = row.EnumerateArray();
+                if (enumerator.MoveNext())
+                {
+                    var seed = enumerator.Current.GetString();
+                    if (!string.IsNullOrEmpty(seed))
+                        seeds.Add(seed);
+                }
+            }
+        }
+        catch { }
+
+        return seeds;
     }
 }
 
