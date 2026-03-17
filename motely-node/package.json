@@ -1,10 +1,12 @@
 {
   "name": "motely-node",
-  "version": "3.15.11",
+  "version": "3.15.13",
   "description": "MotelyJAML for Node.js - Balatro seed analyzer and JAML filter engine using .NET 10 Native AOT",
   "main": "index.cjs",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "require": "./index.cjs",
       "import": "./index.cjs",
       "default": "./index.cjs"
@@ -23,12 +25,12 @@
     "jaml-schema.js",
     "jaml-schema.d.ts",
     "jaml.schema.json",
-    "bin/"
+    "bin/linux-x64/*.node"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
-    "directory": "Motely.NodeAddon"
+    "directory": "motely-node"
   },
   "license": "MIT",
   "keywords": [
@@ -41,5 +43,8 @@
   ],
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "os": [
+    "linux"
+  ]
 }

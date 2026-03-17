@@ -7,7 +7,7 @@
 ## Rules
 
 - **Version:** Single source `Directory.Packages.props` → `<MotelyVersion>`. Sync runs automatically before `dotnet build`/`dotnet publish` (Directory.Build.props). Do not edit package.json or `jaml.schema.json` by hand.
-- **motely-node:** Package is produced by the SDK from **Motely.NodeAddon** only. Do not add `main`/`exports` to Motely.NodeAddon/package.json; do not create hand-written loader JS; the SDK generates the loader and types. Output: `motely-node\bin` (per RID), `.tgz` in `motely-node\pkg`.
+- **motely-node:** Package root is `motely-node/`. The `index.cjs` loader and `index.d.ts` types live there (committed). `dotnet publish` via Docker puts the `.node` binary into `motely-node/bin/linux-x64/`. `npm pack` runs from `motely-node/` — not via the SDK's PackNpmPackage. Linux-x64 only (Vercel target).
 - **Linux addon:** linux-x64 only via Docker (`build-linux.ps1` on Windows, `build-linux.sh` on Unix); no WSL.
 - **Publish:** Run `npm publish` only when explicitly asked; otherwise stop at pack/ready and print next steps.
 
@@ -16,7 +16,7 @@
 ## Phase A: Version (one source, both packages)
 
 1. Edit **only** `Directory.Packages.props`: set `<MotelyVersion>` to the new version (e.g. 3.1.6 → 3.1.7).
-2. **No separate sync step.** Directory.Build.props runs `node sync-version.mjs` before Build/Publish of BrowserWasm or NodeAddon. The next dotnet publish updates motely-wasm and Motely.NodeAddon package.json.
+2. **No separate sync step.** Directory.Build.props runs `node sync-version.mjs` before Build/Publish of BrowserWasm or NodeAddon. The next dotnet publish updates `motely-node/package.json` and `motely-wasm/package.json`.
 3. Do not edit any package.json or jaml.schema.json by hand.
 
 ---
@@ -38,19 +38,17 @@ All from **repo root** unless stated.
 
 ---
 
-## Phase C: motely-node (always)
+## Phase C: motely-node (always, Linux-only)
 
-Same version. From **repo root**. Package lives in **Motely.NodeAddon**; publish outputs to `motely-node\bin`, `.tgz` to `motely-node\pkg`.
+Same version. From **repo root**. Package root is `motely-node/`; binary lands in `motely-node/bin/linux-x64/`.
 
-7. **win-x64 addon:**  
-   `dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r win-x64`  
-   Confirm: `motely-node\bin\win-x64\Motely.NodeAddon.node` exists.
-
-8. **linux-x64 addon (Docker only):**  
+7. **linux-x64 addon (Docker only):**  
    `.\build-linux.ps1` (Windows) or `./build-linux.sh` (Unix).  
    Confirm: `motely-node\bin\linux-x64\Motely.NodeAddon.node` exists. If it fails, fix Docker; do not consider the package ready without the linux binary.
 
-9. **Pack:** The SDK runs `npm pack` during publish (`PackNpmPackage`). After both RIDs, the tarball in `motely-node\pkg` should contain both `bin/win-x64/` and `bin/linux-x64/`. Optionally run `cd Motely.NodeAddon && npm pack` to regenerate and inspect.
+8. **Copy jaml-schema:** Copy `jaml-schema.js`, `jaml-schema.d.ts`, `jaml.schema.json` from `motely-wasm/` to `motely-node/`.
+
+9. **Pack:** `cd motely-node && npm pack`. Inspect the tarball: must contain `index.cjs`, `index.d.ts`, `bin/linux-x64/Motely.NodeAddon.node`, and jaml-schema files.
 
 ---
 
@@ -58,7 +56,7 @@ Same version. From **repo root**. Package lives in **Motely.NodeAddon**; publish
 
 10. **Publish (only if user asked):**  
     From `motely-wasm`: `npm publish` (motely-wasm).  
-    From `motely-node\pkg`: `npm publish <tgz>` (motely-node).  
+    From `motely-node`: `npm publish <tgz>` (motely-node).  
     Same version for both.
 
 11. **Update JAMMY (after publish):**  
@@ -69,8 +67,8 @@ Same version. From **repo root**. Package lives in **Motely.NodeAddon**; publish
 ## Execution rules
 
 - **Order:** A → B → C → D. Do not skip any phase. Both packages are built every time.
-- **Version:** One bump in Directory.Packages.props only; sync-version.mjs updates motely-wasm and Motely.NodeAddon package.json. Never edit package.json version or jaml.schema.json manually.
-- **motely-node:** No hand-written loader or main/exports in package.json. SDK generates loader and types.
+- **Version:** One bump in Directory.Packages.props only; sync-version.mjs updates `motely-node/package.json` and `motely-wasm/package.json`. Never edit package.json version or jaml.schema.json manually.
+- **motely-node:** Package root = `motely-node/`. Committed `index.cjs` + `index.d.ts` + `package.json`. Binary from Docker in `bin/linux-x64/`. `npm pack` from `motely-node/`.
 - **Linux:** Only `build-linux.ps1` / `build-linux.sh` for linux-x64. No WSL, no host `dotnet publish -r linux-x64`.
 - **Publish:** Run `npm publish` for both packages only when the user explicitly asks. Otherwise stop after pack and print the two publish commands.
 
@@ -80,7 +78,7 @@ Same version. From **repo root**. Package lives in **Motely.NodeAddon**; publish
 
 - [ ] A: Bump `<MotelyVersion>` in Directory.Packages.props only (sync runs on next dotnet build/publish).
 - [ ] B: Clean motely-wasm _framework dirs; publish BrowserWasm + stage browser; publish SingleThread + stage singlethread; `cd motely-wasm && npm install && npm run build`.
-- [ ] C: win-x64 publish → `motely-node\bin\win-x64\*.node`; `.\build-linux.ps1` (or `./build-linux.sh`) → `motely-node\bin\linux-x64\*.node`; confirm .tgz in `motely-node\pkg` has both bin dirs.
-- [ ] D: If user asked: `npm publish` in motely-wasm and `npm publish <tgz>` from motely-node/pkg. JAMMY: `pnpm add motely-node@<V> motely-wasm@<V>` and `pnpm run build` — green.
+- [ ] C: `.\build-linux.ps1` (or `./build-linux.sh`) → `motely-node\bin\linux-x64\*.node`; copy jaml-schema from motely-wasm; `cd motely-node && npm pack`; confirm .tgz has `bin/linux-x64/`, `index.cjs`, `index.d.ts`.
+- [ ] D: If user asked: `npm publish` in motely-wasm and `npm publish <tgz>` from motely-node. JAMMY: `pnpm add motely-node@<V> motely-wasm@<V>` and `pnpm run build` — green.
 
 Both packages, same version, every run. No optional steps.

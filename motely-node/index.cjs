@@ -7,16 +7,12 @@ const SEED_DIGITS = new Set("123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
 
 function getRid() {
   const pl = platform();
-  const rid =
-    pl === "darwin"
-      ? "osx-x64"
-      : pl === "win32"
-        ? "win-x64"
-        : pl === "linux"
-          ? "linux-x64"
-          : null;
-  if (!rid) throw new Error(`Unsupported platform: ${pl}`);
-  return rid;
+  if (pl !== "linux") {
+    throw new Error(
+      `motely-node only ships a linux-x64 binary (for Vercel). Current platform: ${pl}`
+    );
+  }
+  return "linux-x64";
 }
 
 function resolveAddonPath() {
@@ -233,17 +229,6 @@ function buildApi(raw) {
       return getRawMethod(raw, "validateJaml")(jamlContent);
     },
 
-    /**
-     * Sync — reads a slice of the infinite shop item PRNG stream for a given seed/ante.
-     * skip=0,count=50 → first potential 50 shop items.
-     * skip=50,count=50 → next 50. Etc.
-     * O(skip+count) per call. Use this for "infinite scroll" seed inspection.
-     */
-    getShopItems(seed, deck, stake, ante, skip, count) {
-      const normalizedSeed = normalizeSeed(seed, "seed");
-      return getRawMethod(raw, "getShopItems")(normalizedSeed, deck, stake, ante, skip, count);
-    },
-
     async startJamlSearch(jamlContent, options = {}) {
       if (disposed) throw new Error("Motely instance has been disposed");
       return runSearchWithRaw(raw, jamlContent, options);
@@ -283,10 +268,6 @@ function createDefaultApi() {
 
     async validateJaml(jamlContent) {
       return (await getApi()).validateJaml(jamlContent);
-    },
-
-    async getShopItems(seed, deck, stake, ante, skip, count) {
-      return (await getApi()).getShopItems(seed, deck, stake, ante, skip, count);
     },
 
     async startJamlSearch(jamlContent, options = {}) {

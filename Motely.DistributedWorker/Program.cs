@@ -1,27 +1,33 @@
 using System.Collections.Concurrent;
 using Motely;
+using Motely.DB;
+using Motely.DB.SeedSource;
 using Motely.DistributedWorker;
 using Motely.Filters;
 
 /// <summary>
 /// Motely Distributed Worker — AOT native Linux executable.
 ///
-/// Connects to the seed-finder pool and claims one block at a time
-/// from whatever filter currently needs help most.
+/// Connects to the seed-finder pool and claims one block at a time.
+/// Also saves results locally to a DuckLake Parquet-backed catalog.
 ///
 /// Usage:
-///   MotelyWorker --pool https://www.seedfinder.app --pool-token <POOL_TOKEN>
+///   MotelyWorker --pool https://www.seedfinder.app
 ///
 /// Options:
-///   --threads N       Thread count (default: all cores)
-///   --worker-id id    Worker identifier (default: hostname-pid)
+///   --threads N           Thread count (default: all cores)
+///   --worker-id id        Worker identifier (default: hostname-pid)
+///   --filter filterId     Only claim blocks for this filter (optional; omit for any active filter)
+///   --local-db ./dir      Directory for local DuckLake .db files (default: MotelyData/sinks)
+///                         One file per filter: <dir>/<filterId>.db
+///                         Set to "-" to disable local saving.
 /// </summary>
 class Program
 {
     static async Task<int> Main(string[] args)
     {
         // ── Parse args ──────────────────────────────────────────────────
-        string? url = null, workerId = null;
+        string? url = null, workerId = null, filterId = null, localDbDir = "MotelyData/sinks";
         int threads = Environment.ProcessorCount;
 
         for (int i = 0; i < args.Length - 1; i++)
@@ -31,6 +37,8 @@ class Program
                 case "--pool": url = args[++i]; break;
                 case "--threads": threads = int.Parse(args[++i]); break;
                 case "--worker-id": workerId = args[++i]; break;
+                case "--filter": filterId = args[++i]; break;
+                case "--local-db": localDbDir = args[++i]; break;
             }
         }
 
@@ -40,28 +48,39 @@ class Program
             Console.Error.WriteLine("  MotelyWorker --pool <helper-url>");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Options:");
-            Console.Error.WriteLine("  --threads <N>      Thread count (default: all cores)");
-            Console.Error.WriteLine("  --worker-id <id>   Worker identifier (optional)");
+            Console.Error.WriteLine("  --threads <N>        Thread count (default: all cores)");
+            Console.Error.WriteLine("  --worker-id <id>     Worker identifier (optional)");
+            Console.Error.WriteLine("  --filter <filterId>  Only claim blocks for this filter (optional)");
+            Console.Error.WriteLine("  --local-db <dir>     DuckLake output directory (default: MotelyData/sinks)");
+            Console.Error.WriteLine("                       Use '-' to disable local saving");
             return 1;
         }
 
         workerId ??= $"{Environment.MachineName}-{Environment.ProcessId}";
+        if (localDbDir == "-") localDbDir = null;
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        return await RunPoolMode(url, workerId, threads, cts);
+        return await RunPoolMode(url, workerId, threads, filterId, localDbDir, cts);
     }
 
     // ═══════════════════════════════════════════════════════════════════
     //  POOL MODE — claim one block at a time from the help-wanted queue
     // ═══════════════════════════════════════════════════════════════════
-    static async Task<int> RunPoolMode(string poolUrl, string workerId, int threads, CancellationTokenSource cts)
+    static async Task<int> RunPoolMode(
+        string poolUrl, string workerId, int threads,
+        string? targetFilterId, string? localDbDir,
+        CancellationTokenSource cts)
     {
         using var pool = new PoolClient(poolUrl);
 
         Console.Error.WriteLine($"[MotelyWorker] → {poolUrl}");
         Console.Error.WriteLine($"[MotelyWorker] Worker: {workerId} | Threads: {threads}");
+        if (targetFilterId != null)
+            Console.Error.WriteLine($"[MotelyWorker] Targeting filter: {targetFilterId}");
+        if (localDbDir != null)
+            Console.Error.WriteLine($"[MotelyWorker] Local DuckLake: {Path.GetFullPath(localDbDir)}/{{filterId}}.db");
         Console.Error.WriteLine("[MotelyWorker] Waiting for work...");
         Console.Error.WriteLine();
 
@@ -70,139 +89,181 @@ class Program
         int chunksCompleted = 0;
         var startTime = DateTime.UtcNow;
 
-        while (!cts.Token.IsCancellationRequested)
+        // ── Per-filter local DuckLake sinks ─────────────────────────
+        var localSinks = new Dictionary<string, ISeedResultSink>();
+        ISeedResultSink? GetOrOpenSink(string fId)
         {
-            // ── CLAIM from pool ──────────────────────────────────────
-            PoolClaimResponseDto claim;
+            if (localDbDir == null) return null;
+            if (localSinks.TryGetValue(fId, out var existing)) return existing;
             try
             {
-                claim = await pool.ClaimAsync(workerId, cts.Token);
-                if (claim.Idle)
-                {
-                    Console.WriteLine($"[MotelyWorker] Claim: idle | retryAfterMs={claim.RetryAfterMs}");
-                }
-                else
-                {
-                    Console.WriteLine(
-                        $"[MotelyWorker] Claim: filter={claim.FilterId} | batchIndex={claim.BatchIndex} | remaining={claim.Remaining} | batchCharCount={claim.BatchCharCount}"
-                    );
-                }
+                Directory.CreateDirectory(localDbDir);
+                var dbPath = Path.Combine(localDbDir, $"{fId}.db");
+                var sink = SeedResultSinkFactory.Create(dbPath, tallyCount: 0);
+                localSinks[fId] = sink;
+                Console.Error.WriteLine($"[MotelyWorker] Opened local DuckLake: {dbPath}");
+                return sink;
             }
-            catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[MotelyWorker] Pool claim failed: {ex.Message}. Retrying in 60s...");
+                Console.Error.WriteLine($"[MotelyWorker] Warning: could not open local DuckLake for {fId}: {ex.Message}");
+                return null;
+            }
+        }
+
+        try
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                // ── CLAIM from pool ──────────────────────────────────────
+                PoolClaimResponseDto claim;
                 try
                 {
-                    await Task.Delay(60000, cts.Token).ConfigureAwait(false);
+                    claim = await pool.ClaimAsync(workerId, targetFilterId, cts.Token);
+                    if (!claim.Idle)
+                        Console.WriteLine(
+                            $"[MotelyWorker] Claim: filter={claim.FilterId} | block={claim.BatchIndex} | batchCharCount={claim.BatchCharCount}"
+                        );
+                }
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[MotelyWorker] Pool claim failed: {ex.Message}. Retrying in 60s...");
+                    try { await Task.Delay(60000, cts.Token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { break; }
+                    continue;
+                }
+
+                if (claim.Idle)
+                {
+                    Console.Error.Write("\r[MotelyWorker] Idle — no work available. Waiting...          ");
+                    try { await Task.Delay(claim.RetryAfterMs, cts.Token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { break; }
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(claim.Jaml) || string.IsNullOrEmpty(claim.FilterId))
+                {
+                    Console.Error.WriteLine("[MotelyWorker] Invalid pool claim response. Retrying...");
+                    await Task.Delay(2000, cts.Token).ConfigureAwait(false);
+                    continue;
+                }
+
+                // ── PARSE JAML ───────────────────────────────────────────
+                if (!JamlConfigLoader.TryLoad(claim.Jaml, out var config, out var parseError) || config is null)
+                {
+                    Console.Error.WriteLine($"[MotelyWorker] JAML parse error: {parseError}");
+                    await Task.Delay(2000, cts.Token).ConfigureAwait(false);
+                    continue;
+                }
+
+                // ── SEARCH ───────────────────────────────────────────────
+                var matchResults = new ConcurrentBag<SeedResultDto>();
+                long seedsSearched = 0;
+                long endBatchExclusive = claim.BatchIndex + Math.Max(1, claim.Remaining);
+
+                var plan = JamlSearchBuilder.CreatePlan(config);
+                var settings = plan.Settings
+                    .WithDeck(config.Deck)
+                    .WithStake(config.Stake)
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(claim.BatchCharCount)
+                    .WithStartBatchIndex(claim.BatchIndex)
+                    .WithEndBatchIndex(endBatchExclusive)
+                    .WithSequentialSearch();
+
+                settings.WithSeedMatchCallback(line =>
+                {
+                    int comma = line.IndexOf(',');
+                    if (comma < 0) { matchResults.Add(new SeedResultDto { Seed = line }); return; }
+                    string seed = line[..comma];
+                    int comma2 = line.IndexOf(',', comma + 1);
+                    var scoreSpan = comma2 >= 0 ? line.AsSpan(comma + 1, comma2 - comma - 1) : line.AsSpan(comma + 1);
+                    matchResults.Add(new SeedResultDto { Seed = seed, Score = int.TryParse(scoreSpan, out int s) ? s : 0 });
+                });
+
+                try
+                {
+                    Console.WriteLine($"[MotelyWorker] Searching filter: {claim.FilterId}");
+                    using var search = settings.Start();
+                    search.Start(cts.Token);
+                    await search.WaitForCompletionAsync(cts.Token);
+                    seedsSearched = search.TotalSeedsSearched;
                 }
                 catch (OperationCanceledException)
                 {
+                    Console.Error.WriteLine("\n[MotelyWorker] Search cancelled.");
                     break;
                 }
-                continue;
-            }
 
-            if (claim.Idle)
-            {
-                Console.Error.Write("\r[MotelyWorker] Idle — no work available. Waiting...          ");
-                await Task.Delay(claim.RetryAfterMs, cts.Token).ConfigureAwait(false);
-                continue;
-            }
+                totalSeedsSearched += seedsSearched;
+                totalMatches += matchResults.Count;
 
-            if (string.IsNullOrEmpty(claim.Jaml) || string.IsNullOrEmpty(claim.FilterId))
-            {
-                Console.Error.WriteLine("[MotelyWorker] Invalid pool claim response. Retrying...");
-                await Task.Delay(2000, cts.Token).ConfigureAwait(false);
-                continue;
-            }
+                var results = matchResults.ToArray();
 
-            // ── PARSE JAML ───────────────────────────────────────────
-            if (!JamlConfigLoader.TryLoad(claim.Jaml, out var config, out var parseError) || config is null)
-            {
-                Console.Error.WriteLine($"[MotelyWorker] JAML parse error: {parseError}");
-                await Task.Delay(2000, cts.Token).ConfigureAwait(false);
-                continue;
-            }
-            // deck/stake come from JAML - no override needed
+                // ── SAVE TO LOCAL DUCKLAKE ────────────────────────────────
+                if (results.Length > 0)
+                {
+                    var sink = GetOrOpenSink(claim.FilterId!);
+                    if (sink != null)
+                    {
+                        foreach (var r in results)
+                            sink.AppendScoredResult(r.Seed, r.Score, ReadOnlySpan<int>.Empty);
+                    }
+                }
 
-            // ── SEARCH ───────────────────────────────────────────────
-            var matchResults = new ConcurrentBag<SeedResultDto>();
-            long seedsSearched = 0;
-            long endBatchExclusive = claim.BatchIndex + Math.Max(1, claim.Remaining);
+                // ── SUBMIT TO POOL ───────────────────────────────────────
+                var submitBody = new SubmitResultsDto
+                {
+                    StartBatch = claim.BatchIndex,
+                    EndBatch = endBatchExclusive,
+                    Results = results,
+                    SeedsSearched = seedsSearched,
+                };
 
-            var plan = JamlSearchBuilder.CreatePlan(config);
-            var settings = plan.Settings
-                .WithDeck(config.Deck)
-                .WithStake(config.Stake)
-                .WithThreadCount(threads)
-                .WithBatchCharacterCount(claim.BatchCharCount)
-                .WithStartBatchIndex(claim.BatchIndex)
-                .WithEndBatchIndex(endBatchExclusive)
-                .WithSequentialSearch();
-
-            settings.WithSeedMatchCallback(line =>
-            {
-                int comma = line.IndexOf(',');
-                if (comma < 0) { matchResults.Add(new SeedResultDto { Seed = line }); return; }
-                string seed = line[..comma];
-                int comma2 = line.IndexOf(',', comma + 1);
-                var scoreSpan = comma2 >= 0 ? line.AsSpan(comma + 1, comma2 - comma - 1) : line.AsSpan(comma + 1);
-                matchResults.Add(new SeedResultDto { Seed = seed, Score = int.TryParse(scoreSpan, out int s) ? s : 0 });
-            });
-
-            try
-            {
-                Console.WriteLine($"[MotelyWorker] Searching filter: {claim.FilterId}");
-                using var search = settings.Start();
-                search.Start(cts.Token);
-                await search.WaitForCompletionAsync(cts.Token);
-                seedsSearched = search.TotalSeedsSearched;
-            }
-            catch (OperationCanceledException)
-            {
-                Console.Error.WriteLine("\n[MotelyWorker] Search cancelled.");
-                break;
-            }
-
-            totalSeedsSearched += seedsSearched;
-            totalMatches += matchResults.Count;
-
-            // ── SUBMIT ───────────────────────────────────────────────
-            var submitBody = new SubmitResultsDto
-            {
-                StartBatch = claim.BatchIndex,
-                EndBatch = endBatchExclusive,
-                Results = matchResults.ToArray(),
-                SeedsSearched = seedsSearched,
-            };
-
-            try
-            {
-                await pool.SubmitResultsAsync(claim.FilterId!, submitBody, cts.Token);
-            }
-            catch (OperationCanceledException) { break; }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"\n[MotelyWorker] Submit failed: {ex.Message}. Retrying...");
                 try
                 {
-                    await Task.Delay(2000, cts.Token);
                     await pool.SubmitResultsAsync(claim.FilterId!, submitBody, cts.Token);
                 }
-                catch
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex)
                 {
-                    Console.Error.WriteLine("[MotelyWorker] Submit retry failed. Results lost for this chunk.");
+                    Console.Error.WriteLine($"\n[MotelyWorker] Submit failed: {ex.Message}. Retrying...");
+                    try
+                    {
+                        await Task.Delay(2000, cts.Token);
+                        await pool.SubmitResultsAsync(claim.FilterId!, submitBody, cts.Token);
+                    }
+                    catch
+                    {
+                        Console.Error.WriteLine("[MotelyWorker] Submit retry failed. Results are saved locally but not submitted to pool.");
+                    }
+                }
+
+                chunksCompleted++;
+
+                var elapsed = DateTime.UtcNow - startTime;
+                double speed = elapsed.TotalSeconds > 0 ? totalSeedsSearched / elapsed.TotalSeconds : 0;
+                Console.Error.Write(
+                    $"\r[MotelyWorker] Filter:{claim.FilterId} | Block:{claim.BatchIndex} | Seeds: {totalSeedsSearched:N0} | Matches: {totalMatches} | {speed:N0} seeds/s  "
+                );
+            }
+        }
+        finally
+        {
+            // ── FLUSH & CLOSE ALL LOCAL SINKS ────────────────────────
+            foreach (var (fId, sink) in localSinks)
+            {
+                try
+                {
+                    sink.Dispose();
+                    Console.Error.WriteLine($"\n[MotelyWorker] Flushed DuckLake for {fId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"\n[MotelyWorker] Warning: DuckLake flush failed for {fId}: {ex.Message}");
                 }
             }
-
-            chunksCompleted++;
-
-            var elapsed = DateTime.UtcNow - startTime;
-            double speed = elapsed.TotalSeconds > 0 ? totalSeedsSearched / elapsed.TotalSeconds : 0;
-            Console.Error.Write(
-                $"\r[MotelyWorker] Filter:{claim.FilterId} | Block:{claim.BatchIndex}/{claim.Remaining} remaining | Seeds: {totalSeedsSearched:N0} | Matches: {totalMatches} | {speed:N0} seeds/s  "
-            );
         }
 
         PrintSummary(workerId, chunksCompleted, totalSeedsSearched, totalMatches, startTime);

@@ -27,11 +27,13 @@ internal sealed class PoolClient : IDisposable
         _http.Timeout = TimeSpan.FromSeconds(30);
     }
 
-    /// <summary>POST /api/search/helper action=request — claim one block from the next filter needing help.</summary>
-    public async Task<PoolClaimResponseDto> ClaimAsync(string? workerId, CancellationToken ct = default)
+    /// <summary>POST /api/search/helper action=request — claim one block.</summary>
+    /// <param name="workerId">Worker identifier for heartbeat tracking.</param>
+    /// <param name="filterId">Optional: target a specific filter. Null = any active filter ("GIMMIE WORK").</param>
+    public async Task<PoolClaimResponseDto> ClaimAsync(string? workerId, string? filterId = null, CancellationToken ct = default)
     {
         var url = _poolUrl;
-        var body = new PoolClaimRequestDto { WorkerId = workerId };
+        var body = new PoolClaimRequestDto { WorkerId = workerId, FilterId = filterId };
         var resp = await _http.PostAsJsonAsync(url, body, WorkerJsonContext.Default.PoolClaimRequestDto, ct);
         if (!resp.IsSuccessStatusCode)
         {

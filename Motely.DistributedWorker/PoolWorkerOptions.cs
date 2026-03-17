@@ -8,4 +8,17 @@ public sealed class PoolWorkerOptions
     public string Url { get; set; } = "";
     public int Threads { get; set; } = Environment.ProcessorCount;
     public string WorkerId { get; set; } = "";
+
+    /// <summary>
+    /// Base directory for local DuckLake result files. One .db file per filterId.
+    /// Default: MotelyData/sinks/ in the working directory.
+    /// Set to empty string to disable local DB saving.
+    /// </summary>
+    public string LocalDbPath { get; set; } = "MotelyData/sinks";
+
+    /// <summary>
+    /// Optional: only claim blocks for this specific filter ID.
+    /// If empty, claim from whatever active session needs help most.
+    /// </summary>
+    public string FilterId { get; set; } = "";
 }
