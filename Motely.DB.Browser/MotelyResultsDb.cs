@@ -70,6 +70,7 @@ public sealed class MotelyResultsDb : IDisposable
         var json = await DuckDbWasmInterop.QueryParquetAsync(
             parquetUrl,
             whereClause ?? "",
+            "score DESC",
             limit);
 
         return ParseQueryResults(json);

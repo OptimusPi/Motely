@@ -49,9 +49,7 @@
   "scripts": {
     "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
     "build": "npm run generate:jaml-schema && node ./node_modules/typescript/lib/tsc.js",
-    "stage-framework": "node ../stage-packages.mjs browser",
-    "prepack": "npm run build && npm run stage-framework",
-    "prepublishOnly": "npm run prepack"
+    "stage-framework": "node ../stage-packages.mjs browser"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
