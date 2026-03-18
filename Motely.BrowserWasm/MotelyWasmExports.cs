@@ -39,7 +39,7 @@ public static partial class MotelyWasmExports
     public static string GetVersion() => GetCachedVersion();
 
     [JSExport]
-    public static string GetRuntime() => "browser-wasm";
+    public static string GetPlatform() => "browser-wasm";
 
     [JSExport]
     public static bool IsSimdEnabled() => MotelyRuntime.IsSimdEnabled();
@@ -80,51 +80,30 @@ public static partial class MotelyWasmExports
 
     // ──────────────────────────────── Streaming (Cursor) ────────────────────────────────
 
-    /// <summary>
-    /// Stream Lucky Money results with cursor pattern.
-    /// state = -1 → start fresh. state = savedDouble → resume.
-    /// Returns JSON { results: bool[], nextState: double }.
-    /// </summary>
+    private static double _lastNextState = -1;
+    private static bool _lastGeneratedFirstPack = false;
+    private static string _lastStateJson = "";
+
     [JSExport]
-    public static Task<string> StreamLuckyMoneyAsync(
+    public static double GetLastNextState() => _lastNextState;
+
+    [JSExport]
+    public static bool GetLastGeneratedFirstPack() => _lastGeneratedFirstPack;
+
+    [JSExport]
+    public static string GetLastStateJson() => _lastStateJson;
+
+    [JSExport]
+    public static byte[] StreamLuckyMoney(
         string seed, string deck, string stake,
         double state, int take, double baseLuck)
     {
-        try
-        {
-            if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
-                return Task.FromResult(JsonSerializer.Serialize(
-                    new ErrorDto { Error = $"Unknown deck: {deck}" },
-                    MotelyJsonContext.Default.ErrorDto));
-
-            if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
-                return Task.FromResult(JsonSerializer.Serialize(
-                    new ErrorDto { Error = $"Unknown stake: {stake}" },
-                    MotelyJsonContext.Default.ErrorDto));
-
-            // state == -1 means fresh start (JS can't pass null for double)
-            double? cursorState = state < 0 ? null : state;
-
-            var (results, nextState) = MotelySeedStreamer.StreamLuckyMoney(
-                seed, deckEnum, stakeEnum, cursorState, take, baseLuck);
-
-            var dto = new LuckyMoneyStreamDto
-            {
-                Results = results,
-                NextState = nextState,
-            };
-            return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.LuckyMoneyStreamDto));
-        }
-        catch (Exception ex)
-        {
-            return Task.FromResult(JsonSerializer.Serialize(
-                new ErrorDto { Error = ex.Message },
-                MotelyJsonContext.Default.ErrorDto));
-        }
+        return StreamBoolEvent(seed, deck, stake, state, take,
+            (s, d, st, cs, t) => MotelySeedStreamer.StreamLuckyMoney(s, d, st, cs, t, baseLuck));
     }
 
     [JSExport]
-    public static Task<string> StreamLuckyMultAsync(
+    public static byte[] StreamLuckyMult(
         string seed, string deck, string stake,
         double state, int take, double baseLuck)
     {
@@ -133,31 +112,30 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamMisprintAsync(
+    public static int[] StreamMisprint(
         string seed, string deck, string stake,
         double state, int take)
     {
         try
         {
-            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var error))
-                return Task.FromResult(error);
+            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var _))
+                return [];
 
             double? cursorState = state < 0 ? null : state;
             var (results, nextState) = MotelySeedStreamer.StreamMisprint(
                 seed, deckEnum, stakeEnum, cursorState, take);
 
-            var dto = new IntStreamDto { Results = results, NextState = nextState };
-            return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.IntStreamDto));
+            _lastNextState = nextState;
+            return results;
         }
-        catch (Exception ex)
+        catch
         {
-            return Task.FromResult(JsonSerializer.Serialize(
-                new ErrorDto { Error = ex.Message }, MotelyJsonContext.Default.ErrorDto));
+            return [];
         }
     }
 
     [JSExport]
-    public static Task<string> StreamCavendishAsync(
+    public static byte[] StreamCavendish(
         string seed, string deck, string stake,
         double state, int take, double baseLuck)
     {
@@ -166,7 +144,7 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamGrosMichelAsync(
+    public static byte[] StreamGrosMichel(
         string seed, string deck, string stake,
         double state, int take, double baseLuck)
     {
@@ -175,7 +153,7 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamErraticDeckAsync(
+    public static string[] StreamErraticDeck(
         string seed, string deck, string stake,
         double state, int take)
     {
@@ -184,7 +162,7 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamWheelOfFortuneAsync(
+    public static string[] StreamWheelOfFortune(
         string seed, string deck, string stake,
         double state, int take, double baseLuck)
     {
@@ -195,7 +173,7 @@ public static partial class MotelyWasmExports
     // ── Tier 2: Per-ante streams ──
 
     [JSExport]
-    public static Task<string> StreamTagsAsync(
+    public static string[] StreamTags(
         string seed, string deck, string stake,
         int ante, double state, int take)
     {
@@ -204,36 +182,31 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamBoosterPacksAsync(
+    public static string[] StreamBoosterPacks(
         string seed, string deck, string stake,
         int ante, double state, bool generatedFirstPack, int take)
     {
         try
         {
             if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var error))
-                return Task.FromResult(error);
+                return [];
 
             double? cursorState = state < 0 ? null : state;
             var (results, nextState, nextGenerated) = MotelySeedStreamer.StreamBoosterPacks(
                 seed, deckEnum, stakeEnum, ante, cursorState, generatedFirstPack, take);
 
-            var dto = new PackStreamDto
-            {
-                Results = results,
-                NextState = nextState,
-                GeneratedFirstPack = nextGenerated,
-            };
-            return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.PackStreamDto));
+            _lastNextState = nextState;
+            _lastGeneratedFirstPack = nextGenerated;
+            return results;
         }
-        catch (Exception ex)
+        catch
         {
-            return Task.FromResult(JsonSerializer.Serialize(
-                new ErrorDto { Error = ex.Message }, MotelyJsonContext.Default.ErrorDto));
+            return [];
         }
     }
 
     [JSExport]
-    public static Task<string> StreamVouchersAsync(
+    public static string[] StreamVouchers(
         string seed, string deck, string stake,
         int ante, int voucherBitfield, double state, int take)
     {
@@ -263,54 +236,56 @@ public static partial class MotelyWasmExports
         return true;
     }
 
-    private static Task<string> StreamBoolEvent(
+    private static byte[] StreamBoolEvent(
         string seed, string deck, string stake, double state, int take,
         Func<string, MotelyDeck, MotelyStake, double?, int, (bool[] Results, double NextState)> streamer)
     {
         try
         {
-            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var error))
-                return Task.FromResult(error);
+            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var _))
+                return [];
 
             double? cursorState = state < 0 ? null : state;
             var (results, nextState) = streamer(seed, deckEnum, stakeEnum, cursorState, take);
 
-            var dto = new LuckyMoneyStreamDto { Results = results, NextState = nextState };
-            return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.LuckyMoneyStreamDto));
+            _lastNextState = nextState;
+
+            // Convert bool[] to byte[] for native MemoryView performance bridging
+            var bytes = new byte[results.Length];
+            for (int i = 0; i < results.Length; i++) bytes[i] = results[i] ? (byte)1 : (byte)0;
+            return bytes;
         }
-        catch (Exception ex)
+        catch
         {
-            return Task.FromResult(JsonSerializer.Serialize(
-                new ErrorDto { Error = ex.Message }, MotelyJsonContext.Default.ErrorDto));
+            return [];
         }
     }
 
-    private static Task<string> StreamStringEvent(
+    private static string[] StreamStringEvent(
         string seed, string deck, string stake, double state, int take,
         Func<string, MotelyDeck, MotelyStake, double?, int, (string[] Results, double NextState)> streamer)
     {
         try
         {
-            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var error))
-                return Task.FromResult(error);
+            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var _))
+                return [];
 
             double? cursorState = state < 0 ? null : state;
             var (results, nextState) = streamer(seed, deckEnum, stakeEnum, cursorState, take);
 
-            var dto = new StringStreamDto { Results = results, NextState = nextState };
-            return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.StringStreamDto));
+            _lastNextState = nextState;
+            return results;
         }
-        catch (Exception ex)
+        catch
         {
-            return Task.FromResult(JsonSerializer.Serialize(
-                new ErrorDto { Error = ex.Message }, MotelyJsonContext.Default.ErrorDto));
+            return [];
         }
     }
 
     // ── Tier 3: Multi-cursor streams ──
 
     [JSExport]
-    public static Task<string> StreamTarotAsync(
+    public static string[] StreamTarot(
         string seed, string deck, string stake,
         int ante, string source, string stateJson, int take)
     {
@@ -319,7 +294,7 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamPlanetAsync(
+    public static string[] StreamPlanet(
         string seed, string deck, string stake,
         int ante, string source, string stateJson, int take)
     {
@@ -328,7 +303,7 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamSpectralAsync(
+    public static string[] StreamSpectral(
         string seed, string deck, string stake,
         int ante, string source, string stateJson, int take)
     {
@@ -337,7 +312,7 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamStandardCardsAsync(
+    public static string[] StreamStandardCards(
         string seed, string deck, string stake,
         int ante, int flags, string stateJson, int take)
     {
@@ -346,7 +321,7 @@ public static partial class MotelyWasmExports
     }
 
     [JSExport]
-    public static Task<string> StreamJokersAsync(
+    public static string[] StreamJokers(
         string seed, string deck, string stake,
         int ante, string source, int flags, string stateJson, int take)
     {
@@ -356,14 +331,14 @@ public static partial class MotelyWasmExports
 
     // ── Stream helpers ── (multi-cursor)
 
-    private static Task<string> StreamItemEvent(
+    private static string[] StreamItemEvent(
         string seed, string deck, string stake, string stateJson, int take,
         Func<string, MotelyDeck, MotelyStake, double[]?, int, (string[] Results, double[] NextState)> streamer)
     {
         try
         {
-            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var error))
-                return Task.FromResult(error);
+            if (!TryParseEnums(deck, stake, out var deckEnum, out var stakeEnum, out var _))
+                return [];
 
             double[]? cursorState = string.IsNullOrEmpty(stateJson) || stateJson == "null"
                 ? null
@@ -371,13 +346,12 @@ public static partial class MotelyWasmExports
 
             var (results, nextState) = streamer(seed, deckEnum, stakeEnum, cursorState, take);
 
-            var dto = new ItemStreamDto { Results = results, NextState = nextState };
-            return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.ItemStreamDto));
+            _lastStateJson = JsonSerializer.Serialize(nextState, MotelyJsonContext.Default.DoubleArray);
+            return results;
         }
-        catch (Exception ex)
+        catch
         {
-            return Task.FromResult(JsonSerializer.Serialize(
-                new ErrorDto { Error = ex.Message }, MotelyJsonContext.Default.ErrorDto));
+            return [];
         }
     }
 
@@ -734,6 +708,11 @@ public static partial class MotelyWasmExports
         _cachedVersion ??= MotelyRuntime.GetVersion(typeof(MotelyWasmExports).Assembly);
 
     [JSExport]
-    private static string[] GetFeatureList() =>
-        MotelyRuntime.GetFeatureList("browser-wasm", GetAvailableThreadCount());
+    public static string[] GetFeatureList()
+    {
+        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate" };
+        if (IsSimdEnabled()) features.Add("simd");
+        features.Add($"{GetAvailableThreadCount()} threads");
+        return features.ToArray();
+    }
 }
