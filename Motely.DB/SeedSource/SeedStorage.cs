@@ -15,6 +15,14 @@ public static class SeedStoragePaths
 
     public static SeedStoragePath ResolveSource(string value)
     {
+        // Check if input is an HTTP/HTTPS URL
+        if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            // Return URL as-is for remote sources (DuckDB supports reading Parquet from URLs)
+            return new SeedStoragePath(value, value, IsExplicitPath: true);
+        }
+
         var resolved = Resolve(value, StandardSourceDirectory, "source", ensureParentDirectory: false);
         if (!File.Exists(resolved.ResolvedPath))
             throw new FileNotFoundException(
