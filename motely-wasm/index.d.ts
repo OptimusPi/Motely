@@ -61,21 +61,22 @@ export interface ValidateResult {
     deck?: string | null;
     stake?: string | null;
 }
-export interface SearchOptions {
-    threadCount?: number;
-    batchCharCount?: number;
-    startBatch?: number;
-    endBatch?: number;
-    cutoff?: string;
-    specificSeed?: string;
-    seeds?: string[];
-    keyword?: string;
-    randomSeeds?: number;
-    palindrome?: boolean;
+export interface SearchCallbacks {
     /** Called with native primitives every ~15ms during search. No JSON overhead. */
     onProgress?: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
     /** Called with native primitives for each new result found. No JSON overhead. */
     onResult?: (seed: string, score: number) => void;
+}
+export interface SearchRuntimeOptions extends SearchCallbacks {
+    threadCount?: number;
+    batchCharCount?: number;
+}
+export interface SequentialSearchOptions extends SearchRuntimeOptions {
+    startBatch?: number;
+    endBatch?: number;
+}
+export interface KeywordSearchOptions extends SearchRuntimeOptions {
+    padding?: string;
 }
 export interface ErrorResult {
     error: string;
@@ -110,7 +111,13 @@ export interface MotelyWasmApi {
      * @param options - Search parameters + onProgress/onResult callbacks
      * @returns Promise resolving to final search status with results
      */
-    startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo>;
+    startJamlSearch(jamlContent: string, options?: SequentialSearchOptions): Promise<SearchStatusInfo>;
+    verifySeed(jamlContent: string, seed: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
+    startSeedListSearch(jamlContent: string, seeds: string[], options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
+    startKeywordSearch(jamlContent: string, keyword: string, options?: KeywordSearchOptions): Promise<SearchStatusInfo>;
+    startKeywordsSearch(jamlContent: string, keywords: string[], options?: KeywordSearchOptions): Promise<SearchStatusInfo>;
+    startRandomSearch(jamlContent: string, count: number, options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
+    startPalindromeSearch(jamlContent: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
     /** Stop the current running search (non-blocking, sets cancellation flag) */
     stopSearch(): void;
     /** Dispose the current search and free memory. Returns Promise. */

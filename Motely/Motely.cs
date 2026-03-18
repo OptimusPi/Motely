@@ -257,7 +257,8 @@ public static partial class MotelyCore
         else
         {
             // For padLen > 3, generate combinations recursively
-            GenerateNPadVariations(keyword, padLen, validChars, "");
+            foreach (var seed in GenerateNPadVariations(keyword, padLen, validChars, ""))
+                yield return seed;
         }
     }
 

@@ -20,6 +20,16 @@ public class SeedProviderCountTests
     }
 
     [Fact]
+    public void GeneratePaddedSeeds_YieldsExpectedCount_ForPadLenGreaterThanThree()
+    {
+        char[] validChars = ['A', 'B', 'C'];
+        int expected = MotelyCore.GetPaddedSeedCount("JUST", 4, validChars);
+        int actual = MotelyCore.GeneratePaddedSeeds("JUST", 4, validChars).Count();
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public void PalindromeSeedProvider_ReportsExactSeedCount()
     {
         var provider = new MotelyPalindromeSeedProvider();
