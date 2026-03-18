@@ -12,7 +12,7 @@
     <PublishAot>true</PublishAot>
     <PublishNodeModule>true</PublishNodeModule>
     <PublishMultiPlatformNodeModule>true</PublishMultiPlatformNodeModule>
-    <PublishDir>$(MSBuildProjectDirectory)\..\motely-node\bin</PublishDir>
+    <PublishDir>$(MSBuildProjectDirectory)\..\motely-node\bin\$(RuntimeIdentifier)</PublishDir>
     <!-- PackNpmPackage disabled — publish-packages.ps1 runs npm pack from motely-node/ directly -->
     <IsAotCompatible>true</IsAotCompatible>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
