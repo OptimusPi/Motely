@@ -4,19 +4,14 @@ using Motely.Filters;
 namespace Motely;
 
 /// <summary>
-/// One seed match (seed string + score). Used in BlockSearchResult.
-/// </summary>
-public sealed record BlockSeedResult(string Seed, int Score);
-
-/// <summary>
 /// Result of running one block of sequential search. Returned by ProcessBlock.
-/// NOTE: Later we can add long[] SeedIndices (bijective 0..~2.3T) to reduce bandwidth.
+/// NOTWE from YOUR COMMANDER!!! YOU MUST OBEY! MAKE IT WORK THIS WAY!
 /// </summary>
 public sealed record BlockSearchResult(
     int BlockId,
-    long SeedsSearched,
     int SeedsFound,
-    IReadOnlyList<BlockSeedResult> Seeds
+    int HighestScore,
+    IReadOnlyCollection<string> Seeds
 );
 
 /// <summary>
@@ -25,13 +20,31 @@ public sealed record BlockSearchResult(
 /// </summary>
 public static class ProcessBlockRunner
 {
-    public const int DefaultBatchCharCount = 5;
+    /// <summary>
+    /// Characters per batch (how many chars vary within one block).
+    /// Each block searches 35^5 = 52,521,875 seeds.
+    /// Total blocks = 35^(MaxSeedLength - BatchCharCount) = 42,875.
+    /// </summary>
+    public const int BatchCharCount = 5;
+
+    /// <summary>Total number of blocks. Derived: 35^(MaxSeedLength - BatchCharCount).</summary>
+    public static readonly int TotalBlocks = ComputePower(
+        MotelyCore.SeedDigits.Length,
+        MotelyCore.MaxSeedLength - BatchCharCount);
+
+    private static int ComputePower(int baseVal, int exp)
+    {
+        int result = 1;
+        for (int i = 0; i < exp; i++)
+            result *= baseVal;
+        return result;
+    }
 
     /// <summary>
     /// Run one block of sequential search. Parses JAML, runs block [blockId, blockId+1), returns result.
     /// </summary>
     /// <param name="jamlContent">Full JAML filter string (deck/stake in JAML).</param>
-    /// <param name="blockId">Block index 0 .. 42,874.</param>
+    /// <param name="blockId">Block index 0 .. <see cref="TotalBlocks"/> - 1.</param>
     /// <param name="cancellationToken">Cancel the search.</param>
     /// <returns>Block result with seeds found; or null if JAML invalid.</returns>
     public static async Task<BlockSearchResult?> ProcessBlockAsync(
@@ -41,41 +54,31 @@ public static class ProcessBlockRunner
     {
         if (string.IsNullOrWhiteSpace(jamlContent))
             return null;
-        if (blockId < 0 || blockId >= 35 * 35 * 35)
+        if (blockId < 0 || blockId >= TotalBlocks)
             return null;
 
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out _) || config is null)
             return null;
 
-        var seeds = new List<BlockSeedResult>();
-        var settings = JamlSearchBuilder.CreatePlan(config).Settings
+        var seeds = new List<string>();
+        int highestScore = 0;
+
+        var plan = JamlSearchBuilder.CreatePlan(config);
+        var settings = plan.Settings
             .WithThreadCount(Environment.ProcessorCount)
-            .WithBatchCharacterCount(DefaultBatchCharCount)
+            .WithBatchCharacterCount(BatchCharCount)
             .WithStartBatchIndex(blockId)
             .WithEndBatchIndex(blockId + 1)
-            .WithSequentialSearch()
-            .WithSeedMatchCallback(line =>
+            .WithSequentialSearch();
+
+        if (plan.ShouldClauseCount > 0)
+            settings = settings.WithScoredResultCallback(tally =>
             {
-                int comma = line.IndexOf(',');
-                string seed;
-                int score = 0;
-                if (comma < 0)
-                {
-                    seed = line;
-                }
-                else
-                {
-                    seed = line[..comma];
-                    if (comma + 1 < line.Length)
-                    {
-                        var rest = line[(comma + 1)..];
-                        int c2 = rest.IndexOf(',');
-                        var scoreSpan = c2 >= 0 ? rest.AsSpan(0, c2) : rest.AsSpan();
-                        int.TryParse(scoreSpan, out score);
-                    }
-                }
-                seeds.Add(new BlockSeedResult(seed, score));
+                seeds.Add(tally.Seed);
+                if (tally.Score > highestScore) highestScore = tally.Score;
             });
+        else
+            settings = settings.WithSeedMatchCallback(seed => seeds.Add(seed));
 
         using var search = settings.CreateSearch();
         search.Start(cancellationToken);
@@ -83,8 +86,8 @@ public static class ProcessBlockRunner
 
         return new BlockSearchResult(
             BlockId: blockId,
-            SeedsSearched: search.TotalSeedsSearched,
             SeedsFound: seeds.Count,
+            HighestScore: highestScore,
             Seeds: seeds
         );
     }

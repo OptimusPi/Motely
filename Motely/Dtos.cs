@@ -95,28 +95,19 @@ public sealed class SearchOptionsDto
     public bool? Palindrome { get; set; }
 }
 
-public sealed class BlockSeedResultDto
-{
-    [JsonPropertyName("seed")]
-    public string Seed { get; set; } = "";
-
-    [JsonPropertyName("score")]
-    public int Score { get; set; }
-}
-
 public sealed class BlockSearchResultDto
 {
     [JsonPropertyName("blockId")]
     public int BlockId { get; set; }
 
-    [JsonPropertyName("seedsSearched")]
-    public long SeedsSearched { get; set; }
-
     [JsonPropertyName("seedsFound")]
     public int SeedsFound { get; set; }
 
+    [JsonPropertyName("highestScore")]
+    public int HighestScore { get; set; }
+
     [JsonPropertyName("seeds")]
-    public BlockSeedResultDto[] Seeds { get; set; } = [];
+    public string[] Seeds { get; set; } = [];
 }
 
 public sealed class SearchHitDto
@@ -128,7 +119,7 @@ public sealed class SearchHitDto
     public int Score { get; set; }
 
     [JsonPropertyName("tallies")]
-    public string[] Tallies { get; set; } = [];
+    public int[] Tallies { get; set; } = [];
 }
 
 public sealed class SearchStatusDto

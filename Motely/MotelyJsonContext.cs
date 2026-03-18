@@ -29,4 +29,5 @@ namespace Motely;
 [JsonSerializable(typeof(PackStreamDto))]
 [JsonSerializable(typeof(ItemStreamDto))]
 [JsonSerializable(typeof(double[]))]
+[JsonSerializable(typeof(int[]))]
 public partial class MotelyJsonContext : JsonSerializerContext { }

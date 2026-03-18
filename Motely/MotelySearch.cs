@@ -1050,6 +1050,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 CompletedBatchCount = thisCompletedCount,
                 TotalBatchCount = totalBatches,
                 SeedsSearched = seedsSearched,
+                MatchingSeeds = MatchingSeeds,
                 SeedsPerMillisecond = seedsPerMs,
                 PercentComplete = percentComplete,
                 ElapsedTime = TimeSpan.FromMilliseconds(elapsedMS),

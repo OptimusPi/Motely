@@ -47,12 +47,20 @@ export async function loadMotely(options) {
     const allExports = await runtime.getAssemblyExports(config.mainAssemblyName);
     const raw = allExports.Motely.BrowserWasm.MotelyWasmExports;
     runtime.runMain().catch(err => console.error("[motely-wasm] runMain failed:", err));
-    const [versionJson, capabilitiesJson] = await Promise.all([
-        raw.GetVersionAsync(),
-        raw.GetCapabilitiesAsync(),
-    ]);
-    const cachedVersion = JSON.parse(versionJson);
-    const cachedCapabilities = JSON.parse(capabilitiesJson);
+    const cachedVersion = {
+        version: raw.GetVersion(),
+        runtime: raw.GetRuntime(),
+        features: raw.GetFeatureList(),
+    };
+    const cachedCapabilities = {
+        simd: raw.IsSimdEnabled(),
+        threads: raw.IsThreadingEnabled(),
+        availableThreadCount: raw.GetAvailableThreadCount(),
+        processorCount: raw.GetProcessorCount(),
+        runtime: cachedVersion.runtime,
+        version: cachedVersion.version,
+        timestamp: new Date().toISOString(),
+    };
     const api = {
         getVersion: () => cachedVersion,
         getCapabilities: () => cachedCapabilities,
