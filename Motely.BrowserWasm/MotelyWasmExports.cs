@@ -32,46 +32,25 @@ public static partial class MotelyWasmExports
 
     // Cached immutable values (computed once, reused forever)
     private static string? _cachedVersion;
-    private static string[]? _cachedFeatures;
 
     // ──────────────────────────────── Version / Capabilities ────────────────────────────────
 
     [JSExport]
-    public static Task<string> GetVersionAsync()
-    {
-        var dto = new VersionDto
-        {
-            Version = GetCachedVersion(),
-            Runtime = "browser-wasm",
-            Features = GetFeatureList(),
-        };
-        return Task.FromResult(JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.VersionDto));
-    }
+    public static string GetVersion() => GetCachedVersion();
 
     [JSExport]
-    public static Task<string> GetCapabilitiesAsync()
-    {
-        var dto = new CapabilitiesDto
-        {
-            Simd = IsSimdEnabled(),
-            Threads = IsThreadingEnabled(),
-            AvailableThreadCount = GetAvailableThreadCount(),
-            ProcessorCount = GetProcessorCount(),
-            Runtime = "browser-wasm",
-            Version = GetCachedVersion(),
-            Timestamp = DateTime.UtcNow.ToString("O"),
-        };
-        return Task.FromResult(
-            JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.CapabilitiesDto)
-        );
-    }
+    public static string GetRuntime() => "browser-wasm";
 
-    public static bool IsSimdEnabled() => System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
+    [JSExport]
+    public static bool IsSimdEnabled() => MotelyRuntime.IsSimdEnabled();
 
+    [JSExport]
     public static bool IsThreadingEnabled() => GetAvailableThreadCount() > 1;
 
+    [JSExport]
     public static int GetAvailableThreadCount() => Environment.ProcessorCount;
 
+    [JSExport]
     public static int GetProcessorCount() => Environment.ProcessorCount;
 
     // ──────────────────────────────── Analyzer ────────────────────────────────
@@ -83,28 +62,7 @@ public static partial class MotelyWasmExports
     {
         try
         {
-            if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
-                return JsonSerializer.Serialize(
-                    new ErrorDto { Error = $"Unknown deck: {deck}" },
-                    global::Motely.MotelyJsonContext.Default.ErrorDto
-                );
-
-            if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
-                return JsonSerializer.Serialize(
-                    new ErrorDto { Error = $"Unknown stake: {stake}" },
-                    global::Motely.MotelyJsonContext.Default.ErrorDto
-                );
-
-            var cfg = new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum);
-            var analysis = MotelySeedAnalyzer.Analyze(cfg);
-
-            if (!string.IsNullOrEmpty(analysis.Error))
-                return JsonSerializer.Serialize(
-                    new ErrorDto { Error = analysis.Error },
-                    global::Motely.MotelyJsonContext.Default.ErrorDto
-                );
-
-            var dto = MapAnalysisToDto(analysis, seed, deckEnum, stakeEnum);
+            var dto = MotelyRuntime.AnalyzeSeed(seed, deck, stake);
             return JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.SeedAnalysisDto);
         }
         catch (Exception ex)
@@ -430,41 +388,8 @@ public static partial class MotelyWasmExports
     /// </summary>
     public static string ValidateJaml(string jamlContent)
     {
-        try
-        {
-            if (
-                !JamlConfigLoader.TryLoad(jamlContent, out var config, out var parseError)
-                || config == null
-            )
-            {
-                return JsonSerializer.Serialize(
-                    new ValidateResultDto
-                    {
-                        Valid = false,
-                        Error = parseError ?? "Failed to parse JAML",
-                    },
-                    global::Motely.MotelyJsonContext.Default.ValidateResultDto
-                );
-            }
-
-            return JsonSerializer.Serialize(
-                new ValidateResultDto
-                {
-                    Valid = true,
-                    Name = config.Name,
-                    Deck = config.Deck.ToString(),
-                    Stake = config.Stake.ToString(),
-                },
-                global::Motely.MotelyJsonContext.Default.ValidateResultDto
-            );
-        }
-        catch (Exception ex)
-        {
-            return JsonSerializer.Serialize(
-                new ValidateResultDto { Valid = false, Error = ex.Message },
-                global::Motely.MotelyJsonContext.Default.ValidateResultDto
-            );
-        }
+        var dto = MotelyRuntime.ValidateJaml(jamlContent);
+        return JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.ValidateResultDto);
     }
 
     [JSExport]
@@ -511,6 +436,8 @@ public static partial class MotelyWasmExports
                         SpecificSeed = parsedOptions.SpecificSeed,
                         Seeds = parsedOptions.Seeds,
                         Keyword = parsedOptions.Keyword,
+                        Keywords = parsedOptions.Keywords,
+                        Padding = parsedOptions.Padding,
                         RandomSeeds = parsedOptions.RandomSeeds,
                         Palindrome = parsedOptions.Palindrome,
                     };
@@ -530,7 +457,6 @@ public static partial class MotelyWasmExports
             )
                 return Task.FromResult(ErrorJson("Invalid options.batchCharCount. Provide an integer in range 1..7."));
 
-            // Browser WASM: force single-thread (no thread pool in browser by default)
             int threadCount = 1;
             if (options.ThreadCount.Value > 1 && IsThreadingEnabled())
                 threadCount = Math.Min(options.ThreadCount.Value, Environment.ProcessorCount);
@@ -542,31 +468,82 @@ public static partial class MotelyWasmExports
                 ));
             }
 
+            // Normalize seeds and keywords inline
+            var normalizedSeeds = new List<string>();
+            var normalizedKeywords = new List<string>();
+
+            if (options.SpecificSeed != null)
+            {
+                if (string.IsNullOrWhiteSpace(options.SpecificSeed))
+                    return Task.FromResult(ErrorJson("specificSeed cannot be empty."));
+                normalizedSeeds.Add(options.SpecificSeed.Trim().ToUpperInvariant());
+            }
+            if (options.Seeds != null)
+            {
+                if (options.Seeds.Length == 0)
+                    return Task.FromResult(ErrorJson("seeds must contain at least one seed."));
+                foreach (var s in options.Seeds)
+                {
+                    if (string.IsNullOrWhiteSpace(s))
+                        return Task.FromResult(ErrorJson("seeds entry cannot be empty."));
+                    normalizedSeeds.Add(s.Trim().ToUpperInvariant());
+                }
+            }
+            if (options.Keyword != null)
+            {
+                if (string.IsNullOrWhiteSpace(options.Keyword))
+                    return Task.FromResult(ErrorJson("keyword cannot be empty."));
+                var kw = options.Keyword.Trim().ToUpperInvariant();
+                if (kw.Length > MotelyCore.MaxSeedLength)
+                    return Task.FromResult(ErrorJson($"keyword is too long (max {MotelyCore.MaxSeedLength} chars)."));
+                normalizedKeywords.Add(kw);
+            }
+            if (options.Keywords != null)
+            {
+                if (options.Keywords.Length == 0)
+                    return Task.FromResult(ErrorJson("keywords must contain at least one keyword."));
+                foreach (var kw in options.Keywords)
+                {
+                    if (string.IsNullOrWhiteSpace(kw))
+                        return Task.FromResult(ErrorJson("keywords entry cannot be empty."));
+                    var norm = kw.Trim().ToUpperInvariant();
+                    if (norm.Length > MotelyCore.MaxSeedLength)
+                        return Task.FromResult(ErrorJson($"keyword '{norm}' is too long (max {MotelyCore.MaxSeedLength} chars)."));
+                    normalizedKeywords.Add(norm);
+                }
+            }
+
             // Cancel any existing search first (only one at a time)
             StopSearch();
-
             _resultQueue.Clear();
 
-            var (request, requestError) = MotelySearchRequestFactory.FromOptions(
-                options,
-                threadCount,
-                options.BatchCharCount.Value
-            );
-            if (requestError != null || request == null)
-                return Task.FromResult(
-                    ErrorJson(requestError ?? "Search request could not be created.")
-                );
+            // Build plan directly from config
+            var plan = JamlSearchBuilder.CreatePlan(config);
+            var filterId = config.FilterId;
+            var settings = plan.Settings
+                .WithDeck(config.Deck)
+                .WithStake(config.Stake)
+                .WithThreadCount(threadCount)
+                .WithBatchCharacterCount(options.BatchCharCount.Value);
 
-            var (plan, filterId, prepareError) = MotelySearchOrchestrator.PrepareSearch(
-                config,
-                request
-            );
-            if (prepareError != null || plan == null || filterId == null)
-                return Task.FromResult(
-                    ErrorJson(prepareError ?? "Search could not be prepared.")
-                );
+            if (options.StartBatch.HasValue)
+                settings = settings.WithStartBatchIndex(options.StartBatch.Value);
+            if (options.EndBatch.HasValue)
+                settings = settings.WithEndBatchIndex(options.EndBatch.Value);
 
-            var settings = plan.Settings.WithProgressCallback(prog =>
+            var modeOpts = new SearchOptionsDto
+            {
+                Seeds = normalizedSeeds.Count > 0 ? normalizedSeeds.ToArray() : null,
+                Keywords = normalizedKeywords.Count > 0 ? normalizedKeywords.ToArray() : null,
+                Padding = string.IsNullOrWhiteSpace(options.Padding) ? null : options.Padding.Trim().ToUpperInvariant(),
+                RandomSeeds = options.RandomSeeds,
+                Palindrome = options.Palindrome == true ? true : null,
+            };
+            var (_, modeError) = settings.ApplySearchMode(modeOpts);
+            if (modeError != null)
+                return Task.FromResult(ErrorJson(modeError));
+
+            settings = settings.WithProgressCallback(prog =>
             {
                 onProgress(
                     prog.SeedsSearched,
@@ -579,7 +556,7 @@ public static partial class MotelyWasmExports
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
-                    var hit = CreateSearchHit(plan.ShouldLabels, tally);
+                    var hit = CreateSearchHit(tally);
                     onResult(hit.Seed, hit.Score);
                     _resultQueue.Enqueue(hit);
                 });
@@ -732,95 +709,31 @@ public static partial class MotelyWasmExports
         return JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.SearchStatusDto);
     }
 
-    private static SearchHitDto CreateSearchHit(
-        string[] shouldLabels,
-        MotelySeedScoreTally tally
-    )
+    private static SearchHitDto CreateSearchHit(MotelySeedScoreTally tally)
     {
         return new SearchHitDto
         {
             Seed = tally.Seed,
             Score = tally.Score,
-            Tallies = BuildTallies(shouldLabels, tally),
+            Tallies = BuildTallies(tally),
         };
     }
 
-    private static string[] BuildTallies(
-        string[] shouldLabels,
-        MotelySeedScoreTally tally
-    )
+    private static int[] BuildTallies(MotelySeedScoreTally tally)
     {
-        if (shouldLabels.Length == 0 || tally.TallyCount == 0)
+        if (tally.TallyCount == 0)
             return [];
 
-        int count = Math.Min(shouldLabels.Length, tally.TallyCount);
-        var tallies = new string[count];
-        for (int i = 0; i < count; i++)
-            tallies[i] = $"{shouldLabels[i]}={tally.GetTally(i)}";
-
+        var tallies = new int[tally.TallyCount];
+        for (int i = 0; i < tally.TallyCount; i++)
+            tallies[i] = tally.GetTally(i);
         return tallies;
     }
 
     private static string GetCachedVersion() =>
-        _cachedVersion ??=
-            MotelyBuildVersion.For(typeof(MotelyWasmExports).Assembly);
+        _cachedVersion ??= MotelyRuntime.GetVersion(typeof(MotelyWasmExports).Assembly);
 
-    private static string[] GetFeatureList()
-    {
-        if (_cachedFeatures is not null)
-            return _cachedFeatures;
-        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate" };
-        if (IsSimdEnabled())
-            features.Add("simd");
-        if (GetAvailableThreadCount() > 1)
-            features.Add("threads");
-        _cachedFeatures = features.ToArray();
-        return _cachedFeatures;
-    }
-
-    private static SeedAnalysisDto MapAnalysisToDto(
-        MotelySeedAnalysis analysis,
-        string seed,
-        MotelyDeck deck,
-        MotelyStake stake
-    )
-    {
-        return new SeedAnalysisDto
-        {
-            Seed = seed,
-            Deck = deck.ToString(),
-            Stake = stake.ToString(),
-            Error = analysis.Error,
-            ErraticDeckComposition =
-                analysis.ErraticDeckComposition?.Split(
-                    ',',
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
-                ) ?? [],
-            Antes = analysis
-                .Antes.Select(a => new AnteAnalysisDto
-                {
-                    Ante = a.Ante,
-                    Boss = a.Boss.ToString(),
-                    Voucher = a.Voucher.ToString(),
-                    SmallBlindTag = a.SmallBlindTag.ToString(),
-                    BigBlindTag = a.BigBlindTag.ToString(),
-                    DrawOrder = a.DrawOrder ?? "",
-                    ShopQueue = a
-                        .ShopQueue.Select(item => new ShopItemDto
-                        {
-                            Id = item.Type.ToString(),
-                            Name = item.ToString(),
-                        })
-                        .ToArray(),
-                    Packs = a
-                        .Packs.Select(p => new PackDto
-                        {
-                            Type = p.Type.ToString(),
-                            Items = p.Items.Select(i => i.ToString()).ToArray(),
-                        })
-                        .ToArray(),
-                })
-                .ToArray(),
-        };
-    }
+    [JSExport]
+    private static string[] GetFeatureList() =>
+        MotelyRuntime.GetFeatureList("browser-wasm", GetAvailableThreadCount());
 }

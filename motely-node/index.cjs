@@ -141,12 +141,11 @@ function normalizeSearchParams(options = {}) {
 // ── Search result helpers ─────────────────────────────────────────────────────
 
 function collectResults(dto, results, onResult) {
-  // node-api-dotnet marshals C# PascalCase properties as camelCase in JS.
-  // BlockSearchResultDto.Seeds → dto.seeds,  BlockSeedResultDto.Seed → hit.seed
-  for (const hit of dto.seeds ?? []) {
-    const result = { seed: hit.seed, score: hit.score ?? 0 };
+  // seeds is now string[] — no per-seed score, highestScore on the block.
+  for (const seed of dto.seeds ?? []) {
+    const result = { seed, score: dto.highestScore ?? 0 };
     results.push(result);
-    onResult?.(result.seed, result.score);
+    onResult?.(seed, result.score);
   }
 }
 
@@ -154,10 +153,11 @@ async function runSearchWithRaw(raw, jamlContent, options = {}) {
   const { onProgress, onResult, ...searchParams } = options;
   const results = [];
   const CHUNK = 500;
-  const TOTAL_BLOCKS = 35 * 35 * 35;
+  // 35^(8-5) = 42,875 blocks — mirrors ProcessBlockRunner.TotalBlocks
+  const TOTAL_BLOCKS = Math.pow(35, 8 - 5);
 
   const onBlock = (dto) => {
-    onProgress?.(dto.seedsSearched ?? 0, dto.seedsFound ?? 0, 0, dto.seeds?.length ?? 0);
+    onProgress?.(dto.seedsFound ?? 0, dto.highestScore ?? 0, 0, dto.seeds?.length ?? 0);
     collectResults(dto, results, onResult);
   };
 

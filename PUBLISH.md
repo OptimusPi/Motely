@@ -20,10 +20,10 @@ No Blazor. Use **WebAssembly Browser App** and **dotnet/runtime WASM** docs only
 3. **Publish**
    - Bump version in package.json, then `npm publish` from the package directory (e.g. `motely-node/`).
 
-### Motely.npm (motely-wasm)
+### motely-wasm
 
 - Same principles: no self-reference, no `file:`/`link:` deps; `main`/`types`/`exports`/`files` correct.
-- Bump version, then `npm publish` from `Motely.npm/`.
+- Bump version, then `npm publish` from `motely-wasm/`.
 
 ### Prepack
 

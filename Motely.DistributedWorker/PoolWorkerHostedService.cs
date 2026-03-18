@@ -115,19 +115,16 @@ public sealed class PoolWorkerHostedService : BackgroundService
                     .WithEndBatchIndex(endBatchExclusive)
                     .WithSequentialSearch();
 
-                settings.WithSeedMatchCallback(line =>
-                {
-                    int comma = line.IndexOf(',');
-                    if (comma < 0) { matchResults.Add(new SeedResultDto { Seed = line }); return; }
-                    string seed = line[..comma];
-                    int comma2 = line.IndexOf(',', comma + 1);
-                    var scoreSpan = comma2 >= 0 ? line.AsSpan(comma + 1, comma2 - comma - 1) : line.AsSpan(comma + 1);
-                    matchResults.Add(new SeedResultDto { Seed = seed, Score = int.TryParse(scoreSpan, out int s) ? s : 0 });
-                });
+                if (plan.ShouldClauseCount > 0)
+                    settings = settings.WithScoredResultCallback(tally =>
+                        matchResults.Add(new SeedResultDto { Seed = tally.Seed, Score = tally.Score }));
+                else
+                    settings = settings.WithSeedMatchCallback(seed =>
+                        matchResults.Add(new SeedResultDto { Seed = seed }));
 
                 try
                 {
-                    using var search = settings.Start();
+                    using var search = settings.CreateSearch();
                     search.Start(stoppingToken);
                     await search.WaitForCompletionAsync(stoppingToken);
                     seedsSearched = search.TotalSeedsSearched;

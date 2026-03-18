@@ -42,19 +42,14 @@ export interface SeedAnalysisInfo {
 export interface SearchResultInfo {
   seed: string;
   score: number;
-  tallies?: string[] | null;
-}
-
-export interface BlockSeedResult {
-  seed: string;
-  score: number;
+  tallies?: number[] | null;
 }
 
 export interface BlockSearchResult {
   blockId: number;
-  seedsSearched: number;
   seedsFound: number;
-  seeds: BlockSeedResult[];
+  highestScore: number;
+  seeds: string[];
 }
 
 export interface ValidateResult {

@@ -2,6 +2,18 @@
 # Run from MotelyJAML repo root.
 # Requires: Docker
 $ErrorActionPreference = "Stop"
+$root = (Get-Location).Path
+@(
+    'Motely\obj',
+    'Motely.Orchestration\obj',
+    'Motely.NodeAddon\obj'
+) | ForEach-Object {
+    $path = Join-Path $root $_
+    if (Test-Path $path) {
+        Remove-Item -Recurse -Force $path
+        Write-Host "Removed stale $_ before linux Docker publish" -ForegroundColor DarkGray
+    }
+}
 $src = (Get-Location).Path -replace '\\', '/'
 $src = $src -replace '\\', '/'
 docker build -f Dockerfile.linux-node -t motely-linux-node .

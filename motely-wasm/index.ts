@@ -81,10 +81,11 @@ export interface SearchOptions {
   batchCharCount?: number;
   startBatch?: number;
   endBatch?: number;
-  cutoff?: string;
   specificSeed?: string;
   seeds?: string[];
   keyword?: string;
+  keywords?: string[];
+  padding?: string;
   randomSeeds?: number;
   palindrome?: boolean;
   /** Called with native primitives every ~15ms during search. No JSON overhead. */
@@ -162,14 +163,19 @@ export interface LoadMotelyOptions {
 
 /** Shape of the raw [JSExport] methods from .NET (async where required for threaded WASM) */
 interface RawExports {
-  GetVersionAsync(): Promise<string>;
-  GetCapabilitiesAsync(): Promise<string>;
+  GetVersion(): string;
+  GetRuntime(): string;
+  GetFeatureList(): string[];
+  IsSimdEnabled(): boolean;
+  IsThreadingEnabled(): boolean;
+  GetAvailableThreadCount(): number;
+  GetProcessorCount(): number;
   AnalyzeSeedAsync(seed: string, deck: string, stake: string): Promise<string>;
   ValidateJamlAsync(jamlContent: string): Promise<string>;
   StartJamlSearch(
     jamlContent: string,
     optionsJson: string,
-    onProgress: (progressJson: string) => void,
+    onProgress: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => void,
     onResult: (seed: string, score: number) => void,
   ): Promise<string>;
   StopSearch(): void;
@@ -244,12 +250,20 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
 
   runtime.runMain().catch(err => console.error("[motely-wasm] runMain failed:", err));
 
-  const [versionJson, capabilitiesJson] = await Promise.all([
-    raw.GetVersionAsync(),
-    raw.GetCapabilitiesAsync(),
-  ]);
-  const cachedVersion = JSON.parse(versionJson) as VersionInfo;
-  const cachedCapabilities = JSON.parse(capabilitiesJson) as CapabilitiesInfo;
+  const cachedVersion: VersionInfo = {
+    version: raw.GetVersion(),
+    runtime: raw.GetRuntime(),
+    features: raw.GetFeatureList(),
+  };
+  const cachedCapabilities: CapabilitiesInfo = {
+    simd: raw.IsSimdEnabled(),
+    threads: raw.IsThreadingEnabled(),
+    availableThreadCount: raw.GetAvailableThreadCount(),
+    processorCount: raw.GetProcessorCount(),
+    runtime: cachedVersion.runtime,
+    version: cachedVersion.version,
+    timestamp: new Date().toISOString(),
+  };
 
   const api: MotelyWasmApi = {
     getVersion: () => cachedVersion,
@@ -281,13 +295,17 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       };
       const optionsJson = JSON.stringify(withDefaults);
 
+      let resultCount = 0;
+
       const progressCb = onProgress
-        ? (json: string) => {
-          const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
-          onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
+        ? (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => {
+          onProgress(totalSeedsSearched, matchingSeeds, elapsedMs, resultCount);
         }
         : () => { };
-      const resultCb = onResult ?? (() => { });
+      const resultCb = (seed: string, score: number) => {
+        resultCount++;
+        onResult?.(seed, score);
+      };
 
       const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
 

@@ -4,7 +4,6 @@ using Motely.Analysis;
 using Motely.Executors;
 using Motely.Filters;
 using BlockSearchResultDto = global::Motely.BlockSearchResultDto;
-using BlockSeedResultDto = global::Motely.BlockSeedResultDto;
 using CapabilitiesDto = global::Motely.CapabilitiesDto;
 using SearchOptionsDto = global::Motely.SearchOptionsDto;
 using ValidateResultDto = global::Motely.ValidateResultDto;
@@ -21,7 +20,6 @@ namespace Motely.NodeAddon;
 public static class MotelyNodeExports
 {
     private static string? _cachedVersion;
-    private static string[]? _cachedFeatures;
 
     // ── Version / Capabilities ───────────────────────────────────────────────
 
@@ -31,14 +29,14 @@ public static class MotelyNodeExports
         {
             Version = GetCachedVersion(),
             Runtime = "node-addon",
-            Features = GetFeatureList(),
+            Features = MotelyRuntime.GetFeatureList("node-addon", Environment.ProcessorCount),
         };
 
     [JSExport]
     public static CapabilitiesDto GetCapabilities() =>
         new()
         {
-            Simd = IsSimdEnabled(),
+            Simd = MotelyRuntime.IsSimdEnabled(),
             Threads = true,
             AvailableThreadCount = Environment.ProcessorCount,
             ProcessorCount = Environment.ProcessorCount,
@@ -50,38 +48,14 @@ public static class MotelyNodeExports
     // ── Seed Analysis ────────────────────────────────────────────────────────
 
     [JSExport]
-    public static SeedAnalysisDto AnalyzeSeed(string seed, string deck, string stake)
-    {
-        if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
-            throw new ArgumentException($"Unknown deck: '{deck}'", nameof(deck));
-        if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
-            throw new ArgumentException($"Unknown stake: '{stake}'", nameof(stake));
-
-        var cfg = new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum);
-        var analysis = MotelySeedAnalyzer.Analyze(cfg);
-
-        if (!string.IsNullOrEmpty(analysis.Error))
-            throw new InvalidOperationException(analysis.Error);
-
-        return MapAnalysisToDto(analysis, seed, deckEnum, stakeEnum);
-    }
+    public static SeedAnalysisDto AnalyzeSeed(string seed, string deck, string stake) =>
+        MotelyRuntime.AnalyzeSeed(seed, deck, stake);
 
     // ── JAML Validation ──────────────────────────────────────────────────────
 
     [JSExport]
-    public static ValidateResultDto ValidateJaml(string jamlContent)
-    {
-        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var parseError) || config == null)
-            return new ValidateResultDto { Valid = false, Error = parseError ?? "Failed to parse JAML" };
-
-        return new ValidateResultDto
-        {
-            Valid = true,
-            Name = config.Name,
-            Deck = config.Deck.ToString(),
-            Stake = config.Stake.ToString(),
-        };
-    }
+    public static ValidateResultDto ValidateJaml(string jamlContent) =>
+        MotelyRuntime.ValidateJaml(jamlContent);
 
     // ── Stream Cursors ───────────────────────────────────────────────────────
 
@@ -273,13 +247,8 @@ public static class MotelyNodeExports
     }
 
     private static void ParseEnums(string deck, string stake,
-        out MotelyDeck deckEnum, out MotelyStake stakeEnum)
-    {
-        if (!Enum.TryParse<MotelyDeck>(deck, true, out deckEnum))
-            throw new ArgumentException($"Unknown deck: '{deck}'", nameof(deck));
-        if (!Enum.TryParse<MotelyStake>(stake, true, out stakeEnum))
-            throw new ArgumentException($"Unknown stake: '{stake}'", nameof(stake));
-    }
+        out MotelyDeck deckEnum, out MotelyStake stakeEnum) =>
+        MotelyRuntime.ParseEnums(deck, stake, out deckEnum, out stakeEnum);
 
     // ── Searches ─────────────────────────────────────────────────────────────
 
@@ -360,15 +329,15 @@ public static class MotelyNodeExports
         int endBlockId
     )
     {
-        const int maxBlocks = 35 * 35 * 35;
+        int maxBlocks = ProcessBlockRunner.TotalBlocks;
         if (startBlockId < 0 || endBlockId > maxBlocks || startBlockId >= endBlockId)
             throw new ArgumentOutOfRangeException(
                 nameof(startBlockId),
                 $"Block range must be 0..{maxBlocks} with start < end."
             );
 
-        long totalSearched = 0;
-        var allSeeds = new List<BlockSeedResultDto>();
+        var allSeeds = new List<string>();
+        int highestScore = 0;
 
         for (int blockId = startBlockId; blockId < endBlockId; blockId++)
         {
@@ -381,16 +350,15 @@ public static class MotelyNodeExports
                     $"Invalid JAML or block {blockId} out of range."
                 );
 
-            totalSearched += result.SeedsSearched;
-            foreach (var s in result.Seeds)
-                allSeeds.Add(new BlockSeedResultDto { Seed = s.Seed, Score = s.Score });
+            allSeeds.AddRange(result.Seeds);
+            if (result.HighestScore > highestScore) highestScore = result.HighestScore;
         }
 
         return new BlockSearchResultDto
         {
             BlockId = startBlockId,
-            SeedsSearched = totalSearched,
             SeedsFound = allSeeds.Count,
+            HighestScore = highestScore,
             Seeds = allSeeds.ToArray(),
         };
     }
@@ -412,11 +380,9 @@ public static class MotelyNodeExports
         return new BlockSearchResultDto
         {
             BlockId = result.BlockId,
-            SeedsSearched = result.SeedsSearched,
             SeedsFound = result.SeedsFound,
-            Seeds = result
-                .Seeds.Select(s => new BlockSeedResultDto { Seed = s.Seed, Score = s.Score })
-                .ToArray(),
+            HighestScore = result.HighestScore,
+            Seeds = result.Seeds.ToArray(),
         };
     }
 
@@ -446,20 +412,21 @@ public static class MotelyNodeExports
         if (prepareError != null || plan == null)
             throw new InvalidOperationException(prepareError ?? "Search could not be prepared.");
 
-        var results = new List<BlockSeedResultDto>();
+        var seeds = new List<string>();
+        int highestScore = 0;
         var settings = plan.Settings;
 
         if (plan.ShouldClauseCount > 0)
         {
             settings = settings.WithScoredResultCallback(tally =>
-                results.Add(new BlockSeedResultDto { Seed = tally.Seed, Score = tally.Score })
-            );
+            {
+                seeds.Add(tally.Seed);
+                if (tally.Score > highestScore) highestScore = tally.Score;
+            });
         }
         else
         {
-            settings = settings.WithSeedMatchCallback(seed =>
-                results.Add(new BlockSeedResultDto { Seed = seed, Score = 0 })
-            );
+            settings = settings.WithSeedMatchCallback(seed => seeds.Add(seed));
         }
 
         using var search = settings.CreateSearch();
@@ -468,9 +435,9 @@ public static class MotelyNodeExports
         return new BlockSearchResultDto
         {
             BlockId = 0,
-            SeedsSearched = search.TotalSeedsSearched,
-            SeedsFound = results.Count,
-            Seeds = results.ToArray(),
+            SeedsFound = seeds.Count,
+            HighestScore = highestScore,
+            Seeds = seeds.ToArray(),
         };
     }
 
@@ -501,65 +468,6 @@ public static class MotelyNodeExports
         Palindrome,
     }
 
-    private static bool IsSimdEnabled() => System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
-
     private static string GetCachedVersion() =>
-        _cachedVersion ??= MotelyBuildVersion.For(typeof(MotelyNodeExports).Assembly);
-
-    private static string[] GetFeatureList()
-    {
-        if (_cachedFeatures is not null)
-            return _cachedFeatures;
-
-        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate", "lucky-money-stream" };
-        if (IsSimdEnabled())
-            features.Add("simd");
-        features.Add("threads");
-
-        return _cachedFeatures = features.ToArray();
-    }
-
-    private static SeedAnalysisDto MapAnalysisToDto(
-        MotelySeedAnalysis analysis,
-        string seed,
-        MotelyDeck deck,
-        MotelyStake stake
-    ) =>
-        new()
-        {
-            Seed = seed,
-            Deck = deck.ToString(),
-            Stake = stake.ToString(),
-            Error = analysis.Error,
-            ErraticDeckComposition =
-                analysis.ErraticDeckComposition?.Split(
-                    ',',
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
-                ) ?? [],
-            Antes = analysis
-                .Antes.Select(a => new AnteAnalysisDto
-                {
-                    Ante = a.Ante,
-                    Boss = a.Boss.ToString(),
-                    Voucher = a.Voucher.ToString(),
-                    SmallBlindTag = a.SmallBlindTag.ToString(),
-                    BigBlindTag = a.BigBlindTag.ToString(),
-                    DrawOrder = a.DrawOrder ?? "",
-                    ShopQueue = a
-                        .ShopQueue.Select(item => new ShopItemDto
-                        {
-                            Id = item.Type.ToString(),
-                            Name = item.ToString(),
-                        })
-                        .ToArray(),
-                    Packs = a
-                        .Packs.Select(p => new PackDto
-                        {
-                            Type = p.Type.ToString(),
-                            Items = p.Items.Select(i => i.ToString()).ToArray(),
-                        })
-                        .ToArray(),
-                })
-                .ToArray(),
-        };
+        _cachedVersion ??= MotelyRuntime.GetVersion(typeof(MotelyNodeExports).Assembly);
 }
