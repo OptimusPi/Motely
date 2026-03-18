@@ -435,7 +435,7 @@ public static class JamlScoring
         for (int i = 0; i < 52; i++)
             if (ctx.GetNextErraticDeckCard(ref stream).PlayingCardRank == clause.Rank)
                 count++;
-        return count * Math.Max(1, clause.Antes.Length);
+        return count;
     }
 
     private static int CountErraticSuitOccurrences(ref MotelySingleSearchContext ctx, ErraticSuitClause clause)
@@ -445,7 +445,7 @@ public static class JamlScoring
         for (int i = 0; i < 52; i++)
             if (ctx.GetNextErraticDeckCard(ref stream).PlayingCardSuit == clause.Suit)
                 count++;
-        return count * Math.Max(1, clause.Antes.Length);
+        return count;
     }
 
     private static int CountErraticCardOccurrences(ref MotelySingleSearchContext ctx, ErraticCardClause clause)

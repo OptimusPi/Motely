@@ -26,12 +26,18 @@ ENV CXX=g++-10
 # SDK runs without libicu (invariant mode). Published binary also uses InvariantGlobalization.
 ENV DOTNET_ROOT=/usr/share/dotnet
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+ENV NUGET_PACKAGES=/nuget/packages
+ENV NUGET_HTTP_CACHE_PATH=/nuget/http-cache
 # Ensure build tools are in PATH
 ENV PATH="${DOTNET_ROOT}:${DOTNET_ROOT}/tools:/usr/bin:/bin:${PATH}"
+RUN mkdir -p /nuget/packages /nuget/http-cache
 RUN wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh \
     && chmod +x /tmp/dotnet-install.sh \
     && /tmp/dotnet-install.sh --install-dir /usr/share/dotnet --channel 10.0 \
     && rm /tmp/dotnet-install.sh
 
+# Install rsync for clean source copying
+RUN apt-get update && apt-get install -y rsync && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
-ENTRYPOINT ["dotnet", "publish", "Motely.NodeAddon/Motely.NodeAddon.csproj", "-c", "Release", "-r", "linux-x64"]
+ENTRYPOINT bash -c "mkdir -p /build && rsync -a --exclude '*/obj/' --exclude '*/bin/' --exclude 'motely-node/bin/' /src/ /build/ && cd /build && dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r linux-x64 && mkdir -p /src/motely-node/bin/linux-x64 && cp -a motely-node/bin/linux-x64/* /src/motely-node/bin/linux-x64/"

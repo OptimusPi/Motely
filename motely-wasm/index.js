@@ -61,6 +61,30 @@ export async function loadMotely(options) {
         version: cachedVersion.version,
         timestamp: new Date().toISOString(),
     };
+    const startSearch = async (jamlContent, searchParams, callbacks) => {
+        const { onProgress, onResult } = callbacks ?? {};
+        const withDefaults = {
+            threadCount: cachedCapabilities.processorCount,
+            batchCharCount: 4,
+            ...searchParams,
+        };
+        const optionsJson = JSON.stringify(withDefaults);
+        let resultCount = 0;
+        const progressCb = onProgress
+            ? (totalSeedsSearched, matchingSeeds, elapsedMs) => {
+                onProgress(totalSeedsSearched, matchingSeeds, elapsedMs, resultCount);
+            }
+            : () => { };
+        const resultCb = (seed, score) => {
+            resultCount++;
+            onResult?.(seed, score);
+        };
+        const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
+        const result = JSON.parse(resultJson);
+        if (result.error)
+            throw new Error(result.error);
+        return result;
+    };
     const api = {
         getVersion: () => cachedVersion,
         getCapabilities: () => cachedCapabilities,
@@ -80,25 +104,56 @@ export async function loadMotely(options) {
             return JSON.parse(json);
         },
         async startJamlSearch(jamlContent, options) {
-            const { onProgress, onResult, ...searchParams } = options ?? {};
-            const withDefaults = {
-                threadCount: cachedCapabilities.processorCount,
-                batchCharCount: 4,
-                ...searchParams,
-            };
-            const optionsJson = JSON.stringify(withDefaults);
-            const progressCb = onProgress
-                ? (json) => {
-                    const p = JSON.parse(json);
-                    onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
-                }
-                : () => { };
-            const resultCb = onResult ?? (() => { });
-            const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
-            const result = JSON.parse(resultJson);
-            if (result.error)
-                throw new Error(result.error);
-            return result;
+            return startSearch(jamlContent, {
+                threadCount: options?.threadCount,
+                batchCharCount: options?.batchCharCount,
+                startBatch: options?.startBatch,
+                endBatch: options?.endBatch,
+            }, options);
+        },
+        async verifySeed(jamlContent, seed, options) {
+            return startSearch(jamlContent, {
+                threadCount: options?.threadCount,
+                batchCharCount: options?.batchCharCount,
+                specificSeed: seed,
+            }, options);
+        },
+        async startSeedListSearch(jamlContent, seeds, options) {
+            return startSearch(jamlContent, {
+                threadCount: options?.threadCount,
+                batchCharCount: options?.batchCharCount,
+                seeds,
+            }, options);
+        },
+        async startKeywordSearch(jamlContent, keyword, options) {
+            return startSearch(jamlContent, {
+                threadCount: options?.threadCount,
+                batchCharCount: options?.batchCharCount,
+                keywords: [keyword],
+                padding: options?.padding,
+            }, options);
+        },
+        async startKeywordsSearch(jamlContent, keywords, options) {
+            return startSearch(jamlContent, {
+                threadCount: options?.threadCount,
+                batchCharCount: options?.batchCharCount,
+                keywords,
+                padding: options?.padding,
+            }, options);
+        },
+        async startRandomSearch(jamlContent, count, options) {
+            return startSearch(jamlContent, {
+                threadCount: options?.threadCount,
+                batchCharCount: options?.batchCharCount,
+                randomSeeds: count,
+            }, options);
+        },
+        async startPalindromeSearch(jamlContent, options) {
+            return startSearch(jamlContent, {
+                threadCount: options?.threadCount,
+                batchCharCount: options?.batchCharCount,
+                palindrome: true,
+            }, options);
         },
         stopSearch: () => { raw.StopSearch(); },
         disposeSearch: () => raw.DisposeSearch(),

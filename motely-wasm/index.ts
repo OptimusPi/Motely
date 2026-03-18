@@ -76,22 +76,25 @@ export interface ValidateResult {
   stake?: string | null;
 }
 
-export interface SearchOptions {
-  threadCount?: number;
-  batchCharCount?: number;
-  startBatch?: number;
-  endBatch?: number;
-  specificSeed?: string;
-  seeds?: string[];
-  keyword?: string;
-  keywords?: string[];
-  padding?: string;
-  randomSeeds?: number;
-  palindrome?: boolean;
+export interface SearchCallbacks {
   /** Called with native primitives every ~15ms during search. No JSON overhead. */
   onProgress?: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
   /** Called with native primitives for each new result found. No JSON overhead. */
   onResult?: (seed: string, score: number) => void;
+}
+
+export interface SearchRuntimeOptions extends SearchCallbacks {
+  threadCount?: number;
+  batchCharCount?: number;
+}
+
+export interface SequentialSearchOptions extends SearchRuntimeOptions {
+  startBatch?: number;
+  endBatch?: number;
+}
+
+export interface KeywordSearchOptions extends SearchRuntimeOptions {
+  padding?: string;
 }
 
 export interface ErrorResult {
@@ -138,7 +141,13 @@ export interface MotelyWasmApi {
    * @param options - Search parameters + onProgress/onResult callbacks
    * @returns Promise resolving to final search status with results
    */
-  startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo>;
+  startJamlSearch(jamlContent: string, options?: SequentialSearchOptions): Promise<SearchStatusInfo>;
+  verifySeed(jamlContent: string, seed: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
+  startSeedListSearch(jamlContent: string, seeds: string[], options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
+  startKeywordSearch(jamlContent: string, keyword: string, options?: KeywordSearchOptions): Promise<SearchStatusInfo>;
+  startKeywordsSearch(jamlContent: string, keywords: string[], options?: KeywordSearchOptions): Promise<SearchStatusInfo>;
+  startRandomSearch(jamlContent: string, count: number, options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
+  startPalindromeSearch(jamlContent: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo>;
 
   /** Stop the current running search (non-blocking, sets cancellation flag) */
   stopSearch(): void;
@@ -180,6 +189,19 @@ interface RawExports {
   ): Promise<string>;
   StopSearch(): void;
   DisposeSearch(): Promise<void>;
+}
+
+interface RawSearchParams {
+  threadCount?: number;
+  batchCharCount?: number;
+  startBatch?: number;
+  endBatch?: number;
+  specificSeed?: string;
+  seeds?: string[];
+  keywords?: string[];
+  padding?: string;
+  randomSeeds?: number;
+  palindrome?: boolean;
 }
 
 function resolveFrameworkUrl(baseUrl: string | undefined, frameworkFolder: "_framework" | "_framework_st"): string {
@@ -265,6 +287,39 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
     timestamp: new Date().toISOString(),
   };
 
+  const startSearch = async (
+    jamlContent: string,
+    searchParams: RawSearchParams,
+    callbacks?: SearchCallbacks,
+  ): Promise<SearchStatusInfo> => {
+    const { onProgress, onResult } = callbacks ?? {};
+
+    const withDefaults = {
+      threadCount: cachedCapabilities.processorCount,
+      batchCharCount: 4,
+      ...searchParams,
+    };
+    const optionsJson = JSON.stringify(withDefaults);
+
+    let resultCount = 0;
+
+    const progressCb = onProgress
+      ? (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => {
+        onProgress(totalSeedsSearched, matchingSeeds, elapsedMs, resultCount);
+      }
+      : () => { };
+    const resultCb = (seed: string, score: number) => {
+      resultCount++;
+      onResult?.(seed, score);
+    };
+
+    const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
+
+    const result = JSON.parse(resultJson);
+    if (result.error) throw new Error(result.error);
+    return result as SearchStatusInfo;
+  };
+
   const api: MotelyWasmApi = {
     getVersion: () => cachedVersion,
     getCapabilities: () => cachedCapabilities,
@@ -285,33 +340,63 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       return JSON.parse(json) as ValidateResult;
     },
 
-    async startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo> {
-      const { onProgress, onResult, ...searchParams } = options ?? {};
+    async startJamlSearch(jamlContent: string, options?: SequentialSearchOptions): Promise<SearchStatusInfo> {
+      return startSearch(jamlContent, {
+        threadCount: options?.threadCount,
+        batchCharCount: options?.batchCharCount,
+        startBatch: options?.startBatch,
+        endBatch: options?.endBatch,
+      }, options);
+    },
 
-      const withDefaults = {
-        threadCount: cachedCapabilities.processorCount,
-        batchCharCount: 4,
-        ...searchParams,
-      };
-      const optionsJson = JSON.stringify(withDefaults);
+    async verifySeed(jamlContent: string, seed: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
+      return startSearch(jamlContent, {
+        threadCount: options?.threadCount,
+        batchCharCount: options?.batchCharCount,
+        specificSeed: seed,
+      }, options);
+    },
 
-      let resultCount = 0;
+    async startSeedListSearch(jamlContent: string, seeds: string[], options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
+      return startSearch(jamlContent, {
+        threadCount: options?.threadCount,
+        batchCharCount: options?.batchCharCount,
+        seeds,
+      }, options);
+    },
 
-      const progressCb = onProgress
-        ? (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => {
-          onProgress(totalSeedsSearched, matchingSeeds, elapsedMs, resultCount);
-        }
-        : () => { };
-      const resultCb = (seed: string, score: number) => {
-        resultCount++;
-        onResult?.(seed, score);
-      };
+    async startKeywordSearch(jamlContent: string, keyword: string, options?: KeywordSearchOptions): Promise<SearchStatusInfo> {
+      return startSearch(jamlContent, {
+        threadCount: options?.threadCount,
+        batchCharCount: options?.batchCharCount,
+        keywords: [keyword],
+        padding: options?.padding,
+      }, options);
+    },
 
-      const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
+    async startKeywordsSearch(jamlContent: string, keywords: string[], options?: KeywordSearchOptions): Promise<SearchStatusInfo> {
+      return startSearch(jamlContent, {
+        threadCount: options?.threadCount,
+        batchCharCount: options?.batchCharCount,
+        keywords,
+        padding: options?.padding,
+      }, options);
+    },
 
-      const result = JSON.parse(resultJson);
-      if (result.error) throw new Error(result.error);
-      return result as SearchStatusInfo;
+    async startRandomSearch(jamlContent: string, count: number, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
+      return startSearch(jamlContent, {
+        threadCount: options?.threadCount,
+        batchCharCount: options?.batchCharCount,
+        randomSeeds: count,
+      }, options);
+    },
+
+    async startPalindromeSearch(jamlContent: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
+      return startSearch(jamlContent, {
+        threadCount: options?.threadCount,
+        batchCharCount: options?.batchCharCount,
+        palindrome: true,
+      }, options);
     },
 
     stopSearch: () => { raw.StopSearch(); },

@@ -1,7 +1,7 @@
 name: WalkieTalkie
 author: pi
 description: get cool shit from walkie talkie lol
-deck: Anaglyph
+deck: Erratic
 stake: White
 
 must:
@@ -17,6 +17,10 @@ must:
     sources:
       packSlots: [0]
 should:
+  - ErraticRank: Ten
+    score: 1
+  - ErraticRank: Four
+    score: 1
   - joker: Blueprint
     antes: [2]
     sources:

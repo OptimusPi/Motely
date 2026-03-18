@@ -1,4 +1,8 @@
 <Project>
+  <PropertyGroup>
+    <!-- Prevent stale Visual Studio fallback package folders from leaking into restore/build. -->
+    <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
+  </PropertyGroup>
   <!-- Sync npm package.json version from Directory.Packages.props before build/publish.
        Edit only <MotelyVersion> in Directory.Packages.props, then dotnet publish — sync runs in one go. -->
   <Target Name="SyncNpmVersionBeforeBuild" BeforeTargets="Build;Publish"
