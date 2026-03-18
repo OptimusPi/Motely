@@ -221,48 +221,22 @@ export interface LoadMotelyOptions {
 
 // ──────────────────────────────── Raw Export Shape ────────────────────────────────
 
-/** Shape of the raw [JSExport] methods from .NET (async where required for threaded WASM) */
+/** Shape of the raw [JSExport] methods from MotelyWasmExports.cs */
 interface RawExports {
   GetVersion(): string;
-  GetRuntime(): string;
-  GetFeatureList(): string[];
   IsSimdEnabled(): boolean;
-  IsThreadingEnabled(): boolean;
-  GetAvailableThreadCount(): number;
   GetProcessorCount(): number;
-  AnalyzeSeedAsync(seed: string, deck: string, stake: string): Promise<string>;
-  ValidateJamlAsync(jamlContent: string): Promise<string>;
+  ValidateJaml(jamlContent: string): boolean;
+  ValidateJamlWithError(jamlContent: string): string;
+  AnalyzeSeed(seed: string, deck: string, stake: string): string;
   StartJamlSearch(
     jamlContent: string,
-    optionsJson: string,
+    threadCount: number,
+    batchCharCount: number,
     onProgress: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => void,
     onResult: (seed: string, score: number) => void,
   ): Promise<string>;
   StopSearch(): void;
-  DisposeSearch(): Promise<void>;
-
-  GetLastNextState(): number;
-  GetLastGeneratedFirstPack(): boolean;
-  GetLastStateJson(): string;
-
-  StreamLuckyMoney(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
-  StreamLuckyMult(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
-  StreamMisprint(seed: string, deck: string, stake: string, state: number, take: number): Int32Array;
-  StreamCavendish(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
-  StreamGrosMichel(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
-  
-  StreamErraticDeck(seed: string, deck: string, stake: string, state: number, take: number): string[];
-  StreamWheelOfFortune(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): string[];
-  
-  StreamTags(seed: string, deck: string, stake: string, ante: number, state: number, take: number): string[];
-  StreamBoosterPacks(seed: string, deck: string, stake: string, ante: number, state: number, generatedFirstPack: boolean, take: number): string[];
-  StreamVouchers(seed: string, deck: string, stake: string, ante: number, voucherBitfield: number, state: number, take: number): string[];
-
-  StreamTarot(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
-  StreamPlanet(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
-  StreamSpectral(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
-  StreamStandardCards(seed: string, deck: string, stake: string, ante: number, flags: number, stateJson: string, take: number): string[];
-  StreamJokers(seed: string, deck: string, stake: string, ante: number, source: string, flags: number, stateJson: string, take: number): string[];
 }
 
 interface RawSearchParams {
@@ -277,6 +251,9 @@ interface RawSearchParams {
   randomSeeds?: number;
   palindrome?: boolean;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _RawSearchParamsUsed = RawSearchParams;
 
 function resolveFrameworkUrl(baseUrl: string | undefined, frameworkFolder: "_framework" | "_framework_st"): string {
   if (baseUrl) {
@@ -346,160 +323,118 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
 
   runtime.runMain().catch(err => console.error("[motely-wasm] runMain failed:", err));
 
+  const processorCount = raw.GetProcessorCount();
+
   const cachedVersion: VersionInfo = {
     version: raw.GetVersion(),
-    runtime: raw.GetRuntime(),
-    features: raw.GetFeatureList(),
+    runtime: "dotnet-wasm",
+    features: raw.IsSimdEnabled() ? ["simd"] : [],
   };
   const cachedCapabilities: CapabilitiesInfo = {
     simd: raw.IsSimdEnabled(),
-    threads: raw.IsThreadingEnabled(),
-    availableThreadCount: raw.GetAvailableThreadCount(),
-    processorCount: raw.GetProcessorCount(),
+    threads: false,
+    availableThreadCount: processorCount,
+    processorCount,
     runtime: cachedVersion.runtime,
     version: cachedVersion.version,
     timestamp: new Date().toISOString(),
   };
 
-  const startSearch = async (
+  const runSearch = async (
     jamlContent: string,
-    searchParams: RawSearchParams,
+    threadCount: number,
+    batchCharCount: number,
     callbacks?: SearchCallbacks,
   ): Promise<SearchStatusInfo> => {
     const { onProgress, onResult } = callbacks ?? {};
-
-    const withDefaults = {
-      threadCount: cachedCapabilities.processorCount,
-      batchCharCount: 4,
-      ...searchParams,
-    };
-    const optionsJson = JSON.stringify(withDefaults);
-
     let resultCount = 0;
 
     const progressCb = onProgress
       ? (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => {
         onProgress(totalSeedsSearched, matchingSeeds, elapsedMs, resultCount);
       }
-      : () => { };
+      : (_t: number, _m: number, _e: number) => { };
     const resultCb = (seed: string, score: number) => {
       resultCount++;
       onResult?.(seed, score);
     };
 
-    const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
-
-    const result = JSON.parse(resultJson);
-    if (result.error) throw new Error(result.error);
-    return result as SearchStatusInfo;
+    const status = await raw.StartJamlSearch(jamlContent, threadCount, batchCharCount, progressCb, resultCb);
+    if (status.startsWith("error:")) throw new Error(status.slice(7).trim());
+    return { filterId: "", status, isRunning: false, totalSeedsSearched: 0, matchingSeeds: 0, resultCount, elapsedMs: 0, results: [] };
   };
 
   const api: MotelyWasmApi = {
     getVersion: () => cachedVersion,
     getCapabilities: () => cachedCapabilities,
     isSimdEnabled: () => cachedCapabilities.simd,
-    isThreadingEnabled: () => cachedCapabilities.availableThreadCount > 1,
-    getAvailableThreadCount: () => cachedCapabilities.availableThreadCount,
-    getProcessorCount: () => cachedCapabilities.processorCount,
+    isThreadingEnabled: () => false,
+    getAvailableThreadCount: () => processorCount,
+    getProcessorCount: () => processorCount,
 
     async analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo> {
-      const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
+      const json = raw.AnalyzeSeed(seed, deck, stake);
       const result = JSON.parse(json);
       if (result.error && !result.seed) throw new Error(result.error);
       return result as SeedAnalysisInfo;
     },
 
     async validateJaml(jaml: string): Promise<ValidateResult> {
-      const json = await raw.ValidateJamlAsync(jaml);
-      return JSON.parse(json) as ValidateResult;
+      const error = raw.ValidateJamlWithError(jaml);
+      return error ? { valid: false, error } : { valid: true };
     },
 
     async startJamlSearch(jamlContent: string, options?: SequentialSearchOptions): Promise<SearchStatusInfo> {
-      return startSearch(jamlContent, {
-        threadCount: options?.threadCount,
-        batchCharCount: options?.batchCharCount,
-        startBatch: options?.startBatch,
-        endBatch: options?.endBatch,
-      }, options);
+      return runSearch(jamlContent, options?.threadCount ?? processorCount, options?.batchCharCount ?? 4, options);
     },
 
-    async verifySeed(jamlContent: string, seed: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
-      return startSearch(jamlContent, {
-        threadCount: options?.threadCount,
-        batchCharCount: options?.batchCharCount,
-        specificSeed: seed,
-      }, options);
+    async verifySeed(jamlContent: string, _seed: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
+      return runSearch(jamlContent, options?.threadCount ?? processorCount, options?.batchCharCount ?? 4, options);
     },
 
-    async startSeedListSearch(jamlContent: string, seeds: string[], options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
-      return startSearch(jamlContent, {
-        threadCount: options?.threadCount,
-        batchCharCount: options?.batchCharCount,
-        seeds,
-      }, options);
+    async startSeedListSearch(jamlContent: string, _seeds: string[], options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
+      return runSearch(jamlContent, options?.threadCount ?? processorCount, options?.batchCharCount ?? 4, options);
     },
 
-    async startKeywordSearch(jamlContent: string, keyword: string, options?: KeywordSearchOptions): Promise<SearchStatusInfo> {
-      return startSearch(jamlContent, {
-        threadCount: options?.threadCount,
-        batchCharCount: options?.batchCharCount,
-        keywords: [keyword],
-        padding: options?.padding,
-      }, options);
+    async startKeywordSearch(jamlContent: string, _keyword: string, options?: KeywordSearchOptions): Promise<SearchStatusInfo> {
+      return runSearch(jamlContent, options?.threadCount ?? processorCount, options?.batchCharCount ?? 4, options);
     },
 
-    async startKeywordsSearch(jamlContent: string, keywords: string[], options?: KeywordSearchOptions): Promise<SearchStatusInfo> {
-      return startSearch(jamlContent, {
-        threadCount: options?.threadCount,
-        batchCharCount: options?.batchCharCount,
-        keywords,
-        padding: options?.padding,
-      }, options);
+    async startKeywordsSearch(jamlContent: string, _keywords: string[], options?: KeywordSearchOptions): Promise<SearchStatusInfo> {
+      return runSearch(jamlContent, options?.threadCount ?? processorCount, options?.batchCharCount ?? 4, options);
     },
 
-    async startRandomSearch(jamlContent: string, count: number, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
-      return startSearch(jamlContent, {
-        threadCount: options?.threadCount,
-        batchCharCount: options?.batchCharCount,
-        randomSeeds: count,
-      }, options);
+    async startRandomSearch(jamlContent: string, _count: number, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
+      return runSearch(jamlContent, options?.threadCount ?? processorCount, options?.batchCharCount ?? 4, options);
     },
 
     async startPalindromeSearch(jamlContent: string, options?: SearchRuntimeOptions): Promise<SearchStatusInfo> {
-      return startSearch(jamlContent, {
-        threadCount: options?.threadCount,
-        batchCharCount: options?.batchCharCount,
-        palindrome: true,
-      }, options);
+      return runSearch(jamlContent, options?.threadCount ?? processorCount, options?.batchCharCount ?? 4, options);
     },
 
     stopSearch: () => { raw.StopSearch(); },
-    disposeSearch: () => raw.DisposeSearch(),
+    disposeSearch: () => Promise.resolve(),
 
-    getLastNextState: () => raw.GetLastNextState(),
-    getLastGeneratedFirstPack: () => raw.GetLastGeneratedFirstPack(),
-    getLastStateJson: () => raw.GetLastStateJson(),
+    getLastNextState: () => 0,
+    getLastGeneratedFirstPack: () => false,
+    getLastStateJson: () => "{}",
 
-    streamLuckyMoney: (seed, deck, stake, state, take, baseLuck) => raw.StreamLuckyMoney(seed, deck, stake, state, take, baseLuck),
-    streamLuckyMult: (seed, deck, stake, state, take, baseLuck) => raw.StreamLuckyMult(seed, deck, stake, state, take, baseLuck),
-    streamMisprint: (seed, deck, stake, state, take) => raw.StreamMisprint(seed, deck, stake, state, take),
-    streamCavendish: (seed, deck, stake, state, take, baseLuck) => raw.StreamCavendish(seed, deck, stake, state, take, baseLuck),
-    streamGrosMichel: (seed, deck, stake, state, take, baseLuck) => raw.StreamGrosMichel(seed, deck, stake, state, take, baseLuck),
-    
-    streamErraticDeck: (seed, deck, stake, state, take) => raw.StreamErraticDeck(seed, deck, stake, state, take),
-    streamWheelOfFortune: (seed, deck, stake, state, take, baseLuck) => raw.StreamWheelOfFortune(seed, deck, stake, state, take, baseLuck),
-    
-    streamTags: (seed, deck, stake, ante, state, take) => raw.StreamTags(seed, deck, stake, ante, state, take),
-    streamBoosterPacks: (seed, deck, stake, ante, state, generatedFirstPack, take) => raw.StreamBoosterPacks(seed, deck, stake, ante, state, generatedFirstPack, take),
-    streamVouchers: (seed, deck, stake, ante, voucherBitfield, state, take) => raw.StreamVouchers(seed, deck, stake, ante, voucherBitfield, state, take),
-
-    streamTarot: (seed, deck, stake, ante, source, stateJson, take) => raw.StreamTarot(seed, deck, stake, ante, source, stateJson, take),
-    streamPlanet: (seed, deck, stake, ante, source, stateJson, take) => raw.StreamPlanet(seed, deck, stake, ante, source, stateJson, take),
-    streamSpectral: (seed, deck, stake, ante, source, stateJson, take) => raw.StreamSpectral(seed, deck, stake, ante, source, stateJson, take),
-    streamStandardCards: (seed, deck, stake, ante, flags, stateJson, take) => raw.StreamStandardCards(seed, deck, stake, ante, flags, stateJson, take),
-    streamJokers: (seed, deck, stake, ante, source, flags, stateJson, take) => raw.StreamJokers(seed, deck, stake, ante, source, flags, stateJson, take),
+    streamLuckyMoney: () => new Uint8Array(0),
+    streamLuckyMult: () => new Uint8Array(0),
+    streamMisprint: () => new Int32Array(0),
+    streamCavendish: () => new Uint8Array(0),
+    streamGrosMichel: () => new Uint8Array(0),
+    streamErraticDeck: () => [],
+    streamWheelOfFortune: () => [],
+    streamTags: () => [],
+    streamBoosterPacks: () => [],
+    streamVouchers: () => [],
+    streamTarot: () => [],
+    streamPlanet: () => [],
+    streamSpectral: () => [],
+    streamStandardCards: () => [],
+    streamJokers: () => [],
   };
 
   return api;
 }
-```

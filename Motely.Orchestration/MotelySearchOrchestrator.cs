@@ -3,8 +3,7 @@ using Motely.Filters;
 namespace Motely.Executors;
 
 /// <summary>
-/// Thin shared search setup for real entry points.
-/// Normalizes public/runtime input at the boundary, then configures Motely once.
+/// Shared search setup. Takes config + request, returns a ready-to-run plan.
 /// </summary>
 public static class MotelySearchOrchestrator
 {
@@ -33,16 +32,7 @@ public static class MotelySearchOrchestrator
         if (request.EndBatch.HasValue)
             settings = settings.WithEndBatchIndex(request.EndBatch.Value);
 
-        var options = new SearchOptionsDto
-        {
-            Seeds = request.Seeds,
-            Keywords = request.Keywords,
-            Padding = request.Padding,
-            RandomSeeds = request.RandomSeeds,
-            Palindrome = request.Palindrome ? true : null,
-        };
-
-        var (_, modeError) = settings.ApplySearchMode(options);
+        var (_, modeError) = settings.ApplySearchMode(request);
         if (modeError != null)
             return (null, null, modeError);
 
@@ -129,7 +119,4 @@ public static class MotelySearchOrchestrator
 
         return null;
     }
-
-    public static string GenerateFilterId(JamlConfig config) =>
-        config.FilterId;
 }
