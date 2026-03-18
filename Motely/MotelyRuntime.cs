@@ -19,19 +19,6 @@ public static class MotelyRuntime
     public static bool IsSimdEnabled() =>
         System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
 
-    public static string[] GetFeatureList(string runtime, int threadCount)
-    {
-        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate" };
-
-        if (runtime == "node-addon")
-            features.Add("lucky-money-stream");
-
-        if (IsSimdEnabled())
-            features.Add("simd");
-
-        features.Add($"{threadCount} threads");
-        return features.ToArray();
-    }
 
     // ── Enum Parsing ─────────────────────────────────────────────────────────
 

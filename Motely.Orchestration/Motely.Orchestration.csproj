@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
   </PropertyGroup>
 
