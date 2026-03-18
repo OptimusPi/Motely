@@ -122,6 +122,24 @@ export interface MotelyWasmApi {
     stopSearch(): void;
     /** Dispose the current search and free memory. Returns Promise. */
     disposeSearch(): Promise<void>;
+    getLastNextState(): number;
+    getLastGeneratedFirstPack(): boolean;
+    getLastStateJson(): string;
+    streamLuckyMoney(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+    streamLuckyMult(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+    streamMisprint(seed: string, deck: string, stake: string, state: number, take: number): Int32Array;
+    streamCavendish(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+    streamGrosMichel(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+    streamErraticDeck(seed: string, deck: string, stake: string, state: number, take: number): string[];
+    streamWheelOfFortune(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): string[];
+    streamTags(seed: string, deck: string, stake: string, ante: number, state: number, take: number): string[];
+    streamBoosterPacks(seed: string, deck: string, stake: string, ante: number, state: number, generatedFirstPack: boolean, take: number): string[];
+    streamVouchers(seed: string, deck: string, stake: string, ante: number, voucherBitfield: number, state: number, take: number): string[];
+    streamTarot(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+    streamPlanet(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+    streamSpectral(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+    streamStandardCards(seed: string, deck: string, stake: string, ante: number, flags: number, stateJson: string, take: number): string[];
+    streamJokers(seed: string, deck: string, stake: string, ante: number, source: string, flags: number, stateJson: string, take: number): string[];
 }
 export interface LoadMotelyOptions {
     /** Base URL for runtime assets. Defaults to this package's bundled framework folder. */

@@ -103,6 +103,32 @@ export interface ErrorResult {
 
 // ──────────────────────────────── Public API ────────────────────────────────
 
+export interface BoolStreamResult {
+  results: boolean[];
+  nextState: number | null;
+}
+
+export interface IntStreamResult {
+  results: number[];
+  nextState: number | null;
+}
+
+export interface StringStreamResult {
+  results: string[];
+  nextState: number | null;
+}
+
+export interface PackStreamResult {
+  results: string[];
+  nextState: number | null;
+  generatedFirstPack: boolean;
+}
+
+export interface ItemStreamResult {
+  results: string[];
+  nextState: number[] | null;
+}
+
 export interface MotelyWasmApi {
   /** Get version and feature info */
   getVersion(): VersionInfo;
@@ -154,6 +180,31 @@ export interface MotelyWasmApi {
 
   /** Dispose the current search and free memory. Returns Promise. */
   disposeSearch(): Promise<void>;
+
+  // ──────────────────────────────── Streaming ────────────────────────────────
+
+  getLastNextState(): number;
+  getLastGeneratedFirstPack(): boolean;
+  getLastStateJson(): string;
+
+  streamLuckyMoney(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  streamLuckyMult(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  streamMisprint(seed: string, deck: string, stake: string, state: number, take: number): Int32Array;
+  streamCavendish(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  streamGrosMichel(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  
+  streamErraticDeck(seed: string, deck: string, stake: string, state: number, take: number): string[];
+  streamWheelOfFortune(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): string[];
+  
+  streamTags(seed: string, deck: string, stake: string, ante: number, state: number, take: number): string[];
+  streamBoosterPacks(seed: string, deck: string, stake: string, ante: number, state: number, generatedFirstPack: boolean, take: number): string[];
+  streamVouchers(seed: string, deck: string, stake: string, ante: number, voucherBitfield: number, state: number, take: number): string[];
+
+  streamTarot(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+  streamPlanet(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+  streamSpectral(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+  streamStandardCards(seed: string, deck: string, stake: string, ante: number, flags: number, stateJson: string, take: number): string[];
+  streamJokers(seed: string, deck: string, stake: string, ante: number, source: string, flags: number, stateJson: string, take: number): string[];
 }
 
 export interface LoadMotelyOptions {
@@ -189,6 +240,29 @@ interface RawExports {
   ): Promise<string>;
   StopSearch(): void;
   DisposeSearch(): Promise<void>;
+
+  GetLastNextState(): number;
+  GetLastGeneratedFirstPack(): boolean;
+  GetLastStateJson(): string;
+
+  StreamLuckyMoney(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  StreamLuckyMult(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  StreamMisprint(seed: string, deck: string, stake: string, state: number, take: number): Int32Array;
+  StreamCavendish(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  StreamGrosMichel(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): Uint8Array;
+  
+  StreamErraticDeck(seed: string, deck: string, stake: string, state: number, take: number): string[];
+  StreamWheelOfFortune(seed: string, deck: string, stake: string, state: number, take: number, baseLuck: number): string[];
+  
+  StreamTags(seed: string, deck: string, stake: string, ante: number, state: number, take: number): string[];
+  StreamBoosterPacks(seed: string, deck: string, stake: string, ante: number, state: number, generatedFirstPack: boolean, take: number): string[];
+  StreamVouchers(seed: string, deck: string, stake: string, ante: number, voucherBitfield: number, state: number, take: number): string[];
+
+  StreamTarot(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+  StreamPlanet(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+  StreamSpectral(seed: string, deck: string, stake: string, ante: number, source: string, stateJson: string, take: number): string[];
+  StreamStandardCards(seed: string, deck: string, stake: string, ante: number, flags: number, stateJson: string, take: number): string[];
+  StreamJokers(seed: string, deck: string, stake: string, ante: number, source: string, flags: number, stateJson: string, take: number): string[];
 }
 
 interface RawSearchParams {
@@ -401,8 +475,31 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
 
     stopSearch: () => { raw.StopSearch(); },
     disposeSearch: () => raw.DisposeSearch(),
+
+    getLastNextState: () => raw.GetLastNextState(),
+    getLastGeneratedFirstPack: () => raw.GetLastGeneratedFirstPack(),
+    getLastStateJson: () => raw.GetLastStateJson(),
+
+    streamLuckyMoney: (seed, deck, stake, state, take, baseLuck) => raw.StreamLuckyMoney(seed, deck, stake, state, take, baseLuck),
+    streamLuckyMult: (seed, deck, stake, state, take, baseLuck) => raw.StreamLuckyMult(seed, deck, stake, state, take, baseLuck),
+    streamMisprint: (seed, deck, stake, state, take) => raw.StreamMisprint(seed, deck, stake, state, take),
+    streamCavendish: (seed, deck, stake, state, take, baseLuck) => raw.StreamCavendish(seed, deck, stake, state, take, baseLuck),
+    streamGrosMichel: (seed, deck, stake, state, take, baseLuck) => raw.StreamGrosMichel(seed, deck, stake, state, take, baseLuck),
+    
+    streamErraticDeck: (seed, deck, stake, state, take) => raw.StreamErraticDeck(seed, deck, stake, state, take),
+    streamWheelOfFortune: (seed, deck, stake, state, take, baseLuck) => raw.StreamWheelOfFortune(seed, deck, stake, state, take, baseLuck),
+    
+    streamTags: (seed, deck, stake, ante, state, take) => raw.StreamTags(seed, deck, stake, ante, state, take),
+    streamBoosterPacks: (seed, deck, stake, ante, state, generatedFirstPack, take) => raw.StreamBoosterPacks(seed, deck, stake, ante, state, generatedFirstPack, take),
+    streamVouchers: (seed, deck, stake, ante, voucherBitfield, state, take) => raw.StreamVouchers(seed, deck, stake, ante, voucherBitfield, state, take),
+
+    streamTarot: (seed, deck, stake, ante, source, stateJson, take) => raw.StreamTarot(seed, deck, stake, ante, source, stateJson, take),
+    streamPlanet: (seed, deck, stake, ante, source, stateJson, take) => raw.StreamPlanet(seed, deck, stake, ante, source, stateJson, take),
+    streamSpectral: (seed, deck, stake, ante, source, stateJson, take) => raw.StreamSpectral(seed, deck, stake, ante, source, stateJson, take),
+    streamStandardCards: (seed, deck, stake, ante, flags, stateJson, take) => raw.StreamStandardCards(seed, deck, stake, ante, flags, stateJson, take),
+    streamJokers: (seed, deck, stake, ante, source, flags, stateJson, take) => raw.StreamJokers(seed, deck, stake, ante, source, flags, stateJson, take),
   };
 
   return api;
 }
-
+```

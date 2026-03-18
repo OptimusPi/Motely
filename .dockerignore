@@ -1,6 +1,0 @@
-**/bin/
-**/obj/
-.git/
-node_modules/
-motely-node/
-motely-wasm/

@@ -29,8 +29,16 @@ public static class MotelyNodeExports
         {
             Version = GetCachedVersion(),
             Runtime = "node-addon",
-            Features = MotelyRuntime.GetFeatureList("node-addon", Environment.ProcessorCount),
+            Features = GetNodeFeatureList(),
         };
+
+    private static string[] GetNodeFeatureList()
+    {
+        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate", "lucky-money-stream" };
+        if (MotelyRuntime.IsSimdEnabled()) features.Add("simd");
+        features.Add($"{Environment.ProcessorCount} threads");
+        return features.ToArray();
+    }
 
     [JSExport]
     public static CapabilitiesDto GetCapabilities() =>
