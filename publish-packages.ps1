@@ -36,7 +36,8 @@ if (-not $SkipBump) {
   $vnode.InnerText = $version
   $xml.Save($propsPath)
   Write-Host "$old -> $version" -ForegroundColor Cyan
-} else {
+}
+else {
   $version = $vnode.InnerText.Trim()
   Write-Host "version: $version (no bump)" -ForegroundColor Cyan
 }
@@ -100,7 +101,7 @@ if (-not $SkipWasm) {
   Copy-Item $stSrc $stDst -Recurse -Force
   Write-Host "  staged _framework_st" -ForegroundColor DarkGray
 
-  # 3c. TypeScript compile + pack
+  # 3d. TypeScript compile + pack
   Write-Host "`n[wasm] npm build + pack" -ForegroundColor Yellow
   Push-Location (Join-Path $root 'motely-wasm')
   try {
@@ -124,11 +125,10 @@ if (-not $SkipNode) {
     Copy-Item (Join-Path $wasmDir $f) (Join-Path $nodeDir $f) -Force
   }
 
-  # Build linux-x64 via WSL (Ubuntu with .NET SDK)
-  Write-Host "`n[node] dotnet publish linux-x64 via WSL" -ForegroundColor Yellow
-  $wslRoot = wsl wslpath -u ($root -replace '\\', '\\')
-  wsl bash -c "cd '$wslRoot' && dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r linux-x64"
-  if ($LASTEXITCODE) { throw "linux-x64 publish failed" }
+  # Build linux-x64 via Docker (build-linux.ps1 — no WSL)
+  Write-Host "`n[node] building linux-x64 via Docker" -ForegroundColor Yellow
+  & (Join-Path $root 'build-linux.ps1')
+  if ($LASTEXITCODE) { throw "linux-x64 Docker build failed" }
 
   $nodeAddon = Join-Path $nodeDir 'bin\linux-x64\Motely.NodeAddon.node'
   if (-not (Test-Path $nodeAddon)) { throw "linux-x64 binary missing: $nodeAddon" }
@@ -146,17 +146,18 @@ if (-not $SkipNode) {
 
 # ── 5. Summary ───────────────────────────────────────────────────────────────
 Write-Host "`n========================================" -ForegroundColor Cyan
-if ($wasmTgz)  { Write-Host "  motely-wasm  $version  $wasmTgz" -ForegroundColor Green }
-if ($nodeTgz)  { Write-Host "  motely-node  $version  $nodeTgz" -ForegroundColor Green }
+if ($wasmTgz) { Write-Host "  motely-wasm  $version  $wasmTgz" -ForegroundColor Green }
+if ($nodeTgz) { Write-Host "  motely-node  $version  $nodeTgz" -ForegroundColor Green }
 Write-Host "========================================" -ForegroundColor Cyan
 
 # ── 6. Publish ───────────────────────────────────────────────────────────────
 if ($Publish) {
-  if ($wasmTgz)  { npm publish $wasmTgz --access public }
-  if ($nodeTgz)  { npm publish $nodeTgz --access public }
+  if ($wasmTgz) { npm publish $wasmTgz --access public }
+  if ($nodeTgz) { npm publish $nodeTgz --access public }
   Write-Host "`nPublished v$version" -ForegroundColor Green
-} else {
+}
+else {
   Write-Host "`nDry run. To publish:" -ForegroundColor Yellow
-  if ($wasmTgz)  { Write-Host "  npm publish `"$wasmTgz`" --access public" }
-  if ($nodeTgz)  { Write-Host "  npm publish `"$nodeTgz`" --access public" }
+  if ($wasmTgz) { Write-Host "  npm publish `"$wasmTgz`" --access public" }
+  if ($nodeTgz) { Write-Host "  npm publish `"$nodeTgz`" --access public" }
 }
