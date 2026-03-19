@@ -1,0 +1,36 @@
+# Build static linux-x64 native AOT binary using Alpine + musl
+# Produces a fully static binary with NO glibc dependency - runs anywhere including Vercel
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+
+# Install native AOT build dependencies for Alpine
+RUN apk add --no-cache clang lld musl-dev zlib-static
+
+WORKDIR /src
+
+# Copy project files
+COPY Directory.Build.props Directory.Build.targets Directory.Packages.props ./
+COPY Motely/Motely.csproj Motely/
+COPY Motely.Orchestration/Motely.Orchestration.csproj Motely.Orchestration/
+COPY Motely.NodeAddon/Motely.NodeAddon.csproj Motely.NodeAddon/
+
+# Restore
+RUN dotnet restore Motely.NodeAddon/Motely.NodeAddon.csproj -r linux-musl-x64
+
+# Copy source
+COPY Motely/ Motely/
+COPY Motely.Orchestration/ Motely.Orchestration/
+COPY Motely.NodeAddon/ Motely.NodeAddon/
+
+# Publish with static linking
+RUN dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj \
+    -c Release \
+    -r linux-musl-x64 \
+    -o /out \
+    -p:PublishAot=true \
+    -p:StripSymbols=true \
+    -p:InvariantGlobalization=true
+
+# Output stage - just copy the .node file
+FROM scratch AS export
+COPY --from=build /out/*.node /

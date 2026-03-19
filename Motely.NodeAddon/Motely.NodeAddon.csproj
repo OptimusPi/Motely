@@ -2,8 +2,8 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Version>$(MotelyVersion)</Version>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Motely.NodeAddon</RootNamespace>
     <AssemblyName>Motely.NodeAddon</AssemblyName>
@@ -38,5 +38,5 @@
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
   </ItemGroup>
 
-  <!-- Linux-x64 build is handled by publish-packages.ps1 calling build-linux.ps1 directly -->
+  <!-- Linux-x64 build is handled by publish-packages.ps1 via WSL -->
 </Project>
