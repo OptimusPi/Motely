@@ -3,6 +3,8 @@ using System.Runtime.Versioning;
 using System.Text;
 using Motely.BrowserWasm;
 
+[assembly: SupportedOSPlatform("browser")]
+
 // Route Console output to browser console
 JsConsole.Attach();
 
@@ -36,23 +38,16 @@ internal static partial class JsConsole
         public override void Write(char value)
         {
             if (value == '\n')
-            {
                 FlushBuffer();
-            }
             else if (value != '\r')
-            {
                 _buffer.Append(value);
-            }
         }
 
         public override void Write(string? value)
         {
-            if (string.IsNullOrEmpty(value))
-                return;
+            if (string.IsNullOrEmpty(value)) return;
             foreach (var c in value)
-            {
                 Write(c);
-            }
         }
 
         private void FlushBuffer()
@@ -60,11 +55,7 @@ internal static partial class JsConsole
             if (_buffer.Length > 0)
             {
                 var msg = _buffer.ToString();
-                if (_isError)
-                    Error(msg);
-                else
-                    Log(msg);
-
+                if (_isError) Error(msg); else Log(msg);
                 _buffer.Clear();
             }
         }

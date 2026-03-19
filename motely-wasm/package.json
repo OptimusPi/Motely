@@ -1,57 +1,49 @@
-{
-  "name": "motely-wasm",
-  "version": "3.15.27",
-  "description": "Run the classic Analyzer on a Balatro seed, and more all in your browser!",
-  "type": "module",
-  "main": "index.js",
-  "browser": "index.js",
-  "types": "index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js",
-      "require": "./index.js"
-    },
-    "./jaml-schema": {
-      "types": "./jaml-schema.d.ts",
-      "import": "./jaml-schema.js",
-      "require": "./jaml-schema.js"
-    },
-    "./jaml.schema.json": "./jaml.schema.json"
-  },
-  "files": [
-    "_framework/",
-    "_framework_st/",
-    "index.js",
-    "index.d.ts",
-    "jaml-schema.js",
-    "jaml-schema.d.ts",
-    "README.md",
-    "jaml.schema.json"
-  ],
-  "keywords": [
-    "balatro",
-    "seed",
-    "wasm",
-    "webassembly",
-    "browser-only",
-    "jaml",
-    "filter",
-    "finder",
-    "search"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
-    "directory": "motely-wasm"
-  },
-  "license": "MIT",
-  "scripts": {
-    "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
-    "build": "npm run generate:jaml-schema && node ./node_modules/typescript/lib/tsc.js",
-    "stage-framework": "node ../stage-packages.mjs browser"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.3"
-  }
+﻿{
+    "name":  "motely-wasm",
+    "version":  "3.15.35",
+    "description":  "Balatro seed search, analysis, and JAML filtering â€” all in the browser via WASM.",
+    "type":  "module",
+    "main":  "index.js",
+    "browser":  "index.js",
+    "types":  "index.d.ts",
+    "exports":  {
+                    ".":  {
+                              "types":  "./index.d.ts",
+                              "import":  "./index.js"
+                          },
+                    "./jaml-schema":  {
+                                          "types":  "./jaml-schema.d.ts",
+                                          "import":  "./jaml-schema.js"
+                                      },
+                    "./jaml.schema.json":  "./jaml.schema.json"
+                },
+    "files":  [
+                  "_framework/",
+                  "_framework_st/",
+                  "index.js",
+                  "index.d.ts",
+                  "jaml-schema.js",
+                  "jaml-schema.d.ts",
+                  "jaml.schema.json"
+              ],
+    "keywords":  [
+                     "balatro",
+                     "seed",
+                     "wasm",
+                     "webassembly",
+                     "jaml",
+                     "filter",
+                     "search"
+                 ],
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/OptimusPi/MotelyJAML.git",
+                       "directory":  "motely-wasm"
+                   },
+    "license":  "MIT",
+    "scripts":  {
+                    "generate:jaml-schema":  "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
+                    "build":  "npm run generate:jaml-schema",
+                    "stage-framework":  "node ../stage-packages.mjs browser"
+                }
 }

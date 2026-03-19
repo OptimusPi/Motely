@@ -32,7 +32,11 @@ public static class MotelyExports
         return error ?? "Unknown validation error";
     }
 
-    public static (string Status, List<string> Seeds, int HighestScore) RunSearch(
+    /// <summary>
+    /// Streaming search — pure source→sink via callbacks. No seed accumulation.
+    /// The caller decides what to do with each seed (fire to JS, write to DuckDB, etc).
+    /// </summary>
+    public static (string Status, int SeedsFound, int HighestScore) RunSearch(
         string jamlContent, MotelySearchRequest request,
         Action<long, long, long>? onProgress = null,
         Action<string, int>? onResult = null)
@@ -44,7 +48,7 @@ public static class MotelyExports
         if (prepareError != null || plan == null)
             throw new InvalidOperationException(prepareError ?? "Search could not be prepared.");
 
-        var seeds = new List<string>();
+        int seedsFound = 0;
         int highestScore = 0;
         var settings = plan.Settings;
 
@@ -58,7 +62,7 @@ public static class MotelyExports
         {
             settings = settings.WithScoredResultCallback(tally =>
             {
-                seeds.Add(tally.Seed);
+                Interlocked.Increment(ref seedsFound);
                 if (tally.Score > highestScore) highestScore = tally.Score;
                 onResult?.Invoke(tally.Seed, tally.Score);
             });
@@ -67,7 +71,7 @@ public static class MotelyExports
         {
             settings = settings.WithSeedMatchCallback(seed =>
             {
-                seeds.Add(seed);
+                Interlocked.Increment(ref seedsFound);
                 onResult?.Invoke(seed, 0);
             });
         }
@@ -75,6 +79,6 @@ public static class MotelyExports
         using var search = settings.CreateSearch();
         search.Start(CancellationToken.None);
 
-        return (search.IsCompleted ? "ok" : "cancelled", seeds, highestScore);
+        return (search.IsCompleted ? "ok" : "cancelled", seedsFound, highestScore);
     }
 }
