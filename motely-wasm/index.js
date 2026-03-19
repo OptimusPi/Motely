@@ -4,7 +4,7 @@
 function resolveFrameworkUrl(baseUrl, frameworkFolder) {
     if (baseUrl) {
         const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-        return frameworkFolder === "_framework_st" ? base + "-st" : base;
+        return frameworkFolder === "_framework_st" ? `${base}-st` : `${base}/${frameworkFolder}`;
     }
     return new URL(`./${frameworkFolder}/dotnet.js`, import.meta.url).href.replace(/\/dotnet\.js$/, "");
 }
