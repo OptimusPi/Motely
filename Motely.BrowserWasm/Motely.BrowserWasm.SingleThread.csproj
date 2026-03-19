@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
-  <!-- Do NOT add Content Include="wwwroot\**" - SDK includes wwwroot automatically; duplicate causes NETSDK1022 -->
   <PropertyGroup>
     <TargetFramework>net10.0-browser</TargetFramework>
     <Version>$(MotelyVersion)</Version>
@@ -11,12 +10,9 @@
     <RunAOTCompilation>true</RunAOTCompilation>
     <PublishReadyToRun>false</PublishReadyToRun>
 
-    <!-- AOT & Native Build -->
+    <!-- Single-thread: NO threading, NO SharedArrayBuffer -->
     <WasmBuildNative>true</WasmBuildNative>
-    <!-- Pass -p:SingleThread=true to publish without threading (browsers without SharedArrayBuffer) -->
-    <SingleThread Condition="'$(SingleThread)' == ''">false</SingleThread>
-    <WasmEnableThreads Condition="'$(SingleThread)' != 'true'">true</WasmEnableThreads>
-    <WasmEnableThreads Condition="'$(SingleThread)' == 'true'">false</WasmEnableThreads>
+    <WasmEnableThreads>false</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
 
     <!-- Trimming & Optimization -->
@@ -30,10 +26,7 @@
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
     <WasmEmitCompressedAssets>false</WasmEmitCompressedAssets>
 
-    <!-- Globalization: Search doesn't need ICU data (~2.5MB saved) -->
     <InvariantGlobalization>true</InvariantGlobalization>
-
-    <!-- Re-enabled: testing with Binaryen 117 from .NET 10 Emscripten pack -->
     <WasmRunWasmOpt>true</WasmRunWasmOpt>
   </PropertyGroup>
 
