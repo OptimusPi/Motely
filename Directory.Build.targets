@@ -1,0 +1,7 @@
+<Project>
+  <!-- Sync package.json versions from Directory.Packages.props before Publish -->
+  <Target Name="SyncVersionBeforePublish" BeforeTargets="Publish"
+          Condition="Exists('$(MSBuildThisFileDirectory)sync-version.mjs')">
+    <Exec Command="node &quot;$(MSBuildThisFileDirectory)sync-version.mjs&quot;" />
+  </Target>
+</Project>
