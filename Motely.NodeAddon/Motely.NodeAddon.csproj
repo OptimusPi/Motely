@@ -38,5 +38,5 @@
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
   </ItemGroup>
 
-  <!-- Linux-x64 build is handled by publish-packages.ps1 via WSL -->
+  <!-- Linux-x64 build: run build-linux.ps1 (Docker, not WSL) -->
 </Project>
