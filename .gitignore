@@ -85,3 +85,6 @@ motely-node/jaml-schema.js
 /motely-wasm/_framework_st
 /motely-wasm/_framework
 *.tgz
+/JamlFilters
+/motely-wasm
+/motely-node
