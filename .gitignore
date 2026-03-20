@@ -88,3 +88,13 @@ motely-node/jaml-schema.js
 /JamlFilters
 /motely-wasm
 /motely-node
+bin
+obj
+/motely-wasm
+/Motely.API/node_modules
+/Motely.API/wwwroot/_framework
+/Motely.API/wwwroot/jammy-seed-finder/_framework
+Motely.API/wwwroot/jammy-seed-finder/main.js
+/Motely.API/wwwroot/jammy-seed-finder
+/motely-node
+/JamlFilters
