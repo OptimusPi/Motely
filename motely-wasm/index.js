@@ -1,5 +1,6 @@
-// motely-wasm — JS loader for .NET WASM [JSExport] methods.
-// No JSON serialization for search or getters. AnalyzeSeed returns JSON (complex nested data).
+// motely-wasm — JS loader for .NET WASM runtime.
+// Instance-based: loadMotely() → runtime, runtime.createInstance() → instance.
+// Search uses push-based callbacks (unchanged). Analysis returns JSON.
 
 function resolveFrameworkUrl(baseUrl, frameworkFolder) {
     if (baseUrl) {
@@ -36,7 +37,6 @@ export async function loadMotely(options) {
 
     runtime.runMain().catch(err => console.error("[motely-wasm] runMain failed:", err));
 
-    // No-op callbacks for when caller doesn't provide them
     const noop3 = () => { };
     const noop2 = () => { };
 
@@ -49,8 +49,99 @@ export async function loadMotely(options) {
 
     let cachedCapabilities = null;
 
-    const api = {
-        // ── Getters (async — dispatched to worker thread) ──
+    // ── Instance: the thing ──
+
+    function createInstance() {
+        const id = raw.CreateInstance();
+        let destroyed = false;
+
+        const inst = {
+            get id() { return id; },
+            get isDestroyed() { return destroyed; },
+
+            // ── Analyze ──
+            async analyzeSeed(seed, deck, stake) {
+                const json = await raw.AnalyzeSeed(id, seed, deck, stake);
+                return JSON.parse(json);
+            },
+
+            // ── Search (push-based, unchanged) ──
+            async startJamlSearch(jamlContent, options) {
+                const o = resolveOpts(options);
+                return raw.StartJamlSearch(
+                    id, jamlContent, o.threadCount, o.batchCharCount,
+                    options?.startBatch ?? -1, options?.endBatch ?? -1,
+                    o.onProgress, o.onResult
+                );
+            },
+
+            async verifySeed(jamlContent, seed, options) {
+                const o = resolveOpts(options);
+                return raw.StartSeedListSearch(
+                    id, jamlContent, o.threadCount, o.batchCharCount,
+                    [seed], o.onProgress, o.onResult
+                );
+            },
+
+            async startSeedListSearch(jamlContent, seeds, options) {
+                const o = resolveOpts(options);
+                return raw.StartSeedListSearch(
+                    id, jamlContent, o.threadCount, o.batchCharCount,
+                    seeds, o.onProgress, o.onResult
+                );
+            },
+
+            async startKeywordSearch(jamlContent, keyword, options) {
+                const o = resolveOpts(options);
+                return raw.StartKeywordSearch(
+                    id, jamlContent, o.threadCount, o.batchCharCount,
+                    [keyword], options?.padding ?? "", o.onProgress, o.onResult
+                );
+            },
+
+            async startKeywordsSearch(jamlContent, keywords, options) {
+                const o = resolveOpts(options);
+                return raw.StartKeywordSearch(
+                    id, jamlContent, o.threadCount, o.batchCharCount,
+                    keywords, options?.padding ?? "", o.onProgress, o.onResult
+                );
+            },
+
+            async startRandomSearch(jamlContent, count, options) {
+                const o = resolveOpts(options);
+                return raw.StartRandomSearch(
+                    id, jamlContent, o.threadCount, o.batchCharCount,
+                    count, o.onProgress, o.onResult
+                );
+            },
+
+            async startPalindromeSearch(jamlContent, options) {
+                const o = resolveOpts(options);
+                return raw.StartPalindromeSearch(
+                    id, jamlContent, o.threadCount, o.batchCharCount,
+                    o.onProgress, o.onResult
+                );
+            },
+
+            async stopSearch() { await raw.StopSearch(id); },
+
+            destroy() {
+                if (!destroyed) {
+                    destroyed = true;
+                    raw.DestroyInstance(id);
+                }
+            },
+        };
+
+        return inst;
+    }
+
+    // ── Runtime: global + factory ──
+
+    return {
+        createInstance,
+
+        // Global (no instance needed)
         getVersion: () => raw.GetVersion(),
         async getCapabilities() {
             if (cachedCapabilities) return cachedCapabilities;
@@ -71,79 +162,28 @@ export async function loadMotely(options) {
         isSimdEnabled: () => raw.IsSimdEnabled(),
         getProcessorCount: () => raw.GetProcessorCount(),
 
-        // ── Analyze (JSON — complex nested data) ──
-        async analyzeSeed(seed, deck, stake) {
-            const json = await raw.AnalyzeSeed(seed, deck, stake);
-            return JSON.parse(json);
-        },
-
-        // ── Validate (no JSON) ──
         async validateJaml(jamlContent) {
             const valid = await raw.ValidateJaml(jamlContent);
             const error = valid ? "" : await raw.ValidateJamlWithError(jamlContent);
             return { valid, error };
         },
 
-        // ── Search methods (no JSON — typed params + callbacks) ──
-        async startJamlSearch(jamlContent, options) {
-            const o = resolveOpts(options);
-            return raw.StartJamlSearch(
-                jamlContent, o.threadCount, o.batchCharCount,
-                options?.startBatch ?? -1, options?.endBatch ?? -1,
-                o.onProgress, o.onResult
-            );
+        // ── Backward compat: flat methods that use a default instance ──
+        _defaultInstance: null,
+        _getDefault() {
+            if (!this._defaultInstance || this._defaultInstance.isDestroyed) {
+                this._defaultInstance = createInstance();
+            }
+            return this._defaultInstance;
         },
-
-        async verifySeed(jamlContent, seed, options) {
-            const o = resolveOpts(options);
-            return raw.StartSeedListSearch(
-                jamlContent, o.threadCount, o.batchCharCount,
-                [seed], o.onProgress, o.onResult
-            );
-        },
-
-        async startSeedListSearch(jamlContent, seeds, options) {
-            const o = resolveOpts(options);
-            return raw.StartSeedListSearch(
-                jamlContent, o.threadCount, o.batchCharCount,
-                seeds, o.onProgress, o.onResult
-            );
-        },
-
-        async startKeywordSearch(jamlContent, keyword, options) {
-            const o = resolveOpts(options);
-            return raw.StartKeywordSearch(
-                jamlContent, o.threadCount, o.batchCharCount,
-                [keyword], options?.padding ?? "", o.onProgress, o.onResult
-            );
-        },
-
-        async startKeywordsSearch(jamlContent, keywords, options) {
-            const o = resolveOpts(options);
-            return raw.StartKeywordSearch(
-                jamlContent, o.threadCount, o.batchCharCount,
-                keywords, options?.padding ?? "", o.onProgress, o.onResult
-            );
-        },
-
-        async startRandomSearch(jamlContent, count, options) {
-            const o = resolveOpts(options);
-            return raw.StartRandomSearch(
-                jamlContent, o.threadCount, o.batchCharCount,
-                count, o.onProgress, o.onResult
-            );
-        },
-
-        async startPalindromeSearch(jamlContent, options) {
-            const o = resolveOpts(options);
-            return raw.StartPalindromeSearch(
-                jamlContent, o.threadCount, o.batchCharCount,
-                o.onProgress, o.onResult
-            );
-        },
-
-        stopSearch: async () => await raw.StopSearch(),
+        analyzeSeed(seed, deck, stake) { return this._getDefault().analyzeSeed(seed, deck, stake); },
+        startJamlSearch(jamlContent, options) { return this._getDefault().startJamlSearch(jamlContent, options); },
+        verifySeed(jamlContent, seed, options) { return this._getDefault().verifySeed(jamlContent, seed, options); },
+        startSeedListSearch(jamlContent, seeds, options) { return this._getDefault().startSeedListSearch(jamlContent, seeds, options); },
+        startKeywordSearch(jamlContent, keyword, options) { return this._getDefault().startKeywordSearch(jamlContent, keyword, options); },
+        startKeywordsSearch(jamlContent, keywords, options) { return this._getDefault().startKeywordsSearch(jamlContent, keywords, options); },
+        startRandomSearch(jamlContent, count, options) { return this._getDefault().startRandomSearch(jamlContent, count, options); },
+        startPalindromeSearch(jamlContent, options) { return this._getDefault().startPalindromeSearch(jamlContent, options); },
+        stopSearch() { return this._getDefault().stopSearch(); },
     };
-
-    return api;
 }

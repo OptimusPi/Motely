@@ -3,10 +3,62 @@ using Motely.Filters;
 namespace Motely.Executors;
 
 /// <summary>
-/// Shared search setup. Takes config + request, returns a ready-to-run plan.
+/// Search orchestration: validate, prepare, and run searches.
 /// </summary>
 public static class MotelySearchOrchestrator
 {
+    /// <summary>
+    /// Run a complete search with callbacks. Loads JAML, prepares, executes.
+    /// </summary>
+    public static (string Status, int SeedsFound, int HighestScore) RunSearch(
+        string jamlContent, MotelySearchRequest request,
+        Action<long, long, long>? onProgress = null,
+        Action<string, int>? onResult = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error) || config == null)
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+
+        var (plan, _, prepareError) = PrepareSearch(config, request);
+        if (prepareError != null || plan == null)
+            throw new InvalidOperationException(prepareError ?? "Search could not be prepared.");
+
+        int seedsFound = 0;
+        int highestScore = 0;
+        var settings = plan.Settings;
+
+        if (onProgress != null)
+        {
+            settings = settings.WithProgressCallback(prog =>
+                onProgress(prog.SeedsSearched, prog.MatchingSeeds, (long)prog.ElapsedTime.TotalMilliseconds));
+        }
+
+        if (plan.ShouldClauseCount > 0)
+        {
+            settings = settings.WithScoredResultCallback(tally =>
+            {
+                Interlocked.Increment(ref seedsFound);
+                if (tally.Score > highestScore) highestScore = tally.Score;
+                onResult?.Invoke(tally.Seed, tally.Score);
+            });
+        }
+        else
+        {
+            settings = settings.WithSeedMatchCallback(seed =>
+            {
+                Interlocked.Increment(ref seedsFound);
+                onResult?.Invoke(seed, 0);
+            });
+        }
+
+        using var search = settings.CreateSearch();
+        search.Start(cancellationToken);
+
+        return (cancellationToken.IsCancellationRequested ? "cancelled" :
+                search.IsCompleted ? "ok" : "cancelled",
+                seedsFound, highestScore);
+    }
+
     public static (JamlSearchPlan? Plan, string? FilterId, string? Error) PrepareSearch(
         JamlConfig config,
         MotelySearchRequest request
