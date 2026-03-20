@@ -4,15 +4,17 @@ using System.Text.Json;
 using Motely;
 using Motely.Analysis;
 using Motely.Executors;
-using Motely.Filters;
 
 namespace Motely.BrowserWasm;
 
+/// <summary>
+/// Browser WASM exports. Thin wrappers around MotelyExports (shared orchestration).
+/// Each method adds [JSExport] and async Task.Run so the browser thread isn't blocked.
+/// </summary>
 [SupportedOSPlatform("browser")]
 public static partial class MotelyWasmExports
 {
     private static CancellationTokenSource? _activeCts;
-    private static IMotelySearch? _activeSearch;
 
     // ── SEARCH (sequential) ──
 
@@ -102,7 +104,6 @@ public static partial class MotelyWasmExports
     [JSExport]
     public static Task StopSearch()
     {
-        try { _activeSearch?.Cancel(); } catch { }
         try { _activeCts?.Cancel(); } catch { }
         return Task.CompletedTask;
     }
@@ -147,54 +148,32 @@ public static partial class MotelyWasmExports
     private static int ResolveThreads(int t) => t > 0 ? t : Environment.ProcessorCount;
     private static int ResolveBatch(int b) => b is >= 1 and <= 7 ? b : 4;
 
+    /// <summary>
+    /// Delegates to MotelyExports.RunSearch (shared orchestration) with cancellation + async.
+    /// </summary>
     private static async Task<string> RunSearch(
         string jamlContent, MotelySearchRequest request,
         Action<long, long, long> onProgress, Action<string, int> onResult)
     {
-        if (_activeSearch != null)
+        if (_activeCts != null)
             return "error: search already running";
-
-        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var loadError))
-            return $"error: {loadError}";
-
-        if (!config.HasAnyClauses)
-            return "error: no clauses in JAML";
-
-        var (plan, _, prepareError) = MotelySearchOrchestrator.PrepareSearch(config, request);
-        if (prepareError != null || plan == null)
-            return $"error: {prepareError ?? "Search could not be prepared."}";
-
-        var settings = plan.Settings;
-
-        settings.WithSeedMatchCallback(line =>
-        {
-            int comma = line.IndexOf(',');
-            if (comma < 0) { onResult(line, 0); return; }
-            var seed = line[..comma];
-            int secondComma = line.IndexOf(',', comma + 1);
-            var scoreSpan = secondComma >= 0
-                ? line.AsSpan(comma + 1, secondComma - comma - 1)
-                : line.AsSpan(comma + 1);
-            int.TryParse(scoreSpan, out int score);
-            onResult(seed, score);
-        });
-
-        settings.WithProgressCallback(p =>
-            onProgress(p.SeedsSearched, p.MatchingSeeds, (long)p.ElapsedTime.TotalMilliseconds));
 
         var cts = new CancellationTokenSource();
         _activeCts = cts;
 
         try
         {
-            using var search = settings.CreateSearch();
-            _activeSearch = search;
-            await Task.Run(() => search.Start(cts.Token));
-            return cts.Token.IsCancellationRequested ? "cancelled" : "ok";
+            var (status, _, _) = await Task.Run(() =>
+                MotelyExports.RunSearch(jamlContent, request, onProgress, onResult, cts.Token));
+            return status;
         }
         catch (OperationCanceledException)
         {
             return "cancelled";
+        }
+        catch (InvalidOperationException ex)
+        {
+            return $"error: {ex.Message}";
         }
         catch (Exception ex)
         {
@@ -202,7 +181,6 @@ public static partial class MotelyWasmExports
         }
         finally
         {
-            _activeSearch = null;
             _activeCts = null;
         }
     }

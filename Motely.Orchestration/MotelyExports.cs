@@ -39,7 +39,8 @@ public static class MotelyExports
     public static (string Status, int SeedsFound, int HighestScore) RunSearch(
         string jamlContent, MotelySearchRequest request,
         Action<long, long, long>? onProgress = null,
-        Action<string, int>? onResult = null)
+        Action<string, int>? onResult = null,
+        CancellationToken cancellationToken = default)
     {
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error) || config == null)
             throw new InvalidOperationException(error ?? "Invalid JAML.");
@@ -77,8 +78,10 @@ public static class MotelyExports
         }
 
         using var search = settings.CreateSearch();
-        search.Start(CancellationToken.None);
+        search.Start(cancellationToken);
 
-        return (search.IsCompleted ? "ok" : "cancelled", seedsFound, highestScore);
+        return (cancellationToken.IsCancellationRequested ? "cancelled" :
+                search.IsCompleted ? "ok" : "cancelled",
+                seedsFound, highestScore);
     }
 }
