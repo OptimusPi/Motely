@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jammy Seed Finder Dashboard</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1220;
+      --bg-elevated: rgba(18, 24, 40, 0.92);
+      --panel: rgba(21, 29, 48, 0.92);
+      --panel-soft: rgba(17, 23, 38, 0.84);
+      --border: rgba(148, 163, 184, 0.16);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #f97316;
+      --accent-2: #38bdf8;
+      --success: #34d399;
+      --danger: #fb7185;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius: 20px;
+      --radius-sm: 14px;
+      --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 30%),
+        radial-gradient(circle at right, rgba(249, 115, 22, 0.18), transparent 24%),
+        linear-gradient(180deg, #0f1220 0%, #0a0d17 100%);
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 16px 0 40px;
+    }
+
+    .hero,
+    .section,
+    .footer {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 20px;
+      display: grid;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .eyebrow,
+    .status-pill,
+    .version-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow {
+      color: var(--accent-2);
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .version-pill {
+      color: #ffd6b0;
+      background: rgba(249, 115, 22, 0.12);
+    }
+
+    .status-pill {
+      color: var(--muted);
+      background: rgba(148, 163, 184, 0.08);
+    }
+
+    .status-pill.online {
+      color: var(--success);
+      border-color: rgba(52, 211, 153, 0.35);
+      background: rgba(52, 211, 153, 0.12);
+    }
+
+    .status-pill.offline {
+      color: var(--danger);
+      border-color: rgba(251, 113, 133, 0.35);
+      background: rgba(251, 113, 133, 0.12);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 3.6rem);
+      line-height: 0.98;
+      margin: 12px 0 10px;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-copy p {
+      max-width: 62ch;
+      color: #cbd5e1;
+      font-size: 1rem;
+    }
+
+    .hero-actions,
+    .link-list,
+    .resource-list,
+    .filter-list,
+    .meta-list,
+    .wasm-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .cta,
+    .resource-link,
+    .pool-link,
+    .meta-link,
+    .wasm-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+    }
+
+    .cta:hover,
+    .resource-link:hover,
+    .pool-link:hover,
+    .meta-link:hover,
+    .wasm-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .cta.primary,
+    .wasm-btn {
+      color: #fff;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .cta.secondary,
+    .pool-link,
+    .meta-link,
+    .resource-link {
+      color: #dbeafe;
+      background: rgba(15, 23, 42, 0.7);
+      border-color: rgba(96, 165, 250, 0.2);
+    }
+
+    .hero-stats,
+    .stat-grid,
+    .tile-grid,
+    .resource-grid,
+    .dashboard-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero-stats,
+    .stat-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tile,
+    .stat,
+    .resource-card,
+    .subpanel,
+    .search-row {
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .tile,
+    .stat,
+    .subpanel,
+    .resource-card {
+      padding: 14px;
+    }
+
+    .tile-label,
+    .label,
+    .section-label,
+    .resource-card span {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .tile-value,
+    .value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      word-break: break-word;
+    }
+
+    .orange {
+      color: #fdba74;
+    }
+
+    .green {
+      color: var(--success);
+    }
+
+    .blue {
+      color: var(--accent-2);
+    }
+
+    .section {
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .section h2 {
+      font-size: 1.15rem;
+      margin-bottom: 4px;
+    }
+
+    .section p,
+    .empty,
+    .resource-card p,
+    .subpanel p,
+    .footer p {
+      color: var(--muted);
+    }
+
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .tile-grid,
+    .resource-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .resource-card {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .resource-card strong {
+      display: block;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+
+    .resource-card:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+
+    .search-row {
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .search-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .search-row .search-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .search-row .id {
+      font-family: var(--mono);
+      color: var(--accent-2);
+      font-size: 0.88rem;
+    }
+
+    .search-row .meta {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8 0%, #f97316 100%);
+      border-radius: inherit;
+      transition: width 0.4s ease;
+    }
+
+    .filter-pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+    }
+
+    .empty {
+      display: block;
+      padding: 6px 0;
+    }
+
+    .pulse {
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    .wasm-search textarea {
+      width: 100%;
+      min-height: 160px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(10, 14, 24, 0.94);
+      color: var(--text);
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      resize: vertical;
+      outline: none;
+    }
+
+    .wasm-search textarea:focus {
+      border-color: rgba(249, 115, 22, 0.5);
+    }
+
+    .wasm-btn {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .wasm-btn.alt {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    }
+
+    .wasm-btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+      transform: none;
+    }
+
+    .wasm-status,
+    .wasm-progress {
+      min-height: 20px;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .wasm-results {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .wasm-seed {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(52, 211, 153, 0.25);
+      background: rgba(16, 27, 24, 0.9);
+      color: var(--success);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+    }
+
+    .footer {
+      padding: 18px;
+    }
+
+    .footer strong {
+      color: #e2e8f0;
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.45;
+      }
+    }
+
+    @media (min-width: 720px) {
+      .page {
+        width: min(1120px, calc(100% - 40px));
+        padding-top: 24px;
+      }
+
+      .hero {
+        padding: 24px;
+      }
+
+      .hero-stats,
+      .stat-grid,
+      .tile-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .resource-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1.4fr 1fr;
+        align-items: start;
+      }
+    }
+
+    @media (min-width: 960px) {
+      .hero {
+        grid-template-columns: 1.4fr 1fr;
+        align-items: end;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="hero-top">
+          <span class="eyebrow">Motely.API local dashboard</span>
+          <div class="hero-actions">
+            <span class="version-pill" id="version">loading...</span>
+            <span class="status-pill" id="apiStatus">Polling status</span>
+          </div>
+        </div>
+        <h1>Jammy Seed Finder</h1>
+        <p>One local-first control surface for browser preview, filters, live searches, worker status, and the in-browser Motely WASM runner.</p>
+        <div class="hero-actions" style="margin-top:16px;">
+          <a class="cta primary" href="/jammy-seed-finder/">Open browser app</a>
+          <a class="cta secondary" href="/api/filters" target="_blank">Filters API</a>
+          <a class="cta secondary" href="/api/status" target="_blank">Status JSON</a>
+          <a class="cta secondary" href="/swagger" target="_blank">Swagger</a>
+        </div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="tile">
+          <span class="tile-label">Hostname</span>
+          <div class="tile-value orange" id="hostname">—</div>
+        </div>
+        <div class="tile">
+          <span class="tile-label">Runtime</span>
+          <div class="tile-value" id="runtime">—</div>
+        </div>
+        <div class="tile">
+          <span class="tile-label">Filters</span>
+          <div class="tile-value green" id="filterCount">—</div>
+        </div>
+        <div class="tile">
+          <span class="tile-label">Uptime</span>
+          <div class="tile-value blue" id="uptime">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <span class="section-label">Quick access</span>
+          <h2>Local tools</h2>
+          <p>Launch the browser shell, inspect endpoints, and keep the hosted preview route close.</p>
+        </div>
+      </div>
+
+      <div class="tile-grid">
+        <div class="subpanel">
+          <span class="section-label">Hosted preview</span>
+          <p>/jammy-seed-finder/ serves the Avalonia browser app from the Motely.API host.</p>
+          <div class="meta-list" style="margin-top:12px;">
+            <a class="meta-link" href="/jammy-seed-finder/">Open preview</a>
+          </div>
+        </div>
+        <div class="subpanel">
+          <span class="section-label">Search API</span>
+          <p>Use the hosted JSON endpoints for filters, search orchestration, and status polling.</p>
+          <div class="meta-list" style="margin-top:12px;">
+            <a class="meta-link" href="/api/filters" target="_blank">/api/filters</a>
+            <a class="meta-link" href="/api/status" target="_blank">/api/status</a>
+          </div>
+        </div>
+        <div class="subpanel">
+          <span class="section-label">Worker pool</span>
+          <p>Community jobs route through the configured pool coordinator when distributed work is enabled.</p>
+          <div class="meta-list" style="margin-top:12px;">
+            <a class="pool-link" id="poolLink" href="https://www.seedfinder.app" target="_blank">seedfinder.app</a>
+          </div>
+        </div>
+        <div class="subpanel">
+          <span class="section-label">Build mode</span>
+          <p>Desktop and browser hosts stay aligned while browser output is copied into this host for local preview.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="dashboard-grid">
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <span class="section-label">Live activity</span>
+            <h2>Active searches</h2>
+            <p>Current server-side search sessions with progress, matches, and elapsed time.</p>
+          </div>
+        </div>
+        <div id="searches"><span class="empty pulse">Polling active searches...</span></div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <span class="section-label">Runtime details</span>
+            <h2>Server and worker</h2>
+            <p>Current process details and distributed worker state.</p>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="label">CPUs</div>
+            <div class="value green" id="cpus">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">OS</div>
+            <div class="value" id="os">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Worker state</div>
+            <div class="value orange" id="workerState">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Configured</div>
+            <div class="value" id="workerConfigured">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Threads</div>
+            <div class="value green" id="workerThreads">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Worker ID</div>
+            <div class="value" id="workerId">—</div>
+          </div>
+          <div class="stat" style="grid-column: 1 / -1;">
+            <div class="label">Pool URL</div>
+            <div class="value" id="workerPoolUrl">—</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <span class="section-label">Local data</span>
+          <h2>Available filters</h2>
+          <p>Current `.jaml` filters discovered by the local host.</p>
+        </div>
+      </div>
+      <div id="filters" class="filter-list"><span class="empty pulse">Loading filters...</span></div>
+    </section>
+
+    <section class="section wasm-search">
+      <div class="section-header">
+        <div>
+          <span class="section-label">In-browser search</span>
+          <h2>Motely WASM runner</h2>
+          <p>Kick off a local single-thread search directly in the browser without leaving the dashboard.</p>
+        </div>
+      </div>
+
+      <textarea id="wasmJaml" rows="6">name: Blackboard Demo
+deck: Red
+stake: White
+must:
+  - joker: Blackboard
+  - joker: Misprint</textarea>
+
+      <div class="wasm-actions" style="margin-top:12px;">
+        <button class="wasm-btn" id="wasmSearchBtn" disabled>Loading WASM...</button>
+        <button class="wasm-btn alt" id="wasmStopBtn" disabled>Stop</button>
+      </div>
+      <div id="wasmStatus" class="wasm-status" style="margin-top:12px;"></div>
+      <div class="wasm-progress" id="wasmProgress"></div>
+      <div class="wasm-results" id="wasmResults"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <span class="section-label">Community</span>
+          <h2>Reference tools</h2>
+          <p>A compact set of external resources from the earlier home page, trimmed for the local dashboard.</p>
+        </div>
+      </div>
+
+      <div class="resource-grid">
+        <a class="resource-card" href="https://miaklwalker.github.io/Blueprint/" target="_blank">
+          <span>Seed analysis</span>
+          <strong>Blueprint</strong>
+          <p>Detailed online Balatro seed analyzer by miaklwalker.</p>
+        </a>
+        <a class="resource-card" href="https://weejoker.app" target="_blank">
+          <span>Search tool</span>
+          <strong>WeeJoker</strong>
+          <p>Community seed search and analysis site.</p>
+        </a>
+        <a class="resource-card" href="https://erraticdeck.app" target="_blank">
+          <span>Deck analysis</span>
+          <strong>ErraticDeck</strong>
+          <p>Balatro deck analysis and related seed tools.</p>
+        </a>
+      </div>
+
+      <div class="resource-list" style="margin-top:12px;">
+        <a class="resource-link" href="https://github.com/miaklwalker/Blueprint" target="_blank">Blueprint GitHub</a>
+        <a class="resource-link" href="https://github.com/tacodiva/motely" target="_blank">Original Motely</a>
+        <a class="resource-link" href="https://playbalatro.com/" target="_blank">Buy Balatro</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p><strong>Not affiliated with LocalThunk or PlayStack.</strong> Community references remain attributed, while this local dashboard stays focused on browser preview, host status, filters, and search tooling.</p>
+    </footer>
+  </main>
+
+  <script>
+    function setApiState(isOnline, text) {
+      const apiStatus = document.getElementById('apiStatus');
+      apiStatus.textContent = text;
+      apiStatus.className = `status-pill ${isOnline ? 'online' : 'offline'}`;
+    }
+
+    async function poll() {
+      try {
+        const res = await fetch('/api/status');
+        const d = await res.json();
+
+        document.getElementById('hostname').textContent = d.hostname || '—';
+        document.getElementById('cpus').textContent = d.processorCount || '—';
+        document.getElementById('uptime').textContent = d.uptime || '—';
+        document.getElementById('os').textContent = d.os || '—';
+        document.getElementById('runtime').textContent = d.runtime || '—';
+        document.getElementById('filterCount').textContent = d.filterCount ?? '—';
+        document.getElementById('version').textContent = d.motelyVersion ? `v${d.motelyVersion}` : (d.runtime ? d.runtime.split(' ').pop() : '?');
+        setApiState(true, 'API online');
+
+        if (d.poolUrl) {
+          document.getElementById('poolLink').href = d.poolUrl;
+          document.getElementById('poolLink').textContent = d.poolUrl.replace('https://', '');
+        }
+
+        const worker = d.worker || {};
+        document.getElementById('workerState').textContent = worker.state || '—';
+        document.getElementById('workerConfigured').textContent = worker.configured ? 'Yes' : 'No';
+        document.getElementById('workerId').textContent = worker.workerId || '—';
+        document.getElementById('workerThreads').textContent = worker.threads ?? '—';
+        document.getElementById('workerPoolUrl').textContent = worker.poolUrl || '—';
+
+        const box = document.getElementById('searches');
+        const searches = d.activeSearches || [];
+        if (searches.length === 0) {
+          box.innerHTML = '<span class="empty">No active searches</span>';
+        } else {
+          box.innerHTML = searches.map(s => {
+            const searchId = (s.id || s.filterId || 'search').slice(0, 8);
+            const searched = Number(s.seedsSearched ?? s.totalSeedsSearched ?? 0);
+            const matches = Number(s.matches ?? s.matchingSeeds ?? 0);
+            const elapsed = s.elapsed || s.elapsedTime || '—';
+            const pct = s.isCompleted ? 100 : Math.min(99, (searched / 1500625) * 100);
+            return `<div class="search-row">
+              <div class="search-top">
+                <span class="id">${searchId}</span>
+                <span class="meta">${matches.toLocaleString()} hits</span>
+              </div>
+              <div class="bar"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+              <span class="meta">${searched.toLocaleString()} seeds searched · ${elapsed}</span>
+            </div>`;
+          }).join('');
+        }
+      } catch {
+        document.getElementById('hostname').textContent = 'Unavailable';
+        setApiState(false, 'API offline');
+      }
+
+      try {
+        const fRes = await fetch('/api/filters');
+        const filters = await fRes.json();
+        const box = document.getElementById('filters');
+        if (!filters.length) {
+          box.innerHTML = '<span class="empty">No filters found</span>';
+        } else {
+          box.innerHTML = filters.map(f => `<span class="filter-pill">${f.name}</span>`).join('');
+        }
+      } catch {
+        document.getElementById('filters').innerHTML = '<span class="empty">Unable to load filters</span>';
+      }
+    }
+
+    poll();
+    setInterval(poll, 3000);
+  </script>
+
+  <script type="module">
+    let raw = null;
+    const searchBtn = document.getElementById('wasmSearchBtn');
+    const stopBtn = document.getElementById('wasmStopBtn');
+    const progressEl = document.getElementById('wasmProgress');
+    const resultsEl = document.getElementById('wasmResults');
+    const statusEl = document.getElementById('wasmStatus');
+
+    try {
+      const { dotnet } = await import('/_framework_st/dotnet.js');
+      const { getAssemblyExports, getConfig } = await dotnet.create();
+      const config = getConfig();
+      const allExports = await getAssemblyExports(config.mainAssemblyName);
+      raw = allExports.Motely.BrowserWasm.MotelyWasmExports;
+      dotnet.run().catch(() => { });
+
+      const caps = JSON.parse(await raw.GetCapabilitiesAsync());
+      statusEl.textContent = `motely-wasm v${caps.version} · ${caps.runtime}`;
+      searchBtn.textContent = 'Search';
+      searchBtn.disabled = false;
+    } catch (e) {
+      searchBtn.textContent = 'WASM unavailable';
+      statusEl.textContent = e.message;
+    }
+
+    searchBtn.addEventListener('click', async () => {
+      if (!raw) {
+        return;
+      }
+
+      const jaml = document.getElementById('wasmJaml').value;
+      resultsEl.innerHTML = '';
+      progressEl.textContent = 'Starting...';
+      searchBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      const opts = JSON.stringify({ threadCount: 1, batchCharCount: 4 });
+      try {
+        const resultJson = await raw.StartJamlSearch(
+          jaml,
+          opts,
+          (searched, matched, elapsed) => {
+            progressEl.textContent = `Searched: ${searched.toLocaleString()} | Matched: ${matched.toLocaleString()} | ${(elapsed / 1000).toFixed(1)}s`;
+          },
+          seed => {
+            const el = document.createElement('span');
+            el.className = 'wasm-seed';
+            el.textContent = seed;
+            resultsEl.appendChild(el);
+          }
+        );
+        const res = JSON.parse(resultJson);
+        progressEl.textContent = `Done - ${Number(res.seedsSearched).toLocaleString()} searched · ${res.matchCount ?? 0} matches · ${(res.elapsedMs / 1000).toFixed(1)}s`;
+      } catch (e) {
+        progressEl.textContent = `Error: ${e.message}`;
+      } finally {
+        searchBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    });
+
+    stopBtn.addEventListener('click', () => {
+      if (raw) {
+        raw.StopSearch();
+      }
+
+      stopBtn.disabled = true;
+    });
+  </script>
+</body>
+
+</html>
