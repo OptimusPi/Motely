@@ -68,16 +68,13 @@ export interface CapabilitiesInfo {
     timestamp: string;
 }
 
-// ── API ──
+// ── Instance ──
 
-export interface MotelyWasmApi {
-    getVersion(): Promise<string>;
-    getCapabilities(): Promise<CapabilitiesInfo>;
-    isSimdEnabled(): Promise<boolean>;
-    getProcessorCount(): Promise<number>;
+export interface MotelyInstance {
+    readonly id: number;
+    readonly isDestroyed: boolean;
 
     analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo>;
-    validateJaml(jamlContent: string): Promise<ValidateResult>;
 
     startJamlSearch(jamlContent: string, options?: SequentialSearchOptions): Promise<string>;
     verifySeed(jamlContent: string, seed: string, options?: SearchRuntimeOptions): Promise<string>;
@@ -86,7 +83,33 @@ export interface MotelyWasmApi {
     startKeywordsSearch(jamlContent: string, keywords: string[], options?: KeywordSearchOptions): Promise<string>;
     startRandomSearch(jamlContent: string, count: number, options?: SearchRuntimeOptions): Promise<string>;
     startPalindromeSearch(jamlContent: string, options?: SearchRuntimeOptions): Promise<string>;
-    stopSearch(): void;
+    stopSearch(): Promise<void>;
+
+    destroy(): void;
+}
+
+// ── Runtime API ──
+
+export interface MotelyWasmApi {
+    createInstance(): MotelyInstance;
+
+    // Global (no instance needed)
+    getVersion(): Promise<string>;
+    getCapabilities(): Promise<CapabilitiesInfo>;
+    isSimdEnabled(): Promise<boolean>;
+    getProcessorCount(): Promise<number>;
+    validateJaml(jamlContent: string): Promise<ValidateResult>;
+
+    // Backward compat (uses default instance)
+    analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo>;
+    startJamlSearch(jamlContent: string, options?: SequentialSearchOptions): Promise<string>;
+    verifySeed(jamlContent: string, seed: string, options?: SearchRuntimeOptions): Promise<string>;
+    startSeedListSearch(jamlContent: string, seeds: string[], options?: SearchRuntimeOptions): Promise<string>;
+    startKeywordSearch(jamlContent: string, keyword: string, options?: KeywordSearchOptions): Promise<string>;
+    startKeywordsSearch(jamlContent: string, keywords: string[], options?: KeywordSearchOptions): Promise<string>;
+    startRandomSearch(jamlContent: string, count: number, options?: SearchRuntimeOptions): Promise<string>;
+    startPalindromeSearch(jamlContent: string, options?: SearchRuntimeOptions): Promise<string>;
+    stopSearch(): Promise<void>;
 }
 
 export interface LoadMotelyOptions {
