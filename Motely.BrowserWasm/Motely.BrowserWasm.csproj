@@ -1,40 +1,30 @@
-<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
-  <!-- Do NOT add Content Include="wwwroot\**" - SDK includes wwwroot automatically; duplicate causes NETSDK1022 -->
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-browser</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
     <Version>$(MotelyVersion)</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <RunAOTCompilation>true</RunAOTCompilation>
-    <PublishReadyToRun>false</PublishReadyToRun>
 
-    <!-- AOT & Native Build -->
-    <WasmBuildNative>true</WasmBuildNative>
-    <!-- Pass -p:SingleThread=true to publish without threading (browsers without SharedArrayBuffer) -->
+    <!-- NativeAOT-LLVM -->
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!-- SIMD & Threading -->
     <SingleThread Condition="'$(SingleThread)' == ''">false</SingleThread>
     <WasmEnableThreads Condition="'$(SingleThread)' != 'true'">true</WasmEnableThreads>
     <WasmEnableThreads Condition="'$(SingleThread)' == 'true'">false</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
 
-    <!-- Trimming & Optimization -->
+    <!-- Trimming -->
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
-    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
 
-    <!-- SIZE REDUCTION -->
-    <WasmIncludeFullSymbols>false</WasmIncludeFullSymbols>
-    <WasmDebugLevel>0</WasmDebugLevel>
-    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
-    <WasmEmitCompressedAssets>false</WasmEmitCompressedAssets>
-
-    <!-- Globalization: Search doesn't need ICU data (~2.5MB saved) -->
+    <!-- No ICU -->
     <InvariantGlobalization>true</InvariantGlobalization>
-
-    <!-- Re-enabled: testing with Binaryen 117 from .NET 10 Emscripten pack -->
-    <WasmRunWasmOpt>true</WasmRunWasmOpt>
   </PropertyGroup>
 
   <ItemGroup>
