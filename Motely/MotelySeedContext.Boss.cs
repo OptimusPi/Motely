@@ -1,0 +1,95 @@
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
+namespace Motely;
+
+unsafe ref partial struct MotelySeedContext
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelySingleBossStream CreateBossStream()
+    {
+        return new(CreatePrngStream(MotelyPrngKeys.Boss));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelyBossBlind GetBossForAnte(
+        ref MotelySingleBossStream stream,
+        int ante,
+        ref MotelyRunState state
+    )
+    {
+        const int maxPoolLength = 23;
+
+        MotelyBossBlind* pool = stackalloc MotelyBossBlind[maxPoolLength];
+        int poolLength = 0;
+
+        if (ante % 8 == 0)
+        {
+            for (int i = 0; i < MotelyBossBlindExt.FinisherBossBlinds.Length; i++)
+            {
+                MotelyBossBlind boss = MotelyBossBlindExt.FinisherBossBlinds[i];
+
+                if (state.HasSeenBoss(boss))
+                    continue;
+
+                Debug.Assert(poolLength < maxPoolLength);
+
+                pool[poolLength++] = boss;
+            }
+
+            if (poolLength == 0)
+            {
+                state.ResetFinisherBosses();
+
+                for (int i = 0; i < MotelyBossBlindExt.FinisherBossBlinds.Length; i++)
+                {
+                    MotelyBossBlind boss = MotelyBossBlindExt.FinisherBossBlinds[i];
+                    Debug.Assert(!state.HasSeenBoss(boss));
+                    Debug.Assert(poolLength < maxPoolLength);
+
+                    pool[poolLength++] = boss;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < MotelyBossBlindExt.NormalBossBlinds.Length; i++)
+            {
+                MotelyBossBlind boss = MotelyBossBlindExt.NormalBossBlinds[i];
+
+                if (state.HasSeenBoss(boss))
+                    continue;
+                if (ante < boss.GetBossMinAnte())
+                    continue;
+
+                Debug.Assert(poolLength < maxPoolLength);
+
+                pool[poolLength++] = boss;
+            }
+
+            if (poolLength == 0)
+            {
+                state.ResetNormalBosses();
+
+                for (int i = 0; i < MotelyBossBlindExt.NormalBossBlinds.Length; i++)
+                {
+                    MotelyBossBlind boss = MotelyBossBlindExt.NormalBossBlinds[i];
+
+                    if (ante < boss.GetBossMinAnte())
+                        continue;
+
+                    Debug.Assert(!state.HasSeenBoss(boss));
+                    Debug.Assert(poolLength < maxPoolLength);
+
+                    pool[poolLength++] = boss;
+                }
+            }
+        }
+
+        MotelyBossBlind selectedBoss = pool[GetNextRandomInt(ref stream.PrngStream, 0, poolLength)];
+
+        state.SeeBoss(selectedBoss);
+
+        return selectedBoss;
+    }
+}
