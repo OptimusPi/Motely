@@ -7,11 +7,6 @@ using Motely.Filters;
 
 namespace Motely.NodeAddon;
 
-/// <summary>
-/// Node.js native addon exports. Thin wrappers around MotelyExports (shared orchestration).
-/// node-api-dotnet auto-generates JS bindings for [JSExport].
-/// JAMMY's index.cjs loads via require("./Motely.NodeAddon.node").MotelyNodeExports.
-/// </summary>
 [JSExport]
 public static class MotelyNodeExports
 {
@@ -19,27 +14,27 @@ public static class MotelyNodeExports
 
     public static CapabilitiesDto GetCapabilities() => new()
     {
-        Simd = MotelyExports.IsSimdEnabled(),
+        Simd = Vector128.IsHardwareAccelerated,
         Threads = true,
-        AvailableThreadCount = MotelyExports.GetProcessorCount(),
-        ProcessorCount = MotelyExports.GetProcessorCount(),
+        AvailableThreadCount = Environment.ProcessorCount,
+        ProcessorCount = Environment.ProcessorCount,
         Runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
-        Version = MotelyExports.GetVersion(typeof(MotelyCore).Assembly),
+        Version = MotelyBuildVersion.For(typeof(MotelyCore).Assembly),
         Timestamp = DateTime.UtcNow.ToString("o"),
     };
 
-    // ── Seed analysis — delegates to MotelyExports ──
+    // ── Seed analysis ──
 
     public static SeedAnalysisDto AnalyzeSeed(string seed, string deck, string stake)
     {
-        try { return MotelyExports.AnalyzeSeed(seed, deck, stake); }
+        try { return MotelySeedAnalyzer.AnalyzeToDto(seed, deck, stake); }
         catch (Exception ex)
         {
             return new SeedAnalysisDto { Seed = seed, Deck = deck, Stake = stake, Error = ex.Message };
         }
     }
 
-    // ── JAML validation — delegates to MotelyExports ──
+    // ── JAML validation ──
 
     public static ValidateResultDto ValidateJaml(string jamlContent)
     {
@@ -55,7 +50,7 @@ public static class MotelyNodeExports
         return new ValidateResultDto { Valid = false, Error = error ?? "Unknown error" };
     }
 
-    // ── Single-block search (distributed worker pool) — delegates to ProcessBlockRunner ──
+    // ── Single-block search (distributed worker pool) ──
 
     public static async Task<BlockSearchResultDto> ProcessBlockAsync(string jamlContent, int blockId)
     {
@@ -66,75 +61,63 @@ public static class MotelyNodeExports
         return ToDto(result);
     }
 
-    // ── Full searches — all delegate to MotelyExports.RunSearch ──
+    // ── Full searches — all delegate to MotelySearchOrchestrator.RunSearch ──
 
     public static BlockSearchResultDto RunSequentialRangeAsync(
         string jamlContent, int startBlock, int endBlock)
-    {
-        return RunViaShared(jamlContent, new MotelySearchRequest
+        => RunViaOrchestrator(jamlContent, new MotelySearchRequest
         {
             ThreadCount = Environment.ProcessorCount,
             BatchCharCount = ProcessBlockRunner.BatchCharCount,
             StartBatch = startBlock,
             EndBatch = endBlock,
         }, startBlock);
-    }
 
     public static BlockSearchResultDto RunListSearchAsync(
         string jamlContent, string[] seeds)
-    {
-        return RunViaShared(jamlContent, new MotelySearchRequest
+        => RunViaOrchestrator(jamlContent, new MotelySearchRequest
         {
             ThreadCount = Environment.ProcessorCount,
             BatchCharCount = ProcessBlockRunner.BatchCharCount,
             Seeds = seeds,
         });
-    }
 
     public static BlockSearchResultDto RunKeywordsSearchAsync(
         string jamlContent, string[] keywords, string? padding)
-    {
-        return RunViaShared(jamlContent, new MotelySearchRequest
+        => RunViaOrchestrator(jamlContent, new MotelySearchRequest
         {
             ThreadCount = Environment.ProcessorCount,
             BatchCharCount = ProcessBlockRunner.BatchCharCount,
             Keywords = keywords,
             Padding = string.IsNullOrEmpty(padding) ? null : padding,
         });
-    }
 
     public static BlockSearchResultDto RunRandomSearchAsync(
         string jamlContent, int count)
-    {
-        return RunViaShared(jamlContent, new MotelySearchRequest
+        => RunViaOrchestrator(jamlContent, new MotelySearchRequest
         {
             ThreadCount = Environment.ProcessorCount,
             BatchCharCount = ProcessBlockRunner.BatchCharCount,
             RandomSeeds = count > 0 ? count : 1000,
         });
-    }
 
     public static BlockSearchResultDto RunPalindromeSearchAsync(string jamlContent)
-    {
-        return RunViaShared(jamlContent, new MotelySearchRequest
+        => RunViaOrchestrator(jamlContent, new MotelySearchRequest
         {
             ThreadCount = Environment.ProcessorCount,
             BatchCharCount = ProcessBlockRunner.BatchCharCount,
             Palindrome = true,
         });
-    }
 
     // ── Private helpers ──
 
-    private static BlockSearchResultDto RunViaShared(
+    private static BlockSearchResultDto RunViaOrchestrator(
         string jamlContent, MotelySearchRequest request, int blockId = 0)
     {
-        // Collect at the wrapper level — bounded by JS-side chunking (500 blocks per call).
-        // The orchestrator streams via callbacks; this is just the final DTO for the JS boundary.
         var seeds = new List<string>();
         int highestScore = 0;
 
-        var (status, seedsFound, _) = MotelyExports.RunSearch(jamlContent, request,
+        var (status, seedsFound, _) = MotelySearchOrchestrator.RunSearch(jamlContent, request,
             onResult: (seed, score) =>
             {
                 seeds.Add(seed);

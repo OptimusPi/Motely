@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Intrinsics;
 using System.Runtime.Versioning;
 using System.Text.Json;
 using Motely;
@@ -8,113 +9,104 @@ using Motely.Filters;
 
 namespace Motely.BrowserWasm;
 
+/// <summary>
+/// Static [JSExport] dispatch layer. Instance methods route through an int handle.
+/// JS callers: createInstance() → id, then pass id to search/analyze/stop/destroy.
+/// </summary>
 [SupportedOSPlatform("browser")]
 public static partial class MotelyWasmExports
 {
-    private static CancellationTokenSource? _activeCts;
-    private static IMotelySearch? _activeSearch;
+    // ── Instance lifecycle ──
 
-    // ── SEARCH (sequential) ──
+    [JSExport]
+    public static int CreateInstance() => MotelyInstance.Create();
+
+    [JSExport]
+    public static void DestroyInstance(int id) => MotelyInstance.Destroy(id);
+
+    // ── Search (all instance-scoped) ──
 
     [JSExport]
     public static Task<string> StartJamlSearch(
-        string jamlContent, int threadCount, int batchCharCount,
+        int instanceId, string jamlContent, int threadCount, int batchCharCount,
         int startBatch, int endBatch,
         [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>] Action<long, long, long> onProgress,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>] Action<string, int> onResult)
-    {
-        return RunSearch(jamlContent, new MotelySearchRequest
+        => RunSearch(instanceId, jamlContent, new MotelySearchRequest
         {
             ThreadCount = ResolveThreads(threadCount),
             BatchCharCount = ResolveBatch(batchCharCount),
             StartBatch = startBatch >= 0 ? startBatch : null,
             EndBatch = endBatch > 0 ? endBatch : null,
         }, onProgress, onResult);
-    }
-
-    // ── SEARCH (seed list / verify) ──
 
     [JSExport]
     public static Task<string> StartSeedListSearch(
-        string jamlContent, int threadCount, int batchCharCount,
+        int instanceId, string jamlContent, int threadCount, int batchCharCount,
         [JSMarshalAs<JSType.Array<JSType.String>>] string[] seeds,
         [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>] Action<long, long, long> onProgress,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>] Action<string, int> onResult)
-    {
-        return RunSearch(jamlContent, new MotelySearchRequest
+        => RunSearch(instanceId, jamlContent, new MotelySearchRequest
         {
             ThreadCount = ResolveThreads(threadCount),
             BatchCharCount = ResolveBatch(batchCharCount),
             Seeds = seeds,
         }, onProgress, onResult);
-    }
-
-    // ── SEARCH (keyword) ──
 
     [JSExport]
     public static Task<string> StartKeywordSearch(
-        string jamlContent, int threadCount, int batchCharCount,
+        int instanceId, string jamlContent, int threadCount, int batchCharCount,
         [JSMarshalAs<JSType.Array<JSType.String>>] string[] keywords, string padding,
         [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>] Action<long, long, long> onProgress,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>] Action<string, int> onResult)
-    {
-        return RunSearch(jamlContent, new MotelySearchRequest
+        => RunSearch(instanceId, jamlContent, new MotelySearchRequest
         {
             ThreadCount = ResolveThreads(threadCount),
             BatchCharCount = ResolveBatch(batchCharCount),
             Keywords = keywords,
             Padding = string.IsNullOrEmpty(padding) ? null : padding,
         }, onProgress, onResult);
-    }
-
-    // ── SEARCH (random) ──
 
     [JSExport]
     public static Task<string> StartRandomSearch(
-        string jamlContent, int threadCount, int batchCharCount, int count,
+        int instanceId, string jamlContent, int threadCount, int batchCharCount, int count,
         [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>] Action<long, long, long> onProgress,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>] Action<string, int> onResult)
-    {
-        return RunSearch(jamlContent, new MotelySearchRequest
+        => RunSearch(instanceId, jamlContent, new MotelySearchRequest
         {
             ThreadCount = ResolveThreads(threadCount),
             BatchCharCount = ResolveBatch(batchCharCount),
             RandomSeeds = count > 0 ? count : 1000,
         }, onProgress, onResult);
-    }
-
-    // ── SEARCH (palindrome) ──
 
     [JSExport]
     public static Task<string> StartPalindromeSearch(
-        string jamlContent, int threadCount, int batchCharCount,
+        int instanceId, string jamlContent, int threadCount, int batchCharCount,
         [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>] Action<long, long, long> onProgress,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>] Action<string, int> onResult)
-    {
-        return RunSearch(jamlContent, new MotelySearchRequest
+        => RunSearch(instanceId, jamlContent, new MotelySearchRequest
         {
             ThreadCount = ResolveThreads(threadCount),
             BatchCharCount = ResolveBatch(batchCharCount),
             Palindrome = true,
         }, onProgress, onResult);
-    }
 
     [JSExport]
-    public static Task StopSearch()
+    public static Task StopSearch(int instanceId)
     {
-        try { _activeSearch?.Cancel(); } catch { }
-        try { _activeCts?.Cancel(); } catch { }
+        MotelyInstance.Get(instanceId).CancelSearch();
         return Task.CompletedTask;
     }
 
-    // ── ANALYZE ──
+    // ── Analyze (instance-scoped for future streaming) ──
 
     [JSExport]
-    public static Task<string> AnalyzeSeed(string seed, string deck, string stake)
+    public static Task<string> AnalyzeSeed(int instanceId, string seed, string deck, string stake)
     {
+        // instanceId reserved for future per-instance state (streaming analysis, caching)
         try
         {
-            var dto = MotelyExports.AnalyzeSeed(seed, deck, stake);
+            var dto = MotelySeedAnalyzer.AnalyzeToDto(seed, deck, stake);
             return Task.FromResult(JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto));
         }
         catch (Exception ex)
@@ -125,22 +117,27 @@ public static partial class MotelyWasmExports
         }
     }
 
-    // ── SIMPLE GETTERS ──
+    // ── Global (no instance needed) ──
 
     [JSExport]
-    public static Task<string> GetVersion() => Task.FromResult(MotelyExports.GetVersion(typeof(MotelyCore).Assembly));
+    public static Task<string> GetVersion() => Task.FromResult(MotelyBuildVersion.For(typeof(MotelyCore).Assembly));
 
     [JSExport]
-    public static Task<bool> IsSimdEnabled() => Task.FromResult(MotelyExports.IsSimdEnabled());
+    public static Task<bool> IsSimdEnabled() => Task.FromResult(Vector128.IsHardwareAccelerated);
 
     [JSExport]
-    public static Task<int> GetProcessorCount() => Task.FromResult(MotelyExports.GetProcessorCount());
+    public static Task<int> GetProcessorCount() => Task.FromResult(Environment.ProcessorCount);
 
     [JSExport]
-    public static Task<bool> ValidateJaml(string jamlContent) => Task.FromResult(MotelyExports.ValidateJaml(jamlContent));
+    public static Task<bool> ValidateJaml(string jamlContent) => Task.FromResult(JamlConfigLoader.TryLoad(jamlContent, out _, out _));
 
     [JSExport]
-    public static Task<string> ValidateJamlWithError(string jamlContent) => Task.FromResult(MotelyExports.ValidateJamlWithError(jamlContent));
+    public static Task<string> ValidateJamlWithError(string jamlContent)
+    {
+        if (JamlConfigLoader.TryLoad(jamlContent, out _, out var error))
+            return Task.FromResult("");
+        return Task.FromResult(error ?? "Unknown validation error");
+    }
 
     // ── Internals ──
 
@@ -148,62 +145,22 @@ public static partial class MotelyWasmExports
     private static int ResolveBatch(int b) => b is >= 1 and <= 7 ? b : 4;
 
     private static async Task<string> RunSearch(
-        string jamlContent, MotelySearchRequest request,
+        int instanceId, string jamlContent, MotelySearchRequest request,
         Action<long, long, long> onProgress, Action<string, int> onResult)
     {
-        if (_activeSearch != null)
-            return "error: search already running";
+        var instance = MotelyInstance.Get(instanceId);
+        if (instance.IsSearchActive)
+            return "error: search already running on this instance";
 
-        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var loadError))
-            return $"error: {loadError}";
-
-        if (!config.HasAnyClauses)
-            return "error: no clauses in JAML";
-
-        var (plan, _, prepareError) = MotelySearchOrchestrator.PrepareSearch(config, request);
-        if (prepareError != null || plan == null)
-            return $"error: {prepareError ?? "Search could not be prepared."}";
-
-        var settings = plan.Settings;
-
-        settings.WithSeedMatchCallback(line =>
-        {
-            int comma = line.IndexOf(',');
-            if (comma < 0) { onResult(line, 0); return; }
-            var seed = line[..comma];
-            int secondComma = line.IndexOf(',', comma + 1);
-            var scoreSpan = secondComma >= 0
-                ? line.AsSpan(comma + 1, secondComma - comma - 1)
-                : line.AsSpan(comma + 1);
-            int.TryParse(scoreSpan, out int score);
-            onResult(seed, score);
-        });
-
-        settings.WithProgressCallback(p =>
-            onProgress(p.SeedsSearched, p.MatchingSeeds, (long)p.ElapsedTime.TotalMilliseconds));
-
-        var cts = new CancellationTokenSource();
-        _activeCts = cts;
-
+        var token = instance.BeginSearch();
         try
         {
-            using var search = settings.CreateSearch();
-            _activeSearch = search;
-            await Task.Run(() => search.Start(cts.Token));
-            return cts.Token.IsCancellationRequested ? "cancelled" : "ok";
+            var (status, _, _) = await Task.Run(() =>
+                MotelySearchOrchestrator.RunSearch(jamlContent, request, onProgress, onResult, token));
+            return status;
         }
-        catch (OperationCanceledException)
-        {
-            return "cancelled";
-        }
-        catch (Exception ex)
-        {
-            return $"error: {ex.Message}";
-        }
-        finally
-        {
-            _activeSearch = null;
-            _activeCts = null;
-        }
+        catch (OperationCanceledException) { return "cancelled"; }
+        catch (Exception ex) { return $"error: {ex.Message}"; }
+        finally { instance.EndSearch(); }
     }
 }
