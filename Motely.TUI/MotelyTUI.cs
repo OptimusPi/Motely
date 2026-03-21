@@ -1,4 +1,4 @@
-using Motely.API;
+using Motely.HomeControlAPI;
 using Terminal.Gui;
 using Terminal.Gui.Views;
 

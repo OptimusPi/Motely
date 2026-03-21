@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Motely.API;
+using Motely.HomeControlAPI;
 using Motely.Executors;
 
 namespace Motely.TUI;
@@ -192,7 +192,7 @@ public class ApiServerWindow : Window
 
             // Create the API using the API Program
             var args = new[] { "--urls", $"http://{host}:{port}" };
-            _server = Motely.API.Program.CreateHost(args);
+            _server = Motely.HomeControlAPI.Program.CreateHost(args);
 
             await _server.StartAsync(_cts.Token);
 
@@ -208,7 +208,7 @@ public class ApiServerWindow : Window
                 );
             });
 
-            var version = typeof(Motely.API.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
+            var version = typeof(Motely.HomeControlAPI.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
             LogMessage($"Hosting Motely API v{version}");
             LogMessage($"Listening on {_serverUrl}");
             LogMessage("Web UI available at same URL");
