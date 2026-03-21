@@ -29,7 +29,8 @@
       "Bash(pnpm update:*)",
       "Bash(pnpm ls:*)",
       "Bash(find /x/JammySeedFinder/src/MotelyJAML -name *Stream* -o -name *stream*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(find /x/JAMMY -type f -name *log* -o -name *error* -o -name *crash*)"
     ]
   }
 }
