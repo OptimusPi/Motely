@@ -27,7 +27,9 @@
       "Bash(dotnet-script /tmp/test_gameplay.cs)",
       "Bash(\"X:/JammySeedFinder/src/MotelyJAML/.cursorignore\")",
       "Bash(pnpm update:*)",
-      "Bash(pnpm ls:*)"
+      "Bash(pnpm ls:*)",
+      "Bash(find /x/JammySeedFinder/src/MotelyJAML -name *Stream* -o -name *stream*)",
+      "Bash(git log:*)"
     ]
   }
 }
