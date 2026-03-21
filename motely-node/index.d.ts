@@ -88,6 +88,8 @@ export interface MotelyNodeApi {
   validateJaml(jamlContent: string): ValidateResult;
   startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchResultInfo[]>;
   processBlock(jamlContent: string, blockId: number): Promise<BlockSearchResult>;
+  /** Infinite shop items: get `count` items starting at `offset` for a given seed/ante. Deterministic. */
+  getShopItems(seed: string, deck: string, stake: string, ante: number, offset: number, count: number): string;
   dispose(): void;
 }
 
@@ -99,6 +101,8 @@ declare const api: {
   validateJaml(jamlContent: string): Promise<ValidateResult>;
   startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchResultInfo[]>;
   processBlock(jamlContent: string, blockId: number): Promise<BlockSearchResult>;
+  /** Infinite shop items: get `count` items starting at `offset` for a given seed/ante. Deterministic. */
+  getShopItems(seed: string, deck: string, stake: string, ante: number, offset: number, count: number): Promise<string>;
   dispose(): void;
 };
 

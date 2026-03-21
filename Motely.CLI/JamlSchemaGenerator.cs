@@ -9,7 +9,7 @@ internal static class JamlSchemaGenerator
 {
     private static readonly string[] RankValues = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Jack", "Q", "Queen", "K", "King", "A", "Ace"];
     private static readonly string[] SuitValues = ["Hearts", "Diamonds", "Clubs", "Spades"];
-    private static readonly string[] MetadataKeys = ["name", "author", "dateCreated", "description", "deck", "stake", "seeds"];
+    private static readonly string[] MetadataKeys = ["name", "author", "dateCreated", "description", "deck", "stake", "seeds", "aesthetics"];
     private static readonly string[] SectionKeys = ["defaults", "must", "should", "mustNot"];
     private static readonly string[] ClauseTypeKeys = [
         "joker", "jokers",
@@ -152,6 +152,13 @@ internal static class JamlSchemaGenerator
                 ["deck"] = EnumStringProperty(EnumNames<MotelyDeck>(), "Balatro deck to search with", "Red"),
                 ["stake"] = EnumStringProperty(EnumNames<MotelyStake>(), "Balatro stake level", "White"),
                 ["seeds"] = StringArrayProperty("Known seed examples associated with this filter."),
+                ["aesthetics"] = new JsonObject
+                {
+                    ["type"] = "array",
+                    ["description"] =
+                        "Optional seed-space constraints from JamlAesthetic (see definitions/JamlAesthetic). Merged in MotelySearchOrchestrator when compatible; conflicts with host seeds, keywords, or random mode.",
+                    ["items"] = new JsonObject { ["$ref"] = "#/definitions/JamlAesthetic" },
+                },
                 ["defaults"] = BuildDefaultsProperty(),
                 ["must"] = ClauseArray("Required clauses. All listed clauses must match."),
                 ["should"] = ClauseArray("Scored clauses. Matching clauses add score but do not gate the seed by themselves."),
@@ -159,7 +166,15 @@ internal static class JamlSchemaGenerator
             },
             ["definitions"] = new JsonObject
             {
-                ["clause"] = BuildClauseDefinition()
+                ["clause"] = BuildClauseDefinition(),
+                ["JamlAesthetic"] = new JsonObject
+                {
+                    ["title"] = "JamlAesthetic",
+                    ["description"] =
+                        "Named constraint on which seeds participate in search. Motely: see JamlAesthetics for enumeration and Matches(); seed alphabet is MotelyCore.SeedDigits, max length MotelyCore.MaxSeedLength.",
+                    ["type"] = "string",
+                    ["enum"] = ToJsonArray(JamlAestheticParser.KnownJamlStringsForSchema()),
+                },
             },
             ["additionalProperties"] = false
         };
@@ -532,6 +547,7 @@ export function isInvalidValueForProp(_value, _prop, _clauseType) {
     {
         return new()
         {
+            ["aesthetics"] = JamlAestheticParser.KnownJamlStringsForSchema(),
             ["deck"] = EnumNames<MotelyDeck>(),
             ["stake"] = EnumNames<MotelyStake>(),
             ["joker"] = EnumNames<MotelyJoker>(),

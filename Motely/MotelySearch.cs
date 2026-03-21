@@ -125,113 +125,20 @@ public sealed class MotelyRandomSeedProvider(int seedCount) : IMotelySeedProvide
 }
 
 /// <summary>
-/// Generates palindrome seeds lazily (e.g., "12344321", "123454321").
-/// Palindromes read the same forwards and backwards.
+/// Generates palindrome seeds lazily via <see cref="JamlAesthetics.EnumerateSeeds"/>.
 /// </summary>
 public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
 {
-    public int SeedCount { get; } = CalculateSeedCount();
+    public int SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Palindrome);
 
     private readonly IEnumerator<string> _palindromeEnumerator;
     private readonly object _enumeratorLock = new();
 
     public MotelyPalindromeSeedProvider()
     {
-        _palindromeEnumerator = GeneratePalindromes().GetEnumerator();
-    }
-
-    private static int CalculateSeedCount()
-    {
-        checked
-        {
-            int total = 0;
-            int seedDigitCount = MotelyCore.SeedDigits.Length;
-
-            for (int len = 1; len <= MotelyCore.MaxSeedLength; len++)
-            {
-                int halfLen = (len + 1) / 2;
-                int countForLength = 1;
-
-                for (int i = 0; i < halfLen; i++)
-                    countForLength *= seedDigitCount;
-
-                total += countForLength;
-            }
-
-            return total;
-        }
-    }
-
-    private IEnumerable<string> GeneratePalindromes()
-    {
-        // Generate palindromes of increasing length
-        // Length 1: single digits (0-9, A-C) = 13 possibilities
-        // Length 2: "11", "22", etc. = 13 possibilities
-        // Length 3: "121", "131", etc. = 13 * 13 = 169 possibilities
-        // Length 4: "1221", "1331", etc. = 13 * 13 = 169 possibilities
-        // Length 5: "12321", "12421", etc. = 13 * 13 * 13 = 2197 possibilities
-        // etc.
-
-        // Start with single-digit palindromes
-        for (int len = 1; len <= MotelyCore.MaxSeedLength; len++)
-        {
-            foreach (var palindrome in GeneratePalindromesOfLength(len))
-            {
-                yield return palindrome;
-            }
-        }
-    }
-
-    private IEnumerable<string> GeneratePalindromesOfLength(int length)
-    {
-        if (length == 1)
-        {
-            // Single digit palindromes
-            for (int i = 0; i < MotelyCore.SeedDigits.Length; i++)
-            {
-                yield return MotelyCore.SeedDigits[i].ToString();
-            }
-        }
-        else
-        {
-            // Generate palindromes recursively
-            int halfLen = (length + 1) / 2; // For even: 4->2, for odd: 5->3
-            foreach (
-                var palindrome in GeneratePalindromesRecursive(new char[length], 0, halfLen, length)
-            )
-            {
-                yield return palindrome;
-            }
-        }
-    }
-
-    private IEnumerable<string> GeneratePalindromesRecursive(
-        char[] buffer,
-        int pos,
-        int halfLen,
-        int totalLen
-    )
-    {
-        if (pos >= halfLen)
-        {
-            // Fill the second half as mirror of first half
-            for (int i = 0; i < halfLen; i++)
-            {
-                buffer[totalLen - 1 - i] = buffer[i];
-            }
-            yield return new string(buffer, 0, totalLen);
-            yield break;
-        }
-
-        // Try each digit at this position
-        for (int i = 0; i < MotelyCore.SeedDigits.Length; i++)
-        {
-            buffer[pos] = MotelyCore.SeedDigits[i];
-            foreach (var result in GeneratePalindromesRecursive(buffer, pos + 1, halfLen, totalLen))
-            {
-                yield return result;
-            }
-        }
+        _palindromeEnumerator = JamlAesthetics
+            .EnumerateSeeds(JamlAesthetic.Palindrome)
+            .GetEnumerator();
     }
 
     public ReadOnlySpan<char> NextSeed()

@@ -71,9 +71,15 @@ public sealed class JamlConfig
 
     /// <summary>Normalized filter name used as the runtime identifier for this config.</summary>
     public string FilterId { get; set; } = "";
+
+    /// <summary>
+    /// Optional seed-space constraints from the JAML document’s <c>aesthetics</c> list.
+    /// Merged into the search request during orchestration when compatible with the host search mode.
+    /// </summary>
+    public List<JamlAesthetic> Aesthetics { get; set; } = [];
 }
 
-// Flat data bags for YamlDotNet deserialization. Match jaml.schema.json.
+// Flat DTOs for JAML parsing (YamlDotNet). Schema: Motely.CLI --write-jaml-schema (JamlSchemaGenerator).
 
 public sealed class JamlDto
 {
@@ -106,6 +112,10 @@ public sealed class JamlDto
 
     [YamlMember(Alias = "mustNot")]
     public List<JamlClauseDto>? MustNot { get; set; }
+
+    /// <summary>Seed-space preferences (e.g. <c>palindrome</c>). See JAML schema.</summary>
+    [YamlMember(Alias = "aesthetics")]
+    public List<string>? Aesthetics { get; set; }
 
     [YamlMember(Alias = "seeds")]
     public List<string>? Seeds { get; set; }
@@ -434,7 +444,7 @@ public static class JamlConfigLoader
             var dto = deserializer.Deserialize<JamlDto>(normalizedJaml);
             if (dto == null)
             {
-                error = "YAML deserialized to null.";
+                error = "JAML document deserialized to null.";
                 return false;
             }
 
@@ -456,6 +466,24 @@ public static class JamlConfigLoader
                 Deck = deck,
                 Stake = stake,
             };
+
+            if (dto.Aesthetics is { Count: > 0 })
+            {
+                foreach (var entry in dto.Aesthetics)
+                {
+                    if (string.IsNullOrWhiteSpace(entry))
+                        continue;
+                    if (!JamlAestheticParser.TryParse(entry, out var aesthetic))
+                    {
+                        error = $"Unknown aesthetics value '{entry.Trim()}'. Known: {JamlAestheticParser.KnownJamlStringsDescription()}.";
+                        config = null;
+                        return false;
+                    }
+
+                    if (!config.Aesthetics.Contains(aesthetic))
+                        config.Aesthetics.Add(aesthetic);
+                }
+            }
 
             // MUST → required filters
             PopulateClauses(config.Must, dto.Must, defaultAntes, dto.Defaults);

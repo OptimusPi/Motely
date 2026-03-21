@@ -114,6 +114,19 @@ public sealed class MotelyWasmBackend : IMotelyWasmBackend
         return Task.FromResult(error ?? "Unknown validation error");
     }
 
+    public Task<string> GetShopItems(string seed, string deck, string stake, int ante, int offset, int count)
+    {
+        try
+        {
+            var json = MotelyShopItemProvider.GetShopItems(seed, deck, stake, ante, offset, count);
+            return Task.FromResult(json);
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult($"{{\"error\":\"{ex.Message}\"}}");
+        }
+    }
+
     private async Task<string> RunSearch(int instanceId, string jamlContent, MotelySearchRequest request)
     {
         var session = MotelySearchSession.Get(instanceId);

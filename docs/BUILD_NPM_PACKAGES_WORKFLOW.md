@@ -6,7 +6,8 @@
 
 ## Rules
 
-- **Version:** Single source `Directory.Packages.props` → `<MotelyVersion>`. Sync runs automatically before `dotnet build`/`dotnet publish` (Directory.Build.props). Do not edit package.json or `jaml.schema.json` by hand.
+- **Version:** Single source `Directory.Packages.props` → `<MotelyVersion>`. Sync runs automatically before `dotnet build`/`dotnet publish` (Directory.Build.props). Do not edit package.json by hand.
+- **JAML schema (`jaml.schema.json`, `jaml-schema.js`, `jaml-schema.d.ts`):** Generated only from C# via `Motely.CLI --write-jaml-schema` (`JamlSchemaGenerator`). Never edit the mirror paths by hand — that causes drift. `build-and-pack.ps1` runs schema generation right after the version bump.
 - **motely-node:** Package root is `motely-node/`. The `index.cjs` loader and `index.d.ts` types live there (committed). `dotnet publish` via Docker puts the `.node` binary into `motely-node/bin/linux-x64/`. `npm pack` runs from `motely-node/` — not via the SDK's PackNpmPackage. Linux-x64 only (Vercel target).
 - **Linux addon:** linux-x64 only via Docker (`build-linux.ps1` on Windows, `build-linux.sh` on Unix); no WSL.
 - **Publish:** Run `npm publish` only when explicitly asked; otherwise stop at pack/ready and print next steps.
@@ -17,7 +18,7 @@
 
 1. Edit **only** `Directory.Packages.props`: set `<MotelyVersion>` to the new version (e.g. 3.1.6 → 3.1.7).
 2. **No separate sync step.** Directory.Build.props runs `node sync-version.mjs` before Build/Publish of BrowserWasm or NodeAddon. The next dotnet publish updates `motely-node/package.json` and `motely-wasm/package.json`.
-3. Do not edit any package.json or jaml.schema.json by hand.
+3. Do not edit package.json by hand. Regenerate JAML schema files with `Motely.CLI --write-jaml-schema`, not by editing copies.
 
 ---
 
@@ -72,7 +73,7 @@ Same version. From **repo root**. Package root is `motely-node/`; binary lands i
 ## Execution rules
 
 - **Order:** A → B → C → D. Do not skip any phase. Both packages are built every time.
-- **Version:** One bump in Directory.Packages.props only; sync-version.mjs updates `motely-node/package.json` and `motely-wasm/package.json`. Never edit package.json version or jaml.schema.json manually.
+- **Version:** One bump in Directory.Packages.props only; sync-version.mjs updates `motely-node/package.json` and `motely-wasm/package.json`. Never edit package.json version manually. Never hand-edit generated JAML schema artifacts.
 - **motely-node:** Package root = `motely-node/`. Committed `index.cjs` + `index.d.ts` + `package.json`. Binary from Docker in `bin/linux-x64/`. `npm pack` from `motely-node/`.
 - **Linux:** Only `build-linux.ps1` / `build-linux.sh` for linux-x64. No WSL, no host `dotnet publish -r linux-x64`.
 - **Publish:** Run `npm publish` for both packages only when the user explicitly asks. Otherwise stop after pack and print the two publish commands.
