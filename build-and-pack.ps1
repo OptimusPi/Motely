@@ -38,6 +38,11 @@ foreach ($pkg in @("motely-wasm\package.json", "motely-node\package.json")) {
 
 Write-Host "Bumped all 3 files to $version" -ForegroundColor Green
 
+# JAML JSON schema + JS helpers (all paths in JamlSchemaGenerator — never edit copies by hand)
+Write-Host "Regenerating JAML schema from C# (Motely.CLI --write-jaml-schema)..." -ForegroundColor Yellow
+dotnet run --project "Motely.CLI/Motely.CLI.csproj" -c Release -- --write-jaml-schema
+if ($LASTEXITCODE -ne 0) { throw "JAML schema generation failed" }
+
 # Phase B: motely-wasm
 Write-Host "`n=== Phase B: motely-wasm ===" -ForegroundColor Cyan
 

@@ -4,6 +4,12 @@
 
 A .NET library + WASM/Node packages for Balatro seed analysis. It predicts what items, jokers, tags, vouchers, etc. a given seed will produce using Balatro's PRNG system.
 
+### Call it JAML
+
+Filter documents are **JAML** (`.jaml`). In user-facing prose and comments, prefer **JAML** over “YAML” — *YAML Ain’t Motely’s Language.* (YamlDotNet is still the parser; that’s implementation.)
+
+Optional top-level **`aesthetics`** (e.g. `- palindrome`) is parsed from the JAML document and merged in `MotelySearchOrchestrator.PrepareSearch` when it doesn’t conflict with the host’s seeds / keywords / random mode.
+
 ## Architecture: Two Thin Hosts, One Brain
 
 ```
@@ -17,6 +23,16 @@ motely-node/   ← Node.js native addon output (published to npm)
 ```
 
 Both are **OUTPUT DIRECTORIES**. They are populated by `build-and-pack.ps1`.
+
+### JAML JSON schema — no hand edits, no drift
+
+`jaml.schema.json`, `jaml-schema.js`, and `jaml-schema.d.ts` are **generated from C#** by `Motely.CLI`:
+
+```bash
+dotnet run --project Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema
+```
+
+`JamlSchemaGenerator` writes the same content to every mirror path (repo root, `public/`, `Motely.NodeAddon/`, `motely-wasm/`, `motely-node/`). `build-and-pack.ps1` runs this step after version bump so packs stay consistent. Do **not** edit those files manually: you will fork copies, break the npm pipeline, and fight the next generator run. New JAML surface area (e.g. `JamlAesthetic` values) belongs in **`Motely.CLI/JamlSchemaGenerator.cs`** and in the parser/enum in **`Motely`**, then regenerate.
 
 ### The Layering Rule
 
@@ -40,7 +56,6 @@ Platform hosts (WASM/Node)  →  MotelySearchOrchestrator  →  Motely (core lib
 - Any file authored by TacoDiva (the Motely library author)
 
 ### Files YOU should edit:
-- `Motely/MotelyGameplayState.cs` — our game state wrapper
 - `Motely.Orchestration/MotelySearchOrchestrator.cs` — all search logic lives here
 - `Motely.Orchestration/MotelySearchSession.cs` — browser instance handles / cancellation
 - `Motely.BrowserWasm/Interop/` — Bootsharp interfaces + implementation (calls orchestrator)
@@ -81,37 +96,35 @@ Every PRNG stream's state is ultimately a `double`. `MotelySinglePrngStream(doub
 
 ### ref struct vs struct
 
-Some stream types are `ref struct` (stack-only, cannot be stored on the heap). When you need to store a `ref struct` as a class field, decompose its fields into a storage struct (they're just doubles and strings), then reconstruct on demand. See `StreamCache` in `MotelyGameplayState.cs`.
+Some stream types are `ref struct` (stack-only, cannot be stored on the heap). When you need to store a `ref struct` as a class field, decompose its fields into a storage struct (they're just doubles and strings), then reconstruct on demand.
 
 Do NOT change `ref struct` to `struct` in core Motely files. Work around it.
 
-### The Parked Filter Pattern
+### analyzeSeed Returns a Fixed Snapshot
 
-`MotelyGameplayState` uses the search pipeline as a **context factory**. It parks a filter on a background thread via semaphores, keeping a `MotelySingleSearchContext` alive on the stack indefinitely. This is the ONLY way to get a context for single-seed analysis.
-
-**DO NOT touch the parked filter code** (`ParkedFilterDesc`, `ParkedFilter`, `CheckSeed`, the semaphore dance). It is correct.
-
-**DO NOT touch the `Cmd<T>` delegate dispatch.** It is correct.
+`MotelySeedAnalyzer.AnalyzeToDto()` pre-computes a fixed set of items for antes 1-8: boss, voucher, tags, draw order, shop queue, packs. This is NOT infinite — it's a snapshot. The shop queue list is finite and exhaustible.
 
 ### One Ante At A Time
 
 The game state represents sequential gameplay. One ante at a time. When the ante changes, reset streams. Do NOT use `Dictionary<int, StreamType>` to cache per-ante.
 
-### MotelyGameplayState IS the Single Seed Context
+### TODO: MotelyGameplayState (Not Yet Implemented)
 
-It's a stateful object that wraps `MotelySingleSearchContext` for one seed. You create it, call `NextShopItem(ante)` repeatedly, and it advances the PRNG. Infinite scroll. Don't pre-compute, don't batch, don't wrap the analyzer.
+Infinite shop item streaming requires a stateful C# object that wraps `MotelySingleSearchContext` for one seed, advancing the shop PRNG on each call (e.g. `createSeedContext → nextShopItem(ante)`). This does NOT exist yet. Today, infinite shop streaming only works on the TypeScript Game path. Building this on the Motely/WASM side requires:
+1. A new C# class (`MotelyGameplayState`) that holds live PRNG state
+2. New WASM exports: `createSeedContext(seed, deck, stake)` → contextId, `nextShopItem(contextId, ante)` → item
+3. JS glue in `motelyWasm.ts` to manage context lifecycle
 
 ## Common Pitfalls
 
 1. **"Let me redesign the architecture"** — No. Make the minimal fix. Use what exists.
 2. **"Let me add a shared interop API class"** — No. Both hosts call orchestrator directly.
-3. **"Let me wrap the analyzer output"** — No. The analyzer pre-computes a fixed set. GameState is infinite scroll.
+3. **"Let me wrap the analyzer output"** — No. The analyzer pre-computes a fixed snapshot. It is not infinite.
 4. **"Let me add a Dictionary for caching"** — No. One ante at a time. Direct fields, reset on ante change.
-5. **"Let me create a new search/filter"** — No. The parked filter IS the mechanism. Use it.
-6. **"Let me edit MotelySingleSearchContext"** — No. Use Motely. Don't edit it.
-7. **"Let me edit the output JS/CJS files"** — No. They're build output.
-8. **"These stream types should be struct not ref struct"** — Don't change core Motely types.
-9. **"Let me hand-roll PRNG logic"** — No. Motely provides high-level stream interfaces. Use them.
+5. **"Let me edit MotelySingleSearchContext"** — No. Use Motely. Don't edit it.
+6. **"Let me edit the output JS/CJS files"** — No. They're build output.
+7. **"These stream types should be struct not ref struct"** — Don't change core Motely types.
+8. **"Let me hand-roll PRNG logic"** — No. Motely provides high-level stream interfaces. Use them.
 
 ## Build
 

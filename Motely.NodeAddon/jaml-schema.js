@@ -1,8 +1,8 @@
-export const JAML_SCHEMA_VERSION = "4.0.1";
+export const JAML_SCHEMA_VERSION = "4.0.2";
 export const jamlSchema = {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
@@ -67,6 +67,13 @@ export const jamlSchema = {
         "type": "string"
       },
       "description": "Known seed examples associated with this filter."
+    },
+    "aesthetics": {
+      "type": "array",
+      "description": "Optional seed-space constraints from JamlAesthetic (see definitions/JamlAesthetic). Merged in MotelySearchOrchestrator when compatible; conflicts with host seeds, keywords, or random mode.",
+      "items": {
+        "$ref": "#/definitions/JamlAesthetic"
+      }
     },
     "defaults": {
       "type": "object",
@@ -1700,6 +1707,14 @@ export const jamlSchema = {
       ],
       "additionalProperties": false,
       "minProperties": 1
+    },
+    "JamlAesthetic": {
+      "title": "JamlAesthetic",
+      "description": "Named constraint on which seeds participate in search. Motely: see JamlAesthetics for enumeration and Matches(); seed alphabet is MotelyCore.SeedDigits, max length MotelyCore.MaxSeedLength.",
+      "type": "string",
+      "enum": [
+        "palindrome"
+      ]
     }
   },
   "additionalProperties": false
@@ -1711,7 +1726,8 @@ export const METADATA_KEYS = [
   "description",
   "deck",
   "stake",
-  "seeds"
+  "seeds",
+  "aesthetics"
 ];
 export const SECTION_KEYS = [
   "defaults",
@@ -1808,6 +1824,9 @@ export const SOURCE_KEYS = [
 ];
 
 const VALUE_SETS = {
+  "aesthetics": [
+    "palindrome"
+  ],
   "deck": [
     "Red",
     "Blue",

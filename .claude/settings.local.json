@@ -25,7 +25,9 @@
       "Bash(grep -E \"\\\\.\\(ps1|sh|mjs\\)$\")",
       "Bash(dotnet run:*)",
       "Bash(dotnet-script /tmp/test_gameplay.cs)",
-      "Bash(\"X:/JammySeedFinder/src/MotelyJAML/.cursorignore\")"
+      "Bash(\"X:/JammySeedFinder/src/MotelyJAML/.cursorignore\")",
+      "Bash(pnpm update:*)",
+      "Bash(pnpm ls:*)"
     ]
   }
 }

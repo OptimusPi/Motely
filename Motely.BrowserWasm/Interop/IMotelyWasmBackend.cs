@@ -34,4 +34,10 @@ public interface IMotelyWasmBackend
 
     Task<bool> ValidateJaml(string jamlContent);
     Task<string> ValidateJamlWithError(string jamlContent);
+
+    /// <summary>
+    /// Infinite shop item stream: get <paramref name="count"/> items starting at <paramref name="offset"/>
+    /// for a given seed/deck/stake/ante. Deterministic and stateless — same inputs always produce same output.
+    /// </summary>
+    Task<string> GetShopItems(string seed, string deck, string stake, int ante, int offset, int count);
 }

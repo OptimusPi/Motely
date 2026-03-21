@@ -88,4 +88,12 @@ public static class MotelyNodeExports
             BatchCharCount = ProcessBlockRunner.BatchCharCount,
             Palindrome = true,
         });
+
+    /// <summary>
+    /// Infinite shop item stream: get <paramref name="count"/> items starting at <paramref name="offset"/>.
+    /// Stateless and deterministic — same inputs always produce same output.
+    /// Returns JSON array of {id, name} objects.
+    /// </summary>
+    public static string GetShopItems(string seed, string deck, string stake, int ante, int offset, int count) =>
+        MotelyShopItemProvider.GetShopItems(seed, deck, stake, ante, offset, count);
 }
