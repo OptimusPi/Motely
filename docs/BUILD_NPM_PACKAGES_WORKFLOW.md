@@ -21,18 +21,23 @@
 
 ---
 
-## Phase B: motely-wasm (always)
+## Phase B: motely-wasm (always, Bootsharp)
 
 All from **repo root** unless stated.
 
-4. Remove existing staged WASM: delete `motely-wasm\_framework` if present.
+4. Remove existing staged bundles: delete `motely-wasm\bootsharp` and `motely-wasm\bootsharp_st` if present.
 
-5. **Browser WASM:**  
+5. **Browser WASM (single-thread):**  
+   `dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release -p:SingleThread=true`  
+   Then: `node stage-packages.mjs bootsharp-st`.  
+   Confirm output under `motely-wasm\bootsharp_st`.
+
+6. **Browser WASM (multi-thread):**  
    `dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release`  
-   Then: `node stage-packages.mjs browser`.  
-   Confirm output under `motely-wasm\_framework`.
+   Then: `node stage-packages.mjs bootsharp`.  
+   Confirm output under `motely-wasm\bootsharp`.
 
-6. **Build motely-wasm:**  
+7. **Build motely-wasm:**  
    `cd motely-wasm`, `npm install`, `npm run build`.  
    motely-wasm is ready to pack/publish (same version as Phase A).
 
@@ -46,20 +51,20 @@ Same version. From **repo root**. Package root is `motely-node/`; binary lands i
    `.\build-linux.ps1` (Windows) or `./build-linux.sh` (Unix).  
    Confirm: `motely-node\bin\linux-x64\Motely.NodeAddon.node` exists. If it fails, fix Docker; do not consider the package ready without the linux binary.
 
-8. **Copy jaml-schema:** Copy `jaml-schema.js`, `jaml-schema.d.ts`, `jaml.schema.json` from `motely-wasm/` to `motely-node/`.
+9. **Copy jaml-schema:** Copy `jaml-schema.js`, `jaml-schema.d.ts`, `jaml.schema.json` from `motely-wasm/` to `motely-node/`.
 
-9. **Pack:** `cd motely-node && npm pack`. Inspect the tarball: must contain `index.cjs`, `index.d.ts`, `bin/linux-x64/Motely.NodeAddon.node`, and jaml-schema files.
+10. **Pack:** `cd motely-node && npm pack`. Inspect the tarball: must contain `index.cjs`, `index.d.ts`, `bin/linux-x64/Motely.NodeAddon.node`, and jaml-schema files.
 
 ---
 
 ## Phase D: Publish and consume
 
-10. **Publish (only if user asked):**  
+11. **Publish (only if user asked):**  
     From `motely-wasm`: `npm publish` (motely-wasm).  
     From `motely-node`: `npm publish <tgz>` (motely-node).  
     Same version for both.
 
-11. **Update JAMMY (after publish):**  
+12. **Update JAMMY (after publish):**  
     From JAMMY repo root: `pnpm add motely-node@<V> motely-wasm@<V>` (use the version from Phase A), then `pnpm run build`. Build must succeed.
 
 ---
@@ -77,7 +82,7 @@ Same version. From **repo root**. Package root is `motely-node/`; binary lands i
 ## Checklist (no optional items)
 
 - [ ] A: Bump `<MotelyVersion>` in Directory.Packages.props only (sync runs on next dotnet build/publish).
-- [ ] B: Clean motely-wasm _framework dirs; publish BrowserWasm + stage browser; publish SingleThread + stage singlethread; `cd motely-wasm && npm install && npm run build`.
+- [ ] B: Clean motely-wasm bootsharp dirs; publish BrowserWasm SingleThread + stage `bootsharp_st`; publish BrowserWasm MultiThread + stage `bootsharp`; `cd motely-wasm && npm install && npm run build`.
 - [ ] C: `.\build-linux.ps1` (or `./build-linux.sh`) → `motely-node\bin\linux-x64\*.node`; copy jaml-schema from motely-wasm; `cd motely-node && npm pack`; confirm .tgz has `bin/linux-x64/`, `index.cjs`, `index.d.ts`.
 - [ ] D: If user asked: `npm publish` in motely-wasm and `npm publish <tgz>` from motely-node. JAMMY: `pnpm add motely-node@<V> motely-wasm@<V>` and `pnpm run build` — green.
 

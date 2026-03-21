@@ -6,6 +6,6 @@
     "copy-wasm": "node copy-wasm.mjs"
   },
   "dependencies": {
-    "motely-wasm": "3.0.13"
+    "motely-wasm": "file:../motely-wasm"
   }
 }

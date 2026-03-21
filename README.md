@@ -8,7 +8,7 @@ This repository is the **MotelyJAML** fork (from [tacodiva/Motely](https://githu
 
 - **Motely** – Core library: JAML/JSON parsing, filter execution, seed analysis, SIMD vectorization
 - **Motely.Orchestration** – Search orchestration, native filter executor, batch search
-- **Motely.BrowserWasm** – .NET WebAssembly build (AOT, SIMD, threads) for browser
+- **Motely.BrowserWasm** – Bootsharp-based .NET browser WASM build (`bin/bootsharp`)
 - **motely-wasm** – npm package: JS loader + Vite/Next.js plugins for in-browser search
 - **Motely.CLI** – Command-line interface (JAML/JSON filters, seed analysis)
 - **Motely.API** – Optional HTTP API and static UIs
@@ -34,12 +34,12 @@ git submodule update --init --recursive
 BSO’s Avalonia app then uses Motely for:
 
 - Desktop: in-process .NET search (AOT optional)
-- Browser: `motely-wasm` (AOT-compiled WASM) for in-browser JAML search and seed analysis
+- Browser: `motely-wasm` (Bootsharp WASM bundle) for in-browser JAML search and seed analysis
 
 ## Browser / WASM
 
-- **Motely.BrowserWasm** – Publishes the .NET WASM runtime (AOT, SIMD, threads) to `motely-wasm/_framework/`.
-- **motely-wasm** – npm package consumed by React/Next.js/Vite (or any JS app). Plugins handle serving `_framework` and COOP/COEP headers.
+- **Motely.BrowserWasm** – Publishes a Bootsharp ES module to `Motely.BrowserWasm/bin/bootsharp/`.
+- **motely-wasm** – npm package consumed by React/Next.js/Vite (or any JS app), staged from Bootsharp output (`bootsharp/` and `bootsharp_st/`).
 
 See [motely-wasm/README.md](./motely-wasm/README.md) for installation and Vite/Next.js setup.
 

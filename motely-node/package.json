@@ -1,6 +1,6 @@
 {
   "name": "motely-node",
-  "version": "3.20.0",
+  "version": "4.0.1",
   "description": "MotelyJAML for Node.js - Balatro seed analyzer and JAML filter engine using .NET 10 Native AOT",
   "main": "index.cjs",
   "types": "./index.d.ts",
