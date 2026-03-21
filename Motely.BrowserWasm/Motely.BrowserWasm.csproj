@@ -1,41 +1,49 @@
-<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
-  <!-- Do NOT add Content Include="wwwroot\**" - SDK includes wwwroot automatically; duplicate causes NETSDK1022 -->
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-browser</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <Version>$(MotelyVersion)</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <RunAOTCompilation>true</RunAOTCompilation>
-    <PublishReadyToRun>false</PublishReadyToRun>
+    <InvariantGlobalization>true</InvariantGlobalization>
 
-    <!-- AOT & Native Build -->
-    <WasmBuildNative>true</WasmBuildNative>
-    <!-- Pass -p:SingleThread=true to publish without threading (browsers without SharedArrayBuffer) -->
     <SingleThread Condition="'$(SingleThread)' == ''">false</SingleThread>
     <WasmEnableThreads Condition="'$(SingleThread)' != 'true'">true</WasmEnableThreads>
     <WasmEnableThreads Condition="'$(SingleThread)' == 'true'">false</WasmEnableThreads>
-    <WasmEnableSIMD>true</WasmEnableSIMD>
 
-    <!-- Trimming & Optimization -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>full</TrimMode>
-    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
-
-    <!-- SIZE REDUCTION -->
-    <WasmIncludeFullSymbols>false</WasmIncludeFullSymbols>
-    <WasmDebugLevel>0</WasmDebugLevel>
-    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
-    <WasmEmitCompressedAssets>false</WasmEmitCompressedAssets>
-
-    <!-- Globalization: Search doesn't need ICU data (~2.5MB saved) -->
-    <InvariantGlobalization>true</InvariantGlobalization>
-
-    <!-- Re-enabled: testing with Binaryen 117 from .NET 10 Emscripten pack -->
-    <WasmRunWasmOpt>true</WasmRunWasmOpt>
+    <BootsharpLLVM>false</BootsharpLLVM>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BootsharpLLVM)' == 'true'">
+    <PublishTrimmed>true</PublishTrimmed>
+    <DotNetJsApi>true</DotNetJsApi>
+    <DebugType>none</DebugType>
+    <EmccFlags>$(EmccFlags) -O3</EmccFlags>
+    <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+    <RestoreAdditionalProjectSources>
+      https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BootsharpLLVM)' == 'true'">
+    <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Condition="'$([MSBuild]::IsOSPlatform(&quot;Windows&quot;))' == 'true'" Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Condition="'$([MSBuild]::IsOSPlatform(&quot;Windows&quot;))' == 'false'" Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_LLVM_ROOT=$(EmscriptenUpstreamBinPath)" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_BINARYEN_ROOT=$(EmscriptenSdkToolsPath)" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_NODE_JS=$(EmscriptenNodeBinPath)node$(ExecutableExtensionName)" />
+    <EmscriptenEnvVars Include="EM_CACHE=$(EmscriptenCacheSdkCacheDir)" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />

@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using Motely.Executors;
 using Motely.Filters;
 
-namespace Motely.API;
+namespace Motely.HomeControlAPI;
 
 public record CreateFilterRequest(string Name, string Content);
 public record UpdateFilterRequest(string Content);
@@ -88,7 +88,7 @@ public class Program
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
-            c.SwaggerDoc("v1", new() { Title = "Motely API", Version = "v1" }));
+            c.SwaggerDoc("v1", new() { Title = "Motely Home Control API", Version = "v1" }));
 
         builder.Services.AddCors(options =>
             options.AddDefaultPolicy(policy =>

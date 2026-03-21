@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "3.20.0",
+  "version": "4.0.1",
   "description": "Balatro seed search, analysis, and JAML filtering â€” all in the browser via WASM.",
   "type": "module",
   "main": "index.js",
@@ -18,8 +18,8 @@
     "./jaml.schema.json": "./jaml.schema.json"
   },
   "files": [
-    "_framework/",
-    "_framework_st/",
+    "bootsharp/",
+    "bootsharp_st/",
     "index.js",
     "index.d.ts",
     "jaml-schema.js",

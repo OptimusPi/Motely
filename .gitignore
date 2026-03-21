@@ -98,3 +98,5 @@ Motely.API/wwwroot/jammy-seed-finder/main.js
 /Motely.API/wwwroot/jammy-seed-finder
 /motely-node
 /JamlFilters
+/Motely.HomeControlAPI/wwwroot
+Motely.HomeControlAPI/Properties/launchSettings.json

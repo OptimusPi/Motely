@@ -13,20 +13,38 @@ if (-not (Test-Path $propsPath)) {
 }
 
 $propsContent = Get-Content $propsPath -Raw
-if ($propsContent -match '<MotelyVersion>([^<]+)</MotelyVersion>') {
-    $version = $matches[1].Trim()
-    Write-Host "Version: $version" -ForegroundColor Green
-} else {
+if ($propsContent -notmatch '<MotelyVersion>([^<]+)</MotelyVersion>') {
     throw "Could not find MotelyVersion in Directory.Packages.props"
 }
+
+# Auto-bump patch version
+$oldVersion = $matches[1].Trim()
+$parts = $oldVersion.Split('.')
+$parts[2] = [int]$parts[2] + 1
+$version = $parts -join '.'
+
+Write-Host "Version: $oldVersion -> $version" -ForegroundColor Green
+
+# Update Directory.Packages.props
+$propsContent = $propsContent -replace "<MotelyVersion>$oldVersion</MotelyVersion>", "<MotelyVersion>$version</MotelyVersion>"
+Set-Content $propsPath $propsContent -NoNewline
+
+# Update package.json files (replace whatever version is there)
+foreach ($pkg in @("motely-wasm\package.json", "motely-node\package.json")) {
+    $json = Get-Content $pkg -Raw
+    $json = $json -replace "`"version`":\s*`"[^`"]+`"", "`"version`": `"$version`""
+    Set-Content $pkg $json -NoNewline
+}
+
+Write-Host "Bumped all 3 files to $version" -ForegroundColor Green
 
 # Phase B: motely-wasm
 Write-Host "`n=== Phase B: motely-wasm ===" -ForegroundColor Cyan
 
-# Clean old framework folders
-Write-Host "Cleaning old _framework folders..." -ForegroundColor Yellow
-if (Test-Path "motely-wasm\_framework") { Remove-Item "motely-wasm\_framework" -Recurse -Force }
-if (Test-Path "motely-wasm\_framework_st") { Remove-Item "motely-wasm\_framework_st" -Recurse -Force }
+# Clean old Bootsharp bundles
+Write-Host "Cleaning old bootsharp folders..." -ForegroundColor Yellow
+if (Test-Path "motely-wasm\bootsharp") { Remove-Item "motely-wasm\bootsharp" -Recurse -Force }
+if (Test-Path "motely-wasm\bootsharp_st") { Remove-Item "motely-wasm\bootsharp_st" -Recurse -Force }
 
 # Build single-thread WASM
 Write-Host "Building single-thread WASM..." -ForegroundColor Yellow
@@ -34,15 +52,9 @@ dotnet clean Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
 dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release -p:SingleThread=true
 if ($LASTEXITCODE -ne 0) { throw "Single-thread WASM build failed" }
 
-# Stage single-thread
-Write-Host "Staging single-thread framework..." -ForegroundColor Yellow
-node stage-packages.mjs browser
+Write-Host "Staging single-thread Bootsharp bundle..." -ForegroundColor Yellow
+node stage-packages.mjs bootsharp-st
 if ($LASTEXITCODE -ne 0) { throw "Stage single-thread failed" }
-
-# Rename to _framework_st
-if (Test-Path "motely-wasm\_framework") {
-    Move-Item "motely-wasm\_framework" "motely-wasm\_framework_st"
-}
 
 # Build multi-thread WASM (skip if YamlDotNet atomics error)
 Write-Host "Building multi-thread WASM..." -ForegroundColor Yellow
@@ -54,7 +66,7 @@ try {
         Write-Host "Multi-thread build failed (YamlDotNet atomics issue), using single-thread only" -ForegroundColor Yellow
         $multiThreadSuccess = $false
     } else {
-        node stage-packages.mjs browser
+        node stage-packages.mjs bootsharp
         if ($LASTEXITCODE -ne 0) { throw "Stage multi-thread failed" }
     }
 } catch {
@@ -62,10 +74,9 @@ try {
     $multiThreadSuccess = $false
 }
 
-# If multi-thread failed, copy single-thread to _framework
 if (-not $multiThreadSuccess) {
-    Write-Host "Copying single-thread to _framework (fallback)..." -ForegroundColor Yellow
-    Copy-Item "motely-wasm\_framework_st" "motely-wasm\_framework" -Recurse
+    Write-Host "Copying single-thread to bootsharp (fallback)..." -ForegroundColor Yellow
+    Copy-Item "motely-wasm\bootsharp_st" "motely-wasm\bootsharp" -Recurse
 }
 
 # Build motely-wasm package
@@ -119,8 +130,12 @@ Write-Host "Version: $version" -ForegroundColor Green
 Write-Host "Packages ready:" -ForegroundColor Green
 Write-Host "  - motely-wasm\motely-wasm-$version.tgz" -ForegroundColor White
 Write-Host "  - motely-node\motely-node-$version.tgz" -ForegroundColor White
-Write-Host "`nTo publish:" -ForegroundColor Yellow
-Write-Host "  cd motely-wasm && npm publish motely-wasm-$version.tgz --access public" -ForegroundColor White
-Write-Host "  cd motely-node && npm publish motely-node-$version.tgz --access public" -ForegroundColor White
+Write-Host "`nTo publish (3 copy-paste blocks):" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  npm login" -ForegroundColor White
+Write-Host ""
+Write-Host "  cd motely-wasm && npm publish motely-wasm-$version.tgz --access public && cd .." -ForegroundColor White
+Write-Host ""
+Write-Host "  cd motely-node && npm publish motely-node-$version.tgz --access public && cd .." -ForegroundColor White
 Write-Host "`nTo update JAMMY:" -ForegroundColor Yellow
 Write-Host "  cd x:\JAMMY && pnpm add motely-wasm@$version motely-node@$version" -ForegroundColor White
