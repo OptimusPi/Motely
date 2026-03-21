@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "C:/Users/pifre/OneDrive/Desktop/GODLIKE-TEMPLATE"
+		},
+		{
+			"path": "../../../../JAMMY"
+		},
+		{
+			"path": "../../../../thelongblind6"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.jaml": "yaml"
+		},
+		"yaml.schemas": {
+			"jaml.schema.json": "*.jaml"
+		},
+		"yaml.completion": true,
+		"json.schemaDownload.enable": true
+	}
+}
