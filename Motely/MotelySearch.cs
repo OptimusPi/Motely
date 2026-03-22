@@ -1316,7 +1316,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     BatchSeeds(0, searchResultMask, in searchContextParams);
                 }
             }
-
         }
 
         // Extracts the actual seed characters from a search context and reports that seed
@@ -1592,6 +1591,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     BatchSeeds(nextFilterIndex, searchResultMask, in searchParams);
                 }
             }
+
+            filterBatch->SeedCount = 0;
         }
 
         public void Dispose()
