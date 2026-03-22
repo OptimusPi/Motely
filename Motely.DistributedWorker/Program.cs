@@ -36,7 +36,9 @@ class Program
             {
                 case "--pool": url = args[++i]; break;
                 case "--threads": threads = int.Parse(args[++i]); break;
-                case "--worker-id": workerId = args[++i]; break;
+                case "--worker-id":
+                case "--workerid": // common typo / convenience
+                    workerId = args[++i]; break;
                 case "--filter": filterId = args[++i]; break;
                 case "--local-db": localDbDir = args[++i]; break;
             }
