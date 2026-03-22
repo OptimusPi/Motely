@@ -61,6 +61,35 @@ public interface IMotelySeedScoreProvider
     );
 }
 
+public interface IMotelySeedContextProviderDesc
+{
+    public IMotelySeedContextProvider CreateContextProvider(ref MotelyFilterCreationContext ctx);
+}
+
+public interface IMotelySeedContextProviderDesc<TProvider> : IMotelySeedContextProviderDesc
+    where TProvider : struct, IMotelySeedContextProvider
+{
+    public new TProvider CreateContextProvider(ref MotelyFilterCreationContext ctx);
+
+    IMotelySeedContextProvider IMotelySeedContextProviderDesc.CreateContextProvider(
+        ref MotelyFilterCreationContext ctx
+    )
+    {
+        return CreateContextProvider(ref ctx);
+    }
+}
+
+public delegate void MotelySeedContextCallback(ref MotelySingleSearchContext ctx);
+
+public interface IMotelySeedContextProvider
+{
+    /// <summary>
+    /// Called by the search loop for each seed. The provider invokes a caller-supplied
+    /// callback while the <see cref="MotelySingleSearchContext"/> is alive on the stack.
+    /// </summary>
+    public void ProvideSeedContext(ref MotelySingleSearchContext ctx);
+}
+
 public interface IMotelySeedFilter
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -269,6 +298,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithStartBatchIndex(long startBatchIndex);
     IMotelySearchSettings WithEndBatchIndex(long endBatchIndex);
     IMotelySearchSettings WithSeedScoreProvider(IMotelySeedScoreDesc seedScoreDesc);
+    IMotelySearchSettings WithSeedContextProvider(IMotelySeedContextProviderDesc desc);
     IMotelySearchSettings WithListSearch(IEnumerable<string> seeds, int seedCount = -1);
     IMotelySearchSettings WithRandomSearch(int count);
     IMotelySearchSettings WithPalindromeSearch();
@@ -304,6 +334,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public IList<IMotelySeedFilterDesc>? AdditionalFilters { get; set; } = null;
 
     public IMotelySeedScoreDesc? SeedScoreDesc { get; set; } = null;
+
+    public IMotelySeedContextProviderDesc? SeedContextProviderDesc { get; set; } = null;
 
     public MotelySearchMode Mode { get; set; }
 
@@ -429,6 +461,14 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
+    public MotelySearchSettings<TBaseFilter> WithSeedContextProvider(
+        IMotelySeedContextProviderDesc desc
+    )
+    {
+        SeedContextProviderDesc = desc;
+        return this;
+    }
+
     // Explicit interface implementations for chaining
     IMotelySearchSettings IMotelySearchSettings.WithThreadCount(int threadCount) =>
         WithThreadCount(threadCount);
@@ -444,6 +484,10 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     IMotelySearchSettings IMotelySearchSettings.WithSeedScoreProvider(IMotelySeedScoreDesc desc) =>
         WithSeedScoreProvider(desc);
+
+    IMotelySearchSettings IMotelySearchSettings.WithSeedContextProvider(
+        IMotelySeedContextProviderDesc desc
+    ) => WithSeedContextProvider(desc);
 
     IMotelySearchSettings IMotelySearchSettings.WithListSearch(
         IEnumerable<string> seeds,
@@ -600,6 +644,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly bool _isProviderMode;
 
     private readonly IMotelySeedScoreProvider? _scoreProvider;
+    private readonly IMotelySeedContextProvider? _seedContextProvider;
 
     // IInternalMotelySearch implementation
     int IInternalMotelySearch.PseudoHashKeyLengthCount => _pseudoHashKeyLengthCount;
@@ -734,6 +779,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         if (settings.SeedScoreDesc != null)
         {
             _scoreProvider = settings.SeedScoreDesc.CreateScoreProvider(ref filterCreationContext);
+        }
+
+        // Create the context provider if one was specified
+        if (settings.SeedContextProviderDesc != null)
+        {
+            _seedContextProvider = settings.SeedContextProviderDesc.CreateContextProvider(
+                ref filterCreationContext
+            );
         }
 
         _startBatchIndex = settings.StartBatchIndex;
@@ -1250,6 +1303,22 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             );
 
             VectorMask searchResultMask = Search._baseFilter.Filter(ref searchContext);
+
+            if (Search._seedContextProvider != null)
+            {
+                for (int lane = 0; lane < MotelyCore.MaxVectorWidth; lane++)
+                {
+                    if (searchContext.IsLaneValid(lane))
+                    {
+                        MotelySingleSearchContext singleCtx = new(
+                            in Search._searchParameters,
+                            in searchContextParams,
+                            lane
+                        );
+                        Search._seedContextProvider.ProvideSeedContext(ref singleCtx);
+                    }
+                }
+            }
 
             if (searchResultMask.IsPartiallyTrue())
             {
