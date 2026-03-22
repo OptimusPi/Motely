@@ -5,8 +5,6 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely", "Motely\Motely.csproj", "{5BFF23C2-D21F-2088-1EE1-7458D32A1FE8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.BrowserWasm", "Motely.BrowserWasm\Motely.BrowserWasm.csproj", "{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.DB", "Motely.DB\Motely.DB.csproj", "{39E4FA7C-E68B-49D4-8E4E-38875243667C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.Tests", "Motely.Tests\Motely.Tests.csproj", "{E482B528-E45C-4833-BC33-EE5E085EEE43}"
@@ -14,8 +12,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.DistributedWorker", "Motely.DistributedWorker\Motely.DistributedWorker.csproj", "{4C42F6F9-632A-4BE6-AFC6-19019F636D91}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.Orchestration", "Motely.Orchestration\Motely.Orchestration.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.NodeAddon", "Motely.NodeAddon\Motely.NodeAddon.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,19 +35,7 @@ Global
 		{5BFF23C2-D21F-2088-1EE1-7458D32A1FE8}.Release | x64.Build.0 = Release | Any CPU
 		{5BFF23C2-D21F-2088-1EE1-7458D32A1FE8}.Release | x86.ActiveCfg = Release | Any CPU
 		{5BFF23C2-D21F-2088-1EE1-7458D32A1FE8}.Release | x86.Build.0 = Release | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Debug | Any CPU.ActiveCfg = Debug | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Debug | Any CPU.Build.0 = Debug | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Debug | x64.ActiveCfg = Debug | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Debug | x64.Build.0 = Debug | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Debug | x86.ActiveCfg = Debug | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Debug | x86.Build.0 = Debug | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Release | Any CPU.ActiveCfg = Release | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Release | Any CPU.Build.0 = Release | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Release | x64.ActiveCfg = Release | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Release | x64.Build.0 = Release | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Release | x86.ActiveCfg = Release | Any CPU
-		{4B1FBBC9-27B2-3049-8A21-C914974A6C0C}.Release | x86.Build.0 = Release | Any CPU
-		{39E4FA7C-E68B-49D4-8E4E-38875243667C}.Debug | Any CPU.ActiveCfg = Debug | Any CPU
+{39E4FA7C-E68B-49D4-8E4E-38875243667C}.Debug | Any CPU.ActiveCfg = Debug | Any CPU
 		{39E4FA7C-E68B-49D4-8E4E-38875243667C}.Debug | Any CPU.Build.0 = Debug | Any CPU
 		{39E4FA7C-E68B-49D4-8E4E-38875243667C}.Debug | x64.ActiveCfg = Debug | Any CPU
 		{39E4FA7C-E68B-49D4-8E4E-38875243667C}.Debug | x64.Build.0 = Debug | Any CPU
@@ -99,18 +83,6 @@ Global
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|x64.Build.0 = Release|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|x86.ActiveCfg = Release|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|x86.Build.0 = Release|Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug | Any CPU.Build.0 = Debug | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug | x64.ActiveCfg = Debug | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug | x64.Build.0 = Debug | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug | x86.ActiveCfg = Debug | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug | x86.Build.0 = Debug | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release | Any CPU.Build.0 = Release | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release | x64.ActiveCfg = Release | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release | x64.Build.0 = Release | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release | x86.ActiveCfg = Release | Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release | x86.Build.0 = Release | Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
