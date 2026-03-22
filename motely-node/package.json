@@ -1,12 +1,19 @@
 {
   "name": "motely-node",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "description": "Motely native Node.js addon (linux-x64 only). No Windows binary.",
   "main": "index.cjs",
-  "types": "index.d.ts",
+  "types": "Motely.d.ts",
   "files": [
     "index.cjs",
-    "index.d.ts",
+    "Motely.js",
+    "Motely.d.ts",
+    "import.cjs",
+    "System.Runtime.d.ts",
+    "System.Runtime.Intrinsics.d.ts",
+    "System.Text.Json.d.ts",
+    "System.Collections.d.ts",
+    "YamlDotNet.d.ts",
     "bin/linux-x64/motely.node",
     "jaml.schema.json"
   ],

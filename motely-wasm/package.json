@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "description": "Motely WebAssembly (Bootsharp) for browser.",
   "type": "module",
   "main": "dist/index.mjs",
@@ -9,7 +9,8 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.mjs"
-    }
+    },
+    "./jaml.schema.json": "./dist/jaml.schema.json"
   },
   "files": [
     "dist"
@@ -24,6 +25,6 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "dotnet publish ../Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release"
+    "build": "dotnet publish ../Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release && node ../Motely/build/stage-wasm.mjs"
   }
 }
