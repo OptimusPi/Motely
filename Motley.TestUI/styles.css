@@ -1,0 +1,254 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+}
+
+body {
+  overflow: hidden;
+  background: #0a0a1a;
+}
+
+.app-shell {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+  position: relative;
+}
+
+canvas {
+  display: block;
+}
+
+/* UI Overlay */
+.ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.ui-overlay .title {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+}
+
+.ui-overlay .title h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f1c40f 0%, #e74c3c 50%, #9b59b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(241, 196, 15, 0.3);
+  letter-spacing: 0.1em;
+}
+
+.ui-overlay .title p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+}
+
+.ui-overlay .instructions {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(10, 10, 26, 0.8);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.ui-overlay .instructions p {
+  margin: 0 0 4px 0;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.ui-overlay .instructions p:last-child {
+  margin-bottom: 0;
+}
+
+.ui-overlay .instructions .seed-row {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 340px;
+}
+
+.ui-overlay .instructions .seed-row label {
+  font-size: 0.7rem;
+  color: #aaa;
+  width: 100%;
+}
+
+.ui-overlay .instructions .seed-row input {
+  flex: 1;
+  min-width: 140px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+  color: #e0e0e0;
+}
+
+.ui-overlay .instructions .seed-row .seed-apply {
+  font-family: inherit;
+  font-size: 0.7rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(241, 192, 47, 0.4);
+  background: rgba(241, 192, 47, 0.12);
+  color: #f1c40f;
+  cursor: pointer;
+}
+
+.ui-overlay .instructions .seed-row .seed-apply:hover {
+  background: rgba(241, 192, 47, 0.22);
+}
+
+.ui-overlay .instructions .seed-row .seed-hint {
+  width: 100%;
+  font-size: 0.65rem;
+  color: #666;
+}
+
+.ui-overlay .tool-switch {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(10, 10, 26, 0.85);
+  color: #888;
+}
+
+.ui-overlay .tool-switch:hover {
+  color: #ccc;
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+/* Balatro fan-site attribution (same bar as JAMMY / WeeJoker) */
+.balatro-fan-footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  min-width: 100%;
+  z-index: 50;
+  transition: opacity 200ms;
+  pointer-events: auto;
+}
+
+.balatro-fan-footer--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-overlay .tool-nav {
+  position: absolute;
+  bottom: 52px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.ui-overlay .tool-nav .tool-switch {
+  position: static;
+}
+
+/* Leva overrides */
+[data-leva-theme] {
+  --leva-colors-accent1: #f1c40f !important;
+  --leva-colors-accent2: #e74c3c !important;
+  --leva-sizes-titleBarHeight: 32px !important;
+}
+
+/* Loading state */
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #f1c40f;
+  font-size: 1.5rem;
+  font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Score animation */
+@keyframes scorePopIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Card hover glow effect */
+.card-glow {
+  filter: drop-shadow(0 0 10px rgba(241, 196, 15, 0.5));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ui-overlay .title h1 {
+    font-size: 1.5rem;
+  }
+
+  .ui-overlay .instructions {
+    font-size: 0.65rem;
+    padding: 8px 12px;
+  }
+}
