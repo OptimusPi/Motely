@@ -12,7 +12,21 @@ This repository is the **MotelyJAML** fork (from [tacodiva/Motely](https://githu
 - **Motely.CLI** – Command-line interface (JAML/JSON filters, seed analysis)
 - **Motely.API** – Optional HTTP API and static UIs
 - **Motely.TUI** – Terminal UI (optional)
+- **Motely.DistributedWorker** – `MotelyWorker` executable: claims blocks from a Jammy/Seed Finder **pool API** and submits results
 - **JamlFilters/** – Example and test JAML filter files
+
+## Distributed worker → Jammy pool (`MotelyWorker`)
+
+Connects to **`POST /api/search/helper`** on a deployed Jammy app (e.g. seedfinder.app). Requires an active distributed search on the server so there is work in the pool.
+
+```bash
+# From this repo root
+dotnet run --project Motely.DistributedWorker/Motely.DistributedWorker.csproj -- --pool https://www.seedfinder.app
+```
+
+Publish (AOT): `dotnet publish Motely.DistributedWorker/Motely.DistributedWorker.csproj -c Release -r linux-x64` (or `win-x64`). Run the `MotelyWorker` binary from the `publish` folder with the same `--pool` flag.
+
+**`--threads`**, **`--worker-id`**, **`--filter`**, **`--local-db`**: see the **Community worker (`MotelyWorker`)** section in the **[Jammy README](https://github.com/OptimusPi/JAMMY#community-worker-motelyworker)** (consumer app docs).
 
 ## Quick start (CLI)
 
