@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySinglePlanetStream(
+public struct MotelySinglePlanetStream(
     string resampleKey,
     MotelySingleResampleStream resampleStream,
     MotelySinglePrngStream blackHoleStream

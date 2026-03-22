@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySingleTarotStream(
+public struct MotelySingleTarotStream(
     string resampleKey,
     MotelySingleResampleStream resampleStream,
     MotelySinglePrngStream soulStream

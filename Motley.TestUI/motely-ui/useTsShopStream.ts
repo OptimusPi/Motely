@@ -22,17 +22,20 @@ export function useTsShopStream(seed: string, deck: ShopDeck, stake: ShopStake, 
   } | null>(null)
 
   const gameRef = useRef<Game | null>(null)
+  const rowsRef = useRef<ShopStreamRow[]>([])
 
   const resetStream = useCallback(() => {
     setStreamError(null)
     try {
       const g = createTsGame(seed, deck, stake)
       gameRef.current = g
+      rowsRef.current = []
       setRows([])
       setCacheMeta(streamSnapshotMeta(g))
       setStreamReady(true)
     } catch (e: unknown) {
       gameRef.current = null
+      rowsRef.current = []
       setCacheMeta(null)
       setStreamReady(false)
       setStreamError(e instanceof Error ? e.message : String(e))
@@ -45,6 +48,7 @@ export function useTsShopStream(seed: string, deck: ShopDeck, stake: ShopStake, 
 
   /** Match Motely hook: new ante = fresh list (same Game, different stream). */
   useEffect(() => {
+    rowsRef.current = []
     setRows([])
   }, [ante])
 
@@ -54,19 +58,18 @@ export function useTsShopStream(seed: string, deck: ShopDeck, stake: ShopStake, 
       const g = gameRef.current
       if (!g || n <= 0) return
       try {
-        setRows((prev) => {
-          const base = prev.length
-          const add: ShopStreamRow[] = []
-          for (let k = 0; k < n; k++) {
-            const shop = g.nextShopItem(ante)
-            add.push({
-              index: base + k,
-              type: String(shop.type),
-              name: shop.item.getName(),
-            })
-          }
-          return [...prev, ...add]
-        })
+        const base = rowsRef.current.length
+        const add: ShopStreamRow[] = []
+        for (let k = 0; k < n; k++) {
+          const shop = g.nextShopItem(ante)
+          add.push({
+            index: base + k,
+            type: String(shop.type),
+            name: shop.item.getName(),
+          })
+        }
+        rowsRef.current = [...rowsRef.current, ...add]
+        setRows([...rowsRef.current])
         setCacheMeta(streamSnapshotMeta(g))
       } catch (e: unknown) {
         setStreamError(e instanceof Error ? e.message : String(e))

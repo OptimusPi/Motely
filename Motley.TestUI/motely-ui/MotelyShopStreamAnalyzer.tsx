@@ -5,7 +5,7 @@ import { useMotelyShopStream } from './useMotelyShopStream'
 
 type Props = Readonly<{ onBack: () => void }>
 
-/** Same UI as TS shop stream, backed by Motely C# WASM <code>analyzeSeed</code> (fixed shopQueue per ante). */
+/** Same UI as TS shop stream, backed by Motely C# WASM (<code>SeedRouterTests</code> shop stream, not <code>analyzeSeed</code>). */
 export function MotelyShopStreamAnalyzer({ onBack }: Props) {
   const [seed, setSeed] = useState('BALATRO1')
   const [deck, setDeck] = useState<ShopDeck>('Red')
@@ -19,9 +19,9 @@ export function MotelyShopStreamAnalyzer({ onBack }: Props) {
       onBack={onBack}
       title="Shop stream — Motely (C# / WASM)"
       subtitle={
-        'Raw experiment: same buttons as the TS page, but the list comes from Motely’s analyzeSeed → antes[].shopQueue. That is a finite snapshot from the real game logic in C#, not nextShopItem() in a loop forever.'
+        'Same controls as the TS page, but each row is one C# call to GetNextShopItem on a live shop stream (BeginShopStream per ante). Matches the SeedRouterTests contract, not a JSON shopQueue snapshot.'
       }
-      footerNote="Reset re-runs analyzeSeed. +N reveals the next N slots from the current ante’s shopQueue until the snapshot is exhausted."
+      footerNote="Reset rebuilds the WASM search context. Changing ante restarts the shop stream for that ante. The list is virtualized; infinite scroll loads +100 near the bottom. Large timing runs use silent WASM drains (no React rows), then BeginShopStream resets the stream."
       seed={seed}
       setSeed={setSeed}
       deck={deck}
@@ -40,6 +40,11 @@ export function MotelyShopStreamAnalyzer({ onBack }: Props) {
       pull={engine.pull}
       copyDebug={engine.copyDebug}
       copyDebugLabel={engine.copyDebugLabel}
+      motelyBenchTwoK={engine.motelyBenchTwoK}
+      motelyBenchSizes={engine.motelyBenchSizes}
+      motelyBenchRunning={engine.motelyBenchRunning}
+      onMotelyBenchTwoK={engine.runMotelyBenchTwoK}
+      onMotelyBenchSizes={engine.runMotelyBenchSizes}
     />
   )
 }

@@ -2,6 +2,8 @@
 export interface ShopItemInfo {
   id: string
   name: string
+  /** Packed Motely item bits (sprite / asset key). */
+  value?: number
 }
 
 export interface PackInfo {

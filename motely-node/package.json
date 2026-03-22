@@ -1,6 +1,6 @@
 {
   "name": "motely-node",
-  "version": "4.0.4",
+  "version": "4.1.1",
   "description": "Motely native Node.js addon (linux-x64 only). No Windows binary.",
   "main": "index.cjs",
   "types": "index.d.ts",

@@ -31,7 +31,31 @@ export type ShopDeck = (typeof SHOP_DECKS)[number]
 export type ShopStake = (typeof SHOP_STAKES)[number]
 
 /** One row in the shop list (TS uses CardType enum; Motely uses string ids). */
-export type ShopStreamRow = Readonly<{ index: number; type: string; name: string }>
+export type ShopStreamRow = Readonly<{
+  index: number
+  type: string
+  name: string
+  /** Packed Motely item int when row comes from WASM / analyze (<code>ShopItemDto.value</code>); use for Balatro sprite lookup. */
+  value?: number
+}>
+
+export type ShopStreamCacheMetaMotely = Readonly<{
+  wasmVersion: string
+  revealedInQueue: number
+  infiniteShopStream: true
+  lastPullMs?: number | null
+}>
+
+/** WASM-only: two back-to-back 1K drains (item indices 0–999 then 1000–1999). */
+export type MotelyBenchTwoK = Readonly<{ first1kMs: number; second1kMs: number }>
+
+/** WASM-only: single-batch drain timings (stream reset after the suite). */
+export type MotelyBenchSizes = Readonly<{
+  k1: number
+  k10: number
+  k100: number
+  k1m: number
+}>
 
 export const shopStreamStyles = {
   root: {
@@ -86,12 +110,17 @@ export const shopStreamStyles = {
     color: '#c4b8a8',
   },
   err: { color: '#e07070', marginTop: 12, whiteSpace: 'pre-wrap' as const, maxWidth: 900 },
+  shopScroll: {
+    maxHeight: 'min(60vh, 520px)',
+    overflowY: 'auto' as const,
+    border: '1px solid #222',
+    borderRadius: 4,
+    background: '#0a0a0e',
+  },
   shop: {
     margin: 0,
     paddingLeft: 18,
     color: '#aaa',
-    maxHeight: 'min(60vh, 520px)',
-    overflowY: 'auto' as const,
   },
   meta: { color: '#555', fontSize: 11, marginTop: 20 },
 } as const

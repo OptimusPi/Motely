@@ -58,6 +58,10 @@ public class ShopItemDto
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
+
+    /// <summary>Packed <see cref="Motely.MotelyItem"/> bits — stable key for sprite / asset lookup (e.g. Balatro image loader).</summary>
+    [JsonPropertyName("value")]
+    public int Value { get; set; }
 }
 
 public class PackDto

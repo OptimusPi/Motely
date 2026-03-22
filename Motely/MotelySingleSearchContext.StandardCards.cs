@@ -1,6 +1,6 @@
 namespace Motely;
 
-public ref struct MotelySingleStandardCardStream
+public struct MotelySingleStandardCardStream
 {
     public static MotelySingleStandardCardStream Invalid =>
         new() { CardPrngStream = MotelySinglePrngStream.Invalid };

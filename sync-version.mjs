@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // sync-version.mjs — reads <MotelyVersion> from Directory.Packages.props and writes to package.json files
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -12,11 +12,16 @@ if (!match) { console.error("MotelyVersion not found in Directory.Packages.props
 const version = match[1].trim();
 
 const targets = [
+  resolve(root, "Motely/package.json"),
   resolve(root, "motely-wasm/package.json"),
   resolve(root, "motely-node/package.json"),
 ];
 
 for (const pkgPath of targets) {
+  if (!existsSync(pkgPath)) {
+    console.warn(`  skip (missing): ${pkgPath}`);
+    continue;
+  }
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   pkg.version = version;
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");

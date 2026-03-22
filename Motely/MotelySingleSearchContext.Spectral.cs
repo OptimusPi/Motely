@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySingleSpectralStream(
+public struct MotelySingleSpectralStream(
     string resampleKey,
     MotelySingleResampleStream resampleStream,
     MotelySinglePrngStream blackHoleStream
