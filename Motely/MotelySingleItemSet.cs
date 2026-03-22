@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Motely;
 
-public ref struct MotelySingleItemSet
+public struct MotelySingleItemSet
 {
     public static MotelySingleItemSet Empty => default;
 

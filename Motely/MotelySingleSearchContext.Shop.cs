@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySingleShopItemStream
+public struct MotelySingleShopItemStream
 {
     public double TarotRate;
     public double PlanetRate;

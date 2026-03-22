@@ -557,6 +557,7 @@ partial class Program
                                     {
                                         Id = item.ToString(),
                                         Name = FormatUtils.FormatItem(item),
+                                        Value = item.Value,
                                     })
                                     .ToArray(),
                                 Packs = a
@@ -634,6 +635,7 @@ partial class Program
                             {
                                 Id = item.ToString(),
                                 Name = FormatUtils.FormatItem(item),
+                                Value = item.Value,
                             })
                             .ToArray(),
                         Packs = a
