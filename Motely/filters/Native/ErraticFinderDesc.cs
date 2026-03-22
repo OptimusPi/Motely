@@ -7,7 +7,7 @@ public struct ErraticFinderDesc() : IMotelySeedFilterDesc<ErraticFinderDesc.Filt
     public const MotelyPlayingCardSuit CardSuit = MotelyPlayingCardSuit.Hearts;
     public const int RequiredCount = 28;
 
-    public FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheErraticDeckPrngStream();
 
@@ -16,7 +16,7 @@ public struct ErraticFinderDesc() : IMotelySeedFilterDesc<ErraticFinderDesc.Filt
 
     public struct FilterStruct() : IMotelySeedFilter
     {
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             var stream = searchContext.CreateErraticDeckPrngStream(true);
 

@@ -1,0 +1,52 @@
+{
+  "name": "motely",
+  "version": "4.0.4",
+  "description": "MotelyJAML — Balatro seed search, analysis, and JAML filtering. Native Node.js module + Browser WASM.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/node/index.cjs"
+      },
+      "browser": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/wasm/index.mjs"
+      },
+      "types": "./dist/index.d.ts",
+      "default": "./dist/node/index.cjs"
+    },
+    "./jaml-schema": {
+      "types": "./dist/jaml-schema.d.ts",
+      "import": "./dist/jaml-schema.mjs",
+      "default": "./dist/jaml-schema.mjs"
+    },
+    "./jaml.schema.json": "./dist/jaml.schema.json"
+  },
+  "files": [
+    "dist/"
+  ],
+  "keywords": [
+    "balatro",
+    "seed",
+    "wasm",
+    "node-api",
+    "aot",
+    "native",
+    "jaml"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "motely"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "node build/build.mjs",
+    "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
+    "prepare": "npm run build"
+  }
+}

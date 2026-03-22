@@ -5,7 +5,7 @@ namespace Motely;
 public struct PerkeoObservatoryFilterDesc()
     : IMotelySeedFilterDesc<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>
 {
-    public PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheAnteFirstVoucher(1);
         ctx.CacheAnteFirstVoucher(2);

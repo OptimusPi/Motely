@@ -1,6 +1,6 @@
 namespace Motely.Analysis;
 
-public sealed class SingleSeedContextYoinkerDesc : IMotelySeedContextProviderDesc, IDisposable
+public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
 {
     private MotelySearchParameters _searchParams;
     private MotelySearchContextParams _contextParams;
@@ -9,7 +9,7 @@ public sealed class SingleSeedContextYoinkerDesc : IMotelySeedContextProviderDes
     private IMotelySearch? _ownedSearch;
 
     /// <summary>Direct construction — runs a single-seed search internally, keeps it alive.</summary>
-    public SingleSeedContextYoinkerDesc(string seed, MotelyDeck deck, MotelyStake stake)
+    public MotelySeedRouterDesc(string seed, MotelyDeck deck, MotelyStake stake)
     {
         PassthroughFilterDesc filterDesc = new();
         var settings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(filterDesc)
@@ -17,15 +17,15 @@ public sealed class SingleSeedContextYoinkerDesc : IMotelySeedContextProviderDes
             .WithStake(stake)
             .WithListSearch([seed])
             .WithThreadCount(1)
-            .WithSeedContextProvider(this);
+            .WithSeedRouter(this);
         _ownedSearch = settings.Start();
         _ownedSearch.AwaitCompletion();
     }
 
-    public IMotelySeedContextProvider CreateContextProvider(ref MotelyFilterCreationContext ctx)
-        => new YoinkerProvider(this);
+    public IMotelySeedRouter CreateSeedRouter(ref MotelyFilterCreationContext ctx)
+        => new ContextCapturingRouter(this);
 
-    private readonly struct YoinkerProvider(SingleSeedContextYoinkerDesc desc) : IMotelySeedContextProvider
+    private readonly struct ContextCapturingRouter(MotelySeedRouterDesc desc) : IMotelySeedRouter
     {
         public void ProvideSeedContext(ref MotelySingleSearchContext ctx)
         {
@@ -40,7 +40,9 @@ public sealed class SingleSeedContextYoinkerDesc : IMotelySeedContextProviderDes
     public MotelySingleSearchContext CreateContext()
     {
         if (!_hasContext)
-            throw new InvalidOperationException("No context yoinked yet.");
+            throw new InvalidOperationException(
+                "No seed context captured yet; the search must run with this instance registered as the seed router."
+            );
         return new MotelySingleSearchContext(in _searchParams, in _contextParams, _lane);
     }
 

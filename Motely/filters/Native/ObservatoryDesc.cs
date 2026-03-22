@@ -4,7 +4,7 @@ namespace Motely.Filters;
 
 public struct ObservatoryDesc : IMotelySeedFilterDesc<ObservatoryDesc.ObservatoryFilter>
 {
-    public ObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly ObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         for (int ante = 1; ante <= 4; ante++)
         {
@@ -16,7 +16,7 @@ public struct ObservatoryDesc : IMotelySeedFilterDesc<ObservatoryDesc.Observator
     public struct ObservatoryFilter : IMotelySeedFilter
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var resultMask = VectorMask.NoBitsSet;
             var runState = new MotelyVectorRunState();

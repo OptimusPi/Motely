@@ -20,7 +20,7 @@ public struct VoucherFilterDesc(VoucherClause clause)
 {
     private readonly VoucherClause _clause = clause;
 
-    public VoucherFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly VoucherFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         int maxAnte = 0;
         for (int i = 0; i < _clause.Antes.Length; i++)
@@ -41,7 +41,7 @@ public struct VoucherFilterDesc(VoucherClause clause)
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
         )]
-        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Vouchers.Length > 0);
 

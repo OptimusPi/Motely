@@ -1,15 +1,15 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>4.0.2</MotelyVersion>
+    <MotelyVersion>4.0.4</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Bootsharp" Version="0.7.0" />
     <PackageVersion Include="Bootsharp.Inject" Version="0.7.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.DotNet.ILCompiler.LLVM" Version="7.0.0-preview.4.23073.1" />
-    <PackageVersion Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="7.0.0-preview.4.23073.1" />
-    <PackageVersion Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="7.0.0-preview.4.23073.1" />
+    <PackageVersion Include="Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
+    <PackageVersion Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
+    <PackageVersion Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
     <PackageVersion Include="Microsoft.JavaScript.NodeApi" Version="0.9.19" />
     <PackageVersion Include="Microsoft.JavaScript.NodeApi.Generator" Version="0.9.19" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />

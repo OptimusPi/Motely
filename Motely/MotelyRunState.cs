@@ -43,7 +43,7 @@ public ref struct MotelyRunState
     public MotelyBossBlind[]? CachedBosses;
 
     public List<MotelyJoker> OwnedJokers => _ownedJokers ??= new List<MotelyJoker>();
-    public bool ShowmanActive => _showmanActive;
+    public readonly bool ShowmanActive => _showmanActive;
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {

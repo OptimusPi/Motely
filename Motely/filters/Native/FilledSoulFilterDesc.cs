@@ -10,7 +10,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
     public const int SoulsInARow = 2;
     public const int hAnte = 1;
 
-    public FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CachePseudoHash(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + 0);
         ctx.CachePseudoHash(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + 1);
@@ -161,7 +161,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
             return (souls * 100) + (negSouls * 10) + perkeo;
         }
 
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             MotelyVectorRunState voucherState = new();
 

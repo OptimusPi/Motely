@@ -10,7 +10,8 @@ public sealed record class MotelySeedAnalysisConfig(
 );
 
 /// <summary>
-/// Contains all analysis data for a seed
+/// Classic String Block Format Analysis
+/// Matches "The Soul" and is also a great thing for Verify() unit tests.
 /// </summary>
 public sealed record class MotelySeedAnalysis(
     string? Error,

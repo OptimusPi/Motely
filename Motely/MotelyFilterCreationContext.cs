@@ -10,7 +10,8 @@ public ref struct MotelyFilterCreationContext
 
     // Default parameters for unit tests
     private static readonly MotelySearchParameters _defaultSearchParameters =
-        new MotelySearchParameters { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
+        new()
+        { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
 
     public readonly MotelyStake Stake => _searchParameters.Stake;
     public readonly MotelyDeck Deck => _searchParameters.Deck;

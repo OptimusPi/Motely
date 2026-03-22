@@ -113,6 +113,123 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
         return stringified;
     }
 
+    /// <summary>
+    /// Parses a <see cref="ToString"/>-shaped label (a &quot;jummy&quot;): prefix order matches
+    /// <see cref="ToString"/> — <c>Seal Seal</c>, then stickers outer-to-inner
+    /// <c>Rental</c> → <c>Eternal</c> → <c>Perishable</c>, then <c>Edition</c>, <c>Enhancement</c>, <c>Type</c>.
+    /// </summary>
+    /// <exception cref="FormatException">Unrecognized layout or unknown enum name.</exception>
+    public static MotelyItem Parse(string jummy)
+    {
+        if (string.IsNullOrWhiteSpace(jummy))
+            throw new FormatException("Motely item string is empty.");
+
+        string str = jummy.Trim();
+
+        MotelyItemSeal seal = MotelyItemSeal.None;
+        foreach (MotelyItemSeal s in Enum.GetValues<MotelyItemSeal>())
+        {
+            if (s == MotelyItemSeal.None)
+                continue;
+            string prefix = s.ToString() + " Seal ";
+            if (str.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                seal = s;
+                str = str[prefix.Length..].TrimStart();
+                break;
+            }
+        }
+
+        // Stickers are prepended in ToString in order Perishable → Eternal → Rental, so the
+        // label reads outermost Rental, then Eternal, then Perishable before edition/enhancement/type.
+        bool perishable = false;
+        bool eternal = false;
+        bool rental = false;
+        if (str.StartsWith("Rental ", StringComparison.Ordinal))
+        {
+            rental = true;
+            str = str["Rental ".Length..].TrimStart();
+        }
+        if (str.StartsWith("Eternal ", StringComparison.Ordinal))
+        {
+            eternal = true;
+            str = str["Eternal ".Length..].TrimStart();
+        }
+        if (str.StartsWith("Perishable ", StringComparison.Ordinal))
+        {
+            perishable = true;
+            str = str["Perishable ".Length..].TrimStart();
+        }
+
+        string[] parts = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            throw new FormatException($"Missing item type in '{jummy}'.");
+
+        MotelyItemEdition edition = MotelyItemEdition.None;
+        MotelyItemEnhancement enhancement = MotelyItemEnhancement.None;
+        MotelyItemType type;
+
+        if (parts.Length == 1)
+        {
+            type = ParseType(parts[0], jummy);
+        }
+        else if (parts.Length == 2)
+        {
+            if (
+                Enum.TryParse(parts[0], ignoreCase: true, out MotelyItemEdition ed)
+                && ed != MotelyItemEdition.None
+            )
+            {
+                edition = ed;
+                type = ParseType(parts[1], jummy);
+            }
+            else if (
+                Enum.TryParse(parts[0], ignoreCase: true, out MotelyItemEnhancement eh)
+                && eh != MotelyItemEnhancement.None
+            )
+            {
+                enhancement = eh;
+                type = ParseType(parts[1], jummy);
+            }
+            else
+                throw new FormatException($"Unrecognized motely item tail '{str}' (expected edition/type or enhancement/type).");
+        }
+        else if (parts.Length == 3)
+        {
+            if (!Enum.TryParse(parts[0], ignoreCase: true, out edition))
+                throw new FormatException($"Unknown MotelyItemEdition '{parts[0]}' in '{jummy}'.");
+            if (!Enum.TryParse(parts[1], ignoreCase: true, out enhancement))
+                throw new FormatException($"Unknown MotelyItemEnhancement '{parts[1]}' in '{jummy}'.");
+            type = ParseType(parts[2], jummy);
+            if (edition == MotelyItemEdition.None || enhancement == MotelyItemEnhancement.None)
+                throw new FormatException($"Invalid edition/enhancement pair in '{jummy}'.");
+        }
+        else
+            throw new FormatException($"Too many tokens in '{jummy}'.");
+
+        MotelyItem item = new(type);
+        if (seal != MotelyItemSeal.None)
+            item = item.WithSeal(seal);
+        if (edition != MotelyItemEdition.None)
+            item = item.WithEdition(edition);
+        if (enhancement != MotelyItemEnhancement.None)
+            item = item.WithEnhancement(enhancement);
+        if (perishable)
+            item = item.WithPerishable(true);
+        if (eternal)
+            item = item.WithEternal(true);
+        if (rental)
+            item = item.WithRental(true);
+        return item;
+    }
+
+    private static MotelyItemType ParseType(string token, string originalJummy)
+    {
+        if (!Enum.TryParse<MotelyItemType>(token, ignoreCase: true, out MotelyItemType type))
+            throw new FormatException($"Unknown MotelyItemType '{token}' in '{originalJummy}'.");
+        return type;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(MotelyItem other)
     {

@@ -16,8 +16,6 @@ public class SeedAnalysisDto
     [JsonPropertyName("erraticDeckComposition")]
     public string[] ErraticDeckComposition { get; set; } = [];
 
-    [JsonPropertyName("twos")]
-    public int Twos { get; set; }
 
     [JsonPropertyName("error")]
     public string? Error { get; set; }

@@ -1,38 +1,36 @@
-# Build WASM Browser Projects
+# Build WASM (browser)
 
-Build the current Motely browser WASM projects and stage their publish outputs for npm packaging.
+Build **`Motely`** for `net10.0-browser` (Bootsharp) and stage into **`motely-wasm/dist/`**.
 
-## Quick Build
+## Quick build
 
 ```bash
-dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
-dotnet publish Motely.SingleThread/Motely.SingleThread.csproj -c Release
-node stage-packages.mjs all
+dotnet publish Motely/Motely.csproj -c Release -f net10.0-browser
+npm --prefix motely-wasm install
+npm --prefix motely-wasm run build
 ```
 
-## What This Produces
+(`motely-wasm`'s `build` script runs `Motely/build/stage-wasm.mjs`, which copies `publish/bootsharp` → `motely-wasm/dist/bootsharp` and writes `dist/index.mjs`.)
 
-- `Motely.BrowserWasm/bin/Release/net10.0-browser/publish/wwwroot/_framework/`
-- `Motely.SingleThread/bin/Release/net10.0-browser/publish/wwwroot/_framework/`
-- staged package assets in:
-  - `Motely.npm/_framework/`
-  - `Motely.npm/_framework_st/`
+## What this produces
 
-## Staging to NPM Packages
+- `Motely/bin/Release/net10.0-browser/publish/bootsharp/` (publish output)
+- `motely-wasm/dist/bootsharp/` + `motely-wasm/dist/index.mjs` (staged npm payload)
 
-The root `stage-packages.mjs` script copies filtered publish assets into the npm package folders.
+Legacy paths (`Motely.BrowserWasm`, `Motely.SingleThread`, `Motely.npm`, root `stage-packages.mjs`) are **removed** from the tree.
 
 ## Requirements
 
 - .NET 10 SDK
 - wasm-tools workload: `dotnet workload install wasm-tools`
-- wasm-experimental workload: `dotnet workload install wasm-experimental`
+- wasm-experimental workload: `dotnet workload install wasm-experimental` (if your SDK still expects it)
 
 ## Troubleshooting
 
 ### wasm-opt crashes
-Already disabled in csproj: `<WasmRunWasmOpt>false</WasmRunWasmOpt>`
+
+If applicable, disable in the browser target: `<WasmRunWasmOpt>false</WasmRunWasmOpt>`
 
 ### Missing SharedArrayBuffer
-For Browser: Needs COOP/COEP headers when using `Motely.BrowserWasm`
-For browser fallback: use the staged `Motely.SingleThread` runtime via `motely-wasm/_framework_st`
+
+Threads + WASM may require COOP/COEP headers on the host page.
