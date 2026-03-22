@@ -2,16 +2,16 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
 
-public unsafe struct MotelySeedScoreTally : IMotelySeedScore
+public unsafe struct MotelySeedScoreTally : IMotelySeedScores
 {
     public const int MAX_TALLY_COUNT = 256;
 
     public int Score { get; set; }
     public string Seed { get; set; }
     private int _tallyCount;
-    private int[] _tallyValues;
+    private int[] _tallyValues = new int[MAX_TALLY_COUNT];
 
-    public byte[] Tally
+    public readonly byte[] Tally
     {
         get
         {
@@ -22,46 +22,46 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
         }
     }
 
-    public MotelySeedScoreTally(string seed, int score)
+    public MotelySeedScoreTally(string seed, int score, Span<int> tallyValues)
     {
         Seed = seed;
         Score = score;
         _tallyCount = 0;
-        _tallyValues = new int[MAX_TALLY_COUNT];
+        tallyValues.CopyTo(_tallyValues);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Reset(string seed, int score = 0)
     {
-        EnsureTallyStorage();
         Seed = seed;
         Score = score;
         _tallyCount = 0;
+        _tallyValues ??= new int[MAX_TALLY_COUNT];
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddTally(int value)
     {
-        EnsureTallyStorage();
         _tallyValues[_tallyCount] = value;
         _tallyCount++;
     }
 
-    public int GetTally(int index)
+    public readonly int GetTally(int index)
     {
         if (index < 0 || index >= _tallyCount)
             return 0;
         return _tallyValues[index];
     }
 
-    public int TallyCount => _tallyCount;
+    public readonly int TallyCount => _tallyCount;
 
-    public ReadOnlySpan<int> TallyValuesSpan
+    public readonly ReadOnlySpan<int> TallyValuesSpan
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new ReadOnlySpan<int>((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
+        get => new((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
     }
 
-    public List<int> TallyColumns
+    public readonly List<int> TallyColumns
     {
         get
         {
@@ -72,13 +72,6 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
             }
             return list;
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void EnsureTallyStorage()
-    {
-        if (_tallyValues == null || _tallyValues.Length != MAX_TALLY_COUNT)
-            _tallyValues = new int[MAX_TALLY_COUNT];
     }
 }
 

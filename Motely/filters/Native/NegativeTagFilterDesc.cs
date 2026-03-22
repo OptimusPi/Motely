@@ -5,7 +5,7 @@ namespace Motely;
 public struct NegativeTagFilterDesc()
     : IMotelySeedFilterDesc<NegativeTagFilterDesc.NegativeTagFilter>
 {
-    public NegativeTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly NegativeTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         for (int ante = 2; ante <= 4; ante++)
             ctx.CacheTagStream(ante);
@@ -17,7 +17,7 @@ public struct NegativeTagFilterDesc()
     public struct NegativeTagFilter() : IMotelySeedFilter
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             MotelyVectorTagStream tagStream;
             VectorMask mask = VectorMask.AllBitsSet;

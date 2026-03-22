@@ -1,8 +1,8 @@
-export const JAML_SCHEMA_VERSION = "4.0.2";
+export const JAML_SCHEMA_VERSION = "4.0.4";
 export const jamlSchema = {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "4.0.2",
+  "version": "4.0.4",
   "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",

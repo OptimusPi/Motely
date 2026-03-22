@@ -4,7 +4,7 @@ namespace Motely;
 
 public struct LuckCardFilterDesc() : IMotelySeedFilterDesc<LuckCardFilterDesc.LuckyCardFilter>
 {
-    public LuckyCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly LuckyCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CachePseudoHash("lucky_money");
         // ctx.CachePseudoHash("space");
@@ -13,7 +13,7 @@ public struct LuckCardFilterDesc() : IMotelySeedFilterDesc<LuckCardFilterDesc.Lu
 
     public struct LuckyCardFilter() : IMotelySeedFilter
     {
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             MotelyVectorPrngStream luckyMoney = searchContext.CreatePrngStream("lucky_money");
 

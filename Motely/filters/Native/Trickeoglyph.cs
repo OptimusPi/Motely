@@ -3,7 +3,7 @@ namespace Motely;
 public struct TrickeoglyphFilterDesc()
     : IMotelySeedFilterDesc<TrickeoglyphFilterDesc.TrickeoglyphFilter>
 {
-    public TrickeoglyphFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly TrickeoglyphFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheAnteFirstVoucher(1);
         ctx.CacheAnteFirstVoucher(2);

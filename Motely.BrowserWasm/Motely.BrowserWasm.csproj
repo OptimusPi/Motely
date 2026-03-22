@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Bootsharp output config -->
+    <BootsharpName>motely-wasm</BootsharpName>
+    <BootsharpEmbedBinaries>false</BootsharpEmbedBinaries>
+    <BootsharpBinariesDirectory>$(MSBuildThisFileDirectory)..\motely-wasm\dist\bootsharp</BootsharpBinariesDirectory>
+    <BootsharpPackageDirectory>$(MSBuildThisFileDirectory)..\motely-wasm</BootsharpPackageDirectory>
+    <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
+    <!-- NativeAOT-LLVM -->
+    <BootsharpLLVM>true</BootsharpLLVM>
+    <DotNetJsApi>true</DotNetJsApi>
+    <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+    <PublishTrimmed>true</PublishTrimmed>
+    <DebugType>none</DebugType>
+    <EmccFlags>$(EmccFlags) -O3</EmccFlags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+                      Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
+                      Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_LLVM_ROOT=$(EmscriptenUpstreamBinPath)" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_BINARYEN_ROOT=$(EmscriptenSdkToolsPath)" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_NODE_JS=$(EmscriptenNodeBinPath)node$(ExecutableExtensionName)" />
+    <EmscriptenEnvVars Include="EM_CACHE=$(EmscriptenCacheSdkCacheDir)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+</Project>

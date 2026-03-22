@@ -57,7 +57,7 @@ public struct SimdIntResult
         return new SimdIntResult(Vector256.Equals(left.Value, right.Value));
     }
 
-    public int this[int index]
+    public readonly int this[int index]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Value.GetElement(index);

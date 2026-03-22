@@ -68,7 +68,7 @@ public unsafe struct VectorEnum<T>(SimdIntResult hardwareVector)
         }
     }
 
-    public override string ToString()
+    public override readonly string ToString()
     {
         // ToString limited to MaxVectorWidth
         var sb = new System.Text.StringBuilder("<");

@@ -8,7 +8,7 @@ public struct NegativePerkeoFilterDescNew()
     public const int MinAnte = 1;
     public const int MaxAnte = 2;
 
-    public FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         for (int ante = MinAnte; ante <= MaxAnte; ante++)
             ctx.CacheSoulJokerStream(
@@ -23,7 +23,7 @@ public struct NegativePerkeoFilterDescNew()
     public struct FilterStruct() : IMotelySeedFilter
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             VectorMask seedMask = VectorMask.NoBitsSet;
 

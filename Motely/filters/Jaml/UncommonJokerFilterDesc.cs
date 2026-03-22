@@ -11,7 +11,7 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
 {
     private readonly UncommonJokerClause _clause = clause;
 
-    public UncommonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly UncommonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         foreach (var ante in _clause.Antes)
         {
@@ -134,7 +134,7 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
         )]
-        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
             int needed = _clause.Min;

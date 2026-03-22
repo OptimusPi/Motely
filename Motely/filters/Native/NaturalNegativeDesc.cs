@@ -5,7 +5,7 @@ namespace Motely;
 public struct NaturalNegativesFilterDesc()
     : IMotelySeedFilterDesc<NaturalNegativesFilterDesc.NaturalNegativesFilter>
 {
-    public NaturalNegativesFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly NaturalNegativesFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheAnteFirstVoucher(1);
         ctx.CacheAnteFirstVoucher(2);

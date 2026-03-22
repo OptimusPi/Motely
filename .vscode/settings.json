@@ -1,4 +1,5 @@
 {
+  "xml.problems.noGrammar": "ignore",
   "files.associations": {
     "*.jaml": "yaml"
   },

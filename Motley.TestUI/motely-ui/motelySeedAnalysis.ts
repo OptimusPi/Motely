@@ -25,7 +25,6 @@ export interface SeedAnalysisInfo {
   deck: string
   stake: string
   erraticDeckComposition: string[]
-  twos?: number
   error?: string | null
   antes: AnteAnalysisInfo[]
 }

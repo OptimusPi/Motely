@@ -53,14 +53,14 @@ public ref struct MotelyVectorRunState
         VoucherStateBitfield |= Vector256.BitwiseAnd(voucherBits, maskVector);
     }
 
-    public Vector256<int> IsVoucherActive(MotelyVoucher voucher)
+    public readonly Vector256<int> IsVoucherActive(MotelyVoucher voucher)
     {
         return Vector256.OnesComplement(
             Vector256.IsZero(VoucherStateBitfield & Vector256.Create(1 << (int)voucher))
         );
     }
 
-    public Vector256<int> IsVoucherActive(VectorEnum256<MotelyVoucher> voucherVector)
+    public readonly Vector256<int> IsVoucherActive(VectorEnum256<MotelyVoucher> voucherVector)
     {
         return Vector256.OnesComplement(
             Vector256.IsZero(

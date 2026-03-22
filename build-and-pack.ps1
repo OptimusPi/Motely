@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Build and pack motely-wasm and motely-node packages
+# Build and pack motely-wasm (Bootsharp LLVM) and motely-node (NodeApi)
 # Version is controlled by Directory.Packages.props
 
 $ErrorActionPreference = "Stop"
@@ -29,47 +29,47 @@ Write-Host "Version: $oldVersion -> $version" -ForegroundColor Green
 $propsContent = $propsContent -replace "<MotelyVersion>$oldVersion</MotelyVersion>", "<MotelyVersion>$version</MotelyVersion>"
 Set-Content $propsPath $propsContent -NoNewline
 
-# Update package.json files (replace whatever version is there)
-foreach ($pkg in @("motely-wasm\package.json")) {
-    $json = Get-Content $pkg -Raw
-    $json = $json -replace "`"version`":\s*`"[^`"]+`"", "`"version`": `"$version`""
-    Set-Content $pkg $json -NoNewline
+# Update motely-wasm/package.json
+foreach ($pkg in @("motely-wasm\package.json", "motely-node\package.json")) {
+    if (Test-Path $pkg) {
+        $json = Get-Content $pkg -Raw
+        $json = $json -replace "`"version`":\s*`"[^`"]+`"", "`"version`": `"$version`""
+        Set-Content $pkg $json -NoNewline
+    }
 }
 
-Write-Host "Bumped all 3 files to $version" -ForegroundColor Green
+Write-Host "Bumped to $version" -ForegroundColor Green
 
-# JAML JSON schema + JS helpers (all paths in JamlSchemaGenerator — never edit copies by hand)
-Write-Host "Regenerating JAML schema from C# (Motely.CLI --write-jaml-schema)..." -ForegroundColor Yellow
+# Phase 1: Generate JAML schema
+Write-Host "`n=== Phase 1: JAML Schema ===" -ForegroundColor Cyan
 dotnet run --project "Motely.CLI/Motely.CLI.csproj" -c Release -- --write-jaml-schema
 if ($LASTEXITCODE -ne 0) { throw "JAML schema generation failed" }
 
-# Phase B: motely-wasm
-Write-Host "`n=== Phase B: motely-wasm ===" -ForegroundColor Cyan
+# Phase 2: Compile net10.0 (Node.js with NodeApi)
+Write-Host "`n=== Phase 2: Node.js (net10.0) ===" -ForegroundColor Cyan
+dotnet publish "Motely/Motely.csproj" -c Release
+if ($LASTEXITCODE -ne 0) { throw "net10.0 publish failed" }
+Write-Host "  ✓ Node.js bindings (Motely.js + Motely.dll)"
 
-# Build motely-wasm package
-Write-Host "Building motely-wasm package..." -ForegroundColor Yellow
+# Phase 3: Publish Motely.BrowserWasm (WASM via Bootsharp LLVM)
+# BootsharpBinariesDirectory writes artifacts directly to motely-wasm/dist/bootsharp/
+Write-Host "`n=== Phase 3: WASM (Bootsharp NativeAOT-LLVM) ===" -ForegroundColor Cyan
+dotnet publish "Motely.BrowserWasm/Motely.BrowserWasm.csproj" -c Release
+if ($LASTEXITCODE -ne 0) { throw "WASM publish failed" }
+Write-Host "  ✓ WASM + Bootsharp runtime → motely-wasm/dist/bootsharp/"
+
+# Phase 4: Pack motely-wasm
+Write-Host "`n=== Phase 4: Pack motely-wasm ===" -ForegroundColor Cyan
 Push-Location motely-wasm
-npm install
-npm run build
-if ($LASTEXITCODE -ne 0) { throw "motely-wasm build failed" }
-
-# Pack motely-wasm
-Write-Host "Packing motely-wasm..." -ForegroundColor Yellow
 npm pack
 if ($LASTEXITCODE -ne 0) { throw "motely-wasm pack failed" }
 Pop-Location
-
 Write-Host "✓ motely-wasm-$version.tgz ready" -ForegroundColor Green
 
 # Summary
 Write-Host "`n=== BUILD COMPLETE ===" -ForegroundColor Cyan
 Write-Host "Version: $version" -ForegroundColor Green
-Write-Host "Packages ready:" -ForegroundColor Green
-Write-Host "  - motely-wasm\motely-wasm-$version.tgz" -ForegroundColor White
-Write-Host "`nTo publish:" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  npm login" -ForegroundColor White
-Write-Host ""
-Write-Host "  cd motely-wasm && npm publish motely-wasm-$version.tgz --access public && cd .." -ForegroundColor White
-Write-Host "`nTo update JAMMY:" -ForegroundColor Yellow
-Write-Host "  cd x:\JAMMY && pnpm add motely-wasm@$version" -ForegroundColor White
+Write-Host "Packages:" -ForegroundColor Green
+Write-Host "  - motely-wasm\motely-wasm-$version.tgz (Browser WASM + Bootsharp)" -ForegroundColor White
+Write-Host "`nPublish:" -ForegroundColor Yellow
+Write-Host "  cd motely-wasm && npm publish motely-wasm-$version.tgz --access public" -ForegroundColor White

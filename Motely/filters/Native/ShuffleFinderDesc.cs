@@ -5,7 +5,7 @@ namespace Motely;
 public struct ShuffleFinderFilterDesc()
     : IMotelySeedFilterDesc<ShuffleFinderFilterDesc.ShuffleFinderFilter>
 {
-    public ShuffleFinderFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly ShuffleFinderFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         return new ShuffleFinderFilter();
     }
@@ -386,7 +386,7 @@ public struct ShuffleFinderFilterDesc()
 
         */
 
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             return searchContext.SearchIndividualSeeds(
                 (ref MotelySingleSearchContext searchContext) =>
