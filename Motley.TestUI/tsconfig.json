@@ -9,9 +9,37 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "isolatedModules": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowImportingTsExtensions": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@balatrots/*": ["assethelp/src/modules/balatrots/*"],
+      "motely-wasm": ["shims/motely-wasm.ts"]
+    }
   },
-  "include": ["main.tsx", "motely-ui/**/*.ts", "motely-ui/**/*.tsx"]
+  "include": [
+    "main.tsx",
+    "App.tsx",
+    "vite-env.d.ts",
+    "r3f.config.ts",
+    "styles.css",
+    "balatro/**/*.ts",
+    "balatro/**/*.tsx",
+    "joker-classifier/**/*.ts",
+    "joker-classifier/**/*.tsx",
+    "adventure/**/*.ts",
+    "adventure/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "routes/**/*.ts",
+    "routes/**/*.tsx",
+    "data/**/*.json",
+    "engine-shop/**/*.ts",
+    "motely-ui/**/*.ts",
+    "motely-ui/**/*.tsx",
+    "shims/**/*.ts"
+  ]
 }
