@@ -20,7 +20,7 @@ export function ShopStreamAnalyzer({ onBack }: Props) {
       subtitle={
         'Under the hood each pseudoseed queue is a chained double (Lua-style) stored in Cache — same kind of cursor Motely keeps per stream. nextShopItem advances those cursors; you can snapshot JSON and restore with importStreamState if you wire it.'
       }
-      footerNote="Reset stream rebuilds the TS Game. Changing ante clears the list; each pull advances nextShopItem for the current ante."
+      footerNote="Reset stream rebuilds the TS Game. Changing ante clears the list; each pull advances nextShopItem for the current ante. Same virtualized infinite scroll as the Motely page (+100 near bottom)."
       seed={seed}
       setSeed={setSeed}
       deck={deck}

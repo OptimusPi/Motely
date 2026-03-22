@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySingleVoucherStream(int ante, MotelySingleResampleStream resampleStream)
+public struct MotelySingleVoucherStream(int ante, MotelySingleResampleStream resampleStream)
 {
     public readonly int Ante = ante;
     public MotelySingleResampleStream ResampleStream = resampleStream;

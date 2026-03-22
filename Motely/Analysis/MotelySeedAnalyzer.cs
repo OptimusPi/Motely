@@ -175,7 +175,12 @@ public static partial class MotelySeedAnalyzer
                 BigBlindTag = FormatUtils.FormatTag(a.BigBlindTag),
                 DrawOrder = a.DrawOrder ?? "",
                 ShopQueue = a.ShopQueue
-                    .Select(item => new ShopItemDto { Id = item.Type.ToString(), Name = FormatUtils.FormatItem(item) })
+                    .Select(item => new ShopItemDto
+                {
+                    Id = item.Type.ToString(),
+                    Name = FormatUtils.FormatItem(item),
+                    Value = item.Value,
+                })
                     .ToArray(),
                 Packs = a.Packs
                     .Select(p => new PackDto

@@ -11,13 +11,16 @@ const binDir = join(pkgRoot, 'bin', 'linux-x64');
 const publishDir =
   process.env.MOTELY_NODE_PUBLISH_DIR ||
   join(repoRoot, 'Motely', 'bin', 'Release', 'net10.0', 'publish');
-const addonSrc = join(publishDir, 'motely.node');
+// NativeAOT produces Motely.so on linux — rename to .node for Node.js
+const addonSrc = existsSync(join(publishDir, 'Motely.so'))
+  ? join(publishDir, 'Motely.so')
+  : join(publishDir, 'motely.node');
 
 mkdirSync(binDir, { recursive: true });
 
 if (!existsSync(addonSrc)) {
-  console.error(`motely.node not found at ${addonSrc}`);
-  console.error('Build linux-x64 first: ./scripts/build-node-linux.sh (WSL) or see scripts/build-node-docker.sh');
+  console.error(`Native addon not found at ${publishDir} (looked for Motely.so and motely.node)`);
+  console.error('Build linux-x64 NativeAOT first: docker run ... dotnet publish -r linux-x64 -p:PublishAot=true');
   process.exit(1);
 }
 

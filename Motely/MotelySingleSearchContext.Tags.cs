@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySingleTagStream(MotelySingleResampleStream resampleStream, int ante)
+public struct MotelySingleTagStream(MotelySingleResampleStream resampleStream, int ante)
 {
     public int Ante = ante;
     public MotelySingleResampleStream ResampleStream = resampleStream;
