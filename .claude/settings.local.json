@@ -1,38 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)",
-      "Bash(git add:*)",
-      "WebFetch(domain:microsoft.github.io)",
-      "Bash(dotnet publish:*)",
-      "Bash(node:*)",
-      "Bash(where:*)",
-      "Bash(npm uninstall:*)",
-      "WebSearch",
-      "Bash(wsl --list --online:*)",
-      "Read(//x/JammySeedFinder/**)",
-      "Read(//mnt/x/JammySeedFinder/**)",
-      "Read(//x//**)",
-      "Read(//c/Users/pifre/**)",
-      "Bash(find /mnt -name GODLIKE* -maxdepth 6)",
-      "Bash(cmd.exe /c 'dir X:\\\\JammySeedFinder\\\\Desktop /b 2>nul')",
-      "Bash(cmd.exe /c 'dir %USERPROFILE%\\\\Desktop /b 2>nul')",
-      "Bash(cmd.exe /c \"dir C:\\\\Users\\\\pifre\\\\Desktop /b 2>nul && echo ---DESKTOP--- && dir X:\\\\JammySeedFinder\\\\Desktop 2>nul && echo ---X_JAMMY_DESKTOP---\")",
-      "Read(//mnt/c/Users/pifre/**)",
-      "Bash(cmd.exe /c \"dir \"\"C:\\\\Users\\\\pifre\\\\OneDrive\\\\Desktop\\\\GODLIKE-TEMPLATE\"\" /b\")",
-      "Bash(xargs wc:*)",
-      "Bash(dotnet build:*)",
-      "Bash(grep -E \"\\\\.\\(ps1|sh|mjs\\)$\")",
-      "Bash(dotnet run:*)",
-      "Bash(dotnet-script /tmp/test_gameplay.cs)",
-      "Bash(\"X:/JammySeedFinder/src/MotelyJAML/.cursorignore\")",
-      "Bash(pnpm update:*)",
-      "Bash(pnpm ls:*)",
-      "Bash(find /x/JammySeedFinder/src/MotelyJAML -name *Stream* -o -name *stream*)",
-      "Bash(git log:*)",
-      "Bash(find /x/JAMMY -type f -name *log* -o -name *error* -o -name *crash*)",
-      "Bash(grep -r \"nextShopItem\\\\|shopitem\\\\|GetNextShop\" /x/JammySeedFinder/src/MotelyJAML --include=*.cs)",
-      "Bash(dotnet test:*)"
+      "Bash(*)",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(rm -rf:*)"
     ]
   }
 }
