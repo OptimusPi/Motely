@@ -39,7 +39,9 @@ if ($Node) {
     Write-Host "Building in Docker..." -ForegroundColor Yellow
     docker run --rm -v "${PWD}:/src" -w "//src" mcr.microsoft.com/dotnet/sdk:10.0 bash -c "apt-get update -qq && apt-get install -y -qq clang zlib1g-dev npm >/dev/null 2>&1 && dotnet publish Motely/Motely.csproj -c Release -f net10.0 -r linux-x64 -p:PublishAot=true"
     if ($LASTEXITCODE -ne 0) { throw "Node NativeAOT build failed" }
-    Write-Host "  Motely.node ready" -ForegroundColor Green
+    node (Join-Path $PSScriptRoot "Motely/build/stage-node.mjs")
+    if ($LASTEXITCODE -ne 0) { throw "stage-node.mjs failed" }
+    Write-Host "  motely-node/ staged (index.cjs + bin/linux-x64/motely.node + Motely.d.ts)" -ForegroundColor Green
 }
 
 # Phase 2: Browser WASM (Bootsharp LLVM)
@@ -47,9 +49,11 @@ if ($Wasm) {
     Write-Host "`n=== Browser WASM (Bootsharp LLVM) ===" -ForegroundColor Cyan
     dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw "WASM build failed" }
-    Write-Host "  motely-wasm ready" -ForegroundColor Green
+    node (Join-Path $PSScriptRoot "Motely/build/stage-wasm.mjs")
+    if ($LASTEXITCODE -ne 0) { throw "stage-wasm.mjs failed" }
+    Write-Host "  motely-wasm/dist ready (dist/index.mjs + full dist/bootsharp/)" -ForegroundColor Green
 }
 
 Write-Host "`n=== DONE ===" -ForegroundColor Cyan
-if ($Node) { Write-Host "  Node:  Motely/pkg/*.tgz" -ForegroundColor White }
-if ($Wasm) { Write-Host "  WASM:  motely-wasm/dist/" -ForegroundColor White }
+if ($Node) { Write-Host "  Node:  cd motely-node && npm pack" -ForegroundColor White }
+if ($Wasm) { Write-Host "  WASM: cd motely-wasm && npm pack" -ForegroundColor White }
