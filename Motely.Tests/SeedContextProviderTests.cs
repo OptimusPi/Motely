@@ -128,4 +128,35 @@ public class SeedContextProviderTests(ITestOutputHelper output)
 
         output.WriteLine($"\nThe ladder keeps going — {allItems.Count} items, no duplication needed.");
     }
+
+    [Fact]
+    public void Yoinker_DirectConstruction_NoSearch()
+    {
+        // No search pipeline at all — just seed + deck + stake
+        using var yoinker = new SingleSeedContextYoinkerDesc(TestSeed, TestDeck, TestStake);
+
+        var ctx = yoinker.CreateContext();
+        var shopStream = ctx.CreateShopItemStream(1);
+
+        List<MotelyItem> items = [];
+        for (int i = 0; i < 15; i++)
+        {
+            items.Add(ctx.GetNextShopItem(ref shopStream));
+        }
+
+        // Compare against analyzer
+        var analysis = MotelySeedAnalyzer.Analyze(
+            new MotelySeedAnalysisConfig(TestSeed, TestDeck, TestStake)
+        );
+        var analyzerItems = analysis.Antes[0].ShopQueue;
+
+        Assert.Equal(analyzerItems.Count, items.Count);
+        for (int i = 0; i < analyzerItems.Count; i++)
+        {
+            Assert.Equal(analyzerItems[i].Type, items[i].Type);
+            output.WriteLine($"Slot {i}: {FormatUtils.FormatItem(items[i])}");
+        }
+
+        output.WriteLine($"\nDirect construction — {items.Count} items match analyzer, no search needed.");
+    }
 }

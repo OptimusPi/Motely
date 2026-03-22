@@ -44,6 +44,9 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     public MotelyStake Stake => _searchParameters.Stake;
     public MotelyDeck Deck => _searchParameters.Deck;
 
+    internal ref readonly MotelySearchParameters SearchParameters => ref _searchParameters;
+    internal ref readonly MotelySearchContextParams SearchContextParams => ref _contextParams;
+
     private PartialSeedHashCache* SeedHashCache => _contextParams.SeedHashCache;
     private int SeedLength => _contextParams.SeedLength;
     private int SeedFirstCharactersLength => _contextParams.SeedFirstCharactersLength;
