@@ -60,14 +60,17 @@ internal sealed class PoolClaimRequestDto
     [JsonPropertyName("action")]
     public string Action { get; set; } = "request";
 
+    /// <summary>Omit when null so JSON has no <c>workerId</c> key — avoids APIs that treat explicit null as invalid.</summary>
     [JsonPropertyName("workerId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? WorkerId { get; set; }
 
     /// <summary>
     /// Optional: target a specific filter ("GIMMIE WORK FOR FILTER:X").
-    /// If null, server picks whatever active session needs help most ("GIMMIE WORK").
+    /// If null, omit property — server picks any active session; explicit JSON null breaks some Zod schemas.
     /// </summary>
     [JsonPropertyName("filterId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FilterId { get; set; }
 
     [JsonPropertyName("estimatedBlocks")]
