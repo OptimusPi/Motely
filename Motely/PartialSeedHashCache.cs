@@ -124,7 +124,7 @@ internal unsafe struct PartialSeedHashCache : IDisposable
         Cache[keyLength] = dynamicCacheMemory;
     }
 
-    public void Dispose()
+    public readonly void Dispose()
     {
         Marshal.FreeHGlobal((nint)Cache);
         Marshal.FreeHGlobal((nint)InitialCache);

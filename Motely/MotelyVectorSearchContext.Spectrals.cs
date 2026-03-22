@@ -296,7 +296,7 @@ ref partial struct MotelyVectorSearchContext
         for (int i = 0; i < cardCount; i++)
         {
             Vector512<double> random = GetNextRandom(ref spectralStream.SoulBlackHolePrngStream);
-            VectorMask isSoul = new VectorMask(
+            VectorMask isSoul = new(
                 (uint)
                     Vector512.ExtractMostSignificantBits(
                         Vector512.GreaterThan(random, Vector512.Create(0.997))

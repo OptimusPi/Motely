@@ -5,8 +5,8 @@ namespace Motely;
 
 /// <summary>
 /// AOT-safe JSON serialisation context for the browser WASM export layer.
-/// node-api-dotnet (NodeAddon) does not use JSON — it marshals real C# types
-/// directly to JS objects via its compile-time source generator.
+/// Node.js native interop (if used) typically marshals C# types directly to JS
+/// without this JSON context; this type is for WASM / JSON-shaped DTOs.
 /// </summary>
 [JsonSerializable(typeof(VersionDto))]
 [JsonSerializable(typeof(CapabilitiesDto))]

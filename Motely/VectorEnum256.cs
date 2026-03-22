@@ -70,7 +70,7 @@ public unsafe struct VectorEnum256<T>(Vector256<int> hardwareVector)
         }
     }
 
-    public override string ToString()
+    public override readonly string ToString()
     {
         return $"<{this[0]}, {this[1]}, {this[2]}, {this[3]}, {this[4]}, {this[5]}, {this[6]}, {this[7]}>";
     }

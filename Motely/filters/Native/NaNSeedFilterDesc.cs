@@ -111,7 +111,7 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
         PseudoHashKeys = keys.ToArray();
     }
 
-    public NaNSeedFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly NaNSeedFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         foreach (var key in PseudoHashKeys)
         {
@@ -124,7 +124,7 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
     {
         public readonly string[] PseudoHashKeys = pseudoHashKeys;
 
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             VectorMask resultMask = VectorMask.NoBitsSet;
 

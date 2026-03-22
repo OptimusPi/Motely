@@ -43,7 +43,7 @@ public interface IMotelySeedScoreDesc<TScoreProvider> : IMotelySeedScoreDesc
     }
 }
 
-public interface IMotelySeedScore
+public interface IMotelySeedScores
 {
     string Seed { get; }
     int Score { get; }
@@ -61,27 +61,24 @@ public interface IMotelySeedScoreProvider
     );
 }
 
-public interface IMotelySeedContextProviderDesc
+public interface IMotelySeedRouterDesc
 {
-    public IMotelySeedContextProvider CreateContextProvider(ref MotelyFilterCreationContext ctx);
+    public IMotelySeedRouter CreateSeedRouter(ref MotelyFilterCreationContext ctx);
 }
 
-public interface IMotelySeedContextProviderDesc<TProvider> : IMotelySeedContextProviderDesc
-    where TProvider : struct, IMotelySeedContextProvider
+public interface IMotelySeedRouterDesc<TProvider> : IMotelySeedRouterDesc
+    where TProvider : struct, IMotelySeedRouter
 {
-    public new TProvider CreateContextProvider(ref MotelyFilterCreationContext ctx);
+    public new TProvider CreateSeedRouter(ref MotelyFilterCreationContext ctx);
 
-    IMotelySeedContextProvider IMotelySeedContextProviderDesc.CreateContextProvider(
+    IMotelySeedRouter IMotelySeedRouterDesc.CreateSeedRouter(
         ref MotelyFilterCreationContext ctx
     )
     {
-        return CreateContextProvider(ref ctx);
+        return CreateSeedRouter(ref ctx);
     }
 }
-
-public delegate void MotelySeedContextCallback(ref MotelySingleSearchContext ctx);
-
-public interface IMotelySeedContextProvider
+public interface IMotelySeedRouter
 {
     /// <summary>
     /// Called by the search loop for each seed. The provider invokes a caller-supplied
@@ -89,6 +86,8 @@ public interface IMotelySeedContextProvider
     /// </summary>
     public void ProvideSeedContext(ref MotelySingleSearchContext ctx);
 }
+
+public delegate void MotelySeedRouterCallback(ref MotelySingleSearchContext ctx);
 
 public interface IMotelySeedFilter
 {
@@ -212,7 +211,7 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
 
     // Thread-safety: IEnumerator<T> is NOT thread-safe, so we need a lock
     // This is a lightweight lock for the hot path - contention should be minimal
-    private readonly object _enumeratorLock = new object();
+    private readonly object _enumeratorLock = new();
 
     public int SeedCount { get; private set; } = -1; // Unknown for enumerables
 
@@ -298,7 +297,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithStartBatchIndex(long startBatchIndex);
     IMotelySearchSettings WithEndBatchIndex(long endBatchIndex);
     IMotelySearchSettings WithSeedScoreProvider(IMotelySeedScoreDesc seedScoreDesc);
-    IMotelySearchSettings WithSeedContextProvider(IMotelySeedContextProviderDesc desc);
+    IMotelySearchSettings WithSeedRouter(IMotelySeedRouterDesc desc);
     IMotelySearchSettings WithListSearch(IEnumerable<string> seeds, int seedCount = -1);
     IMotelySearchSettings WithRandomSearch(int count);
     IMotelySearchSettings WithPalindromeSearch();
@@ -335,7 +334,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     public IMotelySeedScoreDesc? SeedScoreDesc { get; set; } = null;
 
-    public IMotelySeedContextProviderDesc? SeedContextProviderDesc { get; set; } = null;
+    public IMotelySeedRouterDesc? SeedRouterDesc { get; set; } = null;
 
     public MotelySearchMode Mode { get; set; }
 
@@ -461,11 +460,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
-    public MotelySearchSettings<TBaseFilter> WithSeedContextProvider(
-        IMotelySeedContextProviderDesc desc
-    )
+    public MotelySearchSettings<TBaseFilter> WithSeedRouter(IMotelySeedRouterDesc desc)
     {
-        SeedContextProviderDesc = desc;
+        SeedRouterDesc = desc;
         return this;
     }
 
@@ -485,9 +482,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithSeedScoreProvider(IMotelySeedScoreDesc desc) =>
         WithSeedScoreProvider(desc);
 
-    IMotelySearchSettings IMotelySearchSettings.WithSeedContextProvider(
-        IMotelySeedContextProviderDesc desc
-    ) => WithSeedContextProvider(desc);
+    IMotelySearchSettings IMotelySearchSettings.WithSeedRouter(IMotelySeedRouterDesc desc) =>
+        WithSeedRouter(desc);
 
     IMotelySearchSettings IMotelySearchSettings.WithListSearch(
         IEnumerable<string> seeds,
@@ -644,7 +640,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly bool _isProviderMode;
 
     private readonly IMotelySeedScoreProvider? _scoreProvider;
-    private readonly IMotelySeedContextProvider? _seedContextProvider;
+    private readonly IMotelySeedRouter? _seedRouter;
 
     // IInternalMotelySearch implementation
     int IInternalMotelySearch.PseudoHashKeyLengthCount => _pseudoHashKeyLengthCount;
@@ -782,11 +778,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
 
         // Create the context provider if one was specified
-        if (settings.SeedContextProviderDesc != null)
+        if (settings.SeedRouterDesc != null)
         {
-            _seedContextProvider = settings.SeedContextProviderDesc.CreateContextProvider(
-                ref filterCreationContext
-            );
+            _seedRouter = settings.SeedRouterDesc.CreateSeedRouter(ref filterCreationContext);
         }
 
         _startBatchIndex = settings.StartBatchIndex;
@@ -999,9 +993,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         double seedsPerMs = elapsedMS > 1 ? (double)seedsSearched / elapsedMS : 0;
         double seedsPerSecond = seedsPerMs * 1000.0; // Keep for backward compatibility in callback
 
-        // Format speed as M/s (millions per second) for readability
-        string speedFormatted = FormatSpeed(seedsPerSecond);
-
         // ALWAYS invoke progress callback if set (even in quiet mode) - needed for API speed stats
         if (_progressCallback != null)
         {
@@ -1061,6 +1052,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         // In CSV mode, print progress on a NEW LINE (not overwriting) to avoid collision with results
         // Print at end of batch flush, so it appears after any results from that batch
+        string speedFormatted = FormatSpeed(seedsPerSecond);
         var progressMsg =
             $"# Progress: {totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({speedFormatted})";
 
@@ -1110,7 +1102,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private abstract class MotelySearchPlan : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 20;
+        public const int MAX_SEED_WAIT_MS = 20000;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
@@ -1159,12 +1151,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             Search = search;
             ThreadIndex = threadIndex;
-
-            // Initialize the result buffer elements
-            for (int i = 0; i < _resultBuffer.Length; i++)
-            {
-                _resultBuffer[i] = new MotelySeedScoreTally("", 0);
-            }
 
             if (search._additionalFilters.Length != 0)
             {
@@ -1233,16 +1219,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 // Check for timed-out filter batches
                 if (Search._additionalFilters.Length != 0)
                 {
-                    long currentMS = Search._elapsedTime.ElapsedMilliseconds;
                     for (int i = 0; i < Search._additionalFilters.Length; i++)
                     {
                         FilterSeedBatch* batch = &_filterSeedBatches[i];
 
                         if (batch->SeedCount != 0)
                         {
-                            long batchWaitMS = currentMS - batch->WaitStartMS;
 
-                            if (batchWaitMS >= MAX_SEED_WAIT_MS)
+                            if (Search._elapsedTime.ElapsedMilliseconds - batch->WaitStartMS >= MAX_SEED_WAIT_MS)
                             {
                                 SearchFilterBatch(i, batch);
                                 Debug.Assert(
@@ -1278,7 +1262,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         // Kept for compatibility with call sites; counters are per-thread and never flushed.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void FlushLocalCounters()
+        internal static void FlushLocalCounters()
         {
         }
 
@@ -1304,7 +1288,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             VectorMask searchResultMask = Search._baseFilter.Filter(ref searchContext);
 
-            if (Search._seedContextProvider != null)
+            if (Search._seedRouter != null)
             {
                 for (int lane = 0; lane < MotelyCore.MaxVectorWidth; lane++)
                 {
@@ -1315,11 +1299,12 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             in searchContextParams,
                             lane
                         );
-                        Search._seedContextProvider.ProvideSeedContext(ref singleCtx);
+                        Search._seedRouter.ProvideSeedContext(ref singleCtx);
                     }
                 }
             }
 
+            searchContextParams.SeedHashCache->Reset();
             if (searchResultMask.IsPartiallyTrue())
             {
                 if (Search._additionalFilters.Length == 0)
@@ -1332,7 +1317,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
             }
 
-            searchContextParams.SeedHashCache->Reset();
         }
 
         // Extracts the actual seed characters from a search context and reports that seed
@@ -1601,25 +1585,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
                 else
                 {
-                    // Bounds check before batching for next filter
-                    if (nextFilterIndex < Search._additionalFilters.Length)
-                    {
-                        // Otherwise, we batch the seeds up for the next filter :3
-                        BatchSeeds(nextFilterIndex, searchResultMask, in searchParams);
-                    }
-                    else
-                    {
-                        Debug.Assert(
-                            false,
-                            $"nextFilterIndex {nextFilterIndex} >= _additionalFilters.Length {Search._additionalFilters.Length}"
-                        );
-                    }
+                    Debug.Assert(
+                        nextFilterIndex < Search._additionalFilters.Length && nextFilterIndex >= 0,
+                        $"nextFilterIndex {nextFilterIndex} >= _additionalFilters.Length {Search._additionalFilters.Length} or nextFilterIndex < 0   "
+                    );
+                    BatchSeeds(nextFilterIndex, searchResultMask, in searchParams);
                 }
             }
-
-            // Reset the batch
-            filterBatch->SeedCount = 0;
-            filterBatch->SeedHashCache.Reset();
         }
 
         public void Dispose()

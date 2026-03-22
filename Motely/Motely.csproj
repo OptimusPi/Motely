@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Library: do not publish when solution is published (publish apps instead) -->
-    <IsPublishable>false</IsPublishable>
+    <IsPublishable>true</IsPublishable>
+    <PublishReadyToRun>false</PublishReadyToRun>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
@@ -12,29 +12,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    <TrimmerDefaultAction>link</TrimmerDefaultAction>
-  </PropertyGroup>
-
-  <!-- AOT Trimming Configuration -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <TrimmerRootDescriptor Include="TrimmerRoots.xml" />
-  </ItemGroup>
-
-  <!-- Browser WASM configuration -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-    <WasmEnableSIMD>true</WasmEnableSIMD>
-    <WasmEnableThreads>true</WasmEnableThreads>
-    <WasmEnableExceptionHandling>true</WasmEnableExceptionHandling>
-    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>link</TrimMode>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    <TrimmerDefaultAction>link</TrimmerDefaultAction>
-    <NoWarn>$(NoWarn)</NoWarn>
-  </PropertyGroup>
+  <!-- WASM build is handled by Motely.BrowserWasm host project -->
 
   <!-- Packages (versions from Directory.Packages.props) -->
   <ItemGroup>
@@ -44,19 +22,16 @@
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
-  <!-- Exclude platform-specific and desktop-only code from respective builds -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <!-- NodeApi: Node.js bindings generation -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.JavaScript.NodeApi" />
+    <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Exclude desktop-only code -->
+  <ItemGroup>
     <Compile Remove="API\**\*.cs" />
     <Compile Remove="TUI\**\*.cs" />
     <Compile Remove="MotelySearchSync.Browser.cs" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
-    <Compile Remove="TUI\**\*.cs" />
-    <Compile Remove="API\**\*.cs" />
-    <Compile Remove="Executors\**\*.cs" />
-    <Compile Remove="Program.cs" />
-    <Compile Remove="FancyConsole.Desktop.cs" />
-    <Compile Remove="MotelySearchSync.Desktop.cs" />
   </ItemGroup>
 </Project>

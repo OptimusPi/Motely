@@ -3,7 +3,7 @@ namespace Motely;
 public struct NegativeCopyFilterDesc()
     : IMotelySeedFilterDesc<NegativeCopyFilterDesc.NegativeCopyFilter>
 {
-    public NegativeCopyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public readonly NegativeCopyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // Only cache booster pack streams - we'll check jokers directly
         for (int ante = 1; ante <= 8; ante++)

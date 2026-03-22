@@ -5,7 +5,7 @@ auto_execution_mode: 3
 
 # Prepare Update
 
-Bumps the MotelyVersion, cleans everything, builds all .NET projects, AOT-publishes both WASM targets, prepares the active npm packages, and walks the user through publishing.
+Bumps the MotelyVersion, cleans everything, builds the solution, publishes **Motely** for `net10.0-browser` (Bootsharp), stages **`motely-wasm`**, and walks the user through npm publish. The old **`Motely.NodeAddon`** / `Motely.npm` flow is gone.
 
 **User provides**: the new version number — OR if not specified, read the current `<MotelyVersion>` from `Directory.Packages.props` and auto-increment the patch (e.g. `2.2.1` → `2.2.2`).
 
@@ -26,8 +26,8 @@ node x:\JammySeedFinder\src\MotelyJAML\sync-version.mjs
 ```
 
 This reads `<MotelyVersion>` from Directory.Packages.props and updates:
-- `Motely.npm\package.json`
-- `Motely.node\package.json`
+- `motely-wasm/package.json`
+- `motely-node/package.json`
 
 ---
 
@@ -75,145 +75,107 @@ If browser or cross-platform builds fail because of incompatible APIs, do not fo
 
 ---
 
-## Step 6: Clean _framework dir before AOT publish
+## Step 6: Regenerate JAML schema
+
+Writes schema + helper files to paths used by `motely-wasm` / `motely-node` (see `JamlSchemaGenerator`).
 
 // turbo
 
 ```powershell
-Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
+dotnet run --project x:\JammySeedFinder\src\MotelyJAML\Motely.CLI\Motely.CLI.csproj -c Release -- --write-jaml-schema
 ```
 
 ---
 
-## Step 7: AOT Release Publish — Browser WASM (frontend)
+## Step 7: Publish browser WASM (Bootsharp)
 
-This publishes `Motely.BrowserWasm` using the validated browser-wasm AOT path. After publish, run the central staging script to copy the filtered `_framework` output into `Motely.npm/_framework/`.
-
-Keep `x:\JammySeedFinder\src\MotelyJAML\Directory.Build.props` in place so browser-wasm projects explicitly reset `PublishAot=false` and `PublishReadyToRun=false` at the local repo level. The actual browser AOT settings live in the project files via `RunAOTCompilation=true` and `WasmBuildNative=true`.
-
-```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release
-node x:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs browser
-```
-
-If this fails, capture the full SDK error and stop before changing other steps.
-
-Verify the output exists:
-// turbo
-
-```powershell
-@(Get-ChildItem x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework\dotnet.native*.wasm -ErrorAction SilentlyContinue).Count -gt 0
-```
-
----
-
-## Step 8: AOT Release Publish — Browser WASM single-thread fallback
-
-This publishes `Motely.SingleThread` and stages the fallback browser runtime into `Motely.npm/_framework_st/`.
-
-```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release
-node x:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs singlethread
-```
-
-Verify the fallback output exists:
-// turbo
-
-```powershell
-@(Get-ChildItem x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st\dotnet.native*.wasm -ErrorAction SilentlyContinue).Count -gt 0
-```
-
----
-
-## Step 9: AOT Release Publish — Node Addon (win-x64 + linux-x64)
-
-Publish the native AOT addon for both platforms:
-
-```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.NodeAddon\Motely.NodeAddon.csproj -c Release -r win-x64
-wsl dotnet publish /mnt/x/JammySeedFinder/src/MotelyJAML/Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r linux-x64
-```
-
-Copy .node files to Motely.node/bin/ for packaging:
-
-```powershell
-New-Item -ItemType Directory -Force -Path x:\JammySeedFinder\src\MotelyJAML\Motely.node\bin\Release\net10.0\win-x64\publish
-New-Item -ItemType Directory -Force -Path x:\JammySeedFinder\src\MotelyJAML\Motely.node\bin\Release\net10.0\linux-x64\publish
-Copy-Item x:\JammySeedFinder\src\MotelyJAML\Motely.NodeAddon\bin\Release\net10.0\win-x64\publish\Motely.NodeAddon.node x:\JammySeedFinder\src\MotelyJAML\Motely.node\bin\Release\net10.0\win-x64\publish\
-Copy-Item x:\JammySeedFinder\src\MotelyJAML\Motely.NodeAddon\bin\Release\net10.0\linux-x64\publish\Motely.NodeAddon.node x:\JammySeedFinder\src\MotelyJAML\Motely.node\bin\Release\net10.0\linux-x64\publish\
-```
-
-Verify .node files exist:
-// turbo
-
-```powershell
-Test-Path x:\JammySeedFinder\src\MotelyJAML\Motely.node\bin\Release\net10.0\win-x64\publish\Motely.NodeAddon.node
-Test-Path x:\JammySeedFinder\src\MotelyJAML\Motely.node\bin\Release\net10.0\linux-x64\publish\Motely.NodeAddon.node
-```
-
----
-
-## Step 10: Prepare npm package — motely-wasm (browser)
+`Motely` multi-targets `net10.0-browser`. Publish, then run `motely-wasm`'s build script (`Motely/build/stage-wasm.mjs` copies `bootsharp/` into `motely-wasm/dist/`).
 
 // turbo
 
 ```powershell
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm install
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm run build
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely\Motely.csproj -c Release -f net10.0-browser
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-wasm install
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-wasm run build
 ```
 
----
-
-## Step 11: Pack motely-node
-
-The .node files are already published in Step 9. Just pack:
+Verify staged output:
 
 // turbo
 
 ```powershell
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node pack
+Test-Path x:\JammySeedFinder\src\MotelyJAML\motely-wasm\dist\bootsharp\index.mjs
 ```
 
 ---
 
-## Step 12: Tell user to publish
+## Step 8: Node native addon
+
+**`Motely.NodeAddon` was removed.** There is no second C# package to publish for Node in this workflow. Browser delivery is **Bootsharp / `net10.0-browser` only**.
+
+If you add a new Node `.node` target later, document its `dotnet publish` command and how artifacts land under `motely-node/`. Until then, **skip** `npm pack` for `motely-node` unless you intentionally ship JS-only stubs.
+
+---
+
+## Step 9: Pack `motely-wasm`
+
+// turbo
+
+```powershell
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-wasm pack
+```
+
+---
+
+## Step 10: (Optional) Pack `motely-node`
+
+Only when a tested linux-x64 `.node` (or agreed layout) is present.
+
+// turbo
+
+```powershell
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-node pack
+```
+
+---
+
+## Step 11: Tell user to publish
 
 Tell the user:
 
 ```md
-cd x:\JammySeedFinder\src\MotelyJAML\Motely.npm
+cd x:\JammySeedFinder\src\MotelyJAML\motely-wasm
 npm login
 npm publish
 
-cd x:\JammySeedFinder\src\MotelyJAML\Motely.node
+# Optional — only if Step 10 was used and motely-node is meant for npm:
+cd x:\JammySeedFinder\src\MotelyJAML\motely-node
 npm login
 npm publish
 ```
 
-Mention that `motely-wasm` includes `_framework/` and `_framework_st/`, while `motely-node` includes native AOT `.node` files in `bin/`.
+`motely-wasm` ships `dist/` (Bootsharp runtime + `index.mjs`). Do not reference removed `Motely.npm` / `Motely.NodeAddon` paths.
 
 Wait for user to confirm they published.
 
 ---
 
-## Step 13: Cleanup _framework files
+## Step 12: (Optional) Cleanup large staged artifacts
 
-After user confirms publish, clean up the large _framework dirs to keep the repo lean:
+If you want a lean working tree after publish, remove generated WASM staging (adjust if you rely on a committed `dist/`):
 
 ```powershell
-Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\motely-wasm\dist -ErrorAction SilentlyContinue
 ```
 
 ---
 
-## Step 14: Summary
+## Step 13: Summary
 
 Print:
 
 ```sh
 ✅ MotelyJAML update complete!
    Version: <THE_VERSION>
-   Published: motely-wasm@<THE_VERSION>, motely-node@<THE_VERSION>
+   Published: motely-wasm@<THE_VERSION> (and motely-node@<THE_VERSION> only if applicable)
 ```
