@@ -1,0 +1,31 @@
+/** JSON shape from Motely AnalyzeSeed (camelCase via System.Text.Json). */
+export interface ShopItemInfo {
+  id: string
+  name: string
+}
+
+export interface PackInfo {
+  type: string
+  items: string[]
+}
+
+export interface AnteAnalysisInfo {
+  ante: number
+  boss: string
+  voucher: string
+  smallBlindTag: string
+  bigBlindTag: string
+  drawOrder: string
+  shopQueue: ShopItemInfo[]
+  packs: PackInfo[]
+}
+
+export interface SeedAnalysisInfo {
+  seed: string
+  deck: string
+  stake: string
+  erraticDeckComposition: string[]
+  twos?: number
+  error?: string | null
+  antes: AnteAnalysisInfo[]
+}
