@@ -101,3 +101,5 @@ Motely.API/wwwroot/jammy-seed-finder/main.js
 /Motely.HomeControlAPI/wwwroot
 Motely.HomeControlAPI/Properties/launchSettings.json
 /Motley.TestUI/assethelp
+/Motely.npm-staging/motely-wasm/dist/bootsharp
+/Motely.npm-staging/motely-wasm/dist
