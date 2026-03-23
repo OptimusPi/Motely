@@ -3,180 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motely Seed Finder (WASM)</title>
+    <title>Seed Finder</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: 'Courier New', monospace; 
-            background: #0d0d12; 
-            color: #e0e0e0; 
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0d0d12;
+            color: #e0e0e0;
             padding: 20px;
             line-height: 1.6;
         }
-        .container { max-width: 900px; margin: 0 auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
         h1 { color: #00ff88; margin-bottom: 20px; font-size: 24px; }
         label { display: block; margin-top: 15px; font-weight: bold; color: #00ff88; }
-        textarea, input, select { 
-            width: 100%; 
-            padding: 10px; 
-            margin-top: 5px; 
-            background: #1a1a1f; 
-            border: 1px solid #333; 
-            color: #e0e0e0; 
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            background: #1a1a1f;
+            border: 1px solid #333;
+            color: #e0e0e0;
             font-family: inherit;
             font-size: 14px;
+            min-height: 200px;
+            resize: vertical;
         }
-        textarea { min-height: 200px; resize: vertical; }
-        .row { display: flex; gap: 10px; }
-        .row > * { flex: 1; }
-        button { 
-            background: #00ff88; 
-            color: #0d0d12; 
-            border: none; 
-            padding: 12px 24px; 
-            font-weight: bold; 
-            cursor: pointer; 
+        button {
+            background: #00ff88;
+            color: #0d0d12;
+            border: none;
+            padding: 12px 24px;
+            font-weight: bold;
+            cursor: pointer;
             margin-top: 20px;
             font-size: 16px;
         }
         button:hover { background: #00cc6a; }
         button:disabled { background: #333; color: #666; cursor: not-allowed; }
-        #results { 
-            margin-top: 30px; 
-            padding: 20px; 
-            background: #1a1a1f; 
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1a1a1f;
             border: 1px solid #333;
-            min-height: 100px;
+            border-radius: 4px;
         }
         .error { color: #ff4444; }
         .success { color: #00ff88; }
-        .result-item { 
-            padding: 8px; 
-            margin: 5px 0; 
-            background: #0d0d12; 
-            border-left: 3px solid #00ff88;
+        table {
+            width: 100%;
+            margin-top: 30px;
+            border-collapse: collapse;
+            background: #1a1a1f;
         }
-        .status { 
-            color: #888; 
-            font-size: 12px; 
-            margin-top: 10px;
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
         }
-        small { color: #888; }
+        th {
+            background: #0d0d12;
+            color: #00ff88;
+            font-weight: bold;
+        }
+        tr:hover { background: #222; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎰 Motely Seed Finder</h1>
-        
-        <label for="jaml">JAML Filter *</label>
-        <textarea id="jaml" placeholder='Paste JAML here'></textarea>
-        
-        <div class="row">
-            <div>
-                <label for="threadCount">Threads</label>
-                <input type="number" id="threadCount" value="4" min="1">
-            </div>
-            <div>
-                <label for="batchCharCount">Batch Chars</label>
-                <input type="number" id="batchCharCount" value="8" min="1" max="8">
-            </div>
+        <h1>🎰 Seed Finder</h1>
+
+        <label for="jaml">JAML Filter</label>
+        <textarea id="jaml" placeholder="Paste your JAML filter here..."></textarea>
+
+        <button id="searchBtn" onclick="handleSearch()">Search</button>
+
+        <div id="status">
+            <p>Ready. Paste JAML and click Search.</p>
         </div>
-        
-        <div class="row">
-            <div>
-                <label for="startBatch">Start Batch</label>
-                <input type="number" id="startBatch" placeholder="Optional">
-            </div>
-            <div>
-                <label for="endBatch">End Batch</label>
-                <input type="number" id="endBatch" placeholder="Optional">
-            </div>
-        </div>
-        
-        <label for="specificSeed">Specific Seed</label>
-        <input type="text" id="specificSeed" placeholder="e.g., BALATRO1">
-        
-        <label for="keyword">Keyword</label>
-        <input type="text" id="keyword" placeholder="e.g., LUCKY">
-        
-        <label for="padding">Padding</label>
-        <input type="text" id="padding" placeholder="e.g., ABC">
-        
-        <div class="row">
-            <div>
-                <label for="randomSeeds">Random Seeds</label>
-                <input type="number" id="randomSeeds" placeholder="Optional">
-            </div>
-            <div style="padding-top: 30px;">
-                <label><input type="checkbox" id="palindrome" style="width:auto"> Palindrome</label>
-            </div>
-        </div>
-        
-        <button id="searchBtn" onclick="runSearch()">Search</button>
-        
-        <div id="results">
-            <p class="status">Paste your JAML filter and hit Search.</p>
-        </div>
+
+        <table id="resultsTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Seed</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+            </tbody>
+        </table>
     </div>
-    
+
     <script type="module">
-        // NOTE: Update this import path to match your motely-wasm package location
-        // For local testing: './Motely.npm-staging/motely-wasm/dist/index.mjs'
-        // For published npm: 'https://unpkg.com/motely-wasm@latest/dist/index.mjs'
-        
-        let MotelyWasm = null;
-        let searchRunning = false;
-        
-        async function loadWasm() {
+        let wasmModule = null;
+
+        async function initWasm() {
             try {
-                const module = await import('./Motely.npm-staging/motely-wasm/dist/index.mjs');
-                MotelyWasm = module;
-                document.getElementById('results').innerHTML = '<p class="success">✓ WASM ready</p>';
+                const mod = await import('./motely-wasm/dist/index.mjs');
+                await mod.boot();
+                wasmModule = mod;
+                updateStatus('✓ WASM loaded', 'success');
             } catch (err) {
-                document.getElementById('results').innerHTML = 
-                    `<p class="error">✗ Failed to load WASM: ${err.message}</p>`;
+                updateStatus(`✗ Failed to load WASM: ${err.message}`, 'error');
             }
         }
-        
-        loadWasm();
-        
-        window.runSearch = async function() {
-            if (!MotelyWasm) {
-                alert('WASM not loaded. Wait and try again.');
+
+        function updateStatus(message, className = '') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<p class="${className}">${message}</p>`;
+        }
+
+        window.handleSearch = async function() {
+            if (!wasmModule) {
+                updateStatus('✗ WASM not loaded yet', 'error');
                 return;
             }
-            
+
             const jaml = document.getElementById('jaml').value.trim();
             if (!jaml) {
-                alert('Paste a JAML filter first.');
+                updateStatus('✗ Please paste JAML first', 'error');
                 return;
             }
-            
-            const options = {
-                threadCount: parseInt(document.getElementById('threadCount').value) || 4,
-                batchCharCount: parseInt(document.getElementById('batchCharCount').value) || 8,
-            };
-            
-            const val = (id) => document.getElementById(id).value.trim();
-            if (val('startBatch')) options.startBatch = parseInt(val('startBatch'));
-            if (val('endBatch')) options.endBatch = parseInt(val('endBatch'));
-            if (val('specificSeed')) options.specificSeed = val('specificSeed');
-            if (val('keyword')) options.keyword = val('keyword');
-            if (val('padding')) options.padding = val('padding');
-            if (val('randomSeeds')) options.randomSeeds = parseInt(val('randomSeeds'));
-            options.palindrome = document.getElementById('palindrome').checked;
-            
-            searchRunning = true;
-            document.getElementById('searchBtn').disabled = true;
-            document.getElementById('results').innerHTML = '<p class="status">Searching...</p>';
-            
-            try {
-                let resultCount = 0;
-                const result = await MotelyWasm.runSearch(jaml, options, {
-                    onProgress: (searched, found, elapsed) => {
-                        const status = document.querySelector('.status');
-                        if (status) status.textContent = 
-                            `Searched: ${searched} | Found: ${found} | Elapsed: ${elapsed}ms`;
-                    },
-                    onResult: (seed, score) => {
-                        resultCount++;
+
+            // Validate JAML
+            const validation = wasmModule.Program.validateJaml(jaml);
+            if (validation) {
+                updateStatus(`✗ Invalid JAML: ${validation}`, 'error');
+                return;
+            }
+
+            updateStatus('✓ JAML is valid', 'success');
+
+            // TODO: Call actual search API when available
+            // For now, show that JAML validation works
+            document.getElementById('resultsTable').style.display = 'table';
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '<tr><td colspan="2"><em>Search API not yet implemented in WASM</em></td></tr>';
+        };
+
+        // Initialize on load
+        initWasm();
+    </script>
+</body>
+</html>
