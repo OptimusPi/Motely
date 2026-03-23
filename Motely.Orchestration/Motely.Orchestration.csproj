@@ -1,19 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPublishable>true</IsPublishable>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+  <!-- WASM build: dotnet publish -p:WasmBuild=true -->
+  <PropertyGroup Condition="'$(WasmBuild)' == 'true'">
     <OutputType>Exe</OutputType>
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <!-- Bootsharp NativeAOT-LLVM -->
+    <!-- Bootsharp NativeAOT-LLVM (not Mono) -->
     <BootsharpLLVM>true</BootsharpLLVM>
+    <BootsharpOptimize>speed</BootsharpOptimize>
     <PublishTrimmed>true</PublishTrimmed>
     <DotNetJsApi>true</DotNetJsApi>
     <DebugType>none</DebugType>
@@ -21,7 +22,7 @@
     <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+  <ItemGroup Condition="'$(WasmBuild)' == 'true'">
     <PackageReference Include="Bootsharp" />
     <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="'$([MSBuild]::IsOSPlatform(&quot;Windows&quot;))' == 'true'"
