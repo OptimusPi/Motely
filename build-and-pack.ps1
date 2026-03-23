@@ -37,6 +37,7 @@ Write-Host "  motely-node packed" -ForegroundColor Green
 
 # Phase 2: Browser WASM
 Write-Host "`n=== Browser WASM (Bootsharp NativeAOT-LLVM) ===" -ForegroundColor Cyan
+$env:PATH = "X:\binaryen-version_128\bin;" + $env:PATH
 dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
 if ($LASTEXITCODE -ne 0) { throw "WASM build failed" }
 
