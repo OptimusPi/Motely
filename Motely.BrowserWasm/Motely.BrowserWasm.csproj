@@ -13,6 +13,7 @@
     <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
     <!-- NativeAOT-LLVM (per bootsharp.com/guide/llvm) -->
     <BootsharpLLVM>true</BootsharpLLVM>
+    <BootsharpOptimize>speed</BootsharpOptimize>
     <DotNetJsApi>true</DotNetJsApi>
     <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
     <PublishTrimmed>true</PublishTrimmed>

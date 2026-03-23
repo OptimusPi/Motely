@@ -10,7 +10,7 @@
     <PublishAot>true</PublishAot>
     <PublishTrimmed>true</PublishTrimmed>
     <PublishNodeModule>true</PublishNodeModule>
-    <NpmPackDirectory>..\..\motely-node</NpmPackDirectory>
+    <NpmPackDirectory>..\..\Motely.npm-staging\motely-node</NpmPackDirectory>
     <GenerateNodeApiTypeDefinitionsForReferences>false</GenerateNodeApiTypeDefinitionsForReferences>
   </PropertyGroup>
   <ItemGroup>
