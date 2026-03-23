@@ -1,6 +1,6 @@
 {
   "name": "motely",
-  "version": "4.3.1",
+  "version": "4.3.8",
   "description": "MotelyJAML — Balatro seed search, analysis, and JAML filtering. Native Node.js module + Browser WASM.",
   "type": "module",
   "exports": {
