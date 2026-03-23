@@ -836,29 +836,23 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
         else
         {
-            // Multi-threaded: launch N threads, wait for all to finish
-            using var countdown = new CountdownEvent(_threadCount);
+            // Multi-threaded: launch real threads (maps to pthreads in NativeAOT-LLVM WASM)
+            var threads = new Thread[_threadCount];
             for (int i = 0; i < _threadCount; i++)
             {
                 int threadIdx = i;
-                Task.Factory.StartNew(
-                    () =>
-                    {
-                        try
-                        {
-                            RunWorkerBody(_plans[threadIdx]);
-                        }
-                        finally
-                        {
-                            countdown.Signal();
-                        }
-                    },
-                    _cancellationToken,
-                    TaskCreationOptions.LongRunning,
-                    TaskScheduler.Default
-                );
+                threads[i] = new Thread(() => RunWorkerBody(_plans[threadIdx]))
+                {
+                    Name = $"Motely Search Thread {threadIdx}",
+                    IsBackground = true
+                };
+                threads[i].Start();
             }
-            countdown.Wait(_cancellationToken);
+
+            for (int i = 0; i < _threadCount; i++)
+            {
+                threads[i].Join();
+            }
         }
 
         // Ensure all thread-local writes are visible before completing
