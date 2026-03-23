@@ -54,25 +54,11 @@ internal static class JamlSchemaGenerator
         var version = ReadMotelyVersion(repoRoot);
         var schema = Generate(version);
         var json = schema.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-        var helperJs = GenerateHelperModule(schema, version);
-        var helperDts = GenerateHelperModuleTypes();
 
         foreach (var path in GetJsonOutputPaths(repoRoot))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path, json + Environment.NewLine);
-        }
-
-        foreach (var path in GetHelperJsOutputPaths(repoRoot))
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, helperJs + Environment.NewLine);
-        }
-
-        foreach (var path in GetHelperDtsOutputPaths(repoRoot))
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, helperDts + Environment.NewLine);
         }
     }
 
@@ -109,20 +95,7 @@ internal static class JamlSchemaGenerator
     {
         yield return Path.Combine(repoRoot, "jaml.schema.json");
         yield return Path.Combine(repoRoot, "public", "jaml.schema.json");
-        yield return Path.Combine(repoRoot, "motely-node", "jaml.schema.json");
-        yield return Path.Combine(repoRoot, "motely-wasm", "jaml.schema.json");
-    }
-
-    private static IEnumerable<string> GetHelperJsOutputPaths(string repoRoot)
-    {
-        yield return Path.Combine(repoRoot, "motely-node", "jaml-schema.js");
-        yield return Path.Combine(repoRoot, "motely-wasm", "jaml-schema.js");
-    }
-
-    private static IEnumerable<string> GetHelperDtsOutputPaths(string repoRoot)
-    {
-        yield return Path.Combine(repoRoot, "motely-node", "jaml-schema.d.ts");
-        yield return Path.Combine(repoRoot, "motely-wasm", "jaml-schema.d.ts");
+        yield return Path.Combine(repoRoot, "Motely.npm-staging", "motely-wasm", "jaml.schema.json");
     }
 
     private static JsonObject Generate(string version)
@@ -496,121 +469,6 @@ internal static class JamlSchemaGenerator
     private static JsonArray ToJsonArray(IEnumerable<string> values)
     {
         return new JsonArray(values.Select(v => (JsonNode?)JsonValue.Create(v)).ToArray());
-    }
-
-    private static string GenerateHelperModule(JsonObject schema, string version)
-    {
-        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
-        var schemaJson = schema.ToJsonString(jsonOptions);
-        var metadataKeysJson = ToJsonArray(MetadataKeys).ToJsonString(jsonOptions);
-        var sectionKeysJson = ToJsonArray(SectionKeys).ToJsonString(jsonOptions);
-        var clauseTypeKeysJson = ToJsonArray(ClauseTypeKeys).ToJsonString(jsonOptions);
-        var propertyKeysJson = ToJsonArray(PropertyKeys).ToJsonString(jsonOptions);
-        var sourceKeysJson = ToJsonArray(SourceKeys).ToJsonString(jsonOptions);
-        var valueSetsJson = BuildValueSetsJson().ToJsonString(jsonOptions);
-
-        return $$"""
-export const JAML_SCHEMA_VERSION = {{JsonValue.Create(version)!.ToJsonString()}};
-export const jamlSchema = {{schemaJson}};
-export const METADATA_KEYS = {{metadataKeysJson}};
-export const SECTION_KEYS = {{sectionKeysJson}};
-export const CLAUSE_TYPE_KEYS = {{clauseTypeKeysJson}};
-export const PROPERTY_KEYS = {{propertyKeysJson}};
-export const SOURCE_KEYS = {{sourceKeysJson}};
-
-const VALUE_SETS = {{valueSetsJson}};
-const PROPERTY_KEY_SET = new Set(PROPERTY_KEYS);
-const SOURCE_KEY_SET = new Set(SOURCE_KEYS);
-
-export function getValidValuesForKey(key) {
-  return VALUE_SETS[key] ?? null;
-}
-
-export function getAvailablePropsForType(_clauseType) {
-  return [...PROPERTY_KEYS];
-}
-
-export function isInvalidPropForType(prop, _clauseType) {
-  return !(PROPERTY_KEY_SET.has(prop) || SOURCE_KEY_SET.has(prop));
-}
-
-export function isInvalidValueForProp(_value, _prop, _clauseType) {
-  return false;
-}
-""";
-    }
-
-    private static Dictionary<string, string[]> BuildValueSets()
-    {
-        return new()
-        {
-            ["aesthetics"] = JamlAestheticParser.KnownJamlStringsForSchema(),
-            ["deck"] = EnumNames<MotelyDeck>(),
-            ["stake"] = EnumNames<MotelyStake>(),
-            ["joker"] = EnumNames<MotelyJoker>(),
-            ["jokers"] = EnumNames<MotelyJoker>(),
-            ["commonJoker"] = EnumNames<MotelyJokerCommon>(),
-            ["commonJokers"] = EnumNames<MotelyJokerCommon>(),
-            ["uncommonJoker"] = EnumNames<MotelyJokerUncommon>(),
-            ["uncommonJokers"] = EnumNames<MotelyJokerUncommon>(),
-            ["rareJoker"] = EnumNames<MotelyJokerRare>(),
-            ["rareJokers"] = EnumNames<MotelyJokerRare>(),
-            ["mixedJoker"] = EnumNames<MotelyJoker>(),
-            ["mixedJokers"] = EnumNames<MotelyJoker>(),
-            ["soulJoker"] = EnumNames<MotelyJokerLegendary>(),
-            ["legendaryJoker"] = EnumNames<MotelyJokerLegendary>(),
-            ["voucher"] = EnumNames<MotelyVoucher>(),
-            ["vouchers"] = EnumNames<MotelyVoucher>(),
-            ["tarot"] = EnumNames<MotelyTarotCard>(),
-            ["tarotCard"] = EnumNames<MotelyTarotCard>(),
-            ["spectral"] = EnumNames<MotelySpectralCard>(),
-            ["spectralCard"] = EnumNames<MotelySpectralCard>(),
-            ["planet"] = EnumNames<MotelyPlanetCard>(),
-            ["planetCard"] = EnumNames<MotelyPlanetCard>(),
-            ["boss"] = EnumNames<MotelyBossBlind>(),
-            ["tag"] = EnumNames<MotelyTag>(),
-            ["smallBlindTag"] = EnumNames<MotelyTag>(),
-            ["bigBlindTag"] = EnumNames<MotelyTag>(),
-            ["standardCard"] = EnumNames<MotelyPlayingCard>(),
-            ["erraticRank"] = RankValues,
-            ["erraticSuit"] = SuitValues,
-            ["erraticCard"] = EnumNames<MotelyPlayingCard>(),
-            ["startingDraw"] = EnumNames<MotelyPlayingCard>(),
-            ["event"] = EnumNames<MotelyEventType>(),
-            ["eventType"] = EnumNames<MotelyEventType>(),
-            ["edition"] = EnumNames<MotelyItemEdition>().Where(x => x != "None").ToArray(),
-            ["stickers"] = EnumNames<MotelyJokerSticker>().Where(x => x != "None").ToArray(),
-            ["seal"] = EnumNames<MotelyItemSeal>().Where(x => x != "None").ToArray(),
-            ["enhancement"] = EnumNames<MotelyItemEnhancement>().Where(x => x != "None").ToArray(),
-            ["rank"] = RankValues,
-            ["suit"] = SuitValues,
-        };
-    }
-
-    private static JsonObject BuildValueSetsJson()
-    {
-        var obj = new JsonObject();
-        foreach (var pair in BuildValueSets())
-            obj[pair.Key] = ToJsonArray(pair.Value);
-        return obj;
-    }
-
-    private static string GenerateHelperModuleTypes()
-    {
-        return """
-export type ValidationState = 'required-incomplete' | 'optional-incomplete' | 'complete' | 'invalid' | 'metadata';
-export declare const JAML_SCHEMA_VERSION: string;
-export declare const jamlSchema: Record<string, unknown>;
-export declare const METADATA_KEYS: string[];
-export declare const SECTION_KEYS: string[];
-export declare const CLAUSE_TYPE_KEYS: string[];
-export declare const PROPERTY_KEYS: string[];
-export declare const SOURCE_KEYS: string[];
-export declare function getValidValuesForKey(key: string): readonly string[] | null;
-export declare function getAvailablePropsForType(clauseType: string): string[];
-export declare function isInvalidPropForType(prop: string, clauseType: string): boolean;
-export declare function isInvalidValueForProp(value: string, prop: string, clauseType: string): boolean;
-""";
     }
 
     private static string[] EnumNames<T>() where T : struct, Enum

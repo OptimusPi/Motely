@@ -2,6 +2,8 @@ using Bootsharp;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
 using Motely.BrowserWasm;
+using Motely.Executors;
+using Motely.Filters;
 
 [assembly: JSPreferences(Space = ["^Motely\\.BrowserWasm\\.", "MotelyWasm."])]
 
@@ -17,4 +19,12 @@ public static partial class Program
             .BuildServiceProvider()
             .RunBootsharp();
     }
+
+    [JSInvokable]
+    public static string? ValidateJaml(string jamlContent) =>
+        JamlConfigLoader.TryLoad(jamlContent, out _, out var error) ? null : error;
+
+    [JSInvokable]
+    public static string? ValidateRequest(MotelySearchRequest request) =>
+        MotelySearchOrchestrator.ValidateRequest(request);
 }
