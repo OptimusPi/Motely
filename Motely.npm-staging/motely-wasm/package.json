@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "4.3.1",
+  "version": "4.3.8",
   "description": "Motely WebAssembly (Bootsharp) for browser.",
   "type": "module",
   "main": "dist/index.mjs",
