@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>$(MotelyVersion)</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AssemblyName>MotelyNode</AssemblyName>
+    <IsPublishable>true</IsPublishable>
+    <PublishAot>true</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishNodeModule>true</PublishNodeModule>
+    <GenerateNodeApiTypeDefinitionsForReferences>false</GenerateNodeApiTypeDefinitionsForReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <TrimmerRootAssembly Include="MotelyNode" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
+    <PackageReference Include="Microsoft.JavaScript.NodeApi" />
+    <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" PrivateAssets="all" GeneratePathProperty="true" />
+  </ItemGroup>
+</Project>

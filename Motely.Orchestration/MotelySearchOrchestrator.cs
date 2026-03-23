@@ -1,3 +1,4 @@
+using Motely;
 using Motely.Analysis;
 using Motely.Filters;
 
@@ -96,41 +97,7 @@ public static class MotelySearchOrchestrator
         return (plan, config.FilterId, null);
     }
 
-    public static async Task<BlockSearchResultDto> ProcessBlockAsync(string jamlContent, int blockId)
-    {
-        var result = await ProcessBlockRunner.ProcessBlockAsync(jamlContent, blockId);
-        if (result == null)
-            return new BlockSearchResultDto { BlockId = blockId };
-
-        return new BlockSearchResultDto
-        {
-            BlockId = result.BlockId,
-            SeedsFound = result.SeedsFound,
-            HighestScore = result.HighestScore,
-            Seeds = result.Seeds.ToArray(),
-        };
-    }
-
-    public static BlockSearchResultDto RunSearchCollecting(string jamlContent, MotelySearchRequest request, int blockId = 0)
-    {
-        var seeds = new List<string>();
-        int highestScore = 0;
-
-        var (_, seedsFound, _) = RunSearch(jamlContent, request,
-            onResult: (seed, score) =>
-            {
-                seeds.Add(seed);
-                if (score > highestScore) highestScore = score;
-            });
-
-        return new BlockSearchResultDto
-        {
-            BlockId = blockId,
-            SeedsFound = seedsFound,
-            HighestScore = highestScore,
-            Seeds = seeds.ToArray(),
-        };
-    }
+    // Block processing moved to Motely.DistributedWorker.ProcessBlockRunner
 
     public static string? ValidateRequest(MotelySearchRequest request)
     {

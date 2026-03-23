@@ -13,8 +13,7 @@ const version = match[1].trim();
 
 const targets = [
   resolve(root, "Motely/package.json"),
-  resolve(root, "motely-wasm/package.json"),
-  resolve(root, "motely-node/package.json"),
+  resolve(root, "Motely.npm-staging/motely-wasm/package.json"),
 ];
 
 for (const pkgPath of targets) {
