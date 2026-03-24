@@ -6,6 +6,10 @@
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
   "properties": {
+    "id": {
+      "type": "string",
+      "description": "Canonical normalized identifier for this filter. Used as the stable filter ID when provided."
+    },
     "name": {
       "type": "string",
       "description": "Display name of the filter"
@@ -66,6 +70,13 @@
         "type": "string"
       },
       "description": "Known seed examples associated with this filter."
+    },
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional discovery tags for this filter."
     },
     "aesthetics": {
       "type": "array",
