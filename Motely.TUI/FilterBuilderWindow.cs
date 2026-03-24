@@ -24,7 +24,7 @@ public class FilterBuilderWindow : Window
         Y = Pos.Center();
         Width = 90;
         Height = 24;
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         // Create two columns in inner panel boxes
         var yStart = 3;
@@ -38,7 +38,7 @@ public class FilterBuilderWindow : Window
             Height = 13,
             Title = "Filter Items (Required)",
         };
-        filterPanel.SetScheme(BalatroTheme.InnerPanel);
+        filterPanel.ColorScheme = BalatroTheme.InnerPanel;
         Add(filterPanel);
 
         _mustList = new ListView()
@@ -49,15 +49,14 @@ public class FilterBuilderWindow : Window
             Height = Dim.Fill() - 2,
             CanFocus = true,
         };
-        _mustList.SetScheme(
-            new Scheme()
+        _mustList.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
                 HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
                 HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-            }
-        );
+            };
         _mustList.SetSource(new ObservableCollection<string>(_mustItems));
         filterPanel.Add(_mustList);
 
@@ -67,7 +66,7 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " + Add ",
         };
-        mustAddBtn.SetScheme(BalatroTheme.GreenButton);
+        mustAddBtn.ColorScheme = BalatroTheme.GreenButton;
         mustAddBtn.Accept += (s, e) => AddItem("must");
         filterPanel.Add(mustAddBtn);
 
@@ -77,7 +76,7 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " - Remove ",
         };
-        mustRemoveBtn.SetScheme(BalatroTheme.ModalButton);
+        mustRemoveBtn.ColorScheme = BalatroTheme.ModalButton;
         mustRemoveBtn.Accept += (s, e) => RemoveItem("must");
         filterPanel.Add(mustRemoveBtn);
 
@@ -90,7 +89,7 @@ public class FilterBuilderWindow : Window
             Height = 13,
             Title = "Score Items (Bonus Points)",
         };
-        scorePanel.SetScheme(BalatroTheme.InnerPanel);
+        scorePanel.ColorScheme = BalatroTheme.InnerPanel;
         Add(scorePanel);
 
         _shouldList = new ListView()
@@ -101,15 +100,14 @@ public class FilterBuilderWindow : Window
             Height = Dim.Fill() - 2,
             CanFocus = true,
         };
-        _shouldList.SetScheme(
-            new Scheme()
+        _shouldList.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
                 HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
                 HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-            }
-        );
+            };
         _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
         scorePanel.Add(_shouldList);
 
@@ -119,7 +117,7 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " + Add ",
         };
-        shouldAddBtn.SetScheme(BalatroTheme.GreenButton);
+        shouldAddBtn.ColorScheme = BalatroTheme.GreenButton;
         shouldAddBtn.Accept += (s, e) => AddItem("should");
         scorePanel.Add(shouldAddBtn);
 
@@ -129,7 +127,7 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " - Remove ",
         };
-        shouldRemoveBtn.SetScheme(BalatroTheme.ModalButton);
+        shouldRemoveBtn.ColorScheme = BalatroTheme.ModalButton;
         shouldRemoveBtn.Accept += (s, e) => RemoveItem("should");
         scorePanel.Add(shouldRemoveBtn);
 
@@ -142,15 +140,14 @@ public class FilterBuilderWindow : Window
             Text = " save first... ",
             Enabled = false,
         };
-        _startSearchBtn.SetScheme(
-            new Scheme()
+        _startSearchBtn.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
                 Focus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
                 HotNormal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
                 HotFocus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
-            }
-        );
+            };
         _startSearchBtn.Accept += (s, e) => StartSearch();
         Add(_startSearchBtn);
 
@@ -160,7 +157,7 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(4),
             Text = " Save Filter ",
         };
-        saveBtn.SetScheme(BalatroTheme.GreenButton);
+        saveBtn.ColorScheme = BalatroTheme.GreenButton;
         saveBtn.Accept += (s, e) => SaveFilter();
         Add(saveBtn);
 
@@ -171,7 +168,7 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(4),
             Text = " Load Filter ",
         };
-        loadBtn.SetScheme(BalatroTheme.PurpleButton);
+        loadBtn.ColorScheme = BalatroTheme.PurpleButton;
         loadBtn.Accept += (s, e) => LoadFilter();
         Add(loadBtn);
 
@@ -194,7 +191,7 @@ public class FilterBuilderWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        backBtn.SetScheme(BalatroTheme.BackButton);
+        backBtn.ColorScheme = BalatroTheme.BackButton;
         backBtn.Accept += (s, e) => MotelyTUI.CloseWindow(this);
         Add(backBtn);
 
@@ -272,7 +269,7 @@ public class FilterBuilderWindow : Window
                 }
                 else if (choice == 1) // Exit
                 {
-                    MotelyTUI.App?.RequestStop();
+                    Application.RequestStop(Application.Top);
                 }
                 // choice == 2 (Cancel) - do nothing, stay in filter builder
 
@@ -293,7 +290,7 @@ public class FilterBuilderWindow : Window
         {
             // Show category selector
             var categoryDialog = new CategorySelectorDialog();
-            App?.Run(categoryDialog);
+            Application.Run(categoryDialog);
 
             if (categoryDialog.SelectedCategory != null)
             {
@@ -330,7 +327,7 @@ public class FilterBuilderWindow : Window
     private void ShowItemSelectorAndAdd(string category, string listType, bool banItem = false)
     {
         var itemDialog = new ItemSelectorDialog(category);
-        App?.Run(itemDialog);
+        Application.Run(itemDialog);
 
         if (itemDialog.SelectedItem != null)
         {
@@ -366,7 +363,7 @@ public class FilterBuilderWindow : Window
         switch (listType)
         {
             case "must":
-                var mustSelectedIndex = _mustList.SelectedItem ?? 0;
+                var mustSelectedIndex = _mustList.SelectedItem;
                 if (mustSelectedIndex >= 0 && mustSelectedIndex < _mustItems.Count)
                 {
                     _mustItems.RemoveAt(mustSelectedIndex);
@@ -375,7 +372,7 @@ public class FilterBuilderWindow : Window
                 }
                 break;
             case "should":
-                var shouldSelectedIndex = _shouldList.SelectedItem ?? 0;
+                var shouldSelectedIndex = _shouldList.SelectedItem;
                 if (shouldSelectedIndex >= 0 && shouldSelectedIndex < _shouldItems.Count)
                 {
                     _shouldItems.RemoveAt(shouldSelectedIndex);
@@ -445,7 +442,7 @@ public class FilterBuilderWindow : Window
             Width = 60,
             Height = 20,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var instructionLabel = new Label()
         {
@@ -465,21 +462,20 @@ public class FilterBuilderWindow : Window
             Height = Dim.Fill() - 7,
             CanFocus = true,
         };
-        filterList.SetScheme(
-            new Scheme()
+        filterList.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
                 HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
                 HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-            }
-        );
+            };
         filterList.SetSource(new ObservableCollection<string>(filterStrings));
         filterList.SelectedItem = 0;
 
         void DoLoad()
         {
-            var selectedIndex = filterList.SelectedItem ?? 0;
+            var selectedIndex = filterList.SelectedItem;
             if (selectedIndex >= 0 && selectedIndex < filters.Count)
             {
                 var selected = filters[selectedIndex];
@@ -509,10 +505,10 @@ public class FilterBuilderWindow : Window
                     _loadedFilterPath = selected.FullPath;
                     _startSearchBtn.Text = " Start Search ";
                     _startSearchBtn.Enabled = true;
-                    _startSearchBtn.SetScheme(BalatroTheme.BlueButton);
+                    _startSearchBtn.ColorScheme = BalatroTheme.BlueButton;
 
                     _statusLabel.Text = $"Loaded: {selected.DisplayName}";
-                    App?.RequestStop(dialog);
+                    Application.RequestStop(dialog);
                 }
                 catch (Exception ex)
                 {
@@ -541,7 +537,7 @@ public class FilterBuilderWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        loadBtn.SetScheme(BalatroTheme.BlueButton);
+        loadBtn.ColorScheme = BalatroTheme.BlueButton;
         loadBtn.Accept += (s, e) => DoLoad();
         dialog.Add(loadBtn);
 
@@ -553,12 +549,12 @@ public class FilterBuilderWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
-        cancelBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
+        cancelBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(cancelBtn);
 
         filterList.SetFocus();
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private void SaveFilter()
@@ -590,7 +586,7 @@ public class FilterBuilderWindow : Window
         dialog.Add(nameField);
 
         var saveBtn = new CleanButton() { Text = " Save " };
-        saveBtn.SetScheme(BalatroTheme.BlueButton);
+        saveBtn.ColorScheme = BalatroTheme.BlueButton;
         saveBtn.Accept += (s, e) =>
         {
             var name = nameField.Text;
@@ -631,9 +627,9 @@ public class FilterBuilderWindow : Window
                 // Enable Start Search button now that filter is saved
                 _startSearchBtn.Text = " Start Search ";
                 _startSearchBtn.Enabled = true;
-                _startSearchBtn.SetScheme(BalatroTheme.BlueButton);
+                _startSearchBtn.ColorScheme = BalatroTheme.BlueButton;
 
-                App?.RequestStop(dialog);
+                Application.RequestStop(dialog);
             }
             catch (Exception ex)
             {
@@ -647,15 +643,15 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " Back ",
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
-        cancelBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
+        cancelBtn.Accept += (s, e) => Application.RequestStop(dialog);
 
         saveBtn.X = 2;
         saveBtn.Y = Pos.AnchorEnd(1);
         dialog.Add(saveBtn);
         dialog.Add(cancelBtn);
 
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private void StartSearch()
@@ -737,7 +733,7 @@ public class FilterBuilderWindow : Window
             Width = Math.Min(70, message.Length + 10),
             Height = 10,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var label = new Label()
         {
@@ -746,7 +742,7 @@ public class FilterBuilderWindow : Window
             Text = message,
             TextAlignment = Alignment.Center,
         };
-        label.SetScheme(BalatroTheme.ErrorText);
+        label.ColorScheme = BalatroTheme.ErrorText;
         dialog.Add(label);
 
         var okBtn = new CleanButton()
@@ -757,11 +753,11 @@ public class FilterBuilderWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        okBtn.SetScheme(BalatroTheme.BackButton);
-        okBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        okBtn.ColorScheme = BalatroTheme.BackButton;
+        okBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(okBtn);
 
-        MotelyTUI.App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     // Balatro-styled choice dialog (3 buttons)
@@ -779,7 +775,7 @@ public class FilterBuilderWindow : Window
             Width = Math.Min(60, Math.Max(message.Length + 10, 50)),
             Height = 9,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var label = new Label()
         {
@@ -793,19 +789,19 @@ public class FilterBuilderWindow : Window
         int result = -1;
 
         var btn1 = new CleanButton() { Text = $" {button1} " };
-        btn1.SetScheme(BalatroTheme.ModalButton);
+        btn1.ColorScheme = BalatroTheme.ModalButton;
         btn1.Accept += (s, e) =>
         {
             result = 0;
-            MotelyTUI.App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
 
         var btn2 = new CleanButton() { Text = $" {button2} " };
-        btn2.SetScheme(BalatroTheme.ModalButton);
+        btn2.ColorScheme = BalatroTheme.ModalButton;
         btn2.Accept += (s, e) =>
         {
             result = 1;
-            MotelyTUI.App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
 
         var btn3 = new CleanButton()
@@ -814,11 +810,11 @@ public class FilterBuilderWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = $" {button3} ",
         };
-        btn3.SetScheme(BalatroTheme.BackButton);
+        btn3.ColorScheme = BalatroTheme.BackButton;
         btn3.Accept += (s, e) =>
         {
             result = 2;
-            MotelyTUI.App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
 
         btn1.X = 2;
@@ -829,7 +825,7 @@ public class FilterBuilderWindow : Window
         dialog.Add(btn2);
         dialog.Add(btn3);
 
-        MotelyTUI.App?.Run(dialog);
+        Application.Run(dialog);
         return result;
     }
 }

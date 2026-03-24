@@ -12,27 +12,53 @@
     <OutputType>Exe</OutputType>
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <!-- Bootsharp NativeAOT-LLVM (not Mono) -->
     <BootsharpLLVM>true</BootsharpLLVM>
-    <BootsharpOptimize>speed</BootsharpOptimize>
+    <BootsharpPublishDirectory>$(MSBuildThisFileDirectory)..\motely-wasm\dist</BootsharpPublishDirectory>
+    <BootsharpPackageDirectory>$(MSBuildThisFileDirectory)..\motely-wasm</BootsharpPackageDirectory>
+    <BootsharpName>motely-wasm</BootsharpName>
     <PublishTrimmed>true</PublishTrimmed>
     <DotNetJsApi>true</DotNetJsApi>
     <DebugType>none</DebugType>
     <EmccFlags>$(EmccFlags) -O3</EmccFlags>
     <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+    <RestoreAdditionalProjectSources>
+        https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;
+    </RestoreAdditionalProjectSources>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(WasmBuild)' == 'true'">
-    <PackageReference Include="Bootsharp" />
+  <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="'$([MSBuild]::IsOSPlatform(&quot;Windows&quot;))' == 'true'"
                      Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="'$([MSBuild]::IsOSPlatform(&quot;Windows&quot;))' == 'false'"
                      Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(WasmBuild)' == 'true'">
+    <PackageReference Include="Bootsharp" />
     <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_LLVM_ROOT=$(EmscriptenUpstreamBinPath)" />
     <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_BINARYEN_ROOT=$(EmscriptenSdkToolsPath)" />
     <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_NODE_JS=$(EmscriptenNodeBinPath)node$(ExecutableExtensionName)" />
     <EmscriptenEnvVars Include="EM_CACHE=$(EmscriptenCacheSdkCacheDir)" />
+  </ItemGroup>
+
+  <!-- Node build: dotnet publish -p:NodeBuild=true -r linux-x64 -->
+  <PropertyGroup Condition="'$(NodeBuild)' == 'true'">
+    <OutputType>Library</OutputType>
+    <DefineConstants>$(DefineConstants);NODE</DefineConstants>
+    <PublishAot>true</PublishAot>
+    <NativeLib>Shared</NativeLib>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishNodeModule>true</PublishNodeModule>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\motely-node</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(NodeBuild)' == 'true'">
+    <PackageReference Remove="Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Remove="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Remove="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Include="Microsoft.JavaScript.NodeApi" />
+    <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" />
   </ItemGroup>
 
   <ItemGroup>

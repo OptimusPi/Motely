@@ -32,13 +32,13 @@ public class MenuButton : View
         set => _dockBackground = value;
     }
 
-    public MenuButton(string text, Scheme colorScheme, bool useHalfBlock = false)
+    public MenuButton(string text, ColorScheme colorScheme, bool useHalfBlock = false)
     {
         Width = 16;
         Height = 3;
         CanFocus = true;
         TabStop = TabBehavior.TabStop; // Required for TAB navigation in v2
-        SetScheme(colorScheme);
+        ColorScheme = colorScheme;
         _useHalfBlock = useHalfBlock;
 
         // Parse hotkey from text (underscore notation)
@@ -60,7 +60,7 @@ public class MenuButton : View
         KeyBindings.Add(KeyCode.Space, Command.Accept);
 
         MouseBindings.Clear();
-        MouseBindings.Add(MouseFlags.LeftButtonClicked, Command.Accept);
+        MouseBindings.Add(MouseFlags.Button1Clicked, Command.Accept);
 
         DrawingContent += (s, e) => DrawContent();
 
@@ -106,9 +106,8 @@ public class MenuButton : View
     private void DrawContent()
     {
         var viewport = Viewport;
-        var scheme = GetScheme();
-        var attr = HasFocus ? scheme.Focus : scheme.Normal;
-        var buttonColor = HasFocus ? scheme.Focus.Background : scheme.Normal.Background;
+        var attr = HasFocus ? GetFocusColor() : GetNormalColor();
+        var buttonColor = attr.Background;
 
         // Determine if we should draw half-block (shorter) top row
         // With DynamicFocusHeight: half-block when NOT focused, full when focused

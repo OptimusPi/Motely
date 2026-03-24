@@ -28,7 +28,7 @@ public static class BalatroTheme
     public static readonly Color Gray = new(128, 128, 128);
 
     // Red modal button (hover = DarkRed)
-    public static Scheme ModalButton =>
+    public static ColorScheme ModalButton =>
         new()
         {
             Normal = new Attribute(White, Red),
@@ -38,7 +38,7 @@ public static class BalatroTheme
         };
 
     // Orange Back button (hover = DarkOrange)
-    public static Scheme BackButton =>
+    public static ColorScheme BackButton =>
         new()
         {
             Normal = new Attribute(White, Orange),
@@ -48,7 +48,7 @@ public static class BalatroTheme
         };
 
     // Blue button (hover = DarkBlue)
-    public static Scheme BlueButton =>
+    public static ColorScheme BlueButton =>
         new()
         {
             Normal = new Attribute(White, Blue),
@@ -58,7 +58,7 @@ public static class BalatroTheme
         };
 
     // Green button (hover = DarkGreen)
-    public static Scheme GreenButton =>
+    public static ColorScheme GreenButton =>
         new()
         {
             Normal = new Attribute(White, Green),
@@ -68,7 +68,7 @@ public static class BalatroTheme
         };
 
     // Purple button (hover = DarkPurple)
-    public static Scheme PurpleButton =>
+    public static ColorScheme PurpleButton =>
         new()
         {
             Normal = new Attribute(White, Purple),
@@ -78,7 +78,7 @@ public static class BalatroTheme
         };
 
     // Red button (hover = DarkRed)
-    public static Scheme RedButton =>
+    public static ColorScheme RedButton =>
         new()
         {
             Normal = new Attribute(White, Red),
@@ -88,7 +88,7 @@ public static class BalatroTheme
         };
 
     // Gray button
-    public static Scheme GrayButton =>
+    public static ColorScheme GrayButton =>
         new()
         {
             Normal = new Attribute(White, SlateGray),
@@ -98,7 +98,7 @@ public static class BalatroTheme
         };
 
     // Modal window (grey background, light border)
-    public static Scheme Window =>
+    public static ColorScheme Window =>
         new()
         {
             Normal = new Attribute(White, ModalGrey),
@@ -108,16 +108,16 @@ public static class BalatroTheme
         };
 
     // Title text - transparent background to show shader through
-    public static Scheme Title => new() { Normal = new Attribute(White, Transparent) };
+    public static ColorScheme Title => new() { Normal = new Attribute(White, Transparent) };
 
     // Hint text
-    public static Scheme Hint => new() { Normal = new Attribute(MediumGrey, Black) };
+    public static ColorScheme Hint => new() { Normal = new Attribute(MediumGrey, Black) };
 
     // Error text
-    public static Scheme ErrorText => new() { Normal = new Attribute(Red, Black) };
+    public static ColorScheme ErrorText => new() { Normal = new Attribute(Red, Black) };
 
     // Transparent window for shader background
-    public static Scheme TransparentWindow =>
+    public static ColorScheme TransparentWindow =>
         new()
         {
             Normal = new Attribute(White, ModalGrey),
@@ -127,7 +127,7 @@ public static class BalatroTheme
         };
 
     // Inner panel (slightly darker than modal background)
-    public static Scheme InnerPanel =>
+    public static ColorScheme InnerPanel =>
         new()
         {
             Normal = new Attribute(White, InnerPanelGrey),
@@ -137,7 +137,7 @@ public static class BalatroTheme
         };
 
     // ListView - distinct highlight for selected row
-    public static Scheme ListView =>
+    public static ColorScheme ListView =>
         new()
         {
             Normal = new Attribute(White, ModalGrey),

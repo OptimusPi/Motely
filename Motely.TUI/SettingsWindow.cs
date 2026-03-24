@@ -15,7 +15,7 @@ public class SettingsWindow : Window
         Width = 70;
         Height = 20;
         CanFocus = true;
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         // Title
         var titleLabel = new Label()
@@ -25,7 +25,7 @@ public class SettingsWindow : Window
             Text = "SETTINGS",
             TextAlignment = Alignment.Center,
         };
-        titleLabel.SetScheme(BalatroTheme.Title);
+        titleLabel.ColorScheme = BalatroTheme.Title;
         Add(titleLabel);
 
         // Thread Count
@@ -52,7 +52,7 @@ public class SettingsWindow : Window
             Y = 4,
             Text = $"(1-{Environment.ProcessorCount}, default: {Environment.ProcessorCount})",
         };
-        threadHint.SetScheme(BalatroTheme.Hint);
+        threadHint.ColorScheme = BalatroTheme.Hint;
         Add(threadHint);
 
         // Batch Character Count
@@ -79,7 +79,7 @@ public class SettingsWindow : Window
             Y = 7,
             Text = "(1-7, default: 2, recommended: 2-4)",
         };
-        batchHint.SetScheme(BalatroTheme.Hint);
+        batchHint.ColorScheme = BalatroTheme.Hint;
         Add(batchHint);
 
         // API Server Host
@@ -124,7 +124,7 @@ public class SettingsWindow : Window
             Y = 13,
             Text = "(1-65535, default: 3141)",
         };
-        portHint.SetScheme(BalatroTheme.Hint);
+        portHint.ColorScheme = BalatroTheme.Hint;
         Add(portHint);
 
         // Secret option - blends into background until focused!
@@ -135,16 +135,15 @@ public class SettingsWindow : Window
             Text = "          ",
             Width = 12,
         };
-        secretButton.SetScheme(
-            new Scheme()
+        secretButton.ColorScheme =
+            new ColorScheme()
             {
                 // Invisible until focused - blends with window background
                 Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.Purple),
                 HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
                 HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
-            }
-        );
+            };
         secretButton.Accept += (s, e) => ShowSecretDialog();
         Add(secretButton);
 
@@ -156,7 +155,7 @@ public class SettingsWindow : Window
             Text = " _Save ",
             Width = 12,
         };
-        saveButton.SetScheme(BalatroTheme.BlueButton);
+        saveButton.ColorScheme = BalatroTheme.BlueButton;
         saveButton.Accept += (s, e) => SaveSettings();
         Add(saveButton);
 
@@ -169,8 +168,8 @@ public class SettingsWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        cancelButton.SetScheme(BalatroTheme.BackButton);
-        cancelButton.Accept += (s, e) => App?.RequestStop();
+        cancelButton.ColorScheme = BalatroTheme.BackButton;
+        cancelButton.Accept += (s, e) => Application.RequestStop(this);
         Add(cancelButton);
 
         // ESC key handler
@@ -178,7 +177,7 @@ public class SettingsWindow : Window
         {
             if (e.KeyCode == KeyCode.Esc)
             {
-                App?.RequestStop();
+                Application.RequestStop(this);
                 e.Handled = true;
             }
         };
@@ -260,7 +259,7 @@ public class SettingsWindow : Window
             TuiSettings.Save();
 
             // Success - close window
-            App?.RequestStop();
+            Application.RequestStop(this);
         }
         catch (Exception ex)
         {
@@ -276,7 +275,7 @@ public class SettingsWindow : Window
             Width = Math.Min(70, message.Length + 10),
             Height = 10,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var label = new Label()
         {
@@ -285,7 +284,7 @@ public class SettingsWindow : Window
             Text = message,
             TextAlignment = Alignment.Center,
         };
-        label.SetScheme(BalatroTheme.ErrorText);
+        label.ColorScheme = BalatroTheme.ErrorText;
         dialog.Add(label);
 
         var okBtn = new CleanButton()
@@ -296,11 +295,11 @@ public class SettingsWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        okBtn.SetScheme(BalatroTheme.BackButton);
-        okBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        okBtn.ColorScheme = BalatroTheme.BackButton;
+        okBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(okBtn);
 
-        MotelyTUI.App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private static void ShowSecretDialog()
@@ -311,7 +310,7 @@ public class SettingsWindow : Window
             Width = 50,
             Height = 14,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var jimboLabel = new Label()
         {
@@ -329,7 +328,7 @@ public class SettingsWindow : Window
             Y = 8,
             Text = TuiSettings.CrudeSeedsEnabled ? " [X] Crude Seeds " : " [ ] Crude Seeds ",
         };
-        crudeBtn.SetScheme(BalatroTheme.GrayButton);
+        crudeBtn.ColorScheme = BalatroTheme.GrayButton;
         crudeBtn.Accept += (s, e) =>
         {
             TuiSettings.CrudeSeedsEnabled = !TuiSettings.CrudeSeedsEnabled;
@@ -345,10 +344,10 @@ public class SettingsWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " Back ",
         };
-        closeBtn.SetScheme(BalatroTheme.BackButton);
-        closeBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        closeBtn.ColorScheme = BalatroTheme.BackButton;
+        closeBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(closeBtn);
 
-        MotelyTUI.App?.Run(dialog);
+        Application.Run(dialog);
     }
 }

@@ -33,7 +33,7 @@ public class SearchWindow : Window
         Width = Dim.Percent(85);
         Height = 24;
         CanFocus = true;
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         // Status label (top)
         _statusLabel = new Label()
@@ -43,9 +43,8 @@ public class SearchWindow : Window
             Width = Dim.Fill() - 2,
             Text = "Starting search...",
         };
-        _statusLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) }
-        );
+        _statusLabel.ColorScheme =
+            new ColorScheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) };
         Add(_statusLabel);
 
         // Progress label (below status)
@@ -56,9 +55,8 @@ public class SearchWindow : Window
             Width = Dim.Fill() - 2,
             Text = "",
         };
-        _progressLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.ModalGrey) }
-        );
+        _progressLabel.ColorScheme =
+            new ColorScheme() { Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.ModalGrey) };
         Add(_progressLabel);
 
         // Results frame
@@ -70,7 +68,7 @@ public class SearchWindow : Window
             Height = Dim.Fill() - 8,
             Title = "Results",
         };
-        resultsFrame.SetScheme(BalatroTheme.InnerPanel);
+        resultsFrame.ColorScheme = BalatroTheme.InnerPanel;
         Add(resultsFrame);
 
         _resultsView = new TextView()
@@ -83,13 +81,12 @@ public class SearchWindow : Window
             WordWrap = false,
             CanFocus = true,
         };
-        _resultsView.SetScheme(
-            new Scheme()
+        _resultsView.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
-            }
-        );
+            };
         resultsFrame.Add(_resultsView);
 
         // Stop button
@@ -101,7 +98,7 @@ public class SearchWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        _stopBtn.SetScheme(BalatroTheme.RedButton);
+        _stopBtn.ColorScheme = BalatroTheme.RedButton;
         _stopBtn.Accept += (s, e) => StopSearch();
         Add(_stopBtn);
 
@@ -114,7 +111,7 @@ public class SearchWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        backBtn.SetScheme(BalatroTheme.BackButton);
+        backBtn.ColorScheme = BalatroTheme.BackButton;
         backBtn.Accept += (s, e) => AttemptClose();
         Add(backBtn);
 
@@ -179,7 +176,7 @@ public class SearchWindow : Window
 
                     var resultCount = Interlocked.Increment(ref _resultCount);
                     var line = $"{resultCount,6} | {tally.Seed,-10} | {tally.Score,6}";
-                    App?.Invoke(() =>
+                    Application.Invoke(() =>
                     {
                         _resultsView.Text += line + "\n";
                         _resultsView.MoveEnd();
@@ -196,7 +193,7 @@ public class SearchWindow : Window
                     var resultCount = Interlocked.Increment(ref _resultCount);
                     var displayLine = $"{resultCount,6} | {line}";
 
-                    App?.Invoke(() =>
+                    Application.Invoke(() =>
                     {
                         _resultsView.Text += displayLine + "\n";
                         _resultsView.MoveEnd();
@@ -206,21 +203,20 @@ public class SearchWindow : Window
 
             _search = settings.CreateSearch();
 
-            App?.Invoke(() =>
+            Application.Invoke(() =>
             {
                 _statusLabel.Text = "Running";
-                _statusLabel.SetScheme(
-                    new Scheme()
+                _statusLabel.ColorScheme =
+                    new ColorScheme()
                     {
                         Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-                    }
-                );
+                    };
             });
 
             var searchTask = Task.Run(() => _search.Start(_cts.Token), _cts.Token);
 
             // Poll progress on a timer
-            MotelyTUI.App?.AddTimeout(
+            Application.AddTimeout(
                 TimeSpan.FromMilliseconds(500),
                 () =>
                 {
@@ -252,24 +248,23 @@ public class SearchWindow : Window
             searchTask.ContinueWith(t =>
             {
                 if (!t.IsCanceled)
-                    App?.Invoke(() => OnSearchComplete());
+                    Application.Invoke(() => OnSearchComplete());
             });
         }
         catch (OperationCanceledException)
         {
-            App?.Invoke(() => OnSearchStopped());
+            Application.Invoke(() => OnSearchStopped());
         }
         catch (Exception ex)
         {
-            App?.Invoke(() =>
+            Application.Invoke(() =>
             {
                 _statusLabel.Text = "Error";
-                _statusLabel.SetScheme(
-                    new Scheme()
+                _statusLabel.ColorScheme =
+                    new ColorScheme()
                     {
                         Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-                    }
-                );
+                    };
                 _progressLabel.Text = ex.Message;
                 _stopBtn.Visible = false;
                 _searchRunning = false;
@@ -281,9 +276,8 @@ public class SearchWindow : Window
     {
         _searchRunning = false;
         _statusLabel.Text = "Completed";
-        _statusLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
-        );
+        _statusLabel.ColorScheme =
+            new ColorScheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) };
         _stopBtn.Visible = false;
         _activeSink?.Dispose();
         _activeSink = null;
@@ -303,9 +297,8 @@ public class SearchWindow : Window
     {
         _searchRunning = false;
         _statusLabel.Text = "Stopped";
-        _statusLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey) }
-        );
+        _statusLabel.ColorScheme =
+            new ColorScheme() { Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey) };
         _stopBtn.Visible = false;
         _activeSink?.Dispose();
         _activeSink = null;
