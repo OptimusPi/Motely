@@ -56,12 +56,14 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
 /// </summary>
 public sealed class JamlConfig
 {
+    public string Id { get; set; } = "";
     public string? Name { get; set; }
     public string? Description { get; set; }
     public string? Author { get; set; }
     public string DateCreated { get; set; } = System.DateTime.UtcNow.ToString("O");
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
+    public List<string> Hashtags { get; set; } = [];
 
     public JamlClauseSet Must { get; set; } = new();
     public JamlClauseSet Should { get; set; } = new();
@@ -83,6 +85,9 @@ public sealed class JamlConfig
 
 public sealed class JamlDto
 {
+    [YamlMember(Alias = "id")]
+    public string? Id { get; set; }
+
     [YamlMember(Alias = "name")]
     public string? Name { get; set; }
 
@@ -116,6 +121,9 @@ public sealed class JamlDto
     /// <summary>Seed-space preferences (e.g. <c>palindrome</c>). See JAML schema.</summary>
     [YamlMember(Alias = "aesthetics")]
     public List<string>? Aesthetics { get; set; }
+
+    [YamlMember(Alias = "hashtags")]
+    public List<string>? Hashtags { get; set; }
 
     [YamlMember(Alias = "seeds")]
     public List<string>? Seeds { get; set; }
@@ -467,6 +475,10 @@ public static class JamlConfigLoader
                 Stake = stake,
             };
 
+            config.Id = NormalizeFilterId(dto.Id, dto.Name);
+            config.FilterId = config.Id;
+            config.Hashtags = NormalizeHashtags(dto.Hashtags);
+
             if (dto.Aesthetics is { Count: > 0 })
             {
                 foreach (var entry in dto.Aesthetics)
@@ -495,7 +507,6 @@ public static class JamlConfigLoader
             PopulateClauses(config.MustNot, dto.MustNot, defaultAntes, dto.Defaults);
 
             // Set once — config is immutable after load
-            config.FilterId = (config.Name ?? "unnamed").Trim().ToLowerInvariant().Replace(' ', '-');
             config.HasAnyClauses = config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
 
             return true;
@@ -1461,6 +1472,46 @@ public static class JamlConfigLoader
         };
 
     // ── Helpers ──
+
+    private static string NormalizeFilterId(string? explicitId, string? name)
+    {
+        var source = string.IsNullOrWhiteSpace(explicitId) ? name : explicitId;
+        if (string.IsNullOrWhiteSpace(source))
+            return "unnamed";
+
+        var normalized = Regex.Replace(source.Trim(), "[^A-Za-z0-9_-]+", "-");
+        normalized = Regex.Replace(normalized, "-+", "-").Trim('-', '_');
+
+        return string.IsNullOrWhiteSpace(normalized) ? "unnamed" : normalized.ToLowerInvariant();
+    }
+
+    private static List<string> NormalizeHashtags(List<string>? hashtags)
+    {
+        if (hashtags is not { Count: > 0 })
+            return [];
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var normalized = new List<string>();
+
+        foreach (var entry in hashtags)
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+                continue;
+
+            var tag = entry.Trim();
+            if (tag.StartsWith('#'))
+                tag = tag[1..];
+
+            if (string.IsNullOrWhiteSpace(tag))
+                continue;
+
+            tag = tag.ToLowerInvariant();
+            if (seen.Add(tag))
+                normalized.Add(tag);
+        }
+
+        return normalized;
+    }
 
     private static T? ParseEnum<T>(string? value)
         where T : struct, Enum =>

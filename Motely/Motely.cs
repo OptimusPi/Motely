@@ -151,12 +151,12 @@ public static partial class MotelyCore
     /// <summary>
     /// Total seed count for multiple keywords with the given padding chars.
     /// </summary>
-    public static int GetPaddedSeedCountForKeywords(
+    public static ulong GetPaddedSeedCountForKeywords(
         IEnumerable<string> keywords,
         char[]? validChars = null
     )
     {
-        int total = 0;
+        ulong total = 0;
         foreach (var keyword in keywords)
         {
             if (string.IsNullOrEmpty(keyword)) continue;
@@ -171,7 +171,7 @@ public static partial class MotelyCore
     /// Generate all seed variations by padding a keyword with the given valid characters.
     /// Pads 0-3 characters at all positions (prefix, suffix, infix).
     /// </summary>
-    public static int GetPaddedSeedCount(string keyword, int padLen, char[]? validChars = null)
+    public static ulong GetPaddedSeedCount(string keyword, int padLen, char[]? validChars = null)
     {
         validChars ??= SeedDigits;
 
@@ -185,16 +185,16 @@ public static partial class MotelyCore
 
         checked
         {
-            int combinations = 1;
+            ulong combinations = 1;
             for (int i = 0; i < padLen; i++)
-                combinations *= validChars.Length;
+                combinations *= (ulong)validChars.Length;
 
             return padLen switch
             {
                 1 => combinations * 2,
                 2 => combinations * 3,
                 3 => combinations * 4,
-                _ => combinations * (keyword.Length + 1),
+                _ => combinations * (ulong)(keyword.Length + 1),
             };
         }
     }

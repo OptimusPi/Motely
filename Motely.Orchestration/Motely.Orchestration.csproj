@@ -42,7 +42,7 @@
     <EmscriptenEnvVars Include="EM_CACHE=$(EmscriptenCacheSdkCacheDir)" />
   </ItemGroup>
 
-  <!-- Node build: dotnet publish -p:NodeBuild=true -r linux-x64 -->
+  <!-- Node build: dotnet publish -p:NodeBuild=true -->
   <PropertyGroup Condition="'$(NodeBuild)' == 'true'">
     <OutputType>Library</OutputType>
     <DefineConstants>$(DefineConstants);NODE</DefineConstants>
@@ -50,6 +50,7 @@
     <NativeLib>Shared</NativeLib>
     <PublishTrimmed>true</PublishTrimmed>
     <PublishNodeModule>true</PublishNodeModule>
+    <PackNpmPackage>true</PackNpmPackage>
     <PackageOutputPath>$(MSBuildThisFileDirectory)..\motely-node</PackageOutputPath>
   </PropertyGroup>
 

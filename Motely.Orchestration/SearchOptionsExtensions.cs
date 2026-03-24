@@ -29,8 +29,9 @@ public static class SearchOptionsExtensions
             if (validKeywords.Length == 0)
                 return (settings, "All keywords were empty or too long.");
 
-            int count = MotelyCore.GetPaddedSeedCountForKeywords(validKeywords, paddingChars);
-            return (settings.WithListSearch(MotelyCore.GeneratePaddedSeedsForKeywords(validKeywords, paddingChars), count), null);
+            ulong count = MotelyCore.GetPaddedSeedCountForKeywords(validKeywords, paddingChars);
+            int seedCount = count > int.MaxValue ? int.MaxValue : (int)count;
+            return (settings.WithListSearch(MotelyCore.GeneratePaddedSeedsForKeywords(validKeywords, paddingChars), seedCount), null);
         }
 
         if (request.RandomSeeds.HasValue)

@@ -47,6 +47,10 @@ public sealed class MisprintMultClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    /// <summary>
+    /// Specific mult value to match (0-23). If null, matches any value (always succeeds).
+    /// </summary>
+    public int? Value { get; init; }
 }
 
 public sealed class WheelOfFortuneClause : IRollClause
@@ -144,11 +148,24 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
 {
     private readonly MisprintMultClause _clause = clause;
 
-    public MisprintMultFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+    public MisprintMultFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    {
+        // Pre-compute at creation time - no branching in SIMD hot path
+        var targetValue = _clause.Value.HasValue
+            ? Vector256.Create(_clause.Value.Value)
+            : Vector256<int>.Zero;
+        return new MisprintMultFilter(_clause, _clause.Value.HasValue, targetValue);
+    }
 
-    public struct MisprintMultFilter(MisprintMultClause clause) : IMotelySeedFilter
+    public struct MisprintMultFilter(
+        MisprintMultClause clause,
+        bool hasValue,
+        Vector256<int> targetValue
+    ) : IMotelySeedFilter
     {
         private readonly MisprintMultClause _clause = clause;
+        private readonly bool _hasValue = hasValue;
+        private readonly Vector256<int> _targetValue = targetValue;
 
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
@@ -156,6 +173,25 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateMisprintPrngStream();
+
+            if (_hasValue)
+            {
+                return EventFilterUtils.ProcessRollClause(
+                    ref ctx,
+                    _clause,
+                    static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex, Vector256<int> target) =>
+                    {
+                        for (int i = 0; i < rollIndex; i++)
+                            sctx.GetNextMisprintMult(ref stream);
+                        var multValue = sctx.GetNextMisprintMult(ref stream);
+                        return Vector256.Equals(multValue, target);
+                    },
+                    ref stream,
+                    _targetValue
+                );
+            }
+
+            // Original behavior: matches any value (always succeeds if roll exists)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
@@ -276,6 +312,8 @@ internal static class EventFilterUtils
 {
     internal delegate VectorMask RollChecker(ref MotelyVectorSearchContext ctx, ref MotelyVectorPrngStream stream, int rollIndex);
 
+    internal delegate VectorMask RollCheckerWithValue(ref MotelyVectorSearchContext ctx, ref MotelyVectorPrngStream stream, int rollIndex, Vector256<int> value);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static VectorMask ProcessRollClause<TClause>(
         ref MotelyVectorSearchContext ctx,
@@ -294,6 +332,50 @@ internal static class EventFilterUtils
         foreach (var rollIndex in clause.Rolls)
         {
             var rollMask = checker(ref ctx, ref stream, rollIndex);
+            matchCounts = Vector256.Add(
+                matchCounts,
+                Vector256.Create(
+                    rollMask[0] ? 1 : 0,
+                    rollMask[1] ? 1 : 0,
+                    rollMask[2] ? 1 : 0,
+                    rollMask[3] ? 1 : 0,
+                    rollMask[4] ? 1 : 0,
+                    rollMask[5] ? 1 : 0,
+                    rollMask[6] ? 1 : 0,
+                    rollMask[7] ? 1 : 0
+                )
+            );
+        }
+
+        return new VectorMask(
+            MotelyVectorUtils.VectorizedComparisonToMask(
+                Vector256.GreaterThan(
+                    matchCounts,
+                    Vector256.Subtract(Vector256.Create(clause.Min), Vector256.Create(1))
+                )
+            )
+        );
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    internal static VectorMask ProcessRollClause<TClause>(
+        ref MotelyVectorSearchContext ctx,
+        TClause clause,
+        RollCheckerWithValue checker,
+        ref MotelyVectorPrngStream stream,
+        Vector256<int> value
+    )
+        where TClause : IRollClause
+    {
+        Debug.Assert(
+            clause.Rolls.Length > 0,
+            "Event roll clause must provide at least one roll index."
+        );
+
+        var matchCounts = Vector256<int>.Zero;
+        foreach (var rollIndex in clause.Rolls)
+        {
+            var rollMask = checker(ref ctx, ref stream, rollIndex, value);
             matchCounts = Vector256.Add(
                 matchCounts,
                 Vector256.Create(
