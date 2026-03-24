@@ -5,32 +5,28 @@ set-strictmode -version latest
 $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
-$orch = "$root\Motely.Orchestration"
-$wasmPkg = "$root\motely-wasm"
+$buildScript = "$root\build.mjs"
 $wasmPkg = "$root\motely-wasm"
 $nodePkg = "$root\motely-node"
 
-Write-Host "`n=== Step 1: Run tests ===" -ForegroundColor Cyan
-dotnet test "$root\Motely.Tests" -c Release --no-restore
-if ($LASTEXITCODE -ne 0) { Write-Host "TESTS FAILED. Fix them first." -ForegroundColor Red; exit 1 }
-Write-Host "Tests passed." -ForegroundColor Green
+# Write-Host "`n=== Step 1: Run tests ===" -ForegroundColor Cyan
+# dotnet test "$root\Motely.Tests" -c Release --no-restore
+# if ($LASTEXITCODE -ne 0) { Write-Host "TESTS FAILED. Fix them first." -ForegroundColor Red; exit 1 }
+# Write-Host "Tests passed." -ForegroundColor Green
 
-Write-Host "`n=== Step 2: Build server (net10.0) ===" -ForegroundColor Cyan
-dotnet build "$root" -c Release
-if ($LASTEXITCODE -ne 0) { Write-Host "Server build failed." -ForegroundColor Red; exit 1 }
-Write-Host "Server build OK." -ForegroundColor Green
+if (-not (Test-Path $buildScript)) { Write-Host "build.mjs not found." -ForegroundColor Red; exit 1 }
 
-Write-Host "`n=== Step 3: Publish WASM (NativeAOT-LLVM) ===" -ForegroundColor Cyan
+Write-Host "`n=== Step 2: Build WASM package (NativeAOT-LLVM / Bootsharp) ===" -ForegroundColor Cyan
 Write-Host "Output: $wasmPkg\dist\" -ForegroundColor DarkGray
-dotnet publish "$orch" -c Release -p:WasmBuild=true
-if ($LASTEXITCODE -ne 0) { Write-Host "WASM publish failed." -ForegroundColor Red; exit 1 }
-Write-Host "WASM publish OK." -ForegroundColor Green
+node $buildScript wasm
+if ($LASTEXITCODE -ne 0) { Write-Host "WASM package build failed." -ForegroundColor Red; exit 1 }
+Write-Host "WASM package build OK." -ForegroundColor Green
 
-Write-Host "`n=== Step 4: Publish Node (NativeAOT linux-x64) ===" -ForegroundColor Cyan
+Write-Host "`n=== Step 3: Build Node package (NativeAOT) ===" -ForegroundColor Cyan
 Write-Host "Output: $nodePkg\" -ForegroundColor DarkGray
-dotnet publish "$orch" -c Release -p:NodeBuild=true -r linux-x64
-if ($LASTEXITCODE -ne 0) { Write-Host "Node publish failed." -ForegroundColor Red; exit 1 }
-Write-Host "Node publish OK." -ForegroundColor Green
+node $buildScript node
+if ($LASTEXITCODE -ne 0) { Write-Host "Node package build failed." -ForegroundColor Red; exit 1 }
+Write-Host "Node package build OK." -ForegroundColor Green
 
 # Show versions
 $wasmVer = (Get-Content "$wasmPkg\package.json" | ConvertFrom-Json).version

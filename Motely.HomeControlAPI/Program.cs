@@ -88,7 +88,7 @@ public class Program
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
-            c.SwaggerDoc("v1", new() { Title = "Motely Home Control API", Version = "v1" }));
+            c.SwaggerDoc("v1", new() { Title = "Motely Home Control API", Version = "v5" }));
 
         builder.Services.AddCors(options =>
             options.AddDefaultPolicy(policy =>

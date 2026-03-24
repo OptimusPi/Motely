@@ -57,6 +57,12 @@ export type MotelyBenchSizes = Readonly<{
   k1m: number
 }>
 
+export type ShopBenchRangeTimings = Readonly<{
+  range0To99Ms: number
+  range100To9999Ms: number
+  range10000To10001Ms: number
+}>
+
 export const shopStreamStyles = {
   root: {
     background: '#0d0d12',

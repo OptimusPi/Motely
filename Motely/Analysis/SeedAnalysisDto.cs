@@ -74,4 +74,5 @@ public class PackDto
 }
 
 [JsonSerializable(typeof(SeedAnalysisDto))]
+[JsonSerializable(typeof(ShopItemDto))]
 public partial class AnalysisJsonContext : JsonSerializerContext { }

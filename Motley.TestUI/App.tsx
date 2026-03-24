@@ -20,6 +20,11 @@ const MotelyShopStreamAnalyzer = lazy(() =>
     default: m.MotelyShopStreamAnalyzer,
   }))
 )
+const ShopStreamBenchCompare = lazy(() =>
+  import('./motely-ui/ShopStreamBenchCompare').then((m) => ({
+    default: m.ShopStreamBenchCompare,
+  }))
+)
 
 function ToolLoading() {
   return (
@@ -39,7 +44,7 @@ function ToolLoading() {
   )
 }
 
-type ToolId = '3d' | 'jokers' | 'adventure' | 'shop' | 'motely'
+type ToolId = '3d' | 'jokers' | 'adventure' | 'shop' | 'motely' | 'bench'
 
 function readToolFromUrl(): ToolId {
   const t = new URLSearchParams(window.location.search).get('tool')
@@ -47,6 +52,7 @@ function readToolFromUrl(): ToolId {
   if (t === 'adventure') return 'adventure'
   if (t === 'shop') return 'shop'
   if (t === 'motely') return 'motely'
+  if (t === 'bench') return 'bench'
   return '3d'
 }
 
@@ -59,6 +65,7 @@ export default function App() {
     else if (tool === 'adventure') u.searchParams.set('tool', 'adventure')
     else if (tool === 'shop') u.searchParams.set('tool', 'shop')
     else if (tool === 'motely') u.searchParams.set('tool', 'motely')
+    else if (tool === 'bench') u.searchParams.set('tool', 'bench')
     else u.searchParams.delete('tool')
     window.history.replaceState({}, '', `${u.pathname}${u.search}`)
   }, [tool])
@@ -68,6 +75,17 @@ export default function App() {
       <Fragment>
         <Suspense fallback={<ToolLoading />}>
           <ShopStreamAnalyzer onBack={() => setTool('3d')} />
+        </Suspense>
+        <BalatroFanSiteAttributionFooter />
+      </Fragment>
+    )
+  }
+
+  if (tool === 'bench') {
+    return (
+      <Fragment>
+        <Suspense fallback={<ToolLoading />}>
+          <ShopStreamBenchCompare onBack={() => setTool('3d')} />
         </Suspense>
         <BalatroFanSiteAttributionFooter />
       </Fragment>
@@ -156,6 +174,9 @@ export default function App() {
             </button>
             <button type="button" className="tool-switch" onClick={() => setTool('motely')}>
               Motely shop (WASM) →
+            </button>
+            <button type="button" className="tool-switch" onClick={() => setTool('bench')}>
+              TS vs Motely bench →
             </button>
           </div>
         </div>

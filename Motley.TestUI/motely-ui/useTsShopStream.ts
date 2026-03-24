@@ -2,13 +2,33 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Game } from '@balatrots/Game'
 import { createTsGame } from '../engine-shop/tsBalatroGame'
 import type { BalatroStreamStateJson } from '../engine-shop/streamCursors'
-import type { ShopDeck, ShopStake, ShopStreamRow } from './shopStreamShared'
+import type { ShopBenchRangeTimings, ShopDeck, ShopStake, ShopStreamRow } from './shopStreamShared'
 
 function streamSnapshotMeta(g: Game): { cursorCount: number; generatedFirstPack: boolean } {
   const s = g.exportStreamState()
   return {
     cursorCount: Object.keys(s.nodes).length,
     generatedFirstPack: s.generatedFirstPack,
+  }
+}
+
+function nowMs() {
+  return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+}
+
+function measureShopBenchRanges(next: () => void): ShopBenchRangeTimings {
+  const t0 = nowMs()
+  for (let i = 0; i < 100; i++) next()
+  const t1 = nowMs()
+  for (let i = 0; i < 9_900; i++) next()
+  const t2 = nowMs()
+  for (let i = 0; i < 2; i++) next()
+  const t3 = nowMs()
+
+  return {
+    range0To99Ms: Math.round(t1 - t0),
+    range100To9999Ms: Math.round(t2 - t1),
+    range10000To10001Ms: Math.round(t3 - t2),
   }
 }
 
@@ -20,12 +40,15 @@ export function useTsShopStream(seed: string, deck: ShopDeck, stake: ShopStake, 
     cursorCount: number
     generatedFirstPack: boolean
   } | null>(null)
+  const [benchRangeTimings, setBenchRangeTimings] = useState<ShopBenchRangeTimings | null>(null)
+  const [benchRunning, setBenchRunning] = useState(false)
 
   const gameRef = useRef<Game | null>(null)
   const rowsRef = useRef<ShopStreamRow[]>([])
 
   const resetStream = useCallback(() => {
     setStreamError(null)
+    setBenchRangeTimings(null)
     try {
       const g = createTsGame(seed, deck, stake)
       gameRef.current = g
@@ -50,6 +73,7 @@ export function useTsShopStream(seed: string, deck: ShopDeck, stake: ShopStake, 
   useEffect(() => {
     rowsRef.current = []
     setRows([])
+    setBenchRangeTimings(null)
   }, [ante])
 
   const pull = useCallback(
@@ -82,8 +106,26 @@ export function useTsShopStream(seed: string, deck: ShopDeck, stake: ShopStake, 
     const g = gameRef.current
     if (!g) return
     const json = g.exportStreamState() satisfies BalatroStreamStateJson
-    void navigator.clipboard.writeText(JSON.stringify(json)).catch(() => {})
+    void navigator.clipboard.writeText(JSON.stringify(json)).catch(() => { })
   }, [])
+
+  const runBenchRanges = useCallback(async (): Promise<ShopBenchRangeTimings | null> => {
+    setStreamError(null)
+    setBenchRunning(true)
+    try {
+      const g = createTsGame(seed, deck, stake)
+      const timings = measureShopBenchRanges(() => {
+        g.nextShopItem(ante)
+      })
+      setBenchRangeTimings(timings)
+      return timings
+    } catch (e: unknown) {
+      setStreamError(e instanceof Error ? e.message : String(e))
+      return null
+    } finally {
+      setBenchRunning(false)
+    }
+  }, [ante, deck, seed, stake])
 
   return {
     rows,
@@ -95,5 +137,8 @@ export function useTsShopStream(seed: string, deck: ShopDeck, stake: ShopStake, 
     pull,
     copyDebug,
     copyDebugLabel: 'Copy stream JSON',
+    benchRangeTimings,
+    benchRunning,
+    runBenchRanges,
   }
 }
