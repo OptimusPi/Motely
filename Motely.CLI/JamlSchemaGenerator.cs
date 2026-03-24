@@ -9,7 +9,7 @@ internal static class JamlSchemaGenerator
 {
     private static readonly string[] RankValues = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Jack", "Q", "Queen", "K", "King", "A", "Ace"];
     private static readonly string[] SuitValues = ["Hearts", "Diamonds", "Clubs", "Spades"];
-    private static readonly string[] MetadataKeys = ["name", "author", "dateCreated", "description", "deck", "stake", "seeds", "aesthetics"];
+    private static readonly string[] MetadataKeys = ["id", "name", "author", "dateCreated", "description", "deck", "stake", "seeds", "aesthetics", "hashtags"];
     private static readonly string[] SectionKeys = ["defaults", "must", "should", "mustNot"];
     private static readonly string[] ClauseTypeKeys = [
         "joker", "jokers",
@@ -110,6 +110,7 @@ internal static class JamlSchemaGenerator
             ["type"] = "object",
             ["properties"] = new JsonObject
             {
+                ["id"] = StringProperty("Canonical normalized identifier for this filter. Used as the stable filter ID when provided."),
                 ["name"] = StringProperty("Display name of the filter"),
                 ["description"] = StringProperty("Description of what this filter searches for"),
                 ["author"] = StringProperty("Creator of the filter"),
@@ -122,6 +123,7 @@ internal static class JamlSchemaGenerator
                 ["deck"] = EnumStringProperty(EnumNames<MotelyDeck>(), "Balatro deck to search with", "Red"),
                 ["stake"] = EnumStringProperty(EnumNames<MotelyStake>(), "Balatro stake level", "White"),
                 ["seeds"] = StringArrayProperty("Known seed examples associated with this filter."),
+                ["hashtags"] = StringArrayProperty("Optional discovery tags for this filter."),
                 ["aesthetics"] = new JsonObject
                 {
                     ["type"] = "array",
@@ -259,6 +261,7 @@ internal static class JamlSchemaGenerator
             ["rank"] = EnumStringProperty(RankValues, "Required rank for playing-card-based clauses."),
             ["suit"] = EnumStringProperty(SuitValues, "Required suit for playing-card-based clauses."),
             ["rolls"] = IntegerArrayProperty(0, null, "Event occurrence indices to check."),
+            ["multValue"] = IntegerProperty("Exact mult value for MisprintMult event (0-23). If omitted, matches any value.", 0, null, 23),
             ["shopItems"] = IntegerArrayProperty(0, 1023, "Clause-level source mapping for shop item slots."),
             ["boosterPacks"] = IntegerArrayProperty(0, 5, "Clause-level source mapping for pack offering slots."),
             ["minShopSlot"] = IntegerProperty("Minimum shop slot index for range generation.", 0, null, 1023),

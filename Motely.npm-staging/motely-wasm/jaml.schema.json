@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "5.0.0",
+  "version": "5.1.10",
   "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
@@ -1394,6 +1394,12 @@
             "minimum": 0
           },
           "description": "Event occurrence indices to check."
+        },
+        "multValue": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Exact mult value for MisprintMult event (0-23). If omitted, matches any value.",
+          "maximum": 23
         },
         "shopItems": {
           "type": "array",
