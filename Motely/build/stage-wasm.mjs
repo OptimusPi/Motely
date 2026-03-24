@@ -5,31 +5,41 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../../');
 
-const buildOutput = path.join(repoRoot, 'Motely.BrowserWasm/bin/Release/net10.0-browser/browser-wasm/publish');
-const motelyWasmDist = path.join(repoRoot, 'motely-wasm/dist');
-const stagingDir = path.join(repoRoot, 'Motely.npm-staging/motely-wasm');
-const sourcePackageJson = path.join(repoRoot, 'motely-wasm/package.json');
+const bootsharpOut = path.join(repoRoot, 'Motely.Orchestration/bin/bootsharp');
+const wasmDist = path.join(repoRoot, 'motely-wasm/dist');
+const schema = path.join(repoRoot, 'jaml.schema.json');
 
-// Ensure directories exist
-fs.mkdirSync(motelyWasmDist, { recursive: true });
-fs.mkdirSync(stagingDir, { recursive: true });
-
-// Copy all files from build output to dist
-if (fs.existsSync(buildOutput)) {
-  fs.cpSync(buildOutput, motelyWasmDist, { recursive: true, force: true });
-  console.log(`✓ Copied WASM build output to ${motelyWasmDist}`);
-} else {
-  throw new Error(`Build output not found at ${buildOutput}`);
+if (!fs.existsSync(bootsharpOut)) {
+  throw new Error(`Bootsharp output not found at ${bootsharpOut}\nRun: dotnet publish Motely.Orchestration -c Release -p:WasmBuild=true`);
 }
 
-// Copy package.json to staging
-if (fs.existsSync(sourcePackageJson)) {
-  fs.copyFileSync(sourcePackageJson, path.join(stagingDir, 'package.json'));
-  console.log(`✓ Copied package.json to staging`);
-} else {
-  throw new Error(`package.json not found at ${sourcePackageJson}`);
+fs.mkdirSync(wasmDist, { recursive: true });
+
+// index.mjs — the entire bundle (runtime + wasm + interop, one file)
+fs.copyFileSync(path.join(bootsharpOut, 'index.mjs'), path.join(wasmDist, 'index.mjs'));
+console.log('staged index.mjs');
+
+// TypeScript declarations
+if (fs.existsSync(path.join(bootsharpOut, 'types'))) {
+  fs.cpSync(path.join(bootsharpOut, 'types'), path.join(wasmDist, 'types'), { recursive: true, force: true });
+  console.log('staged types/');
 }
 
-// Copy dist to staging
-fs.cpSync(motelyWasmDist, path.join(stagingDir, 'dist'), { recursive: true, force: true });
-console.log(`✓ Staged motely-wasm to ${stagingDir}`);
+// JAML schema
+if (fs.existsSync(schema)) {
+  fs.copyFileSync(schema, path.join(wasmDist, 'jaml.schema.json'));
+  console.log('staged jaml.schema.json');
+}
+
+// Sync version from Directory.Packages.props → motely-wasm/package.json
+const props = fs.readFileSync(path.join(repoRoot, 'Directory.Packages.props'), 'utf8');
+const m = props.match(/<MotelyVersion>([^<]+)<\/MotelyVersion>/);
+if (m) {
+  const pkgPath = path.join(repoRoot, 'motely-wasm/package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  pkg.version = m[1].trim();
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  console.log(`version → ${pkg.version}`);
+}
+
+console.log('done.');

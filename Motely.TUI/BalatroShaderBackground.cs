@@ -64,7 +64,7 @@ public class BalatroShaderBackground : View
         // Calculate initial frame immediately
         UpdateFrameBuffer();
 
-        MotelyTUI.App?.AddTimeout(
+        Application.AddTimeout(
             TimeSpan.FromMilliseconds(31),
             () =>
             {
@@ -86,8 +86,8 @@ public class BalatroShaderBackground : View
     {
         try
         {
-            int screenCols = MotelyTUI.App?.Driver?.Cols ?? 80;
-            int screenRows = MotelyTUI.App?.Driver?.Rows ?? 24;
+            int screenCols = Application.Driver?.Cols ?? 80;
+            int screenRows = Application.Driver?.Rows ?? 24;
 
             // Half-block: 2 vertical pixels per character
             int bufferWidth = screenCols;
@@ -112,10 +112,10 @@ public class BalatroShaderBackground : View
 
     public void DrawToScreen()
     {
-        if (_frameBuffer == null || MotelyTUI.App?.Driver == null)
+        if (_frameBuffer == null || Application.Driver == null)
             return;
 
-        var driver = MotelyTUI.App.Driver;
+        var driver = Application.Driver;
         var upperHalf = new System.Text.Rune('▀');
         int maxRows = Math.Min(driver.Rows - 1, _bufferHeight / 2); // -1 to leave room for status line
         int maxCols = Math.Min(driver.Cols, _bufferWidth);

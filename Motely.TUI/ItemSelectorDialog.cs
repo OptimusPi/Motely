@@ -13,7 +13,7 @@ public class ItemSelectorDialog : Dialog
         Width = 50;
         Height = 24;
 
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         var items = GetItemsForCategory(category);
         var itemStrings = items.Select((item, index) => $"{item}").ToArray();
@@ -27,9 +27,8 @@ public class ItemSelectorDialog : Dialog
             Width = Dim.Fill() - 2,
             Text = $"Selected: {items[0]}",
         };
-        selectionLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
-        );
+        selectionLabel.ColorScheme =
+            new ColorScheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) };
         Add(selectionLabel);
 
         var listView = new ListView()
@@ -40,14 +39,14 @@ public class ItemSelectorDialog : Dialog
             Height = Dim.Fill() - 9,
             CanFocus = true,
         };
-        listView.SetScheme(BalatroTheme.ListView);
+        listView.ColorScheme = BalatroTheme.ListView;
         listView.SetSource(new ObservableCollection<string>(itemStrings));
         listView.SelectedItem = 0;
 
         // Update selection label when navigating
-        listView.ValueChanged += (s, e) =>
+        listView.SelectedItemChanged += (s, e) =>
         {
-            var idx = listView.SelectedItem ?? 0;
+            var idx = listView.SelectedItem;
             if (idx >= 0 && idx < items.Length)
             {
                 selectionLabel.Text = $"Selected: {items[idx]}";
@@ -57,14 +56,14 @@ public class ItemSelectorDialog : Dialog
         // Double-click to select
         listView.Accepting += (s, e) =>
         {
-            var selectedIndex = listView.SelectedItem ?? 0;
+            var selectedIndex = listView.SelectedItem;
             if (selectedIndex >= 0 && selectedIndex < items.Length)
             {
                 SelectedItem = items[selectedIndex];
                 BanItem = banToggled;
-                App?.RequestStop(this);
+                Application.RequestStop(this);
             }
-            e.Handled = true;
+            e.Cancel = true;
         };
 
         Add(listView);
@@ -76,15 +75,14 @@ public class ItemSelectorDialog : Dialog
             Y = Pos.AnchorEnd(5),
             Text = " [ ] Ban Item (B) ",
         };
-        banBtn.SetScheme(
-            new Scheme()
+        banBtn.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.DarkRed),
                 HotNormal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
                 HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkRed),
-            }
-        );
+            };
         banBtn.Accept += (s, e) =>
         {
             banToggled = !banToggled;
@@ -101,15 +99,15 @@ public class ItemSelectorDialog : Dialog
             Text = "Add to Filter",
             TextAlignment = Alignment.Center,
         };
-        addBtn.SetScheme(BalatroTheme.BlueButton);
+        addBtn.ColorScheme = BalatroTheme.BlueButton;
         addBtn.Accept += (s, e) =>
         {
-            var selectedIndex = listView.SelectedItem ?? 0;
+            var selectedIndex = listView.SelectedItem;
             if (selectedIndex >= 0 && selectedIndex < items.Length)
             {
                 SelectedItem = items[selectedIndex];
                 BanItem = banToggled;
-                App?.RequestStop(this);
+                Application.RequestStop(this);
             }
         };
         Add(addBtn);
@@ -123,11 +121,11 @@ public class ItemSelectorDialog : Dialog
             Text = "Back",
             TextAlignment = Alignment.Center,
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
         cancelBtn.Accept += (s, e) =>
         {
             SelectedItem = null;
-            App?.RequestStop(this);
+            Application.RequestStop(this);
         };
         Add(cancelBtn);
 
@@ -136,24 +134,24 @@ public class ItemSelectorDialog : Dialog
         {
             if (e.KeyCode == KeyCode.Enter)
             {
-                var selectedIndex = listView.SelectedItem ?? 0;
+                var selectedIndex = listView.SelectedItem;
                 if (selectedIndex >= 0 && selectedIndex < items.Length)
                 {
                     SelectedItem = items[selectedIndex];
                     BanItem = banToggled;
-                    App?.RequestStop(this);
+                    Application.RequestStop(this);
                 }
                 e.Handled = true;
             }
             else if (e.KeyCode == KeyCode.B)
             {
                 // Quick ban: select item and mark as banned
-                var selectedIndex = listView.SelectedItem ?? 0;
+                var selectedIndex = listView.SelectedItem;
                 if (selectedIndex >= 0 && selectedIndex < items.Length)
                 {
                     SelectedItem = items[selectedIndex];
                     BanItem = true;
-                    App?.RequestStop(this);
+                    Application.RequestStop(this);
                 }
                 e.Handled = true;
             }

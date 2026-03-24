@@ -1,6 +1,5 @@
 using Motely.HomeControlAPI;
 using Terminal.Gui;
-using Terminal.Gui.Views;
 
 namespace Motely.TUI;
 
@@ -44,7 +43,7 @@ public static class MotelyTUI
             Y = 8,
             Text = " Exit ",
         };
-        exitBtn.Accept += (_, _) => _app?.RequestStop();
+        exitBtn.Accept += (_, _) => Application.RequestStop(Application.Top);
         v.Add(label, exitBtn);
         exitBtn.SetFocus();
         return v;
@@ -53,8 +52,6 @@ public static class MotelyTUI
     private static BalatroShaderBackground? _shaderBackground;
     private static Window? _desktop;
     private static MainMenuWindow? _mainMenu;
-    private static IApplication? _app;
-
     /// <summary>Window stack — open overlay windows in order they were opened.</summary>
     private static readonly List<Window> _windowStack = [];
 
@@ -63,12 +60,6 @@ public static class MotelyTUI
     [
         (0, 0), (2, 1), (4, 2), (6, 3), (8, 4), (10, 5),
     ];
-
-    /// <summary>
-    /// The v2 instance-based application context.
-    /// Views should use View.App property, but this is available for static access if needed.
-    /// </summary>
-    public static IApplication? App => _app;
 
     /// <summary>Number of overlay windows currently open.</summary>
     public static int OpenWindowCount => _windowStack.Count;
@@ -157,8 +148,7 @@ public static class MotelyTUI
 
         try
         {
-            _app = Application.Create();
-            _app.Init();
+            Application.Init();
         }
         catch (Exception ex)
         {
@@ -220,7 +210,7 @@ public static class MotelyTUI
                 }
             }
 
-            _app.Run(_desktop);
+            Application.Run(_desktop);
             return 0;
         }
         catch (Exception ex)
@@ -234,7 +224,7 @@ public static class MotelyTUI
             _windowStack.Clear();
             try
             {
-                (_app as IDisposable)?.Dispose();
+                Application.Shutdown();
             }
             catch (Exception ex)
             {

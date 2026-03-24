@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text;
 using SixLabors.ImageSharp.PixelFormats;
-using Color = Terminal.Gui.Drawing.Color;
 using SLImage = SixLabors.ImageSharp.Image;
 
 namespace Motely.TUI;

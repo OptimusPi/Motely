@@ -27,10 +27,10 @@ public class ApiServerWindow : Window
         Title = "API Server";
         X = Pos.Center();
         Y = Pos.Center();
-        Width = Dim.Percent(85); // Use 85% of screen width
-        Height = 25; // Taller for bigger request log
+        Width = Dim.Percent(80); // Use 80% of screen width
+        Height = 24; // Taller for bigger request log
         CanFocus = true;
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         // Status row
         _statusLabel = new Label()
@@ -39,9 +39,8 @@ public class ApiServerWindow : Window
             Y = 1,
             Text = "Starting...",
         };
-        _statusLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) }
-        );
+        _statusLabel.ColorScheme =
+            new ColorScheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) };
         Add(_statusLabel);
 
         // URL (clickable hint) - full width to show complete URL
@@ -52,12 +51,11 @@ public class ApiServerWindow : Window
             Width = Dim.Fill() - 2,
             Text = _serverUrl,
         };
-        _urlLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.Blue, BalatroTheme.ModalGrey) }
-        );
+        _urlLabel.ColorScheme =
+            new ColorScheme() { Normal = new Attribute(BalatroTheme.Blue, BalatroTheme.ModalGrey) };
         _urlLabel.MouseEvent += (s, e) =>
         {
-            if (e.Flags.HasFlag(MouseFlags.LeftButtonClicked))
+            if (e.Flags.HasFlag(MouseFlags.Button1Clicked))
             {
                 CopyToClipboard(_serverUrl);
                 LogMessage($"[CLIPBOARD] Copied URL: {_serverUrl}");
@@ -73,7 +71,7 @@ public class ApiServerWindow : Window
             Y = 1,
             Text = "Open Web UI",
         };
-        openWebButton.SetScheme(BalatroTheme.GreenButton);
+        openWebButton.ColorScheme = BalatroTheme.GreenButton;
         openWebButton.Accept += (s, e) => OpenInBrowser(_serverUrl);
         Add(openWebButton);
 
@@ -89,7 +87,7 @@ public class ApiServerWindow : Window
             Height = Dim.Fill() - 4, // Leave room for buttons at bottom
             Title = "Request Log",
         };
-        logFrame.SetScheme(BalatroTheme.InnerPanel);
+        logFrame.ColorScheme = BalatroTheme.InnerPanel;
         Add(logFrame);
 
         // Copy Logs button inside the frame
@@ -99,18 +97,18 @@ public class ApiServerWindow : Window
             Y = 0,
             Text = "Copy Logs",
         };
-        copyLogsButton.SetScheme(BalatroTheme.BackButton); // Orange
+        copyLogsButton.ColorScheme = BalatroTheme.BackButton; // Orange
         copyLogsButton.Accept += (s, e) =>
         {
             CopyToClipboard(_logView.Text);
             copyLogsButton.Text = "COPIED!";
-            copyLogsButton.SetScheme(BalatroTheme.GreenButton);
-            MotelyTUI.App?.AddTimeout(
+            copyLogsButton.ColorScheme = BalatroTheme.GreenButton;
+            Application.AddTimeout(
                 TimeSpan.FromSeconds(1),
                 () =>
                 {
                     copyLogsButton.Text = "Copy Logs";
-                    copyLogsButton.SetScheme(BalatroTheme.BackButton);
+                    copyLogsButton.ColorScheme = BalatroTheme.BackButton;
                     return false;
                 }
             );
@@ -127,13 +125,12 @@ public class ApiServerWindow : Window
             WordWrap = true,
             CanFocus = true,
         };
-        _logView.SetScheme(
-            new Scheme()
+        _logView.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
-            }
-        );
+            };
         logFrame.Add(_logView);
 
         // Stop Server button - red, above Back
@@ -145,7 +142,7 @@ public class ApiServerWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        _stopButton.SetScheme(BalatroTheme.RedButton);
+        _stopButton.ColorScheme = BalatroTheme.RedButton;
         _stopButton.Accept += (s, e) => _ = StopServerSafeAsync();
         Add(_stopButton);
 
@@ -158,7 +155,7 @@ public class ApiServerWindow : Window
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        backButton.SetScheme(BalatroTheme.BackButton);
+        backButton.ColorScheme = BalatroTheme.BackButton;
         backButton.Accept += (s, e) => AttemptClose();
         Add(backButton);
 
@@ -197,15 +194,14 @@ public class ApiServerWindow : Window
             await _server.StartAsync(_cts.Token);
 
             // Update status AFTER server actually starts
-            App?.Invoke(() =>
+            Application.Invoke(() =>
             {
                 _statusLabel.Text = "Running";
-                _statusLabel.SetScheme(
-                    new Scheme()
+                _statusLabel.ColorScheme =
+                    new ColorScheme()
                     {
                         Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-                    }
-                );
+                    };
             });
 
             var version = typeof(Motely.HomeControlAPI.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
@@ -221,15 +217,14 @@ public class ApiServerWindow : Window
         catch (Exception ex)
         {
             LogMessage($"[ERROR] {ex.Message}");
-            App?.Invoke(() =>
+            Application.Invoke(() =>
             {
                 _statusLabel.Text = "Failed";
-                _statusLabel.SetScheme(
-                    new Scheme()
+                _statusLabel.ColorScheme =
+                    new ColorScheme()
                     {
                         Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-                    }
-                );
+                    };
             });
         }
         finally
@@ -261,15 +256,14 @@ public class ApiServerWindow : Window
             Console.SetError(originalError);
 
             _isRunning = false;
-            App?.Invoke(() =>
+            Application.Invoke(() =>
             {
                 _statusLabel.Text = "Stopped";
-                _statusLabel.SetScheme(
-                    new Scheme()
+                _statusLabel.ColorScheme =
+                    new ColorScheme()
                     {
                         Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
-                    }
-                );
+                    };
                 _stopButton.Visible = false; // Hide when server stops (back button remains)
             });
 
@@ -296,7 +290,7 @@ public class ApiServerWindow : Window
             return;
 
         // Update UI immediately - don't wait for anything
-        App?.Invoke(() =>
+        Application.Invoke(() =>
         {
             _stopButton.Enabled = false;
             _stopButton.Text = "Stopping...";
@@ -330,7 +324,7 @@ public class ApiServerWindow : Window
         }
 
         LogMessage("Server stopped.");
-        App?.Invoke(() => _stopButton.Visible = false);
+        Application.Invoke(() => _stopButton.Visible = false);
     }
 
     private void AttemptClose()
@@ -348,7 +342,7 @@ public class ApiServerWindow : Window
     private async Task StopAndCloseAsync()
     {
         await StopServerOnlyAsync();
-        App?.Invoke(() => MotelyTUI.CloseWindow(this));
+        Application.Invoke(() => MotelyTUI.CloseWindow(this));
     }
 
     private bool ShowStopConfirmDialog()
@@ -359,7 +353,7 @@ public class ApiServerWindow : Window
             Width = 60,
             Height = 9,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var label = new Label()
         {
@@ -378,11 +372,11 @@ public class ApiServerWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " Stop & Close ",
         };
-        stopBtn.SetScheme(BalatroTheme.RedButton);
+        stopBtn.ColorScheme = BalatroTheme.RedButton;
         stopBtn.Accept += (s, e) =>
         {
             stop = true;
-            MotelyTUI.App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
         dialog.Add(stopBtn);
 
@@ -392,15 +386,15 @@ public class ApiServerWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = " Cancel ",
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
         cancelBtn.Accept += (s, e) =>
         {
             stop = false;
-            MotelyTUI.App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
         dialog.Add(cancelBtn);
 
-        MotelyTUI.App?.Run(dialog);
+        Application.Run(dialog);
         return stop;
     }
 
@@ -486,7 +480,7 @@ public class ApiServerWindow : Window
     {
         try
         {
-            App?.Invoke(() =>
+            Application.Invoke(() =>
             {
                 _logView.Text += message + "\n";
                 _logView.MoveEnd();

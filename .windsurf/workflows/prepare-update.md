@@ -5,7 +5,9 @@ auto_execution_mode: 3
 
 # Prepare Update
 
-Bumps the MotelyVersion, cleans everything, builds the solution, publishes **Motely** for `net10.0-browser` (Bootsharp), stages **`motely-wasm`**, and walks the user through npm publish. The old **`Motely.NodeAddon`** / `Motely.npm` flow is gone.
+Bumps the MotelyVersion, cleans everything, builds the solution, publishes **`Motely.Orchestration`** with **`WasmBuild=true`** (Bootsharp / browser-wasm), stages **`motely-wasm`**, optionally builds Node (`NodeBuild`), and walks the user through npm publish.
+
+**Ground truth:** repo-root **`AGENTS.md`**. Older instructions that publish **`Motely/Motely.csproj`** with **`-f net10.0-browser`** are **obsolete** for this tree (engine is `net10.0` only; WASM entry is Orchestration).
 
 **User provides**: the new version number — OR if not specified, read the current `<MotelyVersion>` from `Directory.Packages.props` and auto-increment the patch (e.g. `2.2.1` → `2.2.2`).
 
@@ -89,52 +91,83 @@ dotnet run --project x:\JammySeedFinder\src\MotelyJAML\Motely.CLI\Motely.CLI.csp
 
 ## Step 7: Publish browser WASM (Bootsharp)
 
-`Motely` multi-targets `net10.0-browser`. Publish, then run `motely-wasm`'s build script (`Motely/build/stage-wasm.mjs` copies `bootsharp/` into `motely-wasm/dist/`).
+Publish **`Motely.Orchestration`** with **`-p:WasmBuild=true`**, then stage into `motely-wasm/dist/`.
+
+**Preferred (one command):**
 
 // turbo
 
 ```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely\Motely.csproj -c Release -f net10.0-browser
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-wasm install
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-wasm run build
+node x:\JammySeedFinder\src\MotelyJAML\build.mjs wasm
 ```
 
-Verify staged output:
+**Manual:**
 
 // turbo
 
 ```powershell
-Test-Path x:\JammySeedFinder\src\MotelyJAML\motely-wasm\dist\bootsharp\index.mjs
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.Orchestration\Motely.Orchestration.csproj -c Release -p:WasmBuild=true
+node x:\JammySeedFinder\src\MotelyJAML\Motely\build\stage-wasm.mjs
+```
+
+Verify staged output (current stager puts **`index.mjs` at `dist` root**, not under `dist/bootsharp/`):
+
+// turbo
+
+```powershell
+Test-Path x:\JammySeedFinder\src\MotelyJAML\motely-wasm\dist\index.mjs
 ```
 
 ---
 
 ## Step 8: Node native addon
 
-**`Motely.NodeAddon` was removed.** There is no second C# package to publish for Node in this workflow. Browser delivery is **Bootsharp / `net10.0-browser` only**.
+**`Motely.Orchestration`** with **`-p:NodeBuild=true`** publishes the native addon into `motely-node/` (see **`build.mjs`** for RID: `linux-x64` vs `win-x64`).
 
-If you add a new Node `.node` target later, document its `dotnet publish` command and how artifacts land under `motely-node/`. Until then, **skip** `npm pack` for `motely-node` unless you intentionally ship JS-only stubs.
+**Preferred:**
+
+// turbo
+
+```powershell
+node x:\JammySeedFinder\src\MotelyJAML\build.mjs node
+```
+
+**Manual (Linux binary from Windows cross-publish may require your toolchain):**
+
+// turbo
+
+```powershell
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.Orchestration\Motely.Orchestration.csproj -c Release -p:NodeBuild=true -r linux-x64
+```
+
+If Step 8 is skipped, only pack/publish **`motely-wasm`** unless `motely-node` is intentionally JS-only stubs.
 
 ---
 
 ## Step 9: Pack `motely-wasm`
 
+Use a **path** so npm packs the **local** folder (not a registry version):
+
 // turbo
 
 ```powershell
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-wasm pack
+cd x:\JammySeedFinder\src\MotelyJAML
+npm pack ./motely-wasm
 ```
+
+Or: `node build.mjs --pack` (wasm + node + both tarballs; see **`AGENTS.md`**).
 
 ---
 
 ## Step 10: (Optional) Pack `motely-node`
 
-Only when a tested linux-x64 `.node` (or agreed layout) is present.
+Only when Step 8 produced the native artifacts under `motely-node/`.
 
 // turbo
 
 ```powershell
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\motely-node pack
+cd x:\JammySeedFinder\src\MotelyJAML
+npm pack ./motely-node
 ```
 
 ---
@@ -154,7 +187,7 @@ npm login
 npm publish
 ```
 
-`motely-wasm` ships `dist/` (Bootsharp runtime + `index.mjs`). Do not reference removed `Motely.npm` / `Motely.NodeAddon` paths.
+`motely-wasm` ships **`dist/index.mjs`** (+ `types/`, `jaml.schema.json`). Do not follow stale docs that publish **`Motely.csproj`** for browser.
 
 Wait for user to confirm they published.
 

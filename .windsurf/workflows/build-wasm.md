@@ -1,36 +1,48 @@
 # Build WASM (browser)
 
-Build **`Motely`** for `net10.0-browser` (Bootsharp) and stage into **`motely-wasm/dist/`**.
+Build **`Motely.Orchestration`** with **`WasmBuild=true`** (Bootsharp + NativeAOT-LLVM for `browser-wasm`), then stage into **`motely-wasm/dist/`**.
 
-## Quick build
+**Do not** publish `Motely/Motely.csproj` with `-f net10.0-browser` — the engine project is **`net10.0` only**; the browser entry is **Orchestration**. See repo-root **`AGENTS.md`**.
+
+## Quick build (recommended)
+
+From repo root:
 
 ```bash
-dotnet publish Motely/Motely.csproj -c Release -f net10.0-browser
-npm --prefix motely-wasm install
-npm --prefix motely-wasm run build
+node build.mjs wasm
 ```
 
-(`motely-wasm`'s `build` script runs `Motely/build/stage-wasm.mjs`, which copies `publish/bootsharp` → `motely-wasm/dist/bootsharp` and writes `dist/index.mjs`.)
+This restores/builds/publishes Orchestration with `-p:WasmBuild=true` and copies Bootsharp output into `motely-wasm/dist/`.
+
+## Manual equivalent
+
+```bash
+dotnet publish Motely.Orchestration/Motely.Orchestration.csproj -c Release -p:WasmBuild=true
+node Motely/build/stage-wasm.mjs
+```
+
+(`stage-wasm.mjs` reads **`Motely.Orchestration/bin/bootsharp/`** and writes **`motely-wasm/dist/index.mjs`**, `dist/types/`, `dist/jaml.schema.json`.)
 
 ## What this produces
 
-- `Motely/bin/Release/net10.0-browser/publish/bootsharp/` (publish output)
-- `motely-wasm/dist/bootsharp/` + `motely-wasm/dist/index.mjs` (staged npm payload)
-
-Legacy paths (`Motely.BrowserWasm`, `Motely.SingleThread`, `Motely.npm`, root `stage-packages.mjs`) are **removed** from the tree.
+- Publish output: under `Motely.Orchestration/bin/Release/net10.0/browser-wasm/` (and Bootsharp bundle under `Motely.Orchestration/bin/bootsharp/` as produced by the toolchain).
+- npm payload: **`motely-wasm/dist/index.mjs`** (+ `types/`, `jaml.schema.json` when present).
 
 ## Requirements
 
 - .NET 10 SDK
-- wasm-tools workload: `dotnet workload install wasm-tools`
-- wasm-experimental workload: `dotnet workload install wasm-experimental` (if your SDK still expects it)
+- Experimental LLVM / wasm workload chain as required by your SDK (see Bootsharp / ILCompiler docs for this repo’s versions).
 
 ## Troubleshooting
 
 ### wasm-opt crashes
 
-If applicable, disable in the browser target: `<WasmRunWasmOpt>false</WasmRunWasmOpt>`
+If applicable, disable in the relevant project: `<WasmRunWasmOpt>false</WasmRunWasmOpt>` (only if your target supports it).
 
 ### Missing SharedArrayBuffer
 
 Threads + WASM may require COOP/COEP headers on the host page.
+
+### Copy / PDB errors after a failed or overlapping build
+
+Stop other `dotnet` processes, clean `bin`/`obj` for the projects involved, then **one** full publish. See **`AGENTS.md`**.
