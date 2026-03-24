@@ -6,5 +6,5 @@
   "DefaultSource": "",
   "DefaultSink": "",
   "WorkerPoolUrl": "https://www.seedfinder.app",
-  "WorkerThreads": 16
+  "WorkerThreads": 2
 }
