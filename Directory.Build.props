@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <!-- Prevent stale Visual Studio fallback package folders from leaking into restore/build. -->
     <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
+    <Version>$(MotelyVersion)</Version>
   </PropertyGroup>
 </Project>
