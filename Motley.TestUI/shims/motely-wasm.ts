@@ -4,17 +4,17 @@
  */
 function stubContext() {
   return {
-    beginShopStream(_ante: number) {},
+    beginShopStream(_ante: number) { },
     getNextShopItem(): never {
       throw new Error(
         'Motely WASM not installed: motely-wasm package is missing dist/. Build Motely.BrowserWasm (Bootsharp) and link the motely-wasm folder.'
       )
     },
-    dispose() {},
+    dispose() { },
   }
 }
 
-export async function boot(): Promise<void> {}
+export async function boot(): Promise<void> { }
 
 const MotelyBrowserApi = {
   createSingleSearchContext(_seed: string, _deck: string, _stake: string) {

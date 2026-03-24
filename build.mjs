@@ -11,7 +11,7 @@
 // Plain `npm pack motely-wasm` can resolve npm registry and produce wrong/old tarballs.
 
 import { execSync } from "child_process";
-import { readFileSync, writeFileSync, cpSync, mkdirSync, existsSync, copyFileSync, readdirSync, unlinkSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, copyFileSync, readdirSync, unlinkSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -21,6 +21,12 @@ const doPack = args.includes("--pack");
 const targets = args.filter(a => !a.startsWith("--"));
 const buildWasm = targets.length === 0 || targets.includes("wasm");
 const buildNode = targets.length === 0 || targets.includes("node");
+
+function assertExists(path, label) {
+  if (!existsSync(path)) {
+    throw new Error(`Missing ${label}: ${path}`);
+  }
+}
 
 // ── Version sync ──────────────────────────────────────────────
 const props = readFileSync(resolve(root, "Directory.Packages.props"), "utf8");
@@ -71,15 +77,10 @@ if (buildWasm) {
   run(`dotnet build ${wasmCsproj} -c Release ${wasmProps}`, "motely-wasm: build");
   run(`dotnet publish ${wasmCsproj} -c Release ${wasmProps}`, "motely-wasm: publish (NativeAOT-LLVM → browser-wasm)");
 
-  // Stage bootsharp output → motely-wasm/dist/
-  const src = resolve(root, "Motely.Orchestration/bin/bootsharp");
-  const dst = resolve(root, "motely-wasm/dist");
-  mkdirSync(dst, { recursive: true });
-  copyFileSync(resolve(src, "index.mjs"), resolve(dst, "index.mjs"));
-  if (existsSync(resolve(src, "types"))) {
-    cpSync(resolve(src, "types"), resolve(dst, "types"), { recursive: true, force: true });
-  }
-  console.log(`  staged → motely-wasm/dist/`);
+  run("node Motely/build/stage-wasm.mjs", "motely-wasm: stage npm package");
+
+  assertExists(resolve(root, "motely-wasm/dist/index.mjs"), "motely-wasm entry");
+  assertExists(resolve(root, "motely-wasm/dist/bootsharp/dotnet.js"), "motely-wasm bootsharp runtime");
 
   if (doPack) {
     run("npm pack ./motely-wasm", "npm pack motely-wasm");
@@ -105,7 +106,6 @@ if (buildNode) {
   // Stage output → motely-node/
   const pubDir = resolve(root, `Motely.Orchestration/bin/Release/net10.0/${rid}/publish`);
   const nodeDst = resolve(root, "motely-node");
-  const ext = isWin ? ".dll" : ".so";
 
   // Copy .node, .d.ts, .cjs, .mjs
   for (const suffix of [".node", ".d.ts", ".cjs", ".mjs"]) {
@@ -126,6 +126,10 @@ if (buildNode) {
       console.log(`  staged Motely.Orchestration${suffix} (from gen)`);
     }
   }
+
+  assertExists(resolve(nodeDst, "Motely.Orchestration.node"), "motely-node native addon");
+  assertExists(resolve(nodeDst, "Motely.Orchestration.d.ts"), "motely-node typings");
+  assertExists(resolve(nodeDst, "Motely.Orchestration.mjs"), "motely-node ESM entry");
 
   if (doPack) {
     run("npm pack ./motely-node", "npm pack motely-node");
