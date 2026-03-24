@@ -36,11 +36,22 @@ function Sync-Version($pkg) {
     Write-Host "  $pkg/package.json -> $new"
 }
 
+function Ensure-NpmPublishAccess($pkg) {
+    $who = & npm whoami 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($who | Out-String))) {
+        Write-Error "npm authentication required before publishing $pkg. Run 'npm login' and verify the current account has publish access to '$pkg'."
+    }
+
+    $user = ($who | Out-String).Trim()
+    Write-Host "  npm authenticated as $user"
+}
+
 # ── motely-wasm ───────────────────────────────────────────────
 Write-Host "`n── motely-wasm ──"
 dotnet publish $csproj -c Release -p:WasmBuild=true
 if ($LASTEXITCODE -ne 0) { Write-Error 'motely-wasm build failed' }
 Sync-Version 'motely-wasm'
+Ensure-NpmPublishAccess 'motely-wasm'
 npm publish ./motely-wasm
 
 # ── motely-node (Docker → linux-x64) ─────────────────────────
@@ -67,6 +78,7 @@ if (Test-Path $dtsFile) {
 }
 
 Sync-Version 'motely-node'
+Ensure-NpmPublishAccess 'motely-node'
 npm publish ./motely-node
 
 Write-Host "`n  done: motely-wasm@$new + motely-node@$new`n"
