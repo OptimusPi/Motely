@@ -1,57 +1,72 @@
 #!/usr/bin/env pwsh
-# publish-all.ps1 — Build, pack, and publish motely-wasm + motely-node
-# Run from: X:\JammySeedFinder\src\MotelyJAML\
-set-strictmode -version latest
+# publish.ps1 — bump, build, publish motely-wasm + motely-node
+# motely-wasm: builds natively (browser-wasm, no platform dependency)
+# motely-node: builds inside Docker (linux-x64 NativeAOT)
+#
+# Sources:
+#   https://bootsharp.com/guide/getting-started
+#   https://microsoft.github.io/node-api-dotnet/scenarios/js-aot-module.html
+
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-
 $root = $PSScriptRoot
-$buildScript = "$root\build.mjs"
-$wasmPkg = "$root\motely-wasm"
-$nodePkg = "$root\motely-node"
+$csproj = 'Motely.Orchestration/Motely.Orchestration.csproj'
 
-# Write-Host "`n=== Step 1: Run tests ===" -ForegroundColor Cyan
-# dotnet test "$root\Motely.Tests" -c Release --no-restore
-# if ($LASTEXITCODE -ne 0) { Write-Host "TESTS FAILED. Fix them first." -ForegroundColor Red; exit 1 }
-# Write-Host "Tests passed." -ForegroundColor Green
+# ── Bump version ──────────────────────────────────────────────
+$propsPath = Join-Path $root 'Directory.Packages.props'
+$props = Get-Content $propsPath -Raw
+if ($props -notmatch '<MotelyVersion>(\d+)\.(\d+)\.(\d+)</MotelyVersion>') {
+    Write-Error 'MotelyVersion not found in Directory.Packages.props'
+}
+$maj, $min, $pat = [int]$Matches[1], [int]$Matches[2], [int]$Matches[3]
+$old = "$maj.$min.$pat"
+$pat++
+$new = "$maj.$min.$pat"
+$props = $props -replace '<MotelyVersion>[^<]+<', "<MotelyVersion>$new<"
+Set-Content $propsPath $props -NoNewline
+Write-Host "`n  version: $old -> $new`n"
 
-if (-not (Test-Path $buildScript)) { Write-Host "build.mjs not found." -ForegroundColor Red; exit 1 }
+# ── Helper: write version into package.json right before npm publish ──
+function Sync-Version($pkg) {
+    $p = Join-Path $root $pkg 'package.json'
+    if (!(Test-Path $p)) { Write-Error "$p not found" }
+    $j = Get-Content $p -Raw | ConvertFrom-Json
+    $j.version = $new
+    $j | ConvertTo-Json -Depth 10 | Set-Content $p
+    Write-Host "  $pkg/package.json -> $new"
+}
 
-Write-Host "`n=== Step 2: Build WASM package (NativeAOT-LLVM / Bootsharp) ===" -ForegroundColor Cyan
-Write-Host "Output: $wasmPkg\dist\" -ForegroundColor DarkGray
-node $buildScript wasm
-if ($LASTEXITCODE -ne 0) { Write-Host "WASM package build failed." -ForegroundColor Red; exit 1 }
-Write-Host "WASM package build OK." -ForegroundColor Green
+# ── motely-wasm ───────────────────────────────────────────────
+Write-Host "`n── motely-wasm ──"
+dotnet publish $csproj -c Release -p:WasmBuild=true
+if ($LASTEXITCODE -ne 0) { Write-Error 'motely-wasm build failed' }
+Sync-Version 'motely-wasm'
+npm publish ./motely-wasm
 
-Write-Host "`n=== Step 3: Build Node package (NativeAOT) ===" -ForegroundColor Cyan
-Write-Host "Output: $nodePkg\" -ForegroundColor DarkGray
-node $buildScript node
-if ($LASTEXITCODE -ne 0) { Write-Host "Node package build failed." -ForegroundColor Red; exit 1 }
-Write-Host "Node package build OK." -ForegroundColor Green
+# ── motely-node (Docker → linux-x64) ─────────────────────────
+# NativeAOT needs clang for linking. The dotnet/sdk image doesn't include it.
+# Source: https://aka.ms/nativeaot-prerequisites
+Write-Host "`n── motely-node ──"
+docker run --rm -v "${root}:/src" -w /src mcr.microsoft.com/dotnet/sdk:10.0 `
+    bash -c "apt-get update -qq && apt-get install -y -qq clang zlib1g-dev > /dev/null 2>&1 && dotnet publish $csproj -c Release -p:NodeBuild=true -p:PackNpmPackage=false"
+if ($LASTEXITCODE -ne 0) { Write-Error 'motely-node build failed' }
 
-# Show versions
-$wasmVer = (Get-Content "$wasmPkg\package.json" | ConvertFrom-Json).version
-$nodeVer = (Get-Content "$nodePkg\package.json" | ConvertFrom-Json).version
-Write-Host "`n=== Ready to publish ===" -ForegroundColor Green
-Write-Host "  motely-wasm@$wasmVer  ($wasmPkg)" -ForegroundColor Yellow
-Write-Host "  motely-node@$nodeVer  ($nodePkg)" -ForegroundColor Yellow
+# Copy the linux .node binary from Docker build output into motely-node/
+$pubDir = Join-Path $root 'Motely.Orchestration/bin/Release/net10.0/linux-x64/publish'
+$nodeFile = Join-Path $pubDir 'Motely.Orchestration.node'
+if (!(Test-Path $nodeFile)) { Write-Error "Linux .node binary not found at $nodeFile" }
+Copy-Item $nodeFile (Join-Path $root 'motely-node/Motely.Orchestration.node') -Force
+Write-Host "  copied linux-x64 .node binary"
 
-Write-Host ""
-$confirm = Read-Host "Publish both to npm? (y/N)"
-if ($confirm -ne 'y') { Write-Host "Aborted." -ForegroundColor DarkGray; exit 0 }
+# Copy generated .d.ts from build output
+$genDir = Join-Path $root 'Motely.Orchestration/bin/Release/net10.0/linux-x64'
+$dtsFile = Join-Path $genDir 'Motely.Orchestration.d.ts'
+if (Test-Path $dtsFile) {
+    Copy-Item $dtsFile (Join-Path $root 'motely-node/Motely.Orchestration.d.ts') -Force
+    Write-Host "  copied .d.ts"
+}
 
-Write-Host "`nPublishing motely-wasm@$wasmVer..." -ForegroundColor Cyan
-Push-Location $wasmPkg
-npm publish --access public
-Pop-Location
-if ($LASTEXITCODE -ne 0) { Write-Host "motely-wasm publish failed." -ForegroundColor Red; exit 1 }
+Sync-Version 'motely-node'
+npm publish ./motely-node
 
-Write-Host "Publishing motely-node@$nodeVer..." -ForegroundColor Cyan
-Push-Location $nodePkg
-npm publish --access public
-Pop-Location
-if ($LASTEXITCODE -ne 0) { Write-Host "motely-node publish failed." -ForegroundColor Red; exit 1 }
-
-Write-Host "`n=== ALL DONE ===" -ForegroundColor Green
-Write-Host "  motely-wasm@$wasmVer  published" -ForegroundColor Green
-Write-Host "  motely-node@$nodeVer  published" -ForegroundColor Green
-Write-Host "`nNext: cd X:\JAMMY && pnpm add motely-wasm@$wasmVer motely-node@$nodeVer" -ForegroundColor DarkGray
+Write-Host "`n  done: motely-wasm@$new + motely-node@$new`n"

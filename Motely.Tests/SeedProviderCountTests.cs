@@ -14,19 +14,19 @@ public class SeedProviderCountTests
     public void GetPaddedSeedCount_MatchesExpectedCount(string keyword, int padLen, int expected)
     {
         char[] validChars = ['A', 'B', 'C'];
-        int actual = MotelyCore.GetPaddedSeedCount(keyword, padLen, validChars);
+        ulong actual = MotelyCore.GetPaddedSeedCount(keyword, padLen, validChars);
 
-        Assert.Equal(expected, actual);
+        Assert.Equal((ulong)expected, actual);
     }
 
     [Fact]
     public void GeneratePaddedSeeds_YieldsExpectedCount_ForPadLenGreaterThanThree()
     {
         char[] validChars = ['A', 'B', 'C'];
-        int expected = MotelyCore.GetPaddedSeedCount("JUST", 4, validChars);
+        ulong expected = MotelyCore.GetPaddedSeedCount("JUST", 4, validChars);
         int actual = MotelyCore.GeneratePaddedSeeds("JUST", 4, validChars).Count();
 
-        Assert.Equal(expected, actual);
+        Assert.Equal((int)expected, actual);
     }
 
     [Fact]
