@@ -4,6 +4,7 @@ import { MotelyWasm } from 'motely-wasm'
 import type {
   MotelyBenchSizes,
   MotelyBenchTwoK,
+  ShopBenchRangeTimings,
   ShopStreamCacheMetaMotely,
   ShopStreamRow,
 } from './shopStreamShared'
@@ -50,6 +51,26 @@ function shopItemDtoToRow(dto: unknown): Pick<ShopStreamRow, 'type' | 'name' | '
     : { type: typeStr, name: nameStr }
 }
 
+function nowMs() {
+  return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+}
+
+function measureShopBenchRanges(next: () => void): ShopBenchRangeTimings {
+  const t0 = nowMs()
+  for (let i = 0; i < 100; i++) next()
+  const t1 = nowMs()
+  for (let i = 0; i < 9_900; i++) next()
+  const t2 = nowMs()
+  for (let i = 0; i < 2; i++) next()
+  const t3 = nowMs()
+
+  return {
+    range0To99Ms: Math.round(t1 - t0),
+    range100To9999Ms: Math.round(t2 - t1),
+    range10000To10001Ms: Math.round(t3 - t2),
+  }
+}
+
 export function useMotelyShopStream(
   seed: string,
   deck: string,
@@ -64,6 +85,7 @@ export function useMotelyShopStream(
   const [lastPullMs, setLastPullMs] = useState<number | null>(null)
   const [motelyBenchTwoK, setMotelyBenchTwoK] = useState<MotelyBenchTwoK | null>(null)
   const [motelyBenchSizes, setMotelyBenchSizes] = useState<MotelyBenchSizes | null>(null)
+  const [benchRangeTimings, setBenchRangeTimings] = useState<ShopBenchRangeTimings | null>(null)
   const [motelyBenchRunning, setMotelyBenchRunning] = useState(false)
 
   const sessionRef = useRef<ReturnType<
@@ -82,6 +104,7 @@ export function useMotelyShopStream(
     setLastPullMs(null)
     setMotelyBenchTwoK(null)
     setMotelyBenchSizes(null)
+    setBenchRangeTimings(null)
     disposeInteropSession(sessionRef.current)
     sessionRef.current = null
 
@@ -119,6 +142,7 @@ export function useMotelyShopStream(
     setLastPullMs(null)
     setMotelyBenchTwoK(null)
     setMotelyBenchSizes(null)
+    setBenchRangeTimings(null)
     try {
       ctx.beginShopStream(ante)
     } catch (e: unknown) {
@@ -203,6 +227,7 @@ export function useMotelyShopStream(
     setMotelyBenchRunning(true)
     setStreamError(null)
     setMotelyBenchSizes(null)
+    setBenchRangeTimings(null)
     try {
       const now =
         typeof performance !== 'undefined' && performance.now ? performance.now : Date.now
@@ -231,6 +256,7 @@ export function useMotelyShopStream(
     setMotelyBenchRunning(true)
     setStreamError(null)
     setMotelyBenchTwoK(null)
+    setBenchRangeTimings(null)
     try {
       const now =
         typeof performance !== 'undefined' && performance.now ? performance.now : Date.now
@@ -254,6 +280,30 @@ export function useMotelyShopStream(
     }
   }, [resetShopStreamAfterSilentBench])
 
+  const runBenchRanges = useCallback((): ShopBenchRangeTimings | null => {
+    const ctx = sessionRef.current
+    if (!ctx || benchLockRef.current) return null
+    benchLockRef.current = true
+    setMotelyBenchRunning(true)
+    setStreamError(null)
+    setMotelyBenchTwoK(null)
+    setMotelyBenchSizes(null)
+    try {
+      const timings = measureShopBenchRanges(() => {
+        ctx.getNextShopItem()
+      })
+      setBenchRangeTimings(timings)
+      resetShopStreamAfterSilentBench()
+      return timings
+    } catch (e: unknown) {
+      setStreamError(e instanceof Error ? e.message : String(e))
+      return null
+    } finally {
+      benchLockRef.current = false
+      setMotelyBenchRunning(false)
+    }
+  }, [resetShopStreamAfterSilentBench])
+
   const copyDebug = useCallback(() => {
     const ctx = sessionRef.current
     const payload = {
@@ -265,17 +315,17 @@ export function useMotelyShopStream(
       rows,
       hasSession: Boolean(ctx),
     }
-    void navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).catch(() => {})
+    void navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).catch(() => { })
   }, [ante, deck, rows, seed, stake])
 
   const cacheMeta: ShopStreamCacheMetaMotely | null =
     streamReady && wasmVersion
       ? {
-          wasmVersion,
-          revealedInQueue: rows.length,
-          infiniteShopStream: true,
-          lastPullMs,
-        }
+        wasmVersion,
+        revealedInQueue: rows.length,
+        infiniteShopStream: true,
+        lastPullMs,
+      }
       : null
 
   return {
@@ -290,8 +340,10 @@ export function useMotelyShopStream(
     copyDebugLabel: 'Copy stream JSON (Motely)',
     motelyBenchTwoK,
     motelyBenchSizes,
+    benchRangeTimings,
     motelyBenchRunning,
     runMotelyBenchTwoK,
     runMotelyBenchSizes,
+    runBenchRanges,
   }
 }

@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react'
 
 const rootDir = __dirname
 const motelyWasmEntry = path.join(rootDir, 'node_modules/motely-wasm/dist/index.mjs')
-const motelyBootsharpEntry = path.join(rootDir, 'node_modules/motely-wasm/bootsharp/index.mjs')
+/** Bootsharp loader + interop (package `dist/bootsharp/` is dotnet.* only, no index.mjs). */
+const motelyBootsharpEntry = path.join(rootDir, 'node_modules/motely-wasm/dist/index.mjs')
 const useMotelyWasmShim = !fs.existsSync(motelyWasmEntry)
 
 // Browser WASM is happier with COOP/COEP when the runtime uses threads; harmless if unused.
