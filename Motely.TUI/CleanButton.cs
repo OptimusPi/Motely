@@ -32,7 +32,7 @@ public class CleanButton : View
         KeyBindings.Add(KeyCode.Enter, Command.Accept);
         KeyBindings.Add(KeyCode.Space, Command.Accept);
         MouseBindings.Clear();
-        MouseBindings.Add(MouseFlags.LeftButtonClicked, Command.Accept);
+        MouseBindings.Add(MouseFlags.Button1Clicked, Command.Accept);
     }
 
     // Track when Width is explicitly set
@@ -73,8 +73,7 @@ public class CleanButton : View
     private void DrawContent()
     {
         var viewport = Viewport;
-        var scheme = GetScheme();
-        var attr = HasFocus ? scheme.Focus : scheme.Normal;
+        var attr = HasFocus ? GetFocusColor() : GetNormalColor();
         SetAttribute(attr);
 
         // Fill entire button area

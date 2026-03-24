@@ -1,0 +1,11 @@
+{
+  "name": "@motely/integration-nextjs-templates",
+  "private": true,
+  "description": "Dev-only: install Next + TypeScript so integration snippets typecheck. Not published to npm.",
+  "devDependencies": {
+    "next": "^16.2.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.9.0"
+  }
+}

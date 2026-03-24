@@ -21,7 +21,7 @@ public class JamlEditorWindow : Window
         Width = Dim.Percent(90);
         Height = Dim.Percent(85);
         CanFocus = true;
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         var toolbar = new View
         {
@@ -38,7 +38,7 @@ public class JamlEditorWindow : Window
             Y = 0,
             Text = " Save ",
         };
-        saveButton.SetScheme(BalatroTheme.GreenButton);
+        saveButton.ColorScheme = BalatroTheme.GreenButton;
         saveButton.Accept += (_, _) => SaveEditorContent();
         toolbar.Add(saveButton);
 
@@ -48,7 +48,7 @@ public class JamlEditorWindow : Window
             Y = 0,
             Text = " Save + Search ",
         };
-        runButton.SetScheme(BalatroTheme.BlueButton);
+        runButton.ColorScheme = BalatroTheme.BlueButton;
         runButton.Accept += (_, _) => SaveAndSearch();
         toolbar.Add(runButton);
 
@@ -58,7 +58,7 @@ public class JamlEditorWindow : Window
             Y = 0,
             Text = " Load Local ",
         };
-        loadButton.SetScheme(BalatroTheme.PurpleButton);
+        loadButton.ColorScheme = BalatroTheme.PurpleButton;
         loadButton.Accept += (_, _) => LoadLocalFilter();
         toolbar.Add(loadButton);
 
@@ -79,7 +79,7 @@ public class JamlEditorWindow : Window
             Height = Dim.Fill() - 7,
             Title = "JAML",
         };
-        editorFrame.SetScheme(BalatroTheme.InnerPanel);
+        editorFrame.ColorScheme = BalatroTheme.InnerPanel;
         Add(editorFrame);
 
         _editor = new TextView
@@ -103,7 +103,7 @@ public class JamlEditorWindow : Window
             Text = "Back",
             TextAlignment = Alignment.Center,
         };
-        backButton.SetScheme(BalatroTheme.BackButton);
+        backButton.ColorScheme = BalatroTheme.BackButton;
         backButton.Accept += (_, _) => MotelyTUI.CloseWindow(this);
         Add(backButton);
 
@@ -156,7 +156,7 @@ public class JamlEditorWindow : Window
             Width = 60,
             Height = 20,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var filterList = new ListView
         {
@@ -173,7 +173,7 @@ public class JamlEditorWindow : Window
 
         void LoadSelected()
         {
-            var selectedIndex = filterList.SelectedItem ?? 0;
+            var selectedIndex = filterList.SelectedItem;
             if (selectedIndex < 0 || selectedIndex >= filters.Count)
                 return;
 
@@ -182,7 +182,7 @@ public class JamlEditorWindow : Window
             Title = $"JAML Editor: {Path.GetFileName(_filePath)}";
             _editor.Text = File.ReadAllText(selected.FullPath);
             _statusLabel.Text = selected.FullPath;
-            App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         }
 
         var loadButton = new CleanButton
@@ -193,7 +193,7 @@ public class JamlEditorWindow : Window
             Text = "Load",
             TextAlignment = Alignment.Center,
         };
-        loadButton.SetScheme(BalatroTheme.BlueButton);
+        loadButton.ColorScheme = BalatroTheme.BlueButton;
         loadButton.Accept += (_, _) => LoadSelected();
         dialog.Add(loadButton);
 
@@ -205,12 +205,12 @@ public class JamlEditorWindow : Window
             Text = "Back",
             TextAlignment = Alignment.Center,
         };
-        backButton.SetScheme(BalatroTheme.BackButton);
-        backButton.Accept += (_, _) => App?.RequestStop(dialog);
+        backButton.ColorScheme = BalatroTheme.BackButton;
+        backButton.Accept += (_, _) => Application.RequestStop(dialog);
         dialog.Add(backButton);
 
         filterList.Accepting += (_, _) => LoadSelected();
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private void SaveEditorContent()
@@ -268,7 +268,7 @@ public class JamlEditorWindow : Window
             Width = 50,
             Height = 10,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var nameLabel = new Label
         {
@@ -293,11 +293,11 @@ public class JamlEditorWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = "Save",
         };
-        saveButton.SetScheme(BalatroTheme.GreenButton);
+        saveButton.ColorScheme = BalatroTheme.GreenButton;
         saveButton.Accept += (_, _) =>
         {
             result = nameField.Text?.ToString();
-            App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
         dialog.Add(saveButton);
 
@@ -307,25 +307,24 @@ public class JamlEditorWindow : Window
             Y = Pos.AnchorEnd(1),
             Text = "Back",
         };
-        backButton.SetScheme(BalatroTheme.BackButton);
-        backButton.Accept += (_, _) => App?.RequestStop(dialog);
+        backButton.ColorScheme = BalatroTheme.BackButton;
+        backButton.Accept += (_, _) => Application.RequestStop(dialog);
         dialog.Add(backButton);
 
-        App?.Run(dialog);
+        Application.Run(dialog);
         return result;
     }
 
     private void ShowMessage(string message, bool isError = false)
     {
         _statusLabel.Text = message;
-        _statusLabel.SetScheme(
-            new Scheme
+        _statusLabel.ColorScheme =
+            new ColorScheme
             {
                 Normal = new Attribute(
                     isError ? BalatroTheme.Red : BalatroTheme.Green,
                     BalatroTheme.DarkGrey
                 ),
-            }
-        );
+            };
     }
 }

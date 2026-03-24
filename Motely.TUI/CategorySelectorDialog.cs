@@ -12,7 +12,7 @@ public class CategorySelectorDialog : Dialog
         Width = 45;
         Height = 15;
 
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         var instructionLabel = new Label()
         {
@@ -44,7 +44,7 @@ public class CategorySelectorDialog : Dialog
             Height = Dim.Fill() - 5,
             CanFocus = true,
         };
-        listView.SetScheme(BalatroTheme.ListView);
+        listView.ColorScheme = BalatroTheme.ListView;
         listView.SetSource(new ObservableCollection<string>(categories));
         listView.SelectedItem = 0; // Select first item by default
 
@@ -53,8 +53,8 @@ public class CategorySelectorDialog : Dialog
         {
             if (e.KeyCode == KeyCode.Enter)
             {
-                SelectedCategory = GetCategoryFromIndex(listView.SelectedItem ?? 0);
-                App?.RequestStop(this);
+                SelectedCategory = GetCategoryFromIndex(listView.SelectedItem);
+                Application.RequestStop(this);
                 e.Handled = true;
                 return;
             }
@@ -78,7 +78,7 @@ public class CategorySelectorDialog : Dialog
             if (category != null)
             {
                 SelectedCategory = category;
-                App?.RequestStop(this);
+                Application.RequestStop(this);
                 e.Handled = true;
             }
         };
@@ -86,9 +86,9 @@ public class CategorySelectorDialog : Dialog
         // Handle mouse click for selection
         listView.Accepting += (s, e) =>
         {
-            SelectedCategory = GetCategoryFromIndex(listView.SelectedItem ?? 0);
-            App?.RequestStop(this);
-            e.Handled = true;
+            SelectedCategory = GetCategoryFromIndex(listView.SelectedItem);
+            Application.RequestStop(this);
+            e.Cancel = true;
         };
 
         Add(listView);
@@ -100,11 +100,11 @@ public class CategorySelectorDialog : Dialog
             Width = Dim.Fill() - 2,
             Text = "Back",
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
         cancelBtn.Accept += (s, e) =>
         {
             SelectedCategory = null;
-            App?.RequestStop(this);
+            Application.RequestStop(this);
         };
         Add(cancelBtn);
 

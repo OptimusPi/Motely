@@ -16,8 +16,8 @@ public class MainMenuWindow : View
         CanFocus = true;
 
         if (UseTransparentViewport)
-            ViewportSettings |= ViewportSettingsFlags.Transparent;
-        SetScheme(BalatroTheme.Title); // Title has transparent background
+            ViewportSettings |= ViewportSettings.Transparent;
+        ColorScheme = BalatroTheme.Title; // Title has transparent background
 
         // Jimbo sprite - ADD FIRST so text layers on top! (use Width for anchor; Frame may be 0 before layout)
         var jimboView = new JimboView() { Y = 1 };
@@ -31,7 +31,7 @@ public class MainMenuWindow : View
             Y = 2,
             Text = JimboArt.Logo,
         };
-        logoLabel.SetScheme(BalatroTheme.Title);
+        logoLabel.ColorScheme = BalatroTheme.Title;
         Add(logoLabel);
 
         // Subtitle under logo - JAML JOTD (Joke Of The Day)
@@ -41,7 +41,7 @@ public class MainMenuWindow : View
             Y = 9,
             Text = MotelyQuips.GetRandomJamlJotd(),
         };
-        subtitleLabel.SetScheme(BalatroTheme.Title);
+        subtitleLabel.ColorScheme = BalatroTheme.Title;
         Add(subtitleLabel);
 
         // ═══════════════════════════════════════════════════════════════
@@ -58,8 +58,8 @@ public class MainMenuWindow : View
             CanFocus = true,
         };
         if (UseTransparentViewport)
-            dockBar.ViewportSettings |= ViewportSettingsFlags.Transparent;
-        dockBar.SetScheme(BalatroTheme.Title); // Transparent scheme
+            dockBar.ViewportSettings |= ViewportSettings.Transparent;
+        dockBar.ColorScheme = BalatroTheme.Title; // Transparent scheme
         Add(dockBar);
 
         // Buttons inside dock: All use DynamicFocusHeight for TAB navigation visual feedback
@@ -100,7 +100,7 @@ public class MainMenuWindow : View
             Height = 3,
             DynamicFocusHeight = true,
         };
-        btnExit.Accept += (s, e) => App?.RequestStop();
+        btnExit.Accept += (s, e) => Application.RequestStop(Application.Top);
         dockBar.Add(btnExit);
 
         var btnConfig = new MenuButton("_CONFIG", BalatroTheme.BackButton)
@@ -169,7 +169,7 @@ public class MainMenuWindow : View
                     e.Handled = true;
                     break;
                 case KeyCode.X:
-                    App?.RequestStop();
+                    Application.RequestStop(Application.Top);
                     e.Handled = true;
                     break;
                 case KeyCode.C:
@@ -192,7 +192,7 @@ public class MainMenuWindow : View
                     e.Handled = true;
                     break;
                 case KeyCode.Esc:
-                    App?.RequestStop();
+                    Application.RequestStop(Application.Top);
                     e.Handled = true;
                     break;
             }
@@ -218,7 +218,7 @@ public class MainMenuWindow : View
             Width = 60,
             Height = 20,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var instructionLabel = new Label()
         {
@@ -238,26 +238,25 @@ public class MainMenuWindow : View
             Height = Dim.Fill() - 7,
             CanFocus = true,
         };
-        filterList.SetScheme(
-            new Scheme()
+        filterList.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
                 HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
                 HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-            }
-        );
+            };
         filterList.SetSource(new ObservableCollection<string>(filterStrings));
         filterList.SelectedItem = 0; // Select first item by default
 
         // Helper to start search
         void StartSearch()
         {
-            var selectedIndex = filterList.SelectedItem ?? 0;
+            var selectedIndex = filterList.SelectedItem;
             if (selectedIndex >= 0 && selectedIndex < filters.Count)
             {
                 var selected = filters[selectedIndex];
-                App?.RequestStop(dialog);
+                Application.RequestStop(dialog);
 
                 var searchWindow = new SearchWindow(
                     selected.FullPath,
@@ -293,7 +292,7 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        searchBtn.SetScheme(BalatroTheme.GreenButton);
+        searchBtn.ColorScheme = BalatroTheme.GreenButton;
         searchBtn.Accept += (s, e) => StartSearch();
         dialog.Add(searchBtn);
 
@@ -305,12 +304,12 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
-        cancelBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
+        cancelBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(cancelBtn);
 
         filterList.SetFocus();
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private void ShowSettingsModal()
@@ -321,7 +320,7 @@ public class MainMenuWindow : View
             Width = 50,
             Height = 14,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var btnSearchSettings = new CleanButton()
         {
@@ -331,7 +330,7 @@ public class MainMenuWindow : View
             Width = 30,
             TextAlignment = Alignment.Center,
         };
-        btnSearchSettings.SetScheme(BalatroTheme.ModalButton);
+        btnSearchSettings.ColorScheme = BalatroTheme.ModalButton;
         btnSearchSettings.Accept += (s, e) => ShowSearchSettings();
         dialog.Add(btnSearchSettings);
 
@@ -343,7 +342,7 @@ public class MainMenuWindow : View
             Width = 30,
             TextAlignment = Alignment.Center,
         };
-        btnServerSettings.SetScheme(BalatroTheme.ModalButton);
+        btnServerSettings.ColorScheme = BalatroTheme.ModalButton;
         btnServerSettings.Accept += (s, e) => ShowServerSettings();
         dialog.Add(btnServerSettings);
 
@@ -355,7 +354,7 @@ public class MainMenuWindow : View
             Width = 30,
             TextAlignment = Alignment.Center,
         };
-        btnCredits.SetScheme(BalatroTheme.ModalButton);
+        btnCredits.ColorScheme = BalatroTheme.ModalButton;
         btnCredits.Accept += (s, e) => ShowCredits();
         dialog.Add(btnCredits);
 
@@ -367,12 +366,12 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        backBtn.SetScheme(BalatroTheme.BackButton);
-        backBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        backBtn.ColorScheme = BalatroTheme.BackButton;
+        backBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(backBtn);
 
         btnSearchSettings.SetFocus();
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private void ShowSearchSettings()
@@ -383,7 +382,7 @@ public class MainMenuWindow : View
             Width = 55,
             Height = 16,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         // CPU Threads
         var threadsLabel = new Label()
@@ -463,15 +462,14 @@ public class MainMenuWindow : View
             Text = "       ",
             Width = 9,
         };
-        secretBtn.SetScheme(
-            new Scheme()
+        secretBtn.ColorScheme =
+            new ColorScheme()
             {
                 Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
                 Focus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
                 HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
                 HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
-            }
-        );
+            };
         secretBtn.Accept += (s, e) => ShowSecretDialog();
         dialog.Add(secretBtn);
 
@@ -481,7 +479,7 @@ public class MainMenuWindow : View
             Y = 11,
             Text = " Save ",
         };
-        saveBtn.SetScheme(BalatroTheme.GreenButton);
+        saveBtn.ColorScheme = BalatroTheme.GreenButton;
         saveBtn.Accept += (s, e) =>
         {
             if (int.TryParse(threadsField.Text, out int threads) && threads > 0)
@@ -492,7 +490,7 @@ public class MainMenuWindow : View
             TuiSettings.DefaultSink = sinkField.Text?.ToString() ?? string.Empty;
 
             TuiSettings.Save();
-            App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
         dialog.Add(saveBtn);
 
@@ -504,12 +502,12 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
-        cancelBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
+        cancelBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(cancelBtn);
 
         threadsField.SetFocus();
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private void ShowServerSettings()
@@ -520,7 +518,7 @@ public class MainMenuWindow : View
             Width = 55,
             Height = 14,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         // Host
         var hostLabel = new Label()
@@ -564,7 +562,7 @@ public class MainMenuWindow : View
             Y = 8,
             Text = " Save ",
         };
-        saveBtn.SetScheme(BalatroTheme.GreenButton);
+        saveBtn.ColorScheme = BalatroTheme.GreenButton;
         saveBtn.Accept += (s, e) =>
         {
             TuiSettings.ApiServerHost = hostField.Text ?? "localhost";
@@ -572,7 +570,7 @@ public class MainMenuWindow : View
                 TuiSettings.ApiServerPort = port;
 
             TuiSettings.Save();
-            App?.RequestStop(dialog);
+            Application.RequestStop(dialog);
         };
         dialog.Add(saveBtn);
 
@@ -584,12 +582,12 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        cancelBtn.SetScheme(BalatroTheme.BackButton);
-        cancelBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        cancelBtn.ColorScheme = BalatroTheme.BackButton;
+        cancelBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(cancelBtn);
 
         hostField.SetFocus();
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private void ShowCredits()
@@ -600,7 +598,7 @@ public class MainMenuWindow : View
             Width = 62,
             Height = 22,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var credits = new Label()
         {
@@ -634,12 +632,12 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        backBtn.SetScheme(BalatroTheme.BackButton);
-        backBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        backBtn.ColorScheme = BalatroTheme.BackButton;
+        backBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(backBtn);
 
         backBtn.SetFocus();
-        App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private static void ShowSecretDialog()
@@ -650,7 +648,7 @@ public class MainMenuWindow : View
             Width = 50,
             Height = 14,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         // The mystery message that gets revealed
         var messageLabel = new Label()
@@ -673,7 +671,7 @@ public class MainMenuWindow : View
             Width = 28,
             Visible = false,
         };
-        crudeBtn.SetScheme(BalatroTheme.GrayButton);
+        crudeBtn.ColorScheme = BalatroTheme.GrayButton;
         crudeBtn.Accept += (s, e) =>
         {
             TuiSettings.CrudeSeedsEnabled = !TuiSettings.CrudeSeedsEnabled;
@@ -691,8 +689,8 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        backBtn.SetScheme(BalatroTheme.BackButton);
-        backBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        backBtn.ColorScheme = BalatroTheme.BackButton;
+        backBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(backBtn);
 
         // Run the scratch-off animation
@@ -703,7 +701,7 @@ public class MainMenuWindow : View
 
         // Use a timeout to animate the reveal
         int iteration = 0;
-        MotelyTUI.App?.AddTimeout(
+        Application.AddTimeout(
             TimeSpan.FromMilliseconds(10),
             () =>
             {
@@ -743,7 +741,7 @@ public class MainMenuWindow : View
             }
         );
 
-        MotelyTUI.App?.Run(dialog);
+        Application.Run(dialog);
     }
 
     private static void ShowErrorDialog(string title, string message)
@@ -754,7 +752,7 @@ public class MainMenuWindow : View
             Width = Math.Min(70, message.Length + 10),
             Height = 10,
         };
-        dialog.SetScheme(BalatroTheme.Window);
+        dialog.ColorScheme = BalatroTheme.Window;
 
         var label = new Label()
         {
@@ -763,7 +761,7 @@ public class MainMenuWindow : View
             Text = message,
             TextAlignment = Alignment.Center,
         };
-        label.SetScheme(BalatroTheme.ErrorText);
+        label.ColorScheme = BalatroTheme.ErrorText;
         dialog.Add(label);
 
         var okBtn = new CleanButton()
@@ -774,10 +772,10 @@ public class MainMenuWindow : View
             Width = Dim.Fill() - 2,
             TextAlignment = Alignment.Center,
         };
-        okBtn.SetScheme(BalatroTheme.BackButton);
-        okBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        okBtn.ColorScheme = BalatroTheme.BackButton;
+        okBtn.Accept += (s, e) => Application.RequestStop(dialog);
         dialog.Add(okBtn);
 
-        MotelyTUI.App?.Run(dialog);
+        Application.Run(dialog);
     }
 }

@@ -26,7 +26,7 @@ public class DistributedWorkerWindow : Window
         Width = Dim.Percent(85);
         Height = 28;
         CanFocus = true;
-        SetScheme(BalatroTheme.Window);
+        ColorScheme = BalatroTheme.Window;
 
         // Status row
         _statusLabel = new Label()
@@ -35,12 +35,12 @@ public class DistributedWorkerWindow : Window
             Y = 1,
             Text = "Stopped",
         };
-        _statusLabel.SetScheme(new Scheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) });
+        _statusLabel.ColorScheme = new ColorScheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) };
         Add(_statusLabel);
 
         // Pool URL label
         var poolLabel = new Label() { X = 1, Y = 3, Text = "Pool URL:" };
-        poolLabel.SetScheme(BalatroTheme.Hint);
+        poolLabel.ColorScheme = BalatroTheme.Hint;
         Add(poolLabel);
 
         _poolUrlField = new TextField()
@@ -54,7 +54,7 @@ public class DistributedWorkerWindow : Window
 
         // Thread count
         var threadsLabel = new Label() { X = 1, Y = 6, Text = "Threads:" };
-        threadsLabel.SetScheme(BalatroTheme.Hint);
+        threadsLabel.ColorScheme = BalatroTheme.Hint;
         Add(threadsLabel);
 
         _threadsField = new TextField()
@@ -72,7 +72,7 @@ public class DistributedWorkerWindow : Window
             Y = 7,
             Text = $"(1-{Environment.ProcessorCount} cores available)",
         };
-        threadsHint.SetScheme(BalatroTheme.Hint);
+        threadsHint.ColorScheme = BalatroTheme.Hint;
         Add(threadsHint);
 
         // Log frame
@@ -84,7 +84,7 @@ public class DistributedWorkerWindow : Window
             Height = Dim.Fill() - 5,
             Title = "Worker Log",
         };
-        logFrame.SetScheme(BalatroTheme.InnerPanel);
+        logFrame.ColorScheme = BalatroTheme.InnerPanel;
         Add(logFrame);
 
         var copyLogsButton = new CleanButton()
@@ -93,16 +93,16 @@ public class DistributedWorkerWindow : Window
             Y = 0,
             Text = "Copy Logs",
         };
-        copyLogsButton.SetScheme(BalatroTheme.BackButton);
+        copyLogsButton.ColorScheme = BalatroTheme.BackButton;
         copyLogsButton.Accept += (s, e) =>
         {
             CopyToClipboard(_logView.Text?.ToString() ?? "");
             copyLogsButton.Text = "COPIED!";
-            copyLogsButton.SetScheme(BalatroTheme.GreenButton);
-            App?.AddTimeout(TimeSpan.FromSeconds(1.5), () =>
+            copyLogsButton.ColorScheme = BalatroTheme.GreenButton;
+            Application.AddTimeout(TimeSpan.FromSeconds(1.5), () =>
             {
                 copyLogsButton.Text = "Copy Logs";
-                copyLogsButton.SetScheme(BalatroTheme.BackButton);
+                copyLogsButton.ColorScheme = BalatroTheme.BackButton;
                 return false;
             });
         };
@@ -118,11 +118,11 @@ public class DistributedWorkerWindow : Window
             WordWrap = false,
             CanFocus = true,
         };
-        _logView.SetScheme(new Scheme()
+        _logView.ColorScheme = new ColorScheme()
         {
             Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
             Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
-        });
+        };
         logFrame.Add(_logView);
 
         // Bottom button row
@@ -133,7 +133,7 @@ public class DistributedWorkerWindow : Window
             Width = 16,
             Text = "Start Worker",
         };
-        _startButton.SetScheme(BalatroTheme.GreenButton);
+        _startButton.ColorScheme = BalatroTheme.GreenButton;
         _startButton.Accept += (s, e) => StartWorker();
         Add(_startButton);
 
@@ -145,7 +145,7 @@ public class DistributedWorkerWindow : Window
             Text = "Stop",
             Enabled = false,
         };
-        _stopButton.SetScheme(BalatroTheme.RedButton);
+        _stopButton.ColorScheme = BalatroTheme.RedButton;
         _stopButton.Accept += (s, e) => StopWorker();
         Add(_stopButton);
 
@@ -156,7 +156,7 @@ public class DistributedWorkerWindow : Window
             Width = 8,
             Text = "Back",
         };
-        backButton.SetScheme(BalatroTheme.BackButton);
+        backButton.ColorScheme = BalatroTheme.BackButton;
         backButton.Accept += (s, e) =>
         {
             StopWorker();
@@ -236,7 +236,7 @@ public class DistributedWorkerWindow : Window
                 while (!_workerProcess.StandardOutput.EndOfStream && !_cts.Token.IsCancellationRequested)
                 {
                     var line = await _workerProcess.StandardOutput.ReadLineAsync(_cts.Token).ConfigureAwait(false);
-                    if (line != null) App?.Invoke(() => LogMessage(line));
+                    if (line != null) Application.Invoke(() => LogMessage(line));
                 }
             }, _cts.Token);
 
@@ -245,7 +245,7 @@ public class DistributedWorkerWindow : Window
                 while (!_workerProcess.StandardError.EndOfStream && !_cts.Token.IsCancellationRequested)
                 {
                     var line = await _workerProcess.StandardError.ReadLineAsync(_cts.Token).ConfigureAwait(false);
-                    if (line != null) App?.Invoke(() => LogMessage(line));
+                    if (line != null) Application.Invoke(() => LogMessage(line));
                 }
             }, _cts.Token);
 
@@ -253,7 +253,7 @@ public class DistributedWorkerWindow : Window
             {
                 await _workerProcess.WaitForExitAsync(_cts.Token).ConfigureAwait(false);
                 var code = _workerProcess.ExitCode;
-                App?.Invoke(() =>
+                Application.Invoke(() =>
                 {
                     _isRunning = false;
                     SetStatus("Stopped", BalatroTheme.Orange);
@@ -323,7 +323,7 @@ public class DistributedWorkerWindow : Window
     private void SetStatus(string text, Color color)
     {
         _statusLabel.Text = text;
-        _statusLabel.SetScheme(new Scheme() { Normal = new Attribute(color, BalatroTheme.ModalGrey) });
+        _statusLabel.ColorScheme = new ColorScheme() { Normal = new Attribute(color, BalatroTheme.ModalGrey) };
     }
 
     private static void CopyToClipboard(string text)

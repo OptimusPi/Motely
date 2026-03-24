@@ -602,6 +602,7 @@ public interface IMotelySearch : IDisposable
     public long CompletedBatchCount { get; }
 
     public IMotelySearch Start(CancellationToken cancellationToken = default);
+    public Task RunSearchAsync(CancellationToken cancellationToken = default);
     public void AwaitCompletion();
     public Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
     public void Cancel();
@@ -900,8 +901,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public Task RunSearchAsync(CancellationToken cancellationToken = default)
     {
         _cancellationToken = cancellationToken;
-        RunSearchUntilCompletion();
-        return Task.CompletedTask;
+        StartSearchThreads();
+        return _completionSource.Task;
     }
 
     public IMotelySearch Start(CancellationToken cancellationToken = default)
@@ -911,6 +912,58 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         RunSearchUntilCompletion();
         return this;
+    }
+
+    /// <summary>
+    /// Starts search threads without blocking the caller.
+    /// Completion is signaled via <see cref="_completionSource"/>.
+    /// </summary>
+    private void StartSearchThreads()
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+        _elapsedTime.Start();
+
+        if (_threadCount == 1)
+        {
+            var plan = _plans[0];
+            var thread = new Thread(() =>
+            {
+                RunWorkerBody(plan);
+                Thread.MemoryBarrier();
+                bool completed =
+                    Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
+                _completionSource.TrySetResult(completed);
+            })
+            {
+                Name = "Motely Search Thread 0",
+                IsBackground = true
+            };
+            thread.Start();
+        }
+        else
+        {
+            int remaining = _threadCount;
+            for (int i = 0; i < _threadCount; i++)
+            {
+                int threadIdx = i;
+                var thread = new Thread(() =>
+                {
+                    RunWorkerBody(_plans[threadIdx]);
+                    if (Interlocked.Decrement(ref remaining) == 0)
+                    {
+                        Thread.MemoryBarrier();
+                        bool completed =
+                            Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
+                        _completionSource.TrySetResult(completed);
+                    }
+                })
+                {
+                    Name = $"Motely Search Thread {threadIdx}",
+                    IsBackground = true
+                };
+                thread.Start();
+            }
+        }
     }
 
     public void Cancel()
