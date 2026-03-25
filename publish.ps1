@@ -46,21 +46,44 @@ function Ensure-NpmPublishAccess($pkg) {
     Write-Host "  npm authenticated as $user"
 }
 
+function Write-JamlSchema() {
+    & dotnet run --project 'Motely.CLI/Motely.CLI.csproj' -c Release -- --write-jaml-schema
+    if ($LASTEXITCODE -ne 0) { Write-Error 'JAML schema generation failed' }
+}
+
+function Stage-WasmSchema() {
+    $schemaSource = Join-Path $root 'jaml.schema.json'
+    $schemaTarget = Join-Path $root 'motely-wasm/dist/jaml.schema.json'
+    if (!(Test-Path $schemaSource)) { Write-Error "Authoritative schema not found at $schemaSource" }
+    $schemaTargetDir = Split-Path $schemaTarget -Parent
+    if (!(Test-Path $schemaTargetDir)) { New-Item -ItemType Directory -Path $schemaTargetDir | Out-Null }
+    Copy-Item $schemaSource $schemaTarget -Force
+    $schema = Get-Content $schemaTarget -Raw | ConvertFrom-Json
+    if (-not $schema.properties.id -or -not $schema.properties.hashtags) {
+        Write-Error 'Staged motely-wasm schema is missing id or hashtags'
+    }
+    Write-Host "  staged JAML schema -> motely-wasm/dist/jaml.schema.json"
+}
+
 # ── motely-wasm ───────────────────────────────────────────────
 Write-Host "`n── motely-wasm ──"
 dotnet publish $csproj -c Release -p:WasmBuild=true
 if ($LASTEXITCODE -ne 0) { Write-Error 'motely-wasm build failed' }
+Write-JamlSchema
 Sync-Version 'motely-wasm'
+Stage-WasmSchema
 Ensure-NpmPublishAccess 'motely-wasm'
 npm publish ./motely-wasm
 
 # ── motely-node (Docker → linux-x64) ─────────────────────────
-# NativeAOT needs clang for linking. The dotnet/sdk image doesn't include it.
+# NativeAOT needs clang + zlib for linking. The dotnet/sdk image doesn't include them.
+# Ubuntu 24.04 (dotnet/sdk:10.0 base) also needs libstdc++-12-dev for NativeAOT linking.
 # Source: https://aka.ms/nativeaot-prerequisites
+# Source: https://microsoft.github.io/node-api-dotnet/scenarios/js-aot-module.html
 Write-Host "`n── motely-node ──"
 docker run --rm -v "${root}:/src" -w /src mcr.microsoft.com/dotnet/sdk:10.0 `
-    bash -c "apt-get update -qq && apt-get install -y -qq clang zlib1g-dev > /dev/null 2>&1 && dotnet publish $csproj -c Release -p:NodeBuild=true -p:PackNpmPackage=false"
-if ($LASTEXITCODE -ne 0) { Write-Error 'motely-node build failed' }
+    bash -c "set -e && apt-get update -qq && apt-get install -y clang zlib1g-dev libstdc++-12-dev && dotnet publish $csproj -c Release -p:NodeBuild=true -p:PackNpmPackage=false --verbosity normal"
+if ($LASTEXITCODE -ne 0) { Write-Error 'motely-node Docker build failed — see output above for the actual error' }
 
 # Copy the linux .node binary from Docker build output into motely-node/
 $pubDir = Join-Path $root 'Motely.Orchestration/bin/Release/net10.0/linux-x64/publish'
