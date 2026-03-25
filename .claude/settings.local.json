@@ -1,19 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(*)",
-      "WebFetch",
-      "WebSearch",
-      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__new_page",
-      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_snapshot",
-      "Bash(cmd.exe /c \"dir /b X:\\JammySeedFinder\\src\\MotelyJAML\\motely-wasm 2>nul || echo MISSING\")",
-      "Bash(cmd.exe /c \"dir /b X:\\JammySeedFinder\\src\\MotelyJAML\\motely-node 2>nul || echo MISSING\")",
-      "Bash(node build.mjs:*)",
-      "WebFetch(domain:microsoft.github.io)"
-    ],
-    "deny": [
-      "Bash(rm:*)",
-      "Bash(rm -rf:*)"
+      "Bash(mkdir -p \"C:/Users/pifre/AppData/Roaming/Claude/local-agent-mode-sessions/9441b96d-528b-4dde-b7aa-7de3875f5026/b5beea75-faeb-4be9-b444-8c9f0a166552/remote_cowork_plugins/plugin_016jbzs7aGBZSgBfSWhp4ToX/.claude-plugin\")",
+      "Bash(mkdir -p \"C:/Users/pifre/AppData/Roaming/Claude/local-agent-mode-sessions/9441b96d-528b-4dde-b7aa-7de3875f5026/b5beea75-faeb-4be9-b444-8c9f0a166552/remote_cowork_plugins/plugin_016jbzs7aGBZSgBfSWhp4ToX/skills/motely-guard\")",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(claude plugins:*)"
     ]
   }
 }

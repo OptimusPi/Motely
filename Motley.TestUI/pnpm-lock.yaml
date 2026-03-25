@@ -30,8 +30,8 @@ importers:
         specifier: ^0.10.8
         version: 0.10.8(@types/three@0.183.1)(three@0.183.2)
       motely-wasm:
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: 5.1.18
+        version: 5.1.18
       postprocessing:
         specifier: ^6.39.0
         version: 6.39.0(three@0.183.2)
@@ -1113,8 +1113,8 @@ packages:
     resolution: {integrity: sha512-WRoDn//mXBiJ1H40rqa3vH0toePwSsGb45iInWlTySa+Uu4k3tYUSxa2v1KqAiLtvlrSzaExqS1gtk96A9zvEA==}
     engines: {node: '>=0.10.0'}
 
-  motely-wasm@5.0.0:
-    resolution: {integrity: sha512-5JSNJnhlAAmaPxtArLTakE4OyHdNhnZbKCry42SE2etwFyFNdTHCbPgCH1cmFJFvZg8t4+5TSiCjpEor8s3UvA==}
+  motely-wasm@5.1.18:
+    resolution: {integrity: sha512-V9HdcWgwsrCnypJ1KrJV2m13nRLHcjp6T1YOmMNaC6lAgvs/NIXl9uC1t+e/nSjEOq17vEbQB9XYBrG3Xdgynw==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2332,7 +2332,7 @@ snapshots:
       for-in: 1.0.2
       is-extendable: 1.0.1
 
-  motely-wasm@5.0.0: {}
+  motely-wasm@5.1.18: {}
 
   ms@2.1.3: {}
 
