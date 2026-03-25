@@ -889,11 +889,11 @@ public static class JamlConfigLoader
                     IsAnyWildcard(value ?? c.Jokers?.FirstOrDefault())
                         ? []
                         : value != null
-                            ? [Enum.Parse<MotelyJoker>(value, true)]
-                            : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
+                            ? [RequireEnum<MotelyJoker>(value)]
+                            : c.Jokers?.Select(j => RequireEnum<MotelyJoker>(j)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
-                    c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
+                    c.Stickers?.Select(s => RequireEnum<MotelyJokerSticker>(s)).ToArray()
                     ?? [],
                 Sources = new JokerSourceConfig
                 {
@@ -921,11 +921,11 @@ public static class JamlConfigLoader
                     IsAnyWildcard(value ?? (c.CommonJokers ?? c.Jokers)?.FirstOrDefault())
                         ? []
                         : value != null
-                            ? [Enum.Parse<MotelyJokerCommon>(value, true)]
-                            : (c.CommonJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerCommon>(j, true)).ToArray() ?? [],
+                            ? [RequireEnum<MotelyJokerCommon>(value)]
+                            : (c.CommonJokers ?? c.Jokers)?.Select(j => RequireEnum<MotelyJokerCommon>(j)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
-                    c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
+                    c.Stickers?.Select(s => RequireEnum<MotelyJokerSticker>(s)).ToArray()
                     ?? [],
                 Sources = new JokerSourceConfig
                 {
@@ -953,11 +953,11 @@ public static class JamlConfigLoader
                     IsAnyWildcard(value ?? (c.UncommonJokers ?? c.Jokers)?.FirstOrDefault())
                         ? []
                         : value != null
-                            ? [Enum.Parse<MotelyJokerUncommon>(value, true)]
-                            : (c.UncommonJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerUncommon>(j, true)).ToArray() ?? [],
+                            ? [RequireEnum<MotelyJokerUncommon>(value)]
+                            : (c.UncommonJokers ?? c.Jokers)?.Select(j => RequireEnum<MotelyJokerUncommon>(j)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
-                    c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
+                    c.Stickers?.Select(s => RequireEnum<MotelyJokerSticker>(s)).ToArray()
                     ?? [],
                 Sources = new JokerSourceConfig
                 {
@@ -985,11 +985,11 @@ public static class JamlConfigLoader
                     IsAnyWildcard(value ?? (c.RareJokers ?? c.Jokers)?.FirstOrDefault())
                         ? []
                         : value != null
-                            ? [Enum.Parse<MotelyJokerRare>(value, true)]
-                            : (c.RareJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerRare>(j, true)).ToArray() ?? [],
+                            ? [RequireEnum<MotelyJokerRare>(value)]
+                            : (c.RareJokers ?? c.Jokers)?.Select(j => RequireEnum<MotelyJokerRare>(j)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
-                    c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
+                    c.Stickers?.Select(s => RequireEnum<MotelyJokerSticker>(s)).ToArray()
                     ?? [],
                 Sources = new JokerSourceConfig
                 {
@@ -1018,11 +1018,11 @@ public static class JamlConfigLoader
                     IsAnyWildcard(value ?? (c.MixedJokers ?? c.Jokers)?.FirstOrDefault())
                         ? []
                         : value != null
-                            ? [Enum.Parse<MotelyJoker>(value, true)]
-                            : (c.MixedJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
+                            ? [RequireEnum<MotelyJoker>(value)]
+                            : (c.MixedJokers ?? c.Jokers)?.Select(j => RequireEnum<MotelyJoker>(j)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
-                    c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
+                    c.Stickers?.Select(s => RequireEnum<MotelyJokerSticker>(s)).ToArray()
                     ?? [],
                 Sources = new JokerSourceConfig
                 {
@@ -1050,8 +1050,8 @@ public static class JamlConfigLoader
                     IsAnyWildcard(value ?? c.Jokers?.FirstOrDefault())
                         ? []
                         : value != null
-                            ? [Enum.Parse<MotelyJoker>(value, true)]
-                            : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
+                            ? [RequireEnum<MotelyJoker>(value)]
+                            : c.Jokers?.Select(j => RequireEnum<MotelyJoker>(j)).ToArray() ?? [],
                 Edition = edition,
                 Sources = new SoulJokerSourceConfig
                 {
@@ -1068,8 +1068,8 @@ public static class JamlConfigLoader
                 Min = min,
                 Vouchers =
                     value != null
-                        ? [Enum.Parse<MotelyVoucher>(value, true)]
-                        : c.Vouchers?.Select(v => Enum.Parse<MotelyVoucher>(v, true)).ToArray()
+                        ? [RequireEnum<MotelyVoucher>(value)]
+                        : c.Vouchers?.Select(v => RequireEnum<MotelyVoucher>(v)).ToArray()
                             ?? [],
             },
             MotelyFilterItemType.TarotCard => new TarotCardClause
@@ -1078,7 +1078,7 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Tarots = value != null ? [Enum.Parse<MotelyTarotCard>(value, true)] : [],
+                Tarots = value != null ? [RequireEnum<MotelyTarotCard>(value)] : [],
                 Sources = new TarotCardSourceConfig
                 {
                     ShopItems = shopItems ?? [],
@@ -1093,7 +1093,7 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Spectrals = value != null ? [Enum.Parse<MotelySpectralCard>(value, true)] : [],
+                Spectrals = value != null ? [RequireEnum<MotelySpectralCard>(value)] : [],
                 Sources = new SpectralCardSourceConfig
                 {
                     ShopItems = shopItems ?? [],
@@ -1108,7 +1108,7 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Planets = value != null ? [Enum.Parse<MotelyPlanetCard>(value, true)] : [],
+                Planets = value != null ? [RequireEnum<MotelyPlanetCard>(value)] : [],
                 Sources = new PlanetSourceConfig
                 {
                     ShopItems = shopItems ?? [],
@@ -1121,7 +1121,7 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Bosses = value != null ? [Enum.Parse<MotelyBossBlind>(value, true)] : [],
+                Bosses = value != null ? [RequireEnum<MotelyBossBlind>(value)] : [],
             },
             MotelyFilterItemType.SmallBlindTag => new TagClause
             {
@@ -1129,7 +1129,7 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Tags = value != null ? [Enum.Parse<MotelyTag>(value, true)] : [],
+                Tags = value != null ? [RequireEnum<MotelyTag>(value)] : [],
                 Position = c.Tag != null || string.Equals(c.Type, "Tag", StringComparison.OrdinalIgnoreCase)
                     ? TagPosition.Any
                     : TagPosition.SmallBlind,
@@ -1140,7 +1140,7 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Tags = value != null ? [Enum.Parse<MotelyTag>(value, true)] : [],
+                Tags = value != null ? [RequireEnum<MotelyTag>(value)] : [],
                 Position = TagPosition.BigBlind,
             },
             MotelyFilterItemType.PlayingCard => new StandardCardClause
@@ -1513,9 +1513,16 @@ public static class JamlConfigLoader
         return normalized;
     }
 
+    private static string NormalizeItemName(string name) =>
+        name.Replace(" ", "").Replace("'", "").Replace(".", "");
+
+    private static T RequireEnum<T>(string value)
+        where T : struct, Enum =>
+        Enum.Parse<T>(NormalizeItemName(value), true);
+
     private static T? ParseEnum<T>(string? value)
         where T : struct, Enum =>
-        value != null && Enum.TryParse<T>(value, true, out var result) ? result : null;
+        value != null && Enum.TryParse<T>(NormalizeItemName(value), true, out var result) ? result : null;
 
     private static MotelyPlayingCardRank? ParseRank(string? value)
     {

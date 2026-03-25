@@ -1,11 +1,10 @@
 'use client'
 
-import { MotelyWasm } from 'motely-wasm'
 import {
   findJokerByDisplayName,
   type BalatroJokerCenter,
 } from '../balatro/spriteAtlas/jokerRegistry'
-import { ensureWasmRuntime } from '../motely-ui/motelyWasmRuntime'
+import { analyzeSeedJson } from '../motely-ui/motelyWasmRuntime'
 import type { SeedAnalysisInfo } from '../motely-ui/motelySeedAnalysis'
 import { loadHighwayBillboardJokers, type HighwayBillboardResult } from './highwayBillboardJokers'
 
@@ -24,13 +23,7 @@ export async function loadHighwayBillboardJokersMotely(
   const ts = loadHighwayBillboardJokers(seed, deck, stake)
 
   try {
-    const { instanceId } = await ensureWasmRuntime()
-    const json = await MotelyWasm.MotelyWasmBackend.analyzeSeed(
-      instanceId,
-      seed.trim() || 'BALATRO1',
-      deck,
-      stake
-    )
+    const json = await analyzeSeedJson(seed.trim() || 'BALATRO1', deck, stake)
     const result = JSON.parse(json) as SeedAnalysisInfo
     if (result.error) {
       return {

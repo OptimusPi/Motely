@@ -15,7 +15,7 @@
     "@react-three/rapier": "^2.2.0",
     "leva": "^0.10.0",
     "maath": "^0.10.8",
-    "motely-wasm": "5.1.0",
+    "motely-wasm": "5.1.18",
     "postprocessing": "^6.39.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
