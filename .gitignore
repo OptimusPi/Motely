@@ -8,6 +8,7 @@ obj/
 
 # Node
 node_modules/
+node_modules/**
 
 # VS Code / Editors
 .vscode/
@@ -15,15 +16,8 @@ node_modules/
 
 # Build / Publish
 /publish/
-/Motely.API/bin/
-/Motely.API/obj/
-/Motely.Tests/bin/
-/Motely.Tests/obj/
-/Motely.TUI/bin/
-/Motely.TUI/obj/
-/Motely/bin/
-/Motely/obj/
-/Motely.npm/dist/
+**/bin/**
+**obj/**
 
 # Web
 /Motely.API/wwwroot/

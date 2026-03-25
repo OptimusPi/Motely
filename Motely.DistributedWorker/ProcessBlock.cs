@@ -74,17 +74,17 @@ public static class ProcessBlockRunner
     /// Run one block of sequential search. Parses JAML, converts block to batch params, runs, returns result.
     /// </summary>
     public static async Task<BlockSearchResult?> ProcessBlockAsync(
-        string jamlContent,
+        string jamlConfig,
         int blockId,
         int batchCharCount = DefaultBatchCharCount,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(jamlContent))
+        if (string.IsNullOrWhiteSpace(jamlConfig))
             return null;
         if (blockId < 0 || blockId >= TotalBlocks)
             return null;
 
-        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out _) || config is null)
+        if (!JamlConfigLoader.TryLoad(jamlConfig, out var config, out _) || config is null)
             return null;
 
         var (startBatch, endBatch, effectiveBatchCharCount) = BlockToSearchParams(blockId, batchCharCount);

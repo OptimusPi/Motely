@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import * as motelyWasmMod from 'motely-wasm'
-import { MotelyWasm } from 'motely-wasm'
 import type {
   MotelyBenchSizes,
   MotelyBenchTwoK,
@@ -8,21 +6,12 @@ import type {
   ShopStreamCacheMetaMotely,
   ShopStreamRow,
 } from './shopStreamShared'
-
-function getBoot(): () => Promise<unknown> {
-  const m = motelyWasmMod as Record<string, unknown>
-  if (typeof m.boot === 'function') return m.boot as () => Promise<unknown>
-  const d = m.default as Record<string, unknown> | undefined
-  if (d && typeof d.boot === 'function') return d.boot as () => Promise<unknown>
-  throw new Error('motely-wasm: expected boot() on module or default.boot')
-}
-
-let wasmBoot: Promise<void> | null = null
-
-function ensureWasmBooted(): Promise<void> {
-  wasmBoot ??= getBoot()().then(() => undefined)
-  return wasmBoot
-}
+import {
+  createMotelySearchContext,
+  ensureWasmRuntime,
+  getMotelyVersion,
+  type MotelySearchContext,
+} from './motelyWasmRuntime'
 
 function disposeInteropSession(s: unknown) {
   if (s === null || s === undefined) return
@@ -88,9 +77,7 @@ export function useMotelyShopStream(
   const [benchRangeTimings, setBenchRangeTimings] = useState<ShopBenchRangeTimings | null>(null)
   const [motelyBenchRunning, setMotelyBenchRunning] = useState(false)
 
-  const sessionRef = useRef<ReturnType<
-    typeof MotelyWasm.MotelyBrowserApi.createSingleSearchContext
-  > | null>(null)
+  const sessionRef = useRef<MotelySearchContext | null>(null)
   const rowsRef = useRef<ShopStreamRow[]>([])
   const openGenRef = useRef(0)
 
@@ -110,15 +97,11 @@ export function useMotelyShopStream(
 
     void (async () => {
       try {
-        await ensureWasmBooted()
+        await ensureWasmRuntime()
         if (gen !== openGenRef.current) return
-        const ctx = MotelyWasm.MotelyBrowserApi.createSingleSearchContext(
-          seed.trim() || 'BALATRO1',
-          deck,
-          stake
-        )
+        const ctx = createMotelySearchContext(seed.trim() || 'BALATRO1', deck, stake)
         sessionRef.current = ctx
-        const ver = await Promise.resolve(MotelyWasm.MotelyBrowserApi.getVersion())
+        const ver = getMotelyVersion()
         if (gen !== openGenRef.current) return
         setWasmVersion(ver)
         setStreamReady(true)
@@ -188,15 +171,11 @@ export function useMotelyShopStream(
 
     void (async () => {
       try {
-        await ensureWasmBooted()
+        await ensureWasmRuntime()
         if (gen !== openGenRef.current) return
-        const ctx = MotelyWasm.MotelyBrowserApi.createSingleSearchContext(
-          seed.trim() || 'BALATRO1',
-          deck,
-          stake
-        )
+        const ctx = createMotelySearchContext(seed.trim() || 'BALATRO1', deck, stake)
         sessionRef.current = ctx
-        const ver = await Promise.resolve(MotelyWasm.MotelyBrowserApi.getVersion())
+        const ver = getMotelyVersion()
         if (gen !== openGenRef.current) return
         setWasmVersion(ver)
         setStreamReady(true)

@@ -16,8 +16,7 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@balatrots/*": ["assethelp/src/modules/balatrots/*"],
-      "motely-wasm": ["shims/motely-wasm.ts"]
+      "@balatrots/*": ["assethelp/src/modules/balatrots/*"]
     }
   },
   "include": [
