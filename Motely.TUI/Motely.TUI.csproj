@@ -36,17 +36,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
-    <ProjectReference Include="..\Motely.HomeControlAPI\Motely.HomeControlAPI.csproj" />
+    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Jimbo.png" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\Motely.HomeControlAPI\appsettings.json">
-      <Link>appsettings.json</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 </Project>

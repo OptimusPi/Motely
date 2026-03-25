@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Motely.HomeControlAPI;
-using Motely.Executors;
+using Microsoft.Extensions.Logging;
 
 namespace Motely.TUI;
 
@@ -187,9 +186,16 @@ public class ApiServerWindow : Window
             Console.SetOut(logWriter);
             Console.SetError(logWriter);
 
-            // Create the API using the API Program
-            var args = new[] { "--urls", $"http://{host}:{port}" };
-            _server = Motely.HomeControlAPI.Program.CreateHost(args);
+            // Build a minimal ASP.NET Core host (Motely.HomeControlAPI was removed)
+            var builder = WebApplication.CreateBuilder(["--urls", $"http://{host}:{port}"]);
+            builder.Logging.ClearProviders(); // console output captured via ApiLogWriter
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+            _server = builder.Build();
+            _server.UseSwagger();
+            _server.UseSwaggerUI();
+            _server.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+            _server.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
             await _server.StartAsync(_cts.Token);
 
@@ -204,7 +210,7 @@ public class ApiServerWindow : Window
                     };
             });
 
-            var version = typeof(Motely.HomeControlAPI.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
+            var version = typeof(global::Motely.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
             LogMessage($"Hosting Motely API v{version}");
             LogMessage($"Listening on {_serverUrl}");
             LogMessage("Web UI available at same URL");

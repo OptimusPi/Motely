@@ -1,4 +1,3 @@
-using Motely.HomeControlAPI;
 using Terminal.Gui;
 
 namespace Motely.TUI;

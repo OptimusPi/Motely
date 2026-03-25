@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- Default TFM for NodeBuild and plain builds -->
     <TargetFramework>net10.0</TargetFramework>
+    <!-- Bootsharp LLVM requires the -browser TFM, not net10.0 + RuntimeIdentifier=browser-wasm -->
+    <TargetFramework Condition="'$(WasmBuild)' == 'true'">net10.0-browser</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -11,6 +14,7 @@
   <PropertyGroup Condition="'$(WasmBuild)' == 'true'">
     <OutputType>Exe</OutputType>
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
+    <!-- RuntimeIdentifier is implied by net10.0-browser TFM; set explicitly for publish clarity -->
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <BootsharpLLVM>true</BootsharpLLVM>
     <BootsharpPublishDirectory>$(MSBuildThisFileDirectory)..\motely-wasm\dist</BootsharpPublishDirectory>
