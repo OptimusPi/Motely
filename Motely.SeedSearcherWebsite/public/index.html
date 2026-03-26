@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Motely Home</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow: hidden; overscroll-behavior: none; touch-action: pan-y; height: 100%; }
+  body { font-family: 'Courier New', monospace; background: #0d0d12; color: #e0e0e0; display: flex; flex-direction: column; }
+  .hero { text-align: center; padding: 48px 20px 32px; }
+  .hero h1 { font-size: 2.4rem; color: #00ff88; margin-bottom: 4px; }
+  .hero p { color: #888; font-size: 1rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; max-width: 900px; margin: 0 auto; padding: 0 20px 32px; flex: 1; }
+  .card { background: #16161e; border: 1px solid #2a2a3a; border-radius: 12px; padding: 24px; transition: border-color 0.2s; }
+  .card:hover { border-color: #00ff88; }
+  .card h2 { color: #00ff88; font-size: 1.1rem; margin-bottom: 8px; }
+  .card p { color: #888; font-size: 0.85rem; margin-bottom: 16px; }
+  .card a { display: inline-block; color: #0d0d12; background: #00ff88; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.85rem; }
+  .card a:hover { background: #00cc6a; }
+  .card .status-live { font-size: 0.8rem; color: #888; line-height: 1.5; }
+  .card .status-live .val { color: #00ff88; }
+  .card .status-live .label { color: #555; }
+  .footer { text-align: center; padding: 16px 20px; color: #444; font-size: 0.75rem; }
+  .footer a { color: #00ff88; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .dot.on { background: #00ff88; }
+  .dot.off { background: #ff4444; }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <h1>Motely</h1>
+    <p>Balatro seed search engine</p>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h2>Seed Searcher</h2>
+      <p>Write JAML filters and search seeds in your browser using WASM. No server needed.</p>
+      <a href="/searcher.html">Open Searcher</a>
+    </div>
+    <div class="card" id="status-card">
+      <h2><span class="dot off" id="status-dot"></span>Server</h2>
+      <div class="status-live" id="status-body">Connecting...</div>
+    </div>
+    <div class="card">
+      <h2>Swagger</h2>
+      <p>Full API documentation with try-it-out. Filters, search, worker control.</p>
+      <a href="/swagger">Open Swagger</a>
+    </div>
+    <div class="card">
+      <h2>Filters</h2>
+      <p>Browse and manage JAML filter files on this server.</p>
+      <a href="/api/filters">List Filters</a>
+    </div>
+  </div>
+  <div class="footer">
+    <a href="http://192.168.0.171:3141">192.168.0.171:3141</a> &middot;
+    <a href="https://motelyjaml-pi.8pi.me">motelyjaml-pi.8pi.me</a>
+  </div>
+  <script>
+    fetch('/api/status').then(r => r.json()).then(s => {
+      document.getElementById('status-dot').className = 'dot on';
+      document.getElementById('status-body').innerHTML =
+        `<span class="label">host</span> <span class="val">${s.hostname}</span><br>` +
+        `<span class="label">cores</span> <span class="val">${s.processorCount}</span> &middot; ` +
+        `<span class="label">runtime</span> <span class="val">${s.runtime}</span><br>` +
+        `<span class="label">version</span> <span class="val">${s.motelyVersion}</span> &middot; ` +
+        `<span class="label">filters</span> <span class="val">${s.filterCount}</span><br>` +
+        `<span class="label">uptime</span> <span class="val">${s.uptime}</span>` +
+        (s.activeSearches?.length ? `<br><span class="label">searches</span> <span class="val">${s.activeSearches.length} active</span>` : '');
+    }).catch(() => {
+      document.getElementById('status-body').innerHTML = '<span style="color:#ff4444">Offline</span>';
+    });
+  </script>
+</body>
+</html>
