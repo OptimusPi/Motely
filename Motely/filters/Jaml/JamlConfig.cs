@@ -40,6 +40,8 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
     public List<CavendishExtinctClause> CavendishExtinct { get; set; } = [];
     public List<GrosMichelExtinctClause> GrosMichelExtinct { get; set; } = [];
     public List<StartingDrawClause> StartingDraw { get; set; } = [];
+    public List<AndClause> And { get; set; } = [];
+    public List<OrClause> Or { get; set; } = [];
 
     // Add Count property for compatibility
     public int Count => OrderedClauses.Count;
@@ -303,10 +305,10 @@ public sealed class JamlClauseDto
     public int[]? Rolls { get; set; }
 
     // Compound clauses
-    [YamlMember(Alias = "and")]
+    [YamlMember(Alias = "And")]
     public List<JamlClauseDto>? And { get; set; }
 
-    [YamlMember(Alias = "or")]
+    [YamlMember(Alias = "Or")]
     public List<JamlClauseDto>? Or { get; set; }
 
     [YamlMember(Alias = "clauses")]
@@ -780,9 +782,11 @@ public static class JamlConfigLoader
             case StartingDrawClause c:
                 set.StartingDraw.Add(c);
                 break;
-            case AndClause:
+            case AndClause c:
+                set.And.Add(c);
                 break;
-            case OrClause:
+            case OrClause c:
+                set.Or.Add(c);
                 break;
             default:
                 throw new NotSupportedException(

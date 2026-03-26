@@ -8,11 +8,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JAML text is required." }, { status: 400 });
   }
 
+  const requestId = crypto.randomUUID();
+  const threads = Math.max(1, Math.trunc(body.threads ?? 1));
+  const batchCharCount = Math.max(1, Math.trunc(body.batchCharCount ?? 1));
+
+  // Simple placeholder - no external dependencies
   const response: SearchResponse = {
     ok: true,
     mode: "thin-client-placeholder",
-    message:
-      "Thin-client placeholder route. Replace this handler with the real Node/C# worker contract once the search backend endpoint is ready.",
+    message: `Clean placeholder - no hacked dependencies. Request: ${requestId}, threads: ${threads}, batch: ${batchCharCount}`,
     shouldLabels: [],
     results: [],
     elapsedMs: 0,
