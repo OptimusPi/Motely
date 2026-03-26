@@ -5,6 +5,15 @@
 		},
 		{
 			"path": "../../.."
+		},
+		{
+			"path": "../../../../../../thelongblind6"
+		},
+		{
+			"path": "../../../../../../genie-weenie-adventure"
+		},
+		{
+			"path": "../../../../../../balatro-love-story"
 		}
 	],
 	"settings": {}

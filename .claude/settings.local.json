@@ -4,7 +4,23 @@
       "Bash(mkdir -p \"C:/Users/pifre/AppData/Roaming/Claude/local-agent-mode-sessions/9441b96d-528b-4dde-b7aa-7de3875f5026/b5beea75-faeb-4be9-b444-8c9f0a166552/remote_cowork_plugins/plugin_016jbzs7aGBZSgBfSWhp4ToX/.claude-plugin\")",
       "Bash(mkdir -p \"C:/Users/pifre/AppData/Roaming/Claude/local-agent-mode-sessions/9441b96d-528b-4dde-b7aa-7de3875f5026/b5beea75-faeb-4be9-b444-8c9f0a166552/remote_cowork_plugins/plugin_016jbzs7aGBZSgBfSWhp4ToX/skills/motely-guard\")",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(claude plugins:*)"
+      "Bash(claude plugins:*)",
+      "Bash(claude config:*)",
+      "Bash(find X:/JammySeedFinder/src/MotelyJAML -type f -name *.cs -o -name *.csproj -o -name *.props -o -name *.json -o -name *.targets)",
+      "Bash(dotnet build:*)",
+      "WebFetch(domain:bootsharp.com)",
+      "WebFetch(domain:microsoft.github.io)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "WebFetch(domain:github.com)",
+      "Bash(dotnet restore:*)",
+      "Bash(curl -s \"https://api.github.com/repos/elringus/bootsharp/contents/samples/minimal/cs\")",
+      "Bash(python3 -c \"import sys,json; [print\\(f[''''name'''']\\) for f in json.loads\\(sys.stdin.read\\(\\)\\)]\")",
+      "Bash(curl -s https://api.github.com/repos/elringus/bootsharp/contents/samples/minimal/cs)",
+      "Bash(dotnet sln:*)",
+      "Bash(find /tmp/bootsharp/samples -name *.csproj -path *llvm* -o -name *.csproj -path *LLVM* -o -name *.csproj -path *aot* -o -name *.csproj -path *AOT*)",
+      "Bash(cat /tmp/bootsharp/samples/bench/dotnet-llvm/*.cs)",
+      "Bash(grep -r \"BootsharpLLVM\\\\|LLVM\" /tmp/bootsharp/src/js/test/cs/Test/ --include=*.cs --include=*.csproj -l)"
     ]
   }
 }

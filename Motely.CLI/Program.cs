@@ -4,7 +4,6 @@ using System.Text.Json.Serialization;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.DB.SeedSource;
-using Motely.Executors;
 using Motely.Filters;
 
 namespace Motely;
@@ -320,38 +319,43 @@ partial class Program
                 );
             }
 
-            var rawSearchOptions = new SearchOptionsDto
+            var plan = JamlSearchBuilder.CreatePlan(config);
+            var settings = plan.Settings
+                .WithDeck(deck)
+                .WithStake(stake)
+                .WithThreadCount(threads)
+                .WithBatchCharacterCount(batchCharCount);
+
+            if (explicitSeeds != null)
             {
-                StartBatch = startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
-                EndBatch = endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
-                Seeds = explicitSeeds,
-                Keywords = keywordInputs.Count > 0 ? keywordInputs.ToArray() : null,
-                Padding = paddingOption.HasValue() ? paddingOption.ParsedValue : null,
-                RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
-                Palindrome = palindromeOption.HasValue() ? true : null,
-            };
-            var (searchRequest, requestError) = MotelySearchRequestFactory.FromOptions(
-                rawSearchOptions,
-                threads,
-                batchCharCount
-            );
-            if (requestError != null || searchRequest == null)
+                settings.WithListSearch(explicitSeeds, explicitSeeds.Length);
+            }
+            else if (keywordInputs.Count > 0)
             {
-                Console.Error.WriteLine($"Error: {requestError ?? "Search request could not be created."}");
-                return 1;
+                char[]? paddingChars = paddingOption.HasValue()
+                    ? paddingOption.ParsedValue.ToCharArray()
+                    : null;
+                var keywordSeeds = MotelyCore.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
+                var count = (int)MotelyCore.GetPaddedSeedCountForKeywords(keywordInputs, paddingChars);
+                settings.WithProviderSearch(new MotelySeedListProvider(keywordSeeds, count));
+            }
+            else if (randomOption.HasValue())
+            {
+                settings.WithRandomSearch(randomOption.ParsedValue);
+            }
+            else if (palindromeOption.HasValue())
+            {
+                settings.WithPalindromeSearch();
+            }
+            else
+            {
+                settings.WithSequentialSearch();
             }
 
-            var (plan, _, prepareError) = MotelySearchOrchestrator.PrepareSearch(
-                config,
-                searchRequest
-            );
-            if (prepareError != null || plan == null)
-            {
-                Console.Error.WriteLine($"Error: {prepareError ?? "Search could not be prepared."}");
-                return 1;
-            }
-
-            var settings = plan.Settings;
+            if (startBatchOption.HasValue())
+                settings.WithStartBatchIndex(startBatchOption.ParsedValue);
+            if (endBatchOption.HasValue())
+                settings.WithEndBatchIndex(endBatchOption.ParsedValue);
             bool hasStructuredScores = plan.ShouldClauseCount > 0;
             using ISeedResultSink? sink = sinkOption.HasValue()
                 ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
