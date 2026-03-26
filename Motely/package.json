@@ -16,6 +16,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/node/index.cjs"
     },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.mjs",
+      "default": "./dist/server.mjs"
+    },
     "./jaml-schema": {
       "types": "./dist/jaml-schema.d.ts",
       "import": "./dist/jaml-schema.mjs",
