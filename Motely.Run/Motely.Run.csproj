@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <WasmEnableThreads>false</WasmEnableThreads>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Version>$(MotelyVersion)</Version>
+    <!-- Keep DLL name so existing motely-wasm bootsharp resources stay valid. -->
+    <AssemblyName>Motely.Orchestration</AssemblyName>
+    <RootNamespace>Motely.Run</RootNamespace>
+    <!-- Bootsharp npm package -->
+    <BootsharpName>motely-wasm</BootsharpName>
+    <BootsharpPackageDirectory>$(SolutionDir)motely-wasm</BootsharpPackageDirectory>
+    <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
+    <!-- Bootsharp LLVM -->
+    <BootsharpLLVM>true</BootsharpLLVM>
+    <BootsharpOptimize>speed</BootsharpOptimize>
+    <PublishTrimmed>true</PublishTrimmed>
+    <DotNetJsApi>true</DotNetJsApi>
+    <DebugType>none</DebugType>
+    <EmccFlags>$(EmccFlags) -O3</EmccFlags>
+    <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+    <RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <!-- ── Node.js NativeAOT override (dotnet publish -p:NodeBuild=true) ── -->
+  <PropertyGroup Condition="'$(NodeBuild)' == 'true'">
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <PublishAot>true</PublishAot>
+    <PublishNodeModule>true</PublishNodeModule>
+    <PackNpmPackage>true</PackNpmPackage>
+    <PackageOutputPath>$(SolutionDir)motely-node</PackageOutputPath>
+    <BootsharpLLVM>false</BootsharpLLVM>
+    <WasmEnableThreads>false</WasmEnableThreads>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <!-- LLVM compiler (WASM only). Emscripten paths: https://bootsharp.com/guide/llvm -->
+  <ItemGroup Condition="'$(NodeBuild)' != 'true'">
+    <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Condition="$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+    <PackageReference Condition="!$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_LLVM_ROOT=$(EmscriptenUpstreamBinPath)" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_BINARYEN_ROOT=$(EmscriptenSdkToolsPath)" />
+    <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_NODE_JS=$(EmscriptenNodeBinPath)node$(ExecutableExtensionName)" />
+    <EmscriptenEnvVars Include="EM_CACHE=$(EmscriptenCacheSdkCacheDir)" />
+  </ItemGroup>
+
+  <!-- Node.js interop (Node only) -->
+  <ItemGroup Condition="'$(NodeBuild)' == 'true'">
+    <PackageReference Include="Microsoft.JavaScript.NodeApi" />
+    <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" />
+  </ItemGroup>
+</Project>

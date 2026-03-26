@@ -96,6 +96,7 @@ internal static class JamlSchemaGenerator
         yield return Path.Combine(repoRoot, "jaml.schema.json");
         yield return Path.Combine(repoRoot, "public", "jaml.schema.json");
         yield return Path.Combine(repoRoot, "Motely.npm-staging", "motely-wasm", "jaml.schema.json");
+        yield return Path.Combine(repoRoot, "Motely", "dist", "jaml.schema.json");
     }
 
     private static JsonObject Generate(string version)
@@ -128,7 +129,7 @@ internal static class JamlSchemaGenerator
                 {
                     ["type"] = "array",
                     ["description"] =
-                        "Optional seed-space constraints from JamlAesthetic (see definitions/JamlAesthetic). Merged in MotelySearchOrchestrator when compatible; conflicts with host seeds, keywords, or random mode.",
+                        "Optional seed-space constraints from JamlAesthetic (see definitions/JamlAesthetic). Applied when compatible; conflicts with host seeds, keywords, or random mode.",
                     ["items"] = new JsonObject { ["$ref"] = "#/definitions/JamlAesthetic" },
                 },
                 ["defaults"] = BuildDefaultsProperty(),
