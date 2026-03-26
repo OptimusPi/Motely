@@ -1,0 +1,6 @@
+{
+    "name": "motely-wasm",
+    "type": "module",
+    "main": "../bin/motely-wasm/index.mjs",
+    "types": "../bin/motely-wasm/types/index.d.ts"
+}

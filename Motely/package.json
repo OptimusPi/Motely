@@ -1,6 +1,6 @@
 {
   "name": "motely",
-  "version": "4.3.18",
+  "version": "5.1.18",
   "description": "MotelyJAML — Balatro seed search, analysis, and JAML filtering. Native Node.js module + Browser WASM.",
   "type": "module",
   "exports": {
@@ -21,7 +21,12 @@
       "import": "./dist/jaml-schema.mjs",
       "default": "./dist/jaml-schema.mjs"
     },
-    "./jaml.schema.json": "./dist/jaml.schema.json"
+    "./jaml.schema.json": "./dist/jaml.schema.json",
+    "./browser": {
+      "types": "./dist/wasm/types/index.d.ts",
+      "import": "./dist/wasm/index.mjs",
+      "default": "./dist/wasm/index.mjs"
+    }
   },
   "files": [
     "dist/"
@@ -47,6 +52,6 @@
   "scripts": {
     "build": "node build/build.mjs",
     "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
-    "prepare": "npm run build"
+    "prepublishOnly": "npm run build"
   }
 }

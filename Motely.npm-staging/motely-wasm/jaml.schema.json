@@ -80,7 +80,7 @@
     },
     "aesthetics": {
       "type": "array",
-      "description": "Optional seed-space constraints from JamlAesthetic (see definitions/JamlAesthetic). Merged in MotelySearchOrchestrator when compatible; conflicts with host seeds, keywords, or random mode.",
+      "description": "Optional seed-space constraints from JamlAesthetic (see definitions/JamlAesthetic). Applied when compatible; conflicts with host seeds, keywords, or random mode.",
       "items": {
         "$ref": "#/definitions/JamlAesthetic"
       }
