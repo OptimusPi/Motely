@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleSpectralStream(
     string resampleKey,
@@ -16,7 +16,7 @@ public struct MotelySingleSpectralStream(
     public readonly bool IsSoulBlackHoleable => !SoulBlackHolePrngStream.IsInvalid;
 }
 
-ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySingleSpectralStream CreateSpectralStream(

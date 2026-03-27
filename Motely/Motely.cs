@@ -1,6 +1,6 @@
-namespace Motely;
+namespace Motely.Core;
 
-public static partial class MotelyCore
+public static partial class Motely
 {
     public const int MaxCachedPseudoHashKeyLength = 32;
 

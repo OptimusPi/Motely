@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 
-namespace Motely;
+namespace Motely.Core;
 
 /// <summary>
 /// Shared formatting utilities
@@ -49,7 +49,7 @@ public static class FormatUtils
         {
             case MotelyItemTypeCategory.PlayingCard:
                 var playingCard = (MotelyPlayingCard)(
-                    item.Value & MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask
+                    item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask
                 );
                 result.Append(FormatPlayingCard(playingCard));
                 break;

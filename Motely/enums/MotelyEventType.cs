@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Core;
 
 /// <summary>
 /// Types of random events that can be filtered in searches

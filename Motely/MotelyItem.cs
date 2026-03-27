@@ -1,29 +1,29 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
 {
     public readonly int Value = value;
 
-    public readonly MotelyItemType Type => (MotelyItemType)(Value & MotelyCore.ItemTypeMask);
+    public readonly MotelyItemType Type => (MotelyItemType)(Value & Motely.ItemTypeMask);
     public readonly MotelyItemTypeCategory TypeCategory =>
-        (MotelyItemTypeCategory)(Value & MotelyCore.ItemTypeCategoryMask);
-    public readonly MotelyItemSeal Seal => (MotelyItemSeal)(Value & MotelyCore.ItemSealMask);
+        (MotelyItemTypeCategory)(Value & Motely.ItemTypeCategoryMask);
+    public readonly MotelyItemSeal Seal => (MotelyItemSeal)(Value & Motely.ItemSealMask);
     public readonly MotelyItemEnhancement Enhancement =>
-        (MotelyItemEnhancement)(Value & MotelyCore.ItemEnhancementMask);
+        (MotelyItemEnhancement)(Value & Motely.ItemEnhancementMask);
     public readonly MotelyItemEdition Edition =>
-        (MotelyItemEdition)(Value & MotelyCore.ItemEditionMask);
+        (MotelyItemEdition)(Value & Motely.ItemEditionMask);
 
     public readonly MotelyPlayingCardSuit PlayingCardSuit =>
-        (MotelyPlayingCardSuit)(Value & MotelyCore.PlayingCardSuitMask);
+        (MotelyPlayingCardSuit)(Value & Motely.PlayingCardSuitMask);
     public readonly MotelyPlayingCardRank PlayingCardRank =>
-        (MotelyPlayingCardRank)(Value & MotelyCore.PlayingCardRankMask);
+        (MotelyPlayingCardRank)(Value & Motely.PlayingCardRankMask);
 
-    public readonly bool IsPerishable => (Value & (1 << MotelyCore.PerishableStickerOffset)) != 0;
-    public readonly bool IsEternal => (Value & (1 << MotelyCore.EternalStickerOffset)) != 0;
-    public readonly bool IsRental => (Value & (1 << MotelyCore.RentalStickerOffset)) != 0;
+    public readonly bool IsPerishable => (Value & (1 << Motely.PerishableStickerOffset)) != 0;
+    public readonly bool IsEternal => (Value & (1 << Motely.EternalStickerOffset)) != 0;
+    public readonly bool IsRental => (Value & (1 << Motely.RentalStickerOffset)) != 0;
 
     public readonly bool IsInvalid => TypeCategory == MotelyItemTypeCategory.Invalid;
 
@@ -42,45 +42,45 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem AsType(MotelyItemType type)
     {
-        return new((Value & ~MotelyCore.ItemTypeMask) | (int)type);
+        return new((Value & ~Motely.ItemTypeMask) | (int)type);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem WithSeal(MotelyItemSeal seal)
     {
-        return new((Value & ~MotelyCore.ItemSealMask) | (int)seal);
+        return new((Value & ~Motely.ItemSealMask) | (int)seal);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem WithEnhancement(MotelyItemEnhancement enhancement)
     {
-        return new((Value & ~MotelyCore.ItemEnhancementMask) | (int)enhancement);
+        return new((Value & ~Motely.ItemEnhancementMask) | (int)enhancement);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem WithEdition(MotelyItemEdition edition)
     {
-        return new((Value & ~MotelyCore.ItemEditionMask) | (int)edition);
+        return new((Value & ~Motely.ItemEditionMask) | (int)edition);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem WithPerishable(bool isPerishable)
     {
-        int mask = 1 << MotelyCore.PerishableStickerOffset;
+        int mask = 1 << Motely.PerishableStickerOffset;
         return new(isPerishable ? (Value | mask) : (Value & ~mask));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem WithEternal(bool isEternal)
     {
-        int mask = 1 << MotelyCore.EternalStickerOffset;
+        int mask = 1 << Motely.EternalStickerOffset;
         return new(isEternal ? (Value | mask) : (Value & ~mask));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem WithRental(bool isRental)
     {
-        int mask = 1 << MotelyCore.RentalStickerOffset;
+        int mask = 1 << Motely.RentalStickerOffset;
         return new(isRental ? (Value | mask) : (Value & ~mask));
     }
 

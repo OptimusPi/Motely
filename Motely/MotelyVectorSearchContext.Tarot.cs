@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelyVectorTarotStream(
     string resampleKey,
@@ -308,7 +308,7 @@ ref partial struct MotelyVectorSearchContext
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     tarot.Value,
-                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(tarotType, targetTarot);
@@ -338,7 +338,7 @@ ref partial struct MotelyVectorSearchContext
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     tarot.Value,
-                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
                 )
             );
 

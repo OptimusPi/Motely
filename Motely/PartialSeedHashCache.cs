@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 internal unsafe struct PartialSeedHashCache : IDisposable
 {
@@ -24,18 +24,18 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     {
         Cache = (Vector512<double>**)
             Marshal.AllocHGlobal(
-                sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+                sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength
             );
         InitialCache = (Vector512<double>**)
             Marshal.AllocHGlobal(
-                sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+                sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength
             );
 
         // Initialize the dynamic cache
         DynamicCacheMemory = (Vector512<double>*)
             Marshal.AllocHGlobal(
                 sizeof(Vector512<double>)
-                    * (MotelyCore.MaxCachedPseudoHashKeyLength - search.PseudoHashKeyLengthCount)
+                    * (Motely.MaxCachedPseudoHashKeyLength - search.PseudoHashKeyLengthCount)
             );
         DynamicCacheEntryCount = 0;
 
@@ -43,7 +43,7 @@ internal unsafe struct PartialSeedHashCache : IDisposable
         Unsafe.InitBlockUnaligned(
             InitialCache,
             0,
-            (uint)sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+            (uint)sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength
         );
         for (int i = 0; i < search.PseudoHashKeyLengthCount; i++)
         {
@@ -61,7 +61,7 @@ internal unsafe struct PartialSeedHashCache : IDisposable
         Unsafe.CopyBlock(
             Cache,
             InitialCache,
-            (uint)sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+            (uint)sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength
         );
         DynamicCacheEntryCount = 0;
     }
@@ -78,7 +78,7 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly bool HasPartialHash(int keyLength)
     {
-        return keyLength < MotelyCore.MaxCachedPseudoHashKeyLength && Cache[keyLength] != null;
+        return keyLength < Motely.MaxCachedPseudoHashKeyLength && Cache[keyLength] != null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -110,7 +110,7 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CachePartialHash(int keyLength, Vector512<double> partialHash)
     {
-        Debug.Assert(keyLength < MotelyCore.MaxCachedPseudoHashKeyLength);
+        Debug.Assert(keyLength < Motely.MaxCachedPseudoHashKeyLength);
 
         // Skip if already cached (score provider re-runs filters on same context)
         if (HasPartialHash(keyLength))

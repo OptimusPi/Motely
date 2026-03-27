@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Motely;
+namespace Motely.Core;
 
 /// <summary>
 /// Helper for Balatro seed math (Bijective Base-35 conversion)

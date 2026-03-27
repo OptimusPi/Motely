@@ -1,6 +1,6 @@
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct ErraticFinderDesc() : IMotelySeedFilterDesc<ErraticFinderDesc.FilterStruct>
 {

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleJokerStream
 {
@@ -77,7 +77,7 @@ public enum MotelyJokerFixedRarityStreamFlags
     Default = 0,
 }
 
-unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     public MotelySingleJokerStream CreateShopJokerStream(
         int ante,
