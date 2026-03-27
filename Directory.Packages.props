@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>5.1.18</MotelyVersion>
+    <MotelyVersion>5.1.28</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Bootsharp" Version="0.7.0" />
