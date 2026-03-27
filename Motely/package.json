@@ -1,37 +1,20 @@
 {
   "name": "motely",
   "version": "5.1.18",
-  "description": "MotelyJAML — Balatro seed search, analysis, and JAML filtering. Native Node.js module + Browser WASM.",
+  "description": "MotelyJAML — Balatro seed search engine. NativeAOT-LLVM compiled to browser WASM via Bootsharp.",
   "type": "module",
   "exports": {
     ".": {
-      "node": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/node/index.cjs"
-      },
-      "browser": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/wasm/index.mjs"
-      },
-      "types": "./dist/index.d.ts",
-      "default": "./dist/node/index.cjs"
-    },
-    "./server": {
-      "types": "./dist/server.d.ts",
-      "import": "./dist/server.mjs",
-      "default": "./dist/server.mjs"
+      "types": "./dist/wasm/types/index.d.ts",
+      "import": "./dist/wasm/index.mjs",
+      "default": "./dist/wasm/index.mjs"
     },
     "./jaml-schema": {
       "types": "./dist/jaml-schema.d.ts",
       "import": "./dist/jaml-schema.mjs",
       "default": "./dist/jaml-schema.mjs"
     },
-    "./jaml.schema.json": "./dist/jaml.schema.json",
-    "./browser": {
-      "types": "./dist/wasm/types/index.d.ts",
-      "import": "./dist/wasm/index.mjs",
-      "default": "./dist/wasm/index.mjs"
-    }
+    "./jaml.schema.json": "./dist/jaml.schema.json"
   },
   "files": [
     "dist/"
@@ -40,9 +23,8 @@
     "balatro",
     "seed",
     "wasm",
-    "node-api",
-    "aot",
-    "native",
+    "bootsharp",
+    "nativeaot-llvm",
     "jaml"
   ],
   "repository": {
@@ -51,9 +33,6 @@
     "directory": "motely"
   },
   "license": "MIT",
-  "engines": {
-    "node": ">=22.0.0"
-  },
   "scripts": {
     "build": "node build/build.mjs",
     "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
