@@ -1,11 +1,11 @@
-namespace Motely;
+namespace Motely.Core;
 
 public enum MotelyItemTypeCategory
 {
-    PlayingCard = 0b0001 << MotelyCore.ItemTypeCategoryOffset,
-    SpectralCard = 0b0010 << MotelyCore.ItemTypeCategoryOffset,
-    TarotCard = 0b0011 << MotelyCore.ItemTypeCategoryOffset,
-    PlanetCard = 0b0100 << MotelyCore.ItemTypeCategoryOffset,
-    Joker = 0b0101 << MotelyCore.ItemTypeCategoryOffset,
-    Invalid = 0b1111 << MotelyCore.ItemTypeCategoryOffset,
+    PlayingCard = 0b0001 << Motely.ItemTypeCategoryOffset,
+    SpectralCard = 0b0010 << Motely.ItemTypeCategoryOffset,
+    TarotCard = 0b0011 << Motely.ItemTypeCategoryOffset,
+    PlanetCard = 0b0100 << Motely.ItemTypeCategoryOffset,
+    Joker = 0b0101 << Motely.ItemTypeCategoryOffset,
+    Invalid = 0b1111 << Motely.ItemTypeCategoryOffset,
 }

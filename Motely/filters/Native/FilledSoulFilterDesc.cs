@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDesc.FilterStruct>
 {

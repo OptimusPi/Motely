@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public enum MotelyBoosterPackType
 {
@@ -53,49 +53,49 @@ public enum MotelyBoosterPackSize
 public enum MotelyBoosterPack
 {
     Arcana =
-        (MotelyBoosterPackType.Arcana << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Arcana << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Normal,
     JumboArcana =
-        (MotelyBoosterPackType.Arcana << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Arcana << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Jumbo,
     MegaArcana =
-        (MotelyBoosterPackType.Arcana << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Arcana << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Mega,
     Celestial =
-        (MotelyBoosterPackType.Celestial << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Celestial << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Normal,
     JumboCelestial =
-        (MotelyBoosterPackType.Celestial << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Celestial << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Jumbo,
     MegaCelestial =
-        (MotelyBoosterPackType.Celestial << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Celestial << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Mega,
     Standard =
-        (MotelyBoosterPackType.Standard << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Standard << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Normal,
     JumboStandard =
-        (MotelyBoosterPackType.Standard << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Standard << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Jumbo,
     MegaStandard =
-        (MotelyBoosterPackType.Standard << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Standard << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Mega,
     Buffoon =
-        (MotelyBoosterPackType.Buffoon << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Buffoon << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Normal,
     JumboBuffoon =
-        (MotelyBoosterPackType.Buffoon << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Buffoon << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Jumbo,
     MegaBuffoon =
-        (MotelyBoosterPackType.Buffoon << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Buffoon << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Mega,
     Spectral =
-        (MotelyBoosterPackType.Spectral << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Spectral << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Normal,
     JumboSpectral =
-        (MotelyBoosterPackType.Spectral << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Spectral << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Jumbo,
     MegaSpectral =
-        (MotelyBoosterPackType.Spectral << MotelyCore.BoosterPackTypeOffset)
+        (MotelyBoosterPackType.Spectral << Motely.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Mega,
 }
 
@@ -104,7 +104,7 @@ public static class MotelyBoosterPackExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MotelyBoosterPackType GetPackType(this MotelyBoosterPack pack)
     {
-        return (MotelyBoosterPackType)((int)pack >> MotelyCore.BoosterPackTypeOffset);
+        return (MotelyBoosterPackType)((int)pack >> Motely.BoosterPackTypeOffset);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -112,13 +112,13 @@ public static class MotelyBoosterPackExt
         this VectorEnum256<MotelyBoosterPack> packVector
     )
     {
-        return new(packVector.HardwareVector >> MotelyCore.BoosterPackTypeOffset);
+        return new(packVector.HardwareVector >> Motely.BoosterPackTypeOffset);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MotelyBoosterPackSize GetPackSize(this MotelyBoosterPack pack)
     {
-        return (MotelyBoosterPackSize)((int)pack & MotelyCore.BoosterPackSizeMask);
+        return (MotelyBoosterPackSize)((int)pack & Motely.BoosterPackSizeMask);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -126,7 +126,7 @@ public static class MotelyBoosterPackExt
         this VectorEnum256<MotelyBoosterPack> packVector
     )
     {
-        return new(packVector.HardwareVector & Vector256.Create(MotelyCore.BoosterPackSizeMask));
+        return new(packVector.HardwareVector & Vector256.Create(Motely.BoosterPackSizeMask));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

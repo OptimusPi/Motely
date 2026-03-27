@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public ref struct MotelyVectorSpectralStream(
     string resampleKey,
@@ -356,7 +356,7 @@ ref partial struct MotelyVectorSearchContext
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     spectral.Value,
-                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(spectralType, targetSpectral);
@@ -386,7 +386,7 @@ ref partial struct MotelyVectorSearchContext
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     spectral.Value,
-                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
                 )
             );
 

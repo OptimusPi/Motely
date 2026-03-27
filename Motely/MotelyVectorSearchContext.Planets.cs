@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public ref struct MotelyVectorPlanetStream(
     string resampleKey,
@@ -237,7 +237,7 @@ ref partial struct MotelyVectorSearchContext
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
                     planet.Value,
-                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(planetType, targetPlanet);
@@ -267,7 +267,7 @@ ref partial struct MotelyVectorSearchContext
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
                     planet.Value,
-                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
                 )
             );
 

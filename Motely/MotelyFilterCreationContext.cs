@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Core;
 
 public ref struct MotelyFilterCreationContext
 {
