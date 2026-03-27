@@ -59,26 +59,8 @@ export default schema;
 `;
 writeFileSync(join(distRoot, "jaml-schema.d.ts"), jamlSchemaDts, "utf8");
 
-const indexDts = `export { default } from "./wasm/types/index";
-export * from "./wasm/types/index";
-`;
-writeFileSync(join(distRoot, "index.d.ts"), indexDts, "utf8");
-
-const nodeStub = `'use strict';
-/** Native Node (NodeApi) build is produced with \`dotnet publish -p:NodeBuild=true\` on Linux CI. Browser consumers use \`motely\` → \`dist/wasm\`. */
-module.exports = new Proxy(
-  {},
-  {
-    get() {
-      throw new Error(
-        "[motely] Node native addon is not shipped in this package build. Use the browser export (dist/wasm) or publish Motely.Run with NodeBuild on linux-x64."
-      );
-    },
-  }
-);
-`;
-mkdirSync(join(distRoot, "node"), { recursive: true });
-writeFileSync(join(distRoot, "node", "index.cjs"), nodeStub, "utf8");
+// No node stub — this package is browser WASM only.
+// Node native addon is a separate build: `dotnet publish Motely.Run -p:NodeBuild=true` on linux-x64.
 
 const motelyPkg = JSON.parse(readFileSync(join(motelyDir, "package.json"), "utf8"));
 motelyPkg.version = version;
