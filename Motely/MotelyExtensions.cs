@@ -1,6 +1,6 @@
 using Motely.Filters;
 
-namespace Motely;
+namespace Motely.Core;
 
 public static class MotelyExtensions
 {

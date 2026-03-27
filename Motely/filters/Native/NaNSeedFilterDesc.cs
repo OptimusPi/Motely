@@ -1,6 +1,6 @@
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSeedFilter>
 {

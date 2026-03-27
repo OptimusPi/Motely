@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
+using Motely.Core;
 using Motely.Filters;
 
 namespace Motely;
@@ -144,7 +145,7 @@ internal static class JamlSchemaGenerator
                 {
                     ["title"] = "JamlAesthetic",
                     ["description"] =
-                        "Named constraint on which seeds participate in search. Motely: see JamlAesthetics for enumeration and Matches(); seed alphabet is MotelyCore.SeedDigits, max length MotelyCore.MaxSeedLength.",
+                        "Named constraint on which seeds participate in search. Motely: see JamlAesthetics for enumeration and Matches(); seed alphabet is Motely.SeedDigits, max length Motely.MaxSeedLength.",
                     ["type"] = "string",
                     ["enum"] = ToJsonArray(JamlAestheticParser.KnownJamlStringsForSchema()),
                 },

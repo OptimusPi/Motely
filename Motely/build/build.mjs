@@ -63,6 +63,11 @@ const wasmPkg = join(repoRoot, "Motely.Run", "bin", "motely-wasm");
 if (!existsSync(join(wasmPkg, "index.mjs"))) die("Bootsharp output missing: Motely.Run/bin/motely-wasm/index.mjs");
 if (!existsSync(join(wasmPkg, "types", "index.d.ts"))) die("Bootsharp types missing");
 
+// Copy template package.json to output directory
+const templatePkg = JSON.parse(readFileSync(join(repoRoot, "Motely", "package.json"), "utf8"));
+templatePkg.version = version;
+writeFileSync(join(wasmPkg, "package.json"), JSON.stringify(templatePkg, null, 2) + "\n", "utf8");
+
 // ── JAML schema ──────────────────────────────────────────────────────────────
 
 console.log("[build] Generate JAML schema");
@@ -70,10 +75,6 @@ sh(`dotnet run --project Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema`);
 if (!existsSync(join(repoRoot, "jaml.schema.json"))) die("jaml.schema.json not generated");
 
 // ── Publish motely-wasm (Bootsharp-generated package) ────────────────────────
-
-const wasmPkgJson = JSON.parse(readFileSync(join(wasmPkg, "package.json"), "utf8"));
-wasmPkgJson.version = version;
-writeFileSync(join(wasmPkg, "package.json"), JSON.stringify(wasmPkgJson, null, 2) + "\n", "utf8");
 
 const tag = tagNext ? "next" : "latest";
 const pubArgs = `--access public --tag ${tag}${dryRun ? " --dry-run" : ""}`;

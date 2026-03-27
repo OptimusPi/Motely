@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
+using Motely.Core;
+using static Motely.Core.Motely;
 using Motely.DB.SeedSource;
 using Motely.Filters;
 
@@ -335,8 +337,8 @@ partial class Program
                 char[]? paddingChars = paddingOption.HasValue()
                     ? paddingOption.ParsedValue.ToCharArray()
                     : null;
-                var keywordSeeds = MotelyCore.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
-                var count = (int)MotelyCore.GetPaddedSeedCountForKeywords(keywordInputs, paddingChars);
+                var keywordSeeds = GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
+                var count = (int)GetPaddedSeedCountForKeywords(keywordInputs, paddingChars);
                 settings.WithProviderSearch(new MotelySeedListProvider(keywordSeeds, count));
             }
             else if (randomOption.HasValue())

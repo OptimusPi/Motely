@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleTarotStream(
     string resampleKey,
@@ -16,7 +16,7 @@ public struct MotelySingleTarotStream(
     public readonly bool IsSoulable => !SoulPrngStream.IsInvalid;
 }
 
-ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySingleTarotStream CreateTarotStream(

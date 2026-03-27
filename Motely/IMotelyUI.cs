@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Core;
 
 /// <summary>
 /// Callbacks from C# to JS. Imported via Bootsharp [assembly: JSImport].

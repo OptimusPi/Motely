@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelyVectorBoosterPackStream(
     MotelyVectorPrngStream prngStream,
