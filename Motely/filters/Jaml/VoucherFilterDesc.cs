@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-using Motely;
-using static Motely.MotelyVectorUtils;
+using static Motely.Core.MotelyVectorUtils;
 
 namespace Motely.Filters;
 

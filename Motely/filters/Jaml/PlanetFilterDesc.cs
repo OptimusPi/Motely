@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-using Motely;
-
 namespace Motely.Filters;
 
 public sealed class PlanetCardClause : IJamlClause

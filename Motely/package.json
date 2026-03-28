@@ -1,5 +1,5 @@
 {
-  "name": "motely",
+  "name": "motely-wasm",
   "version": "5.1.27",
   "description": "MotelyJAML — Balatro seed search engine. NativeAOT-LLVM compiled to browser WASM via Bootsharp.",
   "type": "module",
@@ -34,6 +34,9 @@
   },
   "license": "MIT",
   "scripts": {
+    "publish:wasm": "node build/build.mjs",
+    "publish:wasm:dry-run": "node build/build.mjs --dry-run --skip-bump",
+    "publish:wasm:next": "node build/build.mjs --tag-next",
     "build": "node build/build.mjs",
     "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema"
   }

@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleStandardCardStream
 {
@@ -25,7 +25,7 @@ public enum MotelyStandardCardStreamFlags
     Default = 0,
 }
 
-ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     public MotelySingleStandardCardStream CreateStandardPackCardStream(
         int ante,
@@ -103,7 +103,7 @@ ref partial struct MotelySingleSearchContext
                         ref stream.EnhancementPrngStream,
                         1,
                         MotelyEnum<MotelyItemEnhancement>.ValueCount
-                    ) << MotelyCore.ItemEnhancementOffset
+                    ) << Motely.ItemEnhancementOffset
                 )
             );
         }

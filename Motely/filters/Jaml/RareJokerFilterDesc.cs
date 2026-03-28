@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-using Motely;
-using static Motely.MotelyVectorUtils;
+using static Motely.Core.MotelyVectorUtils;
 
 namespace Motely.Filters;
 
@@ -215,7 +214,7 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
             {
                 jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
                 var rarityVec = new VectorEnum256<MotelyJokerRarity>(
-                    Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyCore.JokerRarityMask)));
+                    Vector256.BitwiseAnd(item.Value, Vector256.Create(Motely.Core.Motely.JokerRarityMask)));
                 jokerMatch &= VectorEnum256.Equals(rarityVec, MotelyJokerRarity.Rare);
             }
             else

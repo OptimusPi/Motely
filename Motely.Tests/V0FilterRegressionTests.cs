@@ -55,15 +55,15 @@ public class V0FilterRegressionTests
     private static string[] BuildLogicProbeSeeds(int count)
     {
         var seeds = new string[count];
-        int digitCount = MotelyCore.SeedDigits.Length;
+        int digitCount = SeedDigits.Length;
 
         for (int i = 0; i < count; i++)
         {
             long value = i;
-            var chars = new char[MotelyCore.MaxSeedLength];
+            var chars = new char[MaxSeedLength];
             for (int j = 0; j < chars.Length; j++)
             {
-                chars[j] = MotelyCore.SeedDigits[(int)(value % digitCount)];
+                chars[j] = SeedDigits[(int)(value % digitCount)];
                 value /= digitCount;
             }
             seeds[i] = new string(chars);
