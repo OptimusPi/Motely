@@ -29,12 +29,12 @@ public static class ProcessBlockRunner
 
     /// <summary>Total number of blocks at default batch char count.</summary>
     public static readonly int TotalBlocks = ComputePower(
-        MotelyCore.SeedDigits.Length,
-        MotelyCore.MaxSeedLength - DefaultBatchCharCount);
+        Motely.Core.Motely.SeedDigits.Length,
+        Motely.Core.Motely.MaxSeedLength - DefaultBatchCharCount);
 
     /// <summary>Seeds per block at default batch char count.</summary>
     public static readonly long SeedsPerBlock = ComputePowerLong(
-        MotelyCore.SeedDigits.Length, DefaultBatchCharCount);
+        Motely.Core.Motely.SeedDigits.Length, DefaultBatchCharCount);
 
     private static int ComputePower(int baseVal, int exp)
     {
@@ -64,7 +64,7 @@ public static class ProcessBlockRunner
 
         // Helper wants finer batches. Convert block range into the helper's batch space.
         int charDiff = DefaultBatchCharCount - helperBatchCharCount;
-        long batchesPerBlock = ComputePowerLong(MotelyCore.SeedDigits.Length, charDiff);
+        long batchesPerBlock = ComputePowerLong(Motely.Core.Motely.SeedDigits.Length, charDiff);
         long startBatch = blockId * batchesPerBlock;
         long endBatch = startBatch + batchesPerBlock;
         return (startBatch, endBatch, helperBatchCharCount);

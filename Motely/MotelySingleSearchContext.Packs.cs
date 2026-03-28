@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleBoosterPackStream(
     MotelySinglePrngStream prngStream,
@@ -9,7 +9,7 @@ public struct MotelySingleBoosterPackStream(
     public bool GeneratedFirstPack = generatedFirstPack;
 }
 
-ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     public MotelySingleBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false) =>
         CreateBoosterPackStream(ante, ante > 1, isCached);

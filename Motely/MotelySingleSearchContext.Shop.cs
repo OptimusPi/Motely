@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleShopItemStream
 {
@@ -32,7 +32,7 @@ public enum MotelyShopStreamFlags
     Default = 0,
 }
 
-unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     private const int ShopJokerRate = 20;
 

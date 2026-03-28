@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleVoucherStream(int ante, MotelySingleResampleStream resampleStream)
 {
@@ -8,7 +8,7 @@ public struct MotelySingleVoucherStream(int ante, MotelySingleResampleStream res
     public MotelySingleResampleStream ResampleStream = resampleStream;
 }
 
-ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelySingleVoucherStream CreateVoucherStream(int ante, bool isCached = false)

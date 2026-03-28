@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySinglePlanetStream(
     string resampleKey,
@@ -15,7 +15,7 @@ public struct MotelySinglePlanetStream(
     public readonly bool IsBlackHoleable => !BlackHolePrngStream.IsInvalid;
 }
 
-ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySinglePlanetStream CreatePlanetStream(
