@@ -1,34 +1,73 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
+import type MotelyModule from "motely-wasm";
 
 type WasmPhase = "idle" | "loading" | "ready" | "error";
 
-let bootPromise: Promise<unknown> | null = null;
-let cachedApi: Record<string, unknown> | null = null;
+type MotelyResultEventHub = {
+  subscribe: (handler: (seed: string, score: number) => void) => void;
+  unsubscribe: (handler: (seed: string, score: number) => void) => void;
+};
 
-async function bootWasm(): Promise<Record<string, unknown>> {
+type MotelyProgressEventHub = {
+  subscribe: (handler: (searched: bigint, found: bigint, elapsed: bigint) => void) => void;
+  unsubscribe: (handler: (searched: bigint, found: bigint, elapsed: bigint) => void) => void;
+};
+
+type MotelyApi = {
+  getVersion?: () => string;
+  validateJaml?: (jaml: string) => string | null;
+  runSearch?: (jaml: string, threads: number, batchCharCount: number, startBatch: number, endBatch: number) => string;
+  onResult?: MotelyResultEventHub;
+  onProgress?: MotelyProgressEventHub;
+};
+
+type BootResult = {
+  default: typeof MotelyModule;
+  api: MotelyApi;
+};
+
+let bootPromise: Promise<BootResult> | null = null;
+let cachedApi: MotelyApi | null = null;
+
+async function bootWasm(): Promise<MotelyApi> {
   if (cachedApi) return cachedApi;
   if (!bootPromise) {
     bootPromise = (async () => {
-      const mod = await import(/* webpackIgnore: true */ "/motely-framework/index.mjs" as any);
-      await (mod.boot ?? mod.default?.boot)();
-      const root = mod.Motely as Record<string, Record<string, unknown>> | undefined;
-      const api = (mod.MotelyWasm ?? root?.MotelyWasm ?? root?.Executors?.MotelyWasm) as Record<string, unknown> | undefined;
+      const mod = await import("motely-wasm");
+      await mod.default.boot();
+      const root = (mod as unknown as { Motely?: { MotelyWasm?: MotelyApi } }).Motely;
+      const api = root?.MotelyWasm;
       if (!api) throw new Error("MotelyWasm namespace not found");
       cachedApi = api;
-      return api;
+      return { default: mod.default, api };
     })();
   }
-  return bootPromise as Promise<Record<string, unknown>>;
+  const result = await bootPromise;
+  return result.api;
 }
 
-export function getWasmApi(): Record<string, unknown> | null {
+export function getWasmApi(): MotelyApi | null {
   return cachedApi;
 }
 
 export { bootWasm };
+
+function runtimeBuildConfig(mod: typeof MotelyModule): { wasmEnableThreads?: boolean; wasmEnableSIMD?: boolean } {
+  return (mod.dotnet as Record<string, unknown>)?.buildConfig as Record<string, boolean> ?? {};
+}
+
+export async function getWasmCapabilities() {
+  const result = await bootPromise;
+  if (!result) return null;
+  const cfg = runtimeBuildConfig(result.default);
+  return {
+    version: typeof result.api.getVersion === "function" ? result.api.getVersion() : "?",
+    simd: cfg.wasmEnableSIMD ?? false,
+    threads: cfg.wasmEnableThreads ?? false,
+  };
+}
 
 export function MotelyWasmStatus() {
   const [phase, setPhase] = useState<WasmPhase>("idle");
@@ -37,10 +76,13 @@ export function MotelyWasmStatus() {
   useEffect(() => {
     setPhase("loading");
     bootWasm()
-      .then((api) => {
+      .then(async (api) => {
         const version = typeof api.getVersion === "function" ? (api.getVersion() as string) : "?";
+        const caps = await getWasmCapabilities();
         setPhase("ready");
-        setDetail(`motely-wasm v${version}`);
+        setDetail(
+          `motely-wasm v${version} · ${caps?.simd ? "SIMD" : "No SIMD"} · ${caps?.threads ? "Threads" : "Single-thread"}`
+        );
       })
       .catch((err) => {
         setPhase("error");
