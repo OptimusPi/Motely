@@ -1,0 +1,33 @@
+{
+  "name": "motely-node",
+  "version": "5.1.43",
+  "description": "Motely seed search - Node.js (NativeAOT linux-x64)",
+  "type": "module",
+  "main": "./bin/Release/net10.0/linux-x64/publish/Motely.Orchestration.cjs",
+  "types": "./bin/Release/net10.0/linux-x64/publish/Motely.Orchestration.d.ts",
+  "exports": {
+    ".": {
+      "types": "./bin/Release/net10.0/linux-x64/publish/Motely.Orchestration.d.ts",
+      "import": "./bin/Release/net10.0/linux-x64/publish/Motely.Orchestration.mjs",
+      "require": "./bin/Release/net10.0/linux-x64/publish/Motely.Orchestration.cjs",
+      "default": "./bin/Release/net10.0/linux-x64/publish/Motely.Orchestration.cjs"
+    }
+  },
+  "files": [
+    "bin/Release/net10.0/linux-x64/publish/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "motely"
+  },
+  "license": "MIT",
+  "keywords": [
+    "balatro",
+    "seed",
+    "node",
+    "nativeaot",
+    "linux-x64",
+    "jaml"
+  ]
+}

@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { SearchWorkspace } from "@/components/search-workspace";
 
 export default function Page() {
-  redirect("https://www.seedfinder.app/");
+  return <SearchWorkspace />;
 }
