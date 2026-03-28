@@ -74,7 +74,7 @@ public struct JamlShouldScoreDesc
                     bool passedCutoff = totalScore >= cutoff;
                     if (passedCutoff && seedMatchCallback != null)
                     {
-                        char* seedPtr = stackalloc char[Motely.Motely.MaxSeedLength];
+                        char* seedPtr = stackalloc char[Motely.MaxSeedLength];
                         int seedLength = singleCtx.GetSeed(seedPtr);
                         string seedStr = new string(seedPtr, 0, seedLength);
                         tally.Seed = seedStr;
@@ -92,7 +92,7 @@ public struct JamlShouldScoreDesc
                     }
                     else if (passedCutoff)
                     {
-                        char* seedPtr = stackalloc char[Motely.Motely.MaxSeedLength];
+                        char* seedPtr = stackalloc char[Motely.MaxSeedLength];
                         int seedLength = singleCtx.GetSeed(seedPtr);
                         tally.Seed = new string(seedPtr, 0, seedLength);
                     }
