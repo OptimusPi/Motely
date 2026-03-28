@@ -1,4 +1,4 @@
-namespace Motely.Core;
+namespace Motely;
 
 using System.Runtime.CompilerServices;
 

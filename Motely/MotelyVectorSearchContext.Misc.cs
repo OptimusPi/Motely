@@ -1,6 +1,6 @@
 using System.Runtime.Intrinsics;
 
-namespace Motely.Core;
+namespace Motely;
 
 ref partial struct MotelyVectorSearchContext
 {

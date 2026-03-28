@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Core;
+namespace Motely;
 
 public struct MotelyWeightedPoolItem<T>(T value, double weight)
     where T : unmanaged, Enum

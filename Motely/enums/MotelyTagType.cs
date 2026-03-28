@@ -1,4 +1,4 @@
-namespace Motely.Core;
+namespace Motely;
 
 /// <summary>
 /// Specifies the type of tag to filter on

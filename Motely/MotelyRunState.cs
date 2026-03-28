@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Motely.Core;
+namespace Motely;
 
 public ref struct MotelyRunState
 {

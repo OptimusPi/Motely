@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Motely.Core;
+namespace Motely;
 
 public class ErrorDto
 {

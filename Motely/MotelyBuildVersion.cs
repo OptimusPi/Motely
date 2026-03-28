@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Motely.Core;
+namespace Motely;
 
 public static class MotelyBuildVersion
 {

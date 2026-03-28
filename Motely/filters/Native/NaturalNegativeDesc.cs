@@ -1,6 +1,6 @@
 using System.Runtime.Intrinsics;
 
-namespace Motely.Core;
+namespace Motely;
 
 public struct NaturalNegativesFilterDesc()
     : IMotelySeedFilterDesc<NaturalNegativesFilterDesc.NaturalNegativesFilter>
