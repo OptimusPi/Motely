@@ -1,0 +1,34 @@
+{
+  "name": "motely-wasm",
+  "version": "5.2.0",
+  "description": "Motely seed search engine - Bootsharp WASM (browser)",
+  "type": "module",
+  "main": "./index.mjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    }
+  },
+  "files": [
+    "index.mjs",
+    "types/",
+    "bootsharp/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "Motely.BrowserWasm"
+  },
+  "license": "MIT",
+  "keywords": [
+    "balatro",
+    "seed",
+    "wasm",
+    "bootsharp",
+    "browser",
+    "jaml"
+  ]
+}
