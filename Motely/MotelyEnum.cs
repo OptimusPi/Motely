@@ -1,4 +1,4 @@
-namespace Motely.Core;
+namespace Motely;
 
 public static class MotelyEnum<T>
     where T : unmanaged, Enum

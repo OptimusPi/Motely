@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Core;
+namespace Motely;
 
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public readonly struct MotelyItemVector(Vector256<int> value)

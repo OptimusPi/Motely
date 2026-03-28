@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 
-namespace Motely.Core;
+namespace Motely;
 
 /// <summary>
 /// Shared formatting utilities
