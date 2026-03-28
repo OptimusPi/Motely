@@ -10,10 +10,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>true</InvariantGlobalization>
     <Version>$(MotelyVersion)</Version>
-    <RootNamespace>Motely.Run</RootNamespace>
+    <RootNamespace>Motely.BrowserWasm</RootNamespace>
     <!-- Bootsharp npm package -->
     <BootsharpName>motely-wasm</BootsharpName>
-    <BootsharpPackageDirectory>$(SolutionDir)motely-wasm</BootsharpPackageDirectory>
+    <BootsharpPackageDirectory>$(MSBuildThisFileDirectory)motely-wasm</BootsharpPackageDirectory>
     <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
     <!-- Bootsharp LLVM -->
     <BootsharpLLVM>true</BootsharpLLVM>
@@ -33,7 +33,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
-  <!-- LLVM compiler. Emscripten paths: https://bootsharp.com/guide/llvm -->
+  <!-- LLVM compiler -->
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
