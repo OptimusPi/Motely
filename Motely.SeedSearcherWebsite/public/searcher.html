@@ -83,7 +83,7 @@ must:
     try {
       const mod = await import('/motely-framework/index.mjs');
       await (mod.boot ?? mod.default?.boot)();
-      api = mod.MotelyWasm ?? mod.Motely?.Executors?.MotelyWasm;
+      api = mod.MotelyWasm ?? mod.Motely?.MotelyWasm ?? mod.Motely?.Executors?.MotelyWasm;
       if (!api) throw new Error('MotelyWasm namespace not found');
       $('ver').textContent = api.getVersion?.() ?? '?';
       btnGo.textContent = 'search';

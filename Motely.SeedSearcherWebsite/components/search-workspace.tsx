@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MotelyWasmStatus } from "@/components/motely-wasm-status";
-import type { SearchRequest, SearchResponse, SeedSearchRow } from "@/lib/search-types";
+import { useCallback, useRef, useState } from "react";
+import { MotelyWasmStatus, bootWasm, getWasmApi } from "@/components/motely-wasm-status";
+import type { SeedSearchRow } from "@/lib/search-types";
 
 const initialJaml = `name: Painted skip-fishing
 
@@ -25,199 +25,200 @@ should:
 export function SearchWorkspace() {
   const [jaml, setJaml] = useState(initialJaml);
   const [threads, setThreads] = useState(1);
-  const [batchCharCount, setBatchCharCount] = useState(5);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [response, setResponse] = useState<SearchResponse | null>(null);
+  const [batchCharCount, setBatchCharCount] = useState(1);
+  const [startBatch, setStartBatch] = useState(0);
+  const [endBatch, setEndBatch] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
+  const [rows, setRows] = useState<SeedSearchRow[]>([]);
+  const [progress, setProgress] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const searchingRef = useRef(false);
 
-  const rows = response?.results ?? [];
-  const shouldLabels = response?.shouldLabels ?? [];
-
-  const maxTallies = useMemo(() => {
-    return Math.max(shouldLabels.length, ...rows.map((row) => row.tallies.length), 0);
-  }, [rows, shouldLabels]);
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmitting(true);
+  const handleReset = useCallback(() => {
+    setRows([]);
     setError(null);
+    setProgress("");
+    setElapsedMs(0);
+  }, []);
 
-    const payload: SearchRequest = {
-      jaml,
-      threads: Math.max(1, Math.trunc(threads || 1)),
-      batchCharCount: Math.max(1, Math.trunc(batchCharCount || 1)),
-    };
+  const handleSearch = useCallback(async () => {
+    setError(null);
+    setRows([]);
+    setProgress("Booting WASM...");
+
+    const api = await bootWasm().catch((err) => {
+      setError(err instanceof Error ? err.message : "Failed to boot WASM");
+      setProgress("");
+      return null;
+    });
+    if (!api) return;
 
     try {
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await res.json()) as SearchResponse | { error?: string };
-      if (!res.ok || !("ok" in data)) {
-        throw new Error((data as { error?: string }).error ?? "Search request failed.");
+      const validationError = typeof api.validateJaml === "function" ? api.validateJaml(jaml) : null;
+      if (validationError) {
+        setError(validationError);
+        setProgress("");
+        return;
       }
+      setIsSearching(true);
+      searchingRef.current = true;
 
-      setResponse(data);
+      const onResult = (seed: string, score: number) => {
+        if (!searchingRef.current) return;
+        setRows((prev) => [...prev, { seed, score, tallies: [] }]);
+      };
+
+      const onProgress = (searched: bigint, found: bigint, elapsed: bigint) => {
+        if (!searchingRef.current) return;
+        setElapsedMs(Number(elapsed));
+        setProgress(
+          `${Number(searched).toLocaleString()} searched · ${Number(found)} found · ${(Number(elapsed) / 1000).toFixed(1)}s`
+        );
+      };
+
+      const onResultEvent = api.onResult;
+      const onProgressEvent = api.onProgress;
+
+      onResultEvent?.subscribe?.(onResult);
+      onProgressEvent?.subscribe?.(onProgress);
+
+      try {
+        if (typeof api.runSearch !== "function") {
+          throw new Error("runSearch() is missing from motely-wasm");
+        }
+        const summary = api.runSearch(
+          jaml,
+          Math.max(1, threads),
+          Math.max(1, batchCharCount),
+          startBatch,
+          endBatch
+        );
+        setProgress(summary);
+      } finally {
+        onResultEvent?.unsubscribe?.(onResult);
+        onProgressEvent?.unsubscribe?.(onProgress);
+        searchingRef.current = false;
+        setIsSearching(false);
+      }
     } catch (err) {
-      setResponse(null);
-      setError(err instanceof Error ? err.message : "Search request failed.");
-    } finally {
-      setIsSubmitting(false);
+      setError(err instanceof Error ? err.message : "Search failed");
+      searchingRef.current = false;
+      setIsSearching(false);
     }
-  }
-
-  function handleDemoRows() {
-    const demoRows: SeedSearchRow[] = [
-      { seed: "ALEEB", score: 7, tallies: [0, 0, 1, 0, 0, 5, 0, 1] },
-      { seed: "J179876", score: 6, tallies: [1, 0, 0, 1, 0, 4, 0, 0] },
-    ];
-
-    setResponse({
-      ok: true,
-      mode: "thin-client-placeholder",
-      message: "Demo rows injected locally. Replace /api/search with the real Node/C# worker contract next.",
-      shouldLabels: [
-        "TradingCard",
-        "Rocket",
-        "Venus",
-        "TheHierophant",
-        "Ouija",
-        "PaintedShop",
-        "GhostStake",
-        "Extra",
-      ],
-      results: demoRows,
-      elapsedMs: 14,
-    });
-    setError(null);
-  }
+  }, [jaml, threads, batchCharCount, startBatch, endBatch]);
 
   return (
     <main className="page-shell">
       <section className="hero">
-        <h1>Motely Seed Searcher</h1>
-        <p>
-          Thin Vercel/Jammy client for JAML-backed search. The frontend stays pretty and fast;
-          the heavy Motely work belongs in backend workers.
-        </p>
+        <div className="hero-badge">100% WASM</div>
+        <h1>Motely WASM Probe</h1>
+        <p>Mobile-first test page for pure browser Balatro seed search. No fake server path, no redirect shell, no B.S.</p>
         <MotelyWasmStatus />
       </section>
 
       <section className="grid">
-        <div className="card panel">
-          <h2>Search Request</h2>
-          <p className="panel-copy">
-            Send JAML plus light execution hints to the backend contract. This shell is already
-            shaped for row-based results instead of console output.
-          </p>
+        <div className="card panel panel-search">
+          <div className="panel-heading">
+            <div>
+              <h2>Search</h2>
+              <p className="panel-copy">Paste JAML, pick a batch window, and hit the real package.</p>
+            </div>
+            <div className="actions actions-inline">
+              <button className="button-primary" type="button" onClick={handleSearch}
+                disabled={isSearching || !getWasmApi()}>
+                {isSearching ? "Searching..." : "Run Search"}
+              </button>
+              <button className="button-secondary" type="button" onClick={() => setJaml(initialJaml)}>
+                Reset JAML
+              </button>
+              <button className="button-secondary" type="button" onClick={handleReset}>
+                Clear
+              </button>
+            </div>
+          </div>
 
-          <form className="form" onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="jaml">JAML</label>
+            <textarea id="jaml" value={jaml} onChange={(e) => setJaml(e.target.value)} />
+          </div>
+
+          <div className="form-row">
             <div className="field">
-              <label htmlFor="jaml">JAML</label>
-              <textarea id="jaml" value={jaml} onChange={(e) => setJaml(e.target.value)} />
-              <small>Use the canonical JAML document text directly. No file-loader path needed here.</small>
+              <label htmlFor="threads">Threads</label>
+              <input id="threads" type="number" min={1} step={1} value={threads}
+                onChange={(e) => setThreads(Number(e.target.value))} />
             </div>
-
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="threads">Threads</label>
-                <input
-                  id="threads"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={threads}
-                  onChange={(e) => setThreads(Number(e.target.value))}
-                />
-                <small>For browser LLVM today, keep this at 1 unless the backend worker says otherwise.</small>
-              </div>
-
-              <div className="field">
-                <label htmlFor="batchCharCount">Batch Char Count</label>
-                <input
-                  id="batchCharCount"
-                  type="number"
-                  min={1}
-                  max={7}
-                  step={1}
-                  value={batchCharCount}
-                  onChange={(e) => setBatchCharCount(Number(e.target.value))}
-                />
-                <small>Execution hint for the worker search backend.</small>
-              </div>
+            <div className="field">
+              <label htmlFor="batchCharCount">Batch Chars</label>
+              <input id="batchCharCount" type="number" min={1} max={7} step={1} value={batchCharCount}
+                onChange={(e) => setBatchCharCount(Number(e.target.value))} />
             </div>
-
-            <div className="actions">
-              <button className="button-primary" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Sending…" : "Send Search Request"}
-              </button>
-              <button className="button-secondary" type="button" onClick={handleDemoRows} disabled={isSubmitting}>
-                Load Demo Rows
-              </button>
+            <div className="field">
+              <label htmlFor="startBatch">Start</label>
+              <input id="startBatch" type="number" min={0} value={startBatch}
+                onChange={(e) => setStartBatch(Number(e.target.value))} />
             </div>
-          </form>
+            <div className="field">
+              <label htmlFor="endBatch">End</label>
+              <input id="endBatch" type="number" min={1} value={endBatch}
+                onChange={(e) => setEndBatch(Number(e.target.value))} />
+            </div>
+          </div>
 
           <div className="status-strip">
-            <div className="status-pill">Frontend role: pretty renderer</div>
-            <div className="status-pill">Backend role: Node/C# worker search</div>
-            {response ? <div className="status-pill">{response.message}</div> : null}
-            {error ? <div className="status-pill error">{error}</div> : null}
+            {progress && <div className="status-pill">{progress}</div>}
+            {error && <div className="status-pill error">{error}</div>}
           </div>
         </div>
 
         <div className="card panel">
-          <h2>Result Rows</h2>
-          <p className="panel-copy">
-            Render one row into cards, tables, exports, or whatever Jammy wants. The frontend is
-            cheap; the search engine is the expensive part.
-          </p>
-
-          {response ? (
-            <div className="meta-grid">
-              <div className="meta-card">
-                <strong>Rows</strong>
-                <span>{response.results.length}</span>
-              </div>
-              <div className="meta-card">
-                <strong>Elapsed</strong>
-                <span>{response.elapsedMs} ms</span>
-              </div>
+          <div className="panel-heading">
+            <div>
+              <h2>Results</h2>
+              <p className="panel-copy">Real-time seed matches from the browser engine.</p>
             </div>
-          ) : null}
+          </div>
 
           {rows.length > 0 ? (
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Seed</th>
-                    <th>Score</th>
-                    {Array.from({ length: maxTallies }).map((_, index) => (
-                      <th key={index}>{shouldLabels[index] ?? `should_${index + 1}`}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={`${row.seed}-${row.score}`}>
-                      <td>{row.seed}</td>
-                      <td>{row.score}</td>
-                      {Array.from({ length: maxTallies }).map((_, index) => (
-                        <td key={index}>{row.tallies[index] ?? 0}</td>
-                      ))}
+            <>
+              <div className="meta-grid">
+                <div className="meta-card">
+                  <strong>Seeds</strong>
+                  <span>{rows.length}</span>
+                </div>
+                <div className="meta-card">
+                  <strong>Elapsed</strong>
+                  <span>{(elapsedMs / 1000).toFixed(1)}s</span>
+                </div>
+              </div>
+
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Seed</th>
+                      <th>Score</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, index) => (
+                      <tr key={`${row.seed}-${index}`}>
+                        <td>{index + 1}</td>
+                        <td>{row.seed}</td>
+                        <td>{row.score}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <div className="empty">
               <div>
-                <h3>No rows yet</h3>
-                <p>Submit a request or load demo rows to preview the table contract.</p>
+                <h3>No results yet</h3>
+                <p>Boot the package, run a search, and watch the rows land here.</p>
               </div>
             </div>
           )}

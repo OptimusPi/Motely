@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Text;
 
-namespace Motely;
+namespace Motely.Core;
 
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public struct VectorMask(uint mask)

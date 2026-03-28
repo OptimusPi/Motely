@@ -1,14 +1,14 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleBossStream(MotelySinglePrngStream prngStream)
 {
     public MotelySinglePrngStream PrngStream = prngStream;
 }
 
-unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelySingleBossStream CreateBossStream()

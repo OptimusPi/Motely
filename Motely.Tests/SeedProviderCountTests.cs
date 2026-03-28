@@ -14,7 +14,7 @@ public class SeedProviderCountTests
     public void GetPaddedSeedCount_MatchesExpectedCount(string keyword, int padLen, int expected)
     {
         char[] validChars = ['A', 'B', 'C'];
-        ulong actual = MotelyCore.GetPaddedSeedCount(keyword, padLen, validChars);
+        ulong actual = GetPaddedSeedCount(keyword, padLen, validChars);
 
         Assert.Equal((ulong)expected, actual);
     }
@@ -23,8 +23,8 @@ public class SeedProviderCountTests
     public void GeneratePaddedSeeds_YieldsExpectedCount_ForPadLenGreaterThanThree()
     {
         char[] validChars = ['A', 'B', 'C'];
-        ulong expected = MotelyCore.GetPaddedSeedCount("JUST", 4, validChars);
-        int actual = MotelyCore.GeneratePaddedSeeds("JUST", 4, validChars).Count();
+        ulong expected = GetPaddedSeedCount("JUST", 4, validChars);
+        int actual = GeneratePaddedSeeds("JUST", 4, validChars).Count();
 
         Assert.Equal((int)expected, actual);
     }
@@ -33,7 +33,7 @@ public class SeedProviderCountTests
     public void PalindromeSeedProvider_ReportsExactSeedCount()
     {
         var provider = new MotelyPalindromeSeedProvider();
-        var buffer = new string[MotelyCore.MaxVectorWidth];
+        var buffer = new string[MaxVectorWidth];
         int total = 0;
 
         while (true)

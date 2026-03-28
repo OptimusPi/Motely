@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Core;
 
 public ref struct MotelyVectorTagStream(MotelyVectorResampleStream resampleStream, int ante)
 {

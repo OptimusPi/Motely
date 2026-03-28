@@ -1,26 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["motely"],
-  experimental: {
-    externalDir: true,
-  },
+  staticPageGenerationTimeout: 1000,
   turbopack: {
     resolveAlias: {
-      // Relative to this app dir — Turbopack on Windows rejects absolute file:// imports here.
-      "motely/browser": "../Motely/dist/wasm/index.mjs",
+      fs: { browser: "./lib/stubs/empty.ts" },
+      "fs/promises": { browser: "./lib/stubs/empty.ts" },
+      url: { browser: "./lib/stubs/empty.ts" },
     },
-  },
-  // Serve static files from wwwroot
-  staticPageGenerationTimeout: 1000,
-  // Add rewrites for searcher.html
-  async rewrites() {
-    return [
-      {
-        source: '/searcher',
-        destination: '/searcher.html',
-      },
-    ];
   },
 };
 

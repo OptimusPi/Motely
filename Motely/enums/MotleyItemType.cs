@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Core;
 
 internal enum InternalInvalid
 {

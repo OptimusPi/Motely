@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Core;
 
 public struct MotelySingleTagStream(MotelySingleResampleStream resampleStream, int ante)
 {
@@ -8,7 +8,7 @@ public struct MotelySingleTagStream(MotelySingleResampleStream resampleStream, i
     public MotelySingleResampleStream ResampleStream = resampleStream;
 }
 
-ref partial struct MotelySingleSearchContext
+public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     private static readonly MotelyTag[] DisallowedAnteOneTags =
     [
