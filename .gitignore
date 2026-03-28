@@ -10,6 +10,17 @@ obj/
 node_modules/
 node_modules/**
 
+# Next.js
+.next/
+out/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env*
+.vercel
+
 # VS Code / Editors
 .vscode/
 .claude/
