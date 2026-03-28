@@ -90,7 +90,16 @@ Node.js
   │
   ├─ MotelyNodeExports.validateJaml(jamlContent)  →  null | errorString
   ├─ MotelyNodeExports.analyzeSeed(seed, deck, stake)  →  JSON string
-  └─ MotelyNodeExports.getVersion()  →  version string
+  ├─ MotelyNodeExports.getVersion()  →  version string
+  │
+  │  ── Search ──
+  ├─ MotelyNodeExports.runSearch(jaml, threadCount?, batchCharCount?, startBatch?, endBatch?, onProgress?, onResult?)
+  ├─ MotelyNodeExports.runSeedListSearch(jaml, seeds[], threadCount?, onProgress?, onResult?)
+  └─ MotelyNodeExports.runRandomSearch(jaml, count, threadCount?, onProgress?, onResult?)
+       │
+       └─ All return JSON array of matching seeds
+          onProgress(searched, found, elapsedMs) fires during search
+          onResult(seed, score) fires per match
 ```
 
 NativeAOT compiled to a `.node` binary. `[JSExport]` on the class.
