@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      motely-wasm:
+        specifier: ^5.1.43
+        version: 5.1.43
       next:
         specifier: 16.2.1
         version: 16.2.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -276,6 +279,9 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
+  motely-wasm@5.1.43:
+    resolution: {integrity: sha512-Rqh1c/PCZwXv7KsmpdfC1f68A+x11kwIgW2Oy/k8FmLlKzd9g0Cvnq7pGCUztgau+aQdOM2YzbvLejcXbIpiSw==}
+
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -514,6 +520,8 @@ snapshots:
 
   detect-libc@2.1.2:
     optional: true
+
+  motely-wasm@5.1.43: {}
 
   nanoid@3.3.11: {}
 

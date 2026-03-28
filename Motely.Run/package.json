@@ -1,6 +1,6 @@
 {
   "name": "motely-node",
-  "version": "5.1.43",
+  "version": "5.2.0",
   "description": "Motely seed search - Node.js (NativeAOT linux-x64)",
   "type": "module",
   "main": "./bin/Release/net10.0/linux-x64/publish/Motely.Orchestration.cjs",

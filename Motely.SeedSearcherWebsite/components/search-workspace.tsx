@@ -24,10 +24,10 @@ should:
 
 export function SearchWorkspace() {
   const [jaml, setJaml] = useState(initialJaml);
-  const [threads, setThreads] = useState(4);
-  const [batchCharCount, setBatchCharCount] = useState(5);
+  const [threads, setThreads] = useState(1);
+  const [batchCharCount, setBatchCharCount] = useState(1);
   const [startBatch, setStartBatch] = useState(0);
-  const [endBatch, setEndBatch] = useState(35);
+  const [endBatch, setEndBatch] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [rows, setRows] = useState<SeedSearchRow[]>([]);
   const [progress, setProgress] = useState("");
