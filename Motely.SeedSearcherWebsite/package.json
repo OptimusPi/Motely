@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:wasm": "dotnet build ../Motely.Run -c Release && xcopy \"../Motely.Run/bin/Release/net10.0-browser/browser-wasm/publish/*\" \"public/motely-framework/\" /E /Y && next build",
     "start": "next start"
   },
   "dependencies": {
+    "motely-wasm": "^5.1.43",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"

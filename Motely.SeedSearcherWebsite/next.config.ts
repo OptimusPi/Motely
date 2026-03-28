@@ -1,16 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Serve static files from wwwroot
   staticPageGenerationTimeout: 1000,
-  // Add rewrites for searcher.html
-  async rewrites() {
-    return [
-      {
-        source: '/searcher',
-        destination: '/searcher.html',
-      },
-    ];
+  turbopack: {
+    resolveAlias: {
+      fs: { browser: "./lib/stubs/empty.ts" },
+      "fs/promises": { browser: "./lib/stubs/empty.ts" },
+      url: { browser: "./lib/stubs/empty.ts" },
+    },
   },
 };
 
