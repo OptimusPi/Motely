@@ -449,8 +449,7 @@ public static class JamlConfigLoader
         try
         {
             var normalizedJaml = NormalizeLegacyLogicSyntax(jaml);
-            var deserializer = new StaticDeserializerBuilder(new JamlYamlContext())
-                .Build();
+            var deserializer = new DeserializerBuilder().Build();
             var dto = deserializer.Deserialize<JamlDto>(normalizedJaml);
             if (dto == null)
             {

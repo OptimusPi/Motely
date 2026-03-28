@@ -9,6 +9,11 @@ using Motely.Filters;
 
 namespace Motely;
 
+public interface IMotelySeedFilter
+{
+    public VectorMask Filter(ref MotelyVectorSearchContext searchContext);
+}
+
 public interface IMotelySeedFilterDesc
 {
     public IMotelySeedFilter CreateFilter(ref MotelyFilterCreationContext ctx);
@@ -78,22 +83,13 @@ public interface IMotelySeedRouterDesc<TProvider> : IMotelySeedRouterDesc
         return CreateSeedRouter(ref ctx);
     }
 }
+
 public interface IMotelySeedRouter
 {
-    /// <summary>
-    /// Called by the search loop for each seed. The provider invokes a caller-supplied
-    /// callback while the <see cref="MotelySingleSearchContext"/> is alive on the stack.
-    /// </summary>
     public void ProvideSeedContext(ref MotelySingleSearchContext ctx);
 }
 
 public delegate void MotelySeedRouterCallback(ref MotelySingleSearchContext ctx);
-
-public interface IMotelySeedFilter
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public VectorMask Filter(ref MotelyVectorSearchContext searchContext);
-}
 
 public enum MotelySearchMode
 {
@@ -1334,22 +1330,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             );
 
             VectorMask searchResultMask = Search._baseFilter.Filter(ref searchContext);
-
-            if (Search._seedRouter != null)
-            {
-                for (int lane = 0; lane < Motely.MaxVectorWidth; lane++)
-                {
-                    if (searchContext.IsLaneValid(lane))
-                    {
-                        MotelySingleSearchContext singleCtx = new(
-                            in Search._searchParameters,
-                            in searchContextParams,
-                            lane
-                        );
-                        Search._seedRouter.ProvideSeedContext(ref singleCtx);
-                    }
-                }
-            }
 
             searchContextParams.SeedHashCache->Reset();
             if (searchResultMask.IsPartiallyTrue())

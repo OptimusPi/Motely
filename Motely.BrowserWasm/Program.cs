@@ -1,14 +1,13 @@
 using Bootsharp;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
+using Motely;
 using Motely.BrowserWasm;
 using Motely.Filters;
 
 [assembly: JSPreferences(Space = ["^Motely\\.BrowserWasm\\.", "MotelyWasm."])]
 
-[assembly: JSExport(typeof(IMotelyBrowserApi), typeof(IMotelySingleSearchContext))]
-
-[assembly: JSImport(typeof(IMotelyUI))]
+[assembly: JSExport(typeof(IMotelyBrowserApi))]
 
 public static partial class Program
 {
