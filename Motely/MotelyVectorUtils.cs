@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.Wasm;
 using System.Runtime.Intrinsics.X86;
 
-namespace Motely.Core;
+namespace Motely;
 
 public static unsafe class MotelyVectorUtils
 {

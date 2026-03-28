@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using Motely.Filters;
 
-namespace Motely.Core;
+namespace Motely;
 
 public interface IMotelySeedFilterDesc
 {

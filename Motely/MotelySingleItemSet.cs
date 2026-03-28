@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace Motely.Core;
+namespace Motely;
 
 public struct MotelySingleItemSet
 {

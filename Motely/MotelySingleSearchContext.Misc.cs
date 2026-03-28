@@ -1,4 +1,4 @@
-namespace Motely.Core;
+namespace Motely;
 
 public readonly unsafe ref partial struct MotelySingleSearchContext
 {

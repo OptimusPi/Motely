@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Core;
+namespace Motely;
 
 public ref struct MotelyVectorRunState
 {

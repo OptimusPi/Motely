@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Core;
+namespace Motely;
 
 public enum MotelyBoosterPackType
 {

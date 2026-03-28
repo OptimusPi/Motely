@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
-using Motely.Core;
+using Motely;
 using Motely.Filters;
 
 namespace Motely;

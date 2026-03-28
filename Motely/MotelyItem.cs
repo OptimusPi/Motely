@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely.Core;
+namespace Motely;
 
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>

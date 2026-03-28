@@ -19,8 +19,6 @@
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
     <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="Microsoft.JavaScript.NodeApi" />
-    <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" />
   </ItemGroup>
 
   <!-- Exclude desktop-only code -->

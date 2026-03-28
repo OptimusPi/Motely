@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Text;
 
-namespace Motely.Core;
+namespace Motely;
 
 public ref struct MotelyVectorItemSet
 {

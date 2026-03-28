@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace Motely.Core;
+namespace Motely;
 
 public static class MotelyPrngKeys
 {

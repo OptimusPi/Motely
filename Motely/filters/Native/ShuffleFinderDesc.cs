@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Motely.Core;
+namespace Motely;
 
 public struct ShuffleFinderFilterDesc()
     : IMotelySeedFilterDesc<ShuffleFinderFilterDesc.ShuffleFinderFilter>
@@ -106,37 +106,37 @@ public struct ShuffleFinderFilterDesc()
                 switch (rankCount)
                 {
                     case 1:
-                    {
-                        // High card
-                        chips = 5 + GetCardChips(rank);
-                        mult = 1;
-                        handType = HandType.HighCard;
-                        break;
-                    }
+                        {
+                            // High card
+                            chips = 5 + GetCardChips(rank);
+                            mult = 1;
+                            handType = HandType.HighCard;
+                            break;
+                        }
                     case 2:
-                    {
-                        // Pair
-                        chips = 10 + 2 * GetCardChips(rank);
-                        mult = 2;
-                        handType = HandType.Pair;
-                        break;
-                    }
+                        {
+                            // Pair
+                            chips = 10 + 2 * GetCardChips(rank);
+                            mult = 2;
+                            handType = HandType.Pair;
+                            break;
+                        }
                     case 3:
-                    {
-                        // Three of a kind
-                        chips = 30 + 3 * GetCardChips(rank);
-                        mult = 3;
-                        handType = HandType.ThreeOfAKind;
-                        break;
-                    }
+                        {
+                            // Three of a kind
+                            chips = 30 + 3 * GetCardChips(rank);
+                            mult = 3;
+                            handType = HandType.ThreeOfAKind;
+                            break;
+                        }
                     case 4:
-                    {
-                        // Four of a kind
-                        chips = 60 + 4 * GetCardChips(rank);
-                        mult = 7;
-                        handType = HandType.FourOfAKind;
-                        break;
-                    }
+                        {
+                            // Four of a kind
+                            chips = 60 + 4 * GetCardChips(rank);
+                            mult = 7;
+                            handType = HandType.FourOfAKind;
+                            break;
+                        }
                 }
 
                 if (mult * chips > bestScore)

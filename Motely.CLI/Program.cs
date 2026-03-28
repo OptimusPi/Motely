@@ -3,8 +3,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-using Motely.Core;
-using static Motely.Core.Motely;
+using Motely;
+using static Motely.Motely;
 using Motely.DB.SeedSource;
 using Motely.Filters;
 
@@ -168,7 +168,7 @@ partial class Program
             {
                 string repoRoot = JamlSchemaGenerator.FindRepoRoot(AppContext.BaseDirectory);
                 JamlSchemaGenerator.GenerateAndWriteAll(repoRoot);
-                Console.WriteLine($"JAML schema written using MotelyVersion={JamlSchemaGenerator.ReadMotelyVersion(repoRoot)}");
+                Console.WriteLine($"JAML schema written using Motely;Version={JamlSchemaGenerator.ReadMotelyVersion(repoRoot)}");
                 return 0;
             }
 

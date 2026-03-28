@@ -850,7 +850,7 @@ public static class JamlScoring
         if (item.TypeCategory != MotelyItemTypeCategory.Joker)
             return 0;
         if (wildcardRarity.HasValue &&
-            (MotelyJokerRarity)(item.Value & Motely.Core.Motely.JokerRarityMask) != wildcardRarity.Value)
+            (MotelyJokerRarity)(item.Value & Motely.Motely.JokerRarityMask) != wildcardRarity.Value)
             return 0;
         if (edition.HasValue && item.Edition != edition.Value)
             return 0;
