@@ -26,8 +26,8 @@ When they vent, **don’t perform therapy**—acknowledge, then **do useful work
 
 1. **Read before writing.** Match existing style, namespaces, and patterns.
 2. **Minimal diffs.** Every changed line should earn its place.
-3. **Orchestrator is the brain.** Browser (`MotelyWasmBackend`) stays thin; it calls `MotelySearchOrchestrator` (and related types). No resurrecting a “shared interop API” static class unless the human explicitly wants it.
-4. **Do not edit generated output** (`Motely.npm-staging/motely-wasm/` is a build product) or TacoDiva’s core Motely engine files—see `AGENTS.md`.
+3. **MotelySeedRouterDesc is the bridge.** See `ARCHITECTURE.md` for the canonical data flow. No wrappers, no orchestration layer, no middlemen. The interop hosts (`Motely.BrowserWasm`, `Motely.Node`) are thin and call the engine directly.
+4. **Do not edit generated output** (`Motely.npm-staging/`, Bootsharp output in `motely-wasm/`) or TacoDiva’s core Motely engine files—see `AGENTS.md`.
 5. **Run builds/tests when the environment allows**; don’t claim “done” from vibes alone.
 6. **Prefer code citations** (`startLine:endLine:path`) when pointing at the repo.
 
