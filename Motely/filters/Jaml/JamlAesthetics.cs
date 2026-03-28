@@ -46,7 +46,7 @@ public static class JamlAesthetics
     private static ReadOnlySpan<JamlAesthetic> KnownAesthetics => [JamlAesthetic.Palindrome];
 }
 
-/// <summary>Palindrome seeds: mirror-generated halves over <see cref="Motely.Motely.SeedDigits"/>, lengths 1..<see cref="Motely.Motely.MaxSeedLength"/>.</summary>
+/// <summary>Palindrome seeds: mirror-generated halves over <see cref="Motely.SeedDigits"/>, lengths 1..<see cref="Motely.MaxSeedLength"/>.</summary>
 file static class PalindromeAestheticSeeds
 {
     public static int SeedCount => CalculateSeedCount();
@@ -54,10 +54,10 @@ file static class PalindromeAestheticSeeds
     public static bool Matches(ReadOnlySpan<char> seed)
     {
         int len = seed.Length;
-        if (len is < 1 or > Motely.Motely.MaxSeedLength)
+        if (len is < 1 or > Motely.MaxSeedLength)
             return false;
 
-        ReadOnlySpan<char> alphabet = Motely.Motely.SeedDigits;
+        ReadOnlySpan<char> alphabet = Motely.SeedDigits;
         for (int i = 0; i < len; i++)
         {
             if (!alphabet.Contains(seed[i]))
@@ -75,7 +75,7 @@ file static class PalindromeAestheticSeeds
 
     public static IEnumerable<string> Enumerate()
     {
-        for (int len = 1; len <= Motely.Motely.MaxSeedLength; len++)
+        for (int len = 1; len <= Motely.MaxSeedLength; len++)
         {
             foreach (var palindrome in OfLength(len))
                 yield return palindrome;
@@ -86,8 +86,8 @@ file static class PalindromeAestheticSeeds
     {
         if (length == 1)
         {
-            for (int i = 0; i < Motely.Motely.SeedDigits.Length; i++)
-                yield return Motely.Motely.SeedDigits[i].ToString();
+            for (int i = 0; i < Motely.SeedDigits.Length; i++)
+                yield return Motely.SeedDigits[i].ToString();
             yield break;
         }
 
@@ -106,9 +106,9 @@ file static class PalindromeAestheticSeeds
             yield break;
         }
 
-        for (int i = 0; i < Motely.Motely.SeedDigits.Length; i++)
+        for (int i = 0; i < Motely.SeedDigits.Length; i++)
         {
-            buffer[pos] = Motely.Motely.SeedDigits[i];
+            buffer[pos] = Motely.SeedDigits[i];
             foreach (var result in GenerateRecursive(buffer, pos + 1, halfLen, totalLen))
                 yield return result;
         }
@@ -119,9 +119,9 @@ file static class PalindromeAestheticSeeds
         checked
         {
             int total = 0;
-            int seedDigitCount = Motely.Motely.SeedDigits.Length;
+            int seedDigitCount = Motely.SeedDigits.Length;
 
-            for (int len = 1; len <= Motely.Motely.MaxSeedLength; len++)
+            for (int len = 1; len <= Motely.MaxSeedLength; len++)
             {
                 int halfLen = (len + 1) / 2;
                 int countForLength = 1;

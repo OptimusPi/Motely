@@ -17,7 +17,6 @@
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="YamlDotNet" />
-    <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
