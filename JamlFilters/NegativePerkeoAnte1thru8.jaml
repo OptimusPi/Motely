@@ -4,72 +4,70 @@ description: Negative any legendary 1-8
 stake: White
 
 must:
-  - soulJoker: Any
-    antes: [1,2,3,4,5,6,7,8]
+  - legendaryJoker: Perkeo
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     edition: Negative
-    min: 2
 
 should:
-  - soulJoker: Any
-    antes: [1,2,3,4,5,6,7,8]
+  - legendaryJoker: Any
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     edition: Negative
     score: 100
 
-  - soulJoker: Perkeo
-    antes: [1,2,3,4,5,6,7,8]
+  - legendaryJoker: Perkeo
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Perkeo Ante 1-8"
     score: 10
 
-  - soulJoker: Canio
-    antes: [1,2,3,4,5,6,7,8]
+  - legendaryJoker: Canio
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Canio Ante 1-8"
     score: 10
 
-  - soulJoker: Triboulet
-    antes: [1,2,3,4,5,6,7,8]
+  - legendaryJoker: Triboulet
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Triboulet Ante 1-8"
     score: 10
 
-  - soulJoker: Chicot
-    antes: [1,2,3,4,5,6,7,8]
+  - legendaryJoker: Chicot
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Chicot Ante 1-8"
     score: 10
 
-  - soulJoker: Yorick
-    antes: [1,2,3,4,5,6,7,8]
+  - legendaryJoker: Yorick
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Yorick Ante 1-8"
     score: 10
 
   - joker: Blueprint
-    antes: [1,2,3,4,5,6,7,8]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Blueprint Ante 1-8"
     score: 3
 
   - joker: Brainstorm
-    antes: [1,2,3,4,5,6,7,8]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Brainstorm Ante 1-8"
     score: 3
 
   - joker: InvisibleJoker
-    antes: [1,2,3,4,5,6,7,8]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Invisible Joker Ante 1-8"
     score: 3
 
   - joker: Blueprint
     edition: Negative
-    antes: [1,2,3,4,5,6,7,8]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Negative Blueprint Ante 1-8"
     score: 3
 
   - joker: Brainstorm
     edition: Negative
-    antes: [1,2,3,4,5,6,7,8]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Negative Brainstorm Ante 1-8"
     score: 3
 
   - joker: InvisibleJoker
     edition: Negative
-    antes: [1,2,3,4,5,6,7,8]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
     label: "Negative Invisible Joker Ante 1-8"
     score: 3
-

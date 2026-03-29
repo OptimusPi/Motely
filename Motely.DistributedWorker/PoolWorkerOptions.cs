@@ -10,11 +10,11 @@ public sealed class PoolWorkerOptions
     public string WorkerId { get; set; } = "";
 
     /// <summary>
-    /// Base directory for local DuckLake result files. One .db file per filterId.
-    /// Default: MotelyData/sinks/ in the working directory.
+    /// Shared DuckLake root for local results (partitioned by filter_id in Motely.DB).
+    /// Default: MotelyData/ducklake in the working directory.
     /// Set to empty string to disable local DB saving.
     /// </summary>
-    public string LocalDbPath { get; set; } = "MotelyData/sinks";
+    public string LocalDbPath { get; set; } = "MotelyData/ducklake";
 
     /// <summary>
     /// Optional: only claim blocks for this specific filter ID.

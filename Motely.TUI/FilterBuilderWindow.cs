@@ -608,16 +608,7 @@ public class FilterBuilderWindow : Window
                     MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
                 };
 
-                var serializer = new SerializerBuilder()
-                    .WithNamingConvention(NullNamingConvention.Instance)
-                    .DisableAliases() // Prevent &o0/*o0 anchor/alias references
-                    .ConfigureDefaultValuesHandling(
-                        DefaultValuesHandling.OmitNull
-                            | DefaultValuesHandling.OmitEmptyCollections
-                            | DefaultValuesHandling.OmitDefaults
-                    )
-                    .Build();
-                var jaml = serializer.Serialize(config);
+                var jaml = JamlSerializer.Build().Serialize(config);
 
                 var filePath = FilterLibrary.SaveJamlFilter(name.ToString() ?? "Untitled", jaml);
 
@@ -692,16 +683,7 @@ public class FilterBuilderWindow : Window
             MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
         };
 
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(NullNamingConvention.Instance)
-            .DisableAliases() // Prevent &o0/*o0 anchor/alias references
-            .ConfigureDefaultValuesHandling(
-                DefaultValuesHandling.OmitNull
-                    | DefaultValuesHandling.OmitEmptyCollections
-                    | DefaultValuesHandling.OmitDefaults
-            )
-            .Build();
-        var jaml = serializer.Serialize(config);
+        var jaml = JamlSerializer.Build().Serialize(config);
 
         try
         {

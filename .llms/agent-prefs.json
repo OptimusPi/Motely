@@ -1,0 +1,6 @@
+{
+  "agents": [
+    "claude-code",
+    "cursor"
+  ]
+}
