@@ -37,7 +37,7 @@
   </style>
 </head>
 <body>
-  <h1>Motely WASM 5.5.0</h1>
+  <h1>Motely WASM 5.6.0</h1>
   <div id="boot-status">Booting WASM...</div>
   <div class="tabs">
     <div class="tab active" onclick="switchTab('search')">Search</div>
@@ -81,17 +81,19 @@
   </div>
 
   <script type="module">
-    import Bootsharp, { Motely, Program } from '../Motely.BrowserWasm/bin/motely-wasm/index.mjs';
+    import dotnet, { Program } from '../Motely.BrowserWasm/motely-wasm/index.mjs';
+
+    const wasmRoot = new URL('../Motely.BrowserWasm/motely-wasm/', import.meta.url).href;
     let resultCount = 0;
 
-    Motely.MotelyUI.onProgress.subscribe((searched, found, elapsedMs) => {
+    Program.onProgress.subscribe((searched, found, elapsedMs) => {
       const ms = Number(elapsedMs), sec = (ms/1000).toFixed(1);
       document.getElementById('status').textContent =
         `Searched: ${Number(searched).toLocaleString()}  |  Found: ${Number(found).toLocaleString()}  |  ${sec}s`;
       document.getElementById('bar').style.width = '60%';
     });
 
-    Motely.MotelyUI.onResult.subscribe((seed, score) => {
+    Program.onResult.subscribe((seed, score) => {
       resultCount++;
       const tbody = document.getElementById('results');
       const row = tbody.insertRow(0);
@@ -99,15 +101,15 @@
       if (tbody.rows.length > 1000) tbody.deleteRow(tbody.rows.length - 1);
     });
 
-    Motely.MotelyUI.onComplete.subscribe((status, seedsFound, highestScore) => {
+    Program.onComplete.subscribe((status, seedsFound, highestScore) => {
       document.getElementById('status').textContent =
-        `${status.toUpperCase()} — Found: ${seedsFound}  |  Best: ${highestScore > 0 ? highestScore.toFixed(2) : 'n/a'}`;
+        `${String(status).toUpperCase()} — Found: ${seedsFound}  |  Best: ${highestScore > 0 ? highestScore.toFixed(2) : 'n/a'}`;
       document.getElementById('bar').style.width = '100%';
       document.getElementById('btn-start').disabled = false;
       document.getElementById('btn-stop').disabled = true;
     });
 
-    await Bootsharp.boot();
+    await dotnet.boot({ root: wasmRoot });
     document.getElementById('boot-status').textContent = 'Ready — ' + Program.getVersion();
     document.getElementById('btn-start').disabled = false;
     document.getElementById('btn-analyze').disabled = false;
