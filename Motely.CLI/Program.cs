@@ -1,23 +1,18 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using McMaster.Extensions.CommandLineUtils;
-using Motely.Analysis;
 using Motely;
-using static Motely.Motely;
+using Motely.Analysis;
 using Motely.DB.SeedSource;
 using Motely.Filters;
 
-namespace Motely;
 
 partial class Program
 {
     private static readonly CancellationTokenSource _cts = new();
-    private static volatile IMotelySearch? _activeSearch;
 
     static void RequestTermination()
     {
-        try { _activeSearch?.Cancel(); } catch { }
         _cts.Cancel();
     }
 
@@ -35,7 +30,7 @@ partial class Program
         using var _sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, OnTermination);
         using var _sighup = PosixSignalRegistration.Create(PosixSignal.SIGHUP, OnTermination);
 
-        Console.CancelKeyPress += (_, e) =>
+        Console.CancelKeyPress += (ctx, e) =>
         {
             e.Cancel = true;
             RequestTermination();
@@ -48,7 +43,6 @@ partial class Program
             while (!escCts.Token.IsCancellationRequested)
             {
                 await Task.Delay(100, escCts.Token).ConfigureAwait(false);
-                if (_activeSearch == null) continue;
                 if (!Console.KeyAvailable) continue;
                 if (Console.ReadKey(true).Key == ConsoleKey.Escape)
                     RequestTermination();
@@ -337,9 +331,13 @@ partial class Program
                 char[]? paddingChars = paddingOption.HasValue()
                     ? paddingOption.ParsedValue.ToCharArray()
                     : null;
-                var keywordSeeds = GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
-                var count = (int)GetPaddedSeedCountForKeywords(keywordInputs, paddingChars);
-                settings.WithProviderSearch(new MotelySeedListProvider(keywordSeeds, count));
+                var prov = Motely.Motely.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
+                settings.WithProviderSearch(
+                    new MotelySeedListProvider(
+                        prov,
+                        prov.Count()
+                    )
+                );
             }
             else if (randomOption.HasValue())
             {
@@ -352,40 +350,17 @@ partial class Program
             else
             {
                 settings.WithSequentialSearch();
-            }
 
-            if (startBatchOption.HasValue())
-                settings.WithStartBatchIndex(startBatchOption.ParsedValue);
-            if (endBatchOption.HasValue())
-                settings.WithEndBatchIndex(endBatchOption.ParsedValue);
+
+                if (startBatchOption.HasValue())
+                    settings.WithStartBatchIndex(startBatchOption.ParsedValue);
+                if (endBatchOption.HasValue())
+                    settings.WithEndBatchIndex(endBatchOption.ParsedValue);
+            }
             bool hasStructuredScores = plan.ShouldClauseCount > 0;
             using ISeedResultSink? sink = sinkOption.HasValue()
                 ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
                 : null;
-
-            // CLI output — seeds to stdout, progress to stderr
-            // Parse cutoff: number = fixed threshold, "best" = only print new highs
-            bool cutoffBest = false;
-            int cutoffNum = 0;
-            if (cutoffOption.HasValue())
-            {
-                string cutoffVal = cutoffOption.Value()!;
-                if (
-                    cutoffVal.Equals("best", StringComparison.OrdinalIgnoreCase)
-                    || cutoffVal.Equals("auto", StringComparison.OrdinalIgnoreCase)
-                )
-                    cutoffBest = true;
-                else if (!int.TryParse(cutoffVal, out cutoffNum))
-                {
-                    Console.Error.WriteLine(
-                        $"Error: --cutoff must be a number or 'auto', got '{cutoffVal}'."
-                    );
-                    return 1;
-                }
-            }
-
-            int bestScoreSoFar = int.MinValue;
-            object bestLock = new();
 
             if (hasStructuredScores)
             {
@@ -395,56 +370,6 @@ partial class Program
                 });
             }
 
-            settings.WithSeedMatchCallback(line =>
-            {
-                if (!hasStructuredScores)
-                    sink?.AppendSeed(line);
-
-                // Parse score from format: SEED,SCORE,...
-                int firstComma = line.IndexOf(',');
-                if (firstComma < 0)
-                {
-                    Console.WriteLine(line);
-                    return;
-                }
-
-                int secondComma = line.IndexOf(',', firstComma + 1);
-                var scoreSpan =
-                    secondComma >= 0
-                        ? line.AsSpan(firstComma + 1, secondComma - firstComma - 1)
-                        : line.AsSpan(firstComma + 1);
-
-                if (!int.TryParse(scoreSpan, out int score))
-                {
-                    Console.WriteLine(line);
-                    return;
-                }
-
-                if (cutoffBest)
-                {
-                    lock (bestLock)
-                    {
-                        if (score > bestScoreSoFar)
-                        {
-                            bestScoreSoFar = score;
-                            Console.WriteLine(line);
-                        }
-                    }
-                }
-                else if (score >= cutoffNum)
-                {
-                    Console.WriteLine(line);
-                }
-            });
-            settings.WithProgressMessageCallback(msg => Console.Error.WriteLine(msg));
-
-            var header = "SEED,SCORE";
-            foreach (var l in plan.MustLabels)
-                header += $",\"{l}\"";
-            foreach (var l in plan.ShouldLabels)
-                header += $",\"{l}\"";
-            Console.WriteLine(header);
-
             Console.Error.WriteLine(
                 $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batchCharCount={batchCharCount}"
             );
@@ -452,16 +377,9 @@ partial class Program
                 Console.Error.WriteLine($"Sink: {sink.OutputPath}");
 
             using var search = settings.CreateSearch();
-            _activeSearch = search;
-            try
-            {
-                await Task.Run(() => search.Start(_cts.Token));
-            }
-            catch (OperationCanceledException) { }
-            finally
-            {
-                _activeSearch = null;
-            }
+            search.Start(_cts.Token);
+            await search.WaitForCompletionAsync(_cts.Token);
+
 
             bool cancelled = _cts.Token.IsCancellationRequested;
             PrintSummary(search, batchCharCount, cancelled);

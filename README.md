@@ -17,7 +17,7 @@ This repository is the **MotelyJAML** fork (from [tacodiva/Motely](https://githu
 
 ## Distributed worker → Jammy pool (`MotelyWorker`)
 
-Connects to **`POST /api/search/helper`** on a deployed Jammy app (e.g. seedfinder.app). Requires an active distributed search on the server so there is work in the pool.
+Connects to **`POST /api/search/helper`** on a deployed Jammy app (e.g. seedfinder.app). The server hands out **one block** (`35^5` seeds) per `action=request`; the worker runs Motely on that block and posts `action=submit`. Durable identity everywhere is the filter UUID (`filterId`).
 
 ```bash
 # From this repo root
@@ -26,7 +26,19 @@ dotnet run --project Motely.DistributedWorker/Motely.DistributedWorker.csproj --
 
 Publish (AOT): `dotnet publish Motely.DistributedWorker/Motely.DistributedWorker.csproj -c Release -r linux-x64` (or `win-x64`). Run the `MotelyWorker` binary from the `publish` folder with the same `--pool` flag.
 
-**`--threads`**, **`--worker-id`**, **`--filter`**, **`--local-db`**: see the **Community worker (`MotelyWorker`)** section in the **[Jammy README](https://github.com/OptimusPi/JAMMY#community-worker-motelyworker)** (consumer app docs).
+### Options (summary)
+
+| Flag | Meaning |
+|------|--------|
+| `--pool <url>` | Jammy origin (e.g. `https://www.seedfinder.app`) — required |
+| `--threads N` | Motely search threads **per claimed block** (SIMD / parallel search inside one `35^5` block) |
+| `--worker-id` | Sent to the server on claim (heartbeats / debugging) |
+| `--filter` | Only claim blocks for this `filterId` UUID (optional; default = any active pool work) |
+| `--local-db <dir>` | Shared **DuckLake root** for local Parquet-backed results (default: `MotelyData/ducklake`). Use `-` to disable. All filters share one catalog; rows are scoped by `filter_id` in **Motely.DB** |
+
+See **[JAMMY `docs/DISTRIBUTED_SEARCH.md`](https://github.com/OptimusPi/JAMMY/blob/main/docs/DISTRIBUTED_SEARCH.md)** (or your Jammy checkout) for API + DB semantics.
+
+**`--threads`**, **`--worker-id`**, **`--filter`**, **`--local-db`**: additional notes may appear in the **[Jammy README](https://github.com/OptimusPi/JAMMY#community-worker-motelyworker)** (consumer app docs).
 
 ## Quick start (CLI)
 

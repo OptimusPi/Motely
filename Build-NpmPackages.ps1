@@ -1,93 +1,52 @@
 <#
 .SYNOPSIS
-    Builds the motely-wasm and motely-node NPM packages.
+    Build, pack, and optionally publish the motely-wasm npm package.
 
 .DESCRIPTION
-    One script. Two NPM packages.
-      - motely-wasm:  Bootsharp + NativeAOT-LLVM browser WASM  (Motely.BrowserWasm)
-      - motely-node:  NativeAOT linux-x64 Node addon           (Motely.Node)
+    dotnet publish -> Bootsharp emits the full npm package into motely-wasm/ automatically.
+    BootsharpPublishDirectory and BootsharpPackageDirectory both point to motely-wasm/.
 
     Run from the repo root:
-      ./Build-NpmPackages.ps1              # both
-      ./Build-NpmPackages.ps1 -WasmOnly    # just motely-wasm
-      ./Build-NpmPackages.ps1 -NodeOnly    # just motely-node
+      ./Build-NpmPackages.ps1            # build + pack
+      ./Build-NpmPackages.ps1 -Publish   # build + npm publish (uses NPM_TOKEN env or existing npm login)
+      ./Build-NpmPackages.ps1 -BuildOnly # dotnet publish only, skip npm entirely
 
-.PARAMETER WasmOnly
-    Build only the motely-wasm package.
+.PARAMETER Publish
+    Skip pack, go straight to npm publish --access public.
 
-.PARAMETER NodeOnly
-    Build only the motely-node package.
+.PARAMETER BuildOnly
+    dotnet publish only. No npm steps.
 #>
-param(
-    [switch]$WasmOnly,
-    [switch]$NodeOnly
-)
+param([switch]$Publish, [switch]$BuildOnly)
 
 $ErrorActionPreference = 'Stop'
-$repoRoot = $PSScriptRoot
+$project = Join-Path $PSScriptRoot "Motely.WASM" "Motely.WASM.csproj"
+$outDir = Join-Path $PSScriptRoot "Motely"
 
-Write-Host "=== Motely NPM Package Builder ===" -ForegroundColor Cyan
-Write-Host "Repo root: $repoRoot"
-Write-Host ""
+Write-Host "Building motely-wasm..." -ForegroundColor Cyan
+dotnet publish $project -c Release
+if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+Write-Host "Built -> $outDir" -ForegroundColor Green
 
-# ── motely-wasm (Bootsharp WASM) ──────────────────────────────────────────────
-if (-not $NodeOnly) {
-    Write-Host "── Building motely-wasm (Bootsharp + NativeAOT-LLVM) ──" -ForegroundColor Yellow
+if ($BuildOnly) { exit 0 }
 
-    $wasmProject = Join-Path $repoRoot "Motely.BrowserWasm" "Motely.BrowserWasm.csproj"
-    $wasmOutDir  = Join-Path $repoRoot "Motely.BrowserWasm" "motely-wasm"
-
-    Write-Host "  Project : $wasmProject"
-    Write-Host "  Output  : $wasmOutDir"
-    Write-Host ""
-
-    # Bootsharp publish produces the npm package directly into BootsharpPackageDirectory
-    dotnet publish $wasmProject -c Release
-    if ($LASTEXITCODE -ne 0) { throw "motely-wasm build failed!" }
-
-    Write-Host ""
-    Write-Host "  motely-wasm built -> $wasmOutDir" -ForegroundColor Green
-
-    # Pack it
-    Push-Location $wasmOutDir
-    npm pack
-    if ($LASTEXITCODE -ne 0) { Pop-Location; throw "npm pack failed for motely-wasm!" }
-    $wasmTarball = Get-ChildItem "motely-wasm-*.tgz" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    Write-Host "  Tarball : $($wasmTarball.FullName)" -ForegroundColor Green
-    Pop-Location
-    Write-Host ""
+Push-Location $outDir
+try {
+    if ($Publish) {
+        if ($env:NPM_TOKEN) {
+            "//registry.npmjs.org/:_authToken=$($env:NPM_TOKEN)" | Set-Content ".npmrc"
+        }
+        npm publish --access public
+        if ($LASTEXITCODE -ne 0) { throw "npm publish failed" }
+        Write-Host "Published!" -ForegroundColor Green
+    }
+    else {
+        npm pack
+        if ($LASTEXITCODE -ne 0) { throw "npm pack failed" }
+        $t = Get-ChildItem "motely-wasm-*.tgz" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        Write-Host "Packed -> $($t.FullName)" -ForegroundColor Green
+    }
 }
-
-# ── motely-node (NativeAOT Node addon) ────────────────────────────────────────
-if (-not $WasmOnly) {
-    Write-Host "── Building motely-node (NativeAOT linux-x64) ──" -ForegroundColor Yellow
-
-    $nodeProject = Join-Path $repoRoot "Motely.Node" "Motely.Node.csproj"
-    $nodeOutDir  = Join-Path $repoRoot "Motely.npm-staging" "motely-node"
-
-    Write-Host "  Project : $nodeProject"
-    Write-Host "  Output  : $nodeOutDir"
-    Write-Host ""
-
-    # PublishAot + PublishNodeModule copies .cjs/.mjs/.d.ts/.node into NpmPackDirectory
-    dotnet publish $nodeProject -c Release -r linux-x64 /p:NodeBuild=true
-    if ($LASTEXITCODE -ne 0) { throw "motely-node build failed!" }
-
-    Write-Host ""
-    Write-Host "  motely-node built -> $nodeOutDir" -ForegroundColor Green
-
-    # Pack it
-    Push-Location $nodeOutDir
-    npm pack
-    if ($LASTEXITCODE -ne 0) { Pop-Location; throw "npm pack failed for motely-node!" }
-    $nodeTarball = Get-ChildItem "motely-node-*.tgz" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    Write-Host "  Tarball : $($nodeTarball.FullName)" -ForegroundColor Green
+finally {
     Pop-Location
-    Write-Host ""
 }
-
-Write-Host "=== Done ===" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "To publish to npm:" -ForegroundColor Magenta
-if (-not $NodeOnly) { Write-Host "  cd Motely.BrowserWasm/motely-wasm && npm publish" }
-if (-not $WasmOnly) { Write-Host "  cd Motely.npm-staging/motely-node && npm publish" }

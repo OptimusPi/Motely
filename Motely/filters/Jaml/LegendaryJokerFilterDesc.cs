@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using static Motely.MotelyVectorUtils;
 namespace Motely.Filters;
 
 public sealed class LegendaryJokerClause : IJamlClause
@@ -26,11 +27,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         Debug.Assert(boosterPacks.Length > 0,
             "Legendary joker clause should have normalized default sources at config load time.");
 
-        foreach (var ante in _clause.Antes)
-        {
-            ctx.CacheBoosterPackStream(ante);
-        }
-
         int maxBoosterPack = 0;
         for (int i = 0; i < boosterPacks.Length; i++)
         {
@@ -50,6 +46,7 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             Label = _clause.Label,
             Score = _clause.Score,
             Jokers = _clause.Jokers,
+            IsWildcard = _clause.IsWildcard,
             Edition = _clause.Edition,
             Antes = _clause.Antes,
             Min = _clause.Min,
@@ -96,30 +93,23 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             var soulStream = singleCtx.CreateSoulJokerStream(ante);
             var legendaryJoker = singleCtx.GetNextJoker(ref soulStream);
 
-            bool jokerMatch;
-            if (targetTypes.Length == 0)
+            bool editionMatch = !clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value;
+            bool jokerMatch = targetTypes.Length == 0;
+
+            if (!jokerMatch)
             {
-                // Wildcard: any legendary joker
-                jokerMatch = !clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value;
-            }
-            else
-            {
-                jokerMatch = false;
                 for (int i = 0; i < targetTypes.Length; i++)
                 {
                     if (legendaryJoker.Type == targetTypes[i])
                     {
-                        if (!clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value)
-                        {
-                            jokerMatch = true;
-                            break;
-                        }
+                        jokerMatch = true;
+                        break;
                     }
                 }
             }
 
             // Wrong joker? Don't even bother checking packs.
-            if (!jokerMatch)
+            if (!editionMatch || !jokerMatch)
                 return false;
 
             // ── STEP 2: Does The Soul actually appear in a pack? ──
@@ -193,14 +183,45 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         {
             Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
 
-            // Copy struct fields to locals — lambdas can't capture struct 'this'
             var clause = _clause;
             var maxBoosterPack = _maxBoosterPack;
             var targetTypes = _targetTypes;
             int needed = clause.Min;
             Debug.Assert(needed > 0, "SoulJokerClause.Min must be > 0 — loader bug.");
 
+            Vector256<int> candidateCounts = Vector256<int>.Zero;
+
+            foreach (var ante in clause.Antes)
+            {
+                var soulStream = ctx.CreateSoulJokerStream(ante);
+                var legendaryJoker = ctx.GetNextJoker(ref soulStream);
+                VectorMask preMask = MatchLegendaryJokers(legendaryJoker);
+
+                if (preMask.IsPartiallyTrue())
+                {
+                    candidateCounts = Vector256.Add(
+                        candidateCounts,
+                        Vector256.ConditionalSelect(
+                            VectorMaskToConditionalSelectMask(preMask),
+                            Vector256.Create(1),
+                            Vector256<int>.Zero
+                        )
+                    );
+                }
+            }
+
+            Vector256<int> minVec = Vector256.Create(needed);
+            Vector256<int> comparison = Vector256.GreaterThan(
+                candidateCounts,
+                Vector256.Subtract(minVec, Vector256.Create(1))
+            );
+            VectorMask candidateMask = new(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+
+            if (candidateMask.IsAllFalse())
+                return candidateMask;
+
             return ctx.SearchIndividualSeeds(
+                candidateMask,
                 (ref MotelySingleSearchContext singleCtx) =>
                 {
                     int matchCount = 0;
@@ -226,6 +247,27 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                     return false;
                 }
             );
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private readonly VectorMask MatchLegendaryJokers(in MotelyItemVector item)
+        {
+            VectorMask jokerMatch;
+            if (_clause.IsWildcard)
+            {
+                jokerMatch = VectorMask.AllBitsSet;
+            }
+            else
+            {
+                jokerMatch = VectorMask.NoBitsSet;
+                for (int t = 0; t < _targetTypes.Length; t++)
+                    jokerMatch |= VectorEnum256.Equals(item.Type, _targetTypes[t]);
+            }
+
+            if (_clause.Edition.HasValue)
+                jokerMatch &= VectorEnum256.Equals(item.Edition, _clause.Edition.Value);
+
+            return jokerMatch;
         }
     }
 }

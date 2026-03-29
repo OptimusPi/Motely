@@ -21,7 +21,10 @@
       "Bash(find /tmp/bootsharp/samples -name *.csproj -path *llvm* -o -name *.csproj -path *LLVM* -o -name *.csproj -path *aot* -o -name *.csproj -path *AOT*)",
       "Bash(cat /tmp/bootsharp/samples/bench/dotnet-llvm/*.cs)",
       "Bash(grep -r \"BootsharpLLVM\\\\|LLVM\" /tmp/bootsharp/src/js/test/cs/Test/ --include=*.cs --include=*.csproj -l)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(grep:*)",
+      "Bash(dotnet msbuild:*)",
+      "Bash(npm view:*)"
     ]
   }
 }
