@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "5.2.0",
+  "version": "5.6.0",
   "description": "Motely seed search engine - Bootsharp WASM (browser)",
   "type": "module",
   "main": "./index.mjs",
@@ -14,8 +14,7 @@
   },
   "files": [
     "index.mjs",
-    "types/",
-    "bootsharp/"
+    "types/"
   ],
   "repository": {
     "type": "git",
