@@ -1,0 +1,12 @@
+{
+  "name": "motely-seed-searcher-website",
+  "private": true,
+  "description": "Static Motely WASM smoke-test page (not Next.js)",
+  "scripts": {
+    "build": "node scripts/copy-motely-wasm.mjs",
+    "vercel-build": "npm run build"
+  },
+  "dependencies": {
+    "motely-wasm": "5.6.0"
+  }
+}
