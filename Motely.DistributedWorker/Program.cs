@@ -8,18 +8,17 @@ using Motely.Filters;
 /// <summary>
 /// Motely Distributed Worker — AOT native Linux executable.
 ///
-/// Connects to the seed-finder pool and claims one block at a time.
-/// Also saves results locally to a DuckLake Parquet-backed catalog.
+/// Connects to the seed-finder pool and claims one block (35^5 seeds) at a time.
+/// <see cref="Motely.DB.SeedSource.SeedResultSinkDirectory"/> writes all filters into one shared DuckLake root (partitioned by filter_id).
 ///
 /// Usage:
 ///   MotelyWorker --pool https://www.seedfinder.app
 ///
 /// Options:
-///   --threads N           Thread count (default: all cores)
+///   --threads N           Motely search thread count for each claimed block (SIMD workers inside one block)
 ///   --worker-id id        Worker identifier (default: hostname-pid)
 ///   --filter filterId     Only claim blocks for this filter (optional; omit for any active filter)
-///   --local-db ./dir      Directory for local DuckLake .db files (default: MotelyData/sinks)
-///                         One file per filter: <dir>/<filterId>.db
+///   --local-db ./dir      Shared DuckLake directory (default: MotelyData/ducklake)
 ///                         Set to "-" to disable local saving.
 /// </summary>
 class Program
@@ -27,7 +26,7 @@ class Program
     static async Task<int> Main(string[] args)
     {
         // ── Parse args ──────────────────────────────────────────────────
-        string? url = null, workerId = null, filterId = null, localDbDir = "MotelyData/sinks";
+        string? url = null, workerId = null, filterId = null, localDbDir = "MotelyData/ducklake";
         int threads = Environment.ProcessorCount;
 
         for (int i = 0; i < args.Length - 1; i++)
@@ -50,10 +49,10 @@ class Program
             Console.Error.WriteLine("  MotelyWorker --pool <helper-url>");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Options:");
-            Console.Error.WriteLine("  --threads <N>        Thread count (default: all cores)");
+            Console.Error.WriteLine("  --threads <N>        Search threads per claimed block (default: all cores)");
             Console.Error.WriteLine("  --worker-id <id>     Worker identifier (optional)");
             Console.Error.WriteLine("  --filter <filterId>  Only claim blocks for this filter (optional)");
-            Console.Error.WriteLine("  --local-db <dir>     DuckLake output directory (default: MotelyData/sinks)");
+            Console.Error.WriteLine("  --local-db <dir>     Shared DuckLake root (default: MotelyData/ducklake)");
             Console.Error.WriteLine("                       Use '-' to disable local saving");
             return 1;
         }
@@ -82,7 +81,7 @@ class Program
         if (targetFilterId != null)
             Console.Error.WriteLine($"[MotelyWorker] Targeting filter: {targetFilterId}");
         if (localDbDir != null)
-            Console.Error.WriteLine($"[MotelyWorker] Local DuckLake: {Path.GetFullPath(localDbDir)}/{{filterId}}.db");
+            Console.Error.WriteLine($"[MotelyWorker] Local DuckLake root: {Path.GetFullPath(localDbDir)} (filter_id partitions)");
         Console.Error.WriteLine("[MotelyWorker] Waiting for work...");
         Console.Error.WriteLine();
 
@@ -91,25 +90,16 @@ class Program
         int chunksCompleted = 0;
         var startTime = DateTime.UtcNow;
 
-        // ── Per-filter local DuckLake sinks ─────────────────────────
-        var localSinks = new Dictionary<string, ISeedResultSink>();
-        ISeedResultSink? GetOrOpenSink(string fId)
+        SeedResultSinkDirectory? localSinks = null;
+        if (localDbDir != null)
         {
-            if (localDbDir == null) return null;
-            if (localSinks.TryGetValue(fId, out var existing)) return existing;
             try
             {
-                Directory.CreateDirectory(localDbDir);
-                var dbPath = Path.Combine(localDbDir, $"{fId}.db");
-                var sink = SeedResultSinkFactory.Create(dbPath, tallyCount: 0);
-                localSinks[fId] = sink;
-                Console.Error.WriteLine($"[MotelyWorker] Opened local DuckLake: {dbPath}");
-                return sink;
+                localSinks = new SeedResultSinkDirectory(localDbDir, tallyCount: 0);
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[MotelyWorker] Warning: could not open local DuckLake for {fId}: {ex.Message}");
-                return null;
+                Console.Error.WriteLine($"[MotelyWorker] Warning: could not open local DuckLake sink directory: {ex.Message}");
             }
         }
 
@@ -206,11 +196,18 @@ class Program
                 // ── SAVE TO LOCAL DUCKLAKE ────────────────────────────────
                 if (results.Length > 0)
                 {
-                    var sink = GetOrOpenSink(claim.FilterId!);
-                    if (sink != null)
+                    try
                     {
-                        foreach (var r in results)
-                            sink.AppendScoredResult(r.Seed, r.Score, ReadOnlySpan<int>.Empty);
+                        var sink = localSinks?.GetOrOpen(claim.FilterId!);
+                        if (sink != null)
+                        {
+                            foreach (var r in results)
+                                sink.AppendScoredResult(r.Seed, r.Score, ReadOnlySpan<int>.Empty);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[MotelyWorker] Warning: could not write local DuckLake for {claim.FilterId}: {ex.Message}");
                     }
                 }
 
@@ -253,18 +250,13 @@ class Program
         }
         finally
         {
-            // ── FLUSH & CLOSE ALL LOCAL SINKS ────────────────────────
-            foreach (var (fId, sink) in localSinks)
+            try
             {
-                try
-                {
-                    sink.Dispose();
-                    Console.Error.WriteLine($"\n[MotelyWorker] Flushed DuckLake for {fId}");
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"\n[MotelyWorker] Warning: DuckLake flush failed for {fId}: {ex.Message}");
-                }
+                localSinks?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"\n[MotelyWorker] Warning: DuckLake flush failed: {ex.Message}");
             }
         }
 

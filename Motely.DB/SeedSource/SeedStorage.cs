@@ -9,9 +9,11 @@ public static class SeedStoragePaths
 {
     public static string StandardRoot => Path.Combine(Directory.GetCurrentDirectory(), "MotelyData");
 
-    public static string StandardSourceDirectory => Path.Combine(StandardRoot, "sources");
+    public static string StandardLakeDirectory => Path.Combine(StandardRoot, "ducklake");
 
-    public static string StandardSinkDirectory => Path.Combine(StandardRoot, "sinks");
+    public static string StandardSourceDirectory => StandardLakeDirectory;
+
+    public static string StandardSinkDirectory => StandardLakeDirectory;
 
     public static SeedStoragePath ResolveSource(string value)
     {
@@ -24,7 +26,7 @@ public static class SeedStoragePaths
         }
 
         var resolved = Resolve(value, StandardSourceDirectory, "source", ensureParentDirectory: false);
-        if (!File.Exists(resolved.ResolvedPath))
+        if (!File.Exists(resolved.ResolvedPath) && !Directory.Exists(resolved.ResolvedPath))
             throw new FileNotFoundException(
                 $"Source not found. Looked for '{resolved.ResolvedPath}'.",
                 resolved.ResolvedPath
@@ -78,6 +80,13 @@ public static class SeedReader
 
     public static IReadOnlyList<string> ReadSeeds(string value)
     {
+        if (!Path.HasExtension(value) &&
+            !value.Contains(Path.DirectorySeparatorChar) &&
+            !value.Contains(Path.AltDirectorySeparatorChar))
+        {
+            return ReadSeedsByFilterId(value);
+        }
+
         var source = SeedStoragePaths.ResolveSource(value);
         return ReadSeeds(source);
     }
@@ -120,6 +129,18 @@ public static class SeedReader
     {
         using var db = new MotelyResultsDb(path, 0);
         return db.GetSeeds().Select(NormalizeSeedToken).Where(static seed => !string.IsNullOrWhiteSpace(seed)).ToArray();
+    }
+
+    public static IReadOnlyList<string> ReadSeedsByFilterId(string filterId)
+    {
+        if (string.IsNullOrWhiteSpace(filterId))
+            return [];
+
+        using var db = new MotelyResultsDb(SeedStoragePaths.StandardLakeDirectory, 0);
+        return db.GetSeeds(filterId)
+            .Select(NormalizeSeedToken)
+            .Where(static seed => !string.IsNullOrWhiteSpace(seed))
+            .ToArray();
     }
 
     private static IReadOnlyList<string> ReadParquetSeeds(string path)
@@ -166,6 +187,93 @@ public static class SeedResultSinkFactory
                 $"Unsupported sink format '{sink.Extension}'. Supported sink formats: .db, .parquet"
             ),
         };
+    }
+}
+
+public sealed class SeedResultSinkDirectory : IDisposable
+{
+    private readonly string _directoryPath;
+    private readonly MotelyResultsDb _db;
+    private readonly Dictionary<string, ISeedResultSink> _sinks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _lock = new();
+
+    public SeedResultSinkDirectory(string directoryPath, int tallyCount = 0, string extension = ".db")
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+            throw new ArgumentException("Sink directory path is required.", nameof(directoryPath));
+
+        if (string.IsNullOrWhiteSpace(extension))
+            throw new ArgumentException("Sink file extension is required.", nameof(extension));
+
+        _directoryPath = Path.GetFullPath(directoryPath);
+        Directory.CreateDirectory(_directoryPath);
+        _db = new MotelyResultsDb(_directoryPath, tallyCount);
+    }
+
+    public ISeedResultSink GetOrOpen(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            throw new ArgumentException("Sink key is required.", nameof(key));
+
+        lock (_lock)
+        {
+            if (_sinks.TryGetValue(key, out var existing))
+                return existing;
+
+            var sink = new FilterScopedSeedResultSink(_db, key, Path.Combine(_directoryPath, $"{key}.parquet"));
+            _sinks[key] = sink;
+            return sink;
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_lock)
+        {
+            foreach (var sink in _sinks.Values)
+                sink.Dispose();
+            _sinks.Clear();
+        }
+
+        _db.Dispose();
+    }
+}
+
+internal sealed class FilterScopedSeedResultSink : ISeedResultSink
+{
+    private readonly MotelyResultsDb _db;
+    private readonly string _filterId;
+
+    public FilterScopedSeedResultSink(MotelyResultsDb db, string filterId, string outputPath)
+    {
+        _db = db;
+        _filterId = filterId;
+        OutputPath = outputPath;
+    }
+
+    public string OutputPath { get; }
+
+    public void AppendSeed(string seed)
+    {
+        var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
+        if (string.IsNullOrWhiteSpace(normalizedSeed))
+            return;
+
+        _db.AppendResult(_filterId, normalizedSeed, 0, ReadOnlySpan<int>.Empty);
+    }
+
+    public void AppendScoredResult(string seed, int score, ReadOnlySpan<int> tallies)
+    {
+        var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
+        if (string.IsNullOrWhiteSpace(normalizedSeed))
+            return;
+
+        _db.AppendResult(_filterId, normalizedSeed, score, tallies);
+    }
+
+    public void Dispose()
+    {
+        // Shared DuckLake lifetime belongs to SeedResultSinkDirectory.
     }
 }
 

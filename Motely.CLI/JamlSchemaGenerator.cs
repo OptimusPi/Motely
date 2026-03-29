@@ -1,54 +1,106 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
+using YamlDotNet.Serialization;
 using Motely;
 using Motely.Filters;
 
-namespace Motely;
-
 internal static class JamlSchemaGenerator
 {
-    private static readonly string[] RankValues = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Jack", "Q", "Queen", "K", "King", "A", "Ace"];
-    private static readonly string[] SuitValues = ["Hearts", "Diamonds", "Clubs", "Spades"];
-    private static readonly string[] MetadataKeys = ["id", "name", "author", "dateCreated", "description", "deck", "stake", "seeds", "aesthetics", "hashtags"];
-    private static readonly string[] SectionKeys = ["defaults", "must", "should", "mustNot"];
-    private static readonly string[] ClauseTypeKeys = [
-        "joker", "jokers",
-        "commonJoker", "commonJokers",
-        "uncommonJoker", "uncommonJokers",
-        "rareJoker", "rareJokers",
-        "mixedJoker", "mixedJokers",
-        "soulJoker",
-        "legendaryJoker",
-        "voucher", "vouchers",
-        "tarot", "tarotCard",
-        "spectral", "spectralCard",
-        "planet", "planetCard",
-        "boss",
-        "tag",
-        "smallBlindTag",
-        "bigBlindTag",
-        "standardCard",
-        "erraticRank",
-        "erraticSuit",
-        "erraticCard",
-        "startingDraw",
-        "event",
-        "eventType"
-    ];
-    private static readonly string[] PropertyKeys = [
-        "type", "value",
-        "antes", "score", "min", "max", "label",
-        "edition", "stickers", "seal", "enhancement", "rank", "suit",
-        "rolls", "shopItems", "boosterPacks", "minShopSlot", "maxShopSlot", "minPackSlot", "maxPackSlot",
-        "sources", "and", "or"
-    ];
-    private static readonly string[] SourceKeys = [
-        "shopItems", "boosterPacks", "minShopSlot", "maxShopSlot", "minPackSlot", "maxPackSlot",
-        "tags", "requireMega", "judgement", "rareTag", "uncommonTag", "wraith", "soulCard", "riffRaff",
-        "purpleSealOrEightBall", "emperor", "sixthSense", "seance", "certificate", "incantation", "familiar", "grim",
-        "deckDraw", "uncommonShopJokers", "rareShopJokers", "commonShopJokers", "allShopJokers"
-    ];
+    private static readonly string[] RankValues = ["Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "2", "3", "4", "5", "6", "7", "8", "9", "10", "T", "J", "Jack", "Q", "Queen", "K", "King", "A", "Ace"];
+    private static readonly string[] SuitValues = ["Hearts", "Diamonds", "Clubs", "Spades", "H", "D", "C", "S"];
+    private static readonly string[] JokerWildcardValues = ["any", "anycommon", "anyuncommon", "anyrare", "anylegendary"];
+    private static readonly string[] MetadataKeys = GetYamlAliases(
+        typeof(JamlDto),
+        nameof(JamlDto.Id),
+        nameof(JamlDto.Name),
+        nameof(JamlDto.Author),
+        nameof(JamlDto.DateCreated),
+        nameof(JamlDto.Description),
+        nameof(JamlDto.Deck),
+        nameof(JamlDto.Stake),
+        nameof(JamlDto.Seeds),
+        nameof(JamlDto.Aesthetics),
+        nameof(JamlDto.Hashtags)
+    );
+    private static readonly string[] SectionKeys = GetYamlAliases(
+        typeof(JamlDto),
+        nameof(JamlDto.Defaults),
+        nameof(JamlDto.Must),
+        nameof(JamlDto.Should),
+        nameof(JamlDto.MustNot)
+    );
+    private static readonly string[] ClauseTypeKeys = GetYamlAliases(
+        typeof(JamlClauseDto),
+        nameof(JamlClauseDto.Joker),
+        nameof(JamlClauseDto.Jokers),
+        nameof(JamlClauseDto.CommonJoker),
+        nameof(JamlClauseDto.CommonJokers),
+        nameof(JamlClauseDto.UncommonJoker),
+        nameof(JamlClauseDto.UncommonJokers),
+        nameof(JamlClauseDto.RareJoker),
+        nameof(JamlClauseDto.RareJokers),
+        nameof(JamlClauseDto.MixedJoker),
+        nameof(JamlClauseDto.MixedJokers),
+        nameof(JamlClauseDto.SoulJoker),
+        nameof(JamlClauseDto.LegendaryJoker),
+        nameof(JamlClauseDto.Voucher),
+        nameof(JamlClauseDto.Vouchers),
+        nameof(JamlClauseDto.Tarot),
+        nameof(JamlClauseDto.TarotCard),
+        nameof(JamlClauseDto.Spectral),
+        nameof(JamlClauseDto.SpectralCard),
+        nameof(JamlClauseDto.Planet),
+        nameof(JamlClauseDto.PlanetCard),
+        nameof(JamlClauseDto.Boss),
+        nameof(JamlClauseDto.Tag),
+        nameof(JamlClauseDto.SmallBlindTag),
+        nameof(JamlClauseDto.BigBlindTag),
+        nameof(JamlClauseDto.StandardCard),
+        nameof(JamlClauseDto.ErraticRank),
+        nameof(JamlClauseDto.ErraticSuit),
+        nameof(JamlClauseDto.ErraticCard),
+        nameof(JamlClauseDto.StartingDraw),
+        nameof(JamlClauseDto.Event),
+        nameof(JamlClauseDto.EventType),
+        nameof(JamlClauseDto.LuckyMoney),
+        nameof(JamlClauseDto.LuckyMult),
+        nameof(JamlClauseDto.MisprintMult),
+        nameof(JamlClauseDto.WheelOfFortune),
+        nameof(JamlClauseDto.CavendishExtinct),
+        nameof(JamlClauseDto.GrosMichelExtinct)
+    );
+    private static readonly string[] PropertyKeys = GetYamlAliases(
+        typeof(JamlClauseDto),
+        nameof(JamlClauseDto.Type),
+        nameof(JamlClauseDto.Value),
+        nameof(JamlClauseDto.Antes),
+        nameof(JamlClauseDto.Score),
+        nameof(JamlClauseDto.Min),
+        nameof(JamlClauseDto.Max),
+        nameof(JamlClauseDto.Label),
+        nameof(JamlClauseDto.Edition),
+        nameof(JamlClauseDto.Stickers),
+        nameof(JamlClauseDto.Seal),
+        nameof(JamlClauseDto.Enhancement),
+        nameof(JamlClauseDto.Rank),
+        nameof(JamlClauseDto.Suit),
+        nameof(JamlClauseDto.Rolls),
+        nameof(JamlClauseDto.ShopItems),
+        nameof(JamlClauseDto.BoosterPacks),
+        nameof(JamlClauseDto.MinShopSlot),
+        nameof(JamlClauseDto.MaxShopSlot),
+        nameof(JamlClauseDto.MinPackSlot),
+        nameof(JamlClauseDto.MaxPackSlot),
+        nameof(JamlClauseDto.Sources),
+        nameof(JamlClauseDto.And),
+        nameof(JamlClauseDto.Or),
+        nameof(JamlClauseDto.Clauses),
+        nameof(JamlClauseDto.Mode)
+    );
+    private static readonly string[] SourceKeys = GetYamlAliases(typeof(JamlSourcesDto));
 
     public static void GenerateAndWriteAll(string repoRoot)
     {
@@ -177,55 +229,23 @@ internal static class JamlSchemaGenerator
     {
         var properties = new JsonObject
         {
-            ["type"] = EnumStringProperty([
-                "Joker",
-                "CommonJoker",
-                "UncommonJoker",
-                "RareJoker",
-                "MixedJoker",
-                "SoulJoker",
-                "Voucher",
-                "TarotCard",
-                "Planet",
-                "PlanetCard",
-                "Spectral",
-                "SpectralCard",
-                "Tag",
-                "SmallBlindTag",
-                "BigBlindTag",
-                "Boss",
-                "BossBlind",
-                "StandardCard",
-                "Event",
-                "LuckyMoney",
-                "LuckyMult",
-                "MisprintMult",
-                "WheelOfFortune",
-                "CavendishExtinct",
-                "GrosMichelExtinct",
-                "ErraticRank",
-                "ErraticSuit",
-                "ErraticCard",
-                "StartingDraw",
-                "And",
-                "Or"
-            ], "Explicit clause type when using the type/value form."),
+            ["type"] = EnumStringProperty(GetExplicitClauseTypeNames(), "Explicit clause type when using the type/value form."),
             ["value"] = StringProperty("Primary clause value when using the explicit type/value form."),
             ["eventType"] = EnumStringProperty(EnumNames<MotelyEventType>(), "Event clause value for the explicit type/eventType form."),
-            ["joker"] = EnumStringProperty(EnumNames<MotelyJoker>(), "Joker clause."),
-            ["jokers"] = StringArrayProperty("Joker clause matching any listed joker names."),
-            ["commonJoker"] = EnumStringProperty(EnumNames<MotelyJokerCommon>(), "Common Joker clause."),
-            ["commonJokers"] = StringArrayProperty("Common Joker clause matching any listed common joker names."),
-            ["uncommonJoker"] = EnumStringProperty(EnumNames<MotelyJokerUncommon>(), "Uncommon Joker clause."),
-            ["uncommonJokers"] = StringArrayProperty("Uncommon Joker clause matching any listed uncommon joker names."),
-            ["rareJoker"] = EnumStringProperty(EnumNames<MotelyJokerRare>(), "Rare Joker clause."),
-            ["rareJokers"] = StringArrayProperty("Rare Joker clause matching any listed rare joker names."),
-            ["mixedJoker"] = EnumStringProperty(EnumNames<MotelyJoker>(), "Mixed-rarity Joker clause."),
-            ["mixedJokers"] = StringArrayProperty("Mixed-rarity Joker clause matching any listed joker names."),
-            ["soulJoker"] = EnumStringProperty(EnumNames<MotelyJokerLegendary>(), "Soul Joker clause."),
+            ["joker"] = EnumStringProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Joker clause."),
+            ["jokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Joker clause matching any listed joker names."),
+            ["commonJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerCommon>(), "any", "anycommon"], "Common Joker clause."),
+            ["commonJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerCommon>(), "any", "anycommon"], "Common Joker clause matching any listed common joker names."),
+            ["uncommonJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerUncommon>(), "any", "anyuncommon"], "Uncommon Joker clause."),
+            ["uncommonJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerUncommon>(), "any", "anyuncommon"], "Uncommon Joker clause matching any listed uncommon joker names."),
+            ["rareJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerRare>(), "any", "anyrare"], "Rare Joker clause."),
+            ["rareJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerRare>(), "any", "anyrare"], "Rare Joker clause matching any listed rare joker names."),
+            ["mixedJoker"] = EnumStringProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Mixed-rarity Joker clause."),
+            ["mixedJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Mixed-rarity Joker clause matching any listed joker names."),
+            ["soulJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerLegendary>(), "any", "anylegendary"], "Soul Joker clause."),
             ["legendaryJoker"] = EnumStringProperty(EnumNames<MotelyJokerLegendary>(), "Legendary Joker clause."),
             ["voucher"] = EnumStringProperty(EnumNames<MotelyVoucher>(), "Voucher clause."),
-            ["vouchers"] = StringArrayProperty("Voucher clause matching any listed voucher names."),
+            ["vouchers"] = StringArrayEnumProperty(EnumNames<MotelyVoucher>(), "Voucher clause matching any listed voucher names."),
             ["tarot"] = EnumStringProperty(EnumNames<MotelyTarotCard>(), "Tarot card clause."),
             ["tarotCard"] = EnumStringProperty(EnumNames<MotelyTarotCard>(), "Tarot card clause."),
             ["spectral"] = EnumStringProperty(EnumNames<MotelySpectralCard>(), "Spectral card clause."),
@@ -393,6 +413,20 @@ internal static class JamlSchemaGenerator
         };
     }
 
+    private static JsonObject StringArrayEnumProperty(IEnumerable<string> values, string description)
+    {
+        return new JsonObject
+        {
+            ["type"] = "array",
+            ["items"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["enum"] = ToJsonArray(values)
+            },
+            ["description"] = description
+        };
+    }
+
     private static JsonObject BooleanProperty(string description)
     {
         return new JsonObject
@@ -480,4 +514,47 @@ internal static class JamlSchemaGenerator
     {
         return Enum.GetNames<T>();
     }
+
+    private static string[] GetExplicitClauseTypeNames() =>
+    [
+        .. EnumNames<MotelyFilterItemType>()
+            .SelectMany(name => name switch
+            {
+                "PlanetCard" => new[] { "Planet", "PlanetCard" },
+                "SpectralCard" => new[] { "Spectral", "SpectralCard" },
+                "Boss" => new[] { "Boss", "BossBlind" },
+                "PlayingCard" => new[] { "StandardCard" },
+                "Event" => ["Event", .. EnumNames<MotelyEventType>()],
+                _ => new[] { name }
+            })
+            .Distinct(StringComparer.Ordinal)
+    ];
+
+    /// <summary>
+    /// Resolves [YamlMember] aliases for DTO properties. Uses a concrete <paramref name="dtoType"/>
+    /// (not generic <c>typeof(T)</c>) so Native AOT trimming can preserve the right metadata.
+    /// </summary>
+    private static string[] GetYamlAliases(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type dtoType,
+        params string[] propertyNames
+    )
+    {
+        var properties = dtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+        if (propertyNames.Length == 0)
+            return properties
+                .Select(GetYamlAlias)
+                .OrderBy(static x => x, StringComparer.Ordinal)
+                .ToArray();
+
+        return propertyNames
+            .Select(name => properties.First(p => p.Name == name))
+            .Select(GetYamlAlias)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static string GetYamlAlias(PropertyInfo property) =>
+        property.GetCustomAttribute<YamlMemberAttribute>()?.Alias
+        ?? throw new InvalidOperationException($"Missing [YamlMember] alias on {property.DeclaringType?.FullName}.{property.Name}");
 }

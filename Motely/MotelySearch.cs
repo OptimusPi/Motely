@@ -304,9 +304,8 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithProgressCallback(Action<MotelyProgress> callback);
     IMotelySearchSettings WithCsvOutput(bool csvOutput);
     IMotelySearchSettings WithQuietMode(bool quietMode);
-    IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
-    IMotelySearchSettings WithProgressMessageCallback(Action<string> callback);
+
     /// <summary>Create a search instance without starting it. Call Start() on a background thread to allow progress polling.</summary>
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -510,16 +509,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithQuietMode(bool quietMode) =>
         WithQuietMode(quietMode);
 
-    IMotelySearchSettings IMotelySearchSettings.WithSeedMatchCallback(Action<string> callback) =>
-        WithSeedMatchCallback(callback);
-
     IMotelySearchSettings IMotelySearchSettings.WithScoredResultCallback(
         Action<MotelySeedScoreTally> callback
     ) => WithScoredResultCallback(callback);
-
-    IMotelySearchSettings IMotelySearchSettings.WithProgressMessageCallback(
-        Action<string> callback
-    ) => WithProgressMessageCallback(callback);
 
     IMotelySearch IMotelySearchSettings.CreateSearch() => CreateSearch();
 

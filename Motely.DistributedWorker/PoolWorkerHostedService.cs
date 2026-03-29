@@ -41,25 +41,16 @@ public sealed class PoolWorkerHostedService : BackgroundService
         long totalMatches = 0;
         int chunksCompleted = 0;
 
-        // ── Per-filter local DuckLake sinks ─────────────────────────────
-        var localSinks = new Dictionary<string, ISeedResultSink>();
-        ISeedResultSink? GetOrOpenSink(string fId)
+        SeedResultSinkDirectory? localSinks = null;
+        if (localDbDir != null)
         {
-            if (localDbDir == null) return null;
-            if (localSinks.TryGetValue(fId, out var existing)) return existing;
             try
             {
-                Directory.CreateDirectory(localDbDir);
-                var dbPath = Path.Combine(localDbDir, $"{fId}.db");
-                var sink = SeedResultSinkFactory.Create(dbPath, tallyCount: 0);
-                localSinks[fId] = sink;
-                _logger?.LogInformation("Opened local DuckLake: {Path}", dbPath);
-                return sink;
+                localSinks = new SeedResultSinkDirectory(localDbDir, tallyCount: 0);
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Could not open local DuckLake for {FilterId}", fId);
-                return null;
+                _logger?.LogWarning(ex, "Could not open local DuckLake sink directory");
             }
         }
 
@@ -139,10 +130,17 @@ public sealed class PoolWorkerHostedService : BackgroundService
                 // ── Save to local DuckLake ───────────────────────────────
                 if (results.Length > 0)
                 {
-                    var sink = GetOrOpenSink(claim.FilterId!);
-                    if (sink != null)
-                        foreach (var r in results)
-                            sink.AppendScoredResult(r.Seed, r.Score, ReadOnlySpan<int>.Empty);
+                    try
+                    {
+                        var sink = localSinks?.GetOrOpen(claim.FilterId!);
+                        if (sink != null)
+                            foreach (var r in results)
+                                sink.AppendScoredResult(r.Seed, r.Score, ReadOnlySpan<int>.Empty);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Could not write local DuckLake for {FilterId}", claim.FilterId);
+                    }
                 }
 
                 // ── Submit to pool ───────────────────────────────────────
@@ -175,10 +173,13 @@ public sealed class PoolWorkerHostedService : BackgroundService
         }
         finally
         {
-            foreach (var (fId, sink) in localSinks)
+            try
             {
-                try { sink.Dispose(); }
-                catch (Exception ex) { _logger?.LogWarning(ex, "DuckLake flush failed for {FilterId}", fId); }
+                localSinks?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "DuckLake flush failed");
             }
         }
 
