@@ -13,9 +13,9 @@ must:
     sources:
       shopItems: [0,1,2,3,4]
   - smallBlindTag: NegativeTag
-    antes: 2
+    antes: [2]
   - smallBlindTag: NegativeTag
-    antes: 4
+    antes: [4]
 should:
   - uncommonJoker: OopsAll6s
     antes: [2]

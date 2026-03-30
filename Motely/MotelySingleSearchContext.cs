@@ -34,7 +34,95 @@ public struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngStrea
     public readonly bool IsInvalid => InitialPrngStream.IsInvalid;
 }
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public interface IMotelySingleSearchContext
+{
+    MotelyStake Stake { get; }
+    MotelyDeck Deck { get; }
+
+    MotelySingleTarotStream CreateArcanaPackTarotStream(int ante, bool soulOnly = false, bool isCached = false);
+    MotelySingleBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false);
+    MotelySingleBoosterPackStream CreateBoosterPackStream(int ante, bool generatedFirstPack, bool isCached = false);
+    MotelySingleBossStream CreateBossStream();
+    MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false);
+    MotelySinglePrngStream CreateCavendishPrngStream(bool isCached = false);
+    MotelySinglePlanetStream CreateCelestialPackPlanetStream(int ante, bool isCached = false);
+    MotelySingleJokerFixedRarityStream CreateCommonShopJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false);
+    MotelySingleTarotStream CreateEmperorTarotStream(int ante, bool isCached = false);
+    MotelySinglePrngStream CreateErraticDeckPrngStream(bool isCached = false);
+    MotelySinglePrngStream CreateGrosMichelPrngStream(bool isCached = false);
+    MotelySingleJokerStream CreateJudgementJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false);
+    MotelySinglePrngStream CreateLuckyCardMoneyStream(bool isCached = false);
+    MotelySinglePrngStream CreateLuckyCardMultStream(bool isCached = false);
+    MotelySinglePrngStream CreateMisprintPrngStream(bool isCached = false);
+    MotelySinglePrngStream CreatePrngStream(string key, bool isCached = false);
+    MotelySingleTarotStream CreatePurpleSealTarotStream(int ante, bool isCached = false);
+    MotelySingleJokerFixedRarityStream CreateRareShopJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false);
+    MotelySingleJokerFixedRarityStream CreateRareTagJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false);
+    MotelySingleJokerFixedRarityStream CreateRiffRaffJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false);
+    MotelySingleSpectralStream CreateSeanceSpectralStream(int ante, bool isCached = false);
+    MotelySingleShopItemStream CreateShopItemStream(int ante, MotelyShopStreamFlags flags = MotelyShopStreamFlags.Default, MotelyJokerStreamFlags jokerFlags = MotelyJokerStreamFlags.Default, bool isCached = false);
+    MotelySingleShopItemStream CreateShopItemStream(int ante, MotelyRunState runState, MotelyShopStreamFlags flags = MotelyShopStreamFlags.Default, MotelyJokerStreamFlags jokerFlags = MotelyJokerStreamFlags.Default, bool isCached = false);
+    MotelySingleJokerStream CreateShopJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false);
+    MotelySinglePlanetStream CreateShopPlanetStream(int ante, bool isCached = false);
+    MotelySingleSpectralStream CreateShopSpectralStream(int ante, bool isCached = false);
+    MotelySingleTarotStream CreateShopTarotStream(int ante, bool isCached = false);
+    MotelySingleSpectralStream CreateSixthSenseSpectralStream(int ante, bool isCached = false);
+    MotelySingleJokerFixedRarityStream CreateSoulJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false);
+    MotelySingleSpectralStream CreateSpectralPackSpectralStream(int ante, bool soulOnly = false, bool isCached = false);
+    MotelySingleStandardCardStream CreateStandardPackCardStream(int ante, MotelyStandardCardStreamFlags flags = MotelyStandardCardStreamFlags.Default, bool isCached = false);
+    MotelySingleTagStream CreateTagStream(int ante, bool isCached = false);
+    MotelySingleJokerFixedRarityStream CreateUncommonShopJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false);
+    MotelySingleJokerFixedRarityStream CreateUncommonTagJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false);
+    MotelySingleVoucherStream CreateVoucherStream(int ante, bool isCached = false);
+    MotelySinglePrngStream CreateWheelOfFortuneStream(bool isCached = false);
+    MotelySingleJokerStream CreateWraithJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false);
+    MotelyVoucher GetAnteFirstVoucher(int ante, bool isCached = false);
+    MotelyVoucher GetAnteFirstVoucher(int ante, in MotelyRunState voucherState, bool isCached = false);
+    MotelyBossBlind GetBossForAnte(ref MotelySingleBossStream stream, int ante, ref MotelyRunState state);
+    MotelySingleItemSet GetNextArcanaPackContents(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size);
+    bool GetNextArcanaPackHasTheSoul(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size);
+    MotelyBoosterPack GetNextBoosterPack(ref MotelySingleBoosterPackStream stream);
+    MotelySingleItemSet GetNextBuffoonPackContents(ref MotelySingleJokerStream jokerStream, MotelyBoosterPackSize size);
+    MotelySingleItemSet GetNextBuffoonPackContents(ref MotelySingleJokerStream jokerStream, int size);
+    bool GetNextCavendishExtinct(ref MotelySinglePrngStream cavendishStream, double baseLuck = 1);
+    MotelySingleItemSet GetNextCelestialPackContents(ref MotelySinglePlanetStream planetStream, MotelyBoosterPackSize size);
+    (MotelyItem, MotelyItem) GetNextEmperorTarots(ref MotelySingleTarotStream tarotStream);
+    MotelyItem GetNextErraticDeckCard(ref MotelySinglePrngStream erraticDeckStream);
+    bool GetNextGrosMichelExtinct(ref MotelySinglePrngStream grosMichelStream, double baseLuck = 1);
+    MotelyItem GetNextJoker(ref MotelySingleJokerFixedRarityStream stream);
+    MotelyItem GetNextJoker(ref MotelySingleJokerStream stream, in MotelySingleItemSet itemSet);
+    MotelyItem GetNextJoker(ref MotelySingleJokerStream stream);
+    LuaRandom GetNextLuaRandom(ref MotelySinglePrngStream stream);
+    bool GetNextLuckyMoney(ref MotelySinglePrngStream moneyStream, double baseLuck = 1);
+    bool GetNextLuckyMult(ref MotelySinglePrngStream multStream, double baseLuck = 1);
+    int GetNextMisprintMult(ref MotelySinglePrngStream misprintStream);
+    MotelyItem GetNextPlanet(ref MotelySinglePlanetStream planetStream);
+    MotelyItem GetNextPlanet(ref MotelySinglePlanetStream planetStream, in MotelySingleItemSet itemSet);
+    double GetNextPrngState(ref MotelySinglePrngStream stream);
+    double GetNextPseudoSeed(ref MotelySinglePrngStream stream);
+    double GetNextRandom(ref MotelySinglePrngStream stream);
+    T GetNextRandomElement<T>(ref MotelySinglePrngStream stream, T[] choices);
+    int GetNextRandomInt(ref MotelySinglePrngStream stream, int min, int max);
+    MotelyItem GetNextShopItem(ref MotelySingleShopItemStream stream);
+    MotelyItem GetNextSpectral(ref MotelySingleSpectralStream spectralStream);
+    MotelyItem GetNextSpectral(ref MotelySingleSpectralStream spectralStream, in MotelySingleItemSet itemSet);
+    MotelySingleItemSet GetNextSpectralPackContents(ref MotelySingleSpectralStream spectralStream, MotelyBoosterPackSize size);
+    MotelySingleItemSet GetNextSpectralPackContents(ref MotelySingleSpectralStream spectralStream, int size);
+    bool GetNextSpectralPackHasTheSoul(ref MotelySingleSpectralStream spectralStream, MotelyBoosterPackSize size);
+    MotelyItem GetNextStandardCard(ref MotelySingleStandardCardStream stream);
+    MotelySingleItemSet GetNextStandardPackContents(ref MotelySingleStandardCardStream stream, MotelyBoosterPackSize size);
+    MotelyTag GetNextTag(ref MotelySingleTagStream tagStream);
+    MotelyItem GetNextTarot(ref MotelySingleTarotStream tarotStream);
+    MotelyItem GetNextTarot(ref MotelySingleTarotStream tarotStream, in MotelySingleItemSet itemSet);
+    MotelyVoucher GetNextVoucher(ref MotelySingleVoucherStream voucherStream, in MotelyRunState voucherState);
+    MotelyItemEdition GetNextWheelOfFortune(ref MotelySinglePrngStream wheelStream, double baseLuck = 1);
+    string GetSeed();
+    unsafe int GetSeed(char* output);
+    double PseudoHash(string key, bool isCached = false);
+    void Shuffle(string seed, Span<MotelyItem> deck);
+}
+
+public readonly unsafe ref partial struct MotelySingleSearchContext : IMotelySingleSearchContext
 {
     public readonly int VectorLane;
 
