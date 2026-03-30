@@ -1,23 +1,23 @@
 {
   "name": "motely-wasm",
-  "version": "5.1.27",
+  "version": "5.7.2",
   "description": "MotelyJAML — Balatro seed search engine. NativeAOT-LLVM compiled to browser WASM via Bootsharp.",
   "type": "module",
+  "main": "./index.mjs",
+  "types": "./types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/wasm/types/index.d.ts",
-      "import": "./dist/wasm/index.mjs",
-      "default": "./dist/wasm/index.mjs"
+      "types": "./types/index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
     },
-    "./jaml-schema": {
-      "types": "./dist/jaml-schema.d.ts",
-      "import": "./dist/jaml-schema.mjs",
-      "default": "./dist/jaml-schema.mjs"
-    },
-    "./jaml.schema.json": "./dist/jaml.schema.json"
+    "./jaml.schema.json": "./jaml.schema.json"
   },
   "files": [
-    "dist/"
+    "**/*",
+    "!test.html",
+    "!index.html",
+    "!**/*.pdb"
   ],
   "keywords": [
     "balatro",
@@ -34,10 +34,6 @@
   },
   "license": "MIT",
   "scripts": {
-    "publish:wasm": "node build/build.mjs",
-    "publish:wasm:dry-run": "node build/build.mjs --dry-run --skip-bump",
-    "publish:wasm:next": "node build/build.mjs --tag-next",
-    "build": "node build/build.mjs",
     "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema"
   }
 }

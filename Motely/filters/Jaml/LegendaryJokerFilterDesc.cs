@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
-using static Motely.MotelyVectorUtils;
+using Motely;
 namespace Motely.Filters;
 
 public sealed class LegendaryJokerClause : IJamlClause
@@ -14,12 +13,39 @@ public sealed class LegendaryJokerClause : IJamlClause
     public SoulJokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+
+    /// <summary>
+    /// When true, match as soon as The Soul appears in a targeted arcana/spectral pack (tarot/spectral
+    /// card), without rolling the legendary joker. Use for "any" + soul-card-only searches.
+    /// </summary>
+    public bool SoulCardOnly { get; init; }
+
+    /// <summary>
+    /// Extra soul-stream edition reads per ante for the fast edition vector prefilter (0 = use
+    /// <see cref="SoulJokerSourceConfig.BoosterPacks"/> length). Raise when rare multi-soul antes
+    /// could otherwise false-negative the prefilter.
+    /// </summary>
+    public int SoulEditionRolls { get; init; }
 }
 
-public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
-    : IMotelySeedFilterDesc<LegendaryJokerFilterDesc.LegendaryJokerFilter>
+/// <summary>
+/// <see cref="LegendaryJokerPipelineKind.Standard"/> runs the combined edition vector prefilter + soul path.
+/// <see cref="LegendaryJokerPipelineKind.FullPathOnly"/> is the pack/soul matcher only (used after
+/// <see cref="LegendarySoulEditionFilterDesc"/> in the must pipeline).
+/// </summary>
+public enum LegendaryJokerPipelineKind
+{
+    Standard,
+    FullPathOnly,
+}
+
+public struct LegendaryJokerFilterDesc(
+    LegendaryJokerClause clause,
+    LegendaryJokerPipelineKind pipeline = LegendaryJokerPipelineKind.Standard
+) : IMotelySeedFilterDesc<LegendaryJokerFilterDesc.LegendaryJokerFilter>
 {
     private readonly LegendaryJokerClause _clause = clause;
+    private readonly LegendaryJokerPipelineKind _pipeline = pipeline;
 
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
@@ -34,13 +60,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                 maxBoosterPack = boosterPacks[i];
         }
 
-        // Pre-compute target joker type (cold path)
-        var jokerTypes = new MotelyItemType[_clause.Jokers.Length];
-        for (int i = 0; i < _clause.Jokers.Length; i++)
-            jokerTypes[i] = (MotelyItemType)(
-                (int)MotelyItemTypeCategory.Joker | (int)_clause.Jokers[i]
-            );
-
         var normalizedClause = new LegendaryJokerClause
         {
             Label = _clause.Label,
@@ -50,6 +69,8 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             Edition = _clause.Edition,
             Antes = _clause.Antes,
             Min = _clause.Min,
+            SoulCardOnly = _clause.SoulCardOnly,
+            SoulEditionRolls = _clause.SoulEditionRolls,
             Sources = new SoulJokerSourceConfig
             {
                 ShopItems = _clause.Sources.ShopItems,
@@ -58,167 +79,75 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             },
         };
 
-        return new LegendaryJokerFilter(normalizedClause, maxBoosterPack, jokerTypes);
+        foreach (var ante in normalizedClause.Antes)
+            ctx.CacheBoosterPackStream(ante, force: true);
+
+        if (
+            _pipeline == LegendaryJokerPipelineKind.Standard
+            && normalizedClause.Edition.HasValue
+            && normalizedClause.Min == 1
+        )
+        {
+            foreach (var ante in normalizedClause.Antes)
+                ctx.CacheSoulJokerStream(
+                    ante,
+                    MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
+                        | MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
+                    force: true
+                );
+        }
+
+        return new LegendaryJokerFilter(normalizedClause, maxBoosterPack, _pipeline);
     }
 
     public struct LegendaryJokerFilter(
         LegendaryJokerClause clause,
         int maxBoosterPack,
-        MotelyItemType[] targetTypes
+        LegendaryJokerPipelineKind pipeline
     ) : IMotelySeedFilter
     {
         private readonly LegendaryJokerClause _clause = clause;
         private readonly int _maxBoosterPack = maxBoosterPack;
-        private readonly MotelyItemType[] _targetTypes = targetTypes;
-
-        /// <summary>
-        /// Check if the soul joker in a given ante matches our target.
-        /// Follows Trickeoglyph pattern: check the JOKER FIRST (cheap, deterministic),
-        /// then check if The Soul actually appears in a pack (expensive).
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool CheckSoulJokerInAnte(
-            int ante,
-            LegendaryJokerClause clause,
-            int maxBoosterPack,
-            MotelyItemType[] targetTypes,
-            ref MotelySingleSearchContext singleCtx
-        )
-        {
-            var boosterPacks = clause.Sources.BoosterPacks;
-
-            // ── STEP 1: Check joker FIRST (cheap!) ──
-            // The soul joker stream output is deterministic per seed+ante,
-            // regardless of whether The Soul actually appears in a pack.
-            var soulStream = singleCtx.CreateSoulJokerStream(ante);
-            var legendaryJoker = singleCtx.GetNextJoker(ref soulStream);
-
-            bool editionMatch = !clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value;
-            bool jokerMatch = targetTypes.Length == 0;
-
-            if (!jokerMatch)
-            {
-                for (int i = 0; i < targetTypes.Length; i++)
-                {
-                    if (legendaryJoker.Type == targetTypes[i])
-                    {
-                        jokerMatch = true;
-                        break;
-                    }
-                }
-            }
-
-            // Wrong joker? Don't even bother checking packs.
-            if (!editionMatch || !jokerMatch)
-                return false;
-
-            // ── STEP 2: Does The Soul actually appear in a pack? ──
-            if (boosterPacks.Length == 0)
-                return false;
-
-            MotelySingleTarotStream tarotStream = default;
-            MotelySingleSpectralStream spectralStream = default;
-            bool tarotStreamInit = false;
-            bool spectralStreamInit = false;
-            var packStream = singleCtx.CreateBoosterPackStream(ante);
-
-            for (int p = 0; p <= maxBoosterPack; p++)
-            {
-                MotelyBoosterPack pack = singleCtx.GetNextBoosterPack(ref packStream);
-
-                bool isTarget = false;
-                for (int i = 0; i < boosterPacks.Length; i++)
-                {
-                    if (boosterPacks[i] == p)
-                    {
-                        isTarget = true;
-                        break;
-                    }
-                }
-
-                if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
-                {
-                    if (!tarotStreamInit)
-                    {
-                        tarotStreamInit = true;
-                        tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
-                    }
-
-                    if (
-                        isTarget
-                        && singleCtx.GetNextArcanaPackHasTheSoul(
-                            ref tarotStream,
-                            pack.GetPackSize()
-                        )
-                    )
-                        return true;
-                }
-
-                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                {
-                    if (!spectralStreamInit)
-                    {
-                        spectralStreamInit = true;
-                        spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
-                    }
-
-                    if (
-                        isTarget
-                        && singleCtx.GetNextSpectralPackHasTheSoul(
-                            ref spectralStream,
-                            pack.GetPackSize()
-                        )
-                    )
-                        return true;
-                }
-            }
-
-            return false;
-        }
+        private readonly LegendaryJokerPipelineKind _pipeline = pipeline;
 
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
+            Debug.Assert(
+                _clause.SoulCardOnly || _clause.IsWildcard || _clause.Jokers.Length > 0
+            );
 
             var clause = _clause;
             var maxBoosterPack = _maxBoosterPack;
-            var targetTypes = _targetTypes;
+            var pipeline = _pipeline;
             int needed = clause.Min;
             Debug.Assert(needed > 0, "SoulJokerClause.Min must be > 0 — loader bug.");
 
-            Vector256<int> candidateCounts = Vector256<int>.Zero;
-
-            foreach (var ante in clause.Antes)
+            // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
+            // souls (see LegendarySoulMatcher). Edition-only vector prefilter (Min==1) matches
+            // NegativePerkeoFilterDescNew: scan up to one soul read per configured booster slot so
+            // we do not drop seeds where the first soul fails edition but a later soul matches.
+            uint laneMask = 0;
+            for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
             {
-                var soulStream = ctx.CreateSoulJokerStream(ante);
-                var legendaryJoker = ctx.GetNextJoker(ref soulStream);
-                VectorMask preMask = MatchLegendaryJokers(legendaryJoker);
-
-                if (preMask.IsPartiallyTrue())
-                {
-                    candidateCounts = Vector256.Add(
-                        candidateCounts,
-                        Vector256.ConditionalSelect(
-                            VectorMaskToConditionalSelectMask(preMask),
-                            Vector256.Create(1),
-                            Vector256<int>.Zero
-                        )
-                    );
-                }
+                if (ctx.IsLaneValid(lane))
+                    laneMask |= 1u << lane;
             }
 
-            Vector256<int> minVec = Vector256.Create(needed);
-            Vector256<int> comparison = Vector256.GreaterThan(
-                candidateCounts,
-                Vector256.Subtract(minVec, Vector256.Create(1))
-            );
-            VectorMask candidateMask = new(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            VectorMask candidateMask = new VectorMask(laneMask);
 
-            if (candidateMask.IsAllFalse())
-                return candidateMask;
+            if (
+                pipeline == LegendaryJokerPipelineKind.Standard
+                && clause.Edition.HasValue
+                && clause.Min == 1
+            )
+            {
+                candidateMask = LegendarySoulEditionPrefilter.Apply(ref ctx, clause, laneMask);
+                if (candidateMask.IsAllFalse())
+                    return candidateMask;
+            }
 
             return ctx.SearchIndividualSeeds(
                 candidateMask,
@@ -229,12 +158,11 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                     foreach (var ante in clause.Antes)
                     {
                         if (
-                            CheckSoulJokerInAnte(
+                            LegendarySoulMatcher.MatchAnte(
+                                ref singleCtx,
                                 ante,
                                 clause,
-                                maxBoosterPack,
-                                targetTypes,
-                                ref singleCtx
+                                maxBoosterPack
                             )
                         )
                         {
@@ -247,27 +175,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                     return false;
                 }
             );
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private readonly VectorMask MatchLegendaryJokers(in MotelyItemVector item)
-        {
-            VectorMask jokerMatch;
-            if (_clause.IsWildcard)
-            {
-                jokerMatch = VectorMask.AllBitsSet;
-            }
-            else
-            {
-                jokerMatch = VectorMask.NoBitsSet;
-                for (int t = 0; t < _targetTypes.Length; t++)
-                    jokerMatch |= VectorEnum256.Equals(item.Type, _targetTypes[t]);
-            }
-
-            if (_clause.Edition.HasValue)
-                jokerMatch &= VectorEnum256.Equals(item.Edition, _clause.Edition.Value);
-
-            return jokerMatch;
         }
     }
 }

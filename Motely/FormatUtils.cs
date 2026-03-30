@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Text;
 
 namespace Motely;
@@ -49,7 +51,7 @@ public static class FormatUtils
         {
             case MotelyItemTypeCategory.PlayingCard:
                 var playingCard = (MotelyPlayingCard)(
-                    item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask
+                    item.Value & MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
                 );
                 result.Append(FormatPlayingCard(playingCard));
                 break;
@@ -273,5 +275,209 @@ public static class FormatUtils
             MotelyBoosterPack.MegaStandard => "Mega Standard Pack",
             _ => pack.ToString(),
         };
+    }
+
+    /// <summary>
+    /// Parses a string produced by <see cref="FormatItem"/> (a &quot;jummy&quot;): sticker order
+    /// <see cref="FormatItem"/>, then optional seal, then edition, enhancement, then type
+    /// (<see cref="FormatDisplayName"/> for non–playing-card types, <see cref="FormatPlayingCard"/> for cards).
+    /// </summary>
+    public static MotelyItem ParseMotelyItem(string s)
+    {
+        if (!TryParseMotelyItem(s, out var item))
+            throw new FormatException($"Unrecognized motely item string: '{s}'.");
+        return item;
+    }
+
+    /// <inheritdoc cref="ParseMotelyItem"/>
+    public static bool TryParseMotelyItem(string s, out MotelyItem item)
+    {
+        item = default;
+        if (string.IsNullOrWhiteSpace(s))
+            return false;
+
+        var str = s.Trim();
+
+        // Stickers — same order as FormatItem: Eternal, Perishable, Rental
+        var eternal = TryStripPrefix(ref str, "Eternal ", StringComparison.OrdinalIgnoreCase);
+        var perishable = TryStripPrefix(ref str, "Perishable ", StringComparison.OrdinalIgnoreCase);
+        var rental = TryStripPrefix(ref str, "Rental ", StringComparison.OrdinalIgnoreCase);
+
+        var seal = MotelyItemSeal.None;
+        foreach (MotelyItemSeal se in Enum.GetValues<MotelyItemSeal>())
+        {
+            if (se == MotelyItemSeal.None)
+                continue;
+            var p = se.ToString().Replace("Seal", "", StringComparison.Ordinal) + " Seal ";
+            if (!str.StartsWith(p, StringComparison.OrdinalIgnoreCase))
+                continue;
+            seal = se;
+            str = str[p.Length..].TrimStart();
+            break;
+        }
+
+        // Pure type (no edition/enhancement prefix) — e.g. "2 of Clubs", "The World"
+        if (TryResolveMotelyTypeTail(
+                str,
+                MotelyItemEdition.None,
+                MotelyItemEnhancement.None,
+                seal,
+                eternal,
+                perishable,
+                rental,
+                out item))
+            return true;
+
+        var words = str.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (words.Count == 0)
+            return false;
+
+        var edition = MotelyItemEdition.None;
+        var enhancement = MotelyItemEnhancement.None;
+
+        if (words.Count > 0
+            && TryParseEnumMemberName(words[0], out MotelyItemEdition ed)
+            && ed != MotelyItemEdition.None)
+        {
+            edition = ed;
+            words.RemoveAt(0);
+        }
+
+        if (words.Count > 0
+            && TryParseEnumMemberName(words[0], out MotelyItemEnhancement eh)
+            && eh != MotelyItemEnhancement.None)
+        {
+            enhancement = eh;
+            words.RemoveAt(0);
+        }
+
+        var typeTail = string.Join(' ', words);
+        if (string.IsNullOrWhiteSpace(typeTail))
+            return false;
+
+        return TryResolveMotelyTypeTail(
+            typeTail,
+            edition,
+            enhancement,
+            seal,
+            eternal,
+            perishable,
+            rental,
+            out item
+        );
+    }
+
+    /// <summary>Enum.TryParse by member name only (rejects numeric strings like &quot;7&quot;).</summary>
+    private static bool TryParseEnumMemberName<TEnum>(string word, out TEnum value)
+        where TEnum : struct, Enum
+    {
+        value = default;
+        foreach (var name in Enum.GetNames<TEnum>())
+        {
+            if (!string.Equals(name, word, StringComparison.OrdinalIgnoreCase))
+                continue;
+            return Enum.TryParse(name, ignoreCase: false, out value);
+        }
+
+        return false;
+    }
+
+    private static bool TryStripPrefix(ref string str, string prefix, StringComparison comparison)
+    {
+        if (!str.StartsWith(prefix, comparison))
+            return false;
+        str = str[prefix.Length..].TrimStart();
+        return true;
+    }
+
+    private static bool TryResolveMotelyTypeTail(
+        string typeTail,
+        MotelyItemEdition edition,
+        MotelyItemEnhancement enhancement,
+        MotelyItemSeal seal,
+        bool eternal,
+        bool perishable,
+        bool rental,
+        out MotelyItem item
+    )
+    {
+        item = default;
+
+        foreach (MotelyPlayingCard card in Enum.GetValues<MotelyPlayingCard>())
+        {
+            if (string.Equals(FormatPlayingCard(card), typeTail, StringComparison.OrdinalIgnoreCase))
+            {
+                item = new MotelyItem(card);
+                ApplyMotelyItemModifiers(
+                    ref item,
+                    seal,
+                    edition,
+                    enhancement,
+                    eternal,
+                    perishable,
+                    rental
+                );
+                return true;
+            }
+        }
+
+        foreach (MotelyItemType t in Enum.GetValues<MotelyItemType>())
+        {
+            if (string.Equals(FormatDisplayName(t.ToString()), typeTail, StringComparison.OrdinalIgnoreCase))
+            {
+                item = new MotelyItem(t);
+                ApplyMotelyItemModifiers(
+                    ref item,
+                    seal,
+                    edition,
+                    enhancement,
+                    eternal,
+                    perishable,
+                    rental
+                );
+                return true;
+            }
+        }
+
+        if (Enum.TryParse<MotelyItemType>(typeTail, ignoreCase: true, out var raw))
+        {
+            item = new MotelyItem(raw);
+            ApplyMotelyItemModifiers(
+                ref item,
+                seal,
+                edition,
+                enhancement,
+                eternal,
+                perishable,
+                rental
+            );
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void ApplyMotelyItemModifiers(
+        ref MotelyItem item,
+        MotelyItemSeal seal,
+        MotelyItemEdition edition,
+        MotelyItemEnhancement enhancement,
+        bool eternal,
+        bool perishable,
+        bool rental
+    )
+    {
+        if (seal != MotelyItemSeal.None)
+            item = item.WithSeal(seal);
+        if (edition != MotelyItemEdition.None)
+            item = item.WithEdition(edition);
+        if (enhancement != MotelyItemEnhancement.None)
+            item = item.WithEnhancement(enhancement);
+        if (perishable)
+            item = item.WithPerishable(true);
+        if (eternal)
+            item = item.WithEternal(true);
+        if (rental)
+            item = item.WithRental(true);
     }
 }

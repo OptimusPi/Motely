@@ -339,20 +339,19 @@ public class JamlConfigTests
   }
 
   [Fact]
-  public void LegacyNestedLogicalClause_ParsesSuccessfully()
+  public void NestedLogicalAndClause_ParsesSuccessfully()
   {
     var jaml = """
-            name: LegacyLogic
+            name: NestedAnd
             should:
-              - and:
-                  label: Ante Pair
-                  mode: sum
-                  score: 100
-                  clauses:
-                    - smallBlindTag: NegativeTag
-                      antes: [2]
-                    - bigBlindTag: CharmTag
-                      antes: [2]
+              - label: Ante Pair
+                mode: sum
+                score: 100
+                and:
+                  - smallBlindTag: NegativeTag
+                    antes: [2]
+                  - bigBlindTag: CharmTag
+                    antes: [2]
             """;
 
     var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
@@ -363,6 +362,36 @@ public class JamlConfigTests
     var andClause = Assert.IsType<AndClause>(clause);
     Assert.Equal("Ante Pair", andClause.Label);
     Assert.Equal(2, andClause.Clauses.Length);
+  }
+
+  [Fact]
+  public void NestedLogicalAndClause_WithClausesBlock_SharedAntesApplyToAllChildren()
+  {
+    var jaml = """
+            name: LegacyClausesAntes
+            must:
+              - label: Shared
+                and:
+                  antes: [2, 3, 4]
+                  clauses:
+                    - smallBlindTag: NegativeTag
+                    - uncommonJoker: OopsAll6s
+                      edition: Negative
+                      sources:
+                        shopItems: [0, 1, 2]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    var clause = Assert.Single(config!.Must.OrderedClauses);
+    var andClause = Assert.IsType<AndClause>(clause);
+    Assert.Equal(2, andClause.Clauses.Length);
+    var tag = Assert.IsType<TagClause>(andClause.Clauses[0]);
+    Assert.Equal(new[] { 2, 3, 4 }, tag.Antes);
+    var joker = Assert.IsType<UncommonJokerClause>(andClause.Clauses[1]);
+    Assert.Equal(new[] { 2, 3, 4 }, joker.Antes);
   }
 
   [Fact]

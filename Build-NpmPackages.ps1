@@ -20,8 +20,9 @@
 param([switch]$Publish, [switch]$BuildOnly)
 
 $ErrorActionPreference = 'Stop'
-$project = Join-Path $PSScriptRoot "Motely.WASM" "Motely.WASM.csproj"
-$outDir = Join-Path $PSScriptRoot "Motely"
+$project = Join-Path $PSScriptRoot "Motely.BrowserWasm" "Motely.BrowserWasm.csproj"
+# Bootsharp emits the npm package next to the WASM project (see BootsharpPublishDirectory in .csproj).
+$outDir = Join-Path $PSScriptRoot "Motely.BrowserWasm" "motely-wasm"
 
 Write-Host "Building motely-wasm..." -ForegroundColor Cyan
 dotnet publish $project -c Release

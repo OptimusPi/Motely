@@ -214,7 +214,7 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
             {
                 jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
                 var rarityVec = new VectorEnum256<MotelyJokerRarity>(
-                    Vector256.BitwiseAnd(item.Value, Vector256.Create(Motely.JokerRarityMask)));
+                    Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyGlobals.JokerRarityMask)));
                 jokerMatch &= VectorEnum256.Equals(rarityVec, MotelyJokerRarity.Common);
             }
             else

@@ -1,0 +1,17 @@
+# JUMMY ≈ Jimbo Understands My Mumbling… Yeah??  (one-line criteria below)
+# "in Ante N" = only that ante; ante 1 checks four booster slots, ante 2+ checks six.
+# "by Ante N" = search run through antes 1…N (cumulative).
+
+jummy: 1
+
+name: Jimbo mumble demo
+description: >
+  Eternal Blueprint in ante 1 (four booster packs that ante).
+  Perishable Egg anywhere through ante 4 (antes 1–4, all relevant pack slots).
+
+deck: Red
+stake: White
+
+must:
+  - Eternal Blueprint in Ante 1
+  - Perishable Egg by Ante 4

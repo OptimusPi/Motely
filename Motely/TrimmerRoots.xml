@@ -83,12 +83,9 @@
     <type fullname="Motely.MotelyBoosterPackType" preserve="all" />
     <type fullname="Motely.MotelyBoosterPackSize" preserve="all" />
 
+    <!-- YamlDotNet static context + SG output (JamlYamlContext) -->
+    <type fullname="Motely.Filters.JamlYamlContext" preserve="all" />
 
-  </assembly>
-
-  <!-- Preserve YAML.NET static context generated types -->
-  <assembly fullname="Motely">
-    <type fullname="MotelyJaml.MotelyJamlStaticContext" preserve="all" />
   </assembly>
 
   <!-- Preserve reflection-required types for YAML deserialization -->

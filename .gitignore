@@ -113,3 +113,4 @@ Motely.HomeControlAPI/Properties/launchSettings.json
 # Bootsharp npm payload (run dotnet publish, then copy bin/motely-wasm → motely-wasm for npm pack)
 Motely.BrowserWasm/motely-wasm/index.mjs
 Motely.BrowserWasm/motely-wasm/types/
+/Motely.BrowserWasm/motely-wasm
