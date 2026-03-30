@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -8,30 +9,46 @@ public struct JamlShouldScoreDesc
 {
     private readonly IJamlClause[] _shouldClauses;
     private readonly Action<string>? _seedMatchCallback;
+    private readonly int _minimumTotalScore;
 
-    public JamlShouldScoreDesc(IJamlClause[] shouldClauses, Action<string>? seedMatchCallback = null)
+    public JamlShouldScoreDesc(
+        IJamlClause[] shouldClauses,
+        Action<string>? seedMatchCallback = null,
+        int minimumTotalScore = 0
+    )
     {
         _shouldClauses = shouldClauses;
         _seedMatchCallback = seedMatchCallback;
+        _minimumTotalScore = minimumTotalScore;
     }
 
     public JamlShouldScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
-        => new(_shouldClauses, _seedMatchCallback ?? ctx.SeedMatchCallback);
+        => new(
+            _shouldClauses,
+            _seedMatchCallback ?? ctx.SeedMatchCallback,
+            _minimumTotalScore
+        );
 
     public struct JamlShouldScoreProvider : IMotelySeedScoreProvider
     {
         private readonly IJamlClause[] _shouldClauses;
         private readonly Action<string>? _seedMatchCallback;
+        private readonly int _minimumTotalScore;
 
-        public JamlShouldScoreProvider(IJamlClause[] shouldClauses, Action<string>? seedMatchCallback)
+        public JamlShouldScoreProvider(
+            IJamlClause[] shouldClauses,
+            Action<string>? seedMatchCallback,
+            int minimumTotalScore = 0
+        )
         {
-            if (shouldClauses.Length > MotelySeedScoreTally.MAX_TALLY_COUNT)
-                throw new InvalidOperationException(
-                    $"Too many should clauses: {shouldClauses.Length}. Maximum allowed: {MotelySeedScoreTally.MAX_TALLY_COUNT}"
-                );
+            Debug.Assert(
+                shouldClauses.Length <= MotelySeedScoreTally.MAX_TALLY_COUNT,
+                $"Should clause count {shouldClauses.Length} exceeds MotelySeedScoreTally.MAX_TALLY_COUNT ({MotelySeedScoreTally.MAX_TALLY_COUNT}); fix JAML / builder before search."
+            );
 
             _shouldClauses = shouldClauses;
             _seedMatchCallback = seedMatchCallback;
+            _minimumTotalScore = minimumTotalScore;
         }
 
         [MethodImpl(
@@ -49,7 +66,7 @@ public struct JamlShouldScoreDesc
 
             var shouldClauses = _shouldClauses;
             var seedMatchCallback = _seedMatchCallback;
-            int cutoff = scoreThreshold;
+            int cutoff = Math.Max(_minimumTotalScore, scoreThreshold);
 
             return searchContext.SearchIndividualSeeds(
                 baseFilterMask,

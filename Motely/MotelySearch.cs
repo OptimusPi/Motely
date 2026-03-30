@@ -354,7 +354,6 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
-    IMotelySearchSettings WithCutoffScore(int cutoffScore);
 
     /// <summary>Create a search instance without starting it. Call Start() on a background thread to allow progress polling.</summary>
     IMotelySearch CreateSearch();
@@ -419,12 +418,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// Callback invoked for scored result rows so callers can persist structured results.
     /// </summary>
     public Action<MotelySeedScoreTally>? ScoredResultCallback { get; set; }
-
-    /// <summary>
-    /// Minimum total score passed to <see cref="IMotelySeedScoreProvider.Score"/> (e.g. CLI <c>--cutoff</c>).
-    /// Use <c>0</c> when no fixed cutoff or when using callback-only logic (e.g. <c>auto</c> highs).
-    /// </summary>
-    public int CutoffScore { get; set; }
 
     /// <summary>
     /// Callback for human-readable progress messages (e.g. "Progress: 12.3% | Found: 5/1000").
@@ -572,9 +565,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<MotelySeedScoreTally> callback
     ) => WithScoredResultCallback(callback);
 
-    IMotelySearchSettings IMotelySearchSettings.WithCutoffScore(int cutoffScore) =>
-        WithCutoffScore(cutoffScore);
-
     IMotelySearch IMotelySearchSettings.CreateSearch() => CreateSearch();
 
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
@@ -623,12 +613,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     )
     {
         ScoredResultCallback = callback;
-        return this;
-    }
-
-    public MotelySearchSettings<TBaseFilter> WithCutoffScore(int cutoffScore)
-    {
-        CutoffScore = cutoffScore;
         return this;
     }
 
@@ -780,7 +764,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     }
 
     private long _lastReportMS;
-    private int _cutoffScore;
     private const long ReportIntervalMS = 2000; // Report every 2 seconds
 
     private readonly Action<MotelyProgress>? _progressCallback;
@@ -804,7 +787,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _batchCharacterCount = settings.SequentialBatchCharacterCount;
         _csvOutput = settings.CsvOutput;
         _quietMode = settings.QuietMode;
-        _cutoffScore = settings.CutoffScore;
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
         {
@@ -1101,6 +1083,20 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // ALWAYS invoke progress callback if set (even in quiet mode) - needed for API speed stats
         if (_progressCallback != null)
         {
+            TimeSpan? eta = null;
+            if (thisPortionFinished >= 0.0001)
+            {
+                double totalTimeEstimate = elapsedMS / thisPortionFinished;
+                double timeLeftMs = totalTimeEstimate - elapsedMS;
+                if (
+                    !double.IsNaN(timeLeftMs)
+                    && !double.IsInfinity(timeLeftMs)
+                    && timeLeftMs >= 0
+                    && timeLeftMs <= 30.0 * 24 * 60 * 60 * 1000
+                )
+                    eta = TimeSpan.FromMilliseconds(timeLeftMs);
+            }
+
             var progress = new MotelyProgress
             {
                 CompletedBatchCount = thisCompletedCount,
@@ -1110,6 +1106,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 SeedsPerMillisecond = seedsPerMs,
                 PercentComplete = percentComplete,
                 ElapsedTime = TimeSpan.FromMilliseconds(elapsedMS),
+                EstimatedTimeRemaining = eta,
             };
             _progressCallback(progress);
         }
@@ -1434,8 +1431,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 VectorMask scoredMask = scoreProvider.Score(
                     ref searchContext,
                     _resultBuffer,
-                    searchResultMask,
-                    Search._cutoffScore
+                    searchResultMask
                 );
 
                 // Report the scored results!

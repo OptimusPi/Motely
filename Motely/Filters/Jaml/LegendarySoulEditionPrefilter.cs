@@ -12,7 +12,8 @@ internal static class LegendarySoulEditionPrefilter
 {
     internal static int GetEditionSoulRollCount(LegendaryJokerClause clause)
     {
-        int n = clause.Sources.BoosterPacks.Length;
+        int maxSlot = clause.Sources.MaxReferencedBoosterSlot();
+        int n = maxSlot >= 0 ? maxSlot + 1 : 6;
         if (n <= 0)
             n = 6;
         if (clause.SoulEditionRolls > 0)

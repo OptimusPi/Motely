@@ -12,7 +12,7 @@ param([switch]$WasmOnly, [switch]$NpmPublish)
 
 $ErrorActionPreference = 'Stop'
 $root    = $PSScriptRoot
-$wasmProj = Join-Path $root "Motely.BrowserWasm" "Motely.BrowserWasm.csproj"
+$wasmProj = Join-Path $root "Motely.BrowserWasm\Motely.BrowserWasm.csproj"
 # Bootsharp writes the npm package beside the WASM project (BootsharpPublishDirectory).
 $wasmOut  = Join-Path $root "Motely.BrowserWasm" "motely-wasm"
 

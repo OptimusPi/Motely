@@ -1,5 +1,7 @@
 using System;
 
+using Motely;
+
 using System.Collections.Generic;
 
 using System.Diagnostics;
@@ -98,11 +100,11 @@ public static class JamlSearchBuilder
 
     public static IMotelySearchSettings CreateSettings(JamlConfig config) =>
 
-        CreatePlan(config).Settings;
+        CreatePlan(config, 0).Settings;
 
 
 
-    public static JamlSearchPlan CreatePlan(JamlConfig config)
+    public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal = 0)
 
     {
 
@@ -176,13 +178,12 @@ public static class JamlSearchBuilder
 
         if (config.Should.HasAnyClauses)
         {
-            var shouldDescs = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-            AddDescsFromSet(shouldDescs, config.Should, LegendaryClauseExpansion.None);
-
-            shouldLabelsArray = shouldDescs.Select(x => x.label).ToArray();
-
+            var shouldLabels = new List<string>();
+            var shouldClauses = new List<IJamlClause>();
+            AddShouldScoringEntriesFromSet(shouldLabels, shouldClauses, config.Should);
+            shouldLabelsArray = shouldLabels.ToArray();
             settings.WithSeedScoreProvider(
-                new JamlShouldScoreDesc(shouldDescs.Select(x => x.clause).ToArray())
+                new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal)
             );
         }
 
@@ -220,6 +221,23 @@ public static class JamlSearchBuilder
     {
         None,
         SplitLegendaryEdition,
+    }
+
+    /// <summary>
+    /// Should-scoring only needs clause + label (filter descs are not attached to the search settings).
+    /// </summary>
+    private static void AddShouldScoringEntriesFromSet(
+        List<string> labels,
+        List<IJamlClause> clauses,
+        JamlClauseSet set
+    )
+    {
+        foreach (var c in set.OrderedClauses)
+        {
+            _ = CreateDesc(c);
+            labels.Add(c.Label ?? "");
+            clauses.Add(c);
+        }
     }
 
     private static void AddDescsFromSet(
@@ -393,6 +411,18 @@ public static class JamlSearchBuilder
             StartingDrawFilterDesc d =>
 
                 new MotelySearchSettings<StartingDrawFilterDesc.StartingDrawFilter>(d),
+
+            NegativePerkeoSimdFilterDesc d =>
+
+                new MotelySearchSettings<NegativePerkeoSimdFilterDesc.FilterStruct>(d),
+
+            NegativePerkeoShopSoulFilterDesc d =>
+
+                new MotelySearchSettings<NegativePerkeoShopSoulFilterDesc.FilterStruct>(d),
+
+            NegativePerkeoFilterDescNew d =>
+
+                new MotelySearchSettings<NegativePerkeoFilterDescNew.FilterStruct>(d),
 
             _ => throw new NotSupportedException(
 
