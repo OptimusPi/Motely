@@ -4,6 +4,10 @@ description: showmanthen oops skipper!
 deck: Anaglyph
 stake: Black
 must:
+  - smallBlindTag: NegativeTag
+    antes: [2]
+  - smallBlindTag: NegativeTag
+    antes: [4]
   - uncommonJoker: OopsAll6s
     antes: [2]
     sources:
@@ -12,10 +16,7 @@ must:
     antes: [4]
     sources:
       shopItems: [0,1,2,3,4]
-  - smallBlindTag: NegativeTag
-    antes: [2]
-  - smallBlindTag: NegativeTag
-    antes: [4]
+
 should:
   - uncommonJoker: OopsAll6s
     antes: [2]

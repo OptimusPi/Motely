@@ -117,9 +117,44 @@ partial class Program
             "Search for repeating chars (2-8): AAA, BBB, CCC, ... (generates 26 keywords)",
             CommandOptionType.SingleValue
         );
-        var ascendingOption = app.Option(
-            "--ascending",
-            "Search for ascending sequences: 123, 234, 345, ... XYZ (generates 33 keywords)",
+        var ascendingOption = app.Option<string>(
+            "--ascending <LENGTH>",
+            "Search for ascending sequences (3-8): 123, 234, 345, ... (3-8 char length)",
+            CommandOptionType.SingleValue
+        );
+        var descendingOption = app.Option<string>(
+            "--descending <LENGTH>",
+            "Search for descending sequences (3-8): 321, 432, 543, ... (3-8 char length)",
+            CommandOptionType.SingleValue
+        );
+        var grossOption = app.Option(
+            "--gross",
+            "Search for funny/crude keywords: FART, BUTT, POOP, PUKE, BURP, TOOT, GUTS, SLIME, YUCK, DUMB, LAME, UGLY, WEAK",
+            CommandOptionType.NoValue
+        );
+        var nsfwOption = app.Option(
+            "--nsfw",
+            "Search for NSFW/swear words and slurs (detection mode for safety warnings)",
+            CommandOptionType.NoValue
+        );
+        var aestheticOption = app.Option(
+            "--aesthetic",
+            "Search for aesthetic/beautiful keywords: BEAUTY, GRACE, LOVELY, SERENE, BLISS, PEACE, CALM, PURE, BRIGHT",
+            CommandOptionType.NoValue
+        );
+        var mirrorOption = app.Option<string>(
+            "--mirror <LENGTH>",
+            "Search for visually symmetric patterns (3-8): AHA, OHO, 1A1, 8V8, etc.",
+            CommandOptionType.SingleValue
+        );
+        var funnyOption = app.Option(
+            "--funny",
+            "Search for funny/humor keywords: LOL, HAHA, LMAO, ROFL, YEET, BRUH, MEME, GOOFY, SILLY, WACKY, ZANY",
+            CommandOptionType.NoValue
+        );
+        var balatrOption = app.Option(
+            "--balatro",
+            "Search for Balatro game terms: JOKER, CHIPS, MULT, HAND, SPADE, HEART, JIMBO, SHOP, BLIND, ANTE, CARD, WILD",
             CommandOptionType.NoValue
         );
         var sourceOption = app.Option<string>(
@@ -247,11 +282,18 @@ partial class Program
             if (palindromeOption.HasValue()) explicitSearchModeCount++;
             if (repeatsOption.HasValue()) explicitSearchModeCount++;
             if (ascendingOption.HasValue()) explicitSearchModeCount++;
+            if (descendingOption.HasValue()) explicitSearchModeCount++;
+            if (grossOption.HasValue()) explicitSearchModeCount++;
+            if (nsfwOption.HasValue()) explicitSearchModeCount++;
+            if (aestheticOption.HasValue()) explicitSearchModeCount++;
+            if (mirrorOption.HasValue()) explicitSearchModeCount++;
+            if (funnyOption.HasValue()) explicitSearchModeCount++;
+            if (balatrOption.HasValue()) explicitSearchModeCount++;
 
             if (explicitSearchModeCount > 1)
             {
                 Console.Error.WriteLine(
-                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, --palindrome, --repeats, or --ascending."
+                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, --palindrome, --repeats, --ascending, --descending, --gross, --nsfw, --aesthetic, --mirror, --funny, or --balatro."
                 );
                 return 1;
             }
@@ -350,12 +392,159 @@ partial class Program
 
             if (ascendingOption.HasValue())
             {
+                if (!int.TryParse(ascendingOption.ParsedValue, out int ascendingLength))
+                {
+                    Console.Error.WriteLine("Error: --ascending requires a numeric value (3-8).");
+                    return 1;
+                }
+
+                if (ascendingLength < 3 || ascendingLength > 8)
+                {
+                    Console.Error.WriteLine("Error: --ascending must be between 3 and 8.");
+                    return 1;
+                }
+
                 // Generate ascending sequences: 123, 234, 345, ... 89A, 9AB, ABC, ... XYZ
                 string chars = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                for (int i = 0; i < chars.Length - 2; i++)
+                for (int i = 0; i <= chars.Length - ascendingLength; i++)
                 {
-                    keywordInputs.Add(chars.Substring(i, 3));
+                    keywordInputs.Add(chars.Substring(i, ascendingLength));
                 }
+            }
+
+            if (descendingOption.HasValue())
+            {
+                if (!int.TryParse(descendingOption.ParsedValue, out int descendingLength))
+                {
+                    Console.Error.WriteLine("Error: --descending requires a numeric value (3-8).");
+                    return 1;
+                }
+
+                if (descendingLength < 3 || descendingLength > 8)
+                {
+                    Console.Error.WriteLine("Error: --descending must be between 3 and 8.");
+                    return 1;
+                }
+
+                // Generate descending sequences: 321, 432, 543, ... ZYX, ZYXW, etc.
+                string chars = "ZYXWVUTSRQPONMLKJIHGFEDCBA987654321";
+                for (int i = 0; i <= chars.Length - descendingLength; i++)
+                {
+                    keywordInputs.Add(chars.Substring(i, descendingLength));
+                }
+            }
+
+            if (grossOption.HasValue())
+            {
+                var grossKeywordCompatSeeds = new[]
+                {
+                    "FART", "BUTT", "POOP", "PUKE", "BURP", "TOOT", "GUTS", "SLIME",
+                    "YUCK", "DUMB", "LAME", "UGLY", "WEAK", "CRUD", "CRAP", "SICK",
+                    "NASTY", "GROSS"
+                };
+                keywordInputs.AddRange(grossKeywordCompatSeeds);
+            }
+
+            if (nsfwOption.HasValue())
+            {
+                // Comprehensive NSFW detection list (for content safety warnings)
+                var nsfwKeywords = new[]
+                {
+                    "FUCK", "SHIT", "DAMN", "HELL", "CRAP", "ASSES", "ASSHAT",
+                    "DICK", "COCK", "PUSSY", "WHORE", "SLUT", "BITCH", "PISS",
+                    "CUNT", "TWAT", "ARSE", "BUGGER", "SOD", "TITS", "BOOBS",
+                    "WANKER", "BASTARD", "MOTHERFUCKER", "FAGS", "FAGGOT", "KIKE",
+                    "DYKE", "SPIC", "GOOK", "CHINK", "TRANNY", "HOMO", "LESBO",
+                    "RETARD", "NIGGA", "NIGGER"
+                };
+                keywordInputs.AddRange(nsfwKeywords);
+            }
+
+            if (aestheticOption.HasValue())
+            {
+                var aestheticKeywords = new[]
+                {
+                    "BEAUTY", "GRACE", "LOVELY", "SERENE", "BLISS", "PEACE", "CALM",
+                    "PURE", "BRIGHT", "SHINE", "GLEAM", "GLOW", "DIVINE", "SUBLIME",
+                    "ELEGANT", "PRETTY", "CHARM", "TENDER", "SWEET", "LOVE", "JOY",
+                    "HOPE", "DREAM", "MAGIC", "WONDER", "ANGEL", "GRACE", "SERENE"
+                };
+                keywordInputs.AddRange(aestheticKeywords);
+            }
+
+            if (mirrorOption.HasValue())
+            {
+                if (!int.TryParse(mirrorOption.ParsedValue, out int mirrorLength))
+                {
+                    Console.Error.WriteLine("Error: --mirror requires a numeric value (3-8).");
+                    return 1;
+                }
+
+                if (mirrorLength < 3 || mirrorLength > 8)
+                {
+                    Console.Error.WriteLine("Error: --mirror must be between 3 and 8.");
+                    return 1;
+                }
+
+                // Visually symmetric characters
+                string symmetricChars = "AHIMOTUVWXy18";
+
+                // Generate all combinations of symmetric characters up to mirrorLength
+                void GenerateMirrorPatterns(string current, int remainingLength)
+                {
+                    if (remainingLength == 0)
+                    {
+                        keywordInputs.Add(current);
+                        return;
+                    }
+
+                    foreach (char c in symmetricChars)
+                    {
+                        GenerateMirrorPatterns(current + c, remainingLength - 1);
+                    }
+                }
+
+                GenerateMirrorPatterns("", mirrorLength);
+            }
+
+            if (funnyOption.HasValue())
+            {
+                var funnyKeywords = new[]
+                {
+                    // Classic internet/laughter
+                    "LOL", "HAHA", "HEHE", "LMAO", "ROFL", "YEET", "BRUH", "LULZ",
+                    // Silly/goofy
+                    "SILLY", "GOOFY", "WACKY", "ZANY", "NUTTY", "DOPEY", "DAFT",
+                    "WITTY", "PUNNY", "JOKEY", "QUIRKY",
+                    // Memes/internet
+                    "MEME", "NOOB", "DERP", "YOLO", "DODO", "BOBO", "JOJO",
+                    // Sounds/exclamations
+                    "BOOM", "ZOOM", "WOOSH", "YOYO", "TEHE",
+                    // Funny vibes
+                    "GEEKY", "LOOPY", "BONKY", "WONKY", "FUNKY"
+                };
+                keywordInputs.AddRange(funnyKeywords);
+            }
+
+            if (balatrOption.HasValue())
+            {
+                var balaroKeywords = new[]
+                {
+                    // Core mechanics
+                    "JOKER", "CHIPS", "MULT", "HAND", "CARD", "DECK", "SUIT", "RANK",
+                    "WILD", "SCORE", "ROUND", "ANTE", "BLIND", "STAKE",
+                    // Card suits
+                    "SPADE", "HEART", "CLUB", "DIAMOND",
+                    // Famous Jokers
+                    "JIMBO", "JOLLY", "SEANCE", "GLASS", "STEEL", "STONE", "BRONZE",
+                    "SILVER", "GOLD", "ETERNAL", "VOID", "TORN", "BLUE",
+                    // Mechanics
+                    "BUFF", "COPY", "SEAL", "SHOP", "SELL", "LEVEL", "PAYOUT",
+                    "EDGE", "BONUS", "RETRO", "PETRIFIED", "FOREX", "LUCKY",
+                    // General
+                    "RUN", "WIN", "BEAT", "BOSS", "FLUSH", "FIVE", "HOUSE"
+                };
+                keywordInputs.AddRange(balaroKeywords);
             }
 
             var plan = JamlSearchBuilder.CreatePlan(config);
