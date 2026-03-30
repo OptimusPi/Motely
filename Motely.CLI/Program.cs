@@ -462,59 +462,16 @@ partial class Program
                     return 1;
                 }
 
-                // Lazy generator for mirror patterns (symmetric characters)
-                string symmetricChars = "AHIMOTUVWXy18";
-
-                IEnumerable<string> GenerateMirrorPatternsLazy()
-                {
-                    IEnumerable<string> Generate(string current, int remaining)
-                    {
-                        if (remaining == 0)
-                        {
-                            yield return current;
-                            yield break;
-                        }
-                        foreach (char c in symmetricChars)
-                        {
-                            foreach (var pattern in Generate(current + c, remaining - 1))
-                                yield return pattern;
-                        }
-                    }
-
-                    foreach (var pattern in Generate("", mirrorLength))
-                        yield return pattern;
-                }
-
-                keywordInputs = keywordInputs.Concat(GenerateMirrorPatternsLazy());
+                keywordInputs = keywordInputs.Concat(
+                    MotelySeedKeywordSequences.MirrorPatternKeywords(mirrorLength)
+                );
             }
 
             if (funnyOption.HasValue())
-            {
-                var funnyKeywords = new[]
-                {
-                    "LOL", "HAHA", "HEHE", "LMAO", "ROFL", "YEET", "BRUH", "LULZ",
-                    "SILLY", "GOOFY", "WACKY", "ZANY", "NUTTY", "DOPEY", "DAFT",
-                    "WITTY", "PUNNY", "JOKEY", "QUIRKY", "MEME", "NOOB", "DERP",
-                    "YOLO", "DODO", "BOBO", "JOJO", "BOOM", "ZOOM", "WOOSH",
-                    "YOYO", "TEHE", "GEEKY", "LOOPY", "BONKY", "WONKY", "FUNKY"
-                };
-                keywordInputs = keywordInputs.Concat(funnyKeywords);
-            }
+                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.FunnyKeywords);
 
             if (balatrOption.HasValue())
-            {
-                var balaroKeywords = new[]
-                {
-                    "JOKER", "CHIPS", "MULT", "HAND", "CARD", "DECK", "SUIT", "RANK",
-                    "WILD", "SCORE", "ROUND", "ANTE", "BLIND", "STAKE", "SPADE",
-                    "HEART", "CLUB", "DIAMOND", "JIMBO", "JOLLY", "SEANCE", "GLASS",
-                    "STEEL", "STONE", "BRONZE", "SILVER", "GOLD", "ETERNAL", "VOID",
-                    "TORN", "BLUE", "BUFF", "COPY", "SEAL", "SHOP", "SELL", "LEVEL",
-                    "PAYOUT", "EDGE", "BONUS", "RETRO", "PETRIFIED", "FOREX", "LUCKY",
-                    "RUN", "WIN", "BEAT", "BOSS", "FLUSH", "FIVE", "HOUSE"
-                };
-                keywordInputs = keywordInputs.Concat(balaroKeywords);
-            }
+                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.BalatroKeywords);
 
             int cutoffFixed = int.MinValue;
             bool cutoffAuto = false;
