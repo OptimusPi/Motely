@@ -1,8 +1,8 @@
 namespace Motely;
 
-public static partial class Motely
+public static partial class MotelyGlobals
 {
-    public const int MaxCachedPseudoHashKeyLength = 32;
+    public const int MaxCachedPseudoHashKeyLength = 10;
 
     public static readonly char[] SeedDigits = [.. "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
     public const int MaxSeedLength = 8;

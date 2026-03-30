@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 using System.Diagnostics;
 
+using System.Diagnostics.CodeAnalysis;
+
 using System.Linq;
 
 
@@ -118,7 +120,7 @@ public static class JamlSearchBuilder
 
         var mustLabels = new List<string>();
 
-        AddDescsFromSet(mustDescs, mustLabels, config.Must);
+        AddDescsFromSet(mustDescs, mustLabels, config.Must, LegendaryClauseExpansion.SplitLegendaryEdition);
 
         allMustDescs.AddRange(mustDescs);
 
@@ -126,7 +128,7 @@ public static class JamlSearchBuilder
 
         var mustNotLabels = new List<string>();
 
-        AddDescsFromSet(mustNotDescs, mustNotLabels, config.MustNot);
+        AddDescsFromSet(mustNotDescs, mustNotLabels, config.MustNot, LegendaryClauseExpansion.None);
 
         for (int i = 0; i < mustNotDescs.Count; i++)
 
@@ -175,7 +177,7 @@ public static class JamlSearchBuilder
         if (config.Should.HasAnyClauses)
         {
             var shouldDescs = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-            AddDescsFromSet(shouldDescs, config.Should);
+            AddDescsFromSet(shouldDescs, config.Should, LegendaryClauseExpansion.None);
 
             shouldLabelsArray = shouldDescs.Select(x => x.label).ToArray();
 
@@ -196,11 +198,12 @@ public static class JamlSearchBuilder
     private static void AddDescsFromSet(
         List<IMotelySeedFilterDesc> list,
         List<string> labels,
-        JamlClauseSet set
+        JamlClauseSet set,
+        LegendaryClauseExpansion legendaryExpansion
     )
     {
         var typed = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-        AddDescsFromSet(typed, set);
+        AddDescsFromSet(typed, set, legendaryExpansion);
 
         for (int i = 0; i < typed.Count; i++)
         {
@@ -209,17 +212,72 @@ public static class JamlSearchBuilder
         }
     }
 
-
+    /// <summary>
+    /// Whether a legendary+joker+edition clause becomes two SIMD filters (must only). Must not use
+    /// <see cref="LegendaryClauseExpansion.SplitLegendaryEdition"/> — negation would change meaning.
+    /// </summary>
+    private enum LegendaryClauseExpansion
+    {
+        None,
+        SplitLegendaryEdition,
+    }
 
     private static void AddDescsFromSet(
         List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)> list,
-        JamlClauseSet set
+        JamlClauseSet set,
+        LegendaryClauseExpansion legendaryExpansion
     )
     {
         foreach (var c in set.OrderedClauses)
         {
-            list.Add((CreateDesc(c), c, c.Label));
+            if (
+                legendaryExpansion == LegendaryClauseExpansion.SplitLegendaryEdition
+                && TryExpandLegendaryEditionPipeline(c, out List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>? expanded)
+            )
+            {
+                for (int i = 0; i < expanded.Count; i++)
+                    list.Add(expanded[i]);
+            }
+            else
+                list.Add((CreateDesc(c), c, c.Label));
         }
+    }
+
+    /// <summary>
+    /// Splits "legendary joker + edition + min==1" into a fast edition vector filter followed by the
+    /// full pack / The Soul / joker path. Not used for mustNot (would break negation semantics) or should.
+    /// </summary>
+    private static bool TryExpandLegendaryEditionPipeline(
+        IJamlClause c,
+        [NotNullWhen(true)] out List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>? expanded
+    )
+    {
+        expanded = null;
+        if (c is not LegendaryJokerClause lj)
+            return false;
+        if (
+            lj.IsWildcard
+            || !lj.Edition.HasValue
+            || lj.Jokers.Length == 0
+            || lj.Min != 1
+            || lj.SoulCardOnly
+        )
+            return false;
+
+        string baseLabel = c.Label ?? "";
+        string labelEdition = string.IsNullOrEmpty(baseLabel)
+            ? "legendary edition"
+            : $"{baseLabel} [edition]";
+        string labelPath = string.IsNullOrEmpty(baseLabel)
+            ? "legendary soul path"
+            : $"{baseLabel} [soul path]";
+
+        expanded =
+        [
+            (new LegendarySoulEditionFilterDesc(lj), c, labelEdition),
+            (new LegendaryJokerFilterDesc(lj, LegendaryJokerPipelineKind.FullPathOnly), c, labelPath),
+        ];
+        return true;
     }
 
 
@@ -255,6 +313,10 @@ public static class JamlSearchBuilder
             LegendaryJokerFilterDesc d =>
 
                 new MotelySearchSettings<LegendaryJokerFilterDesc.LegendaryJokerFilter>(d),
+
+            LegendarySoulEditionFilterDesc d =>
+
+                new MotelySearchSettings<LegendarySoulEditionFilterDesc.LegendarySoulEditionFilter>(d),
 
             VoucherFilterDesc d => new MotelySearchSettings<VoucherFilterDesc.VoucherFilter>(d),
 

@@ -157,6 +157,11 @@ partial class Program
             "Search for Balatro game terms: JOKER, CHIPS, MULT, HAND, SPADE, HEART, JIMBO, SHOP, BLIND, ANTE, CARD, WILD",
             CommandOptionType.NoValue
         );
+        var psychosisOption = app.Option(
+            "--psychosis",
+            "Search for echo patterns: ABAxBxxx (letters repeat with gaps, creates psychotic vibe)",
+            CommandOptionType.NoValue
+        );
         var sourceOption = app.Option<string>(
             "--source <NAME_OR_PATH>",
             "Seed source file name or absolute path",
@@ -174,7 +179,7 @@ partial class Program
         );
         var cutoffOption = app.Option<string>(
             "--cutoff <VALUE>",
-            "Minimum score to print, or 'auto' to only show new highs",
+            "Minimum score to print, or 'auto' for running maximum (every seed at or above the best score so far, ties included)",
             CommandOptionType.SingleValue
         );
         var keywordOption = app.Option<string>(
@@ -289,11 +294,12 @@ partial class Program
             if (mirrorOption.HasValue()) explicitSearchModeCount++;
             if (funnyOption.HasValue()) explicitSearchModeCount++;
             if (balatrOption.HasValue()) explicitSearchModeCount++;
+            if (psychosisOption.HasValue()) explicitSearchModeCount++;
 
             if (explicitSearchModeCount > 1)
             {
                 Console.Error.WriteLine(
-                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, --palindrome, --repeats, --ascending, --descending, --gross, --nsfw, --aesthetic, --mirror, --funny, or --balatro."
+                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, --palindrome, --repeats, --ascending, --descending, --gross, --nsfw, --aesthetic, --mirror, --funny, --balatro, or --psychosis."
                 );
                 return 1;
             }
@@ -358,13 +364,14 @@ partial class Program
                 }
             }
 
-            var keywordInputs = new List<string>();
+            IEnumerable<string> keywordInputs = Enumerable.Empty<string>();
+
             if (keywordOption.HasValue())
-                keywordInputs.Add(keywordOption.ParsedValue);
+                keywordInputs = keywordInputs.Append(keywordOption.ParsedValue);
 
             if (keywordsOption.HasValue())
             {
-                keywordInputs.AddRange(
+                keywordInputs = keywordInputs.Concat(
                     keywordsOption.ParsedValue.Split(',', StringSplitOptions.TrimEntries)
                 );
             }
@@ -383,11 +390,11 @@ partial class Program
                     return 1;
                 }
 
-                // Generate repeating character keywords: AAA, BBB, CCC, ... ZZZ
-                for (char c = 'A'; c <= 'Z'; c++)
-                {
-                    keywordInputs.Add(new string(c, repeatCount));
-                }
+                // Lazy generator for repeating characters
+                keywordInputs = keywordInputs.Concat(
+                    Enumerable.Range((int)'A', 26)
+                        .Select(c => new string((char)c, repeatCount))
+                );
             }
 
             if (ascendingOption.HasValue())
@@ -404,12 +411,12 @@ partial class Program
                     return 1;
                 }
 
-                // Generate ascending sequences: 123, 234, 345, ... 89A, 9AB, ABC, ... XYZ
+                // Lazy generator for ascending sequences
                 string chars = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                for (int i = 0; i <= chars.Length - ascendingLength; i++)
-                {
-                    keywordInputs.Add(chars.Substring(i, ascendingLength));
-                }
+                keywordInputs = keywordInputs.Concat(
+                    Enumerable.Range(0, chars.Length - ascendingLength + 1)
+                        .Select(i => chars.Substring(i, ascendingLength))
+                );
             }
 
             if (descendingOption.HasValue())
@@ -426,28 +433,27 @@ partial class Program
                     return 1;
                 }
 
-                // Generate descending sequences: 321, 432, 543, ... ZYX, ZYXW, etc.
+                // Lazy generator for descending sequences
                 string chars = "ZYXWVUTSRQPONMLKJIHGFEDCBA987654321";
-                for (int i = 0; i <= chars.Length - descendingLength; i++)
-                {
-                    keywordInputs.Add(chars.Substring(i, descendingLength));
-                }
+                keywordInputs = keywordInputs.Concat(
+                    Enumerable.Range(0, chars.Length - descendingLength + 1)
+                        .Select(i => chars.Substring(i, descendingLength))
+                );
             }
 
             if (grossOption.HasValue())
             {
-                var grossKeywordCompatSeeds = new[]
+                var grossKeywords = new[]
                 {
                     "FART", "BUTT", "POOP", "PUKE", "BURP", "TOOT", "GUTS", "SLIME",
                     "YUCK", "DUMB", "LAME", "UGLY", "WEAK", "CRUD", "CRAP", "SICK",
                     "NASTY", "GROSS"
                 };
-                keywordInputs.AddRange(grossKeywordCompatSeeds);
+                keywordInputs = keywordInputs.Concat(grossKeywords);
             }
 
             if (nsfwOption.HasValue())
             {
-                // Comprehensive NSFW detection list (for content safety warnings)
                 var nsfwKeywords = new[]
                 {
                     "FUCK", "SHIT", "DAMN", "HELL", "CRAP", "ASSES", "ASSHAT",
@@ -457,7 +463,7 @@ partial class Program
                     "DYKE", "SPIC", "GOOK", "CHINK", "TRANNY", "HOMO", "LESBO",
                     "RETARD", "NIGGA", "NIGGER"
                 };
-                keywordInputs.AddRange(nsfwKeywords);
+                keywordInputs = keywordInputs.Concat(nsfwKeywords);
             }
 
             if (aestheticOption.HasValue())
@@ -469,7 +475,7 @@ partial class Program
                     "ELEGANT", "PRETTY", "CHARM", "TENDER", "SWEET", "LOVE", "JOY",
                     "HOPE", "DREAM", "MAGIC", "WONDER", "ANGEL", "GRACE", "SERENE"
                 };
-                keywordInputs.AddRange(aestheticKeywords);
+                keywordInputs = keywordInputs.Concat(aestheticKeywords);
             }
 
             if (mirrorOption.HasValue())
@@ -486,65 +492,58 @@ partial class Program
                     return 1;
                 }
 
-                // Visually symmetric characters
+                // Lazy generator for mirror patterns (symmetric characters)
                 string symmetricChars = "AHIMOTUVWXy18";
 
-                // Generate all combinations of symmetric characters up to mirrorLength
-                void GenerateMirrorPatterns(string current, int remainingLength)
+                IEnumerable<string> GenerateMirrorPatternsLazy()
                 {
-                    if (remainingLength == 0)
+                    IEnumerable<string> Generate(string current, int remaining)
                     {
-                        keywordInputs.Add(current);
-                        return;
+                        if (remaining == 0)
+                        {
+                            yield return current;
+                            yield break;
+                        }
+                        foreach (char c in symmetricChars)
+                        {
+                            foreach (var pattern in Generate(current + c, remaining - 1))
+                                yield return pattern;
+                        }
                     }
 
-                    foreach (char c in symmetricChars)
-                    {
-                        GenerateMirrorPatterns(current + c, remainingLength - 1);
-                    }
+                    foreach (var pattern in Generate("", mirrorLength))
+                        yield return pattern;
                 }
 
-                GenerateMirrorPatterns("", mirrorLength);
+                keywordInputs = keywordInputs.Concat(GenerateMirrorPatternsLazy());
             }
 
             if (funnyOption.HasValue())
             {
                 var funnyKeywords = new[]
                 {
-                    // Classic internet/laughter
                     "LOL", "HAHA", "HEHE", "LMAO", "ROFL", "YEET", "BRUH", "LULZ",
-                    // Silly/goofy
                     "SILLY", "GOOFY", "WACKY", "ZANY", "NUTTY", "DOPEY", "DAFT",
-                    "WITTY", "PUNNY", "JOKEY", "QUIRKY",
-                    // Memes/internet
-                    "MEME", "NOOB", "DERP", "YOLO", "DODO", "BOBO", "JOJO",
-                    // Sounds/exclamations
-                    "BOOM", "ZOOM", "WOOSH", "YOYO", "TEHE",
-                    // Funny vibes
-                    "GEEKY", "LOOPY", "BONKY", "WONKY", "FUNKY"
+                    "WITTY", "PUNNY", "JOKEY", "QUIRKY", "MEME", "NOOB", "DERP",
+                    "YOLO", "DODO", "BOBO", "JOJO", "BOOM", "ZOOM", "WOOSH",
+                    "YOYO", "TEHE", "GEEKY", "LOOPY", "BONKY", "WONKY", "FUNKY"
                 };
-                keywordInputs.AddRange(funnyKeywords);
+                keywordInputs = keywordInputs.Concat(funnyKeywords);
             }
 
             if (balatrOption.HasValue())
             {
                 var balaroKeywords = new[]
                 {
-                    // Core mechanics
                     "JOKER", "CHIPS", "MULT", "HAND", "CARD", "DECK", "SUIT", "RANK",
-                    "WILD", "SCORE", "ROUND", "ANTE", "BLIND", "STAKE",
-                    // Card suits
-                    "SPADE", "HEART", "CLUB", "DIAMOND",
-                    // Famous Jokers
-                    "JIMBO", "JOLLY", "SEANCE", "GLASS", "STEEL", "STONE", "BRONZE",
-                    "SILVER", "GOLD", "ETERNAL", "VOID", "TORN", "BLUE",
-                    // Mechanics
-                    "BUFF", "COPY", "SEAL", "SHOP", "SELL", "LEVEL", "PAYOUT",
-                    "EDGE", "BONUS", "RETRO", "PETRIFIED", "FOREX", "LUCKY",
-                    // General
+                    "WILD", "SCORE", "ROUND", "ANTE", "BLIND", "STAKE", "SPADE",
+                    "HEART", "CLUB", "DIAMOND", "JIMBO", "JOLLY", "SEANCE", "GLASS",
+                    "STEEL", "STONE", "BRONZE", "SILVER", "GOLD", "ETERNAL", "VOID",
+                    "TORN", "BLUE", "BUFF", "COPY", "SEAL", "SHOP", "SELL", "LEVEL",
+                    "PAYOUT", "EDGE", "BONUS", "RETRO", "PETRIFIED", "FOREX", "LUCKY",
                     "RUN", "WIN", "BEAT", "BOSS", "FLUSH", "FIVE", "HOUSE"
                 };
-                keywordInputs.AddRange(balaroKeywords);
+                keywordInputs = keywordInputs.Concat(balaroKeywords);
             }
 
             var plan = JamlSearchBuilder.CreatePlan(config);
@@ -558,12 +557,12 @@ partial class Program
             {
                 settings.WithListSearch(explicitSeeds, explicitSeeds.Length);
             }
-            else if (keywordInputs.Count > 0)
+            else if (keywordInputs.Any())
             {
                 char[]? paddingChars = paddingOption.HasValue()
                     ? paddingOption.ParsedValue.ToCharArray()
                     : null;
-                var prov = Motely.Motely.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
+                var prov = Motely.MotelyGlobals.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
                 settings.WithProviderSearch(
                     new MotelySeedListProvider(
                         prov,
@@ -578,6 +577,10 @@ partial class Program
             else if (palindromeOption.HasValue())
             {
                 settings.WithPalindromeSearch();
+            }
+            else if (psychosisOption.HasValue())
+            {
+                settings.WithProviderSearch(new MotelyPsychosisSeedProvider());
             }
             else
             {
@@ -594,10 +597,46 @@ partial class Program
                 ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
                 : null;
 
+            int cutoffFixed = int.MinValue;
+            bool cutoffAuto = false;
+            if (cutoffOption.HasValue())
+            {
+                if (cutoffOption.ParsedValue.Equals("auto", StringComparison.OrdinalIgnoreCase))
+                    cutoffAuto = true;
+                else if (int.TryParse(cutoffOption.ParsedValue, out int cv))
+                    cutoffFixed = cv;
+                else
+                {
+                    Console.Error.WriteLine("Error: --cutoff requires a numeric value or 'auto'.");
+                    return 1;
+                }
+            }
+
+            // MotelySearch passes this to IMotelySeedScoreProvider.Score (vector path); CLI callback may still apply --cutoff auto.
+            int cutoffForSearch = 0;
+            if (cutoffOption.HasValue() && !cutoffAuto && cutoffFixed != int.MinValue)
+                cutoffForSearch = cutoffFixed;
+            settings.WithCutoffScore(cutoffForSearch);
+
+            settings.WithProgressCallback(p =>
+            {
+                Console.Error.WriteLine($"Progress: {p.SeedsSearched} searched, {p.MatchingSeeds} found, {p.ElapsedTime.TotalSeconds:F2}s");
+            });
+
             if (hasStructuredScores)
             {
+                int currentHigh = int.MinValue;
                 settings.WithScoredResultCallback(tally =>
                 {
+                    if (cutoffAuto)
+                    {
+                        // Running maximum: print every seed at or above the best score so far (ties at the max included).
+                        if (tally.Score < currentHigh) return;
+                        currentHigh = Math.Max(currentHigh, tally.Score);
+                    }
+                    else if (tally.Score < cutoffFixed)
+                        return;
+
                     var tallies = string.Join(",", tally.TallyValuesSpan.ToArray());
                     Console.WriteLine($"{tally.Seed},{tally.Score},{tallies}");
                     sink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);

@@ -588,26 +588,25 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task AnalyzerDerivedLegacyNestedAndFilter_MatchesSameSeed()
+    public async Task AnalyzerDerivedNestedAndFilter_MatchesSameSeed()
     {
         var match = FindAnalyzedAnteWithDistinctTags();
         Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
 
         var derived = match!.Value;
         var jaml = $$"""
-            name: AnalyzerDerivedLegacyAnd
+            name: AnalyzerDerivedNestedAnd
             deck: Red
             stake: White
             must:
-              - and:
-                  label: Exact blind pair
-                  mode: sum
-                  score: 100
-                  clauses:
-                    - smallBlindTag: {{derived.SmallBlindTag}}
-                      antes: [{{derived.Ante}}]
-                    - bigBlindTag: {{derived.BigBlindTag}}
-                      antes: [{{derived.Ante}}]
+              - label: Exact blind pair
+                mode: sum
+                score: 100
+                and:
+                  - smallBlindTag: {{derived.SmallBlindTag}}
+                    antes: [{{derived.Ante}}]
+                  - bigBlindTag: {{derived.BigBlindTag}}
+                    antes: [{{derived.Ante}}]
             """;
 
         Assert.True(

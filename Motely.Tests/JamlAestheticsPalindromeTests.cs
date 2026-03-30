@@ -6,7 +6,7 @@ namespace Motely.Tests;
 public class JamlAestheticsPalindromeTests
 {
     /// <summary>
-    /// Palindrome search walks every palindrome over <see cref="Motely.SeedDigits"/> for lengths 1..8 in a fixed order.
+    /// Palindrome search walks every palindrome over <see cref="MotelyGlobals.SeedDigits"/> for lengths 1..8 in a fixed order.
     /// </summary>
     [Fact]
     public void EnumerateSeeds_EverySeed_Matches_And_Count_Agrees_With_GetSeedCount()
