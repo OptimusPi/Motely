@@ -47,6 +47,16 @@ public static partial class Program
     public static string AnalyzeSeed(string seed, string deck, string stake) =>
         JsonSerializer.Serialize(MotelySeedAnalyzer.AnalyzeToDto(seed, deck, stake));
 
+    public static MotelySingleSearchContext CreateSeedInstance(string seed, string deck, string stake)
+    {
+        if (!Enum.TryParse<MotelyDeck>(deck, ignoreCase: true, out var deckEnum))
+            throw new ArgumentException($"Invalid deck: {deck}");
+        if (!Enum.TryParse<MotelyStake>(stake, ignoreCase: true, out var stakeEnum))
+            throw new ArgumentException($"Invalid stake: {stake}");
+        var router = new MotelySeedRouterDesc(seed, deckEnum, stakeEnum);
+        return router.CreateContext();
+    }
+
     [JSInvokable]
     public static void StartSearch(string jamlContent, int threadCount)
     {
