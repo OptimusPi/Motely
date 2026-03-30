@@ -96,12 +96,66 @@ internal static class LegendarySoulMatcher
     }
 
     /// <summary>
+    /// Soul-card-only path: same pack walk / slot rules as <see cref="MatchAnte"/>, returns on first The Soul in a targeted arcana/spectral pack.
+    /// </summary>
+    internal static bool MatchAnteShopPackHasSoulOnly(
+        ref MotelySingleSearchContext ctx,
+        int ante,
+        SoulJokerSourceConfig src,
+        int maxBoosterPack
+    )
+    {
+        var packStream = ctx.CreateBoosterPackStream(ante, true, false);
+
+        MotelySingleTarotStream tarotStream = default;
+        MotelySingleSpectralStream spectralStream = default;
+        bool tarotInit = false;
+        bool spectralInit = false;
+
+        for (int p = 0; p <= maxBoosterPack; p++)
+        {
+            var pack = ctx.GetNextBoosterPack(ref packStream);
+
+            if (!IsBoosterSlotTargetForLegendary(src, p, pack))
+                continue;
+
+            if (src.RequireMegaPack && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
+                continue;
+
+            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+            {
+                if (!tarotInit)
+                {
+                    tarotInit = true;
+                    tarotStream = ctx.CreateArcanaPackTarotStream(ante, true);
+                }
+
+                if (ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                    return true;
+            }
+            else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+            {
+                if (!spectralInit)
+                {
+                    spectralInit = true;
+                    spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: ante != 1);
+                }
+
+                if (ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Split mode (non-empty arcana and/or spectral slot lists): only those paths count.
     /// Legacy mode: <see cref="SoulJokerSourceConfig.BoosterPacks"/> — slot matches regardless of rolled pack type
     /// (arcana/spectral branches still gate The Soul).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsBoosterSlotTargetForLegendary(
+    internal static bool IsBoosterSlotTargetForLegendary(
         SoulJokerSourceConfig src,
         int p,
         MotelyBoosterPack pack
