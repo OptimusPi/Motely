@@ -89,7 +89,7 @@ partial class Program
         );
         var batchCharCountOption = app.Option<int>(
             "--batchCharCount <N>",
-            "Batch character count (1-7, default 4)",
+            "Batch character count (1-7, default 2)",
             CommandOptionType.SingleValue
         );
         var startBatchOption = app.Option<long>(
@@ -115,56 +115,6 @@ partial class Program
         var palindromeOption = app.Option(
             "--palindrome",
             "Palindrome seeds",
-            CommandOptionType.NoValue
-        );
-        var repeatsOption = app.Option<string>(
-            "--repeats <COUNT>",
-            "Search for repeating chars (2-8): AAA, BBB, CCC, ... (generates 26 keywords)",
-            CommandOptionType.SingleValue
-        );
-        var ascendingOption = app.Option<string>(
-            "--ascending <LENGTH>",
-            "Search for ascending sequences (3-8): 123, 234, 345, ... (3-8 char length)",
-            CommandOptionType.SingleValue
-        );
-        var descendingOption = app.Option<string>(
-            "--descending <LENGTH>",
-            "Search for descending sequences (3-8): 321, 432, 543, ... (3-8 char length)",
-            CommandOptionType.SingleValue
-        );
-        var grossOption = app.Option(
-            "--gross",
-            "Search for funny/crude keywords: FART, BUTT, POOP, PUKE, BURP, TOOT, GUTS, SLIME, YUCK, DUMB, LAME, UGLY, WEAK",
-            CommandOptionType.NoValue
-        );
-        var nsfwOption = app.Option(
-            "--nsfw",
-            "Search for NSFW/swear words and slurs (detection mode for safety warnings)",
-            CommandOptionType.NoValue
-        );
-        var aestheticOption = app.Option(
-            "--aesthetic",
-            "Search for aesthetic/beautiful keywords: BEAUTY, GRACE, LOVELY, SERENE, BLISS, PEACE, CALM, PURE, BRIGHT",
-            CommandOptionType.NoValue
-        );
-        var mirrorOption = app.Option<string>(
-            "--mirror <LENGTH>",
-            "Search for visually symmetric patterns (3-8): AHA, OHO, 1A1, 8V8, etc.",
-            CommandOptionType.SingleValue
-        );
-        var funnyOption = app.Option(
-            "--funny",
-            "Search for funny/humor keywords: LOL, HAHA, LMAO, ROFL, YEET, BRUH, MEME, GOOFY, SILLY, WACKY, ZANY",
-            CommandOptionType.NoValue
-        );
-        var balatrOption = app.Option(
-            "--balatro",
-            "Search for Balatro game terms: JOKER, CHIPS, MULT, HAND, SPADE, HEART, JIMBO, SHOP, BLIND, ANTE, CARD, WILD",
-            CommandOptionType.NoValue
-        );
-        var psychosisOption = app.Option(
-            "--psychosis",
-            "Search for echo patterns: ABAxBxxx (letters repeat with gaps, creates psychotic vibe)",
             CommandOptionType.NoValue
         );
         var sourceOption = app.Option<string>(
@@ -290,21 +240,11 @@ partial class Program
             if (hasKeywordMode) explicitSearchModeCount++;
             if (randomOption.HasValue()) explicitSearchModeCount++;
             if (palindromeOption.HasValue()) explicitSearchModeCount++;
-            if (repeatsOption.HasValue()) explicitSearchModeCount++;
-            if (ascendingOption.HasValue()) explicitSearchModeCount++;
-            if (descendingOption.HasValue()) explicitSearchModeCount++;
-            if (grossOption.HasValue()) explicitSearchModeCount++;
-            if (nsfwOption.HasValue()) explicitSearchModeCount++;
-            if (aestheticOption.HasValue()) explicitSearchModeCount++;
-            if (mirrorOption.HasValue()) explicitSearchModeCount++;
-            if (funnyOption.HasValue()) explicitSearchModeCount++;
-            if (balatrOption.HasValue()) explicitSearchModeCount++;
-            if (psychosisOption.HasValue()) explicitSearchModeCount++;
 
             if (explicitSearchModeCount > 1)
             {
                 Console.Error.WriteLine(
-                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, --palindrome, --repeats, --ascending, --descending, --gross, --nsfw, --aesthetic, --mirror, --funny, --balatro, or --psychosis."
+                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, or --palindrome."
                 );
                 return 1;
             }
@@ -369,129 +309,18 @@ partial class Program
                 }
             }
 
-            IEnumerable<string> keywordInputs = Enumerable.Empty<string>();
-
+            var keywordInputs = new List<string>();
             if (keywordOption.HasValue())
-                keywordInputs = keywordInputs.Append(keywordOption.ParsedValue);
+                keywordInputs.Add(keywordOption.ParsedValue);
 
             if (keywordsOption.HasValue())
             {
-                keywordInputs = keywordInputs.Concat(
+                keywordInputs.AddRange(
                     keywordsOption.ParsedValue.Split(',', StringSplitOptions.TrimEntries)
                 );
             }
 
-            if (repeatsOption.HasValue())
-            {
-                if (!int.TryParse(repeatsOption.ParsedValue, out int repeatCount))
-                {
-                    Console.Error.WriteLine("Error: --repeats requires a numeric value (2-8).");
-                    return 1;
-                }
-
-                if (repeatCount < 2 || repeatCount > 8)
-                {
-                    Console.Error.WriteLine("Error: --repeats must be between 2 and 8.");
-                    return 1;
-                }
-
-                keywordInputs = keywordInputs.Concat(
-                    MotelySeedKeywordSequences.RepeatCharKeywords(repeatCount)
-                );
-            }
-
-            if (ascendingOption.HasValue())
-            {
-                if (!int.TryParse(ascendingOption.ParsedValue, out int ascendingLength))
-                {
-                    Console.Error.WriteLine("Error: --ascending requires a numeric value (3-8).");
-                    return 1;
-                }
-
-                if (ascendingLength < 3 || ascendingLength > 8)
-                {
-                    Console.Error.WriteLine("Error: --ascending must be between 3 and 8.");
-                    return 1;
-                }
-
-                keywordInputs = keywordInputs.Concat(
-                    MotelySeedKeywordSequences.AscendingDigitLetterKeywords(ascendingLength)
-                );
-            }
-
-            if (descendingOption.HasValue())
-            {
-                if (!int.TryParse(descendingOption.ParsedValue, out int descendingLength))
-                {
-                    Console.Error.WriteLine("Error: --descending requires a numeric value (3-8).");
-                    return 1;
-                }
-
-                if (descendingLength < 3 || descendingLength > 8)
-                {
-                    Console.Error.WriteLine("Error: --descending must be between 3 and 8.");
-                    return 1;
-                }
-
-                keywordInputs = keywordInputs.Concat(
-                    MotelySeedKeywordSequences.DescendingDigitLetterKeywords(descendingLength)
-                );
-            }
-
-            if (grossOption.HasValue())
-                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.GrossKeywords);
-
-            if (nsfwOption.HasValue())
-                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.NsfwKeywords);
-
-            if (aestheticOption.HasValue())
-                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.AestheticKeywords);
-
-            if (mirrorOption.HasValue())
-            {
-                if (!int.TryParse(mirrorOption.ParsedValue, out int mirrorLength))
-                {
-                    Console.Error.WriteLine("Error: --mirror requires a numeric value (3-8).");
-                    return 1;
-                }
-
-                if (mirrorLength < 3 || mirrorLength > 8)
-                {
-                    Console.Error.WriteLine("Error: --mirror must be between 3 and 8.");
-                    return 1;
-                }
-
-                keywordInputs = keywordInputs.Concat(
-                    MotelySeedKeywordSequences.MirrorPatternKeywords(mirrorLength)
-                );
-            }
-
-            if (funnyOption.HasValue())
-                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.FunnyKeywords);
-
-            if (balatrOption.HasValue())
-                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.BalatroKeywords);
-
-            int cutoffFixed = int.MinValue;
-            bool cutoffAuto = false;
-            if (cutoffOption.HasValue())
-            {
-                if (cutoffOption.ParsedValue.Equals("auto", StringComparison.OrdinalIgnoreCase))
-                    cutoffAuto = true;
-                else if (int.TryParse(cutoffOption.ParsedValue, out int cv))
-                    cutoffFixed = cv;
-                else
-                {
-                    Console.Error.WriteLine("Error: --cutoff requires a numeric value or 'auto'.");
-                    return 1;
-                }
-            }
-
-            int cutoffForShouldScoring = 0;
-            if (cutoffOption.HasValue() && !cutoffAuto && cutoffFixed != int.MinValue)
-                cutoffForShouldScoring = cutoffFixed;
-
-            var plan = JamlSearchBuilder.CreatePlan(config, cutoffForShouldScoring);
+            var plan = JamlSearchBuilder.CreatePlan(config);
             var settings = plan.Settings
                 .WithDeck(deck)
                 .WithStake(stake)
@@ -502,12 +331,12 @@ partial class Program
             {
                 settings.WithListSearch(explicitSeeds, explicitSeeds.Length);
             }
-            else if (keywordInputs.Any())
+            else if (keywordInputs.Count > 0)
             {
                 char[]? paddingChars = paddingOption.HasValue()
                     ? paddingOption.ParsedValue.ToCharArray()
                     : null;
-                var prov = Motely.MotelyGlobals.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
+                var prov = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
                 settings.WithProviderSearch(
                     new MotelySeedListProvider(
                         prov,
@@ -522,10 +351,6 @@ partial class Program
             else if (palindromeOption.HasValue())
             {
                 settings.WithPalindromeSearch();
-            }
-            else if (psychosisOption.HasValue())
-            {
-                settings.WithProviderSearch(new MotelyPsychosisSeedProvider());
             }
             else
             {
@@ -588,7 +413,6 @@ partial class Program
 
             if (hasStructuredScores)
             {
-                int currentHigh = int.MinValue;
                 settings.WithScoredResultCallback(tally =>
                 {
                     if (cutoffAuto)

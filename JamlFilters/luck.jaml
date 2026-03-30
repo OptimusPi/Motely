@@ -13,20 +13,36 @@ must:
 should:
   - and:
       - smallBlindTag: NegativeTag
-        antes: [4]
+        antes: [2]
       - uncommonJoker: OopsAll6s
         
-        antes: [4]
+        antes: [2]
+        sources:
+          shopItems: [2,3,4,5] 
+  - and:
+      - smallBlindTag: NegativeTag
+        antes: [3]
+      - uncommonJoker: OopsAll6s
+        
+        antes: [3]
         sources:
           shopItems: [2,3,4,5,6] 
   - and:
       - smallBlindTag: NegativeTag
+        antes: [4]
+      - uncommonJoker: OopsAll6s
+        
+        antes: [4]
+        sources:
+          shopItems: [2,3,4,5,6,7,8] 
+  - and:
+      - smallBlindTag: NegativeTag
         antes: [5]
       - uncommonJoker: OopsAll6s
         
         antes: [5]
         sources:
-          shopItems: [2,3,4,5,6]
+          shopItems: [2,3,4,5,6,7,8,9]
   - and:
       - smallBlindTag: NegativeTag
         antes: [6]
@@ -34,7 +50,7 @@ should:
         
         antes: [6]
         sources:
-          shopItems: [2,3,4,5,6]
+          shopItems: [2,3,4,5,6,7,8,9,10,11,12,13]
   - and:
       - smallBlindTag: NegativeTag
         antes: [7]
@@ -42,7 +58,7 @@ should:
         
         antes: [7]
         sources:
-          shopItems: [2,3,4,5,6]
+          shopItems: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
   - and:
       - smallBlindTag: NegativeTag
         antes: [8]
@@ -50,4 +66,4 @@ should:
         
         antes: [8]
         sources:
-          shopItems: [2,3,4,5,6]
+          shopItems: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
