@@ -131,7 +131,7 @@ public static partial class MotelyGlobals
 
     /// <summary>
     /// Generate seeds for multiple keywords, combining their padded variations lazily.
-    /// All keywords use the same padding chars and pad length derived from the longest keyword.
+    /// Each keyword is padded independently up to <see cref="MaxSeedLength"/>.
     /// </summary>
     public static IEnumerable<string> GeneratePaddedSeedsForKeywords(
         IEnumerable<string> keywords,
