@@ -89,7 +89,7 @@ partial class Program
         );
         var batchCharCountOption = app.Option<int>(
             "--batchCharCount <N>",
-            "Batch character count (1-7, default 2)",
+            "Batch character count (1-7, default 4)",
             CommandOptionType.SingleValue
         );
         var startBatchOption = app.Option<long>(
@@ -272,7 +272,7 @@ partial class Program
             int threads = threadsOption.HasValue()
                 ? threadsOption.ParsedValue
                 : Environment.ProcessorCount;
-            int batchCharCount = batchCharCountOption.HasValue() ? batchCharCountOption.ParsedValue : 4;
+            int batchCharCount = batchCharCountOption.ParsedValue;
 
             bool hasSeedListMode = sourceOption.HasValue() || seedsOption.HasValue();
             bool hasKeywordMode = keywordOption.HasValue() || keywordsOption.HasValue();
