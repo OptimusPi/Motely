@@ -49,16 +49,9 @@ public struct LegendaryJokerFilterDesc(
 
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var boosterPacks = _clause.Sources.BoosterPacks;
-        Debug.Assert(boosterPacks.Length > 0,
-            "Legendary joker clause should have normalized default sources at config load time.");
+        var src = _clause.Sources.NormalizeSoulJokerBoostersIfEmpty();
 
-        int maxBoosterPack = 0;
-        for (int i = 0; i < boosterPacks.Length; i++)
-        {
-            if (boosterPacks[i] > maxBoosterPack)
-                maxBoosterPack = boosterPacks[i];
-        }
+        int maxBoosterPack = src.MaxReferencedBoosterSlot();
 
         var normalizedClause = new LegendaryJokerClause
         {
@@ -73,9 +66,12 @@ public struct LegendaryJokerFilterDesc(
             SoulEditionRolls = _clause.SoulEditionRolls,
             Sources = new SoulJokerSourceConfig
             {
-                ShopItems = _clause.Sources.ShopItems,
-                BoosterPacks = boosterPacks,
-                SoulCard = _clause.Sources.SoulCard,
+                ShopItems = src.ShopItems,
+                BoosterPacks = src.BoosterPacks,
+                ArcanaBoosterPacks = src.ArcanaBoosterPacks,
+                SpectralBoosterPacks = src.SpectralBoosterPacks,
+                SoulCard = src.SoulCard,
+                RequireMegaPack = src.RequireMegaPack,
             },
         };
 
@@ -127,7 +123,8 @@ public struct LegendaryJokerFilterDesc(
 
             // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
             // souls (see LegendarySoulMatcher). Edition-only vector prefilter (Min==1) matches
-            // NegativePerkeoFilterDescNew: scan up to one soul read per configured booster slot so
+            // Negative Perkeo SIMD prefilter: scan soul edition/type per ante like
+            // <see cref="NegativePerkeoSimdFilterDesc"/>; pack path batches via additional filter.
             // we do not drop seeds where the first soul fails edition but a later soul matches.
             uint laneMask = 0;
             for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
