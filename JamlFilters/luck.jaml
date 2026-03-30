@@ -5,13 +5,12 @@ description: >
   One branch per ante (2–8); OR means "hits on at least one of those antes" with tag+joker aligned.
 deck: Anaglyph
 stake: Black
-should:
+must:
   - joker: Showman
     antes: [1, 2, 3]
-    score: 50
   - legendaryJoker: Perkeo
     antes: [1, 2, 3]
-    score: 1
+should:
   - and:
       - smallBlindTag: NegativeTag
         antes: [4]
@@ -19,7 +18,7 @@ should:
         
         antes: [4]
         sources:
-          shopItems: [2,3,4,5,6]
+          shopItems: [2,3,4,5,6] 
   - and:
       - smallBlindTag: NegativeTag
         antes: [5]
