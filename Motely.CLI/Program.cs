@@ -112,6 +112,16 @@ partial class Program
             "Palindrome seeds",
             CommandOptionType.NoValue
         );
+        var repeatsOption = app.Option<string>(
+            "--repeats <COUNT>",
+            "Search for repeating chars (2-8): AAA, BBB, CCC, ... (generates 26 keywords)",
+            CommandOptionType.SingleValue
+        );
+        var ascendingOption = app.Option(
+            "--ascending",
+            "Search for ascending sequences: 123, 234, 345, ... XYZ (generates 33 keywords)",
+            CommandOptionType.NoValue
+        );
         var sourceOption = app.Option<string>(
             "--source <NAME_OR_PATH>",
             "Seed source file name or absolute path",
@@ -235,11 +245,13 @@ partial class Program
             if (hasKeywordMode) explicitSearchModeCount++;
             if (randomOption.HasValue()) explicitSearchModeCount++;
             if (palindromeOption.HasValue()) explicitSearchModeCount++;
+            if (repeatsOption.HasValue()) explicitSearchModeCount++;
+            if (ascendingOption.HasValue()) explicitSearchModeCount++;
 
             if (explicitSearchModeCount > 1)
             {
                 Console.Error.WriteLine(
-                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, or --palindrome."
+                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, --palindrome, --repeats, or --ascending."
                 );
                 return 1;
             }
@@ -315,6 +327,37 @@ partial class Program
                 );
             }
 
+            if (repeatsOption.HasValue())
+            {
+                if (!int.TryParse(repeatsOption.ParsedValue, out int repeatCount))
+                {
+                    Console.Error.WriteLine("Error: --repeats requires a numeric value (2-8).");
+                    return 1;
+                }
+
+                if (repeatCount < 2 || repeatCount > 8)
+                {
+                    Console.Error.WriteLine("Error: --repeats must be between 2 and 8.");
+                    return 1;
+                }
+
+                // Generate repeating character keywords: AAA, BBB, CCC, ... ZZZ
+                for (char c = 'A'; c <= 'Z'; c++)
+                {
+                    keywordInputs.Add(new string(c, repeatCount));
+                }
+            }
+
+            if (ascendingOption.HasValue())
+            {
+                // Generate ascending sequences: 123, 234, 345, ... 89A, 9AB, ABC, ... XYZ
+                string chars = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                for (int i = 0; i < chars.Length - 2; i++)
+                {
+                    keywordInputs.Add(chars.Substring(i, 3));
+                }
+            }
+
             var plan = JamlSearchBuilder.CreatePlan(config);
             var settings = plan.Settings
                 .WithDeck(deck)
@@ -366,6 +409,8 @@ partial class Program
             {
                 settings.WithScoredResultCallback(tally =>
                 {
+                    var tallies = string.Join(",", tally.TallyValuesSpan.ToArray());
+                    Console.WriteLine($"{tally.Seed},{tally.Score},{tallies}");
                     sink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
                 });
             }
