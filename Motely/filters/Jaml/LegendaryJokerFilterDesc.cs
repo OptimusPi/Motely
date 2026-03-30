@@ -123,8 +123,8 @@ public struct LegendaryJokerFilterDesc(
 
             // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
             // souls (see LegendarySoulMatcher). Edition-only vector prefilter (Min==1) matches
-            // Negative Perkeo SIMD prefilter: scan soul edition/type per ante like
-            // <see cref="NegativePerkeoSimdFilterDesc"/>; pack path batches via additional filter.
+            // Negative + soul joker SIMD prefilter (see NegativeSoulJokerSimdFilterDesc);
+            // pack/soul path runs as an additional filter so batches buffer before scalar work.
             // we do not drop seeds where the first soul fails edition but a later soul matches.
             uint laneMask = 0;
             for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)

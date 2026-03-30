@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
@@ -532,9 +531,27 @@ partial class Program
             {
                 settings.WithSequentialSearch();
 
-
                 if (startBatchOption.HasValue())
                     settings.WithStartBatchIndex(startBatchOption.ParsedValue);
+                else if (startPercentOption.HasValue())
+                {
+                    double pct = startPercentOption.ParsedValue;
+                    if (pct < 0 || pct > 100)
+                    {
+                        Console.Error.WriteLine("Error: --startPercent must be between 0 and 100.");
+                        return 1;
+                    }
+
+                    int nonBatchChars = MotelyGlobals.MaxSeedLength - batchCharCount;
+                    long maxBatch = (long)Math.Pow(MotelyGlobals.SeedDigits.Length, nonBatchChars);
+                    long startBatch = (long)(maxBatch * (pct / 100.0));
+                    if (startBatch < 0)
+                        startBatch = 0;
+                    if (maxBatch > 0 && startBatch >= maxBatch)
+                        startBatch = maxBatch - 1;
+                    settings.WithStartBatchIndex(startBatch);
+                }
+
                 if (endBatchOption.HasValue())
                     settings.WithEndBatchIndex(endBatchOption.ParsedValue);
             }
@@ -545,7 +562,28 @@ partial class Program
 
             settings.WithProgressCallback(p =>
             {
-                Console.Error.WriteLine($"Progress: {p.SeedsSearched} searched, {p.MatchingSeeds} found, {p.ElapsedTime.TotalSeconds:F2}s");
+                double perSec = p.SeedsPerMillisecond * 1000.0;
+                string speed =
+                    perSec >= 1_000_000
+                        ? $"{perSec / 1_000_000:F2} M/s"
+                        : perSec >= 1_000
+                            ? $"{perSec / 1_000:F1}K/s"
+                            : $"{perSec:F0}/s";
+
+                string eta = "";
+                if (p.EstimatedTimeRemaining is { TotalSeconds: > 0 } rem)
+                {
+                    string remTxt =
+                        rem.TotalHours >= 24
+                            ? rem.ToString(@"d\.hh\:mm\:ss")
+                            : rem.ToString(@"hh\:mm\:ss");
+                    eta = $" | ETA {remTxt}";
+                }
+
+                string elapsed = p.ElapsedTime.ToString(@"hh\:mm\:ss\.f");
+                Console.Error.WriteLine(
+                    $"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}"
+                );
             });
 
             if (hasStructuredScores)

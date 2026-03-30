@@ -138,13 +138,7 @@ public static class JamlSearchBuilder
 
 
 
-        Debug.Assert(
-
-            allMustDescs.Count > 0 || !config.Should.HasAnyClauses,
-
-            "Should-only JAML plans must provide a real base filter."
-
-        );
+        // Should-only plans are valid: PassthroughFilterDesc is the base, score provider does the work.
 
 
 
@@ -412,17 +406,13 @@ public static class JamlSearchBuilder
 
                 new MotelySearchSettings<StartingDrawFilterDesc.StartingDrawFilter>(d),
 
-            NegativePerkeoSimdFilterDesc d =>
+            NegativeSoulJokerSimdFilterDesc d =>
 
-                new MotelySearchSettings<NegativePerkeoSimdFilterDesc.FilterStruct>(d),
+                new MotelySearchSettings<NegativeSoulJokerSimdFilterDesc.FilterStruct>(d),
 
-            NegativePerkeoShopSoulFilterDesc d =>
+            SoulJokerShopSoulFilterDesc d =>
 
-                new MotelySearchSettings<NegativePerkeoShopSoulFilterDesc.FilterStruct>(d),
-
-            NegativePerkeoFilterDescNew d =>
-
-                new MotelySearchSettings<NegativePerkeoFilterDescNew.FilterStruct>(d),
+                new MotelySearchSettings<SoulJokerShopSoulFilterDesc.FilterStruct>(d),
 
             _ => throw new NotSupportedException(
 
