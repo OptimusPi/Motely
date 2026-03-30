@@ -197,7 +197,7 @@ internal static class JamlSchemaGenerator
                 {
                     ["title"] = "JamlAesthetic",
                     ["description"] =
-                        "Named constraint on which seeds participate in search. Motely: see JamlAesthetics for enumeration and Matches(); seed alphabet is Motely.SeedDigits, max length Motely.MaxSeedLength.",
+                        "Named constraint on which seeds participate in search. Motely: see JamlAesthetics for enumeration and Matches(); seed alphabet is MotelyGlobals.SeedDigits, max length MotelyGlobals.MaxSeedLength.",
                     ["type"] = "string",
                     ["enum"] = ToJsonArray(JamlAestheticParser.KnownJamlStringsForSchema()),
                 },
@@ -243,7 +243,10 @@ internal static class JamlSchemaGenerator
             ["mixedJoker"] = EnumStringProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Mixed-rarity Joker clause."),
             ["mixedJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Mixed-rarity Joker clause matching any listed joker names."),
             ["soulJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerLegendary>(), "any", "anylegendary"], "Soul Joker clause."),
-            ["legendaryJoker"] = EnumStringProperty(EnumNames<MotelyJokerLegendary>(), "Legendary Joker clause."),
+            ["legendaryJoker"] = EnumStringProperty(
+                [.. EnumNames<MotelyJokerLegendary>(), "any", "anylegendary"],
+                "Legendary Joker clause."
+            ),
             ["voucher"] = EnumStringProperty(EnumNames<MotelyVoucher>(), "Voucher clause."),
             ["vouchers"] = StringArrayEnumProperty(EnumNames<MotelyVoucher>(), "Voucher clause matching any listed voucher names."),
             ["tarot"] = EnumStringProperty(EnumNames<MotelyTarotCard>(), "Tarot card clause."),
@@ -283,6 +286,18 @@ internal static class JamlSchemaGenerator
             ["rank"] = EnumStringProperty(RankValues, "Required rank for playing-card-based clauses."),
             ["suit"] = EnumStringProperty(SuitValues, "Required suit for playing-card-based clauses."),
             ["rolls"] = IntegerArrayProperty(0, null, "Event occurrence indices to check."),
+            ["soulEditionRolls"] = IntegerProperty(
+                "Extra soul-stream edition reads per ante for the legendary edition vector prefilter (0 = use booster pack list length).",
+                0,
+                null,
+                32
+            ),
+            ["soulCardOnly"] = new JsonObject
+            {
+                ["type"] = "boolean",
+                ["description"] =
+                    "Legendary / soul joker: match when The Soul tarot/spectral card appears in a pack, without rolling the legendary joker."
+            },
             ["multValue"] = IntegerProperty("Exact mult value for MisprintMult event (0-23). If omitted, matches any value.", 0, null, 23),
             ["shopItems"] = IntegerArrayProperty(0, 1023, "Clause-level source mapping for shop item slots."),
             ["boosterPacks"] = IntegerArrayProperty(0, 5, "Clause-level source mapping for pack offering slots."),
@@ -359,7 +374,11 @@ internal static class JamlSchemaGenerator
             ["description"] = "Source mapping that describes where the clause may be satisfied.",
             ["properties"] = new JsonObject
             {
-                ["shopItems"] = IntegerArrayProperty(0, 1023, "Shop item slot indices."),
+                ["shopItems"] = IntegerArrayProperty(
+                    0,
+                    1023,
+                    "Full shop item stream (every slot, any item type). Slower than raw *ShopJokers streams; indices are assembled shop slots."
+                ),
                 ["boosterPacks"] = IntegerArrayProperty(0, 5, "Pack offering slot indices."),
                 ["minShopSlot"] = IntegerProperty("Minimum shop slot index for range generation.", 0, null, 1023),
                 ["maxShopSlot"] = IntegerProperty("Maximum shop slot index for range generation.", 0, null, 1023),
@@ -382,10 +401,26 @@ internal static class JamlSchemaGenerator
                 ["familiar"] = IntegerArrayProperty(0, null, "Familiar roll indices."),
                 ["grim"] = IntegerArrayProperty(0, null, "Grim roll indices."),
                 ["deckDraw"] = IntegerArrayProperty(0, null, "Deck draw positions."),
-                ["uncommonShopJokers"] = IntegerArrayProperty(0, null, "Raw uncommon shop joker stream positions."),
-                ["rareShopJokers"] = IntegerArrayProperty(0, null, "Raw rare shop joker stream positions."),
-                ["commonShopJokers"] = IntegerArrayProperty(0, null, "Raw common shop joker stream positions."),
-                ["allShopJokers"] = IntegerArrayProperty(0, null, "Raw shop joker stream positions across all rarities.")
+                ["uncommonShopJokers"] = IntegerArrayProperty(
+                    0,
+                    null,
+                    "Uncommon joker PRNG stream only (no vouchers/consumables) — fast SIMD. Indices are 0..n uncommon joker rolls, not necessarily the same numbering as shopItems slots when the shop mixes item types."
+                ),
+                ["rareShopJokers"] = IntegerArrayProperty(
+                    0,
+                    null,
+                    "Rare joker PRNG stream only — fast SIMD; indices are rare joker rolls."
+                ),
+                ["commonShopJokers"] = IntegerArrayProperty(
+                    0,
+                    null,
+                    "Common joker PRNG stream only — fast SIMD; indices are common joker rolls."
+                ),
+                ["allShopJokers"] = IntegerArrayProperty(
+                    0,
+                    null,
+                    "All-rarity shop joker stream — fast SIMD; indices are combined joker-offer positions."
+                )
             },
             ["additionalProperties"] = false
         };

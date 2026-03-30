@@ -19,32 +19,32 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     public readonly Vector256<int> Value = value;
 
     public readonly VectorEnum256<MotelyItemType> Type =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(Motely.ItemTypeMask)));
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.ItemTypeMask)));
     public readonly VectorEnum256<MotelyItemTypeCategory> TypeCategory =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(Motely.ItemTypeCategoryMask)));
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.ItemTypeCategoryMask)));
     public readonly VectorEnum256<MotelyItemSeal> Seal =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(Motely.ItemSealMask)));
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.ItemSealMask)));
     public readonly VectorEnum256<MotelyItemEnhancement> Enhancement =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(Motely.ItemEnhancementMask)));
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.ItemEnhancementMask)));
     public readonly VectorEnum256<MotelyItemEdition> Edition =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(Motely.ItemEditionMask)));
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.ItemEditionMask)));
 
     public readonly VectorEnum256<MotelyPlayingCardSuit> PlayingCardSuit =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(Motely.PlayingCardSuitMask)));
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.PlayingCardSuitMask)));
     public readonly VectorEnum256<MotelyPlayingCardRank> PlayingCardRank =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(Motely.PlayingCardRankMask)));
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.PlayingCardRankMask)));
 
     public readonly VectorMask IsPerishable =>
         ~Vector256.IsZero(
-            Vector256.BitwiseAnd(Value, Vector256.Create(1 << Motely.PerishableStickerOffset))
+            Vector256.BitwiseAnd(Value, Vector256.Create(1 << MotelyGlobals.PerishableStickerOffset))
         );
     public readonly VectorMask IsEternal =>
         ~Vector256.IsZero(
-            Vector256.BitwiseAnd(Value, Vector256.Create(1 << Motely.EternalStickerOffset))
+            Vector256.BitwiseAnd(Value, Vector256.Create(1 << MotelyGlobals.EternalStickerOffset))
         );
     public readonly VectorMask IsRental =>
         ~Vector256.IsZero(
-            Vector256.BitwiseAnd(Value, Vector256.Create(1 << Motely.RentalStickerOffset))
+            Vector256.BitwiseAnd(Value, Vector256.Create(1 << MotelyGlobals.RentalStickerOffset))
         );
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -56,7 +56,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     {
         return new(
             Vector256.BitwiseOr(
-                Vector256.BitwiseAnd(Value, Vector256.Create(~Motely.ItemTypeMask)),
+                Vector256.BitwiseAnd(Value, Vector256.Create(~MotelyGlobals.ItemTypeMask)),
                 Vector256.Create((int)type)
             )
         );
@@ -67,7 +67,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     {
         return new(
             Vector256.BitwiseOr(
-                Vector256.BitwiseAnd(Value, Vector256.Create(~Motely.ItemSealMask)),
+                Vector256.BitwiseAnd(Value, Vector256.Create(~MotelyGlobals.ItemSealMask)),
                 edition.HardwareVector
             )
         );
@@ -84,7 +84,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     {
         return new(
             Vector256.BitwiseOr(
-                Vector256.BitwiseAnd(Value, Vector256.Create(~Motely.ItemEnhancementMask)),
+                Vector256.BitwiseAnd(Value, Vector256.Create(~MotelyGlobals.ItemEnhancementMask)),
                 edition.HardwareVector
             )
         );
@@ -101,7 +101,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     {
         return new(
             Vector256.BitwiseOr(
-                Vector256.BitwiseAnd(Value, Vector256.Create(~Motely.ItemEditionMask)),
+                Vector256.BitwiseAnd(Value, Vector256.Create(~MotelyGlobals.ItemEditionMask)),
                 edition.HardwareVector
             )
         );
@@ -116,7 +116,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector WithPerishable(in Vector256<int> isPerishable)
     {
-        Vector256<int> mask = Vector256.Create(1 << Motely.PerishableStickerOffset);
+        Vector256<int> mask = Vector256.Create(1 << MotelyGlobals.PerishableStickerOffset);
         return new(
             Vector256.BitwiseOr(
                 Vector256.BitwiseAnd(Value, ~mask),
@@ -128,7 +128,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector WithPerishable(bool isPerishable)
     {
-        int mask = 1 << Motely.PerishableStickerOffset;
+        int mask = 1 << MotelyGlobals.PerishableStickerOffset;
         return new(
             isPerishable
                 ? Vector256.BitwiseOr(Value, Vector256.Create(mask))
@@ -139,7 +139,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector WithEternal(in Vector256<int> isEternal)
     {
-        Vector256<int> mask = Vector256.Create(1 << Motely.EternalStickerOffset);
+        Vector256<int> mask = Vector256.Create(1 << MotelyGlobals.EternalStickerOffset);
         return new(
             Vector256.BitwiseOr(
                 Vector256.BitwiseAnd(Value, ~mask),
@@ -151,7 +151,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector WithEternal(bool isEternal)
     {
-        int mask = 1 << Motely.EternalStickerOffset;
+        int mask = 1 << MotelyGlobals.EternalStickerOffset;
         return new(
             isEternal
                 ? Vector256.BitwiseOr(Value, Vector256.Create(mask))
@@ -162,7 +162,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector WithRental(in Vector256<int> isRental)
     {
-        Vector256<int> mask = Vector256.Create(1 << Motely.RentalStickerOffset);
+        Vector256<int> mask = Vector256.Create(1 << MotelyGlobals.RentalStickerOffset);
         return new(
             Vector256.BitwiseOr(
                 Vector256.BitwiseAnd(Value, ~mask),
@@ -174,7 +174,7 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector WithRental(bool isRental)
     {
-        int mask = 1 << Motely.RentalStickerOffset;
+        int mask = 1 << MotelyGlobals.RentalStickerOffset;
         return new(
             isRental
                 ? Vector256.BitwiseOr(Value, Vector256.Create(mask))

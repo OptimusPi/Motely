@@ -12,6 +12,7 @@ public static class JamlAesthetics
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.SeedCount,
+            JamlAesthetic.Psychosis => PsychosisAestheticSeeds.SeedCount,
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -20,6 +21,7 @@ public static class JamlAesthetics
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Enumerate(),
+            JamlAesthetic.Psychosis => PsychosisAestheticSeeds.Enumerate(),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -28,6 +30,7 @@ public static class JamlAesthetics
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Matches(seed),
+            JamlAesthetic.Psychosis => PsychosisAestheticSeeds.Matches(seed),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -43,10 +46,10 @@ public static class JamlAesthetics
     }
 
     /// <summary>Order used by <see cref="CollectMatches"/>; extend when new enum members ship.</summary>
-    private static ReadOnlySpan<JamlAesthetic> KnownAesthetics => [JamlAesthetic.Palindrome];
+    private static ReadOnlySpan<JamlAesthetic> KnownAesthetics => [JamlAesthetic.Palindrome, JamlAesthetic.Psychosis];
 }
 
-/// <summary>Palindrome seeds: mirror-generated halves over <see cref="Motely.SeedDigits"/>, lengths 1..<see cref="Motely.MaxSeedLength"/>.</summary>
+/// <summary>Palindrome seeds: mirror-generated halves over <see cref="MotelyGlobals.SeedDigits"/>, lengths 1..<see cref="MotelyGlobals.MaxSeedLength"/>.</summary>
 file static class PalindromeAestheticSeeds
 {
     public static int SeedCount => CalculateSeedCount();
@@ -54,10 +57,10 @@ file static class PalindromeAestheticSeeds
     public static bool Matches(ReadOnlySpan<char> seed)
     {
         int len = seed.Length;
-        if (len is < 1 or > Motely.MaxSeedLength)
+        if (len is < 1 or > MotelyGlobals.MaxSeedLength)
             return false;
 
-        ReadOnlySpan<char> alphabet = Motely.SeedDigits;
+        ReadOnlySpan<char> alphabet = MotelyGlobals.SeedDigits;
         for (int i = 0; i < len; i++)
         {
             if (!alphabet.Contains(seed[i]))
@@ -75,7 +78,7 @@ file static class PalindromeAestheticSeeds
 
     public static IEnumerable<string> Enumerate()
     {
-        for (int len = 1; len <= Motely.MaxSeedLength; len++)
+        for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
         {
             foreach (var palindrome in OfLength(len))
                 yield return palindrome;
@@ -86,8 +89,8 @@ file static class PalindromeAestheticSeeds
     {
         if (length == 1)
         {
-            for (int i = 0; i < Motely.SeedDigits.Length; i++)
-                yield return Motely.SeedDigits[i].ToString();
+            for (int i = 0; i < MotelyGlobals.SeedDigits.Length; i++)
+                yield return MotelyGlobals.SeedDigits[i].ToString();
             yield break;
         }
 
@@ -106,9 +109,9 @@ file static class PalindromeAestheticSeeds
             yield break;
         }
 
-        for (int i = 0; i < Motely.SeedDigits.Length; i++)
+        for (int i = 0; i < MotelyGlobals.SeedDigits.Length; i++)
         {
-            buffer[pos] = Motely.SeedDigits[i];
+            buffer[pos] = MotelyGlobals.SeedDigits[i];
             foreach (var result in GenerateRecursive(buffer, pos + 1, halfLen, totalLen))
                 yield return result;
         }
@@ -119,9 +122,9 @@ file static class PalindromeAestheticSeeds
         checked
         {
             int total = 0;
-            int seedDigitCount = Motely.SeedDigits.Length;
+            int seedDigitCount = MotelyGlobals.SeedDigits.Length;
 
-            for (int len = 1; len <= Motely.MaxSeedLength; len++)
+            for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
             {
                 int halfLen = (len + 1) / 2;
                 int countForLength = 1;
@@ -133,6 +136,57 @@ file static class PalindromeAestheticSeeds
             }
 
             return total;
+        }
+    }
+}
+
+/// <summary>Psychosis seeds: echo pattern ABAxBxxx where A,B are A-Z and x are 1-9,A-Z (always 8 chars).</summary>
+file static class PsychosisAestheticSeeds
+{
+    private const string Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    public static int SeedCount => checked(26 * 26 * 35 * 35 * 35 * 35); // ~1.01 billion
+
+    public static bool Matches(ReadOnlySpan<char> seed)
+    {
+        if (seed.Length != 8)
+            return false;
+
+        ReadOnlySpan<char> alphabet = MotelyGlobals.SeedDigits;
+
+        // Check all chars are valid
+        for (int i = 0; i < seed.Length; i++)
+        {
+            if (!alphabet.Contains(seed[i]))
+                return false;
+        }
+
+        // Check pattern: A at 0,2 | B at 1,4
+        return seed[0] == seed[2] && seed[1] == seed[4];
+    }
+
+    public static IEnumerable<string> Enumerate()
+    {
+        string alphabet = new string(MotelyGlobals.SeedDigits);
+
+        foreach (char a in Letters)
+        {
+            foreach (char b in Letters)
+            {
+                foreach (char x1 in alphabet)
+                {
+                    foreach (char x2 in alphabet)
+                    {
+                        foreach (char x3 in alphabet)
+                        {
+                            foreach (char x4 in alphabet)
+                            {
+                                yield return $"{a}{b}{a}{x1}{b}{x2}{x3}{x4}";
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

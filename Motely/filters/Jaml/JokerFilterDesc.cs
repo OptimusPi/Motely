@@ -235,7 +235,7 @@ public struct JokerFilterDesc(JokerClause clause)
                 if (_clause.WildcardRarity.HasValue)
                 {
                     var rarityVec = new VectorEnum256<MotelyJokerRarity>(
-                        Vector256.BitwiseAnd(item.Value, Vector256.Create(Motely.JokerRarityMask)));
+                        Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyGlobals.JokerRarityMask)));
                     jokerMatch &= VectorEnum256.Equals(rarityVec, _clause.WildcardRarity.Value);
                 }
             }

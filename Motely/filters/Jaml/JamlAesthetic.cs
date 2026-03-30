@@ -7,6 +7,7 @@ namespace Motely.Filters;
 public enum JamlAesthetic
 {
     Palindrome,
+    Psychosis,
 }
 
 public static class JamlAestheticParser
@@ -17,6 +18,7 @@ public static class JamlAestheticParser
     private static readonly (string Jaml, JamlAesthetic Value)[] Known =
     [
         ("palindrome", JamlAesthetic.Palindrome),
+        ("psychosis", JamlAesthetic.Psychosis),
     ];
 
     /// <summary>Strings for <c>enum</c> in the generated schema; order matches <see cref="Known"/>.</summary>

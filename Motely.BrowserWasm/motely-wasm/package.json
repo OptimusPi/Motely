@@ -1,7 +1,7 @@
 {
   "name": "motely-wasm",
-  "version": "5.6.0",
-  "description": "Motely seed search engine - Bootsharp WASM (browser)",
+  "version": "5.7.2",
+  "description": "MotelyJAML — Balatro seed search engine. NativeAOT-LLVM compiled to browser WASM via Bootsharp.",
   "type": "module",
   "main": "./index.mjs",
   "types": "./types/index.d.ts",
@@ -10,24 +10,30 @@
       "types": "./types/index.d.ts",
       "import": "./index.mjs",
       "default": "./index.mjs"
-    }
+    },
+    "./jaml.schema.json": "./jaml.schema.json"
   },
   "files": [
-    "index.mjs",
-    "types/"
+    "**/*",
+    "!test.html",
+    "!index.html",
+    "!**/*.pdb"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
-    "directory": "Motely.BrowserWasm"
-  },
-  "license": "MIT",
   "keywords": [
     "balatro",
     "seed",
     "wasm",
     "bootsharp",
-    "browser",
+    "nativeaot-llvm",
     "jaml"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "motely"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema"
+  }
 }

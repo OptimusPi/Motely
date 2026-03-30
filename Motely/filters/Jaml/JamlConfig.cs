@@ -83,7 +83,8 @@ public sealed class JamlConfig
     public List<JamlAesthetic> Aesthetics { get; set; } = [];
 }
 
-// Flat DTOs for JAML parsing (YamlDotNet). Schema: Motely.CLI --write-jaml-schema (JamlSchemaGenerator).
+// JamlDto: JSON-schema / TUI shape only — the loader walks YAML and never deserializes into this type.
+// Clause bag below is only for YamlDotNet fragment deserialization into CreateClauseFromDto. Schema: Motely.CLI --write-jaml-schema (JamlSchemaGenerator).
 
 public sealed class JamlDto
 {
@@ -304,11 +305,25 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "rolls")]
     public int[]? Rolls { get; set; }
 
-    // Compound clauses
-    [YamlMember(Alias = "And")]
+    /// <summary>
+    /// Extra soul-stream edition reads per ante for the legendary edition vector prefilter (see
+    /// <see cref="LegendaryJokerClause.SoulEditionRolls"/>).
+    /// </summary>
+    [YamlMember(Alias = "soulEditionRolls")]
+    public int? SoulEditionRolls { get; set; }
+
+    /// <summary>
+    /// Match The Soul tarot/spectral card in packs only (no legendary joker roll). See
+    /// <see cref="LegendaryJokerClause.SoulCardOnly"/>.
+    /// </summary>
+    [YamlMember(Alias = "soulCardOnly")]
+    public bool? SoulCardOnly { get; set; }
+
+    // Compound clauses (YAML keys are lowercase; matches jaml.schema / hand-written JAML)
+    [YamlMember(Alias = "and")]
     public List<JamlClauseDto>? And { get; set; }
 
-    [YamlMember(Alias = "Or")]
+    [YamlMember(Alias = "or")]
     public List<JamlClauseDto>? Or { get; set; }
 
     [YamlMember(Alias = "clauses")]
@@ -427,7 +442,7 @@ public sealed class JamlSourcesDto
 
 // ────────────────────────────── Loader ──────────────────────────────
 
-public static class JamlConfigLoader
+public static partial class JamlConfigLoader
 {
     private static readonly int[] DefaultAntes = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -448,41 +463,41 @@ public static class JamlConfigLoader
 
         try
         {
-            var normalizedJaml = NormalizeLegacyLogicSyntax(jaml);
-            var deserializer = new DeserializerBuilder().Build();
-            var dto = deserializer.Deserialize<JamlDto>(normalizedJaml);
-            if (dto == null)
+            var normalizedJaml = NormalizeNestedLogicSyntax(jaml);
+            if (!TryParseRootFromYaml(normalizedJaml, out var load, out error) || load is null)
             {
-                error = "JAML document deserialized to null.";
+                config = null;
+                if (error == null)
+                    error = "JAML document could not be parsed.";
                 return false;
             }
 
-            var defaultAntes = dto.Defaults?.Antes ?? DefaultAntes;
+            var defaultAntes = load.Defaults?.Antes ?? DefaultAntes;
 
-            var deck = Enum.TryParse<MotelyDeck>(dto.Deck, true, out var deckEnum)
+            var deck = Enum.TryParse<MotelyDeck>(load.Deck, true, out var deckEnum)
                 ? deckEnum
                 : MotelyDeck.Red;
-            var stake = Enum.TryParse<MotelyStake>(dto.Stake, true, out var stakeEnum)
+            var stake = Enum.TryParse<MotelyStake>(load.Stake, true, out var stakeEnum)
                 ? stakeEnum
                 : MotelyStake.White;
 
             config = new JamlConfig
             {
-                Name = dto.Name,
-                Description = dto.Description,
-                Author = dto.Author,
-                DateCreated = dto.DateCreated ?? System.DateTime.UtcNow.ToString("O"),
+                Name = load.Name,
+                Description = load.Description,
+                Author = load.Author,
+                DateCreated = load.DateCreated ?? System.DateTime.UtcNow.ToString("O"),
                 Deck = deck,
                 Stake = stake,
             };
 
-            config.Id = NormalizeFilterId(dto.Id, dto.Name);
+            config.Id = NormalizeFilterId(load.Id, load.Name);
             config.FilterId = config.Id;
-            config.Hashtags = NormalizeHashtags(dto.Hashtags);
+            config.Hashtags = NormalizeHashtags(load.Hashtags);
 
-            if (dto.Aesthetics is { Count: > 0 })
+            if (load.Aesthetics is { Count: > 0 })
             {
-                foreach (var entry in dto.Aesthetics)
+                foreach (var entry in load.Aesthetics)
                 {
                     if (string.IsNullOrWhiteSpace(entry))
                         continue;
@@ -499,13 +514,13 @@ public static class JamlConfigLoader
             }
 
             // MUST → required filters
-            PopulateClauses(config.Must, dto.Must, defaultAntes, dto.Defaults);
+            PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
 
             // SHOULD → scoring clauses
-            PopulateClauses(config.Should, dto.Should, defaultAntes, dto.Defaults);
+            PopulateClauses(config.Should, load.Should, defaultAntes, load.Defaults);
 
             // MUSTNOT → negation filters
-            PopulateClauses(config.MustNot, dto.MustNot, defaultAntes, dto.Defaults);
+            PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
 
             // Set once — config is immutable after load
             config.HasAnyClauses = config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
@@ -518,6 +533,98 @@ public static class JamlConfigLoader
             error = FormatLoadError(ex);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Rewrites nested <c>and:</c> / <c>or:</c> blocks that use <c>clauses:</c> plus shared keys
+    /// (<c>antes</c>, <c>label</c>, <c>mode</c>, <c>score</c>, …) into the flat shape <see cref="JamlClauseDto"/> expects.
+    /// Hoisted keys become siblings of <c>and</c>/<c>or</c> so <see cref="CreateClauseFromDto"/> passes shared <c>antes</c> into each child.
+    /// </summary>
+    private static string NormalizeNestedLogicSyntax(string jaml)
+    {
+        var yaml = new YamlStream();
+        using (var reader = new StringReader(jaml))
+            yaml.Load(reader);
+
+        foreach (var document in yaml.Documents)
+            NormalizeNestedLogicSyntax(document.RootNode);
+
+        using var writer = new StringWriter();
+        yaml.Save(writer, assignAnchors: false);
+        return writer.ToString();
+    }
+
+    private static void NormalizeNestedLogicSyntax(YamlNode node)
+    {
+        switch (node)
+        {
+            case YamlMappingNode mapping:
+                NormalizeNestedLogicBlock(mapping, "and");
+                NormalizeNestedLogicBlock(mapping, "or");
+
+                foreach (var child in mapping.Children.Values.ToArray())
+                    NormalizeNestedLogicSyntax(child);
+                break;
+
+            case YamlSequenceNode sequence:
+                foreach (var child in sequence.Children)
+                    NormalizeNestedLogicSyntax(child);
+                break;
+        }
+    }
+
+    private static void NormalizeNestedLogicBlock(YamlMappingNode mapping, string key)
+    {
+        if (!TryGetYamlChild(mapping, key, out var keyNode, out var valueNode))
+            return;
+
+        if (valueNode is not YamlMappingNode legacyLogicBlock)
+            return;
+
+        if (!TryGetYamlChild(legacyLogicBlock, "clauses", out _, out var clausesNode))
+            return;
+
+        foreach (var child in legacyLogicBlock.Children)
+        {
+            if (child.Key is not YamlScalarNode childKey || childKey.Value == null)
+                continue;
+
+            if (string.Equals(childKey.Value, "clauses", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (!ContainsYamlKey(mapping, childKey.Value))
+                mapping.Add(new YamlScalarNode(childKey.Value), child.Value);
+        }
+
+        mapping.Children[keyNode] = clausesNode;
+    }
+
+    private static bool ContainsYamlKey(YamlMappingNode mapping, string key) =>
+        mapping.Children.Keys.OfType<YamlScalarNode>().Any(node =>
+            string.Equals(node.Value, key, StringComparison.OrdinalIgnoreCase)
+        );
+
+    private static bool TryGetYamlChild(
+        YamlMappingNode mapping,
+        string key,
+        [NotNullWhen(true)] out YamlScalarNode? keyNode,
+        [NotNullWhen(true)] out YamlNode? valueNode
+    )
+    {
+        foreach (var child in mapping.Children)
+        {
+            if (child.Key is YamlScalarNode scalarNode
+                && string.Equals(scalarNode.Value, key, StringComparison.OrdinalIgnoreCase))
+            {
+                keyNode = scalarNode;
+                valueNode = child.Value;
+                return true;
+            }
+        }
+
+        keyNode = null;
+        valueNode = null;
+        return false;
     }
 
     private static string FormatLoadError(Exception ex)
@@ -559,93 +666,6 @@ public static class JamlConfigLoader
             "Motely.Filters.JamlDefaultsDto" => "the defaults block",
             _ => $"{targetType}",
         };
-
-    private static string NormalizeLegacyLogicSyntax(string jaml)
-    {
-        var yaml = new YamlStream();
-        using var reader = new StringReader(jaml);
-        yaml.Load(reader);
-
-        foreach (var document in yaml.Documents)
-            NormalizeLegacyLogicSyntax(document.RootNode);
-
-        using var writer = new StringWriter();
-        yaml.Save(writer, assignAnchors: false);
-        return writer.ToString();
-    }
-
-    private static void NormalizeLegacyLogicSyntax(YamlNode node)
-    {
-        switch (node)
-        {
-            case YamlMappingNode mapping:
-                NormalizeLegacyLogicBlock(mapping, "and");
-                NormalizeLegacyLogicBlock(mapping, "or");
-
-                foreach (var child in mapping.Children.Values.ToArray())
-                    NormalizeLegacyLogicSyntax(child);
-                break;
-
-            case YamlSequenceNode sequence:
-                foreach (var child in sequence.Children)
-                    NormalizeLegacyLogicSyntax(child);
-                break;
-        }
-    }
-
-    private static void NormalizeLegacyLogicBlock(YamlMappingNode mapping, string key)
-    {
-        if (!TryGetChild(mapping, key, out var keyNode, out var valueNode))
-            return;
-
-        if (valueNode is not YamlMappingNode legacyLogicBlock)
-            return;
-
-        if (!TryGetChild(legacyLogicBlock, "clauses", out _, out var clausesNode))
-            return;
-
-        foreach (var child in legacyLogicBlock.Children)
-        {
-            if (child.Key is not YamlScalarNode childKey || childKey.Value == null)
-                continue;
-
-            if (string.Equals(childKey.Value, "clauses", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            if (!ContainsKey(mapping, childKey.Value))
-                mapping.Add(new YamlScalarNode(childKey.Value), child.Value);
-        }
-
-        mapping.Children[keyNode] = clausesNode;
-    }
-
-    private static bool ContainsKey(YamlMappingNode mapping, string key) =>
-        mapping.Children.Keys.OfType<YamlScalarNode>().Any(node =>
-            string.Equals(node.Value, key, StringComparison.OrdinalIgnoreCase)
-        );
-
-    private static bool TryGetChild(
-        YamlMappingNode mapping,
-        string key,
-        [NotNullWhen(true)] out YamlScalarNode? keyNode,
-        [NotNullWhen(true)] out YamlNode? valueNode
-    )
-    {
-        foreach (var child in mapping.Children)
-        {
-            if (child.Key is YamlScalarNode scalarNode
-                && string.Equals(scalarNode.Value, key, StringComparison.OrdinalIgnoreCase))
-            {
-                keyNode = scalarNode;
-                valueNode = child.Value;
-                return true;
-            }
-        }
-
-        keyNode = null;
-        valueNode = null;
-        return false;
-    }
 
     public static bool TryLoadFromFile(
         string path,
@@ -1056,6 +1076,8 @@ public static class JamlConfigLoader
                             ? [RequireEnum<MotelyJoker>(value)]
                             : c.Jokers?.Select(j => RequireEnum<MotelyJoker>(j)).ToArray() ?? [],
                 Edition = edition,
+                SoulCardOnly = c.SoulCardOnly ?? false,
+                SoulEditionRolls = c.SoulEditionRolls ?? 0,
                 Sources = new SoulJokerSourceConfig
                 {
                     ShopItems = shopItems ?? [],
@@ -1615,6 +1637,7 @@ public enum JokerSourceType
 
 public sealed class JokerSourceConfig
 {
+    /// <summary>Assembled shop slots via the full shop item stream (any item type).</summary>
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
     public int[] Judgement { get; set; } = [];
@@ -1622,9 +1645,13 @@ public sealed class JokerSourceConfig
     public int[] RiffRaff { get; set; } = [];
     public int[] RareTag { get; set; } = [];
     public int[] UncommonTag { get; set; } = [];
+    /// <summary>0..n rolls on the common shop joker PRNG only (fast path).</summary>
     public int[] CommonShopJokers { get; set; } = [];
+    /// <summary>0..n rolls on the uncommon shop joker PRNG only (fast path; not the same indices as <see cref="ShopItems"/> when slots mix types).</summary>
     public int[] UncommonShopJokers { get; set; } = [];
+    /// <summary>0..n rolls on the rare shop joker PRNG only (fast path).</summary>
     public int[] RareShopJokers { get; set; } = [];
+    /// <summary>0..n rolls on the all-rarity shop joker stream (fast path).</summary>
     public int[] AllShopJokers { get; set; } = [];
 }
 

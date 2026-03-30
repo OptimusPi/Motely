@@ -7,6 +7,6 @@
     "vercel-build": "npm run build"
   },
   "dependencies": {
-    "motely-wasm": "5.6.0"
+    "motely-wasm": "5.7.2"
   }
 }

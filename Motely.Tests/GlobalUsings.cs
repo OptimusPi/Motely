@@ -1,2 +1,2 @@
 global using Motely;
-global using static Motely.Motely;
+global using static Motely.MotelyGlobals;

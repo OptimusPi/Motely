@@ -12,8 +12,8 @@ ref partial struct MotelyVectorSearchContext
     public Vector256<int> GetNextMisprintMult(ref MotelyVectorPrngStream misprintStream) =>
         GetNextRandomInt(
             ref misprintStream,
-            Motely.JokerMisprintMin,
-            Motely.JokerMisprintMax + 1
+            MotelyGlobals.JokerMisprintMin,
+            MotelyGlobals.JokerMisprintMax + 1
         );
     #endregion
 
@@ -28,7 +28,7 @@ ref partial struct MotelyVectorSearchContext
     ) =>
         Vector512.LessThan(
             GetNextRandom(ref moneyStream),
-            Vector512.Create(baseLuck / Motely.EnhancementLuckyMoneyChance)
+            Vector512.Create(baseLuck / MotelyGlobals.EnhancementLuckyMoneyChance)
         );
 
     public MotelyVectorPrngStream CreateLuckyCardMultStream(bool isCached = false) =>
@@ -40,7 +40,7 @@ ref partial struct MotelyVectorSearchContext
     ) =>
         Vector512.LessThan(
             GetNextRandom(ref multStream),
-            Vector512.Create(baseLuck / Motely.EnhancementLuckyMultChance)
+            Vector512.Create(baseLuck / MotelyGlobals.EnhancementLuckyMultChance)
         );
 
     #endregion
@@ -56,7 +56,7 @@ ref partial struct MotelyVectorSearchContext
     {
         Vector512<double> successMask = Vector512.LessThan(
             GetNextRandom(ref wheelStream),
-            Vector512.Create(baseLuck / Motely.TarrotWheelChance)
+            Vector512.Create(baseLuck / MotelyGlobals.TarrotWheelChance)
         );
 
         // The game picks which joker to apply the effect to, but we don't implement that
@@ -97,7 +97,7 @@ ref partial struct MotelyVectorSearchContext
     ) =>
         Vector512.LessThan(
             GetNextRandom(ref cavendishStream),
-            Vector512.Create(baseLuck / Motely.JokerCavendishChance)
+            Vector512.Create(baseLuck / MotelyGlobals.JokerCavendishChance)
         );
 
     public MotelyVectorPrngStream CreateGrosMichelPrngStream(bool isCached) =>
@@ -109,7 +109,7 @@ ref partial struct MotelyVectorSearchContext
     ) =>
         Vector512.LessThan(
             GetNextRandom(ref grosMichelStream),
-            Vector512.Create(baseLuck / Motely.JokerGrosMichelChance)
+            Vector512.Create(baseLuck / MotelyGlobals.JokerGrosMichelChance)
         );
 
     #endregion

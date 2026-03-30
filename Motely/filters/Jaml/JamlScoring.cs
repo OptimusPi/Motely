@@ -553,88 +553,14 @@ public static class JamlScoring
 
         int count = 0;
         int maxPack = ArrayMax(clause.Sources.BoosterPacks);
-        var targetTypes = new MotelyItemType[clause.Jokers.Length];
-        for (int i = 0; i < clause.Jokers.Length; i++)
-            targetTypes[i] = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.Jokers[i]);
 
         foreach (int ante in clause.Antes)
-            if (CheckLegendaryJokerInAnte(ref ctx, ante, clause, maxPack, targetTypes))
+        {
+            if (LegendarySoulMatcher.MatchAnte(ref ctx, ante, clause, maxPack))
                 count++;
+        }
 
         return count;
-    }
-
-    private static bool CheckLegendaryJokerInAnte(
-        ref MotelySingleSearchContext ctx,
-        int ante,
-        LegendaryJokerClause clause,
-        int maxPack,
-        MotelyItemType[] targetTypes
-    )
-    {
-        var soulStream = ctx.CreateSoulJokerStream(ante);
-        var legendaryJoker = ctx.GetNextJoker(ref soulStream);
-
-        bool jokerMatch;
-        if (targetTypes.Length == 0)
-        {
-            jokerMatch = !clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value;
-        }
-        else
-        {
-            jokerMatch = false;
-            for (int i = 0; i < targetTypes.Length; i++)
-            {
-                if (legendaryJoker.Type != targetTypes[i])
-                    continue;
-                if (!clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value)
-                {
-                    jokerMatch = true;
-                    break;
-                }
-            }
-        }
-
-        if (!jokerMatch || clause.Sources.BoosterPacks.Length == 0)
-            return false;
-
-        MotelySingleTarotStream tarotStream = default;
-        MotelySingleSpectralStream spectralStream = default;
-        bool tarotInit = false;
-        bool spectralInit = false;
-        var packStream = ctx.CreateBoosterPackStream(ante);
-
-        for (int packIndex = 0; packIndex <= maxPack; packIndex++)
-        {
-            var pack = ctx.GetNextBoosterPack(ref packStream);
-            bool isTargetPack = ArrayContains(clause.Sources.BoosterPacks, packIndex);
-
-            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
-            {
-                if (!tarotInit)
-                {
-                    tarotInit = true;
-                    tarotStream = ctx.CreateArcanaPackTarotStream(ante, true);
-                }
-
-                if (isTargetPack && ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
-                    return true;
-            }
-
-            if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-            {
-                if (!spectralInit)
-                {
-                    spectralInit = true;
-                    spectralStream = ctx.CreateSpectralPackSpectralStream(ante, true);
-                }
-
-                if (isTargetPack && ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
-                    return true;
-            }
-        }
-
-        return false;
     }
 
     private static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, JokerClause clause, ref MotelyRunState runState)
@@ -850,7 +776,7 @@ public static class JamlScoring
         if (item.TypeCategory != MotelyItemTypeCategory.Joker)
             return 0;
         if (wildcardRarity.HasValue &&
-            (MotelyJokerRarity)(item.Value & Motely.JokerRarityMask) != wildcardRarity.Value)
+            (MotelyJokerRarity)(item.Value & MotelyGlobals.JokerRarityMask) != wildcardRarity.Value)
             return 0;
         if (edition.HasValue && item.Edition != edition.Value)
             return 0;

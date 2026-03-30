@@ -18,7 +18,7 @@ public static unsafe class VectorEnum
 
         for (int i = 0; i < SimdIntResult.Count; i++)
         {
-            if (i < Motely.MaxVectorWidth)
+            if (i < MotelyGlobals.MaxVectorWidth)
             {
                 vector[i] = Unsafe.As<T, int>(ref values[indices[i]]);
             }
@@ -72,7 +72,7 @@ public unsafe struct VectorEnum<T>(SimdIntResult hardwareVector)
     {
         // ToString limited to MaxVectorWidth
         var sb = new System.Text.StringBuilder("<");
-        for (int i = 0; i < Motely.MaxVectorWidth; i++)
+        for (int i = 0; i < MotelyGlobals.MaxVectorWidth; i++)
         {
             if (i > 0)
                 sb.Append(", ");
