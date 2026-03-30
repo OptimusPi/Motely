@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
@@ -100,6 +101,11 @@ partial class Program
         var endBatchOption = app.Option<long>(
             "--endBatch <N>",
             "Ending batch index",
+            CommandOptionType.SingleValue
+        );
+        var startPercentOption = app.Option<double>(
+            "--startPercent <PCT>",
+            "Sequential search: start at this percent of batch space (0–100). Ignored if --startBatch is set.",
             CommandOptionType.SingleValue
         );
         var randomOption = app.Option<int>(
@@ -390,10 +396,8 @@ partial class Program
                     return 1;
                 }
 
-                // Lazy generator for repeating characters
                 keywordInputs = keywordInputs.Concat(
-                    Enumerable.Range((int)'A', 26)
-                        .Select(c => new string((char)c, repeatCount))
+                    MotelySeedKeywordSequences.RepeatCharKeywords(repeatCount)
                 );
             }
 
@@ -411,11 +415,8 @@ partial class Program
                     return 1;
                 }
 
-                // Lazy generator for ascending sequences
-                string chars = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 keywordInputs = keywordInputs.Concat(
-                    Enumerable.Range(0, chars.Length - ascendingLength + 1)
-                        .Select(i => chars.Substring(i, ascendingLength))
+                    MotelySeedKeywordSequences.AscendingDigitLetterKeywords(ascendingLength)
                 );
             }
 
@@ -433,50 +434,19 @@ partial class Program
                     return 1;
                 }
 
-                // Lazy generator for descending sequences
-                string chars = "ZYXWVUTSRQPONMLKJIHGFEDCBA987654321";
                 keywordInputs = keywordInputs.Concat(
-                    Enumerable.Range(0, chars.Length - descendingLength + 1)
-                        .Select(i => chars.Substring(i, descendingLength))
+                    MotelySeedKeywordSequences.DescendingDigitLetterKeywords(descendingLength)
                 );
             }
 
             if (grossOption.HasValue())
-            {
-                var grossKeywords = new[]
-                {
-                    "FART", "BUTT", "POOP", "PUKE", "BURP", "TOOT", "GUTS", "SLIME",
-                    "YUCK", "DUMB", "LAME", "UGLY", "WEAK", "CRUD", "CRAP", "SICK",
-                    "NASTY", "GROSS"
-                };
-                keywordInputs = keywordInputs.Concat(grossKeywords);
-            }
+                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.GrossKeywords);
 
             if (nsfwOption.HasValue())
-            {
-                var nsfwKeywords = new[]
-                {
-                    "FUCK", "SHIT", "DAMN", "HELL", "CRAP", "ASSES", "ASSHAT",
-                    "DICK", "COCK", "PUSSY", "WHORE", "SLUT", "BITCH", "PISS",
-                    "CUNT", "TWAT", "ARSE", "BUGGER", "SOD", "TITS", "BOOBS",
-                    "WANKER", "BASTARD", "MOTHERFUCKER", "FAGS", "FAGGOT", "KIKE",
-                    "DYKE", "SPIC", "GOOK", "CHINK", "TRANNY", "HOMO", "LESBO",
-                    "RETARD", "NIGGA", "NIGGER"
-                };
-                keywordInputs = keywordInputs.Concat(nsfwKeywords);
-            }
+                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.NsfwKeywords);
 
             if (aestheticOption.HasValue())
-            {
-                var aestheticKeywords = new[]
-                {
-                    "BEAUTY", "GRACE", "LOVELY", "SERENE", "BLISS", "PEACE", "CALM",
-                    "PURE", "BRIGHT", "SHINE", "GLEAM", "GLOW", "DIVINE", "SUBLIME",
-                    "ELEGANT", "PRETTY", "CHARM", "TENDER", "SWEET", "LOVE", "JOY",
-                    "HOPE", "DREAM", "MAGIC", "WONDER", "ANGEL", "GRACE", "SERENE"
-                };
-                keywordInputs = keywordInputs.Concat(aestheticKeywords);
-            }
+                keywordInputs = keywordInputs.Concat(MotelySeedKeywordSequences.AestheticKeywords);
 
             if (mirrorOption.HasValue())
             {
@@ -546,7 +516,26 @@ partial class Program
                 keywordInputs = keywordInputs.Concat(balaroKeywords);
             }
 
-            var plan = JamlSearchBuilder.CreatePlan(config);
+            int cutoffFixed = int.MinValue;
+            bool cutoffAuto = false;
+            if (cutoffOption.HasValue())
+            {
+                if (cutoffOption.ParsedValue.Equals("auto", StringComparison.OrdinalIgnoreCase))
+                    cutoffAuto = true;
+                else if (int.TryParse(cutoffOption.ParsedValue, out int cv))
+                    cutoffFixed = cv;
+                else
+                {
+                    Console.Error.WriteLine("Error: --cutoff requires a numeric value or 'auto'.");
+                    return 1;
+                }
+            }
+
+            int cutoffForShouldScoring = 0;
+            if (cutoffOption.HasValue() && !cutoffAuto && cutoffFixed != int.MinValue)
+                cutoffForShouldScoring = cutoffFixed;
+
+            var plan = JamlSearchBuilder.CreatePlan(config, cutoffForShouldScoring);
             var settings = plan.Settings
                 .WithDeck(deck)
                 .WithStake(stake)
@@ -596,27 +585,6 @@ partial class Program
             using ISeedResultSink? sink = sinkOption.HasValue()
                 ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
                 : null;
-
-            int cutoffFixed = int.MinValue;
-            bool cutoffAuto = false;
-            if (cutoffOption.HasValue())
-            {
-                if (cutoffOption.ParsedValue.Equals("auto", StringComparison.OrdinalIgnoreCase))
-                    cutoffAuto = true;
-                else if (int.TryParse(cutoffOption.ParsedValue, out int cv))
-                    cutoffFixed = cv;
-                else
-                {
-                    Console.Error.WriteLine("Error: --cutoff requires a numeric value or 'auto'.");
-                    return 1;
-                }
-            }
-
-            // MotelySearch passes this to IMotelySeedScoreProvider.Score (vector path); CLI callback may still apply --cutoff auto.
-            int cutoffForSearch = 0;
-            if (cutoffOption.HasValue() && !cutoffAuto && cutoffFixed != int.MinValue)
-                cutoffForSearch = cutoffFixed;
-            settings.WithCutoffScore(cutoffForSearch);
 
             settings.WithProgressCallback(p =>
             {

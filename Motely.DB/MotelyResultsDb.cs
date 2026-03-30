@@ -84,7 +84,10 @@ public sealed class MotelyResultsDb : IDisposable
     private void EnsureFilterIdColumn()
     {
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "ALTER TABLE results ADD COLUMN IF NOT EXISTS filter_id TEXT NOT NULL DEFAULT ''";
+        // DuckDB: ADD COLUMN does not accept NOT NULL/DEFAULT. Migrate older lakes that lack filter_id only.
+        cmd.CommandText = "ALTER TABLE results ADD COLUMN IF NOT EXISTS filter_id TEXT";
+        cmd.ExecuteNonQuery();
+        cmd.CommandText = "UPDATE results SET filter_id = '' WHERE filter_id IS NULL";
         cmd.ExecuteNonQuery();
     }
 

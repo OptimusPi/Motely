@@ -1508,6 +1508,14 @@
               "type": "boolean",
               "description": "Require Mega pack sources where applicable."
             },
+            "charmTag": {
+              "type": "boolean",
+              "description": "Tarot/arcana booster scoring: include Charm Tag bonus Arcana (second weighted shop pack when no natural Arcana)."
+            },
+            "etherealTag": {
+              "type": "boolean",
+              "description": "Spectral booster scoring: include Ethereal Tag bonus Spectral (second weighted shop pack when no natural Spectral)."
+            },
             "judgement": {
               "type": "array",
               "items": {

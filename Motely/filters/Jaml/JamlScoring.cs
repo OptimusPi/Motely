@@ -13,6 +13,11 @@ public static class JamlScoring
         ref MotelyRunState runState
     )
     {
+        Debug.Assert(
+            clauses.Length > 0,
+            "PrepareRunState requires a non-empty should-clause array (CreatePlan / search wiring bug)."
+        );
+
         int maxAnte = 0;
         int maxBossAnte = 0;
 
@@ -83,14 +88,25 @@ public static class JamlScoring
             StartingDrawClause c => CountStartingDrawOccurrences(ref ctx, c),
             AndClause c => CountAndOccurrences(ref ctx, c, ref runState),
             OrClause c => CountOrOccurrences(ref ctx, c, ref runState),
-            _ => 0,
+            _ => UnhandledClauseForScoring(clause),
         };
+    }
+
+    private static int UnhandledClauseForScoring(IJamlClause clause)
+    {
+        Debug.Assert(
+            false,
+            $"JamlScoring.CountOccurrences: unhandled clause type {clause.GetType().Name} (extend switch or exclude from should-clauses)."
+        );
+        return 0;
     }
 
     private static int CountAndOccurrences(ref MotelySingleSearchContext ctx, AndClause clause, ref MotelyRunState runState)
     {
-        if (clause.Clauses.Length == 0)
-            return 0;
+        Debug.Assert(
+            clause.Clauses.Length > 0,
+            "AndClause should not be empty after JAML load (validator / loader bug)."
+        );
 
         int total = 0;
         for (int i = 0; i < clause.Clauses.Length; i++)
@@ -106,6 +122,12 @@ public static class JamlScoring
 
     private static int CountOrOccurrences(ref MotelySingleSearchContext ctx, OrClause clause, ref MotelyRunState runState)
     {
+        Debug.Assert(
+            clause.Clauses.Length > 0,
+            "OrClause should not be empty after JAML load (validator / loader bug)."
+        );
+        Debug.Assert(clause.Min >= 1, "OrClause.Min must be >= 1 after JAML load (validator / loader bug).");
+
         int matched = 0;
         int total = 0;
 
@@ -127,14 +149,26 @@ public static class JamlScoring
 
     private static int CountBossOccurrences(BossClause clause, ref MotelyRunState runState)
     {
-        if (runState.CachedBosses == null)
-            return 0;
+        Debug.Assert(
+            runState.CachedBosses != null,
+            "Boss scoring requires PrepareRunState to populate CachedBosses (loader / run-state bug)."
+        );
+        Debug.Assert(
+            clause.Bosses.Length > 0,
+            "BossClause.Bosses must be non-empty after JAML load (validator / loader bug)."
+        );
+        Debug.Assert(
+            clause.Antes.Length > 0,
+            "BossClause.Antes must be non-empty after JAML load (validator / loader bug)."
+        );
 
         int count = 0;
         foreach (int ante in clause.Antes)
         {
-            if (ante < 1 || ante >= runState.CachedBosses.Length)
-                continue;
+            Debug.Assert(
+                ante >= 1 && ante < runState.CachedBosses!.Length,
+                $"BossClause ante {ante} is out of range for CachedBosses (validator / loader bug)."
+            );
             for (int i = 0; i < clause.Bosses.Length; i++)
                 if (clause.Bosses[i] == runState.CachedBosses[ante])
                     count++;
@@ -205,18 +239,48 @@ public static class JamlScoring
 
             if (clause.Sources.BoosterPacks.Length > 0)
             {
+                bool charmWant = clause.Sources.CharmTag;
+
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
-                for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+                bool hadNaturalArcanaPack = false;
+                int weightedShopDrawNumber = 0;
+
+                for (int packIndex = 0; ; packIndex++)
                 {
+                    bool needForClause = packIndex <= maxPack;
+                    bool needForCharmClosure = charmWant && weightedShopDrawNumber < 2;
+                    if (!needForClause && !needForCharmClosure)
+                        break;
+
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
+                    var packType = pack.GetPackType();
+                    if (packType == MotelyBoosterPackType.Buffoon)
                         continue;
-                    var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
-                    if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+
+                    weightedShopDrawNumber++;
+
+                    if (packType == MotelyBoosterPackType.Arcana)
+                    {
+                        hadNaturalArcanaPack = true;
+                        var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                            continue;
+                        for (int i = 0; i < contents.Length; i++)
+                            count += MatchTarot(contents[i], clause);
                         continue;
-                    for (int i = 0; i < contents.Length; i++)
-                        count += MatchTarot(contents[i], clause);
+                    }
+
+                    // Charm: extra Arcana on the second real shop pack (after Buffoon) only if the two
+                    // weighted rolls had no Arcana — uses pack stream order, not ante-scaled indices.
+                    if (charmWant && !hadNaturalArcanaPack && weightedShopDrawNumber == 2)
+                    {
+                        var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                            continue;
+                        for (int i = 0; i < contents.Length; i++)
+                            count += MatchTarot(contents[i], clause);
+                    }
                 }
             }
 
@@ -271,18 +335,46 @@ public static class JamlScoring
 
             if (clause.Sources.BoosterPacks.Length > 0)
             {
+                bool etherealWant = clause.Sources.EtherealTag;
+
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-                for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+                bool hadNaturalSpectralPack = false;
+                int weightedShopDrawNumber = 0;
+
+                for (int packIndex = 0; ; packIndex++)
                 {
+                    bool needForClause = packIndex <= maxPack;
+                    bool needForEtherealClosure = etherealWant && weightedShopDrawNumber < 2;
+                    if (!needForClause && !needForEtherealClosure)
+                        break;
+
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (pack.GetPackType() != MotelyBoosterPackType.Spectral)
+                    var packType = pack.GetPackType();
+                    if (packType == MotelyBoosterPackType.Buffoon)
                         continue;
-                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
-                    if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+
+                    weightedShopDrawNumber++;
+
+                    if (packType == MotelyBoosterPackType.Spectral)
+                    {
+                        hadNaturalSpectralPack = true;
+                        var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                            continue;
+                        for (int i = 0; i < contents.Length; i++)
+                            count += MatchSpectral(contents[i], clause);
                         continue;
-                    for (int i = 0; i < contents.Length; i++)
-                        count += MatchSpectral(contents[i], clause);
+                    }
+
+                    if (etherealWant && !hadNaturalSpectralPack && weightedShopDrawNumber == 2)
+                    {
+                        var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                            continue;
+                        for (int i = 0; i < contents.Length; i++)
+                            count += MatchSpectral(contents[i], clause);
+                    }
                 }
             }
 
@@ -548,11 +640,9 @@ public static class JamlScoring
 
     private static int CountLegendaryJokerOccurrences(ref MotelySingleSearchContext ctx, LegendaryJokerClause clause)
     {
-        Debug.Assert(clause.Sources.BoosterPacks.Length > 0,
-            "Legendary joker clause should have normalized default sources at config load time.");
-
         int count = 0;
-        int maxPack = ArrayMax(clause.Sources.BoosterPacks);
+        var sources = clause.Sources.NormalizeSoulJokerBoostersIfEmpty();
+        int maxPack = sources.MaxReferencedBoosterSlot();
 
         foreach (int ante in clause.Antes)
         {

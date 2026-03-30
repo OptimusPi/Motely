@@ -382,6 +382,18 @@ public sealed class JamlSourcesDto
     [YamlMember(Alias = "requireMega")]
     public bool RequireMega { get; set; }
 
+    /// <summary>
+    /// Booster scoring: apply Charm-tag rules (bonus Arcana pack on second weighted offer when none rolled Arcana).
+    /// </summary>
+    [YamlMember(Alias = "charmTag")]
+    public bool CharmTag { get; set; }
+
+    /// <summary>
+    /// Booster scoring: apply Ethereal-tag rules (bonus Spectral pack when none rolled Spectral).
+    /// </summary>
+    [YamlMember(Alias = "etherealTag")]
+    public bool EtherealTag { get; set; }
+
     [YamlMember(Alias = "judgement")]
     public int[]? Judgement { get; set; }
 
@@ -396,6 +408,19 @@ public sealed class JamlSourcesDto
 
     [YamlMember(Alias = "soulCard")]
     public int[]? SoulCard { get; set; }
+
+    /// <summary>
+    /// Legendary / soul joker: shop pack slots where The Soul may appear in an <b>arcana</b> pack (tarot stream).
+    /// If either this or spectralBoosterPacks is non-empty, matching uses split rules (see SoulJokerSourceConfig).
+    /// </summary>
+    [YamlMember(Alias = "arcanaBoosterPacks")]
+    public int[]? ArcanaBoosterPacks { get; set; }
+
+    /// <summary>
+    /// Legendary / soul joker: shop pack slots where The Soul may appear in a <b>spectral</b> pack (spectral stream).
+    /// </summary>
+    [YamlMember(Alias = "spectralBoosterPacks")]
+    public int[]? SpectralBoosterPacks { get; set; }
 
     [YamlMember(Alias = "riffRaff")]
     public int[]? RiffRaff { get; set; }
@@ -894,6 +919,17 @@ public static partial class JamlConfigLoader
                 .Range(minPack.Value, maxPack.Value - minPack.Value + 1)
                 .ToArray();
 
+        // Soul joker: arcana/spectral pack lists alone imply split matching — do not inject default [0..5] boosterPacks.
+        if (
+            itemType == MotelyFilterItemType.SoulJoker
+            && boosterPacks == null
+            && (
+                (c.Sources?.ArcanaBoosterPacks?.Length ?? 0) > 0
+                || (c.Sources?.SpectralBoosterPacks?.Length ?? 0) > 0
+            )
+        )
+            boosterPacks = [];
+
         NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType);
 
         var (shRank, shSuit) = ParseCardShorthand(value ?? "");
@@ -1078,12 +1114,14 @@ public static partial class JamlConfigLoader
                 Edition = edition,
                 SoulCardOnly = c.SoulCardOnly ?? false,
                 SoulEditionRolls = c.SoulEditionRolls ?? 0,
-                Sources = new SoulJokerSourceConfig
-                {
-                    ShopItems = shopItems ?? [],
-                    BoosterPacks = boosterPacks ?? [],
-                    SoulCard = c.Sources?.SoulCard ?? [],
-                },
+                Sources = CreateSoulJokerSources(
+                    shopItems,
+                    boosterPacks,
+                    c.Sources?.ArcanaBoosterPacks,
+                    c.Sources?.SpectralBoosterPacks,
+                    c.Sources?.SoulCard,
+                    c.Sources?.RequireMega ?? false
+                ),
             },
             MotelyFilterItemType.Voucher => new VoucherClause
             {
@@ -1110,6 +1148,7 @@ public static partial class JamlConfigLoader
                     BoosterPacks = boosterPacks ?? [],
                     Emperor = c.Sources?.Emperor ?? [],
                     PurpleSealOrEightBall = c.Sources?.PurpleSealOrEightBall ?? [],
+                    CharmTag = c.Sources?.CharmTag ?? false,
                 },
             },
             MotelyFilterItemType.SpectralCard => new SpectralCardClause
@@ -1125,6 +1164,7 @@ public static partial class JamlConfigLoader
                     BoosterPacks = boosterPacks ?? [],
                     SixthSense = c.Sources?.SixthSense ?? [],
                     Seance = c.Sources?.Seance ?? [],
+                    EtherealTag = c.Sources?.EtherealTag ?? false,
                 },
             },
             MotelyFilterItemType.PlanetCard => new PlanetCardClause
@@ -1349,6 +1389,29 @@ public static partial class JamlConfigLoader
         ?? c.WheelOfFortune
         ?? c.CavendishExtinct
         ?? c.GrosMichelExtinct;
+
+    private static SoulJokerSourceConfig CreateSoulJokerSources(
+        int[]? shopItems,
+        int[]? boosterPacks,
+        int[]? arcanaBoosterPacks,
+        int[]? spectralBoosterPacks,
+        int[]? soulCard,
+        bool requireMegaPack
+    )
+    {
+        var arcana = arcanaBoosterPacks ?? [];
+        var spectral = spectralBoosterPacks ?? [];
+        bool split = arcana.Length > 0 || spectral.Length > 0;
+        return new SoulJokerSourceConfig
+        {
+            ShopItems = shopItems ?? [],
+            BoosterPacks = split ? [] : (boosterPacks ?? []),
+            ArcanaBoosterPacks = arcana,
+            SpectralBoosterPacks = spectral,
+            SoulCard = soulCard ?? [],
+            RequireMegaPack = requireMegaPack,
+        };
+    }
 
     private static void NormalizeDefaultSources(
         ref int[]? shopItems,
@@ -1658,8 +1721,60 @@ public sealed class JokerSourceConfig
 public sealed class SoulJokerSourceConfig
 {
     public int[] ShopItems { get; set; } = [];
+
+    /// <summary>
+    /// Legacy: pack offering slots where The Soul may count from either arcana or spectral path.
+    /// Ignored for slot matching when <see cref="ArcanaBoosterPacks"/> or <see cref="SpectralBoosterPacks"/> is non-empty.
+    /// </summary>
     public int[] BoosterPacks { get; set; } = [];
+
+    /// <summary>
+    /// If non-empty (or <see cref="SpectralBoosterPacks"/> non-empty), only listed slots are checked on the arcana/tarot path.
+    /// </summary>
+    public int[] ArcanaBoosterPacks { get; set; } = [];
+
+    /// <summary>Only listed slots on the spectral pack path.</summary>
+    public int[] SpectralBoosterPacks { get; set; } = [];
+
     public int[] SoulCard { get; set; } = [];
+
+    /// <summary>If true, only Mega-sized booster packs (e.g. Charm Tag Mega arcana) match.</summary>
+    public bool RequireMegaPack { get; set; }
+
+    /// <summary>Largest referenced pack slot index across all booster source arrays (-1 if none).</summary>
+    public int MaxReferencedBoosterSlot()
+    {
+        int m = -1;
+        foreach (var x in BoosterPacks)
+            if (x > m)
+                m = x;
+        foreach (var x in ArcanaBoosterPacks)
+            if (x > m)
+                m = x;
+        foreach (var x in SpectralBoosterPacks)
+            if (x > m)
+                m = x;
+        return m;
+    }
+
+    /// <summary>
+    /// When no booster slot lists are set, soul/legendary matching uses slots 0..5 (same as JAML <c>defaults:</c>).
+    /// </summary>
+    public SoulJokerSourceConfig NormalizeSoulJokerBoostersIfEmpty()
+    {
+        if (BoosterPacks.Length > 0 || ArcanaBoosterPacks.Length > 0 || SpectralBoosterPacks.Length > 0)
+            return this;
+
+        return new SoulJokerSourceConfig
+        {
+            ShopItems = ShopItems,
+            BoosterPacks = [0, 1, 2, 3, 4, 5],
+            ArcanaBoosterPacks = [],
+            SpectralBoosterPacks = [],
+            SoulCard = SoulCard,
+            RequireMegaPack = RequireMegaPack,
+        };
+    }
 }
 
 public sealed class TarotCardSourceConfig
@@ -1668,6 +1783,11 @@ public sealed class TarotCardSourceConfig
     public int[] BoosterPacks { get; set; } = [];
     public int[] Emperor { get; set; } = [];
     public int[] PurpleSealOrEightBall { get; set; } = [];
+
+    /// <summary>
+    /// When true, booster arcana scoring may consume the Charm-tag bonus pack (second weighted slot, no natural Arcana).
+    /// </summary>
+    public bool CharmTag { get; set; }
 }
 
 public sealed class SpectralCardSourceConfig
@@ -1676,6 +1796,11 @@ public sealed class SpectralCardSourceConfig
     public int[] BoosterPacks { get; set; } = [];
     public int[] SixthSense { get; set; } = [];
     public int[] Seance { get; set; } = [];
+
+    /// <summary>
+    /// When true, booster spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).
+    /// </summary>
+    public bool EtherealTag { get; set; }
 }
 
 public sealed class PlanetSourceConfig

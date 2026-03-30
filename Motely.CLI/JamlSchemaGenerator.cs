@@ -379,13 +379,29 @@ internal static class JamlSchemaGenerator
                     1023,
                     "Full shop item stream (every slot, any item type). Slower than raw *ShopJokers streams; indices are assembled shop slots."
                 ),
-                ["boosterPacks"] = IntegerArrayProperty(0, 5, "Pack offering slot indices."),
+                ["boosterPacks"] = IntegerArrayProperty(
+                    0,
+                    5,
+                    "Pack offering slot indices. Legendary soul: if arcanaBoosterPacks/spectralBoosterPacks are set, this combined list is ignored for matching."
+                ),
+                ["arcanaBoosterPacks"] = IntegerArrayProperty(
+                    0,
+                    5,
+                    "Legendary soul joker: slots only for The Soul via arcana/tarot packs (not spectral)."
+                ),
+                ["spectralBoosterPacks"] = IntegerArrayProperty(
+                    0,
+                    5,
+                    "Legendary soul joker: slots only for The Soul via spectral packs."
+                ),
                 ["minShopSlot"] = IntegerProperty("Minimum shop slot index for range generation.", 0, null, 1023),
                 ["maxShopSlot"] = IntegerProperty("Maximum shop slot index for range generation.", 0, null, 1023),
                 ["minPackSlot"] = IntegerProperty("Minimum pack slot index for range generation.", 0, null, 5),
                 ["maxPackSlot"] = IntegerProperty("Maximum pack slot index for range generation.", 0, null, 5),
                 ["tags"] = BooleanProperty("Allow tag-based sources."),
-                ["requireMega"] = BooleanProperty("Require Mega pack sources where applicable."),
+                ["requireMega"] = BooleanProperty(
+                    "Legendary soul joker: only Mega-sized booster packs (e.g. Charm Tag Mega arcana). Other clauses: Mega where applicable."
+                ),
                 ["judgement"] = IntegerArrayProperty(0, null, "Judgement roll indices."),
                 ["rareTag"] = IntegerArrayProperty(0, null, "Rare Tag roll indices."),
                 ["uncommonTag"] = IntegerArrayProperty(0, null, "Uncommon Tag roll indices."),

@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Motely;
 
 namespace Motely.Filters;
 
@@ -17,9 +18,7 @@ internal static class LegendarySoulMatcher
         int maxBoosterPack
     )
     {
-        var boosterPacks = clause.Sources.BoosterPacks;
-        if (boosterPacks.Length == 0)
-            return false;
+        var src = clause.Sources.NormalizeSoulJokerBoostersIfEmpty();
 
         // Default CreateBoosterPackStream(ante) uses generatedFirstPack = (ante > 1), so ante 1
         // prepends a synthetic Buffoon — indices and pack types no longer match PerkeoObservatory.
@@ -36,16 +35,10 @@ internal static class LegendarySoulMatcher
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
 
-            bool isTarget = false;
-            for (int i = 0; i < boosterPacks.Length; i++)
-            {
-                if (boosterPacks[i] != p)
-                    continue;
-                isTarget = true;
-                break;
-            }
+            if (!IsBoosterSlotTargetForLegendary(src, p, pack))
+                continue;
 
-            if (!isTarget)
+            if (src.RequireMegaPack && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                 continue;
 
             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
@@ -97,6 +90,57 @@ internal static class LegendarySoulMatcher
                 if (LegendaryJokerMatchesFull(clause, legendaryJoker))
                     return true;
             }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Split mode (non-empty arcana and/or spectral slot lists): only those paths count.
+    /// Legacy mode: <see cref="SoulJokerSourceConfig.BoosterPacks"/> — slot matches regardless of rolled pack type
+    /// (arcana/spectral branches still gate The Soul).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsBoosterSlotTargetForLegendary(
+        SoulJokerSourceConfig src,
+        int p,
+        MotelyBoosterPack pack
+    )
+    {
+        bool split =
+            src.ArcanaBoosterPacks.Length > 0 || src.SpectralBoosterPacks.Length > 0;
+        if (!split)
+        {
+            for (int i = 0; i < src.BoosterPacks.Length; i++)
+            {
+                if (src.BoosterPacks[i] == p)
+                    return true;
+            }
+
+            return false;
+        }
+
+        var type = pack.GetPackType();
+        if (type == MotelyBoosterPackType.Arcana)
+        {
+            for (int i = 0; i < src.ArcanaBoosterPacks.Length; i++)
+            {
+                if (src.ArcanaBoosterPacks[i] == p)
+                    return true;
+            }
+
+            return false;
+        }
+
+        if (type == MotelyBoosterPackType.Spectral)
+        {
+            for (int i = 0; i < src.SpectralBoosterPacks.Length; i++)
+            {
+                if (src.SpectralBoosterPacks[i] == p)
+                    return true;
+            }
+
+            return false;
         }
 
         return false;
