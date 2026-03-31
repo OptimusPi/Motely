@@ -103,7 +103,7 @@ public class MainMenuWindow : View
         btnExit.Accept += (s, e) => Application.RequestStop(Application.Top);
         dockBar.Add(btnExit);
 
-        var btnConfig = new MenuButton("_CONFIG", BalatroTheme.BackButton)
+        var btnConfig = new MenuButton("_CONFIG", BalatroTheme.OrangeButton)
         {
             X = 36,
             Y = 1,
@@ -111,7 +111,7 @@ public class MainMenuWindow : View
             Height = 3,
             DynamicFocusHeight = true,
         };
-        btnConfig.Accept += (s, e) => ShowSettingsModal();
+        btnConfig.Accept += (s, e) => MotelyTUI.ShowWindow(new SettingsWindow());
         dockBar.Add(btnConfig);
 
         // HOST API - purple
@@ -174,7 +174,7 @@ public class MainMenuWindow : View
                     break;
                 case KeyCode.C:
                     btnConfig.SetFocus();
-                    ShowSettingsModal();
+                    MotelyTUI.ShowWindow(new SettingsWindow());
                     e.Handled = true;
                     break;
                 case KeyCode.H:

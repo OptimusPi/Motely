@@ -3,6 +3,16 @@ using System.Text.Json.Serialization;
 
 namespace Motely.TUI;
 
+public enum SearchMode
+{
+    Sequential,
+    Random,
+    Palindrome,
+    Psychosis,
+    Keyword,
+    FileSource
+}
+
 /// <summary>
 /// Runtime settings for TUI searches and API server
 /// </summary>
@@ -21,8 +31,12 @@ public static class TuiSettings
     public static int ApiServerPort { get; set; } = 3141;
 
     // Default search IO settings
+    public static SearchMode SearchMode { get; set; } = SearchMode.Sequential;
     public static string DefaultSource { get; set; } = string.Empty;
     public static string DefaultSink { get; set; } = string.Empty;
+    public static string Keywords { get; set; } = string.Empty;
+    public static string PaddingChars { get; set; } = string.Empty;
+    public static int RandomSeedCount { get; set; } = 1000000;
 
     // Distributed worker settings
     public static string WorkerPoolUrl { get; set; } = "https://www.seedfinder.app";
@@ -50,8 +64,12 @@ public static class TuiSettings
         BatchCharacterCount = 2;
         ApiServerHost = "localhost";
         ApiServerPort = 3141;
+        SearchMode = SearchMode.Sequential;
         DefaultSource = string.Empty;
         DefaultSink = string.Empty;
+        Keywords = string.Empty;
+        PaddingChars = string.Empty;
+        RandomSeedCount = 1000000;
         Save();
     }
 }
@@ -81,8 +99,12 @@ public class SettingsService
                 TuiSettings.BatchCharacterCount = settings.BatchCharacterCount ?? 2;
                 TuiSettings.ApiServerHost = settings.ApiServerHost ?? "localhost";
                 TuiSettings.ApiServerPort = settings.ApiServerPort ?? 3141;
+                TuiSettings.SearchMode = settings.SearchMode ?? SearchMode.Sequential;
                 TuiSettings.DefaultSource = settings.DefaultSource ?? string.Empty;
                 TuiSettings.DefaultSink = settings.DefaultSink ?? string.Empty;
+                TuiSettings.Keywords = settings.Keywords ?? string.Empty;
+                TuiSettings.PaddingChars = settings.PaddingChars ?? string.Empty;
+                TuiSettings.RandomSeedCount = settings.RandomSeedCount ?? 1000000;
                 TuiSettings.WorkerPoolUrl = settings.WorkerPoolUrl ?? "https://www.seedfinder.app";
                 TuiSettings.WorkerThreads = settings.WorkerThreads ?? Environment.ProcessorCount;
             }
@@ -103,8 +125,12 @@ public class SettingsService
                 BatchCharacterCount = TuiSettings.BatchCharacterCount,
                 ApiServerHost = TuiSettings.ApiServerHost,
                 ApiServerPort = TuiSettings.ApiServerPort,
+                SearchMode = TuiSettings.SearchMode,
                 DefaultSource = TuiSettings.DefaultSource,
                 DefaultSink = TuiSettings.DefaultSink,
+                Keywords = TuiSettings.Keywords,
+                PaddingChars = TuiSettings.PaddingChars,
+                RandomSeedCount = TuiSettings.RandomSeedCount,
                 WorkerPoolUrl = TuiSettings.WorkerPoolUrl,
                 WorkerThreads = TuiSettings.WorkerThreads,
             };
@@ -126,8 +152,12 @@ public class SettingsService
         public int? BatchCharacterCount { get; set; }
         public string? ApiServerHost { get; set; }
         public int? ApiServerPort { get; set; }
+        public SearchMode? SearchMode { get; set; }
         public string? DefaultSource { get; set; }
         public string? DefaultSink { get; set; }
+        public string? Keywords { get; set; }
+        public string? PaddingChars { get; set; }
+        public int? RandomSeedCount { get; set; }
         public string? WorkerPoolUrl { get; set; }
         public int? WorkerThreads { get; set; }
     }
