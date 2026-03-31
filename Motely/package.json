@@ -17,7 +17,8 @@
     "**/*",
     "!test.html",
     "!index.html",
-    "!**/*.pdb"
+    "!**/*.pdb",
+    "!**/*.tgz"
   ],
   "keywords": [
     "balatro",
