@@ -809,8 +809,17 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         return scoreProvider != null;
     }
 
+    /// <summary>
+    /// Tries to get the single seed router if configured
+    /// </summary>
+    public bool TryGetSingleSeedRouter([NotNullWhen(true)] out IMotelySeedRouter? seedRouter)
+    {
+        seedRouter = _seedRouter;
+        return seedRouter != null; 
+    }
+
     private long _lastReportMS;
-    private const long ReportIntervalMS = 2000; // Report every 2 seconds
+    private long ReportIntervalMS = 100; // Report every 2 seconds
 
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
@@ -942,7 +951,12 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
-        // Ensure all thread-local writes are visible before completing
+        SignalSearchCompleted();
+    }
+
+    /// <summary>Single place to complete <see cref="_completionSource"/> after worker(s) finish (sync path).</summary>
+    private void SignalSearchCompleted()
+    {
         Thread.MemoryBarrier();
         bool completed =
             Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
@@ -1011,20 +1025,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         if (_threadCount == 1)
         {
-            var plan = _plans[0];
-            var thread = new Thread(() =>
-            {
-                RunWorkerBody(plan);
-                Thread.MemoryBarrier();
-                bool completed =
-                    Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
-                _completionSource.TrySetResult(completed);
-            })
-            {
-                Name = "Motely Search Thread 0",
-                IsBackground = true
-            };
-            thread.Start();
+            // No System.Threading.Thread: matches single-threaded WASM (no pthread) and mirrors
+            // <see cref="RunSearchUntilCompletion"/> for ThreadCount == 1.
+            RunWorkerBody(_plans[0]);
+            SignalSearchCompleted();
         }
         else
         {
@@ -1408,12 +1412,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         internal abstract void SearchProviderBatch();
         internal abstract void SearchSequentialBatch(long batchIdx);
 
-        // Kept for compatibility with call sites; counters are per-thread and never flushed.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void FlushLocalCounters()
-        {
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal long SnapshotMatchingSeeds() => Volatile.Read(ref _localMatchingSeeds);
 
@@ -1485,8 +1483,18 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
             else if (Search._seedRouter != null)
             {
-                // Call the seed router to capture context for later use
-                // (The router will yoink the MotelySingleSearchContext via ProvideSeedContext)
+                for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
+                {
+                    if (searchParams.IsLaneValid(lane))
+                    {
+                        MotelySingleSearchContext singleCtx = new(
+                            in Search._searchParameters,
+                            in searchParams,
+                            lane
+                        );
+                        Search._seedRouter.ProvideSeedContext(ref singleCtx);
+                    }
+                }
             }
             else
             {

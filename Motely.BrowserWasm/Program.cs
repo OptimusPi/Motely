@@ -1,5 +1,7 @@
 using System.Reflection;
 using Bootsharp;
+using Bootsharp.Inject;
+using Microsoft.Extensions.DependencyInjection;
 using Motely;
 using Motely.Analysis;
 using Motely.Filters;
@@ -46,5 +48,12 @@ public class MotelyProgram : IMotelyProgram
 
 public static class Program
 {
-    public static void Main() { }
+    public static void Main()
+    {
+        new ServiceCollection()
+            .AddBootsharp()
+            .AddSingleton<IMotelyProgram, MotelyProgram>()
+            .BuildServiceProvider()
+            .RunBootsharp();
+    }
 }

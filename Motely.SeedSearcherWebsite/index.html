@@ -204,6 +204,7 @@
       <div><label>Threads</label><input type="number" id="threads" value="4" min="1" max="64" style="width:80px" />
       </div>
       <button class="btn-start" id="btn-start" onclick="startSearch()" disabled>Start</button>
+      <button class="btn-go" onclick="validateJaml()">Validate</button>
       <button class="btn-stop" id="btn-stop" onclick="stopSearch()" disabled>Stop</button>
     </div>
     <div id="status">Idle — load WASM first</div>
@@ -262,72 +263,42 @@
   </div>
 
   <script type="module">
-    import dotnet, { Program } from './motely-wasm/index.mjs';
+    import dotnet, { Motely } from './motely-wasm/index.mjs';
 
     const wasmRoot = new URL('./motely-wasm/', import.meta.url).href;
-    let resultCount = 0;
-
-    Program.onProgress.subscribe((searched, found, elapsedMs) => {
-      const ms = Number(elapsedMs), sec = (ms / 1000).toFixed(1);
-      document.getElementById('status').textContent =
-        `Searched: ${Number(searched).toLocaleString()}  |  Found: ${Number(found).toLocaleString()}  |  ${sec}s`;
-      document.getElementById('bar').style.width = '60%';
-    });
-
-    Program.onResult.subscribe((seed, score) => {
-      resultCount++;
-      const tbody = document.getElementById('results');
-      const row = tbody.insertRow(0);
-      row.innerHTML = `<td>${resultCount}</td><td><b>${seed}</b></td><td>${score > 0 ? score.toFixed(2) : '-'}</td>`;
-      if (tbody.rows.length > 1000) tbody.deleteRow(tbody.rows.length - 1);
-    });
-
-    Program.onComplete.subscribe((status, seedsFound, highestScore) => {
-      document.getElementById('status').textContent =
-        `${String(status).toUpperCase()} — Found: ${seedsFound}  |  Best: ${highestScore > 0 ? highestScore.toFixed(2) : 'n/a'}`;
-      document.getElementById('bar').style.width = '100%';
-      document.getElementById('btn-start').disabled = false;
-      document.getElementById('btn-stop').disabled = true;
-    });
+    const Program = Motely.BrowserWasm.MotelyProgram;
+    const Enums = Motely;
 
     await dotnet.boot({ root: wasmRoot });
     const ver = Program.getVersion();
     document.getElementById('title').textContent = 'Motely WASM ' + ver;
     document.getElementById('boot-status').textContent = 'Ready — ' + ver;
-    document.getElementById('btn-start').disabled = false;
     document.getElementById('btn-analyze').disabled = false;
-    document.getElementById('status').textContent = 'Idle';
+    document.getElementById('status').textContent = 'Search not available (single-threaded WASM)';
 
     window.switchTab = tab => {
       document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'search' ? 0 : 1)));
       ['search', 'analyze'].forEach(id => document.getElementById('panel-' + id).classList.toggle('active', id === tab));
     };
     window.startSearch = () => {
-      const jaml = document.getElementById('jaml').value.trim();
-      const threads = parseInt(document.getElementById('threads').value) || 1;
-      const e = Program.validateJaml(jaml);
-      document.getElementById('err').textContent = e ? 'Error: ' + e : '';
-      if (e) return;
-      resultCount = 0;
-      document.getElementById('results').innerHTML = '';
-      document.getElementById('bar').style.width = '0%';
-      document.getElementById('btn-start').disabled = true;
-      document.getElementById('btn-stop').disabled = false;
-      Program.startSearch(jaml, threads);
+      document.getElementById('status').textContent = 'Search requires multi-threaded WASM (not yet supported)';
     };
-    window.stopSearch = () => {
-      Program.stopSearch();
-      document.getElementById('btn-start').disabled = false;
-      document.getElementById('btn-stop').disabled = true;
-    };
+    window.stopSearch = () => {};
     window.analyzeSeed = () => {
       const seed = document.getElementById('a-seed').value.trim().toUpperCase().replace(/0/g, 'O');
-      const deck = document.getElementById('a-deck').value;
-      const stake = document.getElementById('a-stake').value;
+      const deckName = document.getElementById('a-deck').value;
+      const stakeName = document.getElementById('a-stake').value;
+      const deck = Enums.MotelyDeck[deckName];
+      const stake = Enums.MotelyStake[stakeName];
       try {
-        const json = Program.analyzeSeed(seed, deck, stake);
-        document.getElementById('analysis-out').textContent = JSON.stringify(JSON.parse(json), null, 2);
+        const result = Program.analyzeSeed(seed, deck, stake);
+        document.getElementById('analysis-out').textContent = JSON.stringify(result, null, 2);
       } catch (ex) { document.getElementById('analysis-out').textContent = 'Error: ' + ex; }
+    };
+    window.validateJaml = () => {
+      const jaml = document.getElementById('jaml').value.trim();
+      const e = Program.validateJaml(jaml);
+      document.getElementById('err').textContent = e ? 'Error: ' + e : 'Valid JAML!';
     };
   </script>
 </body>

@@ -39,6 +39,10 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
 
     public MotelySingleSearchContext CreateContext()
     {
+        if (!_hasContext)
+        {
+            throw new InvalidOperationException("Seed router context not captured. Call CreateSeedRouter first.");
+        }
         return new MotelySingleSearchContext(in _searchParams, in _contextParams, _lane);
     }
 
