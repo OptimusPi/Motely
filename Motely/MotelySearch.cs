@@ -245,6 +245,52 @@ public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
     }
 }
 
+public sealed class MotelyKeywordSeedProvider : IMotelySeedProvider
+{
+    public int SeedCount { get; }
+
+    private readonly IEnumerator<string> _enumerator;
+    private readonly object _enumeratorLock = new();
+
+    public MotelyKeywordSeedProvider(IEnumerable<string> keywords, char[]? paddingChars = null)
+    {
+        ulong count = MotelyGlobals.GetPaddedSeedCountForKeywords(keywords, paddingChars);
+        SeedCount = count > int.MaxValue ? int.MaxValue : (int)count;
+        _enumerator = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, paddingChars).GetEnumerator();
+    }
+
+    public ReadOnlySpan<char> NextSeed()
+    {
+        lock (_enumeratorLock)
+        {
+            if (_enumerator.MoveNext())
+            {
+                return _enumerator.Current.AsSpan();
+            }
+            return ReadOnlySpan<char>.Empty;
+        }
+    }
+
+    public int NextSeeds(string[] seeds)
+    {
+        if (seeds == null || seeds.Length == 0)
+            return 0;
+
+        lock (_enumeratorLock)
+        {
+            int count = 0;
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                if (!_enumerator.MoveNext())
+                    break;
+                seeds[i] = _enumerator.Current;
+                count++;
+            }
+            return count;
+        }
+    }
+}
+
 public sealed class MotelySeedListProvider : IMotelySeedProvider
 {
     // Keep seeds as enumerable - don't materialize! Seeds are used in the order provided.
