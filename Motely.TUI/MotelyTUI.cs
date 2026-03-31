@@ -74,12 +74,17 @@ public static class MotelyTUI
         if (_desktop == null)
             return;
 
-        // Apply cascade offset so stacked windows are visually distinct
-        var offset = _cascadeOffsets[_windowStack.Count % _cascadeOffsets.Length];
-        if (offset.X != 0 || offset.Y != 0)
+        // Make windows fill the screen instead of being tiny modals, 
+        // leaving 5 rows at the bottom for the main menu dock bar.
+        window.X = 0;
+        window.Y = 0;
+        window.Width = Dim.Fill();
+        window.Height = Dim.Fill() - 5;
+
+        // Hide other windows so they don't draw over each other or waste CPU
+        foreach (var w in _windowStack)
         {
-            window.X = Pos.Center() + offset.X;
-            window.Y = Pos.Center() + offset.Y;
+            w.Visible = false;
         }
 
         _windowStack.Add(window);
@@ -101,7 +106,9 @@ public static class MotelyTUI
         // Restore focus to topmost remaining window, or main menu
         if (_windowStack.Count > 0)
         {
-            _windowStack[^1].SetFocus();
+            var top = _windowStack[^1];
+            top.Visible = true;
+            top.SetFocus();
         }
         else if (_mainMenu != null)
         {
@@ -125,12 +132,17 @@ public static class MotelyTUI
         var focused = _windowStack.FirstOrDefault(w => w.HasFocus);
         if (focused == null)
         {
-            _windowStack[^1].SetFocus();
+            var top = _windowStack[^1];
+            top.Visible = true;
+            top.SetFocus();
             return;
         }
 
         var idx = _windowStack.IndexOf(focused);
         var next = _windowStack[(idx + 1) % _windowStack.Count];
+        
+        focused.Visible = false;
+        next.Visible = true;
         next.SetFocus();
     }
 

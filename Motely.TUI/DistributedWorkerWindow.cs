@@ -293,6 +293,8 @@ public class DistributedWorkerWindow : Window
             Path.Combine(baseDir, "MotelyWorker.exe"),
             Path.Combine(baseDir, "..", "Motely.DistributedWorker", "MotelyWorker"),
             Path.Combine(baseDir, "..", "Motely.DistributedWorker", "MotelyWorker.exe"),
+            Path.Combine(baseDir, "..", "..", "..", "Motely.DistributedWorker", "bin", "Debug", "net10.0", "MotelyWorker.exe"),
+            Path.Combine(baseDir, "..", "..", "..", "Motely.DistributedWorker", "bin", "Release", "net10.0", "MotelyWorker.exe"),
             Path.Combine(baseDir, "..", "..", "Motely.DistributedWorker", "bin", "Release", "net10.0", "linux-x64", "publish", "MotelyWorker"),
             Path.Combine(baseDir, "..", "..", "Motely.DistributedWorker", "bin", "Release", "net10.0", "win-x64", "publish", "MotelyWorker.exe"),
         };

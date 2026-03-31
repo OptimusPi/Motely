@@ -127,25 +127,61 @@ public class SettingsWindow : Window
         portHint.ColorScheme = BalatroTheme.Hint;
         Add(portHint);
 
-        // Secret option - blends into background until focused!
-        var secretButton = new CleanButton()
+        // Search Mode
+        var modeLabel = new Label()
         {
             X = 2,
             Y = 15,
-            Text = "          ",
-            Width = 12,
+            Text = "Search Mode:",
         };
-        secretButton.ColorScheme =
-            new ColorScheme()
-            {
-                // Invisible until focused - blends with window background
-                Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
-                Focus = new Attribute(BalatroTheme.White, BalatroTheme.Purple),
-                HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
-                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
-            };
-        secretButton.Accept += (s, e) => ShowSecretDialog();
-        Add(secretButton);
+        Add(modeLabel);
+
+        var modeRadio = new RadioGroup()
+        {
+            X = 2,
+            Y = 16,
+            RadioLabels = new string[] {
+                "Sequential", "Random", "Palindrome", "Psychosis", "Keyword", "FileSource"
+            },
+            SelectedItem = (int)TuiSettings.SearchMode
+        };
+        Add(modeRadio);
+
+        // Keywords
+        var keywordsLabel = new Label()
+        {
+            X = 30,
+            Y = 15,
+            Text = "Keywords:",
+        };
+        Add(keywordsLabel);
+
+        var keywordsField = new TextField()
+        {
+            X = 30,
+            Y = 16,
+            Width = 20,
+            Text = TuiSettings.Keywords,
+        };
+        Add(keywordsField);
+
+        // Padding Chars
+        var paddingLabel = new Label()
+        {
+            X = 30,
+            Y = 18,
+            Text = "Padding Chars:",
+        };
+        Add(paddingLabel);
+
+        var paddingField = new TextField()
+        {
+            X = 30,
+            Y = 19,
+            Width = 20,
+            Text = TuiSettings.PaddingChars,
+        };
+        Add(paddingField);
 
         // Save button (blue like PLAY) - above Back
         var saveButton = new CleanButton()
@@ -156,7 +192,54 @@ public class SettingsWindow : Window
             Width = 12,
         };
         saveButton.ColorScheme = BalatroTheme.BlueButton;
-        saveButton.Accept += (s, e) => SaveSettings();
+        saveButton.Accept += (s, e) =>
+        {
+            try
+            {
+                if (int.TryParse(_threadCountField.Text, out int threadCount))
+                {
+                    if (threadCount < 1 || threadCount > Environment.ProcessorCount)
+                    {
+                        ShowErrorDialog("Invalid Thread Count", $"Thread count must be between 1 and {Environment.ProcessorCount}");
+                        return;
+                    }
+                    TuiSettings.ThreadCount = threadCount;
+                }
+
+                if (int.TryParse(_batchCharCountField.Text, out int batchCount))
+                {
+                    if (batchCount < 1 || batchCount > 7)
+                    {
+                        ShowErrorDialog("Invalid Batch Count", "Batch character count must be between 1 and 7");
+                        return;
+                    }
+                    TuiSettings.BatchCharacterCount = batchCount;
+                }
+
+                TuiSettings.ApiServerHost = _apiHostField.Text?.ToString() ?? "localhost";
+                
+                if (int.TryParse(_apiPortField.Text, out int port))
+                {
+                    if (port < 1 || port > 65535)
+                    {
+                        ShowErrorDialog("Invalid Port", "Port must be between 1 and 65535");
+                        return;
+                    }
+                    TuiSettings.ApiServerPort = port;
+                }
+
+                TuiSettings.SearchMode = (SearchMode)modeRadio.SelectedItem;
+                TuiSettings.Keywords = keywordsField.Text?.ToString() ?? string.Empty;
+                TuiSettings.PaddingChars = paddingField.Text?.ToString() ?? string.Empty;
+
+                TuiSettings.Save();
+                Application.RequestStop(this);
+            }
+            catch (Exception ex)
+            {
+                ShowErrorDialog("Error Saving Settings", ex.Message);
+            }
+        };
         Add(saveButton);
 
         // Back button (orange) - FULL WIDTH at very bottom
@@ -183,88 +266,6 @@ public class SettingsWindow : Window
         };
 
         _threadCountField.SetFocus();
-    }
-
-    private void SaveSettings()
-    {
-        try
-        {
-            // Validate and save thread count
-            if (int.TryParse(_threadCountField.Text, out int threadCount))
-            {
-                if (threadCount < 1 || threadCount > Environment.ProcessorCount)
-                {
-                    ShowErrorDialog(
-                        "Invalid Thread Count",
-                        $"Thread count must be between 1 and {Environment.ProcessorCount}"
-                    );
-                    return;
-                }
-                TuiSettings.ThreadCount = threadCount;
-            }
-            else
-            {
-                ShowErrorDialog("Invalid Thread Count", "Thread count must be a valid number");
-                return;
-            }
-
-            // Validate and save batch character count
-            if (int.TryParse(_batchCharCountField.Text, out int batchCharCount))
-            {
-                if (batchCharCount < 1 || batchCharCount > 7)
-                {
-                    ShowErrorDialog(
-                        "Invalid Batch Character Count",
-                        "Batch character count must be between 1 and 7"
-                    );
-                    return;
-                }
-                TuiSettings.BatchCharacterCount = batchCharCount;
-            }
-            else
-            {
-                ShowErrorDialog(
-                    "Invalid Batch Character Count",
-                    "Batch character count must be a valid number"
-                );
-                return;
-            }
-
-            // Validate and save API host
-            var host = _apiHostField.Text;
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                ShowErrorDialog("Invalid API Host", "API host cannot be empty");
-                return;
-            }
-            TuiSettings.ApiServerHost = host;
-
-            // Validate and save API port
-            if (int.TryParse(_apiPortField.Text, out int port))
-            {
-                if (port < 1 || port > 65535)
-                {
-                    ShowErrorDialog("Invalid API Port", "API port must be between 1 and 65535");
-                    return;
-                }
-                TuiSettings.ApiServerPort = port;
-            }
-            else
-            {
-                ShowErrorDialog("Invalid API Port", "API port must be a valid number");
-                return;
-            }
-
-            // Save settings to tui.json
-            TuiSettings.Save();
-
-            // Success - close window
-            Application.RequestStop(this);
-        }
-        catch (Exception ex)
-        {
-            ShowErrorDialog("Error Saving Settings", ex.Message);
-        }
     }
 
     private static void ShowErrorDialog(string title, string message)
