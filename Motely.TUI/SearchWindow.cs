@@ -150,17 +150,51 @@ public class SearchWindow : Window
                 .WithBatchCharacterCount(TuiSettings.BatchCharacterCount)
                 .WithQuietMode(true);
 
-            if (!string.IsNullOrWhiteSpace(_source))
+            switch (TuiSettings.SearchMode)
             {
-                var sourceSeeds = SeedReader.ReadSeeds(_source);
-                if (sourceSeeds.Count == 0)
-                    throw new InvalidOperationException("Resolved source contained no seeds.");
+                case SearchMode.FileSource:
+                    if (!string.IsNullOrWhiteSpace(_source))
+                    {
+                        var sourceSeeds = SeedReader.ReadSeeds(_source);
+                        if (sourceSeeds.Count == 0)
+                            throw new InvalidOperationException("Resolved source contained no seeds.");
 
-                settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
-            }
-            else
-            {
-                settings.WithSequentialSearch();
+                        settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("FileSource mode requires a source file.");
+                    }
+                    break;
+
+                case SearchMode.Random:
+                    settings.WithProviderSearch(new MotelyRandomSeedProvider(TuiSettings.RandomSeedCount));
+                    break;
+
+                case SearchMode.Palindrome:
+                    settings.WithProviderSearch(new MotelyPalindromeSeedProvider());
+                    break;
+
+                case SearchMode.Psychosis:
+                    settings.WithProviderSearch(new MotelyPsychosisSeedProvider());
+                    break;
+
+                case SearchMode.Keyword:
+                    if (string.IsNullOrWhiteSpace(TuiSettings.Keywords))
+                        throw new InvalidOperationException("Keyword mode requires keywords to be set in settings.");
+                    
+                    var keywords = TuiSettings.Keywords.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    char[]? paddingChars = string.IsNullOrWhiteSpace(TuiSettings.PaddingChars) 
+                        ? null 
+                        : TuiSettings.PaddingChars.ToCharArray();
+                    
+                    settings.WithProviderSearch(new MotelyKeywordSeedProvider(keywords, paddingChars));
+                    break;
+
+                case SearchMode.Sequential:
+                default:
+                    settings.WithSequentialSearch();
+                    break;
             }
 
             bool hasStructuredScores = plan.ShouldClauseCount > 0;

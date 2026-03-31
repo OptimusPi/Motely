@@ -47,6 +47,16 @@ public static class BalatroTheme
             HotFocus = new Attribute(White, DarkOrange),
         };
 
+    // Orange button (hover = DarkOrange)
+    public static ColorScheme OrangeButton =>
+        new()
+        {
+            Normal = new Attribute(White, Orange),
+            Focus = new Attribute(White, DarkOrange),
+            HotNormal = new Attribute(White, Orange),
+            HotFocus = new Attribute(White, DarkOrange),
+        };
+
     // Blue button (hover = DarkBlue)
     public static ColorScheme BlueButton =>
         new()
