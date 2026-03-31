@@ -131,7 +131,7 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
         private readonly int _maxAllShopJoker = maxAllShopJoker;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

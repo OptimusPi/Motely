@@ -38,7 +38,7 @@ public readonly struct NegativeSoulJokerSimdFilterDesc(MotelyItemType? targetJok
             MotelyGlobals.ItemTypeCategoryMask | MotelyGlobals.JokerRarityMask
         );
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             VectorMask seedMask = VectorMask.NoBitsSet;

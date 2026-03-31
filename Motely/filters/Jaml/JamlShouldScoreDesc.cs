@@ -52,7 +52,7 @@ public struct JamlShouldScoreDesc
         }
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public unsafe VectorMask Score(
             ref MotelyVectorSearchContext searchContext,

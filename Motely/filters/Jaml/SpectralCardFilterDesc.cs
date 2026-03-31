@@ -78,7 +78,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         private readonly int _maxSeance = maxSeance;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

@@ -21,7 +21,7 @@ public struct AndFilterDesc(IMotelySeedFilterDesc[] filters)
         private readonly IMotelySeedFilter[] _filters = filters;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
