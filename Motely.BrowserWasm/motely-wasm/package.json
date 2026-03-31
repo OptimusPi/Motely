@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "5.7.3",
+  "version": "5.7.4",
   "description": "MotelyJAML — Balatro seed search engine. NativeAOT-LLVM compiled to browser WASM via Bootsharp.",
   "type": "module",
   "main": "./index.mjs",
@@ -17,7 +17,8 @@
     "**/*",
     "!test.html",
     "!index.html",
-    "!**/*.pdb"
+    "!**/*.pdb",
+    "!**/*.tgz"
   ],
   "keywords": [
     "balatro",
