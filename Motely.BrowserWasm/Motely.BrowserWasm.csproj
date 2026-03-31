@@ -3,8 +3,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-browser</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <!-- Shared-memory + pthreads can fail wasm-ld with LLVM AOT on some SDK combos; single-threaded WASM is fine for Bootsharp npm. -->
-    <WasmEnableThreads>false</WasmEnableThreads>
+    <!-- Default: single-thread WASM (Bootsharp npm). Multi-thread: dotnet publish /p:MotelyWasmThreads=true (see README-WASM.md). -->
+    <WasmEnableThreads Condition="'$(MotelyWasmThreads)' != 'true'">false</WasmEnableThreads>
+    <WasmEnableThreads Condition="'$(MotelyWasmThreads)' == 'true'">true</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -12,9 +13,11 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <Version>$(MotelyVersion)</Version>
     <RootNamespace>Motely.BrowserWasm</RootNamespace>
-    <!-- Bootsharp npm package: publish directly to motely-wasm directory -->
-    <BootsharpName>motely-wasm</BootsharpName>
-    <BootsharpPublishDirectory>motely-wasm</BootsharpPublishDirectory>
+    <!-- Bootsharp npm output directory (default motely-wasm; MT variant motely-wasm-mt) -->
+    <BootsharpName Condition="'$(MotelyWasmThreads)' != 'true'">motely-wasm</BootsharpName>
+    <BootsharpPublishDirectory Condition="'$(MotelyWasmThreads)' != 'true'">motely-wasm</BootsharpPublishDirectory>
+    <BootsharpName Condition="'$(MotelyWasmThreads)' == 'true'">motely-wasm-mt</BootsharpName>
+    <BootsharpPublishDirectory Condition="'$(MotelyWasmThreads)' == 'true'">motely-wasm-mt</BootsharpPublishDirectory>
     <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
     <!-- Bootsharp LLVM -->
     <BootsharpLLVM>true</BootsharpLLVM>
@@ -30,8 +33,10 @@
   <!-- After Bootsharp writes minimal package.json, overlay full npm metadata + JAML schema. -->
   <Target Name="MotelyWasmNpmOverlay" AfterTargets="BootsharpPack">
     <PropertyGroup>
-      <_WasmPkgDir>$(MSBuildProjectDirectory)\motely-wasm</_WasmPkgDir>
-      <_MotelyPkgJson>$(MSBuildProjectDirectory)\..\Motely\package.json</_MotelyPkgJson>
+      <_WasmPkgDir Condition="'$(MotelyWasmThreads)' == 'true'">$(MSBuildProjectDirectory)\motely-wasm-mt</_WasmPkgDir>
+      <_WasmPkgDir Condition="'$(MotelyWasmThreads)' != 'true'">$(MSBuildProjectDirectory)\motely-wasm</_WasmPkgDir>
+      <_MotelyPkgJson Condition="'$(MotelyWasmThreads)' == 'true'">$(MSBuildProjectDirectory)\..\Motely\motely-wasm-mt.package.json</_MotelyPkgJson>
+      <_MotelyPkgJson Condition="'$(MotelyWasmThreads)' != 'true'">$(MSBuildProjectDirectory)\..\Motely\package.json</_MotelyPkgJson>
       <_JamlSchema>$(MSBuildProjectDirectory)\..\jaml.schema.json</_JamlSchema>
     </PropertyGroup>
     <Copy SourceFiles="$(_MotelyPkgJson)" DestinationFiles="$(_WasmPkgDir)\package.json" SkipUnchangedFiles="false" />
