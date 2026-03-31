@@ -21,7 +21,7 @@ public struct NegationFilterDesc(IMotelySeedFilterDesc inner)
         private readonly IMotelySeedFilter _inner = inner;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

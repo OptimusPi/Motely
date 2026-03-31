@@ -2,7 +2,23 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
+
+public static IMotelySeedFilterDesc Or(
+    this IMotelySeedFilterDesc first,
+    IMotelySeedFilterDesc second
+)
+{
+    return new OrFilterDesc([first, second]);
+}
+
+public static IMotelySeedFilterDesc And(
+    this IMotelySeedFilterDesc first,
+    IMotelySeedFilterDesc second
+)
+{
+    return new AndFilterDesc([first, second]);
+}
 
 public struct OrFilterDesc(IMotelySeedFilterDesc[] filters, int min = 1)
     : IMotelySeedFilterDesc<OrFilterDesc.OrFilter>
@@ -24,7 +40,7 @@ public struct OrFilterDesc(IMotelySeedFilterDesc[] filters, int min = 1)
         private readonly int _min = min;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

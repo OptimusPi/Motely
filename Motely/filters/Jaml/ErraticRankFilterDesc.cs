@@ -30,7 +30,7 @@ public struct ErraticRankFilterDesc(ErraticRankClause clause)
         private readonly ErraticRankClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

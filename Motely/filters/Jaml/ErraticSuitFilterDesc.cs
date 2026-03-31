@@ -30,7 +30,7 @@ public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
         private readonly ErraticSuitClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

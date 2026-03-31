@@ -40,7 +40,7 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
         private readonly TagClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

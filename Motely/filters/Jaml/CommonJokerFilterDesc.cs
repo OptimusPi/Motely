@@ -75,7 +75,7 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         private readonly int _maxBoosterPack = maxBoosterPack;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

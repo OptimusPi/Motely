@@ -38,7 +38,7 @@ public struct VoucherFilterDesc(VoucherClause clause)
         private readonly int _maxAnte = maxAnte;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

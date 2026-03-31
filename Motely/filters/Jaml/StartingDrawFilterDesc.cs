@@ -28,7 +28,7 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
         private readonly StartingDrawClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

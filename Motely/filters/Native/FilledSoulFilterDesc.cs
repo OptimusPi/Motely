@@ -25,7 +25,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
     public struct FilterStruct() : IMotelySeedFilter
     {
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public static int CheckAnteForSoulJoker(
             int ante,

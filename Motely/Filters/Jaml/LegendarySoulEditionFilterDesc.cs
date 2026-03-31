@@ -32,7 +32,7 @@ public struct LegendarySoulEditionFilterDesc(LegendaryJokerClause clause)
     public readonly struct LegendarySoulEditionFilter(LegendaryJokerClause clause) : IMotelySeedFilter
     {
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
