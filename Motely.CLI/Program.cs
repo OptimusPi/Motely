@@ -224,6 +224,23 @@ partial class Program
                 : Environment.ProcessorCount;
             int batchCharCount = batchCharCountOption.ParsedValue;
 
+            bool cutoffAuto = false;
+            int cutoffFixed = int.MinValue;
+            int currentHigh = int.MinValue;
+            if (cutoffOption.HasValue())
+            {
+                var cutoffValue = cutoffOption.ParsedValue.Trim();
+                if (string.Equals(cutoffValue, "auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    cutoffAuto = true;
+                }
+                else if (!int.TryParse(cutoffValue, out cutoffFixed))
+                {
+                    Console.Error.WriteLine("Error: --cutoff must be an integer or 'auto'.");
+                    return 1;
+                }
+            }
+
             bool hasSeedListMode = sourceOption.HasValue() || seedsOption.HasValue();
             bool hasKeywordMode = keywordOption.HasValue() || keywordsOption.HasValue();
 
@@ -329,7 +346,7 @@ partial class Program
 
             if (explicitSeeds != null)
             {
-                settings.WithListSearch(explicitSeeds, explicitSeeds.Length);
+                settings = settings.WithListSearch(explicitSeeds, explicitSeeds.Length);
             }
             else if (keywordInputs.Count > 0)
             {
@@ -337,7 +354,7 @@ partial class Program
                     ? paddingOption.ParsedValue.ToCharArray()
                     : null;
                 var prov = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
-                settings.WithProviderSearch(
+                settings = settings.WithProviderSearch(
                     new MotelySeedListProvider(
                         prov,
                         prov.Count()
@@ -346,18 +363,18 @@ partial class Program
             }
             else if (randomOption.HasValue())
             {
-                settings.WithRandomSearch(randomOption.ParsedValue);
+                settings = settings.WithRandomSearch(randomOption.ParsedValue);
             }
             else if (palindromeOption.HasValue())
             {
-                settings.WithPalindromeSearch();
+                settings = settings.WithPalindromeSearch();
             }
             else
             {
-                settings.WithSequentialSearch();
+                settings = settings.WithSequentialSearch();
 
                 if (startBatchOption.HasValue())
-                    settings.WithStartBatchIndex(startBatchOption.ParsedValue);
+                    settings = settings.WithStartBatchIndex(startBatchOption.ParsedValue);
                 else if (startPercentOption.HasValue())
                 {
                     double pct = startPercentOption.ParsedValue;
@@ -374,18 +391,20 @@ partial class Program
                         startBatch = 0;
                     if (maxBatch > 0 && startBatch >= maxBatch)
                         startBatch = maxBatch - 1;
-                    settings.WithStartBatchIndex(startBatch);
+                    settings = settings.WithStartBatchIndex(startBatch);
                 }
 
                 if (endBatchOption.HasValue())
-                    settings.WithEndBatchIndex(endBatchOption.ParsedValue);
+                    settings = settings.WithEndBatchIndex(endBatchOption.ParsedValue);
             }
+
             bool hasStructuredScores = plan.ShouldClauseCount > 0;
+
             using ISeedResultSink? sink = sinkOption.HasValue()
                 ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
                 : null;
 
-            settings.WithProgressCallback(p =>
+            settings = settings.WithProgressCallback(p =>
             {
                 double perSec = p.SeedsPerMillisecond * 1000.0;
                 string speed =
@@ -413,7 +432,7 @@ partial class Program
 
             if (hasStructuredScores)
             {
-                settings.WithScoredResultCallback(tally =>
+                settings = settings.WithScoredResultCallback(tally =>
                 {
                     if (cutoffAuto)
                     {

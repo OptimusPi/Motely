@@ -392,9 +392,9 @@ public static class JamlSearchBuilder
 
                 new MotelySearchSettings<GrosMichelExtinctFilterDesc.GrosMichelExtinctFilter>(d),
 
-            AndFilterDesc d => new MotelySearchSettings<AndFilterDesc.AndFilter>(d),
+            Motely.Filters.Jaml.AndFilterDesc d => new MotelySearchSettings<Motely.Filters.Jaml.AndFilterDesc.AndFilter>(d),
 
-            OrFilterDesc d => new MotelySearchSettings<OrFilterDesc.OrFilter>(d),
+            Motely.Filters.Jaml.OrFilterDesc d => new MotelySearchSettings<Motely.Filters.Jaml.OrFilterDesc.OrFilter>(d),
 
             NegationFilterDesc d => new MotelySearchSettings<NegationFilterDesc.NegationFilter>(d),
 
@@ -482,9 +482,9 @@ public static class JamlSearchBuilder
 
             StartingDrawClause c => new StartingDrawFilterDesc(c),
 
-            AndClause c => new AndFilterDesc(c.Clauses.Select(CreateDesc).ToArray()),
+            AndClause c => new Motely.Filters.Jaml.AndFilterDesc(c.Clauses.Select(CreateDesc).ToArray()),
 
-            OrClause c => new OrFilterDesc(c.Clauses.Select(CreateDesc).ToArray(), c.Min),
+            OrClause c => new Motely.Filters.Jaml.OrFilterDesc(c.Clauses.Select(CreateDesc).ToArray(), c.Min),
 
             _ => throw new NotSupportedException($"Unknown clause type: {clause.GetType().Name}"),
 

@@ -8,6 +8,11 @@ public enum JamlAesthetic
 {
     Palindrome,
     Psychosis,
+    Gross,
+    Nsfw,
+    Pretty,
+    Funny,
+    Balatro,
 }
 
 public static class JamlAestheticParser
@@ -19,6 +24,11 @@ public static class JamlAestheticParser
     [
         ("palindrome", JamlAesthetic.Palindrome),
         ("psychosis", JamlAesthetic.Psychosis),
+        ("gross", JamlAesthetic.Gross),
+        ("nsfw", JamlAesthetic.Nsfw),
+        ("pretty", JamlAesthetic.Pretty),
+        ("funny", JamlAesthetic.Funny),
+        ("balatro", JamlAesthetic.Balatro),
     ];
 
     /// <summary>Strings for <c>enum</c> in the generated schema; order matches <see cref="Known"/>.</summary>

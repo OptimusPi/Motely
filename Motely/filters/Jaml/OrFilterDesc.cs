@@ -4,20 +4,23 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
-public static IMotelySeedFilterDesc Or(
-    this IMotelySeedFilterDesc first,
-    IMotelySeedFilterDesc second
-)
+public static class MotelySeedFilterDescExtensions
 {
-    return new OrFilterDesc([first, second]);
-}
+    public static IMotelySeedFilterDesc Or(
+        this IMotelySeedFilterDesc first,
+        IMotelySeedFilterDesc second
+    )
+    {
+        return new OrFilterDesc([first, second]);
+    }
 
-public static IMotelySeedFilterDesc And(
-    this IMotelySeedFilterDesc first,
-    IMotelySeedFilterDesc second
-)
-{
-    return new AndFilterDesc([first, second]);
+    public static IMotelySeedFilterDesc And(
+        this IMotelySeedFilterDesc first,
+        IMotelySeedFilterDesc second
+    )
+    {
+        return new AndFilterDesc([first, second]);
+    }
 }
 
 public struct OrFilterDesc(IMotelySeedFilterDesc[] filters, int min = 1)
