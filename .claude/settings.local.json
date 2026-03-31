@@ -24,7 +24,8 @@
       "Bash(npm ls:*)",
       "Bash(grep:*)",
       "Bash(dotnet msbuild:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

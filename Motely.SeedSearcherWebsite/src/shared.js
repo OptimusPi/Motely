@@ -1,5 +1,6 @@
 export async function bootAndWire(dotnet, Motely, modeLabel) {
   const Program = Motely.BrowserWasm.MotelyProgram;
+  const Callbacks = Motely.BrowserWasm.MotelyProgramCallbacks;
   const Enums = Motely;
 
   await dotnet.boot();
@@ -21,6 +22,7 @@ export async function bootAndWire(dotnet, Motely, modeLabel) {
   }
   if (status) status.textContent = "Ready.";
 
+  // ── Tabs ────────────────────────────────────────────────
   for (const tab of document.querySelectorAll(".tab")) {
     tab.addEventListener("click", () => {
       const target = tab.getAttribute("data-tab");
@@ -32,6 +34,7 @@ export async function bootAndWire(dotnet, Motely, modeLabel) {
     });
   }
 
+  // ── Validate ────────────────────────────────────────────
   const validateBtn = document.getElementById("btn-validate");
   validateBtn?.addEventListener("click", () => {
     const jaml = document.getElementById("jaml")?.value?.trim() ?? "";
@@ -39,51 +42,73 @@ export async function bootAndWire(dotnet, Motely, modeLabel) {
     if (err) err.textContent = e ? `Error: ${e}` : "Valid JAML!";
   });
 
-  const findBestBtn = document.getElementById("btn-find-best");
-  findBestBtn?.addEventListener("click", () => {
+  // ── Search (uses real async startSearch + callbacks) ────
+  let searchResults = [];
+
+  Callbacks.onProgress = (seedsSearched, matchingSeeds, elapsedMs) => {
+    if (status) status.textContent = `Searching… ${seedsSearched} seeds, ${matchingSeeds} matches (${(Number(elapsedMs) / 1000).toFixed(1)}s)`;
+  };
+
+  Callbacks.onResult = (seed, score) => {
+    searchResults.push({ seed, score });
+    const preview = searchResults
+      .slice(-10)
+      .map((h, i) => `${i + 1}. ${h.seed} (score=${h.score})`)
+      .join("\n");
+    if (searchOut) searchOut.textContent = `Matches so far: ${searchResults.length}\n\nRecent hits:\n${preview}`;
+  };
+
+  Callbacks.onComplete = (completionStatus, seedsSearched, matchingSeeds) => {
+    if (status) status.textContent = `Search ${completionStatus}. ${seedsSearched} seeds searched, ${matchingSeeds} matches.`;
+    const sorted = [...searchResults].sort((a, b) => b.score - a.score);
+    const preview = sorted
+      .slice(0, 25)
+      .map((h, i) => `${i + 1}. ${h.seed} (score=${h.score})`)
+      .join("\n");
+    if (searchOut) searchOut.textContent = `Status: ${completionStatus}\nSeeds searched: ${seedsSearched}\nMatches: ${matchingSeeds}\n\nTop results:\n${preview || "(none)"}`;
+  };
+
+  const startBtn = document.getElementById("btn-find-best");
+  startBtn?.addEventListener("click", () => {
     const jaml = document.getElementById("jaml")?.value?.trim() ?? "";
     if (!jaml) {
       if (err) err.textContent = "Paste JAML first.";
       return;
     }
-    if (status) status.textContent = "Searching...";
+
+    const valError = Program.validateJaml(jaml);
+    if (valError) {
+      if (err) err.textContent = `JAML error: ${valError}`;
+      return;
+    }
+
     if (err) err.textContent = "";
+    searchResults = [];
+    if (searchOut) searchOut.textContent = "Starting search…";
+    if (status) status.textContent = "Searching…";
+
+    const threadCount = Number(document.getElementById("thread-count")?.value ?? "1");
+    const threads = Number.isFinite(threadCount) && threadCount > 0 ? Math.trunc(threadCount) : 1;
 
     try {
-      const jamlConfig = Program.parseJaml(jaml);
-      const threadCount = Number(document.getElementById("thread-count")?.value ?? "1");
-      const palindromeOnly = Boolean(document.getElementById("pal-only")?.checked ?? true);
-      const request = {
-        jamlConfig,
-        palindromeOnly,
-        threadCount: Number.isFinite(threadCount) && threadCount > 0 ? Math.trunc(threadCount) : 1,
-        topResults: 25,
-      };
-      const result = Program.findBestSeed(request);
-      if (result?.error) {
-        if (searchOut) searchOut.textContent = `Search error: ${result.error}`;
-        if (status) status.textContent = "Search failed.";
-        return;
-      }
-
-      const best = result?.bestSeed ?? "(none)";
-      const bestScore = result?.bestScore ?? 0;
-      const hits = Array.isArray(result?.hits) ? result.hits : [];
-      const preview = hits
-        .slice(0, 10)
-        .map((h, i) => `${i + 1}. ${h.seed} (score=${h.score})`)
-        .join("\n");
-      if (searchOut) {
-        searchOut.textContent =
-          `Best seed: ${best}\nBest score: ${bestScore}\nMatches: ${result?.matches ?? 0}\nElapsed: ${(result?.elapsedSeconds ?? 0).toFixed(2)}s\n\nTop hits:\n${preview || "(none)"}`;
-      }
-      if (status) status.textContent = "Search complete.";
+      Program.startSearch(jaml, threads, 8, BigInt(0), BigInt(0));
     } catch (ex) {
       if (searchOut) searchOut.textContent = `Search exception: ${String(ex)}`;
       if (status) status.textContent = "Search crashed.";
     }
   });
 
+  const stopBtn = document.getElementById("btn-stop");
+  stopBtn?.addEventListener("click", () => {
+    try {
+      Program.stopSearch();
+      if (status) status.textContent = "Stopping…";
+    } catch (ex) {
+      if (status) status.textContent = `Stop error: ${String(ex)}`;
+    }
+  });
+
+  // ── Analyze ─────────────────────────────────────────────
   const analyzeBtn = document.getElementById("btn-analyze");
   analyzeBtn?.addEventListener("click", () => {
     const seed = (document.getElementById("a-seed")?.value ?? "")
