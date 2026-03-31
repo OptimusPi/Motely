@@ -3,10 +3,15 @@
   "private": true,
   "description": "Static Motely WASM smoke-test page (not Next.js)",
   "scripts": {
-    "build": "node scripts/copy-motely-wasm.mjs",
-    "vercel-build": "npm run build"
+    "dev": "vite --host",
+    "build": "vite build",
+    "vercel-build": "pnpm build"
   },
   "dependencies": {
-    "motely-wasm": "5.7.3"
+    "motely-wasm": "5.7.4",
+    "motely-wasm-mt": "5.7.4"
+  },
+  "devDependencies": {
+    "vite": "^8.0.3"
   }
 }
