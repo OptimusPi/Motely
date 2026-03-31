@@ -1,41 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Motely WASM Test</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 16px; }
-    h1 { color: #f5a623; margin-bottom: 12px; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .tab { padding: 8px 18px; background: #2a2a4a; border: 1px solid #444; cursor: pointer; border-radius: 4px; }
-    .tab.active { background: #f5a623; color: #1a1a2e; font-weight: bold; }
-    .panel { display: none; } .panel.active { display: block; }
-    label { display: block; margin: 8px 0 4px; color: #aaa; font-size: 12px; }
-    textarea, input, select { width: 100%; padding: 8px; background: #111122; color: #e0e0e0;
-      border: 1px solid #444; border-radius: 4px; font-family: monospace; font-size: 13px; }
-    textarea { height: 180px; resize: vertical; }
-    .row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-    button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;
-      font-family: monospace; font-size: 14px; font-weight: bold; }
-    .btn-start { background: #27ae60; color: #fff; }
-    .btn-stop  { background: #c0392b; color: #fff; }
-    .btn-go    { background: #2980b9; color: #fff; }
-    button:disabled { opacity: 0.4; cursor: default; }
-    #status { margin: 10px 0; padding: 8px; background: #111; border-radius: 4px;
-      font-size: 13px; color: #7fdbff; min-height: 36px; }
-    #err { color: #ff6b6b; margin: 6px 0; font-size: 13px; min-height: 16px; }
-    #bar-wrap { background: #222; border-radius: 4px; height: 8px; margin: 6px 0; }
-    #bar { height: 8px; background: #f5a623; border-radius: 4px; width: 0%; transition: width 0.2s; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    th { background: #2a2a4a; padding: 6px 10px; text-align: left; color: #f5a623; }
-    td { padding: 5px 10px; border-bottom: 1px solid #2a2a2a; }
-    tr:hover td { background: #1f1f3a; }
-    #analysis-out { background: #111; padding: 12px; border-radius: 4px; font-size: 12px;
-      white-space: pre-wrap; max-height: 500px; overflow-y: auto; margin-top: 10px; color: #b5ead7; }
-    #boot-status { color: #aaa; font-size: 12px; margin-bottom: 12px; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: monospace;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 16px;
+    }
+
+    h1 {
+      color: #f5a623;
+      margin-bottom: 12px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      padding: 8px 18px;
+      background: #2a2a4a;
+      border: 1px solid #444;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .tab.active {
+      background: #f5a623;
+      color: #1a1a2e;
+      font-weight: bold;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    label {
+      display: block;
+      margin: 8px 0 4px;
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      padding: 8px;
+      background: #111122;
+      color: #e0e0e0;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    textarea {
+      height: 180px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .btn-start {
+      background: #27ae60;
+      color: #fff;
+    }
+
+    .btn-stop {
+      background: #c0392b;
+      color: #fff;
+    }
+
+    .btn-go {
+      background: #2980b9;
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #status {
+      margin: 10px 0;
+      padding: 8px;
+      background: #111;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #7fdbff;
+      min-height: 36px;
+    }
+
+    #err {
+      color: #ff6b6b;
+      margin: 6px 0;
+      font-size: 13px;
+      min-height: 16px;
+    }
+
+    #bar-wrap {
+      background: #222;
+      border-radius: 4px;
+      height: 8px;
+      margin: 6px 0;
+    }
+
+    #bar {
+      height: 8px;
+      background: #f5a623;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.2s;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    th {
+      background: #2a2a4a;
+      padding: 6px 10px;
+      text-align: left;
+      color: #f5a623;
+    }
+
+    td {
+      padding: 5px 10px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    tr:hover td {
+      background: #1f1f3a;
+    }
+
+    #analysis-out {
+      background: #111;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 10px;
+      color: #b5ead7;
+    }
+
+    #boot-status {
+      color: #aaa;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
   </style>
 </head>
+
 <body>
   <h1 id="title">Motely WASM</h1>
   <div id="boot-status">Booting WASM...</div>
@@ -49,30 +201,59 @@
     <textarea id="jaml" placeholder="Paste JAML here..."></textarea>
     <div id="err"></div>
     <div class="row" style="margin-top:8px">
-      <div><label>Threads</label><input type="number" id="threads" value="4" min="1" max="64" style="width:80px"/></div>
+      <div><label>Threads</label><input type="number" id="threads" value="4" min="1" max="64" style="width:80px" />
+      </div>
       <button class="btn-start" id="btn-start" onclick="startSearch()" disabled>Start</button>
-      <button class="btn-stop"  id="btn-stop"  onclick="stopSearch()"  disabled>Stop</button>
+      <button class="btn-stop" id="btn-stop" onclick="stopSearch()" disabled>Stop</button>
     </div>
     <div id="status">Idle — load WASM first</div>
-    <div id="bar-wrap"><div id="bar"></div></div>
-    <table><thead><tr><th>#</th><th>Seed</th><th>Score</th></tr></thead><tbody id="results"></tbody></table>
+    <div id="bar-wrap">
+      <div id="bar"></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Seed</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
   </div>
 
   <div id="panel-analyze" class="panel">
     <div class="row">
-      <div><label>Seed</label><input id="a-seed" placeholder="e.g. ABCD1234"/></div>
+      <div><label>Seed</label><input id="a-seed" placeholder="e.g. ABCD1234" /></div>
       <div><label>Deck</label>
         <select id="a-deck">
-          <option>Red</option><option>Blue</option><option>Yellow</option><option>Green</option>
-          <option>Black</option><option>Magic</option><option>Nebula</option><option>Ghost</option>
-          <option>Abandoned</option><option>Checkered</option><option>Zodiac</option><option>Painted</option>
-          <option>Anaglyph</option><option>Plasma</option><option>Erratic</option>
+          <option>Red</option>
+          <option>Blue</option>
+          <option>Yellow</option>
+          <option>Green</option>
+          <option>Black</option>
+          <option>Magic</option>
+          <option>Nebula</option>
+          <option>Ghost</option>
+          <option>Abandoned</option>
+          <option>Checkered</option>
+          <option>Zodiac</option>
+          <option>Painted</option>
+          <option>Anaglyph</option>
+          <option>Plasma</option>
+          <option>Erratic</option>
         </select>
       </div>
       <div><label>Stake</label>
         <select id="a-stake">
-          <option>White</option><option>Red</option><option>Green</option><option>Black</option>
-          <option>Blue</option><option>Purple</option><option>Orange</option><option>Gold</option>
+          <option>White</option>
+          <option>Red</option>
+          <option>Green</option>
+          <option>Black</option>
+          <option>Blue</option>
+          <option>Purple</option>
+          <option>Orange</option>
+          <option>Gold</option>
         </select>
       </div>
       <button class="btn-go" id="btn-analyze" onclick="analyzeSeed()" disabled>Analyze</button>
@@ -87,7 +268,7 @@
     let resultCount = 0;
 
     Program.onProgress.subscribe((searched, found, elapsedMs) => {
-      const ms = Number(elapsedMs), sec = (ms/1000).toFixed(1);
+      const ms = Number(elapsedMs), sec = (ms / 1000).toFixed(1);
       document.getElementById('status').textContent =
         `Searched: ${Number(searched).toLocaleString()}  |  Found: ${Number(found).toLocaleString()}  |  ${sec}s`;
       document.getElementById('bar').style.width = '60%';
@@ -118,14 +299,14 @@
     document.getElementById('status').textContent = 'Idle';
 
     window.switchTab = tab => {
-      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i === (tab==='search'?0:1)));
-      ['search','analyze'].forEach(id => document.getElementById('panel-'+id).classList.toggle('active', id===tab));
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'search' ? 0 : 1)));
+      ['search', 'analyze'].forEach(id => document.getElementById('panel-' + id).classList.toggle('active', id === tab));
     };
     window.startSearch = () => {
       const jaml = document.getElementById('jaml').value.trim();
-      const threads = parseInt(document.getElementById('threads').value)||1;
+      const threads = parseInt(document.getElementById('threads').value) || 1;
       const e = Program.validateJaml(jaml);
-      document.getElementById('err').textContent = e ? 'Error: '+e : '';
+      document.getElementById('err').textContent = e ? 'Error: ' + e : '';
       if (e) return;
       resultCount = 0;
       document.getElementById('results').innerHTML = '';
@@ -140,14 +321,15 @@
       document.getElementById('btn-stop').disabled = true;
     };
     window.analyzeSeed = () => {
-      const seed = document.getElementById('a-seed').value.trim().toUpperCase().replace(/0/g,'O');
+      const seed = document.getElementById('a-seed').value.trim().toUpperCase().replace(/0/g, 'O');
       const deck = document.getElementById('a-deck').value;
       const stake = document.getElementById('a-stake').value;
       try {
         const json = Program.analyzeSeed(seed, deck, stake);
         document.getElementById('analysis-out').textContent = JSON.stringify(JSON.parse(json), null, 2);
-      } catch(ex) { document.getElementById('analysis-out').textContent = 'Error: '+ex; }
+      } catch (ex) { document.getElementById('analysis-out').textContent = 'Error: ' + ex; }
     };
   </script>
 </body>
+
 </html>
