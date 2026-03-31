@@ -107,7 +107,7 @@ public struct LegendaryJokerFilterDesc(
         private readonly LegendaryJokerPipelineKind _pipeline = pipeline;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {

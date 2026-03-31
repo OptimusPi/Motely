@@ -71,7 +71,7 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
     }
 
     // AUDIT ISSUE #3 & #5: Always inline + optimize, fix early exit check
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public VectorEnum256<T> Choose(Vector512<double> poll)
     {
         poll *= WeightSum;

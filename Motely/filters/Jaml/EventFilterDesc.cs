@@ -91,7 +91,7 @@ public struct LuckyMoneyFilterDesc(LuckyMoneyClause clause)
         private readonly LuckyMoneyClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -123,7 +123,7 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
         private readonly LuckyMultClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -168,7 +168,7 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
         private readonly Vector256<int> _targetValue = targetValue;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -220,7 +220,7 @@ public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
         private readonly WheelOfFortuneClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -253,7 +253,7 @@ public struct CavendishExtinctFilterDesc(CavendishExtinctClause clause)
         private readonly CavendishExtinctClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -286,7 +286,7 @@ public struct GrosMichelExtinctFilterDesc(GrosMichelExtinctClause clause)
         private readonly GrosMichelExtinctClause _clause = clause;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -314,7 +314,7 @@ internal static class EventFilterUtils
 
     internal delegate VectorMask RollCheckerWithValue(ref MotelyVectorSearchContext ctx, ref MotelyVectorPrngStream stream, int rollIndex, Vector256<int> value);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static VectorMask ProcessRollClause<TClause>(
         ref MotelyVectorSearchContext ctx,
         TClause clause,
@@ -357,7 +357,7 @@ internal static class EventFilterUtils
         );
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static VectorMask ProcessRollClause<TClause>(
         ref MotelyVectorSearchContext ctx,
         TClause clause,

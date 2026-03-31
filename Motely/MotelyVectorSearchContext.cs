@@ -331,7 +331,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     private static readonly double FiveInvPrec = Math.Pow(5.0, 13);
 
     // Mukundan314's fix: Use FMA with magic number for accurate rounding matching LuaJIT
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Vector512<double> IteratePRNG(Vector512<double> state)
     {
         state = Vector512.Multiply(state, MotelyVectorConstants.PrngMultiplier);
@@ -359,14 +359,13 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return new(PseudoHash(key, isCached));
     }
 
-    // AUDIT ISSUE #3 & #4: Always inline + optimize critical PRNG hot paths, use hoisted constants
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector512<double> GetNextPrngState(ref MotelyVectorPrngStream stream)
     {
         return stream.State = IteratePRNG(stream.State);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector512<double> GetNextPrngState(
         ref MotelyVectorPrngStream stream,
         in Vector512<double> mask
@@ -379,14 +378,14 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         );
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector512<double> IteratePseudoSeed(ref MotelyVectorPrngStream stream)
     {
         return (GetNextPrngState(ref stream) + SeedHashCache->GetSeedHashVector())
             / MotelyVectorConstants.Two;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector512<double> IteratePseudoSeed(
         ref MotelyVectorPrngStream stream,
         in Vector512<double> mask
@@ -396,7 +395,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
             / MotelyVectorConstants.Two;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector512<double> GetNextPseudoSeed(
         ref MotelyVectorPrngStream stream,
         in Vector512<double> mask
@@ -406,13 +405,13 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
             / MotelyVectorConstants.Two;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector512<double> GetNextRandom(ref MotelyVectorPrngStream stream)
     {
         return VectorLuaRandom.Random(IteratePseudoSeed(ref stream));
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector512<double> GetNextRandom(
         ref MotelyVectorPrngStream stream,
         in Vector512<double> mask
@@ -421,13 +420,13 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return VectorLuaRandom.Random(GetNextPseudoSeed(ref stream, mask));
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector256<int> GetNextRandomInt(ref MotelyVectorPrngStream stream, int min, int max)
     {
         return VectorLuaRandom.RandInt(IteratePseudoSeed(ref stream), min, max);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector256<int> GetNextRandomInt(
         ref MotelyVectorPrngStream stream,
         int min,

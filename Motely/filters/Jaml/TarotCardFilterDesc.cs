@@ -72,7 +72,7 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         private readonly int _maxPurpleSeal = maxPurpleSeal;
 
         [MethodImpl(
-            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+            MethodImplOptions.AggressiveInlining
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
