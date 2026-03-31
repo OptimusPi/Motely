@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motely WASM QA (COEP/SAB)</title>
+  <style>
+    body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 16px; }
+    h1 { color: #f5a623; margin-bottom: 8px; }
+    .topline { margin-bottom: 10px; font-size: 12px; }
+    .topline a { color:#7fdbff; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab { padding: 8px 18px; background: #2a2a4a; border: 1px solid #444; cursor: pointer; border-radius: 4px; }
+    .tab.active { background: #f5a623; color: #1a1a2e; font-weight: bold; }
+    .panel { display: none; } .panel.active { display: block; }
+    label { display: block; margin: 8px 0 4px; color: #aaa; font-size: 12px; }
+    textarea,input,select { width: 100%; padding: 8px; background: #111122; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-family: monospace; font-size: 13px; }
+    textarea { height: 180px; resize: vertical; }
+    .row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 14px; font-weight: bold; background: #2980b9; color:#fff; }
+    #status { margin: 10px 0; padding: 8px; background: #111; border-radius: 4px; font-size: 13px; color: #7fdbff; min-height: 36px; }
+    #err { color: #ff6b6b; margin: 6px 0; font-size: 13px; min-height: 16px; }
+    #analysis-out { background: #111; padding: 12px; border-radius: 4px; font-size: 12px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; margin-top: 10px; color: #b5ead7; }
+    #boot-status { color: #aaa; font-size: 12px; margin-bottom: 12px; }
+  </style>
+  <script type="module" crossorigin src="/assets/coep-DDW40qvS.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/chunk-DzMEjpoC.js">
+  <link rel="modulepreload" crossorigin href="/assets/shared-Dd_lOihm.js">
+</head>
+<body>
+  <h1 id="title">Motely WASM QA</h1>
+  <div class="topline">
+    Mode: <strong>COEP/SAB</strong> (threaded package: <code>motely-wasm-mt</code>) ·
+    <a href="/">Open compat page</a>
+  </div>
+  <div id="boot-status">Booting WASM…</div>
+  <div class="tabs">
+    <div class="tab active" data-tab="search">Search</div>
+    <div class="tab" data-tab="analyze">Analyze Seed</div>
+  </div>
+
+  <div id="panel-search" class="panel active">
+    <label>JAML</label>
+    <textarea id="jaml" placeholder="Paste JAML here..."></textarea>
+    <div id="err"></div>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-validate">Validate</button>
+    </div>
+    <div id="status">Idle</div>
+  </div>
+
+  <div id="panel-analyze" class="panel">
+    <div class="row">
+      <div><label>Seed</label><input id="a-seed" placeholder="e.g. ABCD1234" /></div>
+      <div><label>Deck</label>
+        <select id="a-deck">
+          <option>Red</option><option>Blue</option><option>Yellow</option><option>Green</option><option>Black</option>
+          <option>Magic</option><option>Nebula</option><option>Ghost</option><option>Abandoned</option><option>Checkered</option>
+          <option>Zodiac</option><option>Painted</option><option>Anaglyph</option><option>Plasma</option><option>Erratic</option>
+        </select>
+      </div>
+      <div><label>Stake</label>
+        <select id="a-stake">
+          <option>White</option><option>Red</option><option>Green</option><option>Black</option>
+          <option>Blue</option><option>Purple</option><option>Orange</option><option>Gold</option>
+        </select>
+      </div>
+      <button id="btn-analyze">Analyze</button>
+    </div>
+    <pre id="analysis-out">Analysis will appear here...</pre>
+  </div>
+</body>
+</html>

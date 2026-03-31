@@ -19,15 +19,17 @@
     <BootsharpName Condition="'$(MotelyWasmThreads)' == 'true'">motely-wasm-mt</BootsharpName>
     <BootsharpPublishDirectory Condition="'$(MotelyWasmThreads)' == 'true'">motely-wasm-mt</BootsharpPublishDirectory>
     <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
-    <!-- Bootsharp LLVM -->
-    <BootsharpLLVM>true</BootsharpLLVM>
+    <!-- Default package uses NativeAOT-LLVM; MT package uses browser runtime path for now. -->
+    <BootsharpLLVM Condition="'$(MotelyWasmThreads)' != 'true'">true</BootsharpLLVM>
+    <BootsharpLLVM Condition="'$(MotelyWasmThreads)' == 'true'">false</BootsharpLLVM>
     <BootsharpOptimize>speed</BootsharpOptimize>
     <PublishTrimmed>true</PublishTrimmed>
     <DotNetJsApi>true</DotNetJsApi>
     <DebugType>none</DebugType>
     <EmccFlags>$(EmccFlags) -O3</EmccFlags>
-    <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
-    <RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
+    <UsingBrowserRuntimeWorkload Condition="'$(MotelyWasmThreads)' != 'true'">false</UsingBrowserRuntimeWorkload>
+    <UsingBrowserRuntimeWorkload Condition="'$(MotelyWasmThreads)' == 'true'">true</UsingBrowserRuntimeWorkload>
+    <RestoreAdditionalProjectSources Condition="'$(MotelyWasmThreads)' != 'true'">https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
   </PropertyGroup>
 
   <!-- After Bootsharp writes minimal package.json, overlay full npm metadata + JAML schema. -->
@@ -50,8 +52,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
-  <!-- LLVM compiler -->
-  <ItemGroup>
+  <!-- LLVM compiler (single-thread package only) -->
+  <ItemGroup Condition="'$(MotelyWasmThreads)' != 'true'">
     <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="!$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
