@@ -31,7 +31,7 @@ public static class MotelySeedKeywordSequences
     /// <summary>Mirror-friendly strings over symmetric characters (length 3–8 from CLI).</summary>
     public static IEnumerable<string> MirrorPatternKeywords(int length)
     {
-        const string symmetricChars = "AHIMOTUVWXy18";
+        const string symmetricChars = "AHIMOTUVWXY18";
 
         IEnumerable<string> Generate(string current, int remaining)
         {
@@ -144,56 +144,6 @@ public static class MotelySeedKeywordSequences
         "CRUDE",
         "CRASS",
         "VULGAR",
-    ];
-
-    public static readonly string[] PrettyKeywords =
-    [
-        "BEAUTY",
-        "GRACE",
-        "LOVELY",
-        "SERENE",
-        "BLISS",
-        "PEACE",
-        "CALM",
-        "PURE",
-        "BRIGHT",
-        "SHINE",
-        "GLEAM",
-        "GLOW",
-        "DIVINE",
-        "PRETTY",
-        "CHARM",
-        "TENDER",
-        "SWEET",
-        "LOVE",
-        "JOY",
-        "HOPE",
-        "DREAM",
-        "MAGIC",
-        "WONDER",
-        "ANGEL",
-        "SILK",
-        "PEARL",
-        "FAIRY",
-        "MUSE",
-        "DUSK",
-        "DAWN",
-        "HAZE",
-        "MIST",
-        "PETAL",
-        "BLOOM",
-        "AURA",
-        "STAR",
-        "LUNA",
-        "EMBER",
-        "WISH",
-        "JADE",
-        "IRIS",
-        "SAGE",
-        "OPAL",
-        "LYRIC",
-        "VELVET",
-        "CRYSTAL",
     ];
 
     public static readonly string[] FunnyKeywords =

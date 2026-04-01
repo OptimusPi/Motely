@@ -1,34 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f5a623'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='16' fill='%231a1a2e' font-family='monospace'%3EM%3C/text%3E%3C/svg%3E" />
   <title>Motely WASM QA (compat)</title>
   <style>
-    body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 16px; }
-    h1 { color: #f5a623; margin-bottom: 8px; }
-    .topline { margin-bottom: 10px; font-size: 12px; }
-    .topline a { color:#7fdbff; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tab { padding: 8px 18px; background: #2a2a4a; border: 1px solid #444; cursor: pointer; border-radius: 4px; }
-    .tab.active { background: #f5a623; color: #1a1a2e; font-weight: bold; }
-    .panel { display: none; } .panel.active { display: block; }
-    label { display: block; margin: 8px 0 4px; color: #aaa; font-size: 12px; }
-    textarea,input,select { width: 100%; padding: 8px; background: #111122; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-family: monospace; font-size: 13px; }
-    textarea { height: 180px; resize: vertical; }
-    .row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-    button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 14px; font-weight: bold; background: #2980b9; color:#fff; }
-    #status { margin: 10px 0; padding: 8px; background: #111; border-radius: 4px; font-size: 13px; color: #7fdbff; min-height: 36px; }
-    #err { color: #ff6b6b; margin: 6px 0; font-size: 13px; min-height: 16px; }
-    #analysis-out { background: #111; padding: 12px; border-radius: 4px; font-size: 12px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; margin-top: 10px; color: #b5ead7; }
-    #boot-status { color: #aaa; font-size: 12px; margin-bottom: 12px; }
+    body {
+      font-family: monospace;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 16px;
+    }
+
+    h1 {
+      color: #f5a623;
+      margin-bottom: 8px;
+    }
+
+    .topline {
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .topline a {
+      color: #7fdbff;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab {
+      padding: 8px 18px;
+      background: #2a2a4a;
+      border: 1px solid #444;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .tab.active {
+      background: #f5a623;
+      color: #1a1a2e;
+      font-weight: bold;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    label {
+      display: block;
+      margin: 8px 0 4px;
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      padding: 8px;
+      background: #111122;
+      color: #e0e0e0;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    textarea {
+      height: 180px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: bold;
+      background: #2980b9;
+      color: #fff;
+    }
+
+    #status {
+      margin: 10px 0;
+      padding: 8px;
+      background: #111;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #7fdbff;
+      min-height: 36px;
+    }
+
+    #err {
+      color: #ff6b6b;
+      margin: 6px 0;
+      font-size: 13px;
+      min-height: 16px;
+    }
+
+    #analysis-out {
+      background: #111;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 10px;
+      color: #b5ead7;
+    }
+
+    #boot-status {
+      color: #aaa;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
   </style>
 </head>
+
 <body>
   <h1 id="title">Motely WASM QA</h1>
   <div class="topline">
-    Mode: <strong>compat</strong> (single-thread package: <code>motely-wasm</code>) ·
-    <a href="/coep/">Open COEP/SAB page (motely-wasm-mt)</a>
+    Single-thread NativeAOT-LLVM (<code>motely-wasm</code>)
   </div>
   <div id="boot-status">Booting WASM…</div>
   <div class="tabs">
@@ -40,15 +153,50 @@
     <label>JAML</label>
     <textarea id="jaml" placeholder="Paste JAML here..."></textarea>
     <div id="err"></div>
+    <label>Search mode</label>
+    <select id="search-mode">
+      <option value="configured" selected>Configured (JAML aesthetics if present)</option>
+      <option value="sequential">Sequential (full space; JAML must not list aesthetics)</option>
+      <option value="random">Random seeds</option>
+      <option value="aesthetic">Aesthetic stream</option>
+      <option value="keyword">Keyword padding stream</option>
+      <option value="seedlist">Explicit seed list (CSV)</option>
+    </select>
     <div class="row" style="margin-top:8px">
-      <div><label>Threads</label><input id="thread-count" type="number" min="1" max="32" value="1" style="width:90px" /></div>
-      <div><label>Palindrome</label><input id="pal-only" type="checkbox" checked style="width:auto" /></div>
+      <div><label>Threads</label><input id="thread-count" type="number" min="1" max="32" value="1" style="width:90px" />
+      </div>
+      <div><label>Batch chars</label><input id="batch-chars" type="number" min="1" max="7" value="4" style="width:90px"
+          title="Sequential batch width (CLI default 4)" /></div>
+      <div id="wrap-random" style="display:none"><label>Random N</label><input id="random-count" type="number" min="1"
+          value="500" style="width:90px" /></div>
+      <div id="wrap-aesthetic" style="display:none"><label>Aesthetic</label>
+        <select id="aesthetic-pick">
+          <option value="0">palindrome</option>
+          <option value="1">psychosis</option>
+          <option value="2">gross</option>
+          <option value="3">nsfw</option>
+          <option value="4">pretty</option>
+          <option value="5">funny</option>
+          <option value="6">balatro</option>
+        </select>
+      </div>
       <button id="btn-validate">Validate</button>
       <button id="btn-find-best">Start Search</button>
       <button id="btn-stop" style="background:#c0392b">Stop</button>
     </div>
+    <div id="wrap-keyword" style="display:none;margin-top:8px">
+      <label>Keywords (comma-separated, e.g. OW,BOOB)</label>
+      <input id="keywords-input" placeholder="OW,OH" />
+      <label>Padding chars (optional; empty = all seed chars)</label>
+      <input id="padding-input" placeholder="" />
+    </div>
+    <div id="wrap-seedlist" style="display:none;margin-top:8px">
+      <label>Seeds (comma-separated)</label>
+      <input id="seeds-csv" placeholder="ABCD1234,EFGH5678" />
+    </div>
     <div id="status">Idle</div>
-    <pre id="search-out" style="margin-top:10px;background:#111;border-radius:4px;padding:10px;min-height:80px;">No search run yet.</pre>
+    <pre id="search-out"
+      style="margin-top:10px;background:#111;border-radius:4px;padding:10px;min-height:80px;">No search run yet.</pre>
   </div>
 
   <div id="panel-analyze" class="panel">
@@ -56,21 +204,51 @@
       <div><label>Seed</label><input id="a-seed" placeholder="e.g. ABCD1234" /></div>
       <div><label>Deck</label>
         <select id="a-deck">
-          <option>Red</option><option>Blue</option><option>Yellow</option><option>Green</option><option>Black</option>
-          <option>Magic</option><option>Nebula</option><option>Ghost</option><option>Abandoned</option><option>Checkered</option>
-          <option>Zodiac</option><option>Painted</option><option>Anaglyph</option><option>Plasma</option><option>Erratic</option>
+          <option>Red</option>
+          <option>Blue</option>
+          <option>Yellow</option>
+          <option>Green</option>
+          <option>Black</option>
+          <option>Magic</option>
+          <option>Nebula</option>
+          <option>Ghost</option>
+          <option>Abandoned</option>
+          <option>Checkered</option>
+          <option>Zodiac</option>
+          <option>Painted</option>
+          <option>Anaglyph</option>
+          <option>Plasma</option>
+          <option>Erratic</option>
         </select>
       </div>
       <div><label>Stake</label>
         <select id="a-stake">
-          <option>White</option><option>Red</option><option>Green</option><option>Black</option>
-          <option>Blue</option><option>Purple</option><option>Orange</option><option>Gold</option>
+          <option>White</option>
+          <option>Red</option>
+          <option>Green</option>
+          <option>Black</option>
+          <option>Blue</option>
+          <option>Purple</option>
+          <option>Orange</option>
+          <option>Gold</option>
         </select>
       </div>
       <button id="btn-analyze">Analyze</button>
     </div>
     <pre id="analysis-out">Analysis will appear here...</pre>
   </div>
-  <script type="module" src="/src/compat.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "motely-wasm": "./motely-wasm/index.mjs",
+        "motely-wasm-mt": "./motely-wasm-mt/index.mjs",
+        "fs/promises": "./shims/fs-promises.mjs",
+        "fs": "./shims/empty-fs.mjs",
+        "url": "./shims/node-url.mjs"
+      }
+    }
+  </script>
+  <script type="module" src="./src/compat.js"></script>
 </body>
+
 </html>

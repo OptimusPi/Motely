@@ -45,7 +45,7 @@ public class SeedProviderCountTests
             total += pulled;
         }
 
-        Assert.Equal(total, provider.SeedCount);
+        Assert.Equal((long)total, provider.SeedCount);
     }
 
     [Fact]
@@ -54,6 +54,6 @@ public class SeedProviderCountTests
         string[] seeds = ["ABCD1234", "BCDE2345", "CDEF3456"];
         var provider = new MotelySeedListProvider(seeds);
 
-        Assert.Equal(seeds.Length, provider.SeedCount);
+        Assert.Equal((long)seeds.Length, provider.SeedCount);
     }
 }

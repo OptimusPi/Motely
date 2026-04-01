@@ -32,7 +32,22 @@
     <RestoreAdditionalProjectSources Condition="'$(MotelyWasmThreads)' != 'true'">https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
   </PropertyGroup>
 
-  <!-- After Bootsharp writes minimal package.json, overlay full npm metadata + JAML schema. -->
+  <!-- Bake $(Version) into a const so GetVersion() avoids reflection (trimmed/NativeAOT-safe). -->
+  <Target Name="GenerateVersionConst" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_Ver>$(Version)</_Ver>
+      <_Ver Condition="'$(_Ver)' == ''">0.0.0-dev</_Ver>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(IntermediateOutputPath)VersionInfo.g.cs"
+      Lines="namespace Motely.BrowserWasm { internal static class VersionInfo { public const string Version = &quot;$(_Ver)&quot;%3B } }"
+      Overwrite="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Bootsharp already produced the full npm package; copy repo npm metadata + JAML schema. -->
   <Target Name="MotelyWasmNpmOverlay" AfterTargets="BootsharpPack">
     <PropertyGroup>
       <_WasmPkgDir Condition="'$(MotelyWasmThreads)' == 'true'">$(MSBuildProjectDirectory)\motely-wasm-mt</_WasmPkgDir>
@@ -43,6 +58,33 @@
     </PropertyGroup>
     <Copy SourceFiles="$(_MotelyPkgJson)" DestinationFiles="$(_WasmPkgDir)\package.json" SkipUnchangedFiles="false" />
     <Copy SourceFiles="$(_JamlSchema)" DestinationFiles="$(_WasmPkgDir)\jaml.schema.json" SkipUnchangedFiles="false" Condition="Exists('$(_JamlSchema)')" />
+  </Target>
+
+  <!-- Bootsharp MT index.mjs side-loads *.wasm from bin/; the linker writes them under AppBundle/_framework only. -->
+  <Target Name="MotelyWasmMtCopyWasmToBin" AfterTargets="MotelyWasmNpmOverlay" Condition="'$(MotelyWasmThreads)' == 'true'">
+    <PropertyGroup>
+      <_AppBundleFramework>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\browser-wasm\AppBundle\_framework</_AppBundleFramework>
+      <_MtBinDir>$(MSBuildProjectDirectory)\motely-wasm-mt\bin</_MtBinDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_MtWasmFiles Include="$(_AppBundleFramework)\*.wasm" />
+    </ItemGroup>
+    <Warning Condition="'@(_MtWasmFiles)' == ''" Text="motely-wasm-mt: no *.wasm under $(_AppBundleFramework); threaded npm bin will be incomplete." />
+    <Copy SourceFiles="@(_MtWasmFiles)" DestinationFolder="$(_MtBinDir)" SkipUnchangedFiles="true" Condition="'@(_MtWasmFiles)' != ''" />
+  </Target>
+
+  <!-- LLVM (ST) builds don't copy .d.ts to the npm types/ dir; fix that here.
+       MT (browser-runtime) builds: Bootsharp already copies correct types — skip to avoid clobbering. -->
+  <Target Name="MotelyWasmCopyTypes" AfterTargets="MotelyWasmNpmOverlay"
+          Condition="'$(MotelyWasmThreads)' != 'true'">
+    <PropertyGroup>
+      <_PublishDir>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\browser-wasm\publish</_PublishDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TypeFiles Include="$(_PublishDir)\*.d.ts" />
+    </ItemGroup>
+    <MakeDir Directories="$(_WasmPkgDir)\types" />
+    <Copy SourceFiles="@(_TypeFiles)" DestinationFolder="$(_WasmPkgDir)\types" SkipUnchangedFiles="true" Condition="'@(_TypeFiles)' != ''" />
   </Target>
 
   <ItemGroup>

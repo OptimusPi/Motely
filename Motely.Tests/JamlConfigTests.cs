@@ -418,7 +418,7 @@ public class JamlConfigTests
     var jaml = """
             name: EventDirectKey
             must:
-              - LuckyMoney: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+              - luckyMoney: [0, 1, 2, 3, 4, 5, 6, 7, 8]
             """;
 
     var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);

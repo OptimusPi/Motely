@@ -1,6 +1,7 @@
 using System;
 
 using Motely;
+using Motely.Filters.Native;
 
 using System.Collections.Generic;
 
@@ -240,8 +241,34 @@ public static class JamlSearchBuilder
         LegendaryClauseExpansion legendaryExpansion
     )
     {
+        // Merge consecutive voucher clauses into a single MultiVoucherFilterDesc so the
+        // voucher PRNG state is built only once instead of once per clause.
+        var voucherClauses = set.OrderedClauses.OfType<VoucherClause>().ToArray();
+        IMotelySeedFilterDesc? mergedVoucher = voucherClauses.Length > 1
+            ? new MultiVoucherFilterDesc(voucherClauses)
+            : null;
+        bool mergedVoucherEmitted = false;
+
         foreach (var c in set.OrderedClauses)
         {
+            if (c is VoucherClause vc)
+            {
+                if (mergedVoucher != null)
+                {
+                    if (!mergedVoucherEmitted)
+                    {
+                        mergedVoucherEmitted = true;
+                        list.Add((mergedVoucher, vc, vc.Label));
+                    }
+                    // else: absorbed into merged filter, skip
+                }
+                else
+                {
+                    list.Add((new VoucherFilterDesc(vc), vc, vc.Label));
+                }
+                continue;
+            }
+
             if (
                 legendaryExpansion == LegendaryClauseExpansion.SplitLegendaryEdition
                 && TryExpandLegendaryEditionPipeline(c, out List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>? expanded)
@@ -331,6 +358,8 @@ public static class JamlSearchBuilder
                 new MotelySearchSettings<LegendarySoulEditionFilterDesc.LegendarySoulEditionFilter>(d),
 
             VoucherFilterDesc d => new MotelySearchSettings<VoucherFilterDesc.VoucherFilter>(d),
+
+            MultiVoucherFilterDesc d => new MotelySearchSettings<MultiVoucherFilterDesc.MultiVoucherFilter>(d),
 
             TarotCardFilterDesc d => new MotelySearchSettings<TarotCardFilterDesc.TarotCardFilter>(
 

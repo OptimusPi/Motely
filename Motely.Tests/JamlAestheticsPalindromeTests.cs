@@ -12,7 +12,7 @@ public class JamlAestheticsPalindromeTests
     public void EnumerateSeeds_EverySeed_Matches_And_Count_Agrees_With_GetSeedCount()
     {
         var aesthetic = JamlAesthetic.Palindrome;
-        int expected = JamlAesthetics.GetSeedCount(aesthetic);
+        long expected = JamlAesthetics.GetSeedCount(aesthetic);
         int n = 0;
 
         foreach (var seed in JamlAesthetics.EnumerateSeeds(aesthetic))
@@ -50,5 +50,23 @@ public class JamlAestheticsPalindromeTests
     {
         var provider = new MotelyPalindromeSeedProvider();
         Assert.Equal(JamlAesthetics.GetSeedCount(JamlAesthetic.Palindrome), provider.SeedCount);
+    }
+
+    [Theory]
+    [InlineData(JamlAesthetic.Gross, "1GROSS1", true)]
+    [InlineData(JamlAesthetic.Gross, "TACOCAT", false)]
+    [InlineData(JamlAesthetic.Nsfw, "1DICK11", true)]
+    [InlineData(JamlAesthetic.Funny, "1LMAO11", true)]
+    [InlineData(JamlAesthetic.Balatro, "1JOKER1", true)]
+    public void KeywordAesthetics_Match_Expected_Seeds(JamlAesthetic aesthetic, string seed, bool expected)
+    {
+        Assert.Equal(expected, JamlAesthetics.Matches(aesthetic, seed));
+    }
+
+    [Fact]
+    public void AestheticSeedProvider_Uses_Same_Count_As_JamlAesthetics()
+    {
+        var provider = new MotelyAestheticSeedProvider(JamlAesthetic.Gross);
+        Assert.Equal(JamlAesthetics.GetSeedCount(JamlAesthetic.Gross), provider.SeedCount);
     }
 }

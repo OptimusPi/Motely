@@ -13,24 +13,24 @@ internal static class JamlSchemaGenerator
     private static readonly string[] SuitValues = ["Hearts", "Diamonds", "Clubs", "Spades", "H", "D", "C", "S"];
     private static readonly string[] JokerWildcardValues = ["any", "anycommon", "anyuncommon", "anyrare", "anylegendary"];
     private static readonly string[] MetadataKeys = GetYamlAliases(
-        typeof(JamlDto),
-        nameof(JamlDto.Id),
-        nameof(JamlDto.Name),
-        nameof(JamlDto.Author),
-        nameof(JamlDto.DateCreated),
-        nameof(JamlDto.Description),
-        nameof(JamlDto.Deck),
-        nameof(JamlDto.Stake),
-        nameof(JamlDto.Seeds),
-        nameof(JamlDto.Aesthetics),
-        nameof(JamlDto.Hashtags)
+        typeof(JamlRootDocument),
+        nameof(JamlRootDocument.Id),
+        nameof(JamlRootDocument.Name),
+        nameof(JamlRootDocument.Author),
+        nameof(JamlRootDocument.DateCreated),
+        nameof(JamlRootDocument.Description),
+        nameof(JamlRootDocument.Deck),
+        nameof(JamlRootDocument.Stake),
+        nameof(JamlRootDocument.Seeds),
+        nameof(JamlRootDocument.Aesthetics),
+        nameof(JamlRootDocument.Hashtags)
     );
     private static readonly string[] SectionKeys = GetYamlAliases(
-        typeof(JamlDto),
-        nameof(JamlDto.Defaults),
-        nameof(JamlDto.Must),
-        nameof(JamlDto.Should),
-        nameof(JamlDto.MustNot)
+        typeof(JamlRootDocument),
+        nameof(JamlRootDocument.Defaults),
+        nameof(JamlRootDocument.Must),
+        nameof(JamlRootDocument.Should),
+        nameof(JamlRootDocument.MustNot)
     );
     private static readonly string[] ClauseTypeKeys = GetYamlAliases(
         typeof(JamlClauseDto),
@@ -286,6 +286,12 @@ internal static class JamlSchemaGenerator
             ["rank"] = EnumStringProperty(RankValues, "Required rank for playing-card-based clauses."),
             ["suit"] = EnumStringProperty(SuitValues, "Required suit for playing-card-based clauses."),
             ["rolls"] = IntegerArrayProperty(0, null, "Event occurrence indices to check."),
+            ["luckyMoney"] = IntegerArrayProperty(0, null, "LuckyMoney event: roll indices (direct key; same as event: LuckyMoney + rolls)."),
+            ["luckyMult"] = IntegerArrayProperty(0, null, "LuckyMult event: roll indices."),
+            ["misprintMult"] = IntegerArrayProperty(0, null, "MisprintMult event: roll indices."),
+            ["wheelOfFortune"] = IntegerArrayProperty(0, null, "Wheel of Fortune event: roll indices."),
+            ["cavendishExtinct"] = IntegerArrayProperty(0, null, "Cavendish extinct event: roll indices."),
+            ["grosMichelExtinct"] = IntegerArrayProperty(0, null, "Gros Michel extinct event: roll indices."),
             ["soulEditionRolls"] = IntegerProperty(
                 "Extra soul-stream edition reads per ante for the legendary edition vector prefilter (0 = use booster pack list length).",
                 0,

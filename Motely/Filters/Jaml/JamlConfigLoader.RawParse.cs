@@ -6,7 +6,7 @@ using YamlDotNet.Serialization;
 namespace Motely.Filters;
 
 /// <summary>
-/// Raw YAML document walk for the JAML root: no <see cref="JamlDto"/> / top-level YamlDotNet mapping.
+/// Raw YAML document walk for the JAML root: fills <see cref="JamlRootDocument"/> (no full-document YamlDotNet deserialize).
 /// Clause fragments are still materialized into <see cref="JamlClauseDto"/> for <see cref="JamlConfigLoader.CreateClauseFromDto"/>.
 /// </summary>
 public static partial class JamlConfigLoader
@@ -175,7 +175,7 @@ public static partial class JamlConfigLoader
 
     private static bool TryParseRootFromYaml(
         string normalizedJaml,
-        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out JamlRootLoadResult? result,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out JamlRootDocument? result,
         out string? error
     )
     {
@@ -225,7 +225,7 @@ public static partial class JamlConfigLoader
 
         try
         {
-            result = new JamlRootLoadResult
+            result = new JamlRootDocument
             {
                 Id = ParseOptionalScalar(root, "id"),
                 Name = ParseOptionalScalar(root, "name"),
@@ -250,23 +250,5 @@ public static partial class JamlConfigLoader
         }
 
         return true;
-    }
-
-    private sealed class JamlRootLoadResult
-    {
-        public string? Id { get; init; }
-        public string? Name { get; init; }
-        public string? Author { get; init; }
-        public string? DateCreated { get; init; }
-        public string? Description { get; init; }
-        public string? Deck { get; init; }
-        public string? Stake { get; init; }
-        public JamlDefaultsDto? Defaults { get; init; }
-        public List<JamlClauseDto>? Must { get; init; }
-        public List<JamlClauseDto>? Should { get; init; }
-        public List<JamlClauseDto>? MustNot { get; init; }
-        public List<string>? Aesthetics { get; init; }
-        public List<string>? Hashtags { get; init; }
-        public List<string>? Seeds { get; init; }
     }
 }

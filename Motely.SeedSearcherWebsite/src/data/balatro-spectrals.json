@@ -1,0 +1,30 @@
+{
+  "$schema": "Balatro spectral centers — pos is grid cell in Tarots.png (shared atlas, row 2+)",
+  "atlas": {
+    "id": "Tarot",
+    "publicPath": "/images/Tarots.png",
+    "cellPx": { "x": 71, "y": 95 },
+    "textureScale": 2
+  },
+  "count": 18,
+  "spectrals": [
+    { "key": "c_familiar", "name": "Familiar", "pos": { "x": 2, "y": 2 } },
+    { "key": "c_grim", "name": "Grim", "pos": { "x": 3, "y": 2 } },
+    { "key": "c_incantation", "name": "Incantation", "pos": { "x": 4, "y": 2 } },
+    { "key": "c_talisman", "name": "Talisman", "pos": { "x": 5, "y": 2 } },
+    { "key": "c_aura", "name": "Aura", "pos": { "x": 6, "y": 2 } },
+    { "key": "c_wraith", "name": "Wraith", "pos": { "x": 7, "y": 2 } },
+    { "key": "c_sigil", "name": "Sigil", "pos": { "x": 8, "y": 2 } },
+    { "key": "c_ouija", "name": "Ouija", "pos": { "x": 9, "y": 2 } },
+    { "key": "c_ectoplasm", "name": "Ectoplasm", "pos": { "x": 0, "y": 5 } },
+    { "key": "c_immolate", "name": "Immolate", "pos": { "x": 1, "y": 5 } },
+    { "key": "c_ankh", "name": "Ankh", "pos": { "x": 2, "y": 5 } },
+    { "key": "c_deja_vu", "name": "Deja Vu", "pos": { "x": 3, "y": 5 } },
+    { "key": "c_hex", "name": "Hex", "pos": { "x": 4, "y": 5 } },
+    { "key": "c_trance", "name": "Trance", "pos": { "x": 5, "y": 5 } },
+    { "key": "c_medium", "name": "Medium", "pos": { "x": 6, "y": 5 } },
+    { "key": "c_cryptid", "name": "Cryptid", "pos": { "x": 7, "y": 5 } },
+    { "key": "c_soul", "name": "The Soul", "pos": { "x": 8, "y": 5 } },
+    { "key": "c_black_hole", "name": "Black Hole", "pos": { "x": 9, "y": 5 } }
+  ]
+}
