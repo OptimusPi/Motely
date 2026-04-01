@@ -8,7 +8,7 @@ public struct MotelySingleVoucherStream(int ante, MotelySingleResampleStream res
     public MotelySingleResampleStream ResampleStream = resampleStream;
 }
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe partial struct MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelySingleVoucherStream CreateVoucherStream(int ante, bool isCached = false)
