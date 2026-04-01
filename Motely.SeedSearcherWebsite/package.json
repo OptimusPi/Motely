@@ -1,5 +1,0 @@
-{
-  "name": "motely-seed-searcher-website",
-  "private": true,
-  "description": "Static Motely WASM smoke-test. Build: bash build-website.sh (Vercel/Linux) or .\\Build-Website.ps1 (Windows). No Node."
-}

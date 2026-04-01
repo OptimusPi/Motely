@@ -571,10 +571,11 @@ partial class Program
         Console.WriteLine(
             $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds} matched"
         );
-        Console.WriteLine($"  Time:  {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
+        var elapsed = TimeSpan.FromMilliseconds(search.ElapsedMs);
+        Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
         double speed =
-            search.ElapsedTime.TotalSeconds > 0
-                ? search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds
+            elapsed.TotalSeconds > 0
+                ? search.TotalSeedsSearched / elapsed.TotalSeconds
                 : 0;
         Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
         if (search.IsSequentialBatchSearch)

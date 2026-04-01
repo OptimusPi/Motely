@@ -1,5 +1,0 @@
-.vercel
-.env*.local
-node_modules/
-motely-wasm/
-package-lock.json

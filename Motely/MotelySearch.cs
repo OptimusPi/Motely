@@ -297,8 +297,7 @@ public sealed class MotelyKeywordSeedProvider : IMotelySeedProvider
 
     public MotelyKeywordSeedProvider(IEnumerable<string> keywords, char[]? paddingChars = null)
     {
-        ulong count = MotelyGlobals.GetPaddedSeedCountForKeywords(keywords, paddingChars);
-        SeedCount = count > (ulong)long.MaxValue ? long.MaxValue : (long)count;
+        SeedCount = MotelyGlobals.GetPaddedSeedCountForKeywordsLong(keywords, paddingChars);
         _enumerator = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, paddingChars).GetEnumerator();
     }
 
@@ -720,20 +719,20 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
 public interface IMotelySearch : IDisposable
 {
-    public TimeSpan ElapsedTime { get; }
-    public long TotalSeedsSearched { get; }
-    public long MatchingSeeds { get; }
-    public long FilteredSeeds { get; }
-    public bool IsCompleted { get; }
-    public bool IsSequentialBatchSearch { get; }
-    public long BatchIndex { get; }
-    public long CompletedBatchCount { get; }
+    long ElapsedMs { get; }
+    long TotalSeedsSearched { get; }
+    long MatchingSeeds { get; }
+    long FilteredSeeds { get; }
+    bool IsCompleted { get; }
+    bool IsSequentialBatchSearch { get; }
+    long BatchIndex { get; }
+    long CompletedBatchCount { get; }
 
-    public IMotelySearch Start(CancellationToken cancellationToken = default);
-    public Task RunSearchAsync(CancellationToken cancellationToken = default);
-    public void AwaitCompletion();
-    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
-    public void Cancel();
+    IMotelySearch Start(CancellationToken cancellationToken = default);
+    Task RunSearchAsync(CancellationToken cancellationToken = default);
+    void AwaitCompletion();
+    Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
+    void Cancel();
 }
 
 internal unsafe interface IInternalMotelySearch : IMotelySearch
@@ -839,6 +838,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     }
     public long FilteredSeeds => 0; // TODO: rebuild score desc on JamlConfig
 
+    public long ElapsedMs => _elapsedTime.ElapsedMilliseconds;
     public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
 
     /// <summary>
@@ -860,7 +860,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     }
 
     private long _lastReportMS;
-    private long ReportIntervalMS = 100; // Report every 2 seconds
+    private long ReportIntervalMS = 2000; // Report every 2 seconds
 
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
