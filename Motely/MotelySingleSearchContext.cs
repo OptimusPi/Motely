@@ -34,7 +34,7 @@ public struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngStrea
     public readonly bool IsInvalid => InitialPrngStream.IsInvalid;
 }
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe partial struct MotelySingleSearchContext
 {
     public readonly int VectorLane;
 

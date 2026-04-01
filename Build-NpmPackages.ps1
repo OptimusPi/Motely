@@ -51,7 +51,7 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
 # Stamp MotelyVersion into package.json (template uses 0.0.0; avoid a separate Node step)
 $pkgJson = Join-Path $outDir "package.json"
 $raw = Get-Content -LiteralPath $pkgJson -Raw
-$updated = [regex]::Replace($raw, '"version"\s*:\s*"[^"]*"', "`"version`": `"$version`"", 1, [System.Text.RegularExpressions.RegexOptions]::None)
+$updated = [regex]::Replace($raw, '"version"\s*:\s*"[^"]*"', "`"version`": `"$version`"")
 if ($updated -eq $raw) { throw "Could not stamp version in $pkgJson" }
 Set-Content -LiteralPath $pkgJson -Value $updated -NoNewline
 Write-Host "Built -> $outDir (v$version)" -ForegroundColor Green

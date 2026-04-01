@@ -54,6 +54,17 @@ public static class MotelySeedKeywordSequences
 
     // All keywords must be ≤8 chars, using only 1-9A-Z (no zero).
 
+    /// <summary>
+    /// Baked padded-seed totals for JAML keyword aesthetics (<see cref="Motely.Filters.JamlAesthetics.GetSeedCount"/>).
+    /// Must match <see cref="MotelyGlobals.GetPaddedSeedCountForKeywordsLong"/> for the paired <c>*Keywords</c> array;
+    /// recompute with a one-off console if those tables change (see <c>Motely.Tests</c> guard test).
+    /// </summary>
+    public const long GrossKeywordAestheticSeedCount = 181_808_375L;
+
+    public const long NsfwKeywordAestheticSeedCount = 384_746_845L;
+    public const long FunnyKeywordAestheticSeedCount = 430_772_475L;
+    public const long BalatroKeywordAestheticSeedCount = 1_076_577_845L;
+
     public static readonly string[] GrossKeywords =
     [
         "FART",
