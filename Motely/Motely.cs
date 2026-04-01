@@ -130,6 +130,26 @@ public static partial class MotelyGlobals
     }
 
     /// <summary>
+    /// Keywords of length 2 or less expand across the full seed alphabet when <paramref name="validChars"/> is null,
+    /// producing an enormous search space. Callers must pass explicit padding characters (e.g. from <see cref="ParsePaddingChars"/>).
+    /// </summary>
+    private static void ThrowIfShortKeywordWithoutExplicitPadding(
+        string keyword,
+        char[]? validChars,
+        string paramName
+    )
+    {
+        if (validChars != null || string.IsNullOrEmpty(keyword) || keyword.Length > 2)
+            return;
+
+        throw new ArgumentException(
+            $"Keyword \"{keyword}\" has length {keyword.Length}; keywords of length 2 or less require explicit padding characters. "
+                + "Pass a non-null validChars array (e.g. from ParsePaddingChars).",
+            paramName
+        );
+    }
+
+    /// <summary>
     /// Generate seeds for multiple keywords, combining their padded variations lazily.
     /// Each keyword is padded independently up to <see cref="MaxSeedLength"/>.
     /// </summary>
@@ -138,11 +158,24 @@ public static partial class MotelyGlobals
         char[]? validChars = null
     )
     {
-        foreach (var keyword in keywords)
+        // Single-pass enumerators must be materialized so we validate all keywords before yielding.
+        IEnumerable<string> sequence =
+            keywords is IList<string> or ICollection<string> ? keywords : keywords.ToList();
+
+        foreach (var keyword in sequence)
         {
-            if (string.IsNullOrEmpty(keyword)) continue;
+            if (string.IsNullOrEmpty(keyword))
+                continue;
+            ThrowIfShortKeywordWithoutExplicitPadding(keyword, validChars, nameof(keywords));
+        }
+
+        foreach (var keyword in sequence)
+        {
+            if (string.IsNullOrEmpty(keyword))
+                continue;
             int padLen = MaxSeedLength - keyword.Length;
-            if (padLen < 0) continue; // keyword too long — skip silently
+            if (padLen < 0)
+                continue; // keyword too long — skip silently
             foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
                 yield return seed;
         }
@@ -159,12 +192,28 @@ public static partial class MotelyGlobals
         ulong total = 0;
         foreach (var keyword in keywords)
         {
-            if (string.IsNullOrEmpty(keyword)) continue;
+            if (string.IsNullOrEmpty(keyword))
+                continue;
+            ThrowIfShortKeywordWithoutExplicitPadding(keyword, validChars, nameof(keywords));
             int padLen = MaxSeedLength - keyword.Length;
-            if (padLen < 0) continue;
+            if (padLen < 0)
+                continue;
             total += GetPaddedSeedCount(keyword, padLen, validChars);
         }
+
         return total;
+    }
+
+    /// <summary>
+    /// Same as <see cref="GetPaddedSeedCountForKeywords"/> but returns a saturated <see cref="long"/> for provider APIs.
+    /// </summary>
+    public static long GetPaddedSeedCountForKeywordsLong(
+        IEnumerable<string> keywords,
+        char[]? validChars = null
+    )
+    {
+        ulong u = GetPaddedSeedCountForKeywords(keywords, validChars);
+        return u > (ulong)long.MaxValue ? long.MaxValue : (long)u;
     }
 
     /// <summary>

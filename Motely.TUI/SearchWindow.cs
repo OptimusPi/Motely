@@ -259,11 +259,9 @@ public class SearchWindow : Window
 
                     var searched = _search.TotalSeedsSearched;
                     var matches = _search.MatchingSeeds;
-                    var elapsed = _search.ElapsedTime;
-                    var speed =
-                        elapsed.TotalMilliseconds > 0
-                            ? searched / elapsed.TotalMilliseconds * 1000.0
-                            : 0;
+                    var elapsedMs = _search.ElapsedMs;
+                    var speed = elapsedMs > 0 ? searched / (double)elapsedMs * 1000.0 : 0;
+                    var elapsed = TimeSpan.FromMilliseconds(elapsedMs);
 
                     _progressLabel.Text =
                         $"{searched:N0} seeds | {matches} matches | {speed:N0} seeds/sec | {elapsed:hh\\:mm\\:ss}";
@@ -321,7 +319,7 @@ public class SearchWindow : Window
         {
             var searched = _search.TotalSeedsSearched;
             var matches = _search.MatchingSeeds;
-            var elapsed = _search.ElapsedTime;
+            var elapsed = TimeSpan.FromMilliseconds(_search.ElapsedMs);
             _progressLabel.Text =
                 $"Done: {searched:N0} seeds | {matches} matches | {elapsed:hh\\:mm\\:ss}";
         }

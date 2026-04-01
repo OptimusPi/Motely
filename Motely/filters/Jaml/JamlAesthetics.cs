@@ -13,10 +13,10 @@ public static class JamlAesthetics
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.SeedCount,
             JamlAesthetic.Psychosis => PsychosisAestheticSeeds.SeedCount,
-            JamlAesthetic.Gross => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.GrossKeywords)),
-            JamlAesthetic.Nsfw => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.NsfwKeywords)),
-            JamlAesthetic.Funny => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.FunnyKeywords)),
-            JamlAesthetic.Balatro => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.BalatroKeywords)),
+            JamlAesthetic.Gross => MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount,
+            JamlAesthetic.Nsfw => MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount,
+            JamlAesthetic.Funny => MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount,
+            JamlAesthetic.Balatro => MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount,
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -56,9 +56,6 @@ public static class JamlAesthetics
                 destination.Add(aesthetic);
         }
     }
-
-    private static long ClampSeedCount(ulong count) =>
-        count > (ulong)long.MaxValue ? long.MaxValue : (long)count;
 
     /// <summary>Order used by <see cref="CollectMatches"/>; extend when new enum members ship.</summary>
     private static ReadOnlySpan<JamlAesthetic> KnownAesthetics =>
