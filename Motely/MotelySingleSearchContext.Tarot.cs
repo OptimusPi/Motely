@@ -16,7 +16,7 @@ public struct MotelySingleTarotStream(
     public readonly bool IsSoulable => !SoulPrngStream.IsInvalid;
 }
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe partial struct MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySingleTarotStream CreateTarotStream(

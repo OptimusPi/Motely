@@ -1,6 +1,6 @@
 namespace Motely;
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe partial struct MotelySingleSearchContext
 {
     public void Shuffle(string seed, Span<MotelyItem> deck)
     {

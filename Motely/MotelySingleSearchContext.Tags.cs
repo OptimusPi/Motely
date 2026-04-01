@@ -8,7 +8,7 @@ public struct MotelySingleTagStream(MotelySingleResampleStream resampleStream, i
     public MotelySingleResampleStream ResampleStream = resampleStream;
 }
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe partial struct MotelySingleSearchContext
 {
     private static readonly MotelyTag[] DisallowedAnteOneTags =
     [

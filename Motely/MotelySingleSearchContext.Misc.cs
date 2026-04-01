@@ -1,6 +1,6 @@
 namespace Motely;
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe partial struct MotelySingleSearchContext
 {
     #region Misprint
 

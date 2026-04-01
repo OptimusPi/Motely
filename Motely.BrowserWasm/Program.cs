@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Motely.Analysis;
 using Motely.Filters;
 
-[assembly: JSExport(typeof(Motely.BrowserWasm.IMotelyProgram))]
+[assembly: JSExport(typeof(Motely.BrowserWasm.IMotelyProgram), typeof(Motely.IMotelySeedExplorer))]
 [assembly: JSImport([typeof(Motely.BrowserWasm.ISearchEvents)])]
 
 namespace Motely.BrowserWasm;
@@ -20,7 +20,7 @@ public interface ISearchEvents
 public interface IMotelyProgram
 {
     string GetVersion();
-    IMotelyAnalyzer CreateAnalyzer(string seed, MotelyDeck deck, MotelyStake stake);
+    IMotelySeedExplorer CreateSeedExplorer(string seed, MotelyDeck deck, MotelyStake stake);
     void StopSearch();
     void StartConfiguredSearch(JamlConfig jaml, int batchCharCount, long startBatch, long endBatch);
     void StartSequentialSearch(JamlConfig jaml, int batchCharCount, long startBatch, long endBatch);
@@ -37,8 +37,8 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
 
     public string GetVersion() => VersionInfo.Version;
 
-    public IMotelyAnalyzer CreateAnalyzer(string seed, MotelyDeck deck, MotelyStake stake) =>
-        new MotelyAnalyzer(new MotelySeedRouterDesc(seed, deck, stake));
+    public IMotelySeedExplorer CreateSeedExplorer(string seed, MotelyDeck deck, MotelyStake stake) =>
+        new MotelySeedExplorer(seed, deck, stake);
 
     public void StopSearch()
     {
