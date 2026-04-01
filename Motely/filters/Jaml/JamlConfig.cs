@@ -43,7 +43,7 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
     public List<AndClause> And { get; set; } = [];
     public List<OrClause> Or { get; set; } = [];
 
-    // Add Count property for compatibility
+    /// <summary>Number of clauses in <see cref="OrderedClauses"/> (evaluation order).</summary>
     public int Count => OrderedClauses.Count;
 
     public bool HasAnyClauses => OrderedClauses.Count > 0;
@@ -83,10 +83,10 @@ public sealed class JamlConfig
     public List<JamlAesthetic> Aesthetics { get; set; } = [];
 }
 
-// JamlDto: JSON-schema / TUI shape only — the loader walks YAML and never deserializes into this type.
-// Clause bag below is only for YamlDotNet fragment deserialization into CreateClauseFromDto. Schema: Motely.CLI --write-jaml-schema (JamlSchemaGenerator).
-
-public sealed class JamlDto
+/// <summary>
+/// Top-level JAML document: the loader fills this from YAML; <see cref="JamlSerializer"/> and the TUI emit the same shape. Keys are camelCase (JAML convention).
+/// </summary>
+public sealed class JamlRootDocument
 {
     [YamlMember(Alias = "id")]
     public string? Id { get; set; }
@@ -121,7 +121,6 @@ public sealed class JamlDto
     [YamlMember(Alias = "mustNot")]
     public List<JamlClauseDto>? MustNot { get; set; }
 
-    /// <summary>Seed-space preferences (e.g. <c>palindrome</c>). See JAML schema.</summary>
     [YamlMember(Alias = "aesthetics")]
     public List<string>? Aesthetics { get; set; }
 
@@ -250,22 +249,22 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "eventType")]
     public string? EventType { get; set; }
 
-    [YamlMember(Alias = "LuckyMoney")]
+    [YamlMember(Alias = "luckyMoney")]
     public int[]? LuckyMoney { get; set; }
 
-    [YamlMember(Alias = "LuckyMult")]
+    [YamlMember(Alias = "luckyMult")]
     public int[]? LuckyMult { get; set; }
 
-    [YamlMember(Alias = "MisprintMult")]
+    [YamlMember(Alias = "misprintMult")]
     public int[]? MisprintMult { get; set; }
 
-    [YamlMember(Alias = "WheelOfFortune")]
+    [YamlMember(Alias = "wheelOfFortune")]
     public int[]? WheelOfFortune { get; set; }
 
-    [YamlMember(Alias = "CavendishExtinct")]
+    [YamlMember(Alias = "cavendishExtinct")]
     public int[]? CavendishExtinct { get; set; }
 
-    [YamlMember(Alias = "GrosMichelExtinct")]
+    [YamlMember(Alias = "grosMichelExtinct")]
     public int[]? GrosMichelExtinct { get; set; }
 
     // Common clause properties
@@ -685,7 +684,7 @@ public static partial class JamlConfigLoader
     private static string DescribeYamlTarget(string targetType) =>
         targetType switch
         {
-            "Motely.Filters.JamlDto" => "the top-level JAML document",
+            "Motely.Filters.JamlRootDocument" => "the top-level JAML document",
             "Motely.Filters.JamlClauseDto" => "a clause",
             "Motely.Filters.JamlSourcesDto" => "a clause's sources block",
             "Motely.Filters.JamlDefaultsDto" => "the defaults block",

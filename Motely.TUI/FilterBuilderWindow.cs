@@ -598,7 +598,7 @@ public class FilterBuilderWindow : Window
 
             try
             {
-                var config = new JamlDto
+                var config = new JamlRootDocument
                 {
                     Name = name,
                     Description = "Created with Filter Builder TUI",
@@ -673,7 +673,7 @@ public class FilterBuilderWindow : Window
             return;
         }
 
-        var config = new JamlDto
+        var config = new JamlRootDocument
         {
             Name = "TUI_QuickFilter",
             Description = "Quick filter from TUI",

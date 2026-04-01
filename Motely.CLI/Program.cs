@@ -5,6 +5,7 @@ using Motely;
 using Motely.Analysis;
 using Motely.DB.SeedSource;
 using Motely.Filters;
+using Motely.Filters.Native;
 
 
 partial class Program
@@ -112,10 +113,10 @@ partial class Program
             "Random seed count",
             CommandOptionType.SingleValue
         );
-        var palindromeOption = app.Option(
-            "--palindrome",
-            "Palindrome seeds",
-            CommandOptionType.NoValue
+        var aestheticOption = app.Option<string>(
+            "--aesthetic <NAME>",
+            $"Search seeds from an aesthetic provider ({JamlAestheticParser.KnownJamlStringsDescription()})",
+            CommandOptionType.SingleValue
         );
         var sourceOption = app.Option<string>(
             "--source <NAME_OR_PATH>",
@@ -157,6 +158,11 @@ partial class Program
             "Generate and sync the JAML JSON schema files from the current code model",
             CommandOptionType.NoValue
         );
+        var nativeOption = app.Option<string>(
+            "--native <NAME>",
+            "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...)",
+            CommandOptionType.SingleValue
+        );
 
         threadsOption.DefaultValue = Environment.ProcessorCount;
         batchCharCountOption.DefaultValue = 4;
@@ -192,10 +198,50 @@ partial class Program
                 return ExecuteAnalyzeBatch(seedTokens, analyzeDeck, analyzeStake, outputJsonOption.HasValue());
             }
 
+            // --native mode — run a hardcoded C# filter by name
+            if (nativeOption.HasValue())
+            {
+                var nDeck = deckOption.HasValue() ? Enum.Parse<MotelyDeck>(deckOption.ParsedValue, true) : MotelyDeck.Red;
+                var nStake = stakeOption.HasValue() ? Enum.Parse<MotelyStake>(stakeOption.ParsedValue, true) : MotelyStake.White;
+                int nThreads = threadsOption.HasValue() ? threadsOption.ParsedValue : Environment.ProcessorCount;
+                int nBatch = batchCharCountOption.ParsedValue;
+
+                var nSettings = ResolveNativeFilter(nativeOption.ParsedValue);
+                if (nSettings == null)
+                {
+                    Console.Error.WriteLine($"Error: unknown native filter '{nativeOption.ParsedValue}'. Known: {string.Join(", ", NativeFilterNames())}");
+                    return 1;
+                }
+
+                nSettings.WithDeck(nDeck).WithStake(nStake).WithThreadCount(nThreads).WithBatchCharacterCount(nBatch);
+                nSettings.WithSequentialSearch();
+                if (startBatchOption.HasValue()) nSettings.WithStartBatchIndex(startBatchOption.ParsedValue);
+                if (endBatchOption.HasValue()) nSettings.WithEndBatchIndex(endBatchOption.ParsedValue);
+
+                nSettings.WithProgressCallback(p =>
+                {
+                    double perSec = p.SeedsPerMillisecond * 1000.0;
+                    string speed = perSec >= 1_000_000 ? $"{perSec / 1_000_000:F2} M/s" : perSec >= 1_000 ? $"{perSec / 1_000:F1}K/s" : $"{perSec:F0}/s";
+                    string eta = p.EstimatedTimeRemaining is { TotalSeconds: > 0 } rem ? $" | ETA {(rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss"))}" : "";
+                    Console.Error.WriteLine($"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta}");
+                });
+
+                nSettings.WithSeedMatchCallback(seed =>
+                {
+                    Console.WriteLine(seed);
+                });
+
+                Console.Error.WriteLine($"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} batchCharCount={nBatch}");
+                using var nSearch = nSettings.Start(_cts.Token);
+                await nSearch.WaitForCompletionAsync(_cts.Token);
+                PrintSummary(nSearch, nBatch, _cts.Token.IsCancellationRequested);
+                return _cts.Token.IsCancellationRequested ? 1 : 0;
+            }
+
             // --jaml mode
             if (!jamlOption.HasValue())
             {
-                Console.Error.WriteLine("Error: --jaml <path> required.");
+                Console.Error.WriteLine("Error: --jaml <path> or --native <name> required.");
                 return 1;
             }
 
@@ -243,6 +289,18 @@ partial class Program
 
             bool hasSeedListMode = sourceOption.HasValue() || seedsOption.HasValue();
             bool hasKeywordMode = keywordOption.HasValue() || keywordsOption.HasValue();
+            JamlAesthetic? explicitAesthetic = null;
+            if (aestheticOption.HasValue())
+            {
+                if (!JamlAestheticParser.TryParse(aestheticOption.ParsedValue, out var aesthetic))
+                {
+                    Console.Error.WriteLine(
+                        $"Error: unknown --aesthetic value '{aestheticOption.ParsedValue.Trim()}'. Known: {JamlAestheticParser.KnownJamlStringsDescription()}."
+                    );
+                    return 1;
+                }
+                explicitAesthetic = aesthetic;
+            }
 
             if (sourceOption.HasValue() && seedsOption.HasValue())
             {
@@ -256,16 +314,19 @@ partial class Program
             if (hasSeedListMode) explicitSearchModeCount++;
             if (hasKeywordMode) explicitSearchModeCount++;
             if (randomOption.HasValue()) explicitSearchModeCount++;
-            if (palindromeOption.HasValue()) explicitSearchModeCount++;
+            if (explicitAesthetic.HasValue) explicitSearchModeCount++;
 
             if (explicitSearchModeCount > 1)
             {
                 Console.Error.WriteLine(
-                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, or --palindrome."
+                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, or --aesthetic."
                 );
                 return 1;
             }
 
+
+            // TODO fucking stream it with DUCKDB <.>
+            // This is why i HAD MOTELY.ORCHESTRATION!!!!! GRRRR UGH 
             string[]? explicitSeeds = null;
             if (sourceOption.HasValue())
             {
@@ -328,12 +389,14 @@ partial class Program
 
             var keywordInputs = new List<string>();
             if (keywordOption.HasValue())
-                keywordInputs.Add(keywordOption.ParsedValue);
+                keywordInputs.Add(keywordOption.ParsedValue.Trim().ToUpperInvariant());
 
             if (keywordsOption.HasValue())
             {
                 keywordInputs.AddRange(
-                    keywordsOption.ParsedValue.Split(',', StringSplitOptions.TrimEntries)
+                    keywordsOption.ParsedValue
+                        .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                        .Select(static k => k.Trim().ToUpperInvariant())
                 );
             }
 
@@ -351,7 +414,11 @@ partial class Program
             else if (keywordInputs.Count > 0)
             {
                 char[]? paddingChars = paddingOption.HasValue()
-                    ? paddingOption.ParsedValue.ToCharArray()
+                    ? paddingOption.ParsedValue
+                        .ToUpperInvariant()
+                        .Where(static c => MotelyGlobals.SeedDigits.Contains(c))
+                        .Distinct()
+                        .ToArray()
                     : null;
                 var prov = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
                 settings = settings.WithProviderSearch(
@@ -365,9 +432,19 @@ partial class Program
             {
                 settings = settings.WithRandomSearch(randomOption.ParsedValue);
             }
-            else if (palindromeOption.HasValue())
+            else if (explicitAesthetic.HasValue)
             {
-                settings = settings.WithPalindromeSearch();
+                settings = settings.WithAestheticSearch(explicitAesthetic.Value);
+            }
+            else if (config.Aesthetics.Count > 0)
+            {
+                settings = settings.WithAestheticSearch(config.Aesthetics[0]);
+                if (config.Aesthetics.Count > 1)
+                {
+                    Console.Error.WriteLine(
+                        $"Warning: JAML has {config.Aesthetics.Count} aesthetics; using first only."
+                    );
+                }
             }
             else
             {
@@ -455,8 +532,7 @@ partial class Program
             if (sink != null)
                 Console.Error.WriteLine($"Sink: {sink.OutputPath}");
 
-            using var search = settings.CreateSearch();
-            search.Start(_cts.Token);
+            using var search = settings.Start(_cts.Token);
             await search.WaitForCompletionAsync(_cts.Token);
 
 
@@ -662,4 +738,33 @@ partial class Program
         }
         return 0;
     }
+
+    // ── Native filter registry ──
+
+    static IMotelySearchSettings? ResolveNativeFilter(string name)
+    {
+        return name.Trim().ToLowerInvariant() switch
+        {
+            "perkeoobservatory" => new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc()),
+            "observatory" => new MotelySearchSettings<ObservatoryDesc.ObservatoryFilter>(new ObservatoryDesc()),
+            "trickeoglyph" => new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(new TrickeoglyphFilterDesc()),
+            "naturalnegatives" => new MotelySearchSettings<NaturalNegativesFilterDesc.NaturalNegativesFilter>(new NaturalNegativesFilterDesc()),
+            "negativeperkeo" => new MotelySearchSettings<NegativePerkeoFilterDescOld.FilterStruct>(new NegativePerkeoFilterDescOld()),
+            "negativecopy" => new MotelySearchSettings<NegativeCopyFilterDesc.NegativeCopyFilter>(new NegativeCopyFilterDesc()),
+            "shufflefinder" => new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc()),
+            "erraticfinder" => new MotelySearchSettings<ErraticFinderDesc.FilterStruct>(new ErraticFinderDesc()),
+            "filledsoul" => new MotelySearchSettings<FilledSoulFilterDesc.FilterStruct>(new FilledSoulFilterDesc()),
+            "luckycard" => new MotelySearchSettings<LuckCardFilterDesc.LuckyCardFilter>(new LuckCardFilterDesc()),
+            "nanseed" => new MotelySearchSettings<NaNSeedFilterDesc.NaNSeedFilter>(new NaNSeedFilterDesc()),
+            "negativetag" => new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc()),
+            _ => null,
+        };
+    }
+
+    static string[] NativeFilterNames() =>
+    [
+        "PerkeoObservatory", "Observatory", "Trickeoglyph", "NaturalNegatives",
+        "NegativePerkeo", "NegativeCopy", "ShuffleFinder", "ErraticFinder",
+        "FilledSoul", "LuckyCard", "NanSeed", "NegativeTag",
+    ];
 }

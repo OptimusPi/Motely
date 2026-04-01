@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f5a623'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='16' fill='%231a1a2e' font-family='monospace'%3EM%3C/text%3E%3C/svg%3E" />
   <title>Motely WASM QA (COEP/SAB)</title>
   <style>
     body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 16px; }
@@ -40,12 +41,43 @@
     <label>JAML</label>
     <textarea id="jaml" placeholder="Paste JAML here..."></textarea>
     <div id="err"></div>
+    <label>Search mode</label>
+    <select id="search-mode">
+      <option value="configured" selected>Configured (JAML aesthetics if present)</option>
+      <option value="sequential">Sequential (full space; JAML must not list aesthetics)</option>
+      <option value="random">Random seeds</option>
+      <option value="aesthetic">Aesthetic stream</option>
+      <option value="keyword">Keyword padding stream</option>
+      <option value="seedlist">Explicit seed list (CSV)</option>
+    </select>
     <div class="row" style="margin-top:8px">
       <div><label>Threads</label><input id="thread-count" type="number" min="1" max="32" value="4" style="width:90px" /></div>
-      <div><label>Palindrome</label><input id="pal-only" type="checkbox" checked style="width:auto" /></div>
+      <div><label>Batch chars</label><input id="batch-chars" type="number" min="1" max="7" value="4" style="width:90px" title="Sequential batch width (CLI default 4)" /></div>
+      <div id="wrap-random" style="display:none"><label>Random N</label><input id="random-count" type="number" min="1" value="500" style="width:90px" /></div>
+      <div id="wrap-aesthetic" style="display:none"><label>Aesthetic</label>
+        <select id="aesthetic-pick">
+          <option value="0">palindrome</option>
+          <option value="1">psychosis</option>
+          <option value="2">gross</option>
+          <option value="3">nsfw</option>
+          <option value="4">pretty</option>
+          <option value="5">funny</option>
+          <option value="6">balatro</option>
+        </select>
+      </div>
       <button id="btn-validate">Validate</button>
       <button id="btn-find-best">Start Search</button>
       <button id="btn-stop" style="background:#c0392b">Stop</button>
+    </div>
+    <div id="wrap-keyword" style="display:none;margin-top:8px">
+      <label>Keywords (comma-separated, e.g. OW,BOOB)</label>
+      <input id="keywords-input" placeholder="OW,OH" />
+      <label>Padding chars (optional; empty = all seed chars)</label>
+      <input id="padding-input" placeholder="" />
+    </div>
+    <div id="wrap-seedlist" style="display:none;margin-top:8px">
+      <label>Seeds (comma-separated)</label>
+      <input id="seeds-csv" placeholder="ABCD1234,EFGH5678" />
     </div>
     <div id="status">Idle</div>
     <pre id="search-out" style="margin-top:10px;background:#111;border-radius:4px;padding:10px;min-height:80px;">No search run yet.</pre>
@@ -71,6 +103,16 @@
     </div>
     <pre id="analysis-out">Analysis will appear here...</pre>
   </div>
-  <script type="module" src="/src/mt.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "motely-wasm-mt": "../motely-wasm-mt/index.mjs",
+        "fs/promises": "../shims/fs-promises.mjs",
+        "fs": "../shims/empty-fs.mjs",
+        "url": "../shims/node-url.mjs"
+      }
+    }
+  </script>
+  <script type="module" src="../src/mt.js"></script>
 </body>
 </html>

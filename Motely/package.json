@@ -1,7 +1,7 @@
 {
   "name": "motely-wasm",
-  "version": "5.7.4",
-  "description": "MotelyJAML — Balatro seed search engine. NativeAOT-LLVM compiled to browser WASM via Bootsharp.",
+  "version": "0.0.0",
+  "description": "MotelyJAML — Balatro seed search engine (browser WASM). Bootsharp emits index.mjs + WASM + types from dotnet publish; this file is npm metadata only. Import: import dotnet, { Motely } from \"motely-wasm\" — Motely is the C# API surface (enums, MotelyProgram, SearchEvents).",
   "type": "module",
   "main": "./index.mjs",
   "types": "./types/index.d.ts",
@@ -31,7 +31,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
-    "directory": "motely"
+    "directory": "Motely"
   },
   "license": "MIT",
   "scripts": {

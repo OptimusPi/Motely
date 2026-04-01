@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm-mt",
-  "version": "5.7.4",
+  "version": "0.0.0",
   "description": "MotelyJAML — Balatro seed search engine (pthread WASM). Requires COOP/COEP + crossOriginIsolated for browser threading.",
   "type": "module",
   "main": "./index.mjs",

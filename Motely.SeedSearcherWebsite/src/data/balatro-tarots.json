@@ -1,0 +1,34 @@
+{
+  "$schema": "Balatro tarot centers — pos is grid cell in Tarots.png (71×95 px per cell @1x)",
+  "atlas": {
+    "id": "Tarot",
+    "publicPath": "/images/Tarots.png",
+    "cellPx": { "x": 71, "y": 95 },
+    "textureScale": 2
+  },
+  "count": 22,
+  "tarots": [
+    { "key": "c_fool", "name": "The Fool", "pos": { "x": 0, "y": 0 } },
+    { "key": "c_magician", "name": "The Magician", "pos": { "x": 1, "y": 0 } },
+    { "key": "c_high_priestess", "name": "The High Priestess", "pos": { "x": 2, "y": 0 } },
+    { "key": "c_empress", "name": "The Empress", "pos": { "x": 3, "y": 0 } },
+    { "key": "c_emperor", "name": "The Emperor", "pos": { "x": 4, "y": 0 } },
+    { "key": "c_hierophant", "name": "The Hierophant", "pos": { "x": 5, "y": 0 } },
+    { "key": "c_lovers", "name": "The Lovers", "pos": { "x": 6, "y": 0 } },
+    { "key": "c_chariot", "name": "The Chariot", "pos": { "x": 7, "y": 0 } },
+    { "key": "c_justice", "name": "Justice", "pos": { "x": 8, "y": 0 } },
+    { "key": "c_hermit", "name": "The Hermit", "pos": { "x": 9, "y": 0 } },
+    { "key": "c_wheel_of_fortune", "name": "The Wheel of Fortune", "pos": { "x": 0, "y": 1 } },
+    { "key": "c_strength", "name": "Strength", "pos": { "x": 1, "y": 1 } },
+    { "key": "c_hanged_man", "name": "The Hanged Man", "pos": { "x": 2, "y": 1 } },
+    { "key": "c_death", "name": "Death", "pos": { "x": 3, "y": 1 } },
+    { "key": "c_temperance", "name": "Temperance", "pos": { "x": 4, "y": 1 } },
+    { "key": "c_devil", "name": "The Devil", "pos": { "x": 5, "y": 1 } },
+    { "key": "c_tower", "name": "The Tower", "pos": { "x": 6, "y": 1 } },
+    { "key": "c_star", "name": "The Star", "pos": { "x": 7, "y": 1 } },
+    { "key": "c_moon", "name": "The Moon", "pos": { "x": 8, "y": 1 } },
+    { "key": "c_sun", "name": "The Sun", "pos": { "x": 9, "y": 1 } },
+    { "key": "c_judgement", "name": "Judgement", "pos": { "x": 0, "y": 2 } },
+    { "key": "c_world", "name": "The World", "pos": { "x": 1, "y": 2 } }
+  ]
+}

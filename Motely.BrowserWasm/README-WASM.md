@@ -1,41 +1,65 @@
-# Motely browser WASM npm packages
+# Motely browser WASM (`motely-wasm` / `motely-wasm-mt`)
 
-## Default: `motely-wasm` (single-thread)
+## What Bootsharp actually does
 
-From repo root (`src/MotelyJAML`):
+**`dotnet publish Motely.BrowserWasm`** is the **entire** build. [Bootsharp](https://github.com/korif/Bootsharp) emits the **complete** npm package: `index.mjs`, WASM, TypeScript typings, and the JS interop glue. You are **not** hand-assembling an npm package.
 
-```bash
-dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
+After publish, the output folder (`Motely.BrowserWasm/motely-wasm/` or `motely-wasm-mt/`) is a **real** package you can `npm pack`, depend on with `"file:…"`, or publish to the registry.
+
+The only extra step in this repo is **MSBuild**: it copies `Motely/package.json` (and `jaml.schema.json`) **on top of** Bootsharp’s output so `name`, `description`, `exports`, etc. match what you want on npm. **Version** comes from `$(MotelyVersion)` in `Directory.Packages.props` via the project `Version` property — not from editing `package.json` by hand for every release.
+
+### JavaScript: default export = boot API, **`Motely` = named export**
+
+Bootsharp’s `index.mjs` ends with something like `export { Event, Motely, … as default }`. Use it like this:
+
+```js
+import dotnet, { Motely } from "motely-wasm";
+
+await dotnet.boot(); // or dotnet.boot({ root: "/path/to/motely-wasm-mt/bin" } for threaded)
+
+const Program = Motely.BrowserWasm.MotelyProgram;
+const ver = Program.getVersion();
 ```
 
-Output: `Motely.BrowserWasm/motely-wasm/` (Bootsharp ES module + wasm + types). NPM metadata is overlaid from `Motely/package.json`.
+Types are under `motely-wasm/types/`; `Motely` holds enums (`MotelyDeck`, `MotelyStake`) and namespaces (`Motely.BrowserWasm.MotelyProgram`, `Motely.BrowserWasm.SearchEvents`).
 
-Verify tarball:
+---
 
-```bash
+## Commands (from repo root `MotelyJAML`)
+
+### Single-thread package (default)
+
+```powershell
+dotnet publish Motely.BrowserWasm -c Release
+```
+
+Output: **`Motely.BrowserWasm/motely-wasm/`**
+
+### Multi-thread (pthread) package
+
+Some LLVM/SDK combos fail to link threaded WASM — only ship after a **successful** local publish.
+
+```powershell
+dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release /p:MotelyWasmThreads=true
+```
+
+Output: **`Motely.BrowserWasm/motely-wasm-mt/`** (includes `bin/` with `*.wasm` for the threaded loader).
+
+Threaded WASM in the browser needs **cross-origin isolation** (`COOP: same-origin`, `COEP: require-corp` or similar). The default single-thread package does **not** require these.
+
+### Optional: `npm pack` / `npm publish`
+
+Tarball verification or registry publish still use the **npm CLI** (requires Node on that machine, or run in CI):
+
+```powershell
 cd Motely.BrowserWasm/motely-wasm
 npm pack --dry-run
 ```
 
-## Optional: `motely-wasm-mt` (pthread / multi-thread WASM)
+From repo root, **`./Build-NpmPackages.ps1`** stamps version from `Directory.Packages.props` and runs `npm pack` / `npm publish`.
 
-**Status:** On some toolchains (e.g. current LLVM NativeAOT browser-wasm packages), linking fails with `wasm-ld: --shared-memory is disallowed ... 'atomics' or 'bulk-memory'` when `WasmEnableThreads` is true. The MSBuild switch is still supported for when a future SDK/runtime fixes this.
-
-Some LLVM / SDK combinations fail to link threaded wasm; only ship `motely-wasm-mt` after a successful local publish.
-
-```bash
-dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release /p:MotelyWasmThreads=true
-```
-
-Output: `Motely.BrowserWasm/motely-wasm-mt/` with `package.json` name `motely-wasm-mt`.
-
-**Browser hosting:** threaded WASM typically needs **cross-origin isolation**:
-
-- `Cross-Origin-Opener-Policy: same-origin`
-- `Cross-Origin-Embedder-Policy: require-corp` (or `credentialless` with compatible CORP on subresources)
-
-Then `crossOriginIsolated === true` and SharedArrayBuffer-based threading can work. The default `motely-wasm` package does not require these headers.
+---
 
 ## SeedSearcherWebsite
 
-After publish, copy the folder into the static site (or `npm install` from `file:` / registry). See `Motely.SeedSearcherWebsite/scripts/copy-motely-wasm.mjs`.
+Static QA: **`build-website.sh`** / **`Build-Website.ps1`** copy `motely-wasm/`, `motely-wasm-mt/`, and the HTML/JS harness into `dist/` (no bundler). Deploy `dist/` with Vercel or any host that serves `*.wasm` with the right `Content-Type` and COOP/COEP where needed.

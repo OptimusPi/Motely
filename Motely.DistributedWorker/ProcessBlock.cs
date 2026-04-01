@@ -109,8 +109,7 @@ public static class ProcessBlockRunner
         else
             settings = settings.WithSeedMatchCallback(seed => seeds.Add(seed));
 
-        using var search = settings.CreateSearch();
-        search.Start(cancellationToken);
+        using var search = settings.Start(cancellationToken);
         await search.WaitForCompletionAsync(cancellationToken).ConfigureAwait(false);
 
         return new BlockSearchResult(

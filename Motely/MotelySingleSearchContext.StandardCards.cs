@@ -25,7 +25,7 @@ public enum MotelyStandardCardStreamFlags
     Default = 0,
 }
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public partial struct MotelySingleSearchContext
 {
     public MotelySingleStandardCardStream CreateStandardPackCardStream(
         int ante,

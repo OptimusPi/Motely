@@ -8,11 +8,15 @@ namespace Motely.Filters;
 public static class JamlAesthetics
 {
     /// <summary>Returns how many seeds <paramref name="aesthetic"/> enumerates (Motely search space).</summary>
-    public static int GetSeedCount(JamlAesthetic aesthetic) =>
+    public static long GetSeedCount(JamlAesthetic aesthetic) =>
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.SeedCount,
             JamlAesthetic.Psychosis => PsychosisAestheticSeeds.SeedCount,
+            JamlAesthetic.Gross => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.GrossKeywords)),
+            JamlAesthetic.Nsfw => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.NsfwKeywords)),
+            JamlAesthetic.Funny => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.FunnyKeywords)),
+            JamlAesthetic.Balatro => ClampSeedCount(MotelyGlobals.GetPaddedSeedCountForKeywords(MotelySeedKeywordSequences.BalatroKeywords)),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -22,6 +26,10 @@ public static class JamlAesthetics
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Enumerate(),
             JamlAesthetic.Psychosis => PsychosisAestheticSeeds.Enumerate(),
+            JamlAesthetic.Gross => KeywordAestheticSeeds.Enumerate(MotelySeedKeywordSequences.GrossKeywords),
+            JamlAesthetic.Nsfw => KeywordAestheticSeeds.Enumerate(MotelySeedKeywordSequences.NsfwKeywords),
+            JamlAesthetic.Funny => KeywordAestheticSeeds.Enumerate(MotelySeedKeywordSequences.FunnyKeywords),
+            JamlAesthetic.Balatro => KeywordAestheticSeeds.Enumerate(MotelySeedKeywordSequences.BalatroKeywords),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -31,6 +39,10 @@ public static class JamlAesthetics
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Matches(seed),
             JamlAesthetic.Psychosis => PsychosisAestheticSeeds.Matches(seed),
+            JamlAesthetic.Gross => KeywordAestheticSeeds.Matches(seed, MotelySeedKeywordSequences.GrossKeywords),
+            JamlAesthetic.Nsfw => KeywordAestheticSeeds.Matches(seed, MotelySeedKeywordSequences.NsfwKeywords),
+            JamlAesthetic.Funny => KeywordAestheticSeeds.Matches(seed, MotelySeedKeywordSequences.FunnyKeywords),
+            JamlAesthetic.Balatro => KeywordAestheticSeeds.Matches(seed, MotelySeedKeywordSequences.BalatroKeywords),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -45,8 +57,50 @@ public static class JamlAesthetics
         }
     }
 
+    private static long ClampSeedCount(ulong count) =>
+        count > (ulong)long.MaxValue ? long.MaxValue : (long)count;
+
     /// <summary>Order used by <see cref="CollectMatches"/>; extend when new enum members ship.</summary>
-    private static ReadOnlySpan<JamlAesthetic> KnownAesthetics => [JamlAesthetic.Palindrome, JamlAesthetic.Psychosis];
+    private static ReadOnlySpan<JamlAesthetic> KnownAesthetics =>
+    [
+        JamlAesthetic.Palindrome,
+        JamlAesthetic.Psychosis,
+        JamlAesthetic.Gross,
+        JamlAesthetic.Nsfw,
+        JamlAesthetic.Funny,
+        JamlAesthetic.Balatro,
+    ];
+}
+
+/// <summary>Keyword-based aesthetic seeds: padded keyword sequences via <see cref="MotelyGlobals.GeneratePaddedSeedsForKeywords"/>.</summary>
+file static class KeywordAestheticSeeds
+{
+    public static IEnumerable<string> Enumerate(IEnumerable<string> keywords)
+    {
+        return MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, null);
+    }
+
+    public static bool Matches(ReadOnlySpan<char> seed, IEnumerable<string> keywords)
+    {
+        if (seed.Length is < 1 or > MotelyGlobals.MaxSeedLength)
+            return false;
+
+        ReadOnlySpan<char> alphabet = MotelyGlobals.SeedDigits;
+        for (int i = 0; i < seed.Length; i++)
+        {
+            if (!alphabet.Contains(seed[i]))
+                return false;
+        }
+
+        string seedStr = new string(seed);
+        foreach (var keyword in keywords)
+        {
+            if (seedStr.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
 }
 
 /// <summary>Palindrome seeds: mirror-generated halves over <see cref="MotelyGlobals.SeedDigits"/>, lengths 1..<see cref="MotelyGlobals.MaxSeedLength"/>.</summary>

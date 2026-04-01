@@ -8,7 +8,7 @@ This repository is the **MotelyJAML** fork (from [tacodiva/Motely](https://githu
 
 - **Motely** – Core library: JAML/JSON parsing, filter execution, seed analysis, SIMD vectorization
 - **Motely.Orchestration** – Search orchestration, native filter executor, batch search
-- **motely-wasm** – npm package (Bootsharp): JS loader + Vite/Next.js plugins for in-browser search
+- **motely-wasm** – Bootsharp-built npm package (`dotnet publish Motely.BrowserWasm`): **`import dotnet, { Motely } from "motely-wasm"`** after `dotnet.boot()`
 - **Motely.CLI** – Command-line interface (JAML/JSON filters, seed analysis)
 - **Motely.API** – Optional HTTP API and static UIs
 - **Motely.TUI** – Terminal UI (optional)
@@ -63,9 +63,18 @@ BSO’s Avalonia app then uses Motely for:
 
 ## Browser / WASM
 
-- **motely-wasm** – Bootsharp-powered npm package consumed by React/Next.js/Vite (or any JS app) for in-browser search.
+- **motely-wasm** – Bootsharp-powered npm package consumed from any JS app (import maps, or a bundler) for in-browser search.
 
-See [motely-wasm/README.md](./motely-wasm/README.md) for installation and Vite/Next.js setup.
+After C# code changes, rebuild WASM and the static QA site (**no Node** — copy-only script):
+
+```powershell
+dotnet publish Motely.BrowserWasm -c Release
+dotnet publish Motely.BrowserWasm -c Release /p:MotelyWasmThreads=true   # needed for /coep (threaded)
+cd Motely.SeedSearcherWebsite; .\Build-Website.ps1
+# Deploy dist/ with Vercel CLI or `vercel deploy` from that folder
+```
+
+See [Motely.BrowserWasm/README-WASM.md](./Motely.BrowserWasm/README-WASM.md) for full details and multi-thread builds.
 
 ## License
 
