@@ -515,8 +515,6 @@ public static partial class JamlConfigLoader
                 Stake = stake,
             };
 
-            config.Id = NormalizeFilterId(load.Id, load.Name);
-            config.FilterId = config.Id;
             config.Hashtags = NormalizeHashtags(load.Hashtags);
 
             if (load.Aesthetics is { Count: > 0 })
@@ -545,6 +543,11 @@ public static partial class JamlConfigLoader
 
             // MUSTNOT → negation filters
             PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
+
+            // Semantic fingerprint must run after clauses are populated (not on an empty config).
+            var baseFilterId = NormalizeFilterId(load.Id, load.Name);
+            config.Id = AppendSemanticFingerprintToFilterId(baseFilterId, config, load.Defaults);
+            config.FilterId = config.Id;
 
             // Set once — config is immutable after load
             config.HasAnyClauses = config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
