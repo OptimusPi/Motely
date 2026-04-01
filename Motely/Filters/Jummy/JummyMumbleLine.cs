@@ -6,7 +6,8 @@ using YamlDotNet.RepresentationModel;
 namespace Motely.Filters;
 
 /// <summary>
-/// JUMMY ≈ Jimbo Understands My Mumbling… Yeah?? One-line phrases: item text (see <see cref="FormatUtils.TryParseMotelyItem"/>)
+/// JUMMY ≈ Jimbo Understands My Mumbling… Yeah??
+/// One-line phrases: item text (see <see cref="FormatUtils.TryParseMotelyItem"/>)
 /// plus <c> in Ante N</c> (only that ante; ante 1 uses four booster slots, later antes use six) or
 /// <c> by Ante N</c> (check antes 1…N cumulatively).
 /// </summary>
