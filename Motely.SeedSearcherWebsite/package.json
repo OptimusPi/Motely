@@ -1,17 +1,5 @@
 {
   "name": "motely-seed-searcher-website",
   "private": true,
-  "description": "Static Motely WASM smoke-test page (not Next.js)",
-  "scripts": {
-    "dev": "vite --host",
-    "build": "vite build",
-    "vercel-build": "pnpm build"
-  },
-  "dependencies": {
-    "motely-wasm": "5.7.4",
-    "motely-wasm-mt": "5.7.4"
-  },
-  "devDependencies": {
-    "vite": "^8.0.3"
-  }
+  "description": "Static Motely WASM smoke-test. Build: bash build-website.sh (Vercel/Linux) or .\\Build-Website.ps1 (Windows). No Node."
 }

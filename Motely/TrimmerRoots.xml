@@ -2,7 +2,7 @@
 <linker>
   <assembly fullname="Motely">
     <!-- ── JAML YAML DTOs (deserialized by YamlDotNet) ── -->
-    <type fullname="Motely.Filters.JamlDto" preserve="all" />
+    <type fullname="Motely.Filters.JamlRootDocument" preserve="all" />
     <type fullname="Motely.Filters.JamlDefaultsDto" preserve="all" />
     <type fullname="Motely.Filters.JamlClauseDto" preserve="all" />
     <type fullname="Motely.Filters.JamlSourcesDto" preserve="all" />

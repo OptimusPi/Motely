@@ -81,9 +81,10 @@ public struct JamlShouldScoreDesc
 
                     for (int i = 0; i < shouldClauses.Length; i++)
                     {
-                        int count = JamlScoring.CountOccurrences(ref singleCtx, shouldClauses[i], ref runState);
-                        tally.AddTally(count);
-                        totalScore += count * shouldClauses[i].Score;
+                        int raw = JamlScoring.CountRawOccurrences(ref singleCtx, shouldClauses[i], ref runState);
+                        int weighted = JamlScoring.CountOccurrences(ref singleCtx, shouldClauses[i], ref runState);
+                        tally.AddTally(raw);
+                        totalScore += weighted * shouldClauses[i].Score;
                     }
 
                     tally.Score = totalScore;

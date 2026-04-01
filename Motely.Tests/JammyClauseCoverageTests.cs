@@ -8,7 +8,7 @@ public class JammyClauseCoverageTests
 {
     private const string Seed = "JAMMY";
 
-    private static MotelySeedAnalysis AnalyzeJammy(MotelyDeck deck = MotelyDeck.Red)
+    private static MotelyLegacyTextAnalyzer AnalyzeJammy(MotelyDeck deck = MotelyDeck.Red)
     {
         var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(Seed, deck, MotelyStake.White));
         Assert.True(string.IsNullOrEmpty(analysis.Error), $"Analyzer failed for {Seed}/{deck}: {analysis.Error}");
@@ -88,7 +88,7 @@ public class JammyClauseCoverageTests
         (MotelyJokerRarity)((int)item.Type & (int)MotelyJokerRarity.Legendary);
 
     private static (int Ante, int ShopIndex, MotelyItem Item)? FindShopItem(
-        MotelySeedAnalysis analysis,
+        MotelyLegacyTextAnalyzer analysis,
         Func<MotelyItem, bool> predicate
     )
     {
@@ -106,7 +106,7 @@ public class JammyClauseCoverageTests
     }
 
     private static (int Ante, int PackIndex, MotelyItem Item)? FindPackItem(
-        MotelySeedAnalysis analysis,
+        MotelyLegacyTextAnalyzer analysis,
         Func<MotelyItem, bool> predicate
     )
     {

@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct PassthroughFilterDesc()
     : IMotelySeedFilterDesc<PassthroughFilterDesc.PassthroughFilter>

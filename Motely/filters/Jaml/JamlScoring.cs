@@ -147,6 +147,72 @@ public static class JamlScoring
         return clause.Score > 0 ? total : matched;
     }
 
+    /// <summary>
+    /// Raw occurrence counts per should-clause column (CSV tally columns). For composite clauses this sums
+    /// child raw counts without multiplying by per-clause <see cref="IJamlClause.Score"/>; weighted totals are
+    /// computed separately by <see cref="CountOccurrences"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CountRawOccurrences(
+        ref MotelySingleSearchContext ctx,
+        IJamlClause clause,
+        ref MotelyRunState runState
+    )
+    {
+        return clause switch
+        {
+            AndClause c => CountRawAndOccurrences(ref ctx, c, ref runState),
+            OrClause c => CountRawOrOccurrences(ref ctx, c, ref runState),
+            _ => CountOccurrences(ref ctx, clause, ref runState),
+        };
+    }
+
+    private static int CountRawAndOccurrences(ref MotelySingleSearchContext ctx, AndClause clause, ref MotelyRunState runState)
+    {
+        Debug.Assert(
+            clause.Clauses.Length > 0,
+            "AndClause should not be empty after JAML load (validator / loader bug)."
+        );
+
+        int total = 0;
+        for (int i = 0; i < clause.Clauses.Length; i++)
+        {
+            int count = CountRawOccurrences(ref ctx, clause.Clauses[i], ref runState);
+            if (count <= 0)
+                return 0;
+            total += count;
+        }
+
+        return clause.Score > 0 ? total : 1;
+    }
+
+    private static int CountRawOrOccurrences(ref MotelySingleSearchContext ctx, OrClause clause, ref MotelyRunState runState)
+    {
+        Debug.Assert(
+            clause.Clauses.Length > 0,
+            "OrClause should not be empty after JAML load (validator / loader bug)."
+        );
+        Debug.Assert(clause.Min >= 1, "OrClause.Min must be >= 1 after JAML load (validator / loader bug).");
+
+        int matched = 0;
+        int total = 0;
+
+        for (int i = 0; i < clause.Clauses.Length; i++)
+        {
+            int count = CountRawOccurrences(ref ctx, clause.Clauses[i], ref runState);
+            if (count > 0)
+            {
+                matched++;
+                total += count;
+            }
+        }
+
+        if (matched < clause.Min)
+            return 0;
+
+        return clause.Score > 0 ? total : matched;
+    }
+
     private static int CountBossOccurrences(BossClause clause, ref MotelyRunState runState)
     {
         Debug.Assert(

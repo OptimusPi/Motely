@@ -115,8 +115,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
 
                 try
                 {
-                    using var search = settings.CreateSearch();
-                    search.Start(stoppingToken);
+                    using var search = settings.Start(stoppingToken);
                     await search.WaitForCompletionAsync(stoppingToken);
                     seedsSearched = search.TotalSeedsSearched;
                 }

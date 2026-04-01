@@ -1,10 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "pnpm install --frozen-lockfile=false",
-  "buildCommand": "pnpm build",
+  "installCommand": "echo skip",
+  "buildCommand": "bash build-website.sh",
   "outputDirectory": "dist",
   "headers": [
+    {
+      "source": "/(.*)\\.wasm",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
+      ]
+    },
     {
       "source": "/coep",
       "headers": [

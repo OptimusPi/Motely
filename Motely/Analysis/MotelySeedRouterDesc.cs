@@ -1,3 +1,5 @@
+using Motely.Filters.Native;
+
 namespace Motely.Analysis;
 
 public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
@@ -5,8 +7,7 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
     private MotelySearchParameters _searchParams;
     private MotelySearchContextParams _contextParams;
     private int _lane;
-    private bool _hasContext;
-    private IMotelySearch? _ownedSearch;
+    private readonly IMotelySearch? _ownedSearch;
 
     /// <summary>Direct construction — runs a single-seed search internally, keeps it alive.</summary>
     public MotelySeedRouterDesc(string seed, MotelyDeck deck, MotelyStake stake)
@@ -27,22 +28,16 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
 
     private readonly struct ContextCapturingRouter(MotelySeedRouterDesc desc) : IMotelySeedRouter
     {
-        public void ProvideSeedContext(ref MotelySingleSearchContext ctx)
+        public void InjectSingleSeedContext(in MotelySingleSearchContext ctx)
         {
-            if (desc._hasContext) return;
             desc._searchParams = ctx.SearchParameters;
             desc._contextParams = ctx.SearchContextParams;
             desc._lane = ctx.VectorLane;
-            desc._hasContext = true;
         }
     }
 
-    public MotelySingleSearchContext CreateContext()
+    public MotelySingleSearchContext Instance()
     {
-        if (!_hasContext)
-        {
-            throw new InvalidOperationException("Seed router context not captured. Call CreateSeedRouter first.");
-        }
         return new MotelySingleSearchContext(in _searchParams, in _contextParams, _lane);
     }
 

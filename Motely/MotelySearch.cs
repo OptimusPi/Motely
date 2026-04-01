@@ -66,6 +66,11 @@ public interface IMotelySeedScoreProvider
     );
 }
 
+public interface IMotelySeedRouter
+{
+    public void InjectSingleSeedContext(in MotelySingleSearchContext ctx);
+}
+
 public interface IMotelySeedRouterDesc
 {
     public IMotelySeedRouter CreateSeedRouter(ref MotelyFilterCreationContext ctx);
@@ -84,11 +89,6 @@ public interface IMotelySeedRouterDesc<TProvider> : IMotelySeedRouterDesc
     }
 }
 
-public interface IMotelySeedRouter
-{
-    public void ProvideSeedContext(ref MotelySingleSearchContext ctx);
-}
-
 
 public enum MotelySearchMode
 {
@@ -98,7 +98,7 @@ public enum MotelySearchMode
 
 public interface IMotelySeedProvider
 {
-    public int SeedCount { get; }
+    public long SeedCount { get; }
     public ReadOnlySpan<char> NextSeed();
 
     /// <summary>
@@ -110,7 +110,7 @@ public interface IMotelySeedProvider
 
 public sealed class MotelyRandomSeedProvider(int seedCount) : IMotelySeedProvider
 {
-    public int SeedCount { get; } = seedCount;
+    public long SeedCount { get; } = seedCount;
     private int _seedsGenerated;
 
     public ReadOnlySpan<char> NextSeed()
@@ -152,7 +152,7 @@ public sealed class MotelyRandomSeedProvider(int seedCount) : IMotelySeedProvide
 /// </summary>
 public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
 {
-    public int SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Palindrome);
+    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Palindrome);
 
     private readonly IEnumerator<string> _palindromeEnumerator;
     private readonly object _enumeratorLock = new();
@@ -201,7 +201,7 @@ public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
 /// </summary>
 public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
 {
-    public int SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis);
+    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis);
 
     private readonly IEnumerator<string> _psychosisEnumerator;
     private readonly object _enumeratorLock = new();
@@ -245,9 +245,52 @@ public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
     }
 }
 
+public sealed class MotelyAestheticSeedProvider : IMotelySeedProvider
+{
+    public long SeedCount { get; }
+
+    private readonly IEnumerator<string> _enumerator;
+    private readonly object _enumeratorLock = new();
+
+    public MotelyAestheticSeedProvider(JamlAesthetic aesthetic)
+    {
+        SeedCount = JamlAesthetics.GetSeedCount(aesthetic);
+        _enumerator = JamlAesthetics.EnumerateSeeds(aesthetic).GetEnumerator();
+    }
+
+    public ReadOnlySpan<char> NextSeed()
+    {
+        lock (_enumeratorLock)
+        {
+            if (_enumerator.MoveNext())
+                return _enumerator.Current.AsSpan();
+            return ReadOnlySpan<char>.Empty;
+        }
+    }
+
+    public int NextSeeds(string[] seeds)
+    {
+        if (seeds == null || seeds.Length == 0)
+            return 0;
+
+        lock (_enumeratorLock)
+        {
+            int count = 0;
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                if (!_enumerator.MoveNext())
+                    break;
+                seeds[i] = _enumerator.Current;
+                count++;
+            }
+            return count;
+        }
+    }
+}
+
 public sealed class MotelyKeywordSeedProvider : IMotelySeedProvider
 {
-    public int SeedCount { get; }
+    public long SeedCount { get; }
 
     private readonly IEnumerator<string> _enumerator;
     private readonly object _enumeratorLock = new();
@@ -255,7 +298,7 @@ public sealed class MotelyKeywordSeedProvider : IMotelySeedProvider
     public MotelyKeywordSeedProvider(IEnumerable<string> keywords, char[]? paddingChars = null)
     {
         ulong count = MotelyGlobals.GetPaddedSeedCountForKeywords(keywords, paddingChars);
-        SeedCount = count > int.MaxValue ? int.MaxValue : (int)count;
+        SeedCount = count > (ulong)long.MaxValue ? long.MaxValue : (long)count;
         _enumerator = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, paddingChars).GetEnumerator();
     }
 
@@ -303,7 +346,7 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     // This is a lightweight lock for the hot path - contention should be minimal
     private readonly object _enumeratorLock = new();
 
-    public int SeedCount { get; private set; } = -1; // Unknown for enumerables
+    public long SeedCount { get; private set; } = -1; // Unknown for enumerables
 
     public MotelySeedListProvider(IEnumerable<string> seeds, int seedCount = -1)
     {
@@ -312,7 +355,7 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
         SeedCount = ResolveSeedCount(seeds, seedCount);
     }
 
-    private static int ResolveSeedCount(IEnumerable<string> seeds, int seedCount)
+    private static long ResolveSeedCount(IEnumerable<string> seeds, int seedCount)
     {
         if (seedCount >= 0)
             return seedCount;
@@ -390,7 +433,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedRouter(IMotelySeedRouterDesc desc);
     IMotelySearchSettings WithListSearch(IEnumerable<string> seeds, int seedCount = -1);
     IMotelySearchSettings WithRandomSearch(int count);
-    IMotelySearchSettings WithPalindromeSearch();
+    IMotelySearchSettings WithAestheticSearch(JamlAesthetic aesthetic);
     IMotelySearchSettings WithProviderSearch(IMotelySeedProvider provider);
     IMotelySearchSettings WithSequentialSearch();
     IMotelySearchSettings WithDeck(MotelyDeck deck);
@@ -401,8 +444,6 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
 
-    /// <summary>Create a search instance without starting it. Call Start() on a background thread to allow progress polling.</summary>
-    IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
 }
 
@@ -508,9 +549,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return WithProviderSearch(new MotelyRandomSeedProvider(count));
     }
 
-    public MotelySearchSettings<TBaseFilter> WithPalindromeSearch()
+    public MotelySearchSettings<TBaseFilter> WithAestheticSearch(JamlAesthetic aesthetic)
     {
-        return WithProviderSearch(new MotelyPalindromeSeedProvider());
+        return WithProviderSearch(new MotelyAestheticSeedProvider(aesthetic));
     }
 
     public MotelySearchSettings<TBaseFilter> WithProviderSearch(IMotelySeedProvider provider)
@@ -583,7 +624,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithRandomSearch(int count) =>
         WithRandomSearch(count);
 
-    IMotelySearchSettings IMotelySearchSettings.WithPalindromeSearch() => WithPalindromeSearch();
+    IMotelySearchSettings IMotelySearchSettings.WithAestheticSearch(JamlAesthetic aesthetic) =>
+        WithAestheticSearch(aesthetic);
 
     IMotelySearchSettings IMotelySearchSettings.WithProviderSearch(IMotelySeedProvider provider) =>
         WithProviderSearch(provider);
@@ -611,11 +653,11 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<MotelySeedScoreTally> callback
     ) => WithScoredResultCallback(callback);
 
-    IMotelySearch IMotelySearchSettings.CreateSearch() => CreateSearch();
-
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
+
+    /// <inheritdoc cref="IMotelySearchSettings.CreateSearch" />
     public IMotelySearch CreateSearch() => new MotelySearch<TBaseFilter>(this);
 
     public MotelySearchSettings<TBaseFilter> WithDeck(MotelyDeck deck)
@@ -692,7 +734,6 @@ public interface IMotelySearch : IDisposable
     public void AwaitCompletion();
     public Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
     public void Cancel();
-    public void ForceProgressReport();
 }
 
 internal unsafe interface IInternalMotelySearch : IMotelySearch
@@ -1072,11 +1113,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _completionSource.Task.GetAwaiter().GetResult();
     }
 
-    public void ForceProgressReport()
-    {
-        PrintReport(force: true);
-    }
-
     private void PrintReport(bool force = false)
     {
         long elapsedMS = _elapsedTime.ElapsedMilliseconds;
@@ -1254,7 +1290,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private abstract class MotelySearchPlan : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 20000;
+        public const int MAX_SEED_WAIT_MS = 200;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
@@ -1492,7 +1528,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             in searchParams,
                             lane
                         );
-                        Search._seedRouter.ProvideSeedContext(ref singleCtx);
+                        Search._seedRouter.InjectSingleSeedContext(in singleCtx);
                     }
                 }
             }
@@ -1786,7 +1822,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             // Calculate MaxBatch - handle unknown seed count (-1) by using a large estimate
             // This is only used for progress reporting, not actual batch termination
-            int seedCount = SeedProvider.SeedCount;
+            long seedCount = SeedProvider.SeedCount;
             MaxBatch = seedCount >= 0
                 ? (seedCount + (long)(MotelyGlobals.MaxVectorWidth - 1))
                     / (long)MotelyGlobals.MaxVectorWidth
