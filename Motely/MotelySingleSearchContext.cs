@@ -38,14 +38,14 @@ public readonly unsafe partial struct MotelySingleSearchContext
 {
     public readonly int VectorLane;
 
-    private readonly ref readonly MotelySearchParameters _searchParameters;
-    private readonly ref readonly MotelySearchContextParams _contextParams;
+    private readonly MotelySearchParameters _searchParameters;
+    private readonly MotelySearchContextParams _contextParams;
 
     public MotelyStake Stake => _searchParameters.Stake;
     public MotelyDeck Deck => _searchParameters.Deck;
 
-    internal ref readonly MotelySearchParameters SearchParameters => ref _searchParameters;
-    internal ref readonly MotelySearchContextParams SearchContextParams => ref _contextParams;
+    internal MotelySearchParameters SearchParameters => _searchParameters;
+    internal MotelySearchContextParams SearchContextParams => _contextParams;
 
     private PartialSeedHashCache* SeedHashCache => _contextParams.SeedHashCache;
     private int SeedLength => _contextParams.SeedLength;
@@ -57,13 +57,13 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal MotelySingleSearchContext(
-        ref readonly MotelySearchParameters searchParameters,
-        ref readonly MotelySearchContextParams contextParams,
+        in MotelySearchParameters searchParameters,
+        in MotelySearchContextParams contextParams,
         int lane
     )
     {
-        _contextParams = ref contextParams;
-        _searchParameters = ref searchParameters;
+        _contextParams = contextParams;
+        _searchParameters = searchParameters;
         VectorLane = lane;
     }
 

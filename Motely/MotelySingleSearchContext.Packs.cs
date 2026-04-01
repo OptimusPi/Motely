@@ -9,7 +9,7 @@ public struct MotelySingleBoosterPackStream(
     public bool GeneratedFirstPack = generatedFirstPack;
 }
 
-public readonly unsafe ref partial struct MotelySingleSearchContext
+public readonly unsafe partial struct MotelySingleSearchContext
 {
     public MotelySingleBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false) =>
         CreateBoosterPackStream(ante, ante > 1, isCached);
