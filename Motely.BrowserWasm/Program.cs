@@ -14,76 +14,33 @@ namespace Motely.BrowserWasm;
 /// Bootsharp.Inject auto-implements this interface; Notify* methods become On* JS events.</summary>
 public interface ISearchEvents
 {
-    /// <summary>Fired periodically during search with cumulative counters.</summary>
     void NotifyProgress(long seedsSearched, long matchingSeeds, long elapsedMs);
-    /// <summary>Fired for each matching seed. <paramref name="score"/> is 0 when no scoring provider is active.</summary>
     void NotifyResult(string seed, int score);
-    /// <summary>Fired once when the search finishes or is cancelled.</summary>
     void NotifyComplete(string status, long seedsSearched, long matchingSeeds);
 }
 
-/// <summary>JS → C# exports (called from browser)</summary>
+/// <summary>JS → C# exports. Returns real Motely types — Bootsharp marshals them
+/// as interop instances so JS gets the full API (cancel, dispose, fluent builders, etc.).</summary>
 public interface IMotelyProgram
 {
     string GetVersion();
-    /// <summary>Returns <c>null</c> on success, or an error message describing the first problem.</summary>
     string? ValidateJaml(string jamlContent);
 
-    MotelyAnalysisView AnalyzeSeed(string seed, MotelyDeck deck, MotelyStake stake);
+    /// <summary>Creates a <see cref="MotelySeedRouterDesc"/> — the real Motely seed context,
+    /// not the legacy text analyzer. Call Instance() on the result for full stream access.</summary>
     MotelySeedRouterDesc CreateSeedRouter(string seed, MotelyDeck deck, MotelyStake stake);
 
-    /// <summary>Cancel the currently running search (no-op if none).</summary>
-    void StopSearch();
-
-    /// <summary>Honor JAML as authored: sequential batching unless <c>aesthetics</c> selects a provider.</summary>
-    void StartConfiguredSearch(
-        string jamlContent,
-        int threadCount,
-        int batchCharCount,
-        long startBatch,
-        long endBatch
-    );
-
-    /// <summary>Sequential full seed space; JAML must not declare top-level <c>aesthetics</c>.</summary>
-    void StartSequentialSearch(
-        string jamlContent,
-        int threadCount,
-        int batchCharCount,
-        long startBatch,
-        long endBatch
-    );
-
-    void StartRandomSearch(
-        string jamlContent,
-        int randomSeedCount,
-        int threadCount,
-        int batchCharCount
-    );
-
-    /// <param name="aesthetic">Numeric <see cref="JamlAesthetic"/> value (0 = Palindrome, …).</param>
-    void StartAestheticSearch(
-        string jamlContent,
-        int aesthetic,
-        int threadCount,
-        int batchCharCount
-    );
-
-    /// <summary>Comma-separated keywords (padded enumeration). Empty <paramref name="paddingChars"/> uses all seed chars.</summary>
-    void StartKeywordSearch(
-        string jamlContent,
-        string keywordsCsv,
-        string paddingChars,
-        int threadCount,
-        int batchCharCount
-    );
-
-    void StartSeedListSearch(string jamlContent, string seedsCsv, int threadCount);
+    IMotelySearch StartConfiguredSearch(string jamlContent, int threadCount, int batchCharCount, long startBatch, long endBatch);
+    IMotelySearch StartSequentialSearch(string jamlContent, int threadCount, int batchCharCount, long startBatch, long endBatch);
+    IMotelySearch StartRandomSearch(string jamlContent, int randomSeedCount, int threadCount, int batchCharCount);
+    IMotelySearch StartAestheticSearch(string jamlContent, int aesthetic, int threadCount, int batchCharCount);
+    IMotelySearch StartKeywordSearch(string jamlContent, string keywordsCsv, string paddingChars, int threadCount, int batchCharCount);
+    IMotelySearch StartSeedListSearch(string jamlContent, string seedsCsv, int threadCount);
 }
 
 public class MotelyProgram(ISearchEvents events) : IMotelyProgram
 {
     private readonly ISearchEvents _events = events;
-    private IMotelySearch? _activeSearch;
 
     public string GetVersion() => VersionInfo.Version;
 
@@ -94,31 +51,13 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             : error ?? "JAML validation failed.";
     }
 
-    public MotelyAnalysisView AnalyzeSeed(string seed, MotelyDeck deck, MotelyStake stake)
-    {
-        var result = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
-        return MotelyAnalysisView.From(result);
-    }
-
     public MotelySeedRouterDesc CreateSeedRouter(string seed, MotelyDeck deck, MotelyStake stake)
     {
         return new MotelySeedRouterDesc(seed, deck, stake);
     }
 
-    public void StopSearch()
-    {
-        _activeSearch?.Cancel();
-        _activeSearch?.Dispose();
-        _activeSearch = null;
-    }
-
-    public void StartConfiguredSearch(
-        string jamlContent,
-        int threadCount,
-        int batchCharCount,
-        long startBatch,
-        long endBatch
-    )
+    public IMotelySearch StartConfiguredSearch(
+        string jamlContent, int threadCount, int batchCharCount, long startBatch, long endBatch)
     {
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error))
             throw new InvalidOperationException($"Invalid JAML: {error}");
@@ -142,26 +81,18 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
         }
 
-        WireAndStart(settings, plan.ShouldClauseCount > 0);
+        return WireAndStart(settings, plan.ShouldClauseCount > 0);
     }
 
-    public void StartSequentialSearch(
-        string jamlContent,
-        int threadCount,
-        int batchCharCount,
-        long startBatch,
-        long endBatch
-    )
+    public IMotelySearch StartSequentialSearch(
+        string jamlContent, int threadCount, int batchCharCount, long startBatch, long endBatch)
     {
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error))
             throw new InvalidOperationException($"Invalid JAML: {error}");
 
         if (config.Aesthetics.Count > 0)
-        {
             throw new InvalidOperationException(
-                "This JAML declares top-level aesthetics; use StartConfiguredSearch or StartAestheticSearch, or remove aesthetics from the document."
-            );
-        }
+                "This JAML declares top-level aesthetics; use StartConfiguredSearch or StartAestheticSearch.");
 
         var plan = JamlSearchBuilder.CreatePlan(config);
         var settings = plan.Settings
@@ -174,15 +105,11 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
         if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
         if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
 
-        WireAndStart(settings, plan.ShouldClauseCount > 0);
+        return WireAndStart(settings, plan.ShouldClauseCount > 0);
     }
 
-    public void StartRandomSearch(
-        string jamlContent,
-        int randomSeedCount,
-        int threadCount,
-        int batchCharCount
-    )
+    public IMotelySearch StartRandomSearch(
+        string jamlContent, int randomSeedCount, int threadCount, int batchCharCount)
     {
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error))
             throw new InvalidOperationException($"Invalid JAML: {error}");
@@ -195,15 +122,11 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             .WithBatchCharacterCount(batchCharCount)
             .WithRandomSearch(Math.Max(1, randomSeedCount));
 
-        WireAndStart(settings, plan.ShouldClauseCount > 0);
+        return WireAndStart(settings, plan.ShouldClauseCount > 0);
     }
 
-    public void StartAestheticSearch(
-        string jamlContent,
-        int aesthetic,
-        int threadCount,
-        int batchCharCount
-    )
+    public IMotelySearch StartAestheticSearch(
+        string jamlContent, int aesthetic, int threadCount, int batchCharCount)
     {
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error))
             throw new InvalidOperationException($"Invalid JAML: {error}");
@@ -219,16 +142,11 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             .WithBatchCharacterCount(batchCharCount)
             .WithAestheticSearch((JamlAesthetic)aesthetic);
 
-        WireAndStart(settings, plan.ShouldClauseCount > 0);
+        return WireAndStart(settings, plan.ShouldClauseCount > 0);
     }
 
-    public void StartKeywordSearch(
-        string jamlContent,
-        string keywordsCsv,
-        string paddingChars,
-        int threadCount,
-        int batchCharCount
-    )
+    public IMotelySearch StartKeywordSearch(
+        string jamlContent, string keywordsCsv, string paddingChars, int threadCount, int batchCharCount)
     {
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error))
             throw new InvalidOperationException($"Invalid JAML: {error}");
@@ -261,10 +179,10 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             .WithBatchCharacterCount(batchCharCount)
             .WithProviderSearch(new MotelySeedListProvider(padded, padded.Count()));
 
-        WireAndStart(settings, plan.ShouldClauseCount > 0);
+        return WireAndStart(settings, plan.ShouldClauseCount > 0);
     }
 
-    public void StartSeedListSearch(string jamlContent, string seedsCsv, int threadCount)
+    public IMotelySearch StartSeedListSearch(string jamlContent, string seedsCsv, int threadCount)
     {
         if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error))
             throw new InvalidOperationException($"Invalid JAML: {error}");
@@ -278,13 +196,11 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             .WithThreadCount(Math.Max(1, threadCount))
             .WithListSearch(seeds, seeds.Length);
 
-        WireAndStart(settings, false);
+        return WireAndStart(settings, false);
     }
 
-    private void WireAndStart(IMotelySearchSettings settings, bool hasScoring)
+    private IMotelySearch WireAndStart(IMotelySearchSettings settings, bool hasScoring)
     {
-        StopSearch();
-
         settings = settings
             .WithProgressCallback(p => _events.NotifyProgress(
                 p.SeedsSearched, p.MatchingSeeds, (long)p.ElapsedTime.TotalMilliseconds));
@@ -295,23 +211,25 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             settings = settings.WithSeedMatchCallback(seed => _events.NotifyResult(seed, 0));
 
         var search = settings.Start();
-        _activeSearch = search;
-        _ = Task.Run(async () =>
+        _ = NotifyOnCompletionAsync(search);
+        return search;
+    }
+
+    private async Task NotifyOnCompletionAsync(IMotelySearch search)
+    {
+        try
         {
-            try
-            {
-                await search.WaitForCompletionAsync();
-                _events.NotifyComplete("completed", search.TotalSeedsSearched, search.MatchingSeeds);
-            }
-            catch (OperationCanceledException)
-            {
-                _events.NotifyComplete("cancelled", search.TotalSeedsSearched, search.MatchingSeeds);
-            }
-            catch (Exception ex)
-            {
-                _events.NotifyComplete($"error: {ex.Message}", search.TotalSeedsSearched, search.MatchingSeeds);
-            }
-        });
+            await search.WaitForCompletionAsync();
+            _events.NotifyComplete("completed", search.TotalSeedsSearched, search.MatchingSeeds);
+        }
+        catch (OperationCanceledException)
+        {
+            _events.NotifyComplete("cancelled", search.TotalSeedsSearched, search.MatchingSeeds);
+        }
+        catch (Exception ex)
+        {
+            _events.NotifyComplete($"error: {ex.Message}", search.TotalSeedsSearched, search.MatchingSeeds);
+        }
     }
 }
 
