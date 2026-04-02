@@ -1,0 +1,32 @@
+bin/
+obj/
+*.pdb
+*.wasm
+*.tgz
+*.csv
+*.db
+*.sqlite
+*.duckdb
+
+# Node
+node_modules/
+
+# Large build/publish output
+Motely.BrowserWasm/motely-wasm/
+Motely.BrowserWasm/motely-wasm-mt/
+Motely.BrowserWasm/bin/
+Motely.BrowserWasm/obj/
+
+# API wwwroot (large framework files)
+Motely.API/wwwroot/
+
+# Seed data / databases
+/SeedSources/
+/seeds/
+
+# Bootsharp generated (regenerated on build)
+**/bootsharp/
+
+# Test results / search output
+/Motely.TUI/SearchDBResults/
+/SearchResults/

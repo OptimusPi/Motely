@@ -1,35 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-browser</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <!-- Default: single-thread WASM (Bootsharp npm). Multi-thread: dotnet publish /p:MotelyWasmThreads=true (see README-WASM.md). -->
-    <WasmEnableThreads Condition="'$(MotelyWasmThreads)' != 'true'">false</WasmEnableThreads>
-    <WasmEnableThreads Condition="'$(MotelyWasmThreads)' == 'true'">true</WasmEnableThreads>
-    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <BootsharpEmbedBinaries>false</BootsharpEmbedBinaries>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>true</InvariantGlobalization>
     <Version>$(MotelyVersion)</Version>
     <RootNamespace>Motely.BrowserWasm</RootNamespace>
-    <!-- Bootsharp npm output directory (default motely-wasm; MT variant motely-wasm-mt) -->
-    <BootsharpName Condition="'$(MotelyWasmThreads)' != 'true'">motely-wasm</BootsharpName>
-    <BootsharpPublishDirectory Condition="'$(MotelyWasmThreads)' != 'true'">motely-wasm</BootsharpPublishDirectory>
-    <BootsharpName Condition="'$(MotelyWasmThreads)' == 'true'">motely-wasm-mt</BootsharpName>
-    <BootsharpPublishDirectory Condition="'$(MotelyWasmThreads)' == 'true'">motely-wasm-mt</BootsharpPublishDirectory>
+    <BootsharpName>motely-wasm</BootsharpName>
+    <BootsharpPublishDirectory>motely-wasm</BootsharpPublishDirectory>
     <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
-    <!-- Default package uses NativeAOT-LLVM; MT package uses browser runtime path for now. -->
-    <BootsharpLLVM Condition="'$(MotelyWasmThreads)' != 'true'">true</BootsharpLLVM>
-    <BootsharpLLVM Condition="'$(MotelyWasmThreads)' == 'true'">false</BootsharpLLVM>
+    <BootsharpLLVM>true</BootsharpLLVM>
     <BootsharpOptimize>speed</BootsharpOptimize>
     <PublishTrimmed>true</PublishTrimmed>
     <DotNetJsApi>true</DotNetJsApi>
     <DebugType>none</DebugType>
     <EmccFlags>$(EmccFlags) -O3</EmccFlags>
-    <UsingBrowserRuntimeWorkload Condition="'$(MotelyWasmThreads)' != 'true'">false</UsingBrowserRuntimeWorkload>
-    <UsingBrowserRuntimeWorkload Condition="'$(MotelyWasmThreads)' == 'true'">true</UsingBrowserRuntimeWorkload>
-    <RestoreAdditionalProjectSources Condition="'$(MotelyWasmThreads)' != 'true'">https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
+    <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+    <RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
   </PropertyGroup>
 
   <!-- Bake $(Version) into a const so GetVersion() avoids reflection (trimmed/NativeAOT-safe). -->
@@ -47,43 +38,40 @@
     </ItemGroup>
   </Target>
 
-  <!-- Bootsharp already produced the full npm package; copy repo npm metadata + JAML schema. -->
+  <!-- Overlay repo npm metadata and docs on top of Bootsharp's generated package. -->
   <Target Name="MotelyWasmNpmOverlay" AfterTargets="BootsharpPack">
-    <PropertyGroup>
-      <_WasmPkgDir Condition="'$(MotelyWasmThreads)' == 'true'">$(MSBuildProjectDirectory)\motely-wasm-mt</_WasmPkgDir>
-      <_WasmPkgDir Condition="'$(MotelyWasmThreads)' != 'true'">$(MSBuildProjectDirectory)\motely-wasm</_WasmPkgDir>
-      <_JamlSchema>$(MSBuildProjectDirectory)\..\jaml.schema.json</_JamlSchema>
-      <_ReadmeSource>$(MSBuildProjectDirectory)\README-WASM.md</_ReadmeSource>
-    </PropertyGroup>
-    <Copy SourceFiles="$(_JamlSchema)" DestinationFiles="$(_WasmPkgDir)\jaml.schema.json" SkipUnchangedFiles="false" Condition="Exists('$(_JamlSchema)')" />
-    <Copy SourceFiles="$(_ReadmeSource)" DestinationFiles="$(_WasmPkgDir)\README.md" SkipUnchangedFiles="false" Condition="Exists('$(_ReadmeSource)')" />
+    <ReadLinesFromFile File="$(MSBuildProjectDirectory)\..\Motely\package.json">
+      <Output TaskParameter="Lines" ItemName="_PackageJsonLines" />
+    </ReadLinesFromFile>
+    <WriteLinesToFile
+      File="$(BootsharpPublishDirectory)\package.json"
+      Lines="@(_PackageJsonLines->Replace('&quot;version&quot;: &quot;0.0.0&quot;', '&quot;version&quot;: &quot;$(Version)&quot;'))"
+      Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\jaml.schema.json"
+          DestinationFiles="$(BootsharpPublishDirectory)\jaml.schema.json"
+          SkipUnchangedFiles="false"
+          Condition="Exists('$(MSBuildProjectDirectory)\..\jaml.schema.json')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\README-WASM.md"
+          DestinationFiles="$(BootsharpPublishDirectory)\README.md"
+          SkipUnchangedFiles="false"
+          Condition="Exists('$(MSBuildProjectDirectory)\README-WASM.md')" />
+    <ItemGroup>
+      <_MonacoFiles Include="$(MSBuildProjectDirectory)\..\tools\jaml-language\monaco\dist\**\*" />
+    </ItemGroup>
+    <MakeDir Directories="$(BootsharpPublishDirectory)\monaco" Condition="'@(_MonacoFiles)' != ''" />
+    <Copy SourceFiles="@(_MonacoFiles)"
+          DestinationFiles="@(_MonacoFiles->'$(BootsharpPublishDirectory)\monaco\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition="'@(_MonacoFiles)' != ''" />
   </Target>
 
-  <!-- Bootsharp MT index.mjs side-loads *.wasm from bin/; the linker writes them under AppBundle/_framework only. -->
-  <Target Name="MotelyWasmMtCopyWasmToBin" AfterTargets="MotelyWasmNpmOverlay" Condition="'$(MotelyWasmThreads)' == 'true'">
-    <PropertyGroup>
-      <_AppBundleFramework>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\browser-wasm\AppBundle\_framework</_AppBundleFramework>
-      <_MtBinDir>$(MSBuildProjectDirectory)\motely-wasm-mt\bin</_MtBinDir>
-    </PropertyGroup>
+  <!-- LLVM builds don't copy .d.ts to types/; fix that here. -->
+  <Target Name="MotelyWasmCopyTypes" AfterTargets="MotelyWasmNpmOverlay">
     <ItemGroup>
-      <_MtWasmFiles Include="$(_AppBundleFramework)\*.wasm" />
+      <_TypeFiles Include="$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\browser-wasm\publish\*.d.ts" />
     </ItemGroup>
-    <Warning Condition="'@(_MtWasmFiles)' == ''" Text="motely-wasm-mt: no *.wasm under $(_AppBundleFramework); threaded npm bin will be incomplete." />
-    <Copy SourceFiles="@(_MtWasmFiles)" DestinationFolder="$(_MtBinDir)" SkipUnchangedFiles="true" Condition="'@(_MtWasmFiles)' != ''" />
-  </Target>
-
-  <!-- LLVM (ST) builds don't copy .d.ts to the npm types/ dir; fix that here.
-       MT (browser-runtime) builds: Bootsharp already copies correct types — skip to avoid clobbering. -->
-  <Target Name="MotelyWasmCopyTypes" AfterTargets="MotelyWasmNpmOverlay"
-          Condition="'$(MotelyWasmThreads)' != 'true'">
-    <PropertyGroup>
-      <_PublishDir>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\browser-wasm\publish</_PublishDir>
-    </PropertyGroup>
-    <ItemGroup>
-      <_TypeFiles Include="$(_PublishDir)\*.d.ts" />
-    </ItemGroup>
-    <MakeDir Directories="$(_WasmPkgDir)\types" />
-    <Copy SourceFiles="@(_TypeFiles)" DestinationFolder="$(_WasmPkgDir)\types" SkipUnchangedFiles="true" Condition="'@(_TypeFiles)' != ''" />
+    <MakeDir Directories="$(BootsharpPublishDirectory)\types" />
+    <Copy SourceFiles="@(_TypeFiles)" DestinationFolder="$(BootsharpPublishDirectory)\types" SkipUnchangedFiles="true" />
   </Target>
 
   <ItemGroup>
@@ -93,8 +81,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
-  <!-- LLVM compiler (single-thread package only) -->
-  <ItemGroup Condition="'$(MotelyWasmThreads)' != 'true'">
+  <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
     <PackageReference Condition="!$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />

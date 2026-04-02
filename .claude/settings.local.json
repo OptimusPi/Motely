@@ -27,7 +27,9 @@
       "Bash(npm view:*)",
       "mcp__Claude_Preview__preview_start",
       "WebFetch(domain:api.github.com)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   }
 }
