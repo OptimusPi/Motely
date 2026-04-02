@@ -1,40 +1,45 @@
 {
-  "name": "motely-wasm",
-  "version": "5.8.3",
-  "description": "MotelyJAML — Balatro seed search engine (browser WASM). Bootsharp emits index.mjs + WASM + types from dotnet publish; this file is npm metadata only. Import: import dotnet, { Motely } from \"motely-wasm\" — Motely is the C# API surface (enums, MotelyProgram, SearchEvents).",
-  "type": "module",
-  "main": "./index.mjs",
-  "types": "./types/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./types/index.d.ts",
-      "import": "./index.mjs",
-      "default": "./index.mjs"
-    },
-    "./jaml.schema.json": "./jaml.schema.json"
-  },
-  "files": [
-    "**/*",
-    "!test.html",
-    "!index.html",
-    "!**/*.pdb",
-    "!**/*.tgz"
-  ],
-  "keywords": [
-    "balatro",
-    "seed",
-    "wasm",
-    "bootsharp",
-    "nativeaot-llvm",
-    "jaml"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
-    "directory": "Motely"
-  },
-  "license": "MIT",
-  "scripts": {
-    "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema"
-  }
+"name": "motely-wasm",
+"version": "5.9.0",
+"description": "MotelyJAML — Balatro seed search engine (browser WASM). Bootsharp emits index.mjs + WASM + types from dotnet publish; this file is npm metadata only. Import: import dotnet, { Motely } from \"motely-wasm\" — Motely is the C# API surface (enums, MotelyProgram, SearchEvents).",
+"type": "module",
+"main": "./index.mjs",
+"types": "./types/index.d.ts",
+"exports": {
+".": {
+"types": "./types/index.d.ts",
+"import": "./index.mjs",
+"default": "./index.mjs"
+},
+"./jaml.schema.json": "./jaml.schema.json",
+"./monaco": {
+"types": "./monaco/index.d.ts",
+"import": "./monaco/index.js",
+"default": "./monaco/index.js"
+}
+},
+"files": [
+"**/*",
+"!test.html",
+"!index.html",
+"!**/*.pdb",
+"!**/*.tgz"
+],
+"keywords": [
+"balatro",
+"seed",
+"wasm",
+"bootsharp",
+"nativeaot-llvm",
+"jaml"
+],
+"repository": {
+"type": "git",
+"url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+"directory": "Motely"
+},
+"license": "MIT",
+"scripts": {
+"build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema"
+}
 }
