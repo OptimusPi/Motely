@@ -29,7 +29,22 @@
       "WebFetch(domain:api.github.com)",
       "Bash(dotnet test:*)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(find . -type f -name *mcp*)",
+      "Bash(find /x/JammySeedFinder/src/MotelyJAML -maxdepth 2 -name *.props -o -name *.targets)",
+      "Bash(find /x/JammySeedFinder/src/MotelyJAML -maxdepth 1 -type f \\\\\\(-name *.json -o -name *.yml -o -name *.yaml \\\\\\))",
+      "Bash(find /x/JammySeedFinder/src/MotelyJAML/Motely.BrowserWasm -type f -name *.cs -o -name *.json -o -name *.md)",
+      "Bash(find . -type d -name *mcp*)",
+      "Bash(find /x/JammySeedFinder/src/MotelyJAML -type f \\\\\\(-name *.props -o -name *.targets \\\\\\))",
+      "Bash(find . -path */node_modules -prune -o -type f \\\\\\(-name *.ts -o -name *.js -o -name *.csproj \\\\\\) -print)",
+      "Bash(find /x/JammySeedFinder/src/MotelyJAML -type d -name *bootsharp* -o -type d -name *wasm*)",
+      "Bash(find . -path */node_modules -prune -o -type d -name *MCP* -o -name *mcp* -print)",
+      "Bash(find . -path */node_modules -prune -o -type f \\\\\\(-name .github -o -name *.yml -o -name *.yaml \\\\\\) -print)",
+      "Bash(ls -lh \"tools/jaml-language/vscode-extension/\"*.vsix)",
+      "Bash(code --list-extensions)",
+      "Bash(find . -path */node_modules -prune -o -type f -name *.md -print)",
+      "WebSearch",
+      "WebFetch(domain:www.nuget.org)"
     ]
   }
 }
