@@ -574,11 +574,35 @@ public static partial class JamlConfigLoader
             yaml.Load(reader);
 
         foreach (var document in yaml.Documents)
+        {
             NormalizeNestedLogicSyntax(document.RootNode);
+            ApplyPrimitiveSequenceFlowStyle(document.RootNode);
+        }
 
         using var writer = new StringWriter();
         yaml.Save(writer, assignAnchors: false);
         return writer.ToString();
+    }
+
+    /// <summary>
+    /// Emits scalar arrays in flow style (<c>[1, 2, 3]</c>) while leaving clause/object arrays block-style.
+    /// </summary>
+    private static void ApplyPrimitiveSequenceFlowStyle(YamlNode node)
+    {
+        switch (node)
+        {
+            case YamlMappingNode mapping:
+                foreach (var child in mapping.Children.Values)
+                    ApplyPrimitiveSequenceFlowStyle(child);
+                break;
+            case YamlSequenceNode sequence:
+                foreach (var child in sequence.Children)
+                    ApplyPrimitiveSequenceFlowStyle(child);
+
+                if (sequence.Children.Count > 0 && sequence.Children.All(static c => c is YamlScalarNode))
+                    sequence.Style = YamlDotNet.Core.Events.SequenceStyle.Flow;
+                break;
+        }
     }
 
     private static void NormalizeNestedLogicSyntax(YamlNode node)

@@ -76,6 +76,23 @@ cd Motely.SeedSearcherWebsite; .\Build-Website.ps1
 
 See [Motely.BrowserWasm/README-WASM.md](./Motely.BrowserWasm/README-WASM.md) for full details and multi-thread builds.
 
+## JAML language tooling (VS Code + LSP + Monaco)
+
+`tools/jaml-language/` now contains a v1 scaffold for first-class editor support:
+
+- `core/` shared JAML keys/tokens
+- `lsp-server/` diagnostics + completions for `.jaml` and `.jummy`
+- `vscode-extension/` TextMate grammar + LSP client
+- `monaco/` browser editor registration helper
+
+Quick start:
+
+```bash
+cd tools/jaml-language
+pnpm install
+pnpm build
+```
+
 ## License
 
 See [LICENSE](./LICENSE) in this repository.

@@ -34,9 +34,19 @@ public static partial class JamlConfigLoader
         new StaticDeserializerBuilder(new JamlYamlContext()).Build();
 
     /// <summary>
+    /// Returns canonical JAML text by applying loader normalizations and stable YAML emission.
+    /// </summary>
+    public static string Canonicalize(string jaml)
+    {
+        if (string.IsNullOrWhiteSpace(jaml))
+            throw new ArgumentException("JAML content is required.", nameof(jaml));
+        return NormalizeNestedLogicSyntax(jaml);
+    }
+
+    /// <summary>
     /// Nested and/or + clauses normalization, then round-trip through the YAML emitter (canonical text).
     /// </summary>
-    internal static string NormalizeToCanonicalYaml(string jaml) => NormalizeNestedLogicSyntax(jaml);
+    internal static string NormalizeToCanonicalYaml(string jaml) => Canonicalize(jaml);
 
     /// <summary>
     /// Compiles Jummy (human <c>what</c>/<c>where</c> dialect) to JAML, then loads it.
