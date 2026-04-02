@@ -1,0 +1,16 @@
+{
+  "name": "jaml-language-tools",
+  "private": true,
+  "packageManager": "pnpm@9.4.0",
+  "workspaces": [
+    "core",
+    "lsp-server",
+    "vscode-extension",
+    "monaco"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:lsp": "pnpm --filter @motely/jaml-lsp-server dev",
+    "dev:vscode": "pnpm --filter @motely/jaml-vscode-extension watch"
+  }
+}

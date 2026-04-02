@@ -1,0 +1,5 @@
+packages:
+  - core
+  - lsp-server
+  - vscode-extension
+  - monaco

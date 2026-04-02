@@ -20,6 +20,16 @@ public interface ISearchEvents
 public interface IMotelyProgram
 {
     string GetVersion();
+    /// <summary>
+    /// Parses a JAML string into a <see cref="JamlConfig"/> ready for search.
+    /// Throws <see cref="InvalidOperationException"/> with a descriptive message on failure.
+    /// </summary>
+    JamlConfig LoadJaml(string jaml);
+    /// <summary>
+    /// Compiles Jummy text to a <see cref="JamlConfig"/> ready for search.
+    /// Throws <see cref="InvalidOperationException"/> with a descriptive message on failure.
+    /// </summary>
+    JamlConfig CompileJummy(string jummy);
     IMotelySeedExplorer CreateSeedExplorer(string seed, MotelyDeck deck, MotelyStake stake);
     void StopSearch();
     void StartConfiguredSearch(JamlConfig jaml, int batchCharCount, long startBatch, long endBatch);
@@ -37,6 +47,24 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
 
     public string GetVersion() => VersionInfo.Version;
 
+    public JamlConfig LoadJaml(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return config;
+    }
+
+    public JamlConfig CompileJummy(string jummy)
+    {
+        if (!JummyCompiler.TryCompile(jummy, out var jamlYaml, out var compileErr))
+            throw new InvalidOperationException(compileErr ?? "Jummy compile failed.");
+
+        if (!JamlConfigLoader.TryLoad(jamlYaml, out var config, out var loadErr))
+            throw new InvalidOperationException(loadErr ?? "Invalid JAML after Jummy compile.");
+
+        return config;
+    }
+
     public IMotelySeedExplorer CreateSeedExplorer(string seed, MotelyDeck deck, MotelyStake stake) =>
         new MotelySeedExplorer(seed, deck, stake);
 
@@ -47,8 +75,9 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
         _activeSearch = null;
     }
 
-    private (IMotelySearchSettings Settings, bool HasScoring) Plan(
-        JamlConfig jaml, int batchCharCount, int threadCount = -1)
+    private readonly record struct SearchPlan(IMotelySearchSettings Settings, bool HasScoring);
+
+    private SearchPlan Plan(JamlConfig jaml, int batchCharCount, int threadCount = -1)
     {
         var plan = JamlSearchBuilder.CreatePlan(jaml);
         var settings = plan.Settings
@@ -56,12 +85,13 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             .WithStake(jaml.Stake)
             .WithThreadCount(threadCount < 1 ? Environment.ProcessorCount : threadCount)
             .WithBatchCharacterCount(batchCharCount);
-        return (settings, plan.ShouldClauseCount > 0);
+        return new(settings, plan.ShouldClauseCount > 0);
     }
 
     public void StartConfiguredSearch(JamlConfig jaml, int batchCharCount, long startBatch, long endBatch)
     {
-        var (settings, hasScoring) = Plan(jaml, batchCharCount);
+        var plan = Plan(jaml, batchCharCount);
+        var settings = plan.Settings;
 
         if (jaml.Aesthetics.Count > 0)
         {
@@ -74,7 +104,7 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
         }
 
-        WireAndRun(settings, hasScoring);
+        WireAndRun(settings, plan.HasScoring);
     }
 
     public void StartSequentialSearch(JamlConfig jaml, int batchCharCount, long startBatch, long endBatch)
@@ -83,18 +113,18 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
             throw new InvalidOperationException(
                 "This JAML declares aesthetics; use StartConfiguredSearch or StartAestheticSearch.");
 
-        var (settings, hasScoring) = Plan(jaml, batchCharCount);
-        settings = settings.WithSequentialSearch();
+        var plan = Plan(jaml, batchCharCount);
+        var settings = plan.Settings.WithSequentialSearch();
         if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
         if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
 
-        WireAndRun(settings, hasScoring);
+        WireAndRun(settings, plan.HasScoring);
     }
 
     public void StartRandomSearch(JamlConfig jaml, int randomSeedCount, int batchCharCount)
     {
-        var (settings, hasScoring) = Plan(jaml, batchCharCount);
-        WireAndRun(settings.WithRandomSearch(Math.Max(1, randomSeedCount)), hasScoring);
+        var plan = Plan(jaml, batchCharCount);
+        WireAndRun(plan.Settings.WithRandomSearch(Math.Max(1, randomSeedCount)), plan.HasScoring);
     }
 
     public void StartAestheticSearch(JamlConfig jaml, int aesthetic, int batchCharCount)
@@ -102,8 +132,8 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
         if (aesthetic < 0 || aesthetic > (int)JamlAesthetic.Balatro)
             throw new ArgumentOutOfRangeException(nameof(aesthetic));
 
-        var (settings, hasScoring) = Plan(jaml, batchCharCount);
-        WireAndRun(settings.WithAestheticSearch((JamlAesthetic)aesthetic), hasScoring);
+        var plan = Plan(jaml, batchCharCount);
+        WireAndRun(plan.Settings.WithAestheticSearch((JamlAesthetic)aesthetic), plan.HasScoring);
     }
 
     public void StartKeywordSearch(JamlConfig jaml, string keywordsCsv, string paddingChars, int batchCharCount)
@@ -123,16 +153,16 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
                 .Distinct()
                 .ToArray();
 
-        var (settings, hasScoring) = Plan(jaml, batchCharCount);
+        var plan = Plan(jaml, batchCharCount);
         var padded = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, pad);
-        WireAndRun(settings.WithProviderSearch(new MotelySeedListProvider(padded, padded.Count())), hasScoring);
+        WireAndRun(plan.Settings.WithProviderSearch(new MotelySeedListProvider(padded, padded.Count())), plan.HasScoring);
     }
 
     public void StartSeedListSearch(JamlConfig jaml, string seedsCsv, int threadCount)
     {
         var seeds = seedsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var (settings, _) = Plan(jaml, 4, threadCount);
-        WireAndRun(settings.WithListSearch(seeds, seeds.Length), hasScoring: false);
+        var plan = Plan(jaml, 4, threadCount);
+        WireAndRun(plan.Settings.WithListSearch(seeds, seeds.Length), hasScoring: false);
     }
 
     private void WireAndRun(IMotelySearchSettings settings, bool hasScoring)

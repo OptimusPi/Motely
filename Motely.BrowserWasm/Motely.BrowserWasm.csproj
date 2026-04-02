@@ -52,12 +52,11 @@
     <PropertyGroup>
       <_WasmPkgDir Condition="'$(MotelyWasmThreads)' == 'true'">$(MSBuildProjectDirectory)\motely-wasm-mt</_WasmPkgDir>
       <_WasmPkgDir Condition="'$(MotelyWasmThreads)' != 'true'">$(MSBuildProjectDirectory)\motely-wasm</_WasmPkgDir>
-      <_MotelyPkgJson Condition="'$(MotelyWasmThreads)' == 'true'">$(MSBuildProjectDirectory)\..\Motely\motely-wasm-mt.package.json</_MotelyPkgJson>
-      <_MotelyPkgJson Condition="'$(MotelyWasmThreads)' != 'true'">$(MSBuildProjectDirectory)\..\Motely\package.json</_MotelyPkgJson>
       <_JamlSchema>$(MSBuildProjectDirectory)\..\jaml.schema.json</_JamlSchema>
+      <_ReadmeSource>$(MSBuildProjectDirectory)\README-WASM.md</_ReadmeSource>
     </PropertyGroup>
-    <Copy SourceFiles="$(_MotelyPkgJson)" DestinationFiles="$(_WasmPkgDir)\package.json" SkipUnchangedFiles="false" />
     <Copy SourceFiles="$(_JamlSchema)" DestinationFiles="$(_WasmPkgDir)\jaml.schema.json" SkipUnchangedFiles="false" Condition="Exists('$(_JamlSchema)')" />
+    <Copy SourceFiles="$(_ReadmeSource)" DestinationFiles="$(_WasmPkgDir)\README.md" SkipUnchangedFiles="false" Condition="Exists('$(_ReadmeSource)')" />
   </Target>
 
   <!-- Bootsharp MT index.mjs side-loads *.wasm from bin/; the linker writes them under AppBundle/_framework only. -->
