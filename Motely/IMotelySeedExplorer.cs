@@ -1,6 +1,6 @@
 namespace Motely;
 
-public interface IMotelySeedExplorer : IDisposable
+public interface IMotelySeedExplorer
 {
     // === Shop Items (mixed joker/tarot/planet/spectral per rate weights) ===
     void CreateShopItemStream(int ante);

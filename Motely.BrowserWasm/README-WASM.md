@@ -6,7 +6,7 @@
 
 After publish, the output folder (`Motely.BrowserWasm/motely-wasm/` or `motely-wasm-mt/`) is a **real** package you can `npm pack`, depend on with `"file:…"`, or publish to the registry.
 
-The only extra step in this repo is **MSBuild**: it copies `Motely/package.json` (and `jaml.schema.json`) **on top of** Bootsharp’s output so `name`, `description`, `exports`, etc. match what you want on npm. **Version** comes from `$(MotelyVersion)` in `Directory.Packages.props` via the project `Version` property — not from editing `package.json` by hand for every release.
+The only extra step in this repo is **MSBuild**: it copies `Motely/package.json`, `jaml.schema.json`, README metadata, and Monaco assets **on top of** Bootsharp’s output so `name`, `description`, `exports`, and shipped files match what you want on npm. **Version** comes from `$(MotelyVersion)` in `Directory.Packages.props` via the project `Version` property — not from editing `package.json` by hand for every release.
 
 ### JavaScript: default export = boot API, **`Motely` = named export**
 
@@ -56,7 +56,7 @@ cd Motely.BrowserWasm/motely-wasm
 npm pack --dry-run
 ```
 
-From repo root, **`./Build-NpmPackages.ps1`** stamps version from `Directory.Packages.props` and runs `npm pack` / `npm publish`.
+From repo root, **`./publish.ps1`** regenerates schema + language tooling, runs `dotnet publish`, then runs `npm pack` / `npm publish`.
 
 ---
 

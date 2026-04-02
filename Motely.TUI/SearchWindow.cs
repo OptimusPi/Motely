@@ -235,7 +235,6 @@ public class SearchWindow : Window
                 });
             }
 
-            _search = settings.CreateSearch();
 
             Application.Invoke(() =>
             {
@@ -247,26 +246,26 @@ public class SearchWindow : Window
                     };
             });
 
-            var searchTask = Task.Run(() => _search.Start(_cts.Token), _cts.Token);
+            var search = settings.Start(_cts.Token);
 
             // Poll progress on a timer
             Application.AddTimeout(
-                TimeSpan.FromMilliseconds(500),
+                TimeSpan.FromMilliseconds(1000),
                 () =>
                 {
-                    if (!_searchRunning || _search == null)
+                    if (!_searchRunning)
                         return false;
 
-                    var searched = _search.TotalSeedsSearched;
-                    var matches = _search.MatchingSeeds;
-                    var elapsedMs = _search.ElapsedMs;
+                    var searched = search.TotalSeedsSearched;
+                    var matches = search.MatchingSeeds;
+                    var elapsedMs = search.ElapsedMs;
                     var speed = elapsedMs > 0 ? searched / (double)elapsedMs * 1000.0 : 0;
                     var elapsed = TimeSpan.FromMilliseconds(elapsedMs);
 
                     _progressLabel.Text =
                         $"{searched:N0} seeds | {matches} matches | {speed:N0} seeds/sec | {elapsed:hh\\:mm\\:ss}";
 
-                    if (_search.IsCompleted)
+                    if (search.IsCompleted)
                     {
                         OnSearchComplete();
                         return false;
@@ -276,12 +275,7 @@ public class SearchWindow : Window
                 }
             );
 
-            // Wait for completion
-            searchTask.ContinueWith(t =>
-            {
-                if (!t.IsCanceled)
-                    Application.Invoke(() => OnSearchComplete());
-            });
+            OnSearchComplete();
         }
         catch (OperationCanceledException)
         {

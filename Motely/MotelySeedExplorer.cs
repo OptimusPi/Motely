@@ -2,7 +2,7 @@ using Motely.Analysis;
 
 namespace Motely;
 
-public sealed class MotelySeedExplorer : IMotelySeedExplorer
+public sealed class MotelySeedExplorer : IMotelySeedExplorer, IDisposable
 {
     private readonly MotelySeedRouterDesc _router;
     private MotelySingleSearchContext _ctx;
