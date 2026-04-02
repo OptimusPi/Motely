@@ -1,0 +1,130 @@
+{
+  "name": "jaml-language-support",
+  "displayName": "Jimbo's Ante Markup Language",
+  "description": "Curate Balatro seeded runs using JAML/Jummy syntax highlighting, LSP diagnostics, snippets, and in-editor seed search powered by motely-wasm.",
+  "version": "1.0.0",
+  "publisher": "pifreak",
+  "author": {
+    "name": "pifreak"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "tools/jaml-language/vscode-extension"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/OptimusPi/MotelyJAML/tree/master/tools/jaml-language/vscode-extension",
+  "bugs": {
+    "url": "https://github.com/OptimusPi/MotelyJAML/issues"
+  },
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Notebooks"
+  ],
+  "main": "dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "jaml",
+        "aliases": [
+          "JAML",
+          "jaml"
+        ],
+        "extensions": [
+          ".jaml"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "jummy",
+        "aliases": [
+          "Jummy",
+          "jummy"
+        ],
+        "extensions": [
+          ".jummy"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jaml",
+        "scopeName": "source.jaml",
+        "path": "./syntaxes/jaml.tmLanguage.json"
+      },
+      {
+        "language": "jummy",
+        "scopeName": "source.jaml",
+        "path": "./syntaxes/jaml.tmLanguage.json"
+      }
+    ],
+    "notebooks": [
+      {
+        "type": "jaml-notebook",
+        "displayName": "JAML Seed Search Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.jamlnb"
+          }
+        ]
+      }
+    ],
+    "snippets": [
+      {
+        "language": "jaml",
+        "path": "./snippets/jaml.json"
+      },
+      {
+        "language": "jummy",
+        "path": "./snippets/jaml.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "jaml.runSearch",
+        "title": "Run JAML Search",
+        "icon": "$(play)"
+      },
+      {
+        "command": "jaml.stopSearch",
+        "title": "Stop JAML Search",
+        "icon": "$(debug-stop)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceLangId == jaml || resourceLangId == jummy",
+          "command": "jaml.runSearch",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "jaml.runSearch",
+        "key": "ctrl+shift+enter",
+        "when": "editorLangId == jaml || editorLangId == jummy"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "node esbuild.mjs && npx @vscode/vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "motely-wasm": "^5.8.3",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/vscode": "^1.97.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.2"
+  }
+}

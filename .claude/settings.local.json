@@ -25,7 +25,8 @@
       "Bash(grep:*)",
       "Bash(dotnet msbuild:*)",
       "Bash(npm view:*)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }

@@ -11,7 +11,12 @@
       "import": "./index.mjs",
       "default": "./index.mjs"
     },
-    "./jaml.schema.json": "./jaml.schema.json"
+    "./jaml.schema.json": "./jaml.schema.json",
+    "./monaco": {
+      "types": "./monaco/index.d.ts",
+      "import": "./monaco/index.js",
+      "default": "./monaco/index.js"
+    }
   },
   "files": [
     "**/*",

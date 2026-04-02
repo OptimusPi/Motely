@@ -115,3 +115,4 @@ Motely.HomeControlAPI/Properties/launchSettings.json
 Motely.BrowserWasm/motely-wasm/index.mjs
 Motely.BrowserWasm/motely-wasm/types/
 /Motely.BrowserWasm/motely-wasm
+/Motely.npm-staging/motely-wasm
