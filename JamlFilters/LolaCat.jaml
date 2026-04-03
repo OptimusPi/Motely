@@ -25,8 +25,8 @@ should:
     edition: Negative
 
   - and:
-    label: "Ante 2 Negative Oops Skipper"
     mode: sum
+    label: "Ante 2 Negative Oops Skipper"
     score: 100
     clauses:
       - smallBlindTag: NegativeTag
@@ -40,8 +40,8 @@ should:
         score: 10
 
   - and:
-    label: "Ante 3 Negative Oops Skipper"
     mode: sum
+    label: "Ante 3 Negative Oops Skipper"
     score: 100
     clauses:
       - smallBlindTag: NegativeTag
@@ -55,8 +55,8 @@ should:
         score: 10
 
   - and:
-    label: "Ante 4 Negative Oops Skipper"
     mode: sum
+    label: "Ante 4 Negative Oops Skipper"
     score: 100
     clauses:
       - smallBlindTag: NegativeTag
@@ -70,8 +70,8 @@ should:
         score: 10
 
   - and:
-    label: "Ante 5 Negative Oops Skipper"
     mode: sum
+    label: "Ante 5 Negative Oops Skipper"
     score: 100
     clauses:
       - smallBlindTag: NegativeTag
@@ -84,8 +84,8 @@ should:
           maxShopSlot: 11
         score: 10
   - and:
-    label: "Ante 6 Negative Oops Skipper"
     mode: sum
+    label: "Ante 6 Negative Oops Skipper"
     score: 100
     clauses:
       - smallBlindTag: NegativeTag
@@ -98,8 +98,8 @@ should:
           maxShopSlot: 13
         score: 10
   - and:
-    label: "Ante 7 Negative Oops Skipper"
     mode: sum
+    label: "Ante 7 Negative Oops Skipper"
     score: 100
     clauses:
       - smallBlindTag: NegativeTag
@@ -113,8 +113,8 @@ should:
         score: 10
 
   - and:
-    label: "Ante 8 Negative Oops Skipper"
     mode: sum
+    label: "Ante 8 Negative Oops Skipper"
     score: 100
     clauses:
       - smallBlindTag: NegativeTag

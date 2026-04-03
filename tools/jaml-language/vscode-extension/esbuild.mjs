@@ -11,6 +11,8 @@ const watch = process.argv.includes("--watch");
 // The WASM binary is embedded inside (BootsharpEmbedBinaries=true) — single file, no extra assets.
 const wasmSrc = resolve(__dirname, "node_modules/motely-wasm/index.mjs");
 const wasmDst = resolve(__dirname, "dist/motely-wasm.mjs");
+const jamlSchemaSrc = resolve(__dirname, "..", "..", "..", "jaml.schema.json");
+const jamlSchemaDst = resolve(__dirname, "jaml.schema.json");
 
 function copyWasm() {
   if (!existsSync(wasmSrc)) {
@@ -21,7 +23,16 @@ function copyWasm() {
   console.log("Copied motely-wasm.mjs ->", wasmDst);
 }
 
+function copyJamlSchema() {
+  if (!existsSync(jamlSchemaSrc)) {
+    throw new Error("jaml.schema.json not found in repo root");
+  }
+  copyFileSync(jamlSchemaSrc, jamlSchemaDst);
+  console.log("Copied jaml.schema.json ->", jamlSchemaDst);
+}
+
 copyWasm();
+copyJamlSchema();
 
 // ── Extension host bundle ────────────────────────────────────────────────────
 const ctx = await esbuild.context({
