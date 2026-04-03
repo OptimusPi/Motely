@@ -8,7 +8,7 @@ This repository is the **MotelyJAML** fork (from [tacodiva/Motely](https://githu
 
 - **Motely** – Core library: JAML/JSON parsing, filter execution, seed analysis, SIMD vectorization
 - **Motely.Orchestration** – Search orchestration, native filter executor, batch search
-- **motely-wasm** – Bootsharp-built npm package (`dotnet publish Motely.BrowserWasm`): **`import dotnet, { Motely } from "motely-wasm"`** after `dotnet.boot()`
+- **motely-wasm** – Bootsharp-built npm package (`dotnet publish Motely.BrowserWasm`): **`import bootsharp, { MotelyProgram, SearchEvents, MotelyDeck, MotelyStake } from "motely-wasm"`** and then `await bootsharp.boot()`
 - **Motely.CLI** – Command-line interface (JAML/JSON filters, seed analysis)
 - **Motely.API** – Optional HTTP API and static UIs
 - **Motely.TUI** – Terminal UI (optional)
@@ -63,9 +63,9 @@ BSO’s Avalonia app then uses Motely for:
 
 ## Browser / WASM
 
-- **motely-wasm** – Bootsharp-powered npm package consumed from any JS app (import maps, or a bundler) for in-browser search.
+- **motely-wasm** – Bootsharp-powered npm package for browser-first apps, while also remaining usable from Node, Bun, Deno, and other JS runtimes.
 
-After C# code changes, rebuild WASM and the static QA site (**no Node** — copy-only script):
+After C# code changes, rebuild WASM and the static QA site:
 
 ```powershell
 dotnet publish Motely.BrowserWasm -c Release

@@ -3098,7 +3098,7 @@ var require_main = __commonJS({
     exports2.createMessageConnection = exports2.createServerSocketTransport = exports2.createClientSocketTransport = exports2.createServerPipeTransport = exports2.createClientPipeTransport = exports2.generateRandomPipeName = exports2.StreamMessageWriter = exports2.StreamMessageReader = exports2.SocketMessageWriter = exports2.SocketMessageReader = exports2.PortMessageWriter = exports2.PortMessageReader = exports2.IPCMessageWriter = exports2.IPCMessageReader = void 0;
     var ril_1 = require_ril();
     ril_1.default.install();
-    var path3 = require("path");
+    var path2 = require("path");
     var os = require("os");
     var crypto_1 = require("crypto");
     var net_1 = require("net");
@@ -3234,9 +3234,9 @@ var require_main = __commonJS({
       }
       let result;
       if (XDG_RUNTIME_DIR) {
-        result = path3.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
+        result = path2.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
       } else {
-        result = path3.join(os.tmpdir(), `vscode-${randomSuffix}.sock`);
+        result = path2.join(os.tmpdir(), `vscode-${randomSuffix}.sock`);
       }
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0 && result.length > limit) {
@@ -9417,8 +9417,8 @@ var require_minimatch = __commonJS({
       return new Minimatch(pattern, options).match(p);
     };
     module2.exports = minimatch;
-    var path3 = require_path();
-    minimatch.sep = path3.sep;
+    var path2 = require_path();
+    minimatch.sep = path2.sep;
     var GLOBSTAR = Symbol("globstar **");
     minimatch.GLOBSTAR = GLOBSTAR;
     var expand = require_brace_expansion();
@@ -10024,8 +10024,8 @@ var require_minimatch = __commonJS({
         if (this.empty) return f === "";
         if (f === "/" && partial) return true;
         const options = this.options;
-        if (path3.sep !== "/") {
-          f = f.split(path3.sep).join("/");
+        if (path2.sep !== "/") {
+          f = f.split(path2.sep).join("/");
         }
         f = f.split(slashSplit);
         this.debug(this.pattern, "split", f);
@@ -11750,13 +11750,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path3) {
+        function ensurePath(config, path2) {
           let current = config;
-          for (let i = 0; i < path3.length - 1; i++) {
-            let obj = current[path3[i]];
+          for (let i = 0; i < path2.length - 1; i++) {
+            let obj = current[path2[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path3[i]] = obj;
+              current[path2[i]] = obj;
             }
             current = obj;
           }
@@ -11774,8 +11774,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key);
           }
           if (config) {
-            let path3 = keys[i].split(".");
-            ensurePath(result, path3)[path3[path3.length - 1]] = toJSONObject(config);
+            let path2 = keys[i].split(".");
+            ensurePath(result, path2)[path2[path2.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -14342,13 +14342,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path3 = uri.fsPath.replace(/\\/g, "/");
+          const path2 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path3)) {
+              if (filter.matcher.match(path2)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -14362,7 +14362,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path3}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path2}/`)) {
                   return true;
                 }
               }
@@ -17589,7 +17589,7 @@ var require_main4 = __commonJS({
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = require("child_process");
     var fs = require("fs");
-    var path3 = require("path");
+    var path2 = require("path");
     var vscode_1 = require("vscode");
     var Is = require_is();
     var client_1 = require_client();
@@ -18007,18 +18007,18 @@ var require_main4 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path3.isAbsolute(runtime)) {
+        if (path2.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path3.join(mainRootPath, runtime);
+          const result = path2.join(mainRootPath, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path3.join(serverWorkingDirectory, runtime);
+          const result = path2.join(serverWorkingDirectory, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
@@ -18109,32 +18109,24 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path2 = __toESM(require("node:path"));
+var path = __toESM(require("node:path"));
 var vscode3 = __toESM(require("vscode"));
 var import_node = __toESM(require_node3());
 
 // src/searchRunner.ts
-var path = __toESM(require("node:path"));
-var Motely = null;
+var import_motely_wasm = __toESM(require("./motely-wasm.mjs"));
 var bootPromise = null;
-async function ensureBooted(extensionPath) {
+async function ensureBooted() {
   if (bootPromise) return bootPromise;
   bootPromise = (async () => {
-    const wasmPath = path.join(extensionPath, "dist", "motely-wasm.mjs");
-    const mod = await import(
-      /* webpackIgnore: true */
-      `${wasmPath}`
-    );
-    await mod.default.boot();
-    Motely = mod.Motely;
+    await import_motely_wasm.default.boot();
   })();
   return bootPromise;
 }
 var stopRequested = false;
-async function runSearch(extensionPath, jaml, seedCount, onProgress, onResult, onComplete) {
-  await ensureBooted(extensionPath);
+async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
+  await ensureBooted();
   stopRequested = false;
-  const { MotelyProgram, SearchEvents } = Motely.BrowserWasm;
   const results = [];
   const startMs = Date.now();
   const onResultHandler = (seed, score, _tally) => {
@@ -18145,9 +18137,9 @@ async function runSearch(extensionPath, jaml, seedCount, onProgress, onResult, o
     onProgress(searched, matching);
   };
   const onCompleteHandler = (status, searched, matched) => {
-    SearchEvents.onResult.unsubscribe(onResultHandler);
-    SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+    import_motely_wasm.SearchEvents.onResult.unsubscribe(onResultHandler);
+    import_motely_wasm.SearchEvents.onProgress.unsubscribe(onProgressHandler);
+    import_motely_wasm.SearchEvents.onComplete.unsubscribe(onCompleteHandler);
     onComplete({
       status,
       searched: searched.toString(),
@@ -18156,24 +18148,23 @@ async function runSearch(extensionPath, jaml, seedCount, onProgress, onResult, o
       elapsedMs: Date.now() - startMs
     });
   };
-  SearchEvents.onResult.subscribe(onResultHandler);
-  SearchEvents.onProgress.subscribe(onProgressHandler);
-  SearchEvents.onComplete.subscribe(onCompleteHandler);
+  import_motely_wasm.SearchEvents.onResult.subscribe(onResultHandler);
+  import_motely_wasm.SearchEvents.onProgress.subscribe(onProgressHandler);
+  import_motely_wasm.SearchEvents.onComplete.subscribe(onCompleteHandler);
   try {
-    const config = MotelyProgram.loadJaml(jaml);
-    MotelyProgram.startRandomSearch(config, seedCount, 8);
+    const config = import_motely_wasm.MotelyProgram.loadJaml(jaml);
+    import_motely_wasm.MotelyProgram.startRandomSearch(config, seedCount, 1);
   } catch (err) {
-    SearchEvents.onResult.unsubscribe(onResultHandler);
-    SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+    import_motely_wasm.SearchEvents.onResult.unsubscribe(onResultHandler);
+    import_motely_wasm.SearchEvents.onProgress.unsubscribe(onProgressHandler);
+    import_motely_wasm.SearchEvents.onComplete.unsubscribe(onCompleteHandler);
     throw err;
   }
 }
-function stopSearch(extensionPath) {
+function stopSearch() {
   stopRequested = true;
-  if (!Motely) return;
   try {
-    Motely.BrowserWasm.MotelyProgram.stopSearch();
+    import_motely_wasm.MotelyProgram.stopSearch();
   } catch {
   }
 }
@@ -18312,9 +18303,7 @@ var JamlNotebookSerializer = class {
   }
 };
 var JamlNotebookExecutor = class {
-  extensionPath;
-  constructor(extensionPath) {
-    this.extensionPath = extensionPath;
+  constructor() {
   }
   register(context) {
     const controller = vscode2.notebooks.createNotebookController(
@@ -18365,7 +18354,6 @@ var JamlNotebookExecutor = class {
       );
     };
     runSearch(
-      this.extensionPath,
       jaml,
       1e6,
       (s, m) => {
@@ -18419,7 +18407,7 @@ ${tableHtml}
 var client = null;
 async function activate(context) {
   const extPath = context.extensionPath;
-  const serverModule = path2.join(extPath, "dist", "server.js");
+  const serverModule = path.join(extPath, "dist", "server.js");
   client = new import_node.LanguageClient(
     "jamlLanguageServer",
     "JAML Language Server",
@@ -18456,7 +18444,6 @@ async function activate(context) {
       panel.searching(jaml.slice(0, 60).replace(/\n/g, "  ").trim() + "\u2026");
       try {
         await runSearch(
-          extPath,
           jaml,
           1e6,
           (_s, m) => vscode3.window.setStatusBarMessage(`JAML: ${m} hits\u2026`, 500),
@@ -18475,14 +18462,14 @@ async function activate(context) {
       }
     }),
     vscode3.commands.registerCommand("jaml.stopSearch", () => {
-      stopSearch(extPath);
+      stopSearch();
       vscode3.window.setStatusBarMessage("JAML: search stopped.", 2e3);
     })
   );
   context.subscriptions.push(
     vscode3.workspace.registerNotebookSerializer("jaml-notebook", new JamlNotebookSerializer())
   );
-  const executor = new JamlNotebookExecutor(extPath);
+  const executor = new JamlNotebookExecutor();
   executor.register(context);
 }
 async function deactivate() {

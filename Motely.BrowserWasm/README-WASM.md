@@ -8,20 +8,24 @@ After publish, the output folder (`Motely.BrowserWasm/motely-wasm/` or `motely-w
 
 The only extra step in this repo is **MSBuild**: it copies `Motely/package.json`, `jaml.schema.json`, README metadata, and Monaco assets **on top of** Bootsharp’s output so `name`, `description`, `exports`, and shipped files match what you want on npm. **Version** comes from `$(MotelyVersion)` in `Directory.Packages.props` via the project `Version` property — not from editing `package.json` by hand for every release.
 
-### JavaScript: default export = boot API, **`Motely` = named export**
+### JavaScript: default export = boot API, flat named exports for the generated API
 
-Bootsharp’s `index.mjs` ends with something like `export { Event, Motely, … as default }`. Use it like this:
+The browser-first package is emitted as a real npm module and can be consumed from browsers, workers, Node, Bun, or Deno. Use it like this:
 
 ```js
-import dotnet, { Motely } from "motely-wasm";
+import bootsharp, {
+	MotelyProgram,
+	SearchEvents,
+	MotelyDeck,
+	MotelyStake,
+} from "motely-wasm";
 
-await dotnet.boot(); // or dotnet.boot({ root: "/path/to/motely-wasm-mt/bin" } for threaded)
+await bootsharp.boot(); // or bootsharp.boot({ root: "/path/to/motely-wasm-mt/bin" } for threaded)
 
-const Program = Motely.BrowserWasm.MotelyProgram;
-const ver = Program.getVersion();
+const ver = MotelyProgram.getVersion();
 ```
 
-Types are under `motely-wasm/types/`; `Motely` holds enums (`MotelyDeck`, `MotelyStake`) and namespaces (`Motely.BrowserWasm.MotelyProgram`, `Motely.BrowserWasm.SearchEvents`).
+Types are under `motely-wasm/types/`; the generated API is exported directly as named exports such as `MotelyProgram`, `SearchEvents`, `MotelyDeck`, and `MotelyStake`.
 
 ---
 
@@ -33,7 +37,7 @@ Types are under `motely-wasm/types/`; `Motely` holds enums (`MotelyDeck`, `Motel
 dotnet publish Motely.BrowserWasm -c Release
 ```
 
-Output: **`Motely.BrowserWasm/motely-wasm/`**
+Output: **`Motely.BrowserWasm/motely-wasm/`**. With embedded binaries enabled, this is the default low-friction package shape for browser and bundler consumers.
 
 ### Multi-thread (pthread) package
 
@@ -49,7 +53,7 @@ Threaded WASM in the browser needs **cross-origin isolation** (`COOP: same-origi
 
 ### Optional: `npm pack` / `npm publish`
 
-Tarball verification or registry publish still use the **npm CLI** (requires Node on that machine, or run in CI):
+Tarball verification or registry publish still use the **npm CLI** on the publishing machine or in CI:
 
 ```powershell
 cd Motely.BrowserWasm/motely-wasm

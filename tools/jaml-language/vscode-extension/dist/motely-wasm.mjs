@@ -240,61 +240,65 @@ function deserialize(json) { const result = JSON.parse(json); if (result === nul
 
 class Motely_JSMotelySeedExplorer {
     constructor(_id) { this._id = _id; disposeOnFinalize(this, _id); }
-    createShopItemStream(ante) { Motely.MotelySeedExplorer.createShopItemStream(this._id, ante); }
-    nextShopItem() { return Motely.MotelySeedExplorer.nextShopItem(this._id); }
-    createShopJokerStream(ante) { Motely.MotelySeedExplorer.createShopJokerStream(this._id, ante); }
-    createBuffoonPackJokerStream(ante) { Motely.MotelySeedExplorer.createBuffoonPackJokerStream(this._id, ante); }
-    createJudgementJokerStream(ante) { Motely.MotelySeedExplorer.createJudgementJokerStream(this._id, ante); }
-    createWraithJokerStream(ante) { Motely.MotelySeedExplorer.createWraithJokerStream(this._id, ante); }
-    nextJoker() { return Motely.MotelySeedExplorer.nextJoker(this._id); }
-    createSoulJokerStream(ante) { Motely.MotelySeedExplorer.createSoulJokerStream(this._id, ante); }
-    createRareTagJokerStream(ante) { Motely.MotelySeedExplorer.createRareTagJokerStream(this._id, ante); }
-    createUncommonTagJokerStream(ante) { Motely.MotelySeedExplorer.createUncommonTagJokerStream(this._id, ante); }
-    createRiffRaffJokerStream(ante) { Motely.MotelySeedExplorer.createRiffRaffJokerStream(this._id, ante); }
-    createCommonShopJokerStream(ante) { Motely.MotelySeedExplorer.createCommonShopJokerStream(this._id, ante); }
-    createUncommonShopJokerStream(ante) { Motely.MotelySeedExplorer.createUncommonShopJokerStream(this._id, ante); }
-    createRareShopJokerStream(ante) { Motely.MotelySeedExplorer.createRareShopJokerStream(this._id, ante); }
-    nextFixedRarityJoker() { return Motely.MotelySeedExplorer.nextFixedRarityJoker(this._id); }
-    createTagStream(ante) { Motely.MotelySeedExplorer.createTagStream(this._id, ante); }
-    nextTag() { return Motely.MotelySeedExplorer.nextTag(this._id); }
-    createVoucherStream(ante) { Motely.MotelySeedExplorer.createVoucherStream(this._id, ante); }
-    nextVoucher() { return Motely.MotelySeedExplorer.nextVoucher(this._id); }
-    getAnteFirstVoucher(ante) { return Motely.MotelySeedExplorer.getAnteFirstVoucher(this._id, ante); }
-    createBossStream() { Motely.MotelySeedExplorer.createBossStream(this._id); }
-    getBossForAnte(ante) { return Motely.MotelySeedExplorer.getBossForAnte(this._id, ante); }
-    createBoosterPackStream(ante) { Motely.MotelySeedExplorer.createBoosterPackStream(this._id, ante); }
-    nextBoosterPack() { return Motely.MotelySeedExplorer.nextBoosterPack(this._id); }
-    createShopTarotStream(ante) { Motely.MotelySeedExplorer.createShopTarotStream(this._id, ante); }
-    createArcanaPackTarotStream(ante) { Motely.MotelySeedExplorer.createArcanaPackTarotStream(this._id, ante); }
-    createEmperorTarotStream(ante) { Motely.MotelySeedExplorer.createEmperorTarotStream(this._id, ante); }
-    createPurpleSealTarotStream(ante) { Motely.MotelySeedExplorer.createPurpleSealTarotStream(this._id, ante); }
-    nextTarot() { return Motely.MotelySeedExplorer.nextTarot(this._id); }
-    createShopPlanetStream(ante) { Motely.MotelySeedExplorer.createShopPlanetStream(this._id, ante); }
-    createCelestialPackPlanetStream(ante) { Motely.MotelySeedExplorer.createCelestialPackPlanetStream(this._id, ante); }
-    nextPlanet() { return Motely.MotelySeedExplorer.nextPlanet(this._id); }
-    createShopSpectralStream(ante) { Motely.MotelySeedExplorer.createShopSpectralStream(this._id, ante); }
-    createSpectralPackSpectralStream(ante) { Motely.MotelySeedExplorer.createSpectralPackSpectralStream(this._id, ante); }
-    createSixthSenseSpectralStream(ante) { Motely.MotelySeedExplorer.createSixthSenseSpectralStream(this._id, ante); }
-    createSeanceSpectralStream(ante) { Motely.MotelySeedExplorer.createSeanceSpectralStream(this._id, ante); }
-    nextSpectral() { return Motely.MotelySeedExplorer.nextSpectral(this._id); }
-    createStandardPackCardStream(ante) { Motely.MotelySeedExplorer.createStandardPackCardStream(this._id, ante); }
-    nextStandardCard() { return Motely.MotelySeedExplorer.nextStandardCard(this._id); }
-    createLuckyCardMoneyStream() { Motely.MotelySeedExplorer.createLuckyCardMoneyStream(this._id); }
-    nextLuckyMoney() { return Motely.MotelySeedExplorer.nextLuckyMoney(this._id); }
-    createLuckyCardMultStream() { Motely.MotelySeedExplorer.createLuckyCardMultStream(this._id); }
-    nextLuckyMult() { return Motely.MotelySeedExplorer.nextLuckyMult(this._id); }
-    createMisprintStream() { Motely.MotelySeedExplorer.createMisprintStream(this._id); }
-    nextMisprintMult() { return Motely.MotelySeedExplorer.nextMisprintMult(this._id); }
-    createWheelOfFortuneStream() { Motely.MotelySeedExplorer.createWheelOfFortuneStream(this._id); }
-    nextWheelOfFortune() { return Motely.MotelySeedExplorer.nextWheelOfFortune(this._id); }
-    createErraticDeckStream() { Motely.MotelySeedExplorer.createErraticDeckStream(this._id); }
-    nextErraticDeckCard() { return Motely.MotelySeedExplorer.nextErraticDeckCard(this._id); }
-    createCavendishStream() { Motely.MotelySeedExplorer.createCavendishStream(this._id); }
-    nextCavendishExtinct() { return Motely.MotelySeedExplorer.nextCavendishExtinct(this._id); }
-    createGrosMichelStream() { Motely.MotelySeedExplorer.createGrosMichelStream(this._id); }
-    nextGrosMichelExtinct() { return Motely.MotelySeedExplorer.nextGrosMichelExtinct(this._id); }
+    createShopItemStream(ante) { MotelySeedExplorer.createShopItemStream(this._id, ante); }
+    nextShopItem() { return MotelySeedExplorer.nextShopItem(this._id); }
+    createShopJokerStream(ante) { MotelySeedExplorer.createShopJokerStream(this._id, ante); }
+    createBuffoonPackJokerStream(ante) { MotelySeedExplorer.createBuffoonPackJokerStream(this._id, ante); }
+    createJudgementJokerStream(ante) { MotelySeedExplorer.createJudgementJokerStream(this._id, ante); }
+    createWraithJokerStream(ante) { MotelySeedExplorer.createWraithJokerStream(this._id, ante); }
+    nextJoker() { return MotelySeedExplorer.nextJoker(this._id); }
+    createSoulJokerStream(ante) { MotelySeedExplorer.createSoulJokerStream(this._id, ante); }
+    createRareTagJokerStream(ante) { MotelySeedExplorer.createRareTagJokerStream(this._id, ante); }
+    createUncommonTagJokerStream(ante) { MotelySeedExplorer.createUncommonTagJokerStream(this._id, ante); }
+    createRiffRaffJokerStream(ante) { MotelySeedExplorer.createRiffRaffJokerStream(this._id, ante); }
+    createCommonShopJokerStream(ante) { MotelySeedExplorer.createCommonShopJokerStream(this._id, ante); }
+    createUncommonShopJokerStream(ante) { MotelySeedExplorer.createUncommonShopJokerStream(this._id, ante); }
+    createRareShopJokerStream(ante) { MotelySeedExplorer.createRareShopJokerStream(this._id, ante); }
+    nextFixedRarityJoker() { return MotelySeedExplorer.nextFixedRarityJoker(this._id); }
+    createTagStream(ante) { MotelySeedExplorer.createTagStream(this._id, ante); }
+    nextTag() { return MotelySeedExplorer.nextTag(this._id); }
+    createVoucherStream(ante) { MotelySeedExplorer.createVoucherStream(this._id, ante); }
+    nextVoucher() { return MotelySeedExplorer.nextVoucher(this._id); }
+    getAnteFirstVoucher(ante) { return MotelySeedExplorer.getAnteFirstVoucher(this._id, ante); }
+    createBossStream() { MotelySeedExplorer.createBossStream(this._id); }
+    getBossForAnte(ante) { return MotelySeedExplorer.getBossForAnte(this._id, ante); }
+    createBoosterPackStream(ante) { MotelySeedExplorer.createBoosterPackStream(this._id, ante); }
+    nextBoosterPack() { return MotelySeedExplorer.nextBoosterPack(this._id); }
+    createShopTarotStream(ante) { MotelySeedExplorer.createShopTarotStream(this._id, ante); }
+    createArcanaPackTarotStream(ante) { MotelySeedExplorer.createArcanaPackTarotStream(this._id, ante); }
+    createEmperorTarotStream(ante) { MotelySeedExplorer.createEmperorTarotStream(this._id, ante); }
+    createPurpleSealTarotStream(ante) { MotelySeedExplorer.createPurpleSealTarotStream(this._id, ante); }
+    nextTarot() { return MotelySeedExplorer.nextTarot(this._id); }
+    createShopPlanetStream(ante) { MotelySeedExplorer.createShopPlanetStream(this._id, ante); }
+    createCelestialPackPlanetStream(ante) { MotelySeedExplorer.createCelestialPackPlanetStream(this._id, ante); }
+    nextPlanet() { return MotelySeedExplorer.nextPlanet(this._id); }
+    createShopSpectralStream(ante) { MotelySeedExplorer.createShopSpectralStream(this._id, ante); }
+    createSpectralPackSpectralStream(ante) { MotelySeedExplorer.createSpectralPackSpectralStream(this._id, ante); }
+    createSixthSenseSpectralStream(ante) { MotelySeedExplorer.createSixthSenseSpectralStream(this._id, ante); }
+    createSeanceSpectralStream(ante) { MotelySeedExplorer.createSeanceSpectralStream(this._id, ante); }
+    nextSpectral() { return MotelySeedExplorer.nextSpectral(this._id); }
+    createStandardPackCardStream(ante) { MotelySeedExplorer.createStandardPackCardStream(this._id, ante); }
+    nextStandardCard() { return MotelySeedExplorer.nextStandardCard(this._id); }
+    createLuckyCardMoneyStream() { MotelySeedExplorer.createLuckyCardMoneyStream(this._id); }
+    nextLuckyMoney() { return MotelySeedExplorer.nextLuckyMoney(this._id); }
+    createLuckyCardMultStream() { MotelySeedExplorer.createLuckyCardMultStream(this._id); }
+    nextLuckyMult() { return MotelySeedExplorer.nextLuckyMult(this._id); }
+    createMisprintStream() { MotelySeedExplorer.createMisprintStream(this._id); }
+    nextMisprintMult() { return MotelySeedExplorer.nextMisprintMult(this._id); }
+    createWheelOfFortuneStream() { MotelySeedExplorer.createWheelOfFortuneStream(this._id); }
+    nextWheelOfFortune() { return MotelySeedExplorer.nextWheelOfFortune(this._id); }
+    createErraticDeckStream() { MotelySeedExplorer.createErraticDeckStream(this._id); }
+    nextErraticDeckCard() { return MotelySeedExplorer.nextErraticDeckCard(this._id); }
+    createCavendishStream() { MotelySeedExplorer.createCavendishStream(this._id); }
+    nextCavendishExtinct() { return MotelySeedExplorer.nextCavendishExtinct(this._id); }
+    createGrosMichelStream() { MotelySeedExplorer.createGrosMichelStream(this._id); }
+    nextGrosMichelExtinct() { return MotelySeedExplorer.nextGrosMichelExtinct(this._id); }
 }
 
+const Filters = {
+    TagPosition: { "0": "Any", "1": "SmallBlind", "2": "BigBlind", "Any": 0, "SmallBlind": 1, "BigBlind": 2 },
+    JamlAesthetic: { "0": "Palindrome", "1": "Psychosis", "2": "Gross", "3": "Nsfw", "4": "Funny", "5": "Balatro", "Palindrome": 0, "Psychosis": 1, "Gross": 2, "Nsfw": 3, "Funny": 4, "Balatro": 5 }
+};
 const Motely = {
     MotelyDeck: { "0": "Red", "1": "Blue", "2": "Yellow", "3": "Green", "4": "Black", "5": "Magic", "6": "Nebula", "7": "Ghost", "8": "Abandoned", "9": "Checkered", "10": "Zodiac", "11": "Painted", "12": "Anaglyph", "13": "Plasma", "14": "Erratic", "Red": 0, "Blue": 1, "Yellow": 2, "Green": 3, "Black": 4, "Magic": 5, "Nebula": 6, "Ghost": 7, "Abandoned": 8, "Checkered": 9, "Zodiac": 10, "Painted": 11, "Anaglyph": 12, "Plasma": 13, "Erratic": 14 },
     MotelyStake: { "0": "White", "1": "Red", "2": "Green", "3": "Black", "4": "Blue", "6": "Purple", "7": "Orange", "8": "Gold", "White": 0, "Red": 1, "Green": 2, "Black": 3, "Blue": 4, "Purple": 6, "Orange": 7, "Gold": 8 },
@@ -314,147 +318,145 @@ const Motely = {
     MotelyItemEnhancement: { "0": "None", "524288": "Bonus", "1048576": "Mult", "1572864": "Wild", "2097152": "Glass", "2621440": "Steel", "3145728": "Stone", "3670016": "Gold", "4194304": "Lucky", "None": 0, "Bonus": 524288, "Mult": 1048576, "Wild": 1572864, "Glass": 2097152, "Steel": 2621440, "Stone": 3145728, "Gold": 3670016, "Lucky": 4194304 },
     MotelyItemSeal: { "0": "None", "65536": "Gold", "131072": "Red", "196608": "Blue", "262144": "Purple", "None": 0, "Gold": 65536, "Red": 131072, "Blue": 196608, "Purple": 262144 },
     MotelyBossBlind: { "-2147483648": "", "-2147483647": "", "-2147483646": "", "-2147483645": "", "-2147483644": "", "536870917": "TheArm", "6": "", "805306375": "TheEye", "536870920": "TheFish", "536870921": "TheFlint", "10": "TheGoad", "11": "TheHead", "12": "TheHook", "536870925": "TheHouse", "14": "TheManacle", "536870927": "TheMark", "536870928": "TheMouth", "536870929": "TheNeedle", "1610612754": "TheOx", "19": "ThePillar", "1073741844": "ThePlant", "21": "ThePsychic", "1342177302": "TheSerpent", "805306391": "TheTooth", "536870936": "TheWall", "536870937": "TheWater", "536870938": "TheWheel", "27": "TheWindow", "": -2147483648, "": -2147483647, "": -2147483646, "": -2147483645, "": -2147483644, "TheArm": 536870917, "": 6, "TheEye": 805306375, "TheFish": 536870920, "TheFlint": 536870921, "TheGoad": 10, "TheHead": 11, "TheHook": 12, "TheHouse": 536870925, "TheManacle": 14, "TheMark": 536870927, "TheMouth": 536870928, "TheNeedle": 536870929, "TheOx": 1610612754, "ThePillar": 19, "ThePlant": 1073741844, "ThePsychic": 21, "TheSerpent": 1342177302, "TheTooth": 805306391, "TheWall": 536870936, "TheWater": 536870937, "TheWheel": 536870938, "TheWindow": 27 },
-    MotelyTag: { "0": "UncommonTag", "1": "RareTag", "2": "NegativeTag", "3": "FoilTag", "4": "HolographicTag", "5": "PolychromeTag", "6": "InvestmentTag", "7": "VoucherTag", "8": "BossTag", "9": "StandardTag", "10": "CharmTag", "11": "MeteorTag", "12": "BuffoonTag", "13": "HandyTag", "14": "GarbageTag", "15": "EtherealTag", "16": "CouponTag", "17": "DoubleTag", "18": "JuggleTag", "19": "D6Tag", "20": "TopupTag", "21": "SpeedTag", "22": "OrbitalTag", "23": "EconomyTag", "UncommonTag": 0, "RareTag": 1, "NegativeTag": 2, "FoilTag": 3, "HolographicTag": 4, "PolychromeTag": 5, "InvestmentTag": 6, "VoucherTag": 7, "BossTag": 8, "StandardTag": 9, "CharmTag": 10, "MeteorTag": 11, "BuffoonTag": 12, "HandyTag": 13, "GarbageTag": 14, "EtherealTag": 15, "CouponTag": 16, "DoubleTag": 17, "JuggleTag": 18, "D6Tag": 19, "TopupTag": 20, "SpeedTag": 21, "OrbitalTag": 22, "EconomyTag": 23 },
-    BrowserWasm: {
-        MotelyProgram: {
-            getVersion: () => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_GetVersion(),
-            loadJaml: (jaml) => deserialize(getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_LoadJaml(jaml)),
-            compileJummy: (jummy) => deserialize(getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_CompileJummy(jummy)),
-            createSeedExplorer: (seed, deck, stake) => new Motely_JSMotelySeedExplorer(getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_CreateSeedExplorer(seed, serialize(deck), serialize(stake))),
-            stopSearch: () => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StopSearch(),
-            startConfiguredSearch: (jaml, batchCharCount, startBatch, endBatch) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartConfiguredSearch(serialize(jaml), batchCharCount, startBatch, endBatch),
-            startSequentialSearch: (jaml, batchCharCount, startBatch, endBatch) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartSequentialSearch(serialize(jaml), batchCharCount, startBatch, endBatch),
-            startRandomSearch: (jaml, randomSeedCount, batchCharCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartRandomSearch(serialize(jaml), randomSeedCount, batchCharCount),
-            startAestheticSearch: (jaml, aesthetic, batchCharCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartAestheticSearch(serialize(jaml), aesthetic, batchCharCount),
-            startKeywordSearch: (jaml, keywordsCsv, paddingChars, batchCharCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartKeywordSearch(serialize(jaml), keywordsCsv, paddingChars, batchCharCount),
-            startSeedListSearch: (jaml, seedsCsv, threadCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartSeedListSearch(serialize(jaml), seedsCsv, threadCount)
-        },
-        SearchEvents: {
-            onProgress: new Event(),
-            onProgressSerialized: (seedsSearched, matchingSeeds, elapsedMs) => Motely.BrowserWasm.SearchEvents.onProgress.broadcast(seedsSearched, matchingSeeds, elapsedMs),
-            onResult: new Event(),
-            onResultSerialized: (seed, score, tallyColumns) => Motely.BrowserWasm.SearchEvents.onResult.broadcast(seed, score, tallyColumns),
-            onComplete: new Event(),
-            onCompleteSerialized: (status, seedsSearched, matchingSeeds) => Motely.BrowserWasm.SearchEvents.onComplete.broadcast(status, seedsSearched, matchingSeeds)
-        }
-    },
-    Filters: {
-        TagPosition: { "0": "Any", "1": "SmallBlind", "2": "BigBlind", "Any": 0, "SmallBlind": 1, "BigBlind": 2 },
-        JamlAesthetic: { "0": "Palindrome", "1": "Psychosis", "2": "Gross", "3": "Nsfw", "4": "Funny", "5": "Balatro", "Palindrome": 0, "Psychosis": 1, "Gross": 2, "Nsfw": 3, "Funny": 4, "Balatro": 5 }
-    },
-    MotelySeedExplorer: {
-        createShopItemStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopItemStream(ante),
-        nextShopItem: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextShopItem(_id),
-        createShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopJokerStream(ante),
-        createBuffoonPackJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBuffoonPackJokerStream(ante),
-        createJudgementJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateJudgementJokerStream(ante),
-        createWraithJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWraithJokerStream(ante),
-        nextJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextJoker(_id),
-        createSoulJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSoulJokerStream(ante),
-        createRareTagJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareTagJokerStream(ante),
-        createUncommonTagJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonTagJokerStream(ante),
-        createRiffRaffJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRiffRaffJokerStream(ante),
-        createCommonShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCommonShopJokerStream(ante),
-        createUncommonShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonShopJokerStream(ante),
-        createRareShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareShopJokerStream(ante),
-        nextFixedRarityJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextFixedRarityJoker(_id),
-        createTagStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateTagStream(ante),
-        nextTag: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTag(_id),
-        createVoucherStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateVoucherStream(ante),
-        nextVoucher: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextVoucher(_id),
-        getAnteFirstVoucher: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetAnteFirstVoucher(ante),
-        createBossStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBossStream(_id),
-        getBossForAnte: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetBossForAnte(ante),
-        createBoosterPackStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBoosterPackStream(ante),
-        nextBoosterPack: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextBoosterPack(_id),
-        createShopTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopTarotStream(ante),
-        createArcanaPackTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateArcanaPackTarotStream(ante),
-        createEmperorTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateEmperorTarotStream(ante),
-        createPurpleSealTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreatePurpleSealTarotStream(ante),
-        nextTarot: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTarot(_id),
-        createShopPlanetStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopPlanetStream(ante),
-        createCelestialPackPlanetStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCelestialPackPlanetStream(ante),
-        nextPlanet: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextPlanet(_id),
-        createShopSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopSpectralStream(ante),
-        createSpectralPackSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSpectralPackSpectralStream(ante),
-        createSixthSenseSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSixthSenseSpectralStream(ante),
-        createSeanceSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSeanceSpectralStream(ante),
-        nextSpectral: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextSpectral(_id),
-        createStandardPackCardStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateStandardPackCardStream(ante),
-        nextStandardCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextStandardCard(_id),
-        createLuckyCardMoneyStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMoneyStream(_id),
-        nextLuckyMoney: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMoney(_id),
-        createLuckyCardMultStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMultStream(_id),
-        nextLuckyMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMult(_id),
-        createMisprintStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateMisprintStream(_id),
-        nextMisprintMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextMisprintMult(_id),
-        createWheelOfFortuneStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWheelOfFortuneStream(_id),
-        nextWheelOfFortune: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextWheelOfFortune(_id),
-        createErraticDeckStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateErraticDeckStream(_id),
-        nextErraticDeckCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextErraticDeckCard(_id),
-        createCavendishStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCavendishStream(_id),
-        nextCavendishExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextCavendishExtinct(_id),
-        createGrosMichelStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateGrosMichelStream(_id),
-        nextGrosMichelExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextGrosMichelExtinct(_id),
-        createShopItemStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopItemStream(_id, ante),
-        nextShopItem: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextShopItem(_id),
-        createShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopJokerStream(_id, ante),
-        createBuffoonPackJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBuffoonPackJokerStream(_id, ante),
-        createJudgementJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateJudgementJokerStream(_id, ante),
-        createWraithJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWraithJokerStream(_id, ante),
-        nextJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextJoker(_id),
-        createSoulJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSoulJokerStream(_id, ante),
-        createRareTagJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareTagJokerStream(_id, ante),
-        createUncommonTagJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonTagJokerStream(_id, ante),
-        createRiffRaffJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRiffRaffJokerStream(_id, ante),
-        createCommonShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCommonShopJokerStream(_id, ante),
-        createUncommonShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonShopJokerStream(_id, ante),
-        createRareShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareShopJokerStream(_id, ante),
-        nextFixedRarityJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextFixedRarityJoker(_id),
-        createTagStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateTagStream(_id, ante),
-        nextTag: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTag(_id),
-        createVoucherStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateVoucherStream(_id, ante),
-        nextVoucher: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextVoucher(_id),
-        getAnteFirstVoucher: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetAnteFirstVoucher(_id, ante),
-        createBossStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBossStream(_id),
-        getBossForAnte: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetBossForAnte(_id, ante),
-        createBoosterPackStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBoosterPackStream(_id, ante),
-        nextBoosterPack: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextBoosterPack(_id),
-        createShopTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopTarotStream(_id, ante),
-        createArcanaPackTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateArcanaPackTarotStream(_id, ante),
-        createEmperorTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateEmperorTarotStream(_id, ante),
-        createPurpleSealTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreatePurpleSealTarotStream(_id, ante),
-        nextTarot: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTarot(_id),
-        createShopPlanetStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopPlanetStream(_id, ante),
-        createCelestialPackPlanetStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCelestialPackPlanetStream(_id, ante),
-        nextPlanet: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextPlanet(_id),
-        createShopSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopSpectralStream(_id, ante),
-        createSpectralPackSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSpectralPackSpectralStream(_id, ante),
-        createSixthSenseSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSixthSenseSpectralStream(_id, ante),
-        createSeanceSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSeanceSpectralStream(_id, ante),
-        nextSpectral: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextSpectral(_id),
-        createStandardPackCardStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateStandardPackCardStream(_id, ante),
-        nextStandardCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextStandardCard(_id),
-        createLuckyCardMoneyStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMoneyStream(_id),
-        nextLuckyMoney: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMoney(_id),
-        createLuckyCardMultStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMultStream(_id),
-        nextLuckyMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMult(_id),
-        createMisprintStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateMisprintStream(_id),
-        nextMisprintMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextMisprintMult(_id),
-        createWheelOfFortuneStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWheelOfFortuneStream(_id),
-        nextWheelOfFortune: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextWheelOfFortune(_id),
-        createErraticDeckStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateErraticDeckStream(_id),
-        nextErraticDeckCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextErraticDeckCard(_id),
-        createCavendishStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCavendishStream(_id),
-        nextCavendishExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextCavendishExtinct(_id),
-        createGrosMichelStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateGrosMichelStream(_id),
-        nextGrosMichelExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextGrosMichelExtinct(_id)
-    }
+    MotelyTag: { "0": "UncommonTag", "1": "RareTag", "2": "NegativeTag", "3": "FoilTag", "4": "HolographicTag", "5": "PolychromeTag", "6": "InvestmentTag", "7": "VoucherTag", "8": "BossTag", "9": "StandardTag", "10": "CharmTag", "11": "MeteorTag", "12": "BuffoonTag", "13": "HandyTag", "14": "GarbageTag", "15": "EtherealTag", "16": "CouponTag", "17": "DoubleTag", "18": "JuggleTag", "19": "D6Tag", "20": "TopupTag", "21": "SpeedTag", "22": "OrbitalTag", "23": "EconomyTag", "UncommonTag": 0, "RareTag": 1, "NegativeTag": 2, "FoilTag": 3, "HolographicTag": 4, "PolychromeTag": 5, "InvestmentTag": 6, "VoucherTag": 7, "BossTag": 8, "StandardTag": 9, "CharmTag": 10, "MeteorTag": 11, "BuffoonTag": 12, "HandyTag": 13, "GarbageTag": 14, "EtherealTag": 15, "CouponTag": 16, "DoubleTag": 17, "JuggleTag": 18, "D6Tag": 19, "TopupTag": 20, "SpeedTag": 21, "OrbitalTag": 22, "EconomyTag": 23 }
+};
+const MotelyProgram = {
+    getVersion: () => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_GetVersion(),
+    loadJaml: (jaml) => deserialize(getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_LoadJaml(jaml)),
+    compileJummy: (jummy) => deserialize(getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_CompileJummy(jummy)),
+    createSeedExplorer: (seed, deck, stake) => new Motely_JSMotelySeedExplorer(getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_CreateSeedExplorer(seed, serialize(deck), serialize(stake))),
+    stopSearch: () => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StopSearch(),
+    startConfiguredSearch: (jaml, batchCharCount, startBatch, endBatch) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartConfiguredSearch(serialize(jaml), batchCharCount, startBatch, endBatch),
+    startSequentialSearch: (jaml, batchCharCount, startBatch, endBatch) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartSequentialSearch(serialize(jaml), batchCharCount, startBatch, endBatch),
+    startRandomSearch: (jaml, randomSeedCount, batchCharCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartRandomSearch(serialize(jaml), randomSeedCount, batchCharCount),
+    startAestheticSearch: (jaml, aesthetic, batchCharCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartAestheticSearch(serialize(jaml), aesthetic, batchCharCount),
+    startKeywordSearch: (jaml, keywordsCsv, paddingChars, batchCharCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartKeywordSearch(serialize(jaml), keywordsCsv, paddingChars, batchCharCount),
+    startSeedListSearch: (jaml, seedsCsv, threadCount) => getExports().Bootsharp_Generated_Exports_Motely_BrowserWasm_JSMotelyProgram_StartSeedListSearch(serialize(jaml), seedsCsv, threadCount)
+};
+const MotelySeedExplorer = {
+    createShopItemStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopItemStream(ante),
+    nextShopItem: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextShopItem(_id),
+    createShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopJokerStream(ante),
+    createBuffoonPackJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBuffoonPackJokerStream(ante),
+    createJudgementJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateJudgementJokerStream(ante),
+    createWraithJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWraithJokerStream(ante),
+    nextJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextJoker(_id),
+    createSoulJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSoulJokerStream(ante),
+    createRareTagJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareTagJokerStream(ante),
+    createUncommonTagJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonTagJokerStream(ante),
+    createRiffRaffJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRiffRaffJokerStream(ante),
+    createCommonShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCommonShopJokerStream(ante),
+    createUncommonShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonShopJokerStream(ante),
+    createRareShopJokerStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareShopJokerStream(ante),
+    nextFixedRarityJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextFixedRarityJoker(_id),
+    createTagStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateTagStream(ante),
+    nextTag: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTag(_id),
+    createVoucherStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateVoucherStream(ante),
+    nextVoucher: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextVoucher(_id),
+    getAnteFirstVoucher: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetAnteFirstVoucher(ante),
+    createBossStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBossStream(_id),
+    getBossForAnte: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetBossForAnte(ante),
+    createBoosterPackStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBoosterPackStream(ante),
+    nextBoosterPack: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextBoosterPack(_id),
+    createShopTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopTarotStream(ante),
+    createArcanaPackTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateArcanaPackTarotStream(ante),
+    createEmperorTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateEmperorTarotStream(ante),
+    createPurpleSealTarotStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreatePurpleSealTarotStream(ante),
+    nextTarot: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTarot(_id),
+    createShopPlanetStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopPlanetStream(ante),
+    createCelestialPackPlanetStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCelestialPackPlanetStream(ante),
+    nextPlanet: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextPlanet(_id),
+    createShopSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopSpectralStream(ante),
+    createSpectralPackSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSpectralPackSpectralStream(ante),
+    createSixthSenseSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSixthSenseSpectralStream(ante),
+    createSeanceSpectralStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSeanceSpectralStream(ante),
+    nextSpectral: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextSpectral(_id),
+    createStandardPackCardStream: (ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateStandardPackCardStream(ante),
+    nextStandardCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextStandardCard(_id),
+    createLuckyCardMoneyStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMoneyStream(_id),
+    nextLuckyMoney: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMoney(_id),
+    createLuckyCardMultStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMultStream(_id),
+    nextLuckyMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMult(_id),
+    createMisprintStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateMisprintStream(_id),
+    nextMisprintMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextMisprintMult(_id),
+    createWheelOfFortuneStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWheelOfFortuneStream(_id),
+    nextWheelOfFortune: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextWheelOfFortune(_id),
+    createErraticDeckStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateErraticDeckStream(_id),
+    nextErraticDeckCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextErraticDeckCard(_id),
+    createCavendishStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCavendishStream(_id),
+    nextCavendishExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextCavendishExtinct(_id),
+    createGrosMichelStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateGrosMichelStream(_id),
+    nextGrosMichelExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextGrosMichelExtinct(_id),
+    createShopItemStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopItemStream(_id, ante),
+    nextShopItem: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextShopItem(_id),
+    createShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopJokerStream(_id, ante),
+    createBuffoonPackJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBuffoonPackJokerStream(_id, ante),
+    createJudgementJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateJudgementJokerStream(_id, ante),
+    createWraithJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWraithJokerStream(_id, ante),
+    nextJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextJoker(_id),
+    createSoulJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSoulJokerStream(_id, ante),
+    createRareTagJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareTagJokerStream(_id, ante),
+    createUncommonTagJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonTagJokerStream(_id, ante),
+    createRiffRaffJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRiffRaffJokerStream(_id, ante),
+    createCommonShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCommonShopJokerStream(_id, ante),
+    createUncommonShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateUncommonShopJokerStream(_id, ante),
+    createRareShopJokerStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateRareShopJokerStream(_id, ante),
+    nextFixedRarityJoker: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextFixedRarityJoker(_id),
+    createTagStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateTagStream(_id, ante),
+    nextTag: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTag(_id),
+    createVoucherStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateVoucherStream(_id, ante),
+    nextVoucher: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextVoucher(_id),
+    getAnteFirstVoucher: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetAnteFirstVoucher(_id, ante),
+    createBossStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBossStream(_id),
+    getBossForAnte: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_GetBossForAnte(_id, ante),
+    createBoosterPackStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateBoosterPackStream(_id, ante),
+    nextBoosterPack: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextBoosterPack(_id),
+    createShopTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopTarotStream(_id, ante),
+    createArcanaPackTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateArcanaPackTarotStream(_id, ante),
+    createEmperorTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateEmperorTarotStream(_id, ante),
+    createPurpleSealTarotStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreatePurpleSealTarotStream(_id, ante),
+    nextTarot: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextTarot(_id),
+    createShopPlanetStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopPlanetStream(_id, ante),
+    createCelestialPackPlanetStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCelestialPackPlanetStream(_id, ante),
+    nextPlanet: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextPlanet(_id),
+    createShopSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateShopSpectralStream(_id, ante),
+    createSpectralPackSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSpectralPackSpectralStream(_id, ante),
+    createSixthSenseSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSixthSenseSpectralStream(_id, ante),
+    createSeanceSpectralStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateSeanceSpectralStream(_id, ante),
+    nextSpectral: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextSpectral(_id),
+    createStandardPackCardStream: (_id, ante) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateStandardPackCardStream(_id, ante),
+    nextStandardCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextStandardCard(_id),
+    createLuckyCardMoneyStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMoneyStream(_id),
+    nextLuckyMoney: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMoney(_id),
+    createLuckyCardMultStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateLuckyCardMultStream(_id),
+    nextLuckyMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextLuckyMult(_id),
+    createMisprintStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateMisprintStream(_id),
+    nextMisprintMult: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextMisprintMult(_id),
+    createWheelOfFortuneStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateWheelOfFortuneStream(_id),
+    nextWheelOfFortune: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextWheelOfFortune(_id),
+    createErraticDeckStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateErraticDeckStream(_id),
+    nextErraticDeckCard: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextErraticDeckCard(_id),
+    createCavendishStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateCavendishStream(_id),
+    nextCavendishExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextCavendishExtinct(_id),
+    createGrosMichelStream: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_CreateGrosMichelStream(_id),
+    nextGrosMichelExtinct: (_id) => getExports().Bootsharp_Generated_Exports_Motely_JSMotelySeedExplorer_NextGrosMichelExtinct(_id)
+};
+const SearchEvents = {
+    onProgress: new Event(),
+    onProgressSerialized: (seedsSearched, matchingSeeds, elapsedMs) => SearchEvents.onProgress.broadcast(seedsSearched, matchingSeeds, elapsedMs),
+    onResult: new Event(),
+    onResultSerialized: (seed, score, tallyColumns) => SearchEvents.onResult.broadcast(seed, score, tallyColumns),
+    onComplete: new Event(),
+    onCompleteSerialized: (status, seedsSearched, matchingSeeds) => SearchEvents.onComplete.broadcast(status, seedsSearched, matchingSeeds)
 };
 
 var bindings = /*#__PURE__*/Object.freeze({
     __proto__: null,
-    Motely: Motely
+    Filters: Filters,
+    Motely: Motely,
+    MotelyProgram: MotelyProgram,
+    MotelySeedExplorer: MotelySeedExplorer,
+    SearchEvents: SearchEvents
 });
 
 function bindImports(runtime) {
@@ -564,4 +566,4 @@ var dotnet_runtime_g = /*#__PURE__*/Object.freeze({
     mt: mt
 });
 
-export { Event, Motely, index as default };
+export { Event, Filters, Motely, MotelyProgram, MotelySeedExplorer, SearchEvents, index as default };

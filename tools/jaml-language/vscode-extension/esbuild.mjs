@@ -44,12 +44,18 @@ const ctx = await esbuild.context({
   platform: "node",
   sourcemap: true,
   minify: false,
-  // motely-wasm is loaded at runtime via dynamic import
-  // Keep it external so esbuild doesn't try to bundle the large .mjs
+  // motely-wasm is loaded at runtime via dynamic import from dist/
+  // Redirect bare "motely-wasm" imports to the copied dist file at runtime
   plugins: [
     {
-      name: "mark-motely-wasm-external",
+      name: "externalize-motely-wasm",
       setup(build) {
+        // Catch bare specifier: import ... from "motely-wasm"
+        build.onResolve({ filter: /^motely-wasm$/ }, () => ({
+          path: "./motely-wasm.mjs",
+          external: true,
+        }));
+        // Catch direct .mjs references
         build.onResolve({ filter: /motely-wasm\.mjs$/ }, () => ({
           path: "./motely-wasm.mjs",
           external: true,
