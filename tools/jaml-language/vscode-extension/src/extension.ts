@@ -54,7 +54,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       try {
         await runSearch(
-          extPath, jaml, 1_000_000,
+          jaml, 1_000_000,
           (_s, m) => vscode.window.setStatusBarMessage(`JAML: ${m} hits…`, 500),
           (seed, score) => panel.addResult(seed, score),
           (summary) => {
@@ -71,7 +71,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
 
     vscode.commands.registerCommand("jaml.stopSearch", () => {
-      stopSearch(extPath);
+      stopSearch();
       vscode.window.setStatusBarMessage("JAML: search stopped.", 2000);
     })
   );
@@ -80,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.workspace.registerNotebookSerializer("jaml-notebook", new JamlNotebookSerializer())
   );
-  const executor = new JamlNotebookExecutor(extPath);
+  const executor = new JamlNotebookExecutor();
   executor.register(context);
 }
 
