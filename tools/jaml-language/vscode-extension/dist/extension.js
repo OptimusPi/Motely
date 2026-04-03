@@ -18335,55 +18335,83 @@ var JamlNotebookExecutor = class {
   }
   executeCell(cell, controller) {
     const execution = controller.createCellExecution(cell);
-    execution.start(Date.now());
+    const startTime = Date.now();
+    execution.start(startTime);
     execution.clearOutput();
     const jaml = cell.document.getText();
     const results = [];
     let searched = 0n;
+    let matching = 0n;
+    const liveOutput = new vscode2.NotebookCellOutput([
+      vscode2.NotebookCellOutputItem.text(
+        buildNotebookHtml([], { status: "running", searched: "0", matched: "0", elapsedMs: 0 }),
+        "text/html"
+      )
+    ]);
+    execution.appendOutput(liveOutput);
+    let lastRender = 0;
+    const RENDER_INTERVAL_MS = 400;
+    const renderLive = () => {
+      const now = Date.now();
+      if (now - lastRender < RENDER_INTERVAL_MS) return;
+      lastRender = now;
+      const sorted = results.slice().sort((a, b) => b.score - a.score).slice(0, 200);
+      execution.replaceOutputItems(
+        [vscode2.NotebookCellOutputItem.text(
+          buildNotebookHtml(sorted, { status: "running", searched: searched.toString(), matched: matching.toString(), elapsedMs: now - startTime }),
+          "text/html"
+        )],
+        liveOutput
+      );
+    };
     runSearch(
       this.extensionPath,
       jaml,
       1e6,
-      (s, _m) => {
+      (s, m) => {
         searched = s;
+        matching = m;
+        renderLive();
       },
       (seed, score) => {
         results.push({ seed, score });
       },
       (summary) => {
-        const sorted = summary.results;
-        const tableHtml = buildNotebookHtml(sorted, summary);
-        execution.appendOutput(new vscode2.NotebookCellOutput([
-          vscode2.NotebookCellOutputItem.text(tableHtml, "text/html"),
-          vscode2.NotebookCellOutputItem.text(
-            JSON.stringify(summary, null, 2),
-            "application/json"
-          )
-        ]));
+        execution.replaceOutputItems(
+          [
+            vscode2.NotebookCellOutputItem.text(buildNotebookHtml(summary.results, summary), "text/html"),
+            vscode2.NotebookCellOutputItem.text(JSON.stringify(summary, null, 2), "application/json")
+          ],
+          liveOutput
+        );
         execution.end(true, Date.now());
       }
     ).catch((err) => {
-      execution.appendOutput(new vscode2.NotebookCellOutput([
-        vscode2.NotebookCellOutputItem.error(err)
-      ]));
+      execution.replaceOutputItems(
+        [vscode2.NotebookCellOutputItem.error(err)],
+        liveOutput
+      );
       execution.end(false, Date.now());
     });
   }
 };
 function buildNotebookHtml(results, summary) {
+  const isRunning = summary.status === "running";
   const rows = results.slice(0, 200).map(
     (r) => `<tr><td style="font-weight:600;letter-spacing:.05em;padding:2px 8px">${r.seed}</td><td style="padding:2px 8px;opacity:.6">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
   ).join("");
-  return `<div style="font:13px monospace">
-<p style="margin:.25rem 0;opacity:.7">${summary.matched} matches \xB7 ${summary.searched} seeds \xB7 ${summary.elapsedMs}ms</p>
-${results.length === 0 ? "<p>No matches.</p>" : `
-<table style="border-collapse:collapse;width:100%">
+  const searchedFmt = Number(BigInt(summary.searched)).toLocaleString();
+  const statusLine = isRunning ? `<p style="margin:.25rem 0;opacity:.7">\u23F3 ${summary.matched} matches \xB7 ${searchedFmt} seeds \xB7 ${summary.elapsedMs}ms\u2026</p>` : `<p style="margin:.25rem 0;opacity:.7">\u2713 ${summary.matched} matches \xB7 ${searchedFmt} seeds \xB7 ${summary.elapsedMs}ms</p>`;
+  const tableHtml = results.length === 0 ? isRunning ? "" : "<p>No matches.</p>" : `<table style="border-collapse:collapse;width:100%">
   <thead><tr>
     <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Seed</th>
     <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Score</th>
   </tr></thead>
   <tbody>${rows}</tbody>
-</table>`}
+</table>`;
+  return `<div style="font:13px monospace">
+${statusLine}
+${tableHtml}
 </div>`;
 }
 
