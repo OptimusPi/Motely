@@ -1,6 +1,6 @@
 {
 "name": "motely-wasm",
-"version": "5.9.0",
+"version": "5.9.1",
 "description": "MotelyJAML — Balatro seed search engine (browser WASM). Bootsharp emits index.mjs + WASM + types from dotnet publish; this file is npm metadata only. Import: import dotnet, { Motely } from \"motely-wasm\" — Motely is the C# API surface (enums, MotelyProgram, SearchEvents).",
 "type": "module",
 "main": "./index.mjs",

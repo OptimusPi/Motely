@@ -17,7 +17,7 @@ Install from the Visual Studio Code Marketplace: [jaml-language-support](https:/
 
 Or install the `.vsix` manually:
 ```bash
-code --install-extension jaml-language-support-1.1.0.vsix
+code --install-extension jaml-language-support-1.1.6.vsix
 ```
 
 ## Usage
@@ -39,7 +39,8 @@ deck: Red
 stake: Gold
 
 must:
-  - joker: [Eternal, Blueprint]
+  - joker: Blueprint
+    stickers: [Eternal]
   - boss: The Psychic
 
 should:
@@ -65,7 +66,7 @@ Create `.jamlnb` files to mix markdown documentation with executable filters:
 ```json
 [
   { "kind": "markdown", "source": "# My Search Strategy\n\nFinding Eternal Blueprint combos..." },
-  { "kind": "filter", "source": "id: eternal_blueprint\ndeck: Red\nmust:\n  - joker: [Eternal, Blueprint]" },
+  { "kind": "filter", "source": "id: eternal_blueprint\ndeck: Red\nmust:\n  - joker: Blueprint\n    stickers: [Eternal]" },
   { "kind": "markdown", "source": "## Results Analysis" }
 ]
 ```

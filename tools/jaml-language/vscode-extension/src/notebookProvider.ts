@@ -67,52 +67,84 @@ export class JamlNotebookExecutor {
 
   private executeCell(cell: vscode.NotebookCell, controller: vscode.NotebookController): void {
     const execution = controller.createCellExecution(cell);
-    execution.start(Date.now());
+    const startTime = Date.now();
+    execution.start(startTime);
     execution.clearOutput();
 
     const jaml = cell.document.getText();
     const results: { seed: string; score: number }[] = [];
     let searched = 0n;
+    let matching = 0n;
+
+    // Create a persistent output we'll update live as results stream in
+    const liveOutput = new vscode.NotebookCellOutput([
+      vscode.NotebookCellOutputItem.text(
+        buildNotebookHtml([], { status: "running", searched: "0", matched: "0", elapsedMs: 0 }),
+        "text/html"
+      ),
+    ]);
+    execution.appendOutput(liveOutput);
+
+    let lastRender = 0;
+    const RENDER_INTERVAL_MS = 400;
+
+    const renderLive = () => {
+      const now = Date.now();
+      if (now - lastRender < RENDER_INTERVAL_MS) return;
+      lastRender = now;
+      const sorted = results.slice().sort((a, b) => b.score - a.score).slice(0, 200);
+      execution.replaceOutputItems(
+        [vscode.NotebookCellOutputItem.text(
+          buildNotebookHtml(sorted, { status: "running", searched: searched.toString(), matched: matching.toString(), elapsedMs: now - startTime }),
+          "text/html"
+        )],
+        liveOutput
+      );
+    };
 
     runSearch(
       this.extensionPath,
       jaml,
       1_000_000,
-      (s, _m) => { searched = s; },
+      (s, m) => { searched = s; matching = m; renderLive(); },
       (seed, score) => { results.push({ seed, score }); },
       (summary) => {
-        const sorted = summary.results;
-        const tableHtml = buildNotebookHtml(sorted, summary);
-        execution.appendOutput(new vscode.NotebookCellOutput([
-          vscode.NotebookCellOutputItem.text(tableHtml, "text/html"),
-          vscode.NotebookCellOutputItem.text(
-            JSON.stringify(summary, null, 2), "application/json"
-          ),
-        ]));
+        execution.replaceOutputItems(
+          [
+            vscode.NotebookCellOutputItem.text(buildNotebookHtml(summary.results, summary), "text/html"),
+            vscode.NotebookCellOutputItem.text(JSON.stringify(summary, null, 2), "application/json"),
+          ],
+          liveOutput
+        );
         execution.end(true, Date.now());
       }
     ).catch(err => {
-      execution.appendOutput(new vscode.NotebookCellOutput([
-        vscode.NotebookCellOutputItem.error(err),
-      ]));
+      execution.replaceOutputItems(
+        [vscode.NotebookCellOutputItem.error(err)],
+        liveOutput
+      );
       execution.end(false, Date.now());
     });
   }
 }
 
 function buildNotebookHtml(results: { seed: string; score: number }[], summary: { status: string; searched: string; matched: string; elapsedMs: number }): string {
+  const isRunning = summary.status === "running";
   const rows = results.slice(0, 200).map(r =>
     `<tr><td style="font-weight:600;letter-spacing:.05em;padding:2px 8px">${r.seed}</td><td style="padding:2px 8px;opacity:.6">${r.score > 0 ? r.score : "—"}</td></tr>`
   ).join("");
-  return `<div style="font:13px monospace">
-<p style="margin:.25rem 0;opacity:.7">${summary.matched} matches · ${summary.searched} seeds · ${summary.elapsedMs}ms</p>
-${results.length === 0 ? "<p>No matches.</p>" : `
-<table style="border-collapse:collapse;width:100%">
+  const searchedFmt = Number(BigInt(summary.searched)).toLocaleString();
+  const statusLine = isRunning
+    ? `<p style="margin:.25rem 0;opacity:.7">⏳ ${summary.matched} matches · ${searchedFmt} seeds · ${summary.elapsedMs}ms…</p>`
+    : `<p style="margin:.25rem 0;opacity:.7">✓ ${summary.matched} matches · ${searchedFmt} seeds · ${summary.elapsedMs}ms</p>`;
+  const tableHtml = results.length === 0
+    ? (isRunning ? "" : "<p>No matches.</p>")
+    : `<table style="border-collapse:collapse;width:100%">
   <thead><tr>
     <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Seed</th>
     <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Score</th>
   </tr></thead>
   <tbody>${rows}</tbody>
-</table>`}
-</div>`;
+</table>`;
+  return `<div style="font:13px monospace">\n${statusLine}\n${tableHtml}\n</div>`;
 }

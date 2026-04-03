@@ -2,7 +2,7 @@
   "name": "jaml-language-support",
   "displayName": "Jimbo's Ante Markup Language",
   "description": "Curate Balatro seeded runs using JAML/Jummy syntax highlighting, LSP diagnostics, snippets, and in-editor seed search powered by motely-wasm.",
-  "version": "1.1.0",
+  "version": "1.1.6",
   "publisher": "pifreak",
   "author": {
     "name": "pifreak"
@@ -14,6 +14,9 @@
   },
   "license": "MIT",
   "icon": "icon.png",
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
   "homepage": "https://github.com/OptimusPi/MotelyJAML/tree/master/tools/jaml-language/vscode-extension",
   "bugs": {
     "url": "https://github.com/OptimusPi/MotelyJAML/issues"
@@ -61,6 +64,15 @@
         "language": "jummy",
         "scopeName": "source.jaml",
         "path": "./syntaxes/jaml.tmLanguage.json"
+      }
+    ],
+    "yamlValidation": [
+      {
+        "fileMatch": [
+          "*.jaml",
+          "*.jummy"
+        ],
+        "url": "./jaml.schema.json"
       }
     ],
     "notebooks": [
@@ -119,7 +131,7 @@
     "package": "node esbuild.mjs && npx @vscode/vsce package --no-dependencies"
   },
   "dependencies": {
-    "motely-wasm": "^5.8.3",
+    "motely-wasm": "^5.9.1",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {

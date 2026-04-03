@@ -3,7 +3,4 @@
     <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
     <Version>$(MotelyVersion)</Version>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(NodeBuild)' == 'true'">
-    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
-  </PropertyGroup>
 </Project>
