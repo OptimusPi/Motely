@@ -11,9 +11,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const extPath = context.extensionPath;
 
   // ── LSP ──────────────────────────────────────────────────────────────────
-  const serverModule = path.join(
-    extPath, "..", "lsp-server", "dist", "server.js"
-  );
+  const serverModule = path.join(extPath, "dist", "server.js");
   client = new LanguageClient(
     "jamlLanguageServer",
     "JAML Language Server",

@@ -18391,13 +18391,7 @@ ${results.length === 0 ? "<p>No matches.</p>" : `
 var client = null;
 async function activate(context) {
   const extPath = context.extensionPath;
-  const serverModule = path2.join(
-    extPath,
-    "..",
-    "lsp-server",
-    "dist",
-    "server.js"
-  );
+  const serverModule = path2.join(extPath, "dist", "server.js");
   client = new import_node.LanguageClient(
     "jamlLanguageServer",
     "JAML Language Server",
