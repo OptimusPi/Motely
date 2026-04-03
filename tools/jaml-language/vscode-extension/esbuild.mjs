@@ -23,6 +23,7 @@ function copyWasm() {
 
 copyWasm();
 
+// ── Extension host bundle ────────────────────────────────────────────────────
 const ctx = await esbuild.context({
   entryPoints: ["src/extension.ts"],
   bundle: true,
@@ -32,7 +33,7 @@ const ctx = await esbuild.context({
   platform: "node",
   sourcemap: true,
   minify: false,
-  // motely-wasm is loaded at runtime via createRequire/dynamic import
+  // motely-wasm is loaded at runtime via dynamic import
   // Keep it external so esbuild doesn't try to bundle the large .mjs
   plugins: [
     {
@@ -47,11 +48,22 @@ const ctx = await esbuild.context({
   ],
 });
 
+// ── LSP server bundle (runs in a separate Node process via IPC) ──────────────
+const lspCtx = await esbuild.context({
+  entryPoints: [resolve(__dirname, "..", "lsp-server", "src", "server.ts")],
+  bundle: true,
+  outfile: "dist/server.js",
+  format: "cjs",
+  platform: "node",
+  sourcemap: true,
+  minify: false,
+});
+
 if (watch) {
-  await ctx.watch();
+  await Promise.all([ctx.watch(), lspCtx.watch()]);
   console.log("Watching for changes…");
 } else {
-  await ctx.rebuild();
-  await ctx.dispose();
+  await Promise.all([ctx.rebuild(), lspCtx.rebuild()]);
+  await Promise.all([ctx.dispose(), lspCtx.dispose()]);
   console.log("Build complete.");
 }
