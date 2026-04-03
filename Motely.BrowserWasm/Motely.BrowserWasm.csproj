@@ -55,6 +55,10 @@
           DestinationFiles="$(BootsharpPublishDirectory)\README.md"
           SkipUnchangedFiles="false"
           Condition="Exists('$(MSBuildProjectDirectory)\README-WASM.md')" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)\..\tools\jimbos-ante-markup-language.ico"
+          DestinationFiles="$(BootsharpPublishDirectory)\favicon.ico"
+          SkipUnchangedFiles="false"
+          Condition="Exists('$(MSBuildProjectDirectory)\..\tools\jimbos-ante-markup-language.ico')" />
     <ItemGroup>
       <_MonacoFiles Include="$(MSBuildProjectDirectory)\..\tools\jaml-language\monaco\dist\**\*" />
     </ItemGroup>
