@@ -7,6 +7,9 @@ using Motely.Filters;
 
 [assembly: JSExport(typeof(Motely.BrowserWasm.IMotelyProgram), typeof(Motely.IMotelySeedExplorer))]
 [assembly: JSImport([typeof(Motely.BrowserWasm.ISearchEvents)])]
+[assembly: JSPreferences(
+    Space = [@"^Motely\.BrowserWasm\.(\S+)", "$1", @"^Motely\.(\S+)", "$1"]
+)]
 
 namespace Motely.BrowserWasm;
 

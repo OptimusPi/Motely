@@ -1,5 +1,4 @@
-import * as path from "node:path";
-import { createRequire } from "node:module";
+import bootsharp, { MotelyProgram, SearchEvents } from "motely-wasm";
 
 export interface SearchResult {
   seed: string;
@@ -18,16 +17,12 @@ type OnProgress = (searched: bigint, matching: bigint) => void;
 type OnResult = (seed: string, score: number) => void;
 type OnComplete = (summary: SearchSummary) => void;
 
-let Motely: any = null;
 let bootPromise: Promise<void> | null = null;
 
-async function ensureBooted(extensionPath: string): Promise<void> {
+async function ensureBooted(): Promise<void> {
   if (bootPromise) return bootPromise;
   bootPromise = (async () => {
-    const wasmPath = path.join(extensionPath, "dist", "motely-wasm.mjs");
-    const mod = await import(/* webpackIgnore: true */ `${wasmPath}`);
-    await mod.default.boot();
-    Motely = mod.Motely;
+    await bootsharp.boot();
   })();
   return bootPromise;
 }
@@ -35,17 +30,16 @@ async function ensureBooted(extensionPath: string): Promise<void> {
 let stopRequested = false;
 
 export async function runSearch(
-  extensionPath: string,
   jaml: string,
   seedCount: number,
   onProgress: OnProgress,
   onResult: OnResult,
   onComplete: OnComplete
 ): Promise<void> {
-  await ensureBooted(extensionPath);
+  await ensureBooted();
   stopRequested = false;
 
-  const { MotelyProgram, SearchEvents } = Motely.BrowserWasm;
+
   const results: SearchResult[] = [];
   const startMs = Date.now();
 
@@ -77,7 +71,7 @@ export async function runSearch(
 
   try {
     const config = MotelyProgram.loadJaml(jaml);
-    MotelyProgram.startRandomSearch(config, seedCount, 8);
+    MotelyProgram.startRandomSearch(config, seedCount, 1);
   } catch (err) {
     SearchEvents.onResult.unsubscribe(onResultHandler);
     SearchEvents.onProgress.unsubscribe(onProgressHandler);
@@ -86,10 +80,9 @@ export async function runSearch(
   }
 }
 
-export function stopSearch(extensionPath: string): void {
+export function stopSearch(): void {
   stopRequested = true;
-  if (!Motely) return;
   try {
-    Motely.BrowserWasm.MotelyProgram.stopSearch();
+    MotelyProgram.stopSearch();
   } catch {}
 }

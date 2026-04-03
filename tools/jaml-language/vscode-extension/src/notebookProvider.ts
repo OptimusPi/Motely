@@ -36,11 +36,7 @@ export class JamlNotebookSerializer implements vscode.NotebookSerializer {
 }
 
 export class JamlNotebookExecutor {
-  private readonly extensionPath: string;
-
-  constructor(extensionPath: string) {
-    this.extensionPath = extensionPath;
-  }
+  constructor() {}
 
   register(context: vscode.ExtensionContext): vscode.Disposable {
     const controller = vscode.notebooks.createNotebookController(
@@ -103,7 +99,6 @@ export class JamlNotebookExecutor {
     };
 
     runSearch(
-      this.extensionPath,
       jaml,
       1_000_000,
       (s, m) => { searched = s; matching = m; renderLive(); },

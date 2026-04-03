@@ -17,7 +17,7 @@ Install from the Visual Studio Code Marketplace: [jaml-language-support](https:/
 
 Or install the `.vsix` manually:
 ```bash
-code --install-extension jaml-language-support-1.1.6.vsix
+code --install-extension jaml-language-support-1.1.7.vsix
 ```
 
 ## Usage
