@@ -206,25 +206,21 @@ partial class Program
                 int nThreads = threadsOption.HasValue() ? threadsOption.ParsedValue : Environment.ProcessorCount;
                 int nBatch = batchCharCountOption.ParsedValue;
 
-                var nSettings = ResolveNativeFilter(nativeOption.ParsedValue);
-                if (nSettings == null)
+                if (!MotelyNativeFilterNames.TryParse(nativeOption.ParsedValue, out var nativeFilter))
                 {
-                    Console.Error.WriteLine($"Error: unknown native filter '{nativeOption.ParsedValue}'. Known: {string.Join(", ", NativeFilterNames())}");
+                    Console.Error.WriteLine(
+                        $"Error: unknown native filter '{nativeOption.ParsedValue}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}");
                     return 1;
                 }
+
+                var nSettings = MotelyNativeFilterFactory.CreateSettings(nativeFilter);
 
                 nSettings.WithDeck(nDeck).WithStake(nStake).WithThreadCount(nThreads).WithBatchCharacterCount(nBatch);
                 nSettings.WithSequentialSearch();
                 if (startBatchOption.HasValue()) nSettings.WithStartBatchIndex(startBatchOption.ParsedValue);
                 if (endBatchOption.HasValue()) nSettings.WithEndBatchIndex(endBatchOption.ParsedValue);
 
-                nSettings.WithProgressCallback(p =>
-                {
-                    double perSec = p.SeedsPerMillisecond * 1000.0;
-                    string speed = perSec >= 1_000_000 ? $"{perSec / 1_000_000:F2} M/s" : perSec >= 1_000 ? $"{perSec / 1_000:F1}K/s" : $"{perSec:F0}/s";
-                    string eta = p.EstimatedTimeRemaining is { TotalSeconds: > 0 } rem ? $" | ETA {(rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss"))}" : "";
-                    Console.Error.WriteLine($"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta}");
-                });
+                nSettings.WithProgressCallback(WriteNativeProgressLineToStderr);
 
                 nSettings.WithSeedMatchCallback(seed =>
                 {
@@ -475,37 +471,14 @@ partial class Program
                     settings = settings.WithEndBatchIndex(endBatchOption.ParsedValue);
             }
 
-            bool hasStructuredScores = plan.ShouldClauseCount > 0;
+            int scoreTallyColumns = plan.ScoreTallyColumnCount;
+            bool hasStructuredScores = scoreTallyColumns > 0;
 
             using ISeedResultSink? sink = sinkOption.HasValue()
-                ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
+                ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, scoreTallyColumns)
                 : null;
 
-            settings = settings.WithProgressCallback(p =>
-            {
-                double perSec = p.SeedsPerMillisecond * 1000.0;
-                string speed =
-                    perSec >= 1_000_000
-                        ? $"{perSec / 1_000_000:F2} M/s"
-                        : perSec >= 1_000
-                            ? $"{perSec / 1_000:F1}K/s"
-                            : $"{perSec:F0}/s";
-
-                string eta = "";
-                if (p.EstimatedTimeRemaining is { TotalSeconds: > 0 } rem)
-                {
-                    string remTxt =
-                        rem.TotalHours >= 24
-                            ? rem.ToString(@"d\.hh\:mm\:ss")
-                            : rem.ToString(@"hh\:mm\:ss");
-                    eta = $" | ETA {remTxt}";
-                }
-
-                string elapsed = p.ElapsedTime.ToString(@"hh\:mm\:ss\.f");
-                Console.Error.WriteLine(
-                    $"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}"
-                );
-            });
+            settings = settings.WithProgressCallback(WriteJamlProgressLineToStderr);
 
             if (hasStructuredScores)
             {
@@ -740,32 +713,42 @@ partial class Program
         return 0;
     }
 
-    // ── Native filter registry ──
-
-    static IMotelySearchSettings? ResolveNativeFilter(string name)
+    static void WriteNativeProgressLineToStderr(MotelyProgress p)
     {
-        return name.Trim().ToLowerInvariant() switch
-        {
-            "perkeoobservatory" => new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc()),
-            "observatory" => new MotelySearchSettings<ObservatoryDesc.ObservatoryFilter>(new ObservatoryDesc()),
-            "trickeoglyph" => new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(new TrickeoglyphFilterDesc()),
-            "naturalnegatives" => new MotelySearchSettings<NaturalNegativesFilterDesc.NaturalNegativesFilter>(new NaturalNegativesFilterDesc()),
-            "negativeperkeo" => new MotelySearchSettings<NegativePerkeoFilterDescOld.FilterStruct>(new NegativePerkeoFilterDescOld()),
-            "negativecopy" => new MotelySearchSettings<NegativeCopyFilterDesc.NegativeCopyFilter>(new NegativeCopyFilterDesc()),
-            "shufflefinder" => new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc()),
-            "erraticfinder" => new MotelySearchSettings<ErraticFinderDesc.FilterStruct>(new ErraticFinderDesc()),
-            "filledsoul" => new MotelySearchSettings<FilledSoulFilterDesc.FilterStruct>(new FilledSoulFilterDesc()),
-            "luckycard" => new MotelySearchSettings<LuckCardFilterDesc.LuckyCardFilter>(new LuckCardFilterDesc()),
-            "nanseed" => new MotelySearchSettings<NaNSeedFilterDesc.NaNSeedFilter>(new NaNSeedFilterDesc()),
-            "negativetag" => new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc()),
-            _ => null,
-        };
+        double perSec = p.SeedsPerMillisecond * 1000.0;
+        string speed =
+            perSec >= 1_000_000
+                ? $"{perSec / 1_000_000:F2} M/s"
+                : perSec >= 1_000
+                    ? $"{perSec / 1_000:F1}K/s"
+                    : $"{perSec:F0}/s";
+        string eta = p.EstimatedTimeRemainingMilliseconds is long etaMs && etaMs > 0
+            ? $" | ETA {FormatEtaMs(etaMs)}"
+            : "";
+        Console.Error.WriteLine(
+            $"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta}");
     }
 
-    static string[] NativeFilterNames() =>
-    [
-        "PerkeoObservatory", "Observatory", "Trickeoglyph", "NaturalNegatives",
-        "NegativePerkeo", "NegativeCopy", "ShuffleFinder", "ErraticFinder",
-        "FilledSoul", "LuckyCard", "NanSeed", "NegativeTag",
-    ];
+    static void WriteJamlProgressLineToStderr(MotelyProgress p)
+    {
+        double perSec = p.SeedsPerMillisecond * 1000.0;
+        string speed =
+            perSec >= 1_000_000
+                ? $"{perSec / 1_000_000:F2} M/s"
+                : perSec >= 1_000
+                    ? $"{perSec / 1_000:F1}K/s"
+                    : $"{perSec:F0}/s";
+        string eta = "";
+        if (p.EstimatedTimeRemainingMilliseconds is long remMs && remMs > 0)
+            eta = $" | ETA {FormatEtaMs(remMs)}";
+        string elapsed = TimeSpan.FromMilliseconds(p.ElapsedMilliseconds).ToString(@"hh\:mm\:ss\.f");
+        Console.Error.WriteLine(
+            $"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}");
+    }
+
+    static string FormatEtaMs(long milliseconds)
+    {
+        var rem = TimeSpan.FromMilliseconds(milliseconds);
+        return rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss");
+    }
 }

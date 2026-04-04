@@ -1,19 +1,17 @@
-using System;
+namespace Motely;
 
-namespace Motely
+/// <summary>
+/// Progress information reported during Motely search operations.
+/// Durations are milliseconds (same basis as the internal progress ticker).
+/// </summary>
+public class MotelyProgress
 {
-    /// <summary>
-    /// Progress information reported during Motely search operations
-    /// </summary>
-    public class MotelyProgress
-    {
-        public long CompletedBatchCount { get; set; }
-        public long TotalBatchCount { get; set; }
-        public long SeedsSearched { get; set; }
-        public long MatchingSeeds { get; set; }
-        public double SeedsPerMillisecond { get; set; }
-        public double PercentComplete { get; set; }
-        public TimeSpan ElapsedTime { get; set; }
-        public TimeSpan? EstimatedTimeRemaining { get; set; }
-    }
+    public long CompletedBatchCount { get; set; }
+    public long TotalBatchCount { get; set; }
+    public long SeedsSearched { get; set; }
+    public long MatchingSeeds { get; set; }
+    public double SeedsPerMillisecond { get; set; }
+    public double PercentComplete { get; set; }
+    public long ElapsedMilliseconds { get; set; }
+    public long? EstimatedTimeRemainingMilliseconds { get; set; }
 }
