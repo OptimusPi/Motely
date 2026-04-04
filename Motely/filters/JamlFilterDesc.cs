@@ -11,8 +11,6 @@ using System.Diagnostics.CodeAnalysis;
 
 using System.Linq;
 
-
-
 namespace Motely.Filters;
 
 
@@ -67,22 +65,12 @@ public sealed class OrClause : LogicClause
 
 
 
-/// <summary>
-
-/// Holds the built search settings plus ordered labels for must and should columns.
-
-/// </summary>
-
-public record JamlSearchPlan(
-
+/// <summary>Compiled JAML: runnable settings plus tally width for sinks (matches scoring clause count).</summary>
+public sealed record JamlSearchPlan(
     IMotelySearchSettings Settings,
-
-    string[] MustLabels,
-
-    string[] ShouldLabels,
-
-    int ShouldClauseCount
-
+    int ScoreTallyColumnCount,
+    /// <summary>RFC-4180 style header line: quoted fields, comma-separated. Empty when <see cref="ScoreTallyColumnCount"/> is 0.</summary>
+    string ScoredCsvHeaderQuoted
 );
 
 
@@ -103,8 +91,6 @@ public static class JamlSearchBuilder
 
         CreatePlan(config, 0).Settings;
 
-
-
     public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal = 0)
 
     {
@@ -121,17 +107,13 @@ public static class JamlSearchBuilder
 
         var mustDescs = new List<IMotelySeedFilterDesc>();
 
-        var mustLabels = new List<string>();
-
-        AddDescsFromSet(mustDescs, mustLabels, config.Must, LegendaryClauseExpansion.SplitLegendaryEdition);
+        AddDescsFromSet(mustDescs, config.Must, LegendaryClauseExpansion.SplitLegendaryEdition);
 
         allMustDescs.AddRange(mustDescs);
 
         var mustNotDescs = new List<IMotelySeedFilterDesc>();
 
-        var mustNotLabels = new List<string>();
-
-        AddDescsFromSet(mustNotDescs, mustNotLabels, config.MustNot, LegendaryClauseExpansion.None);
+        AddDescsFromSet(mustNotDescs, config.MustNot, LegendaryClauseExpansion.None);
 
         for (int i = 0; i < mustNotDescs.Count; i++)
 
@@ -167,33 +149,46 @@ public static class JamlSearchBuilder
 
 
 
-        // ── SHOULD: score provider (optional, contributes to seed score) ──
+        // ── Scoring: should clauses plus must clauses (must filters still enforced above)
 
-        string[] shouldLabelsArray = [];
+        var shouldClauses = new List<IJamlClause>();
+        AddShouldScoringEntriesFromSet(shouldClauses, config.Must);
+        AddShouldScoringEntriesFromSet(shouldClauses, config.Should);
+        settings.WithSeedScoreProvider(
+            new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal)
+        );
 
-        if (config.Should.HasAnyClauses)
+        string headerQuoted = shouldClauses.Count > 0
+            ? BuildScoredCsvHeaderQuoted(shouldClauses)
+            : "";
+
+        return new JamlSearchPlan(settings, shouldClauses.Count, headerQuoted);
+    }
+
+    /// <summary>Quoted CSV header for stdout sinks: <c>seed</c>, <c>score</c>, then each should-scoring clause label (or <c>tally_i</c>). Built once per plan.</summary>
+    public static string BuildScoredCsvHeaderQuoted(IReadOnlyList<IJamlClause> shouldClauses)
+    {
+        int n = shouldClauses.Count;
+        var parts = new string[2 + n];
+        parts[0] = CsvQuoteField("seed");
+        parts[1] = CsvQuoteField("score");
+        for (int i = 0; i < n; i++)
         {
-            var shouldLabels = new List<string>();
-            var shouldClauses = new List<IJamlClause>();
-            AddShouldScoringEntriesFromSet(shouldLabels, shouldClauses, config.Should);
-            shouldLabelsArray = shouldLabels.ToArray();
-            settings.WithSeedScoreProvider(
-                new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal)
-            );
+            string col = shouldClauses[i].Label;
+            parts[2 + i] = CsvQuoteField(string.IsNullOrWhiteSpace(col) ? $"tally_{i}" : col);
         }
 
-
-
-        return new JamlSearchPlan(settings, mustLabels.ToArray(), shouldLabelsArray, shouldLabelsArray.Length);
-
+        return string.Join(",", parts);
     }
+
+    private static string CsvQuoteField(string value) =>
+        $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 
 
 
 
     private static void AddDescsFromSet(
         List<IMotelySeedFilterDesc> list,
-        List<string> labels,
         JamlClauseSet set,
         LegendaryClauseExpansion legendaryExpansion
     )
@@ -202,10 +197,7 @@ public static class JamlSearchBuilder
         AddDescsFromSet(typed, set, legendaryExpansion);
 
         for (int i = 0; i < typed.Count; i++)
-        {
             list.Add(typed[i].desc);
-            labels.Add(typed[i].label);
-        }
     }
 
     /// <summary>
@@ -218,19 +210,12 @@ public static class JamlSearchBuilder
         SplitLegendaryEdition,
     }
 
-    /// <summary>
-    /// Should-scoring only needs clause + label (filter descs are not attached to the search settings).
-    /// </summary>
-    private static void AddShouldScoringEntriesFromSet(
-        List<string> labels,
-        List<IJamlClause> clauses,
-        JamlClauseSet set
-    )
+    /// <summary>Collects clauses for <see cref="JamlShouldScoreDesc"/> (validates each via <see cref="CreateDesc"/>).</summary>
+    private static void AddShouldScoringEntriesFromSet(List<IJamlClause> clauses, JamlClauseSet set)
     {
         foreach (var c in set.OrderedClauses)
         {
             _ = CreateDesc(c);
-            labels.Add(c.Label ?? "");
             clauses.Add(c);
         }
     }

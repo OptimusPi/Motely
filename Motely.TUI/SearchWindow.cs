@@ -197,9 +197,10 @@ public class SearchWindow : Window
                     break;
             }
 
-            bool hasStructuredScores = plan.ShouldClauseCount > 0;
+            int scoreTallyColumns = plan.ScoreTallyColumnCount;
+            bool hasStructuredScores = scoreTallyColumns > 0;
             _activeSink = !string.IsNullOrWhiteSpace(_sink)
-                ? SeedResultSinkFactory.Create(_sink, plan.ShouldClauseCount)
+                ? SeedResultSinkFactory.Create(_sink, scoreTallyColumns)
                 : null;
 
             if (hasStructuredScores)
