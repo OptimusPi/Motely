@@ -100,7 +100,7 @@ public static class ProcessBlockRunner
             .WithEndBatchIndex(endBatch)
             .WithSequentialSearch();
 
-        if (plan.ShouldClauseCount > 0)
+        if (plan.ScoreTallyColumnCount > 0)
             settings = settings.WithScoredResultCallback(tally =>
             {
                 seeds.Add(tally.Seed);

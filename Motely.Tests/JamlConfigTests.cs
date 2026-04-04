@@ -315,7 +315,7 @@ public class JamlConfigTests
   }
 
   [Fact]
-  public void CreatePlan_PreservesMustLabelsInOrder()
+  public void MustClauseLabels_AreLoadedInOrder()
   {
     var jaml = """
             name: LabelTest
@@ -333,9 +333,13 @@ public class JamlConfigTests
     Assert.True(success, $"Failed to parse: {error}");
     Assert.NotNull(config);
 
-    var plan = JamlSearchBuilder.CreatePlan(config!);
+    var mustClauses = config!.Must.OrderedClauses;
+    Assert.Equal(2, mustClauses.Count);
+    Assert.Equal("First must", mustClauses[0].Label);
+    Assert.Equal("Second must", mustClauses[1].Label);
 
-    Assert.Equal(["First must", "Second must"], plan.MustLabels);
+    var plan = JamlSearchBuilder.CreatePlan(config);
+    Assert.Equal(2, plan.ScoreTallyColumnCount);
   }
 
   [Fact]

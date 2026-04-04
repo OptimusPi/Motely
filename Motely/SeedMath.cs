@@ -111,13 +111,10 @@ public static class SeedMath
     }
 
     /// <summary>
-    /// Backward compatibility for Motely's fixed-length 8-char search.
+    /// Delegates to <see cref="SearchIndexToSeed"/>: <paramref name="index"/> is relative to the start of the length-<paramref name="length"/> space (Balatro seeds are 8 chars).
     /// </summary>
-    public static string TotalIndexToSeed(long index, int length)
-    {
-        // If length is provided, we assume the index is relative to the start of that length space.
-        return SearchIndexToSeed(index, length);
-    }
+    public static string TotalIndexToSeed(long index, int length) =>
+        SearchIndexToSeed(index, length);
 
     public static long SeedToBatchIndex(string seed, int batchSize)
     {

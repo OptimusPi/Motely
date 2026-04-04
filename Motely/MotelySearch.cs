@@ -505,12 +505,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// </summary>
     public Action<MotelySeedScoreTally>? ScoredResultCallback { get; set; }
 
-    /// <summary>
-    /// Callback for human-readable progress messages (e.g. "Progress: 12.3% | Found: 5/1000").
-    /// Consumers provide their own output handler (e.g. Console.Error.WriteLine for CLI).
-    /// </summary>
-    public Action<string>? ProgressMessageCallback { get; set; }
-
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
         ThreadCount = threadCount;
@@ -703,12 +697,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
-    public MotelySearchSettings<TBaseFilter> WithProgressMessageCallback(Action<string> callback)
-    {
-        ProgressMessageCallback = callback;
-        return this;
-    }
-
     public IMotelySearch Start(CancellationToken cancellationToken = default)
     {
         MotelySearch<TBaseFilter> search = new(this);
@@ -859,16 +847,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         return seedRouter != null; 
     }
 
-    private long _lastReportMS;
-    private long ReportIntervalMS = 2000; // Report every 2 seconds
-
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
     private readonly Action<MotelySeedScoreTally>? _scoredResultCallback;
-    private readonly Action<string>? _progressMessageCallback;
     private readonly int _batchCharacterCount;
-    private readonly bool _csvOutput;
-    private readonly bool _quietMode;
 
     private readonly Stopwatch _elapsedTime = new();
 
@@ -879,10 +861,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _progressCallback = settings.ProgressCallback;
         _seedMatchCallback = settings.SeedMatchCallback;
         _scoredResultCallback = settings.ScoredResultCallback;
-        _progressMessageCallback = settings.ProgressMessageCallback;
         _batchCharacterCount = settings.SequentialBatchCharacterCount;
-        _csvOutput = settings.CsvOutput;
-        _quietMode = settings.QuietMode;
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
         {
@@ -1113,34 +1092,17 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _completionSource.Task.GetAwaiter().GetResult();
     }
 
-    private void PrintReport(bool force = false)
+    /// <summary>After each batch: fire the progress callback with <see cref="MotelyProgress"/> (callers format strings).</summary>
+    private void PrintReport()
     {
+        if (_progressCallback == null)
+            return;
+
         long elapsedMS = _elapsedTime.ElapsedMilliseconds;
-
-        if (!force)
-        {
-            // Atomic check-and-set to prevent multiple threads from printing simultaneously
-            long lastReport = Volatile.Read(ref _lastReportMS);
-            if (elapsedMS - lastReport < ReportIntervalMS)
-                return;
-
-            // Try to claim this report slot - if another thread beat us, skip
-            // This ensures only ONE thread prints progress, even if multiple threads call this
-            long expected = lastReport;
-            if (Interlocked.CompareExchange(ref _lastReportMS, elapsedMS, expected) != expected)
-                return;
-        }
-        else
-        {
-            Volatile.Write(ref _lastReportMS, elapsedMS);
-        }
-
-        // PERFORMANCE: Use calculated CompletedBatchCount (no extra state to maintain)
         long thisCompletedCount = CompletedBatchCount;
         long totalBatches = _plans[0].MaxBatch;
         long seedsSearched = TotalSeedsSearched;
 
-        // Calculate progress percentage
         double percentComplete;
         double totalPortionFinished;
         double thisPortionFinished;
@@ -1162,109 +1124,34 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 totalBatchesToDo > 0 ? (double)batchesSinceStart / totalBatchesToDo : 0.0;
         }
 
-        // Calculate seeds per millisecond (easier to read than per second for large numbers)
         double seedsPerMs = elapsedMS > 1 ? (double)seedsSearched / elapsedMS : 0;
-        double seedsPerSecond = seedsPerMs * 1000.0; // Keep for backward compatibility in callback
 
-        // ALWAYS invoke progress callback if set (even in quiet mode) - needed for API speed stats
-        if (_progressCallback != null)
-        {
-            TimeSpan? eta = null;
-            if (thisPortionFinished >= 0.0001)
-            {
-                double totalTimeEstimate = elapsedMS / thisPortionFinished;
-                double timeLeftMs = totalTimeEstimate - elapsedMS;
-                if (
-                    !double.IsNaN(timeLeftMs)
-                    && !double.IsInfinity(timeLeftMs)
-                    && timeLeftMs >= 0
-                    && timeLeftMs <= 30.0 * 24 * 60 * 60 * 1000
-                )
-                    eta = TimeSpan.FromMilliseconds(timeLeftMs);
-            }
-
-            var progress = new MotelyProgress
-            {
-                CompletedBatchCount = thisCompletedCount,
-                TotalBatchCount = totalBatches,
-                SeedsSearched = seedsSearched,
-                MatchingSeeds = MatchingSeeds,
-                SeedsPerMillisecond = seedsPerMs,
-                PercentComplete = percentComplete,
-                ElapsedTime = TimeSpan.FromMilliseconds(elapsedMS),
-                EstimatedTimeRemaining = eta,
-            };
-            _progressCallback(progress);
-        }
-
-        // Suppress console progress output in quiet mode, unless forced (e.g. via ESC key)
-        if (_quietMode && !force)
-            return;
-
-        string timeLeftFormatted;
-        // Guard against unrealistic estimates early in search (when progress is < 0.01%)
-        // Also guard against division by zero or near-zero
-        if (thisPortionFinished < 0.0001)
-        {
-            timeLeftFormatted = "calculating...";
-        }
-        else
+        long? etaMs = null;
+        if (thisPortionFinished >= 0.0001)
         {
             double totalTimeEstimate = elapsedMS / thisPortionFinished;
-            double timeLeft = totalTimeEstimate - elapsedMS;
-
-            bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
-            // Clamp to max TimeSpan if too large - for very slow searches
-            // Also cap at 30 days to avoid showing unrealistic estimates
-            const double MAX_ESTIMATE_MS = 30.0 * 24 * 60 * 60 * 1000; // 30 days
+            double timeLeftMs = totalTimeEstimate - elapsedMS;
             if (
-                invalid
-                || timeLeft > Math.Min(TimeSpan.MaxValue.TotalMilliseconds, MAX_ESTIMATE_MS)
+                !double.IsNaN(timeLeftMs)
+                && !double.IsInfinity(timeLeftMs)
+                && timeLeftMs >= 0
+                && timeLeftMs <= 30.0 * 24 * 60 * 60 * 1000
             )
-            {
-                timeLeftFormatted = "--:--:--";
-            }
-            else
-            {
-                TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(
-                    Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds)
-                );
-                if (timeLeftSpan.Days == 0)
-                    timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-                else
-                    timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
-            }
+                etaMs = (long)timeLeftMs;
         }
 
-        // Different progress display for CSV mode vs normal mode
-
-        // In CSV mode, print progress on a NEW LINE (not overwriting) to avoid collision with results
-        // Print at end of batch flush, so it appears after any results from that batch
-        string speedFormatted = FormatSpeed(seedsPerSecond);
-        var progressMsg =
-            $"# Progress: {totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({speedFormatted})";
-
-        _progressMessageCallback?.Invoke(progressMsg);
-    }
-
-    /// <summary>
-    /// Format speed as M/s (millions per second) for readability.
-    /// Examples: 2950678 → "2.95 M/s", 123456 → "123K seeds/s", 1234 → "1.23K seeds/s"
-    /// </summary>
-    private static string FormatSpeed(double seedsPerSecond)
-    {
-        if (seedsPerSecond >= 1_000_000)
+        var progress = new MotelyProgress
         {
-            return $"{seedsPerSecond / 1_000_000:F2} M/s";
-        }
-        else if (seedsPerSecond >= 1_000)
-        {
-            return $"{seedsPerSecond / 1_000:F2}K seeds/s";
-        }
-        else
-        {
-            return $"{seedsPerSecond:F0} seeds/s";
-        }
+            CompletedBatchCount = thisCompletedCount,
+            TotalBatchCount = totalBatches,
+            SeedsSearched = seedsSearched,
+            MatchingSeeds = MatchingSeeds,
+            SeedsPerMillisecond = seedsPerMs,
+            PercentComplete = percentComplete,
+            ElapsedMilliseconds = elapsedMS,
+            EstimatedTimeRemainingMilliseconds = etaMs,
+        };
+        _progressCallback(progress);
     }
 
     public void Dispose()

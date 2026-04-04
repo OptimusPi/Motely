@@ -106,7 +106,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
                     .WithEndBatchIndex(endBatchExclusive)
                     .WithSequentialSearch();
 
-                if (plan.ShouldClauseCount > 0)
+                if (plan.ScoreTallyColumnCount > 0)
                     settings = settings.WithScoredResultCallback(tally =>
                         matchResults.Add(new SeedResultDto { Seed = tally.Seed, Score = tally.Score }));
                 else
