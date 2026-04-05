@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import * as fs from "node:fs";
 import * as vscode from "vscode";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node";
 import { init as initSearch, runSearch, stopSearch } from "./searchRunner.js";
@@ -74,6 +75,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("jaml.stopSearch", () => {
       stopSearch();
       vscode.window.setStatusBarMessage("JAML: search stopped.", 2000);
+    }),
+
+    vscode.commands.registerCommand("jaml.openExample", async () => {
+      const examplesDir = path.join(extPath, "examples");
+      if (!fs.existsSync(examplesDir)) {
+        vscode.window.showErrorMessage("No example files found in extension.");
+        return;
+      }
+      const files = fs.readdirSync(examplesDir).filter(f => f.endsWith(".jaml") || f.endsWith(".jummy"));
+      const pick = await vscode.window.showQuickPick(
+        files.map(f => ({ label: f.replace(/\.(jaml|jummy)$/, "").replace(/[-_]/g, " "), description: f })),
+        { placeHolder: "Pick an example JAML filter to open" }
+      );
+      if (!pick) return;
+      const src = path.join(examplesDir, pick.description!);
+      const doc = await vscode.workspace.openTextDocument({ language: "jaml", content: fs.readFileSync(src, "utf8") });
+      await vscode.window.showTextDocument(doc);
     })
   );
 

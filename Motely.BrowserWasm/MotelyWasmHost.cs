@@ -66,7 +66,7 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         _events = events;
     }
 
-    public string GetVersion() => VersionInfo.Version;
+    public string GetVersion() { return VersionInfo.Version; }
 
     public JamlConfig LoadJaml(string jaml)
     {
@@ -225,7 +225,7 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         WireAndRun(PlanProviderSearch(jaml, threadCount).WithListSearch(seeds, seeds.Length));
     }
 
-    public void StopSearch() => _activeSearch?.Cancel();
+    public void StopSearch() { _activeSearch?.Cancel(); }
 
     private void WireAndRun(IMotelySearchSettings settings)
     {
