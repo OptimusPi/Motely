@@ -212,9 +212,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
         return new(PseudoHash(key, isCached));
     }
 
-#if DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public double GetNextPrngState(ref MotelySinglePrngStream stream)
     {
         Debug.Assert(!stream.IsInvalid, "Invalid stream.");

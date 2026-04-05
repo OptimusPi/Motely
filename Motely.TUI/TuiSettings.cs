@@ -38,6 +38,11 @@ public static class TuiSettings
     public static string PaddingChars { get; set; } = string.Empty;
     public static int RandomSeedCount { get; set; } = 1000000;
 
+    /// <summary>Optional Motely search-index bounds for sequential mode (null = full 8-char space).</summary>
+    public static long? SequentialStartSeedSearchIndex { get; set; }
+
+    public static long? SequentialStopSeedSearchIndex { get; set; }
+
     // Distributed worker settings
     public static string WorkerPoolUrl { get; set; } = "https://www.seedfinder.app";
     public static int WorkerThreads { get; set; } = Environment.ProcessorCount;
@@ -70,6 +75,8 @@ public static class TuiSettings
         Keywords = string.Empty;
         PaddingChars = string.Empty;
         RandomSeedCount = 1000000;
+        SequentialStartSeedSearchIndex = null;
+        SequentialStopSeedSearchIndex = null;
         Save();
     }
 }
@@ -105,6 +112,8 @@ public class SettingsService
                 TuiSettings.Keywords = settings.Keywords ?? string.Empty;
                 TuiSettings.PaddingChars = settings.PaddingChars ?? string.Empty;
                 TuiSettings.RandomSeedCount = settings.RandomSeedCount ?? 1000000;
+                TuiSettings.SequentialStartSeedSearchIndex = settings.SequentialStartSeedSearchIndex;
+                TuiSettings.SequentialStopSeedSearchIndex = settings.SequentialStopSeedSearchIndex;
                 TuiSettings.WorkerPoolUrl = settings.WorkerPoolUrl ?? "https://www.seedfinder.app";
                 TuiSettings.WorkerThreads = settings.WorkerThreads ?? Environment.ProcessorCount;
             }
@@ -131,6 +140,8 @@ public class SettingsService
                 Keywords = TuiSettings.Keywords,
                 PaddingChars = TuiSettings.PaddingChars,
                 RandomSeedCount = TuiSettings.RandomSeedCount,
+                SequentialStartSeedSearchIndex = TuiSettings.SequentialStartSeedSearchIndex,
+                SequentialStopSeedSearchIndex = TuiSettings.SequentialStopSeedSearchIndex,
                 WorkerPoolUrl = TuiSettings.WorkerPoolUrl,
                 WorkerThreads = TuiSettings.WorkerThreads,
             };
@@ -158,6 +169,8 @@ public class SettingsService
         public string? Keywords { get; set; }
         public string? PaddingChars { get; set; }
         public int? RandomSeedCount { get; set; }
+        public long? SequentialStartSeedSearchIndex { get; set; }
+        public long? SequentialStopSeedSearchIndex { get; set; }
         public string? WorkerPoolUrl { get; set; }
         public int? WorkerThreads { get; set; }
     }
