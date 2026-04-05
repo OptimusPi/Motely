@@ -7,15 +7,15 @@ namespace Motely;
 
 public struct MotelySinglePrngStream(double state)
 {
-    public static MotelySinglePrngStream Invalid => new(-1);
+    public static MotelySinglePrngStream Invalid { get { return new(-1); } }
 
     public double State = state;
-    public readonly bool IsInvalid => State < 0;
+    public readonly bool IsInvalid { get { return State < 0; } }
 }
 
 public struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngStream, bool isCached)
 {
-    public static MotelySingleResampleStream Invalid => new(MotelySinglePrngStream.Invalid, false);
+    public static MotelySingleResampleStream Invalid { get { return new(MotelySinglePrngStream.Invalid, false); } }
 
     public const int StackResampleCount = 4;
 
@@ -31,7 +31,7 @@ public struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngStrea
     public List<object>? HighResamplePrngStreams;
     public bool IsCached = isCached;
 
-    public readonly bool IsInvalid => InitialPrngStream.IsInvalid;
+    public readonly bool IsInvalid { get { return InitialPrngStream.IsInvalid; } }
 }
 
 public readonly unsafe partial struct MotelySingleSearchContext
@@ -41,19 +41,19 @@ public readonly unsafe partial struct MotelySingleSearchContext
     private readonly MotelySearchParameters _searchParameters;
     private readonly MotelySearchContextParams _contextParams;
 
-    public MotelyStake Stake => _searchParameters.Stake;
-    public MotelyDeck Deck => _searchParameters.Deck;
+    public MotelyStake Stake { get { return _searchParameters.Stake; } }
+    public MotelyDeck Deck { get { return _searchParameters.Deck; } }
 
-    internal MotelySearchParameters SearchParameters => _searchParameters;
-    internal MotelySearchContextParams SearchContextParams => _contextParams;
+    internal MotelySearchParameters SearchParameters { get { return _searchParameters; } }
+    internal MotelySearchContextParams SearchContextParams { get { return _contextParams; } }
 
-    private PartialSeedHashCache* SeedHashCache => _contextParams.SeedHashCache;
-    private int SeedLength => _contextParams.SeedLength;
-    private int SeedFirstCharactersLength => _contextParams.SeedFirstCharactersLength;
-    private int SeedLastCharactersLength => _contextParams.SeedLastCharactersLength;
-    private char* SeedFirstCharacters => _contextParams.SeedFirstCharacters;
-    private Vector512<double>* SeedLastCharacters => _contextParams.SeedLastCharacters;
-    private bool IsAdditionalFilter => _contextParams.IsAdditionalFilter;
+    private PartialSeedHashCache* SeedHashCache { get { return _contextParams.SeedHashCache; } }
+    private int SeedLength { get { return _contextParams.SeedLength; } }
+    private int SeedFirstCharactersLength { get { return _contextParams.SeedFirstCharactersLength; } }
+    private int SeedLastCharactersLength { get { return _contextParams.SeedLastCharactersLength; } }
+    private char* SeedFirstCharacters { get { return _contextParams.SeedFirstCharacters; } }
+    private Vector512<double>* SeedLastCharacters { get { return _contextParams.SeedLastCharacters; } }
+    private bool IsAdditionalFilter { get { return _contextParams.IsAdditionalFilter; } }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal MotelySingleSearchContext(
@@ -68,10 +68,10 @@ public readonly unsafe partial struct MotelySingleSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public string GetSeed() => _contextParams.GetSeed(VectorLane);
+    public string GetSeed() { return _contextParams.GetSeed(VectorLane); }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int GetSeed(char* output) => _contextParams.GetSeed(VectorLane, output);
+    public int GetSeed(char* output) { return _contextParams.GetSeed(VectorLane, output); }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double PseudoHash(string key, bool isCached = false)
