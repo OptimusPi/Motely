@@ -1,8 +1,8 @@
 {
   "name": "jaml-language-support",
   "displayName": "Jimbo's Ante Markup Language",
-  "description": "JAML and Jummy syntax highlighting, LSP diagnostics, completion, snippets, and YAML schema validation for filter files.",
-  "version": "1.1.7",
+  "description": "Curate Balatro seeded runs with JAML/Jummy: syntax highlighting, LSP diagnostics, snippets, in-editor seed search, and notebook support.",
+  "version": "1.2.0",
   "publisher": "pifreak",
   "author": {
     "name": "pifreak"
@@ -25,7 +25,8 @@
     "vscode": "^1.97.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Notebooks"
   ],
   "main": "dist/extension.js",
   "contributes": {
@@ -74,6 +75,17 @@
         "url": "./jaml.schema.json"
       }
     ],
+    "notebooks": [
+      {
+        "type": "jaml-notebook",
+        "displayName": "JAML Seed Search Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.jamlnb"
+          }
+        ]
+      }
+    ],
     "snippets": [
       {
         "language": "jaml",
@@ -83,6 +95,34 @@
         "language": "jummy",
         "path": "./snippets/jaml.json"
       }
+    ],
+    "commands": [
+      {
+        "command": "jaml.runSearch",
+        "title": "Run JAML Search",
+        "icon": "$(play)"
+      },
+      {
+        "command": "jaml.stopSearch",
+        "title": "Stop JAML Search",
+        "icon": "$(debug-stop)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceLangId == jaml || resourceLangId == jummy",
+          "command": "jaml.runSearch",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "jaml.runSearch",
+        "key": "ctrl+shift+enter",
+        "when": "editorLangId == jaml || editorLangId == jummy"
+      }
     ]
   },
   "scripts": {
@@ -90,8 +130,8 @@
     "compile": "npm run check-types && node esbuild.mjs",
     "build": "npm run compile",
     "watch": "node esbuild.mjs --watch",
-    "vscode:prepublish": "npm run check-types && node esbuild.mjs --production",
-    "package": "npx @vscode/vsce package --no-dependencies"
+    "vscode:prepublish": "node esbuild.mjs --production",
+    "package": "node esbuild.mjs --production && npx @vscode/vsce package --no-dependencies"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
