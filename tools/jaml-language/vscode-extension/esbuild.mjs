@@ -6,63 +6,45 @@ import { dirname } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const watch = process.argv.includes("--watch");
+const production = process.argv.includes("--production");
 
-// VSCE uses --no-dependencies + pnpm: ship runtime bits into the VSIX explicitly.
-const wasmSrc = resolve(__dirname, "node_modules", "motely-wasm-compat", "index.mjs");
-const wasmDst = resolve(__dirname, "dist", "motely-wasm-compat.mjs");
-const schemaSrc = resolve(__dirname, "node_modules", "@motely", "jaml-schema", "jaml.schema.json");
+// Repo-root schema → extension root for contributes.yamlValidation (VSIX does not ship node_modules).
+const schemaSrc = resolve(__dirname, "..", "..", "..", "jaml.schema.json");
 const schemaDst = resolve(__dirname, "jaml.schema.json");
 
 function stagePackagedAssets() {
-  if (!existsSync(wasmSrc)) {
-    throw new Error(
-      "motely-wasm-compat not found — pnpm install (tools/jaml-language); dotnet publish Motely.BrowserWasm for file: link."
-    );
-  }
   if (!existsSync(schemaSrc)) {
     throw new Error(
-      "@motely/jaml-schema not found — pnpm install (tools/jaml-language). prepare syncs jaml.schema.json."
+      `jaml.schema.json not found at ${schemaSrc} — generate or copy the repo-root schema first (Motely.CLI / build).`
     );
   }
   mkdirSync(resolve(__dirname, "dist"), { recursive: true });
-  copyFileSync(wasmSrc, wasmDst);
   copyFileSync(schemaSrc, schemaDst);
-  console.log("Staged motely-wasm-compat ->", wasmDst);
-  console.log("Staged @motely/jaml-schema ->", schemaDst);
+  console.log("Staged repo-root jaml.schema.json ->", schemaDst);
 }
 
 stagePackagedAssets();
 
-const ctx = await esbuild.context({
-  entryPoints: ["src/extension.ts"],
+const shared = {
   bundle: true,
-  outfile: "dist/extension.js",
-  external: ["vscode", "motely-wasm-compat"],
   format: "cjs",
   platform: "node",
-  sourcemap: true,
-  minify: false,
-  plugins: [
-    {
-      name: "resolve-motely-wasm-compat",
-      setup(build) {
-        build.onResolve({ filter: /^motely-wasm-compat$/ }, () => ({
-          path: "./motely-wasm-compat.mjs",
-          external: true,
-        }));
-      },
-    },
-  ],
+  minify: production,
+  sourcemap: production ? false : true,
+  sourcesContent: false,
+};
+
+const ctx = await esbuild.context({
+  ...shared,
+  entryPoints: ["src/extension.ts"],
+  outfile: "dist/extension.js",
+  external: ["vscode"],
 });
 
 const lspCtx = await esbuild.context({
+  ...shared,
   entryPoints: [resolve(__dirname, "..", "lsp-server", "src", "server.ts")],
-  bundle: true,
   outfile: "dist/server.js",
-  format: "cjs",
-  platform: "node",
-  sourcemap: true,
-  minify: false,
 });
 
 if (watch) {

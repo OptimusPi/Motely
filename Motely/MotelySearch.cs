@@ -953,7 +953,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
     private readonly Action<MotelySeedScoreTally>? _scoredResultCallback;
-    private readonly int _batchCharacterCount;
 
     private readonly Stopwatch _elapsedTime = new();
 
@@ -964,7 +963,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _progressCallback = settings.ProgressCallback;
         _seedMatchCallback = settings.SeedMatchCallback;
         _scoredResultCallback = settings.ScoredResultCallback;
-        _batchCharacterCount = settings.SequentialBatchCharacterCount;
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
         {

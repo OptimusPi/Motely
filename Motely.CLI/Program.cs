@@ -115,7 +115,7 @@ partial class Program
         );
         var batchCharCountOption = app.Option<int>(
             "--batchCharCount <N>",
-            "Batch character count (1-7, default 2)",
+            "Sequential default search only (1–7, default 4). Ignored for --keyword/--random/--aesthetic/--source list modes.",
             CommandOptionType.SingleValue
         );
         var startBatchOption = app.Option<long>(
@@ -131,6 +131,16 @@ partial class Program
         var startPercentOption = app.Option<double>(
             "--startPercent <PCT>",
             "Sequential search: start at this percent of batch space (0–100). Ignored if --startBatch is set.",
+            CommandOptionType.SingleValue
+        );
+        var startSeedOption = app.Option<long>(
+            "--startSeed <N>",
+            "Sequential: first Motely search index (0 … 35^8−1); maps to batches with --batchCharCount. Mutually exclusive with --startBatch/--endBatch/--startPercent.",
+            CommandOptionType.SingleValue
+        );
+        var stopSeedOption = app.Option<long>(
+            "--stopSeed <N>",
+            "Sequential: last Motely search index (inclusive). Omit for full range after --startSeed.",
             CommandOptionType.SingleValue
         );
         var randomOption = app.Option<int>(
@@ -185,7 +195,7 @@ partial class Program
         );
         var nativeOption = app.Option<string>(
             "--native <NAME>",
-            "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...). Seed-input flags match JAML: --source, --seeds, --keyword(s), --random, --aesthetic, or default sequential (--startBatch / --endBatch / --startPercent).",
+            "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...). Seed-input flags match JAML: --source, --seeds, --keyword(s), --random, --aesthetic, or default sequential (--startBatch/--endBatch/--startPercent or --startSeed/--stopSeed).",
             CommandOptionType.SingleValue
         );
 
@@ -243,8 +253,7 @@ partial class Program
                 nSettings = nSettings
                     .WithDeck(nDeck)
                     .WithStake(nStake)
-                    .WithThreadCount(nThreads)
-                    .WithBatchCharacterCount(nBatch);
+                    .WithThreadCount(nThreads);
 
                 if (
                     !CliSearchMode.TryApplySearchMode(
@@ -259,6 +268,8 @@ partial class Program
                             StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                             EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                             StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
+                            StartSeedSearchIndex: startSeedOption.HasValue() ? startSeedOption.ParsedValue : null,
+                            StopSeedSearchIndex: stopSeedOption.HasValue() ? stopSeedOption.ParsedValue : null,
                             BatchCharacterCount: nBatch,
                             JamlAestheticFallback: null
                         ),
@@ -276,7 +287,8 @@ partial class Program
                     .WithProgressCallback(WriteNativeProgressLineToStderr)
                     .WithSeedMatchCallback(seed => Console.WriteLine(seed));
 
-                Console.Error.WriteLine($"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} batchCharCount={nBatch}");
+                Console.Error.WriteLine(
+                    $"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} | batchCharCount={nBatch} (sequential only)");
                 using var nSearch = nSettings.Start(_cts.Token);
                 await nSearch.WaitForCompletionAsync(_cts.Token);
                 PrintSummary(nSearch, nBatch, _cts.Token.IsCancellationRequested);
@@ -336,8 +348,7 @@ partial class Program
             IMotelySearchSettings settings = plan.Settings
                 .WithDeck(deck)
                 .WithStake(stake)
-                .WithThreadCount(threads)
-                .WithBatchCharacterCount(batchCharCount);
+                .WithThreadCount(threads);
 
             if (
                 !CliSearchMode.TryApplySearchMode(
@@ -352,6 +363,8 @@ partial class Program
                         StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                         EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                         StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
+                        StartSeedSearchIndex: startSeedOption.HasValue() ? startSeedOption.ParsedValue : null,
+                        StopSeedSearchIndex: stopSeedOption.HasValue() ? stopSeedOption.ParsedValue : null,
                         BatchCharacterCount: batchCharCount,
                         JamlAestheticFallback: config.Aesthetics
                     ),
@@ -394,7 +407,7 @@ partial class Program
             }
 
             Console.Error.WriteLine(
-                $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batchCharCount={batchCharCount}"
+                $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} (sequential only)"
             );
             if (sink != null)
                 Console.Error.WriteLine($"Sink: {sink.OutputPath}");
@@ -451,7 +464,18 @@ partial class Program
             double pct = max > 0 ? (double)search.CompletedBatchCount * 100.0 / max : 0;
             Console.WriteLine($"  Batch: {search.CompletedBatchCount:N0} / {max:N0} ({pct:F4}%)");
             if (cancelled)
-                Console.WriteLine($"  Resume: --startBatch {search.CompletedBatchCount}");
+            {
+                long nextBatch = search.CompletedBatchCount;
+                Console.WriteLine($"  Resume: --startBatch {nextBatch}");
+                if (nextBatch >= 0 && nextBatch < max)
+                {
+                    string prefix = SeedMath.BatchIndexToSeedPrefix(nextBatch, batchCharCount);
+                    string minSeedInBatch =
+                        prefix + new string(MotelyGlobals.SeedDigits[0], batchCharCount);
+                    long resumeSeedIdx = SeedMath.SeedToSearchIndex(minSeedInBatch);
+                    Console.WriteLine($"  Resume: --startSeed {resumeSeedIdx}  (first seed in that batch)");
+                }
+            }
         }
     }
 

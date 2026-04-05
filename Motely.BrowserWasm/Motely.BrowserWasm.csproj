@@ -30,12 +30,9 @@
 <_Ver Condition="'$(_Ver)' == ''">0.0.0-dev</_Ver>
 </PropertyGroup>
 <WriteLinesToFile
-File="$(IntermediateOutputPath)VersionInfo.g.cs"
+File="$(MSBuildProjectDirectory)\VersionInfo.g.cs"
 Lines="namespace Motely.BrowserWasm { internal static class VersionInfo { public const string Version = &quot;$(_Ver)&quot;%3B } }"
 Overwrite="true" />
-<ItemGroup>
-<Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
-</ItemGroup>
 </Target>
 
 <!-- Overlay repo npm metadata and docs on top of Bootsharp's generated package. -->
