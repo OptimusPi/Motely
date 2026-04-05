@@ -43,3 +43,8 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
 
     public void Dispose() => _ownedSearch?.Dispose();
 }
+
+public interface IMotelySingleSearchContext
+{
+    public double PseudoHash(string key, bool isCached = false);
+}

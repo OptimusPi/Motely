@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Motely;
 using Motely.DB.SeedSource;
 using Motely.Filters;
 
@@ -147,7 +148,6 @@ public class SearchWindow : Window
                 .Settings.WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(TuiSettings.ThreadCount)
-                .WithBatchCharacterCount(TuiSettings.BatchCharacterCount)
                 .WithQuietMode(true);
 
             switch (TuiSettings.SearchMode)
@@ -193,7 +193,21 @@ public class SearchWindow : Window
 
                 case SearchMode.Sequential:
                 default:
-                    settings.WithSequentialSearch();
+                    settings.WithSequentialSearch().WithBatchCharacterCount(TuiSettings.BatchCharacterCount);
+                    if (TuiSettings.SequentialStartSeedSearchIndex.HasValue
+                        || TuiSettings.SequentialStopSeedSearchIndex.HasValue)
+                    {
+                        long startIdx = TuiSettings.SequentialStartSeedSearchIndex ?? 0;
+                        long stopIdx =
+                            TuiSettings.SequentialStopSeedSearchIndex
+                            ?? SeedMath.MaxSearchIndexInclusive(MotelyGlobals.MaxSeedLength);
+                        var (sb, ebExclusive) = SeedMath.SearchIndexRangeToBatchRange(
+                            startIdx,
+                            stopIdx,
+                            TuiSettings.BatchCharacterCount);
+                        settings.WithStartBatchIndex(sb).WithEndBatchIndex(ebExclusive);
+                    }
+
                     break;
             }
 

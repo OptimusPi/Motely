@@ -135,4 +135,49 @@ public static class SeedMath
         // index is treated as relative
         return SearchIndexToSeed(batchIndex, prefixLen);
     }
+
+    /// <summary>
+    /// Largest Motely search index for a fixed seed length (inclusive). For length 8 this is 35^8 − 1.
+    /// </summary>
+    public static long MaxSearchIndexInclusive(int length)
+    {
+        if (length <= 0)
+            return -1;
+        long p = 1;
+        for (int i = 0; i < length; i++)
+            checked
+            {
+                p *= 35;
+            }
+        return p - 1;
+    }
+
+    /// <summary>
+    /// Maps an inclusive Motely search-index range for 8-character seeds to sequential batch indices.
+    /// The second value is an exclusive end batch index (same convention as <c>WithEndBatchIndex</c>).
+    /// </summary>
+    public static (long StartBatchIndex, long EndBatchIndexExclusive) SearchIndexRangeToBatchRange(
+        long startSearchIndexInclusive,
+        long stopSearchIndexInclusive,
+        int batchCharCount
+    )
+    {
+        if (batchCharCount is < 1 or > 7)
+            throw new ArgumentOutOfRangeException(nameof(batchCharCount));
+
+        long maxIdx = MaxSearchIndexInclusive(8);
+        if (startSearchIndexInclusive < 0 || stopSearchIndexInclusive < startSearchIndexInclusive
+            || stopSearchIndexInclusive > maxIdx)
+        {
+            throw new ArgumentOutOfRangeException(
+                $"{nameof(startSearchIndexInclusive)}..{nameof(stopSearchIndexInclusive)}",
+                $"Must satisfy 0 <= start <= stop <= {maxIdx}.");
+        }
+
+        string startSeed = SearchIndexToSeed(startSearchIndexInclusive, 8);
+        string stopSeed = SearchIndexToSeed(stopSearchIndexInclusive, 8);
+        long startBatch = SeedToBatchIndex(startSeed, batchCharCount);
+        long stopBatch = SeedToBatchIndex(stopSeed, batchCharCount);
+        return (startBatch, stopBatch + 1);
+    }
 }

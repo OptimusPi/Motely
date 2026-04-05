@@ -20,6 +20,8 @@ internal static class CliSearchMode
         long? StartBatch,
         long? EndBatch,
         double? StartPercent,
+        long? StartSeedSearchIndex,
+        long? StopSeedSearchIndex,
         int BatchCharacterCount,
         IReadOnlyList<JamlAesthetic>? JamlAestheticFallback
     );
@@ -55,6 +57,24 @@ internal static class CliSearchMode
                 return false;
             }
             explicitAesthetic = aesthetic;
+        }
+
+        bool hasSeedIndexOptions =
+            input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
+        if (hasSeedIndexOptions)
+        {
+            if (hasSource || hasSeedsArg || input.KeywordInputs.Count > 0 || input.RandomCount.HasValue
+                || explicitAesthetic.HasValue)
+            {
+                error = "Error: --startSeed/--stopSeed apply only to default sequential search.";
+                return false;
+            }
+
+            if (input.JamlAestheticFallback is { Count: > 0 })
+            {
+                error = "Error: --startSeed/--stopSeed cannot be used when JAML declares aesthetics.";
+                return false;
+            }
         }
 
         bool hasSeedListMode = hasSource || hasSeedsArg;
@@ -180,30 +200,62 @@ internal static class CliSearchMode
         else
         {
             updated = updated.WithSequentialSearch();
+            updated = updated.WithBatchCharacterCount(input.BatchCharacterCount);
 
-            if (input.StartBatch.HasValue)
-                updated = updated.WithStartBatchIndex(input.StartBatch.Value);
-            else if (input.StartPercent.HasValue)
+            bool hasSeedRange =
+                input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
+            if (hasSeedRange)
             {
-                double pct = input.StartPercent.Value;
-                if (pct < 0 || pct > 100)
+                if (input.StartBatch.HasValue || input.EndBatch.HasValue || input.StartPercent.HasValue)
                 {
-                    error = "Error: --startPercent must be between 0 and 100.";
+                    error =
+                        "Error: do not combine --startSeed/--stopSeed with --startBatch, --endBatch, or --startPercent.";
                     return false;
                 }
 
-                int nonBatchChars = MotelyGlobals.MaxSeedLength - input.BatchCharacterCount;
-                long maxBatch = (long)Math.Pow(MotelyGlobals.SeedDigits.Length, nonBatchChars);
-                long startBatch = (long)(maxBatch * (pct / 100.0));
-                if (startBatch < 0)
-                    startBatch = 0;
-                if (maxBatch > 0 && startBatch >= maxBatch)
-                    startBatch = maxBatch - 1;
-                updated = updated.WithStartBatchIndex(startBatch);
-            }
+                long maxIdx = SeedMath.MaxSearchIndexInclusive(MotelyGlobals.MaxSeedLength);
+                long startIdx = input.StartSeedSearchIndex ?? 0;
+                long stopIdx = input.StopSeedSearchIndex ?? maxIdx;
+                if (startIdx < 0 || stopIdx < startIdx || stopIdx > maxIdx)
+                {
+                    error =
+                        $"Error: --startSeed/--stopSeed must satisfy 0 <= start <= stop <= {maxIdx} (Motely search index for length-{MotelyGlobals.MaxSeedLength} seeds).";
+                    return false;
+                }
 
-            if (input.EndBatch.HasValue)
-                updated = updated.WithEndBatchIndex(input.EndBatch.Value);
+                var (sb, ebExclusive) = SeedMath.SearchIndexRangeToBatchRange(
+                    startIdx,
+                    stopIdx,
+                    input.BatchCharacterCount
+                );
+                updated = updated.WithStartBatchIndex(sb).WithEndBatchIndex(ebExclusive);
+            }
+            else
+            {
+                if (input.StartBatch.HasValue)
+                    updated = updated.WithStartBatchIndex(input.StartBatch.Value);
+                else if (input.StartPercent.HasValue)
+                {
+                    double pct = input.StartPercent.Value;
+                    if (pct < 0 || pct > 100)
+                    {
+                        error = "Error: --startPercent must be between 0 and 100.";
+                        return false;
+                    }
+
+                    int nonBatchChars = MotelyGlobals.MaxSeedLength - input.BatchCharacterCount;
+                    long maxBatch = (long)Math.Pow(MotelyGlobals.SeedDigits.Length, nonBatchChars);
+                    long startBatch = (long)(maxBatch * (pct / 100.0));
+                    if (startBatch < 0)
+                        startBatch = 0;
+                    if (maxBatch > 0 && startBatch >= maxBatch)
+                        startBatch = maxBatch - 1;
+                    updated = updated.WithStartBatchIndex(startBatch);
+                }
+
+                if (input.EndBatch.HasValue)
+                    updated = updated.WithEndBatchIndex(input.EndBatch.Value);
+            }
         }
 
         return true;
