@@ -29,7 +29,33 @@ public interface IMotelyWasmHost
     /// Throws <see cref="InvalidOperationException"/> with a descriptive message on failure.
     /// </summary>
     JamlConfig CompileJummy(string jummy);
-    MotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
+
+    // ── Single-seed analysis (JS-safe bridge) ────────────────────────────
+    // MotelySingleSearchContext is an unsafe struct with pointers/ref params
+    // that Bootsharp cannot marshal.  These methods keep the context on the
+    // C# side and expose simple types to JavaScript.
+
+    /// <summary>Sets up a single-seed analysis context. Call this before any SeedCtx* method.</summary>
+    void SetSeedContext(string seed, int deck, int stake);
+    /// <summary>Returns the seed string for the current context.</summary>
+    string SeedCtxGetSeed();
+    /// <summary>Returns the deck enum value for the current context.</summary>
+    int SeedCtxGetDeck();
+    /// <summary>Returns the stake enum value for the current context.</summary>
+    int SeedCtxGetStake();
+    /// <summary>Hashes a key against the current seed context.</summary>
+    double SeedCtxPseudoHash(string key);
+    /// <summary>Creates a named PRNG stream and returns its ID (0-based).</summary>
+    int SeedCtxCreateStream(string key);
+    /// <summary>Advances the PRNG stream and returns the raw state.</summary>
+    double SeedCtxNextState(int streamId);
+    /// <summary>Returns the next random double [0,1) from a PRNG stream.</summary>
+    double SeedCtxNextRandom(int streamId);
+    /// <summary>Returns the next random int in [min, max) from a PRNG stream.</summary>
+    int SeedCtxNextRandomInt(int streamId, int min, int max);
+
+    // ── Search ───────────────────────────────────────────────────────────
+
     /// <summary>
     /// If <paramref name="jaml"/> declares <c>aesthetics</c>, runs aesthetic provider search ( <paramref name="batchCharCount"/> and batch range are ignored).
     /// Otherwise sequential search with the given batch settings.
@@ -60,6 +86,8 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
     private readonly ISearchEvents _events;
     private IMotelySearch? _activeSearch;
     private MotelySeedRouterDesc? _singleSeedRouter;
+    private MotelySingleSearchContext _seedCtx;
+    private readonly List<MotelySinglePrngStream> _seedCtxStreams = [];
 
     public MotelyWasmHost(ISearchEvents events)
     {
@@ -86,14 +114,53 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return config;
     }
 
-    /// <summary>
-    /// Single-seed context from a minimal list-search; prior router is disposed.
-    /// </summary>
-    public MotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake)
+    // ── Single-seed analysis (JS-safe bridge) ────────────────────────────
+    // The raw MotelySingleSearchContext uses unsafe pointers and ref params
+    // that Bootsharp can't marshal to JS.  These methods keep the context
+    // on the C# side and expose only primitive types.
+
+    public void SetSeedContext(string seed, int deck, int stake)
     {
         _singleSeedRouter?.Dispose();
-        _singleSeedRouter = new MotelySeedRouterDesc(seed, deck, stake);
-        return _singleSeedRouter.Instance();
+        _singleSeedRouter = new MotelySeedRouterDesc(seed, (MotelyDeck)deck, (MotelyStake)stake);
+        _seedCtx = _singleSeedRouter.Instance();
+        _seedCtxStreams.Clear();
+    }
+
+    public string SeedCtxGetSeed() { return _seedCtx.GetSeed(); }
+    public int SeedCtxGetDeck() { return (int)_seedCtx.Deck; }
+    public int SeedCtxGetStake() { return (int)_seedCtx.Stake; }
+    public double SeedCtxPseudoHash(string key) { return _seedCtx.PseudoHash(key); }
+
+    public int SeedCtxCreateStream(string key)
+    {
+        var stream = _seedCtx.CreatePrngStream(key);
+        _seedCtxStreams.Add(stream);
+        return _seedCtxStreams.Count - 1;
+    }
+
+    public double SeedCtxNextState(int streamId)
+    {
+        var stream = _seedCtxStreams[streamId];
+        var result = _seedCtx.GetNextPrngState(ref stream);
+        _seedCtxStreams[streamId] = stream;
+        return result;
+    }
+
+    public double SeedCtxNextRandom(int streamId)
+    {
+        var stream = _seedCtxStreams[streamId];
+        var result = _seedCtx.GetNextRandom(ref stream);
+        _seedCtxStreams[streamId] = stream;
+        return result;
+    }
+
+    public int SeedCtxNextRandomInt(int streamId, int min, int max)
+    {
+        var stream = _seedCtxStreams[streamId];
+        var result = _seedCtx.GetNextRandomInt(ref stream, min, max);
+        _seedCtxStreams[streamId] = stream;
+        return result;
     }
 
     /// <summary>Deck/stake/thread only — for provider/list/random/aesthetic/keyword modes (sequential batch size is not used).</summary>
