@@ -4,6 +4,7 @@
   "packageManager": "pnpm@9.4.0",
   "workspaces": [
     "core",
+    "jaml-schema",
     "lsp-server",
     "vscode-extension",
     "monaco"

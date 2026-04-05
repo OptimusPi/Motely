@@ -1,0 +1,17 @@
+{
+  "name": "motely-wasm-test-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "motely-wasm": "file:../Motely.BrowserWasm/motely-wasm",
+    "motely-wasm-compat": "file:../Motely.BrowserWasm/motely-wasm-compat"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}

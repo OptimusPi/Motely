@@ -43,7 +43,8 @@ else {
 }
 
 $package.version = $targetExtensionVersion
-$package.dependencies.'motely-wasm' = "^$motelyVersion"
+$package.dependencies.'motely-wasm-compat' = "^$motelyVersion"
+$package.dependencies.'@motely/jaml-schema' = "^$motelyVersion"
 Save-JsonFile -Path $extensionPackageJson -Value $package
 
 $readme = Get-Content -Path $extensionReadme -Raw
@@ -55,7 +56,7 @@ $readme = [regex]::Replace(
 [System.IO.File]::WriteAllText($extensionReadme, $readme)
 
 Write-Host "Extension version: $currentExtensionVersion -> $targetExtensionVersion"
-Write-Host "motely-wasm dependency -> ^$motelyVersion"
+Write-Host "motely-wasm-compat / @motely/jaml-schema -> ^$motelyVersion"
 
 Push-Location (Join-Path $root 'tools\jaml-language')
 try {

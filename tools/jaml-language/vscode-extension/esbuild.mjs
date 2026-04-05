@@ -7,57 +7,47 @@ import { dirname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const watch = process.argv.includes("--watch");
 
-// Copy motely-wasm/index.mjs from node_modules into dist/motely-wasm.mjs.
-// The WASM binary is embedded inside (BootsharpEmbedBinaries=true) — single file, no extra assets.
-const wasmSrc = resolve(__dirname, "node_modules/motely-wasm/index.mjs");
-const wasmDst = resolve(__dirname, "dist/motely-wasm.mjs");
-const jamlSchemaSrc = resolve(__dirname, "..", "..", "..", "jaml.schema.json");
-const jamlSchemaDst = resolve(__dirname, "jaml.schema.json");
+// VSCE uses --no-dependencies + pnpm: ship runtime bits into the VSIX explicitly.
+const wasmSrc = resolve(__dirname, "node_modules", "motely-wasm-compat", "index.mjs");
+const wasmDst = resolve(__dirname, "dist", "motely-wasm-compat.mjs");
+const schemaSrc = resolve(__dirname, "node_modules", "@motely", "jaml-schema", "jaml.schema.json");
+const schemaDst = resolve(__dirname, "jaml.schema.json");
 
-function copyWasm() {
+function stagePackagedAssets() {
   if (!existsSync(wasmSrc)) {
-    throw new Error("motely-wasm not found — run: pnpm install");
+    throw new Error(
+      "motely-wasm-compat not found — pnpm install (tools/jaml-language); dotnet publish Motely.BrowserWasm for file: link."
+    );
+  }
+  if (!existsSync(schemaSrc)) {
+    throw new Error(
+      "@motely/jaml-schema not found — pnpm install (tools/jaml-language). prepare syncs jaml.schema.json."
+    );
   }
   mkdirSync(resolve(__dirname, "dist"), { recursive: true });
   copyFileSync(wasmSrc, wasmDst);
-  console.log("Copied motely-wasm.mjs ->", wasmDst);
+  copyFileSync(schemaSrc, schemaDst);
+  console.log("Staged motely-wasm-compat ->", wasmDst);
+  console.log("Staged @motely/jaml-schema ->", schemaDst);
 }
 
-function copyJamlSchema() {
-  if (!existsSync(jamlSchemaSrc)) {
-    throw new Error("jaml.schema.json not found in repo root");
-  }
-  copyFileSync(jamlSchemaSrc, jamlSchemaDst);
-  console.log("Copied jaml.schema.json ->", jamlSchemaDst);
-}
+stagePackagedAssets();
 
-copyWasm();
-copyJamlSchema();
-
-// ── Extension host bundle ────────────────────────────────────────────────────
 const ctx = await esbuild.context({
   entryPoints: ["src/extension.ts"],
   bundle: true,
   outfile: "dist/extension.js",
-  external: ["vscode"],
+  external: ["vscode", "motely-wasm-compat"],
   format: "cjs",
   platform: "node",
   sourcemap: true,
   minify: false,
-  // motely-wasm is loaded at runtime via dynamic import from dist/
-  // Redirect bare "motely-wasm" imports to the copied dist file at runtime
   plugins: [
     {
-      name: "externalize-motely-wasm",
+      name: "resolve-motely-wasm-compat",
       setup(build) {
-        // Catch bare specifier: import ... from "motely-wasm"
-        build.onResolve({ filter: /^motely-wasm$/ }, () => ({
-          path: "./motely-wasm.mjs",
-          external: true,
-        }));
-        // Catch direct .mjs references
-        build.onResolve({ filter: /motely-wasm\.mjs$/ }, () => ({
-          path: "./motely-wasm.mjs",
+        build.onResolve({ filter: /^motely-wasm-compat$/ }, () => ({
+          path: "./motely-wasm-compat.mjs",
           external: true,
         }));
       },
@@ -65,7 +55,6 @@ const ctx = await esbuild.context({
   ],
 });
 
-// ── LSP server bundle (runs in a separate Node process via IPC) ──────────────
 const lspCtx = await esbuild.context({
   entryPoints: [resolve(__dirname, "..", "lsp-server", "src", "server.ts")],
   bundle: true,

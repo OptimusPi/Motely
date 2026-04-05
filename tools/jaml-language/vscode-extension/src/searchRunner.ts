@@ -1,4 +1,23 @@
-import bootsharp, { MotelyProgram, SearchEvents } from "motely-wasm";
+/**
+ * Loads the published npm package `motely-wasm-compat` at runtime (ESM).
+ * The extension bundle is CJS; dynamic import resolves `node_modules/motely-wasm-compat` from the
+ * extension install directory (shipped in the VSIX — see .vscodeignore).
+ */
+type MotelyWasm = typeof import("motely-wasm-compat");
+
+let ready: Promise<MotelyWasm> | null = null;
+let stopRequested = false;
+
+async function getWasm(): Promise<MotelyWasm> {
+  if (!ready) {
+    ready = (async () => {
+      const mod = await import("motely-wasm-compat");
+      await mod.default.boot();
+      return mod;
+    })();
+  }
+  return ready;
+}
 
 export interface SearchResult {
   seed: string;
@@ -17,18 +36,6 @@ type OnProgress = (searched: bigint, matching: bigint) => void;
 type OnResult = (seed: string, score: number) => void;
 type OnComplete = (summary: SearchSummary) => void;
 
-let bootPromise: Promise<void> | null = null;
-
-async function ensureBooted(): Promise<void> {
-  if (bootPromise) return bootPromise;
-  bootPromise = (async () => {
-    await bootsharp.boot();
-  })();
-  return bootPromise;
-}
-
-let stopRequested = false;
-
 export async function runSearch(
   jaml: string,
   seedCount: number,
@@ -36,9 +43,8 @@ export async function runSearch(
   onResult: OnResult,
   onComplete: OnComplete
 ): Promise<void> {
-  await ensureBooted();
+  const { MotelyProgram, SearchEvents } = await getWasm();
   stopRequested = false;
-
 
   const results: SearchResult[] = [];
   const startMs = Date.now();
@@ -82,7 +88,12 @@ export async function runSearch(
 
 export function stopSearch(): void {
   stopRequested = true;
-  try {
-    MotelyProgram.stopSearch();
-  } catch {}
+  if (!ready) return;
+  void ready.then((mod) => {
+    try {
+      mod.MotelyProgram.stopSearch();
+    } catch {
+      /* ignore */
+    }
+  });
 }

@@ -13,7 +13,7 @@ node_modules/
 
 # Large build/publish output
 Motely.BrowserWasm/motely-wasm/
-Motely.BrowserWasm/motely-wasm-mt/
+Motely.BrowserWasm/motely-wasm-compat/
 Motely.BrowserWasm/bin/
 Motely.BrowserWasm/obj/
 
