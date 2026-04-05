@@ -45,7 +45,7 @@ export class JamlNotebookExecutor {
       "JAML Seed Search",
     );
     controller.supportedLanguages = ["jaml", "jummy"];
-    controller.description = "motely-wasm";
+    controller.description = "motely-wasm-compat";
     controller.executeHandler = this.execute.bind(this);
     context.subscriptions.push(controller);
     return controller;

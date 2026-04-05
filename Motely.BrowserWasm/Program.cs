@@ -149,8 +149,9 @@ public class MotelyProgram(ISearchEvents events) : IMotelyProgram
                 .ToArray();
 
         var padded = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, pad);
+        long keywordSeedCount = MotelyGlobals.GetPaddedSeedCountForKeywordsLong(keywords, pad);
         WireAndRun(
-            Plan(jaml, batchCharCount).WithProviderSearch(new MotelySeedListProvider(padded, padded.Count())));
+            Plan(jaml, batchCharCount).WithProviderSearch(new MotelySeedListProvider(padded, keywordSeedCount)));
     }
 
     public void StartSeedListSearch(JamlConfig jaml, string seedsCsv, int threadCount)

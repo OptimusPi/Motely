@@ -18114,18 +18114,20 @@ var vscode3 = __toESM(require("vscode"));
 var import_node = __toESM(require_node3());
 
 // src/searchRunner.ts
-var import_motely_wasm = __toESM(require("./motely-wasm.mjs"));
-var bootPromise = null;
-async function ensureBooted() {
-  if (bootPromise) return bootPromise;
-  bootPromise = (async () => {
-    await import_motely_wasm.default.boot();
-  })();
-  return bootPromise;
-}
+var ready = null;
 var stopRequested = false;
+async function getWasm() {
+  if (!ready) {
+    ready = (async () => {
+      const mod = await import("./motely-wasm-compat.mjs");
+      await mod.default.boot();
+      return mod;
+    })();
+  }
+  return ready;
+}
 async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
-  await ensureBooted();
+  const { MotelyProgram, SearchEvents } = await getWasm();
   stopRequested = false;
   const results = [];
   const startMs = Date.now();
@@ -18137,9 +18139,9 @@ async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
     onProgress(searched, matching);
   };
   const onCompleteHandler = (status, searched, matched) => {
-    import_motely_wasm.SearchEvents.onResult.unsubscribe(onResultHandler);
-    import_motely_wasm.SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    import_motely_wasm.SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+    SearchEvents.onResult.unsubscribe(onResultHandler);
+    SearchEvents.onProgress.unsubscribe(onProgressHandler);
+    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
     onComplete({
       status,
       searched: searched.toString(),
@@ -18148,25 +18150,28 @@ async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
       elapsedMs: Date.now() - startMs
     });
   };
-  import_motely_wasm.SearchEvents.onResult.subscribe(onResultHandler);
-  import_motely_wasm.SearchEvents.onProgress.subscribe(onProgressHandler);
-  import_motely_wasm.SearchEvents.onComplete.subscribe(onCompleteHandler);
+  SearchEvents.onResult.subscribe(onResultHandler);
+  SearchEvents.onProgress.subscribe(onProgressHandler);
+  SearchEvents.onComplete.subscribe(onCompleteHandler);
   try {
-    const config = import_motely_wasm.MotelyProgram.loadJaml(jaml);
-    import_motely_wasm.MotelyProgram.startRandomSearch(config, seedCount, 1);
+    const config = MotelyProgram.loadJaml(jaml);
+    MotelyProgram.startRandomSearch(config, seedCount, 1);
   } catch (err) {
-    import_motely_wasm.SearchEvents.onResult.unsubscribe(onResultHandler);
-    import_motely_wasm.SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    import_motely_wasm.SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+    SearchEvents.onResult.unsubscribe(onResultHandler);
+    SearchEvents.onProgress.unsubscribe(onProgressHandler);
+    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
     throw err;
   }
 }
 function stopSearch() {
   stopRequested = true;
-  try {
-    import_motely_wasm.MotelyProgram.stopSearch();
-  } catch {
-  }
+  if (!ready) return;
+  void ready.then((mod) => {
+    try {
+      mod.MotelyProgram.stopSearch();
+    } catch {
+    }
+  });
 }
 
 // src/resultsPanel.ts
@@ -18312,7 +18317,7 @@ var JamlNotebookExecutor = class {
       "JAML Seed Search"
     );
     controller.supportedLanguages = ["jaml", "jummy"];
-    controller.description = "motely-wasm";
+    controller.description = "motely-wasm-compat";
     controller.executeHandler = this.execute.bind(this);
     context.subscriptions.push(controller);
     return controller;

@@ -347,14 +347,14 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
 
     public long SeedCount { get; private set; } = -1; // Unknown for enumerables
 
-    public MotelySeedListProvider(IEnumerable<string> seeds, int seedCount = -1)
+    public MotelySeedListProvider(IEnumerable<string> seeds, long seedCount = -1)
     {
         // Don't materialize! Seeds are used in the order provided from generator/enumerator
         _seedEnumerator = seeds.GetEnumerator();
         SeedCount = ResolveSeedCount(seeds, seedCount);
     }
 
-    private static long ResolveSeedCount(IEnumerable<string> seeds, int seedCount)
+    private static long ResolveSeedCount(IEnumerable<string> seeds, long seedCount)
     {
         if (seedCount >= 0)
             return seedCount;
@@ -416,6 +416,109 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
         {
             _seedEnumerator?.Dispose();
         }
+    }
+}
+
+/// <summary>
+/// Optional <see cref="IMotelySeedProvider"/> for <see cref="IAsyncEnumerable{T}"/> sources.
+/// Pass to <see cref="MotelySearchSettings{TBaseFilter}.WithProviderSearch"/>; do not use unless you
+/// truly need async streaming — prefer <see cref="MotelySeedListProvider"/> / <see cref="MotelySearchSettings{TBaseFilter}.WithListSearch"/>.
+/// </summary>
+public sealed class MotelyAsyncSeedListProvider : IMotelySeedProvider, IDisposable, IAsyncDisposable
+{
+    private readonly IAsyncEnumerable<string> _seeds;
+    private readonly CancellationToken _cancellationToken;
+
+    private IAsyncEnumerator<string>? _enumerator;
+    private string? _currentSeed;
+    private readonly object _enumeratorLock = new();
+    private bool _disposed;
+
+    public long SeedCount { get; }
+
+    public MotelyAsyncSeedListProvider(
+        IAsyncEnumerable<string> seeds,
+        long seedCount = -1,
+        CancellationToken cancellationToken = default
+    )
+    {
+        _seeds = seeds ?? throw new ArgumentNullException(nameof(seeds));
+        SeedCount = seedCount;
+        _cancellationToken = cancellationToken;
+    }
+
+    private IAsyncEnumerator<string> EnsureEnumerator()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _enumerator ??= _seeds.GetAsyncEnumerator(_cancellationToken);
+    }
+
+    private static bool MoveNextSync(IAsyncEnumerator<string> enumerator)
+    {
+        return enumerator.MoveNextAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+    }
+
+    public ReadOnlySpan<char> NextSeed()
+    {
+        lock (_enumeratorLock)
+        {
+            if (_disposed)
+                return ReadOnlySpan<char>.Empty;
+
+            var enumerator = EnsureEnumerator();
+            if (!MoveNextSync(enumerator))
+                return ReadOnlySpan<char>.Empty;
+
+            _currentSeed = enumerator.Current;
+            return _currentSeed.AsSpan();
+        }
+    }
+
+    public int NextSeeds(string[] seeds)
+    {
+        if (seeds is not { Length: > 0 })
+            return 0;
+
+        lock (_enumeratorLock)
+        {
+            if (_disposed)
+                return 0;
+
+            var enumerator = EnsureEnumerator();
+            int count = 0;
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                if (!MoveNextSync(enumerator))
+                    break;
+                seeds[i] = enumerator.Current;
+                count++;
+            }
+
+            return count;
+        }
+    }
+
+    public void Dispose()
+    {
+        DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        IAsyncEnumerator<string>? enumerator;
+        lock (_enumeratorLock)
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            enumerator = _enumerator;
+            _enumerator = null;
+        }
+
+        if (enumerator != null)
+            await enumerator.DisposeAsync().ConfigureAwait(false);
     }
 }
 

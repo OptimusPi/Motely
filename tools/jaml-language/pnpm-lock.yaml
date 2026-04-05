@@ -14,6 +14,8 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
 
+  jaml-schema: {}
+
   lsp-server:
     dependencies:
       '@motely/jaml-language-core':
@@ -41,9 +43,12 @@ importers:
 
   vscode-extension:
     dependencies:
-      motely-wasm:
-        specifier: ^6.0.1
-        version: 6.0.1
+      '@motely/jaml-schema':
+        specifier: workspace:*
+        version: link:../jaml-schema
+      motely-wasm-compat:
+        specifier: file:../../../Motely.BrowserWasm/motely-wasm-compat
+        version: file:../../Motely.BrowserWasm/motely-wasm-compat
       vscode-languageclient:
         specifier: ^9.0.1
         version: 9.0.1
@@ -988,8 +993,8 @@ packages:
   mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
 
-  motely-wasm@6.0.1:
-    resolution: {integrity: sha512-XbOTwgNJTWChAPrzYBmuzJaQAzDkFz1Rd0sTlk7s54N/CCb+r8Pp7ao8zcoTc/E/k7IOl2UKHFpTv2RMRs0hdw==}
+  motely-wasm-compat@file:../../Motely.BrowserWasm/motely-wasm-compat:
+    resolution: {directory: ../../Motely.BrowserWasm/motely-wasm-compat, type: directory}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2391,7 +2396,7 @@ snapshots:
   mkdirp-classic@0.5.3:
     optional: true
 
-  motely-wasm@6.0.1: {}
+  motely-wasm-compat@file:../../Motely.BrowserWasm/motely-wasm-compat: {}
 
   ms@2.1.3: {}
 
