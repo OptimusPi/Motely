@@ -7,25 +7,20 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
 {
     public readonly int Value = value;
 
-    public readonly MotelyItemType Type => (MotelyItemType)(Value & MotelyGlobals.ItemTypeMask);
-    public readonly MotelyItemTypeCategory TypeCategory =>
-        (MotelyItemTypeCategory)(Value & MotelyGlobals.ItemTypeCategoryMask);
-    public readonly MotelyItemSeal Seal => (MotelyItemSeal)(Value & MotelyGlobals.ItemSealMask);
-    public readonly MotelyItemEnhancement Enhancement =>
-        (MotelyItemEnhancement)(Value & MotelyGlobals.ItemEnhancementMask);
-    public readonly MotelyItemEdition Edition =>
-        (MotelyItemEdition)(Value & MotelyGlobals.ItemEditionMask);
+    public readonly MotelyItemType Type { get { return (MotelyItemType)(Value & MotelyGlobals.ItemTypeMask); } }
+    public readonly MotelyItemTypeCategory TypeCategory { get { return (MotelyItemTypeCategory)(Value & MotelyGlobals.ItemTypeCategoryMask); } }
+    public readonly MotelyItemSeal Seal { get { return (MotelyItemSeal)(Value & MotelyGlobals.ItemSealMask); } }
+    public readonly MotelyItemEnhancement Enhancement { get { return (MotelyItemEnhancement)(Value & MotelyGlobals.ItemEnhancementMask); } }
+    public readonly MotelyItemEdition Edition { get { return (MotelyItemEdition)(Value & MotelyGlobals.ItemEditionMask); } }
 
-    public readonly MotelyPlayingCardSuit PlayingCardSuit =>
-        (MotelyPlayingCardSuit)(Value & MotelyGlobals.PlayingCardSuitMask);
-    public readonly MotelyPlayingCardRank PlayingCardRank =>
-        (MotelyPlayingCardRank)(Value & MotelyGlobals.PlayingCardRankMask);
+    public readonly MotelyPlayingCardSuit PlayingCardSuit { get { return (MotelyPlayingCardSuit)(Value & MotelyGlobals.PlayingCardSuitMask); } }
+    public readonly MotelyPlayingCardRank PlayingCardRank { get { return (MotelyPlayingCardRank)(Value & MotelyGlobals.PlayingCardRankMask); } }
 
-    public readonly bool IsPerishable => (Value & (1 << MotelyGlobals.PerishableStickerOffset)) != 0;
-    public readonly bool IsEternal => (Value & (1 << MotelyGlobals.EternalStickerOffset)) != 0;
-    public readonly bool IsRental => (Value & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
+    public readonly bool IsPerishable { get { return (Value & (1 << MotelyGlobals.PerishableStickerOffset)) != 0; } }
+    public readonly bool IsEternal { get { return (Value & (1 << MotelyGlobals.EternalStickerOffset)) != 0; } }
+    public readonly bool IsRental { get { return (Value & (1 << MotelyGlobals.RentalStickerOffset)) != 0; } }
 
-    public readonly bool IsInvalid => TypeCategory == MotelyItemTypeCategory.Invalid;
+    public readonly bool IsInvalid { get { return TypeCategory == MotelyItemTypeCategory.Invalid; } }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem(MotelyItemType type)
@@ -118,11 +113,10 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
     /// Prefix order matches <see cref="FormatUtils.FormatItem"/> (stickers, seal, edition, enhancement, type).
     /// </summary>
     /// <exception cref="FormatException">Unrecognized layout or unknown type.</exception>
-    public static MotelyItem Parse(string jummy) => FormatUtils.ParseMotelyItem(jummy);
+    public static MotelyItem Parse(string jummy) { return FormatUtils.ParseMotelyItem(jummy); }
 
     /// <inheritdoc cref="Parse"/>
-    public static bool TryParse(string jummy, out MotelyItem item) =>
-        FormatUtils.TryParseMotelyItem(jummy, out item);
+    public static bool TryParse(string jummy, out MotelyItem item) { return FormatUtils.TryParseMotelyItem(jummy, out item); }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(MotelyItem other)
@@ -136,15 +130,15 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator ==(MotelyItem a, MotelyItem b) => a.Equals(b);
+    public static bool operator ==(MotelyItem a, MotelyItem b) { return a.Equals(b); }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator !=(MotelyItem a, MotelyItem b) => !a.Equals(b);
+    public static bool operator !=(MotelyItem a, MotelyItem b) { return !a.Equals(b); }
 
     public override int GetHashCode()
     {
         return Value.GetHashCode();
     }
 
-    public static implicit operator MotelyItem(MotelyItemType type) => new(type);
+    public static implicit operator MotelyItem(MotelyItemType type) { return new(type); }
 }

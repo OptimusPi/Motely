@@ -44,13 +44,13 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
     public List<OrClause> Or { get; set; } = [];
 
     /// <summary>Number of clauses in <see cref="OrderedClauses"/> (evaluation order).</summary>
-    public int Count => OrderedClauses.Count;
+    public int Count { get { return OrderedClauses.Count; } }
 
-    public bool HasAnyClauses => OrderedClauses.Count > 0;
+    public bool HasAnyClauses { get { return OrderedClauses.Count > 0; } }
 
-    public IEnumerator<IJamlClause> GetEnumerator() => OrderedClauses.GetEnumerator();
+    public IEnumerator<IJamlClause> GetEnumerator() { return OrderedClauses.GetEnumerator(); }
 
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { return GetEnumerator(); }
 }
 
 /// <summary>
