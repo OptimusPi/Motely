@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
+using Motely.CLI;
 using Motely.Analysis;
 using Motely.DB.SeedSource;
 using Motely.Filters;
@@ -11,6 +12,30 @@ using Motely.Filters.Native;
 partial class Program
 {
     private static readonly CancellationTokenSource _cts = new();
+
+    private static List<string> BuildKeywordInputs(
+        CommandOption<string> keywordOption,
+        CommandOption<string> keywordsOption
+    )
+    {
+        var keywordInputs = new List<string>();
+        if (keywordOption.HasValue())
+            keywordInputs.Add(keywordOption.ParsedValue.Trim().ToUpperInvariant());
+
+        if (keywordsOption.HasValue())
+        {
+            keywordInputs.AddRange(
+                keywordsOption
+                    .ParsedValue.Split(
+                        ',',
+                        StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+                    )
+                    .Select(static k => k.Trim().ToUpperInvariant())
+            );
+        }
+
+        return keywordInputs;
+    }
 
     static void RequestTermination()
     {
@@ -160,7 +185,7 @@ partial class Program
         );
         var nativeOption = app.Option<string>(
             "--native <NAME>",
-            "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...)",
+            "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...). Seed-input flags match JAML: --source, --seeds, --keyword(s), --random, --aesthetic, or default sequential (--startBatch / --endBatch / --startPercent).",
             CommandOptionType.SingleValue
         );
 
@@ -213,19 +238,43 @@ partial class Program
                     return 1;
                 }
 
-                var nSettings = MotelyNativeFilterFactory.CreateSettings(nativeFilter);
+                IMotelySearchSettings nSettings = MotelyNativeFilterFactory.CreateSettings(nativeFilter);
 
-                nSettings.WithDeck(nDeck).WithStake(nStake).WithThreadCount(nThreads).WithBatchCharacterCount(nBatch);
-                nSettings.WithSequentialSearch();
-                if (startBatchOption.HasValue()) nSettings.WithStartBatchIndex(startBatchOption.ParsedValue);
-                if (endBatchOption.HasValue()) nSettings.WithEndBatchIndex(endBatchOption.ParsedValue);
+                nSettings = nSettings
+                    .WithDeck(nDeck)
+                    .WithStake(nStake)
+                    .WithThreadCount(nThreads)
+                    .WithBatchCharacterCount(nBatch);
 
-                nSettings.WithProgressCallback(WriteNativeProgressLineToStderr);
-
-                nSettings.WithSeedMatchCallback(seed =>
+                if (
+                    !CliSearchMode.TryApplySearchMode(
+                        nSettings,
+                        new CliSearchMode.Input(
+                            SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
+                            SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
+                            KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
+                            PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
+                            RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
+                            AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
+                            StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
+                            EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
+                            StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
+                            BatchCharacterCount: nBatch,
+                            JamlAestheticFallback: null
+                        ),
+                        msg => Console.Error.WriteLine(msg),
+                        out var nSearchModeError,
+                        out nSettings
+                    )
+                )
                 {
-                    Console.WriteLine(seed);
-                });
+                    Console.Error.WriteLine(nSearchModeError);
+                    return 1;
+                }
+
+                nSettings = nSettings
+                    .WithProgressCallback(WriteNativeProgressLineToStderr)
+                    .WithSeedMatchCallback(seed => Console.WriteLine(seed));
 
                 Console.Error.WriteLine($"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} batchCharCount={nBatch}");
                 using var nSearch = nSettings.Start(_cts.Token);
@@ -283,192 +332,37 @@ partial class Program
                 }
             }
 
-            bool hasSeedListMode = sourceOption.HasValue() || seedsOption.HasValue();
-            bool hasKeywordMode = keywordOption.HasValue() || keywordsOption.HasValue();
-            JamlAesthetic? explicitAesthetic = null;
-            if (aestheticOption.HasValue())
-            {
-                if (!JamlAestheticParser.TryParse(aestheticOption.ParsedValue, out var aesthetic))
-                {
-                    Console.Error.WriteLine(
-                        $"Error: unknown --aesthetic value '{aestheticOption.ParsedValue.Trim()}'. Known: {JamlAestheticParser.KnownJamlStringsDescription()}."
-                    );
-                    return 1;
-                }
-                explicitAesthetic = aesthetic;
-            }
-
-            if (sourceOption.HasValue() && seedsOption.HasValue())
-            {
-                Console.Error.WriteLine(
-                    "Error: choose only one explicit seed input: --source or --seeds."
-                );
-                return 1;
-            }
-
-            int explicitSearchModeCount = 0;
-            if (hasSeedListMode) explicitSearchModeCount++;
-            if (hasKeywordMode) explicitSearchModeCount++;
-            if (randomOption.HasValue()) explicitSearchModeCount++;
-            if (explicitAesthetic.HasValue) explicitSearchModeCount++;
-
-            if (explicitSearchModeCount > 1)
-            {
-                Console.Error.WriteLine(
-                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, or --aesthetic."
-                );
-                return 1;
-            }
-
-
-            // TODO fucking stream it with DUCKDB <.>
-            // This is why i HAD MOTELY.ORCHESTRATION!!!!! GRRRR UGH 
-            string[]? explicitSeeds = null;
-            if (sourceOption.HasValue())
-            {
-                try
-                {
-                    var sourceSeeds = SeedReader.ReadSeeds(sourceOption.ParsedValue);
-                    if (sourceSeeds.Count == 0)
-                    {
-                        Console.Error.WriteLine("Error: resolved source contained no seeds.");
-                        return 1;
-                    }
-
-                    explicitSeeds = sourceSeeds.ToArray();
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Error: {ex.Message}");
-                    return 1;
-                }
-            }
-            else if (seedsOption.HasValue())
-            {
-                var seedsValue = seedsOption.ParsedValue;
-                var looksLikeSourcePath = seedsValue.Contains(Path.DirectorySeparatorChar)
-                    || seedsValue.Contains(Path.AltDirectorySeparatorChar)
-                    || Path.HasExtension(seedsValue);
-
-                if (looksLikeSourcePath)
-                {
-                    try
-                    {
-                        var sourceSeeds = SeedReader.ReadSeeds(seedsValue);
-                        if (sourceSeeds.Count == 0)
-                        {
-                            Console.Error.WriteLine("Error: resolved seed source contained no seeds.");
-                            return 1;
-                        }
-
-                        Console.Error.WriteLine("Warning: --seeds <path> is deprecated; use --source <path>.");
-                        explicitSeeds = sourceSeeds.ToArray();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine($"Error: {ex.Message}");
-                        return 1;
-                    }
-                }
-                else
-                {
-                    var inlineSeeds = SeedReader.ParseInlineSeeds(seedsValue);
-                    if (inlineSeeds.Count == 0)
-                    {
-                        Console.Error.WriteLine("Error: --seeds requires at least one inline seed.");
-                        return 1;
-                    }
-
-                    explicitSeeds = inlineSeeds.ToArray();
-                }
-            }
-
-            var keywordInputs = new List<string>();
-            if (keywordOption.HasValue())
-                keywordInputs.Add(keywordOption.ParsedValue.Trim().ToUpperInvariant());
-
-            if (keywordsOption.HasValue())
-            {
-                keywordInputs.AddRange(
-                    keywordsOption.ParsedValue
-                        .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                        .Select(static k => k.Trim().ToUpperInvariant())
-                );
-            }
-
             var plan = JamlSearchBuilder.CreatePlan(config);
-            var settings = plan.Settings
+            IMotelySearchSettings settings = plan.Settings
                 .WithDeck(deck)
                 .WithStake(stake)
                 .WithThreadCount(threads)
                 .WithBatchCharacterCount(batchCharCount);
 
-            if (explicitSeeds != null)
+            if (
+                !CliSearchMode.TryApplySearchMode(
+                    settings,
+                    new CliSearchMode.Input(
+                        SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
+                        SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
+                        KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
+                        PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
+                        RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
+                        AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
+                        StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
+                        EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
+                        StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
+                        BatchCharacterCount: batchCharCount,
+                        JamlAestheticFallback: config.Aesthetics
+                    ),
+                    msg => Console.Error.WriteLine(msg),
+                    out var jamlSearchModeError,
+                    out settings
+                )
+            )
             {
-                settings = settings.WithListSearch(explicitSeeds, explicitSeeds.Length);
-            }
-            else if (keywordInputs.Count > 0)
-            {
-                char[]? paddingChars = paddingOption.HasValue()
-                    ? paddingOption.ParsedValue
-                        .ToUpperInvariant()
-                        .Where(static c => MotelyGlobals.SeedDigits.Contains(c))
-                        .Distinct()
-                        .ToArray()
-                    : null;
-                var prov = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywordInputs, paddingChars);
-                settings = settings.WithProviderSearch(
-                    new MotelySeedListProvider(
-                        prov,
-                        prov.Count()
-                    )
-                );
-            }
-            else if (randomOption.HasValue())
-            {
-                settings = settings.WithRandomSearch(randomOption.ParsedValue);
-            }
-            else if (explicitAesthetic.HasValue)
-            {
-                settings = settings.WithAestheticSearch(explicitAesthetic.Value);
-            }
-            else if (config.Aesthetics.Count > 0)
-            {
-                settings = settings.WithAestheticSearch(config.Aesthetics[0]);
-                if (config.Aesthetics.Count > 1)
-                {
-                    Console.Error.WriteLine(
-                        $"Warning: JAML has {config.Aesthetics.Count} aesthetics; using first only."
-                    );
-                }
-            }
-            else
-            {
-                settings = settings.WithSequentialSearch();
-
-                if (startBatchOption.HasValue())
-                    settings = settings.WithStartBatchIndex(startBatchOption.ParsedValue);
-                else if (startPercentOption.HasValue())
-                {
-                    double pct = startPercentOption.ParsedValue;
-                    if (pct < 0 || pct > 100)
-                    {
-                        Console.Error.WriteLine("Error: --startPercent must be between 0 and 100.");
-                        return 1;
-                    }
-
-                    int nonBatchChars = MotelyGlobals.MaxSeedLength - batchCharCount;
-                    long maxBatch = (long)Math.Pow(MotelyGlobals.SeedDigits.Length, nonBatchChars);
-                    long startBatch = (long)(maxBatch * (pct / 100.0));
-                    if (startBatch < 0)
-                        startBatch = 0;
-                    if (maxBatch > 0 && startBatch >= maxBatch)
-                        startBatch = maxBatch - 1;
-                    settings = settings.WithStartBatchIndex(startBatch);
-                }
-
-                if (endBatchOption.HasValue())
-                    settings = settings.WithEndBatchIndex(endBatchOption.ParsedValue);
+                Console.Error.WriteLine(jamlSearchModeError);
+                return 1;
             }
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
