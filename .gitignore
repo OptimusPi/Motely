@@ -117,3 +117,4 @@ Motely.BrowserWasm/motely-wasm/types/
 /Motely.npm-staging/motely-wasm
 Motely.TestWebsite/node_modules
 Motely.TestWebsite/dist
+Motely.HelperAPI/wwwroot/

@@ -1,8 +1,13 @@
 using Microsoft.Extensions.Options;
 using Motely;
 using Motely.DistributedWorker;
+using Motely.HelperAPI;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── AOT-safe JSON ───────────────────────────────────────────────────
+builder.Services.ConfigureHttpJsonOptions(o =>
+    o.SerializerOptions.TypeInfoResolverChain.Add(HelperApiJsonContext.Default));
 
 // ── CORS — open for community tools ─────────────────────────────────
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
@@ -19,27 +24,16 @@ var app = builder.Build();
 
 app.UseCors();
 
-// Serve static files from wwwroot/ (root-level static assets).
+// Serve the motely-wasm seed tools (Vite build output copied to wwwroot/).
 app.UseDefaultFiles();
-app.UseStaticFiles();
-
-// Serve /jammy-seed-finder/ with unknown file types (WASM .dll, .br, .gz, etc.)
-app.UseDefaultFiles(new DefaultFilesOptions
-{
-    RequestPath = "/jammy-seed-finder",
-    DefaultFileNames = ["index.html"]
-});
 app.UseStaticFiles(new StaticFileOptions
 {
-    RequestPath = "/jammy-seed-finder",
-    ServeUnknownFileTypes = true
+    ServeUnknownFileTypes = true // .wasm, .mjs, etc.
 });
 
 // ── Routes ──────────────────────────────────────────────────────────
 
 var motelyVersion = typeof(MotelyGlobals).Assembly.GetName().Version?.ToString(3) ?? "7.0.0";
-
-app.MapGet("/", () => Results.Redirect("/jammy-seed-finder/"));
 
 app.MapGet("/health", () =>
     Results.Ok(new HealthResponse("ok", motelyVersion)));
