@@ -25,6 +25,9 @@ importers:
       '@motely/jaml-language-core':
         specifier: workspace:*
         version: link:../core
+      motely-wasm:
+        specifier: ^7.0.0
+        version: 7.0.0
       yaml:
         specifier: ^2.8.3
         version: 2.8.3
@@ -1188,6 +1191,9 @@ packages:
 
   mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
+
+  motely-wasm@7.0.0:
+    resolution: {integrity: sha512-PVZNHufhgRbaNB/cnMdx0zAc5Py9ZHTx/NDF2uEhnCr3hIamw+gfyO3mmeIuJGm+1zFudxhZAuHzB5A0Ai+Duw==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2900,6 +2906,8 @@ snapshots:
 
   mkdirp-classic@0.5.3:
     optional: true
+
+  motely-wasm@7.0.0: {}
 
   ms@2.1.3: {}
 
