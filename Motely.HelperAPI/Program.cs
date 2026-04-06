@@ -19,18 +19,6 @@ var app = builder.Build();
 
 app.UseCors();
 
-// COOP / COEP headers — required for WASM SharedArrayBuffer (multi-threaded search).
-app.Use(async (context, next) =>
-{
-    var path = context.Request.Path.Value ?? "";
-    if (path.StartsWith("/jammy-seed-finder", StringComparison.OrdinalIgnoreCase))
-    {
-        context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
-        context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
-    }
-    await next();
-});
-
 // Serve static files from wwwroot/ (root-level static assets).
 app.UseDefaultFiles();
 app.UseStaticFiles();
