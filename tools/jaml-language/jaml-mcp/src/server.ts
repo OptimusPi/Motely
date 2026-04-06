@@ -14,6 +14,40 @@ import {
   unknownRootKeys,
 } from "@motely/jaml-language-core";
 
+// ── WASM engine (lazy-loaded) ──────────────────────────────────────────────
+let wasmReady: Promise<any> | null = null;
+
+function findWasmPath(): string | null {
+  const candidates = [
+    resolve(HERE, "motely-wasm.mjs"),
+    resolve(HERE, "..", "dist", "motely-wasm.mjs"),
+  ];
+  // Also check workspace node_modules
+  const nmCandidates = ["motely-wasm-compat", "motely-wasm"];
+  for (const pkg of nmCandidates) {
+    candidates.push(resolve(HERE, "..", "node_modules", pkg, "index.mjs"));
+    candidates.push(resolve(HERE, "..", "..", "node_modules", pkg, "index.mjs"));
+    candidates.push(resolve(HERE, "..", "..", "..", "node_modules", pkg, "index.mjs"));
+  }
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+async function getWasm(): Promise<any> {
+  if (!wasmReady) {
+    wasmReady = (async () => {
+      const wasmPath = findWasmPath();
+      if (!wasmPath) throw new Error("Motely WASM engine not found. Run: dotnet publish Motely.BrowserWasm -c Release");
+      const mod = await (Function("p", "return import(p)")(wasmPath) as Promise<any>);
+      await mod.default.boot();
+      return mod;
+    })();
+  }
+  return wasmReady;
+}
+
 // ── Paths ──────────────────────────────────────────────────────────────────
 const HERE = typeof __dirname !== "undefined"
   ? __dirname
@@ -134,6 +168,34 @@ server.tool(
         text: JSON.stringify(result, null, 2),
       }],
     };
+  },
+);
+
+// Tool: compile_jummy
+server.tool(
+  "compile_jummy",
+  "Compile Jummy text into JAML. Jummy is a human-friendly alternative syntax (supports mumble lines like 'Eternal Blueprint in Ante 1' and what/where blocks). Requires the Motely WASM engine.",
+  { jummy: z.string().describe("Jummy source text to compile") },
+  async ({ jummy }) => {
+    try {
+      const wasm = await getWasm();
+      const config = wasm.MotelyWasmHost.compileJummy(jummy);
+      // The WASM returns a JamlConfig object — serialize it back
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ success: true, config }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ success: false, error: (err as Error).message }, null, 2),
+        }],
+        isError: true,
+      };
+    }
   },
 );
 
