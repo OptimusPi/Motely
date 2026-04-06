@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { RESOURCE_URI_META_KEY, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps";
 import { z } from "zod";
 import { parse as parseYaml } from "yaml";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
@@ -268,11 +269,11 @@ if (appHtml) {
   server.resource(
     "jaml-search-app",
     "ui://jaml-mcp/search",
-    { description: "Interactive JAML search UI — renders inline in Claude/VS Code", mimeType: "text/html;profile=mcp-app" },
+    { description: "Interactive JAML search UI — renders inline in Claude/VS Code", mimeType: RESOURCE_MIME_TYPE },
     async () => ({
       contents: [{
         uri: "ui://jaml-mcp/search",
-        mimeType: "text/html;profile=mcp-app" as const,
+        mimeType: RESOURCE_MIME_TYPE,
         text: appHtml!,
       }],
     }),
@@ -292,7 +293,7 @@ if (appHtml) {
           : "Opening JAML search app.",
       }],
       _meta: {
-        ui: { resourceUri: "ui://jaml-mcp/search" },
+        [RESOURCE_URI_META_KEY]: "ui://jaml-mcp/search",
       },
     }),
   );

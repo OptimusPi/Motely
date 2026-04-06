@@ -215,15 +215,26 @@ const isInIframe = window.self !== window.top;
 
 async function initApp() {
   try {
-    const { App } = await import("@modelcontextprotocol/ext-apps");
-    app = new App({ name: "jaml-search", version: "0.1.0" });
+    const { App, PostMessageTransport } = await import("@modelcontextprotocol/ext-apps");
+    app = new App(
+      { name: "jaml-search", version: "0.1.0" },
+      {} // capabilities
+    );
 
-    app.ontoolresult = (result) => {
-      if (result._tool === "validate_jaml") handleValidation(result);
-      if (result._tool === "run_search") handleSearchResults(result);
+    // Receive the tool input (the jaml arg passed to jaml_search_app)
+    app.ontoolinput = (params) => {
+      if (params.arguments?.jaml) {
+        editor.value = params.arguments.jaml;
+      }
     };
 
-    await app.connect();
+    await app.connect(new PostMessageTransport(window.parent));
+
+    // Check host context for pre-filled JAML from tool args
+    const ctx = app.getHostContext();
+    if (ctx?.toolInfo?.arguments?.jaml) {
+      editor.value = ctx.toolInfo.arguments.jaml;
+    }
   } catch {
     // Running standalone or SDK not available — that's fine
   }
@@ -233,16 +244,15 @@ async function callServerTool(name, args) {
   if (app) {
     return await app.callServerTool({ name, arguments: args });
   }
-  // Fallback: post to parent
-  if (isInIframe) {
-    window.parent.postMessage({ type: "mcp-tool-call", tool: name, args }, "*");
-  }
   return null;
 }
 
 async function pushContext(text) {
   if (app) {
-    await app.updateModelContext({ content: [{ type: "text", text }] });
+    await app.sendMessage({
+      role: "user",
+      content: [{ type: "text", text }],
+    });
   }
 }
 
