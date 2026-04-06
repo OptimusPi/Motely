@@ -20,6 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "preview"
+
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      - name: Publish motely-wasm (NativeAOT-LLVM → WASM)
+        run: dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
