@@ -10,9 +10,9 @@ namespace Motely.DistributedWorker;
 [JsonSerializable(typeof(PoolClaimRequestDto))]
 [JsonSerializable(typeof(PoolClaimResponseDto))]
 [JsonSerializable(typeof(ErrorDto))]
-internal partial class WorkerJsonContext : JsonSerializerContext { }
+public partial class WorkerJsonContext : JsonSerializerContext { }
 
-internal sealed class SubmitResultsDto
+public sealed class SubmitResultsDto
 {
     [JsonPropertyName("action")]
     public string Action { get; set; } = "submit";
@@ -33,13 +33,13 @@ internal sealed class SubmitResultsDto
     public long SeedsSearched { get; set; }
 }
 
-internal sealed class SubmitResponseDto
+public sealed class SubmitResponseDto
 {
     [JsonPropertyName("accepted")]
     public int Accepted { get; set; }
 }
 
-internal sealed class SeedResultDto
+public sealed class SeedResultDto
 {
     [JsonPropertyName("seed")]
     public string Seed { get; set; } = "";
@@ -48,14 +48,14 @@ internal sealed class SeedResultDto
     public int Score { get; set; }
 }
 
-internal sealed class ErrorDto
+public sealed class ErrorDto
 {
     [JsonPropertyName("error")]
     public string? Error { get; set; }
 }
 
 /// <summary>POST body for /api/search/helper action=request</summary>
-internal sealed class PoolClaimRequestDto
+public sealed class PoolClaimRequestDto
 {
     [JsonPropertyName("action")]
     public string Action { get; set; } = "request";
@@ -78,7 +78,7 @@ internal sealed class PoolClaimRequestDto
 }
 
 /// <summary>Response from /api/search/pool/claim</summary>
-internal sealed class PoolClaimResponseDto
+public sealed class PoolClaimResponseDto
 {
     [JsonPropertyName("idle")]
     public bool Idle { get; set; }
