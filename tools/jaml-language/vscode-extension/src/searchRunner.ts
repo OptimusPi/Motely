@@ -78,7 +78,7 @@ export async function runSearch(
   onResult: OnResult,
   onComplete: OnComplete
 ): Promise<void> {
-  const { MotelyProgram, SearchEvents } = await getWasm();
+  const { MotelyWasmHost, SearchEvents } = await getWasm();
 
   const results: SearchResult[] = [];
   const startMs = Date.now();
@@ -110,8 +110,8 @@ export async function runSearch(
   SearchEvents.onComplete.subscribe(onCompleteHandler);
 
   try {
-    const config = MotelyProgram.loadJaml(jaml);
-    MotelyProgram.startRandomSearch(config, seedCount, 1);
+    const config = MotelyWasmHost.loadJaml(jaml);
+    MotelyWasmHost.startRandomSearch(config, seedCount);
   } catch (err) {
     SearchEvents.onResult.unsubscribe(onResultHandler);
     SearchEvents.onProgress.unsubscribe(onProgressHandler);
@@ -124,8 +124,7 @@ export function stopSearch(): void {
   if (!ready) return;
   void ready.then((mod) => {
     try {
-      // @ts-ignore stopSearch added in 6.1.1+
-      mod.MotelyProgram.stopSearch();
+      mod.MotelyWasmHost.stopSearch();
     } catch {
       /* ignore */
     }

@@ -18,7 +18,7 @@
 **Manual VSIX:**
 
 ```bash
-code --install-extension jaml-language-support-1.1.7.vsix
+code --install-extension jaml-language-support-1.2.0.vsix
 ```
 
 ## Usage
