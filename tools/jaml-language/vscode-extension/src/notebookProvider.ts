@@ -60,7 +60,8 @@ export class JamlNotebookExecutor {
   }
 
   private executeCell(cell: vscode.NotebookCell, controller: vscode.NotebookController): void {
-    const execution = controller.createCellExecution(cell);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const execution = (controller as any).createCellExecution(cell);
     const startTime = Date.now();
     execution.start(startTime);
     execution.clearOutput();

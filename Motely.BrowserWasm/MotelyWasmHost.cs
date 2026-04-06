@@ -29,7 +29,7 @@ public interface IMotelyWasmHost
     /// Throws <see cref="InvalidOperationException"/> with a descriptive message on failure.
     /// </summary>
     JamlConfig CompileJummy(string jummy);
-    MotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
+    IMotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
     /// <summary>
     /// If <paramref name="jaml"/> declares <c>aesthetics</c>, runs aesthetic provider search ( <paramref name="batchCharCount"/> and batch range are ignored).
     /// Otherwise sequential search with the given batch settings.
@@ -89,11 +89,11 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
     /// <summary>
     /// Single-seed context from a minimal list-search; prior router is disposed.
     /// </summary>
-    public MotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake)
+    public IMotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake)
     {
         _singleSeedRouter?.Dispose();
         _singleSeedRouter = new MotelySeedRouterDesc(seed, deck, stake);
-        return _singleSeedRouter.Instance();
+        return new MotelySingleSearchContextImpl(_singleSeedRouter);
     }
 
     /// <summary>Deck/stake/thread only — for provider/list/random/aesthetic/keyword modes (sequential batch size is not used).</summary>

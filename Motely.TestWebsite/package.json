@@ -8,8 +8,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "motely-wasm": "file:../Motely.BrowserWasm/motely-wasm",
-    "motely-wasm-compat": "file:../Motely.BrowserWasm/motely-wasm-compat"
+    "motely-wasm": "7.0.0",
+    "motely-wasm-compat": "7.0.0"
   },
   "devDependencies": {
     "vite": "^6.3.5"

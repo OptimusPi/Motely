@@ -1,11 +1,10 @@
 # Motely WASM test site
 
+**Live:** https://optimuspi.github.io/MotelyJAML/
+
 Smoke-test **`motely-wasm`** and **`motely-wasm-compat`** from the local publish folders (Vite).
 
 ```powershell
-# From repo root — produces Motely.BrowserWasm/motely-wasm/ and motely-wasm-compat/
-dotnet publish Motely.BrowserWasm -c Release
-
 cd Motely.TestWebsite
 npm install
 npm run dev

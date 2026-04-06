@@ -108,7 +108,7 @@ If npm said the version already exists: bump <MotelyVersion> in Directory.Packag
 
 if ($Npm -ne 'None') {
     $jamlSchemaDir = Join-Path $root 'tools\jaml-language\jaml-schema'
-    Write-Banner "==> pnpm install (jaml-language — sync @motely/jaml-schema)"
+    Write-Banner "==> pnpm install (jaml-language — sync jaml-schema)"
     Push-Location (Join-Path $root 'tools\jaml-language')
     try {
         pnpm install
@@ -116,8 +116,8 @@ if ($Npm -ne 'None') {
     }
     finally { Pop-Location }
 
-    Write-Banner "==> npm ($Npm) — @motely/jaml-schema + motely-wasm + motely-wasm-compat"
-    Invoke-NpmForPackage -PackageDir $jamlSchemaDir -Label '@motely/jaml-schema' -Mode $Npm
+    Write-Banner "==> npm ($Npm) — jaml-schema + motely-wasm + motely-wasm-compat"
+    Invoke-NpmForPackage -PackageDir $jamlSchemaDir -Label 'jaml-schema' -Mode $Npm
     Invoke-NpmForPackage -PackageDir $wasmOut -Label 'motely-wasm' -Mode $Npm
     Invoke-NpmForPackage -PackageDir $wasmCompatOut -Label 'motely-wasm-compat' -Mode $Npm
 }

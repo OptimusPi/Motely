@@ -3098,7 +3098,7 @@ var require_main = __commonJS({
     exports2.createMessageConnection = exports2.createServerSocketTransport = exports2.createClientSocketTransport = exports2.createServerPipeTransport = exports2.createClientPipeTransport = exports2.generateRandomPipeName = exports2.StreamMessageWriter = exports2.StreamMessageReader = exports2.SocketMessageWriter = exports2.SocketMessageReader = exports2.PortMessageWriter = exports2.PortMessageReader = exports2.IPCMessageWriter = exports2.IPCMessageReader = void 0;
     var ril_1 = require_ril();
     ril_1.default.install();
-    var path2 = require("path");
+    var path3 = require("path");
     var os = require("os");
     var crypto_1 = require("crypto");
     var net_1 = require("net");
@@ -3234,9 +3234,9 @@ var require_main = __commonJS({
       }
       let result;
       if (XDG_RUNTIME_DIR) {
-        result = path2.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
+        result = path3.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
       } else {
-        result = path2.join(os.tmpdir(), `vscode-${randomSuffix}.sock`);
+        result = path3.join(os.tmpdir(), `vscode-${randomSuffix}.sock`);
       }
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0 && result.length > limit) {
@@ -3406,8 +3406,8 @@ var require_main2 = __commonJS({
         }
         Position2.is = is;
       })(Position || (exports3.Position = Position = {}));
-      var Range;
-      (function(Range2) {
+      var Range2;
+      (function(Range3) {
         function create(one, two, three, four) {
           if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
             return { start: Position.create(one, two), end: Position.create(three, four) };
@@ -3417,13 +3417,13 @@ var require_main2 = __commonJS({
             throw new Error("Range#create called with invalid arguments[".concat(one, ", ").concat(two, ", ").concat(three, ", ").concat(four, "]"));
           }
         }
-        Range2.create = create;
+        Range3.create = create;
         function is(value) {
           var candidate = value;
           return Is.objectLiteral(candidate) && Position.is(candidate.start) && Position.is(candidate.end);
         }
-        Range2.is = is;
-      })(Range || (exports3.Range = Range = {}));
+        Range3.is = is;
+      })(Range2 || (exports3.Range = Range2 = {}));
       var Location;
       (function(Location2) {
         function create(uri, range) {
@@ -3432,7 +3432,7 @@ var require_main2 = __commonJS({
         Location2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
+          return Is.objectLiteral(candidate) && Range2.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
         }
         Location2.is = is;
       })(Location || (exports3.Location = Location = {}));
@@ -3444,7 +3444,7 @@ var require_main2 = __commonJS({
         LocationLink2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range.is(candidate.targetSelectionRange) && (Range.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
+          return Is.objectLiteral(candidate) && Range2.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range2.is(candidate.targetSelectionRange) && (Range2.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
         }
         LocationLink2.is = is;
       })(LocationLink || (exports3.LocationLink = LocationLink = {}));
@@ -3476,7 +3476,7 @@ var require_main2 = __commonJS({
         ColorInformation2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.range) && Color.is(candidate.color);
+          return Is.objectLiteral(candidate) && Range2.is(candidate.range) && Color.is(candidate.color);
         }
         ColorInformation2.is = is;
       })(ColorInformation || (exports3.ColorInformation = ColorInformation = {}));
@@ -3587,7 +3587,7 @@ var require_main2 = __commonJS({
         function is(value) {
           var _a;
           var candidate = value;
-          return Is.defined(candidate) && Range.is(candidate.range) && Is.string(candidate.message) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
+          return Is.defined(candidate) && Range2.is(candidate.range) && Is.string(candidate.message) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
         }
         Diagnostic2.is = is;
       })(Diagnostic || (exports3.Diagnostic = Diagnostic = {}));
@@ -3627,7 +3627,7 @@ var require_main2 = __commonJS({
         TextEdit2.del = del;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range.is(candidate.range);
+          return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range2.is(candidate.range);
         }
         TextEdit2.is = is;
       })(TextEdit || (exports3.TextEdit = TextEdit = {}));
@@ -4171,7 +4171,7 @@ var require_main2 = __commonJS({
         InsertReplaceEdit2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate && Is.string(candidate.newText) && Range.is(candidate.insert) && Range.is(candidate.replace);
+          return candidate && Is.string(candidate.newText) && Range2.is(candidate.insert) && Range2.is(candidate.replace);
         }
         InsertReplaceEdit2.is = is;
       })(InsertReplaceEdit || (exports3.InsertReplaceEdit = InsertReplaceEdit = {}));
@@ -4218,7 +4218,7 @@ var require_main2 = __commonJS({
       (function(Hover2) {
         function is(value) {
           var candidate = value;
-          return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range.is(value.range));
+          return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range2.is(value.range));
         }
         Hover2.is = is;
       })(Hover || (exports3.Hover = Hover = {}));
@@ -4339,7 +4339,7 @@ var require_main2 = __commonJS({
         DocumentSymbol2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range.is(candidate.range) && Range.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
+          return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range2.is(candidate.range) && Range2.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
         }
         DocumentSymbol2.is = is;
       })(DocumentSymbol || (exports3.DocumentSymbol = DocumentSymbol = {}));
@@ -4404,8 +4404,8 @@ var require_main2 = __commonJS({
         }
         CodeAction2.is = is;
       })(CodeAction || (exports3.CodeAction = CodeAction = {}));
-      var CodeLens;
-      (function(CodeLens2) {
+      var CodeLens2;
+      (function(CodeLens3) {
         function create(range, data) {
           var result = { range };
           if (Is.defined(data)) {
@@ -4413,13 +4413,13 @@ var require_main2 = __commonJS({
           }
           return result;
         }
-        CodeLens2.create = create;
+        CodeLens3.create = create;
         function is(value) {
           var candidate = value;
-          return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
+          return Is.defined(candidate) && Range2.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
         }
-        CodeLens2.is = is;
-      })(CodeLens || (exports3.CodeLens = CodeLens = {}));
+        CodeLens3.is = is;
+      })(CodeLens2 || (exports3.CodeLens = CodeLens2 = {}));
       var FormattingOptions;
       (function(FormattingOptions2) {
         function create(tabSize, insertSpaces) {
@@ -4440,7 +4440,7 @@ var require_main2 = __commonJS({
         DocumentLink2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
+          return Is.defined(candidate) && Range2.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
         }
         DocumentLink2.is = is;
       })(DocumentLink || (exports3.DocumentLink = DocumentLink = {}));
@@ -4452,7 +4452,7 @@ var require_main2 = __commonJS({
         SelectionRange2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
+          return Is.objectLiteral(candidate) && Range2.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
         }
         SelectionRange2.is = is;
       })(SelectionRange || (exports3.SelectionRange = SelectionRange = {}));
@@ -4511,7 +4511,7 @@ var require_main2 = __commonJS({
         InlineValueText2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.string(candidate.text);
+          return candidate !== void 0 && candidate !== null && Range2.is(candidate.range) && Is.string(candidate.text);
         }
         InlineValueText2.is = is;
       })(InlineValueText || (exports3.InlineValueText = InlineValueText = {}));
@@ -4523,7 +4523,7 @@ var require_main2 = __commonJS({
         InlineValueVariableLookup2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
+          return candidate !== void 0 && candidate !== null && Range2.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
         }
         InlineValueVariableLookup2.is = is;
       })(InlineValueVariableLookup || (exports3.InlineValueVariableLookup = InlineValueVariableLookup = {}));
@@ -4535,7 +4535,7 @@ var require_main2 = __commonJS({
         InlineValueEvaluatableExpression2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
+          return candidate !== void 0 && candidate !== null && Range2.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
         }
         InlineValueEvaluatableExpression2.is = is;
       })(InlineValueEvaluatableExpression || (exports3.InlineValueEvaluatableExpression = InlineValueEvaluatableExpression = {}));
@@ -4547,7 +4547,7 @@ var require_main2 = __commonJS({
         InlineValueContext2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.defined(candidate) && Range.is(value.stoppedLocation);
+          return Is.defined(candidate) && Range2.is(value.stoppedLocation);
         }
         InlineValueContext2.is = is;
       })(InlineValueContext || (exports3.InlineValueContext = InlineValueContext = {}));
@@ -5446,15 +5446,15 @@ var require_protocol_notebook = __commonJS({
     var vscode_languageserver_types_1 = require_main2();
     var Is = require_is3();
     var messages_1 = require_messages2();
-    var NotebookCellKind;
-    (function(NotebookCellKind2) {
-      NotebookCellKind2.Markup = 1;
-      NotebookCellKind2.Code = 2;
+    var NotebookCellKind2;
+    (function(NotebookCellKind3) {
+      NotebookCellKind3.Markup = 1;
+      NotebookCellKind3.Code = 2;
       function is(value) {
         return value === 1 || value === 2;
       }
-      NotebookCellKind2.is = is;
-    })(NotebookCellKind || (exports2.NotebookCellKind = NotebookCellKind = {}));
+      NotebookCellKind3.is = is;
+    })(NotebookCellKind2 || (exports2.NotebookCellKind = NotebookCellKind2 = {}));
     var ExecutionSummary;
     (function(ExecutionSummary2) {
       function create(executionOrder, success) {
@@ -5489,7 +5489,7 @@ var require_protocol_notebook = __commonJS({
       NotebookCell2.create = create;
       function is(value) {
         const candidate = value;
-        return Is.objectLiteral(candidate) && NotebookCellKind.is(candidate.kind) && vscode_languageserver_types_1.DocumentUri.is(candidate.document) && (candidate.metadata === void 0 || Is.objectLiteral(candidate.metadata));
+        return Is.objectLiteral(candidate) && NotebookCellKind2.is(candidate.kind) && vscode_languageserver_types_1.DocumentUri.is(candidate.document) && (candidate.metadata === void 0 || Is.objectLiteral(candidate.metadata));
       }
       NotebookCell2.is = is;
       function diff(one, two) {
@@ -6682,8 +6682,8 @@ var require_protocolCodeAction = __commonJS({
   "../node_modules/.pnpm/vscode-languageclient@9.0.1/node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    var vscode = require("vscode");
-    var ProtocolCodeAction = class extends vscode.CodeAction {
+    var vscode5 = require("vscode");
+    var ProtocolCodeAction = class extends vscode5.CodeAction {
       constructor(title, data) {
         super(title);
         this.data = data;
@@ -6699,7 +6699,7 @@ var require_protocolDiagnostic = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ProtocolDiagnostic = exports2.DiagnosticCode = void 0;
-    var vscode = require("vscode");
+    var vscode5 = require("vscode");
     var Is = require_is();
     var DiagnosticCode;
     (function(DiagnosticCode2) {
@@ -6709,7 +6709,7 @@ var require_protocolDiagnostic = __commonJS({
       }
       DiagnosticCode2.is = is;
     })(DiagnosticCode || (exports2.DiagnosticCode = DiagnosticCode = {}));
-    var ProtocolDiagnostic = class extends vscode.Diagnostic {
+    var ProtocolDiagnostic = class extends vscode5.Diagnostic {
       constructor(range, message, severity, data) {
         super(range, message, severity);
         this.data = data;
@@ -9417,8 +9417,8 @@ var require_minimatch = __commonJS({
       return new Minimatch(pattern, options).match(p);
     };
     module2.exports = minimatch;
-    var path2 = require_path();
-    minimatch.sep = path2.sep;
+    var path3 = require_path();
+    minimatch.sep = path3.sep;
     var GLOBSTAR = Symbol("globstar **");
     minimatch.GLOBSTAR = GLOBSTAR;
     var expand = require_brace_expansion();
@@ -10024,8 +10024,8 @@ var require_minimatch = __commonJS({
         if (this.empty) return f === "";
         if (f === "/" && partial) return true;
         const options = this.options;
-        if (path2.sep !== "/") {
-          f = f.split(path2.sep).join("/");
+        if (path3.sep !== "/") {
+          f = f.split(path3.sep).join("/");
         }
         f = f.split(slashSplit);
         this.debug(this.pattern, "split", f);
@@ -10810,7 +10810,7 @@ var require_notebook = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NotebookDocumentSyncFeature = void 0;
-    var vscode = require("vscode");
+    var vscode5 = require("vscode");
     var minimatch = require_minimatch();
     var proto = require_main3();
     var UUID = require_uuid();
@@ -10865,9 +10865,9 @@ var require_notebook = __commonJS({
         c2p2.asNotebookCell = asNotebookCell;
         function asNotebookCellKind(kind) {
           switch (kind) {
-            case vscode.NotebookCellKind.Markup:
+            case vscode5.NotebookCellKind.Markup:
               return proto.NotebookCellKind.Markup;
-            case vscode.NotebookCellKind.Code:
+            case vscode5.NotebookCellKind.Code:
               return proto.NotebookCellKind.Code;
           }
         }
@@ -11118,25 +11118,25 @@ var require_notebook = __commonJS({
         this.notebookDidOpen = /* @__PURE__ */ new Set();
         this.disposables = [];
         this.selector = client2.protocol2CodeConverter.asDocumentSelector($NotebookDocumentSyncOptions.asDocumentSelector(options));
-        vscode.workspace.onDidOpenNotebookDocument((notebookDocument) => {
+        vscode5.workspace.onDidOpenNotebookDocument((notebookDocument) => {
           this.notebookDidOpen.add(notebookDocument.uri.toString());
           this.didOpen(notebookDocument);
         }, void 0, this.disposables);
-        for (const notebookDocument of vscode.workspace.notebookDocuments) {
+        for (const notebookDocument of vscode5.workspace.notebookDocuments) {
           this.notebookDidOpen.add(notebookDocument.uri.toString());
           this.didOpen(notebookDocument);
         }
-        vscode.workspace.onDidChangeNotebookDocument((event) => this.didChangeNotebookDocument(event), void 0, this.disposables);
+        vscode5.workspace.onDidChangeNotebookDocument((event) => this.didChangeNotebookDocument(event), void 0, this.disposables);
         if (this.options.save === true) {
-          vscode.workspace.onDidSaveNotebookDocument((notebookDocument) => this.didSave(notebookDocument), void 0, this.disposables);
+          vscode5.workspace.onDidSaveNotebookDocument((notebookDocument) => this.didSave(notebookDocument), void 0, this.disposables);
         }
-        vscode.workspace.onDidCloseNotebookDocument((notebookDocument) => {
+        vscode5.workspace.onDidCloseNotebookDocument((notebookDocument) => {
           this.didClose(notebookDocument);
           this.notebookDidOpen.delete(notebookDocument.uri.toString());
         }, void 0, this.disposables);
       }
       getState() {
-        for (const notebook of vscode.workspace.notebookDocuments) {
+        for (const notebook of vscode5.workspace.notebookDocuments) {
           const matchingCells = this.getMatchingCells(notebook);
           if (matchingCells !== void 0) {
             return { kind: "document", id: "$internal", registrations: true, matches: true };
@@ -11148,10 +11148,10 @@ var require_notebook = __commonJS({
         return "notebook";
       }
       handles(textDocument) {
-        return vscode.languages.match(this.selector, textDocument) > 0;
+        return vscode5.languages.match(this.selector, textDocument) > 0;
       }
       didOpenNotebookCellTextDocument(notebookDocument, cell) {
-        if (vscode.languages.match(this.selector, cell.document) === 0) {
+        if (vscode5.languages.match(this.selector, cell.document) === 0) {
           return;
         }
         if (!this.notebookDidOpen.has(notebookDocument.uri.toString())) {
@@ -11182,7 +11182,7 @@ var require_notebook = __commonJS({
         }
       }
       didChangeNotebookCellTextDocument(notebookDocument, event) {
-        if (vscode.languages.match(this.selector, event.document) === 0) {
+        if (vscode5.languages.match(this.selector, event.document) === 0) {
           return;
         }
         this.doSendChange({
@@ -11455,7 +11455,7 @@ var require_notebook = __commonJS({
         this.client = client2;
         this.registrations = /* @__PURE__ */ new Map();
         this.registrationType = proto.NotebookDocumentSyncRegistrationType.type;
-        vscode.workspace.onDidOpenTextDocument((textDocument) => {
+        vscode5.workspace.onDidOpenTextDocument((textDocument) => {
           if (textDocument.uri.scheme !== _NotebookDocumentSyncFeature.CellScheme) {
             return;
           }
@@ -11469,7 +11469,7 @@ var require_notebook = __commonJS({
             }
           }
         });
-        vscode.workspace.onDidChangeTextDocument((event) => {
+        vscode5.workspace.onDidChangeTextDocument((event) => {
           if (event.contentChanges.length === 0) {
             return;
           }
@@ -11487,7 +11487,7 @@ var require_notebook = __commonJS({
             }
           }
         });
-        vscode.workspace.onDidCloseTextDocument((textDocument) => {
+        vscode5.workspace.onDidCloseTextDocument((textDocument) => {
           if (textDocument.uri.scheme !== _NotebookDocumentSyncFeature.CellScheme) {
             return;
           }
@@ -11552,7 +11552,7 @@ var require_notebook = __commonJS({
         if (textDocument.uri.scheme !== _NotebookDocumentSyncFeature.CellScheme) {
           return false;
         }
-        if (this.dedicatedChannel !== void 0 && vscode.languages.match(this.dedicatedChannel, textDocument) > 0) {
+        if (this.dedicatedChannel !== void 0 && vscode5.languages.match(this.dedicatedChannel, textDocument) > 0) {
           return true;
         }
         for (const provider of this.registrations.values()) {
@@ -11572,7 +11572,7 @@ var require_notebook = __commonJS({
       }
       findNotebookDocumentAndCell(textDocument) {
         const uri = textDocument.uri.toString();
-        for (const notebookDocument of vscode.workspace.notebookDocuments) {
+        for (const notebookDocument of vscode5.workspace.notebookDocuments) {
           for (const cell of notebookDocument.getCells()) {
             if (cell.document.uri.toString() === uri) {
               return [notebookDocument, cell];
@@ -11750,13 +11750,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path2) {
+        function ensurePath(config, path3) {
           let current = config;
-          for (let i = 0; i < path2.length - 1; i++) {
-            let obj = current[path2[i]];
+          for (let i = 0; i < path3.length - 1; i++) {
+            let obj = current[path3[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path2[i]] = obj;
+              current[path3[i]] = obj;
             }
             current = obj;
           }
@@ -11774,8 +11774,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key);
           }
           if (config) {
-            let path2 = keys[i].split(".");
-            ensurePath(result, path2)[path2[path2.length - 1]] = toJSONObject(config);
+            let path3 = keys[i].split(".");
+            ensurePath(result, path3)[path3[path3.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -14088,7 +14088,7 @@ var require_semanticTokens = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SemanticTokensFeature = void 0;
-    var vscode = require("vscode");
+    var vscode5 = require("vscode");
     var vscode_languageserver_protocol_1 = require_main3();
     var features_1 = require_features();
     var Is = require_is();
@@ -14166,7 +14166,7 @@ var require_semanticTokens = __commonJS({
         const selector = options.documentSelector;
         const fullProvider = Is.boolean(options.full) ? options.full : options.full !== void 0;
         const hasEditProvider = options.full !== void 0 && typeof options.full !== "boolean" && options.full.delta === true;
-        const eventEmitter = new vscode.EventEmitter();
+        const eventEmitter = new vscode5.EventEmitter();
         const documentProvider = fullProvider ? {
           onDidChangeSemanticTokens: eventEmitter.event,
           provideDocumentSemanticTokens: (document, token) => {
@@ -14238,12 +14238,12 @@ var require_semanticTokens = __commonJS({
         const legend = client2.protocol2CodeConverter.asSemanticTokensLegend(options.legend);
         const documentSelector = client2.protocol2CodeConverter.asDocumentSelector(selector);
         if (documentProvider !== void 0) {
-          disposables.push(vscode.languages.registerDocumentSemanticTokensProvider(documentSelector, documentProvider, legend));
+          disposables.push(vscode5.languages.registerDocumentSemanticTokensProvider(documentSelector, documentProvider, legend));
         }
         if (rangeProvider !== void 0) {
-          disposables.push(vscode.languages.registerDocumentRangeSemanticTokensProvider(documentSelector, rangeProvider, legend));
+          disposables.push(vscode5.languages.registerDocumentRangeSemanticTokensProvider(documentSelector, rangeProvider, legend));
         }
-        return [new vscode.Disposable(() => disposables.forEach((item) => item.dispose())), { range: rangeProvider, full: documentProvider, onDidChangeSemanticTokensEmitter: eventEmitter }];
+        return [new vscode5.Disposable(() => disposables.forEach((item) => item.dispose())), { range: rangeProvider, full: documentProvider, onDidChangeSemanticTokensEmitter: eventEmitter }];
       }
     };
     exports2.SemanticTokensFeature = SemanticTokensFeature;
@@ -14342,13 +14342,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path2 = uri.fsPath.replace(/\\/g, "/");
+          const path3 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path2)) {
+              if (filter.matcher.match(path3)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -14362,7 +14362,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path2}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path3}/`)) {
                   return true;
                 }
               }
@@ -17094,12 +17094,12 @@ var require_comparator = __commonJS({
           if (this.value === "") {
             return true;
           }
-          return new Range(comp.value, options).test(this.value);
+          return new Range2(comp.value, options).test(this.value);
         } else if (comp.operator === "") {
           if (comp.value === "") {
             return true;
           }
-          return new Range(this.value, options).test(comp.semver);
+          return new Range2(this.value, options).test(comp.semver);
         }
         options = parseOptions(options);
         if (options.includePrerelease && (this.value === "<0.0.0-0" || comp.value === "<0.0.0-0")) {
@@ -17132,7 +17132,7 @@ var require_comparator = __commonJS({
     var cmp = require_cmp();
     var debug = require_debug();
     var SemVer = require_semver();
-    var Range = require_range();
+    var Range2 = require_range();
   }
 });
 
@@ -17141,7 +17141,7 @@ var require_range = __commonJS({
   "../node_modules/.pnpm/semver@7.7.4/node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
-    var Range = class _Range {
+    var Range2 = class _Range {
       constructor(range, options) {
         options = parseOptions(options);
         if (range instanceof _Range) {
@@ -17279,7 +17279,7 @@ var require_range = __commonJS({
         return false;
       }
     };
-    module2.exports = Range;
+    module2.exports = Range2;
     var LRU = require_lrucache();
     var cache = new LRU();
     var parseOptions = require_parse_options();
@@ -17517,10 +17517,10 @@ var require_range = __commonJS({
 var require_satisfies = __commonJS({
   "../node_modules/.pnpm/semver@7.7.4/node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
-    var Range = require_range();
+    var Range2 = require_range();
     var satisfies = (version, range, options) => {
       try {
-        range = new Range(range, options);
+        range = new Range2(range, options);
       } catch (er) {
         return false;
       }
@@ -17588,8 +17588,8 @@ var require_main4 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = require("child_process");
-    var fs = require("fs");
-    var path2 = require("path");
+    var fs3 = require("fs");
+    var path3 = require("path");
     var vscode_1 = require("vscode");
     var Is = require_is();
     var client_1 = require_client();
@@ -18007,19 +18007,19 @@ var require_main4 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path2.isAbsolute(runtime)) {
+        if (path3.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path2.join(mainRootPath, runtime);
-          if (fs.existsSync(result)) {
+          const result = path3.join(mainRootPath, runtime);
+          if (fs3.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path2.join(serverWorkingDirectory, runtime);
-          if (fs.existsSync(result)) {
+          const result = path3.join(serverWorkingDirectory, runtime);
+          if (fs3.existsSync(result)) {
             return result;
           }
         }
@@ -18043,7 +18043,7 @@ var require_main4 = __commonJS({
         }
         if (cwd) {
           return new Promise((s) => {
-            fs.lstat(cwd, (err, stats) => {
+            fs3.lstat(cwd, (err, stats) => {
               s(!err && stats.isDirectory() ? cwd : void 0);
             });
           });
@@ -18109,12 +18109,329 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path = __toESM(require("node:path"));
+var path2 = __toESM(require("node:path"));
+var fs2 = __toESM(require("node:fs"));
+var vscode4 = __toESM(require("vscode"));
 var import_node = __toESM(require_node3());
+
+// src/searchRunner.ts
+var vscode = __toESM(require("vscode"));
+var path = __toESM(require("node:path"));
+var fs = __toESM(require("node:fs"));
+var ready = null;
+function resolveWasmPath(extPath) {
+  const bundled = path.join(extPath, "dist", "motely-wasm.mjs");
+  if (fs.existsSync(bundled)) return bundled;
+  const candidates = ["motely-wasm-compat", "motely-wasm"];
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    for (const pkg of candidates) {
+      const entry = path.join(folder.uri.fsPath, "node_modules", pkg, "index.mjs");
+      if (fs.existsSync(entry)) return entry;
+    }
+  }
+  throw new Error(
+    "Motely WASM engine not found.\n\nIf you built the extension yourself, run:\n  dotnet publish Motely.BrowserWasm -c Release\nthen rebuild the extension.\n\nOr install the npm package in your workspace:\n  npm install motely-wasm-compat"
+  );
+}
+var _extPath = "";
+function init(extensionPath) {
+  _extPath = extensionPath;
+}
+async function getWasm() {
+  if (!ready) {
+    ready = (async () => {
+      const wasmPath = resolveWasmPath(_extPath);
+      const mod = await Function("p", "return import(p)")(wasmPath);
+      await mod.default.boot();
+      return mod;
+    })();
+  }
+  return ready;
+}
+async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
+  const { MotelyProgram, SearchEvents } = await getWasm();
+  const results = [];
+  const startMs = Date.now();
+  const onResultHandler = (seed, score, _tally) => {
+    results.push({ seed, score });
+    onResult(seed, score);
+  };
+  const onProgressHandler = (searched, matching, _elapsed) => {
+    onProgress(searched, matching);
+  };
+  const onCompleteHandler = (status, searched, matched) => {
+    SearchEvents.onResult.unsubscribe(onResultHandler);
+    SearchEvents.onProgress.unsubscribe(onProgressHandler);
+    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+    onComplete({
+      status,
+      searched: searched.toString(),
+      matched: matched.toString(),
+      results: results.sort((a, b) => b.score - a.score).slice(0, 500),
+      elapsedMs: Date.now() - startMs
+    });
+  };
+  SearchEvents.onResult.subscribe(onResultHandler);
+  SearchEvents.onProgress.subscribe(onProgressHandler);
+  SearchEvents.onComplete.subscribe(onCompleteHandler);
+  try {
+    const config = MotelyProgram.loadJaml(jaml);
+    MotelyProgram.startRandomSearch(config, seedCount, 1);
+  } catch (err) {
+    SearchEvents.onResult.unsubscribe(onResultHandler);
+    SearchEvents.onProgress.unsubscribe(onProgressHandler);
+    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+    throw err;
+  }
+}
+function stopSearch() {
+  if (!ready) return;
+  void ready.then((mod) => {
+    try {
+      mod.MotelyProgram.stopSearch();
+    } catch {
+    }
+  });
+}
+
+// src/resultsPanel.ts
+var vscode2 = __toESM(require("vscode"));
+var ResultsPanel = class _ResultsPanel {
+  static current;
+  panel;
+  results = [];
+  static getOrCreate(extensionUri) {
+    if (_ResultsPanel.current) {
+      _ResultsPanel.current.panel.reveal();
+      return _ResultsPanel.current;
+    }
+    const panel = vscode2.window.createWebviewPanel(
+      "jamlResults",
+      "JAML Search Results",
+      vscode2.ViewColumn.Beside,
+      { enableScripts: true, retainContextWhenHidden: true }
+    );
+    _ResultsPanel.current = new _ResultsPanel(panel);
+    return _ResultsPanel.current;
+  }
+  constructor(panel) {
+    this.panel = panel;
+    panel.onDidDispose(() => {
+      _ResultsPanel.current = void 0;
+    });
+    this.setHtml("idle");
+  }
+  searching(filter) {
+    this.results = [];
+    this.setHtml("searching", filter);
+  }
+  addResult(seed, score) {
+    this.results.push({ seed, score });
+    if (this.results.length % 10 === 0) this.flushTable();
+  }
+  done(summary) {
+    this.results = summary.results;
+    this.setHtml("done", void 0, summary);
+  }
+  error(message) {
+    this.setHtml("error", message);
+  }
+  flushTable() {
+    this.panel.webview.postMessage({ type: "results", results: this.results.slice(-10) });
+  }
+  setHtml(state, extra, summary) {
+    this.panel.webview.html = buildHtml(state, extra, summary);
+  }
+};
+function buildHtml(state, extra, summary) {
+  const rows = summary?.results.slice(0, 500).map(
+    (r) => `<tr><td class="seed">${r.seed}</td><td class="score">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
+  ).join("") ?? "";
+  const header = {
+    idle: "Waiting\u2026",
+    searching: `Searching\u2026 <span class="filter">${extra ?? ""}</span>`,
+    done: `${summary?.matched} matches in ${summary?.searched} seeds \xB7 ${summary?.elapsedMs}ms \xB7 status: ${summary?.status}`,
+    error: `Error: ${extra}`
+  }[state];
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body{font:13px/1.5 var(--vscode-editor-font-family,monospace);color:var(--vscode-editor-foreground);background:var(--vscode-editor-background);padding:1rem;margin:0}
+  h2{font-size:1rem;margin:0 0 .75rem}
+  .filter{opacity:.7;font-weight:normal}
+  table{border-collapse:collapse;width:100%}
+  th{text-align:left;padding:.25rem .5rem;border-bottom:1px solid var(--vscode-editorGroup-border);opacity:.6;font-weight:normal;font-size:.85rem}
+  td{padding:.25rem .5rem}
+  tr:hover{background:var(--vscode-list-hoverBackground)}
+  .seed{font-weight:600;letter-spacing:.05em}
+  .score{color:var(--vscode-charts-yellow);width:4rem}
+  .spinner{display:inline-block;animation:spin 1s linear infinite;margin-right:.4rem}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .empty{opacity:.5;margin-top:1rem}
+</style>
+</head>
+<body>
+<h2>${state === "searching" ? '<span class="spinner">\u27F3</span>' : ""}${header}</h2>
+${state === "done" && summary && summary.results.length > 0 ? `
+<table>
+  <thead><tr><th>Seed</th><th>Score</th></tr></thead>
+  <tbody id="tbody">${rows}</tbody>
+</table>` : state === "done" ? `<p class="empty">No matching seeds found.</p>` : ""}
+${state === "searching" ? `<p class="empty" id="live">Running\u2026</p>` : ""}
+<script>
+  const vscode = acquireVsCodeApi();
+  const tbody = document.getElementById('tbody');
+  const live = document.getElementById('live');
+  window.addEventListener('message', e => {
+    const {type, results} = e.data;
+    if(type === 'results' && tbody && results){
+      results.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td class="seed">'+r.seed+'</td><td class="score">'+(r.score>0?r.score:'\u2014')+'</td>';
+        tbody.appendChild(tr);
+      });
+      if(live) live.textContent = tbody.children.length + ' hits so far\u2026';
+    }
+  });
+</script>
+</body>
+</html>`;
+}
+
+// src/notebookProvider.ts
+var vscode3 = __toESM(require("vscode"));
+var JamlNotebookSerializer = class {
+  async deserializeNotebook(data) {
+    const text = new TextDecoder().decode(data);
+    let cells = [];
+    try {
+      cells = JSON.parse(text);
+    } catch {
+      cells = [{ kind: "filter", source: text }];
+    }
+    return new vscode3.NotebookData(
+      cells.map((c) => new vscode3.NotebookCellData(
+        c.kind === "markdown" ? vscode3.NotebookCellKind.Markup : vscode3.NotebookCellKind.Code,
+        c.source,
+        c.kind === "markdown" ? "markdown" : "jaml"
+      ))
+    );
+  }
+  async serializeNotebook(data) {
+    const cells = data.cells.map((c) => ({
+      kind: c.kind === vscode3.NotebookCellKind.Markup ? "markdown" : "filter",
+      source: c.value
+    }));
+    return new TextEncoder().encode(JSON.stringify(cells, null, 2));
+  }
+};
+var JamlNotebookExecutor = class {
+  register(context) {
+    const controller = vscode3.notebooks.createNotebookController(
+      "jaml-kernel",
+      "jaml-notebook",
+      "JAML Seed Search"
+    );
+    controller.supportedLanguages = ["jaml", "jummy"];
+    controller.description = "Motely WASM seed search";
+    controller.executeHandler = this.execute.bind(this);
+    context.subscriptions.push(controller);
+    return controller;
+  }
+  execute(cells, _notebook, controller) {
+    for (const cell of cells) {
+      this.executeCell(cell, controller);
+    }
+  }
+  executeCell(cell, controller) {
+    const execution = controller.createCellExecution(cell);
+    const startTime = Date.now();
+    execution.start(startTime);
+    execution.clearOutput();
+    const jaml = cell.document.getText();
+    const results = [];
+    let searched = 0n;
+    let matching = 0n;
+    const liveOutput = new vscode3.NotebookCellOutput([
+      vscode3.NotebookCellOutputItem.text(
+        buildNotebookHtml([], { status: "running", searched: "0", matched: "0", elapsedMs: 0 }),
+        "text/html"
+      )
+    ]);
+    execution.appendOutput(liveOutput);
+    let lastRender = 0;
+    const RENDER_INTERVAL_MS = 400;
+    const renderLive = () => {
+      const now = Date.now();
+      if (now - lastRender < RENDER_INTERVAL_MS) return;
+      lastRender = now;
+      const sorted = results.slice().sort((a, b) => b.score - a.score).slice(0, 200);
+      execution.replaceOutputItems(
+        [vscode3.NotebookCellOutputItem.text(
+          buildNotebookHtml(sorted, { status: "running", searched: searched.toString(), matched: matching.toString(), elapsedMs: now - startTime }),
+          "text/html"
+        )],
+        liveOutput
+      );
+    };
+    runSearch(
+      jaml,
+      1e6,
+      (s, m) => {
+        searched = s;
+        matching = m;
+        renderLive();
+      },
+      (seed, score) => {
+        results.push({ seed, score });
+      },
+      (summary) => {
+        execution.replaceOutputItems(
+          [
+            vscode3.NotebookCellOutputItem.text(buildNotebookHtml(summary.results, summary), "text/html"),
+            vscode3.NotebookCellOutputItem.text(JSON.stringify(summary, null, 2), "application/json")
+          ],
+          liveOutput
+        );
+        execution.end(true, Date.now());
+      }
+    ).catch((err) => {
+      execution.replaceOutputItems(
+        [vscode3.NotebookCellOutputItem.error(err)],
+        liveOutput
+      );
+      execution.end(false, Date.now());
+    });
+  }
+};
+function buildNotebookHtml(results, summary) {
+  const isRunning = summary.status === "running";
+  const rows = results.slice(0, 200).map(
+    (r) => `<tr><td style="font-weight:600;letter-spacing:.05em;padding:2px 8px">${r.seed}</td><td style="padding:2px 8px;opacity:.6">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
+  ).join("");
+  const searchedFmt = Number(BigInt(summary.searched)).toLocaleString();
+  const statusLine = isRunning ? `<p style="margin:.25rem 0;opacity:.7">\u23F3 ${summary.matched} matches \xB7 ${searchedFmt} seeds \xB7 ${summary.elapsedMs}ms\u2026</p>` : `<p style="margin:.25rem 0;opacity:.7">\u2713 ${summary.matched} matches \xB7 ${searchedFmt} seeds \xB7 ${summary.elapsedMs}ms</p>`;
+  const tableHtml = results.length === 0 ? isRunning ? "" : "<p>No matches.</p>" : `<table style="border-collapse:collapse;width:100%">
+  <thead><tr>
+    <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Seed</th>
+    <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Score</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>`;
+  return `<div style="font:13px monospace">
+${statusLine}
+${tableHtml}
+</div>`;
+}
+
+// src/extension.ts
 var client = null;
 async function activate(context) {
   const extPath = context.extensionPath;
-  const serverModule = path.join(extPath, "dist", "server.js");
+  init(extPath);
+  const serverModule = path2.join(extPath, "dist", "server.js");
   client = new import_node.LanguageClient(
     "jamlLanguageServer",
     "JAML Language Server",
@@ -18126,6 +18443,74 @@ async function activate(context) {
   );
   await client.start();
   context.subscriptions.push({ dispose: () => void client?.stop() });
+  context.subscriptions.push(
+    vscode4.languages.registerCodeLensProvider(
+      [{ language: "jaml" }, { language: "jummy" }],
+      {
+        provideCodeLenses(doc) {
+          return [
+            new vscode4.CodeLens(new vscode4.Range(0, 0, 0, 0), {
+              title: "\u25B6 Run Search (1M seeds)",
+              command: "jaml.runSearch",
+              arguments: [doc]
+            })
+          ];
+        }
+      }
+    )
+  );
+  context.subscriptions.push(
+    vscode4.commands.registerCommand("jaml.runSearch", async (docArg) => {
+      const doc = docArg ?? vscode4.window.activeTextEditor?.document;
+      if (!doc) return;
+      const panel = ResultsPanel.getOrCreate(context.extensionUri);
+      const jaml = doc.getText();
+      panel.searching(jaml.slice(0, 60).replace(/\n/g, "  ").trim() + "\u2026");
+      try {
+        await runSearch(
+          jaml,
+          1e6,
+          (_s, m) => vscode4.window.setStatusBarMessage(`JAML: ${m} hits\u2026`, 500),
+          (seed, score) => panel.addResult(seed, score),
+          (summary) => {
+            panel.done(summary);
+            vscode4.window.setStatusBarMessage(
+              `JAML: ${summary.matched} matches in ${summary.searched} seeds (${summary.elapsedMs}ms)`,
+              5e3
+            );
+          }
+        );
+      } catch (err) {
+        panel.error(err.message);
+        vscode4.window.showErrorMessage(`JAML Search error: ${err.message}`);
+      }
+    }),
+    vscode4.commands.registerCommand("jaml.stopSearch", () => {
+      stopSearch();
+      vscode4.window.setStatusBarMessage("JAML: search stopped.", 2e3);
+    }),
+    vscode4.commands.registerCommand("jaml.openExample", async () => {
+      const examplesDir = path2.join(extPath, "examples");
+      if (!fs2.existsSync(examplesDir)) {
+        vscode4.window.showErrorMessage("No example files found in extension.");
+        return;
+      }
+      const files = fs2.readdirSync(examplesDir).filter((f) => f.endsWith(".jaml") || f.endsWith(".jummy"));
+      const pick = await vscode4.window.showQuickPick(
+        files.map((f) => ({ label: f.replace(/\.(jaml|jummy)$/, "").replace(/[-_]/g, " "), description: f })),
+        { placeHolder: "Pick an example JAML filter to open" }
+      );
+      if (!pick) return;
+      const src = path2.join(examplesDir, pick.description);
+      const doc = await vscode4.workspace.openTextDocument({ language: "jaml", content: fs2.readFileSync(src, "utf8") });
+      await vscode4.window.showTextDocument(doc);
+    })
+  );
+  context.subscriptions.push(
+    vscode4.workspace.registerNotebookSerializer("jaml-notebook", new JamlNotebookSerializer())
+  );
+  const executor = new JamlNotebookExecutor();
+  executor.register(context);
 }
 async function deactivate() {
   if (client) {
