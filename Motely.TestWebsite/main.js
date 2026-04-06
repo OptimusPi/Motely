@@ -23,8 +23,8 @@ for (const [k, v] of Object.entries(Motely.MotelyDeck))
   if (typeof v === "number") deckSel.append(new Option(k, v));
 for (const [k, v] of Object.entries(Motely.MotelyStake))
   if (typeof v === "number") stakeSel.append(new Option(k, v));
-// Aesthetic enum — use numeric values
-const aesNames = ["Default", "Balatro"]; // extend as needed
+// Aesthetic enum — matches JamlAesthetic C# enum order
+const aesNames = ["Palindrome", "Psychosis", "Gross", "Nsfw", "Funny", "Balatro"];
 aesNames.forEach((n, i) => aesSel.append(new Option(n, i)));
 
 // Events
