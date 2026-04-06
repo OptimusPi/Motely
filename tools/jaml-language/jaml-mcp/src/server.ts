@@ -15,37 +15,14 @@ import {
 } from "@motely/jaml-language-core";
 
 // ── WASM engine (lazy-loaded) ──────────────────────────────────────────────
-let wasmReady: Promise<any> | null = null;
+// motely-wasm v7.0.0: NativeAOT-LLVM, works in Node/Bun/Deno/browser
+let wasmBooted = false;
 
-function findWasmPath(): string | null {
-  const candidates = [
-    resolve(HERE, "motely-wasm.mjs"),
-    resolve(HERE, "..", "dist", "motely-wasm.mjs"),
-  ];
-  // Also check workspace node_modules
-  const nmCandidates = ["motely-wasm-compat", "motely-wasm"];
-  for (const pkg of nmCandidates) {
-    candidates.push(resolve(HERE, "..", "node_modules", pkg, "index.mjs"));
-    candidates.push(resolve(HERE, "..", "..", "node_modules", pkg, "index.mjs"));
-    candidates.push(resolve(HERE, "..", "..", "..", "node_modules", pkg, "index.mjs"));
-  }
-  for (const p of candidates) {
-    if (existsSync(p)) return p;
-  }
-  return null;
-}
-
-async function getWasm(): Promise<any> {
-  if (!wasmReady) {
-    wasmReady = (async () => {
-      const wasmPath = findWasmPath();
-      if (!wasmPath) throw new Error("Motely WASM engine not found. Run: dotnet publish Motely.BrowserWasm -c Release");
-      const mod = await (Function("p", "return import(p)")(wasmPath) as Promise<any>);
-      await mod.default.boot();
-      return mod;
-    })();
-  }
-  return wasmReady;
+async function bootWasm(): Promise<void> {
+  if (wasmBooted) return;
+  const wasm = await import("motely-wasm");
+  await wasm.default.boot();
+  wasmBooted = true;
 }
 
 // ── Paths ──────────────────────────────────────────────────────────────────
@@ -178,9 +155,10 @@ server.tool(
   { jummy: z.string().describe("Jummy source text to compile") },
   async ({ jummy }) => {
     try {
-      const wasm = await getWasm();
+      await bootWasm();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- namespace re-export not resolved by tsc with NodeNext
+      const wasm: any = await import("motely-wasm");
       const config = wasm.MotelyWasmHost.compileJummy(jummy);
-      // The WASM returns a JamlConfig object — serialize it back
       return {
         content: [{
           type: "text" as const,
