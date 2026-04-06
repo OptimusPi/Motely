@@ -32,4 +32,15 @@
   <PropertyGroup>
     <SuppressAotAnalysisWarnings>true</SuppressAotAnalysisWarnings>
   </PropertyGroup>
+
+  <!-- Copy Vite build output from TestWebsite into wwwroot before build. -->
+  <Target Name="CopyTestWebsiteToWwwroot" BeforeTargets="Build"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\Motely.TestWebsite\dist\index.html')">
+    <ItemGroup>
+      <_ViteDistFiles Include="$(MSBuildThisFileDirectory)..\Motely.TestWebsite\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ViteDistFiles)"
+          DestinationFolder="$(MSBuildThisFileDirectory)wwwroot\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>
