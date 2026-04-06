@@ -1071,8 +1071,8 @@ var require_semaphore = __commonJS({
         this._waiting = [];
       }
       lock(thunk) {
-        return new Promise((resolve, reject) => {
-          this._waiting.push({ thunk, resolve, reject });
+        return new Promise((resolve2, reject) => {
+          this._waiting.push({ thunk, resolve: resolve2, reject });
           this.runNext();
         });
       }
@@ -2562,9 +2562,9 @@ ${JSON.stringify(message, null, 4)}`);
           if (typeof cancellationStrategy.sender.enableCancellation === "function") {
             cancellationStrategy.sender.enableCancellation(requestMessage);
           }
-          return new Promise(async (resolve, reject) => {
+          return new Promise(async (resolve2, reject) => {
             const resolveWithCleanup = (r) => {
-              resolve(r);
+              resolve2(r);
               cancellationStrategy.sender.cleanup(id);
               disposable?.dispose();
             };
@@ -2975,10 +2975,10 @@ var require_ril = __commonJS({
         return api_1.Disposable.create(() => this.stream.off("end", listener));
       }
       write(data, encoding) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           const callback = (error) => {
             if (error === void 0 || error === null) {
-              resolve();
+              resolve2();
             } else {
               reject(error);
             }
@@ -3230,10 +3230,10 @@ var require_main = __commonJS({
     exports2.generateRandomPipeName = generateRandomPipeName;
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
-      const connected = new Promise((resolve, _reject) => {
-        connectResolve = resolve;
+      const connected = new Promise((resolve2, _reject) => {
+        connectResolve = resolve2;
       });
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve2, reject) => {
         let server = (0, net_1.createServer)((socket) => {
           server.close();
           connectResolve([
@@ -3244,7 +3244,7 @@ var require_main = __commonJS({
         server.on("error", reject);
         server.listen(pipeName, () => {
           server.removeListener("error", reject);
-          resolve({
+          resolve2({
             onConnected: () => {
               return connected;
             }
@@ -3263,10 +3263,10 @@ var require_main = __commonJS({
     exports2.createServerPipeTransport = createServerPipeTransport;
     function createClientSocketTransport(port, encoding = "utf-8") {
       let connectResolve;
-      const connected = new Promise((resolve, _reject) => {
-        connectResolve = resolve;
+      const connected = new Promise((resolve2, _reject) => {
+        connectResolve = resolve2;
       });
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve2, reject) => {
         const server = (0, net_1.createServer)((socket) => {
           server.close();
           connectResolve([
@@ -3277,7 +3277,7 @@ var require_main = __commonJS({
         server.on("error", reject);
         server.listen(port, "127.0.0.1", () => {
           server.removeListener("error", reject);
-          resolve({
+          resolve2({
             onConnected: () => {
               return connected;
             }
@@ -4091,21 +4091,21 @@ var require_main2 = __commonJS({
         }
         TextDocumentItem2.is = is;
       })(TextDocumentItem || (exports3.TextDocumentItem = TextDocumentItem = {}));
-      var MarkupKind;
-      (function(MarkupKind2) {
-        MarkupKind2.PlainText = "plaintext";
-        MarkupKind2.Markdown = "markdown";
+      var MarkupKind2;
+      (function(MarkupKind3) {
+        MarkupKind3.PlainText = "plaintext";
+        MarkupKind3.Markdown = "markdown";
         function is(value) {
           var candidate = value;
-          return candidate === MarkupKind2.PlainText || candidate === MarkupKind2.Markdown;
+          return candidate === MarkupKind3.PlainText || candidate === MarkupKind3.Markdown;
         }
-        MarkupKind2.is = is;
-      })(MarkupKind || (exports3.MarkupKind = MarkupKind = {}));
+        MarkupKind3.is = is;
+      })(MarkupKind2 || (exports3.MarkupKind = MarkupKind2 = {}));
       var MarkupContent;
       (function(MarkupContent2) {
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(value) && MarkupKind.is(candidate.kind) && Is.string(candidate.value);
+          return Is.objectLiteral(value) && MarkupKind2.is(candidate.kind) && Is.string(candidate.value);
         }
         MarkupContent2.is = is;
       })(MarkupContent || (exports3.MarkupContent = MarkupContent = {}));
@@ -4197,14 +4197,14 @@ var require_main2 = __commonJS({
         }
         MarkedString2.is = is;
       })(MarkedString || (exports3.MarkedString = MarkedString = {}));
-      var Hover;
-      (function(Hover2) {
+      var Hover2;
+      (function(Hover3) {
         function is(value) {
           var candidate = value;
           return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range.is(value.range));
         }
-        Hover2.is = is;
-      })(Hover || (exports3.Hover = Hover = {}));
+        Hover3.is = is;
+      })(Hover2 || (exports3.Hover = Hover2 = {}));
       var ParameterInformation;
       (function(ParameterInformation2) {
         function create(label, documentation) {
@@ -8063,8 +8063,8 @@ var require_server = __commonJS({
         if (value instanceof Promise) {
           return value;
         } else if (Is.thenable(value)) {
-          return new Promise((resolve, reject) => {
-            value.then((resolved) => resolve(resolved), (error) => reject(error));
+          return new Promise((resolve2, reject) => {
+            value.then((resolved) => resolve2(resolved), (error) => reject(error));
           });
         } else {
           return Promise.resolve(value);
@@ -8334,7 +8334,7 @@ var require_files = __commonJS({
     function isWindows() {
       return process.platform === "win32";
     }
-    function resolve(moduleName, nodePath, cwd, tracer) {
+    function resolve2(moduleName, nodePath, cwd, tracer) {
       const nodePathKey = "NODE_PATH";
       const app = [
         "var p = process;",
@@ -8353,7 +8353,7 @@ var require_files = __commonJS({
         "}",
         "});"
       ].join("");
-      return new Promise((resolve2, reject) => {
+      return new Promise((resolve3, reject) => {
         let env = process.env;
         let newEnv = /* @__PURE__ */ Object.create(null);
         Object.keys(env).forEach((key) => newEnv[key] = env[key]);
@@ -8385,7 +8385,7 @@ var require_files = __commonJS({
             if (message2.c === "r") {
               cp.send({ c: "e" });
               if (message2.s) {
-                resolve2(message2.r);
+                resolve3(message2.r);
               } else {
                 reject(new Error(`Failed to resolve module: ${moduleName}`));
               }
@@ -8401,7 +8401,7 @@ var require_files = __commonJS({
         }
       });
     }
-    exports2.resolve = resolve;
+    exports2.resolve = resolve2;
     function resolveGlobalNodePath(tracer) {
       let npmCommand = "npm";
       const env = /* @__PURE__ */ Object.create(null);
@@ -8516,17 +8516,17 @@ var require_files = __commonJS({
         if (!path.isAbsolute(nodePath)) {
           nodePath = path.join(workspaceRoot, nodePath);
         }
-        return resolve(moduleName, nodePath, nodePath, tracer).then((value) => {
+        return resolve2(moduleName, nodePath, nodePath, tracer).then((value) => {
           if (FileSystem.isParent(nodePath, value)) {
             return value;
           } else {
             return Promise.reject(new Error(`Failed to load ${moduleName} from node path location.`));
           }
         }).then(void 0, (_error) => {
-          return resolve(moduleName, resolveGlobalNodePath(tracer), workspaceRoot, tracer);
+          return resolve2(moduleName, resolveGlobalNodePath(tracer), workspaceRoot, tracer);
         });
       } else {
-        return resolve(moduleName, resolveGlobalNodePath(tracer), workspaceRoot, tracer);
+        return resolve2(moduleName, resolveGlobalNodePath(tracer), workspaceRoot, tracer);
       }
     }
     exports2.resolveModulePath = resolveModulePath;
@@ -16406,6 +16406,9 @@ function getWellformedEdit(textEdit) {
 
 // ../lsp-server/src/server.ts
 var import_yaml = __toESM(require_dist(), 1);
+var import_node_fs = require("node:fs");
+var import_node_path = require("node:path");
+var import_node_url = require("node:url");
 
 // ../core/dist/index.js
 var JAML_ROOT_KEYS = [
@@ -16451,8 +16454,55 @@ function unknownRootKeys(root) {
 }
 
 // ../lsp-server/src/server.ts
+var import_meta = {};
+var VALUE_MAP = /* @__PURE__ */ new Map();
+function loadSchemaValues() {
+  const here = typeof __dirname !== "undefined" ? __dirname : (0, import_node_path.dirname)((0, import_node_url.fileURLToPath)(import_meta.url));
+  const candidates = [
+    (0, import_node_path.resolve)(here, "jaml.schema.json"),
+    (0, import_node_path.resolve)(here, "..", "jaml.schema.json"),
+    (0, import_node_path.resolve)(here, "..", "..", "..", "jaml.schema.json")
+  ];
+  let schema;
+  for (const p of candidates) {
+    try {
+      schema = JSON.parse((0, import_node_fs.readFileSync)(p, "utf8"));
+      break;
+    } catch {
+    }
+  }
+  if (!schema) return;
+  const props = schema.properties ?? {};
+  for (const [key, def] of Object.entries(props)) {
+    if (def.enum) VALUE_MAP.set(key, def.enum);
+  }
+  const clauseDefs = props.must?.items?.properties ?? props.should?.items?.properties ?? {};
+  for (const [key, def] of Object.entries(clauseDefs)) {
+    if (def.enum && !VALUE_MAP.has(key)) {
+      VALUE_MAP.set(key, def.enum);
+    }
+    if (def.items?.enum && !VALUE_MAP.has(key)) {
+      VALUE_MAP.set(key, def.items.enum);
+    }
+  }
+  if (props.aesthetics?.items?.enum) {
+    VALUE_MAP.set("aesthetics", props.aesthetics.items.enum);
+  }
+}
+loadSchemaValues();
 var connection = (0, import_node.createConnection)(import_node.ProposedFeatures.all);
 var documents = /* @__PURE__ */ new Map();
+function getKeyAtLine(line) {
+  const m = line.match(/^\s*(\w[\w-]*):\s*/);
+  return m ? m[1] : null;
+}
+function getWordAt(line, char) {
+  let start = char;
+  let end = char;
+  while (start > 0 && /[\w-]/.test(line[start - 1])) start--;
+  while (end < line.length && /[\w-]/.test(line[end])) end++;
+  return line.slice(start, end);
+}
 function diagnosticsForDocument(text) {
   const diagnostics = [];
   const max = Math.max(0, text.length - 1);
@@ -16466,10 +16516,7 @@ function diagnosticsForDocument(text) {
     if (!root || typeof root !== "object" || Array.isArray(root)) {
       diagnostics.push({
         severity: import_node.DiagnosticSeverity.Error,
-        range: {
-          start: { line: 0, character: 0 },
-          end: { line: 0, character: max }
-        },
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: max } },
         message: "JAML root must be an object/mapping.",
         source: "jaml-lsp"
       });
@@ -16478,10 +16525,7 @@ function diagnosticsForDocument(text) {
     for (const bad of unknownRootKeys(root)) {
       diagnostics.push({
         severity: import_node.DiagnosticSeverity.Warning,
-        range: {
-          start: { line: 0, character: 0 },
-          end: { line: 0, character: max }
-        },
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: max } },
         message: `Unknown root key '${bad}'.`,
         source: "jaml-lsp"
       });
@@ -16489,10 +16533,7 @@ function diagnosticsForDocument(text) {
   } catch (error) {
     diagnostics.push({
       severity: import_node.DiagnosticSeverity.Error,
-      range: {
-        start: { line: 0, character: 0 },
-        end: { line: 0, character: max }
-      },
+      range: { start: { line: 0, character: 0 }, end: { line: 0, character: max } },
       message: `Parse error: ${error.message}`,
       source: "jaml-lsp"
     });
@@ -16503,9 +16544,8 @@ connection.onInitialize((_params) => {
   return {
     capabilities: {
       textDocumentSync: import_node.TextDocumentSyncKind.Full,
-      completionProvider: {
-        resolveProvider: false
-      }
+      completionProvider: { resolveProvider: false, triggerCharacters: [":"] },
+      hoverProvider: true
     }
   };
 });
@@ -16530,7 +16570,20 @@ connection.onDidChangeTextDocument((evt) => {
   documents.set(next.uri, next);
   connection.sendDiagnostics({ uri: next.uri, diagnostics: diagnosticsForDocument(nextText) });
 });
-connection.onCompletion(() => {
+connection.onCompletion((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  const line = doc ? doc.getText({ start: { line: params.position.line, character: 0 }, end: params.position }) : "";
+  const key = getKeyAtLine(line);
+  if (key) {
+    const values = VALUE_MAP.get(key);
+    if (values) {
+      return values.map((v) => ({
+        label: v,
+        kind: import_node.CompletionItemKind.EnumMember,
+        detail: `${key} value`
+      }));
+    }
+  }
   return [
     ...JAML_ROOT_KEYS.map((k) => ({
       label: k,
@@ -16545,6 +16598,31 @@ connection.onCompletion(() => {
       insertText: `${k}: `
     }))
   ];
+});
+connection.onHover((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return null;
+  const lineText = doc.getText({
+    start: { line: params.position.line, character: 0 },
+    end: { line: params.position.line + 1, character: 0 }
+  });
+  const word = getWordAt(lineText, params.position.character);
+  if (!word) return null;
+  const categories = [];
+  for (const [key, values] of VALUE_MAP) {
+    if (values.includes(word)) {
+      categories.push(key);
+    }
+  }
+  if (categories.length > 0) {
+    return {
+      contents: {
+        kind: import_node.MarkupKind.Markdown,
+        value: `**${word}** \u2014 ${categories.join(", ")}`
+      }
+    };
+  }
+  return null;
 });
 connection.listen();
 //# sourceMappingURL=server.js.map

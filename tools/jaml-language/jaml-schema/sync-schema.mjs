@@ -11,6 +11,10 @@ const src = resolve(repoRoot, "jaml.schema.json");
 const dst = resolve(__dirname, "jaml.schema.json");
 
 if (!existsSync(src)) {
+  if (existsSync(dst)) {
+    // Running from a flattened publish copy — schema already present, nothing to do.
+    process.exit(0);
+  }
   throw new Error(`sync-schema: missing ${src} (run dotnet CLI --write-jaml-schema from repo root).`);
 }
 copyFileSync(src, dst);

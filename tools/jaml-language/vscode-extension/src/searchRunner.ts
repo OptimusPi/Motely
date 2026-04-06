@@ -7,7 +7,7 @@ import * as fs from "node:fs";
  *   1. dist/motely-wasm.mjs  — bundled in the VSIX (self-contained, just works)
  *   2. workspace node_modules — fallback for dev / monorepo setups
  */
-type MotelyWasm = typeof import("motely-wasm-compat");
+type MotelyWasm = typeof import("motely-wasm");
 
 let ready: Promise<MotelyWasm> | null = null;
 
@@ -124,6 +124,7 @@ export function stopSearch(): void {
   if (!ready) return;
   void ready.then((mod) => {
     try {
+      // @ts-ignore stopSearch added in 6.1.1+
       mod.MotelyProgram.stopSearch();
     } catch {
       /* ignore */
