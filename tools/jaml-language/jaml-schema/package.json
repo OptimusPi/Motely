@@ -1,5 +1,5 @@
 {
-  "name": "@motely/jaml-schema",
+  "name": "jaml-schema",
   "version": "6.1.1",
   "description": "JAML JSON Schema — published for tools; source generated at repo root by Motely.CLI.",
   "license": "MIT",

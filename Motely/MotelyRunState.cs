@@ -2,6 +2,17 @@ using System.Diagnostics;
 
 namespace Motely;
 
+/// <summary>JS-serializable snapshot of <see cref="MotelyRunState"/> (voucher + boss bitfields).</summary>
+public record MotelyJsRunState(int VoucherBitfield, int BossBitfield)
+{
+    public static readonly MotelyJsRunState Default = new(0, 0);
+
+    public MotelyRunState ToRunState()
+    {
+        return new MotelyRunState { VoucherBitfield = VoucherBitfield, BossBitfield = BossBitfield };
+    }
+}
+
 public ref struct MotelyRunState
 {
     private static readonly int FinisherBossBlindMask;
