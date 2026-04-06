@@ -3,15 +3,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { RESOURCE_URI_META_KEY, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps";
 import { z } from "zod";
-import { parse as parseYaml } from "yaml";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   JAML_ROOT_KEYS,
   CLAUSE_KEYS,
-  looksLikeJson,
-  unknownRootKeys,
 } from "@motely/jaml-language-core";
 
 // ── WASM engine (lazy-loaded) ──────────────────────────────────────────────
@@ -23,6 +20,11 @@ async function bootWasm(): Promise<void> {
   const wasm = await import("motely-wasm");
   await wasm.default.boot();
   wasmBooted = true;
+}
+
+async function getWasm(): Promise<any> {
+  await bootWasm();
+  return await import("motely-wasm");
 }
 
 // ── Paths ──────────────────────────────────────────────────────────────────
@@ -54,77 +56,7 @@ function findExamplesDir(): string | null {
   return null;
 }
 
-// ── Schema data ────────────────────────────────────────────────────────────
 const schema = findSchema();
-const VALUE_MAP = new Map<string, string[]>();
-
-if (schema) {
-  const props = schema.properties ?? {};
-  for (const [key, def] of Object.entries<any>(props)) {
-    if (def.enum) VALUE_MAP.set(key, def.enum);
-  }
-  const clauseDefs =
-    props.must?.items?.properties ??
-    props.should?.items?.properties ?? {};
-  for (const [key, def] of Object.entries<any>(clauseDefs)) {
-    if (def.enum && !VALUE_MAP.has(key)) VALUE_MAP.set(key, def.enum);
-    if (def.items?.enum && !VALUE_MAP.has(key)) VALUE_MAP.set(key, def.items.enum);
-  }
-  if (props.aesthetics?.items?.enum) {
-    VALUE_MAP.set("aesthetics", props.aesthetics.items.enum);
-  }
-}
-
-// ── Validation logic (shared with LSP) ─────────────────────────────────────
-interface Diagnostic {
-  severity: "error" | "warning" | "info";
-  message: string;
-  line: number;
-}
-
-function validateJaml(text: string): { valid: boolean; diagnostics: Diagnostic[] } {
-  const diagnostics: Diagnostic[] = [];
-
-  try {
-    let root: unknown;
-    if (looksLikeJson(text)) {
-      root = JSON.parse(text);
-    } else {
-      root = parseYaml(text);
-    }
-
-    if (!root || typeof root !== "object" || Array.isArray(root)) {
-      diagnostics.push({ severity: "error", message: "JAML root must be an object/mapping.", line: 1 });
-      return { valid: false, diagnostics };
-    }
-
-    for (const bad of unknownRootKeys(root as Record<string, unknown>)) {
-      diagnostics.push({ severity: "warning", message: `Unknown root key '${bad}'.`, line: 1 });
-    }
-
-    // Validate enum values
-    const obj = root as Record<string, unknown>;
-    for (const [key, values] of VALUE_MAP) {
-      if (key in obj) {
-        const val = obj[key];
-        if (typeof val === "string" && !values.includes(val)) {
-          diagnostics.push({
-            severity: "warning",
-            message: `Invalid value '${val}' for '${key}'. Valid: ${values.slice(0, 5).join(", ")}${values.length > 5 ? "..." : ""}`,
-            line: 1,
-          });
-        }
-      }
-    }
-  } catch (error) {
-    diagnostics.push({ severity: "error", message: `Parse error: ${(error as Error).message}`, line: 1 });
-  }
-
-  return {
-    valid: diagnostics.every((d) => d.severity !== "error"),
-    diagnostics,
-  };
-}
 
 // ── MCP Server ─────────────────────────────────────────────────────────────
 const server = new McpServer({
@@ -132,33 +64,56 @@ const server = new McpServer({
   version: "0.1.0",
 });
 
-// Tool: validate_jaml
+// Tool: get_version
 server.tool(
-  "validate_jaml",
-  "Parse and validate a JAML filter. Returns diagnostics (errors/warnings) and whether the filter is valid.",
-  { jaml: z.string().describe("JAML filter text (YAML or JSON)") },
-  async ({ jaml }) => {
-    const result = validateJaml(jaml);
-    return {
-      content: [{
-        type: "text" as const,
-        text: JSON.stringify(result, null, 2),
-      }],
-    };
+  "get_version",
+  "Get the Motely WASM engine version.",
+  {},
+  async () => {
+    try {
+      const { MotelyWasmHost } = await getWasm();
+      return { content: [{ type: "text" as const, text: MotelyWasmHost.getVersion() }] };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
+    }
   },
 );
 
-// Tool: compile_jummy
+// Tool: validate_jaml — uses the real WASM loadJaml, not JS approximation
+server.tool(
+  "validate_jaml",
+  "Parse and validate a JAML filter through the Motely WASM engine (MotelyWasmHost.loadJaml). Returns the loaded JamlConfig on success or the exact C# error on failure.",
+  { jaml: z.string().describe("JAML filter text (YAML or JSON)") },
+  async ({ jaml }) => {
+    try {
+      const { MotelyWasmHost } = await getWasm();
+      const config = MotelyWasmHost.loadJaml(jaml);
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ valid: true, config }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ valid: false, error: (err as Error).message }, null, 2),
+        }],
+      };
+    }
+  },
+);
+
+// Tool: compile_jummy — Jummy → JamlConfig via WASM
 server.tool(
   "compile_jummy",
-  "Compile Jummy text into JAML. Jummy is a human-friendly alternative syntax (supports mumble lines like 'Eternal Blueprint in Ante 1' and what/where blocks). Requires the Motely WASM engine.",
+  "Compile Jummy text into a JamlConfig via MotelyWasmHost.compileJummy. Jummy supports mumble lines ('Eternal Blueprint in Ante 1') and what/where blocks.",
   { jummy: z.string().describe("Jummy source text to compile") },
   async ({ jummy }) => {
     try {
-      await bootWasm();
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- namespace re-export not resolved by tsc with NodeNext
-      const wasm: any = await import("motely-wasm");
-      const config = wasm.MotelyWasmHost.compileJummy(jummy);
+      const { MotelyWasmHost } = await getWasm();
+      const config = MotelyWasmHost.compileJummy(jummy);
       return {
         content: [{
           type: "text" as const,
@@ -177,90 +132,131 @@ server.tool(
   },
 );
 
-// Tool: get_completions
+// Tool: inspect_seed — look up what a specific seed produces
 server.tool(
-  "get_completions",
-  "Get valid JAML keys and enum values for autocompletion. Optionally filter by a specific key to get its valid values.",
+  "inspect_seed",
+  "Inspect a specific seed. Creates a MotelyWasmHost.motelySingleSearchContext and queries what jokers, vouchers, bosses, tags, booster packs, and shop items appear at each ante.",
   {
-    key: z.string().optional().describe("Specific JAML key to get values for (e.g. 'joker', 'deck', 'boss'). Omit to get all keys."),
+    seed: z.string().describe("The seed to inspect (e.g. 'ABC123')"),
+    deck: z.string().describe("Deck name (e.g. 'Red')"),
+    stake: z.string().describe("Stake name (e.g. 'White')"),
+    antes: z.number().default(8).describe("Number of antes to inspect (default 8)"),
   },
-  async ({ key }) => {
-    if (key) {
-      const values = VALUE_MAP.get(key);
-      if (values) {
-        return {
-          content: [{
-            type: "text" as const,
-            text: JSON.stringify({ key, values }, null, 2),
-          }],
+  async ({ seed, deck, stake, antes }) => {
+    try {
+      const { MotelyWasmHost, Motely } = await getWasm();
+      const deckEnum = Motely.MotelyDeck[deck as keyof typeof Motely.MotelyDeck];
+      const stakeEnum = Motely.MotelyStake[stake as keyof typeof Motely.MotelyStake];
+      if (deckEnum === undefined) return { content: [{ type: "text" as const, text: `Unknown deck '${deck}'. Valid: ${Object.keys(Motely.MotelyDeck).filter(k => isNaN(Number(k))).join(", ")}` }], isError: true };
+      if (stakeEnum === undefined) return { content: [{ type: "text" as const, text: `Unknown stake '${stake}'. Valid: ${Object.keys(Motely.MotelyStake).filter(k => isNaN(Number(k))).join(", ")}` }], isError: true };
+
+      const ctx = MotelyWasmHost.motelySingleSearchContext(seed, deckEnum, stakeEnum);
+      const result: Record<string, any> = { seed, deck, stake };
+
+      for (let ante = 1; ante <= antes; ante++) {
+        result[`ante${ante}`] = {
+          boss: ctx.getBossForAnte(ante),
+          tag: ctx.getNextTag(ante),
+          voucher: ctx.getAnteFirstVoucher(ante),
+          boosterPack: ctx.getNextBoosterPack(ante),
+          shopItem: ctx.getNextShopItem(ante),
+          shopJoker: ctx.getNextShopJoker(ante),
         };
       }
+
       return {
         content: [{
           type: "text" as const,
-          text: JSON.stringify({ error: `Unknown key '${key}'. Valid keys: ${[...VALUE_MAP.keys()].join(", ")}` }),
+          text: JSON.stringify(result, null, 2),
         }],
       };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
     }
-
-    return {
-      content: [{
-        type: "text" as const,
-        text: JSON.stringify({
-          rootKeys: [...JAML_ROOT_KEYS],
-          clauseKeys: [...CLAUSE_KEYS],
-          enumFields: Object.fromEntries(
-            [...VALUE_MAP.entries()].map(([k, v]) => [k, { count: v.length, sample: v.slice(0, 5) }])
-          ),
-        }, null, 2),
-      }],
-    };
   },
 );
 
-// Tool: create_jaml
+// Tool: run_search — run a JAML search via WASM SearchEvents
 server.tool(
-  "create_jaml",
-  "Generate a JAML filter from a natural-language description. Returns valid JAML YAML text.",
+  "run_search",
+  "Run a seed search using a JAML filter. Boots WASM, loads the filter via loadJaml, runs startRandomSearch, and collects results via SearchEvents.",
   {
-    description: z.string().describe("What the filter should search for, e.g. 'Find seeds with Blueprint and Brainstorm in ante 1 on Red Deck'"),
-    deck: z.string().optional().describe("Deck to use (e.g. 'Red Deck')"),
-    stake: z.string().optional().describe("Stake to use (e.g. 'White Stake')"),
+    jaml: z.string().describe("JAML filter text"),
+    seed_count: z.number().default(100000).describe("Number of random seeds to search (default 100000)"),
   },
-  async ({ description, deck, stake }) => {
-    // Build a starter JAML from the description + schema knowledge
-    const lines: string[] = [];
-    lines.push(`# Generated from: ${description}`);
-    lines.push(`name: "${description.slice(0, 60)}"`);
-    if (deck) lines.push(`deck: ${deck}`);
-    if (stake) lines.push(`stake: ${stake}`);
-    lines.push("must:");
+  async ({ jaml, seed_count }) => {
+    try {
+      const { MotelyWasmHost, SearchEvents } = await getWasm();
+      const config = MotelyWasmHost.loadJaml(jaml);
 
-    // Extract joker names from description by matching against known values
-    const jokerValues = VALUE_MAP.get("joker") ?? [];
-    const mentioned = jokerValues.filter((j) => {
-      const normalized = j.toLowerCase().replace(/[_-]/g, " ");
-      return description.toLowerCase().includes(normalized);
-    });
+      const results: Array<{ seed: string; score: number }> = [];
+      let searched = 0n;
+      let matching = 0n;
 
-    if (mentioned.length > 0) {
-      for (const j of mentioned) {
-        lines.push(`  - joker: ${j}`);
+      const resultHandler = (seed: string, score: number, _tally: Int32Array) => {
+        results.push({ seed, score });
+      };
+      const completeHandler = (status: string, seedsSearched: bigint, matchingSeeds: bigint) => {
+        searched = seedsSearched;
+        matching = matchingSeeds;
+      };
+
+      SearchEvents.onResult.subscribe(resultHandler);
+      SearchEvents.onComplete.subscribe(completeHandler);
+
+      try {
+        MotelyWasmHost.startRandomSearch(config, seed_count);
+      } finally {
+        SearchEvents.onResult.unsubscribe(resultHandler);
+        SearchEvents.onComplete.unsubscribe(completeHandler);
       }
-    } else {
-      lines.push("  - joker: # add joker name here");
+
+      results.sort((a, b) => b.score - a.score);
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            searched: searched.toString(),
+            matching: matching.toString(),
+            resultCount: results.length,
+            results: results.slice(0, 200),
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
     }
-
-    const jaml = lines.join("\n");
-    const validation = validateJaml(jaml);
-
-    return {
-      content: [{
-        type: "text" as const,
-        text: JSON.stringify({ jaml, validation }, null, 2),
-      }],
-    };
   },
+);
+
+// Tool: stop_search
+server.tool(
+  "stop_search",
+  "Stop any currently running search.",
+  {},
+  async () => {
+    try {
+      const { MotelyWasmHost } = await getWasm();
+      MotelyWasmHost.stopSearch();
+      return { content: [{ type: "text" as const, text: "Search stopped." }] };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
+    }
+  },
+);
+
+// Tool: get_completions — schema-driven (no WASM needed)
+server.tool(
+  "get_completions",
+  "Get valid JAML root keys and clause keys for autocompletion.",
+  {},
+  async () => ({
+    content: [{
+      type: "text" as const,
+      text: JSON.stringify({ rootKeys: [...JAML_ROOT_KEYS], clauseKeys: [...CLAUSE_KEYS] }, null, 2),
+    }],
+  }),
 );
 
 // Resource: schema
