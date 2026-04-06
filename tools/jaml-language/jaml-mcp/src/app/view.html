@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JAML Search</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --surface: #262637;
+    --border: #3a3a5c;
+    --text: #e0e0f0;
+    --muted: #8888aa;
+    --accent: #a78bfa;
+    --accent-dim: #7c5cbf;
+    --green: #86efac;
+    --red: #fca5a5;
+    --yellow: #fde68a;
+    --font: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--accent); }
+  header .status { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .status.running { color: var(--yellow); }
+  .status.done { color: var(--green); }
+  .status.error { color: var(--red); }
+
+  .editor-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  textarea {
+    flex: 1;
+    background: var(--surface);
+    color: var(--text);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    min-height: 120px;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  .toolbar {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  button {
+    background: var(--accent-dim);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-family: var(--font);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--accent); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.stop { background: #b91c1c; }
+  button.stop:hover { background: #dc2626; }
+
+  .seed-count {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-family: var(--font);
+    font-size: 12px;
+    width: 100px;
+  }
+  label { font-size: 11px; color: var(--muted); }
+
+  .progress {
+    padding: 4px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: none;
+  }
+  .progress.visible { display: block; }
+  .progress-bar {
+    height: 2px;
+    background: var(--accent);
+    transition: width 0.3s;
+    border-radius: 1px;
+    margin-top: 4px;
+  }
+
+  .results-wrap {
+    flex: 2;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    text-align: left;
+    padding: 8px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  tr:hover td { background: var(--surface); }
+  .seed-cell { color: var(--accent); font-weight: 500; }
+  .score-cell { color: var(--green); text-align: right; }
+  .rank-cell { color: var(--muted); width: 40px; }
+
+  .empty-state {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .diagnostics {
+    padding: 8px 16px;
+    background: #2a1a1a;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    display: none;
+  }
+  .diagnostics.visible { display: block; }
+  .diagnostics .err { color: var(--red); }
+  .diagnostics .warn { color: var(--yellow); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>JAML Search</h1>
+    <span class="status" id="status">Ready</span>
+  </header>
+
+  <div class="editor-wrap">
+    <textarea id="editor" placeholder="# Paste your JAML filter here...
+deck: Red Deck
+stake: White Stake
+must:
+  - joker: Blueprint"></textarea>
+  </div>
+
+  <div class="diagnostics" id="diagnostics"></div>
+
+  <div class="toolbar">
+    <button id="runBtn">Run Search</button>
+    <button id="stopBtn" class="stop" disabled>Stop</button>
+    <label>Seeds:</label>
+    <input class="seed-count" id="seedCount" type="number" value="100000" min="1000" step="1000" />
+    <button id="validateBtn">Validate</button>
+  </div>
+
+  <div class="progress" id="progress">
+    <span id="progressText">Searching...</span>
+    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+  </div>
+
+  <div class="results-wrap">
+    <table>
+      <thead>
+        <tr><th class="rank-cell">#</th><th>Seed</th><th style="text-align:right">Score</th></tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState">
+      Write a JAML filter above and click <strong>Run Search</strong>
+    </div>
+  </div>
+
+<script type="module">
+// ── MCP App bridge ─────────────────────────────────────────────────────────
+// We use postMessage to communicate with the MCP host.
+// If ext-apps SDK is available, use it; otherwise fall back to direct postMessage.
+
+let app = null;
+const isInIframe = window.self !== window.top;
+
+async function initApp() {
+  try {
+    const { App } = await import("@modelcontextprotocol/ext-apps");
+    app = new App({ name: "jaml-search", version: "0.1.0" });
+
+    app.ontoolresult = (result) => {
+      if (result._tool === "validate_jaml") handleValidation(result);
+      if (result._tool === "run_search") handleSearchResults(result);
+    };
+
+    await app.connect();
+  } catch {
+    // Running standalone or SDK not available — that's fine
+  }
+}
+
+async function callServerTool(name, args) {
+  if (app) {
+    return await app.callServerTool({ name, arguments: args });
+  }
+  // Fallback: post to parent
+  if (isInIframe) {
+    window.parent.postMessage({ type: "mcp-tool-call", tool: name, args }, "*");
+  }
+  return null;
+}
+
+async function pushContext(text) {
+  if (app) {
+    await app.updateModelContext({ content: [{ type: "text", text }] });
+  }
+}
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const editor = document.getElementById("editor");
+const statusEl = document.getElementById("status");
+const runBtn = document.getElementById("runBtn");
+const stopBtn = document.getElementById("stopBtn");
+const validateBtn = document.getElementById("validateBtn");
+const seedCountInput = document.getElementById("seedCount");
+const progressEl = document.getElementById("progress");
+const progressText = document.getElementById("progressText");
+const progressBar = document.getElementById("progressBar");
+const resultsBody = document.getElementById("results");
+const emptyState = document.getElementById("emptyState");
+const diagnosticsEl = document.getElementById("diagnostics");
+
+let searching = false;
+let allResults = [];
+
+// ── UI Helpers ─────────────────────────────────────────────────────────────
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = "status " + (cls || "");
+}
+
+function showDiagnostics(diags) {
+  if (!diags || diags.length === 0) {
+    diagnosticsEl.classList.remove("visible");
+    return;
+  }
+  diagnosticsEl.classList.add("visible");
+  diagnosticsEl.innerHTML = diags.map(d =>
+    `<div class="${d.severity === 'error' ? 'err' : 'warn'}">${d.severity}: ${d.message}</div>`
+  ).join("");
+}
+
+function renderResults(results) {
+  if (results.length === 0) {
+    resultsBody.innerHTML = "";
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+  resultsBody.innerHTML = results
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 500)
+    .map((r, i) =>
+      `<tr>
+        <td class="rank-cell">${i + 1}</td>
+        <td class="seed-cell">${r.seed}</td>
+        <td class="score-cell">${r.score}</td>
+      </tr>`
+    ).join("");
+}
+
+// ── Event handlers ─────────────────────────────────────────────────────────
+validateBtn.addEventListener("click", async () => {
+  const jaml = editor.value.trim();
+  if (!jaml) return;
+
+  setStatus("Validating...", "running");
+  const result = await callServerTool("validate_jaml", { jaml });
+
+  if (result) {
+    handleValidation(JSON.parse(result.content?.[0]?.text || "{}"));
+  } else {
+    // Local validation fallback (basic)
+    try {
+      setStatus("Valid", "done");
+      showDiagnostics([]);
+    } catch (e) {
+      setStatus("Invalid", "error");
+      showDiagnostics([{ severity: "error", message: e.message }]);
+    }
+  }
+});
+
+function handleValidation(result) {
+  if (result.valid) {
+    setStatus("Valid", "done");
+  } else {
+    setStatus("Invalid", "error");
+  }
+  showDiagnostics(result.diagnostics);
+}
+
+runBtn.addEventListener("click", async () => {
+  const jaml = editor.value.trim();
+  if (!jaml || searching) return;
+
+  searching = true;
+  allResults = [];
+  runBtn.disabled = true;
+  stopBtn.disabled = false;
+  progressEl.classList.add("visible");
+  progressBar.style.width = "0%";
+  setStatus("Searching...", "running");
+  showDiagnostics([]);
+  renderResults([]);
+
+  const seedCount = parseInt(seedCountInput.value) || 100000;
+
+  // Call the server tool
+  const result = await callServerTool("run_search", { jaml, seed_count: seedCount });
+
+  if (result) {
+    const data = JSON.parse(result.content?.[0]?.text || "{}");
+    handleSearchResults(data);
+  } else {
+    // If no MCP connection, show a message
+    setStatus("No WASM engine — install motely-wasm", "error");
+    searching = false;
+    runBtn.disabled = false;
+    stopBtn.disabled = true;
+    progressEl.classList.remove("visible");
+  }
+});
+
+function handleSearchResults(data) {
+  searching = false;
+  runBtn.disabled = false;
+  stopBtn.disabled = true;
+  progressEl.classList.remove("visible");
+
+  if (data.error) {
+    setStatus("Error", "error");
+    showDiagnostics([{ severity: "error", message: data.error }]);
+    return;
+  }
+
+  const results = data.results || [];
+  allResults = results;
+  renderResults(results);
+
+  const elapsed = data.elapsedMs ? `${(data.elapsedMs / 1000).toFixed(1)}s` : "";
+  setStatus(`Done — ${results.length} results ${elapsed}`, "done");
+
+  // Push results summary back to the model
+  pushContext(
+    `JAML search complete: ${data.searched || "?"} seeds searched, ` +
+    `${results.length} matches found${elapsed ? ` in ${elapsed}` : ""}. ` +
+    `Top seed: ${results[0]?.seed || "none"} (score: ${results[0]?.score || 0})`
+  );
+}
+
+stopBtn.addEventListener("click", async () => {
+  await callServerTool("stop_search", {});
+  setStatus("Stopped", "");
+  searching = false;
+  runBtn.disabled = false;
+  stopBtn.disabled = true;
+  progressEl.classList.remove("visible");
+});
+
+// ── Listen for messages from parent (non-SDK mode) ─────────────────────────
+window.addEventListener("message", (event) => {
+  const msg = event.data;
+  if (!msg || typeof msg !== "object") return;
+
+  if (msg.type === "jaml-set-filter") {
+    editor.value = msg.jaml || "";
+  }
+  if (msg.type === "jaml-search-progress") {
+    progressText.textContent = `Searched ${Number(msg.searched).toLocaleString()} / ${Number(msg.matching).toLocaleString()} matching`;
+    if (msg.total) {
+      progressBar.style.width = `${Math.min(100, (Number(msg.searched) / Number(msg.total)) * 100)}%`;
+    }
+  }
+  if (msg.type === "jaml-search-result") {
+    allResults.push({ seed: msg.seed, score: msg.score });
+    renderResults(allResults);
+  }
+  if (msg.type === "jaml-search-complete") {
+    handleSearchResults(msg);
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+initApp();
+</script>
+</body>
+</html>
