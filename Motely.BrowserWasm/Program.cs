@@ -2,24 +2,30 @@
 using Bootsharp;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
-
-[assembly: JSExport(typeof(Motely.BrowserWasm.MotelyWasmHost), typeof(Motely.BrowserWasm.IMotelyWasmHost))]
-[assembly: JSImport([typeof(Motely.BrowserWasm.ISearchEvents)])]
-[assembly: JSPreferences(
-    Space = [@"^Motely\.BrowserWasm\.(\S+)", "$1", @"^Motely\.(\S+)", "$1"]
-)]
+using MotelyJaml;
 
 namespace Motely.BrowserWasm;
 
-/// <summary>WASM runtime entry only — Bootsharp bootstrap. Application API is <see cref="MotelyWasmHost"/>.</summary>
 public static class Program
 {
     public static void Main()
     {
-        new ServiceCollection()
-            .AddBootsharp()
-            .AddSingleton<IMotelyWasmHost, MotelyWasmHost>()
-            .BuildServiceProvider()
-            .RunBootsharp();
+        try
+        {
+            new ServiceCollection()
+                .AddBootsharp()
+                .AddSingleton<IMotelySingleSearchContext, MotelySingleSearchContext>()
+                .AddSingleton<IMotelyJamlSearchBuilder, MotelyJamlSearchBuilder>()
+                .BuildServiceProvider()
+                .RunBootsharp();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"BOOT CRASH: {ex.GetType().Name}: {ex.Message}");
+            Console.Error.WriteLine(ex.StackTrace);
+            if (ex.InnerException != null)
+                Console.Error.WriteLine($"INNER: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+            throw;
+        }
     }
 }

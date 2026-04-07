@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
@@ -144,8 +144,7 @@
         },
         "score": {
           "type": "integer",
-          "minimum": 0,
-          "description": "Default score for should clauses.",
+          "description": "Default weight for should clauses. May be negative (penalty). Omitted or null defaults to 1 in the loader.",
           "default": 1
         }
       },
@@ -1839,8 +1838,7 @@
         },
         "score": {
           "type": "integer",
-          "minimum": 0,
-          "description": "Score contribution for should clauses.",
+          "description": "Weight for this clause in should scoring. May be negative (penalty). Omitted or null defaults to 1 in the loader. For And/Or children, 0 still means multiplier 1 (legacy); use non-zero for explicit weights.",
           "default": 1
         },
         "min": {
