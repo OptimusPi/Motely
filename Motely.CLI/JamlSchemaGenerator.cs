@@ -11,7 +11,7 @@ internal static class JamlSchemaGenerator
 {
     private static readonly string[] RankValues = ["Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "2", "3", "4", "5", "6", "7", "8", "9", "10", "T", "J", "Jack", "Q", "Queen", "K", "King", "A", "Ace"];
     private static readonly string[] SuitValues = ["Hearts", "Diamonds", "Clubs", "Spades", "H", "D", "C", "S"];
-    private static readonly string[] JokerWildcardValues = ["any", "anycommon", "anyuncommon", "anyrare", "anylegendary"];
+    private static readonly string[] JokerWildcardValues = ["any", "Any", "anycommon", "AnyCommon", "anyuncommon", "AnyUncommon", "anyrare", "AnyRare", "anylegendary", "AnyLegendary"];
     private static readonly string[] MetadataKeys = GetYamlAliases(
         typeof(JamlRootDocument),
         nameof(JamlRootDocument.Id),
@@ -219,7 +219,7 @@ internal static class JamlSchemaGenerator
                 ["antes"] = IntegerArrayProperty(0, 39, "Default antes to check if a clause does not specify antes.", [1, 2, 3, 4, 5, 6, 7, 8]),
                 ["boosterPacks"] = IntegerArrayProperty(0, 5, "Default pack offering slots to inspect.", [0, 1, 2, 3, 4, 5]),
                 ["shopItems"] = IntegerArrayProperty(0, 5, "Default shop item slots to inspect.", [0, 1, 2, 3, 4, 5]),
-                ["score"] = IntegerProperty("Default score for should clauses.", 0, 1)
+                ["score"] = IntegerProperty("Default score for should clauses.", defaultValue: 1)
             },
             ["additionalProperties"] = false
         };
@@ -234,17 +234,17 @@ internal static class JamlSchemaGenerator
             ["eventType"] = EnumStringProperty(EnumNames<MotelyEventType>(), "Event clause value for the explicit type/eventType form."),
             ["joker"] = EnumStringProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Joker clause."),
             ["jokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Joker clause matching any listed joker names."),
-            ["commonJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerCommon>(), "any", "anycommon"], "Common Joker clause."),
-            ["commonJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerCommon>(), "any", "anycommon"], "Common Joker clause matching any listed common joker names."),
-            ["uncommonJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerUncommon>(), "any", "anyuncommon"], "Uncommon Joker clause."),
-            ["uncommonJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerUncommon>(), "any", "anyuncommon"], "Uncommon Joker clause matching any listed uncommon joker names."),
-            ["rareJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerRare>(), "any", "anyrare"], "Rare Joker clause."),
-            ["rareJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerRare>(), "any", "anyrare"], "Rare Joker clause matching any listed rare joker names."),
+            ["commonJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerCommon>(), "any", "Any", "anycommon", "AnyCommon"], "Common Joker clause."),
+            ["commonJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerCommon>(), "any", "Any", "anycommon", "AnyCommon"], "Common Joker clause matching any listed common joker names."),
+            ["uncommonJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerUncommon>(), "any", "Any", "anyuncommon", "AnyUncommon"], "Uncommon Joker clause."),
+            ["uncommonJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerUncommon>(), "any", "Any", "anyuncommon", "AnyUncommon"], "Uncommon Joker clause matching any listed uncommon joker names."),
+            ["rareJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerRare>(), "any", "Any", "anyrare", "AnyRare"], "Rare Joker clause."),
+            ["rareJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJokerRare>(), "any", "Any", "anyrare", "AnyRare"], "Rare Joker clause matching any listed rare joker names."),
             ["mixedJoker"] = EnumStringProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Mixed-rarity Joker clause."),
             ["mixedJokers"] = StringArrayEnumProperty([.. EnumNames<MotelyJoker>(), .. JokerWildcardValues], "Mixed-rarity Joker clause matching any listed joker names."),
-            ["soulJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerLegendary>(), "any", "anylegendary"], "Soul Joker clause."),
+            ["soulJoker"] = EnumStringProperty([.. EnumNames<MotelyJokerLegendary>(), "any", "Any", "anylegendary", "AnyLegendary"], "Soul Joker clause."),
             ["legendaryJoker"] = EnumStringProperty(
-                [.. EnumNames<MotelyJokerLegendary>(), "any", "anylegendary"],
+                [.. EnumNames<MotelyJokerLegendary>(), "any", "Any", "anylegendary", "AnyLegendary"],
                 "Legendary Joker clause."
             ),
             ["voucher"] = EnumStringProperty(EnumNames<MotelyVoucher>(), "Voucher clause."),
@@ -266,7 +266,7 @@ internal static class JamlSchemaGenerator
             ["startingDraw"] = EnumStringProperty(EnumNames<MotelyPlayingCard>(), "Starting draw clause."),
             ["event"] = EnumStringProperty(EnumNames<MotelyEventType>(), "Event clause."),
             ["antes"] = IntegerArrayProperty(0, 39, "Which antes to search in."),
-            ["score"] = IntegerProperty("Score contribution for should clauses.", 0, 1),
+            ["score"] = IntegerProperty("Score contribution for should clauses (can be negative to penalize).", defaultValue: 1),
             ["min"] = IntegerProperty("Minimum matches required for this clause.", 0),
             ["max"] = IntegerProperty("Maximum matches allowed for this clause.", 0),
             ["label"] = StringProperty("Custom label for result output."),
@@ -506,15 +506,16 @@ internal static class JamlSchemaGenerator
         };
     }
 
-    private static JsonObject IntegerProperty(string description, int minimum, int? defaultValue = null, int? maximum = null)
+    private static JsonObject IntegerProperty(string description, int? minimum = null, int? defaultValue = null, int? maximum = null)
     {
         var obj = new JsonObject
         {
             ["type"] = "integer",
-            ["minimum"] = minimum,
             ["description"] = description
         };
 
+        if (minimum.HasValue)
+            obj["minimum"] = minimum.Value;
         if (maximum.HasValue)
             obj["maximum"] = maximum.Value;
         if (defaultValue.HasValue)

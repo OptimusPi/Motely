@@ -658,7 +658,7 @@ partial class Program
         FormatProgressToStderr(p);
     }
 
-    static MotelyProgress _latestProgress;
+    static MotelyProgress _latestProgress = default;
 
     static void FormatProgressToStderr(MotelyProgress p)
     {
