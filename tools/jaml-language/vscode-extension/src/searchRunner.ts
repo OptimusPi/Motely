@@ -71,9 +71,6 @@ type OnProgress = (searched: bigint, matching: bigint) => void;
 type OnResult = (seed: string, score: number) => void;
 type OnComplete = (summary: SearchSummary) => void;
 
-/** Last search handle from WASM — cancel here, not via a host-global. */
-let activeSearch: { cancel: () => void } | null = null;
-
 export async function runSearch(
   jaml: string,
   seedCount: number,
@@ -96,7 +93,6 @@ export async function runSearch(
   };
 
   const onCompleteHandler = (status: string, searched: bigint, matched: bigint) => {
-    activeSearch = null;
     SearchEvents.onResult.unsubscribe(onResultHandler);
     SearchEvents.onProgress.unsubscribe(onProgressHandler);
     SearchEvents.onComplete.unsubscribe(onCompleteHandler);
@@ -115,7 +111,7 @@ export async function runSearch(
 
   try {
     const config = MotelyWasmHost.loadJaml(jaml);
-    activeSearch = MotelyWasmHost.startRandomSearch(config, seedCount);
+    MotelyWasmHost.startRandomSearch(config, seedCount);
   } catch (err) {
     SearchEvents.onResult.unsubscribe(onResultHandler);
     SearchEvents.onProgress.unsubscribe(onProgressHandler);
@@ -125,10 +121,5 @@ export async function runSearch(
 }
 
 export function stopSearch(): void {
-  try {
-    activeSearch?.cancel();
-  } catch {
-    /* ignore */
-  }
-  activeSearch = null;
+  ready?.then(w => w.MotelyWasmHost.stopSearch()).catch(() => {});
 }
