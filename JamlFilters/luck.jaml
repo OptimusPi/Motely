@@ -7,20 +7,22 @@ deck: Anaglyph
 stake: Black
 must:
   - smallBlindTag: NegativeTag
-    antes: [2, 3, 4, 5, 6, 7, 8]
-  - joker: Showman
-    antes: [1, 2, 3]
-  - legendaryJoker: Perkeo
-    antes: [1, 2, 3]
+    antes: [4]
+  - uncommonJoker: OopsAll6s
+    antes: [4]
+    sources:
+      shopItems: [2,3,4,5,6]
+    min: 3
 should:
   - and:
       - smallBlindTag: NegativeTag
         antes: [2]
+        score: 10
       - uncommonJoker: OopsAll6s
-        score: 13
+        score: 100
         antes: [2]
         sources:
-          shopItems: [2,3,4,5] 
+          shopItems: [2,3,4,5,6,7] 
   - and:
       - smallBlindTag: NegativeTag
         antes: [3]
