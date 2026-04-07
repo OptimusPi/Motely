@@ -752,7 +752,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
-
     /// <inheritdoc cref="IMotelySearchSettings.CreateSearch" />
     public IMotelySearch CreateSearch() => new MotelySearch<TBaseFilter>(this);
 

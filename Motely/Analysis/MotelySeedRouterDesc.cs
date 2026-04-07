@@ -44,50 +44,7 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
     public void Dispose() => _ownedSearch?.Dispose();
 }
 
-public interface IMotelySingleSearchContext
-{
-    string GetSeed();
-    double PseudoHash(string key, bool isCached = false);
-
-    // Vouchers
-    MotelyVoucher GetAnteFirstVoucher(int ante);
-
-    // Tags
-    MotelyTag GetNextTag(int ante);
-
-    // Boss blinds
-    MotelyBossBlind GetBossForAnte(int ante);
-
-    // Vouchers with optional active-voucher state
-    MotelyVoucher GetAnteFirstVoucherWithState(int ante, MotelyJsRunState state);
-
-    // Booster packs
-    MotelyBoosterPack GetNextBoosterPack(int ante);
-
-    // Shop
-    MotelyItem GetNextShopItem(int ante);
-    MotelyItem GetNextShopJoker(int ante);
-
-    // Tarot
-    MotelyItem GetNextTarot(int ante);
-
-    // Spectral
-    MotelyItem GetNextSpectral(int ante);
-
-    // Planet
-    MotelyItem GetNextPlanet(int ante);
-
-    // Standard cards
-    MotelyItem GetNextStandardCard(int ante);
-
-    // Misc
-    int GetNextMisprintMult();
-    bool GetNextLuckyMoney(double baseLuck = 1);
-    bool GetNextLuckyMult(double baseLuck = 1);
-    MotelyItem GetNextErraticDeckCard();
-}
-
-public sealed class MotelySingleSearchContextImpl : IMotelySingleSearchContext
+public sealed class MotelySingleSearchContextImpl
 {
     private readonly MotelySeedRouterDesc _router;
 

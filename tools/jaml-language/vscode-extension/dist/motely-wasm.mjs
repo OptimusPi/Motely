@@ -325,7 +325,7 @@ const MotelyWasmHost = {
 };
 const SearchEvents = {
     onProgress: new Event(),
-    onProgressSerialized: (seedsSearched, matchingSeeds, elapsedMs) => SearchEvents.onProgress.broadcast(seedsSearched, matchingSeeds, elapsedMs),
+    onProgressSerialized: (seedsSearched, matchingSeeds) => SearchEvents.onProgress.broadcast(seedsSearched, matchingSeeds),
     onResult: new Event(),
     onResultSerialized: (seed, score, tallyColumns) => SearchEvents.onResult.broadcast(seed, score, tallyColumns),
     onComplete: new Event(),

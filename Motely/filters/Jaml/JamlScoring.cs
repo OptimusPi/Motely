@@ -114,10 +114,13 @@ public static class JamlScoring
             int count = CountOccurrences(ref ctx, clause.Clauses[i], ref runState);
             if (count <= 0)
                 return 0;
-            total += count * Math.Max(1, clause.Clauses[i].Score);
+            int w = clause.Clauses[i].Score;
+            if (w == 0)
+                w = 1;
+            total += count * w;
         }
 
-        return clause.Score > 0 ? total : 1;
+        return clause.Score != 0 ? total : 1;
     }
 
     private static int CountOrOccurrences(ref MotelySingleSearchContext ctx, OrClause clause, ref MotelyRunState runState)
@@ -137,14 +140,17 @@ public static class JamlScoring
             if (count > 0)
             {
                 matched++;
-                total += count * Math.Max(1, clause.Clauses[i].Score);
+                int w = clause.Clauses[i].Score;
+                if (w == 0)
+                    w = 1;
+                total += count * w;
             }
         }
 
         if (matched < clause.Min)
             return 0;
 
-        return clause.Score > 0 ? total : matched;
+        return clause.Score != 0 ? total : matched;
     }
 
     /// <summary>
@@ -183,7 +189,7 @@ public static class JamlScoring
             total += count;
         }
 
-        return clause.Score > 0 ? total : 1;
+        return clause.Score != 0 ? total : 1;
     }
 
     private static int CountRawOrOccurrences(ref MotelySingleSearchContext ctx, OrClause clause, ref MotelyRunState runState)
@@ -210,7 +216,7 @@ public static class JamlScoring
         if (matched < clause.Min)
             return 0;
 
-        return clause.Score > 0 ? total : matched;
+        return clause.Score != 0 ? total : matched;
     }
 
     private static int CountBossOccurrences(BossClause clause, ref MotelyRunState runState)
