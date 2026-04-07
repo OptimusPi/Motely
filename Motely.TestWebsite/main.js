@@ -28,8 +28,8 @@ const aesNames = ["Palindrome", "Psychosis", "Gross", "Nsfw", "Funny", "Balatro"
 aesNames.forEach((n, i) => aesSel.append(new Option(n, i)));
 
 // Events
-SearchEvents.onProgress.subscribe((searched, matching, elapsed) =>
-  log(`[progress] ${searched} searched  ${matching} matching  ${elapsed}ms`));
+SearchEvents.onProgress.subscribe((searched, matching) =>
+  log(`[progress] ${searched} searched  ${matching} matching`));
 SearchEvents.onResult.subscribe((seed, score, tally) =>
   log(`[result] ${seed}  score=${score}`));
 SearchEvents.onComplete.subscribe((status, searched, matching) =>
