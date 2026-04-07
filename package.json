@@ -7,8 +7,5 @@
     "dev": "cd Motely.TestWebsite && npm run dev",
     "build": "cd Motely.TestWebsite && npm run build",
     "preview": "cd Motely.TestWebsite && npm run preview"
-  },
-  "workspaces": [
-    "Motely.TestWebsite"
-  ]
+  }
 }
