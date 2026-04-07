@@ -62,7 +62,7 @@ partial class Program
             RequestTermination();
         };
 
-        // ESC key to quit (same as Ctrl+C) while a search is running
+        // ESC key to quit (same as Ctrl+C), 'p' to print progress
         var escCts = new CancellationTokenSource();
         _ = Task.Run(async () =>
         {
@@ -70,8 +70,15 @@ partial class Program
             {
                 await Task.Delay(100, escCts.Token).ConfigureAwait(false);
                 if (!Console.KeyAvailable) continue;
-                if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                var key = Console.ReadKey(true);
+                if (key.Key == ConsoleKey.Escape)
                     RequestTermination();
+                else if (key.Key == ConsoleKey.P)
+                {
+                    var p = _latestProgress;
+                    if (p.SeedsSearched > 0)
+                        FormatProgressToStderr(p);
+                }
             }
         }, escCts.Token);
 
@@ -631,7 +638,29 @@ partial class Program
         return 0;
     }
 
+    static int _lastNativePercent = -1;
     static void WriteNativeProgressLineToStderr(MotelyProgress p)
+    {
+        _latestProgress = p;
+        int pct = (int)p.PercentComplete;
+        if (pct <= _lastNativePercent) return;
+        _lastNativePercent = pct;
+        FormatProgressToStderr(p);
+    }
+
+    static int _lastJamlPercent = -1;
+    static void WriteJamlProgressLineToStderr(MotelyProgress p)
+    {
+        _latestProgress = p;
+        int pct = (int)p.PercentComplete;
+        if (pct <= _lastJamlPercent) return;
+        _lastJamlPercent = pct;
+        FormatProgressToStderr(p);
+    }
+
+    static MotelyProgress _latestProgress;
+
+    static void FormatProgressToStderr(MotelyProgress p)
     {
         double perSec = p.SeedsPerMillisecond * 1000.0;
         string speed =
@@ -643,25 +672,9 @@ partial class Program
         string eta = p.EstimatedTimeRemainingMilliseconds is long etaMs && etaMs > 0
             ? $" | ETA {FormatEtaMs(etaMs)}"
             : "";
-        Console.Error.WriteLine(
-            $"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta}");
-    }
-
-    static void WriteJamlProgressLineToStderr(MotelyProgress p)
-    {
-        double perSec = p.SeedsPerMillisecond * 1000.0;
-        string speed =
-            perSec >= 1_000_000
-                ? $"{perSec / 1_000_000:F2} M/s"
-                : perSec >= 1_000
-                    ? $"{perSec / 1_000:F1}K/s"
-                    : $"{perSec:F0}/s";
-        string eta = "";
-        if (p.EstimatedTimeRemainingMilliseconds is long remMs && remMs > 0)
-            eta = $" | ETA {FormatEtaMs(remMs)}";
         string elapsed = TimeSpan.FromMilliseconds(p.ElapsedMilliseconds).ToString(@"hh\:mm\:ss\.f");
         Console.Error.WriteLine(
-            $"Progress: {p.PercentComplete:F2}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}");
+            $"Progress: {p.PercentComplete:F1}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}");
     }
 
     static string FormatEtaMs(long milliseconds)

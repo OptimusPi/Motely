@@ -8,7 +8,7 @@
     "jaml-mcp": "./dist/server.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/app && cp src/app/view.html dist/app/view.html",
+    "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs');fs.mkdirSync('dist/app',{recursive:true});fs.copyFileSync('src/app/view.html','dist/app/view.html')\"",
     "build:app": "node build-app.mjs",
     "dev": "node --watch dist/server.js"
   },
@@ -16,7 +16,7 @@
     "@modelcontextprotocol/ext-apps": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@motely/jaml-language-core": "workspace:*",
-    "motely-wasm": "^7.0.1",
+    "motely-wasm": "^7.0.0",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },

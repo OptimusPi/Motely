@@ -144,7 +144,8 @@
         },
         "score": {
           "type": "integer",
-          "description": "Default weight for should clauses. May be negative (penalty). Omitted or null defaults to 1 in the loader.",
+          "minimum": 0,
+          "description": "Default score for should clauses.",
           "default": 1
         }
       },
@@ -1838,7 +1839,8 @@
         },
         "score": {
           "type": "integer",
-          "description": "Weight for this clause in should scoring. May be negative (penalty). Omitted or null defaults to 1 in the loader. For And/Or children, 0 still means multiplier 1 (legacy); use non-zero for explicit weights.",
+          "minimum": 0,
+          "description": "Score contribution for should clauses.",
           "default": 1
         },
         "min": {
