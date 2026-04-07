@@ -6,68 +6,21 @@ description: >
 deck: Anaglyph
 stake: Black
 must:
-  - smallBlindTag: NegativeTag
-    antes: [4]
-  - uncommonJoker: OopsAll6s
-    antes: [4]
+  - legendaryJoker: Any
+    edition: Negative
+    antes: [1]
     sources:
-      shopItems: [2,3,4,5,6]
-    min: 3
+      boosterPacks:
+        - 1
+  - legendaryJoker: Any
+    edition: Negative
+    antes: [1]
+    sources:
+      boosterPacks: [2,3]
 should:
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [2]
-        score: 10
-      - uncommonJoker: OopsAll6s
-        score: 100
-        antes: [2]
-        sources:
-          shopItems: [2,3,4,5,6,7] 
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [3]
-      - uncommonJoker: OopsAll6s
-        score: 15
-        antes: [3]
-        sources:
-          shopItems: [2,3,4,5,6] 
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [4]
-      - uncommonJoker: OopsAll6s
-        score: 16
-        antes: [4]
-        sources:
-          shopItems: [2,3,4,5,6,7,8] 
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [5]
-      - uncommonJoker: OopsAll6s
-        score: 15
-        antes: [5]
-        sources:
-          shopItems: [2,3,4,5,6,7,8,9]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [6]
-      - uncommonJoker: OopsAll6s
-        score: 14
-        antes: [6]
-        sources:
-          shopItems: [2,3,4,5,6,7,8,9,10,11,12,13]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [7]
-      - uncommonJoker: OopsAll6s
-        score: 12
-        antes: [7]
-        sources:
-          shopItems: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [8]
-      - uncommonJoker: OopsAll6s
-        score: 10
-        antes: [8]
-        sources:
-          shopItems: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
+  - legendaryJoker: Any
+    edition: Negative
+    antes: [1,2,3]
+  - legendaryJoker: Any
+    edition: Negative
+    antes: [4,5,6]
