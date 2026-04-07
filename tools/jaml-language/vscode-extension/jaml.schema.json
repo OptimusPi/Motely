@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "7.0.1",
+  "version": "7.0.2",
   "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
@@ -144,7 +144,6 @@
         },
         "score": {
           "type": "integer",
-          "minimum": 0,
           "description": "Default score for should clauses.",
           "default": 1
         }
@@ -383,10 +382,15 @@
             "Chicot",
             "Perkeo",
             "any",
+            "Any",
             "anycommon",
+            "AnyCommon",
             "anyuncommon",
+            "AnyUncommon",
             "anyrare",
-            "anylegendary"
+            "AnyRare",
+            "anylegendary",
+            "AnyLegendary"
           ],
           "description": "Joker clause."
         },
@@ -546,10 +550,15 @@
               "Chicot",
               "Perkeo",
               "any",
+              "Any",
               "anycommon",
+              "AnyCommon",
               "anyuncommon",
+              "AnyUncommon",
               "anyrare",
-              "anylegendary"
+              "AnyRare",
+              "anylegendary",
+              "AnyLegendary"
             ]
           },
           "description": "Joker clause matching any listed joker names."
@@ -619,7 +628,9 @@
             "HangingChad",
             "ShootTheMoon",
             "any",
-            "anycommon"
+            "Any",
+            "anycommon",
+            "AnyCommon"
           ],
           "description": "Common Joker clause."
         },
@@ -690,7 +701,9 @@
               "HangingChad",
               "ShootTheMoon",
               "any",
-              "anycommon"
+              "Any",
+              "anycommon",
+              "AnyCommon"
             ]
           },
           "description": "Common Joker clause matching any listed common joker names."
@@ -763,7 +776,9 @@
             "Astronomer",
             "Bootstraps",
             "any",
-            "anyuncommon"
+            "Any",
+            "anyuncommon",
+            "AnyUncommon"
           ],
           "description": "Uncommon Joker clause."
         },
@@ -837,7 +852,9 @@
               "Astronomer",
               "Bootstraps",
               "any",
-              "anyuncommon"
+              "Any",
+              "anyuncommon",
+              "AnyUncommon"
             ]
           },
           "description": "Uncommon Joker clause matching any listed uncommon joker names."
@@ -866,7 +883,9 @@
             "DriversLicense",
             "BurntJoker",
             "any",
-            "anyrare"
+            "Any",
+            "anyrare",
+            "AnyRare"
           ],
           "description": "Rare Joker clause."
         },
@@ -896,7 +915,9 @@
               "DriversLicense",
               "BurntJoker",
               "any",
-              "anyrare"
+              "Any",
+              "anyrare",
+              "AnyRare"
             ]
           },
           "description": "Rare Joker clause matching any listed rare joker names."
@@ -1055,10 +1076,15 @@
             "Chicot",
             "Perkeo",
             "any",
+            "Any",
             "anycommon",
+            "AnyCommon",
             "anyuncommon",
+            "AnyUncommon",
             "anyrare",
-            "anylegendary"
+            "AnyRare",
+            "anylegendary",
+            "AnyLegendary"
           ],
           "description": "Mixed-rarity Joker clause."
         },
@@ -1218,10 +1244,15 @@
               "Chicot",
               "Perkeo",
               "any",
+              "Any",
               "anycommon",
+              "AnyCommon",
               "anyuncommon",
+              "AnyUncommon",
               "anyrare",
-              "anylegendary"
+              "AnyRare",
+              "anylegendary",
+              "AnyLegendary"
             ]
           },
           "description": "Mixed-rarity Joker clause matching any listed joker names."
@@ -1235,7 +1266,9 @@
             "Chicot",
             "Perkeo",
             "any",
-            "anylegendary"
+            "Any",
+            "anylegendary",
+            "AnyLegendary"
           ],
           "description": "Soul Joker clause."
         },
@@ -1248,7 +1281,9 @@
             "Chicot",
             "Perkeo",
             "any",
-            "anylegendary"
+            "Any",
+            "anylegendary",
+            "AnyLegendary"
           ],
           "description": "Legendary Joker clause."
         },
@@ -1839,19 +1874,18 @@
         },
         "score": {
           "type": "integer",
-          "minimum": 0,
-          "description": "Score contribution for should clauses.",
+          "description": "Score contribution for should clauses (can be negative to penalize).",
           "default": 1
         },
         "min": {
           "type": "integer",
-          "minimum": 0,
-          "description": "Minimum matches required for this clause."
+          "description": "Minimum matches required for this clause.",
+          "minimum": 0
         },
         "max": {
           "type": "integer",
-          "minimum": 0,
-          "description": "Maximum matches allowed for this clause."
+          "description": "Maximum matches allowed for this clause.",
+          "minimum": 0
         },
         "label": {
           "type": "string",
@@ -2008,8 +2042,8 @@
         },
         "soulEditionRolls": {
           "type": "integer",
-          "minimum": 0,
           "description": "Extra soul-stream edition reads per ante for the legendary edition vector prefilter (0 = use booster pack list length).",
+          "minimum": 0,
           "maximum": 32
         },
         "soulCardOnly": {
@@ -2018,8 +2052,8 @@
         },
         "multValue": {
           "type": "integer",
-          "minimum": 0,
           "description": "Exact mult value for MisprintMult event (0-23). If omitted, matches any value.",
+          "minimum": 0,
           "maximum": 23
         },
         "shopItems": {
@@ -2042,26 +2076,26 @@
         },
         "minShopSlot": {
           "type": "integer",
-          "minimum": 0,
           "description": "Minimum shop slot index for range generation.",
+          "minimum": 0,
           "maximum": 1023
         },
         "maxShopSlot": {
           "type": "integer",
-          "minimum": 0,
           "description": "Maximum shop slot index for range generation.",
+          "minimum": 0,
           "maximum": 1023
         },
         "minPackSlot": {
           "type": "integer",
-          "minimum": 0,
           "description": "Minimum pack slot index for range generation.",
+          "minimum": 0,
           "maximum": 5
         },
         "maxPackSlot": {
           "type": "integer",
-          "minimum": 0,
           "description": "Maximum pack slot index for range generation.",
+          "minimum": 0,
           "maximum": 5
         },
         "sources": {
@@ -2106,26 +2140,26 @@
             },
             "minShopSlot": {
               "type": "integer",
-              "minimum": 0,
               "description": "Minimum shop slot index for range generation.",
+              "minimum": 0,
               "maximum": 1023
             },
             "maxShopSlot": {
               "type": "integer",
-              "minimum": 0,
               "description": "Maximum shop slot index for range generation.",
+              "minimum": 0,
               "maximum": 1023
             },
             "minPackSlot": {
               "type": "integer",
-              "minimum": 0,
               "description": "Minimum pack slot index for range generation.",
+              "minimum": 0,
               "maximum": 5
             },
             "maxPackSlot": {
               "type": "integer",
-              "minimum": 0,
               "description": "Maximum pack slot index for range generation.",
+              "minimum": 0,
               "maximum": 5
             },
             "tags": {
