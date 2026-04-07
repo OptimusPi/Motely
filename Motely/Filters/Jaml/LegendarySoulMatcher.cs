@@ -35,11 +35,8 @@ internal static class LegendarySoulMatcher
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
 
-            if (!IsBoosterSlotTargetForLegendary(src, p, pack))
-                continue;
-
-            if (src.RequireMegaPack && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
-                continue;
+            bool isTarget = IsBoosterSlotTargetForLegendary(src, p, pack)
+                && (!src.RequireMegaPack || pack.GetPackSize() == MotelyBoosterPackSize.Mega);
 
             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
             {
@@ -49,7 +46,9 @@ internal static class LegendarySoulMatcher
                     tarotStream = ctx.CreateArcanaPackTarotStream(ante, true);
                 }
 
-                if (!ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                bool hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+
+                if (!isTarget || !hasSoul)
                     continue;
 
                 if (clause.SoulCardOnly)
@@ -74,7 +73,9 @@ internal static class LegendarySoulMatcher
                     spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: ante != 1);
                 }
 
-                if (!ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                bool hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+
+                if (!isTarget || !hasSoul)
                     continue;
 
                 if (clause.SoulCardOnly)
@@ -116,11 +117,8 @@ internal static class LegendarySoulMatcher
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
 
-            if (!IsBoosterSlotTargetForLegendary(src, p, pack))
-                continue;
-
-            if (src.RequireMegaPack && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
-                continue;
+            bool isTarget = IsBoosterSlotTargetForLegendary(src, p, pack)
+                && (!src.RequireMegaPack || pack.GetPackSize() == MotelyBoosterPackSize.Mega);
 
             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
             {
@@ -130,7 +128,8 @@ internal static class LegendarySoulMatcher
                     tarotStream = ctx.CreateArcanaPackTarotStream(ante, true);
                 }
 
-                if (ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                bool hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+                if (hasSoul && isTarget)
                     return true;
             }
             else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
@@ -141,7 +140,8 @@ internal static class LegendarySoulMatcher
                     spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: ante != 1);
                 }
 
-                if (ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                bool hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+                if (hasSoul && isTarget)
                     return true;
             }
         }
