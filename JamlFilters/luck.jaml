@@ -10,17 +10,20 @@ must:
     edition: Negative
     antes: [1]
     sources:
-      boosterPacks:
-        - 1
-  - legendaryJoker: Any
+      boosterPacks: [0,1,2,3,4,5]
+    score: 1000
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
     sources:
-      boosterPacks: [2,3]
+      boosterPacks: [0,1,2,3,4,5]
+    score: 1000
+  - voucher: Hieroglyph
+    antes: [1]
 should:
-  - legendaryJoker: Any
+  - joker: anyrare
     edition: Negative
-    antes: [1,2,3]
-  - legendaryJoker: Any
-    edition: Negative
-    antes: [4,5,6]
+    antes: [2,3,4,5,6,7,8]
+    sources:
+      boosterPacks: [0,1,2,3,4,5]
+    score: 10

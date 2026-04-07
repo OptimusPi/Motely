@@ -348,9 +348,6 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
                             }
                         }
 
-                        if (!isTarget)
-                            continue;
-
                         VectorMask isBuffoon = VectorEnum256.Equals(
                             pack.GetPackType(),
                             MotelyBoosterPackType.Buffoon
