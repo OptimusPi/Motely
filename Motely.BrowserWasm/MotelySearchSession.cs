@@ -21,6 +21,8 @@ public interface IMotelySearchSession : IDisposable
 
 public sealed class MotelySearchSession : IMotelySearchSession
 {
+    internal static readonly MotelySearchSession Placeholder = new(null!);
+
     private readonly IMotelySearch _search;
 
     internal MotelySearchSession(IMotelySearch search)
