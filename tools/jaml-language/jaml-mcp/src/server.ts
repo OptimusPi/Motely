@@ -12,8 +12,9 @@ import {
 } from "@motely/jaml-language-core";
 
 // ── WASM engine (lazy-loaded) ──────────────────────────────────────────────
-// motely-wasm v7.0.0: NativeAOT-LLVM, works in Node/Bun/Deno/browser
+// motely-wasm v7.0.4: NativeAOT-LLVM, works in Node/Bun/Deno/browser
 let wasmBooted = false;
+let currentSession: any = null;
 
 async function bootWasm(): Promise<void> {
   if (wasmBooted) return;
@@ -39,7 +40,7 @@ function findSchema(): any {
     resolve(HERE, "..", "..", "..", "..", "jaml.schema.json"),
   ];
   for (const p of candidates) {
-    try { return JSON.parse(readFileSync(p, "utf8")); } catch {}
+    try { return JSON.parse(readFileSync(p, "utf8")); } catch { }
   }
   return null;
 }
@@ -71,8 +72,8 @@ server.tool(
   {},
   async () => {
     try {
-      const { MotelyWasmHost } = await getWasm();
-      return { content: [{ type: "text" as const, text: MotelyWasmHost.getVersion() }] };
+      const { MotelyJamlSearchBuilder } = await getWasm();
+      return { content: [{ type: "text" as const, text: MotelyJamlSearchBuilder.getVersion() }] };
     } catch (err) {
       return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
     }
@@ -82,16 +83,16 @@ server.tool(
 // Tool: validate_jaml — uses the real WASM loadJaml, not JS approximation
 server.tool(
   "validate_jaml",
-  "Parse and validate a JAML filter through the Motely WASM engine (MotelyWasmHost.loadJaml). Returns the loaded JamlConfig on success or the exact C# error on failure.",
+  "Parse and validate a JAML filter through the Motely WASM engine (MotelyJamlSearchBuilder.loadJaml). Returns success or the exact C# error on failure.",
   { jaml: z.string().describe("JAML filter text (YAML or JSON)") },
   async ({ jaml }) => {
     try {
-      const { MotelyWasmHost } = await getWasm();
-      const config = MotelyWasmHost.loadJaml(jaml);
+      const { MotelyJamlSearchBuilder } = await getWasm();
+      MotelyJamlSearchBuilder.loadJaml(jaml);
       return {
         content: [{
           type: "text" as const,
-          text: JSON.stringify({ valid: true, config }, null, 2),
+          text: JSON.stringify({ valid: true }, null, 2),
         }],
       };
     } catch (err) {
@@ -105,19 +106,19 @@ server.tool(
   },
 );
 
-// Tool: compile_jummy — Jummy → JamlConfig via WASM
+// Tool: compile_jummy — Jummy → JAML via WASM
 server.tool(
   "compile_jummy",
-  "Compile Jummy text into a JamlConfig via MotelyWasmHost.compileJummy. Jummy supports mumble lines ('Eternal Blueprint in Ante 1') and what/where blocks.",
+  "Compile Jummy text into a JAML filter via MotelyJamlSearchBuilder.compileJummy. Jummy supports mumble lines ('Eternal Blueprint in Ante 1') and what/where blocks.",
   { jummy: z.string().describe("Jummy source text to compile") },
   async ({ jummy }) => {
     try {
-      const { MotelyWasmHost } = await getWasm();
-      const config = MotelyWasmHost.compileJummy(jummy);
+      const { MotelyJamlSearchBuilder } = await getWasm();
+      MotelyJamlSearchBuilder.compileJummy(jummy);
       return {
         content: [{
           type: "text" as const,
-          text: JSON.stringify({ success: true, config }, null, 2),
+          text: JSON.stringify({ success: true }, null, 2),
         }],
       };
     } catch (err) {
@@ -135,7 +136,7 @@ server.tool(
 // Tool: inspect_seed — look up what a specific seed produces
 server.tool(
   "inspect_seed",
-  "Inspect a specific seed. Creates a MotelyWasmHost.motelySingleSearchContext and queries what jokers, vouchers, bosses, tags, booster packs, and shop items appear at each ante.",
+  "Inspect a specific seed. Opens a MotelySingleSearchContext and queries what jokers, vouchers, bosses, tags, booster packs, and shop items appear at each ante.",
   {
     seed: z.string().describe("The seed to inspect (e.g. 'ABC123')"),
     deck: z.string().describe("Deck name (e.g. 'Red')"),
@@ -144,13 +145,13 @@ server.tool(
   },
   async ({ seed, deck, stake, antes }) => {
     try {
-      const { MotelyWasmHost, Motely } = await getWasm();
+      const { MotelySingleSearchContext, Motely } = await getWasm();
       const deckEnum = Motely.MotelyDeck[deck as keyof typeof Motely.MotelyDeck];
       const stakeEnum = Motely.MotelyStake[stake as keyof typeof Motely.MotelyStake];
       if (deckEnum === undefined) return { content: [{ type: "text" as const, text: `Unknown deck '${deck}'. Valid: ${Object.keys(Motely.MotelyDeck).filter(k => isNaN(Number(k))).join(", ")}` }], isError: true };
       if (stakeEnum === undefined) return { content: [{ type: "text" as const, text: `Unknown stake '${stake}'. Valid: ${Object.keys(Motely.MotelyStake).filter(k => isNaN(Number(k))).join(", ")}` }], isError: true };
 
-      const ctx = MotelyWasmHost.motelySingleSearchContext(seed, deckEnum, stakeEnum);
+      const ctx = MotelySingleSearchContext.open(seed, deckEnum, stakeEnum);
       const result: Record<string, any> = { seed, deck, stake };
 
       for (let ante = 1; ante <= antes; ante++) {
@@ -179,15 +180,14 @@ server.tool(
 // Tool: run_search — run a JAML search via WASM SearchEvents
 server.tool(
   "run_search",
-  "Run a seed search using a JAML filter. Boots WASM, loads the filter via loadJaml, runs startRandomSearch, and collects results via SearchEvents.",
+  "Run a seed search using a JAML filter. Boots WASM, loads the filter, runs a random search, and collects results via SearchEvents.",
   {
     jaml: z.string().describe("JAML filter text"),
     seed_count: z.number().default(100000).describe("Number of random seeds to search (default 100000)"),
   },
   async ({ jaml, seed_count }) => {
     try {
-      const { MotelyWasmHost, SearchEvents } = await getWasm();
-      const config = MotelyWasmHost.loadJaml(jaml);
+      const { MotelyJamlSearchBuilder, SearchEvents } = await getWasm();
 
       const results: Array<{ seed: string; score: number }> = [];
       let searched = 0n;
@@ -205,10 +205,13 @@ server.tool(
       SearchEvents.onComplete.subscribe(completeHandler);
 
       try {
-        MotelyWasmHost.startRandomSearch(config, seed_count);
+        MotelyJamlSearchBuilder.loadJaml(jaml);
+        MotelyJamlSearchBuilder.random(seed_count);
+        currentSession = MotelyJamlSearchBuilder.run();
       } finally {
         SearchEvents.onResult.unsubscribe(resultHandler);
         SearchEvents.onComplete.unsubscribe(completeHandler);
+        currentSession = null;
       }
 
       results.sort((a, b) => b.score - a.score);
@@ -237,9 +240,12 @@ server.tool(
   {},
   async () => {
     try {
-      const { MotelyWasmHost } = await getWasm();
-      MotelyWasmHost.stopSearch();
-      return { content: [{ type: "text" as const, text: "Search stopped." }] };
+      if (currentSession) {
+        currentSession.cancel();
+        currentSession = null;
+        return { content: [{ type: "text" as const, text: "Search cancelled." }] };
+      }
+      return { content: [{ type: "text" as const, text: "No search is currently running." }] };
     } catch (err) {
       return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
     }
@@ -299,7 +305,7 @@ if (examplesDir) {
 // ── MCP App: interactive search UI ─────────────────────────────────────────
 const appHtmlPath = resolve(HERE, "app", "view.html");
 let appHtml: string | null = null;
-try { appHtml = readFileSync(appHtmlPath, "utf8"); } catch {}
+try { appHtml = readFileSync(appHtmlPath, "utf8"); } catch { }
 
 if (appHtml) {
   server.resource(
