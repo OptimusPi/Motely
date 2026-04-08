@@ -35,6 +35,15 @@ Lines="namespace Motely.BrowserWasm { internal static class VersionInfo { public
 Overwrite="true" />
 </Target>
 
+<!-- .NET 10's runtime JS emits /*! webpackIgnore: true */ (with !) which breaks Next.js/webpack
+     when embedded in the Bootsharp bundle. Bootsharp's InternalPatcher already adds the correct
+     /*webpackIgnore:true*/ (no !). Strip the .NET variant from index.mjs. Remove when fixed upstream. -->
+<Target Name="PatchWebpackComments" AfterTargets="BootsharpPack" BeforeTargets="MotelyWasmNpmOverlay">
+<Exec Condition="Exists('$(BootsharpPublishDirectory)\index.mjs')"
+      Command="node -e &quot;const fs=require('fs');fs.writeFileSync('index.mjs',fs.readFileSync('index.mjs','utf8').replace(/\/\*!\s*webpackIgnore:\s*true\s*\*\//g,''))&quot;"
+      WorkingDirectory="$(BootsharpPublishDirectory)" />
+</Target>
+
 <!-- Overlay repo npm metadata and docs on top of Bootsharp's generated package. -->
 <Target Name="MotelyWasmNpmOverlay" AfterTargets="BootsharpPack">
 <ReadLinesFromFile File="$(MSBuildProjectDirectory)\..\Motely\package.json">

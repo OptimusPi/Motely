@@ -78,7 +78,7 @@ export async function runSearch(
   onResult: OnResult,
   onComplete: OnComplete
 ): Promise<void> {
-  const { MotelyWasmHost, SearchEvents } = await getWasm();
+  const { MotelyJamlSearchBuilder, SearchEvents } = await getWasm();
 
   const results: SearchResult[] = [];
   const startMs = Date.now();
@@ -96,6 +96,7 @@ export async function runSearch(
     SearchEvents.onResult.unsubscribe(onResultHandler);
     SearchEvents.onProgress.unsubscribe(onProgressHandler);
     SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+    _currentSession = null;
     onComplete({
       status,
       searched: searched.toString(),
@@ -110,8 +111,9 @@ export async function runSearch(
   SearchEvents.onComplete.subscribe(onCompleteHandler);
 
   try {
-    const config = MotelyWasmHost.loadJaml(jaml);
-    MotelyWasmHost.startRandomSearch(config, seedCount);
+    MotelyJamlSearchBuilder.loadJaml(jaml);
+    MotelyJamlSearchBuilder.random(seedCount);
+    _currentSession = MotelyJamlSearchBuilder.run();
   } catch (err) {
     SearchEvents.onResult.unsubscribe(onResultHandler);
     SearchEvents.onProgress.unsubscribe(onProgressHandler);
@@ -120,6 +122,11 @@ export async function runSearch(
   }
 }
 
+let _currentSession: any = null;
+
 export function stopSearch(): void {
-  ready?.then(w => w.MotelyWasmHost.stopSearch()).catch(() => {});
+  if (_currentSession) {
+    try { _currentSession.cancel(); } catch { }
+    _currentSession = null;
+  }
 }

@@ -26,8 +26,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       motely-wasm:
-        specifier: ^7.0.0
-        version: 7.0.0
+        specifier: ^7.0.4
+        version: 7.0.4
       yaml:
         specifier: ^2.8.3
         version: 2.8.3
@@ -88,8 +88,8 @@ importers:
         specifier: ^0.25.0
         version: 0.25.12
       motely-wasm:
-        specifier: ^7.0.0
-        version: 7.0.0
+        specifier: ^7.0.4
+        version: 7.0.4
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
@@ -1195,8 +1195,8 @@ packages:
   mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
 
-  motely-wasm@7.0.0:
-    resolution: {integrity: sha512-PVZNHufhgRbaNB/cnMdx0zAc5Py9ZHTx/NDF2uEhnCr3hIamw+gfyO3mmeIuJGm+1zFudxhZAuHzB5A0Ai+Duw==}
+  motely-wasm@7.0.4:
+    resolution: {integrity: sha512-Deh3aA314eZc9Gduiyrhg+WA19HCDbVGJhg/DW9DeTLJ1pr3A0rP24B+PeNehL+O5CLHKrIt9WM5pMTHhbD8rw==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2910,7 +2910,7 @@ snapshots:
   mkdirp-classic@0.5.3:
     optional: true
 
-  motely-wasm@7.0.0: {}
+  motely-wasm@7.0.4: {}
 
   ms@2.1.3: {}
 
