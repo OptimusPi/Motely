@@ -16408,7 +16408,6 @@ function getWellformedEdit(textEdit) {
 var import_yaml = __toESM(require_dist(), 1);
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
-var import_node_url = require("node:url");
 
 // ../core/dist/index.js
 var JAML_ROOT_KEYS = [
@@ -16454,10 +16453,9 @@ function unknownRootKeys(root) {
 }
 
 // ../lsp-server/src/server.ts
-var import_meta = {};
 var VALUE_MAP = /* @__PURE__ */ new Map();
 function loadSchemaValues() {
-  const here = typeof __dirname !== "undefined" ? __dirname : (0, import_node_path.dirname)((0, import_node_url.fileURLToPath)(import_meta.url));
+  const here = __dirname;
   const candidates = [
     (0, import_node_path.resolve)(here, "jaml.schema.json"),
     (0, import_node_path.resolve)(here, "..", "jaml.schema.json"),
