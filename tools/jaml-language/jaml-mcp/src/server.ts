@@ -251,7 +251,9 @@ server.tool(
   async () => {
     try {
       if (currentSession) {
-        currentSession.cancel();
+        const session = currentSession;
+        currentSession = null;
+        session.cancel();
         return { content: [{ type: "text" as const, text: "Search cancelled." }] };
       }
       return { content: [{ type: "text" as const, text: "No search is currently running." }] };

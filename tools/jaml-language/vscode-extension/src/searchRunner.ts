@@ -156,6 +156,8 @@ export async function runSearch(
 
 export function stopSearch(): void {
   if (activeSearch) {
-    try { activeSearch.cancel(); } catch { }
+    const search = activeSearch;
+    activeSearch = null;
+    try { search.cancel(); } catch { }
   }
 }
