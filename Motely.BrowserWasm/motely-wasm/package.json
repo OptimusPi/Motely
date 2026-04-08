@@ -1,6 +1,6 @@
 {
 "name": "motely-wasm",
-"version": "7.0.5",
+"version": "7.0.6",
 "description": "MotelyJAML — Balatro seed search engine (browser WASM / NativeAOT-LLVM). Import: import bootsharp, { MotelyJamlSearchBuilder, MotelyWasmHost, SearchEvents, Motely } from \"motely-wasm\"; await bootsharp.boot();",
 "type": "module",
 "main": "./index.mjs",
