@@ -1,6 +1,6 @@
 {
   "name": "jaml-schema",
-  "version": "7.0.5",
+  "version": "7.0.6",
   "description": "JAML JSON Schema — published for tools; source generated at repo root by Motely.CLI.",
   "license": "MIT",
   "repository": {
