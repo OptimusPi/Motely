@@ -3,15 +3,19 @@
 <OutputType>Exe</OutputType>
 <TargetFramework>net10.0</TargetFramework>
 <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-<BootsharpEmbedBinaries>true</BootsharpEmbedBinaries>
+<IsMotelyWasmCompatBuild Condition="'$(IsMotelyWasmCompatBuild)' == ''">false</IsMotelyWasmCompatBuild>
+<BootsharpEmbedBinaries Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">true</BootsharpEmbedBinaries>
+<BootsharpEmbedBinaries Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">false</BootsharpEmbedBinaries>
 <Nullable>enable</Nullable>
 <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 <ImplicitUsings>enable</ImplicitUsings>
 <InvariantGlobalization>true</InvariantGlobalization>
 <Version>$(MotelyVersion)</Version>
 <RootNamespace>Motely.BrowserWasm</RootNamespace>
-<BootsharpName>motely-wasm</BootsharpName>
-<BootsharpPublishDirectory>motely-wasm</BootsharpPublishDirectory>
+<BootsharpName Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">motely-wasm-compat</BootsharpName>
+<BootsharpName Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">motely-wasm</BootsharpName>
+<BootsharpPublishDirectory Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">motely-wasm-compat</BootsharpPublishDirectory>
+<BootsharpPublishDirectory Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">motely-wasm</BootsharpPublishDirectory>
 <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
 <BootsharpLLVM>true</BootsharpLLVM>
 <BootsharpOptimize>speed</BootsharpOptimize>
@@ -38,14 +42,14 @@ Overwrite="true" />
 <!-- .NET 10's runtime JS emits /*! webpackIgnore: true */ (with !) which breaks Next.js/webpack
      when embedded in the Bootsharp bundle. Bootsharp's InternalPatcher already adds the correct
      /*webpackIgnore:true*/ (no !). Strip the .NET variant from index.mjs. Remove when fixed upstream. -->
-<Target Name="PatchWebpackComments" AfterTargets="BootsharpPack" BeforeTargets="MotelyWasmNpmOverlay">
+<Target Name="PatchWebpackComments" AfterTargets="BootsharpPack" BeforeTargets="MotelyWasmNpmOverlay;MotelyWasmCompatOverlay">
 <Exec Condition="Exists('$(BootsharpPublishDirectory)\index.mjs')"
       Command="node -e &quot;const fs=require('fs');fs.writeFileSync('index.mjs',fs.readFileSync('index.mjs','utf8').replace(/\/\*!\s*webpackIgnore:\s*true\s*\*\//g,''))&quot;"
       WorkingDirectory="$(BootsharpPublishDirectory)" />
 </Target>
 
 <!-- Overlay repo npm metadata and docs on top of Bootsharp's generated package. -->
-<Target Name="MotelyWasmNpmOverlay" AfterTargets="BootsharpPack">
+<Target Name="MotelyWasmNpmOverlay" AfterTargets="BootsharpPack" Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">
 <ReadLinesFromFile File="$(MSBuildProjectDirectory)\..\Motely\package.json">
 <Output TaskParameter="Lines" ItemName="_PackageJsonLines" />
 </ReadLinesFromFile>
@@ -75,8 +79,19 @@ SkipUnchangedFiles="true"
 Condition="'@(_MonacoFiles)' != ''" />
 </Target>
 
+<!-- Overlay motely-wasm-compat metadata on top of Bootsharp's generated package. -->
+<Target Name="MotelyWasmCompatOverlay" AfterTargets="BootsharpPack" Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">
+<ReadLinesFromFile File="$(MSBuildProjectDirectory)\..\Motely\package-wasm-compat.json">
+<Output TaskParameter="Lines" ItemName="_CompatPackageJsonLines" />
+</ReadLinesFromFile>
+<WriteLinesToFile
+File="$(BootsharpPublishDirectory)\package.json"
+Lines="@(_CompatPackageJsonLines->Replace('&quot;version&quot;: &quot;0.0.0&quot;', '&quot;version&quot;: &quot;$(Version)&quot;'))"
+Overwrite="true" />
+</Target>
+
 <!-- LLVM builds don't copy .d.ts to types/; fix that here. -->
-<Target Name="MotelyWasmCopyTypes" AfterTargets="MotelyWasmNpmOverlay">
+<Target Name="MotelyWasmCopyTypes" AfterTargets="MotelyWasmNpmOverlay;MotelyWasmCompatOverlay">
 <ItemGroup>
 <_TypeFiles Include="$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\browser-wasm\publish\*.d.ts" />
 </ItemGroup>
@@ -84,21 +99,11 @@ Condition="'@(_MonacoFiles)' != ''" />
 <Copy SourceFiles="@(_TypeFiles)" DestinationFolder="$(BootsharpPublishDirectory)\types" SkipUnchangedFiles="true" />
 </Target>
 
-<!-- motely-wasm-compat: minimal package (index.mjs + types). Same Bootsharp bundle as motely-wasm; no schema/Monaco/README duplication. -->
-<Target Name="MotelyWasmCompatPackage" AfterTargets="MotelyWasmCopyTypes">
-<PropertyGroup>
-<_CompatDir>$(MSBuildProjectDirectory)\motely-wasm-compat</_CompatDir>
-<_CompatTemplate>$(MSBuildProjectDirectory)\..\Motely\package-wasm-compat.json</_CompatTemplate>
-<_CompatScript>$(MSBuildProjectDirectory)\..\scripts\Build-MotelyWasmCompat.ps1</_CompatScript>
-</PropertyGroup>
-<Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(_CompatScript)&quot; -SourcePath &quot;$(MSBuildProjectDirectory)\motely-wasm&quot; -DestinationPath &quot;$(_CompatDir)&quot;" />
-<ReadLinesFromFile File="$(_CompatTemplate)">
-<Output TaskParameter="Lines" ItemName="_CompatPackageJsonLines" />
-</ReadLinesFromFile>
-<WriteLinesToFile
-File="$(_CompatDir)\package.json"
-Lines="@(_CompatPackageJsonLines->Replace('&quot;version&quot;: &quot;0.0.0&quot;', '&quot;version&quot;: &quot;$(Version)&quot;'))"
-Overwrite="true" />
+<!-- Build embedded motely-wasm-compat package in a second publish pass. -->
+<Target Name="MotelyWasmCompatPackage" AfterTargets="MotelyWasmCopyTypes" Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">
+<Exec
+  Command="dotnet publish &quot;$(MSBuildProjectFullPath)&quot; -c $(Configuration) /p:IsMotelyWasmCompatBuild=true"
+  WorkingDirectory="$(MSBuildProjectDirectory)" />
 </Target>
 
 <ItemGroup>
