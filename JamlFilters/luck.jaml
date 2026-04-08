@@ -9,16 +9,15 @@ must:
   - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
-    sources:
-      boosterPacks: [0]
     score: 1000
   - voucher: Hieroglyph
     antes: [1]
+    score: 3
 should:
   - luckyMoney: [0,1,2]
     score: 3
   - luckyMoney: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,16,17,18,19,20]
   - smallBlindTag: NegativeTag
-    score: 10
+    score: 3
 
     
