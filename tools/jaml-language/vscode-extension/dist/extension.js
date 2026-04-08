@@ -18119,6 +18119,7 @@ var vscode = __toESM(require("vscode"));
 var path = __toESM(require("node:path"));
 var fs = __toESM(require("node:fs"));
 var ready = null;
+var activeSearch = null;
 function resolveWasmPath(extPath) {
   const bundled = path.join(extPath, "dist", "motely-wasm.mjs");
   if (fs.existsSync(bundled)) return bundled;
@@ -18149,51 +18150,57 @@ async function getWasm() {
   return ready;
 }
 async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
-  const { MotelyJamlSearchBuilder, SearchEvents } = await getWasm();
+  if (activeSearch) {
+    throw new Error("A JAML search is already running. Stop it before starting another.");
+  }
+  const { MotelyWasmHost, SearchEvents } = await getWasm();
+  const config = MotelyWasmHost.loadJaml(jaml);
   const results = [];
   const startMs = Date.now();
-  const onResultHandler = (seed, score, _tally) => {
-    results.push({ seed, score });
-    onResult(seed, score);
-  };
-  const onProgressHandler = (searched, matching) => {
-    onProgress(searched, matching);
-  };
-  const onCompleteHandler = (status, searched, matched) => {
-    SearchEvents.onResult.unsubscribe(onResultHandler);
-    SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
-    _currentSession = null;
-    onComplete({
-      status,
-      searched: searched.toString(),
-      matched: matched.toString(),
-      results: results.sort((a, b) => b.score - a.score).slice(0, 500),
-      elapsedMs: Date.now() - startMs
-    });
-  };
-  SearchEvents.onResult.subscribe(onResultHandler);
-  SearchEvents.onProgress.subscribe(onProgressHandler);
-  SearchEvents.onComplete.subscribe(onCompleteHandler);
-  try {
-    MotelyJamlSearchBuilder.loadJaml(jaml);
-    MotelyJamlSearchBuilder.random(seedCount);
-    _currentSession = MotelyJamlSearchBuilder.run();
-  } catch (err) {
-    SearchEvents.onResult.unsubscribe(onResultHandler);
-    SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
-    throw err;
-  }
-}
-var _currentSession = null;
-function stopSearch() {
-  if (_currentSession) {
+  return await new Promise((resolve, reject) => {
+    const onResultHandler = (seed, score, _tally) => {
+      results.push({ seed, score });
+      onResult(seed, score);
+    };
+    const onProgressHandler = (searched, matching) => {
+      onProgress(searched, matching);
+    };
+    let session = null;
+    const cleanup = () => {
+      SearchEvents.onResult.unsubscribe(onResultHandler);
+      SearchEvents.onProgress.unsubscribe(onProgressHandler);
+      SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+      if (session && activeSearch === session) activeSearch = null;
+    };
+    const onCompleteHandler = (status, searched, matched) => {
+      cleanup();
+      onComplete({
+        status,
+        searched: searched.toString(),
+        matched: matched.toString(),
+        results: results.sort((a, b) => b.score - a.score).slice(0, 500),
+        elapsedMs: Date.now() - startMs
+      });
+      resolve();
+    };
+    SearchEvents.onResult.subscribe(onResultHandler);
+    SearchEvents.onProgress.subscribe(onProgressHandler);
+    SearchEvents.onComplete.subscribe(onCompleteHandler);
     try {
-      _currentSession.cancel();
+      session = MotelyWasmHost.startRandomSearch(config, seedCount);
+      activeSearch = session;
+    } catch (err) {
+      cleanup();
+      reject(err);
+    }
+  });
+}
+function stopSearch() {
+  if (activeSearch) {
+    try {
+      activeSearch.cancel();
     } catch {
     }
-    _currentSession = null;
   }
 }
 
@@ -18344,11 +18351,14 @@ var JamlNotebookExecutor = class {
     return controller;
   }
   execute(cells, _notebook, controller) {
+    void this.executeSequentially(cells, controller);
+  }
+  async executeSequentially(cells, controller) {
     for (const cell of cells) {
-      this.executeCell(cell, controller);
+      await this.executeCell(cell, controller);
     }
   }
-  executeCell(cell, controller) {
+  async executeCell(cell, controller) {
     const execution = controller.createCellExecution(cell);
     const startTime = Date.now();
     execution.start(startTime);
@@ -18379,34 +18389,37 @@ var JamlNotebookExecutor = class {
         liveOutput
       );
     };
-    runSearch(
-      jaml,
-      1e6,
-      (s, m) => {
-        searched = s;
-        matching = m;
-        renderLive();
-      },
-      (seed, score) => {
-        results.push({ seed, score });
-      },
-      (summary) => {
-        execution.replaceOutputItems(
-          [
-            vscode3.NotebookCellOutputItem.text(buildNotebookHtml(summary.results, summary), "text/html"),
-            vscode3.NotebookCellOutputItem.text(JSON.stringify(summary, null, 2), "application/json")
-          ],
-          liveOutput
-        );
-        execution.end(true, Date.now());
-      }
-    ).catch((err) => {
+    try {
+      await runSearch(
+        jaml,
+        1e6,
+        (s, m) => {
+          searched = s;
+          matching = m;
+          renderLive();
+        },
+        (seed, score) => {
+          results.push({ seed, score });
+        },
+        (summary) => {
+          execution.replaceOutputItems(
+            [
+              vscode3.NotebookCellOutputItem.text(buildNotebookHtml(summary.results, summary), "text/html"),
+              vscode3.NotebookCellOutputItem.text(JSON.stringify(summary, null, 2), "application/json")
+            ],
+            liveOutput
+          );
+          execution.end(true, Date.now());
+        }
+      );
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
       execution.replaceOutputItems(
-        [vscode3.NotebookCellOutputItem.error(err)],
+        [vscode3.NotebookCellOutputItem.error(error)],
         liveOutput
       );
       execution.end(false, Date.now());
-    });
+    }
   }
 };
 function buildNotebookHtml(results, summary) {
