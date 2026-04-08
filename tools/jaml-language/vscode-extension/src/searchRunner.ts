@@ -8,8 +8,31 @@ import * as fs from "node:fs";
  *   2. workspace node_modules — fallback for dev / monorepo setups
  */
 type MotelyWasm = typeof import("motely-wasm");
+type SearchSession = { cancel(): void };
+type SearchEventsApi = {
+  onResult: {
+    subscribe(handler: (seed: string, score: number, tally: Int32Array) => void): void;
+    unsubscribe(handler: (seed: string, score: number, tally: Int32Array) => void): void;
+  };
+  onProgress: {
+    subscribe(handler: (searched: bigint, matching: bigint) => void): void;
+    unsubscribe(handler: (searched: bigint, matching: bigint) => void): void;
+  };
+  onComplete: {
+    subscribe(handler: (status: string, searched: bigint, matched: bigint) => void): void;
+    unsubscribe(handler: (status: string, searched: bigint, matched: bigint) => void): void;
+  };
+};
+type MotelyWasmCompat = MotelyWasm & {
+  MotelyWasmHost: {
+    loadJaml(jaml: string): unknown;
+    startRandomSearch(config: unknown, seedCount: number): SearchSession;
+  };
+  SearchEvents: SearchEventsApi;
+};
 
 let ready: Promise<MotelyWasm> | null = null;
+let activeSearch: SearchSession | null = null;
 
 function resolveWasmPath(extPath: string): string {
   // 1. Bundled in VSIX (placed by esbuild stage step)
@@ -78,55 +101,61 @@ export async function runSearch(
   onResult: OnResult,
   onComplete: OnComplete
 ): Promise<void> {
-  const { MotelyJamlSearchBuilder, SearchEvents } = await getWasm();
+  if (activeSearch) {
+    throw new Error("A JAML search is already running. Stop it before starting another.");
+  }
 
+  const { MotelyWasmHost, SearchEvents } = await getWasm() as MotelyWasmCompat;
+  const config = MotelyWasmHost.loadJaml(jaml);
   const results: SearchResult[] = [];
   const startMs = Date.now();
 
-  const onResultHandler = (seed: string, score: number, _tally: Int32Array) => {
-    results.push({ seed, score });
-    onResult(seed, score);
-  };
+  return await new Promise<void>((resolve, reject) => {
+    const onResultHandler = (seed: string, score: number, _tally: Int32Array) => {
+      results.push({ seed, score });
+      onResult(seed, score);
+    };
 
-  const onProgressHandler = (searched: bigint, matching: bigint) => {
-    onProgress(searched, matching);
-  };
+    const onProgressHandler = (searched: bigint, matching: bigint) => {
+      onProgress(searched, matching);
+    };
 
-  const onCompleteHandler = (status: string, searched: bigint, matched: bigint) => {
-    SearchEvents.onResult.unsubscribe(onResultHandler);
-    SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
-    _currentSession = null;
-    onComplete({
-      status,
-      searched: searched.toString(),
-      matched: matched.toString(),
-      results: results.sort((a, b) => b.score - a.score).slice(0, 500),
-      elapsedMs: Date.now() - startMs,
-    });
-  };
+    let session: SearchSession | null = null;
+    const cleanup = () => {
+      SearchEvents.onResult.unsubscribe(onResultHandler);
+      SearchEvents.onProgress.unsubscribe(onProgressHandler);
+      SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+      if (session && activeSearch === session) activeSearch = null;
+    };
 
-  SearchEvents.onResult.subscribe(onResultHandler);
-  SearchEvents.onProgress.subscribe(onProgressHandler);
-  SearchEvents.onComplete.subscribe(onCompleteHandler);
+    const onCompleteHandler = (status: string, searched: bigint, matched: bigint) => {
+      cleanup();
+      onComplete({
+        status,
+        searched: searched.toString(),
+        matched: matched.toString(),
+        results: results.sort((a, b) => b.score - a.score).slice(0, 500),
+        elapsedMs: Date.now() - startMs,
+      });
+      resolve();
+    };
 
-  try {
-    MotelyJamlSearchBuilder.loadJaml(jaml);
-    MotelyJamlSearchBuilder.random(seedCount);
-    _currentSession = MotelyJamlSearchBuilder.run();
-  } catch (err) {
-    SearchEvents.onResult.unsubscribe(onResultHandler);
-    SearchEvents.onProgress.unsubscribe(onProgressHandler);
-    SearchEvents.onComplete.unsubscribe(onCompleteHandler);
-    throw err;
-  }
+    SearchEvents.onResult.subscribe(onResultHandler);
+    SearchEvents.onProgress.subscribe(onProgressHandler);
+    SearchEvents.onComplete.subscribe(onCompleteHandler);
+
+    try {
+      session = MotelyWasmHost.startRandomSearch(config, seedCount);
+      activeSearch = session;
+    } catch (err) {
+      cleanup();
+      reject(err);
+    }
+  });
 }
 
-let _currentSession: any = null;
-
 export function stopSearch(): void {
-  if (_currentSession) {
-    try { _currentSession.cancel(); } catch { }
-    _currentSession = null;
+  if (activeSearch) {
+    try { activeSearch.cancel(); } catch { }
   }
 }

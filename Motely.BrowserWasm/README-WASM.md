@@ -1,14 +1,14 @@
 # motely-wasm (NativeAOT-LLVM + Bootsharp)
 
-This project compiles Motely to **browser WASM** with **Bootsharp** interop. Prefer **`createPlan` → chain on `settings` (same as `JamlSearchBuilder` / `IMotelySearchSettings` in C#) → `runSearch`**; the `start*` helpers are optional shortcuts. Progress/results go through **`SearchEvents`**.
+This project compiles Motely to **browser WASM** with **Bootsharp** interop. Prefer **`MotelyJamlSearchBuilder`** for new code (`loadJaml`/`compileJummy` → search mode → `run`). The legacy **`MotelyWasmHost`** `start*` helpers are still exported for compatibility. Progress/results go through **`SearchEvents`**.
 
 The **`Program`** class here is only the **runtime bootstrap** (`Main` → `RunBootsharp()`). Do not confuse it with `Motely.CLI`.
 
-**Bootsharp glue** (`JSExport` / `JSImport` / `JSPreferences`) is isolated in **`BootsharpInterop.cs`** so you can ignore it while working in C#. **`MotelyJamlSearchBuilder`** (search), **`MotelySingleSearchContext`** (seed inspection), and **`SearchEvents`** (progress/results) are the real API surface.
+**Bootsharp glue** (`JSExport` / `JSImport` / `JSPreferences`) is isolated in **`BootsharpInterop.cs`** so you can ignore it while working in C#. **`MotelyJamlSearchBuilder`** (preferred search API), **`MotelyWasmHost`** (compatibility wrapper), **`MotelySingleSearchContext`** (seed inspection), and **`SearchEvents`** (progress/results) are the real API surface.
 
 After `dotnet publish` on this project, the npm package is emitted under `motely-wasm/` (and `motely-wasm-compat/` is built by the csproj target).
 
-**Breaking change (v7.0.4):** the old `MotelyWasmHost` namespace is gone. Use `MotelyJamlSearchBuilder` (builder pattern: `loadJaml` → `random`/`sequential`/etc → `run`), `MotelySingleSearchContext.open(seed, deck, stake)`, and `SearchEvents`.
+**API note:** `MotelyJamlSearchBuilder` is the preferred API (`loadJaml` → `random`/`sequential`/etc → `run`), but `MotelyWasmHost` remains available for older callers (`loadJaml`, `startRandomSearch`, `stopSearch`, etc.).
 
 **Sequential batch size:** `batchCharCount` applies only to **sequential** search (`startSequentialSearch*`, and `startConfiguredSearch` when the JAML has **no** `aesthetics`). Keyword/random/aesthetic/seed-list modes are **provider** searches and do **not** take `batchCharCount` (the engine uses fixed vector-width batches).
 

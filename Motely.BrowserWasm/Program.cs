@@ -14,8 +14,11 @@ public static class Program
         {
             new ServiceCollection()
                 .AddBootsharp()
-                .AddSingleton<IMotelySingleSearchContext, MotelySingleSearchContext>()
-                .AddSingleton<IMotelyJamlSearchBuilder, MotelyJamlSearchBuilder>()
+                .AddSingleton<MotelySingleSearchContext>()
+                .AddSingleton<IMotelySingleSearchContext>(static sp => sp.GetRequiredService<MotelySingleSearchContext>())
+                .AddSingleton<MotelyJamlSearchBuilder>()
+                .AddSingleton<IMotelyJamlSearchBuilder>(static sp => sp.GetRequiredService<MotelyJamlSearchBuilder>())
+                .AddSingleton<IMotelyWasmHost, MotelyWasmHost>()
                 .BuildServiceProvider()
                 .RunBootsharp();
         }
