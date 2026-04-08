@@ -145,7 +145,7 @@
     "@types/vscode": "1.97.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.0",
-    "motely-wasm": "^7.0.4",
+    "motely-wasm": "^7.0.5",
     "typescript": "^5.9.2"
   }
 }

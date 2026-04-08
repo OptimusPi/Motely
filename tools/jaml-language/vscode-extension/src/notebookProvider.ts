@@ -54,12 +54,19 @@ export class JamlNotebookExecutor {
     _notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController
   ): void {
+    void this.executeSequentially(cells, controller);
+  }
+
+  private async executeSequentially(
+    cells: vscode.NotebookCell[],
+    controller: vscode.NotebookController
+  ): Promise<void> {
     for (const cell of cells) {
-      this.executeCell(cell, controller);
+      await this.executeCell(cell, controller);
     }
   }
 
-  private executeCell(cell: vscode.NotebookCell, controller: vscode.NotebookController): void {
+  private async executeCell(cell: vscode.NotebookCell, controller: vscode.NotebookController): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const execution = (controller as any).createCellExecution(cell);
     const startTime = Date.now();
@@ -96,28 +103,31 @@ export class JamlNotebookExecutor {
       );
     };
 
-    runSearch(
-      jaml,
-      1_000_000,
-      (s, m) => { searched = s; matching = m; renderLive(); },
-      (seed, score) => { results.push({ seed, score }); },
-      (summary) => {
-        execution.replaceOutputItems(
-          [
-            vscode.NotebookCellOutputItem.text(buildNotebookHtml(summary.results, summary), "text/html"),
-            vscode.NotebookCellOutputItem.text(JSON.stringify(summary, null, 2), "application/json"),
-          ],
-          liveOutput
-        );
-        execution.end(true, Date.now());
-      }
-    ).catch(err => {
+    try {
+      await runSearch(
+        jaml,
+        1_000_000,
+        (s, m) => { searched = s; matching = m; renderLive(); },
+        (seed, score) => { results.push({ seed, score }); },
+        (summary) => {
+          execution.replaceOutputItems(
+            [
+              vscode.NotebookCellOutputItem.text(buildNotebookHtml(summary.results, summary), "text/html"),
+              vscode.NotebookCellOutputItem.text(JSON.stringify(summary, null, 2), "application/json"),
+            ],
+            liveOutput
+          );
+          execution.end(true, Date.now());
+        }
+      );
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
       execution.replaceOutputItems(
-        [vscode.NotebookCellOutputItem.error(err)],
+        [vscode.NotebookCellOutputItem.error(error)],
         liveOutput
       );
       execution.end(false, Date.now());
-    });
+    }
   }
 }
 

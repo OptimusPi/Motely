@@ -8,6 +8,7 @@ namespace MotelyJaml;
 public interface IMotelyJamlSearchBuilder
 {
     string GetVersion();
+    MotelyJamlSearchBuilder LoadConfig(JamlConfig config);
     MotelyJamlSearchBuilder LoadJaml(string jaml);
     MotelyJamlSearchBuilder CompileJummy(string jummy);
     MotelyJamlSearchBuilder Configured(int batchCharCount, long startBatch, long endBatch);
@@ -53,6 +54,14 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
     public string GetVersion()
     {
         return VersionInfo.Version;
+    }
+
+    public MotelyJamlSearchBuilder LoadConfig(JamlConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        ClearPlan();
+        _config = config;
+        return this;
     }
 
     public MotelyJamlSearchBuilder LoadJaml(string jaml)

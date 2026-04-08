@@ -2,8 +2,7 @@ import { CompletionItemKind, createConnection, DiagnosticSeverity, DidChangeConf
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { parse as parseYaml } from "yaml";
 import { readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { CLAUSE_KEYS, JAML_ROOT_KEYS, looksLikeJson, unknownRootKeys, } from "@motely/jaml-language-core";
 // ── Schema-driven value data ────────────────────────────────────────────────
 /** Map from JAML key → list of valid enum values, built from jaml.schema.json. */
@@ -11,7 +10,7 @@ const VALUE_MAP = new Map();
 function loadSchemaValues() {
     // Schema lives next to the bundled server.js (esbuild copies it during build).
     // Fallback: repo root (dev mode).
-    const here = typeof __dirname !== "undefined" ? __dirname : dirname(fileURLToPath(import.meta.url));
+    const here = __dirname;
     const candidates = [
         resolve(here, "jaml.schema.json"),
         resolve(here, "..", "jaml.schema.json"),
