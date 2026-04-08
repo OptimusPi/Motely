@@ -18197,8 +18197,10 @@ async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
 }
 function stopSearch() {
   if (activeSearch) {
+    const search = activeSearch;
+    activeSearch = null;
     try {
-      activeSearch.cancel();
+      search.cancel();
     } catch {
     }
   }
