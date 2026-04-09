@@ -99,6 +99,14 @@ Overwrite="true" />
 <Copy SourceFiles="@(_TypeFiles)" DestinationFolder="$(BootsharpPublishDirectory)\types" SkipUnchangedFiles="true" />
 </Target>
 
+<!-- NodeNext consumers can fail to resolve namespace exports through export *.
+     Patch types/index.d.ts with explicit named re-exports from bindings.g. -->
+<Target Name="MotelyWasmPatchTypeExports" AfterTargets="MotelyWasmCopyTypes">
+<Exec Condition="Exists('$(BootsharpPublishDirectory)\types\index.d.ts')"
+      Command="node -e &quot;const fs=require('fs');const file='types/index.d.ts';const line='export { Analysis, BrowserWasm, Filters, Motely, MotelyJaml, MotelyJamlSearchBuilder, MotelySearchSession, MotelySingleSearchContext, MotelyWasmHost, SearchEvents } from \&quot;./bindings.g\&quot;;';let text=fs.readFileSync(file,'utf8');if(!text.includes(line)){text += (text.endsWith('\n')?'':'\n') + line + '\n';}fs.writeFileSync(file,text);&quot;"
+      WorkingDirectory="$(BootsharpPublishDirectory)" />
+</Target>
+
 <!-- Build embedded motely-wasm-compat package in a second publish pass. -->
 <Target Name="MotelyWasmCompatPackage" AfterTargets="MotelyWasmCopyTypes" Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">
 <Exec

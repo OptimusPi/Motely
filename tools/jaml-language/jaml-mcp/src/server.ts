@@ -11,22 +11,49 @@ import {
   CLAUSE_KEYS,
 } from "@motely/jaml-language-core";
 
-// ── WASM engine (lazy-loaded) ──────────────────────────────────────────────
-// motely-wasm v7.0.4: NativeAOT-LLVM, works in Node/Bun/Deno/browser
-let wasmBooted = false;
+import * as motely from "motely-wasm-compat";
+
+// ── WASM engine (direct Bootsharp contract) ────────────────────────────────
+let bootPromise: Promise<void> | null = null;
 type SearchSession = { cancel(): void };
 let currentSession: SearchSession | null = null;
+const bootsharp = motely.default;
+const { Motely, MotelyWasmHost, SearchEvents } = motely;
+type MotelyWasmHostExtended = typeof MotelyWasmHost & {
+  singleGetBossForAnte(
+    seed: string,
+    deck: number,
+    stake: number,
+    ante: number
+  ): number;
+  singleGetNextTag(
+    seed: string,
+    deck: number,
+    stake: number,
+    ante: number
+  ): number;
+  singleGetAnteFirstVoucher(
+    seed: string,
+    deck: number,
+    stake: number,
+    ante: number
+  ): number;
+  singleGetNextShopItem(
+    seed: string,
+    deck: number,
+    stake: number,
+    ante: number
+  ): unknown;
+  startRandomSearchFromJaml(jaml: string, seedCount: number): SearchSession;
+};
+const Host = MotelyWasmHost as unknown as MotelyWasmHostExtended;
 
-async function bootWasm(): Promise<void> {
-  if (wasmBooted) return;
-  const wasm = await import("motely-wasm");
-  await wasm.default.boot();
-  wasmBooted = true;
-}
-
-async function getWasm(): Promise<any> {
-  await bootWasm();
-  return await import("motely-wasm");
+async function ensureBooted(): Promise<void> {
+  bootPromise ??= bootsharp.boot().then(() => {}).catch((err: unknown) => {
+    bootPromise = null;
+    throw err;
+  });
+  await bootPromise;
 }
 
 // ── Paths ──────────────────────────────────────────────────────────────────
@@ -73,7 +100,7 @@ server.tool(
   {},
   async () => {
     try {
-      const { MotelyWasmHost } = await getWasm();
+      await ensureBooted();
       return { content: [{ type: "text" as const, text: MotelyWasmHost.getVersion() }] };
     } catch (err) {
       return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -88,7 +115,7 @@ server.tool(
   { jaml: z.string().describe("JAML filter text (YAML or JSON)") },
   async ({ jaml }) => {
     try {
-      const { MotelyWasmHost } = await getWasm();
+      await ensureBooted();
       const config = MotelyWasmHost.loadJaml(jaml);
       return {
         content: [{
@@ -114,7 +141,7 @@ server.tool(
   { jummy: z.string().describe("Jummy source text to compile") },
   async ({ jummy }) => {
     try {
-      const { MotelyWasmHost } = await getWasm();
+      await ensureBooted();
       const config = MotelyWasmHost.compileJummy(jummy);
       return {
         content: [{
@@ -137,7 +164,7 @@ server.tool(
 // Tool: inspect_seed — look up what a specific seed produces
 server.tool(
   "inspect_seed",
-  "Inspect a specific seed. Creates a MotelyWasmHost.motelySingleSearchContext and queries what jokers, vouchers, bosses, tags, booster packs, and shop items appear at each ante.",
+  "Inspect a specific seed via MotelyWasmHost single-query APIs and report bosses, tags, vouchers, booster packs, and shop items per ante.",
   {
     seed: z.string().describe("The seed to inspect (e.g. 'ABC123')"),
     deck: z.string().describe("Deck name (e.g. 'Red')"),
@@ -146,23 +173,20 @@ server.tool(
   },
   async ({ seed, deck, stake, antes }) => {
     try {
-      const { MotelyWasmHost, Motely } = await getWasm();
+      await ensureBooted();
       const deckEnum = Motely.MotelyDeck[deck as keyof typeof Motely.MotelyDeck];
       const stakeEnum = Motely.MotelyStake[stake as keyof typeof Motely.MotelyStake];
       if (deckEnum === undefined) return { content: [{ type: "text" as const, text: `Unknown deck '${deck}'. Valid: ${Object.keys(Motely.MotelyDeck).filter(k => isNaN(Number(k))).join(", ")}` }], isError: true };
       if (stakeEnum === undefined) return { content: [{ type: "text" as const, text: `Unknown stake '${stake}'. Valid: ${Object.keys(Motely.MotelyStake).filter(k => isNaN(Number(k))).join(", ")}` }], isError: true };
 
-      const ctx = MotelyWasmHost.motelySingleSearchContext(seed, deckEnum, stakeEnum);
       const result: Record<string, any> = { seed, deck, stake };
 
       for (let ante = 1; ante <= antes; ante++) {
         result[`ante${ante}`] = {
-          boss: ctx.getBossForAnte(ante),
-          tag: ctx.getNextTag(ante),
-          voucher: ctx.getAnteFirstVoucher(ante),
-          boosterPack: ctx.getNextBoosterPack(ante),
-          shopItem: ctx.getNextShopItem(ante),
-          shopJoker: ctx.getNextShopJoker(ante),
+          boss: Host.singleGetBossForAnte(seed, deckEnum, stakeEnum, ante),
+          tag: Host.singleGetNextTag(seed, deckEnum, stakeEnum, ante),
+          voucher: Host.singleGetAnteFirstVoucher(seed, deckEnum, stakeEnum, ante),
+          shopItem: Host.singleGetNextShopItem(seed, deckEnum, stakeEnum, ante),
         };
       }
 
@@ -192,14 +216,13 @@ server.tool(
         return { content: [{ type: "text" as const, text: "A search is already running." }], isError: true };
       }
 
-      const { MotelyWasmHost, SearchEvents } = await getWasm();
-      const config = MotelyWasmHost.loadJaml(jaml);
+      await ensureBooted();
 
       return await new Promise((resolve, reject) => {
-        const results: Array<{ seed: string; score: number }> = [];
+        const results: Array<{ seed: string; score: number; tally: Int32Array }> = [];
 
-        const resultHandler = (seed: string, score: number, _tally: Int32Array) => {
-          results.push({ seed, score });
+        const resultHandler = (seed: string, score: number, tally: Int32Array) => {
+          results.push({ seed, score, tally });
         };
 
         let session: SearchSession | null = null;
@@ -230,7 +253,7 @@ server.tool(
         SearchEvents.onComplete.subscribe(completeHandler);
 
         try {
-          session = MotelyWasmHost.startRandomSearch(config, seed_count);
+          session = Host.startRandomSearchFromJaml(jaml, seed_count);
           currentSession = session;
         } catch (err) {
           cleanup();

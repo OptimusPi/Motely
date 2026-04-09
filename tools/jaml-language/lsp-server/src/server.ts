@@ -81,6 +81,32 @@ loadSchemaValues();
 const connection = createConnection(ProposedFeatures.all);
 const documents = new Map<string, TextDocument>();
 
+function normalizeEnumVariant(value: string): string {
+  return value.replace(/[\s_\-'.]/g, "").toLowerCase();
+}
+
+function preferEnumVariant(current: string, candidate: string): string {
+  // Prefer friendlier literals over legacy lowercase compact aliases.
+  const rank = (v: string): number => {
+    if (v === "Any") return 5;
+    if (v.startsWith("Any") && /[A-Z]/.test(v.slice(1))) return 4;
+    if (/^[A-Z][A-Za-z0-9]*$/.test(v)) return 3;
+    if (v.includes(" ")) return 2;
+    return 1;
+  };
+  return rank(candidate) > rank(current) ? candidate : current;
+}
+
+function dedupeEnumVariants(values: string[]): string[] {
+  const byNormalized = new Map<string, string>();
+  for (const value of values) {
+    const key = normalizeEnumVariant(value);
+    const existing = byNormalized.get(key);
+    byNormalized.set(key, existing ? preferEnumVariant(existing, value) : value);
+  }
+  return Array.from(byNormalized.values());
+}
+
 /** Detect which JAML key the cursor is on: returns the key if the line is `key: <cursor>`. */
 function getKeyAtLine(line: string): string | null {
   const m = line.match(/^\s*(\w[\w-]*):\s*/);
@@ -189,7 +215,7 @@ connection.onCompletion((params: TextDocumentPositionParams) => {
   if (key) {
     const values = VALUE_MAP.get(key);
     if (values) {
-      return values.map((v) => ({
+      return dedupeEnumVariants(values).map((v) => ({
         label: v,
         kind: CompletionItemKind.EnumMember,
         detail: `${key} value`,

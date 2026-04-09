@@ -16490,6 +16490,28 @@ function loadSchemaValues() {
 loadSchemaValues();
 var connection = (0, import_node.createConnection)(import_node.ProposedFeatures.all);
 var documents = /* @__PURE__ */ new Map();
+function normalizeEnumVariant(value) {
+  return value.replace(/[\s_\-'.]/g, "").toLowerCase();
+}
+function preferEnumVariant(current, candidate) {
+  const rank = (v) => {
+    if (v === "Any") return 5;
+    if (v.startsWith("Any") && /[A-Z]/.test(v.slice(1))) return 4;
+    if (/^[A-Z][A-Za-z0-9]*$/.test(v)) return 3;
+    if (v.includes(" ")) return 2;
+    return 1;
+  };
+  return rank(candidate) > rank(current) ? candidate : current;
+}
+function dedupeEnumVariants(values) {
+  const byNormalized = /* @__PURE__ */ new Map();
+  for (const value of values) {
+    const key = normalizeEnumVariant(value);
+    const existing = byNormalized.get(key);
+    byNormalized.set(key, existing ? preferEnumVariant(existing, value) : value);
+  }
+  return Array.from(byNormalized.values());
+}
 function getKeyAtLine(line) {
   const m = line.match(/^\s*(\w[\w-]*):\s*/);
   return m ? m[1] : null;
@@ -16575,7 +16597,7 @@ connection.onCompletion((params) => {
   if (key) {
     const values = VALUE_MAP.get(key);
     if (values) {
-      return values.map((v) => ({
+      return dedupeEnumVariants(values).map((v) => ({
         label: v,
         kind: import_node.CompletionItemKind.EnumMember,
         detail: `${key} value`

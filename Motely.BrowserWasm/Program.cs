@@ -16,6 +16,8 @@ public static class Program
                 .AddBootsharp()
                 .AddSingleton<MotelySingleSearchContext>()
                 .AddSingleton<IMotelySingleSearchContext>(static sp => sp.GetRequiredService<MotelySingleSearchContext>())
+                .AddSingleton(Motely.Analysis.MotelySingleSearchContextImpl.Placeholder)
+                .AddSingleton<Motely.Analysis.IMotelySingleSearchContextImpl>(static sp => sp.GetRequiredService<Motely.Analysis.MotelySingleSearchContextImpl>())
                 .AddSingleton<MotelyJamlSearchBuilder>()
                 .AddSingleton<IMotelyJamlSearchBuilder>(static sp => sp.GetRequiredService<MotelyJamlSearchBuilder>())
                 .AddSingleton<MotelyWasmHost>()

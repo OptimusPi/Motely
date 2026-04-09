@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { runSearch } from "./searchRunner.js";
+import type { SearchResult, SearchSummary } from "./searchRunner.js";
 
 interface JamlCell {
   kind: "filter" | "markdown";
@@ -74,7 +75,7 @@ export class JamlNotebookExecutor {
     execution.clearOutput();
 
     const jaml = cell.document.getText();
-    const results: { seed: string; score: number }[] = [];
+    const results: SearchResult[] = [];
     let searched = 0n;
     let matching = 0n;
 
@@ -108,7 +109,7 @@ export class JamlNotebookExecutor {
         jaml,
         1_000_000,
         (s, m) => { searched = s; matching = m; renderLive(); },
-        (seed, score) => { results.push({ seed, score }); },
+        (seed, score, tally) => { results.push({ seed, score, tally }); },
         (summary) => {
           execution.replaceOutputItems(
             [
@@ -131,10 +132,13 @@ export class JamlNotebookExecutor {
   }
 }
 
-function buildNotebookHtml(results: { seed: string; score: number }[], summary: { status: string; searched: string; matched: string; elapsedMs: number }): string {
+function buildNotebookHtml(
+  results: SearchResult[],
+  summary: Pick<SearchSummary, "status" | "searched" | "matched" | "elapsedMs">
+): string {
   const isRunning = summary.status === "running";
   const rows = results.slice(0, 200).map(r =>
-    `<tr><td style="font-weight:600;letter-spacing:.05em;padding:2px 8px">${r.seed}</td><td style="padding:2px 8px;opacity:.6">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
+    `<tr><td style="font-weight:600;letter-spacing:.05em;padding:2px 8px">${r.seed}</td><td style="padding:2px 8px;opacity:.6">${r.score > 0 ? r.score : "\u2014"}</td><td style="padding:2px 8px;opacity:.6">[${Array.from(r.tally).join(", ")}]</td></tr>`
   ).join("");
   const searchedFmt = Number(BigInt(summary.searched)).toLocaleString();
   const statusLine = isRunning
@@ -146,6 +150,7 @@ function buildNotebookHtml(results: { seed: string; score: number }[], summary: 
   <thead><tr>
     <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Seed</th>
     <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Score</th>
+    <th style="text-align:left;padding:2px 8px;opacity:.5;font-weight:normal">Tally</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>`;
