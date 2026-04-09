@@ -2,15 +2,16 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node";
-import { init as initSearch, runSearch, stopSearch } from "./searchRunner.js";
-import { ResultsPanel } from "./resultsPanel.js";
+import { runSearch, stopSearch } from "./searchRunner.js";
 import { JamlNotebookSerializer, JamlNotebookExecutor } from "./notebookProvider.js";
 
 let client: LanguageClient | null = null;
+let searchOutput: vscode.OutputChannel | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const extPath = context.extensionPath;
-  initSearch(extPath);
+  searchOutput = vscode.window.createOutputChannel("JAML Search");
+  context.subscriptions.push(searchOutput);
 
   // -- LSP ----------------------------------------------------------------
   const serverModule = path.join(extPath, "dist", "server.js");
@@ -50,24 +51,36 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const doc = docArg ?? vscode.window.activeTextEditor?.document;
       if (!doc) return;
 
-      const panel = ResultsPanel.getOrCreate(context.extensionUri);
       const jaml = doc.getText();
-      panel.searching(jaml.slice(0, 60).replace(/\n/g, "  ").trim() + "\u2026");
+      const output = searchOutput ?? vscode.window.createOutputChannel("JAML Search");
+      searchOutput = output;
+      output.clear();
+      output.show(true);
+      output.appendLine("JAML Search");
+      output.appendLine("");
+      output.appendLine(`Filter: ${jaml.slice(0, 120).replace(/\s+/g, " ").trim()}`);
+      output.appendLine("");
 
       try {
         await runSearch(
           jaml, 1_000_000,
           (_s, m) => vscode.window.setStatusBarMessage(`JAML: ${m} hits\u2026`, 500),
-          (seed, score) => panel.addResult(seed, score),
+          (seed, score, tally) => {
+            output.appendLine(
+              `${seed}\t${score}\t[${Array.from(tally).join(", ")}]`
+            );
+          },
           (summary) => {
-            panel.done(summary);
+            output.appendLine("");
+            output.appendLine(
+              `Done: ${summary.matched} matches in ${summary.searched} seeds (${summary.elapsedMs}ms) status=${summary.status}`
+            );
             vscode.window.setStatusBarMessage(
               `JAML: ${summary.matched} matches in ${summary.searched} seeds (${summary.elapsedMs}ms)`, 5000
             );
           }
         );
       } catch (err) {
-        panel.error((err as Error).message);
         vscode.window.showErrorMessage(`JAML Search error: ${(err as Error).message}`);
       }
     }),

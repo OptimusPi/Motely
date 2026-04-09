@@ -13,6 +13,10 @@ public record MotelyJsRunState(int VoucherBitfield, int BossBitfield)
     }
 }
 
+public record MotelyBossStateResult(MotelyBossBlind Boss, MotelyJsRunState RunState);
+
+public record MotelyVoucherStateResult(MotelyVoucher Voucher, MotelyJsRunState RunState);
+
 public ref struct MotelyRunState
 {
     private static readonly int FinisherBossBlindMask;

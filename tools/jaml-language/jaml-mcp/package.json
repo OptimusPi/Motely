@@ -16,7 +16,7 @@
     "@modelcontextprotocol/ext-apps": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@motely/jaml-language-core": "workspace:*",
-    "motely-wasm": "file:../../../Motely.BrowserWasm/motely-wasm",
+    "motely-wasm-compat": "^7.0.8",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },

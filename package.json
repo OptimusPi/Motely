@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "cd Motely.TestWebsite && npm run dev",
     "build": "cd Motely.TestWebsite && npm run build",
-    "preview": "cd Motely.TestWebsite && npm run preview"
+    "preview": "cd Motely.TestWebsite && npm run preview",
+    "test:motely-direct-contract": "node scripts/test-motely-direct-contract.mjs",
+    "test:motely-wasm-compat-contract": "node --test scripts/test-motely-wasm-compat.contract.test.mjs"
   }
 }
