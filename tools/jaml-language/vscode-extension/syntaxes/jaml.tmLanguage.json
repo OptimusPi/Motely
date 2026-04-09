@@ -99,12 +99,88 @@
         {
           "begin": "\"",
           "end": "\"",
-          "name": "string.quoted.double.jaml"
+          "name": "string.quoted.double.jaml",
+          "patterns": [
+            {
+              "include": "#wildcards"
+            },
+            {
+              "include": "#jokers"
+            },
+            {
+              "include": "#vouchers"
+            },
+            {
+              "include": "#bosses"
+            },
+            {
+              "include": "#tags"
+            },
+            {
+              "include": "#tarots"
+            },
+            {
+              "include": "#spectrals"
+            },
+            {
+              "include": "#planets"
+            },
+            {
+              "include": "#deckStake"
+            },
+            {
+              "include": "#editions"
+            },
+            {
+              "include": "#modifiers"
+            },
+            {
+              "include": "#aesthetics"
+            }
+          ]
         },
         {
           "begin": "'",
           "end": "'",
-          "name": "string.quoted.single.jaml"
+          "name": "string.quoted.single.jaml",
+          "patterns": [
+            {
+              "include": "#wildcards"
+            },
+            {
+              "include": "#jokers"
+            },
+            {
+              "include": "#vouchers"
+            },
+            {
+              "include": "#bosses"
+            },
+            {
+              "include": "#tags"
+            },
+            {
+              "include": "#tarots"
+            },
+            {
+              "include": "#spectrals"
+            },
+            {
+              "include": "#planets"
+            },
+            {
+              "include": "#deckStake"
+            },
+            {
+              "include": "#editions"
+            },
+            {
+              "include": "#modifiers"
+            },
+            {
+              "include": "#aesthetics"
+            }
+          ]
         }
       ]
     },

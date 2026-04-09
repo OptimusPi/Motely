@@ -14,16 +14,6 @@ const production = process.argv.includes("--production");
 const schemaSrc = resolve(__dirname, "..", "..", "..", "jaml.schema.json");
 const schemaDst = resolve(__dirname, "jaml.schema.json");
 
-// 2. WASM engine → dist/motely-wasm.mjs  (self-contained VSIX).
-//    Tries: local dotnet publish output, then workspace node_modules.
-const wasmCandidates = [
-  resolve(__dirname, "..", "..", "..", "Motely.BrowserWasm", "motely-wasm-compat", "index.mjs"),
-  resolve(__dirname, "..", "..", "..", "Motely.BrowserWasm", "motely-wasm", "index.mjs"),
-  resolve(__dirname, "node_modules", "motely-wasm-compat", "index.mjs"),
-  resolve(__dirname, "node_modules", "motely-wasm", "index.mjs"),
-];
-const wasmDst = resolve(__dirname, "dist", "motely-wasm.mjs");
-
 function stageAssets() {
   mkdirSync(resolve(__dirname, "dist"), { recursive: true });
 
@@ -35,18 +25,6 @@ function stageAssets() {
   }
   copyFileSync(schemaSrc, schemaDst);
   console.log("Staged jaml.schema.json");
-
-  // WASM (optional — extension still builds for LSP-only without it)
-  const wasmSrc = wasmCandidates.find((p) => existsSync(p));
-  if (wasmSrc) {
-    copyFileSync(wasmSrc, wasmDst);
-    console.log("Staged motely-wasm.mjs from", wasmSrc);
-  } else {
-    console.warn(
-      "WARNING: No WASM engine found. The VSIX will have LSP + syntax only (no search).\n" +
-      "To include search, run:  dotnet publish Motely.BrowserWasm -c Release"
-    );
-  }
 }
 
 stageAssets();

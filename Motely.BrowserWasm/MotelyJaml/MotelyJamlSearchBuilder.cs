@@ -323,7 +323,15 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         settings = settings.WithScoredResultCallback(t =>
             _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray()));
 
-        var search = settings.Start();
+        IMotelySearch search;
+        try
+        {
+            search = settings.Start();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"MotelyJamlSearchBuilder settings.Start() failed: {ex.Message}", ex);
+        }
         _ = NotifyOnCompletionAsync(search);
         return new MotelySearchSession(search);
     }

@@ -207,8 +207,7 @@ must:
 
 <script type="module">
 // ── MCP App bridge ─────────────────────────────────────────────────────────
-// We use postMessage to communicate with the MCP host.
-// If ext-apps SDK is available, use it; otherwise fall back to direct postMessage.
+// This UI runs inside an MCP Apps host and talks to tools via ext-apps.
 
 let app = null;
 const isInIframe = window.self !== window.top;
@@ -235,16 +234,21 @@ async function initApp() {
     if (ctx?.toolInfo?.arguments?.jaml) {
       editor.value = ctx.toolInfo.arguments.jaml;
     }
-  } catch {
-    // Running standalone or SDK not available — that's fine
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    setStatus("MCP host unavailable", "error");
+    showDiagnostics([{ severity: "error", message: `Failed to connect to MCP host: ${message}` }]);
+    runBtn.disabled = true;
+    stopBtn.disabled = true;
+    validateBtn.disabled = true;
   }
 }
 
 async function callServerTool(name, args) {
-  if (app) {
-    return await app.callServerTool({ name, arguments: args });
+  if (!app) {
+    throw new Error("MCP host is not connected.");
   }
-  return null;
+  return await app.callServerTool({ name, arguments: args });
 }
 
 async function pushContext(text) {
@@ -314,20 +318,13 @@ validateBtn.addEventListener("click", async () => {
   const jaml = editor.value.trim();
   if (!jaml) return;
 
-  setStatus("Validating...", "running");
-  const result = await callServerTool("validate_jaml", { jaml });
-
-  if (result) {
+  try {
+    setStatus("Validating...", "running");
+    const result = await callServerTool("validate_jaml", { jaml });
     handleValidation(JSON.parse(result.content?.[0]?.text || "{}"));
-  } else {
-    // Local validation fallback (basic)
-    try {
-      setStatus("Valid", "done");
-      showDiagnostics([]);
-    } catch (e) {
-      setStatus("Invalid", "error");
-      showDiagnostics([{ severity: "error", message: e.message }]);
-    }
+  } catch (err) {
+    setStatus("Validation failed", "error");
+    showDiagnostics([{ severity: "error", message: err instanceof Error ? err.message : String(err) }]);
   }
 });
 
@@ -356,15 +353,14 @@ runBtn.addEventListener("click", async () => {
 
   const seedCount = parseInt(seedCountInput.value) || 100000;
 
-  // Call the server tool
-  const result = await callServerTool("run_search", { jaml, seed_count: seedCount });
-
-  if (result) {
+  try {
+    // Call the server tool
+    const result = await callServerTool("run_search", { jaml, seed_count: seedCount });
     const data = JSON.parse(result.content?.[0]?.text || "{}");
     handleSearchResults(data);
-  } else {
-    // If no MCP connection, show a message
-    setStatus("No WASM engine — install motely-wasm", "error");
+  } catch (err) {
+    setStatus("Search failed", "error");
+    showDiagnostics([{ severity: "error", message: err instanceof Error ? err.message : String(err) }]);
     searching = false;
     runBtn.disabled = false;
     stopBtn.disabled = true;
@@ -406,29 +402,6 @@ stopBtn.addEventListener("click", async () => {
   runBtn.disabled = false;
   stopBtn.disabled = true;
   progressEl.classList.remove("visible");
-});
-
-// ── Listen for messages from parent (non-SDK mode) ─────────────────────────
-window.addEventListener("message", (event) => {
-  const msg = event.data;
-  if (!msg || typeof msg !== "object") return;
-
-  if (msg.type === "jaml-set-filter") {
-    editor.value = msg.jaml || "";
-  }
-  if (msg.type === "jaml-search-progress") {
-    progressText.textContent = `Searched ${Number(msg.searched).toLocaleString()} / ${Number(msg.matching).toLocaleString()} matching`;
-    if (msg.total) {
-      progressBar.style.width = `${Math.min(100, (Number(msg.searched) / Number(msg.total)) * 100)}%`;
-    }
-  }
-  if (msg.type === "jaml-search-result") {
-    allResults.push({ seed: msg.seed, score: msg.score });
-    renderResults(allResults);
-  }
-  if (msg.type === "jaml-search-complete") {
-    handleSearchResults(msg);
-  }
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────

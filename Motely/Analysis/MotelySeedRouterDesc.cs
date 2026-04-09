@@ -44,8 +44,33 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
     public void Dispose() => _ownedSearch?.Dispose();
 }
 
-public sealed class MotelySingleSearchContextImpl
+public interface IMotelySingleSearchContextImpl
 {
+    string GetSeed();
+    double PseudoHash(string key, bool isCached = false);
+    MotelyVoucher GetAnteFirstVoucher(int ante);
+    MotelyVoucherStateResult GetAnteFirstVoucherStateful(int ante, MotelyJsRunState jsState);
+    MotelyTag GetNextTag(int ante);
+    MotelyBossBlind GetBossForAnte(int ante);
+    MotelyBossStateResult GetBossForAnteStateful(int ante, MotelyJsRunState jsState);
+    MotelyVoucher GetAnteFirstVoucherWithState(int ante, MotelyJsRunState jsState);
+    MotelyBoosterPack GetNextBoosterPack(int ante);
+    MotelyItem GetNextShopItem(int ante);
+    MotelyItem GetNextShopJoker(int ante);
+    MotelyItem GetNextTarot(int ante);
+    MotelyItem GetNextSpectral(int ante);
+    MotelyItem GetNextPlanet(int ante);
+    MotelyItem GetNextStandardCard(int ante);
+    int GetNextMisprintMult();
+    bool GetNextLuckyMoney(double baseLuck = 1);
+    bool GetNextLuckyMult(double baseLuck = 1);
+    MotelyItem GetNextErraticDeckCard();
+}
+
+public sealed class MotelySingleSearchContextImpl : IMotelySingleSearchContextImpl
+{
+    public static readonly MotelySingleSearchContextImpl Placeholder = new(null!);
+
     private readonly MotelySeedRouterDesc _router;
 
     // Per-ante stream state
@@ -67,12 +92,27 @@ public sealed class MotelySingleSearchContextImpl
 
     public MotelySingleSearchContextImpl(MotelySeedRouterDesc router) => _router = router;
 
-    private MotelySingleSearchContext Ctx() => _router.Instance();
+    private MotelySingleSearchContext Ctx()
+    {
+        if (ReferenceEquals(_router, null))
+            throw new InvalidOperationException("MotelySingleSearchContextImpl router is null.");
+        return _router.Instance();
+    }
 
     public string GetSeed() => Ctx().GetSeed();
     public double PseudoHash(string key, bool isCached = false) => Ctx().PseudoHash(key, isCached);
 
     public MotelyVoucher GetAnteFirstVoucher(int ante) => Ctx().GetAnteFirstVoucher(ante);
+
+    public MotelyVoucherStateResult GetAnteFirstVoucherStateful(int ante, MotelyJsRunState jsState)
+    {
+        var state = jsState.ToRunState();
+        var voucher = Ctx().GetAnteFirstVoucher(ante, in state);
+        state.ActivateVoucher(voucher);
+        return new MotelyVoucherStateResult(
+            voucher,
+            new MotelyJsRunState(state.VoucherBitfield, state.BossBitfield));
+    }
 
     public MotelyTag GetNextTag(int ante)
     {
@@ -106,6 +146,17 @@ public sealed class MotelySingleSearchContextImpl
         }
         _lastBossAnte = ante;
         return boss;
+    }
+
+    public MotelyBossStateResult GetBossForAnteStateful(int ante, MotelyJsRunState jsState)
+    {
+        var ctx = Ctx();
+        var state = jsState.ToRunState();
+        var stream = ctx.CreateBossStream();
+        var boss = ctx.GetBossForAnte(ref stream, ante, ref state);
+        return new MotelyBossStateResult(
+            boss,
+            new MotelyJsRunState(state.VoucherBitfield, state.BossBitfield));
     }
 
     public MotelyVoucher GetAnteFirstVoucherWithState(int ante, MotelyJsRunState jsState)
