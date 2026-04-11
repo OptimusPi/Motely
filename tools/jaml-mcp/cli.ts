@@ -1,11 +1,14 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerTools, bootPromise } from "./api/tools.js";
 
+const pkg = createRequire(import.meta.url)("./package.json");
+
 const server = new McpServer({
-  name: "balatro-seed-mcp",
-  version: "8.0.0",
+  name: pkg.name,
+  version: pkg.version,
 });
 
 registerTools(server);

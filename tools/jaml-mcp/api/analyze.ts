@@ -5,7 +5,10 @@
  * Body: { seed: string, jaml: string }
  * Returns: MotelySingleSearchContext JSON
  */
+import bootsharp from "motely-wasm";
 import { analyzeSeed } from "./tools.js";
+
+await bootsharp.boot();
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
