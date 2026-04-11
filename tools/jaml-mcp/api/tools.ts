@@ -312,7 +312,7 @@ function normalizeJamlCaseInsensitive(
 }
 
 /** MCP Apps: bundled React + json-render UI for `search_seeds` (Claude / Copilot / other hosts). */
-const SEARCH_UI_URI = "ui://jaml-mcp/jaml-search-app.html";
+const SEARCH_UI_URI = "ui://balatro-seed-mcp/jaml-search-app.html";
 
 async function loadSearchAppHtml(): Promise<string> {
   const here = dirname(fileURLToPath(import.meta.url));

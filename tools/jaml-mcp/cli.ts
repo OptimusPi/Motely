@@ -4,8 +4,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { registerTools, bootPromise } from "./api/tools.js";
 
 const server = new McpServer({
-  name: "jaml-mcp",
-  version: "1.0.0",
+  name: "balatro-seed-mcp",
+  version: "8.0.0",
 });
 
 registerTools(server);

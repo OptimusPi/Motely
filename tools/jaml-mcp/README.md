@@ -1,4 +1,4 @@
-# jaml-mcp
+# balatro-seed-mcp
 
 MCP server for **Balatro** seed search and analysis using MotelyJAML (`motely-wasm`). Deploys cleanly on **Vercel** (HTTP MCP) or runs locally over **stdio** (Claude Desktop, VS Code, Copilot).
 
@@ -31,7 +31,7 @@ Use `search_seeds` with `jummy`:
 
 `search_seeds` registers an MCP Apps extension ([Model Context Protocol Apps](https://modelcontextprotocol.github.io/ext-apps/api/)):
 
-- **Resource:** `ui://jaml-mcp/jaml-search-app.html` — single-file bundle (`text/html;profile=mcp-app`)
+- **Resource:** `ui://balatro-seed-mcp/jaml-search-app.html` — single-file bundle (`text/html;profile=mcp-app`)
 - **View:** **React 19** + [**Vercel json-render**](https://json-render.dev/) — generative UI catalog (`Stack`, `StatsBlock`, `SeedRow`, `Button`, `Text`) so you can evolve layouts from structured JSON
 - **Hosts:** Claude, ChatGPT, VS Code, and others that negotiate the Apps extension — behavior falls back to plain JSON text where UI is not available
 
