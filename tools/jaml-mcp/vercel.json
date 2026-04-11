@@ -4,18 +4,15 @@
   "buildCommand": "pnpm run build",
   "outputDirectory": "public",
   "rewrites": [
-    {
-      "source": "/mcp",
-      "destination": "/api/server"
-    }
+    { "source": "/mcp", "destination": "/api/server" }
   ],
   "functions": {
     "api/server.ts": {
-      "maxDuration": 800,
+      "maxDuration": 300,
       "includeFiles": "mcp-ui/dist/**"
     },
     "api/search.ts": {
-      "maxDuration": 600
+      "maxDuration": 300
     },
     "api/analyze.ts": {
       "maxDuration": 30
