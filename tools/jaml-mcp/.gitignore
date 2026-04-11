@@ -1,0 +1,5 @@
+.vercel
+mcp-ui/dist
+node_modules
+.env
+.env.*

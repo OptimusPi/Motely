@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.Options;
 using Motely;
 using Motely.DistributedWorker;
@@ -33,7 +34,17 @@ app.UseStaticFiles(new StaticFileOptions
 
 // ── Routes ──────────────────────────────────────────────────────────
 
-var motelyVersion = typeof(MotelyGlobals).Assembly.GetName().Version?.ToString(3) ?? "7.0.0";
+// Motely.dll has no product version (GenerateAssemblyInfo=false). Expose repo MotelyVersion via *this* assembly (GenerateAssemblyInfo=true + Directory.Build.props Version).
+var motelyVersion = GetHelperApiMotelyVersion();
+
+static string GetHelperApiMotelyVersion()
+{
+    var asm = Assembly.GetExecutingAssembly();
+    var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+    if (info?.InformationalVersion is { Length: > 0 } s)
+        return s.Split('+')[0].Trim();
+    return asm.GetName().Version?.ToString(3) ?? "7.0.0";
+}
 
 app.MapGet("/health", () =>
     Results.Ok(new HealthResponse("ok", motelyVersion)));

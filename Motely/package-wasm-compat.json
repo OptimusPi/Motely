@@ -1,7 +1,7 @@
 {
   "name": "motely-wasm-compat",
   "version": "0.0.0",
-  "description": "MotelyJAML WASM — minimal install: single index.mjs (WASM base64-embedded by Bootsharp) + TypeScript types. For jaml.schema.json, Monaco, and full assets use the motely-wasm package.",
+  "description": "Motely browser WASM (single index.mjs, embedded WASM) + types + jaml.schema.json.",
   "type": "module",
   "main": "./index.mjs",
   "types": "./types/index.d.ts",
@@ -13,10 +13,13 @@
       "types": "./types/index.d.ts",
       "import": "./index.mjs",
       "default": "./index.mjs"
-    }
+    },
+    "./jaml.schema.json": "./jaml.schema.json"
   },
   "files": [
     "index.mjs",
+    "jaml.schema.json",
+    "README.md",
     "types/**/*.d.ts"
   ],
   "keywords": [
@@ -32,8 +35,5 @@
     "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
     "directory": "Motely"
   },
-  "license": "MIT",
-  "scripts": {
-    "build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema"
-  }
+  "license": "MIT"
 }

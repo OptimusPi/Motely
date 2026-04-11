@@ -19,7 +19,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PublishAot Condition="'$(RuntimeIdentifier)' != 'browser-wasm' and '$(DesignTimeBuild)' != 'true'">true</PublishAot>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- true: Version / MotelyVersion from Directory.Build.props → AssemblyInformationalVersion (read in Program.cs). -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>

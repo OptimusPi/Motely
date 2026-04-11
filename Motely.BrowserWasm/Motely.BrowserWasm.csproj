@@ -1,21 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
+<!-- Compat=true: motely-wasm-compat (*-compat package). Default: motely-wasm. -->
 <PropertyGroup>
 <OutputType>Exe</OutputType>
 <TargetFramework>net10.0</TargetFramework>
 <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-<IsMotelyWasmCompatBuild Condition="'$(IsMotelyWasmCompatBuild)' == ''">false</IsMotelyWasmCompatBuild>
-<BootsharpEmbedBinaries Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">true</BootsharpEmbedBinaries>
-<BootsharpEmbedBinaries Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">false</BootsharpEmbedBinaries>
+<Compat Condition="'$(Compat)' == ''">false</Compat>
+<BootsharpEmbedBinaries Condition="'$(Compat)' == 'true'">true</BootsharpEmbedBinaries>
+<BootsharpEmbedBinaries Condition="'$(Compat)' != 'true'">false</BootsharpEmbedBinaries>
 <Nullable>enable</Nullable>
 <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 <ImplicitUsings>enable</ImplicitUsings>
 <InvariantGlobalization>true</InvariantGlobalization>
 <Version>$(MotelyVersion)</Version>
 <RootNamespace>Motely.BrowserWasm</RootNamespace>
-<BootsharpName Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">motely-wasm-compat</BootsharpName>
-<BootsharpName Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">motely-wasm</BootsharpName>
-<BootsharpPublishDirectory Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">motely-wasm-compat</BootsharpPublishDirectory>
-<BootsharpPublishDirectory Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">motely-wasm</BootsharpPublishDirectory>
+<BootsharpName Condition="'$(Compat)' == 'true'">motely-wasm-compat</BootsharpName>
+<BootsharpName Condition="'$(Compat)' != 'true'">motely-wasm</BootsharpName>
+<BootsharpPublishDirectory Condition="'$(Compat)' == 'true'">motely-wasm-compat</BootsharpPublishDirectory>
+<BootsharpPublishDirectory Condition="'$(Compat)' != 'true'">motely-wasm</BootsharpPublishDirectory>
 <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
 <BootsharpLLVM>true</BootsharpLLVM>
 <BootsharpOptimize>speed</BootsharpOptimize>
@@ -24,6 +25,7 @@
 <DebugType>none</DebugType>
 <EmccFlags>$(EmccFlags) -O3</EmccFlags>
 <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+<WasmEnableThreads>false</WasmEnableThreads>
 <RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
 </PropertyGroup>
 
@@ -37,81 +39,6 @@
 File="$(MSBuildProjectDirectory)\VersionInfo.g.cs"
 Lines="namespace Motely.BrowserWasm { internal static class VersionInfo { public const string Version = &quot;$(_Ver)&quot;%3B } }"
 Overwrite="true" />
-</Target>
-
-<!-- .NET 10's runtime JS emits /*! webpackIgnore: true */ (with !) which breaks Next.js/webpack
-     when embedded in the Bootsharp bundle. Bootsharp's InternalPatcher already adds the correct
-     /*webpackIgnore:true*/ (no !). Strip the .NET variant from index.mjs. Remove when fixed upstream. -->
-<Target Name="PatchWebpackComments" AfterTargets="BootsharpPack" BeforeTargets="MotelyWasmNpmOverlay;MotelyWasmCompatOverlay">
-<Exec Condition="Exists('$(BootsharpPublishDirectory)\index.mjs')"
-      Command="node -e &quot;const fs=require('fs');fs.writeFileSync('index.mjs',fs.readFileSync('index.mjs','utf8').replace(/\/\*!\s*webpackIgnore:\s*true\s*\*\//g,''))&quot;"
-      WorkingDirectory="$(BootsharpPublishDirectory)" />
-</Target>
-
-<!-- Overlay repo npm metadata and docs on top of Bootsharp's generated package. -->
-<Target Name="MotelyWasmNpmOverlay" AfterTargets="BootsharpPack" Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">
-<ReadLinesFromFile File="$(MSBuildProjectDirectory)\..\Motely\package.json">
-<Output TaskParameter="Lines" ItemName="_PackageJsonLines" />
-</ReadLinesFromFile>
-<WriteLinesToFile
-File="$(BootsharpPublishDirectory)\package.json"
-Lines="@(_PackageJsonLines->Replace('&quot;version&quot;: &quot;0.0.0&quot;', '&quot;version&quot;: &quot;$(Version)&quot;'))"
-Overwrite="true" />
-<Copy SourceFiles="$(MSBuildProjectDirectory)\..\jaml.schema.json"
-DestinationFiles="$(BootsharpPublishDirectory)\jaml.schema.json"
-SkipUnchangedFiles="false"
-Condition="Exists('$(MSBuildProjectDirectory)\..\jaml.schema.json')" />
-<Copy SourceFiles="$(MSBuildProjectDirectory)\README-WASM.md"
-DestinationFiles="$(BootsharpPublishDirectory)\README.md"
-SkipUnchangedFiles="false"
-Condition="Exists('$(MSBuildProjectDirectory)\README-WASM.md')" />
-<Copy SourceFiles="$(MSBuildProjectDirectory)\..\tools\jimbos-ante-markup-language.ico"
-DestinationFiles="$(BootsharpPublishDirectory)\favicon.ico"
-SkipUnchangedFiles="false"
-Condition="Exists('$(MSBuildProjectDirectory)\..\tools\jimbos-ante-markup-language.ico')" />
-<ItemGroup>
-<_MonacoFiles Include="$(MSBuildProjectDirectory)\..\tools\jaml-language\monaco\dist\**\*" />
-</ItemGroup>
-<MakeDir Directories="$(BootsharpPublishDirectory)\monaco" Condition="'@(_MonacoFiles)' != ''" />
-<Copy SourceFiles="@(_MonacoFiles)"
-DestinationFiles="@(_MonacoFiles->'$(BootsharpPublishDirectory)\monaco\%(RecursiveDir)%(Filename)%(Extension)')"
-SkipUnchangedFiles="true"
-Condition="'@(_MonacoFiles)' != ''" />
-</Target>
-
-<!-- Overlay motely-wasm-compat metadata on top of Bootsharp's generated package. -->
-<Target Name="MotelyWasmCompatOverlay" AfterTargets="BootsharpPack" Condition="'$(IsMotelyWasmCompatBuild)' == 'true'">
-<ReadLinesFromFile File="$(MSBuildProjectDirectory)\..\Motely\package-wasm-compat.json">
-<Output TaskParameter="Lines" ItemName="_CompatPackageJsonLines" />
-</ReadLinesFromFile>
-<WriteLinesToFile
-File="$(BootsharpPublishDirectory)\package.json"
-Lines="@(_CompatPackageJsonLines->Replace('&quot;version&quot;: &quot;0.0.0&quot;', '&quot;version&quot;: &quot;$(Version)&quot;'))"
-Overwrite="true" />
-</Target>
-
-<!-- LLVM builds don't copy .d.ts to types/; fix that here. -->
-<Target Name="MotelyWasmCopyTypes" AfterTargets="MotelyWasmNpmOverlay;MotelyWasmCompatOverlay">
-<ItemGroup>
-<_TypeFiles Include="$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\browser-wasm\publish\*.d.ts" />
-</ItemGroup>
-<MakeDir Directories="$(BootsharpPublishDirectory)\types" />
-<Copy SourceFiles="@(_TypeFiles)" DestinationFolder="$(BootsharpPublishDirectory)\types" SkipUnchangedFiles="true" />
-</Target>
-
-<!-- NodeNext consumers can fail to resolve namespace exports through export *.
-     Patch types/index.d.ts with explicit named re-exports from bindings.g. -->
-<Target Name="MotelyWasmPatchTypeExports" AfterTargets="MotelyWasmCopyTypes">
-<Exec Condition="Exists('$(BootsharpPublishDirectory)\types\index.d.ts')"
-      Command="node -e &quot;const fs=require('fs');const file='types/index.d.ts';const line='export { Analysis, BrowserWasm, Filters, Motely, MotelyJaml, MotelyJamlSearchBuilder, MotelySearchSession, MotelySingleSearchContext, MotelyWasmHost, SearchEvents } from \&quot;./bindings.g\&quot;;';let text=fs.readFileSync(file,'utf8');if(!text.includes(line)){text += (text.endsWith('\n')?'':'\n') + line + '\n';}fs.writeFileSync(file,text);&quot;"
-      WorkingDirectory="$(BootsharpPublishDirectory)" />
-</Target>
-
-<!-- Build embedded motely-wasm-compat package in a second publish pass. -->
-<Target Name="MotelyWasmCompatPackage" AfterTargets="MotelyWasmCopyTypes" Condition="'$(IsMotelyWasmCompatBuild)' != 'true'">
-<Exec
-  Command="dotnet publish &quot;$(MSBuildProjectFullPath)&quot; -c $(Configuration) /p:IsMotelyWasmCompatBuild=true"
-  WorkingDirectory="$(MSBuildProjectDirectory)" />
 </Target>
 
 <ItemGroup>
