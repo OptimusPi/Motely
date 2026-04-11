@@ -195,11 +195,6 @@ partial class Program
             "Restrict padding chars for --keyword/--keywords (e.g. \"67Z\" uses only 6, 7, Z as padding)",
             CommandOptionType.SingleValue
         );
-        var writeJamlSchemaOption = app.Option(
-            "--write-jaml-schema",
-            "Generate and sync the JAML JSON schema files from the current code model",
-            CommandOptionType.NoValue
-        );
         var nativeOption = app.Option<string>(
             "--native <NAME>",
             "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...). Seed-input flags match JAML: --source, --seeds, --keyword(s), --random, --aesthetic, or default sequential (--startBatch/--endBatch/--startPercent or --startSeed/--stopSeed).",
@@ -211,14 +206,6 @@ partial class Program
 
         app.OnExecuteAsync(async _ =>
         {
-            if (writeJamlSchemaOption.HasValue())
-            {
-                string repoRoot = JamlSchemaGenerator.FindRepoRoot(AppContext.BaseDirectory);
-                JamlSchemaGenerator.GenerateAndWriteAll(repoRoot);
-                Console.WriteLine($"JAML schema written using Motely;Version={JamlSchemaGenerator.ReadMotelyVersion(repoRoot)}");
-                return 0;
-            }
-
             if (args.Length == 0)
             {
                 app.ShowHelp();

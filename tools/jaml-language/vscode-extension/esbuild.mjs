@@ -20,7 +20,7 @@ function stageAssets() {
   // Schema (required)
   if (!existsSync(schemaSrc)) {
     throw new Error(
-      `jaml.schema.json not found at ${schemaSrc} — run: dotnet run --project Motely.CLI -- --write-jaml-schema`
+      `jaml.schema.json not found at ${schemaSrc} — add or copy the file at repo root`
     );
   }
   copyFileSync(schemaSrc, schemaDst);

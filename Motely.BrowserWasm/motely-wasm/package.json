@@ -14,12 +14,7 @@
 "import": "./index.mjs",
 "default": "./index.mjs"
 },
-"./jaml.schema.json": "./jaml.schema.json",
-"./monaco": {
-"types": "./monaco/index.d.ts",
-"import": "./monaco/index.js",
-"default": "./monaco/index.js"
-}
+"./jaml.schema.json": "./jaml.schema.json"
 },
 "files": [
 "**/*",
@@ -41,8 +36,5 @@
 "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
 "directory": "Motely"
 },
-"license": "MIT",
-"scripts": {
-"build:schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema"
-}
+"license": "MIT"
 }

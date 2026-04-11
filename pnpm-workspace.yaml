@@ -1,2 +1,3 @@
 packages:
   - 'Motely.TestWebsite'
+  - 'tools/jaml-mcp'

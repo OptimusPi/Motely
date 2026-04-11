@@ -15,6 +15,6 @@ if (!existsSync(src)) {
     // Running from a flattened publish copy — schema already present, nothing to do.
     process.exit(0);
   }
-  throw new Error(`sync-schema: missing ${src} (run dotnet CLI --write-jaml-schema from repo root).`);
+  throw new Error(`sync-schema: missing ${src} (place jaml.schema.json at repo root).`);
 }
 copyFileSync(src, dst);

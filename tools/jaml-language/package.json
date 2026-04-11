@@ -7,12 +7,10 @@
     "jaml-schema",
     "lsp-server",
     "vscode-extension",
-    "monaco",
-    "jaml-mcp"
+    "monaco"
   ],
   "scripts": {
     "build": "pnpm -r build",
-    "build:mcp": "pnpm --filter @motely/jaml-mcp build",
     "dev:lsp": "pnpm --filter @motely/jaml-lsp-server dev",
     "dev:vscode": "pnpm --filter jaml-language-support watch"
   }
