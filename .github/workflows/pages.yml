@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MOTELY_VERSION: "7.0.8"
+  MOTELY_VERSION: "7.2.0"
 
 jobs:
   build:
