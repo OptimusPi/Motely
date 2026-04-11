@@ -62,7 +62,12 @@
       "Read(//c//**)",
       "Read(//x//**)",
       "Read(//c/Users/pifre/**)",
-      "Bash(ls /d/*.app)"
+      "Bash(ls /d/*.app)",
+      "Bash(git -C X:/JammySeedFinder/src/MotelyJAML log --oneline --diff-filter=M -- Motely.Tests/JamlClauseCoverageTests.cs)",
+      "Bash(git -C X:/JammySeedFinder/src/MotelyJAML show HEAD~1:Motely.Tests/JamlClauseCoverageTests.cs)",
+      "Bash(git:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(npm publish:*)"
     ]
   }
 }
