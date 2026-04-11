@@ -12,7 +12,7 @@ async function createTransport(): Promise<StreamableHTTPServerTransport> {
     enableJsonResponse: true,
   });
   const server = new McpServer(
-    { name: "jaml-mcp", version: "1.0.0" },
+    { name: "balatro-seed-mcp", version: "8.0.0" },
     { capabilities: { tools: {} } }
   );
   if (MCP_LITE) {
