@@ -135,7 +135,7 @@
                     "build":  "npm run compile",
                     "watch":  "node esbuild.mjs --watch",
                     "vscode:prepublish":  "node esbuild.mjs --production",
-                    "package":  "node esbuild.mjs --production \u0026\u0026 npx @vscode/vsce package"
+                    "package":  "node esbuild.mjs --production \u0026\u0026 npx @vscode/vsce package --no-dependencies"
                 },
     "dependencies":  {
                          "motely-wasm-compat":  "^7.0.8",
