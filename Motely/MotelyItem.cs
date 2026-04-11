@@ -5,7 +5,7 @@ namespace Motely;
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
 {
-    public readonly int Value = value;
+    public int Value { get; } = value;
 
     public readonly MotelyItemType Type { get { return (MotelyItemType)(Value & MotelyGlobals.ItemTypeMask); } }
     public readonly MotelyItemTypeCategory TypeCategory { get { return (MotelyItemTypeCategory)(Value & MotelyGlobals.ItemTypeCategoryMask); } }
