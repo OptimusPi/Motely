@@ -28355,8 +28355,8 @@ var dotnet_runtime_g = /* @__PURE__ */ Object.freeze({
 var bootPromise = null;
 var activeSearch = null;
 async function ensureBooted() {
-  bootPromise ??= index.boot().then(() => {
-  }).catch((err) => {
+  bootPromise ??= index.boot().then(function() {
+  }).catch(function(err) {
     bootPromise = null;
     throw err;
   });
@@ -28370,31 +28370,33 @@ async function runSearch(jaml, seedCount, onProgress, onResult, onComplete) {
   const config = MotelyWasmHost.loadJaml(jaml);
   const results = [];
   const startMs = Date.now();
-  return await new Promise((resolve, reject) => {
-    const onResultHandler = (seed, score, tally) => {
+  return await new Promise(function(resolve, reject) {
+    function cleanup() {
+      SearchEvents.onResult.unsubscribe(onResultHandler);
+      SearchEvents.onProgress.unsubscribe(onProgressHandler);
+      SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+      activeSearch = null;
+    }
+    function onResultHandler(seed, score, tally) {
       results.push({ seed, score, tally });
       onResult(seed, score, tally);
-    };
-    const onProgressHandler = (searched, matching) => {
+    }
+    function onProgressHandler(searched, matching) {
       onProgress(searched, matching);
-    };
-    const onCompleteHandler = (status2, searched, matched) => {
+    }
+    function onCompleteHandler(status2, searched, matched) {
       cleanup();
       onComplete({
         status: status2,
         searched: searched.toString(),
         matched: matched.toString(),
-        results: results.sort((a2, b2) => b2.score - a2.score).slice(0, 500),
+        results: results.sort(function(a2, b2) {
+          return b2.score - a2.score;
+        }).slice(0, 500),
         elapsedMs: Date.now() - startMs
       });
       resolve();
-    };
-    const cleanup = () => {
-      SearchEvents.onResult.unsubscribe(onResultHandler);
-      SearchEvents.onProgress.unsubscribe(onProgressHandler);
-      SearchEvents.onComplete.unsubscribe(onCompleteHandler);
-      activeSearch = null;
-    };
+    }
     SearchEvents.onResult.subscribe(onResultHandler);
     SearchEvents.onProgress.subscribe(onProgressHandler);
     SearchEvents.onComplete.subscribe(onCompleteHandler);
@@ -28601,7 +28603,10 @@ async function activate(context) {
         await runSearch(
           jaml,
           1e6,
-          (_s2, m2) => vscode2.window.setStatusBarMessage(`JAML: ${m2} hits\u2026`, 500),
+          (searched, matching) => vscode2.window.setStatusBarMessage(
+            `JAML: ${searched} seeds \xB7 ${matching} matches\u2026`,
+            500
+          ),
           (seed, score, tally) => {
             output.appendLine(
               `${seed}	${score}	[${Array.from(tally).join(", ")}]`

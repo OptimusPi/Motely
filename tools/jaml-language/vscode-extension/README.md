@@ -1,6 +1,6 @@
 # JAML Language Support for VS Code
 
-**JAML** (Jimbo's Ante Markup Language) and **Jummy** in the editor: highlighting, diagnostics, completion, snippets, and schema-backed validation. This extension is **language tooling only** — it does not run seed searches or bundle the WASM engine.
+**JAML** (Jimbo's Ante Markup Language) and **Jummy** in the editor: highlighting, diagnostics, completion, snippets, schema-backed validation, and **in-editor seed search** (bundled **`motely-wasm-compat`** + Bootsharp — no separate WASM path to configure).
 
 **Requires:** VS Code **≥ 1.97** and the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) (schema validation for `.jaml` / `.jummy`).
 
@@ -10,6 +10,7 @@
 - **LSP diagnostics** — Validation and errors in the editor
 - **Completion** — JAML root keys and clause types
 - **Snippets** — Common filter boilerplate
+- **Run JAML Search** — Toolbar play / `Ctrl+Shift+Enter`: random search over the current document’s JAML (output in **JAML Search** panel). Uses the same engine as the Motely WASM stack; nothing to point at manually.
 
 ## Installation
 
@@ -55,7 +56,9 @@ The Psychic boss
 
 ### Running searches
 
-Use **Motely** (CLI, site, or any tool that consumes `motely-wasm` / your own runner). This extension does not execute searches.
+From a `.jaml` / `.jummy` file: **Run JAML Search** (editor title) or **Ctrl+Shift+Enter**. For CLI, sites, or full `motely-wasm`, use the main Motely repo / npm packages.
+
+**Developers:** always install from the monorepo root — `cd tools/jaml-language && pnpm install` — then `pnpm --filter jaml-language-support run compile`. Do **not** run `npm install` inside `vscode-extension` alone (workspace protocol / hoisting).
 
 ## Settings
 

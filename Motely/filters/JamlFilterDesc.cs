@@ -99,7 +99,8 @@ public static class JamlSearchBuilder
 
             throw new InvalidOperationException("JamlConfig has no clauses.");
 
-
+        ValidateSoulJokerClausesForMustAndShould(config.Must);
+        ValidateSoulJokerClausesForMustAndShould(config.Should);
 
         var allMustDescs = new List<IMotelySeedFilterDesc>();
 
@@ -163,6 +164,48 @@ public static class JamlSearchBuilder
             : "";
 
         return new JamlSearchPlan(settings, shouldClauses.Count, headerQuoted);
+    }
+
+    /// <summary>
+    /// Runs the same structural checks as <see cref="CreatePlan"/> (impossible soul-joker booster slots, empty config, etc.)
+    /// without retaining the plan. Call after <see cref="JamlConfigLoader.TryLoad"/> so WASM/CLI validation matches what search uses.
+    /// No-op when <see cref="JamlConfig.HasAnyClauses"/> is false.
+    /// </summary>
+    public static void EnsureRunnablePlan(JamlConfig config)
+    {
+        if (!config.HasAnyClauses)
+            return;
+        _ = CreatePlan(config);
+    }
+
+    /// <summary>
+    /// Fails fast on soul joker clauses whose booster sources can never hit arcana/spectral at slot ≥1
+    /// (<see cref="JamlSoulJokerStructuralValidation"/>). Skips <c>mustNot</c>: negated dead clauses are vacuously true.
+    /// </summary>
+    private static void ValidateSoulJokerClausesForMustAndShould(JamlClauseSet set)
+    {
+        foreach (IJamlClause c in set.OrderedClauses)
+            ValidateClauseTreeForSoulJoker(c);
+    }
+
+    private static void ValidateClauseTreeForSoulJoker(IJamlClause c)
+    {
+        switch (c)
+        {
+            case LegendaryJokerClause lj:
+                JamlSoulJokerStructuralValidation.ValidateLegendaryJokerClauseOrThrow(lj);
+                return;
+            case AndClause and:
+                for (int i = 0; i < and.Clauses.Length; i++)
+                    ValidateClauseTreeForSoulJoker(and.Clauses[i]);
+                return;
+            case OrClause or:
+                for (int i = 0; i < or.Clauses.Length; i++)
+                    ValidateClauseTreeForSoulJoker(or.Clauses[i]);
+                return;
+            default:
+                return;
+        }
     }
 
     /// <summary>Quoted CSV header for stdout sinks: <c>seed</c>, <c>score</c>, then each should-scoring clause label (or <c>tally_i</c>). Built once per plan.</summary>
