@@ -19,10 +19,64 @@ public interface IMotelySearchSession : IDisposable
     Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Default <see cref="IMotelySearchSession"/> for Bootsharp DI only (<c>AddBootsharp</c> needs a registered handler
+/// before it can build the JS export for <see cref="MotelySearchSession"/>). Real searches use <see cref="MotelySearchSession"/>.
+/// </summary>
+/// <summary>Registered in DI for Bootsharp; kept public so NativeAOT does not trim it away.</summary>
+public sealed class IdleMotelySearchSession : IMotelySearchSession
+{
+    public long GetTotalSeedsSearched()
+    {
+        return 0;
+    }
+
+    public long GetMatchingSeeds()
+    {
+        return 0;
+    }
+
+    public long GetFilteredSeeds()
+    {
+        return 0;
+    }
+
+    public bool GetIsCompleted()
+    {
+        return true;
+    }
+
+    public bool GetIsSequentialBatchSearch()
+    {
+        return false;
+    }
+
+    public long GetBatchIndex()
+    {
+        return 0;
+    }
+
+    public long GetCompletedBatchCount()
+    {
+        return 0;
+    }
+
+    public void Cancel()
+    {
+    }
+
+    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+    }
+}
+
 public sealed class MotelySearchSession : IMotelySearchSession
 {
-    internal static readonly MotelySearchSession Placeholder = new(null!);
-
     private readonly IMotelySearch _search;
 
     internal MotelySearchSession(IMotelySearch search)
@@ -30,24 +84,53 @@ public sealed class MotelySearchSession : IMotelySearchSession
         _search = search;
     }
 
-    public long GetTotalSeedsSearched() => _search.TotalSeedsSearched;
+    public long GetTotalSeedsSearched()
+    {
+        return _search.TotalSeedsSearched;
+    }
 
-    public long GetMatchingSeeds() => _search.MatchingSeeds;
+    public long GetMatchingSeeds()
+    {
+        return _search.MatchingSeeds;
+    }
 
-    public long GetFilteredSeeds() => _search.FilteredSeeds;
+    public long GetFilteredSeeds()
+    {
+        return _search.FilteredSeeds;
+    }
 
-    public bool GetIsCompleted() => _search.IsCompleted;
+    public bool GetIsCompleted()
+    {
+        return _search.IsCompleted;
+    }
 
-    public bool GetIsSequentialBatchSearch() => _search.IsSequentialBatchSearch;
+    public bool GetIsSequentialBatchSearch()
+    {
+        return _search.IsSequentialBatchSearch;
+    }
 
-    public long GetBatchIndex() => _search.BatchIndex;
+    public long GetBatchIndex()
+    {
+        return _search.BatchIndex;
+    }
 
-    public long GetCompletedBatchCount() => _search.CompletedBatchCount;
+    public long GetCompletedBatchCount()
+    {
+        return _search.CompletedBatchCount;
+    }
 
-    public void Cancel() => _search.Cancel();
+    public void Cancel()
+    {
+        _search.Cancel();
+    }
 
-    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default) =>
-        _search.WaitForCompletionAsync(cancellationToken);
+    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default)
+    {
+        return _search.WaitForCompletionAsync(cancellationToken);
+    }
 
-    public void Dispose() => _search.Dispose();
+    public void Dispose()
+    {
+        _search.Dispose();
+    }
 }

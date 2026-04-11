@@ -62,6 +62,8 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
+        // Match JamlSearchBuilder.CreatePlan — parse-only is not enough (MCP validate_jaml, editor preview).
+        JamlSearchBuilder.EnsureRunnablePlan(config);
         return config;
     }
 
@@ -71,6 +73,7 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
             throw new InvalidOperationException(compileErr ?? "Jummy compile failed.");
         if (!JamlConfigLoader.TryLoad(jamlYaml, out var config, out var loadErr))
             throw new InvalidOperationException(loadErr ?? "Invalid JAML after Jummy compile.");
+        JamlSearchBuilder.EnsureRunnablePlan(config);
         return config;
     }
 

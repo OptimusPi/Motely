@@ -64,7 +64,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       try {
         await runSearch(
           jaml, 1_000_000,
-          (_s, m) => vscode.window.setStatusBarMessage(`JAML: ${m} hits\u2026`, 500),
+          (searched, matching) =>
+            vscode.window.setStatusBarMessage(
+              `JAML: ${searched} seeds · ${matching} matches\u2026`,
+              500
+            ),
           (seed, score, tally) => {
             output.appendLine(
               `${seed}\t${score}\t[${Array.from(tally).join(", ")}]`

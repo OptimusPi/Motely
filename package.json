@@ -8,6 +8,8 @@
     "build": "cd Motely.TestWebsite && npm run build",
     "preview": "cd Motely.TestWebsite && npm run preview",
     "test:motely-direct-contract": "node scripts/test-motely-direct-contract.mjs",
-    "test:motely-wasm-compat-contract": "node --test scripts/test-motely-wasm-compat.contract.test.mjs"
+    "test:motely-wasm-compat-contract": "node --test scripts/test-motely-wasm-compat.contract.test.mjs",
+    "find:gros-michel-wasm": "node scripts/find-gros-michel-via-wasm.mjs",
+    "build:jaml-mcp": "pnpm --dir tools/jaml-language build:mcp"
   }
 }

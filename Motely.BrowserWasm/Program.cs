@@ -22,8 +22,7 @@ public static class Program
                 .AddSingleton<IMotelyJamlSearchBuilder>(static sp => sp.GetRequiredService<MotelyJamlSearchBuilder>())
                 .AddSingleton<MotelyWasmHost>()
                 .AddSingleton<IMotelyWasmHost>(static sp => sp.GetRequiredService<MotelyWasmHost>())
-                .AddSingleton(MotelySearchSession.Placeholder)
-                .AddSingleton<IMotelySearchSession>(static sp => sp.GetRequiredService<MotelySearchSession>())
+                .AddSingleton<IMotelySearchSession>(new IdleMotelySearchSession())
                 .BuildServiceProvider()
                 .RunBootsharp();
         }

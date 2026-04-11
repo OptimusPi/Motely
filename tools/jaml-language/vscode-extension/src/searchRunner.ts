@@ -1,3 +1,7 @@
+/**
+ * Bootsharp interop: do not pass arrow functions (`=>`) into generated WASM delegates
+ * (e.g. SearchEvents.subscribe). Use `function` declarations until Bootsharp supports it.
+ */
 import bootsharp, {
   MotelyWasmHost,
   SearchEvents,
@@ -23,13 +27,19 @@ export type OnResult = (seed: string, score: number, tally: Int32Array) => void;
 export type OnComplete = (summary: SearchSummary) => void;
 
 let bootPromise: Promise<void> | null = null;
+/** Set while a random search is running; cleared on complete or {@link stopSearch}. */
 let activeSearch: BrowserWasm.IMotelySearchSession | null = null;
 
 async function ensureBooted(): Promise<void> {
-  bootPromise ??= bootsharp.boot().then(() => {}).catch((err) => {
-    bootPromise = null;
-    throw err;
-  });
+  bootPromise ??= bootsharp
+    .boot()
+    .then(function () {
+      /* booted */
+    })
+    .catch(function (err: unknown) {
+      bootPromise = null;
+      throw err;
+    });
   await bootPromise;
 }
 
@@ -46,49 +56,53 @@ export async function runSearch(
 
   await ensureBooted();
 
-  const config = MotelyWasmHost.loadJaml(jaml);
+  // Random search must use FromJaml: JamlConfig from loadJaml() does not round-trip through JS interop for startRandomSearch.
   const results: SearchResult[] = [];
   const startMs = Date.now();
 
-  return await new Promise<void>((resolve, reject) => {
-    const onResultHandler = (seed: string, score: number, tally: Int32Array) => {
+  return await new Promise<void>(function (resolve, reject) {
+    function cleanup(): void {
+      SearchEvents.onResult.unsubscribe(onResultHandler);
+      SearchEvents.onProgress.unsubscribe(onProgressHandler);
+      SearchEvents.onComplete.unsubscribe(onCompleteHandler);
+      activeSearch = null;
+    }
+
+    function onResultHandler(seed: string, score: number, tally: Int32Array): void {
       results.push({ seed, score, tally });
       onResult(seed, score, tally);
-    };
+    }
 
-    const onProgressHandler = (searched: bigint, matching: bigint) => {
+    function onProgressHandler(searched: bigint, matching: bigint): void {
       onProgress(searched, matching);
-    };
+    }
 
-    const onCompleteHandler = (
+    function onCompleteHandler(
       status: string,
       searched: bigint,
       matched: bigint
-    ) => {
+    ): void {
       cleanup();
       onComplete({
         status,
         searched: searched.toString(),
         matched: matched.toString(),
-        results: results.sort((a, b) => b.score - a.score).slice(0, 500),
+        results: results
+          .sort(function (a, b) {
+            return b.score - a.score;
+          })
+          .slice(0, 500),
         elapsedMs: Date.now() - startMs,
       });
       resolve();
-    };
-
-    const cleanup = () => {
-      SearchEvents.onResult.unsubscribe(onResultHandler);
-      SearchEvents.onProgress.unsubscribe(onProgressHandler);
-      SearchEvents.onComplete.unsubscribe(onCompleteHandler);
-      activeSearch = null;
-    };
+    }
 
     SearchEvents.onResult.subscribe(onResultHandler);
     SearchEvents.onProgress.subscribe(onProgressHandler);
     SearchEvents.onComplete.subscribe(onCompleteHandler);
 
     try {
-      activeSearch = MotelyWasmHost.startRandomSearch(config, seedCount);
+      activeSearch = MotelyWasmHost.startRandomSearchFromJaml(jaml, seedCount);
     } catch (err) {
       cleanup();
       reject(err);

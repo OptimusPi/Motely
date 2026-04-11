@@ -320,9 +320,75 @@ internal static class JamlSchemaGenerator
         {
             ["type"] = "object",
             ["properties"] = properties,
-            ["allOf"] = new JsonArray(BuildEventAntesRestriction()),
+            ["allOf"] = new JsonArray(BuildEventAntesRestriction(), BuildSoulJokerLegacyBoosterPacksRestriction()),
             ["additionalProperties"] = false,
             ["minProperties"] = 1
+        };
+    }
+
+    /// <summary>
+    /// Draft-07: when soul/legendary joker uses legacy <c>sources.boosterPacks</c> only, require an index ≥1
+    /// (slot 0 is Buffoon — no arcana/spectral soul path). Split arcana/spectral slot-0 edge cases stay in Motely CreatePlan.
+    /// </summary>
+    private static JsonObject BuildSoulJokerLegacyBoosterPacksRestriction()
+    {
+        return new JsonObject
+        {
+            ["if"] = new JsonObject
+            {
+                ["anyOf"] = new JsonArray(
+                    new JsonObject { ["required"] = ToJsonArray(["soulJoker"]) },
+                    new JsonObject { ["required"] = ToJsonArray(["legendaryJoker"]) },
+                    new JsonObject
+                    {
+                        ["properties"] = new JsonObject
+                        {
+                            ["type"] = new JsonObject { ["enum"] = ToJsonArray(["SoulJoker"]) },
+                        },
+                        ["required"] = ToJsonArray(["type"]),
+                    }
+                ),
+            },
+            ["then"] = new JsonObject
+            {
+                ["properties"] = new JsonObject
+                {
+                    ["sources"] = new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["boosterPacks"] = new JsonObject
+                            {
+                                ["allOf"] = new JsonArray(
+                                    new JsonObject
+                                    {
+                                        ["type"] = "array",
+                                        ["items"] = new JsonObject
+                                        {
+                                            ["type"] = "integer",
+                                            ["minimum"] = 0,
+                                            ["maximum"] = 5,
+                                        },
+                                    },
+                                    new JsonObject
+                                    {
+                                        ["if"] = new JsonObject { ["minItems"] = 1 },
+                                        ["then"] = new JsonObject
+                                        {
+                                            ["contains"] = new JsonObject
+                                            {
+                                                ["type"] = "integer",
+                                                ["minimum"] = 1,
+                                            },
+                                        },
+                                    }
+                                ),
+                            },
+                        },
+                    },
+                },
+            },
         };
     }
 
@@ -388,7 +454,7 @@ internal static class JamlSchemaGenerator
                 ["boosterPacks"] = IntegerArrayProperty(
                     0,
                     5,
-                    "Pack offering slot indices. Legendary soul: if arcanaBoosterPacks/spectralBoosterPacks are set, this combined list is ignored for matching."
+                    "Pack offering slot indices. Legendary/soul joker (legacy list only): Motely's shop stream always offers Buffoon at slot 0 first, so The Soul cannot appear from slot 0 alone — list at least one index ≥1, or use arcanaBoosterPacks/spectralBoosterPacks. If arcana/spectral lists are set, this legacy list is ignored for matching."
                 ),
                 ["arcanaBoosterPacks"] = IntegerArrayProperty(
                     0,

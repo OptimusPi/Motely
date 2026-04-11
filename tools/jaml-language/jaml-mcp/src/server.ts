@@ -111,7 +111,7 @@ server.tool(
 // Tool: validate_jaml — uses the real WASM loadJaml, not JS approximation
 server.tool(
   "validate_jaml",
-  "Parse and validate a JAML filter through the Motely WASM engine (MotelyWasmHost.loadJaml). Returns the loaded JamlConfig on success or the exact C# error on failure.",
+  "Parse and validate a JAML filter through the Motely WASM engine (MotelyWasmHost.loadJaml). After YAML parse, runs the same search-plan checks as a real search (JamlSearchBuilder.EnsureRunnablePlan / CreatePlan): impossible soul-joker booster slots, etc. Returns the loaded JamlConfig on success or the exact C# error on failure.",
   { jaml: z.string().describe("JAML filter text (YAML or JSON)") },
   async ({ jaml }) => {
     try {
