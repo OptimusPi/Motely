@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>JAML MCP — Balatro Seed Intelligence</title>
+<title>Balatro Seed MCP — seedfinder.app</title>
 <style>
 /* ── Reset & base ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -703,14 +703,13 @@ header {
   <div class="logo">
     <div class="logo-icon">🃏</div>
     <div class="logo-text">
-      <h1>JAML MCP</h1>
+      <h1>Balatro Seed MCP</h1>
       <p>Balatro Seed Intelligence Engine</p>
     </div>
   </div>
   <div class="header-actions">
-    <span class="badge badge-gold" id="version-badge" title="MotelyJAML engine version">Loading…</span>
+    <span class="badge badge-gold" id="version-badge" title="MotelyJAML engine version">v8.0.0</span>
     <span class="badge badge-blue">HTTP + stdio</span>
-    <span class="badge badge-green">MCP 2025</span>
     <a href="https://github.com" id="gh-link" class="badge badge-gold" style="text-decoration:none" target="_blank">GitHub ↗</a>
   </div>
 </header>
@@ -1462,20 +1461,6 @@ function loadFromURL() {
 }
 
 // ── Version fetch ──────────────────────────────────────────────────────────────
-async function fetchVersion() {
-  try {
-    // Quick MCP tool call isn't possible from a plain browser, so we just show the npm version
-    // which we can embed at build time; for now poll a lightweight ping
-    const resp = await fetch('/api/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jaml: JSON.stringify({ deck: 'Red', stake: 'White' }), seed_count: 1 }),
-    });
-    if (resp.ok) {
-      document.getElementById('version-badge').textContent = 'v5.8.2';
-    }
-  } catch {}
-}
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -1484,7 +1469,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderClauseGroups();
   populateConnectSnippets();
   loadFromURL();
-  fetchVersion();
 
   // Keyboard shortcuts
   document.addEventListener('keydown', e => {
