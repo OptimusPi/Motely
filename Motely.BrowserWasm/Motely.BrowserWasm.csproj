@@ -5,8 +5,7 @@
 <TargetFramework>net10.0</TargetFramework>
 <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
 <Compat Condition="'$(Compat)' == ''">false</Compat>
-<BootsharpEmbedBinaries Condition="'$(Compat)' == 'true'">true</BootsharpEmbedBinaries>
-<BootsharpEmbedBinaries Condition="'$(Compat)' != 'true'">false</BootsharpEmbedBinaries>
+<BootsharpEmbedBinaries>true</BootsharpEmbedBinaries>
 <Nullable>enable</Nullable>
 <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 <ImplicitUsings>enable</ImplicitUsings>
