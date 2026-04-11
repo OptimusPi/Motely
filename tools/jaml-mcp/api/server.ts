@@ -1,32 +1,24 @@
+import { createRequire } from "node:module";
+import { bootPromise } from "./tools.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
-// Set MCP_API_KEY to require Bearer token auth on the HTTP endpoint.
+const pkg = createRequire(import.meta.url)("../package.json");
+
 const API_KEY = process.env.MCP_API_KEY;
 
-const MCP_LITE = /^1\s*$/.test(process.env.MCP_LITE ?? "");
-
 async function createTransport(): Promise<StreamableHTTPServerTransport> {
+  await bootPromise;
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
   const server = new McpServer(
-    { name: "balatro-seed-mcp", version: "8.0.0" },
+    { name: pkg.name, version: pkg.version },
     { capabilities: { tools: {} } }
   );
-  if (MCP_LITE) {
-    server.registerTool(
-      "ping",
-      { description: "Health check (MCP_LITE=1)." },
-      async () => ({
-        content: [{ type: "text" as const, text: "pong" }],
-      })
-    );
-  } else {
-    const { registerTools } = await import("./tools.js");
-    registerTools(server);
-  }
+  const { registerTools } = await import("./tools.js");
+  registerTools(server);
   await server.connect(transport);
   return transport;
 }
@@ -39,7 +31,6 @@ function verifyBearer(req: { headers?: Record<string, string | string[] | undefi
   return auth.slice(7) === API_KEY;
 }
 
-/** Vercel may set `req.body`; avoid double-consuming the stream (hang). */
 async function jsonBodyForMcp(req: any): Promise<unknown | undefined> {
   if (req.method !== "POST" && req.method !== "DELETE") return undefined;
   if (req.body != null) {
@@ -64,7 +55,6 @@ async function jsonBodyForMcp(req: any): Promise<unknown | undefined> {
   return raw ? JSON.parse(raw) : undefined;
 }
 
-/** Vercel Node serverless: `IncomingMessage` + `ServerResponse` (same shape as `api/search.ts`). */
 async function mcpNodeHandler(req: any, res: any): Promise<void> {
   if (!verifyBearer(req)) {
     res.statusCode = 401;
