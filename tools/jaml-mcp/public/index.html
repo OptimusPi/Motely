@@ -1348,7 +1348,7 @@ function populateConnectSnippets() {
 
   document.getElementById('code-claude').childNodes[0].textContent = `{
   "mcpServers": {
-    "jaml-mcp": {
+    "balatro-seed-mcp": {
       "type": "http",
       "url": "${url}",
       "headers": {
@@ -1358,7 +1358,7 @@ function populateConnectSnippets() {
   }
 }`;
 
-  document.getElementById('code-cursor').childNodes[0].textContent = `"jaml-mcp": {
+  document.getElementById('code-cursor').childNodes[0].textContent = `"balatro-seed-mcp": {
   "url": "${url}",
   "transport": "http",
   "headers": {
@@ -1368,10 +1368,10 @@ function populateConnectSnippets() {
 
   document.getElementById('code-stdio').childNodes[0].textContent = `{
   "mcpServers": {
-    "jaml-mcp": {
+    "balatro-seed-mcp": {
       "command": "npx",
       "args": ["tsx", "cli.ts"],
-      "cwd": "/path/to/jaml-mcp"
+      "cwd": "/path/to/balatro-seed-mcp"
     }
   }
 }`;
