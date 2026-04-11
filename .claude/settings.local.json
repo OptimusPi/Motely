@@ -44,7 +44,8 @@
       "Bash(code --list-extensions)",
       "Bash(find . -path */node_modules -prune -o -type f -name *.md -print)",
       "WebSearch",
-      "WebFetch(domain:www.nuget.org)"
+      "WebFetch(domain:www.nuget.org)",
+      "Bash(ls:*)"
     ]
   }
 }
