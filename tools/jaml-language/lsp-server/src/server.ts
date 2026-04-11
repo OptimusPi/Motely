@@ -20,15 +20,17 @@ import {
   CLAUSE_KEYS,
   JAML_ROOT_KEYS,
   looksLikeJson,
-  unknownRootKeys,
 } from "@motely/jaml-language-core";
 
 // ── Schema-driven value data ────────────────────────────────────────────────
 
 /** Map from JAML key → list of valid enum values, built from jaml.schema.json. */
 const VALUE_MAP = new Map<string, string[]>();
+const ROOT_KEY_SET = new Set<string>(JAML_ROOT_KEYS as readonly string[]);
+const CLAUSE_KEY_SET = new Set<string>(CLAUSE_KEYS as readonly string[]);
+const SOURCE_KEY_SET = new Set<string>();
 
-function loadSchemaValues(): void {
+function loadSchema(): any {
   // Schema lives next to the bundled server.js (esbuild copies it during build).
   // Fallback: repo root (dev mode).
   const here = __dirname;
@@ -38,39 +40,175 @@ function loadSchemaValues(): void {
     resolve(here, "..", "..", "..", "jaml.schema.json"),
   ];
 
-  let schema: any;
   for (const p of candidates) {
     try {
-      schema = JSON.parse(readFileSync(p, "utf8"));
-      break;
+      return JSON.parse(readFileSync(p, "utf8"));
     } catch {}
   }
+
+  return null;
+}
+
+function resolveSchemaRef(schema: any, ref: string | undefined): any {
+  if (!ref || !ref.startsWith("#/")) return null;
+
+  let current = schema;
+  for (const segment of ref.slice(2).split("/")) {
+    current = current?.[segment];
+    if (current == null) return null;
+  }
+
+  return current;
+}
+
+function getSchemaNode(schema: any, definition: any): any {
+  if (!definition || typeof definition !== "object") return null;
+  return definition.$ref ? resolveSchemaRef(schema, definition.$ref) : definition;
+}
+
+function getSchemaProperties(schema: any, definition: any): Record<string, any> {
+  const node = getSchemaNode(schema, definition);
+  const properties = node?.properties;
+  return properties && typeof properties === "object" ? properties : {};
+}
+
+function getSchemaEnumValues(schema: any, definition: any): string[] | null {
+  const node = getSchemaNode(schema, definition);
+  if (!node || typeof node !== "object") return null;
+
+  if (Array.isArray(node.enum)) {
+    return node.enum;
+  }
+
+  if (Array.isArray(node.items?.enum)) {
+    return node.items.enum;
+  }
+
+  if (node.items) {
+    return getSchemaEnumValues(schema, node.items);
+  }
+
+  return null;
+}
+
+function unknownKeys(object: Record<string, unknown>, allowed: Set<string>): string[] {
+  return Object.keys(object).filter((key) => !allowed.has(key));
+}
+
+function pushDiagnostic(
+  diagnostics: Diagnostic[],
+  seenMessages: Set<string>,
+  severity: DiagnosticSeverity,
+  message: string,
+  max: number
+): void {
+  if (seenMessages.has(message)) return;
+  seenMessages.add(message);
+  diagnostics.push({
+    severity,
+    range: { start: { line: 0, character: 0 }, end: { line: 0, character: max } },
+    message,
+    source: "jaml-lsp",
+  });
+}
+
+function validateSourcesObject(
+  sources: unknown,
+  diagnostics: Diagnostic[],
+  seenMessages: Set<string>,
+  max: number
+): void {
+  if (!sources || typeof sources !== "object" || Array.isArray(sources)) {
+    pushDiagnostic(diagnostics, seenMessages, DiagnosticSeverity.Warning, "Clause 'sources' must be an object/mapping.", max);
+    return;
+  }
+
+  if (SOURCE_KEY_SET.size === 0) return;
+
+  for (const bad of unknownKeys(sources as Record<string, unknown>, SOURCE_KEY_SET)) {
+    pushDiagnostic(diagnostics, seenMessages, DiagnosticSeverity.Warning, `Unknown source key '${bad}'.`, max);
+  }
+}
+
+function validateClauseObject(
+  clause: unknown,
+  diagnostics: Diagnostic[],
+  seenMessages: Set<string>,
+  max: number
+): void {
+  if (!clause || typeof clause !== "object" || Array.isArray(clause)) {
+    pushDiagnostic(diagnostics, seenMessages, DiagnosticSeverity.Warning, "JAML clauses must be objects/mappings.", max);
+    return;
+  }
+
+  const clauseObject = clause as Record<string, unknown>;
+  for (const bad of unknownKeys(clauseObject, CLAUSE_KEY_SET)) {
+    pushDiagnostic(diagnostics, seenMessages, DiagnosticSeverity.Warning, `Unknown clause key '${bad}'.`, max);
+  }
+
+  if ("sources" in clauseObject) {
+    validateSourcesObject(clauseObject.sources, diagnostics, seenMessages, max);
+  }
+
+  for (const nestedKey of ["and", "or", "clauses"] as const) {
+    validateClauseList(nestedKey, clauseObject[nestedKey], diagnostics, seenMessages, max);
+  }
+}
+
+function validateClauseList(
+  sectionName: string,
+  clauses: unknown,
+  diagnostics: Diagnostic[],
+  seenMessages: Set<string>,
+  max: number
+): void {
+  if (clauses == null) return;
+
+  if (!Array.isArray(clauses)) {
+    pushDiagnostic(diagnostics, seenMessages, DiagnosticSeverity.Warning, `JAML section '${sectionName}' must be an array of clauses.`, max);
+    return;
+  }
+
+  for (const clause of clauses) {
+    validateClauseObject(clause, diagnostics, seenMessages, max);
+  }
+}
+
+function loadSchemaValues(): void {
+  const schema = loadSchema();
   if (!schema) return;
 
-  // Top-level enum fields (deck, stake)
-  const props = schema.properties ?? {};
+  const props = getSchemaProperties(schema, schema);
   for (const [key, def] of Object.entries<any>(props)) {
-    if (def.enum) VALUE_MAP.set(key, def.enum);
+    ROOT_KEY_SET.add(key);
+
+    const values = getSchemaEnumValues(schema, def);
+    if (values) {
+      VALUE_MAP.set(key, values);
+    }
   }
 
-  // Clause-level fields inside must/should/mustNot items
-  const clauseDefs =
-    props.must?.items?.properties ??
-    props.should?.items?.properties ??
-    {};
+  const clauseDefs = getSchemaProperties(
+    schema,
+    props.must?.items ?? props.should?.items ?? props.mustNot?.items
+  );
   for (const [key, def] of Object.entries<any>(clauseDefs)) {
-    if (def.enum && !VALUE_MAP.has(key)) {
-      VALUE_MAP.set(key, def.enum);
-    }
-    // Also handle array-of-enum (e.g. jokers: [joker1, joker2])
-    if (def.items?.enum && !VALUE_MAP.has(key)) {
-      VALUE_MAP.set(key, def.items.enum);
+    CLAUSE_KEY_SET.add(key);
+
+    const values = getSchemaEnumValues(schema, def);
+    if (values && !VALUE_MAP.has(key)) {
+      VALUE_MAP.set(key, values);
     }
   }
 
-  // Aesthetics
-  if (props.aesthetics?.items?.enum) {
-    VALUE_MAP.set("aesthetics", props.aesthetics.items.enum);
+  const sourceDefs = getSchemaProperties(schema, clauseDefs.sources);
+  for (const key of Object.keys(sourceDefs)) {
+    SOURCE_KEY_SET.add(key);
+  }
+
+  const aesthetics = getSchemaEnumValues(schema, props.aesthetics);
+  if (aesthetics) {
+    VALUE_MAP.set("aesthetics", aesthetics);
   }
 }
 
@@ -109,7 +247,7 @@ function dedupeEnumVariants(values: string[]): string[] {
 
 /** Detect which JAML key the cursor is on: returns the key if the line is `key: <cursor>`. */
 function getKeyAtLine(line: string): string | null {
-  const m = line.match(/^\s*(\w[\w-]*):\s*/);
+  const m = line.match(/^\s*(?:-\s*)?(\w[\w-]*):\s*/);
   return m ? m[1] : null;
 }
 
@@ -127,6 +265,7 @@ function getWordAt(line: string, char: number): string {
 function diagnosticsForDocument(text: string): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const max = Math.max(0, text.length - 1);
+  const seenMessages = new Set<string>();
 
   try {
     let root: unknown;
@@ -146,13 +285,13 @@ function diagnosticsForDocument(text: string): Diagnostic[] {
       return diagnostics;
     }
 
-    for (const bad of unknownRootKeys(root as Record<string, unknown>)) {
-      diagnostics.push({
-        severity: DiagnosticSeverity.Warning,
-        range: { start: { line: 0, character: 0 }, end: { line: 0, character: max } },
-        message: `Unknown root key '${bad}'.`,
-        source: "jaml-lsp",
-      });
+    const rootObject = root as Record<string, unknown>;
+    for (const bad of unknownKeys(rootObject, ROOT_KEY_SET)) {
+      pushDiagnostic(diagnostics, seenMessages, DiagnosticSeverity.Warning, `Unknown root key '${bad}'.`, max);
+    }
+
+    for (const sectionName of ["must", "should", "mustNot"] as const) {
+      validateClauseList(sectionName, rootObject[sectionName], diagnostics, seenMessages, max);
     }
   } catch (error) {
     diagnostics.push({
@@ -225,13 +364,13 @@ connection.onCompletion((params: TextDocumentPositionParams) => {
 
   // Otherwise: provide KEY completions
   return [
-    ...JAML_ROOT_KEYS.map((k) => ({
+    ...Array.from(ROOT_KEY_SET).map((k) => ({
       label: k,
       kind: CompletionItemKind.Property,
       detail: "JAML root key",
       insertText: `${k}: `,
     })),
-    ...CLAUSE_KEYS.map((k) => ({
+    ...Array.from(CLAUSE_KEY_SET).map((k) => ({
       label: k,
       kind: CompletionItemKind.Property,
       detail: "JAML clause key",
