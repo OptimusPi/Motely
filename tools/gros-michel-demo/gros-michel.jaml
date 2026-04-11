@@ -1,0 +1,7 @@
+# Demo: common joker Gros Michel appears in run (antes 1–3)
+name: Gros Michel (bananas)
+deck: Red
+stake: White
+must:
+  - joker: GrosMichel
+    antes: [1, 2, 3]

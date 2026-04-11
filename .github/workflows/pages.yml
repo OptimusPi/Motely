@@ -14,6 +14,9 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  MOTELY_VERSION: "7.0.8"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,8 +28,8 @@ jobs:
           dotnet-version: "10.0.x"
           dotnet-quality: "preview"
 
-      - name: Publish motely-wasm (NativeAOT-LLVM via Bootsharp — no workloads needed)
-        run: dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release -p:MSBuildEnableWorkloadResolver=false
+      - name: Publish motely-wasm (NativeAOT-LLVM + Bootsharp)
+        run: dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release -p:MSBuildEnableWorkloadResolver=false -p:MotelyVersion=${{ env.MOTELY_VERSION }}
 
       - uses: actions/setup-node@v4
         with:

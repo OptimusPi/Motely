@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "7.0.6",
+  "version": "7.0.8",
   "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
@@ -2118,7 +2118,7 @@
                 "minimum": 0,
                 "maximum": 5
               },
-              "description": "Pack offering slot indices. Legendary soul: if arcanaBoosterPacks/spectralBoosterPacks are set, this combined list is ignored for matching."
+              "description": "Pack offering slot indices. Legendary/soul joker (legacy list only): Motely\u0027s shop stream always offers Buffoon at slot 0 first, so The Soul cannot appear from slot 0 alone \u2014 list at least one index \u22651, or use arcanaBoosterPacks/spectralBoosterPacks. If arcana/spectral lists are set, this legacy list is ignored for matching."
             },
             "arcanaBoosterPacks": {
               "type": "array",
@@ -2379,6 +2379,66 @@
               "required": [
                 "antes"
               ]
+            }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "soulJoker"
+                ]
+              },
+              {
+                "required": [
+                  "legendaryJoker"
+                ]
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "SoulJoker"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "sources": {
+                "type": "object",
+                "properties": {
+                  "boosterPacks": {
+                    "allOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        }
+                      },
+                      {
+                        "if": {
+                          "minItems": 1
+                        },
+                        "then": {
+                          "contains": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         }

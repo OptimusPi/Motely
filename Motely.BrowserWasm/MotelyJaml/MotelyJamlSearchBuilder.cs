@@ -60,6 +60,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
     {
         ArgumentNullException.ThrowIfNull(config);
         ClearPlan();
+        JamlSearchBuilder.EnsureRunnablePlan(config);
         _config = config;
         return this;
     }
@@ -69,6 +70,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         ClearPlan();
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
+        JamlSearchBuilder.EnsureRunnablePlan(config);
         _config = config;
         return this;
     }
@@ -80,6 +82,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
             throw new InvalidOperationException(compileErr ?? "Jummy compile failed.");
         if (!JamlConfigLoader.TryLoad(jamlYaml, out var config, out var loadErr))
             throw new InvalidOperationException(loadErr ?? "Invalid JAML after Jummy compile.");
+        JamlSearchBuilder.EnsureRunnablePlan(config);
         _config = config;
         return this;
     }

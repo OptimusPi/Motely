@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
@@ -351,7 +351,17 @@ partial class Program
                 }
             }
 
-            var plan = JamlSearchBuilder.CreatePlan(config);
+            JamlSearchPlan plan;
+            try
+            {
+                plan = JamlSearchBuilder.CreatePlan(config);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.Error.WriteLine($"Error: {ex.Message}");
+                return 1;
+            }
+
             IMotelySearchSettings settings = plan.Settings
                 .WithDeck(deck)
                 .WithStake(stake)

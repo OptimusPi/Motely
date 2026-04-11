@@ -1,0 +1,6 @@
+id: find-grosmichel-cli
+deck: Red
+stake: White
+must:
+  - commonJoker: GrosMichel
+    antes: [1, 2, 3]
