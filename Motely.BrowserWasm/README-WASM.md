@@ -6,7 +6,7 @@ The **`Program`** class here is only the **runtime bootstrap** (`Main` → `RunB
 
 **Bootsharp glue** (`JSExport` / `JSImport` / `JSPreferences`) is isolated in **`BootsharpInterop.cs`** so you can ignore it while working in C#. **`MotelyJamlSearchBuilder`** (preferred search API), **`MotelyWasmHost`** (compatibility wrapper), **`MotelySingleSearchContext`** (seed inspection), and **`SearchEvents`** (progress/results) are the real API surface.
 
-After `dotnet publish` on this project, the npm package is emitted under `motely-wasm/` (and `motely-wasm-compat/` is built by the csproj target).
+After `dotnet publish` on this project, the npm package is emitted under `motely-wasm/` (and `motely-wasm-compat/` is built by the csproj target). **Monaco** is not part of these packages — use `tools/jaml-language/monaco` (`@motely/jaml-monaco`) for editor assets.
 
 **API note:** `MotelyJamlSearchBuilder` is the preferred API (`loadJaml` → `random`/`sequential`/etc → `run`), but `MotelyWasmHost` remains available for older callers (`loadJaml`, `startRandomSearch`, `stopSearch`, etc.).
 

@@ -4,4 +4,3 @@ packages:
   - lsp-server
   - vscode-extension
   - monaco
-  - jaml-mcp

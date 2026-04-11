@@ -8,13 +8,6 @@ public class JammyClauseCoverageTests
 {
     private const string Seed = "JAMMY";
 
-    private static MotelyLegacyTextAnalyzer AnalyzeJammy(MotelyDeck deck = MotelyDeck.Red)
-    {
-        var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(Seed, deck, MotelyStake.White));
-        Assert.True(string.IsNullOrEmpty(analysis.Error), $"Analyzer failed for {Seed}/{deck}: {analysis.Error}");
-        return analysis;
-    }
-
     private static string BuildMustJaml(string clauseBody, MotelyDeck deck = MotelyDeck.Red)
     {
         var lines = clauseBody.Replace("\r\n", "\n").Trim().Split('\n');

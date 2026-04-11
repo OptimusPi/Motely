@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/mcp",
+      "destination": "/api/server"
+    }
+  ],
+  "functions": {
+    "api/server.ts": {
+      "maxDuration": 800,
+      "includeFiles": "mcp-ui/dist/**"
+    },
+    "api/search.ts": {
+      "maxDuration": 600
+    },
+    "api/analyze.ts": {
+      "maxDuration": 30
+    }
+  }
+}

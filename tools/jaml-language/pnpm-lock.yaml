@@ -73,7 +73,7 @@ importers:
     dependencies:
       motely-wasm-compat:
         specifier: ^7.0.8
-        version: 7.0.8
+        version: 7.2.0
       vscode-languageclient:
         specifier: ^9.0.1
         version: 9.0.1
@@ -1195,8 +1195,8 @@ packages:
   mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
 
-  motely-wasm-compat@7.0.8:
-    resolution: {integrity: sha512-PybIzDP0llEKQ8wuQsf7Ef8ebGRlCB50XGd4idiQEM47AyE+pkFoOslP6mCA8dhqzTVvG05X435dJTWIDbqWtg==}
+  motely-wasm-compat@7.2.0:
+    resolution: {integrity: sha512-lguRI+dCl1yxheUdIEZjnH1s5HgdsV91oT8GsyJoWOGJl73LY34cF9JrIfGbUvmAUcwOX3Emhho+ff3uS2Q9qA==}
 
   motely-wasm-compat@file:../../Motely.BrowserWasm/motely-wasm-compat:
     resolution: {directory: ../../Motely.BrowserWasm/motely-wasm-compat, type: directory}
@@ -2913,7 +2913,7 @@ snapshots:
   mkdirp-classic@0.5.3:
     optional: true
 
-  motely-wasm-compat@7.0.8: {}
+  motely-wasm-compat@7.2.0: {}
 
   motely-wasm-compat@file:../../Motely.BrowserWasm/motely-wasm-compat: {}
 

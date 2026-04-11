@@ -45,7 +45,24 @@
       "Bash(find . -path */node_modules -prune -o -type f -name *.md -print)",
       "WebSearch",
       "WebFetch(domain:www.nuget.org)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mkdir -p X:/JammySeedFinder/src/MotelyJAML/tools/jaml-mcp)",
+      "Bash(cp -r D:/jaml-mcp/api X:/JammySeedFinder/src/MotelyJAML/tools/jaml-mcp/)",
+      "Bash(cp -r D:/jaml-mcp/mcp-ui X:/JammySeedFinder/src/MotelyJAML/tools/jaml-mcp/)",
+      "Bash(cp -r D:/jaml-mcp/scripts X:/JammySeedFinder/src/MotelyJAML/tools/jaml-mcp/)",
+      "Bash(cp -r D:/jaml-mcp/public X:/JammySeedFinder/src/MotelyJAML/tools/jaml-mcp/)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx tsx:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:apps.extensions.modelcontextprotocol.io)",
+      "WebFetch(domain:blog.modelcontextprotocol.io)",
+      "Read(//d//**)",
+      "Read(//c//**)",
+      "Read(//x//**)",
+      "Read(//c/Users/pifre/**)",
+      "Bash(ls /d/*.app)"
     ]
   }
 }

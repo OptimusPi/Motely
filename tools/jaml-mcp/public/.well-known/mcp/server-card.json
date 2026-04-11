@@ -1,0 +1,71 @@
+{
+  "serverInfo": {
+    "name": "jaml-mcp",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "search_seeds",
+      "description": "Search for Balatro seeds matching a JAML filter. Runs a random search of up to 1,000,000 seeds. Returns matching seed strings and relevance scores. In MCP Apps hosts, opens an interactive json-render UI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jaml": {
+            "type": "string",
+            "description": "JAML filter JSON. Example: {\"deck\":\"Red\",\"stake\":\"White\",\"must\":[{\"joker\":\"Blueprint\"}]}"
+          },
+          "seed_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000,
+            "default": 1000000,
+            "description": "Seeds to randomly sample (1–1,000,000)."
+          }
+        },
+        "required": ["jaml"]
+      }
+    },
+    {
+      "name": "analyze_seed",
+      "description": "Analyze a specific Balatro seed against a JAML filter. Returns the seed context for the deck and stake defined in the JAML.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "seed": {
+            "type": "string",
+            "description": "Balatro seed string (e.g. ABCD1234)"
+          },
+          "jaml": {
+            "type": "string",
+            "description": "JAML filter JSON — deck and stake are read from this"
+          }
+        },
+        "required": ["seed", "jaml"]
+      }
+    },
+    {
+      "name": "validate_jaml",
+      "description": "Validate a JAML filter string. Returns valid if the JSON is well-formed JAML, or a descriptive error. Does NOT run a search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jaml": {
+            "type": "string",
+            "description": "JAML filter JSON string to validate"
+          }
+        },
+        "required": ["jaml"]
+      }
+    },
+    {
+      "name": "get_version",
+      "description": "Get the MotelyJAML engine version string.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}
