@@ -63,41 +63,39 @@ describe("motely-wasm: search pipeline (the path that crashed in 9.0.0)", () => 
       // Fix: MotelyWasmHost.cs *FromJaml methods now inline LoadJamlCore (a
       // private static helper) instead of calling LoadJaml on `this`.
 
-      // We observe completion via the SearchEvents stream rather than
-      // awaiting `session.waitForCompletionAsync(...)` on the returned handle.
-      // Both should work after the C# fix, but the event-stream path is what
-      // the MCP server uses in production (api/tools.ts::searchSeeds). If that
-      // works, we know the pipeline is healthy end-to-end.
+      // Test the API as designed by Tacodiva/Motely:
+      // `start*` returns an `IMotelySearchSession` handle; the caller awaits
+      // `session.waitForCompletionAsync(...)` on that handle. If this crashes,
+      // the bug is in the C# WASM bridge — fix it there, don't work around it.
+      let completedStatus: string | undefined;
+      let completedSeedsSearched = 0n;
+      let completedMatches = 0n;
       let resultCount = 0;
-      const completion = await new Promise<{
-        status: string;
-        searched: bigint;
-        matching: bigint;
-      }>((resolve, reject) => {
-        const onResult = () => {
-          resultCount++;
-        };
-        const onComplete = (status: string, searched: bigint, matching: bigint) => {
-          SearchEvents.onResult.unsubscribe(onResult);
-          SearchEvents.onComplete.unsubscribe(onComplete);
-          resolve({ status, searched, matching });
-        };
-        SearchEvents.onResult.subscribe(onResult);
-        SearchEvents.onComplete.subscribe(onComplete);
-        try {
-          MotelyWasmHost.startRandomSearchFromJaml(MINIMAL_JAML, 1000);
-        } catch (err) {
-          SearchEvents.onResult.unsubscribe(onResult);
-          SearchEvents.onComplete.unsubscribe(onComplete);
-          reject(err);
-        }
-      });
 
-      expect(completion.status).toBe("completed");
-      expect(completion.searched).toBeGreaterThanOrEqual(1n);
+      const onResult = () => {
+        resultCount++;
+      };
+      const onComplete = (status: string, searched: bigint, matching: bigint) => {
+        completedStatus = status;
+        completedSeedsSearched = searched;
+        completedMatches = matching;
+      };
+
+      SearchEvents.onResult.subscribe(onResult);
+      SearchEvents.onComplete.subscribe(onComplete);
+      try {
+        const session = MotelyWasmHost.startRandomSearchFromJaml(MINIMAL_JAML, 1000);
+        await session.waitForCompletionAsync(null);
+      } finally {
+        SearchEvents.onResult.unsubscribe(onResult);
+        SearchEvents.onComplete.unsubscribe(onComplete);
+      }
+
+      expect(completedStatus).toBe("completed");
+      expect(completedSeedsSearched).toBeGreaterThanOrEqual(1n);
       // Either matches or no matches is fine for a 1k-seed budget; we just
       // require the pipeline to run and emit a structured completion.
-      expect(typeof completion.matching).toBe("bigint");
+      expect(typeof completedMatches).toBe("bigint");
       expect(resultCount).toBeGreaterThanOrEqual(0);
     },
     60_000,
