@@ -9,5 +9,8 @@
     "test:motely-direct-contract": "node scripts/test-motely-direct-contract.mjs",
     "test:motely-wasm-compat-contract": "node --test scripts/test-motely-wasm-compat.contract.test.mjs",
     "find:gros-michel-wasm": "node scripts/find-gros-michel-via-wasm.mjs"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.4"
   }
 }

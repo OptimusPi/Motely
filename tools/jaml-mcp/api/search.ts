@@ -5,7 +5,10 @@
  * Body: { jaml: string, seed_count?: number }
  * Returns: SearchResponse JSON
  */
+import bootsharp from "motely-wasm";
 import { searchSeeds } from "./tools.js";
+
+await bootsharp.boot();
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
