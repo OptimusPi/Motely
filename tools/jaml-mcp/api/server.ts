@@ -8,8 +8,7 @@ const pkg = createRequire(import.meta.url)("../package.json") as {
   version: string;
 };
 
-// Set MCP_API_KEY to require Bearer token auth on the HTTP endpoint.
-const API_KEY = process.env.MCP_API_KEY;
+const pkg = createRequire(import.meta.url)("../package.json");
 
 async function createTransport(): Promise<StreamableHTTPServerTransport> {
   await bootPromise;
@@ -34,7 +33,6 @@ function verifyBearer(req: { headers?: Record<string, string | string[] | undefi
   return auth.slice(7) === API_KEY;
 }
 
-/** Vercel may set `req.body`; avoid double-consuming the stream (hang). */
 async function jsonBodyForMcp(req: any): Promise<unknown | undefined> {
   if (req.method !== "POST" && req.method !== "DELETE") return undefined;
   if (req.body != null) {
@@ -59,7 +57,6 @@ async function jsonBodyForMcp(req: any): Promise<unknown | undefined> {
   return raw ? JSON.parse(raw) : undefined;
 }
 
-/** Vercel Node serverless: `IncomingMessage` + `ServerResponse` (same shape as `api/search.ts`). */
 async function mcpNodeHandler(req: any, res: any): Promise<void> {
   if (!verifyBearer(req)) {
     res.statusCode = 401;
