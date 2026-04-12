@@ -1,10 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-<!-- Compat=true: motely-wasm-compat (*-compat package). Default: motely-wasm. -->
 <PropertyGroup>
 <OutputType>Exe</OutputType>
 <TargetFramework>net10.0</TargetFramework>
 <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-<Compat Condition="'$(Compat)' == ''">false</Compat>
 <BootsharpEmbedBinaries>true</BootsharpEmbedBinaries>
 <Nullable>enable</Nullable>
 <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -12,10 +10,8 @@
 <InvariantGlobalization>true</InvariantGlobalization>
 <Version>$(MotelyVersion)</Version>
 <RootNamespace>Motely.BrowserWasm</RootNamespace>
-<BootsharpName Condition="'$(Compat)' == 'true'">motely-wasm-compat</BootsharpName>
-<BootsharpName Condition="'$(Compat)' != 'true'">motely-wasm</BootsharpName>
-<BootsharpPublishDirectory Condition="'$(Compat)' == 'true'">motely-wasm-compat</BootsharpPublishDirectory>
-<BootsharpPublishDirectory Condition="'$(Compat)' != 'true'">motely-wasm</BootsharpPublishDirectory>
+<BootsharpName>motely-wasm</BootsharpName>
+<BootsharpPublishDirectory>motely-wasm</BootsharpPublishDirectory>
 <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
 <BootsharpLLVM>true</BootsharpLLVM>
 <BootsharpOptimize>speed</BootsharpOptimize>
@@ -38,6 +34,17 @@
 File="$(MSBuildProjectDirectory)\VersionInfo.g.cs"
 Lines="namespace Motely.BrowserWasm { internal static class VersionInfo { public const string Version = &quot;$(_Ver)&quot;%3B } }"
 Overwrite="true" />
+</Target>
+
+<!-- Copy overlay package.json and stamp version before Bootsharp generates its own. -->
+<Target Name="StampPackageJson" BeforeTargets="BootsharpPack">
+<PropertyGroup>
+<_PkgSrc>$(MSBuildProjectDirectory)\..\Motely\package.json</_PkgSrc>
+<_PkgDst>$(BootsharpPublishDirectory)\package.json</_PkgDst>
+</PropertyGroup>
+<MakeDir Directories="$(BootsharpPublishDirectory)" />
+<Copy SourceFiles="$(_PkgSrc)" DestinationFiles="$(_PkgDst)" />
+<Exec Command="node -e &quot;const f='$(_PkgDst)'.replace(/\\/g,'/');const j=require('fs');j.writeFileSync(f,j.readFileSync(f,'utf8').replace('0.0.0','$(Version)'))&quot;" />
 </Target>
 
 <ItemGroup>

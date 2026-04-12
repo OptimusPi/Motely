@@ -7,7 +7,7 @@
     "dev": "cd Motely.TestWebsite && npm run dev",
     "preview": "cd Motely.TestWebsite && npm run preview",
     "test:motely-direct-contract": "node scripts/test-motely-direct-contract.mjs",
-    "test:motely-wasm-compat-contract": "node --test scripts/test-motely-wasm-compat.contract.test.mjs",
+    "test:motely-wasm-contract": "node --test scripts/test-motely-wasm.contract.test.mjs",
     "find:gros-michel-wasm": "node scripts/find-gros-michel-via-wasm.mjs"
   },
   "devDependencies": {

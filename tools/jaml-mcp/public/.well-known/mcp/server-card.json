@@ -1,33 +1,39 @@
 {
   "serverInfo": {
     "name": "balatro-seed-mcp",
-    "version": "9.0.1"
+    "version": "9.9.9"
   },
   "tools": [
     {
       "name": "search_seeds",
-      "description": "Search for Balatro seeds matching a JAML filter. Runs a random search of up to 1,000,000 seeds. Returns matching seed strings and relevance scores. In MCP Apps hosts, opens an interactive json-render UI.",
+      "description": "Search for Balatro seeds. Describe what you want in natural language (Jummy) like 'what: Negative Perkeo in ante 1', or pass a JAML filter with deck, stake, must/should/mustNot clauses. Supports jokers, vouchers, bosses, tags, editions, stickers, and more. Randomly samples up to 1,000,000 seeds.",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "jummy": {
+            "type": "string",
+            "description": "Natural language seed search. Example: 'what: Negative Perkeo in ante 1'"
+          },
           "jaml": {
             "type": "string",
-            "description": "JAML filter JSON. Example: {\"deck\":\"Red\",\"stake\":\"White\",\"must\":[{\"joker\":\"Blueprint\"}]}"
+            "description": "JAML filter as JSON. Example: {\"deck\":\"Red\",\"stake\":\"White\",\"must\":[{\"joker\":\"Blueprint\",\"antes\":[1]}]}"
           },
           "seed_count": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000000,
             "default": 1000000,
-            "description": "Seeds to randomly sample (1–1,000,000)."
+            "description": "Seeds to randomly sample (1-1,000,000)."
           }
-        },
-        "required": ["jaml"]
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
       }
     },
     {
       "name": "analyze_seed",
-      "description": "Analyze a specific Balatro seed against a JAML filter. Returns the seed context for the deck and stake defined in the JAML.",
+      "description": "Inspect a specific Balatro seed. Returns boss blinds, tags, vouchers, shop items, and booster packs for each ante (1-8). Use after search_seeds to drill into a promising seed.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -37,32 +43,13 @@
           },
           "jaml": {
             "type": "string",
-            "description": "JAML filter JSON — deck and stake are read from this"
+            "description": "JAML filter JSON for deck/stake context. Minimal: {\"deck\":\"Red\",\"stake\":\"White\"}"
           }
         },
         "required": ["seed", "jaml"]
-      }
-    },
-    {
-      "name": "validate_jaml",
-      "description": "Validate a JAML filter string. Returns valid if the JSON is well-formed JAML, or a descriptive error. Does NOT run a search.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "jaml": {
-            "type": "string",
-            "description": "JAML filter JSON string to validate"
-          }
-        },
-        "required": ["jaml"]
-      }
-    },
-    {
-      "name": "get_version",
-      "description": "Get the MotelyJAML engine version string.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {}
+      },
+      "annotations": {
+        "readOnlyHint": true
       }
     }
   ],

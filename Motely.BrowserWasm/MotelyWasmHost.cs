@@ -61,11 +61,8 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return _builder.GetVersion();
     }
 
-    // Private worker used by every public [JSExport] method that needs to load JAML.
-    // Public LoadJaml below delegates to this helper. *FromJaml methods MUST call this
-    // helper directly — never LoadJaml — so a [JSExport] method never invokes another
-    // [JSExport] method on `this`, which crashes with "Invalid Program: attempted to
-    // call a UnmanagedCallersOnly method from managed code" on Bootsharp 9.0.0+.
+    // [JSExport] methods must never call other [JSExport] methods on `this` —
+    // Bootsharp surfaces them as UnmanagedCallersOnly thunks and managed dispatch crashes.
     private static JamlConfig LoadJamlCore(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
@@ -136,7 +133,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public IMotelySearch StartConfiguredSearchFromJaml(string jaml, int batchCharCount, long startBatch = 0, long endBatch = 0)
     {
-        // Inline LoadJamlCore + start to avoid [JSExport]→[JSExport] dispatch on `this`.
         var config = LoadJamlCore(jaml);
         return StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
     }
@@ -177,7 +173,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public IMotelySearch StartRandomSearchFromJaml(string jaml, int randomSeedCount)
     {
-        // Inline LoadJamlCore + start to avoid [JSExport]→[JSExport] dispatch on `this`.
         var config = LoadJamlCore(jaml);
         return StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
     }
@@ -199,7 +194,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public IMotelySearch StartSeedListSearchFromJaml(string jaml, string[] seeds)
     {
-        // Inline LoadJamlCore + start to avoid [JSExport]→[JSExport] dispatch on `this`.
         var config = LoadJamlCore(jaml);
         return StartSearch(_builder.LoadConfig(config).SeedList(seeds).Run());
     }

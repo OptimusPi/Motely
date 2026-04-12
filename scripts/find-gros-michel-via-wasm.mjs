@@ -3,7 +3,7 @@
  * (rebuild: dotnet publish Motely.BrowserWasm -c Release /p:MotelyVersion=…).
  * Uses startRandomSearchFromJaml so JAML is parsed inside WASM (JamlConfig round-trip from loadJaml breaks random search).
  */
-import dotnet, { MotelyWasmHost, SearchEvents } from "../Motely.BrowserWasm/motely-wasm-compat/index.mjs";
+import dotnet, { MotelyWasmHost, SearchEvents } from "../Motely.BrowserWasm/motely-wasm/index.mjs";
 
 const jaml = `
 name: Gros Michel (WASM-only)

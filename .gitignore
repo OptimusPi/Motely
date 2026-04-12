@@ -1,6 +1,7 @@
 bin/
 obj/
 *.pdb
+VersionInfo.g.cs
 *.swp
 *.editorconfig
 *.wal
@@ -119,3 +120,4 @@ Motely.TestWebsite/node_modules
 Motely.TestWebsite/dist
 Motely.HelperAPI/wwwroot/
 /JamlFilters
+Motely.BrowserWasm/VersionInfo.g.cs

@@ -67,7 +67,18 @@
       "Bash(git -C X:/JammySeedFinder/src/MotelyJAML show HEAD~1:Motely.Tests/JamlClauseCoverageTests.cs)",
       "Bash(git:*)",
       "Bash(dotnet publish:*)",
-      "Bash(npm publish:*)"
+      "Bash(npm publish:*)",
+      "Bash(npm info:*)",
+      "Bash(xargs cat:*)",
+      "Bash(find /Users/nate/GitHub/MotelyJAML -type f -name \"*.csproj\" -exec grep -l \"MotelyVersion\\\\|Version\" {} \\\\;)",
+      "Bash(find /Users/nate/GitHub/MotelyJAML -name \"*.cs\" -path \"*/Motely.BrowserWasm/*\" -exec grep -l \"VersionInfo\\\\|GetVersion\\\\|Version\" {} \\\\;)",
+      "Bash(brew upgrade:*)",
+      "Bash(npx vitest:*)",
+      "Bash(pnpm add:*)",
+      "Bash(dotnet --version)",
+      "Bash(brew search:*)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet nuget:*)"
     ]
   }
 }
