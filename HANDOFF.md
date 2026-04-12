@@ -6,7 +6,7 @@
 - MotelyWasmHost.cs: search methods return void, JS uses SearchEvents
 - MotelyJamlSearchBuilder.cs: tracks seeds/matches from progress callback, not polling search object properties
 - tools.ts: stripped from 800→250 lines, 2 tools (search_seeds, analyze_seed), UX descriptions explaining JAML and Jummy
-- MCP App UI built (`tools/balatro-seed-mcp/mcp-ui/dist/`)
+- MCP App UI built (`tools/balatro-seed-finder/mcp-ui/dist/`)
 - Version 9.9.9 in Directory.Packages.props
 - OSX platform condition added (uses linux-x64, can't actually compile on Mac ARM though)
 - BootsharpPublishDirectory = repo-root/motely-wasm/ (build output, gets wiped)
@@ -72,8 +72,8 @@ Then test the MCP:
 - `Motely/README.md` — npm README
 - `Motely.BrowserWasm/MotelyWasmHost.cs` — the sole JSExport entry point
 - `Motely.BrowserWasm/BootsharpInterop.cs` — JSExport list
-- `tools/balatro-seed-mcp/api/tools.ts` — MCP tool definitions
-- `tools/balatro-seed-mcp/public/.well-known/mcp/server-card.json` — MCP metadata
+- `tools/balatro-seed-finder/api/tools.ts` — MCP tool definitions
+- `tools/balatro-seed-finder/public/.well-known/mcp/server-card.json` — MCP metadata
 
 ## Bootsharp rules (read these every time)
 1. BootsharpPackageDirectory ≠ BootsharpPublishDirectory. Two different folders.
