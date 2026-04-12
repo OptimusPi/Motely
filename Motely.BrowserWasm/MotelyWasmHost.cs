@@ -61,12 +61,22 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return _builder.GetVersion();
     }
 
-    public JamlConfig LoadJaml(string jaml)
+    // Private worker used by every public [JSExport] method that needs to load JAML.
+    // Public LoadJaml below delegates to this helper. *FromJaml methods MUST call this
+    // helper directly — never LoadJaml — so a [JSExport] method never invokes another
+    // [JSExport] method on `this`, which crashes with "Invalid Program: attempted to
+    // call a UnmanagedCallersOnly method from managed code" on Bootsharp 9.0.0+.
+    private static JamlConfig LoadJamlCore(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
         JamlSearchBuilder.EnsureRunnablePlan(config);
         return config;
+    }
+
+    public JamlConfig LoadJaml(string jaml)
+    {
+        return LoadJamlCore(jaml);
     }
 
     public JamlConfig CompileJummy(string jummy)
@@ -126,7 +136,9 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public IMotelySearch StartConfiguredSearchFromJaml(string jaml, int batchCharCount, long startBatch = 0, long endBatch = 0)
     {
-        return StartConfiguredSearch(LoadJaml(jaml), batchCharCount, startBatch, endBatch);
+        // Inline LoadJamlCore + start to avoid [JSExport]→[JSExport] dispatch on `this`.
+        var config = LoadJamlCore(jaml);
+        return StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
     }
 
     public IMotelySearch StartConfiguredSearchBySearchIndex(
@@ -165,7 +177,9 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public IMotelySearch StartRandomSearchFromJaml(string jaml, int randomSeedCount)
     {
-        return StartRandomSearch(LoadJaml(jaml), randomSeedCount);
+        // Inline LoadJamlCore + start to avoid [JSExport]→[JSExport] dispatch on `this`.
+        var config = LoadJamlCore(jaml);
+        return StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
     }
 
     public IMotelySearch StartAestheticSearch(JamlConfig config, JamlAesthetic aesthetic)
@@ -185,7 +199,9 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public IMotelySearch StartSeedListSearchFromJaml(string jaml, string[] seeds)
     {
-        return StartSeedListSearch(LoadJaml(jaml), seeds);
+        // Inline LoadJamlCore + start to avoid [JSExport]→[JSExport] dispatch on `this`.
+        var config = LoadJamlCore(jaml);
+        return StartSearch(_builder.LoadConfig(config).SeedList(seeds).Run());
     }
 
     public void StopSearch()

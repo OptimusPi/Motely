@@ -1,11 +1,14 @@
 import { createRequire } from "node:module";
-import { bootPromise } from "./tools.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { bootPromise, registerTools } from "./tools.js";
+
+const pkg = createRequire(import.meta.url)("../package.json") as {
+  name: string;
+  version: string;
+};
 
 const pkg = createRequire(import.meta.url)("../package.json");
-
-const API_KEY = process.env.MCP_API_KEY;
 
 async function createTransport(): Promise<StreamableHTTPServerTransport> {
   await bootPromise;
@@ -17,7 +20,6 @@ async function createTransport(): Promise<StreamableHTTPServerTransport> {
     { name: pkg.name, version: pkg.version },
     { capabilities: { tools: {} } }
   );
-  const { registerTools } = await import("./tools.js");
   registerTools(server);
   await server.connect(transport);
   return transport;
