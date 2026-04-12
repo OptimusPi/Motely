@@ -320,8 +320,15 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
 
     private IMotelySearch WireAndRun(IMotelySearchSettings settings)
     {
+        long lastSeedsSearched = 0;
+        long lastMatchingSeeds = 0;
+
         settings = settings.WithProgressCallback(p =>
-            _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds));
+        {
+            lastSeedsSearched = p.SeedsSearched;
+            lastMatchingSeeds = p.MatchingSeeds;
+            _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds);
+        });
 
         settings = settings.WithScoredResultCallback(t =>
             _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray()));
@@ -335,24 +342,24 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         {
             throw new InvalidOperationException($"MotelyJamlSearchBuilder settings.Start() failed: {ex.Message}", ex);
         }
-        _ = NotifyOnCompletionAsync(search);
+        _ = NotifyOnCompletionAsync(search, () => lastSeedsSearched, () => lastMatchingSeeds);
         return search;
     }
 
-    private async Task NotifyOnCompletionAsync(IMotelySearch search)
+    private async Task NotifyOnCompletionAsync(IMotelySearch search, Func<long> getSeedsSearched, Func<long> getMatchingSeeds)
     {
         try
         {
             await search.WaitForCompletionAsync();
-            _events.NotifyComplete("completed", search.GetTotalSeedsSearched(), search.GetMatchingSeeds());
+            _events.NotifyComplete("completed", getSeedsSearched(), getMatchingSeeds());
         }
         catch (OperationCanceledException)
         {
-            _events.NotifyComplete("cancelled", search.GetTotalSeedsSearched(), search.GetMatchingSeeds());
+            _events.NotifyComplete("cancelled", getSeedsSearched(), getMatchingSeeds());
         }
         catch (Exception ex)
         {
-            _events.NotifyComplete($"error: {ex.Message}", search.GetTotalSeedsSearched(), search.GetMatchingSeeds());
+            _events.NotifyComplete($"error: {ex.Message}", getSeedsSearched(), getMatchingSeeds());
         }
     }
 

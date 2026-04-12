@@ -5,8 +5,7 @@ using Bootsharp.Inject;
 [assembly: JSExport(
     typeof(Motely.BrowserWasm.IMotelySingleSearchContext),
     typeof(Motely.Analysis.IMotelySingleSearchContextImpl),
-    typeof(MotelyJaml.IMotelyJamlSearchBuilder),
-    typeof(Motely.IMotelySearch))]
+    typeof(Motely.BrowserWasm.IMotelyWasmHost))]
 [assembly: JSImport([typeof(Motely.BrowserWasm.ISearchEvents)])]
 // JSPreferences strips C# namespace prefixes from generated JS bindings.
 // Order matters: more specific rules first.
