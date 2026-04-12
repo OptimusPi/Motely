@@ -10,6 +10,7 @@
     <PackageVersion Include="Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
     <PackageVersion Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
     <PackageVersion Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
+    <PackageVersion Include="runtime.osx-arm64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.0" />
     <PackageVersion Include="Terminal.Gui" Version="2.0.0" />

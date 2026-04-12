@@ -57,7 +57,8 @@ Overwrite="true" />
 <ItemGroup>
 <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" />
 <PackageReference Condition="$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" />
-<PackageReference Condition="!$([MSBuild]::IsOSPlatform('Windows'))" Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+<PackageReference Condition="$([MSBuild]::IsOSPlatform('Linux'))" Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" />
+<PackageReference Condition="$([MSBuild]::IsOSPlatform('OSX'))" Include="runtime.osx-arm64.Microsoft.DotNet.ILCompiler.LLVM" />
 <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_LLVM_ROOT=$(EmscriptenUpstreamBinPath)" />
 <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_BINARYEN_ROOT=$(EmscriptenSdkToolsPath)" />
 <EmscriptenEnvVars Include="DOTNET_EMSCRIPTEN_NODE_JS=$(EmscriptenNodeBinPath)node$(ExecutableExtensionName)" />
