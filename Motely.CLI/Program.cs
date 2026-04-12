@@ -62,7 +62,7 @@ partial class Program
             RequestTermination();
         };
 
-        // ESC key to quit (same as Ctrl+C), 'p' to print progress
+        // ESC key to quit (same as Ctrl+C)
         var escCts = new CancellationTokenSource();
         _ = Task.Run(async () =>
         {
@@ -73,12 +73,6 @@ partial class Program
                 var key = Console.ReadKey(true);
                 if (key.Key == ConsoleKey.Escape)
                     RequestTermination();
-                else if (key.Key == ConsoleKey.P)
-                {
-                    var p = _latestProgress;
-                    if (p.SeedsSearched > 0)
-                        FormatProgressToStderr(p);
-                }
             }
         }, escCts.Token);
 
@@ -638,7 +632,6 @@ partial class Program
     static int _lastNativePercent = -1;
     static void WriteNativeProgressLineToStderr(MotelyProgress p)
     {
-        _latestProgress = p;
         int pct = (int)p.PercentComplete;
         if (pct <= _lastNativePercent) return;
         _lastNativePercent = pct;
@@ -648,14 +641,11 @@ partial class Program
     static int _lastJamlPercent = -1;
     static void WriteJamlProgressLineToStderr(MotelyProgress p)
     {
-        _latestProgress = p;
         int pct = (int)p.PercentComplete;
         if (pct <= _lastJamlPercent) return;
         _lastJamlPercent = pct;
         FormatProgressToStderr(p);
     }
-
-    static MotelyProgress _latestProgress = default;
 
     static void FormatProgressToStderr(MotelyProgress p)
     {
