@@ -20,7 +20,6 @@ public interface IMotelyWasmHost
     bool SingleGetNextLuckyMult(string seed, MotelyDeck deck, MotelyStake stake, double baseLuck = 1);
     int SingleGetNextMisprintMult(string seed, MotelyDeck deck, MotelyStake stake);
     IMotelySearch StartConfiguredSearch(JamlConfig config, int batchCharCount, long startBatch = 0, long endBatch = 0);
-    IMotelySearch StartConfiguredSearchFromJaml(string jaml, int batchCharCount, long startBatch = 0, long endBatch = 0);
     IMotelySearch StartConfiguredSearchBySearchIndex(
         JamlConfig config,
         int batchCharCount,
@@ -37,7 +36,6 @@ public interface IMotelyWasmHost
     IMotelySearch StartAestheticSearch(JamlConfig config, JamlAesthetic aesthetic);
     IMotelySearch StartKeywordSearch(JamlConfig config, string keywordsCsv, string paddingChars);
     IMotelySearch StartSeedListSearch(JamlConfig config, string[] seeds);
-    IMotelySearch StartSeedListSearchFromJaml(string jaml, string[] seeds);
     void StopSearch();
 }
 
@@ -61,19 +59,12 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return _builder.GetVersion();
     }
 
-    // [JSExport] methods must never call other [JSExport] methods on `this` —
-    // Bootsharp surfaces them as UnmanagedCallersOnly thunks and managed dispatch crashes.
-    private static JamlConfig LoadJamlCore(string jaml)
+    public JamlConfig LoadJaml(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
         JamlSearchBuilder.EnsureRunnablePlan(config);
         return config;
-    }
-
-    public JamlConfig LoadJaml(string jaml)
-    {
-        return LoadJamlCore(jaml);
     }
 
     public JamlConfig CompileJummy(string jummy)
@@ -131,12 +122,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
     }
 
-    public IMotelySearch StartConfiguredSearchFromJaml(string jaml, int batchCharCount, long startBatch = 0, long endBatch = 0)
-    {
-        var config = LoadJamlCore(jaml);
-        return StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
-    }
-
     public IMotelySearch StartConfiguredSearchBySearchIndex(
         JamlConfig config,
         int batchCharCount,
@@ -171,12 +156,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
     }
 
-    public IMotelySearch StartRandomSearchFromJaml(string jaml, int randomSeedCount)
-    {
-        var config = LoadJamlCore(jaml);
-        return StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
-    }
-
     public IMotelySearch StartAestheticSearch(JamlConfig config, JamlAesthetic aesthetic)
     {
         return StartSearch(_builder.LoadConfig(config).Aesthetic(aesthetic).Run());
@@ -189,12 +168,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public IMotelySearch StartSeedListSearch(JamlConfig config, string[] seeds)
     {
-        return StartSearch(_builder.LoadConfig(config).SeedList(seeds).Run());
-    }
-
-    public IMotelySearch StartSeedListSearchFromJaml(string jaml, string[] seeds)
-    {
-        var config = LoadJamlCore(jaml);
         return StartSearch(_builder.LoadConfig(config).SeedList(seeds).Run());
     }
 
