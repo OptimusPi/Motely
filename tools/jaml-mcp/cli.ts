@@ -2,7 +2,12 @@
 import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerTools, bootPromise } from "./api/tools.js";
+import { bootPromise, registerTools } from "./api/tools.js";
+
+const pkg = createRequire(import.meta.url)("./package.json") as {
+  name: string;
+  version: string;
+};
 
 const pkg = createRequire(import.meta.url)("./package.json");
 

@@ -1,3 +1,12 @@
+/**
+ * MCP tool registration for the Balatro seed search server.
+ *
+ * The C# engine (motely-wasm-compat) owns JAML parsing, validation, casing
+ * rules, and search execution. This file is intentionally a thin MCP shell:
+ * it boots Bootsharp once at module load, registers four tools with the
+ * SDK, and forwards inputs straight to the engine. Engine errors propagate
+ * as `isError` MCP responses with the engine's own message verbatim.
+ */
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -8,19 +17,28 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import bootsharp, {
-  MotelyJamlSearchBuilder,
-  MotelySingleSearchContext,
-  SearchEvents,
-} from "motely-wasm";
+import dotnet, { MotelyWasmHost, SearchEvents } from "motely-wasm-compat";
 import { z } from "zod";
 
-export const bootPromise = bootsharp.boot();
+// Derive the single-seed context type from the actual function signature so
+// this file compiles regardless of whether the generated TS exposes the type
+// under the `Analysis` namespace (pre-9.0.1 layout) or at the top level
+// (9.0.1+ JSPreferences strips the `Motely.Analysis.` prefix). See
+// Motely.BrowserWasm/BootsharpInterop.cs.
+type SingleSearchContext = ReturnType<typeof MotelyWasmHost.motelySingleSearchContext>;
 
 const MAX_RANDOM_SEEDS = 1_000_000;
 const DEFAULT_RANDOM_SEEDS = 1_000_000;
+const MAX_RESULTS = 200;
 
-// ── MCP Apps UI ──────────────────────────────────────────────────────────────
+/**
+ * Boot Bootsharp once per process at module load.
+ * Every async tool handler awaits this; it resolves immediately after the
+ * first boot completes.
+ */
+export const bootPromise = dotnet.boot();
+
+// ── MCP Apps UI bundle (bundled HTML for compliant hosts) ────────────────────
 
 const SEARCH_UI_URI = "ui://balatro-seed-mcp/jaml-search-app.html";
 
@@ -39,7 +57,7 @@ async function loadSearchAppHtml(): Promise<string> {
   );
 }
 
-// ── Seed search ──────────────────────────────────────────────────────────────
+// ── Search ───────────────────────────────────────────────────────────────────
 
 interface SearchResult {
   seed: string;
@@ -51,8 +69,8 @@ interface SearchResponse {
   status: string;
   seedsSearched: string;
   matchesFound: string;
-  totalMatches?: string;
-  resultsShown?: string;
+  totalMatches: string;
+  resultsShown: string;
   results: SearchResult[];
 }
 
@@ -149,23 +167,21 @@ export function registerTools(server: McpServer) {
     })
   );
 
-  // ── search_seeds ───────────────────────────────────────────────────────────
+  // search_seeds ────────────────────────────────────────────────────────────
   registerAppTool(
     server,
     "search_seeds",
     {
       title: "Search Balatro seeds",
       description:
-        "Search for Balatro seeds matching a JAML filter.\n" +
-        "NOTE: Requires browser/Vercel runtime. Returns an error in Node/stdio mode (known limitation).\n\n" +
-        "ALWAYS construct the JAML filter yourself from the user's request. Never ask the user to write JAML.\n\n" +
-        "JAML is a JSON object: {\"deck\":\"Red\",\"stake\":\"White\",\"must\":[{\"joker\":\"Blueprint\",\"antes\":[1]}]}\n\n" +
-        "Deck names: Red, Blue, Yellow, Green, Black, Magic, Nebula, Ghost, Abandoned, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic.\n" +
-        "Stake names: White, Red, Green, Black, Blue, Purple, Orange, Gold.\n" +
-        "Clause types: joker, voucher, boss, tag, tarot, spectral, planet, standardCard, erraticCard.\n" +
+        "Search for Balatro seeds matching a JAML filter. Translate the user's request into JAML yourself; never ask the user to write JAML.\n\n" +
+        'JAML shape: {"deck":"Red","stake":"White","must":[{"joker":"Blueprint","antes":[1]}]}\n\n' +
+        "Decks: Red, Blue, Yellow, Green, Black, Magic, Nebula, Ghost, Abandoned, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic.\n" +
+        "Stakes: White, Red, Green, Black, Blue, Purple, Orange, Gold.\n" +
+        "Clauses: joker, voucher, boss, tag, tarotCard, spectralCard, planetCard, standardCard, erraticCard.\n" +
         "Editions: Foil, Holographic, Polychrome, Negative.\n" +
-        "Use 'antes' array to restrict which antes to search (e.g. [1] for ante 1 only).\n\n" +
-        "Randomly samples up to 1,000,000 seeds. Returns matching seeds with scores.",
+        "Use 'antes' (array) to scope a clause, e.g. [1] for ante 1 only.\n\n" +
+        "Randomly samples up to 1,000,000 seeds. Returns the top matches by score.",
       inputSchema: {
         jaml: z
           .string()
@@ -218,63 +234,60 @@ export function registerTools(server: McpServer) {
     }
   );
 
-  // ── analyze_seed ───────────────────────────────────────────────────────────
+  // analyze_seed ────────────────────────────────────────────────────────────
   server.tool(
     "analyze_seed",
-    "Inspect a specific Balatro seed. Returns boss blinds, tags, vouchers, shop items, and booster packs for each ante. " +
-    "Use after search_seeds to drill into a promising seed, or to check a known seed. " +
-    "Deck and stake are read from the JAML filter (defaults: Red deck, White stake). " +
-    "NOTE: Requires browser/Vercel runtime. Returns an error in Node/stdio mode (known limitation).",
+    "Inspect a specific Balatro seed: boss blinds, tags, vouchers, shop items, packs per ante. " +
+      "Use after search_seeds to drill into a promising seed, or to check a known seed. " +
+      "Deck/stake come from the supplied JAML (defaults: Red, White).",
     {
       seed: z.string().describe("Balatro seed string (e.g. 'ABCD1234')"),
       jaml: z
         .string()
-        .describe(
-          'JAML filter JSON for deck/stake context. Minimal: {"deck":"Red","stake":"White"}'
-        ),
+        .describe('JAML filter JSON for deck/stake context. Minimal: {"deck":"Red","stake":"White"}'),
     },
     async ({ seed, jaml }) => {
       try {
-        const result = await analyzeSeed(seed, jaml);
+        const ctx = await analyzeSeed(seed, jaml);
         return {
-          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(ctx, null, 2) }],
         };
       } catch (err) {
         return {
-          content: [{ type: "text" as const, text: `Analysis error: ${(err as Error).message}` }],
-        };
-      }
-    }
-  );
-
-  // ── validate_jaml ──────────────────────────────────────────────────────────
-  server.tool(
-    "validate_jaml",
-    "Validate a JAML filter. Returns 'valid' or a descriptive error. Does NOT run a search.",
-    {
-      jaml: z.string().describe("JAML filter JSON string to validate"),
-    },
-    async ({ jaml }) => {
-      try {
-        await bootPromise;
-        MotelyJamlSearchBuilder.loadJaml(jaml);
-        return {
-          content: [{ type: "text" as const, text: "JAML is valid." }],
-        };
-      } catch (err) {
-        return {
+          isError: true,
           content: [
-            {
-              type: "text" as const,
-              text: `Invalid JAML: ${(err as Error).message}`,
-            },
+            { type: "text" as const, text: `Analysis error: ${(err as Error).message}` },
           ],
         };
       }
     }
   );
 
-  // ── get_version ────────────────────────────────────────────────────────────
+  // validate_jaml ──────────────────────────────────────────────────────────
+  server.tool(
+    "validate_jaml",
+    "Validate a JAML filter. Returns 'valid' or the engine's descriptive error. Does NOT run a search.",
+    {
+      jaml: z.string().describe("JAML filter JSON string to validate"),
+    },
+    async ({ jaml }) => {
+      try {
+        await bootPromise;
+        MotelyWasmHost.loadJaml(jaml);
+        return {
+          content: [{ type: "text" as const, text: "JAML is valid." }],
+        };
+      } catch (err) {
+        return {
+          content: [
+            { type: "text" as const, text: `Invalid JAML: ${(err as Error).message}` },
+          ],
+        };
+      }
+    }
+  );
+
+  // get_version ────────────────────────────────────────────────────────────
   server.tool(
     "get_version",
     "Get the MotelyJAML engine version string.",
@@ -282,7 +295,12 @@ export function registerTools(server: McpServer) {
     async () => {
       await bootPromise;
       return {
-        content: [{ type: "text" as const, text: `MotelyJAML v${MotelyJamlSearchBuilder.getVersion()}` }],
+        content: [
+          {
+            type: "text" as const,
+            text: `MotelyJAML v${MotelyWasmHost.getVersion()}`,
+          },
+        ],
       };
     }
   );
