@@ -1,39 +1,39 @@
 {
-    "name": "motely-wasm",
-    "version": "9.0.0",
-    "description": "MotelyJAML — Balatro seed search engine (browser WASM / NativeAOT-LLVM). Import: import bootsharp, { MotelyJamlSearchBuilder, MotelyWasmHost, SearchEvents, Motely } from \"motely-wasm\"; await bootsharp.boot();",
-    "type": "module",
-    "main": "./index.mjs",
-    "types": "./types/index.d.ts",
-    "browser": {
-        "fs/promises": false
-    },
-    "exports": {
-        ".": {
-            "types": "./types/index.d.ts",
-            "import": "./index.mjs",
-            "default": "./index.mjs"
-        }
-    },
-    "files": [
-        "**/*",
-        "!test.html",
-        "!index.html",
-        "!**/*.pdb",
-        "!**/*.tgz"
-    ],
-    "keywords": [
-        "balatro",
-        "seed",
-        "wasm",
-        "bootsharp",
-        "nativeaot-llvm",
-        "jaml"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
-        "directory": "Motely"
-    },
-    "license": "MIT"
+  "name": "motely-wasm",
+  "version": "0.0.0",
+  "description": "MotelyJAML — Balatro seed search engine (browser WASM / NativeAOT-LLVM). Import: import bootsharp, { MotelyJamlSearchBuilder, MotelyWasmHost, SearchEvents, Motely } from \"motely-wasm\"; await bootsharp.boot();",
+  "type": "module",
+  "main": "./index.mjs",
+  "types": "./types/index.d.ts",
+  "browser": {
+    "fs/promises": false
+  },
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    }
+  },
+  "files": [
+    "**/*",
+    "!test.html",
+    "!index.html",
+    "!**/*.pdb",
+    "!**/*.tgz"
+  ],
+  "keywords": [
+    "balatro",
+    "seed",
+    "wasm",
+    "bootsharp",
+    "nativeaot-llvm",
+    "jaml"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "Motely"
+  },
+  "license": "MIT"
 }
