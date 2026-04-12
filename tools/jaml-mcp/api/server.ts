@@ -1,32 +1,27 @@
+import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { bootPromise, registerTools } from "./tools.js";
+
+const pkg = createRequire(import.meta.url)("../package.json") as {
+  name: string;
+  version: string;
+};
 
 // Set MCP_API_KEY to require Bearer token auth on the HTTP endpoint.
 const API_KEY = process.env.MCP_API_KEY;
 
-const MCP_LITE = /^1\s*$/.test(process.env.MCP_LITE ?? "");
-
 async function createTransport(): Promise<StreamableHTTPServerTransport> {
+  await bootPromise;
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
   const server = new McpServer(
-    { name: "balatro-seed-mcp", version: "8.0.0" },
+    { name: pkg.name, version: pkg.version },
     { capabilities: { tools: {} } }
   );
-  if (MCP_LITE) {
-    server.registerTool(
-      "ping",
-      { description: "Health check (MCP_LITE=1)." },
-      async () => ({
-        content: [{ type: "text" as const, text: "pong" }],
-      })
-    );
-  } else {
-    const { registerTools } = await import("./tools.js");
-    registerTools(server);
-  }
+  registerTools(server);
   await server.connect(transport);
   return transport;
 }
