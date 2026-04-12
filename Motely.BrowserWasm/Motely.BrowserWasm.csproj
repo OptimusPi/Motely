@@ -36,16 +36,6 @@ Lines="namespace Motely.BrowserWasm { internal static class VersionInfo { public
 Overwrite="true" />
 </Target>
 
-<!-- Copy overlay package.json and stamp version before Bootsharp generates its own. -->
-<Target Name="StampPackageJson" BeforeTargets="BootsharpPack">
-<PropertyGroup>
-<_PkgSrc>$(MSBuildProjectDirectory)\..\Motely\package.json</_PkgSrc>
-<_PkgDst>$(BootsharpPublishDirectory)\package.json</_PkgDst>
-</PropertyGroup>
-<MakeDir Directories="$(BootsharpPublishDirectory)" />
-<Copy SourceFiles="$(_PkgSrc)" DestinationFiles="$(_PkgDst)" />
-<Exec Command="node -e &quot;const f='$(_PkgDst)'.replace(/\\/g,'/');const j=require('fs');j.writeFileSync(f,j.readFileSync(f,'utf8').replace('0.0.0','$(Version)'))&quot;" />
-</Target>
 
 <ItemGroup>
 <ProjectReference Include="..\Motely\Motely.csproj" />
