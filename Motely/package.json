@@ -3,20 +3,20 @@
   "version": "9.9.9",
   "description": "MotelyJAML — Balatro seed search engine (browser WASM / NativeAOT-LLVM). Import: import bootsharp, { MotelyJamlSearchBuilder, MotelyWasmHost, SearchEvents, Motely } from \"motely-wasm\"; await bootsharp.boot();",
   "type": "module",
-  "main": "../Motely.BrowserWasm/motely-wasm/index.mjs",
-  "types": "../Motely.BrowserWasm/motely-wasm/types/index.d.ts",
+  "main": "../motely-wasm/index.mjs",
+  "types": "../motely-wasm/types/index.d.ts",
   "browser": {
     "fs/promises": false
   },
   "exports": {
     ".": {
-      "types": "../Motely.BrowserWasm/motely-wasm/types/index.d.ts",
-      "import": "../Motely.BrowserWasm/motely-wasm/index.mjs",
-      "default": "../Motely.BrowserWasm/motely-wasm/index.mjs"
+      "types": "../motely-wasm/types/index.d.ts",
+      "import": "../motely-wasm/index.mjs",
+      "default": "../motely-wasm/index.mjs"
     }
   },
   "files": [
-    "../Motely.BrowserWasm/motely-wasm/**/*",
+    "../motely-wasm/**/*",
     "!**/*.pdb",
     "!**/*.tgz"
   ],

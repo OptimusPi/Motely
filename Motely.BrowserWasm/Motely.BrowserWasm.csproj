@@ -12,7 +12,7 @@
 <Version>$(MotelyVersion)</Version>
 <RootNamespace>Motely.BrowserWasm</RootNamespace>
 <BootsharpName>motely-wasm</BootsharpName>
-<BootsharpPublishDirectory>motely-wasm</BootsharpPublishDirectory>
+<BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
 <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\Motely</BootsharpPackageDirectory>
 <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
 <BootsharpLLVM>true</BootsharpLLVM>
