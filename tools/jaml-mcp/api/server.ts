@@ -8,8 +8,6 @@ const pkg = createRequire(import.meta.url)("../package.json") as {
   version: string;
 };
 
-const pkg = createRequire(import.meta.url)("../package.json");
-
 async function createTransport(): Promise<StreamableHTTPServerTransport> {
   await bootPromise;
   const transport = new StreamableHTTPServerTransport({

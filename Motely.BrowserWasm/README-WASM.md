@@ -13,7 +13,7 @@ The **`Program`** class here is only the **runtime bootstrap** (`Main` → `RunB
 
 **Bootsharp glue** (`JSExport` / `JSImport` / `JSPreferences`) is isolated in **`BootsharpInterop.cs`** so you can ignore it while working in C#. The public API surface is **`MotelyWasmHost`**, **`MotelyJamlSearchBuilder`**, **`MotelySingleSearchContext`** (seed inspection), and **`SearchEvents`** (progress/results).
 
-After `dotnet publish` on this project, the npm package is emitted under `motely-wasm/` (and `motely-wasm-compat/` is built by the csproj target). **Monaco** is not part of these packages — use `tools/jaml-language/monaco` (`@motely/jaml-monaco`) for editor assets.
+After `dotnet publish` on this project, the npm package is emitted under `motely-wasm/` (single package, binaries always embedded). **Monaco** is not part of these packages — use `tools/jaml-language/monaco` (`@motely/jaml-monaco`) for editor assets.
 
 **Bootsharp interop rule (9.0.0+):** a `[JSExport]` interface method on `MotelyWasmHost` must NOT call another `[JSExport]` interface method on `this`. Mono WASM rejects the resulting managed→`[UnmanagedCallersOnly]` dispatch with `Fatal error. Invalid Program: attempted to call a UnmanagedCallersOnly method from managed code.` Inline shared logic into a `private static` helper (see `LoadJamlCore`) and call the helper from each public method.
 
