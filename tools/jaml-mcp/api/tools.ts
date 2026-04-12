@@ -8,15 +8,14 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import {
-  boot,
-  MotelyWasmHost,
+import bootsharp, {
+  MotelyJamlSearchBuilder,
   MotelySingleSearchContext,
   SearchEvents,
 } from "motely-wasm";
 import { z } from "zod";
 
-export const bootPromise = boot();
+export const bootPromise = bootsharp.boot();
 
 const MAX_RANDOM_SEEDS = 1_000_000;
 const DEFAULT_RANDOM_SEEDS = 1_000_000;
@@ -81,7 +80,7 @@ export async function searchSeeds(
   SearchEvents.onResult.subscribe(onResult);
   SearchEvents.onComplete.subscribe(onComplete);
   try {
-    const session = MotelyWasmHost.startRandomSearchFromJaml(jamlJson, seedCount);
+    const session = MotelyJamlSearchBuilder.loadJaml(jamlJson).random(seedCount).run();
     await session.waitForCompletionAsync(null);
     const sorted = results.sort((a, b) => b.score - a.score);
     const shown = sorted.slice(0, MAX_RESULTS);
@@ -105,7 +104,7 @@ const ROUTE_ANTES = 8;
 
 export async function analyzeSeed(seed: string, jamlJson: string) {
   await bootPromise;
-  const config = MotelyWasmHost.loadJaml(jamlJson);
+  const config = MotelyJamlSearchBuilder.loadJaml(jamlJson);
   const ctx = MotelySingleSearchContext.open(seed, config.deck, config.stake);
   const antes: object[] = [];
   for (let ante = 1; ante <= ROUTE_ANTES; ante++) {
@@ -157,7 +156,8 @@ export function registerTools(server: McpServer) {
     {
       title: "Search Balatro seeds",
       description:
-        "Search for Balatro seeds matching a JAML filter.\n\n" +
+        "Search for Balatro seeds matching a JAML filter.\n" +
+        "NOTE: Requires browser/Vercel runtime. Returns an error in Node/stdio mode (known limitation).\n\n" +
         "ALWAYS construct the JAML filter yourself from the user's request. Never ask the user to write JAML.\n\n" +
         "JAML is a JSON object: {\"deck\":\"Red\",\"stake\":\"White\",\"must\":[{\"joker\":\"Blueprint\",\"antes\":[1]}]}\n\n" +
         "Deck names: Red, Blue, Yellow, Green, Black, Magic, Nebula, Ghost, Abandoned, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic.\n" +
@@ -223,7 +223,8 @@ export function registerTools(server: McpServer) {
     "analyze_seed",
     "Inspect a specific Balatro seed. Returns boss blinds, tags, vouchers, shop items, and booster packs for each ante. " +
     "Use after search_seeds to drill into a promising seed, or to check a known seed. " +
-    "Deck and stake are read from the JAML filter (defaults: Red deck, White stake).",
+    "Deck and stake are read from the JAML filter (defaults: Red deck, White stake). " +
+    "NOTE: Requires browser/Vercel runtime. Returns an error in Node/stdio mode (known limitation).",
     {
       seed: z.string().describe("Balatro seed string (e.g. 'ABCD1234')"),
       jaml: z
@@ -256,7 +257,7 @@ export function registerTools(server: McpServer) {
     async ({ jaml }) => {
       try {
         await bootPromise;
-        MotelyWasmHost.loadJaml(jaml);
+        MotelyJamlSearchBuilder.loadJaml(jaml);
         return {
           content: [{ type: "text" as const, text: "JAML is valid." }],
         };
@@ -281,7 +282,7 @@ export function registerTools(server: McpServer) {
     async () => {
       await bootPromise;
       return {
-        content: [{ type: "text" as const, text: `MotelyJAML v${MotelyWasmHost.getVersion()}` }],
+        content: [{ type: "text" as const, text: `MotelyJAML v${MotelyJamlSearchBuilder.getVersion()}` }],
       };
     }
   );
