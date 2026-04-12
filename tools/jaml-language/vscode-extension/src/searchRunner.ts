@@ -5,8 +5,8 @@
 import bootsharp, {
   MotelyWasmHost,
   SearchEvents,
-} from "motely-wasm-compat";
-import type { BrowserWasm } from "motely-wasm-compat";
+} from "motely-wasm";
+import type { BrowserWasm } from "motely-wasm";
 
 export interface SearchResult {
   seed: string;

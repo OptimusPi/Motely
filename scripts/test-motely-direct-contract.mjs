@@ -3,7 +3,7 @@ import dotnet, {
   MotelySingleSearchContext,
   MotelyWasmHost,
   SearchEvents,
-} from "../Motely.BrowserWasm/motely-wasm-compat/index.mjs";
+} from "../Motely.BrowserWasm/motely-wasm/index.mjs";
 
 const jaml = JSON.stringify({
   deck: "Red",

@@ -7,7 +7,7 @@ Balatro seed-filter engine. JAML (Jimbo's Ante Markup Language) is a YAML-based 
 ```
 Motely/                      # Core C# filtering engine — SIMD, JAML compilation
 Motely.CLI/                  # NativeAOT CLI (Linux/Windows x64) with AVX/AVX-512
-Motely.BrowserWasm/          # Bootsharp WASM → publishes motely-wasm / motely-wasm-compat npm
+Motely.BrowserWasm/          # Bootsharp WASM → publishes motely-wasm npm (NativeAOT-LLVM, embedded binaries)
 Motely.TUI/                  # Terminal.Gui UI (Windows-focused)
 Motely.DistributedWorker/    # Pool worker for distributed search
 Motely.HelperAPI/            # Auxiliary REST API
@@ -20,7 +20,7 @@ MotelyData/                  # DuckLake seed data files
 JamlFilters/                 # User/example .jaml filter library
 ```
 
-**Version:** 8.0.0 (set in `Directory.Packages.props`).  
+**Version:** 9.9.9 (set in `Directory.Packages.props`).  
 **Target framework:** net10.0 (net10.0-browser for WASM).
 
 ## Build & Test
