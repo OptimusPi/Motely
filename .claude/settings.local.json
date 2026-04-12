@@ -78,7 +78,12 @@
       "Bash(dotnet --version)",
       "Bash(brew search:*)",
       "Bash(dotnet --list-sdks)",
-      "Bash(dotnet nuget:*)"
+      "Bash(dotnet nuget:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(sed -i '' 's/IMotelySearch Start/void Start/g' Motely.BrowserWasm/MotelyWasmHost.cs)",
+      "Bash(sed -i '' 's/return StartSearch/StartSearch/g' Motely.BrowserWasm/MotelyWasmHost.cs)",
+      "Bash(sed -i '' 's/private IMotelySearch StartSearch/private void StartSearch/g' Motely.BrowserWasm/MotelyWasmHost.cs)",
+      "Bash(sed -i '' 's/_ = ReleaseWhenCompleteAsync/ReleaseWhenCompleteAsync/g' Motely.BrowserWasm/MotelyWasmHost.cs)"
     ]
   }
 }
