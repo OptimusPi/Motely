@@ -26,7 +26,7 @@ export const bootPromise = dotnet.boot();
 
 // ── MCP Apps UI ──────────────────────────────────────────────────────────────
 
-const SEARCH_UI_URI = "ui://balatro-seed-mcp/jaml-search-app.html";
+const SEARCH_UI_URI = "ui://balatro-seed-finder/jaml-search-app.html";
 
 async function loadSearchAppHtml(): Promise<string> {
   const html = fileURLToPath(new URL("../mcp-ui/dist/jaml-search-app.html", import.meta.url));
