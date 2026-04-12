@@ -85,7 +85,8 @@ export async function searchSeeds(
     SearchEvents.onComplete.subscribe(onComplete);
 
     try {
-      MotelyWasmHost.startRandomSearchFromJaml(jamlJson, seedCount);
+      const config = MotelyWasmHost.loadJaml(jamlJson);
+      MotelyWasmHost.startRandomSearch(config, seedCount);
     } catch (err) {
       SearchEvents.onResult.unsubscribe(onResult);
       SearchEvents.onComplete.unsubscribe(onComplete);
