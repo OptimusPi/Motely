@@ -1,11 +1,11 @@
 {
-  "name": "balatro-seed-mcp",
+  "name": "balatro-seed-finder",
   "version": "9.9.9",
   "description": "MCP server for searching and analyzing Balatro seeds using MotelyJAML",
   "main": "index.js",
   "type": "module",
   "bin": {
-    "balatro-seed-mcp": "./cli.ts"
+    "balatro-seed-finder": "./cli.ts"
   },
   "scripts": {
     "start": "npx tsx cli.ts",

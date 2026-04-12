@@ -15,7 +15,7 @@ Motely.DB/                   # DuckDB interface; Motely.DB.Browser for WASM vari
 Motely.Tests/                # xunit test suite (net10.0)
 Motely.TestWebsite/          # Vite + React demo site
 tools/jaml-language/         # TypeScript monorepo: core | lsp-server | vscode-extension | monaco | jaml-schema
-tools/balatro-seed-mcp/              # Standalone MCP server + MCP Apps UI for JAML search
+tools/balatro-seed-finder/              # Standalone MCP server + MCP Apps UI for JAML search
 MotelyData/                  # DuckLake seed data files
 JamlFilters/                 # User/example .jaml filter library
 ```
@@ -46,7 +46,7 @@ pnpm dev:lsp        # watch LSP server
 pnpm dev:vscode     # watch VS Code extension
 
 # MCP server
-cd tools/balatro-seed-mcp && pnpm install && pnpm build
+cd tools/balatro-seed-finder && pnpm install && pnpm build
 
 # Root npm scripts
 npm run dev                             # Motely.TestWebsite dev server
@@ -64,7 +64,7 @@ npm run test:motely-wasm-compat-contract
 - **JAML syntax source of truth**: `Motely/Filters/Jaml/JamlConfig.cs` and the generated `jaml.schema.json` define the full root/clause/source key surface. Keep language tooling and MCP normalization logic in sync when `JamlClauseDto`, `JamlSourcesDto`, or `JamlSchemaGenerator` change.
 - **Jummy**: compact alternative syntax for JAML (compiled by `JummyCompiler`). Tests in `JummyCompilerTests.cs`.
 - **Test filters**: `.jaml` files under `Motely.Tests/filters/` are copied to test output and used for regression/RAG embedding.
-- **MCP server** (`tools/balatro-seed-mcp/`): standalone HTTP/stdio MCP server plus MCP Apps UI for JAML search.
+- **MCP server** (`tools/balatro-seed-finder/`): standalone HTTP/stdio MCP server plus MCP Apps UI for JAML search.
 
 ## Key Files
 
@@ -74,8 +74,8 @@ npm run test:motely-wasm-compat-contract
 | Core JAML token definitions | `tools/jaml-language/core/src/index.ts` |
 | LSP server | `tools/jaml-language/lsp-server/` |
 | VS Code extension entry | `tools/jaml-language/vscode-extension/src/extension.ts` |
-| MCP server entry | `tools/balatro-seed-mcp/api/server.ts` |
-| MCP tool registration | `tools/balatro-seed-mcp/api/tools.ts` |
+| MCP server entry | `tools/balatro-seed-finder/api/server.ts` |
+| MCP tool registration | `tools/balatro-seed-finder/api/tools.ts` |
 | Vector search | `Motely/MotelyVectorSearchContext.cs` |
 | Single-seed search | `Motely/MotelySingleSearchContext.cs` |
 | JAML compilation | `Motely/` (filter compilation entrypoints) |
@@ -88,5 +88,5 @@ npm run test:motely-wasm-compat-contract
 - `agent-prefs.json` (`.llms/agent-prefs.json`) declares this workspace is used with **claude-code** and **cursor**.
 - VS Code extension debug: open `tools/jaml-language/vscode-extension` and press `F5`.
 - Extend JAML keyword coverage in `tools/jaml-language/core/src/index.ts`.
-- Build the MCP App bundle before running `tools/balatro-seed-mcp` locally.
+- Build the MCP App bundle before running `tools/balatro-seed-finder` locally.
 - Live demo: https://optimuspi.github.io/MotelyJAML/
