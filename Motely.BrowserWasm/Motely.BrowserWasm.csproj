@@ -12,6 +12,7 @@
 <RootNamespace>Motely.BrowserWasm</RootNamespace>
 <BootsharpName>motely-wasm</BootsharpName>
 <BootsharpPublishDirectory>motely-wasm</BootsharpPublishDirectory>
+<BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\Motely</BootsharpPackageDirectory>
 <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
 <BootsharpLLVM>true</BootsharpLLVM>
 <BootsharpOptimize>speed</BootsharpOptimize>
