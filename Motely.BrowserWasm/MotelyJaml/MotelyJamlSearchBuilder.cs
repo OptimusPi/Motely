@@ -25,7 +25,7 @@ public interface IMotelyJamlSearchBuilder
     MotelyJamlSearchBuilder Aesthetic(JamlAesthetic aesthetic);
     MotelyJamlSearchBuilder Keywords(string keywordsCsv, string paddingChars);
     MotelyJamlSearchBuilder SeedList(string[] seeds);
-    IMotelySearchSession Run();
+    IMotelySearch Run();
 }
 
 public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
@@ -169,7 +169,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         return this;
     }
 
-    public IMotelySearchSession Run()
+    public IMotelySearch Run()
     {
         var jaml = _config ?? throw new InvalidOperationException("Call LoadJaml or CompileJummy first.");
         if (_mode == SearchMode.None)
@@ -318,7 +318,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         return PlanProviderSearch(jaml).WithBatchCharacterCount(batchCharCount);
     }
 
-    private IMotelySearchSession WireAndRun(IMotelySearchSettings settings)
+    private IMotelySearch WireAndRun(IMotelySearchSettings settings)
     {
         settings = settings.WithProgressCallback(p =>
             _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds));
@@ -336,7 +336,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
             throw new InvalidOperationException($"MotelyJamlSearchBuilder settings.Start() failed: {ex.Message}", ex);
         }
         _ = NotifyOnCompletionAsync(search);
-        return new MotelySearchSession(search);
+        return search;
     }
 
     private async Task NotifyOnCompletionAsync(IMotelySearch search)
@@ -344,15 +344,15 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         try
         {
             await search.WaitForCompletionAsync();
-            _events.NotifyComplete("completed", search.TotalSeedsSearched, search.MatchingSeeds);
+            _events.NotifyComplete("completed", search.GetTotalSeedsSearched(), search.GetMatchingSeeds());
         }
         catch (OperationCanceledException)
         {
-            _events.NotifyComplete("cancelled", search.TotalSeedsSearched, search.MatchingSeeds);
+            _events.NotifyComplete("cancelled", search.GetTotalSeedsSearched(), search.GetMatchingSeeds());
         }
         catch (Exception ex)
         {
-            _events.NotifyComplete($"error: {ex.Message}", search.TotalSeedsSearched, search.MatchingSeeds);
+            _events.NotifyComplete($"error: {ex.Message}", search.GetTotalSeedsSearched(), search.GetMatchingSeeds());
         }
     }
 
