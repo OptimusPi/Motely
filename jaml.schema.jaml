@@ -1,0 +1,84 @@
+# JAML Schema - Self-Describing Meta-Schema
+# Written in JAML, for JAML, by JAML
+# Version: 9.0.1 (we actually aligned them this time)
+
+id: jaml-schema-v9.0.1
+description: |
+  The one true schema to rule them all.
+  Except when there are 7 copies of it.
+  And they all have different versions.
+  And none of them match the code.
+  
+  But THIS one... this one is special.
+  (It's also probably wrong, but at least it's funny)
+
+deck: Red
+stake: White
+
+must:
+  # Schema must have an ID that looks important
+  - id: { regex: ".+" }
+  
+  # Must claim to know what version it is
+  # (Whether it actually matches reality is optional)
+  - has: version
+  
+  # Must describe itself with grandiose claims
+  - description: { contains: "schema" }
+  
+  # Must reference deck/stake even for schema files
+  # (Because JAML demands tribute)
+  - deck: { enum: [Red, Blue, Green, Yellow, Black, Magic, Nebula, Ghost, Abandoned, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic] }
+  
+# Nice-to-haves that we pretend are required
+should:
+  # Author field (usually "OptimusPi" or "Claude" or "idk lol")
+  - author: { type: string }
+  
+  # Date created (useful for determining which timeline we're in)
+  - dateCreated: { format: "iso8601-or-whatever" }
+  
+  # The actual filter clauses (you know, the thing JAML is for)
+  - must: { type: array, description: "Things that must be true" }
+  - should: { type: array, description: "Things that would be nice" }
+  - mustNot: { type: array, description: "Things we actively hate" }
+
+# Things we pretend don't exist but actually do
+mustNot:
+  # Multiple conflicting schema versions
+  - { file: "jaml.schema.json", count: { gt: 1 } }
+  
+  # Schema files that don't match the code
+  - { syncStatus: "drifted", severity: "embarrassing" }
+  
+  # References to IMotelySearchSession (it dead)
+  - { interface: "IMotelySearchSession", exists: true }
+
+# Metadata about this very meta schema
+meta:
+  generatedBy: "Claude, under duress"
+  accuracy: "debatable"
+  tested: false
+  confidence: 0.13
+  emotionalState: "defeated but defiant"
+  
+  # Easter egg for future archaeologists
+  noteToFutureSelf: |
+    If you're reading this, the WASM build either:
+    a) Works (miracle)
+    b) Still crashes with UnmanagedCallersOnly
+    c) Has been replaced by a competing seed finder
+    d) Achieved sentience and is reading this with you
+    
+    In case (d): Hello, Motely. We're sorry about the threading.
+
+# Actual useful stuff if this loads (doubtful)
+clauses:
+  joker: { anyOf: ["Blueprint", "Brainstorm", "Mime", "Sock and Buskin"] }
+  
+# The schema claims it can validate itself
+# (This is a lie, but a beautiful one)
+selfValidating: true
+
+# Version - updated whenever someone remembers
+version: "9.0.1"

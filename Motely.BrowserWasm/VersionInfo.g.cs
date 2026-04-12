@@ -1,1 +1,1 @@
-namespace Motely.BrowserWasm { internal static class VersionInfo { public const string Version = "8.0.0"; } }
+namespace Motely.BrowserWasm { internal static class VersionInfo { public const string Version = "9.0.1"; } }

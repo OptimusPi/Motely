@@ -6,7 +6,7 @@ using Bootsharp.Inject;
     typeof(Motely.BrowserWasm.IMotelySingleSearchContext),
     typeof(Motely.Analysis.IMotelySingleSearchContextImpl),
     typeof(MotelyJaml.IMotelyJamlSearchBuilder),
-    typeof(Motely.BrowserWasm.IMotelySearchSession))]
+    typeof(Motely.IMotelySearch))]
 [assembly: JSImport([typeof(Motely.BrowserWasm.ISearchEvents)])]
 [assembly: JSPreferences(
     Space = [
