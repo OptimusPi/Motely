@@ -65,7 +65,7 @@ interface SearchResult {
   tally: number[];
 }
 
-export interface SearchResponse {
+interface SearchResponse {
   status: string;
   seedsSearched: string;
   matchesFound: string;
@@ -74,77 +74,75 @@ export interface SearchResponse {
   results: SearchResult[];
 }
 
-/**
- * Run a random seed search against a JAML filter.
- *
- * Subscribes to SearchEvents (`onResult`, `onComplete`) for the duration of
- * one search, kicks off the search via `MotelyWasmHost.startRandomSearchFromJaml`,
- * then resolves when `onComplete` fires. We deliberately do NOT call
- * `session.waitForCompletionAsync(...)` on the returned handle: the host owns
- * the search lifetime, JS just observes the event stream. This keeps the JS
- * side independent of any per-instance Bootsharp marshaling for
- * `IMotelySearchSession`, which historically has been fragile.
- */
+const MAX_RESULTS = 200;
+
 export async function searchSeeds(
   jamlJson: string,
-  seedCount: number = DEFAULT_RANDOM_SEEDS
+  seedCount: number
 ): Promise<SearchResponse> {
   await bootPromise;
+  const results: SearchResult[] = [];
+  let finalStatus = "";
+  let finalSeedsSearched = 0n;
+  let finalMatchingSeeds = 0n;
 
-  return new Promise<SearchResponse>((resolve, reject) => {
-    const results: SearchResult[] = [];
+  const onResult = (seed: string, score: number, tally: Int32Array) => {
+    results.push({ seed, score, tally: Array.from(tally) });
+  };
+  const onComplete = (status: string, seedsSearched: bigint, matchingSeeds: bigint) => {
+    finalStatus = status;
+    finalSeedsSearched = seedsSearched;
+    finalMatchingSeeds = matchingSeeds;
+  };
 
-    const onResult = (seed: string, score: number, tally: Int32Array) => {
-      results.push({ seed, score, tally: Array.from(tally) });
+  SearchEvents.onResult.subscribe(onResult);
+  SearchEvents.onComplete.subscribe(onComplete);
+  try {
+    const session = MotelyJamlSearchBuilder.loadJaml(jamlJson).random(seedCount).run();
+    await session.waitForCompletionAsync(null);
+    const sorted = results.sort((a, b) => b.score - a.score);
+    const shown = sorted.slice(0, MAX_RESULTS);
+    return {
+      status: finalStatus,
+      seedsSearched: finalSeedsSearched.toString(),
+      matchesFound: finalMatchingSeeds.toString(),
+      totalMatches: String(sorted.length),
+      resultsShown: String(shown.length),
+      results: shown,
     };
-
-    const onComplete = (
-      status: string,
-      seedsSearched: bigint,
-      matchingSeeds: bigint,
-    ) => {
-      SearchEvents.onResult.unsubscribe(onResult);
-      SearchEvents.onComplete.unsubscribe(onComplete);
-      const sorted = results.sort((a, b) => b.score - a.score);
-      const shown = sorted.slice(0, MAX_RESULTS);
-      resolve({
-        status,
-        seedsSearched: seedsSearched.toString(),
-        matchesFound: matchingSeeds.toString(),
-        totalMatches: String(sorted.length),
-        resultsShown: String(shown.length),
-        results: shown,
-      });
-    };
-
-    SearchEvents.onResult.subscribe(onResult);
-    SearchEvents.onComplete.subscribe(onComplete);
-
-    try {
-      MotelyWasmHost.startRandomSearchFromJaml(jamlJson, seedCount);
-    } catch (err) {
-      SearchEvents.onResult.unsubscribe(onResult);
-      SearchEvents.onComplete.unsubscribe(onComplete);
-      reject(err);
-    }
-  });
+  } finally {
+    SearchEvents.onResult.unsubscribe(onResult);
+    SearchEvents.onComplete.unsubscribe(onComplete);
+  }
 }
 
-// ── Single-seed analysis ─────────────────────────────────────────────────────
+const SHOP_ITEMS_PER_ANTE = 12;
+const PACKS_PER_ANTE = 4;
+const ROUTE_ANTES = 8;
 
-/**
- * Open a single-seed search context for the given seed using the deck/stake
- * declared in the supplied JAML filter (defaults to Red/White if unset by
- * the engine). Returned object exposes `getBossForAnte`, `getNextTag`,
- * `getNextShopItem`, etc. — see `IMotelySingleSearchContextImpl`.
- */
-export async function analyzeSeed(
-  seed: string,
-  jamlJson: string
-): Promise<SingleSearchContext> {
+export async function analyzeSeed(seed: string, jamlJson: string) {
   await bootPromise;
-  const config = MotelyWasmHost.loadJaml(jamlJson);
-  return MotelyWasmHost.motelySingleSearchContext(seed, config.deck, config.stake);
+  const config = MotelyJamlSearchBuilder.loadJaml(jamlJson);
+  const ctx = MotelySingleSearchContext.open(seed, config.deck, config.stake);
+  const antes: object[] = [];
+  for (let ante = 1; ante <= ROUTE_ANTES; ante++) {
+    const shopItems: number[] = [];
+    for (let i = 0; i < SHOP_ITEMS_PER_ANTE; i++)
+      shopItems.push(ctx.getNextShopItem(ante).value);
+    const packs: number[] = [];
+    for (let i = 0; i < PACKS_PER_ANTE; i++)
+      packs.push(ctx.getNextBoosterPack(ante));
+    antes.push({
+      ante,
+      boss: ctx.getBossForAnte(ante),
+      voucher: ctx.getAnteFirstVoucher(ante),
+      smallBlindTag: ctx.getNextTag(ante),
+      bigBlindTag: ctx.getNextTag(ante),
+      shopItems,
+      packs,
+    });
+  }
+  return { seed, deck: config.deck, stake: config.stake, antes };
 }
 
 // ── MCP tool registration ────────────────────────────────────────────────────

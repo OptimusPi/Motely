@@ -9,6 +9,8 @@ const pkg = createRequire(import.meta.url)("./package.json") as {
   version: string;
 };
 
+const pkg = createRequire(import.meta.url)("./package.json");
+
 const server = new McpServer({
   name: pkg.name,
   version: pkg.version,
