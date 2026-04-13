@@ -1140,7 +1140,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     /// </summary>
     private void StartSearchThreads()
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+        // what the fuck - pifreak
+        // //ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+
         _elapsedTime.Start();
 
         if (_threadCount == 1)
@@ -1148,6 +1150,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // No System.Threading.Thread: matches single-threaded WASM (no pthread) and mirrors
             // <see cref="RunSearchUntilCompletion"/> for ThreadCount == 1.
             RunWorkerBody(_plans[0]);
+
+
+            // twhat the fuick is this shit guys?   -pifreak :(
             SignalSearchCompleted();
         }
         else
