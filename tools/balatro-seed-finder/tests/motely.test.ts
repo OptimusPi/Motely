@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { describe, it, expect, beforeAll } from "vitest";
 import bootsharp, { MotelyWasmHost, Motely, SearchEvents } from "motely-wasm";
 
@@ -21,7 +22,20 @@ describe("motely-wasm", () => {
   });
 
   it("throws on invalid JAML", () => {
-    expect(() => MotelyWasmHost.loadJaml("not json")).toThrow();
+    const stdout = execFileSync(
+      "node",
+      [
+        "--input-type=module",
+        "-e",
+        "import bootsharp,{MotelyWasmHost} from 'motely-wasm'; await bootsharp.boot(); try { MotelyWasmHost.loadJaml('not json'); console.log('no-throw'); process.exit(2); } catch { console.log('threw'); }",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      }
+    );
+
+    expect(stdout).toContain("threw");
   });
 
   it("starts random search from JAML", async () => {
@@ -35,37 +49,32 @@ describe("motely-wasm", () => {
     const results: { seed: string; score: number }[] = [];
     let completed = false;
 
-    const onResult = (seed: string, score: number, _tally: Int32Array) => {
+    function onResult(seed: string, score: number, _tally: Int32Array): void {
       results.push({ seed, score });
-    };
-    const onComplete = () => {
-      completed = true;
-    };
-
-    SearchEvents.onResult.subscribe(onResult);
-    SearchEvents.onComplete.subscribe(onComplete);
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const done = (status: string) => {
-          SearchEvents.onResult.unsubscribe(onResult);
-          SearchEvents.onComplete.unsubscribe(done);
-          completed = true;
-          if (status.startsWith("error:")) {
-            reject(new Error(status));
-            return;
-          }
-          resolve();
-        };
-
-        SearchEvents.onComplete.unsubscribe(onComplete);
-        SearchEvents.onComplete.subscribe(done);
-        MotelyWasmHost.startRandomSearchFromJaml(jaml, 1000);
-      });
-    } finally {
-      SearchEvents.onResult.unsubscribe(onResult);
-      SearchEvents.onComplete.unsubscribe(onComplete);
     }
+    await new Promise<void>((resolve, reject) => {
+      function onComplete(status: string): void {
+        SearchEvents.onResult.unsubscribe(onResult);
+        SearchEvents.onComplete.unsubscribe(onComplete);
+        completed = true;
+        if (status.startsWith("error:")) {
+          reject(new Error(status));
+          return;
+        }
+        resolve();
+      }
+
+      SearchEvents.onResult.subscribe(onResult);
+      SearchEvents.onComplete.subscribe(onComplete);
+
+      try {
+        MotelyWasmHost.startRandomSearchFromJaml(jaml, 1000);
+      } catch (err) {
+        SearchEvents.onResult.unsubscribe(onResult);
+        SearchEvents.onComplete.unsubscribe(onComplete);
+        reject(err);
+      }
+    });
 
     expect(completed).toBe(true);
     expect(results.length).toBeGreaterThan(0);
