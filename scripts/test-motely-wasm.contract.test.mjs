@@ -23,91 +23,140 @@ async function ensureBooted() {
   await bootPromise;
 }
 
-test("boot + loadJaml contract", async () => {
+test("boot + getVersion", async () => {
   await ensureBooted();
   const version = MotelyWasmHost.getVersion();
   assert.equal(typeof version, "string");
   assert.ok(version.length > 0, "version should be non-empty");
-
-  const config = MotelyWasmHost.loadJaml(jaml);
-  assert.equal(config.deck, Motely.MotelyDeck.Red);
-  assert.equal(config.stake, Motely.MotelyStake.White);
+  console.log("  version:", version);
 });
 
-test("single-search export shape is available", async () => {
+test("loadJaml returns config ID string", async () => {
   await ensureBooted();
-  const ctx = MotelyWasmHost.motelySingleSearchContext(
+  const configId = MotelyWasmHost.loadJaml(jaml);
+  assert.equal(typeof configId, "string");
+  assert.ok(configId.length > 0, "config ID should be non-empty");
+
+  const deck = MotelyWasmHost.getConfigDeck(configId);
+  const stake = MotelyWasmHost.getConfigStake(configId);
+  assert.equal(deck, Motely.MotelyDeck.Red);
+  assert.equal(stake, Motely.MotelyStake.White);
+});
+
+test("validateJaml returns valid or error", async () => {
+  await ensureBooted();
+  const good = MotelyWasmHost.validateJaml(jaml);
+  assert.equal(good, "valid");
+
+  const bad = MotelyWasmHost.validateJaml("not json at all");
+  assert.notEqual(bad, "valid");
+  assert.equal(typeof bad, "string");
+});
+
+test("openSingleSearchContext + context methods", async () => {
+  await ensureBooted();
+  const ctxId = MotelyWasmHost.openSingleSearchContext(
     "ALEEB5N",
     Motely.MotelyDeck.Red,
     Motely.MotelyStake.White
   );
+  assert.equal(typeof ctxId, "string");
 
-  assert.equal(typeof ctx.getSeed, "function");
-  assert.equal(typeof ctx.getBossForAnte, "function");
-  assert.equal(typeof ctx.getAnteFirstVoucher, "function");
-  assert.equal(typeof ctx.getNextTag, "function");
-  assert.equal(ctx.getSeed(), "ALEEB5N");
-});
+  const seed = MotelyWasmHost.contextGetSeed(ctxId);
+  assert.equal(seed, "ALEEB5N");
 
-test("host single-query methods accept parameters", async () => {
-  await ensureBooted();
-  const seed = "ALEEB5N";
-  const deck = Motely.MotelyDeck.Red;
-  const stake = Motely.MotelyStake.White;
-
-  const boss = MotelyWasmHost.singleGetBossForAnte(seed, deck, stake, 1);
-  const voucher = MotelyWasmHost.singleGetAnteFirstVoucher(seed, deck, stake, 1);
-  const tag = MotelyWasmHost.singleGetNextTag(seed, deck, stake, 1);
-  const lucky = MotelyWasmHost.singleGetNextLuckyMoney(seed, deck, stake, 1);
-  const misprint = MotelyWasmHost.singleGetNextMisprintMult(seed, deck, stake);
-
+  const boss = MotelyWasmHost.contextGetBossForAnte(ctxId, 1);
   assert.equal(typeof boss, "number");
+
+  const voucher = MotelyWasmHost.contextGetAnteFirstVoucher(ctxId, 1);
   assert.equal(typeof voucher, "number");
+
+  const tag = MotelyWasmHost.contextGetNextTag(ctxId, 1);
   assert.equal(typeof tag, "number");
-  assert.equal(typeof lucky, "boolean");
-  assert.equal(typeof misprint, "number");
+
+  MotelyWasmHost.contextClose(ctxId);
 });
 
-test("search starts from jaml string and event contract remains stable", async () => {
+test("analyzeSeed returns JSON string", async () => {
   await ensureBooted();
+  const json = MotelyWasmHost.analyzeSeed(
+    "ALEEB5N",
+    Motely.MotelyDeck.Red,
+    Motely.MotelyStake.White
+  );
+  assert.equal(typeof json, "string");
+  const parsed = JSON.parse(json);
+  assert.ok(parsed.antes, "should have antes array");
+  assert.ok(parsed.antes.length > 0, "should have at least one ante");
+  console.log("  antes:", parsed.antes.length, "| boss1:", parsed.antes[0].boss);
+});
+
+test("startRandomSearch + events", async () => {
+  await ensureBooted();
+  const configId = MotelyWasmHost.loadJaml(jaml);
 
   const seen = [];
-  let timeout = null;
-  let onComplete = null;
   let completed = false;
-  const onResult = (seed, score, tally) => {
-    seen.push({ seed, score, tally });
-  };
   const complete = new Promise((resolve, reject) => {
-    timeout = setTimeout(() => {
-      reject(new Error("Timed out waiting for search completion"));
-    }, 15000);
-    onComplete = () => {
+    const timeout = setTimeout(() => reject(new Error("Timed out")), 15000);
+    const onComplete = () => {
       completed = true;
+      clearTimeout(timeout);
+      SearchEvents.onComplete.unsubscribe(onComplete);
       resolve();
     };
     SearchEvents.onComplete.subscribe(onComplete);
   });
 
+  const onResult = (seed, score, tally) => {
+    seen.push({ seed, score, tally });
+  };
   SearchEvents.onResult.subscribe(onResult);
+
   try {
-    MotelyWasmHost.startSeedListSearchFromJaml(jaml, ["ALEEB5N"]);
+    MotelyWasmHost.startRandomSearch(configId, 10000);
     await complete;
   } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    if (onComplete) {
-      SearchEvents.onComplete.unsubscribe(onComplete);
-    }
     SearchEvents.onResult.unsubscribe(onResult);
   }
 
   assert.equal(completed, true);
+  console.log("  results:", seen.length, "from 10k seeds");
   if (seen.length > 0) {
     const first = seen[0];
     assert.equal(typeof first.seed, "string");
     assert.equal(typeof first.score, "number");
     assert.ok(first.tally instanceof Int32Array, "tally should be Int32Array");
   }
+});
+
+test("startSeedListSearchFromJaml (direct jaml string)", async () => {
+  await ensureBooted();
+
+  const seen = [];
+  let completed = false;
+  const complete = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out")), 15000);
+    const onComplete = () => {
+      completed = true;
+      clearTimeout(timeout);
+      SearchEvents.onComplete.unsubscribe(onComplete);
+      resolve();
+    };
+    SearchEvents.onComplete.subscribe(onComplete);
+  });
+
+  const onResult = (seed, score, tally) => {
+    seen.push({ seed, score, tally });
+  };
+  SearchEvents.onResult.subscribe(onResult);
+
+  try {
+    MotelyWasmHost.startSeedListSearchFromJaml(jaml, ["ALEEB5N"]);
+    await complete;
+  } finally {
+    SearchEvents.onResult.unsubscribe(onResult);
+  }
+
+  assert.equal(completed, true);
 });

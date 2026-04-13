@@ -375,3 +375,16 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         SeedList,
     }
 }
+
+public interface IMotelySearchSession : IDisposable
+{
+    IMotelySearch Inner { get; }
+    void Cancel();
+}
+
+internal sealed class MotelySearchSession(IMotelySearch search) : IMotelySearchSession
+{
+    public IMotelySearch Inner => search;
+    public void Cancel() => search.Cancel();
+    public void Dispose() => search.Dispose();
+}
