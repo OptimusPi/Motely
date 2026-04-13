@@ -186,6 +186,11 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInterna
 
     public IMotelySearch Run()
     {
+        return WireAndRun(BuildSettings());
+    }
+
+    public IMotelySearchSettings BuildSettings()
+    {
         var jaml = _config ?? throw new InvalidOperationException("Call LoadJaml or CompileJummy first.");
         if (_mode == SearchMode.None)
             throw new InvalidOperationException("Choose a search mode (Configured, Sequential, Random, …) before Run.");
@@ -240,7 +245,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInterna
         }
 
         ClearPlan();
-        return WireAndRun(settings);
+        return settings;
     }
 
     private void ClearPlan()
