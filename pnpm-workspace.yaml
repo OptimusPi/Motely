@@ -1,5 +1,5 @@
 packages:
   - Motely.TestWebsite
-  - tools/jaml-mcp
+  - tools/balatro-seed-finder
 
 onlyBuiltDependencies: '*'
