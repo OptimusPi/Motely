@@ -371,6 +371,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInterna
             }
         });
 
+        Console.Error.WriteLine("[DIAG] WireAndRun: calling settings.Start()");
         IMotelySearch search;
         try
         {
@@ -381,6 +382,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInterna
             Console.Error.WriteLine($"settings.Start failed: {ex}");
             throw new InvalidOperationException($"MotelyJamlSearchBuilder settings.Start() failed: {ex.Message}", ex);
         }
+        Console.Error.WriteLine("[DIAG] WireAndRun: settings.Start() returned");
         _ = NotifyOnCompletionAsync(search, () => lastSeedsSearched, () => lastMatchingSeeds);
         return search;
     }
