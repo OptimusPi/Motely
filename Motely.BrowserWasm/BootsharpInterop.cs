@@ -21,7 +21,6 @@ using Bootsharp.Inject;
     Space = [
         @"^Motely\.Analysis\.(\S+)", "$1",
         @"^Motely\.BrowserWasm\.(\S+)", "$1",
-        @"^Motely\.Analysis\.(\S+)", "$1",
         @"^Motely\.(\S+)", "$1",
         @"^MotelyJaml\.(\S+)", "$1"
     ]
