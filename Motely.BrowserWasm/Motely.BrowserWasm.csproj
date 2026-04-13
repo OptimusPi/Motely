@@ -25,7 +25,6 @@
 <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
 <WasmEnableSIMD>true</WasmEnableSIMD>
 <WasmEnableThreads>false</WasmEnableThreads>
-<WasmEnableSIMD>true</WasmEnableSIMD>
 <RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
 </PropertyGroup>
 
@@ -41,8 +40,8 @@ Lines="namespace Motely.BrowserWasm { internal static class VersionInfo { public
 Overwrite="true" />
 </Target>
 
-
 <ItemGroup>
+<Compile Remove="MotelyBrowserApi.cs" />
 <ProjectReference Include="..\Motely\Motely.csproj" />
 <PackageReference Include="Bootsharp" />
 <PackageReference Include="Bootsharp.Inject" />

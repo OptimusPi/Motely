@@ -56,18 +56,18 @@ export async function searchSeeds(
   const results: SearchResult[] = [];
 
   return new Promise<SearchResponse>((resolve, reject) => {
-    const onResult = (seed: string, score: number, tally: Int32Array) => {
+    function onResult(seed: string, score: number, tally: Int32Array): void {
       results.push({ seed, score, tally: Array.from(tally) });
-    };
+    }
 
-    const onComplete = (
+    function onComplete(
       status: string,
       seedsSearched: bigint,
-      matchingSeeds: bigint,
-    ) => {
+      matchingSeeds: bigint
+    ): void {
       SearchEvents.onResult.unsubscribe(onResult);
       SearchEvents.onComplete.unsubscribe(onComplete);
-      const sorted = results.sort((a, b) => b.score - a.score);
+      const sorted = results.sort(function (a, b) { return b.score - a.score; });
       const shown = sorted.slice(0, MAX_RESULTS);
       resolve({
         status,
@@ -77,7 +77,7 @@ export async function searchSeeds(
         resultsShown: String(shown.length),
         results: shown,
       });
-    };
+    }
 
     SearchEvents.onResult.subscribe(onResult);
     SearchEvents.onComplete.subscribe(onComplete);
