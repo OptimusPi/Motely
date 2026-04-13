@@ -2,7 +2,7 @@
  * MCP tool registration for the Balatro Seed MCP.
  *
  * The C# engine (motely-wasm) owns JAML parsing, validation, and search.
- * This file boots Bootsharp, registers two tools, and forwards inputs
+ * This file boots Bootsharp, registers tools, and forwards inputs
  * straight to the engine. Engine errors propagate as isError MCP responses.
  */
 import { readFile } from "node:fs/promises";
@@ -15,8 +15,6 @@ import {
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import dotnet, { MotelyWasmHost, SearchEvents } from "motely-wasm";
 import { z } from "zod";
-
-type SingleSearchContext = ReturnType<typeof MotelyWasmHost.motelySingleSearchContext>;
 
 const MAX_RANDOM_SEEDS = 1_000_000;
 const DEFAULT_RANDOM_SEEDS = 1_000_000;
@@ -94,19 +92,6 @@ export async function searchSeeds(
   });
 }
 
-// ── Single-seed analysis ─────────────────────────────────────────────────────
-
-export async function analyzeSeed(
-  seed: string,
-  jamlJson: string
-): Promise<SingleSearchContext> {
-  await bootPromise;
-  const configId = MotelyWasmHost.loadJaml(jamlJson);
-  const deck = MotelyWasmHost.getConfigDeck(configId);
-  const stake = MotelyWasmHost.getConfigStake(configId);
-  return MotelyWasmHost.motelySingleSearchContext(seed, deck, stake);
-}
-
 // ── Tool descriptions ────────────────────────────────────────────────────────
 
 const SEARCH_DESCRIPTION =
@@ -176,6 +161,31 @@ const ANALYZE_DESCRIPTION =
   `Use after search_seeds to drill into a promising seed, or to check a known seed.\n` +
   `Deck and stake come from the JAML filter (defaults: Red deck, White stake).`;
 
+// ── Static catalog ──────────────────────────────────────────────────────────
+
+const CATALOG = {
+  decks: ["Red", "Blue", "Yellow", "Green", "Black", "Magic", "Nebula", "Ghost", "Abandoned", "Checkered", "Zodiac", "Painted", "Anaglyph", "Plasma", "Erratic"],
+  stakes: ["White", "Red", "Green", "Black", "Blue", "Purple", "Orange", "Gold"],
+  jokers: {
+    common: ["Joker", "Greedy Joker", "Lusty Joker", "Wrathful Joker", "Gluttonous Joker", "Jolly Joker", "Zany Joker", "Mad Joker", "Crazy Joker", "Droll Joker", "Sly Joker", "Wily Joker", "Clever Joker", "Devious Joker", "Crafty Joker", "Half Joker", "Credit Card", "Banner", "Mystic Summit", "8 Ball", "Misprint", "Raised Fist", "Chaos the Clown", "Scary Face", "Abstract Joker", "Delayed Gratification", "Gros Michel", "Even Steven", "Odd Todd", "Scholar", "Business Card", "Supernova", "Ride the Bus", "Egg", "Runner", "Ice Cream", "Splash", "Blue Joker", "Faceless Joker", "Green Joker", "Superposition", "To Do List", "Cavendish", "Red Card", "Square Joker", "Riff-Raff", "Photograph", "Reserved Parking", "Mail-In Rebate", "Hallucination", "Fortune Teller", "Juggler", "Drunkard", "Golden Joker", "Popcorn", "Walkie Talkie", "Smiley Face", "Golden Ticket", "Swashbuckler", "Hanging Chad", "Shoot the Moon"],
+    uncommon: ["Joker Stencil", "Four Fingers", "Mime", "Ceremonial Dagger", "Marble Joker", "Loyalty Card", "Dusk", "Fibonacci", "Steel Joker", "Hack", "Pareidolia", "Space Joker", "Burglar", "Blackboard", "Sixth Sense", "Constellation", "Hiker", "Card Sharp", "Madness", "Seance", "Vampire", "Shortcut", "Hologram", "Cloud 9", "Rocket", "Midas Mask", "Luchador", "Gift Card", "Turtle Bean", "Erosion", "To the Moon", "Stone Joker", "Lucky Cat", "Bull", "Diet Cola", "Trading Card", "Flash Card", "Spare Trousers", "Ramen", "Seltzer", "Castle", "Mr. Bones", "Acrobat", "Sock and Buskin", "Troubadour", "Certificate", "Smeared Joker", "Throwback", "Rough Gem", "Bloodstone", "Arrowhead", "Onyx Agate", "Glass Joker", "Showman", "Flower Pot", "Merry Andy", "Oops! All 6s", "The Idol", "Seeing Double", "Matador", "Satellite", "Cartomancer", "Astronomer", "Bootstraps"],
+    rare: ["DNA", "Vagabond", "Baron", "Obelisk", "Baseball Card", "Ancient Joker", "Campfire", "Blueprint", "Wee Joker", "Hit the Road", "The Duo", "The Trio", "The Family", "The Order", "The Tribe", "Stuntman", "Invisible Joker", "Brainstorm", "Driver's License", "Burnt Joker"],
+    legendary: ["Canio", "Triboulet", "Yorick", "Chicot", "Perkeo"],
+  },
+  vouchers: ["Overstock", "Overstock Plus", "Clearance Sale", "Liquidation", "Hone", "Glow Up", "Reroll Surplus", "Reroll Glut", "Crystal Ball", "Omen Globe", "Telescope", "Observatory", "Grabber", "Nacho Tong", "Wasteful", "Recyclomancy", "Tarot Merchant", "Tarot Tycoon", "Planet Merchant", "Planet Tycoon", "Seed Money", "Money Tree", "Blank", "Antimatter", "Magic Trick", "Illusion", "Hieroglyph", "Petroglyph", "Director's Cut", "Retcon", "Paint Brush", "Palette"],
+  bosses: {
+    normal: ["The Arm", "The Club", "The Eye", "The Fish", "The Flint", "The Goad", "The Head", "The Hook", "The House", "The Manacle", "The Mark", "The Mouth", "The Needle", "The Ox", "The Pillar", "The Plant", "The Psychic", "The Serpent", "The Tooth", "The Wall", "The Water", "The Wheel", "The Window"],
+    finisher: ["Amber Acorn", "Cerulean Bell", "Crimson Heart", "Verdant Leaf", "Violet Vessel"],
+  },
+  tags: ["Uncommon Tag", "Rare Tag", "Negative Tag", "Foil Tag", "Holographic Tag", "Polychrome Tag", "Investment Tag", "Voucher Tag", "Boss Tag", "Standard Tag", "Charm Tag", "Meteor Tag", "Buffoon Tag", "Handy Tag", "Garbage Tag", "Ethereal Tag", "Coupon Tag", "Double Tag", "Juggle Tag", "D6 Tag", "Top-up Tag", "Speed Tag", "Orbital Tag", "Economy Tag"],
+  editions: ["Foil", "Holographic", "Polychrome", "Negative"],
+  stickers: ["Eternal", "Perishable", "Rental"],
+  seals: ["Gold", "Red", "Blue", "Purple"],
+  enhancements: ["Bonus", "Mult", "Wild", "Glass", "Steel", "Stone", "Gold", "Lucky"],
+  clauseTypes: ["joker", "commonJoker", "uncommonJoker", "rareJoker", "legendaryJoker", "soulJoker", "voucher", "boss", "tag", "smallBlindTag", "bigBlindTag", "tarotCard", "spectralCard", "planetCard", "standardCard", "erraticRank", "erraticSuit", "erraticCard", "event"],
+  sections: ["must", "should", "mustNot"],
+};
+
 // ── MCP tool registration ────────────────────────────────────────────────────
 
 export function registerTools(server: McpServer) {
@@ -196,6 +206,158 @@ export function registerTools(server: McpServer) {
         },
       ],
     })
+  );
+
+  // get_version ────────────────────────────────────────────────────────────
+  server.tool(
+    "get_version",
+    {
+      description: "Get the MotelyJAML engine version string.",
+      annotations: { readOnlyHint: true },
+    },
+    {},
+    async () => {
+      await bootPromise;
+      const ver = MotelyWasmHost.getVersion();
+      return {
+        content: [{ type: "text" as const, text: ver }],
+      };
+    }
+  );
+
+  // validate_jaml ──────────────────────────────────────────────────────────
+  server.tool(
+    "validate_jaml",
+    {
+      description:
+        "Validate a JAML filter string. Returns 'valid' if the JSON is well-formed JAML, " +
+        "or a descriptive error. Does NOT run a search.",
+      annotations: { readOnlyHint: true },
+    },
+    {
+      jaml: z
+        .string()
+        .describe("JAML filter JSON string to validate"),
+    },
+    async ({ jaml }) => {
+      await bootPromise;
+      try {
+        const result = MotelyWasmHost.validateJaml(jaml);
+        return {
+          content: [{ type: "text" as const, text: result }],
+        };
+      } catch (err) {
+        return {
+          isError: true,
+          content: [
+            { type: "text" as const, text: `Validation error: ${(err as Error).message}` },
+          ],
+        };
+      }
+    }
+  );
+
+  // get_catalog ─────────────────────────────────────────────────────────────
+  server.tool(
+    "get_catalog",
+    {
+      description:
+        "Get the full catalog of valid Balatro item names for use in JAML filters. " +
+        "Returns all jokers (by rarity), vouchers, bosses, tags, editions, stickers, " +
+        "seals, enhancements, decks, stakes, clause types, and filter sections. " +
+        "Use this to avoid hallucinating invalid names when constructing filters.",
+      annotations: { readOnlyHint: true },
+    },
+    {
+      category: z
+        .enum(["all", "jokers", "vouchers", "bosses", "tags", "decks", "stakes", "editions", "stickers", "seals", "enhancements", "clauseTypes", "sections"])
+        .default("all")
+        .describe("Which category to return. Default: all."),
+    },
+    async ({ category }) => {
+      const data = category === "all" ? CATALOG : { [category]: (CATALOG as Record<string, unknown>)[category] };
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+      };
+    }
+  );
+
+  // get_jaml_schema ────────────────────────────────────────────────────────
+  server.tool(
+    "get_jaml_schema",
+    {
+      description:
+        "Get the JAML (Jimbo's Ante Markup Language) filter schema. " +
+        "Returns the JSON schema describing valid JAML filter structure " +
+        "including all properties, clause types, and their options.",
+      annotations: { readOnlyHint: true },
+    },
+    {},
+    async () => {
+      const schema = {
+        $schema: "http://json-schema.org/draft-07/schema#",
+        title: "JAML Filter",
+        description: "Jimbo's Ante Markup Language — filter format for Balatro seed searches",
+        type: "object",
+        properties: {
+          deck: { type: "string", enum: CATALOG.decks, default: "Red" },
+          stake: { type: "string", enum: CATALOG.stakes, default: "White" },
+          must: { $ref: "#/$defs/clauseList", description: "All clauses must match (required)" },
+          should: { $ref: "#/$defs/clauseList", description: "Scored clauses (higher score = better, not required)" },
+          mustNot: { $ref: "#/$defs/clauseList", description: "Reject seed if any clause matches" },
+        },
+        $defs: {
+          clauseList: {
+            type: "array",
+            items: { $ref: "#/$defs/clause" },
+          },
+          clause: {
+            type: "object",
+            description: "A filter clause. Exactly one clause type key should be present.",
+            properties: {
+              // Clause type keys (one required)
+              joker: { type: "string", description: "Any joker name" },
+              commonJoker: { type: "string" },
+              uncommonJoker: { type: "string" },
+              rareJoker: { type: "string" },
+              legendaryJoker: { type: "string" },
+              soulJoker: { type: "string" },
+              voucher: { type: "string", description: "Voucher name" },
+              boss: { type: "string", description: "Boss blind name" },
+              tag: { type: "string", description: "Tag name" },
+              smallBlindTag: { type: "string" },
+              bigBlindTag: { type: "string" },
+              tarotCard: { type: "string" },
+              spectralCard: { type: "string" },
+              planetCard: { type: "string" },
+              standardCard: { type: "string", description: "e.g. 'Ace of Spades', '10 of Hearts'" },
+              erraticRank: { type: "string" },
+              erraticSuit: { type: "string" },
+              erraticCard: { type: "string" },
+              event: { type: "string" },
+              // Options
+              antes: {
+                type: "array",
+                items: { type: "integer", minimum: 0, maximum: 8 },
+                description: "Which antes to check. 0 = pre-game.",
+              },
+              edition: { type: "string", enum: CATALOG.editions },
+              stickers: {
+                type: "array",
+                items: { type: "string", enum: CATALOG.stickers },
+              },
+              seal: { type: "string", enum: CATALOG.seals },
+              enhancement: { type: "string", enum: CATALOG.enhancements },
+              score: { type: "number", description: "Score value for 'should' clauses" },
+              label: { type: "string", description: "Display name for this clause" },
+            },
+          },
+        },
+      };
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(schema, null, 2) }],
+      };
+    }
   );
 
   // search_seeds ────────────────────────────────────────────────────────────
@@ -302,9 +464,15 @@ export function registerTools(server: McpServer) {
     },
     async ({ seed, jaml }) => {
       try {
-        const ctx = await analyzeSeed(seed, jaml);
+        await bootPromise;
+        // Parse the JAML to get deck/stake, then analyze
+        const configId = MotelyWasmHost.loadJaml(jaml);
+        const deck = MotelyWasmHost.getConfigDeck(configId);
+        const stake = MotelyWasmHost.getConfigStake(configId);
+        const jsonStr = MotelyWasmHost.analyzeSeed(seed, deck, stake);
+        const parsed = JSON.parse(jsonStr);
         return {
-          content: [{ type: "text" as const, text: JSON.stringify(ctx, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(parsed, null, 2) }],
         };
       } catch (err) {
         return {

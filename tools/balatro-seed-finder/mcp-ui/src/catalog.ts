@@ -8,6 +8,13 @@ export const jamlSearchCatalog = defineCatalog(schema, {
       props: z.object({ heading: z.string() }),
       description: "Vertical layout with a gold title",
     },
+    FilterDisplay: {
+      props: z.object({
+        jummy: z.string().optional(),
+        jaml: z.string().optional(),
+      }),
+      description: "Shows the current search filter",
+    },
     StatsBlock: {
       props: z.object({
         status: z.string(),
@@ -29,6 +36,15 @@ export const jamlSearchCatalog = defineCatalog(schema, {
       }),
       description: "Table of matching seeds with scores and tally breakdown",
     },
+    SeedDetail: {
+      props: z.object({
+        seed: z.string(),
+        loading: z.string().optional(),
+        error: z.string().optional(),
+        analysisJson: z.string().optional(),
+      }),
+      description: "Expanded ante-by-ante breakdown for a single seed",
+    },
     Button: {
       props: z.object({
         label: z.string(),
@@ -47,10 +63,20 @@ export const jamlSearchCatalog = defineCatalog(schema, {
       props: z.object({ message: z.string() }),
       description: "Shown when no results found",
     },
+    Spinner: {
+      props: z.object({ message: z.string().optional() }),
+      description: "Animated loading spinner",
+    },
   },
   actions: {
     rerunSearch: {
       description: "Re-roll: run search_seeds again with the same filter",
+    },
+    analyzeSeed: {
+      description: "Drill into a seed for full ante-by-ante breakdown",
+    },
+    closeSeedDetail: {
+      description: "Close the seed detail overlay",
     },
   },
 });

@@ -8,6 +8,8 @@ import {
 import { useCallback, useRef, useState } from "react";
 import {
   buildErrorSpec,
+  buildLoadingSpec,
+  buildSeedDetailSpec,
   buildSpecFromSearch,
   registry,
 } from "./registry.js";
@@ -33,11 +35,14 @@ function parseSearchResultPayload(result: {
 
 export function JamlSearchApp() {
   const [spec, setSpec] = useState(() =>
-    buildErrorSpec("Waiting for search results..."),
+    buildLoadingSpec("Waiting for search results..."),
   );
   const [loading, setLoading] = useState(false);
   const appRef = useRef<App | null>(null);
   const lastArgsRef = useRef<Record<string, unknown>>({});
+  const lastSearchRef = useRef<SearchResponse | null>(null);
+  // Track which view: "results" or "detail"
+  const [view, setView] = useState<"results" | "detail">("results");
 
   const onAppCreated = useCallback((app: App) => {
     appRef.current = app;
@@ -49,7 +54,14 @@ export function JamlSearchApp() {
 
     app.ontoolresult = (result) => {
       try {
-        setSpec(buildSpecFromSearch(parseSearchResultPayload(result)));
+        const parsed = parseSearchResultPayload(result);
+        lastSearchRef.current = parsed;
+        const args = lastArgsRef.current;
+        setSpec(buildSpecFromSearch(parsed, {
+          jummy: args.jummy as string | undefined,
+          jaml: args.jaml as string | undefined,
+        }));
+        setView("results");
       } catch (e) {
         const text = result.content?.find((c) => c.type === "text")?.text ?? "";
         setSpec(
@@ -72,18 +84,62 @@ export function JamlSearchApp() {
     const app = appRef.current;
     if (!app || loading) return;
     setLoading(true);
+    setSpec(buildLoadingSpec("Re-rolling search..."));
     const args = lastArgsRef.current;
     try {
       const result = await app.callServerTool({
         name: "search_seeds",
         arguments: args,
       });
-      setSpec(buildSpecFromSearch(parseSearchResultPayload(result)));
+      const parsed = parseSearchResultPayload(result);
+      lastSearchRef.current = parsed;
+      setSpec(buildSpecFromSearch(parsed, {
+        jummy: args.jummy as string | undefined,
+        jaml: args.jaml as string | undefined,
+      }));
+      setView("results");
     } catch (e) {
       setSpec(buildErrorSpec(`Re-roll failed: ${(e as Error).message}`));
     }
     setLoading(false);
   }, [loading]);
+
+  const analyzeSeed = useCallback(async (_params: unknown, eventData?: { seed?: string }) => {
+    const app = appRef.current;
+    const seed = eventData?.seed;
+    if (!app || !seed) return;
+
+    setView("detail");
+    setSpec(buildSeedDetailSpec(seed, { loading: true }));
+
+    // Build minimal JAML from last search args for deck/stake
+    const args = lastArgsRef.current;
+    const jaml = (args.jaml as string) || '{"deck":"Red","stake":"White"}';
+
+    try {
+      const result = await app.callServerTool({
+        name: "analyze_seed",
+        arguments: { seed, jaml },
+      });
+      const text = result.content?.find((c: { type: string }) => c.type === "text")?.text ?? "{}";
+      setSpec(buildSeedDetailSpec(seed, { analysisJson: text }));
+    } catch (e) {
+      setSpec(buildSeedDetailSpec(seed, { error: (e as Error).message }));
+    }
+  }, []);
+
+  const closeSeedDetail = useCallback(() => {
+    setView("results");
+    if (lastSearchRef.current) {
+      const args = lastArgsRef.current;
+      setSpec(buildSpecFromSearch(lastSearchRef.current, {
+        jummy: args.jummy as string | undefined,
+        jaml: args.jaml as string | undefined,
+      }));
+    } else {
+      setSpec(buildLoadingSpec("Waiting for search results..."));
+    }
+  }, []);
 
   if (error)
     return (
@@ -92,28 +148,31 @@ export function JamlSearchApp() {
       </div>
     );
   if (!isConnected)
-    return <div style={{ padding: 12, color: "var(--muted, #64748b)" }}>Connecting...</div>;
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 12, color: "var(--text2, #a0a8b8)" }}>
+        <div
+          style={{
+            width: 16,
+            height: 16,
+            border: "2px solid var(--border, #334461)",
+            borderTopColor: "var(--blue, #0093ff)",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+        Connecting...
+      </div>
+    );
 
   return (
     <StateProvider initialState={{}}>
       <ActionProvider
         handlers={{
-          rerunSearch: rerunSearch,
+          rerunSearch,
+          analyzeSeed,
+          closeSeedDetail,
         }}
       >
-        {loading && (
-          <div
-            style={{
-              padding: "8px 12px",
-              background: "var(--stats-bg, #e2e8f0)",
-              borderRadius: 8,
-              fontSize: "0.85rem",
-              marginBottom: 8,
-            }}
-          >
-            Searching...
-          </div>
-        )}
         <Renderer spec={spec as never} registry={registry} />
       </ActionProvider>
     </StateProvider>
