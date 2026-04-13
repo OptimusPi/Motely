@@ -12,14 +12,14 @@ public static class Program
     {
         try
         {
-            new ServiceCollection()
+            var provider = new ServiceCollection()
                 .AddBootsharp()
                 .AddSingleton<MotelyJamlSearchBuilder>()
-                .AddSingleton<Motely.BrowserWasm.MotelyWasmHost>()
-                // Register the handler as the concrete type AND the interface
-                .AddSingleton<IMotelyWasmHost>(static sp => sp.GetRequiredService<Motely.BrowserWasm.MotelyWasmHost>())
-                .BuildServiceProvider()
-                .RunBootsharp();
+                .BuildServiceProvider();
+
+            MotelyBrowserApi.Initialize(provider.GetRequiredService<MotelyJamlSearchBuilder>());
+
+            provider.RunBootsharp();
         }
         catch (Exception ex)
         {
