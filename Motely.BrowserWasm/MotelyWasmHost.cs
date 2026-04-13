@@ -11,7 +11,6 @@ public interface IMotelyWasmHost
 {
     string GetVersion();
     string LoadJaml(string jaml);
-    string CompileJummy(string jummy);
     string ValidateJaml(string jaml);
     MotelyDeck GetConfigDeck(string configId);
     MotelyStake GetConfigStake(string configId);
@@ -65,14 +64,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
     public string LoadJaml(string jaml)
     {
         var config = LoadJamlCore(jaml);
-        var id = Guid.NewGuid().ToString();
-        lock (_configs) _configs[id] = config;
-        return id;
-    }
-
-    public string CompileJummy(string jummy)
-    {
-        var config = CompileJummyCore(jummy);
         var id = Guid.NewGuid().ToString();
         lock (_configs) _configs[id] = config;
         return id;
@@ -233,8 +224,9 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         }
     }
 
-    private void StartSearch(IMotelySearch search)
+    private void StartSearch(IMotelySearchSession session)
     {
+        var search = session.Inner;
         lock (_sync)
         {
             _currentSearch?.Cancel();
@@ -271,13 +263,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
             throw new InvalidOperationException(error ?? "Invalid JAML.");
         JamlSearchBuilder.EnsureRunnablePlan(config);
         return config;
-    }
-
-    private JamlConfig CompileJummyCore(string jummy)
-    {
-        if (!JummyCompiler.TryCompile(jummy, out var jamlYaml, out var compileErr))
-            throw new InvalidOperationException(compileErr ?? "Jummy compile failed.");
-        return LoadJamlCore(jamlYaml);
     }
 
     private JamlConfig GetConfigInternal(string id)

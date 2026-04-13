@@ -3,12 +3,11 @@
  *
  * Public demo endpoint — no auth required.
  * Body: { seed: string, jaml: string }
- * Returns: MotelySingleSearchContext JSON
+ * Returns: seed analysis JSON
  */
-import bootsharp from "motely-wasm";
-import { analyzeSeed } from "./tools.js";
+import dotnet, { MotelyWasmHost } from "motely-wasm";
 
-await bootsharp.boot();
+await dotnet.boot();
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +16,6 @@ const CORS_HEADERS = {
 };
 
 export default async function handler(req: any, res: any) {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     res.writeHead(204, CORS_HEADERS);
     res.end();
@@ -42,6 +40,7 @@ export default async function handler(req: any, res: any) {
     res.end(JSON.stringify({ error: "Invalid JSON in request body" }));
     return;
   }
+
   const seed: string = body?.seed;
   const jaml: string = body?.jaml;
 
@@ -59,10 +58,13 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const result = await analyzeSeed(seed, jaml);
+    const configId = MotelyWasmHost.loadJaml(jaml);
+    const deck = MotelyWasmHost.getConfigDeck(configId);
+    const stake = MotelyWasmHost.getConfigStake(configId);
+    const jsonStr = MotelyWasmHost.analyzeSeed(seed, deck, stake);
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify(result));
+    res.end(jsonStr);
   } catch (err) {
     res.statusCode = 400;
     res.setHeader("Content-Type", "application/json");

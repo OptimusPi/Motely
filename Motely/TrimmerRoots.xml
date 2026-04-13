@@ -83,6 +83,10 @@
     <type fullname="Motely.MotelyBoosterPackType" preserve="all" />
     <type fullname="Motely.MotelyBoosterPackSize" preserve="all" />
 
+    <!-- ── Jummy compiler (uses runtime Regex) ── -->
+    <type fullname="Motely.Filters.JummyCompiler" preserve="all" />
+    <type fullname="Motely.Filters.JummyMumbleLine" preserve="all" />
+
     <!-- YamlDotNet static context + SG output (JamlYamlContext) -->
     <type fullname="Motely.Filters.JamlYamlContext" preserve="all" />
 
