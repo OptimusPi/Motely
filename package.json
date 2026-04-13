@@ -11,6 +11,7 @@
     "find:gros-michel-wasm": "node scripts/find-gros-michel-via-wasm.mjs"
   },
   "devDependencies": {
+    "rollup": "^4.60.1",
     "vitest": "^4.1.4"
   }
 }
