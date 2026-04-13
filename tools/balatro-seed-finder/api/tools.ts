@@ -51,7 +51,7 @@ interface SearchResponse {
 }
 
 export async function searchSeeds(
-  jamlJson: string,
+  configId: string,
   seedCount: number = DEFAULT_RANDOM_SEEDS
 ): Promise<SearchResponse> {
   await bootPromise;
@@ -85,7 +85,7 @@ export async function searchSeeds(
     SearchEvents.onComplete.subscribe(onComplete);
 
     try {
-      MotelyWasmHost.startRandomSearchFromJaml(jamlJson, seedCount);
+      MotelyWasmHost.startRandomSearch(configId, seedCount);
     } catch (err) {
       SearchEvents.onResult.unsubscribe(onResult);
       SearchEvents.onComplete.unsubscribe(onComplete);
@@ -101,8 +101,10 @@ export async function analyzeSeed(
   jamlJson: string
 ): Promise<SingleSearchContext> {
   await bootPromise;
-  const config = MotelyWasmHost.loadJaml(jamlJson);
-  return MotelyWasmHost.motelySingleSearchContext(seed, config.deck, config.stake);
+  const configId = MotelyWasmHost.loadJaml(jamlJson);
+  const deck = MotelyWasmHost.getConfigDeck(configId);
+  const stake = MotelyWasmHost.getConfigStake(configId);
+  return MotelyWasmHost.motelySingleSearchContext(seed, deck, stake);
 }
 
 // ── Tool descriptions ────────────────────────────────────────────────────────
@@ -233,7 +235,7 @@ export function registerTools(server: McpServer) {
       },
     },
     async ({ jummy, jaml, seed_count }) => {
-      let jamlInput: string;
+      let configId: string;
       try {
         if (jummy && jaml) {
           return {
@@ -241,12 +243,11 @@ export function registerTools(server: McpServer) {
             content: [{ type: "text" as const, text: "Provide jummy OR jaml, not both." }],
           };
         }
+        await bootPromise;
         if (jummy) {
-          await bootPromise;
-          const config = MotelyWasmHost.compileJummy(jummy);
-          jamlInput = JSON.stringify(config);
+          configId = MotelyWasmHost.compileJummy(jummy);
         } else if (jaml) {
-          jamlInput = jaml;
+          configId = MotelyWasmHost.loadJaml(jaml);
         } else {
           return {
             isError: true,
@@ -261,7 +262,7 @@ export function registerTools(server: McpServer) {
       }
 
       try {
-        const output = await searchSeeds(jamlInput, seed_count);
+        const output = await searchSeeds(configId, seed_count);
         const truncNote =
           output.resultsShown !== output.totalMatches
             ? ` Showing top ${output.resultsShown} of ${output.totalMatches}.`
