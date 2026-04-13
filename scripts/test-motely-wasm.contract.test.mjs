@@ -4,9 +4,8 @@ import assert from "node:assert/strict";
 import dotnet, {
   Motely,
   MotelyWasmHost,
-  MotelySingleSearchContext,
   SearchEvents,
-} from "../Motely.BrowserWasm/motely-wasm/index.mjs";
+} from "../Motely.BrowserWasm/bin/Release/net10.0/browser-wasm/publish/index.mjs";
 
 const jaml = JSON.stringify({
   deck: "Red",
@@ -37,7 +36,7 @@ test("boot + loadJaml contract", async () => {
 
 test("single-search export shape is available", async () => {
   await ensureBooted();
-  const ctx = MotelySingleSearchContext.open(
+  const ctx = MotelyWasmHost.motelySingleSearchContext(
     "ALEEB5N",
     Motely.MotelyDeck.Red,
     Motely.MotelyStake.White
