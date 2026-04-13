@@ -8,6 +8,8 @@ const pkg = createRequire(import.meta.url)("../package.json") as {
   version: string;
 };
 
+const API_KEY = process.env.BALATRO_MCP_API_KEY ?? "";
+
 async function createTransport(): Promise<StreamableHTTPServerTransport> {
   await bootPromise;
   const transport = new StreamableHTTPServerTransport({
