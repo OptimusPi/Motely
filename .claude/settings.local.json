@@ -83,7 +83,11 @@
       "Bash(sed -i '' 's/IMotelySearch Start/void Start/g' Motely.BrowserWasm/MotelyWasmHost.cs)",
       "Bash(sed -i '' 's/return StartSearch/StartSearch/g' Motely.BrowserWasm/MotelyWasmHost.cs)",
       "Bash(sed -i '' 's/private IMotelySearch StartSearch/private void StartSearch/g' Motely.BrowserWasm/MotelyWasmHost.cs)",
-      "Bash(sed -i '' 's/_ = ReleaseWhenCompleteAsync/ReleaseWhenCompleteAsync/g' Motely.BrowserWasm/MotelyWasmHost.cs)"
+      "Bash(sed -i '' 's/_ = ReleaseWhenCompleteAsync/ReleaseWhenCompleteAsync/g' Motely.BrowserWasm/MotelyWasmHost.cs)",
+      "Read(//Users/nate/.claude/**)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm update:*)",
+      "Bash(npm pack:*)"
     ]
   }
 }
