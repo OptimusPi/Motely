@@ -3,8 +3,6 @@ using Bootsharp;
 using Bootsharp.Inject;
 
 [assembly: JSExport(
-    typeof(Motely.BrowserWasm.IMotelySingleSearchContext),
-    typeof(Motely.Analysis.IMotelySingleSearchContextImpl),
     typeof(Motely.BrowserWasm.IMotelyWasmHost))]
 [assembly: JSImport([typeof(Motely.BrowserWasm.ISearchEvents)])]
 // JSPreferences strips C# namespace prefixes from generated JS bindings.

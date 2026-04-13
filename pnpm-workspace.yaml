@@ -1,5 +1,6 @@
 packages:
   - Motely.TestWebsite
-  - tools/jaml-mcp
+  - motely-wasm
+  - tools/balatro-seed-finder
 
-onlyBuiltDependencies: '*'
+onlyBuiltDependencies: "*"
