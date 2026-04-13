@@ -136,13 +136,13 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
 
     public void StartConfiguredSearch(JamlConfig config, int batchCharCount, long startBatch = 0, long endBatch = 0)
     {
-        StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
+        QueueSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch));
     }
 
     public void StartConfiguredSearchFromJaml(string jaml, int batchCharCount, long startBatch = 0, long endBatch = 0)
     {
         var config = LoadJamlCore(jaml);
-        StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
+        QueueSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch));
     }
 
     public void StartConfiguredSearchBySearchIndex(
@@ -151,15 +151,14 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         long startSeedSearchIndex,
         long stopSeedSearchIndexInclusive)
     {
-        StartSearch(
+        QueueSearch(
             _builder.LoadConfig(config)
-                .ConfiguredBySearchIndex(batchCharCount, startSeedSearchIndex, stopSeedSearchIndexInclusive)
-                .Run());
+                .ConfiguredBySearchIndex(batchCharCount, startSeedSearchIndex, stopSeedSearchIndexInclusive));
     }
 
     public void StartSequentialSearch(JamlConfig config, int batchCharCount, long startBatch = 0, long endBatch = 0)
     {
-        StartSearch(_builder.LoadConfig(config).Sequential(batchCharCount, startBatch, endBatch).Run());
+        QueueSearch(_builder.LoadConfig(config).Sequential(batchCharCount, startBatch, endBatch));
     }
 
     public void StartSequentialSearchBySearchIndex(
@@ -168,42 +167,42 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         long startSeedSearchIndex,
         long stopSeedSearchIndexInclusive)
     {
-        StartSearch(
+        QueueSearch(
             _builder.LoadConfig(config)
-                .SequentialBySearchIndex(batchCharCount, startSeedSearchIndex, stopSeedSearchIndexInclusive)
-                .Run());
+                .SequentialBySearchIndex(batchCharCount, startSeedSearchIndex, stopSeedSearchIndexInclusive));
     }
 
     public void StartRandomSearch(JamlConfig config, int randomSeedCount)
     {
-        StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
+        QueueSearch(_builder.LoadConfig(config).Random(randomSeedCount));
     }
 
     public void StartRandomSearchFromJaml(string jaml, int randomSeedCount)
     {
+        Console.Error.WriteLine("[DIAG] StartRandomSearchFromJaml managed entry");
         var config = LoadJamlCore(jaml);
-        StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
+        QueueSearch(_builder.LoadConfig(config).Random(randomSeedCount));
     }
 
     public void StartAestheticSearch(JamlConfig config, JamlAesthetic aesthetic)
     {
-        StartSearch(_builder.LoadConfig(config).Aesthetic(aesthetic).Run());
+        QueueSearch(_builder.LoadConfig(config).Aesthetic(aesthetic));
     }
 
     public void StartKeywordSearch(JamlConfig config, string keywordsCsv, string paddingChars)
     {
-        StartSearch(_builder.LoadConfig(config).Keywords(keywordsCsv, paddingChars).Run());
+        QueueSearch(_builder.LoadConfig(config).Keywords(keywordsCsv, paddingChars));
     }
 
     public void StartSeedListSearch(JamlConfig config, string[] seeds)
     {
-        StartSearch(_builder.LoadConfig(config).SeedList(seeds).Run());
+        QueueSearch(_builder.LoadConfig(config).SeedList(seeds));
     }
 
     public void StartSeedListSearchFromJaml(string jaml, string[] seeds)
     {
         var config = LoadJamlCore(jaml);
-        StartSearch(_builder.LoadConfig(config).SeedList(seeds).Run());
+        QueueSearch(_builder.LoadConfig(config).SeedList(seeds));
     }
 
     public void StopSearch()
@@ -215,6 +214,26 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         }
 
         search?.Cancel();
+    }
+
+    // Defers search execution past the current [JSExport] call frame.
+    // Task.Yield() schedules the continuation on the JS event loop so that
+    // [JSImport] callbacks (NotifyProgress, NotifyResult, NotifyComplete) can
+    // fire without violating NativeAOT-LLVM's JSImport-inside-JSExport restriction.
+    private void QueueSearch(IMotelyJamlSearchBuilder plan)
+    {
+        Console.Error.WriteLine("[DIAG] QueueSearch entered");
+        _ = RunAfterYieldAsync(plan);
+        Console.Error.WriteLine("[DIAG] QueueSearch returned");
+    }
+
+    private async Task RunAfterYieldAsync(IMotelyJamlSearchBuilder plan)
+    {
+        Console.Error.WriteLine("[DIAG] RunAfterYieldAsync: before yield");
+        await Task.Yield();
+        Console.Error.WriteLine("[DIAG] RunAfterYieldAsync: after yield, calling plan.Run()");
+        StartSearch(plan.Run());
+        Console.Error.WriteLine("[DIAG] RunAfterYieldAsync: StartSearch returned");
     }
 
     private void StartSearch(IMotelySearch search)
