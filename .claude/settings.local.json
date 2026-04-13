@@ -119,7 +119,10 @@
       "Bash(cp ~/GitHub/runtimelab/artifacts/packages/Release/Shipping/*.nupkg ~/GitHub/runtimelab-packages/)",
       "Bash(node -e ':*)",
       "Bash(node --input-type=module)",
-      "Bash(2>&1)"
+      "Bash(2>&1)",
+      "Bash(npm install:*)",
+      "Bash(cat ~/.pnpm-store/v3/files/*/package.json)",
+      "Bash(node -e:*)"
     ]
   }
 }
