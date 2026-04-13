@@ -121,3 +121,4 @@ Motely.TestWebsite/dist
 Motely.HelperAPI/wwwroot/
 /JamlFilters
 Motely.BrowserWasm/VersionInfo.g.cs
+.claude/settings.local.json
