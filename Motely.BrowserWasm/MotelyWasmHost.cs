@@ -9,8 +9,8 @@ namespace Motely.BrowserWasm;
 public interface IMotelyWasmHost
 {
     string GetVersion();
-    JamlConfig LoadJaml(string jaml);
-    JamlConfig CompileJummy(string jummy);
+    string LoadJaml(string jaml);
+    string CompileJummy(string jummy);
     IMotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
     MotelyBossBlind SingleGetBossForAnte(string seed, MotelyDeck deck, MotelyStake stake, int ante);
     MotelyVoucher SingleGetAnteFirstVoucher(string seed, MotelyDeck deck, MotelyStake stake, int ante);
@@ -19,41 +19,51 @@ public interface IMotelyWasmHost
     bool SingleGetNextLuckyMoney(string seed, MotelyDeck deck, MotelyStake stake, double baseLuck = 1);
     bool SingleGetNextLuckyMult(string seed, MotelyDeck deck, MotelyStake stake, double baseLuck = 1);
     int SingleGetNextMisprintMult(string seed, MotelyDeck deck, MotelyStake stake);
-    void StartConfiguredSearch(JamlConfig config, int batchCharCount, long startBatch = 0, long endBatch = 0);
+    void StartConfiguredSearch(string configId, int batchCharCount, long startBatch = 0, long endBatch = 0);
     void StartConfiguredSearchFromJaml(string jaml, int batchCharCount, long startBatch = 0, long endBatch = 0);
-    void StartConfiguredSearchBySearchIndex(
-        JamlConfig config,
-        int batchCharCount,
-        long startSeedSearchIndex,
-        long stopSeedSearchIndexInclusive);
-    void StartSequentialSearch(JamlConfig config, int batchCharCount, long startBatch = 0, long endBatch = 0);
-    void StartSequentialSearchBySearchIndex(
-        JamlConfig config,
-        int batchCharCount,
-        long startSeedSearchIndex,
-        long stopSeedSearchIndexInclusive);
-    void StartRandomSearch(JamlConfig config, int randomSeedCount);
+    void StartRandomSearch(string configId, int randomSeedCount);
     void StartRandomSearchFromJaml(string jaml, int randomSeedCount);
-    void StartAestheticSearch(JamlConfig config, JamlAesthetic aesthetic);
-    void StartKeywordSearch(JamlConfig config, string keywordsCsv, string paddingChars);
-    void StartSeedListSearch(JamlConfig config, string[] seeds);
+    void StartAestheticSearch(string configId, JamlAesthetic aesthetic);
+    void StartKeywordSearch(string configId, string keywordsCsv, string paddingChars);
+    void StartSeedListSearch(string configId, string[] seeds);
     void StartSeedListSearchFromJaml(string jaml, string[] seeds);
     void StopSearch();
 }
 
 public sealed class MotelyWasmHost : IMotelyWasmHost
 {
-    private readonly IMotelyJamlSearchBuilder _builder;
-    private readonly IMotelySingleSearchContext _singleSearchContext;
+    private readonly IInternalMotelyJamlSearchBuilder _builder;
+    private readonly MotelySingleSearchContext _singleSearchContext;
+    private readonly ISearchEvents _events;
     private readonly object _sync = new();
     private IMotelySearch? _currentSearch;
+    private readonly Dictionary<string, JamlConfig> _configs = new();
 
     public MotelyWasmHost(
-        IMotelyJamlSearchBuilder builder,
-        IMotelySingleSearchContext singleSearchContext)
+        IInternalMotelyJamlSearchBuilder builder,
+        MotelySingleSearchContext singleSearchContext,
+        ISearchEvents events)
     {
         _builder = builder;
         _singleSearchContext = singleSearchContext;
+        _events = events;
+    }
+
+    private string StoreConfig(JamlConfig config)
+    {
+        var id = config.Id;
+        if (string.IsNullOrEmpty(id)) id = Guid.NewGuid().ToString();
+        lock (_configs) { _configs[id] = config; }
+        return id;
+    }
+
+    private JamlConfig GetConfig(string id)
+    {
+        lock (_configs)
+        {
+            if (_configs.TryGetValue(id, out var config)) return config;
+        }
+        throw new InvalidOperationException($"Config '{id}' not found. Call LoadJaml first.");
     }
 
     public string GetVersion()
@@ -61,8 +71,6 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return _builder.GetVersion();
     }
 
-    // [JSExport] methods must never call other [JSExport] methods on `this` —
-    // Bootsharp surfaces them as UnmanagedCallersOnly thunks and managed dispatch crashes.
     private static JamlConfig LoadJamlCore(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
@@ -71,71 +79,69 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         return config;
     }
 
-    public JamlConfig LoadJaml(string jaml)
+    public string LoadJaml(string jaml)
     {
-        return LoadJamlCore(jaml);
+        return StoreConfig(LoadJamlCore(jaml));
     }
 
-    public JamlConfig CompileJummy(string jummy)
+    public string CompileJummy(string jummy)
     {
         if (!JummyCompiler.TryCompile(jummy, out var jamlYaml, out var compileErr))
             throw new InvalidOperationException(compileErr ?? "Jummy compile failed.");
-        if (!JamlConfigLoader.TryLoad(jamlYaml, out var config, out var loadErr))
-            throw new InvalidOperationException(loadErr ?? "Invalid JAML after Jummy compile.");
-        JamlSearchBuilder.EnsureRunnablePlan(config);
-        return config;
+        return StoreConfig(LoadJamlCore(jamlYaml));
     }
 
     public IMotelySingleSearchContext MotelySingleSearchContext(string seed, MotelyDeck deck, MotelyStake stake)
     {
-        _singleSearchContext.Open(seed, deck, stake);
+        _singleSearchContext.OpenInternal(seed, deck, stake);
         return _singleSearchContext;
     }
 
     public MotelyBossBlind SingleGetBossForAnte(string seed, MotelyDeck deck, MotelyStake stake, int ante)
     {
-        _singleSearchContext.Open(seed, deck, stake);
-        return System.Text.Json.JsonSerializer.Deserialize<MotelyBossBlind>(_singleSearchContext.GetBossForAnte(ante));
+        _singleSearchContext.OpenInternal(seed, deck, stake);
+        return _singleSearchContext.GetBossForAnteInternal(ante);
     }
 
     public MotelyVoucher SingleGetAnteFirstVoucher(string seed, MotelyDeck deck, MotelyStake stake, int ante)
     {
-        _singleSearchContext.Open(seed, deck, stake);
-        return System.Text.Json.JsonSerializer.Deserialize<MotelyVoucher>(_singleSearchContext.GetAnteFirstVoucher(ante));
+        _singleSearchContext.OpenInternal(seed, deck, stake);
+        return _singleSearchContext.GetAnteFirstVoucherInternal(ante);
     }
 
     public MotelyTag SingleGetNextTag(string seed, MotelyDeck deck, MotelyStake stake, int ante)
     {
-        _singleSearchContext.Open(seed, deck, stake);
-        return System.Text.Json.JsonSerializer.Deserialize<MotelyTag>(_singleSearchContext.GetNextTag(ante));
+        _singleSearchContext.OpenInternal(seed, deck, stake);
+        return _singleSearchContext.GetNextTagInternal(ante);
     }
 
     public MotelyItem SingleGetNextShopItem(string seed, MotelyDeck deck, MotelyStake stake, int ante)
     {
-        _singleSearchContext.Open(seed, deck, stake);
-        return System.Text.Json.JsonSerializer.Deserialize<MotelyItem>(_singleSearchContext.GetNextShopItem(ante));
+        _singleSearchContext.OpenInternal(seed, deck, stake);
+        return _singleSearchContext.GetNextShopItemInternal(ante);
     }
 
     public bool SingleGetNextLuckyMoney(string seed, MotelyDeck deck, MotelyStake stake, double baseLuck = 1)
     {
-        _singleSearchContext.Open(seed, deck, stake);
-        return _singleSearchContext.PseudoHash("lucky_money", false) > 0.5; // Simplified for now
+        _singleSearchContext.OpenInternal(seed, deck, stake);
+        return _singleSearchContext.GetNextLuckyMoneyInternal(baseLuck);
     }
 
     public bool SingleGetNextLuckyMult(string seed, MotelyDeck deck, MotelyStake stake, double baseLuck = 1)
     {
-        _singleSearchContext.Open(seed, deck, stake);
-        return _singleSearchContext.PseudoHash("lucky_mult", false) > 0.5; // Simplified for now
+        _singleSearchContext.OpenInternal(seed, deck, stake);
+        return _singleSearchContext.GetNextLuckyMultInternal(baseLuck);
     }
 
     public int SingleGetNextMisprintMult(string seed, MotelyDeck deck, MotelyStake stake)
     {
-        _singleSearchContext.Open(seed, deck, stake);
-        return (int)(_singleSearchContext.PseudoHash("misprint", false) * 100); // Simplified for now
+        _singleSearchContext.OpenInternal(seed, deck, stake);
+        return _singleSearchContext.GetNextMisprintMultInternal();
     }
 
-    public void StartConfiguredSearch(JamlConfig config, int batchCharCount, long startBatch = 0, long endBatch = 0)
+    public void StartConfiguredSearch(string configId, int batchCharCount, long startBatch = 0, long endBatch = 0)
     {
+        var config = GetConfig(configId);
         StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
     }
 
@@ -145,58 +151,88 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         StartSearch(_builder.LoadConfig(config).Configured(batchCharCount, startBatch, endBatch).Run());
     }
 
-    public void StartConfiguredSearchBySearchIndex(
-        JamlConfig config,
-        int batchCharCount,
-        long startSeedSearchIndex,
-        long stopSeedSearchIndexInclusive)
+    public void StartRandomSearch(string configId, int randomSeedCount)
     {
-        StartSearch(
-            _builder.LoadConfig(config)
-                .ConfiguredBySearchIndex(batchCharCount, startSeedSearchIndex, stopSeedSearchIndexInclusive)
-                .Run());
-    }
-
-    public void StartSequentialSearch(JamlConfig config, int batchCharCount, long startBatch = 0, long endBatch = 0)
-    {
-        StartSearch(_builder.LoadConfig(config).Sequential(batchCharCount, startBatch, endBatch).Run());
-    }
-
-    public void StartSequentialSearchBySearchIndex(
-        JamlConfig config,
-        int batchCharCount,
-        long startSeedSearchIndex,
-        long stopSeedSearchIndexInclusive)
-    {
-        StartSearch(
-            _builder.LoadConfig(config)
-                .SequentialBySearchIndex(batchCharCount, startSeedSearchIndex, stopSeedSearchIndexInclusive)
-                .Run());
-    }
-
-    public void StartRandomSearch(JamlConfig config, int randomSeedCount)
-    {
+        var config = GetConfig(configId);
         StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
     }
 
     public void StartRandomSearchFromJaml(string jaml, int randomSeedCount)
     {
         var config = LoadJamlCore(jaml);
-        StartSearch(_builder.LoadConfig(config).Random(randomSeedCount).Run());
+        var built = JamlSearchBuilder.CreatePlan(config);
+        var settings = built.Settings
+            .WithDeck(config.Deck)
+            .WithStake(config.Stake)
+            .WithThreadCount(1)
+            .WithRandomSearch(randomSeedCount);
+        
+        StartSearch(WireAndRunCore(settings));
     }
 
-    public void StartAestheticSearch(JamlConfig config, JamlAesthetic aesthetic)
+    private IMotelySearch WireAndRunCore(IMotelySearchSettings settings)
     {
+        long lastSeedsSearched = 0;
+        long lastMatchingSeeds = 0;
+
+        settings = settings.WithProgressCallback(p =>
+        {
+            lastSeedsSearched = p.SeedsSearched;
+            lastMatchingSeeds = p.MatchingSeeds;
+            _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds);
+        });
+
+        settings = settings.WithScoredResultCallback(t =>
+        {
+            _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray());
+        });
+
+        var search = settings.Start();
+        _ = NotifyOnCompletionCoreAsync(search, () => lastSeedsSearched, () => lastMatchingSeeds);
+        return search;
+    }
+
+    private async Task NotifyOnCompletionCoreAsync(IMotelySearch search, Func<long> getSeedsSearched, Func<long> getMatchingSeeds)
+    {
+        try
+        {
+            await search.WaitForCompletionAsync();
+            _events.NotifyComplete("completed", getSeedsSearched(), getMatchingSeeds());
+        }
+        catch (OperationCanceledException)
+        {
+            _events.NotifyComplete("cancelled", getSeedsSearched(), getMatchingSeeds());
+        }
+        catch (Exception ex)
+        {
+            _events.NotifyComplete($"error: {ex.Message}", getSeedsSearched(), getMatchingSeeds());
+        }
+        finally
+        {
+            lock (_sync)
+            {
+                if (ReferenceEquals(_currentSearch, search))
+                    _currentSearch = null;
+            }
+            search.Dispose();
+        }
+    }
+
+    public void StartAestheticSearch(string configId, JamlAesthetic aesthetic)
+    {
+        var config = GetConfig(configId);
         StartSearch(_builder.LoadConfig(config).Aesthetic(aesthetic).Run());
     }
 
-    public void StartKeywordSearch(JamlConfig config, string keywordsCsv, string paddingChars)
+    public void StartKeywordSearch(string configId, string keywordsCsv, string paddingChars)
     {
+        var config = GetConfig(configId);
         StartSearch(_builder.LoadConfig(config).Keywords(keywordsCsv, paddingChars).Run());
     }
 
-    public void StartSeedListSearch(JamlConfig config, string[] seeds)
+    public void StartSeedListSearch(string configId, string[] seeds)
     {
+        var config = GetConfig(configId);
         StartSearch(_builder.LoadConfig(config).SeedList(seeds).Run());
     }
 

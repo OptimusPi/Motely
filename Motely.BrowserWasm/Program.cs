@@ -18,6 +18,7 @@ public static class Program
                 .AddSingleton<IMotelySingleSearchContext>(static sp => sp.GetRequiredService<MotelySingleSearchContext>())
                 .AddSingleton<MotelyJamlSearchBuilder>()
                 .AddSingleton<IMotelyJamlSearchBuilder>(static sp => sp.GetRequiredService<MotelyJamlSearchBuilder>())
+                .AddSingleton<IInternalMotelyJamlSearchBuilder>(static sp => sp.GetRequiredService<MotelyJamlSearchBuilder>())
                 .AddSingleton<MotelyWasmHost>()
                 .AddSingleton<IMotelyWasmHost>(static sp => sp.GetRequiredService<MotelyWasmHost>())
                 .BuildServiceProvider()

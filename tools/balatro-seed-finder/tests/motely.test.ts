@@ -13,12 +13,11 @@ describe("motely-wasm", () => {
   });
 
   it("loads valid JAML", () => {
-    const config = MotelyWasmHost.loadJaml(
+    const configId = MotelyWasmHost.loadJaml(
       JSON.stringify({ deck: "Red", stake: "White", must: [{ joker: "Blueprint" }] })
     );
-    expect(config).toBeDefined();
-    expect(config.deck).toBe(Motely.MotelyDeck.Red);
-    expect(config.stake).toBe(Motely.MotelyStake.White);
+    expect(typeof configId).toBe("string");
+    expect(configId.length).toBeGreaterThan(0);
   });
 
   it("throws on invalid JAML", () => {
