@@ -122,7 +122,15 @@
       "Bash(2>&1)",
       "Bash(npm install:*)",
       "Bash(cat ~/.pnpm-store/v3/files/*/package.json)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(node --test scripts/test-motely-wasm.contract.test.mjs)",
+      "Bash(node test-mcp-quick.mjs)",
+      "Bash(npx vercel:*)",
+      "Bash(curl -s -X POST https://jaml-mcp.vercel.app/api/search -H \"Content-Type: application/json\" -d '{\"jaml\":\"{\\\\\"deck\\\\\":\\\\\"Red\\\\\",\\\\\"stake\\\\\":\\\\\"White\\\\\",\\\\\"must\\\\\":[{\\\\\"joker\\\\\":\\\\\"Blueprint\\\\\"}]}\",\"seed_count\":100}')",
+      "Bash(gh repo:*)",
+      "Bash(where gh:*)",
+      "Bash(node --test test.mjs)",
+      "Bash(curl -s https://jaml-mcp.vercel.app/api/analyze -X POST -H \"Content-Type: application/json\" -d '{\"seed\":\"ALEEB5N\",\"jaml\":\"{\\\\\"deck\\\\\":\\\\\"Red\\\\\",\\\\\"stake\\\\\":\\\\\"White\\\\\"}\"}')"
     ]
   }
 }

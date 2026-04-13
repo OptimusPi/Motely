@@ -95,16 +95,9 @@ export async function searchSeeds(
 // ── Tool descriptions ────────────────────────────────────────────────────────
 
 const SEARCH_DESCRIPTION =
-  `Search for Balatro seeds. Describe what you want in natural language (Jummy), or write a JAML filter.\n` +
+  `Search for Balatro seeds using a JAML filter.\n` +
   `\n` +
-  `## Jummy (natural language — use this for simple searches)\n` +
-  `Just say what you're looking for:\n` +
-  `  "what: Blueprint in ante 1"\n` +
-  `  "what: Negative Perkeo in ante 1"\n` +
-  `  "what: eternal Brainstorm in ante 2"\n` +
-  `  "what: Blueprint\\nwhere: deck Red, stake Gold"\n` +
-  `\n` +
-  `## JAML (Jimbo's Ante Markup Language — for complex filters)\n` +
+  `## JAML (Jimbo's Ante Markup Language)\n` +
   `JAML is a YAML-based language for describing seed criteria.\n` +
   `Example JAML filter:\n` +
   `  deck: Red\n` +
@@ -211,10 +204,7 @@ export function registerTools(server: McpServer) {
   // get_version ────────────────────────────────────────────────────────────
   server.tool(
     "get_version",
-    {
-      description: "Get the MotelyJAML engine version string.",
-      annotations: { readOnlyHint: true },
-    },
+    "Get the MotelyJAML engine version string.",
     {},
     async () => {
       await bootPromise;
@@ -228,12 +218,7 @@ export function registerTools(server: McpServer) {
   // validate_jaml ──────────────────────────────────────────────────────────
   server.tool(
     "validate_jaml",
-    {
-      description:
-        "Validate a JAML filter string. Returns 'valid' if the JSON is well-formed JAML, " +
-        "or a descriptive error. Does NOT run a search.",
-      annotations: { readOnlyHint: true },
-    },
+    "Validate a JAML filter string. Returns 'valid' if well-formed, or a descriptive error. Does NOT run a search.",
     {
       jaml: z
         .string()
@@ -260,14 +245,7 @@ export function registerTools(server: McpServer) {
   // get_catalog ─────────────────────────────────────────────────────────────
   server.tool(
     "get_catalog",
-    {
-      description:
-        "Get the full catalog of valid Balatro item names for use in JAML filters. " +
-        "Returns all jokers (by rarity), vouchers, bosses, tags, editions, stickers, " +
-        "seals, enhancements, decks, stakes, clause types, and filter sections. " +
-        "Use this to avoid hallucinating invalid names when constructing filters.",
-      annotations: { readOnlyHint: true },
-    },
+    "Get the full catalog of valid Balatro item names for JAML filters (jokers, vouchers, bosses, tags, editions, etc.).",
     {
       category: z
         .enum(["all", "jokers", "vouchers", "bosses", "tags", "decks", "stakes", "editions", "stickers", "seals", "enhancements", "clauseTypes", "sections"])
@@ -285,77 +263,13 @@ export function registerTools(server: McpServer) {
   // get_jaml_schema ────────────────────────────────────────────────────────
   server.tool(
     "get_jaml_schema",
-    {
-      description:
-        "Get the JAML (Jimbo's Ante Markup Language) filter schema. " +
-        "Returns the JSON schema describing valid JAML filter structure " +
-        "including all properties, clause types, and their options.",
-      annotations: { readOnlyHint: true },
-    },
+    "Get the JAML filter JSON schema describing valid filter structure, clause types, and options.",
     {},
     async () => {
-      const schema = {
-        $schema: "http://json-schema.org/draft-07/schema#",
-        title: "JAML Filter",
-        description: "Jimbo's Ante Markup Language — filter format for Balatro seed searches",
-        type: "object",
-        properties: {
-          deck: { type: "string", enum: CATALOG.decks, default: "Red" },
-          stake: { type: "string", enum: CATALOG.stakes, default: "White" },
-          must: { $ref: "#/$defs/clauseList", description: "All clauses must match (required)" },
-          should: { $ref: "#/$defs/clauseList", description: "Scored clauses (higher score = better, not required)" },
-          mustNot: { $ref: "#/$defs/clauseList", description: "Reject seed if any clause matches" },
-        },
-        $defs: {
-          clauseList: {
-            type: "array",
-            items: { $ref: "#/$defs/clause" },
-          },
-          clause: {
-            type: "object",
-            description: "A filter clause. Exactly one clause type key should be present.",
-            properties: {
-              // Clause type keys (one required)
-              joker: { type: "string", description: "Any joker name" },
-              commonJoker: { type: "string" },
-              uncommonJoker: { type: "string" },
-              rareJoker: { type: "string" },
-              legendaryJoker: { type: "string" },
-              soulJoker: { type: "string" },
-              voucher: { type: "string", description: "Voucher name" },
-              boss: { type: "string", description: "Boss blind name" },
-              tag: { type: "string", description: "Tag name" },
-              smallBlindTag: { type: "string" },
-              bigBlindTag: { type: "string" },
-              tarotCard: { type: "string" },
-              spectralCard: { type: "string" },
-              planetCard: { type: "string" },
-              standardCard: { type: "string", description: "e.g. 'Ace of Spades', '10 of Hearts'" },
-              erraticRank: { type: "string" },
-              erraticSuit: { type: "string" },
-              erraticCard: { type: "string" },
-              event: { type: "string" },
-              // Options
-              antes: {
-                type: "array",
-                items: { type: "integer", minimum: 0, maximum: 8 },
-                description: "Which antes to check. 0 = pre-game.",
-              },
-              edition: { type: "string", enum: CATALOG.editions },
-              stickers: {
-                type: "array",
-                items: { type: "string", enum: CATALOG.stickers },
-              },
-              seal: { type: "string", enum: CATALOG.seals },
-              enhancement: { type: "string", enum: CATALOG.enhancements },
-              score: { type: "number", description: "Score value for 'should' clauses" },
-              label: { type: "string", description: "Display name for this clause" },
-            },
-          },
-        },
-      };
+      const schemaPath = fileURLToPath(new URL("../jaml.schema.json", import.meta.url));
+      const text = await readFile(schemaPath, "utf-8");
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(schema, null, 2) }],
+        content: [{ type: "text" as const, text }],
       };
     }
   );
@@ -369,16 +283,8 @@ export function registerTools(server: McpServer) {
       description: SEARCH_DESCRIPTION,
       annotations: { readOnlyHint: true },
       inputSchema: {
-        jummy: z
-          .string()
-          .optional()
-          .describe(
-            'Natural language seed search. Examples: "what: Negative Perkeo in ante 1", ' +
-            '"what: Blueprint and Brainstorm in ante 2\\nwhere: deck Red, stake Gold"'
-          ),
         jaml: z
           .string()
-          .optional()
           .describe(
             'JAML filter as JSON. Example: {"deck":"Red","stake":"White","must":[{"joker":"Blueprint","antes":[1],"edition":"Negative"}]}'
           ),
@@ -396,26 +302,11 @@ export function registerTools(server: McpServer) {
         ui: { resourceUri: SEARCH_UI_URI },
       },
     },
-    async ({ jummy, jaml, seed_count }) => {
+    async ({ jaml, seed_count }) => {
       let configId: string;
       try {
-        if (jummy && jaml) {
-          return {
-            isError: true,
-            content: [{ type: "text" as const, text: "Provide jummy OR jaml, not both." }],
-          };
-        }
         await bootPromise;
-        if (jummy) {
-          configId = MotelyWasmHost.compileJummy(jummy);
-        } else if (jaml) {
-          configId = MotelyWasmHost.loadJaml(jaml);
-        } else {
-          return {
-            isError: true,
-            content: [{ type: "text" as const, text: "Provide jummy or jaml parameter." }],
-          };
-        }
+        configId = MotelyWasmHost.loadJaml(jaml);
       } catch (err) {
         return {
           isError: true,
@@ -452,10 +343,7 @@ export function registerTools(server: McpServer) {
   // analyze_seed ────────────────────────────────────────────────────────────
   server.tool(
     "analyze_seed",
-    {
-      description: ANALYZE_DESCRIPTION,
-      annotations: { readOnlyHint: true },
-    },
+    ANALYZE_DESCRIPTION,
     {
       seed: z.string().describe("Balatro seed string (e.g. 'ABCD1234')"),
       jaml: z
