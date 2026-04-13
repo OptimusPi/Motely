@@ -31,26 +31,26 @@ importers:
         specifier: ^0.17.0
         version: 0.17.0(react@19.2.5)(zod@4.3.6)
       '@modelcontextprotocol/ext-apps':
-        specifier: ^1.3.2
+        specifier: ^1.5.0
         version: 1.5.0(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
       motely-wasm:
-        specifier: ^9.9.10
-        version: 9.9.10
+        specifier: ^9.9.12
+        version: 9.9.12
       react:
-        specifier: ^19
+        specifier: ^19.2.5
         version: 19.2.5
       react-dom:
-        specifier: ^19
+        specifier: ^19.2.5
         version: 19.2.5(react@19.2.5)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@types/node':
-        specifier: ^22.13.10
+        specifier: ^22.19.17
         version: 22.19.17
       '@types/react':
         specifier: ^19.2.14
@@ -62,59 +62,7 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1(vite@8.0.8(@types/node@22.19.17)(yaml@2.8.3))
       vite:
-        specifier: ^8.0.3
-        version: 8.0.8(@types/node@22.19.17)(yaml@2.8.3)
-      vite-plugin-singlefile:
-        specifier: ^2.3.2
-        version: 2.3.2(rollup@4.60.1)(vite@8.0.8(@types/node@22.19.17)(yaml@2.8.3))
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@types/node@22.19.17)(vite@8.0.8(@types/node@22.19.17)(yaml@2.8.3))
-
-  tools/jaml-mcp:
-    dependencies:
-      '@json-render/core':
-        specifier: ^0.17.0
-        version: 0.17.0(zod@4.3.6)
-      '@json-render/react':
-        specifier: ^0.17.0
-        version: 0.17.0(react@19.2.5)(zod@4.3.6)
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^1.3.2
-        version: 1.5.0(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.29.0
-        version: 1.29.0(zod@4.3.6)
-      motely-wasm:
-        specifier: ^9.0.0
-        version: 9.0.0
-      react:
-        specifier: ^19
-        version: 19.2.5
-      react-dom:
-        specifier: ^19
-        version: 19.2.5(react@19.2.5)
-      yaml:
-        specifier: ^2.8.0
-        version: 2.8.3
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
-    devDependencies:
-      '@types/node':
-        specifier: ^22.13.10
-        version: 22.19.17
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.14)
-      '@vitejs/plugin-react':
-        specifier: ^6.0.1
-        version: 6.0.1(vite@8.0.8(@types/node@22.19.17)(yaml@2.8.3))
-      vite:
-        specifier: ^8.0.3
+        specifier: ^8.0.8
         version: 8.0.8(@types/node@22.19.17)(yaml@2.8.3)
       vite-plugin-singlefile:
         specifier: ^2.3.2
@@ -1007,8 +955,8 @@ packages:
   motely-wasm@9.0.0:
     resolution: {integrity: sha512-W/UgKwxibpA68qQD+PHc0SqaK6CLIG6+ge1gfOsDL0dUmUtvAMFFLtywO+gh4Sdcam7pK4M8/tcrFd3rHdgALw==}
 
-  motely-wasm@9.9.10:
-    resolution: {integrity: sha512-op7X7c/n/n+EKIfYylTU4CU7g9GLMH84f1VE6xrvccANdRpr2sNnbHEucquvX/pVjlW+cnHhVC+Tc/OY8K3L7A==}
+  motely-wasm@9.9.12:
+    resolution: {integrity: sha512-Nwc2wenciK8bOzIJT+HGdw3dhYENVskZDkOCvP3fMGvgzgfvTZZ+VX9mBo4MtzRP3j/UkSD/wgnlIfG/FTDWiQ==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2080,7 +2028,7 @@ snapshots:
 
   motely-wasm@9.0.0: {}
 
-  motely-wasm@9.9.10: {}
+  motely-wasm@9.9.12: {}
 
   ms@2.1.3: {}
 
@@ -2401,7 +2349,8 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  yaml@2.8.3: {}
+  yaml@2.8.3:
+    optional: true
 
   zod-to-json-schema@3.25.2(zod@4.3.6):
     dependencies:
