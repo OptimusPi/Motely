@@ -384,7 +384,7 @@ public interface IMotelySearchSession : IDisposable
 
 internal sealed class MotelySearchSession(IMotelySearch search) : IMotelySearchSession
 {
-    public IMotelySearch Inner => search;
-    public void Cancel() => search.Cancel();
-    public void Dispose() => search.Dispose();
+    public IMotelySearch Inner { get { return search; } }
+    public void Cancel() { search.Cancel(); }
+    public void Dispose() { search.Dispose(); }
 }
