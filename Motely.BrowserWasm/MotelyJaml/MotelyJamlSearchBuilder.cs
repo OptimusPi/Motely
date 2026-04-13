@@ -25,25 +25,10 @@ public interface IMotelyJamlSearchBuilder
     MotelyJamlSearchBuilder Aesthetic(JamlAesthetic aesthetic);
     MotelyJamlSearchBuilder Keywords(string keywordsCsv, string paddingChars);
     MotelyJamlSearchBuilder SeedList(string[] seeds);
-    IMotelySearch Run();
+    IMotelySearchSession Run();
 }
 
-public interface IInternalMotelyJamlSearchBuilder
-{
-    string GetVersion();
-    MotelyJamlSearchBuilder LoadConfig(JamlConfig config);
-    MotelyJamlSearchBuilder Configured(int batchCharCount, long startBatch, long endBatch);
-    MotelyJamlSearchBuilder ConfiguredBySearchIndex(int batchCharCount, long startSeedSearchIndex, long stopSeedSearchIndexInclusive);
-    MotelyJamlSearchBuilder Sequential(int batchCharCount, long startBatch, long endBatch);
-    MotelyJamlSearchBuilder SequentialBySearchIndex(int batchCharCount, long startSeedSearchIndex, long stopSeedSearchIndexInclusive);
-    MotelyJamlSearchBuilder Random(int randomSeedCount);
-    MotelyJamlSearchBuilder Aesthetic(JamlAesthetic aesthetic);
-    MotelyJamlSearchBuilder Keywords(string keywordsCsv, string paddingChars);
-    MotelyJamlSearchBuilder SeedList(string[] seeds);
-    IMotelySearch Run();
-}
-
-public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInternalMotelyJamlSearchBuilder
+public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
 {
     private readonly ISearchEvents _events;
 
@@ -184,7 +169,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInterna
         return this;
     }
 
-    public IMotelySearch Run()
+    public IMotelySearchSession Run()
     {
         return WireAndRun(BuildSettings());
     }
@@ -338,40 +323,14 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInterna
         return PlanProviderSearch(jaml).WithBatchCharacterCount(batchCharCount);
     }
 
-    private IMotelySearch WireAndRun(IMotelySearchSettings settings)
+    private IMotelySearchSession WireAndRun(IMotelySearchSettings settings)
     {
-        long lastSeedsSearched = 0;
-        long lastMatchingSeeds = 0;
-
         settings = settings.WithProgressCallback(p =>
-        {
-            lastSeedsSearched = p.SeedsSearched;
-            lastMatchingSeeds = p.MatchingSeeds;
-            try
-            {
-                _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"NotifyProgress failed: {ex}");
-                throw;
-            }
-        });
+            _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds));
 
         settings = settings.WithScoredResultCallback(t =>
-        {
-            try
-            {
-                _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray());
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"NotifyResult failed: {ex}");
-                throw;
-            }
-        });
+            _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray()));
 
-        Console.Error.WriteLine("[DIAG] WireAndRun: calling settings.Start()");
         IMotelySearch search;
         try
         {
@@ -379,53 +338,27 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInterna
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"settings.Start failed: {ex}");
             throw new InvalidOperationException($"MotelyJamlSearchBuilder settings.Start() failed: {ex.Message}", ex);
         }
-        Console.Error.WriteLine("[DIAG] WireAndRun: settings.Start() returned");
-        _ = NotifyOnCompletionAsync(search, () => lastSeedsSearched, () => lastMatchingSeeds);
-        return search;
+
+        _ = NotifyOnCompletionAsync(search);
+        return new MotelySearchSession(search);
     }
 
-    private async Task NotifyOnCompletionAsync(IMotelySearch search, Func<long> getSeedsSearched, Func<long> getMatchingSeeds)
+    private async Task NotifyOnCompletionAsync(IMotelySearch search)
     {
         try
         {
             await search.WaitForCompletionAsync();
-            try
-            {
-                _events.NotifyComplete("completed", getSeedsSearched(), getMatchingSeeds());
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"NotifyComplete(completed) failed: {ex}");
-                throw;
-            }
+            _events.NotifyComplete("completed", search.TotalSeedsSearched, search.MatchingSeeds);
         }
         catch (OperationCanceledException)
         {
-            try
-            {
-                _events.NotifyComplete("cancelled", getSeedsSearched(), getMatchingSeeds());
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"NotifyComplete(cancelled) failed: {ex}");
-                throw;
-            }
+            _events.NotifyComplete("cancelled", search.TotalSeedsSearched, search.MatchingSeeds);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"WaitForCompletionAsync failed: {ex}");
-            try
-            {
-                _events.NotifyComplete($"error: {ex.Message}", getSeedsSearched(), getMatchingSeeds());
-            }
-            catch (Exception notifyEx)
-            {
-                Console.Error.WriteLine($"NotifyComplete(error) failed: {notifyEx}");
-                throw;
-            }
+            _events.NotifyComplete($"error: {ex.Message}", search.TotalSeedsSearched, search.MatchingSeeds);
         }
     }
 
