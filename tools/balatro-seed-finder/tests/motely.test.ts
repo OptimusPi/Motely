@@ -13,12 +13,11 @@ describe("motely-wasm", () => {
   });
 
   it("loads valid JAML", () => {
-    const config = MotelyWasmHost.loadJaml(
+    const configId = MotelyWasmHost.loadJaml(
       JSON.stringify({ deck: "Red", stake: "White", must: [{ joker: "Blueprint" }] })
     );
-    expect(config).toBeDefined();
-    expect(config.deck).toBe(Motely.MotelyDeck.Red);
-    expect(config.stake).toBe(Motely.MotelyStake.White);
+    expect(typeof configId).toBe("string");
+    expect(configId.length).toBeGreaterThan(0);
   });
 
   it("throws on invalid JAML", () => {
@@ -30,6 +29,7 @@ describe("motely-wasm", () => {
       deck: "Red",
       stake: "White",
       must: [{ joker: "Blueprint" }],
+      should: [{ joker: "Brainstorm" }], // Bluestorm <3 
     });
 
     const results: { seed: string; score: number }[] = [];
@@ -72,16 +72,21 @@ describe("motely-wasm", () => {
   }, 30_000);
 
   it("opens SingleSearchContext for seed exploration", () => {
-    const ctx = MotelyWasmHost.motelySingleSearchContext("AAAAAAAA", Motely.MotelyDeck.Red, Motely.MotelyStake.White);
-    expect(ctx).toBeDefined();
+    const ctxId = MotelyWasmHost.openSingleSearchContext("AAAAAAAA", Motely.MotelyDeck.Red, Motely.MotelyStake.White);
+    expect(typeof ctxId).toBe("string");
 
-    const boss = ctx.getBossForAnte(1);
+    const seed = MotelyWasmHost.contextGetSeed(ctxId);
+    expect(seed).toBe("AAAAAAAA");
+
+    const boss = MotelyWasmHost.contextGetBossForAnte(ctxId, 1);
     expect(boss).toBeDefined();
 
-    const voucher = ctx.getAnteFirstVoucher(1);
+    const voucher = MotelyWasmHost.contextGetAnteFirstVoucher(ctxId, 1);
     expect(voucher).toBeDefined();
 
-    const tag = ctx.getNextTag(1);
+    const tag = MotelyWasmHost.contextGetNextTag(ctxId, 1);
     expect(tag).toBeDefined();
+
+    MotelyWasmHost.contextClose(ctxId);
   });
 });
