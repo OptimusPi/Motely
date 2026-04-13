@@ -23,6 +23,7 @@
 <DebugType>none</DebugType>
 <EmccFlags>$(EmccFlags) -O3 -msimd128</EmccFlags>
 <UsingBrowserRuntimeWorkload>false</UsingBrowserRuntimeWorkload>
+<WasmEnableSIMD>true</WasmEnableSIMD>
 <WasmEnableThreads>false</WasmEnableThreads>
 <WasmEnableSIMD>true</WasmEnableSIMD>
 <RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json;</RestoreAdditionalProjectSources>
