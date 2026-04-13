@@ -6,7 +6,6 @@ import bootsharp, {
   MotelyWasmHost,
   SearchEvents,
 } from "motely-wasm";
-import type { BrowserWasm } from "motely-wasm";
 
 export interface SearchResult {
   seed: string;
@@ -27,8 +26,7 @@ export type OnResult = (seed: string, score: number, tally: Int32Array) => void;
 export type OnComplete = (summary: SearchSummary) => void;
 
 let bootPromise: Promise<void> | null = null;
-/** Set while a random search is running; cleared on complete or {@link stopSearch}. */
-let activeSearch: BrowserWasm.IMotelySearchSession | null = null;
+let activeSearch = false;
 
 async function ensureBooted(): Promise<void> {
   bootPromise ??= bootsharp
@@ -65,7 +63,7 @@ export async function runSearch(
       SearchEvents.onResult.unsubscribe(onResultHandler);
       SearchEvents.onProgress.unsubscribe(onProgressHandler);
       SearchEvents.onComplete.unsubscribe(onCompleteHandler);
-      activeSearch = null;
+      activeSearch = false;
     }
 
     function onResultHandler(seed: string, score: number, tally: Int32Array): void {
@@ -102,7 +100,8 @@ export async function runSearch(
     SearchEvents.onComplete.subscribe(onCompleteHandler);
 
     try {
-      activeSearch = MotelyWasmHost.startRandomSearchFromJaml(jaml, seedCount);
+      activeSearch = true;
+      MotelyWasmHost.startRandomSearchFromJaml(jaml, seedCount);
     } catch (err) {
       cleanup();
       reject(err);
@@ -112,11 +111,9 @@ export async function runSearch(
 
 export function stopSearch(): void {
   if (!activeSearch) return;
-  const session = activeSearch;
-  activeSearch = null;
+  activeSearch = false;
   try {
-    session.cancel();
+    MotelyWasmHost.stopSearch();
   } catch {
-    // ignore cancellation failures
   }
 }
