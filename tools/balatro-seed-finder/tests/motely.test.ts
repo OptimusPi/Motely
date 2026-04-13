@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import bootsharp, { MotelyJamlSearchBuilder, Motely, MotelySingleSearchContext, SearchEvents } from "motely-wasm";
+import bootsharp, { MotelyWasmHost, Motely, SearchEvents } from "motely-wasm";
 
 beforeAll(async () => {
   await bootsharp.boot();
@@ -7,13 +7,13 @@ beforeAll(async () => {
 
 describe("motely-wasm", () => {
   it("boots and returns version", () => {
-    const ver = MotelyJamlSearchBuilder.getVersion();
+    const ver = MotelyWasmHost.getVersion();
     expect(typeof ver).toBe("string");
     expect(ver).toMatch(/^\d+\.\d+/);
   });
 
   it("loads valid JAML", () => {
-    const config = MotelyJamlSearchBuilder.loadJaml(
+    const config = MotelyWasmHost.loadJaml(
       JSON.stringify({ deck: "Red", stake: "White", must: [{ joker: "Blueprint" }] })
     );
     expect(config).toBeDefined();
@@ -22,11 +22,9 @@ describe("motely-wasm", () => {
   });
 
   it("throws on invalid JAML", () => {
-    expect(() => MotelyJamlSearchBuilder.loadJaml("not json")).toThrow();
+    expect(() => MotelyWasmHost.loadJaml("not json")).toThrow();
   });
 
-  // FAILING: Runtime crashes with process.exit(1)
-  // See: https://github.com/OptimusPi/MotelyJAML/issues/TODO
   it("starts random search from JAML", async () => {
     const jaml = JSON.stringify({
       deck: "Red",
@@ -47,20 +45,34 @@ describe("motely-wasm", () => {
     SearchEvents.onResult.subscribe(onResult);
     SearchEvents.onComplete.subscribe(onComplete);
 
-    const session = MotelyJamlSearchBuilder.loadJaml(jaml).random(1000).run();
-    await session.waitForCompletionAsync(null);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const done = (status: string) => {
+          SearchEvents.onResult.unsubscribe(onResult);
+          SearchEvents.onComplete.unsubscribe(done);
+          completed = true;
+          if (status.startsWith("error:")) {
+            reject(new Error(status));
+            return;
+          }
+          resolve();
+        };
 
-    SearchEvents.onResult.unsubscribe(onResult);
-    SearchEvents.onComplete.unsubscribe(onComplete);
+        SearchEvents.onComplete.unsubscribe(onComplete);
+        SearchEvents.onComplete.subscribe(done);
+        MotelyWasmHost.startRandomSearchFromJaml(jaml, 1000);
+      });
+    } finally {
+      SearchEvents.onResult.unsubscribe(onResult);
+      SearchEvents.onComplete.unsubscribe(onComplete);
+    }
 
     expect(completed).toBe(true);
     expect(results.length).toBeGreaterThan(0);
   }, 30_000);
 
-  // FAILING: Runtime crashes with process.exit(1)
-  // See: https://github.com/OptimusPi/MotelyJAML/issues/TODO
   it("opens SingleSearchContext for seed exploration", () => {
-    const ctx = MotelySingleSearchContext.open("AAAAAAAA", Motely.MotelyDeck.Red, Motely.MotelyStake.White);
+    const ctx = MotelyWasmHost.motelySingleSearchContext("AAAAAAAA", Motely.MotelyDeck.Red, Motely.MotelyStake.White);
     expect(ctx).toBeDefined();
 
     const boss = ctx.getBossForAnte(1);

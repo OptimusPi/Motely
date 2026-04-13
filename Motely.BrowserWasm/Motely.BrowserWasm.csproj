@@ -14,6 +14,7 @@
 <BootsharpName>motely-wasm</BootsharpName>
 <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
 <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\Motely</BootsharpPackageDirectory>
+<BootsharpBundleCommand>node &quot;$(MSBuildProjectDirectory)\..\node_modules\rollup\dist\bin\rollup&quot; index.js -o index.mjs -f es -g process,module --output.inlineDynamicImports</BootsharpBundleCommand>
 <BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>
 <BootsharpLLVM>true</BootsharpLLVM>
 <BootsharpOptimize>speed</BootsharpOptimize>
