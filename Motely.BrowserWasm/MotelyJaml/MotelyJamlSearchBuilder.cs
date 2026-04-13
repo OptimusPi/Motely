@@ -28,7 +28,22 @@ public interface IMotelyJamlSearchBuilder
     IMotelySearch Run();
 }
 
-public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
+public interface IInternalMotelyJamlSearchBuilder
+{
+    string GetVersion();
+    MotelyJamlSearchBuilder LoadConfig(JamlConfig config);
+    MotelyJamlSearchBuilder Configured(int batchCharCount, long startBatch, long endBatch);
+    MotelyJamlSearchBuilder ConfiguredBySearchIndex(int batchCharCount, long startSeedSearchIndex, long stopSeedSearchIndexInclusive);
+    MotelyJamlSearchBuilder Sequential(int batchCharCount, long startBatch, long endBatch);
+    MotelyJamlSearchBuilder SequentialBySearchIndex(int batchCharCount, long startSeedSearchIndex, long stopSeedSearchIndexInclusive);
+    MotelyJamlSearchBuilder Random(int randomSeedCount);
+    MotelyJamlSearchBuilder Aesthetic(JamlAesthetic aesthetic);
+    MotelyJamlSearchBuilder Keywords(string keywordsCsv, string paddingChars);
+    MotelyJamlSearchBuilder SeedList(string[] seeds);
+    IMotelySearch Run();
+}
+
+public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder, IInternalMotelyJamlSearchBuilder
 {
     private readonly ISearchEvents _events;
 
@@ -171,6 +186,11 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
 
     public IMotelySearch Run()
     {
+        return WireAndRun(BuildSettings());
+    }
+
+    public IMotelySearchSettings BuildSettings()
+    {
         var jaml = _config ?? throw new InvalidOperationException("Call LoadJaml or CompileJummy first.");
         if (_mode == SearchMode.None)
             throw new InvalidOperationException("Choose a search mode (Configured, Sequential, Random, …) before Run.");
@@ -225,7 +245,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         }
 
         ClearPlan();
-        return WireAndRun(settings);
+        return settings;
     }
 
     private void ClearPlan()
