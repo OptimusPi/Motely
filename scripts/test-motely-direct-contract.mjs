@@ -1,9 +1,8 @@
 import dotnet, {
   Motely,
-  MotelySingleSearchContext,
   MotelyWasmHost,
   SearchEvents,
-} from "../Motely.BrowserWasm/motely-wasm/index.mjs";
+} from "../Motely.BrowserWasm/bin/Release/net10.0/browser-wasm/publish/index.mjs";
 
 const jaml = JSON.stringify({
   deck: "Red",
@@ -28,16 +27,8 @@ async function main() {
     Motely.MotelyDeck.Red,
     Motely.MotelyStake.White
   );
-  const directCtx = MotelySingleSearchContext.open(
-    "ALEEB5N",
-    Motely.MotelyDeck.Red,
-    Motely.MotelyStake.White
-  );
 
-  for (const [label, ctx] of [
-    ["hostCtx", hostCtx],
-    ["directCtx", directCtx],
-  ]) {
+  for (const [label, ctx] of [["hostCtx", hostCtx]]) {
     console.log(label, "own keys:", Object.keys(ctx).sort());
     console.log(
       label,

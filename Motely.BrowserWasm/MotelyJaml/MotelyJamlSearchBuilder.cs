@@ -327,11 +327,29 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         {
             lastSeedsSearched = p.SeedsSearched;
             lastMatchingSeeds = p.MatchingSeeds;
-            _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds);
+            try
+            {
+                _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"NotifyProgress failed: {ex}");
+                throw;
+            }
         });
 
         settings = settings.WithScoredResultCallback(t =>
-            _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray()));
+        {
+            try
+            {
+                _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray());
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"NotifyResult failed: {ex}");
+                throw;
+            }
+        });
 
         IMotelySearch search;
         try
@@ -340,6 +358,7 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         }
         catch (Exception ex)
         {
+            Console.Error.WriteLine($"settings.Start failed: {ex}");
             throw new InvalidOperationException($"MotelyJamlSearchBuilder settings.Start() failed: {ex.Message}", ex);
         }
         _ = NotifyOnCompletionAsync(search, () => lastSeedsSearched, () => lastMatchingSeeds);
@@ -351,15 +370,40 @@ public sealed class MotelyJamlSearchBuilder : IMotelyJamlSearchBuilder
         try
         {
             await search.WaitForCompletionAsync();
-            _events.NotifyComplete("completed", getSeedsSearched(), getMatchingSeeds());
+            try
+            {
+                _events.NotifyComplete("completed", getSeedsSearched(), getMatchingSeeds());
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"NotifyComplete(completed) failed: {ex}");
+                throw;
+            }
         }
         catch (OperationCanceledException)
         {
-            _events.NotifyComplete("cancelled", getSeedsSearched(), getMatchingSeeds());
+            try
+            {
+                _events.NotifyComplete("cancelled", getSeedsSearched(), getMatchingSeeds());
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"NotifyComplete(cancelled) failed: {ex}");
+                throw;
+            }
         }
         catch (Exception ex)
         {
-            _events.NotifyComplete($"error: {ex.Message}", getSeedsSearched(), getMatchingSeeds());
+            Console.Error.WriteLine($"WaitForCompletionAsync failed: {ex}");
+            try
+            {
+                _events.NotifyComplete($"error: {ex.Message}", getSeedsSearched(), getMatchingSeeds());
+            }
+            catch (Exception notifyEx)
+            {
+                Console.Error.WriteLine($"NotifyComplete(error) failed: {notifyEx}");
+                throw;
+            }
         }
     }
 
