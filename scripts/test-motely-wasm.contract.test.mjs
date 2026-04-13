@@ -5,7 +5,7 @@ import dotnet, {
   Motely,
   MotelyWasmHost,
   SearchEvents,
-} from "../Motely.BrowserWasm/bin/Release/net10.0/browser-wasm/publish/index.mjs";
+} from "motely-wasm";
 
 const jaml = JSON.stringify({
   deck: "Red",

@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      motely-wasm:
+        specifier: ^10.0.2
+        version: 10.0.2
     devDependencies:
       rollup:
         specifier: ^4.60.1
