@@ -7,9 +7,11 @@ MCP server for **Balatro** seed search and analysis using MotelyJAML (`motely-wa
 | Tool | Description |
 |------|-------------|
 | `search_seeds` | Random search up to 1M seeds against JAML **or Jummy**; returns JSON + **MCP App UI** in supported hosts |
-| `analyze_seed` | Full ante-by-ante breakdown for one seed |
-| `validate_jaml` | Quick JSON shape check |
+| `analyze_seed` | Full ante-by-ante breakdown for one seed (boss blinds, tags, vouchers, shop items, booster packs) |
 | `get_version` | Engine version string |
+| `validate_jaml` | Validate a JAML filter without searching — returns "valid" or a descriptive error |
+| `get_catalog` | Full catalog of valid Balatro names (jokers, vouchers, bosses, tags, editions, etc.) |
+| `get_jaml_schema` | JSON Schema for JAML filter format |
 
 ### Case-insensitive input behavior
 
@@ -32,8 +34,9 @@ Use `search_seeds` with `jummy`:
 `search_seeds` registers an MCP Apps extension ([Model Context Protocol Apps](https://modelcontextprotocol.github.io/ext-apps/api/)):
 
 - **Resource:** `ui://balatro-seed-finder/jaml-search-app.html` — single-file bundle (`text/html;profile=mcp-app`)
-- **View:** **React 19** + [**Vercel json-render**](https://json-render.dev/) — generative UI catalog (`Stack`, `StatsBlock`, `SeedRow`, `Button`, `Text`) so you can evolve layouts from structured JSON
+- **View:** **React 19** + [**Vercel json-render**](https://json-render.dev/) — generative UI catalog (`Stack`, `StatsBlock`, `SeedTable`, `SeedDetail`, `FilterDisplay`, `Button`, `Spinner`, `Text`) with seed detail drilldown
 - **Hosts:** Claude, ChatGPT, VS Code, and others that negotiate the Apps extension — behavior falls back to plain JSON text where UI is not available
+- **Seed drilldown:** Clicking a seed row in the results table calls `analyze_seed` and renders ante-by-ante breakdown inline
 
 ### Build the UI bundle
 
@@ -57,11 +60,7 @@ pnpm start
 
 Endpoint: `https://<deployment>.vercel.app/mcp`
 
-Optional: set `MCP_API_KEY` and send `Authorization: Bearer <key>`.
-
-## Public demo API
-
-- `POST /api/search` — body `{ "jaml": "<json string>", "seed_count": 100000 }`
+Optional: set `BALATRO_MCP_API_KEY` and send `Authorization: Bearer <key>`.
 
 ## JAML format
 
@@ -74,6 +73,8 @@ Filters are **JSON objects** (same shape as Motely JAML-on-disk, expressed as JS
   "must": [{ "joker": "Blueprint", "antes": [1], "sources": { "shopItems": [0, 1] } }]
 }
 ```
+
+Use `get_jaml_schema` for the full schema and `get_catalog` for valid item names.
 
 ## License
 

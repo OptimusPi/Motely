@@ -1,6 +1,99 @@
 import { defineRegistry } from "@json-render/react";
-import type { SearchResponse } from "./searchTypes.js";
+import type { SearchResponse, SeedAnalysis, AnteAnalysis } from "./searchTypes.js";
 import { jamlSearchCatalog } from "./catalog.js";
+
+// ── Ante detail sub-component (not in json-render, just React) ──────────────
+
+function AnteCard({ ante }: { ante: AnteAnalysis }) {
+  return (
+    <div
+      style={{
+        padding: "10px 12px",
+        borderRadius: 8,
+        background: "var(--bg2, #1a2332)",
+        border: "1px solid var(--border, #334461)",
+        marginBottom: 8,
+      }}
+    >
+      <div
+        style={{
+          fontWeight: 700,
+          color: "var(--gold, #ffc640)",
+          fontSize: "0.9rem",
+          marginBottom: 6,
+        }}
+      >
+        Ante {ante.ante}
+      </div>
+      <div style={{ fontSize: "0.82rem", lineHeight: 1.8 }}>
+        <div>
+          <span style={{ color: "var(--text3, #708386)" }}>Boss: </span>
+          <span style={{ color: "var(--red, #ff4c40)", fontWeight: 600 }}>
+            {ante.boss}
+          </span>
+        </div>
+        <div>
+          <span style={{ color: "var(--text3, #708386)" }}>Voucher: </span>
+          <span style={{ color: "var(--blue, #0093ff)" }}>{ante.voucher}</span>
+        </div>
+        <div>
+          <span style={{ color: "var(--text3, #708386)" }}>Tags: </span>
+          <span>{ante.smallBlindTag}, {ante.bigBlindTag}</span>
+        </div>
+        {ante.drawOrder && (
+          <div>
+            <span style={{ color: "var(--text3, #708386)" }}>Draw: </span>
+            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: "0.78rem" }}>
+              {ante.drawOrder}
+            </span>
+          </div>
+        )}
+        {ante.shopQueue.length > 0 && (
+          <div style={{ marginTop: 4 }}>
+            <div style={{ color: "var(--text3, #708386)", marginBottom: 2 }}>Shop:</div>
+            <div
+              style={{
+                paddingLeft: 8,
+                fontFamily: "ui-monospace, monospace",
+                fontSize: "0.78rem",
+                color: "var(--text2, #a0a8b8)",
+              }}
+            >
+              {ante.shopQueue.map((item, i) => (
+                <div key={i}>
+                  {i + 1}) {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {ante.packs.length > 0 && (
+          <div style={{ marginTop: 4 }}>
+            <div style={{ color: "var(--text3, #708386)", marginBottom: 2 }}>Packs:</div>
+            <div
+              style={{
+                paddingLeft: 8,
+                fontSize: "0.78rem",
+                color: "var(--text2, #a0a8b8)",
+              }}
+            >
+              {ante.packs.map((p, i) => (
+                <div key={i}>
+                  <span style={{ color: "var(--green-text, #35bd86)" }}>{p.type}</span>
+                  {p.items.length > 0 && (
+                    <span> — {p.items.join(", ")}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── json-render component registry ──────────────────────────────────────────
 
 export const { registry } = defineRegistry(jamlSearchCatalog, {
   components: {
@@ -19,6 +112,30 @@ export const { registry } = defineRegistry(jamlSearchCatalog, {
         {children}
       </div>
     ),
+    FilterDisplay: ({ props }) => {
+      const text = props.jummy || props.jaml;
+      if (!text) return null;
+      return (
+        <div
+          style={{
+            padding: "8px 12px",
+            borderRadius: 8,
+            background: "var(--bg3, #2a3233)",
+            border: "1px solid var(--border2, #4f6367)",
+            fontSize: "0.8rem",
+            fontFamily: "ui-monospace, monospace",
+            color: "var(--text2, #a0a8b8)",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          <span style={{ color: "var(--text3, #708386)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            {props.jummy ? "Jummy" : "JAML"}
+          </span>
+          <div style={{ marginTop: 4 }}>{text}</div>
+        </div>
+      );
+    },
     StatsBlock: ({ props }) => (
       <div
         style={{
@@ -57,7 +174,7 @@ export const { registry } = defineRegistry(jamlSearchCatalog, {
         </div>
       </div>
     ),
-    SeedTable: ({ props }) => {
+    SeedTable: ({ props, emit }) => {
       const rows = (props.rows ?? []) as Array<{
         seed: string;
         score: string;
@@ -80,11 +197,16 @@ export const { registry } = defineRegistry(jamlSearchCatalog, {
                 <th>Seed</th>
                 <th style={{ textAlign: "right" }}>Score</th>
                 {hasTally && <th>Tally</th>}
+                <th style={{ width: "1%" }}></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={i}>
+                <tr
+                  key={i}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => emit("press", { seed: r.seed })}
+                >
                   <td style={{ color: "var(--text3, #708386)", fontFamily: "ui-monospace, monospace", fontSize: "0.75rem" }}>
                     {i + 1}
                   </td>
@@ -120,10 +242,91 @@ export const { registry } = defineRegistry(jamlSearchCatalog, {
                         : "\u2014"}
                     </td>
                   )}
+                  <td
+                    style={{
+                      color: "var(--accent, #935adc)",
+                      fontSize: "0.75rem",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Analyze
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      );
+    },
+    SeedDetail: ({ props, emit }) => {
+      const loading = props.loading === "true";
+      const error = props.error;
+      let analysis: SeedAnalysis | null = null;
+      if (props.analysisJson) {
+        try {
+          analysis = JSON.parse(props.analysisJson) as SeedAnalysis;
+        } catch {}
+      }
+
+      return (
+        <div
+          style={{
+            borderRadius: 10,
+            border: "2px solid var(--accent, #935adc)",
+            background: "var(--bg, #1e2b2d)",
+            padding: 16,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <h3
+              style={{
+                margin: 0,
+                fontFamily: "ui-monospace, monospace",
+                color: "var(--gold, #ffc640)",
+                fontSize: "1rem",
+              }}
+            >
+              Seed: {props.seed}
+            </h3>
+            <button
+              type="button"
+              onClick={() => emit("press")}
+              style={{
+                background: "var(--grey-dark, #3a5055)",
+                border: "none",
+                color: "var(--text, #f6f0d5)",
+                padding: "4px 12px",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontSize: "0.8rem",
+              }}
+            >
+              Close
+            </button>
+          </div>
+          {loading && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text2, #a0a8b8)", fontSize: "0.85rem" }}>
+              <span className="spinner" />
+              Analyzing seed...
+            </div>
+          )}
+          {error && (
+            <div style={{ color: "var(--red, #ff4c40)", fontSize: "0.85rem" }}>
+              {error}
+            </div>
+          )}
+          {analysis?.error && (
+            <div style={{ color: "var(--red, #ff4c40)", fontSize: "0.85rem" }}>
+              {analysis.error}
+            </div>
+          )}
+          {analysis?.antes && analysis.antes.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {analysis.antes.map((a) => (
+                <AnteCard key={a.ante} ante={a} />
+              ))}
+            </div>
+          )}
         </div>
       );
     },
@@ -190,15 +393,48 @@ export const { registry } = defineRegistry(jamlSearchCatalog, {
         {props.message}
       </div>
     ),
+    Spinner: ({ props }) => (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}>
+        <div
+          style={{
+            width: 20,
+            height: 20,
+            border: "3px solid var(--border, #334461)",
+            borderTopColor: "var(--blue, #0093ff)",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+        <span style={{ color: "var(--text2, #a0a8b8)", fontSize: "0.85rem" }}>
+          {props.message || "Searching..."}
+        </span>
+      </div>
+    ),
   },
 });
 
 const MAX_UI_ROWS = 200;
 
-export function buildSpecFromSearch(output: SearchResponse) {
+export function buildSpecFromSearch(
+  output: SearchResponse,
+  filterInfo?: { jummy?: string; jaml?: string }
+) {
   const elements: Record<string, Record<string, unknown>> = {};
-  const childKeys: string[] = ["stats"];
+  const childKeys: string[] = [];
   const slice = output.results.slice(0, MAX_UI_ROWS);
+
+  // Filter display
+  if (filterInfo && (filterInfo.jummy || filterInfo.jaml)) {
+    elements["filter"] = {
+      type: "FilterDisplay",
+      props: {
+        jummy: filterInfo.jummy ?? undefined,
+        jaml: filterInfo.jaml ?? undefined,
+      },
+      children: [],
+    };
+    childKeys.push("filter");
+  }
 
   elements["stats"] = {
     type: "StatsBlock",
@@ -210,6 +446,7 @@ export function buildSpecFromSearch(output: SearchResponse) {
     },
     children: [],
   };
+  childKeys.push("stats");
 
   if (slice.length === 0) {
     elements["empty"] = {
@@ -229,6 +466,9 @@ export function buildSpecFromSearch(output: SearchResponse) {
     elements["table"] = {
       type: "SeedTable",
       props: { rows },
+      on: {
+        press: { action: "analyzeSeed", params: {} },
+      },
       children: [],
     };
     childKeys.push("table");
@@ -256,6 +496,35 @@ export function buildSpecFromSearch(output: SearchResponse) {
   };
 }
 
+export function buildSeedDetailSpec(
+  seed: string,
+  state: { loading?: boolean; error?: string; analysisJson?: string }
+) {
+  return {
+    root: "root",
+    elements: {
+      root: {
+        type: "Stack",
+        props: { heading: `Seed Analysis` },
+        children: ["detail"],
+      },
+      detail: {
+        type: "SeedDetail",
+        props: {
+          seed,
+          loading: state.loading ? "true" : "false",
+          error: state.error ?? undefined,
+          analysisJson: state.analysisJson ?? undefined,
+        },
+        on: {
+          press: { action: "closeSeedDetail", params: {} },
+        },
+        children: [],
+      },
+    },
+  };
+}
+
 export function buildErrorSpec(message: string) {
   return {
     root: "root",
@@ -268,6 +537,24 @@ export function buildErrorSpec(message: string) {
       err: {
         type: "Text",
         props: { body: message, variant: "error" },
+        children: [],
+      },
+    },
+  };
+}
+
+export function buildLoadingSpec(message?: string) {
+  return {
+    root: "root",
+    elements: {
+      root: {
+        type: "Stack",
+        props: { heading: "Balatro Seed Search" },
+        children: ["spinner"],
+      },
+      spinner: {
+        type: "Spinner",
+        props: { message: message ?? "Searching..." },
         children: [],
       },
     },
