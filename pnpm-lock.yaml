@@ -22,14 +22,12 @@ importers:
   Motely.TestWebsite:
     dependencies:
       motely-wasm:
-        specifier: ^9.0.0
-        version: 9.0.0
+        specifier: ^10.0.2
+        version: 10.0.2
     devDependencies:
       vite:
         specifier: ^6.3.5
         version: 6.4.2(@types/node@22.19.17)(lightningcss@1.32.0)(yaml@2.8.3)
-
-  motely-wasm: {}
 
   tools/balatro-seed-finder:
     dependencies:
@@ -963,9 +961,6 @@ packages:
 
   motely-wasm@10.0.2:
     resolution: {integrity: sha512-N65C7wfgPbxTmhrAjPRvMXOJ3DNYGPU6dRDKCj9dF4xPICLki+66JICHi7R58VESsGJgUhhbhAzRHK95YS3alg==}
-
-  motely-wasm@9.0.0:
-    resolution: {integrity: sha512-W/UgKwxibpA68qQD+PHc0SqaK6CLIG6+ge1gfOsDL0dUmUtvAMFFLtywO+gh4Sdcam7pK4M8/tcrFd3rHdgALw==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2036,8 +2031,6 @@ snapshots:
       mime-db: 1.54.0
 
   motely-wasm@10.0.2: {}
-
-  motely-wasm@9.0.0: {}
 
   ms@2.1.3: {}
 
