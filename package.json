@@ -4,17 +4,13 @@
   "description": "Balatro deck filtering system",
   "private": true,
   "scripts": {
-    "dev": "cd Motely.TestWebsite && npm run dev",
-    "preview": "cd Motely.TestWebsite && npm run preview",
+    "dev": "vite Motely.TestWebsite",
+    "preview": "vite preview Motely.TestWebsite",
     "test:motely-direct-contract": "node scripts/test-motely-direct-contract.mjs",
     "test:motely-wasm-contract": "node --test scripts/test-motely-wasm.contract.test.mjs",
     "find:gros-michel-wasm": "node scripts/find-gros-michel-via-wasm.mjs"
   },
   "devDependencies": {
-    "rollup": "^4.60.1",
-    "vitest": "^4.1.4"
-  },
-  "dependencies": {
-    "motely-wasm": "^10.0.2"
+    "vite": "^6.3.5"
   }
 }
