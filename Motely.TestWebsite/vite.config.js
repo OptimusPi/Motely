@@ -10,7 +10,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
-        compat: resolve(__dirname, "compat.html"),
       },
       onwarn(warning, warn) {
         // motely-wasm uses Node built-ins conditionally; Vite stubs them — safe to ignore.
