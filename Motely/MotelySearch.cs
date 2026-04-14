@@ -1520,7 +1520,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             in searchParams,
                             lane
                         );
-                        // HEY BONERS THIS IS WHERE THE FUCKING SINGLE SEED SEARCHER 0GETS CAPTURED AND RETURNED.
                         Search._seedRouter.InjectSingleSeedContext(in singleCtx);
                     }
                 }

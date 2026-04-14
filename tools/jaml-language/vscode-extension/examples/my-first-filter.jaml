@@ -1,0 +1,14 @@
+# My First JAML Filter
+# Find seeds where Blueprint appears by ante 3
+name: My First Filter
+author: You
+deck: Red
+stake: White
+
+must:
+  - joker: Blueprint
+    antes: [1, 2, 3]
+
+should:
+  - voucher: Telescope
+  - joker: Brainstorm
