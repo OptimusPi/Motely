@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Balatro Seed MCP — seedfinder.app</title>
+<style>
+/* ── Reset & base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #0d0d1a;
+  --bg2:       #131326;
+  --bg3:       #1a1a34;
+  --panel:     #181830;
+  --border:    #2a2a55;
+  --border2:   #3a3a70;
+  --gold:      #f5c842;
+  --gold2:     #e8a918;
+  --red:       #e84040;
+  --blue:      #4a9eff;
+  --green:     #48d68a;
+  --purple:    #a855f7;
+  --text:      #e8e8f0;
+  --text2:     #9898c0;
+  --text3:     #5a5a88;
+  --card-w:    280px;
+  --radius:    10px;
+  --font:      'Segoe UI', system-ui, sans-serif;
+  --mono:      'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+html { font-size: 15px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  outline: none;
+}
+input, select, textarea {
+  font-family: var(--font);
+  font-size: 0.9rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.45em 0.75em;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(245,200,66,.18);
+}
+select option { background: var(--bg2); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Layout ───────────────────────────────────────────────── */
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── Header ───────────────────────────────────────────────── */
+header {
+  background: linear-gradient(135deg, #0d0d22 0%, #161634 60%, #0f0f28 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 1.25rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.logo-icon {
+  font-size: 2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(245,200,66,.5));
+}
+.logo-text h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--gold), #ff9f1a, var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.04em;
+}
+.logo-text p {
+  font-size: 0.72rem;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.badge {
+  font-size: 0.7rem;
+  padding: 0.25em 0.6em;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.badge-gold  { background: rgba(245,200,66,.15); color: var(--gold);   border: 1px solid rgba(245,200,66,.35); }
+.badge-blue  { background: rgba(74,158,255,.15); color: var(--blue);   border: 1px solid rgba(74,158,255,.35); }
+.badge-green { background: rgba(72,214,138,.15); color: var(--green);  border: 1px solid rgba(72,214,138,.35); }
+#version-badge { cursor: default; }
+
+/* ── Main two-column layout ───────────────────────────────── */
+.main-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 0;
+  flex: 1;
+  height: calc(100vh - 68px);
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .main-layout { grid-template-columns: 1fr; height: auto; overflow: visible; }
+}
+
+/* ── Query panel ──────────────────────────────────────────── */
+.query-panel {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.panel-section {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.panel-section:last-child { border-bottom: none; }
+.section-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.row2 label, .field label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text2);
+  margin-bottom: 0.3rem;
+}
+.row2 select, .row2 input, .field select, .field input { width: 100%; }
+
+/* Mode tabs */
+.mode-tabs { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+.mode-tab {
+  flex: 1;
+  padding: 0.4em 0;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  transition: all .15s;
+  font-weight: 500;
+}
+.mode-tab.active {
+  background: rgba(245,200,66,.12);
+  border-color: var(--gold2);
+  color: var(--gold);
+}
+.mode-tab:hover:not(.active) { border-color: var(--border2); color: var(--text); }
+
+/* Clause list */
+.clause-group { margin-bottom: 0.75rem; }
+.clause-group-label {
+  font-size: 0.7rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.clause-group-label span.dot {
+  width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+}
+.dot-must    { background: var(--green); }
+.dot-should  { background: var(--gold); }
+.dot-mustnot { background: var(--red); }
+
+.clause-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+  align-items: center;
+}
+.clause-type-sel { width: 110px; flex-shrink: 0; font-size: 0.8rem; padding: 0.35em 0.5em; }
+.clause-val-inp  { flex: 1; font-size: 0.8rem; padding: 0.35em 0.6em; }
+.clause-val-inp[list] { font-size: 0.8rem; }
+.btn-remove {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(232,64,64,.15);
+  color: var(--red);
+  border: 1px solid rgba(232,64,64,.3);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.btn-remove:hover { background: rgba(232,64,64,.3); }
+.btn-add-clause {
+  font-size: 0.75rem;
+  padding: 0.3em 0.7em;
+  border-radius: 6px;
+  border: 1px dashed var(--border2);
+  background: transparent;
+  color: var(--text3);
+  transition: all .15s;
+  margin-top: 0.2rem;
+}
+.btn-add-clause:hover { border-color: var(--gold2); color: var(--gold); }
+
+/* Raw JAML textarea */
+#raw-jaml {
+  width: 100%;
+  min-height: 140px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  resize: vertical;
+  border-radius: var(--radius);
+  padding: 0.7em 0.9em;
+  line-height: 1.55;
+  background: var(--bg);
+}
+
+/* Search button */
+.btn-search {
+  width: 100%;
+  padding: 0.75em;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #c8900a, var(--gold2), #f5c842);
+  color: #1a0e00;
+  border: none;
+  transition: all .2s;
+  text-transform: uppercase;
+  box-shadow: 0 2px 16px rgba(245,200,66,.25);
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.btn-search:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(245,200,66,.4);
+}
+.btn-search:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-search .spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(26,14,0,.3);
+  border-top-color: #1a0e00;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: none;
+}
+.btn-search.loading .spinner { display: block; }
+.btn-search.loading .btn-label { display: none; }
+
+/* Seed count range */
+.seed-count-row {
+  display: flex; align-items: center; gap: 0.6rem;
+}
+#seed-count-range { flex: 1; accent-color: var(--gold); }
+#seed-count-display {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--gold);
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Results panel ────────────────────────────────────────── */
+.results-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.results-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.results-meta { font-size: 0.82rem; color: var(--text2); }
+.results-meta strong { color: var(--text); }
+.results-sort {
+  display: flex; gap: 0.4rem; align-items: center;
+  font-size: 0.78rem; color: var(--text3);
+}
+.btn-sort {
+  padding: 0.3em 0.65em;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-size: 0.75rem;
+  transition: all .15s;
+}
+.btn-sort.active { border-color: var(--gold2); color: var(--gold); background: rgba(245,200,66,.1); }
+.btn-sort:hover:not(.active) { border-color: var(--border2); color: var(--text); }
+
+.results-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.9rem;
+}
+
+/* ── Seed card ────────────────────────────────────────────── */
+.seed-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+  overflow: hidden;
+}
+.seed-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,200,66,.04), transparent);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.seed-card:hover { border-color: var(--gold2); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+.seed-card:hover::before { opacity: 1; }
+.seed-string {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.btn-copy-seed {
+  background: transparent;
+  border: none;
+  color: var(--text3);
+  font-size: 0.75rem;
+  padding: 0 0.2em;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.seed-card:hover .btn-copy-seed { opacity: 1; }
+.btn-copy-seed:hover { color: var(--gold); }
+.seed-score { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.55rem; }
+.stars { color: var(--gold); font-size: 0.85rem; letter-spacing: 0.05em; }
+.score-num { font-size: 0.72rem; color: var(--text3); font-family: var(--mono); }
+.seed-meta { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.seed-tag {
+  font-size: 0.65rem;
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  border: 1px solid;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+}
+.seed-tag-deck  { background: rgba(74,158,255,.1);  color: #78b4ff; border-color: rgba(74,158,255,.3); }
+.seed-tag-stake { background: rgba(168,85,247,.1);  color: #c084fc; border-color: rgba(168,85,247,.3); }
+.btn-analyze {
+  margin-top: 0.65rem;
+  width: 100%;
+  padding: 0.4em;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border2);
+  background: rgba(74,158,255,.08);
+  color: var(--blue);
+  transition: all .15s;
+}
+.btn-analyze:hover { background: rgba(74,158,255,.18); border-color: var(--blue); }
+
+/* ── Empty / loading states ───────────────────────────────── */
+.state-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: var(--text3);
+  text-align: center;
+  gap: 0.75rem;
+}
+.state-empty .big-icon { font-size: 3.5rem; opacity: .4; }
+.state-empty p { font-size: 0.9rem; max-width: 300px; line-height: 1.6; }
+
+.load-more-sentinel { height: 60px; display: flex; align-items: center; justify-content: center; }
+.load-more-spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.load-more-spinner.visible { opacity: 1; }
+
+/* ── Seed analysis modal ──────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.modal-backdrop.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  width: 100%; max-width: 860px;
+  max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 80px rgba(0,0,0,.7);
+  transform: translateY(20px) scale(.97);
+  transition: transform .2s;
+}
+.modal-backdrop.open .modal { transform: none; }
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.modal-title {
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.modal-seed {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+.modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.modal-close:hover { background: rgba(232,64,64,.2); color: var(--red); border-color: var(--red); }
+.modal-body { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; }
+
+/* Ante tabs */
+.ante-tabs { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.ante-tab {
+  padding: 0.35em 0.75em;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  transition: all .15s;
+  cursor: pointer;
+}
+.ante-tab.active { background: rgba(245,200,66,.12); border-color: var(--gold2); color: var(--gold); }
+.ante-tab:hover:not(.active) { border-color: var(--border2); color: var(--text); }
+.ante-tab.all {
+  background: rgba(74,158,255,.08);
+  color: var(--blue);
+  border-color: rgba(74,158,255,.3);
+}
+.ante-tab.all.active {
+  background: rgba(74,158,255,.2);
+  border-color: var(--blue);
+}
+
+/* Ante breakdown */
+.ante-block {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.9rem;
+  overflow: hidden;
+}
+.ante-block-header {
+  padding: 0.65rem 1rem;
+  background: linear-gradient(90deg, rgba(245,200,66,.06), transparent);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.ante-num {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+}
+.ante-boss {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--red);
+}
+.ante-block-body { padding: 0.8rem 1rem; }
+.ante-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; align-items: flex-start; }
+.ante-row-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  width: 70px;
+  flex-shrink: 0;
+  padding-top: 0.15em;
+}
+.ante-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.chip {
+  font-size: 0.72rem;
+  padding: 0.2em 0.55em;
+  border-radius: 5px;
+  border: 1px solid;
+  font-weight: 500;
+}
+.chip-shop   { background: rgba(245,200,66,.08);  color: #f5c842; border-color: rgba(245,200,66,.3); }
+.chip-voucher{ background: rgba(168,85,247,.1);   color: #c084fc; border-color: rgba(168,85,247,.35); }
+.chip-tag    { background: rgba(72,214,138,.08);  color: #48d68a; border-color: rgba(72,214,138,.3); }
+.chip-empty  { color: var(--text3); border-color: var(--border); background: transparent; font-style: italic; }
+
+/* ── Connect / MCP section ────────────────────────────────── */
+.connect-section {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 1.25rem 1.5rem;
+  flex-shrink: 0;
+}
+.connect-header {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+}
+.connect-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.connect-toggle { color: var(--text3); font-size: 0.8rem; transition: transform .2s; }
+.connect-toggle.open { transform: rotate(180deg); }
+.connect-body { padding-top: 1rem; display: none; }
+.connect-body.open { display: block; }
+.connect-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.9rem; }
+.connect-tab {
+  padding: 0.3em 0.75em;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  transition: all .15s;
+}
+.connect-tab.active { background: rgba(74,158,255,.12); border-color: var(--blue); color: var(--blue); }
+.connect-tab:hover:not(.active) { border-color: var(--border2); color: var(--text); }
+.connect-pane { display: none; }
+.connect-pane.active { display: block; }
+.code-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.77rem;
+  line-height: 1.6;
+  color: var(--text2);
+  position: relative;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.btn-copy-code {
+  position: absolute;
+  top: 0.5rem; right: 0.5rem;
+  padding: 0.25em 0.65em;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(74,158,255,.15);
+  border: 1px solid rgba(74,158,255,.3);
+  color: var(--blue);
+  transition: all .15s;
+}
+.btn-copy-code:hover { background: rgba(74,158,255,.3); }
+.connect-note { font-size: 0.75rem; color: var(--text3); margin-top: 0.6rem; line-height: 1.5; }
+.connect-note code { font-family: var(--mono); color: var(--gold2); background: rgba(245,200,66,.08); padding: 0.1em 0.35em; border-radius: 3px; }
+
+/* ── Toasts ───────────────────────────────────────────────── */
+#toast-container {
+  position: fixed;
+  bottom: 1.5rem; right: 1.5rem;
+  z-index: 999;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  pointer-events: none;
+}
+.toast {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 0.6em 1em;
+  font-size: 0.82rem;
+  color: var(--text);
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  animation: toastIn .2s ease, toastOut .3s ease 2.7s forwards;
+  pointer-events: all;
+}
+.toast.success { border-color: rgba(72,214,138,.5); color: var(--green); }
+.toast.error   { border-color: rgba(232,64,64,.5);  color: var(--red); }
+
+/* ── Error banner ─────────────────────────────────────────── */
+.error-banner {
+  background: rgba(232,64,64,.1);
+  border: 1px solid rgba(232,64,64,.35);
+  border-radius: var(--radius);
+  padding: 0.7em 1em;
+  color: #ff8080;
+  font-size: 0.83rem;
+  margin-bottom: 1rem;
+  display: none;
+}
+.error-banner.visible { display: block; }
+
+/* ── Animations ───────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes toastIn  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+@keyframes toastOut { to   { opacity: 0; transform: translateX(20px); } }
+@keyframes fadeIn   { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.seed-card { animation: fadeIn .18s ease both; }
+
+/* ── URL param banner ─────────────────────────────────────── */
+.url-banner {
+  background: rgba(74,158,255,.06);
+  border: 1px solid rgba(74,158,255,.2);
+  border-radius: 8px;
+  padding: 0.5em 0.9em;
+  font-size: 0.78rem;
+  color: var(--blue);
+  margin-bottom: 0.75rem;
+  display: none;
+}
+.url-banner.visible { display: flex; align-items: center; gap: 0.5rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🃏</div>
+    <div class="logo-text">
+      <h1>Balatro Seed MCP</h1>
+      <p>Balatro Seed Intelligence Engine</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="badge badge-gold" id="version-badge" title="MotelyJAML engine version">v9.0.1</span>
+    <span class="badge badge-blue">HTTP + stdio</span>
+    <a href="https://github.com" id="gh-link" class="badge badge-gold" style="text-decoration:none" target="_blank">GitHub ↗</a>
+  </div>
+</header>
+
+<!-- ── Main layout ─────────────────────────────────────────── -->
+<div class="main-layout">
+
+  <!-- Left: Query panel -->
+  <aside class="query-panel">
+
+    <!-- Mode selector + Config -->
+    <div class="panel-section">
+      <div class="section-label">⚙ Config</div>
+      <div class="row2">
+        <div>
+          <label>Deck</label>
+          <select id="deck-sel">
+            <option>Red</option><option>Blue</option><option>Yellow</option>
+            <option>Green</option><option>Black</option><option>Magic</option>
+            <option>Nebula</option><option>Ghost</option><option>Abandoned</option>
+            <option>Checkered</option><option>Zodiac</option><option>Painted</option>
+            <option>Anaglyph</option><option>Plasma</option><option>Erratic</option>
+          </select>
+        </div>
+        <div>
+          <label>Stake</label>
+          <select id="stake-sel">
+            <option>White</option><option>Red</option><option>Green</option>
+            <option>Black</option><option>Blue</option><option>Purple</option>
+            <option>Orange</option><option>Gold</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clause builder / Raw toggle -->
+    <div class="panel-section" style="flex:1">
+      <div class="section-label">🔍 Filter</div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tab-builder" onclick="setMode('builder')">Builder</button>
+        <button class="mode-tab" id="tab-raw" onclick="setMode('raw')">Raw JAML</button>
+      </div>
+
+      <!-- Builder UI -->
+      <div id="builder-ui">
+        <div id="clause-groups"></div>
+        <div id="builder-error" class="error-banner"></div>
+      </div>
+
+      <!-- Raw JAML UI -->
+      <div id="raw-ui" style="display:none">
+        <label style="font-size:.72rem;color:var(--text2);display:block;margin-bottom:.4rem">
+          JAML JSON (deck/stake from selectors above override)
+        </label>
+        <textarea id="raw-jaml" placeholder='{"must":[{"joker":"Blueprint"}]}'></textarea>
+        <div id="raw-error" class="error-banner" style="margin-top:.5rem"></div>
+      </div>
+    </div>
+
+    <!-- Seed count slider -->
+    <div class="panel-section">
+      <div class="section-label">🎲 Search Size</div>
+      <div class="seed-count-row">
+        <input type="range" id="seed-count-range" min="10000" max="1000000" step="10000" value="1000000" oninput="updateSeedCount(this.value)" />
+        <span id="seed-count-display">1,000,000</span>
+      </div>
+    </div>
+
+    <!-- Search button -->
+    <div class="panel-section">
+      <button class="btn-search" id="search-btn" onclick="runSearch()">
+        <div class="spinner"></div>
+        <span class="btn-label">⚡ Search Seeds</span>
+      </button>
+    </div>
+
+    <!-- Connect / MCP info -->
+    <div class="connect-section">
+      <div class="connect-header" onclick="toggleConnect()">
+        <span class="connect-title">🔌 Connect to MCP</span>
+        <span class="connect-toggle" id="connect-toggle">▼</span>
+      </div>
+      <div class="connect-body" id="connect-body">
+        <div class="connect-tabs">
+          <button class="connect-tab active" onclick="setConnectTab('claude')">Claude Desktop</button>
+          <button class="connect-tab" onclick="setConnectTab('cursor')">Cursor</button>
+          <button class="connect-tab" onclick="setConnectTab('stdio')">stdio (CLI)</button>
+        </div>
+
+        <div class="connect-pane active" id="pane-claude">
+          <div class="code-block" id="code-claude">
+            <button class="btn-copy-code" onclick="copyCode('code-claude')">Copy</button>
+          </div>
+          <p class="connect-note">Add to <code>claude_desktop_config.json</code>. Set <code>MCP_API_KEY</code> env var on the server if you want auth.</p>
+        </div>
+
+        <div class="connect-pane" id="pane-cursor">
+          <div class="code-block" id="code-cursor">
+            <button class="btn-copy-code" onclick="copyCode('code-cursor')">Copy</button>
+          </div>
+          <p class="connect-note">Add inside <code>mcpServers</code> in your Cursor settings JSON.</p>
+        </div>
+
+        <div class="connect-pane" id="pane-stdio">
+          <div class="code-block" id="code-stdio">
+            <button class="btn-copy-code" onclick="copyCode('code-stdio')">Copy</button>
+          </div>
+          <p class="connect-note">Run locally with <code>npx tsx cli.ts</code> (stdio transport, no auth needed).</p>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Right: Results panel -->
+  <main class="results-panel">
+
+    <div class="results-header">
+      <div class="results-meta" id="results-meta">
+        Run a search to find matching seeds ♠♥♦♣
+      </div>
+      <div class="results-sort" id="sort-controls" style="display:none">
+        Sort:
+        <button class="btn-sort active" id="sort-score" onclick="sortResults('score')">Score ↓</button>
+        <button class="btn-sort" id="sort-alpha" onclick="sortResults('alpha')">A–Z</button>
+      </div>
+    </div>
+
+    <div class="results-scroll" id="results-scroll">
+      <div id="url-banner" class="url-banner">📎 Loaded from URL — press Search to update results</div>
+      <div id="results-error" class="error-banner"></div>
+      <div id="results-grid" class="results-grid"></div>
+      <div class="state-empty" id="state-empty">
+        <div class="big-icon">♠</div>
+        <p>Configure a JAML filter and click <strong>Search Seeds</strong> to find matching Balatro runs.</p>
+      </div>
+      <div class="load-more-sentinel" id="load-more">
+        <div class="load-more-spinner" id="load-more-spinner"></div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /main-layout -->
+
+</div><!-- /app -->
+
+<!-- ── Analysis Modal ───────────────────────────────────────── -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span style="color:var(--text3);font-size:.8rem">SEED ANALYSIS</span>
+        <span class="modal-seed" id="modal-seed-str"></span>
+        <button class="badge badge-blue" style="cursor:pointer;font-size:.65rem" onclick="copyText(document.getElementById('modal-seed-str').textContent)">Copy</button>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="state-empty"><div class="big-icon" style="animation:spin 1s linear infinite;font-size:2rem">⟳</div><p>Analyzing seed…</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Joker datalist for the clause builder -->
+<datalist id="joker-list">
+  <option value="Joker"/><option value="GreedyJoker"/><option value="LustyJoker"/>
+  <option value="WrathfulJoker"/><option value="GluttonousJoker"/><option value="JollyJoker"/>
+  <option value="ZanyJoker"/><option value="MadJoker"/><option value="CrazyJoker"/>
+  <option value="DrollJoker"/><option value="SlyJoker"/><option value="WilyJoker"/>
+  <option value="CleverJoker"/><option value="DeviousJoker"/><option value="CraftyJoker"/>
+  <option value="HalfJoker"/><option value="CreditCard"/><option value="Banner"/>
+  <option value="MysticSummit"/><option value="EightBall"/><option value="Misprint"/>
+  <option value="RaisedFist"/><option value="ChaostheClown"/><option value="ScaryFace"/>
+  <option value="AbstractJoker"/><option value="DelayedGratification"/><option value="GrosMichel"/>
+  <option value="EvenSteven"/><option value="OddTodd"/><option value="Scholar"/>
+  <option value="BusinessCard"/><option value="Supernova"/><option value="RideTheBus"/>
+  <option value="Egg"/><option value="Runner"/><option value="IceCream"/>
+  <option value="Splash"/><option value="BlueJoker"/><option value="FacelessJoker"/>
+  <option value="GreenJoker"/><option value="Superposition"/><option value="ToDoList"/>
+  <option value="Cavendish"/><option value="RedCard"/><option value="SquareJoker"/>
+  <option value="RiffRaff"/><option value="Photograph"/><option value="ReservedParking"/>
+  <option value="MailInRebate"/><option value="Hallucination"/><option value="FortuneTeller"/>
+  <option value="Juggler"/><option value="Drunkard"/><option value="GoldenJoker"/>
+  <option value="Popcorn"/><option value="WalkieTalkie"/><option value="SmileyFace"/>
+  <option value="GoldenTicket"/><option value="Swashbuckler"/><option value="HangingChad"/>
+  <option value="ShootTheMoon"/><option value="JokerStencil"/><option value="FourFingers"/>
+  <option value="Mime"/><option value="CeremonialDagger"/><option value="MarbleJoker"/>
+  <option value="LoyaltyCard"/><option value="Dusk"/><option value="Fibonacci"/>
+  <option value="SteelJoker"/><option value="Hack"/><option value="Pareidolia"/>
+  <option value="SpaceJoker"/><option value="Burglar"/><option value="Blackboard"/>
+  <option value="SixthSense"/><option value="Constellation"/><option value="Hiker"/>
+  <option value="CardSharp"/><option value="Madness"/><option value="Seance"/>
+  <option value="Vampire"/><option value="Shortcut"/><option value="Hologram"/>
+  <option value="Cloud9"/><option value="Rocket"/><option value="MidasMask"/>
+  <option value="Luchador"/><option value="GiftCard"/><option value="TurtleBean"/>
+  <option value="Erosion"/><option value="ToTheMoon"/><option value="StoneJoker"/>
+  <option value="LuckyCat"/><option value="Bull"/><option value="DietCola"/>
+  <option value="TradingCard"/><option value="FlashCard"/><option value="SpareTrousers"/>
+  <option value="Ramen"/><option value="Seltzer"/><option value="Castle"/>
+  <option value="MrBones"/><option value="Acrobat"/><option value="SockAndBuskin"/>
+  <option value="Troubadour"/><option value="Certificate"/><option value="SmearedJoker"/>
+  <option value="Throwback"/><option value="RoughGem"/><option value="Bloodstone"/>
+  <option value="Arrowhead"/><option value="OnyxAgate"/><option value="GlassJoker"/>
+  <option value="Showman"/><option value="FlowerPot"/><option value="MerryAndy"/>
+  <option value="OopsAll6s"/><option value="TheIdol"/><option value="SeeingDouble"/>
+  <option value="Matador"/><option value="Satellite"/><option value="Cartomancer"/>
+  <option value="Astronomer"/><option value="Bootstraps"/><option value="DNA"/>
+  <option value="Vagabond"/><option value="Baron"/><option value="Obelisk"/>
+  <option value="BaseballCard"/><option value="AncientJoker"/><option value="Campfire"/>
+  <option value="Blueprint"/><option value="WeeJoker"/><option value="HitTheRoad"/>
+  <option value="TheDuo"/><option value="TheTrio"/><option value="TheFamily"/>
+  <option value="TheOrder"/><option value="TheTribe"/><option value="Stuntman"/>
+  <option value="InvisibleJoker"/><option value="Brainstorm"/><option value="DriversLicense"/>
+  <option value="BurntJoker"/><option value="Canio"/><option value="Triboulet"/>
+  <option value="Yorick"/><option value="Chicot"/><option value="Perkeo"/>
+</datalist>
+
+<datalist id="voucher-list">
+  <option value="Overstock"/><option value="OverstockPlus"/><option value="ClearanceSale"/>
+  <option value="Liquidation"/><option value="Hone"/><option value="GlowUp"/>
+  <option value="RerollSurplus"/><option value="RerollGlut"/><option value="CrystalBall"/>
+  <option value="OmenGlobe"/><option value="Telescope"/><option value="Observatory"/>
+  <option value="Grabber"/><option value="NachoTong"/><option value="Wasteful"/>
+  <option value="Recyclomancy"/><option value="TarotMerchant"/><option value="TarotTycoon"/>
+  <option value="PlanetMerchant"/><option value="PlanetTycoon"/><option value="SeedMoney"/>
+  <option value="MoneyTree"/><option value="Blank"/><option value="Antimatter"/>
+  <option value="MagicTrick"/><option value="Illusion"/><option value="Hieroglyph"/>
+  <option value="Petroglyph"/><option value="DirectorsCut"/><option value="Retcon"/>
+  <option value="PaintBrush"/><option value="Palette"/>
+</datalist>
+
+<datalist id="boss-list">
+  <option value="AmberAcorn"/><option value="CeruleanBell"/><option value="CrimsonHeart"/>
+  <option value="VerdantLeaf"/><option value="VioletVessel"/><option value="TheClub"/>
+  <option value="TheGoad"/><option value="TheHead"/><option value="TheHook"/>
+  <option value="TheManacle"/><option value="ThePillar"/><option value="ThePsychic"/>
+  <option value="TheWindow"/><option value="TheArm"/><option value="TheFish"/>
+  <option value="TheFlint"/><option value="TheHouse"/><option value="TheMark"/>
+  <option value="TheMouth"/><option value="TheNeedle"/><option value="TheWall"/>
+  <option value="TheWater"/><option value="TheWheel"/><option value="TheEye"/>
+  <option value="TheTooth"/><option value="ThePlant"/><option value="TheSerpent"/>
+  <option value="TheOx"/>
+</datalist>
+
+<datalist id="tag-list">
+  <option value="UncommonTag"/><option value="RareTag"/><option value="NegativeTag"/>
+  <option value="FoilTag"/><option value="HolographicTag"/><option value="PolychromeTag"/>
+  <option value="InvestmentTag"/><option value="VoucherTag"/><option value="BossTag"/>
+  <option value="StandardTag"/><option value="CharmTag"/><option value="MeteorTag"/>
+  <option value="BuffoonTag"/><option value="HandyTag"/><option value="GarbageTag"/>
+  <option value="EtherealTag"/><option value="CouponTag"/><option value="DoubleTag"/>
+  <option value="JuggleTag"/><option value="D6Tag"/><option value="TopupTag"/>
+  <option value="SpeedTag"/><option value="OrbitalTag"/><option value="EconomyTag"/>
+</datalist>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const state = {
+  mode: 'builder',      // 'builder' | 'raw'
+  results: [],
+  currentJaml: null,
+  seedCount: 1000000,
+  isSearching: false,
+  batchCount: 0,
+  totalSearched: 0,
+  totalMatches: 0,
+  sortBy: 'score',      // 'score' | 'alpha'
+  connectTab: 'claude',
+  connectOpen: false,
+  activeSeed: null,
+  activeAnteView: 'all',
+  analysisCache: {},
+};
+
+// ── Clause builder ─────────────────────────────────────────────────────────────
+const clauseGroups = [
+  { id: 'must',    label: 'Must Have',     dotClass: 'dot-must',    color: 'var(--green)' },
+  { id: 'should',  label: 'Should Have',   dotClass: 'dot-should',  color: 'var(--gold)' },
+  { id: 'mustNot', label: 'Must Not Have', dotClass: 'dot-mustnot', color: 'var(--red)' },
+];
+const clauseTypes = [
+  { value: 'joker',       label: 'Joker',      list: 'joker-list' },
+  { value: 'voucher',     label: 'Voucher',     list: 'voucher-list' },
+  { value: 'boss',        label: 'Boss',        list: 'boss-list' },
+  { value: 'tag',         label: 'Tag',         list: 'tag-list' },
+  { value: 'tarotCard',   label: 'Tarot',       list: '' },
+  { value: 'spectralCard',label: 'Spectral',    list: '' },
+];
+// In-memory clause model: { must: [{type, value}], should: [...], mustNot: [...] }
+const clauses = { must: [], should: [], mustNot: [] };
+
+function renderClauseGroups() {
+  const container = document.getElementById('clause-groups');
+  container.innerHTML = clauseGroups.map(g => `
+    <div class="clause-group">
+      <div class="clause-group-label">
+        <span class="dot ${g.dotClass}"></span>
+        ${g.label}
+      </div>
+      <div id="clauses-${g.id}">
+        ${(clauses[g.id] || []).map((c, i) => renderClauseRow(g.id, c, i)).join('')}
+      </div>
+      <button class="btn-add-clause" onclick="addClause('${g.id}')">+ Add ${g.label}</button>
+    </div>
+  `).join('');
+}
+
+function renderClauseRow(groupId, clause, idx) {
+  const typeOpts = clauseTypes.map(t =>
+    `<option value="${t.value}"${t.value === clause.type ? ' selected' : ''}>${t.label}</option>`
+  ).join('');
+  const listAttr = clauseTypes.find(t => t.value === clause.type)?.list
+    ? `list="${clauseTypes.find(t => t.value === clause.type).list}"`
+    : '';
+  return `
+    <div class="clause-row" data-group="${groupId}" data-idx="${idx}">
+      <select class="clause-type-sel" onchange="updateClauseType('${groupId}',${idx},this.value)">${typeOpts}</select>
+      <input class="clause-val-inp" ${listAttr} value="${clause.value || ''}"
+             placeholder="e.g. Blueprint"
+             onchange="updateClauseValue('${groupId}',${idx},this.value)"
+             oninput="updateClauseValue('${groupId}',${idx},this.value)" />
+      <button class="btn-remove" onclick="removeClause('${groupId}',${idx})" title="Remove">×</button>
+    </div>`;
+}
+
+function addClause(groupId) {
+  clauses[groupId].push({ type: 'joker', value: '' });
+  renderClauseGroups();
+}
+function removeClause(groupId, idx) {
+  clauses[groupId].splice(idx, 1);
+  renderClauseGroups();
+}
+function updateClauseType(groupId, idx, val) {
+  clauses[groupId][idx].type = val;
+  renderClauseGroups();
+}
+function updateClauseValue(groupId, idx, val) {
+  clauses[groupId][idx].value = val;
+}
+
+// Build JAML from current builder state
+function buildJamlFromState() {
+  const deck = document.getElementById('deck-sel').value;
+  const stake = document.getElementById('stake-sel').value;
+
+  function buildGroup(arr) {
+    return arr.filter(c => c.value.trim()).map(c => ({ [c.type]: c.value.trim() }));
+  }
+  const must    = buildGroup(clauses.must);
+  const should  = buildGroup(clauses.should);
+  const mustNot = buildGroup(clauses.mustNot);
+
+  const config = { deck, stake };
+  if (must.length)    config.must    = must;
+  if (should.length)  config.should  = should;
+  if (mustNot.length) config.mustNot = mustNot;
+  return JSON.stringify(config);
+}
+
+function getJaml() {
+  if (state.mode === 'builder') {
+    return buildJamlFromState();
+  } else {
+    const raw = document.getElementById('raw-jaml').value.trim();
+    if (!raw) return buildJamlFromState(); // fallback
+    // Merge deck/stake from selectors into raw JAML
+    try {
+      const parsed = JSON.parse(raw);
+      parsed.deck  = parsed.deck  || document.getElementById('deck-sel').value;
+      parsed.stake = parsed.stake || document.getElementById('stake-sel').value;
+      return JSON.stringify(parsed);
+    } catch (e) {
+      return raw; // let server reject it with a good error
+    }
+  }
+}
+
+// ── Mode toggle ────────────────────────────────────────────────────────────────
+function setMode(mode) {
+  state.mode = mode;
+  document.getElementById('builder-ui').style.display = mode === 'builder' ? 'block' : 'none';
+  document.getElementById('raw-ui').style.display      = mode === 'raw'     ? 'block' : 'none';
+  document.getElementById('tab-builder').classList.toggle('active', mode === 'builder');
+  document.getElementById('tab-raw').classList.toggle('active',     mode === 'raw');
+  if (mode === 'raw' && state.currentJaml) {
+    document.getElementById('raw-jaml').value = formatJaml(state.currentJaml);
+  }
+}
+
+function formatJaml(jaml) {
+  try { return JSON.stringify(JSON.parse(jaml), null, 2); } catch { return jaml; }
+}
+
+// ── Seed count slider ──────────────────────────────────────────────────────────
+function updateSeedCount(val) {
+  state.seedCount = parseInt(val, 10);
+  document.getElementById('seed-count-display').textContent = Number(val).toLocaleString();
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────────
+async function runSearch(append = false) {
+  if (state.isSearching) return;
+
+  const jaml = getJaml();
+  clearErrors();
+
+  if (!append) {
+    state.results = [];
+    state.batchCount = 0;
+    state.totalSearched = 0;
+    state.totalMatches = 0;
+    state.currentJaml = jaml;
+    renderResults();
+  }
+
+  setSearching(true);
+
+  try {
+    const resp = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jaml, seed_count: state.seedCount }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+
+    state.batchCount++;
+    state.totalSearched += parseInt(data.seedsSearched, 10);
+    state.totalMatches  += parseInt(data.matchesFound,  10);
+    state.results.push(...data.results);
+
+    if (state.sortBy === 'score') {
+      state.results.sort((a, b) => b.score - a.score);
+    } else {
+      state.results.sort((a, b) => a.seed.localeCompare(b.seed));
+    }
+
+    renderResults();
+    updateMeta();
+    updateURL(jaml);
+
+  } catch (err) {
+    showError('results-error', err.message);
+  } finally {
+    setSearching(false);
+  }
+}
+
+// Infinite scroll "load more"
+async function loadMore() {
+  if (state.isSearching || !state.currentJaml) return;
+  document.getElementById('load-more-spinner').classList.add('visible');
+  await runSearch(true);
+  document.getElementById('load-more-spinner').classList.remove('visible');
+}
+
+// Intersection Observer for infinite scroll
+const scrollObserver = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting && state.results.length > 0 && !state.isSearching) {
+    loadMore();
+  }
+}, { threshold: 0.1 });
+scrollObserver.observe(document.getElementById('load-more'));
+
+// ── Rendering ──────────────────────────────────────────────────────────────────
+function renderResults() {
+  const grid   = document.getElementById('results-grid');
+  const empty  = document.getElementById('state-empty');
+  const sortCtl= document.getElementById('sort-controls');
+
+  if (state.results.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    sortCtl.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  sortCtl.style.display = 'flex';
+
+  const deck  = (() => { try { return JSON.parse(state.currentJaml || '{}').deck || 'Red'; } catch { return 'Red'; } })();
+  const stake = (() => { try { return JSON.parse(state.currentJaml || '{}').stake || 'White'; } catch { return 'White'; } })();
+  const maxScore = Math.max(...state.results.map(r => r.score), 1);
+
+  grid.innerHTML = state.results.map((r, i) => {
+    const pct   = r.score / maxScore;
+    const stars = '★'.repeat(Math.round(pct * 5)).padEnd(5, '☆');
+    return `<div class="seed-card" onclick="openAnalysis('${r.seed}','${deck}','${stake}')" style="animation-delay:${Math.min(i * 0.02, 0.4)}s">
+      <div class="seed-string">
+        <span>${r.seed}</span>
+        <button class="btn-copy-seed" onclick="event.stopPropagation();copyText('${r.seed}')" title="Copy seed">⧉</button>
+      </div>
+      <div class="seed-score">
+        <span class="stars">${stars}</span>
+        <span class="score-num">score: ${r.score}</span>
+      </div>
+      <div class="seed-meta">
+        <span class="seed-tag seed-tag-deck">${deck}</span>
+        <span class="seed-tag seed-tag-stake">${stake}</span>
+      </div>
+      <button class="btn-analyze" onclick="event.stopPropagation();openAnalysis('${r.seed}','${deck}','${stake}')">
+        🔬 Analyze Ante-by-Ante
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function updateMeta() {
+  const m = document.getElementById('results-meta');
+  const batches = state.batchCount > 1 ? ` (${state.batchCount} batches)` : '';
+  m.innerHTML = `<strong>${state.totalMatches.toLocaleString()}</strong> matches from <strong>${state.totalSearched.toLocaleString()}</strong> seeds searched${batches}`;
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────────────
+function sortResults(by) {
+  state.sortBy = by;
+  document.getElementById('sort-score').classList.toggle('active', by === 'score');
+  document.getElementById('sort-alpha').classList.toggle('active', by === 'alpha');
+  if (by === 'score') state.results.sort((a, b) => b.score - a.score);
+  else               state.results.sort((a, b) => a.seed.localeCompare(b.seed));
+  renderResults();
+}
+
+// ── Seed analysis modal ────────────────────────────────────────────────────────
+async function openAnalysis(seed, deck, stake) {
+  state.activeSeed = { seed, deck, stake };
+  state.activeAnteView = 'all';
+  document.getElementById('modal-seed-str').textContent = seed;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="state-empty">
+      <div style="font-size:2rem;animation:spin 1s linear infinite">⟳</div>
+      <p>Analyzing <strong>${seed}</strong>…</p>
+    </div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const cacheKey = `${seed}:${deck}:${stake}`;
+  if (state.analysisCache[cacheKey]) {
+    renderAnalysis(state.analysisCache[cacheKey]);
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seed, deck, stake }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+    state.analysisCache[cacheKey] = data;
+    renderAnalysis(data);
+  } catch (err) {
+    document.getElementById('modal-body').innerHTML = `
+      <div class="error-banner visible">Failed to analyze seed: ${err.message}</div>`;
+  }
+}
+
+function renderAnalysis(data) {
+  const antes = data.antes || [];
+  const anteTabsHtml = `
+    <div class="ante-tabs">
+      <button class="ante-tab all${state.activeAnteView === 'all' ? ' active' : ''}" onclick="setAnteView('all')">All Antes</button>
+      ${antes.map(a => `<button class="ante-tab${state.activeAnteView === a.ante ? ' active' : ''}" onclick="setAnteView(${a.ante})">Ante ${a.ante}</button>`).join('')}
+    </div>`;
+
+  const blocksHtml = antes.map(a => {
+    const visible = state.activeAnteView === 'all' || state.activeAnteView === a.ante;
+    const shopHtml  = a.shopItems?.length ? a.shopItems.map(i => `<span class="chip chip-shop">${i}</span>`).join('') : '<span class="chip chip-empty">empty</span>';
+    const vouchHtml = a.vouchers?.length  ? a.vouchers.map(v => `<span class="chip chip-voucher">${v}</span>`).join('') : '<span class="chip chip-empty">none</span>';
+    const tagHtml   = a.tags?.length      ? a.tags.map(t => `<span class="chip chip-tag">${t}</span>`).join('') : '<span class="chip chip-empty">none</span>';
+    return `<div class="ante-block" id="ante-block-${a.ante}" style="${visible ? '' : 'display:none'}">
+      <div class="ante-block-header">
+        <span class="ante-num">Ante ${a.ante}</span>
+        <span style="color:var(--text3)">•</span>
+        <span class="ante-boss">👁 ${a.boss}</span>
+      </div>
+      <div class="ante-block-body">
+        <div class="ante-row"><span class="ante-row-label">Shop</span><div class="ante-chips">${shopHtml}</div></div>
+        <div class="ante-row"><span class="ante-row-label">Vouchers</span><div class="ante-chips">${vouchHtml}</div></div>
+        <div class="ante-row"><span class="ante-row-label">Tags</span><div class="ante-chips">${tagHtml}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('modal-body').innerHTML = anteTabsHtml + blocksHtml;
+  // Re-attach tab state
+  state.analysisCache[`${data.seed}:${data.deck}:${data.stake}`] = data;
+}
+
+function setAnteView(view) {
+  state.activeAnteView = view;
+  // Update tabs
+  document.querySelectorAll('.ante-tab').forEach(el => {
+    const isAll = el.classList.contains('all');
+    const isThis = isAll ? view === 'all' : parseInt(el.textContent.replace('Ante ', '')) === view;
+    el.classList.toggle('active', isThis);
+  });
+  // Update visibility
+  document.querySelectorAll('[id^="ante-block-"]').forEach(el => {
+    const ante = parseInt(el.id.replace('ante-block-', ''));
+    el.style.display = (view === 'all' || view === ante) ? '' : 'none';
+  });
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-backdrop')) return;
+  document.getElementById('modal-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── Connect panel ──────────────────────────────────────────────────────────────
+function toggleConnect() {
+  state.connectOpen = !state.connectOpen;
+  document.getElementById('connect-body').classList.toggle('open', state.connectOpen);
+  document.getElementById('connect-toggle').classList.toggle('open', state.connectOpen);
+}
+
+function setConnectTab(tab) {
+  state.connectTab = tab;
+  document.querySelectorAll('.connect-tab').forEach((el, i) => {
+    const tabs = ['claude', 'cursor', 'stdio'];
+    el.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.connect-pane').forEach(el => {
+    el.classList.toggle('active', el.id === `pane-${tab}`);
+  });
+}
+
+function populateConnectSnippets() {
+  const url = `${window.location.origin}/mcp`;
+
+  document.getElementById('code-claude').childNodes[0].textContent = `{
+  "mcpServers": {
+    "balatro-seed-mcp": {
+      "type": "http",
+      "url": "${url}",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
+      }
+    }
+  }
+}`;
+
+  document.getElementById('code-cursor').childNodes[0].textContent = `"balatro-seed-mcp": {
+  "url": "${url}",
+  "transport": "http",
+  "headers": {
+    "Authorization": "Bearer YOUR_MCP_API_KEY"
+  }
+}`;
+
+  document.getElementById('code-stdio').childNodes[0].textContent = `{
+  "mcpServers": {
+    "balatro-seed-mcp": {
+      "command": "npx",
+      "args": ["tsx", "cli.ts"],
+      "cwd": "/path/to/balatro-seed-mcp"
+    }
+  }
+}`;
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+function setSearching(val) {
+  state.isSearching = val;
+  const btn = document.getElementById('search-btn');
+  btn.classList.toggle('loading', val);
+  btn.disabled = val;
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+
+function clearErrors() {
+  document.querySelectorAll('.error-banner').forEach(el => el.classList.remove('visible'));
+}
+
+function copyText(text) {
+  navigator.clipboard?.writeText(text).then(() => toast('Copied!', 'success')).catch(() => toast('Copy failed', 'error'));
+}
+
+function copyCode(id) {
+  const el = document.getElementById(id);
+  const text = el.childNodes[0]?.textContent || el.textContent;
+  copyText(text.trim());
+}
+
+function toast(msg, type = '') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3100);
+}
+
+// ── URL params (seed router / JAML sharing) ────────────────────────────────────
+function updateURL(jaml) {
+  try {
+    const p = new URLSearchParams({ jaml });
+    window.history.replaceState({}, '', '?' + p.toString());
+  } catch {}
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const jaml = params.get('jaml');
+  const seed = params.get('seed');
+
+  if (seed) {
+    // Direct seed analysis route: ?seed=ABCD1234&deck=Red&stake=White
+    const deck  = params.get('deck')  || 'Red';
+    const stake = params.get('stake') || 'White';
+    openAnalysis(seed, deck, stake);
+  }
+
+  if (jaml) {
+    document.getElementById('url-banner').classList.add('visible');
+    try {
+      const parsed = JSON.parse(jaml);
+      // Apply deck/stake
+      if (parsed.deck)  document.getElementById('deck-sel').value = parsed.deck;
+      if (parsed.stake) document.getElementById('stake-sel').value = parsed.stake;
+
+      // Populate builder from clauses
+      const mapGroup = (arr) => (arr || []).map(c => {
+        const key = Object.keys(c).find(k => k !== 'deck' && k !== 'stake');
+        return { type: key || 'joker', value: c[key] || '' };
+      });
+      clauses.must    = mapGroup(parsed.must);
+      clauses.should  = mapGroup(parsed.should);
+      clauses.mustNot = mapGroup(parsed.mustNot);
+      renderClauseGroups();
+
+      // Also set raw textarea
+      document.getElementById('raw-jaml').value = JSON.stringify(parsed, null, 2);
+
+      state.currentJaml = jaml;
+    } catch {}
+  }
+}
+
+// ── Version fetch ──────────────────────────────────────────────────────────────
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Add default "must" clause to show the builder isn't empty
+  clauses.must.push({ type: 'joker', value: '' });
+  renderClauseGroups();
+  populateConnectSnippets();
+  loadFromURL();
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.getElementById('modal-backdrop').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      runSearch();
+    }
+  });
+});
+</script>
+</body>
+</html>

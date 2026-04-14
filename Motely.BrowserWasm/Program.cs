@@ -2,6 +2,7 @@
 using Bootsharp;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
+using MotelyJaml;
 
 namespace Motely.BrowserWasm;
 
@@ -13,6 +14,7 @@ public static class Program
         {
             new ServiceCollection()
                 .AddBootsharp()
+                .AddSingleton<MotelyJamlSearchBuilder>()
                 .AddSingleton<MotelyWasmHost>()
                 .AddSingleton<IMotelyWasmHost>(static sp => sp.GetRequiredService<MotelyWasmHost>())
                 .BuildServiceProvider()
