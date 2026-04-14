@@ -1,0 +1,34 @@
+# Advanced combo search with scored conditions
+# Uses must/should/mustNot with "and" clauses
+name: Blueprint Brainstorm Combo
+author: pifreak
+deck: Red
+stake: White
+
+must:
+  - joker: Blueprint
+    antes: [1, 2, 3]
+  - joker: Brainstorm
+    antes: [1, 2, 3]
+
+should:
+  - and:
+    mode: sum
+    label: "Early Showman"
+    score: 50
+    clauses:
+      - joker: Showman
+        antes: [1, 2]
+        score: 25
+      - voucher: Telescope
+        antes: [1]
+        score: 25
+
+  - tarotCard: TheMagician
+    antes: [1, 2]
+    sources:
+      boosterPacks: [0, 1, 2, 3]
+
+mustNot:
+  - boss: TheNeedle
+    antes: [1]

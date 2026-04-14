@@ -1,0 +1,73 @@
+{
+  "JAML filter": {
+    "prefix": "jaml",
+    "body": [
+      "deck: ${1|Red,Blue,Yellow,Green,Black,Magic,Nebula,Ghost,Abandoned,Checkered,Zodiac,Painted,Anaglyph,Plasma,Erratic|}",
+      "stake: ${2|White,Red,Green,Black,Blue,Purple,Orange,Gold|}",
+      "must:",
+      "  - $0"
+    ],
+    "description": "New JAML filter"
+  },
+  "Joker clause": {
+    "prefix": "joker",
+    "body": ["${1|joker,commonJoker,uncommonJoker,rareJoker,legendaryJoker|}: ${2:Blueprint}"],
+    "description": "Joker clause"
+  },
+  "Joker with antes": {
+    "prefix": "joker-antes",
+    "body": [
+      "${1|joker,rareJoker|}: ${2:Blueprint}",
+      "antes: [${3:1, 2}]"
+    ],
+    "description": "Joker clause with antes"
+  },
+  "Voucher clause": {
+    "prefix": "voucher",
+    "body": ["voucher: ${1|Telescope,Observatory,Overstock,Hone,CrystalBall,SeedMoney|}"],
+    "description": "Voucher clause"
+  },
+  "Boss clause": {
+    "prefix": "boss",
+    "body": ["boss: ${1|TheEye,TheTooth,ThePlant,TheWheel,TheOx|}"],
+    "description": "Boss blind clause"
+  },
+  "Tag clause": {
+    "prefix": "tag",
+    "body": ["tag: ${1|RareTag,NegativeTag,FoilTag,HolographicTag,PolychromeTag|}"],
+    "description": "Tag clause"
+  },
+  "Should clause (scored)": {
+    "prefix": "should",
+    "body": [
+      "should:",
+      "  - ${1|joker,rareJoker|}: ${2:Brainstorm}",
+      "    score: ${3:1}"
+    ],
+    "description": "Scored should clause"
+  },
+  "mustNot clause": {
+    "prefix": "mustnot",
+    "body": [
+      "mustNot:",
+      "  - joker: ${1:Cavendish}"
+    ],
+    "description": "Exclusion clause"
+  },
+  "Jummy mumble line": {
+    "prefix": "mumble",
+    "body": ["${1:Blueprint} in Ante ${2:1}"],
+    "description": "Jummy mumble line"
+  },
+  "Jummy what/where": {
+    "prefix": "what",
+    "body": [
+      "- what:",
+      "    ${1|rareJoker,joker,voucher|}: ${2:Blueprint}",
+      "  where:",
+      "    ante: \"${3:1 or 2}\"",
+      "    booster packs: \"${4:first and second}\""
+    ],
+    "description": "Jummy what/where block"
+  }
+}

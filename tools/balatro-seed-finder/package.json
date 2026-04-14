@@ -1,0 +1,46 @@
+{
+  "name": "balatro-seed-finder",
+  "version": "10.0.0",
+  "description": "MCP server for searching and analyzing Balatro seeds using MotelyJAML",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "balatro-seed-finder": "./cli.ts"
+  },
+  "scripts": {
+    "start": "npx tsx cli.ts",
+    "build:mcp-ui": "vite build --config mcp-ui/vite.config.ts",
+    "build": "pnpm run build:mcp-ui",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "mcp",
+    "balatro",
+    "seed",
+    "jaml",
+    "motely"
+  ],
+  "author": "OptimusPi",
+  "license": "MIT",
+  "packageManager": "pnpm@9.4.0",
+  "dependencies": {
+    "@json-render/core": "^0.17.0",
+    "@json-render/react": "^0.17.0",
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "motely-wasm": "10.0.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.8",
+    "vite-plugin-singlefile": "^2.3.2",
+    "vitest": "^4.1.4"
+  }
+}
