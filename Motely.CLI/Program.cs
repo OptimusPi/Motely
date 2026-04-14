@@ -64,17 +64,25 @@ partial class Program
 
         // ESC key to quit (same as Ctrl+C)
         var escCts = new CancellationTokenSource();
-        _ = Task.Run(async () =>
+        var escThread = new Thread(() =>
         {
-            while (!escCts.Token.IsCancellationRequested)
+            try
             {
-                await Task.Delay(100, escCts.Token).ConfigureAwait(false);
-                if (!Console.KeyAvailable) continue;
-                var key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.Escape)
-                    RequestTermination();
+                while (!escCts.Token.IsCancellationRequested)
+                {
+                    // Avoid Console.ReadKey — it holds an internal lock that can deadlock
+                    // with Console.WriteLine on worker threads.
+                    Thread.Sleep(100);
+                    if (!Console.KeyAvailable) continue;
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.Escape)
+                        RequestTermination();
+                }
             }
-        }, escCts.Token);
+            catch (OperationCanceledException) { }
+        })
+        { IsBackground = true, Name = "ESC Key Listener" };
+        escThread.Start();
 
         var app = new CommandLineApplication
         {

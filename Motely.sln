@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.DistributedWorker", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.CLI", "Motely.CLI\Motely.CLI.csproj", "{67F9CCEF-6756-4971-8FD6-655A73F5F6C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.BrowserWasm", "Motely.BrowserWasm\Motely.BrowserWasm.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.Wasm", "Motely.Wasm\Motely.Wasm.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Motely.HelperAPI", "Motely.HelperAPI\Motely.HelperAPI.csproj", "{1AB096AE-2218-4614-9F02-E351BC63C782}"
 EndProject

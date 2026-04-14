@@ -320,12 +320,12 @@ public static partial class MotelyGlobals
     {
         if (current.Length == padLen)
         {
-            // Insert at all positions: prefix, suffix, and infix
-            yield return current + keyword;
-            yield return keyword + current;
-            for (int i = 1; i < keyword.Length; i++)
+            // Distribute the padding block into slots around the keyword:
+            // slot 0 = before keyword, slot i = after keyword[i-1], slot keyword.Length = after keyword.
+            // The padding block stays contiguous so the keyword is never split.
+            for (int slot = 0; slot <= keyword.Length; slot++)
             {
-                yield return keyword.Substring(0, i) + current + keyword.Substring(i);
+                yield return keyword.Substring(0, slot) + current + keyword.Substring(slot);
             }
             yield break;
         }

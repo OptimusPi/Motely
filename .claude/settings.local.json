@@ -131,7 +131,10 @@
       "Bash(where gh:*)",
       "Bash(node --test test.mjs)",
       "Bash(curl -s https://jaml-mcp.vercel.app/api/analyze -X POST -H \"Content-Type: application/json\" -d '{\"seed\":\"ALEEB5N\",\"jaml\":\"{\\\\\"deck\\\\\":\\\\\"Red\\\\\",\\\\\"stake\\\\\":\\\\\"White\\\\\"}\"}')",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(powershell:*)",
+      "Bash(dir:*)",
+      "WebFetch(domain:claude.com)"
     ],
     "additionalDirectories": [
       "D:\\jaml-mcp"
