@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using Motely;
 using Motely.DistributedWorker;
@@ -25,12 +26,70 @@ var app = builder.Build();
 
 app.UseCors();
 
-// Serve the motely-wasm seed tools (Vite build output copied to wwwroot/).
-app.UseDefaultFiles();
+// ── MIME type provider — WASM needs application/wasm or the browser
+//    will refuse to compile it. Also explicitly map .mjs, .br, .gz.
+var mimeProvider = new FileExtensionContentTypeProvider();
+mimeProvider.Mappings[".wasm"]  = "application/wasm";
+mimeProvider.Mappings[".mjs"]   = "text/javascript";
+mimeProvider.Mappings[".cjs"]   = "text/javascript";
+mimeProvider.Mappings[".br"]    = "application/x-brotli";
+mimeProvider.Mappings[".gz"]    = "application/x-gzip";
+mimeProvider.Mappings[".blat"]  = "application/octet-stream";
+mimeProvider.Mappings[".dat"]   = "application/octet-stream";
+mimeProvider.Mappings[".sym"]   = "application/octet-stream";
+
+var staticFileOptions = new StaticFileOptions
+{
+    ContentTypeProvider = mimeProvider,
+    ServeUnknownFileTypes = true,  // Catch any edge-case extensions (pdb, etc.)
+    // Enable headers that let pre-compressed files be served correctly.
+    OnPrepareResponse = ctx =>
+    {
+        var path = ctx.File.Name;
+        if (path.EndsWith(".br", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.ContentEncoding = "br";
+            // Strip the .br so the browser gets the original content-type
+            var baseName = path[..^3];
+            if (mimeProvider.TryGetContentType(baseName, out var baseMime))
+                ctx.Context.Response.ContentType = baseMime;
+        }
+        else if (path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.ContentEncoding = "gzip";
+            var baseName = path[..^3];
+            if (mimeProvider.TryGetContentType(baseName, out var baseMime))
+                ctx.Context.Response.ContentType = baseMime;
+        }
+        // Wide-open COOP/COEP for SharedArrayBuffer (threads support)
+        ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"]    = "same-origin";
+        ctx.Context.Response.Headers["Cross-Origin-Embedder-Policy"]  = "require-corp";
+    },
+};
+
+// ── Serve the Avalonia WASM app at /jammy-seed-finder/ ──────────────
+// UseDefaultFiles + UseStaticFiles must be scoped to the sub-path so
+// the browser gets the right index.html (the Avalonia bootstrap) and
+// not the root splash page.
+app.UseDefaultFiles(new DefaultFilesOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.WebRootPath, "jammy-seed-finder")),
+    RequestPath = "/jammy-seed-finder",
+});
 app.UseStaticFiles(new StaticFileOptions
 {
-    ServeUnknownFileTypes = true // .wasm, .mjs, etc.
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.WebRootPath, "jammy-seed-finder")),
+    RequestPath = "/jammy-seed-finder",
+    ContentTypeProvider = mimeProvider,
+    ServeUnknownFileTypes = true,
+    OnPrepareResponse = staticFileOptions.OnPrepareResponse,
 });
+
+// ── Root wwwroot (splash page, duckdb-reader.js, assorted assets) ───
+app.UseDefaultFiles();
+app.UseStaticFiles(staticFileOptions);
 
 // ── Routes ──────────────────────────────────────────────────────────
 

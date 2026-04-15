@@ -1,11 +1,11 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>10.1.1</MotelyVersion>
+    <MotelyVersion>11.1.0</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Bootsharp" Version="0.7.0" />
-    <PackageVersion Include="Bootsharp.Inject" Version="0.7.0" />
+    <PackageVersion Include="Bootsharp" Version="0.8.0" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.8.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageVersion Include="Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
     <PackageVersion Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />

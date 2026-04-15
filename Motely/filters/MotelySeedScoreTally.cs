@@ -53,12 +53,21 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScores
         return _tallyValues[index];
     }
 
-    public readonly int TallyCount => _tallyCount;
+    public readonly int TallyCount
+    {
+        get
+        {
+            return _tallyCount;
+        }
+    }
 
     public readonly ReadOnlySpan<int> TallyValuesSpan
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
+        get
+        {
+            return new((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
+        }
     }
 
     public readonly List<int> TallyColumns

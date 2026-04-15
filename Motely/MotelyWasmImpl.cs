@@ -1,18 +1,12 @@
 using Motely.Analysis;
 using Motely.Filters;
+using System.Collections.Concurrent;
 
 namespace Motely;
 
 public sealed class MotelyWasmImpl : IMotelyWasm
 {
-    private readonly IMotelyWasmEvents _events;
-    private readonly object _sync = new();
-    private IMotelySearch? _currentSearch;
-
-    public MotelyWasmImpl(IMotelyWasmEvents events)
-    {
-        _events = events;
-    }
+    public MotelyWasmImpl() { }
 
     public string GetVersion() => VersionInfo.Version;
 
@@ -39,7 +33,7 @@ public sealed class MotelyWasmImpl : IMotelyWasm
         return new MotelyWasmSearchContext(seed, deck, stake);
     }
 
-    public void StartRandomSearch(string jaml, int randomSeedCount)
+    public IMotelyWasmSearch StartRandomSearch(string jaml, int randomSeedCount)
     {
         var config = ParseJaml(jaml);
         var plan = JamlSearchBuilder.CreatePlan(config);
@@ -48,10 +42,10 @@ public sealed class MotelyWasmImpl : IMotelyWasm
             .WithStake(config.Stake)
             .WithThreadCount(1)
             .WithRandomSearch(Math.Max(1, randomSeedCount));
-        RunSearch(settings);
+        return RunSearch(settings);
     }
 
-    public void StartSequentialSearch(string jaml, int batchCharCount,
+    public IMotelyWasmSearch StartSequentialSearch(string jaml, int batchCharCount,
         long startBatch, long endBatch)
     {
         var config = ParseJaml(jaml);
@@ -64,10 +58,26 @@ public sealed class MotelyWasmImpl : IMotelyWasm
             .WithSequentialSearch();
         if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
         if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
-        RunSearch(settings);
+        return RunSearch(settings);
     }
 
-    public void StartSeedListSearch(string jaml, string[] seeds)
+    public async Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(
+        string jaml,
+        int batchCharCount,
+        long startBatch,
+        long endBatch,
+        int maxResults)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(batchCharCount, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxResults, 0);
+
+        using var search = StartSequentialSearch(jaml, batchCharCount, startBatch, endBatch);
+        var completion = await search.WaitForCompletion();
+        var results = search.DrainResults(maxResults);
+        return new(completion, results);
+    }
+
+    public IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds)
     {
         var config = ParseJaml(jaml);
         var trimmed = seeds
@@ -82,10 +92,10 @@ public sealed class MotelyWasmImpl : IMotelyWasm
             .WithStake(config.Stake)
             .WithThreadCount(1)
             .WithListSearch(trimmed, trimmed.Length);
-        RunSearch(settings);
+        return RunSearch(settings);
     }
 
-    public void StartKeywordSearch(string jaml, string keywordsCsv,
+    public IMotelyWasmSearch StartKeywordSearch(string jaml, string keywordsCsv,
         string paddingChars)
     {
         var config = ParseJaml(jaml);
@@ -105,12 +115,7 @@ public sealed class MotelyWasmImpl : IMotelyWasm
             .WithStake(config.Stake)
             .WithThreadCount(1)
             .WithProviderSearch(provider);
-        RunSearch(settings);
-    }
-
-    public void StopSearch()
-    {
-        lock (_sync) _currentSearch?.Cancel();
+        return RunSearch(settings);
     }
 
     private JamlConfig ParseJaml(string jaml)
@@ -121,51 +126,14 @@ public sealed class MotelyWasmImpl : IMotelyWasm
         return config;
     }
 
-    private void RunSearch(IMotelySearchSettings settings)
+    private IMotelyWasmSearch RunSearch(IMotelySearchSettings settings)
     {
+        var results = new ConcurrentQueue<MotelyWasmSearchResult>();
         settings = settings
-            .WithProgressCallback(p =>
-                _events.NotifyProgress(p.SeedsSearched, p.MatchingSeeds))
-            .WithScoredResultCallback(t =>
-                _events.NotifyResult(t.Seed, t.Score, t.TallyColumns.ToArray()));
+            .WithSeedMatchCallback(seed => results.Enqueue(new(seed, 0, [])))
+            .WithScoredResultCallback(t => results.Enqueue(new(t.Seed, t.Score, t.TallyColumns.ToArray())));
 
         var search = settings.Start();
-
-        lock (_sync)
-        {
-            _currentSearch?.Cancel();
-            _currentSearch = search;
-        }
-
-        _ = WatchAsync(search);
-    }
-
-    private async Task WatchAsync(IMotelySearch search)
-    {
-        try
-        {
-            await search.WaitForCompletionAsync();
-            _events.NotifyComplete("completed",
-                search.TotalSeedsSearched, search.MatchingSeeds);
-        }
-        catch (OperationCanceledException)
-        {
-            _events.NotifyComplete("cancelled",
-                search.TotalSeedsSearched, search.MatchingSeeds);
-        }
-        catch (Exception ex)
-        {
-            _events.NotifyComplete($"error: {ex.Message}",
-                search.TotalSeedsSearched, search.MatchingSeeds);
-        }
-        finally
-        {
-            lock (_sync)
-            {
-                if (ReferenceEquals(_currentSearch, search))
-                    _currentSearch = null;
-            }
-            search.Dispose();
-        }
+        return new MotelyWasmSearch(search, results);
     }
 }
