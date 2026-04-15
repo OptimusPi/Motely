@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "motely-wasm": "file:../motely-wasm"
+    "motely-wasm": "^11.1.0"
   },
   "devDependencies": {
     "vite": "^6.3.5"
