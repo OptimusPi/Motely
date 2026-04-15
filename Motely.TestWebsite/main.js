@@ -1,7 +1,13 @@
-import bootsharp, { MotelyJamlSearchBuilder, MotelySingleSearchContext, SearchEvents, Motely, Filters } from "motely-wasm";
+import bootsharp, { MotelyWasm, MotelyWasmEvents, Motely } from "motely-wasm";
 
 const out = document.getElementById("out");
 const status = document.getElementById("status");
+const panelSequential = document.getElementById("panel-sequential");
+const panelProvider = document.getElementById("panel-provider");
+const panelAesthetic = document.getElementById("panel-aesthetic");
+const seqTab = document.querySelector('[data-tab="sequential"]');
+const providerTab = document.querySelector('[data-tab="provider"]');
+const aesTab = document.querySelector('[data-tab="aesthetic"]');
 const log = s => { out.textContent += s + "\n"; };
 
 // Tabs
@@ -18,29 +24,40 @@ document.getElementById("btn-clear").addEventListener("click", () => { out.textC
 // Populate deck/stake dropdowns
 const deckSel = document.getElementById("deck");
 const stakeSel = document.getElementById("stake");
-const aesSel = document.getElementById("aes-val");
 for (const [k, v] of Object.entries(Motely.MotelyDeck))
   if (typeof v === "number") deckSel.append(new Option(k, v));
 for (const [k, v] of Object.entries(Motely.MotelyStake))
   if (typeof v === "number") stakeSel.append(new Option(k, v));
-// Aesthetic enum
-for (const [k, v] of Object.entries(Filters.JamlAesthetic))
-  if (typeof v === "number") aesSel.append(new Option(k, v));
+
+if (panelSequential) panelSequential.innerHTML = '<p>This demo is currently focused on the single-seed browser search-context API.</p>';
+if (panelProvider) panelProvider.innerHTML = '<p>Provider search wiring is temporarily disabled here while the site is aligned to the new MotelyWasm surface.</p>';
+if (panelAesthetic) panelAesthetic.innerHTML = '<p>Aesthetic search wiring is temporarily disabled here while the site is aligned to the new MotelyWasm surface.</p>';
+if (seqTab) seqTab.style.display = 'none';
+if (providerTab) providerTab.style.display = 'none';
+if (aesTab) aesTab.style.display = 'none';
 
 // Events
-SearchEvents.onProgress.subscribe((searched, matching) =>
+MotelyWasmEvents.onProgress.subscribe((searched, matching) =>
   log(`[progress] ${searched} searched  ${matching} matching`));
-SearchEvents.onResult.subscribe((seed, score, tally) =>
+MotelyWasmEvents.onResult.subscribe((seed, score, tally) =>
   log(`[result] ${seed}  score=${score}  tally=[${[...tally]}]`));
-SearchEvents.onComplete.subscribe((status, searched, matching) =>
+MotelyWasmEvents.onComplete.subscribe((status, searched, matching) =>
   log(`[done] ${status}  searched=${searched}  matching=${matching}`));
 
-// Track active search session for cancellation
-let activeSession = null;
+const defaultRunState = () => ({ voucherBitfield: 0, bossBitfield: 0 });
+let ctx = null;
+let shopStream = null;
+let tagStream = null;
+let bossStream = null;
+let packStream = null;
+let misprintStream = null;
+let luckyMoneyStream = null;
+let luckyMultStream = null;
+let erraticStream = null;
 
 try {
   await bootsharp.boot();
-  const ver = MotelyJamlSearchBuilder.getVersion();
+  const ver = MotelyWasm.getVersion();
   document.getElementById("ver").textContent = ver;
   status.textContent = `Ready — ${ver}`;
 } catch (e) {
@@ -49,14 +66,20 @@ try {
 }
 
 // ── Single-seed explorer ──────────────────────────────────────────────────────
-let ctx = null;
-
 document.getElementById("btn-ctx").addEventListener("click", () => {
   const seed = document.getElementById("seed").value.trim();
-  ctx = MotelySingleSearchContext.open(seed, Number(deckSel.value), Number(stakeSel.value));
+  ctx = MotelyWasm.createSearchContext(seed, Number(deckSel.value), Number(stakeSel.value));
+  shopStream = null;
+  tagStream = null;
+  bossStream = null;
+  packStream = null;
+  misprintStream = null;
+  luckyMoneyStream = null;
+  luckyMultStream = null;
+  erraticStream = null;
   out.textContent = "";
   log(`Loaded: ${seed}  deck=${deckSel.options[deckSel.selectedIndex].text}  stake=${stakeSel.options[stakeSel.selectedIndex].text}`);
-  log(`Context: ${JSON.stringify(ctx, null, 2)}`);
+  log(`Context ready: ${seed}`);
 });
 
 const ante = () => Number(document.getElementById("ante").value);
@@ -68,20 +91,63 @@ document.querySelectorAll("[data-action]").forEach(btn => {
     const a = ante(), bl = baseLuck();
     try {
       const r = {
-        voucher:    () => `voucher ante ${a}: ${ctx.getAnteFirstVoucher(a)}`,
-        tag:        () => `tag ante ${a}: ${ctx.getNextTag(a)}`,
-        boss:       () => `boss ante ${a}: ${ctx.getBossForAnte(a)}`,
-        pack:       () => `pack ante ${a}: ${JSON.stringify(ctx.getNextBoosterPack(a))}`,
-        shopitem:   () => `shop item ante ${a}: ${JSON.stringify(ctx.getNextShopItem(a))}`,
-        shopjoker:  () => `shop joker ante ${a}: ${JSON.stringify(ctx.getNextShopJoker(a))}`,
-        tarot:      () => `tarot ante ${a}: ${JSON.stringify(ctx.getNextTarot(a))}`,
-        spectral:   () => `spectral ante ${a}: ${JSON.stringify(ctx.getNextSpectral(a))}`,
-        planet:     () => `planet ante ${a}: ${JSON.stringify(ctx.getNextPlanet(a))}`,
-        stdcard:    () => `std card ante ${a}: ${JSON.stringify(ctx.getNextStandardCard(a))}`,
-        misprint:   () => `misprint mult: ${ctx.getNextMisprintMult()}`,
-        luckymoney: () => `lucky money (luck=${bl}): ${ctx.getNextLuckyMoney(bl)}`,
-        luckymult:  () => `lucky mult (luck=${bl}): ${ctx.getNextLuckyMult(bl)}`,
-        erratic:    () => `erratic card: ${JSON.stringify(ctx.getNextErraticDeckCard())}`,
+        voucher: () => {
+          const result = ctx.getAnteFirstVoucher(a, defaultRunState());
+          return `voucher ante ${a}: ${Motely.MotelyVoucher[result.voucher]}`;
+        },
+        tag: () => {
+          tagStream ??= ctx.createTagStream(a);
+          const result = ctx.getNextTag(tagStream);
+          tagStream = result.stream;
+          return `tag ante ${a}: ${Motely.MotelyTag[result.tag]}`;
+        },
+        boss: () => {
+          bossStream ??= ctx.createBossStream();
+          const result = ctx.getNextBossForAnte(bossStream, a, defaultRunState());
+          bossStream = result.stream;
+          return `boss ante ${a}: ${Motely.MotelyBossBlind[result.boss]}`;
+        },
+        pack: () => {
+          packStream ??= ctx.createBoosterPackStream(a);
+          const result = ctx.getNextBoosterPack(packStream);
+          packStream = result.stream;
+          return `pack ante ${a}: ${Motely.MotelyBoosterPack[result.pack]}`;
+        },
+        shopitem: () => {
+          shopStream ??= ctx.createShopItemStream(a, defaultRunState(), Motely.MotelyShopStreamFlags.Default, Motely.MotelyJokerStreamFlags.Default);
+          const result = ctx.getNextShopItem(shopStream);
+          shopStream = result.stream;
+          return `shop item ante ${a}: ${result.item.value}`;
+        },
+        shopjoker: () => "shop joker: use shop scroll chunking to inspect packed item output",
+        tarot: () => "tarot: use shop scroll chunking to inspect packed item output",
+        spectral: () => "spectral: use shop scroll chunking to inspect packed item output",
+        planet: () => "planet: use shop scroll chunking to inspect packed item output",
+        stdcard: () => "std card: standard-card-specific browser helper not wired in this surface yet",
+        misprint: () => {
+          misprintStream ??= ctx.createMisprintPrngStream();
+          const result = ctx.getNextMisprintMult(misprintStream);
+          misprintStream = result.stream;
+          return `misprint mult: ${result.value}`;
+        },
+        luckymoney: () => {
+          luckyMoneyStream ??= ctx.createLuckyCardMoneyStream();
+          const result = ctx.getNextLuckyMoney(luckyMoneyStream, bl);
+          luckyMoneyStream = result.stream;
+          return `lucky money (luck=${bl}): ${result.value}`;
+        },
+        luckymult: () => {
+          luckyMultStream ??= ctx.createLuckyCardMultStream();
+          const result = ctx.getNextLuckyMult(luckyMultStream, bl);
+          luckyMultStream = result.stream;
+          return `lucky mult (luck=${bl}): ${result.value}`;
+        },
+        erratic: () => {
+          erraticStream ??= ctx.createErraticDeckPrngStream();
+          const result = ctx.getNextErraticDeckCard(erraticStream);
+          erraticStream = result.stream;
+          return `erratic card: ${result.item.value}`;
+        },
       }[btn.dataset.action];
       log(r ? r() : "?");
     } catch (e) {
@@ -90,78 +156,13 @@ document.querySelectorAll("[data-action]").forEach(btn => {
   });
 });
 
-// ── Sequential ────────────────────────────────────────────────────────────────
-document.getElementById("btn-seq").addEventListener("click", () => {
-  const jaml = document.getElementById("jaml-seq").value.trim();
-  if (!jaml) { log("Paste JAML first."); return; }
-  try {
-    MotelyJamlSearchBuilder.loadJaml(jaml);
-    const batchcc = Number(document.getElementById("seq-batchcc").value);
-    const start = BigInt(document.getElementById("seq-start").value);
-    const end = BigInt(document.getElementById("seq-end").value);
-    out.textContent = "";
-    MotelyJamlSearchBuilder.sequential(batchcc, start, end);
-    activeSession = MotelyJamlSearchBuilder.run();
-  } catch (e) { log(`Error: ${e?.message ?? e}`); }
-});
-document.getElementById("btn-seq-stop").addEventListener("click", () => {
-  if (activeSession) { activeSession.cancel(); activeSession = null; }
-});
-
-// ── Provider ──────────────────────────────────────────────────────────────────
-const loadProvJaml = () => {
-  const j = document.getElementById("jaml-prov").value.trim();
-  if (!j) throw new Error("Paste JAML first.");
-  MotelyJamlSearchBuilder.loadJaml(j);
-};
-
-document.getElementById("btn-random").addEventListener("click", () => {
-  try {
-    loadProvJaml();
-    const count = Number(document.getElementById("prov-count").value);
-    out.textContent = "";
-    MotelyJamlSearchBuilder.random(count);
-    activeSession = MotelyJamlSearchBuilder.run();
-  } catch (e) { log(`Error: ${e?.message ?? e}`); }
-});
-
-document.getElementById("btn-keyword").addEventListener("click", () => {
-  try {
-    loadProvJaml();
-    const kw = document.getElementById("prov-keywords").value.trim();
-    const pad = document.getElementById("prov-padding").value.trim();
-    if (!kw) { log("Enter keywords."); return; }
-    out.textContent = "";
-    MotelyJamlSearchBuilder.keywords(kw, pad);
-    activeSession = MotelyJamlSearchBuilder.run();
-  } catch (e) { log(`Error: ${e?.message ?? e}`); }
-});
-
-document.getElementById("btn-seedlist").addEventListener("click", () => {
-  try {
-    loadProvJaml();
-    const seeds = document.getElementById("prov-seeds").value.trim();
-    if (!seeds) { log("Enter seeds."); return; }
-    out.textContent = "";
-    MotelyJamlSearchBuilder.seedList(seeds.split(",").map(s => s.trim()));
-    activeSession = MotelyJamlSearchBuilder.run();
-  } catch (e) { log(`Error: ${e?.message ?? e}`); }
-});
-
-document.getElementById("btn-prov-stop").addEventListener("click", () => {
-  if (activeSession) { activeSession.cancel(); activeSession = null; }
-});
-
 // ── Shop scroll stress test ──────────────────────────────────────────────────
 let scrollRunning = false;
 
 document.getElementById("btn-shopscroll").addEventListener("click", async () => {
   if (!ctx) { log("Load a seed first."); return; }
   if (scrollRunning) return;
-  if (typeof ctx.getNextShopItem !== "function") {
-    log("Shop scroll requires instance methods (not supported with current binding).");
-    return;
-  }
+  shopStream ??= ctx.createShopItemStream(ante(), defaultRunState(), Motely.MotelyShopStreamFlags.Default, Motely.MotelyJokerStreamFlags.Default);
   scrollRunning = true;
   const batchSize = Number(document.getElementById("scroll-batch").value) || 100;
   const a = ante();
@@ -171,12 +172,13 @@ document.getElementById("btn-shopscroll").addEventListener("click", async () => 
 
   const tick = () => {
     if (!scrollRunning) return;
-    const batchStart = performance.now();
-    for (let i = 0; i < batchSize; i++) ctx.getNextShopItem(a);
-    total += batchSize;
+    const result = ctx.getNextShopItemChunk(shopStream, batchSize);
+    shopStream = result.stream;
+    total += result.items.length;
     const now = performance.now();
     if (now - lastLog >= 500) {
-      log(`${Math.round(now - t0)}ms  →  ${total} items  (${Math.round(total / ((now - t0) / 1000))}/s)`);
+      const latest = Array.from(result.items.slice(0, Math.min(5, result.items.length))).join(", ");
+      log(`${Math.round(now - t0)}ms  →  ${total} items  (${Math.round(total / ((now - t0) / 1000))}/s) latest=[${latest}] ante=${a}`);
       lastLog = now;
     }
     requestAnimationFrame(tick);
@@ -187,20 +189,4 @@ document.getElementById("btn-shopscroll").addEventListener("click", async () => 
 document.getElementById("btn-shopscroll-stop").addEventListener("click", () => {
   scrollRunning = false;
   log("stopped");
-});
-
-// ── Aesthetic ────────────────────────────────────────────────────────────────
-document.getElementById("btn-aes").addEventListener("click", () => {
-  try {
-    const jaml = document.getElementById("jaml-aes").value.trim();
-    if (!jaml) { log("Paste JAML first."); return; }
-    MotelyJamlSearchBuilder.loadJaml(jaml);
-    const aes = Number(aesSel.value);
-    out.textContent = "";
-    MotelyJamlSearchBuilder.aesthetic(aes);
-    activeSession = MotelyJamlSearchBuilder.run();
-  } catch (e) { log(`Error: ${e?.message ?? e}`); }
-});
-document.getElementById("btn-aes-stop").addEventListener("click", () => {
-  if (activeSession) { activeSession.cancel(); activeSession = null; }
 });

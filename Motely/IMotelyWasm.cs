@@ -6,11 +6,12 @@ public interface IMotelyWasm
     string ValidateJaml(string jaml);
     string CompileJummy(string jummy);
     IMotelyWasmSearchContext CreateSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
-    void StartRandomSearch(string jaml, int randomSeedCount);
-    void StartSequentialSearch(string jaml, int batchCharCount,
+    IMotelyWasmSearch StartRandomSearch(string jaml, int randomSeedCount);
+    IMotelyWasmSearch StartSequentialSearch(string jaml, int batchCharCount,
         long startBatch, long endBatch);
-    void StartSeedListSearch(string jaml, string[] seeds);
-    void StartKeywordSearch(string jaml, string keywordsCsv,
+    Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(string jaml, int batchCharCount,
+        long startBatch, long endBatch, int maxResults);
+    IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds);
+    IMotelyWasmSearch StartKeywordSearch(string jaml, string keywordsCsv,
         string paddingChars);
-    void StopSearch();
 }
