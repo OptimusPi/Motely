@@ -35,7 +35,7 @@
       <div class="tab active" data-tab="explorer">Single-seed</div>
       <div class="tab" data-tab="sequential">Sequential</div>
       <div class="tab" data-tab="provider">Provider</div>
-      <div class="tab" data-tab="aesthetic">Aesthetic</div>
+      <div class="tab" data-tab="aesthetic">Jummy</div>
     </div>
 
     <!-- Single-seed explorer -->
@@ -101,20 +101,18 @@
       <div class="row">
         <button id="btn-seedlist">Seed list</button>
         <label>Seeds (csv): <input id="prov-seeds" type="text" value="" placeholder="e.g. AAAA,BBBB" style="width:20rem" /></label>
-        <label>Threads: <input id="prov-threads" type="number" value="1" style="width:4rem" /></label>
       </div>
       <div class="row"><button id="btn-prov-stop">Stop</button></div>
     </div>
 
-    <!-- Aesthetic search -->
+    <!-- Jummy compile -->
     <div class="panel" id="panel-aesthetic">
       <div class="row">
-        <textarea id="jaml-aes" rows="5" placeholder="Paste JAML here… (aesthetics field optional)"></textarea>
+        <textarea id="jaml-aes" rows="5" placeholder="Paste Jummy here…"></textarea>
       </div>
       <div class="row">
-        <label>Aesthetic: <select id="aes-val"></select></label>
-        <button id="btn-aes">Start aesthetic</button>
-        <button id="btn-aes-stop">Stop</button>
+        <button id="btn-aes">Compile to JAML</button>
+        <button id="btn-aes-stop">Copy into search inputs</button>
       </div>
     </div>
 
