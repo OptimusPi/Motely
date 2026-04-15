@@ -1,4 +1,4 @@
-import bootsharp, { MotelyWasm, Motely } from "motely-wasm";
+import bootsharp, { MotelyWasm, Motely, Filters } from "motely-wasm";
 
 const out = document.getElementById("out");
 const status = document.getElementById("status");
@@ -20,6 +20,9 @@ for (const [k, v] of Object.entries(Motely.MotelyDeck))
   if (typeof v === "number") deckSel.append(new Option(k, v));
 for (const [k, v] of Object.entries(Motely.MotelyStake))
   if (typeof v === "number") stakeSel.append(new Option(k, v));
+const aestheticSel = document.getElementById("aes-val");
+for (const [k, v] of Object.entries(Filters.JamlAesthetic ?? {}))
+  if (typeof v === "number") aestheticSel.append(new Option(k, v));
 
 const defaultRunState = () => ({ voucherBitfield: 0, bossBitfield: 0 });
 const enumName = (enumObject, value) => enumObject[value] ?? String(value);
@@ -78,7 +81,6 @@ const cleanupActiveSearch = () => {
     activeSearchDrainTimer = null;
   }
   if (activeSearch) {
-    activeSearch.dispose();
     activeSearch = null;
   }
   setReadyStatus();
@@ -332,10 +334,25 @@ document.getElementById("btn-prov-stop").addEventListener("click", cancelActiveS
 // ── Aesthetic search ─────────────────────────────────────────────────────────
 document.getElementById("btn-aes").addEventListener("click", () => {
   try {
+    const jaml = ensureJaml("jaml-aes");
+    const aesthetic = Number(aestheticSel.value);
+    const aestheticName = aestheticSel.options[aestheticSel.selectedIndex]?.text ?? String(aesthetic);
+    const handle = MotelyWasm.startAestheticSearch(jaml, aesthetic);
+    void startSearch(`aesthetic:${aestheticName}`, handle);
+  } catch (e) {
+    log(`Error: ${e?.message ?? e}`);
+  }
+});
+
+document.getElementById("btn-aes-stop").addEventListener("click", cancelActiveSearch);
+
+document.getElementById("btn-aes-compile").addEventListener("click", () => {
+  try {
     const jummy = document.getElementById("jaml-aes").value.trim();
     if (!jummy)
       throw new Error("Enter Jummy first.");
     lastCompiledJummy = MotelyWasm.compileJummy(jummy);
+    document.getElementById("jaml-aes").value = lastCompiledJummy;
     log("[jummy] compiled successfully");
     log(lastCompiledJummy);
   } catch (e) {
@@ -343,7 +360,7 @@ document.getElementById("btn-aes").addEventListener("click", () => {
   }
 });
 
-document.getElementById("btn-aes-stop").addEventListener("click", () => {
+document.getElementById("btn-aes-copy").addEventListener("click", () => {
   const compiled = lastCompiledJummy || document.getElementById("jaml-aes").value.trim();
   if (!compiled) {
     log("Nothing to copy.");
@@ -351,5 +368,5 @@ document.getElementById("btn-aes-stop").addEventListener("click", () => {
   }
   document.getElementById("jaml-seq").value = compiled;
   document.getElementById("jaml-prov").value = compiled;
-  log("[jummy] copied into sequential and provider inputs");
+  log("[jaml] copied into sequential and provider inputs");
 });

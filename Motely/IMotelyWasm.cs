@@ -1,3 +1,5 @@
+using Motely.Filters;
+
 namespace Motely;
 
 public interface IMotelyWasm
@@ -7,6 +9,7 @@ public interface IMotelyWasm
     string CompileJummy(string jummy);
     IMotelyWasmSearchContext CreateSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
     IMotelyWasmSearch StartRandomSearch(string jaml, int randomSeedCount);
+    IMotelyWasmSearch StartAestheticSearch(string jaml, JamlAesthetic aesthetic);
     IMotelyWasmSearch StartSequentialSearch(string jaml, int batchCharCount,
         long startBatch, long endBatch);
     Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(string jaml, int batchCharCount,
