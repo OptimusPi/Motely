@@ -8,11 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-<<<<<<< Updated upstream
-    "motely-wasm": "^10.0.2"
-=======
     "motely-wasm": "file:../motely-wasm"
->>>>>>> Stashed changes
   },
   "devDependencies": {
     "vite": "^6.3.5"
