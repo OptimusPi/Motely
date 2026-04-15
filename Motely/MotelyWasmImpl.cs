@@ -45,6 +45,18 @@ public sealed class MotelyWasmImpl : IMotelyWasm
         return RunSearch(settings);
     }
 
+    public IMotelyWasmSearch StartAestheticSearch(string jaml, JamlAesthetic aesthetic)
+    {
+        var config = ParseJaml(jaml);
+        var plan = JamlSearchBuilder.CreatePlan(config);
+        var settings = plan.Settings
+            .WithDeck(config.Deck)
+            .WithStake(config.Stake)
+            .WithThreadCount(1)
+            .WithAestheticSearch(aesthetic);
+        return RunSearch(settings);
+    }
+
     public IMotelyWasmSearch StartSequentialSearch(string jaml, int batchCharCount,
         long startBatch, long endBatch)
     {
