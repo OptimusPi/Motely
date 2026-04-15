@@ -1,126 +1,204 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Motely WASM — seed explorer</title>
-    <style>
-      body { font-family: monospace; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
-      h1 { margin-bottom: 0.25rem; }
-      #status { color: #888; font-size: 0.85rem; margin-bottom: 1rem; }
-      input, select, button, textarea { font-family: monospace; font-size: 0.95rem; padding: 0.3rem 0.5rem; }
-      button { cursor: pointer; }
-      .tabs { display: flex; gap: 0; border-bottom: 2px solid #ccc; margin-bottom: 1rem; }
-      .tab { padding: 0.4rem 1rem; cursor: pointer; border: 1px solid transparent; border-bottom: none; }
-      .tab.active { border-color: #ccc; border-bottom: 2px solid #fff; margin-bottom: -2px; font-weight: bold; }
-      .panel { display: none; }
-      .panel.active { display: block; }
-      .row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
-      textarea { width: 100%; box-sizing: border-box; }
-      #out { white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem; min-height: 4rem; margin-top: 1rem; }
-      .clear-btn { font-size: 0.8rem; float: right; }
-    </style>
-  </head>
-  <body>
-    <h1>motely-wasm <span id="ver"></span></h1>
-    <p id="status">Booting…</p>
 
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motely WASM — seed explorer</title>
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+    }
+
+    #status {
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      font-family: monospace;
+      font-size: 0.95rem;
+      padding: 0.3rem 0.5rem;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid #ccc;
+      margin-bottom: 1rem;
+    }
+
+    .tab {
+      padding: 0.4rem 1rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+    }
+
+    .tab.active {
+      border-color: #ccc;
+      border-bottom: 2px solid #fff;
+      margin-bottom: -2px;
+      font-weight: bold;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    #out {
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      min-height: 4rem;
+      margin-top: 1rem;
+    }
+
+    .clear-btn {
+      font-size: 0.8rem;
+      float: right;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>motely-wasm <span id="ver"></span></h1>
+  <p id="status">Booting…</p>
+
+  <div class="row">
+    <input id="seed" type="text" value="AAAAAAAA" placeholder="Seed" style="width:12rem" />
+    <select id="deck"></select>
+    <select id="stake"></select>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="explorer">Single-seed</div>
+    <div class="tab" data-tab="sequential">Sequential</div>
+    <div class="tab" data-tab="provider">Provider</div>
+    <div class="tab" data-tab="aesthetic">Aesthetic</div>
+  </div>
+
+  <!-- Single-seed explorer -->
+  <div class="panel active" id="panel-explorer">
     <div class="row">
-      <input id="seed" type="text" value="AAAAAAAA" placeholder="Seed" style="width:12rem" />
-      <select id="deck"></select>
-      <select id="stake"></select>
+      <button id="btn-ctx">Load seed</button>
+      <label>Ante: <input id="ante" type="number" value="1" min="1" max="8" style="width:4rem" /></label>
+      <label>baseLuck: <input id="baseluck" type="number" value="1" step="0.5" style="width:5rem" /></label>
     </div>
-
-    <div class="tabs">
-      <div class="tab active" data-tab="explorer">Single-seed</div>
-      <div class="tab" data-tab="sequential">Sequential</div>
-      <div class="tab" data-tab="provider">Provider</div>
-      <div class="tab" data-tab="aesthetic">Jummy</div>
+    <div class="row">
+      <button data-action="voucher">Voucher</button>
+      <button data-action="tag">Tag</button>
+      <button data-action="boss">Boss</button>
+      <button data-action="pack">Next pack</button>
+      <button data-action="shopitem">Shop item</button>
+      <button data-action="shopjoker">Shop joker</button>
+      <button data-action="tarot">Tarot</button>
+      <button data-action="spectral">Spectral</button>
+      <button data-action="planet">Planet</button>
+      <button data-action="stdcard">Std card</button>
+      <button data-action="misprint">Misprint mult</button>
+      <button data-action="luckymoney">Lucky money</button>
+      <button data-action="luckymult">Lucky mult</button>
+      <button data-action="erratic">Erratic card</button>
     </div>
-
-    <!-- Single-seed explorer -->
-    <div class="panel active" id="panel-explorer">
-      <div class="row">
-        <button id="btn-ctx">Load seed</button>
-        <label>Ante: <input id="ante" type="number" value="1" min="1" max="8" style="width:4rem" /></label>
-        <label>baseLuck: <input id="baseluck" type="number" value="1" step="0.5" style="width:5rem" /></label>
-      </div>
-      <div class="row">
-        <button data-action="voucher">Voucher</button>
-        <button data-action="tag">Tag</button>
-        <button data-action="boss">Boss</button>
-        <button data-action="pack">Next pack</button>
-        <button data-action="shopitem">Shop item</button>
-        <button data-action="shopjoker">Shop joker</button>
-        <button data-action="tarot">Tarot</button>
-        <button data-action="spectral">Spectral</button>
-        <button data-action="planet">Planet</button>
-        <button data-action="stdcard">Std card</button>
-        <button data-action="misprint">Misprint mult</button>
-        <button data-action="luckymoney">Lucky money</button>
-        <button data-action="luckymult">Lucky mult</button>
-        <button data-action="erratic">Erratic card</button>
-      </div>
-      <div class="row">
-        <button id="btn-shopscroll">&#9654; scroll shop stream</button>
-        <button id="btn-shopscroll-stop">&#9646;&#9646; stop</button>
-        <label>Batch: <input id="scroll-batch" type="number" value="100" style="width:5rem" /></label>
-      </div>
+    <div class="row">
+      <button id="btn-shopscroll">&#9654; scroll shop stream</button>
+      <button id="btn-shopscroll-stop">&#9646;&#9646; stop</button>
+      <label>Batch: <input id="scroll-batch" type="number" value="100" style="width:5rem" /></label>
     </div>
+  </div>
 
-    <!-- Sequential search -->
-    <div class="panel" id="panel-sequential">
-      <div class="row">
-        <textarea id="jaml-seq" rows="5" placeholder="Paste JAML here…"></textarea>
-      </div>
-      <div class="row">
-        <label>Batch chars: <input id="seq-batchcc" type="number" value="8" style="width:5rem" /></label>
-        <label>Start batch: <input id="seq-start" type="number" value="0" style="width:9rem" /></label>
-        <label>End batch: <input id="seq-end" type="number" value="1000000" style="width:11rem" /></label>
-      </div>
-      <div class="row">
-        <button id="btn-seq">Start sequential</button>
-        <button id="btn-seq-stop">Stop</button>
-      </div>
+  <!-- Sequential search -->
+  <div class="panel" id="panel-sequential">
+    <div class="row">
+      <textarea id="jaml-seq" rows="5" placeholder="Paste JAML here…"></textarea>
     </div>
-
-    <!-- Provider searches -->
-    <div class="panel" id="panel-provider">
-      <div class="row">
-        <textarea id="jaml-prov" rows="5" placeholder="Paste JAML here…"></textarea>
-      </div>
-      <div class="row">
-        <button id="btn-random">Random</button>
-        <label>Count: <input id="prov-count" type="number" value="1000" style="width:7rem" /></label>
-      </div>
-      <div class="row">
-        <button id="btn-keyword">Keyword</button>
-        <label>Keywords (csv): <input id="prov-keywords" type="text" value="" placeholder="e.g. LOOT,GOLD" style="width:14rem" /></label>
-        <label>Padding: <input id="prov-padding" type="text" value="" style="width:6rem" /></label>
-      </div>
-      <div class="row">
-        <button id="btn-seedlist">Seed list</button>
-        <label>Seeds (csv): <input id="prov-seeds" type="text" value="" placeholder="e.g. AAAA,BBBB" style="width:20rem" /></label>
-      </div>
-      <div class="row"><button id="btn-prov-stop">Stop</button></div>
+    <div class="row">
+      <label>Batch chars: <input id="seq-batchcc" type="number" value="8" style="width:5rem" /></label>
+      <label>Start batch: <input id="seq-start" type="number" value="0" style="width:9rem" /></label>
+      <label>End batch: <input id="seq-end" type="number" value="1000000" style="width:11rem" /></label>
     </div>
-
-    <!-- Jummy compile -->
-    <div class="panel" id="panel-aesthetic">
-      <div class="row">
-        <textarea id="jaml-aes" rows="5" placeholder="Paste Jummy here…"></textarea>
-      </div>
-      <div class="row">
-        <button id="btn-aes">Compile to JAML</button>
-        <button id="btn-aes-stop">Copy into search inputs</button>
-      </div>
+    <div class="row">
+      <button id="btn-seq">Start sequential</button>
+      <button id="btn-seq-stop">Stop</button>
     </div>
+  </div>
 
-    <div style="margin-top:0.5rem">
-      <button class="clear-btn" id="btn-clear">clear</button>
+  <!-- Provider searches -->
+  <div class="panel" id="panel-provider">
+    <div class="row">
+      <textarea id="jaml-prov" rows="5" placeholder="Paste JAML here…"></textarea>
     </div>
-    <pre id="out"></pre>
+    <div class="row">
+      <button id="btn-random">Random</button>
+      <label>Count: <input id="prov-count" type="number" value="1000" style="width:7rem" /></label>
+    </div>
+    <div class="row">
+      <button id="btn-keyword">Keyword</button>
+      <label>Keywords (csv): <input id="prov-keywords" type="text" value="" placeholder="e.g. LOOT,GOLD"
+          style="width:14rem" /></label>
+      <label>Padding: <input id="prov-padding" type="text" value="" style="width:6rem" /></label>
+    </div>
+    <div class="row">
+      <button id="btn-seedlist">Seed list</button>
+      <label>Seeds (csv): <input id="prov-seeds" type="text" value="" placeholder="e.g. AAAA,BBBB"
+          style="width:20rem" /></label>
+    </div>
+    <div class="row"><button id="btn-prov-stop">Stop</button></div>
+  </div>
 
-    <script type="module" src="/main.js"></script>
-  </body>
+  <!-- Aesthetic search -->
+  <div class="panel" id="panel-aesthetic">
+    <div class="row">
+      <textarea id="jaml-aes" rows="5" placeholder="Paste JAML here…"></textarea>
+    </div>
+    <div class="row">
+      <label>Aesthetic: <select id="aes-val"></select></label>
+      <button id="btn-aes">Start aesthetic</button>
+      <button id="btn-aes-stop">Stop</button>
+      <button id="btn-aes-compile">Compile Jummy to JAML</button>
+      <button id="btn-aes-copy">Copy JAML into other inputs</button>
+    </div>
+  </div>
+
+  <div style="margin-top:0.5rem">
+    <button class="clear-btn" id="btn-clear">clear</button>
+  </div>
+  <pre id="out"></pre>
+
+  <script type="module" src="/main.js"></script>
+</body>
+
 </html>
