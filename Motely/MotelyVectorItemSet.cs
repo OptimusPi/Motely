@@ -103,8 +103,14 @@ public ref struct MotelyVectorItemSet
 
     public MotelyItemVector this[int i]
     {
-        get => GetItem(i);
-        set => GetItemRef(ref this, i) = value;
+        get
+        {
+            return GetItem(i);
+        }
+        set
+        {
+            GetItemRef(ref this, i) = value;
+        }
     }
 
     public MotelyItemVector[] AsArray()
