@@ -1,26 +1,40 @@
-# motely-wasm (NativeAOT-LLVM + Bootsharp)
+# Motely — core engine
 
-This project compiles Motely to **browser WASM** with **Bootsharp** interop. Two complementary APIs are exported, both first-class:
+Core C# seed-filter engine for **Balatro**. Compiles JAML (Jimbo's Ante Markup Language) filters to SIMD-vectorized search code targeting `net10.0`. Used by:
 
-- **`MotelyWasmHost`** — one-call host. `loadJaml` / `compileJummy` parse JAML; `startRandomSearchFromJaml(jaml, count)`, `startConfiguredSearchFromJaml(...)`, `startSeedListSearchFromJaml(...)` start a search in a single call. The host owns `_currentSearch`; `stopSearch()` cancels it.
-- **`MotelyJamlSearchBuilder`** — fluent multi-step builder. Chain `loadJaml(jaml) → random(n) | sequential(...) | seedList(...) | aesthetic(a) | keywords(...) → run()` when you need fine-grained control over the search pipeline.
+- **`Motely.CLI`** — NativeAOT native CLI.
+- **`Motely.Wasm`** — Bootsharp / NativeAOT-LLVM browser build that publishes the **`motely-wasm`** npm package.
+- **`Motely.TUI`** — Terminal.Gui desktop UI.
+- **`Motely.DistributedWorker`** / **`Motely.HelperAPI`** — pool worker + REST API.
+- **`Motely.Tests`** — xunit regression suite.
 
-Both call into the same engine. Pick whichever shape matches your call site; neither is deprecated.
+## Key types
 
-Progress and results go through **`SearchEvents`** (`onProgress`, `onResult`, `onComplete` — JS subscribes; C# notifies). Single-seed inspection lives on **`MotelyWasmHost`** (`singleGetBossForAnte`, `singleGetAnteFirstVoucher`, etc.) — these take `seed/deck/stake` on every call so JS does not have to hold a stateful per-instance handle.
+| Type | Role |
+|------|------|
+| `MotelyVectorSearchContext` | SIMD vectorized search (8 seeds/cycle, AVX / AVX2 / AVX-512). |
+| `MotelySingleSearchContext` | Single-seed analysis (partial classes per domain: bosses, tags, vouchers, shop, packs, cards, events). |
+| `MotelyFilters.JamlConfig` + `JamlConfigLoader` | Parsed JAML document; authoritative shape and defaults. |
+| `MotelyFilters.JamlSearchBuilder` | Turns a `JamlConfig` into a runnable `IMotelySearchSettings` plan. |
+| `MotelyFilters.JamlScoring` | `must` / `should` / `mustNot` evaluation and tally production. |
+| `FormatUtils` | Canonical display-name formatting for bosses / vouchers / tags / packs / items. |
 
-The **`Program`** class here is only the **runtime bootstrap** (`Main` → `RunBootsharp()`). Do not confuse it with `Motely.CLI`.
+## JAML schema
 
-**Bootsharp glue** (`JSExport` / `JSImport` / `JSPreferences`) is isolated in **`BootsharpInterop.cs`** so you can ignore it while working in C#. The public API surface is **`MotelyWasmHost`**, **`MotelyJamlSearchBuilder`**, **`MotelySingleSearchContext`** (seed inspection), and **`SearchEvents`** (progress/results).
+Generated, not hand-written. Regenerate from the CLI:
 
-After `dotnet publish` on this project, the npm package is emitted under `motely-wasm/` (single package, binaries always embedded). **Monaco** is not part of these packages — use `tools/jaml-language/monaco` (`@motely/jaml-monaco`) for editor assets.
+```powershell
+dotnet run --project Motely.CLI -- --write-jaml-schema
+```
 
-**Bootsharp interop rule (9.0.0+):** a `[JSExport]` interface method on `MotelyWasmHost` must NOT call another `[JSExport]` interface method on `this`. Mono WASM rejects the resulting managed→`[UnmanagedCallersOnly]` dispatch with `Fatal error. Invalid Program: attempted to call a UnmanagedCallersOnly method from managed code.` Inline shared logic into a `private static` helper (see `LoadJamlCore`) and call the helper from each public method.
+Writes to `jaml.schema.json` at repo root. Language tooling (`tools/jaml-language/`) in this repo and external consumers (the MCP server in `seedfinder.app`, `jaml-ui`, etc.) consume the generated schema — re-sync downstream whenever `Motely/Filters/Jaml/JamlConfig.cs` changes.
 
-**Sequential batch size:** `batchCharCount` applies only to **sequential** search (`startSequentialSearch*`, and `startConfiguredSearch` when the JAML has **no** `aesthetics`). Keyword/random/aesthetic/seed-list modes are **provider** searches and do **not** take `batchCharCount` (the engine uses fixed vector-width batches).
+## NativeAOT / trimming
 
-**Threads:** the browser host runs search with **one** worker (`threadCount` is not a parameter). Use the CLI/TUI for configurable parallelism.
+- `TrimmerRoots.xml` keeps reflection-reachable types alive.
+- YAML deserialization uses `Vecc.YamlDotNet.Analyzers.StaticGenerator` — do not add reflection-heavy patterns.
+- All browser WASM interop is isolated in the `Motely.Wasm` project — see [`../Motely.Wasm/README.md`](../Motely.Wasm/README.md).
 
-**Seed list:** `startSeedListSearch` takes **`string[]` seeds** (trimmed, empties dropped), not a CSV string.
+## Version
 
-**Cancel:** `runSearch` / each `start*` returns **`IMotelySearch`** — call **`cancel()`** on that object. There is no host-level “current search” slot.
+Defined once in repo-root `Directory.Packages.props` as `<MotelyVersion>` and stamped into every assembly by `Directory.Build.props` and into `motely-wasm/package.json` at publish time.

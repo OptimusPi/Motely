@@ -11,10 +11,10 @@ public sealed class PoolWorkerOptions
 
     /// <summary>
     /// Shared DuckLake root for local results (partitioned by filter_id in Motely.DB).
-    /// Default: MotelyData/ducklake in the working directory.
+    /// Default: Seeds/ducklake in the working directory.
     /// Set to empty string to disable local DB saving.
     /// </summary>
-    public string LocalDbPath { get; set; } = "MotelyData/ducklake";
+    public string LocalDbPath { get; set; } = "Seeds/ducklake";
 
     /// <summary>
     /// Optional: only claim blocks for this specific filter ID.

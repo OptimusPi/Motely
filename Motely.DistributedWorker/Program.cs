@@ -18,7 +18,7 @@ using Motely.Filters;
 ///   --threads N           Motely search thread count for each claimed block (SIMD workers inside one block)
 ///   --worker-id id        Worker identifier (default: hostname-pid)
 ///   --filter filterId     Only claim blocks for this filter (optional; omit for any active filter)
-///   --local-db ./dir      Shared DuckLake directory (default: MotelyData/ducklake)
+///   --local-db ./dir      Shared DuckLake directory (default: Seeds/ducklake)
 ///                         Set to "-" to disable local saving.
 /// </summary>
 class Program
@@ -26,7 +26,7 @@ class Program
     static async Task<int> Main(string[] args)
     {
         // ── Parse args ──────────────────────────────────────────────────
-        string? url = null, workerId = null, filterId = null, localDbDir = "MotelyData/ducklake";
+        string? url = null, workerId = null, filterId = null, localDbDir = "Seeds/ducklake";
         int threads = Environment.ProcessorCount;
 
         for (int i = 0; i < args.Length - 1; i++)
@@ -52,7 +52,7 @@ class Program
             Console.Error.WriteLine("  --threads <N>        Search threads per claimed block (default: all cores)");
             Console.Error.WriteLine("  --worker-id <id>     Worker identifier (optional)");
             Console.Error.WriteLine("  --filter <filterId>  Only claim blocks for this filter (optional)");
-            Console.Error.WriteLine("  --local-db <dir>     Shared DuckLake root (default: MotelyData/ducklake)");
+            Console.Error.WriteLine("  --local-db <dir>     Shared DuckLake root (default: Seeds/ducklake)");
             Console.Error.WriteLine("                       Use '-' to disable local saving");
             return 1;
         }

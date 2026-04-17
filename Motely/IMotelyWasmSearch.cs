@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using Motely.Filters;
 
 namespace Motely;
@@ -40,15 +38,11 @@ public record MotelyWasmSearchBatchResult(
 public interface IMotelyWasmSearch : IDisposable
 {
     MotelyWasmSearchSnapshot GetSnapshot();
-    MotelyWasmSearchResult[] DrainResults(int maxCount);
     void Cancel();
     Task<MotelyWasmSearchCompletion> WaitForCompletion();
 }
 
-public sealed class MotelyWasmSearch(
-    IMotelySearch search,
-    ConcurrentQueue<MotelyWasmSearchResult> resultsQueue
-) : IMotelyWasmSearch
+public sealed class MotelyWasmSearch(IMotelySearch search) : IMotelyWasmSearch
 {
     public MotelyWasmSearchSnapshot GetSnapshot()
     {
@@ -62,16 +56,6 @@ public sealed class MotelyWasmSearch(
             search.BatchIndex,
             search.CompletedBatchCount
         );
-    }
-
-    public MotelyWasmSearchResult[] DrainResults(int maxCount)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(maxCount);
-
-        var results = new List<MotelyWasmSearchResult>(maxCount);
-        for (int i = 0; i < maxCount && resultsQueue.TryDequeue(out var result); i++)
-            results.Add(result);
-        return [.. results];
     }
 
     public void Cancel()
