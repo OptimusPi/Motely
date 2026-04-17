@@ -1,16 +1,9 @@
 {
   "name": "motely-jaml",
   "version": "1.0.0",
-  "description": "Balatro deck filtering system",
+  "description": "JAML (Jimbo's Ante Markup Language) by pifreak + Motely seed engine + motely-wasm browser build.",
   "private": true,
-  "scripts": {
-    "dev": "vite Motely.TestWebsite",
-    "preview": "vite preview Motely.TestWebsite",
-    "test:motely-direct-contract": "node scripts/test-motely-direct-contract.mjs",
-    "test:motely-wasm-contract": "node --test scripts/test-motely-wasm.contract.test.mjs",
-    "find:gros-michel-wasm": "node scripts/find-gros-michel-via-wasm.mjs"
-  },
   "devDependencies": {
-    "vite": "^6.3.5"
+    "rollup": "^4.60.1"
   }
 }
