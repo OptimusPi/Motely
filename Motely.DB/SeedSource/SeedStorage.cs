@@ -7,7 +7,7 @@ public sealed record SeedStoragePath(string Input, string ResolvedPath, bool IsE
 
 public static class SeedStoragePaths
 {
-    public static string StandardRoot => Path.Combine(Directory.GetCurrentDirectory(), "MotelyData");
+    public static string StandardRoot => Path.Combine(Directory.GetCurrentDirectory(), "Seeds");
 
     public static string StandardLakeDirectory => Path.Combine(StandardRoot, "ducklake");
 

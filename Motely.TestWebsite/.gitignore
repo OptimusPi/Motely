@@ -1,5 +1,0 @@
-node_modules/
-dist/
-# Lockfile has local file: symlinks baked in — not suitable for CI.
-# CI uses npm install which resolves from registry fresh.
-package-lock.json

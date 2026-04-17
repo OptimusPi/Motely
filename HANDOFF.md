@@ -1,85 +1,180 @@
-# Handoff: Publish motely-wasm 9.9.9
+# EXECUTABLE AGENT HANDOFF
 
-## What's done
-- motely-wasm-compat is gone. One package: `motely-wasm`, always embedded binaries.
-- MotelyItem.cs: field→property fix for Bootsharp serialization
-- MotelyWasmHost.cs: search methods return void, JS uses SearchEvents
-- MotelyJamlSearchBuilder.cs: tracks seeds/matches from progress callback, not polling search object properties
-- tools.ts: stripped from 800→250 lines, 2 tools (search_seeds, analyze_seed), UX descriptions explaining JAML and Jummy
-- MCP App UI built (`tools/balatro-seed-finder/mcp-ui/dist/`)
-- Version 9.9.9 in Directory.Packages.props
-- OSX platform condition added (uses linux-x64, can't actually compile on Mac ARM though)
-- BootsharpPublishDirectory = repo-root/motely-wasm/ (build output, gets wiped)
-- BootsharpPackageDirectory = Motely/ (where package.json lives)
+Read `AGENTS.md` for repo rules. This file is only the verified next-step playbook.
 
-## What's broken / needs fixing
+## What this repo is
 
-### 1. package.json situation
-The overlay `Motely/package.json` has hardcoded `../motely-wasm/` paths that are probably wrong now that BootsharpPublishDirectory changed to repo root.
+**JAML — Jimbo's Ante Markup Language** + the Motely engine.  
+This repo's publishable JS artifact is **`motely-wasm`**.
 
-**Best approach:** Delete `Motely/package.json`. Let Bootsharp generate it fresh. It computes relative paths from BootsharpPackageDirectory to BootsharpPublishDirectory automatically. Then edit the generated one ONCE to add: version, description, keywords, repository, license, browser, files.
+## Out of scope
 
-### 2. Version in package.json
-Bootsharp does NOT stamp versions. The generated package.json has no version field. You must set it manually. After Bootsharp generates it, add `"version": "9.9.9"`.
+- `jaml-ui`, `jimbo-ui` → separate npm repos
+- VS Code extension / LSP / Monaco / grammar → `D:\jaml-vsx`
+- MCP App → `seedfinder.app` / `mcp.seedfinder.app`
 
-### 3. README.md
-Currently in `Motely/README.md`. That's where package.json is, so npm will find it. If you move package.json, move README too.
+Do not resurrect any of that here.
 
-## Steps to publish on Windows
+## Verified current state
+
+These are already true in the worktree:
+
+- `Motely.TestWebsite/` is deleted
+- `tools/jaml-language/` is deleted
+- `tools/balatro-seed-finder/` is deleted
+- `pnpm-workspace.yaml` is deleted
+- root `package.json` is reduced to:
+  - private package
+  - `rollup` devDependency only
+- `Directory.Packages.props` is already bumped to `11.3.2`
+- `Motely/MotelyWasmHost.cs` exists and matches the current `IMotelyWasm` surface
+- `dotnet build Motely.Wasm -c Release` succeeds
+- `dotnet publish Motely.Wasm -c Release` succeeds when Binaryen is visible to this shell
+- `motely-wasm/package.json` is currently stamped to `11.3.2`
+- `npm view motely-wasm version` still returns `11.3.1`
+
+## The exact publish command that worked
+
+Run this from repo root:
 
 ```powershell
-git pull
+$env:PATH = "X:\binaryen-version_128;X:\binaryen-version_128\bin;" + $env:PATH
+dotnet publish Motely.Wasm -c Release
+```
 
-# Delete stale build output + overlay so Bootsharp generates fresh
-Remove-Item -Recurse -Force motely-wasm -ErrorAction SilentlyContinue
-Remove-Item Motely\package.json -ErrorAction SilentlyContinue
+What this does:
 
-# Build
-dotnet publish -c Release .\Motely.BrowserWasm\
+- produces `motely-wasm/index.mjs`
+- produces generated types under `motely-wasm/types/`
+- rewrites `motely-wasm/package.json` to version `11.3.2`
 
-# Bootsharp generated Motely/package.json with correct relative paths
-# Now add your metadata:
-# Open Motely\package.json and add: version, description, keywords, etc.
-# Or use npm version:
-cd Motely
-npm version 9.9.9 --no-git-tag-version
+## Important: what is NOT the current blocker
 
-# Publish
+Do **not** waste time on:
+
+- `Motely.TestWebsite`
+- `tools/jaml-language`
+- `tools/balatro-seed-finder`
+- workspace linking
+- PATH arguments with the user
+
+The actual Bootsharp build is currently working.
+
+## Rollup note
+
+`dotnet publish Motely.Wasm -c Release` emits Rollup warnings like unresolved `fs`, `fs/promises`, and `url`.
+
+This did **not** stop publish.
+
+Bootsharp still completed and wrote:
+
+- `motely-wasm/index.mjs`
+- `motely-wasm/package.json`
+
+So treat the current task as **publish + consumer update**, not "fix Rollup first" unless runtime testing later proves the generated bundle is broken in browser usage.
+
+## Next actions — do in this order
+
+1. Publish the npm package:
+
+```powershell
+cd X:\JammySeedFinder\src\MotelyJAML\motely-wasm
 npm publish
 ```
 
-## After publish, verify
+Expected result:
+
+- npm publishes `motely-wasm@11.3.2`
+
+2. Verify publish:
+
 ```powershell
-npm info motely-wasm version
-# Should say 9.9.9
+npm view motely-wasm version
 ```
 
-Then test the MCP:
-- Restart Claude with the MCP configured
-- Ask it to search for "Negative Perkeo in ante 1"
-- Check that analyze_seed returns real data, not `{"_id": -2147483647}`
+Expected result:
 
-## Known issues
-- Bootsharp 0.7.0 bug: can't export interfaces with properties (IMotelySearch). That's why IMotelySearch and IMotelyJamlSearchBuilder were removed from JSExport. MotelyWasmHost is the sole JS entry point.
-- Mac ARM can't compile WASM (no osx-arm64 ILCompiler host binary exists). Windows/Linux only.
-- The MCP App React UI calls back through the MCP server to search — ideally it should call WASM directly in the browser for offline search. Future work.
-- Tool descriptions still need the full joker/voucher/boss catalog so AI clients know what values are valid (e.g. `legendaryJoker: Perkeo` not `joker: Perkeo`).
+- `11.3.2`
 
-## Files that matter
-- `Directory.Packages.props` — MotelyVersion (9.9.9)
-- `Motely.BrowserWasm/Motely.BrowserWasm.csproj` — BootsharpPublishDirectory, BootsharpPackageDirectory
-- `Motely/package.json` — npm overlay (or let Bootsharp generate)
-- `Motely/README.md` — npm README
-- `Motely.BrowserWasm/MotelyWasmHost.cs` — the sole JSExport entry point
-- `Motely.BrowserWasm/BootsharpInterop.cs` — JSExport list
-- `tools/balatro-seed-finder/api/tools.ts` — MCP tool definitions
-- `tools/balatro-seed-finder/public/.well-known/mcp/server-card.json` — MCP metadata
+3. Update consumers using normal npm flow:
 
-## Bootsharp rules (read these every time)
-1. BootsharpPackageDirectory ≠ BootsharpPublishDirectory. Two different folders.
-2. Bootsharp generates package.json at BootsharpPackageDirectory IF one doesn't exist.
-3. Generated package.json has correct relative paths computed automatically.
-4. Bootsharp does NOT handle versioning. Set it manually.
-5. Don't create MSBuild targets to hack around Bootsharp. Ever.
-6. Don't export interfaces with properties. Bootsharp generates broken .get_X() calls.
-7. The linux-x64 ILCompiler package is used for ALL non-Windows platforms.
+```powershell
+cd X:\jaml-ui
+pnpm update motely-wasm
+
+cd X:\jimbo-ui
+pnpm update motely-wasm
+
+cd D:\jaml-vsx
+pnpm update motely-wasm
+```
+
+Also update `seedfinder.app` in its own repo/workspace the same way:
+
+```powershell
+pnpm update motely-wasm
+```
+
+Then commit each lockfile in each repo separately.
+
+## MCP App fact check
+
+Live endpoint:
+
+- `https://mcp.seedfinder.app/mcp`
+
+Observed metadata during this session:
+
+- name: `balatro-seed-finder`
+- version: `11.2.0`
+- transport: `streamable-http`
+
+This means the MCP App is behind the current engine/package and should be updated from the `seedfinder.app` repo after `motely-wasm@11.3.2` is published.
+
+## npm/package positioning already changed
+
+Current generated `motely-wasm` description is intended to sell the real user outcome:
+
+> Find Balatro seeds with plain-language JAML filters — Jimbo's Ante Markup Language. SIMD-vectorized seed search (Motely engine, C#). Curate runs, share filters, search millions of seeds. Browser + Node.
+
+Keywords include:
+
+- `balatro`
+- `seed`
+- `seed-finder`
+- `seed-curator`
+- `jaml`
+- `jummy`
+- `filter`
+- `simd`
+- `wasm`
+- `webassembly`
+- `motely`
+
+## CDN demo
+
+`motely-wasm/demo.html` exists now.
+
+It is:
+
+- a single HTML file
+- CDN-import based
+- intended to prove the package works without bundlers
+
+Natural home:
+
+- `demo.seedfinder.app` on Vercel
+
+## Things the previous agent got wrong
+
+Do not repeat these mistakes:
+
+1. Do not tell the user the problem is PATH when the user says it is not.
+2. Do not target deleted projects.
+3. Do not invent fluent interop shapes that violate Bootsharp instance-binding rules.
+4. Do not turn package descriptions into toolchain essays.
+5. Do not say "browser only" when the package is also useful from Node-compatible runtimes.
+
+## One-line summary for the next agent
+
+`motely-wasm` is built and ready at `11.3.2`; publish it to npm, then run `pnpm update motely-wasm` in the consumer repos and redeploy `seedfinder.app`.

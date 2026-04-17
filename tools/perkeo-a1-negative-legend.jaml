@@ -1,9 +1,0 @@
-﻿name: PerkeoA1-NegativeLegendary
-deck: Red
-stake: White
-must:
-  - legendaryJoker: Perkeo
-    antes: [1]
-  - legendaryJoker: anylegendary
-    edition: Negative
-    antes: [1, 2, 3, 4, 5, 6, 7, 8]

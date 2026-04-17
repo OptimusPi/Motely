@@ -50,17 +50,48 @@
         <EmscriptenEnvVars Include="EM_CACHE=$(EmscriptenCacheSdkCacheDir)"/>
     </ItemGroup>
 
-    <!-- Stamp MotelyVersion into motely-wasm/package.json after publish -->
-    <Target Name="PatchPackageJsonVersion" AfterTargets="Publish">
+    <!--
+      Bootsharp emits a minimal package.json from PackageTemplate.json (just name, type, main, types).
+      We overwrite it with the full npm-ready manifest so description, homepage, repository,
+      keywords, bugs, and license survive every publish.
+    -->
+    <Target Name="WriteFullPackageJson" AfterTargets="Publish">
         <PropertyGroup>
             <_PkgJson>$(BootsharpPackageDirectory)\package.json</_PkgJson>
-            <_PkgContent>$([System.IO.File]::ReadAllText('$(_PkgJson)'))</_PkgContent>
-            <_PkgPatched>$([System.Text.RegularExpressions.Regex]::Replace(
-                $(_PkgContent), '"version"\s*:\s*"[^"]*"', '"version": "$(MotelyVersion)"'))</_PkgPatched>
+            <_PkgContent>{
+    "name": "motely-wasm",
+    "version": "$(MotelyVersion)",
+    "description": "Find Balatro seeds with plain-language JAML filters — Jimbo's Ante Markup Language. SIMD-vectorized seed search (Motely engine, C#). Curate runs, share filters, search millions of seeds. Browser + Node.",
+    "type": "module",
+    "main": "index.mjs",
+    "types": "types/index.d.ts",
+    "license": "MIT",
+    "homepage": "https://github.com/OptimusPi/MotelyJAML#readme",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/OptimusPi/MotelyJAML",
+        "directory": "motely-wasm"
+    },
+    "bugs": {
+        "url": "https://github.com/OptimusPi/MotelyJAML/issues"
+    },
+    "keywords": [
+        "balatro",
+        "seed",
+        "seed-finder",
+        "seed-curator",
+        "jaml",
+        "jummy",
+        "filter",
+        "simd",
+        "wasm",
+        "webassembly",
+        "motely"
+    ]
+}</_PkgContent>
         </PropertyGroup>
-        <WriteLinesToFile File="$(_PkgJson)" Lines="$(_PkgPatched)" Overwrite="true"
-                         Condition="$(_PkgContent) != $(_PkgPatched)"/>
-        <Message Text="motely-wasm package.json version: $(MotelyVersion)" Importance="high"/>
+        <WriteLinesToFile File="$(_PkgJson)" Lines="$(_PkgContent)" Overwrite="true"/>
+        <Message Text="motely-wasm package.json rewritten at version $(MotelyVersion)" Importance="high"/>
     </Target>
 
 </Project>
