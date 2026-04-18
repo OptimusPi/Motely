@@ -956,7 +956,7 @@ public static partial class JamlConfigLoader
         )
             boosterPacks = [];
 
-        NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType);
+        NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, c.Sources);
 
         var (shRank, shSuit) = ParseCardShorthand(value ?? "");
 
@@ -1442,10 +1442,14 @@ public static partial class JamlConfigLoader
     private static void NormalizeDefaultSources(
         ref int[]? shopItems,
         ref int[]? boosterPacks,
-        MotelyFilterItemType itemType
+        MotelyFilterItemType itemType,
+        JamlSourcesDto? sources
     )
     {
         if (shopItems != null || boosterPacks != null)
+            return;
+
+        if (HasSpecialtySources(sources))
             return;
 
         switch (itemType)
@@ -1455,7 +1459,7 @@ public static partial class JamlConfigLoader
             case MotelyFilterItemType.UncommonJoker:
             case MotelyFilterItemType.RareJoker:
             case MotelyFilterItemType.MixedJoker:
-                shopItems = [0, 1, 2, 3, 4];
+                shopItems = [0, 1, 2, 3];
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
 
@@ -1463,6 +1467,20 @@ public static partial class JamlConfigLoader
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
         }
+    }
+
+    private static bool HasSpecialtySources(JamlSourcesDto? sources)
+    {
+        if (sources == null) return false;
+        return (sources.Judgement?.Length ?? 0) > 0
+            || (sources.Wraith?.Length ?? 0) > 0
+            || (sources.RiffRaff?.Length ?? 0) > 0
+            || (sources.RareTag?.Length ?? 0) > 0
+            || (sources.UncommonTag?.Length ?? 0) > 0
+            || (sources.CommonShopJokers?.Length ?? 0) > 0
+            || (sources.UncommonShopJokers?.Length ?? 0) > 0
+            || (sources.RareShopJokers?.Length ?? 0) > 0
+            || (sources.AllShopJokers?.Length ?? 0) > 0;
     }
 
     // ── Resolve type from shorthand keys or explicit type field ──

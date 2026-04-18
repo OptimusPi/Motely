@@ -305,9 +305,33 @@ public static class JamlSearchBuilder
                 for (int i = 0; i < expanded.Count; i++)
                     list.Add(expanded[i]);
             }
-            else
+            else if (!IsSpecialtySourceOnly(c))
                 list.Add((CreateDesc(c), c, c.Label));
         }
+    }
+
+    private static bool IsSpecialtySourceOnly(IJamlClause c)
+    {
+        JokerSourceConfig? sources = c switch
+        {
+            JokerClause j => j.Sources,
+            CommonJokerClause j => j.Sources,
+            UncommonJokerClause j => j.Sources,
+            RareJokerClause j => j.Sources,
+            MixedJokerClause j => j.Sources,
+            _ => null,
+        };
+        if (sources == null) return false;
+        if (sources.ShopItems.Length > 0 || sources.BoosterPacks.Length > 0) return false;
+        return sources.Judgement.Length > 0
+            || sources.Wraith.Length > 0
+            || sources.RiffRaff.Length > 0
+            || sources.RareTag.Length > 0
+            || sources.UncommonTag.Length > 0
+            || sources.CommonShopJokers.Length > 0
+            || sources.UncommonShopJokers.Length > 0
+            || sources.RareShopJokers.Length > 0
+            || sources.AllShopJokers.Length > 0;
     }
 
     /// <summary>
