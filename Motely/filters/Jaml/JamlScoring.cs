@@ -774,9 +774,6 @@ public static class JamlScoring
         var shopItems = sources.ShopItems;
         var boosterPacks = sources.BoosterPacks;
 
-        Debug.Assert(shopItems.Length > 0 || boosterPacks.Length > 0,
-            "Joker clause should have normalized default sources at config load time.");
-
         int maxShop = ArrayMax(shopItems);
         int maxPack = ArrayMax(boosterPacks);
         var targetTypes = new MotelyItemType[jokers.Length];
@@ -825,6 +822,98 @@ public static class JamlScoring
                     }
                 }
             }
+
+            count += CountSpecialtyJokerSources(ref ctx, ante, sources, targetTypes, edition, stickers, ref runState);
+        }
+
+        return count;
+    }
+
+    private static int CountSpecialtyJokerSources(
+        ref MotelySingleSearchContext ctx,
+        int ante,
+        JokerSourceConfig sources,
+        MotelyItemType[] targetTypes,
+        MotelyItemEdition? edition,
+        MotelyJokerSticker[] stickers,
+        ref MotelyRunState runState
+    )
+    {
+        int count = 0;
+
+        if (sources.Judgement.Length > 0)
+        {
+            int max = ArrayMax(sources.Judgement);
+            var stream = ctx.CreateJudgementJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.Judgement, roll))
+                {
+                    int matches = MatchJoker(item, targetTypes, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.Wraith.Length > 0)
+        {
+            int max = ArrayMax(sources.Wraith);
+            var stream = ctx.CreateWraithJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.Wraith, roll))
+                {
+                    int matches = MatchJoker(item, targetTypes, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.RiffRaff.Length > 0)
+        {
+            int max = ArrayMax(sources.RiffRaff);
+            var stream = ctx.CreateRiffRaffJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RiffRaff, roll))
+                {
+                    int matches = MatchJoker(item, targetTypes, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.RareTag.Length > 0)
+        {
+            int max = ArrayMax(sources.RareTag);
+            var stream = ctx.CreateRareTagJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RareTag, roll))
+                {
+                    int matches = MatchJoker(item, targetTypes, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.UncommonTag.Length > 0)
+        {
+            int max = ArrayMax(sources.UncommonTag);
+            var stream = ctx.CreateUncommonTagJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.UncommonTag, roll))
+                {
+                    int matches = MatchJoker(item, targetTypes, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
         }
 
         return count;
@@ -843,9 +932,6 @@ public static class JamlScoring
         int count = 0;
         var shopItems = sources.ShopItems;
         var boosterPacks = sources.BoosterPacks;
-
-        Debug.Assert(shopItems.Length > 0 || boosterPacks.Length > 0,
-            "Joker clause should have normalized default sources at config load time.");
 
         int maxShop = ArrayMax(shopItems);
         int maxPack = ArrayMax(boosterPacks);
@@ -890,6 +976,98 @@ public static class JamlScoring
                             count += matches;
                         }
                     }
+                }
+            }
+
+            count += CountSpecialtyJokerSourcesWildcard(ref ctx, ante, sources, wildcardRarity, edition, stickers, ref runState);
+        }
+
+        return count;
+    }
+
+    private static int CountSpecialtyJokerSourcesWildcard(
+        ref MotelySingleSearchContext ctx,
+        int ante,
+        JokerSourceConfig sources,
+        MotelyJokerRarity? wildcardRarity,
+        MotelyItemEdition? edition,
+        MotelyJokerSticker[] stickers,
+        ref MotelyRunState runState
+    )
+    {
+        int count = 0;
+
+        if (sources.Judgement.Length > 0)
+        {
+            int max = ArrayMax(sources.Judgement);
+            var stream = ctx.CreateJudgementJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.Judgement, roll))
+                {
+                    int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.Wraith.Length > 0)
+        {
+            int max = ArrayMax(sources.Wraith);
+            var stream = ctx.CreateWraithJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.Wraith, roll))
+                {
+                    int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.RiffRaff.Length > 0)
+        {
+            int max = ArrayMax(sources.RiffRaff);
+            var stream = ctx.CreateRiffRaffJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RiffRaff, roll))
+                {
+                    int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.RareTag.Length > 0)
+        {
+            int max = ArrayMax(sources.RareTag);
+            var stream = ctx.CreateRareTagJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RareTag, roll))
+                {
+                    int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                }
+            }
+        }
+
+        if (sources.UncommonTag.Length > 0)
+        {
+            int max = ArrayMax(sources.UncommonTag);
+            var stream = ctx.CreateUncommonTagJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.UncommonTag, roll))
+                {
+                    int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
                 }
             }
         }
