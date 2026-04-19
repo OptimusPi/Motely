@@ -27,6 +27,8 @@ public interface IJamlClause
 
     int Score { get; init; }
 
+    int Min { get; init; }
+
 }
 
 
@@ -38,6 +40,8 @@ public abstract class LogicClause : IJamlClause
     public string Label { get; init; } = "";
 
     public int Score { get; init; }
+
+    public int Min { get; init; } = 1;
 
 }
 
@@ -59,7 +63,7 @@ public sealed class OrClause : LogicClause
 
     public required IJamlClause[] Clauses { get; init; }
 
-    public int Min { get; init; } = 1;
+    public new int Min { get; init; } = 1;
 
 }
 
@@ -150,13 +154,14 @@ public static class JamlSearchBuilder
 
 
 
-        // ── Scoring: should clauses plus must clauses (must filters still enforced above)
+        // ── Scoring: must clauses first (for early-exit), then should clauses
 
         var shouldClauses = new List<IJamlClause>();
         AddShouldScoringEntriesFromSet(shouldClauses, config.Must);
+        int mustClauseCount = shouldClauses.Count;
         AddShouldScoringEntriesFromSet(shouldClauses, config.Should);
         settings.WithSeedScoreProvider(
-            new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal)
+            new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal, mustClauseCount)
         );
 
         string headerQuoted = shouldClauses.Count > 0

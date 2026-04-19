@@ -518,7 +518,9 @@ public static class JamlScoring
 
     private static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, VoucherClause clause, ref MotelyRunState runState)
     {
-        var localState = runState;
+        // Start from a fresh state — PrepareRunState already activated vouchers into runState,
+        // which would cause GetAnteFirstVoucher to skip them and return wrong results.
+        var localState = new MotelyRunState();
         int count = 0;
         int maxAnte = GetMaxAnte(clause);
 

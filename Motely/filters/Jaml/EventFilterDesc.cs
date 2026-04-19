@@ -22,7 +22,6 @@ public sealed class ErraticCardClause : IJamlClause
 public interface IRollClause : IJamlClause
 {
     int[] Rolls { get; }
-    int Min { get; }
 }
 
 public sealed class LuckyMoneyClause : IRollClause
