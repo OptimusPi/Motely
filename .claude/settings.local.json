@@ -134,7 +134,8 @@
       "Bash(wc:*)",
       "Bash(powershell:*)",
       "Bash(dir:*)",
-      "WebFetch(domain:claude.com)"
+      "WebFetch(domain:claude.com)",
+      "PowerShell(dotnet test *)"
     ],
     "additionalDirectories": [
       "D:\\jaml-mcp"
