@@ -37,6 +37,63 @@ partial class Program
         return keywordInputs;
     }
 
+    static bool TryParseSeedOptions(
+        CommandOption<string> startSeedOption,
+        CommandOption<string> stopSeedOption,
+        out long? startIndex,
+        out long? stopIndex,
+        out string? error)
+    {
+        startIndex = null;
+        stopIndex = null;
+        error = null;
+
+        if (startSeedOption.HasValue())
+        {
+            if (!TryParseSeedString(startSeedOption.ParsedValue, out var idx, out var err))
+            {
+                error = $"Error: --startSeed: {err}";
+                return false;
+            }
+            startIndex = idx;
+        }
+        if (stopSeedOption.HasValue())
+        {
+            if (!TryParseSeedString(stopSeedOption.ParsedValue, out var idx, out var err))
+            {
+                error = $"Error: --stopSeed: {err}";
+                return false;
+            }
+            stopIndex = idx;
+        }
+        return true;
+    }
+
+    static bool TryParseSeedString(string input, out long index, out string? error)
+    {
+        index = 0;
+        error = null;
+        var seed = input.Trim().ToUpperInvariant().Replace('0', 'O');
+        if (seed.Length == 0 || seed.Length > MotelyGlobals.MaxSeedLength)
+        {
+            error = $"'{input}' must be 1–{MotelyGlobals.MaxSeedLength} characters (1-9, A-Z).";
+            return false;
+        }
+        // Pad to 8 chars — short seeds like "A" mean "A1111111" (leftmost significant)
+        if (seed.Length < MotelyGlobals.MaxSeedLength)
+            seed = seed + new string(MotelyGlobals.SeedDigits[0], MotelyGlobals.MaxSeedLength - seed.Length);
+        foreach (char c in seed)
+        {
+            if (!MotelyGlobals.SeedDigits.Contains(c))
+            {
+                error = $"'{input}' contains invalid character '{c}'. Valid: 1-9, A-Z (no 0).";
+                return false;
+            }
+        }
+        index = SeedMath.SeedToSearchIndex(seed);
+        return true;
+    }
+
     static void RequestTermination()
     {
         _cts.Cancel();
@@ -142,14 +199,14 @@ partial class Program
             "Sequential search: start at this percent of batch space (0–100). Ignored if --startBatch is set.",
             CommandOptionType.SingleValue
         );
-        var startSeedOption = app.Option<long>(
-            "--startSeed <N>",
-            "Sequential: first Motely search index (0 … 35^8−1); maps to batches with --batchCharCount. Mutually exclusive with --startBatch/--endBatch/--startPercent.",
+        var startSeedOption = app.Option<string>(
+            "--startSeed <SEED>",
+            "Sequential: first seed to search (e.g. 11111111 … ZZZZZZZZ). Mutually exclusive with --startBatch/--endBatch/--startPercent.",
             CommandOptionType.SingleValue
         );
-        var stopSeedOption = app.Option<long>(
-            "--stopSeed <N>",
-            "Sequential: last Motely search index (inclusive). Omit for full range after --startSeed.",
+        var stopSeedOption = app.Option<string>(
+            "--stopSeed <SEED>",
+            "Sequential: last seed to search (inclusive, e.g. ZZZZZZZZ). Omit for full range after --startSeed.",
             CommandOptionType.SingleValue
         );
         var randomOption = app.Option<int>(
@@ -251,6 +308,12 @@ partial class Program
                     .WithStake(nStake)
                     .WithThreadCount(nThreads);
 
+                if (!TryParseSeedOptions(startSeedOption, stopSeedOption, out var nStartIdx, out var nStopIdx, out var seedOptError))
+                {
+                    Console.Error.WriteLine(seedOptError);
+                    return 1;
+                }
+
                 if (
                     !CliSearchMode.TryApplySearchMode(
                         nSettings,
@@ -264,8 +327,8 @@ partial class Program
                             StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                             EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                             StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
-                            StartSeedSearchIndex: startSeedOption.HasValue() ? startSeedOption.ParsedValue : null,
-                            StopSeedSearchIndex: stopSeedOption.HasValue() ? stopSeedOption.ParsedValue : null,
+                            StartSeedSearchIndex: nStartIdx,
+                            StopSeedSearchIndex: nStopIdx,
                             BatchCharacterCount: nBatch,
                             JamlAestheticFallback: null
                         ),
@@ -356,6 +419,12 @@ partial class Program
                 .WithStake(stake)
                 .WithThreadCount(threads);
 
+            if (!TryParseSeedOptions(startSeedOption, stopSeedOption, out var jStartIdx, out var jStopIdx, out var jSeedOptError))
+            {
+                Console.Error.WriteLine(jSeedOptError);
+                return 1;
+            }
+
             if (
                 !CliSearchMode.TryApplySearchMode(
                     settings,
@@ -369,8 +438,8 @@ partial class Program
                         StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                         EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                         StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
-                        StartSeedSearchIndex: startSeedOption.HasValue() ? startSeedOption.ParsedValue : null,
-                        StopSeedSearchIndex: stopSeedOption.HasValue() ? stopSeedOption.ParsedValue : null,
+                        StartSeedSearchIndex: jStartIdx,
+                        StopSeedSearchIndex: jStopIdx,
                         BatchCharacterCount: batchCharCount,
                         JamlAestheticFallback: config.Aesthetics
                     ),
@@ -421,7 +490,6 @@ partial class Program
             using var search = settings.Start(_cts.Token);
             await search.WaitForCompletionAsync(_cts.Token);
 
-
             bool cancelled = _cts.Token.IsCancellationRequested;
             PrintSummary(search, batchCharCount, cancelled);
             return cancelled ? 1 : 0;
@@ -455,7 +523,7 @@ partial class Program
         Console.WriteLine();
         Console.WriteLine(cancelled ? "STOPPED" : "COMPLETED");
         Console.WriteLine(
-            $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds} matched"
+            $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds:N0} matched"
         );
         var elapsed = TimeSpan.FromMilliseconds(search.ElapsedMs);
         Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
@@ -478,8 +546,7 @@ partial class Program
                     string prefix = SeedMath.BatchIndexToSeedPrefix(nextBatch, batchCharCount);
                     string minSeedInBatch =
                         prefix + new string(MotelyGlobals.SeedDigits[0], batchCharCount);
-                    long resumeSeedIdx = SeedMath.SeedToSearchIndex(minSeedInBatch);
-                    Console.WriteLine($"  Resume: --startSeed {resumeSeedIdx}  (first seed in that batch)");
+                    Console.WriteLine($"  Resume: --startSeed {minSeedInBatch}");
                 }
             }
         }
@@ -491,12 +558,12 @@ partial class Program
     {
         if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
         {
-            Console.Error.WriteLine($"Invalid deck: {deckName}");
+            Console.Error.WriteLine($"Error: invalid deck '{deckName}'.");
             return 1;
         }
         if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s))
         {
-            Console.Error.WriteLine($"Invalid stake: {stakeName}");
+            Console.Error.WriteLine($"Error: invalid stake '{stakeName}'.");
             return 1;
         }
 
@@ -575,16 +642,17 @@ partial class Program
     {
         if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
         {
-            Console.Error.WriteLine($"Invalid deck: {deckName}");
+            Console.Error.WriteLine($"Error: invalid deck '{deckName}'.");
             return 1;
         }
         if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s))
         {
-            Console.Error.WriteLine($"Invalid stake: {stakeName}");
+            Console.Error.WriteLine($"Error: invalid stake '{stakeName}'.");
             return 1;
         }
 
-        var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, d, s));
+        var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
+        var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(normalizedSeed, d, s));
 
         if (json)
         {
@@ -593,7 +661,7 @@ partial class Program
                 ?? [];
             var dto = new SeedAnalysisDto
             {
-                Seed = seed,
+                Seed = normalizedSeed,
                 Deck = d.ToString(),
                 Stake = s.ToString(),
                 ErraticDeckComposition = erratic,
@@ -631,8 +699,9 @@ partial class Program
         }
         else
         {
-            Console.WriteLine($"Analyzing: {seed} | {d} {s}");
+            Console.WriteLine($"=== {normalizedSeed} | {d} {s} ===");
             Console.Write(analysis);
+            Console.WriteLine();
         }
         return 0;
     }
@@ -662,7 +731,7 @@ partial class Program
             perSec >= 1_000_000
                 ? $"{perSec / 1_000_000:F2} M/s"
                 : perSec >= 1_000
-                    ? $"{perSec / 1_000:F1}K/s"
+                    ? $"{perSec / 1_000:F1} K/s"
                     : $"{perSec:F0}/s";
         string eta = p.EstimatedTimeRemainingMilliseconds is long etaMs && etaMs > 0
             ? $" | ETA {FormatEtaMs(etaMs)}"
