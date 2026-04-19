@@ -790,12 +790,7 @@ public static class JamlScoring
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (!ArrayContains(shopItems, slot))
                         continue;
-                    int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    if (matches > 0)
-                    {
-                        runState.AddOwnedJoker((MotelyJoker)item.Type);
-                        count += matches;
-                    }
+                    count += MatchJoker(item, targetTypes, edition, stickers);
                 }
             }
 
@@ -813,12 +808,7 @@ public static class JamlScoring
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                     {
-                        int matches = MatchJoker(contents[i], targetTypes, edition, stickers);
-                        if (matches > 0)
-                        {
-                            runState.AddOwnedJoker((MotelyJoker)contents[i].Type);
-                            count += matches;
-                        }
+                        count += MatchJoker(contents[i], targetTypes, edition, stickers);
                     }
                 }
             }
@@ -851,7 +841,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.Judgement, roll))
                 {
                     int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -866,7 +856,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.Wraith, roll))
                 {
                     int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -881,7 +871,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.RiffRaff, roll))
                 {
                     int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -896,7 +886,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.RareTag, roll))
                 {
                     int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -911,7 +901,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.UncommonTag, roll))
                 {
                     int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -946,12 +936,7 @@ public static class JamlScoring
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (!ArrayContains(shopItems, slot))
                         continue;
-                    int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
-                    if (matches > 0)
-                    {
-                        runState.AddOwnedJoker((MotelyJoker)item.Type);
-                        count += matches;
-                    }
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
                 }
             }
 
@@ -969,12 +954,7 @@ public static class JamlScoring
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                     {
-                        int matches = MatchJokerWildcard(contents[i], wildcardRarity, edition, stickers);
-                        if (matches > 0)
-                        {
-                            runState.AddOwnedJoker((MotelyJoker)contents[i].Type);
-                            count += matches;
-                        }
+                        count += MatchJokerWildcard(contents[i], wildcardRarity, edition, stickers);
                     }
                 }
             }
@@ -1007,7 +987,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.Judgement, roll))
                 {
                     int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -1022,7 +1002,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.Wraith, roll))
                 {
                     int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -1037,7 +1017,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.RiffRaff, roll))
                 {
                     int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -1052,7 +1032,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.RareTag, roll))
                 {
                     int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
@@ -1067,7 +1047,7 @@ public static class JamlScoring
                 if (ArrayContains(sources.UncommonTag, roll))
                 {
                     int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
-                    if (matches > 0) { runState.AddOwnedJoker((MotelyJoker)item.Type); count += matches; }
+                    count += matches;
                 }
             }
         }
