@@ -135,7 +135,14 @@
       "Bash(powershell:*)",
       "Bash(dir:*)",
       "WebFetch(domain:claude.com)",
-      "PowerShell(dotnet test *)"
+      "PowerShell(dotnet test *)",
+      "Bash(sed -n '516,549p' /X/JammySeedFinder/src/MotelyJAML/Motely.CLI/Program.cs)",
+      "Bash(sed -n '594,627p' /X/JammySeedFinder/src/MotelyJAML/Motely.CLI/Program.cs)",
+      "PowerShell(dotnet build *)",
+      "Bash(unzip *)",
+      "Bash(gh issue *)",
+      "PowerShell(Set-Location C:\\\\torture-chamber\\\\week-fourteen\\\\Motely-master; Write-Output \\(Get-Location\\).Path)",
+      "WebFetch(domain:deepwiki.com)"
     ],
     "additionalDirectories": [
       "D:\\jaml-mcp"
