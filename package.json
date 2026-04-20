@@ -1,9 +1,0 @@
-{
-  "name": "motely-jaml",
-  "version": "1.0.0",
-  "description": "JAML (Jimbo's Ante Markup Language) by pifreak + Motely seed engine + motely-wasm browser build.",
-  "private": true,
-  "devDependencies": {
-    "rollup": "^4.60.1"
-  }
-}

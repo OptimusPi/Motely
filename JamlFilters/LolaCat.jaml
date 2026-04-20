@@ -9,7 +9,7 @@ must:
     antes: [2]
     sources:
       boosterPacks: [0]
-  - smallBlindTag: negativeTag
+  - smallBlindTag: NegativeTag
     antes: [2]
   - joker: Showman
     antes: [1, 2]
