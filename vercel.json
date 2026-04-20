@@ -1,4 +1,0 @@
-{
-  "buildCommand": "cd Motely.TestWebsite && npm install && npm run build",
-  "outputDirectory": "Motely.TestWebsite/dist"
-}
