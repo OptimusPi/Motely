@@ -711,7 +711,9 @@ public sealed class MotelyWasmSearchContext : IMotelyWasmSearchContext
         return new(items, nextStream);
     }
 
-    // ── Dispose ───────────────────────────────────────────────────────
+    // ── Dispose / Cancel ─────────────────────────────────────────────
+
+    public void Cancel() => Dispose();
 
     public void Dispose()
     {

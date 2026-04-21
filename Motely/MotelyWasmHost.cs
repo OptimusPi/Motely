@@ -1,4 +1,5 @@
 using Motely.Filters;
+using YamlDotNet.Core;
 
 namespace Motely;
 
@@ -27,6 +28,119 @@ public sealed class MotelyWasmHost : IMotelyWasm
             return "valid";
         }
         return error ?? "Invalid JAML.";
+    }
+
+    public JamlValidationResult ValidateJamlStructured(string jaml)
+    {
+        if (JamlConfigLoader.TryLoadWithException(jaml, out var config, out var error, out var exception))
+        {
+            try { JamlSearchBuilder.EnsureRunnablePlan(config); }
+            catch (Exception ex)
+            {
+                return new JamlValidationResult(false, ex.Message, null, 0, 0);
+            }
+            return new JamlValidationResult(true, null, null, 0, 0);
+        }
+
+        int line = 0, col = 0;
+        string? path = null;
+        if (exception is YamlException yamlEx)
+        {
+            line = (int)yamlEx.Start.Line;
+            col = (int)yamlEx.Start.Column;
+        }
+        return new JamlValidationResult(false, error ?? "Invalid JAML.", path, line, col);
+    }
+
+    public JamlMetaResult GetJamlMeta(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out _))
+            return new JamlMetaResult([], [], 0, 0, 0, "Red", "White");
+
+        var antes = new SortedSet<int>();
+        var itemTypes = new SortedSet<string>();
+
+        void Walk(System.Collections.Generic.IEnumerable<IJamlClause> clauses)
+        {
+            foreach (var c in clauses)
+            {
+                switch (c)
+                {
+                    case JokerClause jc:
+                        itemTypes.Add("Joker");
+                        foreach (var a in jc.Antes) antes.Add(a);
+                        break;
+                    case CommonJokerClause cc:
+                        itemTypes.Add("CommonJoker");
+                        foreach (var a in cc.Antes) antes.Add(a);
+                        break;
+                    case UncommonJokerClause uc:
+                        itemTypes.Add("UncommonJoker");
+                        foreach (var a in uc.Antes) antes.Add(a);
+                        break;
+                    case RareJokerClause rc:
+                        itemTypes.Add("RareJoker");
+                        foreach (var a in rc.Antes) antes.Add(a);
+                        break;
+                    case LegendaryJokerClause lc:
+                        itemTypes.Add("LegendaryJoker");
+                        foreach (var a in lc.Antes) antes.Add(a);
+                        break;
+                    case VoucherClause vc:
+                        itemTypes.Add("Voucher");
+                        foreach (var a in vc.Antes) antes.Add(a);
+                        break;
+                    case BossClause bc:
+                        itemTypes.Add("Boss");
+                        foreach (var a in bc.Antes) antes.Add(a);
+                        break;
+                    case TagClause tc:
+                        itemTypes.Add("Tag");
+                        foreach (var a in tc.Antes) antes.Add(a);
+                        break;
+                    case TarotCardClause tarot:
+                        itemTypes.Add("Tarot");
+                        foreach (var a in tarot.Antes) antes.Add(a);
+                        break;
+                    case SpectralCardClause spec:
+                        itemTypes.Add("Spectral");
+                        foreach (var a in spec.Antes) antes.Add(a);
+                        break;
+                    case PlanetCardClause planet:
+                        itemTypes.Add("Planet");
+                        foreach (var a in planet.Antes) antes.Add(a);
+                        break;
+                    case ErraticRankClause erk:
+                        itemTypes.Add("ErraticRank");
+                        foreach (var a in erk.Antes) antes.Add(a);
+                        break;
+                    case ErraticSuitClause esc:
+                        itemTypes.Add("ErraticSuit");
+                        foreach (var a in esc.Antes) antes.Add(a);
+                        break;
+                    case AndClause and:
+                        Walk(and.Clauses);
+                        break;
+                    case OrClause or:
+                        Walk(or.Clauses);
+                        break;
+                }
+            }
+        }
+
+        Walk(config.Must);
+        Walk(config.Should);
+        Walk(config.MustNot);
+
+        return new JamlMetaResult(
+            [.. antes],
+            [.. itemTypes],
+            config.Must.Count,
+            config.Should.Count,
+            config.MustNot.Count,
+            config.Deck.ToString(),
+            config.Stake.ToString()
+        );
     }
 
     public string CompileJummy(string jummy)
