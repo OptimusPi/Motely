@@ -150,6 +150,8 @@ public record MotelyItemChunkResult(
 
 public interface IMotelyWasmSearchContext : IDisposable
 {
+    void Cancel();
+
     MotelySingleBossStream CreateBossStream();
     MotelyBossStreamResult GetNextBossForAnte(
         MotelySingleBossStream stream,

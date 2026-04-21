@@ -563,6 +563,67 @@ public static partial class JamlConfigLoader
     }
 
     /// <summary>
+    /// Like <see cref="TryLoad"/> but also surfaces the raw exception so callers can extract
+    /// structured location info (line, column) from <see cref="YamlException"/>.
+    /// </summary>
+    public static bool TryLoadWithException(
+        string jaml,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error,
+        out Exception? exception)
+    {
+        exception = null;
+        config = null;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(jaml))
+        {
+            error = "JAML content is required.";
+            return false;
+        }
+
+        try
+        {
+            var normalizedJaml = NormalizeNestedLogicSyntax(jaml);
+            if (!TryParseRootFromYaml(normalizedJaml, out var load, out error) || load is null)
+            {
+                if (error == null) error = "JAML document could not be parsed.";
+                return false;
+            }
+
+            var defaultAntes = load.Defaults?.Antes ?? DefaultAntes;
+            var deck = Enum.TryParse<MotelyDeck>(load.Deck, true, out var deckEnum) ? deckEnum : MotelyDeck.Red;
+            var stake = Enum.TryParse<MotelyStake>(load.Stake, true, out var stakeEnum) ? stakeEnum : MotelyStake.White;
+
+            config = new JamlConfig
+            {
+                Id = load.Id ?? load.Name ?? string.Empty,
+                FilterId = load.Id ?? load.Name ?? string.Empty,
+                Deck = deck,
+                Stake = stake,
+            };
+
+            PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
+            PopulateClauses(config.Should, load.Should, defaultAntes, load.Defaults);
+            PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
+
+            var baseFilterId = NormalizeFilterId(load.Id, load.Name);
+            config.Id = AppendSemanticFingerprintToFilterId(baseFilterId, config, load.Defaults);
+            config.FilterId = config.Id;
+            config.HasAnyClauses = config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            config = null;
+            error = FormatLoadError(ex);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Rewrites nested <c>and:</c> / <c>or:</c> blocks that use <c>clauses:</c> plus shared keys
     /// (<c>antes</c>, <c>label</c>, <c>mode</c>, <c>score</c>, …) into the flat shape <see cref="JamlClauseDto"/> expects.
     /// Hoisted keys become siblings of <c>and</c>/<c>or</c> so <see cref="CreateClauseFromDto"/> passes shared <c>antes</c> into each child.
