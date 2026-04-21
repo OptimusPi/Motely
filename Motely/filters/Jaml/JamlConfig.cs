@@ -877,7 +877,7 @@ public static partial class JamlConfigLoader
         bool hasUserSpecifiedAntes = clauseHasExplicitAntes || inheritedAntesSpecifiedByUser;
         int min = c.Min ?? 1;
         int score = c.Score ?? 1;
-        var label = c.Label ?? "Label"; // TODO JamlClauseLabeler.Generate(itemType, c, antes, min);
+        var label = c.Label ?? GenerateLabel(c);
 
         bool explicitAnd = string.Equals(c.Type, "And", StringComparison.OrdinalIgnoreCase);
         bool explicitOr = string.Equals(c.Type, "Or", StringComparison.OrdinalIgnoreCase);
@@ -1481,6 +1481,48 @@ public static partial class JamlConfigLoader
             || (sources.UncommonShopJokers?.Length ?? 0) > 0
             || (sources.RareShopJokers?.Length ?? 0) > 0
             || (sources.AllShopJokers?.Length ?? 0) > 0;
+    }
+
+    private static string GenerateLabel(JamlClauseDto c)
+    {
+        if (c.Joker != null) return c.Joker;
+        if (c.Jokers is { Count: > 0 } jj) return string.Join(", ", jj);
+        if (c.CommonJoker != null) return c.CommonJoker;
+        if (c.CommonJokers is { Count: > 0 } cj) return string.Join(", ", cj);
+        if (c.UncommonJoker != null) return c.UncommonJoker;
+        if (c.UncommonJokers is { Count: > 0 } uj) return string.Join(", ", uj);
+        if (c.RareJoker != null) return c.RareJoker;
+        if (c.RareJokers is { Count: > 0 } rj) return string.Join(", ", rj);
+        if (c.MixedJoker != null) return c.MixedJoker;
+        if (c.MixedJokers is { Count: > 0 } mj) return string.Join(", ", mj);
+        if (c.SoulJoker != null) return c.SoulJoker;
+        if (c.LegendaryJoker != null) return c.LegendaryJoker;
+        if (c.Voucher != null) return c.Voucher;
+        if (c.Vouchers is { Count: > 0 } vv) return string.Join(", ", vv);
+        if (c.Tarot != null) return c.Tarot;
+        if (c.TarotCard != null) return c.TarotCard;
+        if (c.Spectral != null) return c.Spectral;
+        if (c.SpectralCard != null) return c.SpectralCard;
+        if (c.Planet != null) return c.Planet;
+        if (c.PlanetCard != null) return c.PlanetCard;
+        if (c.Boss != null) return c.Boss;
+        if (c.Tag != null) return c.Tag;
+        if (c.SmallBlindTag != null) return c.SmallBlindTag;
+        if (c.BigBlindTag != null) return c.BigBlindTag;
+        if (c.StandardCard != null) return c.StandardCard;
+        if (c.ErraticRank != null) return c.ErraticRank;
+        if (c.ErraticSuit != null) return c.ErraticSuit;
+        if (c.ErraticCard != null) return c.ErraticCard;
+        if (c.StartingDraw != null) return c.StartingDraw;
+        if (c.Event != null) return c.Event;
+        if (c.LuckyMoney != null) return "luckyMoney";
+        if (c.LuckyMult != null) return "luckyMult";
+        if (c.MisprintMult != null) return "misprintMult";
+        if (c.WheelOfFortune != null) return "wheelOfFortune";
+        if (c.CavendishExtinct != null) return "cavendishExtinct";
+        if (c.GrosMichelExtinct != null) return "grosMichelExtinct";
+        if (c.Type != null) return c.Value ?? c.Type;
+        return "clause";
     }
 
     // ── Resolve type from shorthand keys or explicit type field ──

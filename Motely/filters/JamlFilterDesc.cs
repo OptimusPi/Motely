@@ -74,7 +74,9 @@ public sealed record JamlSearchPlan(
     IMotelySearchSettings Settings,
     int ScoreTallyColumnCount,
     /// <summary>RFC-4180 style header line: quoted fields, comma-separated. Empty when <see cref="ScoreTallyColumnCount"/> is 0.</summary>
-    string ScoredCsvHeaderQuoted
+    string ScoredCsvHeaderQuoted,
+    /// <summary>Authoritative tally column labels in evaluation order (must clauses first, then should).</summary>
+    string[] TallyLabels
 );
 
 
@@ -168,7 +170,11 @@ public static class JamlSearchBuilder
             ? BuildScoredCsvHeaderQuoted(shouldClauses)
             : "";
 
-        return new JamlSearchPlan(settings, shouldClauses.Count, headerQuoted);
+        var tallyLabels = shouldClauses.Count > 0
+            ? shouldClauses.Select((c, i) => string.IsNullOrWhiteSpace(c.Label) ? $"tally_{i}" : c.Label).ToArray()
+            : [];
+
+        return new JamlSearchPlan(settings, shouldClauses.Count, headerQuoted, tallyLabels);
     }
 
     /// <summary>
@@ -512,7 +518,7 @@ public static class JamlSearchBuilder
 
 
 
-    private static IMotelySeedFilterDesc CreateDesc(object clause)
+    private static IMotelySeedFilterDesc CreateDesc(IJamlClause clause)
 
     {
 

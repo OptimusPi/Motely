@@ -17,4 +17,5 @@ public interface IMotelyWasm
     IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds);
     IMotelyWasmSearch StartKeywordSearch(string jaml, string keywordsCsv,
         string paddingChars);
+    string[] GetTallyLabels(string jaml);
 }
