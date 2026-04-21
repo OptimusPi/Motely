@@ -179,7 +179,7 @@ public sealed class MotelyWasmHost : IMotelyWasm
         });
     }
 
-    public async Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(
+    public Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(
         string jaml,
         int batchCharCount,
         long startBatch,
@@ -188,7 +188,7 @@ public sealed class MotelyWasmHost : IMotelyWasm
     )
     {
         var results = new List<MotelyWasmSearchResult>();
-        var search = StartSequentialSearch(
+        using var search = StartSequentialSearch(
             jaml,
             batchCharCount,
             startBatch,
@@ -198,15 +198,15 @@ public sealed class MotelyWasmHost : IMotelyWasm
                     results.Add(result);
             }
         );
-        try
-        {
-            var completion = await search.WaitForCompletion();
-            return new(completion, [.. results]);
-        }
-        finally
-        {
-            search.Dispose();
-        }
+        // NativeAOT fires all events synchronously — search is complete by here.
+        var snap = search.GetSnapshot();
+        var completion = new MotelyWasmSearchCompletion(
+            MotelyWasmSearchState.Completed,
+            snap.TotalSeedsSearched,
+            snap.MatchingSeeds,
+            null
+        );
+        return Task.FromResult(new MotelyWasmSearchBatchResult(completion, [.. results]));
     }
 
     public IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds)
@@ -272,12 +272,15 @@ public sealed class MotelyWasmHost : IMotelyWasm
         settings = configureMode(settings);
 
         var events = _events;
-        settings = settings.WithScoredResultCallback(tally =>
-        {
-            var tallyColumns = tally.TallyColumns.ToArray();
-            onResult?.Invoke(new(tally.Seed, tally.Score, tallyColumns));
-            events.NotifyResult(tally.Seed, tally.Score, tallyColumns);
-        });
+        settings = settings
+            .WithProgressCallback(progress =>
+                events.NotifyProgress(progress.SeedsSearched, progress.MatchingSeeds))
+            .WithScoredResultCallback(tally =>
+            {
+                var tallyColumns = tally.TallyColumns.ToArray();
+                onResult?.Invoke(new(tally.Seed, tally.Score, tallyColumns));
+                events.NotifyResult(tally.Seed, tally.Score, tallyColumns);
+            });
 
         var search = settings.Start();
         return new MotelyWasmSearch(search);
