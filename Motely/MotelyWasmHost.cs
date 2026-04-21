@@ -169,6 +169,9 @@ public sealed class MotelyWasmHost : IMotelyWasm
         return new MotelyWasmSearch(search);
     }
 
+    public string[] GetTallyLabels(string jaml) =>
+        JamlSearchBuilder.CreatePlan(ParseJaml(jaml)).TallyLabels;
+
     private static JamlConfig ParseJaml(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))

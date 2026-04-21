@@ -1,17 +1,13 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>12.1.0</MotelyVersion>
+    <MotelyVersion>12.2.0</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Bootsharp" Version="0.7.0" />
-    <PackageVersion Include="Bootsharp.Inject" Version="0.7.0" />
+    <PackageVersion Include="Bootsharp" Version="0.8.0-alpha.74" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.8.0-alpha.74" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
-    <PackageVersion Include="Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
-    <PackageVersion Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
-    <PackageVersion Include="runtime.linux-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-rc.1.26117.1" />
-    <PackageVersion Include="runtime.osx-arm64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-dev" />
-    <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
+<PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.0" />
     <PackageVersion Include="Terminal.Gui" Version="2.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.5" />
