@@ -19,7 +19,7 @@ const assetKeyByFileName = Object.fromEntries(
 ) as Record<JamlAssetFile, JamlAssetKey>;
 
 // Keep in lockstep with package.json version. Upload assets to this path when publishing.
-const JAML_UI_VERSION = "0.8.0";
+const JAML_UI_VERSION = "0.10.0";
 const CDN_BASE = `https://cdn.seedfinder.app/jaml-ui/${JAML_UI_VERSION}/assets/`;
 
 const defaultAssetUrls: Record<JamlAssetKey, string> = {
