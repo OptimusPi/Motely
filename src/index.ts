@@ -74,6 +74,12 @@ export {
 } from "./ui/jimboFilterBar.js";
 export { JimboBackground } from "./ui/jimboBackground.js";
 export {
+    JimboTooltip,
+    type JimboTooltipProps,
+    type JimboTooltipMode,
+    type JimboTooltipPlacement,
+} from "./ui/jimboTooltip.js";
+export {
     JamlIdeToolbar,
     type JamlIdeMode,
     type JamlIdeToolbarProps,
