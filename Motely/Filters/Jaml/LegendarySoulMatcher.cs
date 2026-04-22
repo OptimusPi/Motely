@@ -16,6 +16,20 @@ internal static class LegendarySoulMatcher
         int ante,
         LegendaryJokerClause clause,
         int maxBoosterPack
+    ) => CountAnte(ref ctx, ante, clause, maxBoosterPack, stopAfterFirstMatch: true) > 0;
+
+    /// <summary>
+    /// Walks every targeted arcana/spectral pack in <paramref name="ante"/> and returns the total
+    /// number of soul-legendary matches. Soul stream must be consumed once per soul seen regardless
+    /// of whether the joker matches the clause, so short-circuiting mid-ante would misalign later antes
+    /// (and, more visibly, hide the second soul in antes like ALEEB's 1–2 with double legendaries).
+    /// </summary>
+    internal static int CountAnte(
+        ref MotelySingleSearchContext ctx,
+        int ante,
+        LegendaryJokerClause clause,
+        int maxBoosterPack,
+        bool stopAfterFirstMatch = false
     )
     {
         var src = clause.Sources.NormalizeSoulJokerBoostersIfEmpty();
@@ -30,6 +44,8 @@ internal static class LegendarySoulMatcher
         bool spectralInit = false;
         MotelySingleJokerFixedRarityStream soulStream = default;
         bool soulStreamInited = false;
+
+        int count = 0;
 
         for (int p = 0; p <= maxBoosterPack; p++)
         {
@@ -52,7 +68,12 @@ internal static class LegendarySoulMatcher
                     continue;
 
                 if (clause.SoulCardOnly)
-                    return true;
+                {
+                    count++;
+                    if (stopAfterFirstMatch)
+                        return count;
+                    continue;
+                }
 
                 if (!soulStreamInited)
                 {
@@ -62,7 +83,11 @@ internal static class LegendarySoulMatcher
 
                 var legendaryJoker = ctx.GetNextJoker(ref soulStream);
                 if (LegendaryJokerMatchesFull(clause, legendaryJoker))
-                    return true;
+                {
+                    count++;
+                    if (stopAfterFirstMatch)
+                        return count;
+                }
             }
             else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
             {
@@ -79,7 +104,12 @@ internal static class LegendarySoulMatcher
                     continue;
 
                 if (clause.SoulCardOnly)
-                    return true;
+                {
+                    count++;
+                    if (stopAfterFirstMatch)
+                        return count;
+                    continue;
+                }
 
                 if (!soulStreamInited)
                 {
@@ -89,11 +119,15 @@ internal static class LegendarySoulMatcher
 
                 var legendaryJoker = ctx.GetNextJoker(ref soulStream);
                 if (LegendaryJokerMatchesFull(clause, legendaryJoker))
-                    return true;
+                {
+                    count++;
+                    if (stopAfterFirstMatch)
+                        return count;
+                }
             }
         }
 
-        return false;
+        return count;
     }
 
     /// <summary>
