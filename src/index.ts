@@ -72,12 +72,25 @@ export {
     type JimboFilterBarProps,
     type JimboFilterSortOption,
 } from "./ui/jimboFilterBar.js";
+export { JimboBackground } from "./ui/jimboBackground.js";
 export {
     JamlIdeToolbar,
     type JamlIdeMode,
     type JamlIdeToolbarProps,
 } from "./components/JamlIdeToolbar.js";
 export { CardList, type CardListProps } from "./components/CardList.js";
+export { CardFan, type CardFanProps } from "./components/CardFan.js";
+export {
+    DeckSprite,
+    DECK_SPRITE_POS,
+    STAKE_SPRITE_POS,
+    type DeckSpriteProps,
+} from "./components/DeckSprite.js";
+export {
+    MotelyVersionBadge,
+    type MotelyVersionBadgeProps,
+    type MotelyCapabilities,
+} from "./components/MotelyVersionBadge.js";
 
 export {
     extractVisualJamlItems,
