@@ -58,6 +58,21 @@ export {
     type JimboTextSize,
 } from "./ui/jimboText.js";
 export {
+    JimboTabs,
+    JimboVerticalTabs,
+    type JimboTabItem,
+    type JimboTabsProps,
+} from "./ui/jimboTabs.js";
+export {
+    JimboFlankNav,
+    type JimboFlankNavProps,
+} from "./ui/jimboFlankNav.js";
+export {
+    JimboFilterBar,
+    type JimboFilterBarProps,
+    type JimboFilterSortOption,
+} from "./ui/jimboFilterBar.js";
+export {
     JamlIdeToolbar,
     type JamlIdeMode,
     type JamlIdeToolbarProps,
