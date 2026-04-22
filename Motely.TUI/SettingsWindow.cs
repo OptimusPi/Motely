@@ -248,7 +248,7 @@ public class SettingsWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         cancelButton.ColorScheme = BalatroTheme.BackButton;
@@ -293,7 +293,7 @@ public class SettingsWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         okBtn.ColorScheme = BalatroTheme.BackButton;

@@ -24,7 +24,7 @@ public class ItemSelectorDialog : Dialog
         {
             X = 1,
             Y = 1,
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = $"Selected: {items[0]}",
         };
         selectionLabel.ColorScheme =
@@ -35,8 +35,8 @@ public class ItemSelectorDialog : Dialog
         {
             X = 1,
             Y = 3,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 9,
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -9,
             CanFocus = true,
         };
         listView.ColorScheme = BalatroTheme.ListView;
@@ -95,7 +95,7 @@ public class ItemSelectorDialog : Dialog
         {
             X = 1,
             Y = Pos.AnchorEnd(3),
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Add to Filter",
             TextAlignment = Alignment.Center,
         };
@@ -117,7 +117,7 @@ public class ItemSelectorDialog : Dialog
         {
             X = 1,
             Y = Pos.AnchorEnd(1),
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Back",
             TextAlignment = Alignment.Center,
         };

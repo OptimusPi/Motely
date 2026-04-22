@@ -46,7 +46,7 @@ public class FilterBuilderWindow : Window
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill() - 2,
+            Height = Dim.Fill()! -2,
             CanFocus = true,
         };
         _mustList.ColorScheme =
@@ -97,7 +97,7 @@ public class FilterBuilderWindow : Window
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill() - 2,
+            Height = Dim.Fill()! -2,
             CanFocus = true,
         };
         _shouldList.ColorScheme =
@@ -188,7 +188,7 @@ public class FilterBuilderWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         backBtn.ColorScheme = BalatroTheme.BackButton;
@@ -458,8 +458,8 @@ public class FilterBuilderWindow : Window
         {
             X = 1,
             Y = 3,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 7,
+            Width = Dim.Fill()! - 2,
+            Height = Dim.Fill()! - 7,
             CanFocus = true,
         };
         filterList.ColorScheme =
@@ -534,7 +534,7 @@ public class FilterBuilderWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(3),
             Text = "Load Filter",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         loadBtn.ColorScheme = BalatroTheme.BlueButton;
@@ -546,7 +546,7 @@ public class FilterBuilderWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         cancelBtn.ColorScheme = BalatroTheme.BackButton;
@@ -732,7 +732,7 @@ public class FilterBuilderWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         okBtn.ColorScheme = BalatroTheme.BackButton;
