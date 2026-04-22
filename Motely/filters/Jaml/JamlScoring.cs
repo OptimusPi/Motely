@@ -719,10 +719,7 @@ public static class JamlScoring
         int maxPack = sources.MaxReferencedBoosterSlot();
 
         foreach (int ante in clause.Antes)
-        {
-            if (LegendarySoulMatcher.MatchAnte(ref ctx, ante, clause, maxPack))
-                count++;
-        }
+            count += LegendarySoulMatcher.CountAnte(ref ctx, ante, clause, maxPack);
 
         return count;
     }
