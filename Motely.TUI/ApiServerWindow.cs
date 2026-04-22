@@ -47,7 +47,7 @@ public class ApiServerWindow : Window
         {
             X = 1,
             Y = 2,
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = _serverUrl,
         };
         _urlLabel.ColorScheme =
@@ -82,8 +82,8 @@ public class ApiServerWindow : Window
         {
             X = 1,
             Y = 5,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 4, // Leave room for buttons at bottom
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -4, // Leave room for buttons at bottom
             Title = "Request Log",
         };
         logFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -138,7 +138,7 @@ public class ApiServerWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(3),
             Text = "Stop Server Host",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         _stopButton.ColorScheme = BalatroTheme.RedButton;
@@ -151,7 +151,7 @@ public class ApiServerWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         backButton.ColorScheme = BalatroTheme.BackButton;

@@ -41,7 +41,7 @@ public class SearchWindow : Window
         {
             X = 1,
             Y = 1,
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Starting search...",
         };
         _statusLabel.ColorScheme =
@@ -53,7 +53,7 @@ public class SearchWindow : Window
         {
             X = 1,
             Y = 2,
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "",
         };
         _progressLabel.ColorScheme =
@@ -65,8 +65,8 @@ public class SearchWindow : Window
         {
             X = 1,
             Y = 4,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 8,
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -8,
             Title = "Results",
         };
         resultsFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -96,7 +96,7 @@ public class SearchWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(3),
             Text = "Stop Search",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         _stopBtn.ColorScheme = BalatroTheme.RedButton;
@@ -109,7 +109,7 @@ public class SearchWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         backBtn.ColorScheme = BalatroTheme.BackButton;
@@ -262,6 +262,7 @@ public class SearchWindow : Window
             });
 
             var search = settings.Start(_cts.Token);
+            _search = search;
 
             // Poll progress on a timer
             Application.AddTimeout(

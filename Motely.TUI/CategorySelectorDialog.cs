@@ -18,7 +18,7 @@ public class CategorySelectorDialog : Dialog
         {
             X = 1,
             Y = 1,
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Choose a category (hotkey or arrow keys + Enter):",
         };
         Add(instructionLabel);
@@ -40,8 +40,8 @@ public class CategorySelectorDialog : Dialog
         {
             X = 1,
             Y = 3,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 5,
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -5,
             CanFocus = true,
         };
         listView.ColorScheme = BalatroTheme.ListView;
@@ -97,7 +97,7 @@ public class CategorySelectorDialog : Dialog
         {
             X = 1,
             Y = Pos.AnchorEnd(1),
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Back",
         };
         cancelBtn.ColorScheme = BalatroTheme.BackButton;

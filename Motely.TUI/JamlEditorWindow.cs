@@ -27,7 +27,7 @@ public class JamlEditorWindow : Window
         {
             X = 1,
             Y = 1,
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Height = 1,
         };
         Add(toolbar);
@@ -75,8 +75,8 @@ public class JamlEditorWindow : Window
         {
             X = 1,
             Y = 3,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 7,
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -7,
             Title = "JAML",
         };
         editorFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -99,7 +99,7 @@ public class JamlEditorWindow : Window
         {
             X = 1,
             Y = Pos.AnchorEnd(1),
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Back",
             TextAlignment = Alignment.Center,
         };
@@ -162,8 +162,8 @@ public class JamlEditorWindow : Window
         {
             X = 1,
             Y = 1,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 5,
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -5,
             CanFocus = true,
         };
         filterList.SetSource(
@@ -189,7 +189,7 @@ public class JamlEditorWindow : Window
         {
             X = 1,
             Y = Pos.AnchorEnd(3),
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Load",
             TextAlignment = Alignment.Center,
         };
@@ -201,7 +201,7 @@ public class JamlEditorWindow : Window
         {
             X = 1,
             Y = Pos.AnchorEnd(1),
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = "Back",
             TextAlignment = Alignment.Center,
         };

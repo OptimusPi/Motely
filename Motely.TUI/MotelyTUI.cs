@@ -32,7 +32,7 @@ public static class MotelyTUI
         {
             X = 2,
             Y = 2,
-            Width = Dim.Fill() - 4,
+            Width = Dim.Fill()! -4,
             Height = 5,
             Text = message,
         };
@@ -79,7 +79,7 @@ public static class MotelyTUI
         window.X = 0;
         window.Y = 0;
         window.Width = Dim.Fill();
-        window.Height = Dim.Fill() - 5;
+        window.Height = Dim.Fill()! -5;
 
         // Hide other windows so they don't draw over each other or waste CPU
         foreach (var w in _windowStack)
