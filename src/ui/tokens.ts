@@ -78,16 +78,18 @@ export const JIMBO_ANIMATIONS = {
   CARD_TILT_MAX: 6,
   MENU_SINK_DURATION: 200,
   MENU_RISE_DURATION: 300,
+  MENU_ORBIT_DURATION: 320,
   LETTER_POP_RATE: 3,
   LETTER_BUMP_RATE: 2.666,
 } as const
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'back' | 'ghost'
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'action' | 'back' | 'ghost'
 
 export const BUTTON_COLORS: Record<ButtonVariant, { bg: string; hover: string; text: string }> = {
   primary:   { bg: JimboColorOption.RED,    hover: JimboColorOption.DARK_RED,    text: JimboColorOption.WHITE },
   secondary: { bg: JimboColorOption.BLUE,   hover: JimboColorOption.DARK_BLUE,   text: JimboColorOption.WHITE },
   danger:    { bg: JimboColorOption.RED,    hover: JimboColorOption.DARK_RED,    text: JimboColorOption.WHITE },
+  action:    { bg: JimboColorOption.RED,    hover: JimboColorOption.DARK_RED,    text: JimboColorOption.WHITE },
   back:      { bg: JimboColorOption.ORANGE, hover: JimboColorOption.DARK_ORANGE, text: JimboColorOption.WHITE },
   ghost:     { bg: 'transparent', hover: 'rgba(255,255,255,0.1)', text: JimboColorOption.WHITE },
 }

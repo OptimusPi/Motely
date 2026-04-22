@@ -67,3 +67,9 @@ export {
 } from "./utils/jamlMapPreview.js";
 
 export { useMotelyStream, type StreamItem, type StreamState } from "./hooks/useShopStream.js";
+export {
+    useSearch,
+    type SearchResult,
+    type SearchStatus,
+    type UseSearchState,
+} from "./hooks/useSearch.js";

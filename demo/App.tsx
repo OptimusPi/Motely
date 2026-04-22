@@ -1,5 +1,9 @@
-import React, { useState } from "react";
-import { JamlIde, type JamlIdeSearchResult } from "jaml-ui";
+import React, { useState, useMemo } from "react";
+import { JamlIde, useSearch, type JamlIdeSearchResult } from "jaml-ui";
+import { JimboColorOption } from "jaml-ui/ui";
+import motelyPkg from "motely-wasm/package.json" with { type: "json" };
+
+const MOTELY_WASM_VERSION: string = motelyPkg.version;
 
 const SAMPLE_JAML = `name: Blueprint Copy Engine
 author: pifreak
@@ -27,68 +31,61 @@ mustNot:
     antes: [8]
 `;
 
-const MOCK_RESULTS: JamlIdeSearchResult[] = [
-  { seed: "8Q47WV6K", score: 320, tallyColumns: [1, 1, 1, 1, 1], tallyLabels: ["Blueprint", "Brainstorm", "Perkeo", "Baron", "NegativeTag"] },
-  { seed: "DCVE28EC", score: 280, tallyColumns: [1, 0, 1, 1, 1], tallyLabels: ["Blueprint", "Brainstorm", "Perkeo", "Baron", "NegativeTag"] },
-  { seed: "7M1GURT1", score: 215, tallyColumns: [1, 1, 0, 0, 1], tallyLabels: ["Blueprint", "Brainstorm", "Perkeo", "Baron", "NegativeTag"] },
-];
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <h2 style={{ fontSize: 12, letterSpacing: 2, color: "#8aa", textTransform: "uppercase", margin: 0 }}>{title}</h2>
-      {children}
-    </section>
-  );
+function envOrThrow(key: string): string {
+  const v = (import.meta.env as Record<string, string | undefined>)[key];
+  if (!v) throw new Error(`Missing ${key} in jaml-ui/.env.local — set VITE_CDN_BASE_URL (e.g. https://cdn.seedfinder.app)`);
+  return v;
 }
 
+// Version comes from motely-wasm's own package.json — single source of truth.
+// No env var lets version drift away from what npm installed.
+const MOTELY_WASM_URL = `${envOrThrow("VITE_CDN_BASE_URL")}/motely-wasm/${MOTELY_WASM_VERSION}/index.mjs`;
+
 export function App() {
-  const [controlledJaml, setControlledJaml] = useState(SAMPLE_JAML);
-  const [isSearching, setIsSearching] = useState(false);
+  const [jaml, setJaml] = useState(SAMPLE_JAML);
+  const search = useSearch(MOTELY_WASM_URL);
+
+  // Feed real search results into JamlIde's expected shape.
+  const results: JamlIdeSearchResult[] = useMemo(
+    () => search.results.map((r) => ({ seed: r.seed, score: r.score })),
+    [search.results],
+  );
+
+  const isSearching = search.status === "running";
+  const bootStatus = search.status === "booting" ? "booting motely-wasm…" : null;
 
   const handleSearch = () => {
-    setIsSearching(true);
-    setTimeout(() => setIsSearching(false), 1200);
+    if (isSearching) {
+      search.cancel();
+    } else {
+      search.start(jaml, 5000);
+    }
   };
 
   return (
-    <div style={{ padding: 32, display: "grid", gap: 32, maxWidth: 1100, margin: "0 auto" }}>
-      <header>
-        <h1 style={{ fontSize: 20, margin: 0, color: "#eac058" }}>jaml-ui demo</h1>
-        <div style={{ fontSize: 12, color: "#888" }}>Live component showcase — edits here hit the same source as the published package.</div>
+    <div style={{ padding: 24, display: "grid", gap: 24, maxWidth: 1100, margin: "0 auto" }}>
+      <header style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
+        <h1 style={{ fontSize: 20, margin: 0, color: JimboColorOption.GOLD_TEXT }}>jaml-ui demo</h1>
+        <span style={{ fontSize: 11, color: JimboColorOption.GREY }}>
+          motely-wasm @ {envOrThrow("VITE_MOTELY_WASM_VERSION")}
+        </span>
+        {bootStatus && <span style={{ fontSize: 11, color: JimboColorOption.GOLD_TEXT }}>{bootStatus}</span>}
+        {search.status === "error" && (
+          <span style={{ fontSize: 11, color: JimboColorOption.RED }}>error: {search.error}</span>
+        )}
       </header>
 
-      <Section title="JamlIde · uncontrolled (defaultJaml only, no onChange)">
-        <JamlIde defaultJaml={SAMPLE_JAML} />
-      </Section>
+      <JamlIde
+        jaml={jaml}
+        onChange={setJaml}
+        searchResults={results}
+        onSearch={handleSearch}
+        isSearching={isSearching}
+      />
 
-      <Section title="JamlIde · controlled (parent owns jaml state)">
-        <JamlIde
-          jaml={controlledJaml}
-          onChange={setControlledJaml}
-          actions={
-            <button
-              onClick={() => setControlledJaml(SAMPLE_JAML)}
-              style={{
-                fontSize: 11, padding: "4px 10px",
-                background: "#eac058", color: "#1e2b2d",
-                border: "none", borderRadius: 4, cursor: "pointer",
-              }}
-            >
-              Reset
-            </button>
-          }
-        />
-      </Section>
-
-      <Section title="JamlIde · with mock search results + search button">
-        <JamlIde
-          defaultJaml={SAMPLE_JAML}
-          searchResults={MOCK_RESULTS}
-          onSearch={handleSearch}
-          isSearching={isSearching}
-        />
-      </Section>
+      <footer style={{ fontSize: 11, color: JimboColorOption.DARK_GREY }}>
+        status: {search.status} · searched: {search.totalSearched.toString()} · matches: {search.matchingSeeds.toString()} · results shown: {search.results.length}
+      </footer>
     </div>
   );
 }
