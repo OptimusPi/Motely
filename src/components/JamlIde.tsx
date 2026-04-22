@@ -3,10 +3,13 @@
 import React, { useMemo, useState } from "react";
 import { JamlMapPreview } from "./JamlMapPreview.js";
 import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
+import { JimboColorOption } from "../ui/tokens.js";
 
 export interface JamlIdeSearchResult {
   seed: string;
   score?: number;
+  tallyColumns?: number[];
+  tallyLabels?: string[];
 }
 
 export interface JamlIdeProps {
@@ -22,44 +25,164 @@ export interface JamlIdeProps {
   isSearching?: boolean;
 }
 
+function TallyBar({ value, max }: { value: number; max: number }) {
+  const pct = max > 0 ? Math.min(1, value / max) : 0;
+  return (
+    <div style={{ flex: 1, height: 4, borderRadius: 999, background: `${JimboColorOption.DARK_GREY}88`, overflow: "hidden" }}>
+      <div
+        style={{
+          height: "100%",
+          width: `${pct * 100}%`,
+          borderRadius: 999,
+          background: value > 0 ? JimboColorOption.GREEN : JimboColorOption.GREY,
+          transition: "width 200ms ease",
+        }}
+      />
+    </div>
+  );
+}
+
 function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
   if (results.length === 0) {
     return (
       <div
         style={{
-          border: "1px dashed rgba(255,255,255,0.18)",
-          borderRadius: 12,
-          padding: 14,
+          border: `1px dashed ${JimboColorOption.DARK_GREY}`,
+          borderRadius: 10,
+          padding: 16,
           fontSize: 12,
-          opacity: 0.72,
-          background: "rgba(255,255,255,0.03)",
+          color: JimboColorOption.GREY,
+          background: `${JimboColorOption.DARKEST}88`,
+          textAlign: "center",
         }}
       >
-        No results yet.
+        No results yet. Run a search to find seeds.
       </div>
     );
   }
 
+  const labels = results[0]?.tallyLabels ?? [];
+  const maxScore = Math.max(...results.map((r) => r.score ?? 0));
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {results.map((result, index) => (
-        <div
-          key={`${result.seed}-${index}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "rgba(255,255,255,0.03)",
-            padding: "10px 12px",
-          }}
-        >
-          <div style={{ fontWeight: 700, letterSpacing: 0.4 }}>{result.seed}</div>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>{result.score !== undefined ? result.score : "-"}</div>
-        </div>
-      ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {results.map((result) => {
+        const isOpen = expanded === result.seed;
+        const hasTally = result.tallyColumns && result.tallyColumns.length > 0 && labels.length > 0;
+
+        return (
+          <div
+            key={result.seed}
+            style={{
+              borderRadius: 10,
+              border: `1px solid ${isOpen ? JimboColorOption.GOLD + "55" : JimboColorOption.PANEL_EDGE}`,
+              background: isOpen ? `${JimboColorOption.GOLD}0a` : `${JimboColorOption.DARKEST}cc`,
+              overflow: "hidden",
+              transition: "border-color 120ms",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => hasTally && setExpanded(isOpen ? null : result.seed)}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "9px 12px",
+                background: "none",
+                border: "none",
+                cursor: hasTally ? "pointer" : "default",
+                color: "inherit",
+                textAlign: "left",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "m6x11plus, monospace",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  letterSpacing: 1,
+                  color: JimboColorOption.GOLD_TEXT,
+                  minWidth: 80,
+                }}
+              >
+                {result.seed}
+              </span>
+
+              {result.score !== undefined ? (
+                <>
+                  <TallyBar value={result.score} max={maxScore} />
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: result.score > 0 ? JimboColorOption.GREEN_TEXT : JimboColorOption.GREY,
+                      minWidth: 36,
+                      textAlign: "right",
+                    }}
+                  >
+                    {result.score}
+                  </span>
+                </>
+              ) : null}
+
+              {hasTally ? (
+                <span style={{ fontSize: 10, color: JimboColorOption.GREY, marginLeft: 2 }}>
+                  {isOpen ? "▲" : "▼"}
+                </span>
+              ) : null}
+            </button>
+
+            {isOpen && hasTally ? (
+              <div
+                style={{
+                  borderTop: `1px solid ${JimboColorOption.PANEL_EDGE}`,
+                  padding: "8px 12px 10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 5,
+                }}
+              >
+                {labels.map((label, i) => {
+                  const val = result.tallyColumns![i] ?? 0;
+                  const maxVal = Math.max(...results.map((r) => r.tallyColumns?.[i] ?? 0));
+                  return (
+                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: val > 0 ? JimboColorOption.WHITE : JimboColorOption.GREY,
+                          minWidth: 140,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {label}
+                      </span>
+                      <TallyBar value={val} max={maxVal} />
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: val > 0 ? JimboColorOption.GREEN_TEXT : JimboColorOption.DARK_GREY,
+                          minWidth: 24,
+                          textAlign: "right",
+                        }}
+                      >
+                        {val}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -86,11 +209,12 @@ export function JamlIde({
         display: "flex",
         flexDirection: "column",
         minHeight: 420,
-        borderRadius: 16,
+        borderRadius: 12,
         overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.08)",
-        background: "#17181c",
-        color: "#f5f5f5",
+        border: `2px solid ${JimboColorOption.BORDER_SILVER}`,
+        boxShadow: `0 3px 0 0 ${JimboColorOption.BORDER_SOUTH}`,
+        background: JimboColorOption.DARK_GREY,
+        color: JimboColorOption.WHITE,
       }}
     >
       <div
@@ -99,21 +223,21 @@ export function JamlIde({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          padding: "12px 14px",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(255,255,255,0.03)",
+          padding: "10px 14px",
+          borderBottom: `1px solid ${JimboColorOption.PANEL_EDGE}`,
+          background: JimboColorOption.TEAL_GREY,
         }}
       >
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>{title}</div>
-          <div style={{ fontSize: 11, opacity: 0.66 }}>Reusable JAML authoring and preview surface.</div>
+          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "m6x11plus, monospace", color: JimboColorOption.GOLD_TEXT }}>{title}</div>
+          <div style={{ fontSize: 11, color: JimboColorOption.GREY }}>Jimbo's Ante Markup Language</div>
         </div>
         {actions ? <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{actions}</div> : null}
       </div>
 
       <JamlIdeToolbar mode={mode} onModeChange={setMode} resultCount={results.length} onSearch={onSearch} isSearching={isSearching} />
 
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: JimboColorOption.DARKEST }}>
         {mode === "code" ? (
           <textarea
             title="JAML IDE Editor"
@@ -131,7 +255,7 @@ export function JamlIde({
               outline: 0,
               padding: 16,
               background: "transparent",
-              color: "inherit",
+              color: JimboColorOption.WHITE,
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
               fontSize: 13,
               lineHeight: 1.7,
@@ -140,7 +264,12 @@ export function JamlIde({
         ) : null}
 
         {mode === "map" ? <JamlMapPreview jaml={jaml} /> : null}
-        {mode === "results" ? <div style={{ padding: 16 }}><ResultsView results={results} /></div> : null}
+
+        {mode === "results" ? (
+          <div style={{ padding: 12 }}>
+            <ResultsView results={results} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
