@@ -48,6 +48,10 @@ export {
     type JamlIdeVisualProps,
 } from "./components/JamlIdeVisual.js";
 export {
+    JamlCodeEditor,
+    type JamlCodeEditorProps,
+} from "./components/JamlCodeEditor.js";
+export {
     JamlIdeToolbar,
     type JamlIdeMode,
     type JamlIdeToolbarProps,

@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { JamlMapPreview } from "./JamlMapPreview.js";
 import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
 import { JamlIdeVisual, type JamlVisualFilter } from "./JamlIdeVisual.js";
+import { JamlCodeEditor } from "./JamlCodeEditor.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
 
@@ -313,28 +314,10 @@ export function JamlIde({
         ) : null}
 
         {mode === "code" ? (
-          <textarea
-            title="JAML IDE Editor"
+          <JamlCodeEditor
             value={text}
-            onChange={(event) => handleTextChange(event.target.value)}
+            onChange={handleTextChange}
             placeholder={codePlaceholder}
-            spellCheck={false}
-            autoCapitalize="off"
-            autoCorrect="off"
-            style={{
-              width: "100%",
-              minHeight: 320,
-              resize: "vertical",
-              border: 0,
-              outline: 0,
-              padding: 16,
-              background: "transparent",
-              color: JimboColorOption.WHITE,
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-              fontSize: 13,
-              lineHeight: 1.7,
-              boxSizing: "border-box",
-            }}
           />
         ) : null}
 
