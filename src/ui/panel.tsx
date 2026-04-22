@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, memo } from 'react'
 import { JimboColorOption, JIMBO_ANIMATIONS } from './tokens.js'
+import { JimboText, type JimboTextSize } from './jimboText.js'
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export function JimboButton({
   const [pressed, setPressed] = useState(false)
   const [fg, sh] = JIMBO_TONE_PAIRS[tone] ?? JIMBO_TONE_PAIRS.orange
   const pad = size === 'xs' ? '2px 8px' : size === 'sm' ? '4px 10px' : size === 'lg' ? '14px 18px' : '9px 14px'
-  const fs  = size === 'xs' ? 10 : size === 'sm' ? 12 : size === 'lg' ? 18 : 14
+  const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
 
   return (
     <div
@@ -116,10 +117,9 @@ export function JimboButton({
         transform: pressed ? 'translate(1px, 3px)' : 'translate(0,0)',
         transition: 'transform 55ms linear',
         textAlign: 'center',
-        fontFamily: 'm6x11plus, monospace', fontSize: fs, letterSpacing: 2,
-        color: '#fff', textShadow: '1px 1px 0 rgba(0,0,0,0.8)',
-        textTransform: 'uppercase', lineHeight: 1.1,
-      }}>{children}</div>
+      }}>
+        <JimboText size={textSize} uppercase>{children}</JimboText>
+      </div>
     </div>
   )
 }
@@ -170,7 +170,7 @@ export function JimboModal({ children, open, onClose, title, className }: JimboM
         className={'w-full flex flex-col max-h-[90vh] ' + (className ?? 'max-w-lg')}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
-        {title && <h2 style={{ fontFamily: 'm6x11plus, monospace', color: '#fff', textAlign: 'center', margin: '0 0 1rem', fontSize: '1.25rem' }}>{title}</h2>}
+        {title && <JimboText as="h2" size="lg" style={{ textAlign: 'center', margin: '0 0 1rem' }}>{title}</JimboText>}
         {children}
       </JimboPanel>
     </div>

@@ -26,11 +26,13 @@
       "types": "./dist/r3f.d.ts",
       "import": "./dist/r3f.js"
     },
+    "./fonts.css": "./fonts.css",
     "./package.json": "./package.json"
   },
-  "sideEffects": false,
+  "sideEffects": ["./fonts.css"],
   "files": [
     "dist",
+    "fonts.css",
     "README.md",
     "LICENSE"
   ],

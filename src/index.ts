@@ -52,6 +52,12 @@ export {
     type JamlCodeEditorProps,
 } from "./components/JamlCodeEditor.js";
 export {
+    JimboText,
+    type JimboTextProps,
+    type JimboTextTone,
+    type JimboTextSize,
+} from "./ui/jimboText.js";
+export {
     JamlIdeToolbar,
     type JamlIdeMode,
     type JamlIdeToolbarProps,
