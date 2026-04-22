@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Data;
 using Motely;
 using Motely.DB.SeedSource;
 using Motely.Filters;
@@ -11,15 +11,17 @@ public class SearchWindow : Window
     private readonly string _configFormat;
     private readonly string? _source;
     private readonly string? _sink;
-    private Label _statusLabel;
-    private Label _progressLabel;
-    private TextView _resultsView;
-    private CleanButton _stopBtn;
+    private readonly Label _statusLabel;
+    private readonly Label _progressLabel;
+    private readonly TableView _resultsTable;
+    private readonly DataTable _dataTable = new();
+    private readonly CleanButton _stopBtn;
     private IMotelySearch? _search;
     private ISeedResultSink? _activeSink;
     private CancellationTokenSource? _cts;
     private bool _searchRunning = false;
     private int _resultCount = 0;
+    private int _tallyColumnCount = 0;
 
     public SearchWindow(string configPath, string configFormat, string? source = null, string? sink = null)
     {
@@ -31,93 +33,98 @@ public class SearchWindow : Window
         Title = $"Search: {Path.GetFileNameWithoutExtension(configPath)}";
         X = Pos.Center();
         Y = Pos.Center();
-        Width = Dim.Percent(85);
-        Height = 24;
+        Width = Dim.Percent(90);
+        Height = Dim.Percent(85);
         CanFocus = true;
         ColorScheme = BalatroTheme.Window;
 
-        // Status label (top)
-        _statusLabel = new Label()
+        _statusLabel = new Label
         {
             X = 1,
             Y = 1,
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             Text = "Starting search...",
         };
-        _statusLabel.ColorScheme =
-            new ColorScheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) };
+        _statusLabel.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey),
+        };
         Add(_statusLabel);
 
-        // Progress label (below status)
-        _progressLabel = new Label()
+        _progressLabel = new Label
         {
             X = 1,
             Y = 2,
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             Text = "",
         };
-        _progressLabel.ColorScheme =
-            new ColorScheme() { Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.ModalGrey) };
+        _progressLabel.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.ModalGrey),
+        };
         Add(_progressLabel);
 
-        // Results frame
-        var resultsFrame = new FrameView()
+        var resultsFrame = new FrameView
         {
             X = 1,
             Y = 4,
-            Width = Dim.Fill()! -2,
-            Height = Dim.Fill()! -8,
-            Title = "Results",
+            Width = Dim.Fill()! - 2,
+            Height = Dim.Fill()! - 8,
+            Title = "Results (live)",
         };
         resultsFrame.ColorScheme = BalatroTheme.InnerPanel;
         Add(resultsFrame);
 
-        _resultsView = new TextView()
+        _dataTable.Columns.Add("#", typeof(int));
+        _dataTable.Columns.Add("Seed", typeof(string));
+        _dataTable.Columns.Add("Score", typeof(int));
+
+        _resultsTable = new TableView
         {
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
-            ReadOnly = true,
-            WordWrap = false,
+            FullRowSelect = true,
             CanFocus = true,
         };
-        _resultsView.ColorScheme =
-            new ColorScheme()
-            {
-                Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
-                Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
-            };
-        resultsFrame.Add(_resultsView);
+        _resultsTable.Style.AlwaysShowHeaders = true;
+        _resultsTable.Style.ShowHorizontalHeaderUnderline = true;
+        _resultsTable.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+            HotNormal = new Attribute(BalatroTheme.Orange, BalatroTheme.InnerPanelGrey),
+            HotFocus = new Attribute(BalatroTheme.Orange, BalatroTheme.Blue),
+        };
+        _resultsTable.Table = new DataTableSource(_dataTable);
+        resultsFrame.Add(_resultsTable);
 
-        // Stop button
-        _stopBtn = new CleanButton()
+        _stopBtn = new CleanButton
         {
             X = 1,
             Y = Pos.AnchorEnd(3),
             Text = "Stop Search",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         _stopBtn.ColorScheme = BalatroTheme.RedButton;
-        _stopBtn.Accept += (s, e) => StopSearch();
+        _stopBtn.Accept += (_, _) => StopSearch();
         Add(_stopBtn);
 
-        // Back button
-        var backBtn = new CleanButton()
+        var backBtn = new CleanButton
         {
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         backBtn.ColorScheme = BalatroTheme.BackButton;
-        backBtn.Accept += (s, e) => AttemptClose();
+        backBtn.Accept += (_, _) => AttemptClose();
         Add(backBtn);
 
-        // ESC key
-        KeyDown += (sender, e) =>
+        KeyDown += (_, e) =>
         {
             if (e.KeyCode == KeyCode.Esc)
             {
@@ -126,8 +133,16 @@ public class SearchWindow : Window
             }
         };
 
-        // Start search after window is ready
-        _ = Task.Run(() => RunSearch());
+        _ = Task.Run(RunSearch);
+    }
+
+    private void EnsureTallyColumns(int count)
+    {
+        if (_tallyColumnCount >= count) return;
+        for (int i = _tallyColumnCount; i < count; i++)
+            _dataTable.Columns.Add($"t{i}", typeof(int));
+        _tallyColumnCount = count;
+        _resultsTable.Table = new DataTableSource(_dataTable);
     }
 
     private void RunSearch()
@@ -137,10 +152,8 @@ public class SearchWindow : Window
             _cts = new CancellationTokenSource();
             _searchRunning = true;
 
-            if (
-                !TryLoadConfig(_configPath, _configFormat, out var config, out var configError)
-                || config == null
-            )
+            if (!TryLoadConfig(_configPath, _configFormat, out var config, out var configError)
+                || config == null)
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
 
             var plan = JamlSearchBuilder.CreatePlan(config);
@@ -158,7 +171,6 @@ public class SearchWindow : Window
                         var sourceSeeds = SeedReader.ReadSeeds(_source);
                         if (sourceSeeds.Count == 0)
                             throw new InvalidOperationException("Resolved source contained no seeds.");
-
                         settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
                     }
                     else
@@ -182,12 +194,12 @@ public class SearchWindow : Window
                 case SearchMode.Keyword:
                     if (string.IsNullOrWhiteSpace(TuiSettings.Keywords))
                         throw new InvalidOperationException("Keyword mode requires keywords to be set in settings.");
-                    
+
                     var keywords = TuiSettings.Keywords.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                    char[]? paddingChars = string.IsNullOrWhiteSpace(TuiSettings.PaddingChars) 
-                        ? null 
+                    char[]? paddingChars = string.IsNullOrWhiteSpace(TuiSettings.PaddingChars)
+                        ? null
                         : TuiSettings.PaddingChars.ToCharArray();
-                    
+
                     settings.WithProviderSearch(new MotelyKeywordSeedProvider(keywords, paddingChars));
                     break;
 
@@ -202,12 +214,9 @@ public class SearchWindow : Window
                             TuiSettings.SequentialStopSeedSearchIndex
                             ?? SeedMath.MaxSearchIndexInclusive(MotelyGlobals.MaxSeedLength);
                         var (sb, ebExclusive) = SeedMath.SearchIndexRangeToBatchRange(
-                            startIdx,
-                            stopIdx,
-                            TuiSettings.BatchCharacterCount);
+                            startIdx, stopIdx, TuiSettings.BatchCharacterCount);
                         settings.WithStartBatchIndex(sb).WithEndBatchIndex(ebExclusive);
                     }
-
                     break;
             }
 
@@ -217,6 +226,8 @@ public class SearchWindow : Window
                 ? SeedResultSinkFactory.Create(_sink, scoreTallyColumns)
                 : null;
 
+            Application.Invoke(() => EnsureTallyColumns(scoreTallyColumns));
+
             if (hasStructuredScores)
             {
                 settings.WithScoredResultCallback(tally =>
@@ -224,47 +235,35 @@ public class SearchWindow : Window
                     _activeSink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
 
                     var resultCount = Interlocked.Increment(ref _resultCount);
-                    var line = $"{resultCount,6} | {tally.Seed,-10} | {tally.Score,6}";
-                    Application.Invoke(() =>
-                    {
-                        _resultsView.Text += line + "\n";
-                        _resultsView.MoveEnd();
-                    });
+                    var seed = tally.Seed;
+                    var score = tally.Score;
+                    var tallies = tally.TallyValuesSpan.ToArray();
+                    Application.Invoke(() => AppendRow(resultCount, seed, score, tallies));
                 });
             }
-
-            if (!hasStructuredScores)
+            else
             {
                 settings.WithSeedMatchCallback(line =>
                 {
                     _activeSink?.AppendSeed(line);
-
                     var resultCount = Interlocked.Increment(ref _resultCount);
-                    var displayLine = $"{resultCount,6} | {line}";
-
-                    Application.Invoke(() =>
-                    {
-                        _resultsView.Text += displayLine + "\n";
-                        _resultsView.MoveEnd();
-                    });
+                    var captured = line;
+                    Application.Invoke(() => AppendRow(resultCount, captured, 0, Array.Empty<int>()));
                 });
             }
-
 
             Application.Invoke(() =>
             {
                 _statusLabel.Text = "Running";
-                _statusLabel.ColorScheme =
-                    new ColorScheme()
-                    {
-                        Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-                    };
+                _statusLabel.ColorScheme = new ColorScheme
+                {
+                    Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
+                };
             });
 
             var search = settings.Start(_cts.Token);
             _search = search;
 
-            // Poll progress on a timer
             Application.AddTimeout(
                 TimeSpan.FromMilliseconds(1000),
                 () =>
@@ -286,7 +285,6 @@ public class SearchWindow : Window
                         OnSearchComplete();
                         return false;
                     }
-
                     return true;
                 }
             );
@@ -295,18 +293,17 @@ public class SearchWindow : Window
         }
         catch (OperationCanceledException)
         {
-            Application.Invoke(() => OnSearchStopped());
+            Application.Invoke(OnSearchStopped);
         }
         catch (Exception ex)
         {
             Application.Invoke(() =>
             {
                 _statusLabel.Text = "Error";
-                _statusLabel.ColorScheme =
-                    new ColorScheme()
-                    {
-                        Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-                    };
+                _statusLabel.ColorScheme = new ColorScheme
+                {
+                    Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+                };
                 _progressLabel.Text = ex.Message;
                 _stopBtn.Visible = false;
                 _searchRunning = false;
@@ -314,17 +311,35 @@ public class SearchWindow : Window
         }
     }
 
+    private void AppendRow(int idx, string seed, int score, int[] tallies)
+    {
+        EnsureTallyColumns(tallies.Length);
+        var row = _dataTable.NewRow();
+        row[0] = idx;
+        row[1] = seed;
+        row[2] = score;
+        for (int i = 0; i < tallies.Length && i < _tallyColumnCount; i++)
+            row[3 + i] = tallies[i];
+        _dataTable.Rows.Add(row);
+
+        // Scroll to show the newest row.
+        _resultsTable.SelectedRow = _dataTable.Rows.Count - 1;
+        _resultsTable.EnsureSelectedCellIsVisible();
+        _resultsTable.SetNeedsDraw();
+    }
+
     private void OnSearchComplete()
     {
         _searchRunning = false;
         _statusLabel.Text = "Completed";
-        _statusLabel.ColorScheme =
-            new ColorScheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) };
+        _statusLabel.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
+        };
         _stopBtn.Visible = false;
         _activeSink?.Dispose();
         _activeSink = null;
 
-        // Final progress update
         if (_search != null)
         {
             var searched = _search.TotalSeedsSearched;
@@ -339,8 +354,10 @@ public class SearchWindow : Window
     {
         _searchRunning = false;
         _statusLabel.Text = "Stopped";
-        _statusLabel.ColorScheme =
-            new ColorScheme() { Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey) };
+        _statusLabel.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
+        };
         _stopBtn.Visible = false;
         _activeSink?.Dispose();
         _activeSink = null;
@@ -354,12 +371,7 @@ public class SearchWindow : Window
         _stopBtn.Enabled = false;
         _stopBtn.Text = "Stopping...";
 
-        // Cancellation goes through CTS — _search observes the token
-        try
-        {
-            _cts?.Cancel();
-        }
-        catch { }
+        try { _cts?.Cancel(); } catch { }
 
         OnSearchStopped();
     }
@@ -384,8 +396,7 @@ public class SearchWindow : Window
         string path,
         string configFormat,
         out JamlConfig? config,
-        out string? error
-    )
+        out string? error)
     {
         config = null;
         error = null;
@@ -403,8 +414,7 @@ public class SearchWindow : Window
         }
 
         var content = File.ReadAllText(path);
-        var format = configFormat.ToLowerInvariant();
-
+        _ = configFormat;
         return JamlConfigLoader.TryLoad(content, out config, out error);
     }
 }
