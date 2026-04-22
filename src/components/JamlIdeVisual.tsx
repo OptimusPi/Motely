@@ -221,10 +221,6 @@ export function JamlIdeVisual({ filter, onChange, onSave, onBack }: JamlIdeVisua
         )}
       </div>
 
-      <div style={{ fontSize: 9, color: JimboColorOption.GREY, letterSpacing: 1, textAlign: "center" }}>
-        ⋮⋮ drag clauses between zones · tap to edit
-      </div>
-
       <ZoneDropRail zone="must"    clauses={filter.must}    onDragStart={onDragStart} highlight={hoverZone === "must"} />
       <ZoneDropRail zone="should"  clauses={filter.should}  onDragStart={onDragStart} highlight={hoverZone === "should"} />
       <ZoneDropRail zone="mustnot" clauses={filter.mustnot} onDragStart={onDragStart} highlight={hoverZone === "mustnot"} />

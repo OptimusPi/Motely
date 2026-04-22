@@ -4,34 +4,40 @@ import React from "react";
 import Editor, { type BeforeMount } from "@monaco-editor/react";
 import { JimboColorOption } from "../ui/tokens.js";
 
+// Monaco needs hex strings for its colors API. We strip the leading `#` from
+// JimboColor tokens where Monaco expects raw hex for syntax rules (token
+// foreground), and pass the full `#...` form for UI colors. Alpha suffix
+// (e.g. WHITE + "20") is valid for Monaco colors but not for rules.
+const hex = (token: string) => token.replace(/^#/, "");
+
 const defineBalatroTheme: BeforeMount = (monaco) => {
   monaco.editor.defineTheme("jaml-balatro-dark", {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "comment", foreground: "5f7377", fontStyle: "italic" },
-      { token: "keyword", foreground: "fe5f55" },
-      { token: "string", foreground: "eac058" },
-      { token: "number", foreground: "009dff" },
-      { token: "type", foreground: "4bc292" },
+      { token: "comment", foreground: hex(JimboColorOption.GREY), fontStyle: "italic" },
+      { token: "keyword", foreground: hex(JimboColorOption.RED) },
+      { token: "string", foreground: hex(JimboColorOption.GOLD_TEXT) },
+      { token: "number", foreground: hex(JimboColorOption.BLUE) },
+      { token: "type", foreground: hex(JimboColorOption.GREEN_TEXT) },
     ],
     colors: {
       "editor.background": JimboColorOption.DARKEST,
       "editor.foreground": JimboColorOption.WHITE,
-      "editorLineNumber.foreground": "#4f6367",
-      "editorLineNumber.activeForeground": "#eac058",
-      "editor.selectionBackground": "#ffffff20",
-      "editor.inactiveSelectionBackground": "#ffffff10",
-      "editor.lineHighlightBackground": "#00000020",
-      "editorCursor.foreground": "#eac058",
+      "editorLineNumber.foreground": JimboColorOption.GREY,
+      "editorLineNumber.activeForeground": JimboColorOption.GOLD_TEXT,
+      "editor.selectionBackground": `${JimboColorOption.WHITE}20`,
+      "editor.inactiveSelectionBackground": `${JimboColorOption.WHITE}10`,
+      "editor.lineHighlightBackground": `${JimboColorOption.BLACK}20`,
+      "editorCursor.foreground": JimboColorOption.GOLD_TEXT,
       "editorWidget.background": JimboColorOption.DARK_GREY,
-      "editorWidget.border": "#ffffff20",
+      "editorWidget.border": `${JimboColorOption.WHITE}20`,
       "editorWidget.foreground": JimboColorOption.WHITE,
-      "list.activeSelectionBackground": "#d8b97d",
+      "list.activeSelectionBackground": JimboColorOption.GOLD,
       "list.activeSelectionForeground": JimboColorOption.DARKEST,
-      "list.hoverBackground": "#2a3b3d",
+      "list.hoverBackground": JimboColorOption.PANEL_EDGE,
       "list.hoverForeground": JimboColorOption.WHITE,
-      "list.focusBackground": "#d8b97d",
+      "list.focusBackground": JimboColorOption.GOLD,
       "list.focusForeground": JimboColorOption.DARKEST,
     },
   });
