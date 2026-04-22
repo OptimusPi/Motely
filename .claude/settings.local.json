@@ -142,7 +142,9 @@
       "Bash(unzip *)",
       "Bash(gh issue *)",
       "PowerShell(Set-Location C:\\\\torture-chamber\\\\week-fourteen\\\\Motely-master; Write-Output \\(Get-Location\\).Path)",
-      "WebFetch(domain:deepwiki.com)"
+      "WebFetch(domain:deepwiki.com)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-ChildItem \"X:\\\\JammySeedFinder\\\\src\\\\MotelyJAML\\\\Motely.TUI\\\\bin\\\\Debug\\\\net10.0\\\\MotelyTUI.dll\" -ErrorAction SilentlyContinue | Select-Object Name, LastWriteTime, @{N='KB';E={[int]\\($_.Length/1024\\)}}; if \\(Test-Path \"X:\\\\JammySeedFinder\\\\src\\\\MotelyJAML\\\\Motely.TUI\\\\motely-tui-crash.txt\"\\) { \"CRASH LOG:\"; Get-Content \"X:\\\\JammySeedFinder\\\\src\\\\MotelyJAML\\\\Motely.TUI\\\\motely-tui-crash.txt\" } else { \"NO_CRASH_LOG\" })"
     ],
     "additionalDirectories": [
       "D:\\jaml-mcp"
