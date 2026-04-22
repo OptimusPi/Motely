@@ -79,7 +79,7 @@ function DragClausePill({
     >
       <div style={{ color: JimboColorOption.GREY, fontSize: 12, lineHeight: 1, padding: "0 2px" }}>⋮⋮</div>
       <ClauseSprite clause={clause} size={26} />
-      <div style={{ fontSize: 10, color: JimboColorOption.WHITE, letterSpacing: 1, textShadow: "1px 1px 0 rgba(0,0,0,.8)" }}>
+      <div style={{ fontSize: 10, color: JimboColorOption.WHITE, letterSpacing: 1, textShadow: `1px 1px 0 ${JimboColorOption.BLACK}cc` }}>
         {clause.label || clause.value}
       </div>
       {clause.antes && clause.antes.length > 0 && (
@@ -125,7 +125,7 @@ function ZoneDropRail({
         <div style={{
           fontSize: 10, letterSpacing: 2, padding: "2px 8px",
           background: z.color, color: JimboColorOption.WHITE, borderRadius: 3,
-          textShadow: "1px 1px 0 rgba(0,0,0,.8)",
+          textShadow: `1px 1px 0 ${JimboColorOption.BLACK}cc`,
         }}>{z.label}</div>
         <div style={{ flex: 1, height: 1, background: `${z.color}44` }} />
         <div style={{ fontSize: 8, color: JimboColorOption.GREY }}>{clauses.length}</div>
@@ -213,7 +213,7 @@ export function JamlIdeVisual({ filter, onChange, onSave, onBack }: JamlIdeVisua
         borderRadius: 6, padding: 8, boxShadow: `0 2px 0 ${JimboColorOption.BLACK}`,
       }}>
         <div style={{ fontSize: 9, color: JimboColorOption.GREY, letterSpacing: 2 }}>FILE</div>
-        <div style={{ fontSize: 14, color: JimboColorOption.WHITE, textShadow: "1px 1px 0 rgba(0,0,0,.8)" }}>
+        <div style={{ fontSize: 14, color: JimboColorOption.WHITE, textShadow: `1px 1px 0 ${JimboColorOption.BLACK}cc` }}>
           {filter.name || "Untitled"}.jaml
         </div>
         {filter.author && (
@@ -232,7 +232,7 @@ export function JamlIdeVisual({ filter, onChange, onSave, onBack }: JamlIdeVisua
           left: drag.x - drag.offX, top: drag.y - drag.offY,
           pointerEvents: "none", zIndex: 999,
           transform: "rotate(-2deg) scale(1.05)",
-          filter: "drop-shadow(0 4px 6px rgba(0,0,0,.6))", opacity: 0.92,
+          filter: `drop-shadow(0 4px 6px ${JimboColorOption.BLACK}99)`, opacity: 0.92,
         }}>
           <DragClausePill clause={drag.clause} zone={drag.fromZone} onDragStart={() => {}} />
         </div>
