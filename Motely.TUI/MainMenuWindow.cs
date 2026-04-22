@@ -234,8 +234,8 @@ public class MainMenuWindow : View
         {
             X = 1,
             Y = 3,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 7,
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -7,
             CanFocus = true,
         };
         filterList.ColorScheme =
@@ -289,7 +289,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(3),
             Text = "Start Search",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         searchBtn.ColorScheme = BalatroTheme.GreenButton;
@@ -301,7 +301,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         cancelBtn.ColorScheme = BalatroTheme.BackButton;
@@ -363,7 +363,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             TextAlignment = Alignment.Center,
         };
         backBtn.ColorScheme = BalatroTheme.BackButton;
@@ -499,7 +499,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         cancelBtn.ColorScheme = BalatroTheme.BackButton;
@@ -579,7 +579,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         cancelBtn.ColorScheme = BalatroTheme.BackButton;
@@ -629,7 +629,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         backBtn.ColorScheme = BalatroTheme.BackButton;
@@ -686,7 +686,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         backBtn.ColorScheme = BalatroTheme.BackButton;
@@ -769,7 +769,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         okBtn.ColorScheme = BalatroTheme.BackButton;

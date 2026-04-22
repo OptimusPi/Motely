@@ -47,7 +47,7 @@ public class DistributedWorkerWindow : Window
         {
             X = 1,
             Y = 4,
-            Width = Dim.Fill() - 2,
+            Width = Dim.Fill()! -2,
             Text = TuiSettings.WorkerPoolUrl,
         };
         Add(_poolUrlField);
@@ -80,8 +80,8 @@ public class DistributedWorkerWindow : Window
         {
             X = 1,
             Y = 9,
-            Width = Dim.Fill() - 2,
-            Height = Dim.Fill() - 5,
+            Width = Dim.Fill()! -2,
+            Height = Dim.Fill()! -5,
             Title = "Worker Log",
         };
         logFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -233,19 +233,23 @@ public class DistributedWorkerWindow : Window
 
             _ = Task.Run(async () =>
             {
-                while (!_workerProcess.StandardOutput.EndOfStream && !_cts.Token.IsCancellationRequested)
+                string? line;
+                while (!_cts.Token.IsCancellationRequested
+                    && (line = await _workerProcess.StandardOutput.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
                 {
-                    var line = await _workerProcess.StandardOutput.ReadLineAsync(_cts.Token).ConfigureAwait(false);
-                    if (line != null) Application.Invoke(() => LogMessage(line));
+                    var captured = line;
+                    Application.Invoke(() => LogMessage(captured));
                 }
             }, _cts.Token);
 
             _ = Task.Run(async () =>
             {
-                while (!_workerProcess.StandardError.EndOfStream && !_cts.Token.IsCancellationRequested)
+                string? line;
+                while (!_cts.Token.IsCancellationRequested
+                    && (line = await _workerProcess.StandardError.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
                 {
-                    var line = await _workerProcess.StandardError.ReadLineAsync(_cts.Token).ConfigureAwait(false);
-                    if (line != null) Application.Invoke(() => LogMessage(line));
+                    var captured = line;
+                    Application.Invoke(() => LogMessage(captured));
                 }
             }, _cts.Token);
 
