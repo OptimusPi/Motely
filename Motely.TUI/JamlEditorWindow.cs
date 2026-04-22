@@ -5,82 +5,123 @@ namespace Motely.TUI;
 
 public class JamlEditorWindow : Window
 {
+    private enum DocMode { Jaml, Jummy }
+
     private readonly TextView _editor;
     private readonly Label _statusLabel;
+    private readonly Label _modeLabel;
+    private readonly ListView _filterList;
+    private readonly FrameView _editorFrame;
+    private IReadOnlyList<FilterLibraryEntry> _localFilters = Array.Empty<FilterLibraryEntry>();
     private string? _filePath;
+    private DocMode _mode;
 
     public JamlEditorWindow(string? filePath = null)
     {
         _filePath = filePath;
+        _mode = DetectMode(filePath);
 
         Title = string.IsNullOrWhiteSpace(filePath)
-            ? "JAML Editor"
-            : $"JAML Editor: {Path.GetFileName(filePath)}";
-        X = Pos.Center();
-        Y = Pos.Center();
-        Width = Dim.Percent(90);
-        Height = Dim.Percent(85);
+            ? "JAML / Jummy Editor"
+            : $"{(_mode == DocMode.Jummy ? "Jummy" : "JAML")} Editor: {Path.GetFileName(filePath)}";
+        X = 0;
+        Y = 0;
+        Width = Dim.Fill();
+        Height = Dim.Fill();
         CanFocus = true;
         ColorScheme = BalatroTheme.Window;
 
-        var toolbar = new View
-        {
-            X = 1,
-            Y = 1,
-            Width = Dim.Fill()! -2,
-            Height = 1,
-        };
+        // ── toolbar ─────────────────────────────────────────────────────────
+        var toolbar = new View { X = 1, Y = 1, Width = Dim.Fill()! - 2, Height = 1 };
         Add(toolbar);
 
-        var saveButton = new CleanButton
-        {
-            X = 0,
-            Y = 0,
-            Text = " Save ",
-        };
+        var saveButton = new CleanButton { X = 0, Y = 0, Text = " Save " };
         saveButton.ColorScheme = BalatroTheme.GreenButton;
         saveButton.Accept += (_, _) => SaveEditorContent();
         toolbar.Add(saveButton);
 
-        var runButton = new CleanButton
-        {
-            X = Pos.Right(saveButton) + 1,
-            Y = 0,
-            Text = " Save + Search ",
-        };
+        var runButton = new CleanButton { X = Pos.Right(saveButton) + 1, Y = 0, Text = " Save + Search " };
         runButton.ColorScheme = BalatroTheme.BlueButton;
         runButton.Accept += (_, _) => SaveAndSearch();
         toolbar.Add(runButton);
 
-        var loadButton = new CleanButton
+        var compileButton = new CleanButton { X = Pos.Right(runButton) + 1, Y = 0, Text = " Compile " };
+        compileButton.ColorScheme = BalatroTheme.OrangeButton;
+        compileButton.Accept += (_, _) => CompileAndValidate();
+        toolbar.Add(compileButton);
+
+        var refreshButton = new CleanButton { X = Pos.Right(compileButton) + 1, Y = 0, Text = " Refresh List " };
+        refreshButton.ColorScheme = BalatroTheme.PurpleButton;
+        refreshButton.Accept += (_, _) => ReloadFilters();
+        toolbar.Add(refreshButton);
+
+        var toggleButton = new CleanButton { X = Pos.Right(refreshButton) + 1, Y = 0, Text = " Toggle Mode " };
+        toggleButton.ColorScheme = BalatroTheme.ModalButton;
+        toggleButton.Accept += (_, _) => ToggleMode();
+        toolbar.Add(toggleButton);
+
+        _modeLabel = new Label
         {
-            X = Pos.Right(runButton) + 1,
+            X = Pos.Right(toggleButton) + 2,
             Y = 0,
-            Text = " Load Local ",
+            Text = ModeText(),
         };
-        loadButton.ColorScheme = BalatroTheme.PurpleButton;
-        loadButton.Accept += (_, _) => LoadLocalFilter();
-        toolbar.Add(loadButton);
+        _modeLabel.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.DarkGrey),
+        };
+        toolbar.Add(_modeLabel);
 
         _statusLabel = new Label
         {
-            X = Pos.Right(loadButton) + 2,
-            Y = 0,
-            Width = Dim.Fill(),
-            Text = string.IsNullOrWhiteSpace(filePath) ? "New JAML document" : filePath,
+            X = 1,
+            Y = 2,
+            Width = Dim.Fill()! - 2,
+            Text = string.IsNullOrWhiteSpace(filePath) ? "New document" : filePath,
         };
-        toolbar.Add(_statusLabel);
+        Add(_statusLabel);
 
-        var editorFrame = new FrameView
+        // ── left: filter list (inline, always visible) ──────────────────────
+        var listFrame = new FrameView
         {
             X = 1,
             Y = 3,
-            Width = Dim.Fill()! -2,
-            Height = Dim.Fill()! -7,
-            Title = "JAML",
+            Width = 30,
+            Height = Dim.Fill()! - 5,
+            Title = "Local Filters",
         };
-        editorFrame.ColorScheme = BalatroTheme.InnerPanel;
-        Add(editorFrame);
+        listFrame.ColorScheme = BalatroTheme.InnerPanel;
+        Add(listFrame);
+
+        _filterList = new ListView
+        {
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+            CanFocus = true,
+        };
+        _filterList.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+            HotNormal = new Attribute(BalatroTheme.Orange, BalatroTheme.InnerPanelGrey),
+            HotFocus = new Attribute(BalatroTheme.Orange, BalatroTheme.Blue),
+        };
+        _filterList.Accepting += (_, _) => LoadSelectedFilter();
+        listFrame.Add(_filterList);
+
+        // ── right: editor frame ─────────────────────────────────────────────
+        _editorFrame = new FrameView
+        {
+            X = Pos.Right(listFrame) + 1,
+            Y = 3,
+            Width = Dim.Fill()! - 2,
+            Height = Dim.Fill()! - 5,
+            Title = EditorFrameTitle(),
+        };
+        _editorFrame.ColorScheme = BalatroTheme.InnerPanel;
+        Add(_editorFrame);
 
         _editor = new TextView
         {
@@ -91,15 +132,20 @@ public class JamlEditorWindow : Window
             ReadOnly = false,
             WordWrap = false,
             CanFocus = true,
-            Text = LoadInitialText(filePath),
+            Text = LoadInitialText(filePath, _mode),
         };
-        editorFrame.Add(_editor);
+        if (_editor.Autocomplete is { } ac)
+            ac.SuggestionGenerator = new SingleWordSuggestionGenerator
+            {
+                AllSuggestions = BuildSuggestionList(),
+            };
+        _editorFrame.Add(_editor);
 
         var backButton = new CleanButton
         {
             X = 1,
             Y = Pos.AnchorEnd(1),
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             Text = "Back",
             TextAlignment = Alignment.Center,
         };
@@ -109,108 +155,113 @@ public class JamlEditorWindow : Window
 
         KeyDown += (_, e) =>
         {
-            if (e.IsCtrl && e.KeyCode == KeyCode.S)
-            {
-                SaveEditorContent();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.KeyCode == KeyCode.F5)
-            {
-                SaveAndSearch();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.KeyCode == KeyCode.Esc)
-            {
-                MotelyTUI.CloseWindow(this);
-                e.Handled = true;
-            }
+            if (e.IsCtrl && e.KeyCode == KeyCode.S) { SaveEditorContent(); e.Handled = true; return; }
+            if (e.KeyCode == KeyCode.F5) { SaveAndSearch(); e.Handled = true; return; }
+            if (e.KeyCode == KeyCode.F7) { CompileAndValidate(); e.Handled = true; return; }
+            if (e.KeyCode == KeyCode.Esc) { MotelyTUI.CloseWindow(this); e.Handled = true; }
         };
 
+        ReloadFilters();
         _editor.SetFocus();
     }
 
-    private static string LoadInitialText(string? filePath)
+    private static DocMode DetectMode(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return DocMode.Jaml;
+        return Path.GetExtension(filePath).Equals(".jummy", StringComparison.OrdinalIgnoreCase)
+            ? DocMode.Jummy
+            : DocMode.Jaml;
+    }
+
+    private string ModeText() => _mode == DocMode.Jummy ? "MODE: Jummy" : "MODE: JAML";
+    private string EditorFrameTitle() =>
+        _mode == DocMode.Jummy ? "Jummy source (compiles 1:1 → JAML)" : "JAML";
+
+    private void ToggleMode()
+    {
+        _mode = _mode == DocMode.Jummy ? DocMode.Jaml : DocMode.Jummy;
+        _modeLabel.Text = ModeText();
+        _editorFrame.Title = EditorFrameTitle();
+        SetNeedsDraw();
+    }
+
+    private void ReloadFilters()
+    {
+        _localFilters = FilterLibrary.DiscoverLocalFilters();
+        _filterList.SetSource(
+            new ObservableCollection<string>(
+                _localFilters.Select(f => f.DisplayName).ToList()));
+        SetNeedsDraw();
+    }
+
+    private void LoadSelectedFilter()
+    {
+        var idx = _filterList.SelectedItem;
+        if (idx < 0 || idx >= _localFilters.Count) return;
+
+        var selected = _localFilters[idx];
+        try
+        {
+            _filePath = selected.FullPath;
+            _mode = DetectMode(_filePath);
+            _editor.Text = File.ReadAllText(selected.FullPath);
+            _modeLabel.Text = ModeText();
+            _editorFrame.Title = EditorFrameTitle();
+            Title = $"{(_mode == DocMode.Jummy ? "Jummy" : "JAML")} Editor: {Path.GetFileName(_filePath)}";
+            _statusLabel.Text = _filePath;
+            _editor.SetFocus();
+            SetNeedsDraw();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Load failed: {ex.Message}", isError: true);
+        }
+    }
+
+    private static string LoadInitialText(string? filePath, DocMode mode)
     {
         if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
             return File.ReadAllText(filePath);
 
-        return "name: New Filter\ndescription: Created in Motely.TUI\ndeck: Red\nstake: White\nmust:\n";
+        return mode == DocMode.Jummy
+            ? "jummy: 1\nname: New Jummy Filter\ndeck: Red\nstake: White\nmust:\n  - Eternal Blueprint in Ante 1\nshould: []\n"
+            : "name: New Filter\ndescription: Created in Motely.TUI\ndeck: Red\nstake: White\nmust:\n";
     }
 
-    private void LoadLocalFilter()
+    private bool TryGetValidatedJaml(string source, out string jaml, out string? error)
     {
-        var filters = FilterLibrary.DiscoverLocalFilters();
-        if (filters.Count == 0)
+        jaml = source;
+        error = null;
+        if (_mode == DocMode.Jummy)
         {
-            ShowMessage("No local filters found.");
+            if (!JummyCompiler.TryCompile(source, out var compiled, out var compileError))
+            {
+                error = $"Jummy compile error: {compileError}";
+                return false;
+            }
+            jaml = compiled;
+        }
+
+        if (!JamlConfigLoader.TryLoad(jaml, out _, out var loadError))
+        {
+            error = loadError ?? "Failed to parse JAML.";
+            return false;
+        }
+        return true;
+    }
+
+    private void CompileAndValidate()
+    {
+        var content = _editor.Text?.ToString() ?? string.Empty;
+        if (!TryGetValidatedJaml(content, out _, out var error))
+        {
+            ShowMessage(error ?? "Validation failed.", isError: true);
             return;
         }
 
-        var dialog = new Dialog
-        {
-            Title = "Load Local Filter",
-            Width = 60,
-            Height = 20,
-        };
-        dialog.ColorScheme = BalatroTheme.Window;
-
-        var filterList = new ListView
-        {
-            X = 1,
-            Y = 1,
-            Width = Dim.Fill()! -2,
-            Height = Dim.Fill()! -5,
-            CanFocus = true,
-        };
-        filterList.SetSource(
-            new ObservableCollection<string>(filters.Select(static filter => filter.DisplayName).ToList())
-        );
-        dialog.Add(filterList);
-
-        void LoadSelected()
-        {
-            var selectedIndex = filterList.SelectedItem;
-            if (selectedIndex < 0 || selectedIndex >= filters.Count)
-                return;
-
-            var selected = filters[selectedIndex];
-            _filePath = selected.FullPath;
-            Title = $"JAML Editor: {Path.GetFileName(_filePath)}";
-            _editor.Text = File.ReadAllText(selected.FullPath);
-            _statusLabel.Text = selected.FullPath;
-            Application.RequestStop(dialog);
-        }
-
-        var loadButton = new CleanButton
-        {
-            X = 1,
-            Y = Pos.AnchorEnd(3),
-            Width = Dim.Fill()! -2,
-            Text = "Load",
-            TextAlignment = Alignment.Center,
-        };
-        loadButton.ColorScheme = BalatroTheme.BlueButton;
-        loadButton.Accept += (_, _) => LoadSelected();
-        dialog.Add(loadButton);
-
-        var backButton = new CleanButton
-        {
-            X = 1,
-            Y = Pos.AnchorEnd(1),
-            Width = Dim.Fill()! -2,
-            Text = "Back",
-            TextAlignment = Alignment.Center,
-        };
-        backButton.ColorScheme = BalatroTheme.BackButton;
-        backButton.Accept += (_, _) => Application.RequestStop(dialog);
-        dialog.Add(backButton);
-
-        filterList.Accepting += (_, _) => LoadSelected();
-        Application.Run(dialog);
+        ShowMessage(_mode == DocMode.Jummy
+            ? "Jummy compiled OK → valid JAML."
+            : "JAML validated OK.");
     }
 
     private void SaveEditorContent()
@@ -218,9 +269,9 @@ public class JamlEditorWindow : Window
         try
         {
             var content = _editor.Text?.ToString() ?? string.Empty;
-            if (!JamlConfigLoader.TryLoad(content, out _, out var error))
+            if (!TryGetValidatedJaml(content, out _, out var error))
             {
-                ShowMessage(error ?? "Failed to parse JAML.", isError: true);
+                ShowMessage(error ?? "Save blocked by validation.", isError: true);
                 return;
             }
 
@@ -230,7 +281,9 @@ public class JamlEditorWindow : Window
                 if (string.IsNullOrWhiteSpace(requestedName))
                     return;
 
-                _filePath = FilterLibrary.SaveJamlFilter(requestedName, content);
+                _filePath = _mode == DocMode.Jummy
+                    ? FilterLibrary.SaveJummyFilter(requestedName, content)
+                    : FilterLibrary.SaveJamlFilter(requestedName, content);
             }
             else
             {
@@ -238,9 +291,10 @@ public class JamlEditorWindow : Window
                 File.WriteAllText(_filePath, content);
             }
 
-            Title = $"JAML Editor: {Path.GetFileName(_filePath)}";
+            Title = $"{(_mode == DocMode.Jummy ? "Jummy" : "JAML")} Editor: {Path.GetFileName(_filePath)}";
             _statusLabel.Text = _filePath;
             ShowMessage($"Saved {_filePath}");
+            ReloadFilters();
         }
         catch (Exception ex)
         {
@@ -250,32 +304,50 @@ public class JamlEditorWindow : Window
 
     private void SaveAndSearch()
     {
+        var content = _editor.Text?.ToString() ?? string.Empty;
+        if (!TryGetValidatedJaml(content, out var compiledJaml, out var error))
+        {
+            ShowMessage(error ?? "Compile failed.", isError: true);
+            return;
+        }
+
         SaveEditorContent();
         if (string.IsNullOrWhiteSpace(_filePath) || !File.Exists(_filePath))
             return;
 
-        var searchWindow = new SearchWindow(_filePath, "jaml", TuiSettings.DefaultSource, TuiSettings.DefaultSink);
+        // Jummy needs to be compiled to a temp .jaml for the search pipeline.
+        string searchPath;
+        if (_mode == DocMode.Jummy)
+        {
+            searchPath = Path.Combine(
+                Path.GetTempPath(),
+                $"motely-jummy-{Path.GetFileNameWithoutExtension(_filePath)}.jaml");
+            File.WriteAllText(searchPath, compiledJaml);
+        }
+        else
+        {
+            searchPath = _filePath;
+        }
+
+        var searchWindow = new SearchWindow(searchPath, "jaml", TuiSettings.DefaultSource, TuiSettings.DefaultSink);
         MotelyTUI.ShowWindow(searchWindow);
     }
 
     private string? PromptForName()
     {
+        // Still a dialog for name entry — one of the surviving modals. Reasonable
+        // for a transient input field; can be replaced with an inline footer prompt later.
         string? result = null;
 
         var dialog = new Dialog
         {
-            Title = "Save JAML Filter",
+            Title = _mode == DocMode.Jummy ? "Save Jummy Filter" : "Save JAML Filter",
             Width = 50,
             Height = 10,
         };
         dialog.ColorScheme = BalatroTheme.Window;
 
-        var nameLabel = new Label
-        {
-            X = 1,
-            Y = 1,
-            Text = "Filter name:",
-        };
+        var nameLabel = new Label { X = 1, Y = 1, Text = "Filter name:" };
         dialog.Add(nameLabel);
 
         var nameField = new TextField
@@ -287,12 +359,7 @@ public class JamlEditorWindow : Window
         };
         dialog.Add(nameField);
 
-        var saveButton = new CleanButton
-        {
-            X = 1,
-            Y = Pos.AnchorEnd(1),
-            Text = "Save",
-        };
+        var saveButton = new CleanButton { X = 1, Y = Pos.AnchorEnd(1), Text = "Save" };
         saveButton.ColorScheme = BalatroTheme.GreenButton;
         saveButton.Accept += (_, _) =>
         {
@@ -301,12 +368,7 @@ public class JamlEditorWindow : Window
         };
         dialog.Add(saveButton);
 
-        var backButton = new CleanButton
-        {
-            X = Pos.Right(saveButton) + 1,
-            Y = Pos.AnchorEnd(1),
-            Text = "Back",
-        };
+        var backButton = new CleanButton { X = Pos.Right(saveButton) + 1, Y = Pos.AnchorEnd(1), Text = "Back" };
         backButton.ColorScheme = BalatroTheme.BackButton;
         backButton.Accept += (_, _) => Application.RequestStop(dialog);
         dialog.Add(backButton);
@@ -318,13 +380,42 @@ public class JamlEditorWindow : Window
     private void ShowMessage(string message, bool isError = false)
     {
         _statusLabel.Text = message;
-        _statusLabel.ColorScheme =
-            new ColorScheme
-            {
-                Normal = new Attribute(
-                    isError ? BalatroTheme.Red : BalatroTheme.Green,
-                    BalatroTheme.DarkGrey
-                ),
-            };
+        _statusLabel.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(
+                isError ? BalatroTheme.Red : BalatroTheme.Green,
+                BalatroTheme.DarkGrey),
+        };
+    }
+
+    private static List<string> BuildSuggestionList()
+    {
+        var set = new SortedSet<string>(StringComparer.Ordinal);
+
+        foreach (var k in new[]
+        {
+            "name", "description", "author", "deck", "stake", "antes",
+            "must", "should", "mustNot", "jummy",
+            "what", "where", "ante", "type", "value", "edition",
+            "enhancement", "sticker", "seal", "suit", "rank",
+            "shopItems", "boosterPacks", "shop", "booster", "packs",
+            "tarotCard", "planetCard", "spectralCard", "joker", "tag",
+            "first", "second", "third", "fourth", "fifth",
+            "score", "sources", "tallyConfig", "cutoff",
+        }) set.Add(k);
+
+        foreach (var name in typeof(MotelyDeck).GetEnumNames()) set.Add(name);
+        foreach (var name in typeof(MotelyStake).GetEnumNames()) set.Add(name);
+        foreach (var name in typeof(MotelyJoker).GetEnumNames()) set.Add(name);
+        foreach (var name in typeof(MotelyTarotCard).GetEnumNames()) set.Add(name);
+        foreach (var name in typeof(MotelyPlanetCard).GetEnumNames()) set.Add(name);
+        foreach (var name in typeof(MotelySpectralCard).GetEnumNames()) set.Add(name);
+        foreach (var name in typeof(MotelyTag).GetEnumNames()) set.Add(name);
+
+        foreach (var w in new[] { "Eternal", "Perishable", "Rental", "Pinned" }) set.Add(w);
+        foreach (var w in new[] { "foil", "holographic", "polychrome", "negative" }) set.Add(w);
+        foreach (var w in new[] { "in Ante", "by Ante", "Ante" }) set.Add(w);
+
+        return set.ToList();
     }
 }

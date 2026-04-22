@@ -46,14 +46,14 @@ public class MainMenuWindow : View
 
         // ═══════════════════════════════════════════════════════════════
         // BUTTON DOCK AT BOTTOM - Transparent container with clean buttons
-        // Layout: SEARCH(12) + DESIGNER(12) + EXIT(8) + CONFIG(8) + HOST API(12) + WORKER(14) + gaps = 76
+        // Layout: SEARCH(12) + DESIGNER(12) + RESULTS(12) + CONFIG(8) + HOST API(12) + WORKER(12) + EXIT(8)
         // ═══════════════════════════════════════════════════════════════
 
         var dockBar = new View()
         {
             X = Pos.Center(),
             Y = Pos.AnchorEnd(5),
-            Width = 76,
+            Width = 89,
             Height = 5,
             CanFocus = true,
         };
@@ -149,6 +149,18 @@ public class MainMenuWindow : View
         };
         dockBar.Add(btnWorker);
 
+        // RESULTS - browse the DuckLake results store
+        var btnResults = new MenuButton("_RESULTS", BalatroTheme.OrangeButton)
+        {
+            X = 71,
+            Y = 1,
+            Width = 12,
+            Height = 3,
+            DynamicFocusHeight = true,
+        };
+        btnResults.Accept += (s, e) => MotelyTUI.ShowWindow(new ResultsBrowserWindow());
+        dockBar.Add(btnResults);
+
         // Set focus to SEARCH
         btnSearch.SetFocus();
 
@@ -189,6 +201,11 @@ public class MainMenuWindow : View
                 case KeyCode.W:
                     btnWorker.SetFocus();
                     MotelyTUI.ShowWindow(new DistributedWorkerWindow());
+                    e.Handled = true;
+                    break;
+                case KeyCode.R:
+                    btnResults.SetFocus();
+                    MotelyTUI.ShowWindow(new ResultsBrowserWindow());
                     e.Handled = true;
                     break;
                 case KeyCode.Esc:

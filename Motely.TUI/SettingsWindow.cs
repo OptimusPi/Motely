@@ -12,8 +12,8 @@ public class SettingsWindow : Window
         Title = "Settings";
         X = Pos.Center();
         Y = Pos.Center();
-        Width = 70;
-        Height = 20;
+        Width = 78;
+        Height = 24;
         CanFocus = true;
         ColorScheme = BalatroTheme.Window;
 
@@ -183,6 +183,24 @@ public class SettingsWindow : Window
         };
         Add(paddingField);
 
+        // Data Lake Path (for Results Browser)
+        var lakeLabel = new Label()
+        {
+            X = 2,
+            Y = 18,
+            Text = "Data Lake Path:",
+        };
+        Add(lakeLabel);
+
+        var lakeField = new TextField()
+        {
+            X = 2,
+            Y = 19,
+            Width = 25,
+            Text = TuiSettings.DataLakePath,
+        };
+        Add(lakeField);
+
         // Save button (blue like PLAY) - above Back
         var saveButton = new CleanButton()
         {
@@ -231,6 +249,9 @@ public class SettingsWindow : Window
                 TuiSettings.SearchMode = (SearchMode)modeRadio.SelectedItem;
                 TuiSettings.Keywords = keywordsField.Text?.ToString() ?? string.Empty;
                 TuiSettings.PaddingChars = paddingField.Text?.ToString() ?? string.Empty;
+
+                var lakeText = lakeField.Text?.ToString();
+                TuiSettings.DataLakePath = string.IsNullOrWhiteSpace(lakeText) ? "seeds" : lakeText;
 
                 TuiSettings.Save();
                 Application.RequestStop(this);

@@ -47,6 +47,9 @@ public static class TuiSettings
     public static string WorkerPoolUrl { get; set; } = "https://www.seedfinder.app";
     public static int WorkerThreads { get; set; } = Environment.ProcessorCount;
 
+    // DuckLake (results data lake) root directory — resolved relative to current directory.
+    public static string DataLakePath { get; set; } = "seeds";
+
     // Secret settings (in-memory only, not persisted)
     public static bool CrudeSeedsEnabled { get; set; } = false;
 
@@ -116,6 +119,7 @@ public class SettingsService
                 TuiSettings.SequentialStopSeedSearchIndex = settings.SequentialStopSeedSearchIndex;
                 TuiSettings.WorkerPoolUrl = settings.WorkerPoolUrl ?? "https://www.seedfinder.app";
                 TuiSettings.WorkerThreads = settings.WorkerThreads ?? Environment.ProcessorCount;
+                TuiSettings.DataLakePath = settings.DataLakePath ?? "seeds";
             }
         }
         catch (Exception)
@@ -144,6 +148,7 @@ public class SettingsService
                 SequentialStopSeedSearchIndex = TuiSettings.SequentialStopSeedSearchIndex,
                 WorkerPoolUrl = TuiSettings.WorkerPoolUrl,
                 WorkerThreads = TuiSettings.WorkerThreads,
+                DataLakePath = TuiSettings.DataLakePath,
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true };
@@ -173,5 +178,6 @@ public class SettingsService
         public long? SequentialStopSeedSearchIndex { get; set; }
         public string? WorkerPoolUrl { get; set; }
         public int? WorkerThreads { get; set; }
+        public string? DataLakePath { get; set; }
     }
 }
