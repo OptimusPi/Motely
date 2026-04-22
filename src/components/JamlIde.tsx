@@ -5,6 +5,7 @@ import { JamlMapPreview } from "./JamlMapPreview.js";
 import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
 import { JamlIdeVisual, type JamlVisualFilter } from "./JamlIdeVisual.js";
 import { JimboColorOption } from "../ui/tokens.js";
+import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
 
 export interface JamlIdeSearchResult {
   seed: string;
@@ -28,6 +29,10 @@ export interface JamlIdeProps {
   codePlaceholder?: string;
   onSearch?: () => void;
   isSearching?: boolean;
+  /**
+   * Controlled visual filter. When provided alongside `onVisualFilterChange`, the Visual tab
+   * is fully controlled by the parent. When absent, the Visual tab auto-derives from the text.
+   */
   visualFilter?: JamlVisualFilter;
   onVisualFilterChange?: (filter: JamlVisualFilter) => void;
 }
@@ -215,15 +220,56 @@ export function JamlIde({
   const [mode, setMode] = useState<JamlIdeMode>(defaultMode);
   const [internalText, setInternalText] = useState<string>(jaml ?? defaultJaml ?? "");
   const [lastJamlProp, setLastJamlProp] = useState<string | undefined>(jaml);
+
+  // Adjust-state-during-render: sync controlled `jaml` prop into internal text.
   if (jaml !== lastJamlProp) {
     setLastJamlProp(jaml);
     if (jaml !== undefined) setInternalText(jaml);
   }
+
   const text = internalText;
+
   const handleTextChange = (next: string) => {
     setInternalText(next);
     onChange?.(next);
   };
+
+  // Derived visual filter state (used only when not externally controlled).
+  // Cache the last successfully parsed filter so a mid-edit invalid state
+  // doesn't flash the visual panel empty.
+  const [lastParsedText, setLastParsedText] = useState<string>("");
+  const [lastParsedFilter, setLastParsedFilter] = useState<JamlVisualFilter>(() =>
+    jamlTextToVisualFilter(jaml ?? defaultJaml ?? ""),
+  );
+
+  // Adjust-state-during-render: reparse when text changes (only if not controlled).
+  if (visualFilter === undefined && text !== lastParsedText) {
+    try {
+      const parsed = jamlTextToVisualFilter(text);
+      setLastParsedText(text);
+      setLastParsedFilter(parsed);
+    } catch {
+      // Keep previous filter on parse error — don't flash empty.
+      setLastParsedText(text);
+    }
+  }
+
+  const activeFilter: JamlVisualFilter = visualFilter ?? lastParsedFilter;
+
+  const handleVisualFilterChange = (next: JamlVisualFilter) => {
+    if (onVisualFilterChange) {
+      // Controlled: let parent own both.
+      onVisualFilterChange(next);
+    } else {
+      // Uncontrolled: round-trip through text so textarea stays source of truth.
+      const nextText = visualFilterToJamlText(next);
+      setInternalText(nextText);
+      setLastParsedFilter(next);
+      setLastParsedText(nextText);
+      onChange?.(nextText);
+    }
+  };
+
   const results = useMemo(() => searchResults, [searchResults]);
 
   return (
@@ -262,12 +308,8 @@ export function JamlIde({
       <JamlIdeToolbar mode={mode} onModeChange={setMode} resultCount={results.length} onSearch={onSearch} isSearching={isSearching} />
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: JimboColorOption.DARKEST }}>
-        {mode === "visual" && visualFilter && onVisualFilterChange ? (
-          <JamlIdeVisual filter={visualFilter} onChange={onVisualFilterChange} />
-        ) : mode === "visual" ? (
-          <div style={{ padding: 16, color: JimboColorOption.GREY, fontSize: 12, textAlign: "center" }}>
-            Pass <code>visualFilter</code> and <code>onVisualFilterChange</code> props to enable the visual editor.
-          </div>
+        {mode === "visual" ? (
+          <JamlIdeVisual filter={activeFilter} onChange={handleVisualFilterChange} />
         ) : null}
 
         {mode === "code" ? (
@@ -291,6 +333,7 @@ export function JamlIde({
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
               fontSize: 13,
               lineHeight: 1.7,
+              boxSizing: "border-box",
             }}
           />
         ) : null}

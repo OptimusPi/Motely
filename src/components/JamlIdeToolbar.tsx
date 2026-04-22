@@ -17,7 +17,7 @@ export interface JamlIdeToolbarProps {
 
 const TABS: Array<{ id: JamlIdeMode; label: string }> = [
   { id: "visual", label: "Visual" },
-  { id: "code", label: "Code" },
+  { id: "code", label: ".jaml" },
   { id: "map", label: "Map" },
   { id: "results", label: "Results" },
 ];
@@ -36,22 +36,68 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
         background: JimboColorOption.DARKEST,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        {TABS.map((tab) => (
-          <JimboButton
-            key={tab.id}
-            tone={mode === tab.id ? "gold" : "grey"}
-            size="xs"
-            onClick={() => onModeChange(tab.id)}
-          >
-            {tab.label}
-            {tab.id === "results" && resultCount > 0 ? (
-              <span style={{ marginLeft: 6, borderRadius: 999, background: "rgba(228,182,67,0.2)", color: JimboColorOption.GOLD_TEXT, padding: "1px 6px", fontSize: 10 }}>
-                {resultCount}
-              </span>
-            ) : null}
-          </JimboButton>
-        ))}
+      {/* Gold-fill segmented tab strip */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "stretch",
+          gap: 0,
+          background: `${JimboColorOption.DARK_GREY}cc`,
+          borderRadius: 7,
+          border: `1px solid ${JimboColorOption.PANEL_EDGE}`,
+          padding: 2,
+          overflow: "hidden",
+        }}
+      >
+        {TABS.map((tab) => {
+          const isActive = mode === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onModeChange(tab.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 10px",
+                border: "none",
+                borderRadius: 5,
+                cursor: "pointer",
+                fontFamily: "m6x11plus, monospace",
+                fontSize: 10,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                lineHeight: 1.2,
+                transition: "background 80ms, color 80ms, box-shadow 80ms",
+                color: isActive ? JimboColorOption.DARKEST : JimboColorOption.GREY,
+                background: isActive ? JimboColorOption.GOLD : "transparent",
+                boxShadow: isActive ? `0 2px 0 #8a6a1e` : "none",
+                textShadow: isActive ? "none" : "none",
+                userSelect: "none",
+                position: "relative",
+                transform: isActive ? "translateY(0)" : "translateY(0)",
+              }}
+            >
+              {tab.label}
+              {tab.id === "results" && resultCount > 0 ? (
+                <span
+                  style={{
+                    borderRadius: 999,
+                    background: isActive ? `${JimboColorOption.DARKEST}44` : `${JimboColorOption.GOLD}33`,
+                    color: isActive ? JimboColorOption.DARKEST : JimboColorOption.GOLD_TEXT,
+                    padding: "0px 5px",
+                    fontSize: 9,
+                    fontFamily: "monospace",
+                    letterSpacing: 0,
+                  }}
+                >
+                  {resultCount}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
 
       {onSearch ? (
