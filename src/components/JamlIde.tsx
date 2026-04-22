@@ -14,8 +14,12 @@ export interface JamlIdeSearchResult {
 }
 
 export interface JamlIdeProps {
-  jaml: string;
-  onChange: (jaml: string) => void;
+  /** Controlled value. When provided alongside `onChange`, the editor is fully controlled. */
+  jaml?: string;
+  /** Initial value for uncontrolled mode. Ignored when `jaml` is provided on first render. */
+  defaultJaml?: string;
+  /** Subscriber for every edit. Optional — the editor still works without it. */
+  onChange?: (jaml: string) => void;
   defaultMode?: JamlIdeMode;
   searchResults?: JamlIdeSearchResult[];
   className?: string;
@@ -195,6 +199,7 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
 
 export function JamlIde({
   jaml,
+  defaultJaml,
   onChange,
   defaultMode = "code",
   searchResults = [],
@@ -208,6 +213,17 @@ export function JamlIde({
   onVisualFilterChange,
 }: JamlIdeProps) {
   const [mode, setMode] = useState<JamlIdeMode>(defaultMode);
+  const [internalText, setInternalText] = useState<string>(jaml ?? defaultJaml ?? "");
+  const [lastJamlProp, setLastJamlProp] = useState<string | undefined>(jaml);
+  if (jaml !== lastJamlProp) {
+    setLastJamlProp(jaml);
+    if (jaml !== undefined) setInternalText(jaml);
+  }
+  const text = internalText;
+  const handleTextChange = (next: string) => {
+    setInternalText(next);
+    onChange?.(next);
+  };
   const results = useMemo(() => searchResults, [searchResults]);
 
   return (
@@ -257,8 +273,8 @@ export function JamlIde({
         {mode === "code" ? (
           <textarea
             title="JAML IDE Editor"
-            value={jaml}
-            onChange={(event) => onChange(event.target.value)}
+            value={text}
+            onChange={(event) => handleTextChange(event.target.value)}
             placeholder={codePlaceholder}
             spellCheck={false}
             autoCapitalize="off"
@@ -279,7 +295,7 @@ export function JamlIde({
           />
         ) : null}
 
-        {mode === "map" ? <JamlMapPreview jaml={jaml} /> : null}
+        {mode === "map" ? <JamlMapPreview jaml={text} /> : null}
 
         {mode === "results" ? (
           <div style={{ padding: 12 }}>
