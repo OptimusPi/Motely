@@ -193,7 +193,8 @@ public sealed class MotelyWasmHost : IMotelyWasm
             batchCharCount,
             startBatch,
             endBatch,
-            result => {
+            result =>
+            {
                 if (results.Count < Math.Max(0, maxResults))
                     results.Add(result);
             }
