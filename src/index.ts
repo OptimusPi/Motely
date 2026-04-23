@@ -113,3 +113,7 @@ export {
     type SearchStatus,
     type UseSearchState,
 } from "./hooks/useSearch.js";
+export {
+    useAnalyzer,
+    type AnalyzerStatus,
+} from "./hooks/useAnalyzer.js";
