@@ -275,7 +275,7 @@ public sealed class MotelyAnalyzerFilterDesc()
             {
                 int count = rankCounts.GetValueOrDefault(rank, 0);
                 string marker = count == maxRankCount && count > 0 ? "*" : "";
-                sb.AppendLine($"  {rank, 2}: {count}{marker}");
+                sb.AppendLine($"  {rank,2}: {count}{marker}");
             }
 
             // Suits breakdown with ASCII symbols
