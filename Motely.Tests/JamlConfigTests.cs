@@ -339,7 +339,9 @@ public class JamlConfigTests
     Assert.Equal("Second must", mustClauses[1].Label);
 
     var plan = JamlSearchBuilder.CreatePlan(config);
-    Assert.Equal(2, plan.ScoreTallyColumnCount);
+    // Must-only configs report 0 tally columns: must-clause tallies gate execution
+    // but are intentionally excluded from the CSV output (shouldOnly semantics).
+    Assert.Equal(0, plan.ScoreTallyColumnCount);
   }
 
   [Fact]

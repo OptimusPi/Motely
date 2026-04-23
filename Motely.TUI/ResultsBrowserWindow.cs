@@ -27,6 +27,8 @@ public class ResultsBrowserWindow : Window
     private SortMode _sortMode = SortMode.ScoreDesc;
     private int _minScore = 0;
     private int _rowLimit = 1000;
+    private int _topScoreInView = int.MinValue;
+    private int _secondTierThreshold = int.MinValue;
 
     public ResultsBrowserWindow()
     {
@@ -180,6 +182,32 @@ public class ResultsBrowserWindow : Window
         _resultsTable.Style.ShowHorizontalHeaderOverline = false;
         _resultsTable.Style.ShowHorizontalHeaderUnderline = true;
         _resultsTable.Style.AlwaysShowHeaders = true;
+        // Top-score row → gold, ≥90% of top → orange, everything else = default.
+        var topScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.DarkGrey),
+            Focus = new Attribute(BalatroTheme.Orange, BalatroTheme.Blue),
+            HotNormal = new Attribute(BalatroTheme.Orange, BalatroTheme.DarkGrey),
+            HotFocus = new Attribute(BalatroTheme.Orange, BalatroTheme.Blue),
+        };
+        var tierScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.Green, BalatroTheme.InnerPanelGrey),
+            Focus = new Attribute(BalatroTheme.Green, BalatroTheme.Blue),
+            HotNormal = new Attribute(BalatroTheme.Green, BalatroTheme.InnerPanelGrey),
+            HotFocus = new Attribute(BalatroTheme.Green, BalatroTheme.Blue),
+        };
+        _resultsTable.Style.RowColorGetter = args =>
+        {
+            if (args.Table is not DataTableSource src) return null;
+            if (args.RowIndex < 0 || args.RowIndex >= src.DataTable.Rows.Count) return null;
+            if (src.DataTable.Columns.Count < 2) return null;
+            var v = src.DataTable.Rows[args.RowIndex][1]; // column 1 = Score
+            if (v is not int score) return null;
+            if (score == _topScoreInView && _topScoreInView > int.MinValue) return topScheme;
+            if (score >= _secondTierThreshold && _secondTierThreshold > int.MinValue) return tierScheme;
+            return null;
+        };
         _resultsTable.ColorScheme = new ColorScheme
         {
             Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
@@ -386,9 +414,18 @@ public class ResultsBrowserWindow : Window
         _dataTable = dt;
         _resultsTable.Table = new DataTableSource(_dataTable);
 
+        // Compute top-score tiers for row coloring.
+        _topScoreInView = int.MinValue;
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            if (dt.Rows[i][1] is int s && s > _topScoreInView) _topScoreInView = s;
+        }
+        _secondTierThreshold = _topScoreInView > 0 ? (int)Math.Ceiling(_topScoreInView * 0.9) : int.MinValue;
+
         var displayId = string.IsNullOrEmpty(filterId) ? "(default)" : filterId;
         var cutoffTxt = _minScore > 0 ? $" • cutoff ≥ {_minScore}" : "";
-        _countLabel.Text = $"{dt.Rows.Count:N0} row(s) • filter: {displayId}{cutoffTxt}";
+        var topTxt = _topScoreInView > int.MinValue ? $" • top {_topScoreInView}" : "";
+        _countLabel.Text = $"{dt.Rows.Count:N0} row(s) • filter: {displayId}{cutoffTxt}{topTxt}";
 
         SetNeedsDraw();
     }

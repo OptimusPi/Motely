@@ -177,6 +177,33 @@ public static class MotelyTUI
                 }
             };
 
+            // Status bar: v2 Bar + Shortcut idiom. Informational only (each window
+            // handles its own keys); shows the discoverable global hotkeys.
+            var statusBar = new Bar
+            {
+                X = 0,
+                Y = Pos.AnchorEnd(1),
+                Width = Dim.Fill(),
+                Height = 1,
+            };
+            statusBar.ColorScheme = BalatroTheme.Title;
+            foreach (var s in new[]
+            {
+                new Shortcut(Key.F1, "Help", () => { }, "F1"),
+                new Shortcut(Key.F5, "Refresh", () => { }, "F5"),
+                new Shortcut(Key.F7, "Compile", () => { }, "F7"),
+                new Shortcut(Key.Esc, "Back", () => { }, "Esc"),
+                new Shortcut(Key.Tab.WithAlt, "Cycle", () => { }, "Alt+Tab"),
+                new Shortcut((KeyCode)'S', "Search", () => { }, "S"),
+                new Shortcut((KeyCode)'D', "Designer", () => { }, "D"),
+                new Shortcut((KeyCode)'R', "Results", () => { }, "R"),
+                new Shortcut((KeyCode)'C', "Config", () => { }, "C"),
+            })
+            {
+                statusBar.Add(s);
+            }
+            _desktop.Add(statusBar);
+
             if (!string.IsNullOrEmpty(configName) && !string.IsNullOrEmpty(configFormat))
             {
                 // Direct search mode (CLI arg) — show search window immediately

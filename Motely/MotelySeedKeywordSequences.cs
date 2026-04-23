@@ -59,11 +59,15 @@ public static class MotelySeedKeywordSequences
     /// Must match <see cref="MotelyGlobals.GetPaddedSeedCountForKeywordsLong"/> for the paired <c>*Keywords</c> array;
     /// recompute with a one-off console if those tables change (see <c>Motely.Tests</c> guard test).
     /// </summary>
+    // Counts regenerated after the GenerateNPadVariations fix (keyword-contiguous,
+    // padLen + 1 slots). Gross keywords all have padLen ≤ 3 so they were never
+    // affected by the old bug; nsfw/funny/balatro contain longer keywords and
+    // went up.
     public const long GrossKeywordAestheticSeedCount = 181_808_375L;
 
-    public const long NsfwKeywordAestheticSeedCount = 384_746_845L;
-    public const long FunnyKeywordAestheticSeedCount = 430_772_475L;
-    public const long BalatroKeywordAestheticSeedCount = 1_076_577_845L;
+    public const long NsfwKeywordAestheticSeedCount = 489_790_595L;
+    public const long FunnyKeywordAestheticSeedCount = 535_816_225L;
+    public const long BalatroKeywordAestheticSeedCount = 1_496_752_845L;
 
     public static readonly string[] GrossKeywords =
     [
