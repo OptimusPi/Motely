@@ -238,12 +238,15 @@ public static partial class MotelyGlobals
             for (int i = 0; i < padLen; i++)
                 combinations *= (ulong)validChars.Length;
 
+            // Number of distinct keyword positions in a seed of length (keyword.Length + padLen)
+            // is (padLen + 1) — one slot between each consecutive pair of pad chars plus the ends.
+            // Earlier cases happen to equal padLen + 1; the general case was buggy with keyword.Length.
             return padLen switch
             {
                 1 => combinations * 2,
                 2 => combinations * 3,
                 3 => combinations * 4,
-                _ => combinations * (ulong)(keyword.Length + 1),
+                _ => combinations * (ulong)(padLen + 1),
             };
         }
     }
@@ -320,12 +323,12 @@ public static partial class MotelyGlobals
     {
         if (current.Length == padLen)
         {
-            // Distribute the padding block into slots around the keyword:
-            // slot 0 = before keyword, slot i = after keyword[i-1], slot keyword.Length = after keyword.
-            // The padding block stays contiguous so the keyword is never split.
-            for (int slot = 0; slot <= keyword.Length; slot++)
+            // Slide the keyword across the padding block: keyword at position 0..padLen,
+            // splitting the PADDING (not the keyword). This matches the padLen 1/2/3 hand-
+            // rolled cases and keeps the keyword contiguous for every emitted seed.
+            for (int keywordStart = 0; keywordStart <= padLen; keywordStart++)
             {
-                yield return keyword.Substring(0, slot) + current + keyword.Substring(slot);
+                yield return current.Substring(0, keywordStart) + keyword + current.Substring(keywordStart);
             }
             yield break;
         }
