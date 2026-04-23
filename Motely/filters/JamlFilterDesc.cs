@@ -166,15 +166,20 @@ public static class JamlSearchBuilder
             new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal, mustClauseCount)
         );
 
-        string headerQuoted = shouldClauses.Count > 0
-            ? BuildScoredCsvHeaderQuoted(shouldClauses)
+        // Emit only should-clause columns in the CSV header and tally labels; must-clause
+        // tallies gate execution internally but no longer appear in outputs (was debug).
+        var shouldOnlyClauses = shouldClauses.Skip(mustClauseCount).ToList();
+        int shouldOnlyCount = shouldOnlyClauses.Count;
+
+        string headerQuoted = shouldOnlyCount > 0
+            ? BuildScoredCsvHeaderQuoted(shouldOnlyClauses)
             : "";
 
-        var tallyLabels = shouldClauses.Count > 0
-            ? shouldClauses.Select((c, i) => string.IsNullOrWhiteSpace(c.Label) ? $"tally_{i}" : c.Label).ToArray()
+        var tallyLabels = shouldOnlyCount > 0
+            ? shouldOnlyClauses.Select((c, i) => string.IsNullOrWhiteSpace(c.Label) ? $"tally_{i}" : c.Label).ToArray()
             : [];
 
-        return new JamlSearchPlan(settings, shouldClauses.Count, headerQuoted, tallyLabels);
+        return new JamlSearchPlan(settings, shouldOnlyCount, headerQuoted, tallyLabels);
     }
 
     /// <summary>

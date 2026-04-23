@@ -10,7 +10,10 @@ public class SeedProviderCountTests
     [InlineData("A", 1, 6)]
     [InlineData("AB", 2, 27)]
     [InlineData("SHOW", 3, 108)]
-    [InlineData("HI", 4, 243)]
+    // HI + padLen 4: (padLen + 1) = 5 keyword-contiguous slots × 3^4 = 405.
+    // Old value (243) encoded the pre-fix bug where the recursive padLen>3 path
+    // used (keyword.Length + 1) slots AND split the keyword across padding.
+    [InlineData("HI", 4, 405)]
     public void GetPaddedSeedCount_MatchesExpectedCount(string keyword, int padLen, int expected)
     {
         char[] validChars = ['A', 'B', 'C'];
