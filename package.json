@@ -39,6 +39,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prebuild": "node scripts/gen-version.mjs",
     "build": "tsc --pretty false",
     "dev": "tsc --watch",
     "demo": "vite --config demo/vite.config.ts",
