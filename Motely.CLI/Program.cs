@@ -119,10 +119,13 @@ partial class Program
             RequestTermination();
         };
 
-        // ESC key to quit (same as Ctrl+C)
+        // Key listener: Esc quits, 'p' prints the latest progress on demand.
+        // Skip entirely when stdin is redirected (Console.KeyAvailable throws in that case),
+        // and swallow exceptions so a terminal that can't check keys doesn't kill the run.
         var escCts = new CancellationTokenSource();
         var escThread = new Thread(() =>
         {
+            if (Console.IsInputRedirected) return;
             try
             {
                 while (!escCts.Token.IsCancellationRequested)
@@ -133,12 +136,20 @@ partial class Program
                     if (!Console.KeyAvailable) continue;
                     var key = Console.ReadKey(true);
                     if (key.Key == ConsoleKey.Escape)
+                    {
                         RequestTermination();
+                    }
+                    else if (key.KeyChar == 'p' || key.KeyChar == 'P')
+                    {
+                        PrintLatestProgressOnDemand();
+                    }
                 }
             }
             catch (OperationCanceledException) { }
+            catch (InvalidOperationException) { /* stdin went away mid-run */ }
+            catch (IOException) { /* terminal disconnected */ }
         })
-        { IsBackground = true, Name = "ESC Key Listener" };
+        { IsBackground = true, Name = "Console Key Listener" };
         escThread.Start();
 
         var app = new CommandLineApplication
@@ -347,10 +358,13 @@ partial class Program
                     return 1;
                 }
 
+                // Always attach a progress callback so 'p' hotkey has fresh data;
+                // quiet mode just swaps in the silent capture variant.
                 nSettings = nSettings
-                    .WithSeedMatchCallback(seed => Console.WriteLine(seed));
-                if (!quietOption.HasValue())
-                    nSettings = nSettings.WithProgressCallback(WriteNativeProgressLineToStderr);
+                    .WithSeedMatchCallback(seed => Console.WriteLine(seed))
+                    .WithProgressCallback(quietOption.HasValue()
+                        ? CaptureNativeProgress
+                        : WriteNativeProgressLineToStderr);
 
                 if (!quietOption.HasValue())
                     Console.Error.WriteLine(
@@ -471,8 +485,11 @@ partial class Program
                 ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, scoreTallyColumns)
                 : null;
 
-            if (!quietOption.HasValue())
-                settings = settings.WithProgressCallback(WriteJamlProgressLineToStderr);
+            // Always attach a progress callback so 'p' hotkey stays current;
+            // quiet mode swaps in the silent capture variant.
+            settings = settings.WithProgressCallback(quietOption.HasValue()
+                ? CaptureJamlProgress
+                : WriteJamlProgressLineToStderr);
 
             if (hasStructuredScores)
             {
@@ -721,9 +738,13 @@ partial class Program
         return 0;
     }
 
+    // Cached latest progress so 'p' key can print on demand even under --quiet.
+    static MotelyProgress? _latestProgress;
+
     static int _lastNativePercent = -1;
     static void WriteNativeProgressLineToStderr(MotelyProgress p)
     {
+        _latestProgress = p;
         int pct = (int)p.PercentComplete;
         if (pct <= _lastNativePercent) return;
         _lastNativePercent = pct;
@@ -733,10 +754,21 @@ partial class Program
     static int _lastJamlPercent = -1;
     static void WriteJamlProgressLineToStderr(MotelyProgress p)
     {
+        _latestProgress = p;
         int pct = (int)p.PercentComplete;
         if (pct <= _lastJamlPercent) return;
         _lastJamlPercent = pct;
         FormatProgressToStderr(p);
+    }
+
+    // Quiet-mode callbacks: capture latest progress silently so the 'p' hotkey
+    // still has something to print.
+    static void CaptureNativeProgress(MotelyProgress p) => _latestProgress = p;
+    static void CaptureJamlProgress(MotelyProgress p) => _latestProgress = p;
+
+    static void PrintLatestProgressOnDemand()
+    {
+        if (_latestProgress is { } p) FormatProgressToStderr(p);
     }
 
     static void FormatProgressToStderr(MotelyProgress p)

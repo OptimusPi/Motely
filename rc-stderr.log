@@ -1,2 +1,4 @@
-
-The build failed. Fix the build errors and run again.
+Unhandled exception. System.InvalidOperationException: Cannot see if a key has been pressed when either application does not have a console or when console input has been redirected from a file. Try Console.In.Peek.
+   at System.Console.get_KeyAvailable()
+   at Program.<>c__DisplayClass6_0.<Main>b__2() in X:\JammySeedFinder\src\MotelyJAML\Motely.CLI\Program.cs:line 133
+   at System.Threading.Thread.StartCallback()
