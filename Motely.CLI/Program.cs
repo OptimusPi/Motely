@@ -406,7 +406,11 @@ partial class Program
             JamlSearchPlan plan;
             try
             {
-                plan = JamlSearchBuilder.CreatePlan(config);
+                // Push fixed --cutoff into the engine so low-scoring seeds are dropped at
+                // the scorer (no callback spam, no per-seed string concat). Auto still needs
+                // the caller-side running-max below since the engine threshold is static.
+                int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
+                plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
             }
             catch (InvalidOperationException ex)
             {
