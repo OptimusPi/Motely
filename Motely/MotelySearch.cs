@@ -546,6 +546,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
 
+    IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
 }
 
