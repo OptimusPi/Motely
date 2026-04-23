@@ -65,27 +65,14 @@ public static class MotelyTUI
 
     /// <summary>
     /// Show a window as a non-modal overlay on the desktop.
-    /// Multiple windows can be open simultaneously — they stack with cascade offsets.
-    /// The main menu stays in the background; focus moves to the new window.
-    /// Use Alt+Tab to cycle between open windows.
+    /// Multiple windows can be open AND VISIBLE simultaneously — each window
+    /// is responsible for its own X/Y/Width/Height so windows can be tiled
+    /// side-by-side. Alt+Tab cycles focus.
     /// </summary>
     public static void ShowWindow(Window window)
     {
         if (_desktop == null)
             return;
-
-        // Make windows fill the screen instead of being tiny modals, 
-        // leaving 5 rows at the bottom for the main menu dock bar.
-        window.X = 0;
-        window.Y = 0;
-        window.Width = Dim.Fill();
-        window.Height = Dim.Fill()! -5;
-
-        // Hide other windows so they don't draw over each other or waste CPU
-        foreach (var w in _windowStack)
-        {
-            w.Visible = false;
-        }
 
         _windowStack.Add(window);
         _desktop.Add(window);
@@ -103,12 +90,9 @@ public static class MotelyTUI
         _windowStack.Remove(window);
         _desktop.Remove(window);
 
-        // Restore focus to topmost remaining window, or main menu
         if (_windowStack.Count > 0)
         {
-            var top = _windowStack[^1];
-            top.Visible = true;
-            top.SetFocus();
+            _windowStack[^1].SetFocus();
         }
         else if (_mainMenu != null)
         {
@@ -128,22 +112,15 @@ public static class MotelyTUI
             return;
         }
 
-        // Find which window currently has focus and move to the next
         var focused = _windowStack.FirstOrDefault(w => w.HasFocus);
         if (focused == null)
         {
-            var top = _windowStack[^1];
-            top.Visible = true;
-            top.SetFocus();
+            _windowStack[^1].SetFocus();
             return;
         }
 
         var idx = _windowStack.IndexOf(focused);
-        var next = _windowStack[(idx + 1) % _windowStack.Count];
-        
-        focused.Visible = false;
-        next.Visible = true;
-        next.SetFocus();
+        _windowStack[(idx + 1) % _windowStack.Count].SetFocus();
     }
 
     public static int Run(string? configName = null, string? configFormat = null)

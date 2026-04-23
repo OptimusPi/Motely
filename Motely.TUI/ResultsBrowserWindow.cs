@@ -10,7 +10,11 @@ namespace Motely.TUI;
 /// </summary>
 public class ResultsBrowserWindow : Window
 {
+    private enum SortMode { ScoreDesc, ScoreAsc, SeedAsc, SeedDesc }
+
     private readonly TextField _pathField;
+    private readonly TextField _cutoffField;
+    private readonly CleanButton _sortBtn;
     private readonly ListView _filterList;
     private readonly TableView _resultsTable;
     private readonly Label _statusLabel;
@@ -20,14 +24,18 @@ public class ResultsBrowserWindow : Window
     private List<string> _filterIds = new();
     private string _selectedFilterId = "";
     private int _detectedTallyCount;
+    private SortMode _sortMode = SortMode.ScoreDesc;
+    private int _minScore = 0;
+    private int _rowLimit = 1000;
 
     public ResultsBrowserWindow()
     {
         Title = "Results Browser — DuckLake";
-        X = 0;
+        // Tile on the right so it can sit next to the search window.
+        X = Pos.Percent(55);
         Y = 0;
         Width = Dim.Fill();
-        Height = Dim.Fill();
+        Height = Dim.Fill()! - 5;
         CanFocus = true;
         ColorScheme = BalatroTheme.Window;
 
@@ -64,13 +72,66 @@ public class ResultsBrowserWindow : Window
         clearBtn.Accept += (_, _) => ClearFilter();
         Add(clearBtn);
 
+        // ── Y=3: sort + cutoff row ──────────────────────────────────────────
+        _sortBtn = new CleanButton { X = 1, Y = 3, Text = SortButtonText() };
+        _sortBtn.ColorScheme = BalatroTheme.PurpleButton;
+        _sortBtn.Accept += (_, _) => CycleSort();
+        Add(_sortBtn);
+
+        var cutoffLabel = new Label { X = Pos.Right(_sortBtn) + 2, Y = 3, Text = "Min Score:" };
+        Add(cutoffLabel);
+
+        _cutoffField = new TextField
+        {
+            X = Pos.Right(cutoffLabel) + 1,
+            Y = 3,
+            Width = 8,
+            Text = "0",
+        };
+        _cutoffField.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+        };
+        Add(_cutoffField);
+
+        var applyBtn = new CleanButton { X = Pos.Right(_cutoffField) + 1, Y = 3, Text = " Apply " };
+        applyBtn.ColorScheme = BalatroTheme.GreenButton;
+        applyBtn.Accept += (_, _) => ApplyCutoff();
+        Add(applyBtn);
+
+        var limitLabel = new Label { X = Pos.Right(applyBtn) + 2, Y = 3, Text = "Limit:" };
+        Add(limitLabel);
+
+        var limitField = new TextField
+        {
+            X = Pos.Right(limitLabel) + 1,
+            Y = 3,
+            Width = 8,
+            Text = _rowLimit.ToString(),
+        };
+        limitField.ColorScheme = _cutoffField.ColorScheme;
+        Add(limitField);
+
+        var limitApplyBtn = new CleanButton { X = Pos.Right(limitField) + 1, Y = 3, Text = " Set " };
+        limitApplyBtn.ColorScheme = BalatroTheme.BlueButton;
+        limitApplyBtn.Accept += (_, _) =>
+        {
+            if (int.TryParse(limitField.Text, out var n) && n > 0)
+            {
+                _rowLimit = n;
+                Reload();
+            }
+        };
+        Add(limitApplyBtn);
+
         // ── left panel: filter_id list ──────────────────────────────────────
         var filterFrame = new FrameView
         {
             X = 1,
-            Y = 3,
+            Y = 5,
             Width = 28,
-            Height = Dim.Fill()! - 5,
+            Height = Dim.Fill()! - 7,
             Title = "Filters",
         };
         filterFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -99,9 +160,9 @@ public class ResultsBrowserWindow : Window
         var resultsFrame = new FrameView
         {
             X = Pos.Right(filterFrame) + 1,
-            Y = 3,
+            Y = 5,
             Width = Dim.Fill()! - 2,
-            Height = Dim.Fill()! - 5,
+            Height = Dim.Fill()! - 7,
             Title = "Results (select a filter)",
         };
         resultsFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -127,6 +188,7 @@ public class ResultsBrowserWindow : Window
             HotFocus = new Attribute(BalatroTheme.Orange, BalatroTheme.Blue),
         };
         _resultsTable.Table = new DataTableSource(_dataTable);
+        _resultsTable.CellActivated += (_, e) => OnCellActivated(e.Col);
         resultsFrame.Add(_resultsTable);
 
         // ── bottom bar: status + back ───────────────────────────────────────
@@ -294,7 +356,7 @@ public class ResultsBrowserWindow : Window
         }
     }
 
-    private void LoadResults(DuckDBConnection conn, string filterId, int limit = 1000)
+    private void LoadResults(DuckDBConnection conn, string filterId)
     {
         var dt = new DataTable();
         dt.Columns.Add("Seed", typeof(string));
@@ -304,10 +366,11 @@ public class ResultsBrowserWindow : Window
 
         using var cmd = conn.CreateCommand();
         var tallyCols = string.Concat(Enumerable.Range(0, _detectedTallyCount).Select(i => $", tally{i}"));
+        var cutoffClause = _minScore > 0 ? $" AND score >= {_minScore}" : "";
         cmd.CommandText =
             $"SELECT seed, score{tallyCols} FROM results " +
-            $"WHERE filter_id = '{EscapeSqlLiteral(filterId)}' " +
-            $"ORDER BY score DESC LIMIT {limit}";
+            $"WHERE filter_id = '{EscapeSqlLiteral(filterId)}'{cutoffClause} " +
+            $"ORDER BY {SortClause()} LIMIT {_rowLimit}";
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -324,9 +387,78 @@ public class ResultsBrowserWindow : Window
         _resultsTable.Table = new DataTableSource(_dataTable);
 
         var displayId = string.IsNullOrEmpty(filterId) ? "(default)" : filterId;
-        _countLabel.Text = $"{dt.Rows.Count:N0} row(s) • filter: {displayId}";
+        var cutoffTxt = _minScore > 0 ? $" • cutoff ≥ {_minScore}" : "";
+        _countLabel.Text = $"{dt.Rows.Count:N0} row(s) • filter: {displayId}{cutoffTxt}";
 
         SetNeedsDraw();
+    }
+
+    private string SortClause() => _sortMode switch
+    {
+        SortMode.ScoreDesc => "score DESC",
+        SortMode.ScoreAsc => "score ASC",
+        SortMode.SeedAsc => "seed ASC",
+        SortMode.SeedDesc => "seed DESC",
+        _ => "score DESC",
+    };
+
+    private string SortButtonText() => _sortMode switch
+    {
+        SortMode.ScoreDesc => " Sort: Score ↓ ",
+        SortMode.ScoreAsc => " Sort: Score ↑ ",
+        SortMode.SeedAsc => " Sort: Seed A→Z ",
+        SortMode.SeedDesc => " Sort: Seed Z→A ",
+        _ => " Sort: Score ↓ ",
+    };
+
+    private void CycleSort()
+    {
+        _sortMode = (SortMode)(((int)_sortMode + 1) % 4);
+        _sortBtn.Text = SortButtonText();
+        Reload();
+    }
+
+    /// <summary>Press Enter on a cell → sort by that column (toggles asc/desc on repeat).</summary>
+    private void OnCellActivated(int col)
+    {
+        var next = col switch
+        {
+            0 => _sortMode == SortMode.SeedAsc ? SortMode.SeedDesc : SortMode.SeedAsc,
+            1 => _sortMode == SortMode.ScoreDesc ? SortMode.ScoreAsc : SortMode.ScoreDesc,
+            _ => _sortMode, // tally cols — not currently sortable
+        };
+        if (next == _sortMode) return;
+        _sortMode = next;
+        _sortBtn.Text = SortButtonText();
+        Reload();
+    }
+
+    private void ApplyCutoff()
+    {
+        var text = _cutoffField.Text?.ToString() ?? "0";
+        if (int.TryParse(text, out var n) && n >= 0)
+        {
+            _minScore = n;
+            Reload();
+        }
+        else
+        {
+            _statusLabel.Text = $"Invalid cutoff '{text}' — must be a non-negative integer.";
+        }
+    }
+
+    private void Reload()
+    {
+        if (_filterIds.Count == 0) return;
+        try
+        {
+            using var conn = OpenConnection();
+            LoadResults(conn, _selectedFilterId);
+        }
+        catch (Exception ex)
+        {
+            _statusLabel.Text = $"Error: {ex.Message}";
+        }
     }
 
     private void ExportParquet()

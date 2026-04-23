@@ -55,14 +55,12 @@ public class JamlEditorWindow : Window
         refreshButton.Accept += (_, _) => ReloadFilters();
         toolbar.Add(refreshButton);
 
-        var toggleButton = new CleanButton { X = Pos.Right(refreshButton) + 1, Y = 0, Text = " Toggle Mode " };
-        toggleButton.ColorScheme = BalatroTheme.ModalButton;
-        toggleButton.Accept += (_, _) => ToggleMode();
-        toolbar.Add(toggleButton);
-
+        // Mode is auto-detected from the file extension — no toggle.
+        // Jummy is valid YAML-JAML too, so "Perkeo in Ante 1" works whether you
+        // called the file .jummy or .jaml; the compiler is the differentiator.
         _modeLabel = new Label
         {
-            X = Pos.Right(toggleButton) + 2,
+            X = Pos.Right(refreshButton) + 2,
             Y = 0,
             Text = ModeText(),
         };
@@ -176,14 +174,6 @@ public class JamlEditorWindow : Window
     private string ModeText() => _mode == DocMode.Jummy ? "MODE: Jummy" : "MODE: JAML";
     private string EditorFrameTitle() =>
         _mode == DocMode.Jummy ? "Jummy source (compiles 1:1 → JAML)" : "JAML";
-
-    private void ToggleMode()
-    {
-        _mode = _mode == DocMode.Jummy ? DocMode.Jaml : DocMode.Jummy;
-        _modeLabel.Text = ModeText();
-        _editorFrame.Title = EditorFrameTitle();
-        SetNeedsDraw();
-    }
 
     private void ReloadFilters()
     {

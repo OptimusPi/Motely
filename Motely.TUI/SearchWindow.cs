@@ -13,6 +13,7 @@ public class SearchWindow : Window
     private readonly string? _sink;
     private readonly Label _statusLabel;
     private readonly Label _progressLabel;
+    private readonly TextField _cutoffField;
     private readonly TableView _resultsTable;
     private readonly DataTable _dataTable = new();
     private readonly CleanButton _stopBtn;
@@ -23,6 +24,14 @@ public class SearchWindow : Window
     private int _resultCount = 0;
     private int _tallyColumnCount = 0;
 
+    // --cutoff semantics (match Motely.CLI):
+    //   auto     → running maximum: emit every seed at-or-above the best so far.
+    //   <int>    → fixed floor: skip anything below this score.
+    //   (blank)  → no cutoff.
+    private bool _cutoffAuto = true;
+    private int _cutoffFixed = int.MinValue;
+    private int _currentHigh = int.MinValue;
+
     public SearchWindow(string configPath, string configFormat, string? source = null, string? sink = null)
     {
         _configPath = configPath;
@@ -31,10 +40,11 @@ public class SearchWindow : Window
         _sink = string.IsNullOrWhiteSpace(sink) ? null : sink;
 
         Title = $"Search: {Path.GetFileNameWithoutExtension(configPath)}";
-        X = Pos.Center();
-        Y = Pos.Center();
-        Width = Dim.Percent(90);
-        Height = Dim.Percent(85);
+        // Tile on the left half so the editor / results browser can sit next to it.
+        X = 0;
+        Y = 0;
+        Width = Dim.Percent(55);
+        Height = Dim.Fill()! - 5;
         CanFocus = true;
         ColorScheme = BalatroTheme.Window;
 
@@ -64,12 +74,47 @@ public class SearchWindow : Window
         };
         Add(_progressLabel);
 
+        // --cutoff row: matches Motely.CLI semantics. "auto" = running max, "<int>" = floor, "" = off.
+        var cutoffLabel = new Label { X = 1, Y = 3, Text = "--cutoff:" };
+        Add(cutoffLabel);
+
+        _cutoffField = new TextField
+        {
+            X = Pos.Right(cutoffLabel) + 1,
+            Y = 3,
+            Width = 10,
+            Text = "auto",
+        };
+        _cutoffField.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+        };
+        Add(_cutoffField);
+
+        var cutoffApplyBtn = new CleanButton { X = Pos.Right(_cutoffField) + 1, Y = 3, Text = " Apply " };
+        cutoffApplyBtn.ColorScheme = BalatroTheme.GreenButton;
+        cutoffApplyBtn.Accept += (_, _) => ApplyCutoffInput();
+        Add(cutoffApplyBtn);
+
+        var cutoffHint = new Label
+        {
+            X = Pos.Right(cutoffApplyBtn) + 2,
+            Y = 3,
+            Text = "(auto | <int> | blank)",
+        };
+        cutoffHint.ColorScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.ModalGrey),
+        };
+        Add(cutoffHint);
+
         var resultsFrame = new FrameView
         {
             X = 1,
-            Y = 4,
+            Y = 5,
             Width = Dim.Fill()! - 2,
-            Height = Dim.Fill()! - 8,
+            Height = Dim.Fill()! - 9,
             Title = "Results (live)",
         };
         resultsFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -232,6 +277,10 @@ public class SearchWindow : Window
             {
                 settings.WithScoredResultCallback(tally =>
                 {
+                    // Match Motely.CLI: cutoff gates BOTH sink and display.
+                    if (!PassesCutoff(tally.Score))
+                        return;
+
                     _activeSink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
 
                     var resultCount = Interlocked.Increment(ref _resultCount);
@@ -308,6 +357,50 @@ public class SearchWindow : Window
                 _stopBtn.Visible = false;
                 _searchRunning = false;
             });
+        }
+    }
+
+    /// <summary>Cutoff gate — matches Motely.CLI --cutoff semantics.</summary>
+    private bool PassesCutoff(int score)
+    {
+        if (_cutoffAuto)
+        {
+            // Running maximum: emit every seed at-or-above the best so far (ties included).
+            if (score < _currentHigh)
+                return false;
+            _currentHigh = Math.Max(_currentHigh, score);
+            return true;
+        }
+        if (_cutoffFixed > int.MinValue && score < _cutoffFixed)
+            return false;
+        return true;
+    }
+
+    private void ApplyCutoffInput()
+    {
+        var raw = (_cutoffField.Text?.ToString() ?? "").Trim();
+        if (string.Equals(raw, "auto", StringComparison.OrdinalIgnoreCase))
+        {
+            _cutoffAuto = true;
+            _cutoffFixed = int.MinValue;
+            _currentHigh = int.MinValue;
+            _statusLabel.Text = "Cutoff: auto (running max).";
+        }
+        else if (string.IsNullOrEmpty(raw))
+        {
+            _cutoffAuto = false;
+            _cutoffFixed = int.MinValue;
+            _statusLabel.Text = "Cutoff: off.";
+        }
+        else if (int.TryParse(raw, out var n))
+        {
+            _cutoffAuto = false;
+            _cutoffFixed = n;
+            _statusLabel.Text = $"Cutoff: ≥ {n}.";
+        }
+        else
+        {
+            _statusLabel.Text = $"Invalid cutoff '{raw}' — use 'auto', an integer, or leave blank.";
         }
     }
 
