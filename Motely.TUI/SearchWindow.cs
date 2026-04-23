@@ -17,7 +17,9 @@ public class SearchWindow : Window
     private readonly TableView _resultsTable;
     private readonly DataTable _dataTable = new();
     private readonly CleanButton _stopBtn;
+    private readonly SpinnerView _spinner;
     private IMotelySearch? _search;
+    private int _highestScoreSeen = int.MinValue;
     private ISeedResultSink? _activeSink;
     private CancellationTokenSource? _cts;
     private bool _searchRunning = false;
@@ -48,11 +50,22 @@ public class SearchWindow : Window
         CanFocus = true;
         ColorScheme = BalatroTheme.Window;
 
-        _statusLabel = new Label
+        _spinner = new SpinnerView
         {
             X = 1,
             Y = 1,
-            Width = Dim.Fill()! - 2,
+            Style = new SpinnerStyle.Dots(),
+            AutoSpin = true,
+            SpinDelay = 120,
+            Visible = true,
+        };
+        Add(_spinner);
+
+        _statusLabel = new Label
+        {
+            X = Pos.Right(_spinner) + 1,
+            Y = 1,
+            Width = Dim.Fill()! - 4,
             Text = "Starting search...",
         };
         _statusLabel.ColorScheme = new ColorScheme
@@ -135,6 +148,24 @@ public class SearchWindow : Window
         };
         _resultsTable.Style.AlwaysShowHeaders = true;
         _resultsTable.Style.ShowHorizontalHeaderUnderline = true;
+        // Top-score rows get the gold treatment — row's score == best score so far = highlight.
+        var goldScheme = new ColorScheme
+        {
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.DarkGrey),
+            Focus = new Attribute(BalatroTheme.Orange, BalatroTheme.Blue),
+            HotNormal = new Attribute(BalatroTheme.Orange, BalatroTheme.DarkGrey),
+            HotFocus = new Attribute(BalatroTheme.Orange, BalatroTheme.Blue),
+        };
+        _resultsTable.Style.RowColorGetter = args =>
+        {
+            if (args.Table is not DataTableSource src) return null;
+            if (src.Table.Columns.Count < 3 || args.RowIndex < 0 || args.RowIndex >= src.Table.Rows.Count)
+                return null;
+            var v = src.Table.Rows[args.RowIndex][2];
+            if (v is int score && score == _highestScoreSeen && _highestScoreSeen > int.MinValue)
+                return goldScheme;
+            return null;
+        };
         _resultsTable.ColorScheme = new ColorScheme
         {
             Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
@@ -419,6 +450,8 @@ public class SearchWindow : Window
             row[3 + i] = tallies[i];
         _dataTable.Rows.Add(row);
 
+        if (score > _highestScoreSeen) _highestScoreSeen = score;
+
         // Scroll to show the newest row.
         _resultsTable.SelectedRow = _dataTable.Rows.Count - 1;
         _resultsTable.EnsureSelectedCellIsVisible();
@@ -433,6 +466,8 @@ public class SearchWindow : Window
         {
             Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
         };
+        _spinner.AutoSpin = false;
+        _spinner.Visible = false;
         _stopBtn.Visible = false;
         _activeSink?.Dispose();
         _activeSink = null;
@@ -455,6 +490,8 @@ public class SearchWindow : Window
         {
             Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
         };
+        _spinner.AutoSpin = false;
+        _spinner.Visible = false;
         _stopBtn.Visible = false;
         _activeSink?.Dispose();
         _activeSink = null;
