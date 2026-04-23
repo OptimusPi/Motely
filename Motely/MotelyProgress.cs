@@ -6,7 +6,7 @@ namespace Motely;
 /// </summary>
 public class MotelyProgress
 {
-    
+
     public long CompletedBatchCount { get; set; }
     public long TotalBatchCount { get; set; }
     public long SeedsSearched { get; set; }

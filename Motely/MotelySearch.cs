@@ -947,7 +947,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public bool TryGetSingleSeedRouter([NotNullWhen(true)] out IMotelySeedRouter? seedRouter)
     {
         seedRouter = _seedRouter;
-        return seedRouter != null; 
+        return seedRouter != null;
     }
 
     private readonly Action<MotelyProgress>? _progressCallback;
