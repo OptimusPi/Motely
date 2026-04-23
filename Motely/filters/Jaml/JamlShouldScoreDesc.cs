@@ -91,19 +91,21 @@ public struct JamlShouldScoreDesc
                     ref var tally = ref buffer[singleCtx.VectorLane];
                     tally.Reset(string.Empty);
 
-                    // Must clauses first — early-exit if any fails
+                    // Must clauses first — early-exit if any fails. Must tallies are NOT
+                    // added to the emitted tally buffer (was debug-only, now "regular"):
+                    // output includes only should-clause tallies so the CSV matches the
+                    // shouldClauses header.
                     for (int i = 0; i < mustCount; i++)
                     {
                         int raw = JamlScoring.CountRawOccurrences(ref singleCtx, shouldClauses[i], ref runState);
                         int weighted = JamlScoring.CountOccurrences(ref singleCtx, shouldClauses[i], ref runState);
-                        tally.AddTally(raw);
                         totalScore += weighted * shouldClauses[i].Score;
 
                         if (raw < shouldClauses[i].Min)
                             return false;
                     }
 
-                    // Should clauses — score but never reject
+                    // Should clauses — score, append tally, never reject.
                     for (int i = mustCount; i < shouldClauses.Length; i++)
                     {
                         int raw = JamlScoring.CountRawOccurrences(ref singleCtx, shouldClauses[i], ref runState);

@@ -259,6 +259,11 @@ partial class Program
             "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...). Seed-input flags match JAML: --source, --seeds, --keyword(s), --random, --aesthetic, or default sequential (--startBatch/--endBatch/--startPercent or --startSeed/--stopSeed).",
             CommandOptionType.SingleValue
         );
+        var quietOption = app.Option(
+            "-q|--quiet|--no-progress",
+            "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
+            CommandOptionType.NoValue
+        );
 
         threadsOption.DefaultValue = Environment.ProcessorCount;
         batchCharCountOption.DefaultValue = 4;
@@ -343,11 +348,13 @@ partial class Program
                 }
 
                 nSettings = nSettings
-                    .WithProgressCallback(WriteNativeProgressLineToStderr)
                     .WithSeedMatchCallback(seed => Console.WriteLine(seed));
+                if (!quietOption.HasValue())
+                    nSettings = nSettings.WithProgressCallback(WriteNativeProgressLineToStderr);
 
-                Console.Error.WriteLine(
-                    $"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} | batchCharCount={nBatch} (sequential only)");
+                if (!quietOption.HasValue())
+                    Console.Error.WriteLine(
+                        $"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} | batchCharCount={nBatch} (sequential only)");
                 using var nSearch = nSettings.Start(_cts.Token);
                 await nSearch.WaitForCompletionAsync(_cts.Token);
                 PrintSummary(nSearch, nBatch, _cts.Token.IsCancellationRequested);
@@ -464,7 +471,8 @@ partial class Program
                 ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, scoreTallyColumns)
                 : null;
 
-            settings = settings.WithProgressCallback(WriteJamlProgressLineToStderr);
+            if (!quietOption.HasValue())
+                settings = settings.WithProgressCallback(WriteJamlProgressLineToStderr);
 
             if (hasStructuredScores)
             {
@@ -485,11 +493,14 @@ partial class Program
                 });
             }
 
-            Console.Error.WriteLine(
-                $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} (sequential only)"
-            );
-            if (sink != null)
-                Console.Error.WriteLine($"Sink: {sink.OutputPath}");
+            if (!quietOption.HasValue())
+            {
+                Console.Error.WriteLine(
+                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} (sequential only)"
+                );
+                if (sink != null)
+                    Console.Error.WriteLine($"Sink: {sink.OutputPath}");
+            }
 
             using var search = settings.Start(_cts.Token);
             await search.WaitForCompletionAsync(_cts.Token);

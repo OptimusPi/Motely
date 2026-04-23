@@ -159,9 +159,9 @@ public class SearchWindow : Window
         _resultsTable.Style.RowColorGetter = args =>
         {
             if (args.Table is not DataTableSource src) return null;
-            if (src.Table.Columns.Count < 3 || args.RowIndex < 0 || args.RowIndex >= src.Table.Rows.Count)
+            if (src.DataTable.Columns.Count < 3 || args.RowIndex < 0 || args.RowIndex >= src.DataTable.Rows.Count)
                 return null;
-            var v = src.Table.Rows[args.RowIndex][2];
+            var v = src.DataTable.Rows[args.RowIndex][2];
             if (v is int score && score == _highestScoreSeen && _highestScoreSeen > int.MinValue)
                 return goldScheme;
             return null;
