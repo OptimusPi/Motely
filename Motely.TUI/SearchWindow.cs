@@ -201,7 +201,11 @@ public class SearchWindow : Window
                 || config == null)
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
 
-            var plan = JamlSearchBuilder.CreatePlan(config);
+            // Push fixed cutoff into the engine (matches Motely.CLI behaviour): the scorer
+            // drops below-threshold seeds before any callback fires. Auto runs caller-side
+            // via PassesCutoff() because the engine threshold is fixed per-plan.
+            int engineCutoff = (!_cutoffAuto && _cutoffFixed > int.MinValue) ? _cutoffFixed : 0;
+            var plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
             var settings = plan
                 .Settings.WithDeck(config.Deck)
                 .WithStake(config.Stake)
