@@ -275,6 +275,11 @@ partial class Program
             "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
             CommandOptionType.NoValue
         );
+        var writeJamlSchemaOption = app.Option(
+            "--write-jaml-schema",
+            "Regenerate jaml.schema.json from JamlConfig.cs via the AOT-safe schema exporter. Writes to repo root and tools/jaml-language/{jaml-schema,vscode-extension}/schemas/.",
+            CommandOptionType.NoValue
+        );
 
         threadsOption.DefaultValue = Environment.ProcessorCount;
         batchCharCountOption.DefaultValue = 4;
@@ -285,6 +290,12 @@ partial class Program
             {
                 app.ShowHelp();
                 return 0;
+            }
+
+            // --write-jaml-schema is a standalone maintenance command; run it and exit.
+            if (writeJamlSchemaOption.HasValue())
+            {
+                return JamlSchemaGenerator.WriteDefault(log: Console.Error);
             }
 
             // --analyze mode — supports single seed or comma-separated batch
