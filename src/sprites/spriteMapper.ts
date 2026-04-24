@@ -18,47 +18,29 @@ export interface SpriteData {
   type: SpriteSheetType;
 }
 
+const normalize = (name: string): string => name.toLowerCase().replace(/\s+/g, "");
+const stripPrefix = (name: string): string =>
+  name.replace(/^(Joker|Tarot|Planet|Voucher|Pack|Edition|Tag) [|:] /i, "").trim();
+
 const ITEM_MAP = new Map<string, SpriteData>();
 
-function addToMap(items: SpriteEntry[], type: SpriteSheetType) {
+function registerAll(items: SpriteEntry[], type: SpriteSheetType) {
   for (const item of items) {
     if (!item.name || !item.pos) continue;
-    const data: SpriteData = { pos: item.pos, type };
-    ITEM_MAP.set(item.name, data);
-    ITEM_MAP.set(item.name.toLowerCase(), data);
-    ITEM_MAP.set(item.name.replace(/ /g, ""), data);
-    ITEM_MAP.set(item.name.replace(/ /g, "").toLowerCase(), data);
+    ITEM_MAP.set(normalize(item.name), { pos: item.pos, type });
   }
 }
 
-addToMap(JOKERS, "Jokers");
-addToMap(JOKER_FACES, "Jokers");
-addToMap(TAROTS_AND_PLANETS, "Tarots");
-addToMap(CONSUMABLE_FACES ?? [], "Tarots");
-addToMap(VOUCHERS, "Vouchers");
-addToMap(BOSSES, "BlindChips");
-addToMap(TAGS, "tags");
-addToMap(BOOSTER_PACKS ?? [], "Boosters");
+registerAll(JOKERS, "Jokers");
+registerAll(JOKER_FACES, "Jokers");
+registerAll(TAROTS_AND_PLANETS, "Tarots");
+registerAll(CONSUMABLE_FACES ?? [], "Tarots");
+registerAll(VOUCHERS, "Vouchers");
+registerAll(BOSSES, "BlindChips");
+registerAll(TAGS, "tags");
+registerAll(BOOSTER_PACKS ?? [], "Boosters");
 
-/** O(1) sprite lookup by name. Tries multiple normalizations. */
+/** Look up sprite data by name. Accepts display names ("Icy Joker"), enum keys ("IcyJoker"), and "Joker | Name" prefixed forms. */
 export function getSpriteData(name: string): SpriteData | null {
-  const cleaned = name.replace(/^(Joker|Tarot|Planet|Voucher|Pack|Edition|Tag) [|:] /i, "").trim();
-
-  if (ITEM_MAP.has(cleaned)) return ITEM_MAP.get(cleaned)!;
-  if (ITEM_MAP.has(name)) return ITEM_MAP.get(name)!;
-
-  const variants = [
-    cleaned.toLowerCase(),
-    cleaned.replace(/ /g, ""),
-    cleaned.replace(/ /g, "").toLowerCase(),
-    name.toLowerCase(),
-    name.replace(/ /g, ""),
-    name.replace(/ /g, "").toLowerCase(),
-  ];
-
-  for (const v of variants) {
-    if (ITEM_MAP.has(v)) return ITEM_MAP.get(v)!;
-  }
-
-  return null;
+  return ITEM_MAP.get(normalize(stripPrefix(name))) ?? ITEM_MAP.get(normalize(name)) ?? null;
 }
