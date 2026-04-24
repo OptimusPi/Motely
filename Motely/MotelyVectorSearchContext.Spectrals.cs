@@ -175,7 +175,7 @@ ref partial struct MotelyVectorSearchContext
         items = Vector256.ConditionalSelect(shrunkMask, spectralItems, items);
 
         int resampleCount = 0;
-        while (true)
+        while (resampleCount < MotelyVectorResampleLimit)
         {
             Vector256<int> resampleMaskInt =
                 Vector256.Equals(items, Vector256.Create((int)MotelyItemType.TheSoul))
