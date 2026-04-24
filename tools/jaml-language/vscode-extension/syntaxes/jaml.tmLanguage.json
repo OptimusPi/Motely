@@ -1,0 +1,284 @@
+{
+  "scopeName": "source.jaml",
+  "name": "JAML",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keys"
+    },
+    {
+      "include": "#booleans"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#wildcards"
+    },
+    {
+      "include": "#jokers"
+    },
+    {
+      "include": "#vouchers"
+    },
+    {
+      "include": "#bosses"
+    },
+    {
+      "include": "#tags"
+    },
+    {
+      "include": "#tarots"
+    },
+    {
+      "include": "#spectrals"
+    },
+    {
+      "include": "#planets"
+    },
+    {
+      "include": "#deckStake"
+    },
+    {
+      "include": "#editions"
+    },
+    {
+      "include": "#modifiers"
+    },
+    {
+      "include": "#aesthetics"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "#.*$",
+          "name": "comment.line.number-sign.jaml"
+        }
+      ]
+    },
+    "keys": {
+      "patterns": [
+        {
+          "match": "^(\\s*)([A-Za-z_][A-Za-z0-9_-]*)(\\s*:)",
+          "captures": {
+            "2": {
+              "name": "entity.name.tag.jaml"
+            },
+            "3": {
+              "name": "punctuation.separator.key-value.jaml"
+            }
+          }
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "match": "\\b(true|false|null)\\b",
+          "name": "constant.language.boolean.jaml"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b-?\\d+(?:\\.\\d+)?\\b",
+          "name": "constant.numeric.jaml"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.jaml",
+          "patterns": [
+            {
+              "include": "#wildcards"
+            },
+            {
+              "include": "#jokers"
+            },
+            {
+              "include": "#vouchers"
+            },
+            {
+              "include": "#bosses"
+            },
+            {
+              "include": "#tags"
+            },
+            {
+              "include": "#tarots"
+            },
+            {
+              "include": "#spectrals"
+            },
+            {
+              "include": "#planets"
+            },
+            {
+              "include": "#deckStake"
+            },
+            {
+              "include": "#editions"
+            },
+            {
+              "include": "#modifiers"
+            },
+            {
+              "include": "#aesthetics"
+            }
+          ]
+        },
+        {
+          "begin": "'",
+          "end": "'",
+          "name": "string.quoted.single.jaml",
+          "patterns": [
+            {
+              "include": "#wildcards"
+            },
+            {
+              "include": "#jokers"
+            },
+            {
+              "include": "#vouchers"
+            },
+            {
+              "include": "#bosses"
+            },
+            {
+              "include": "#tags"
+            },
+            {
+              "include": "#tarots"
+            },
+            {
+              "include": "#spectrals"
+            },
+            {
+              "include": "#planets"
+            },
+            {
+              "include": "#deckStake"
+            },
+            {
+              "include": "#editions"
+            },
+            {
+              "include": "#modifiers"
+            },
+            {
+              "include": "#aesthetics"
+            }
+          ]
+        }
+      ]
+    },
+    "wildcards": {
+      "patterns": [
+        {
+          "match": "\\b(any|anycommon|anyuncommon|anyrare|anylegendary)\\b",
+          "name": "keyword.other.wildcard.jaml"
+        }
+      ]
+    },
+    "jokers": {
+      "patterns": [
+        {
+          "match": "\\b(Joker|GreedyJoker|LustyJoker|WrathfulJoker|GluttonousJoker|JollyJoker|ZanyJoker|MadJoker|CrazyJoker|DrollJoker|SlyJoker|WilyJoker|CleverJoker|DeviousJoker|CraftyJoker|HalfJoker|CreditCard|Banner|MysticSummit|EightBall|Misprint|RaisedFist|ChaostheClown|ScaryFace|AbstractJoker|DelayedGratification|GrosMichel|EvenSteven|OddTodd|Scholar|BusinessCard|Supernova|RideTheBus|Egg|Runner|IceCream|Splash|BlueJoker|FacelessJoker|GreenJoker|Superposition|ToDoList|Cavendish|RedCard|SquareJoker|RiffRaff|Photograph|ReservedParking|MailInRebate|Hallucination|FortuneTeller|Juggler|Drunkard|GoldenJoker|Popcorn|WalkieTalkie|SmileyFace|GoldenTicket|Swashbuckler|HangingChad|ShootTheMoon|JokerStencil|FourFingers|Mime|CeremonialDagger|MarbleJoker|LoyaltyCard|Dusk|Fibonacci|SteelJoker|Hack|Pareidolia|SpaceJoker|Burglar|Blackboard|SixthSense|Constellation|Hiker|CardSharp|Madness|Seance|Vampire|Shortcut|Hologram|Cloud9|Rocket|MidasMask|Luchador|GiftCard|TurtleBean|Erosion|ToTheMoon|StoneJoker|LuckyCat|Bull|DietCola|TradingCard|FlashCard|SpareTrousers|Ramen|Seltzer|Castle|MrBones|Acrobat|SockAndBuskin|Troubadour|Certificate|SmearedJoker|Throwback|RoughGem|Bloodstone|Arrowhead|OnyxAgate|GlassJoker|Showman|FlowerPot|MerryAndy|OopsAll6s|TheIdol|SeeingDouble|Matador|Satellite|Cartomancer|Astronomer|Bootstraps|DNA|Vagabond|Baron|Obelisk|BaseballCard|AncientJoker|Campfire|Blueprint|WeeJoker|HitTheRoad|TheDuo|TheTrio|TheFamily|TheOrder|TheTribe|Stuntman|InvisibleJoker|Brainstorm|DriversLicense|BurntJoker|Canio|Triboulet|Yorick|Chicot|Perkeo|Any|AnyCommon|AnyUncommon|AnyRare|AnyLegendary|Greedy Joker|Lusty Joker|Wrathful Joker|Gluttonous Joker|Jolly Joker|Zany Joker|Mad Joker|Crazy Joker|Droll Joker|Sly Joker|Wily Joker|Clever Joker|Devious Joker|Crafty Joker|Half Joker|Credit Card|Mystic Summit|8 Ball|Raised Fist|Chaos the Clown|Scary Face|Abstract Joker|Delayed Gratification|Gros Michel|Even Steven|Odd Todd|Business Card|Ride the Bus|Ice Cream|Blue Joker|Faceless Joker|Green Joker|To Do List|Red Card|Square Joker|Riff-raff|Reserved Parking|Mail In Rebate|Fortune Teller|Golden Joker|Walkie Talkie|Smiley Face|Golden Ticket|Hanging Chad|Shoot the Moon|Joker Stencil|Four Fingers|Ceremonial Dagger|Marble Joker|Loyalty Card|Steel Joker|Space Joker|Sixth Sense|Card Sharp|Cloud 9|Midas Mask|Gift Card|Turtle Bean|To the Moon|Stone Joker|Lucky Cat|Diet Cola|Trading Card|Flash Card|Spare Trousers|Mr\\. Bones|Sock and Buskin|Smeared Joker|Rough Gem|Onyx Agate|Glass Joker|Flower Pot|Merry Andy|Oops! All 6s|The Idol|Seeing Double|D N A|Baseball Card|Ancient Joker|Wee Joker|Hit the Road|The Duo|The Trio|The Family|The Order|The Tribe|Invisible Joker|Driver's License|Burnt Joker|Any Common|Any Uncommon|Any Rare|Any Legendary)\\b",
+          "name": "entity.name.function.joker.jaml"
+        }
+      ]
+    },
+    "vouchers": {
+      "patterns": [
+        {
+          "match": "\\b(Overstock|OverstockPlus|ClearanceSale|Liquidation|Hone|GlowUp|RerollSurplus|RerollGlut|CrystalBall|OmenGlobe|Telescope|Observatory|Grabber|NachoTong|Wasteful|Recyclomancy|TarotMerchant|TarotTycoon|PlanetMerchant|PlanetTycoon|SeedMoney|MoneyTree|Blank|Antimatter|MagicTrick|Illusion|Hieroglyph|Petroglyph|DirectorsCut|Retcon|PaintBrush|Palette|Overstock Plus|Clearance Sale|Glow Up|Reroll Surplus|Reroll Glut|Crystal Ball|Omen Globe|Nacho Tong|Tarot Merchant|Tarot Tycoon|Planet Merchant|Planet Tycoon|Seed Money|Money Tree|Magic Trick|Director's Cut|Paint Brush)\\b",
+          "name": "support.function.voucher.jaml"
+        }
+      ]
+    },
+    "bosses": {
+      "patterns": [
+        {
+          "match": "\\b(TheClub|TheGoad|TheHead|TheHook|TheManacle|ThePillar|ThePsychic|TheWindow|TheArm|TheFish|TheFlint|TheHouse|TheMark|TheMouth|TheNeedle|TheWall|TheWater|TheWheel|TheEye|TheTooth|ThePlant|TheSerpent|TheOx|AmberAcorn|CeruleanBell|CrimsonHeart|VerdantLeaf|VioletVessel|The Club|The Goad|The Head|The Hook|The Manacle|The Pillar|The Psychic|The Window|The Arm|The Fish|The Flint|The House|The Mark|The Mouth|The Needle|The Wall|The Water|The Wheel|The Eye|The Tooth|The Plant|The Serpent|The Ox|Amber Acorn|Cerulean Bell|Crimson Heart|Verdant Leaf|Violet Vessel)\\b",
+          "name": "entity.name.type.boss.jaml"
+        }
+      ]
+    },
+    "tags": {
+      "patterns": [
+        {
+          "match": "\\b(UncommonTag|RareTag|NegativeTag|FoilTag|HolographicTag|PolychromeTag|InvestmentTag|VoucherTag|BossTag|StandardTag|CharmTag|MeteorTag|BuffoonTag|HandyTag|GarbageTag|EtherealTag|CouponTag|DoubleTag|JuggleTag|D6Tag|TopupTag|SpeedTag|OrbitalTag|EconomyTag|Uncommon Tag|Rare Tag|Negative Tag|Foil Tag|Holographic Tag|Polychrome Tag|Investment Tag|Voucher Tag|Boss Tag|Standard Tag|Charm Tag|Meteor Tag|Buffoon Tag|Handy Tag|Garbage Tag|Ethereal Tag|Coupon Tag|Double Tag|Juggle Tag|D6 Tag|Topup Tag|Speed Tag|Orbital Tag|Economy Tag)\\b",
+          "name": "variable.other.tag.jaml"
+        }
+      ]
+    },
+    "tarots": {
+      "patterns": [
+        {
+          "match": "\\b(TheFool|TheMagician|TheHighPriestess|TheEmpress|TheEmperor|TheHierophant|TheLovers|TheChariot|Justice|TheHermit|TheWheelOfFortune|Strength|TheHangedMan|Death|Temperance|TheDevil|TheTower|TheStar|TheMoon|TheSun|Judgement|TheWorld|The Fool|The Magician|The High Priestess|The Empress|The Emperor|The Hierophant|The Lovers|The Chariot|The Hermit|The Wheel of Fortune|The Hanged Man|The Devil|The Tower|The Star|The Moon|The Sun|The World)\\b",
+          "name": "string.other.tarot.jaml"
+        }
+      ]
+    },
+    "spectrals": {
+      "patterns": [
+        {
+          "match": "\\b(Familiar|Grim|Incantation|Talisman|Aura|Wraith|Sigil|Ouija|Ectoplasm|Immolate|Ankh|DejaVu|Hex|Trance|Medium|Cryptid|TheSoul|BlackHole|Deja Vu|The Soul|Black Hole)\\b",
+          "name": "string.other.spectral.jaml"
+        }
+      ]
+    },
+    "planets": {
+      "patterns": [
+        {
+          "match": "\\b(Mercury|Venus|Earth|Mars|Jupiter|Saturn|Uranus|Neptune|Pluto|PlanetX|Ceres|Eris|Planet X)\\b",
+          "name": "string.other.planet.jaml"
+        }
+      ]
+    },
+    "deckStake": {
+      "patterns": [
+        {
+          "match": "\\b(Red|Blue|Yellow|Green|Black|Magic|Nebula|Ghost|Abandoned|Checkered|Zodiac|Painted|Anaglyph|Plasma|Erratic|White|Red|Green|Black|Blue|Purple|Orange|Gold)\\b",
+          "name": "support.constant.jaml"
+        }
+      ]
+    },
+    "editions": {
+      "patterns": [
+        {
+          "match": "\\b(Foil|Holographic|Polychrome|Negative)\\b",
+          "name": "markup.bold.edition.jaml"
+        }
+      ]
+    },
+    "modifiers": {
+      "patterns": [
+        {
+          "match": "\\b(Eternal|Perishable|Rental|Gold|Red|Blue|Purple|Bonus|Mult|Wild|Glass|Steel|Stone|Lucky)\\b",
+          "name": "markup.italic.modifier.jaml"
+        }
+      ]
+    },
+    "aesthetics": {
+      "patterns": [
+        {
+          "match": "\\b(palindrome|psychosis|gross|nsfw|funny|balatro)\\b",
+          "name": "keyword.control.aesthetic.jaml"
+        }
+      ]
+    }
+  }
+}
