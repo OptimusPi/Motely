@@ -7,6 +7,14 @@ VersionInfo.g.cs
 *.wal
 *.csv
 
+# Test harness artefacts
+**/TestResults/
+*.trx
+*hangdump*.dmp
+
+# VS Code extension build outputs (publish via npm/vsce, never commit built .vsix)
+*.vsix
+
 # Node
 node_modules/
 node_modules/**

@@ -156,6 +156,16 @@ internal static class MotelyVectorConstants
 
 public readonly unsafe ref partial struct MotelyVectorSearchContext
 {
+    /// <summary>
+    /// Hard cap on vector-mode resample loops (vouchers, tarots, planets, tags, spectrals).
+    /// Protects against infinite spin when stale/invalid lanes in a SIMD vector keep
+    /// producing values that never satisfy the resample-exit mask (e.g. additional-filter
+    /// batches with padding lanes, zeroed seed chars, or stale hash-cache state).
+    /// 64 is well above any legitimate resample count — the underlying item domains are
+    /// all smaller than this — so real searches are never affected.
+    /// </summary>
+    internal const int MotelyVectorResampleLimit = 64;
+
     private readonly ref readonly MotelySearchParameters _searchParameters;
     private readonly ref readonly MotelySearchContextParams _contextParams;
 

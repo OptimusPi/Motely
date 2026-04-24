@@ -189,7 +189,7 @@ ref partial struct MotelyVectorSearchContext
             planets = Vector256.Create((int)MotelyItemTypeCategory.PlanetCard) | planets;
 
             int resampleCount = 0;
-            while (true)
+            while (resampleCount < MotelyVectorResampleLimit)
             {
                 Vector256<int> resampleMaskInt = itemSet.Contains(new MotelyItemVector(planets));
                 resampleMaskInt &= ~blackHoleMaskInt;
