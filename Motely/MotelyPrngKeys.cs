@@ -53,6 +53,14 @@ public static class MotelyPrngKeys
     public const string JokerMisprint = "misprint";
     public const string JokerCavendish = "cavendish";
     public const string JokerGrosMichel = "gros_michel";
+    public const string JokerSpace = "space";
+    public const string JokerBusiness = "business";
+    public const string JokerBloodstone = "bloodstone";
+    public const string JokerParking = "parking";
+    public const string JokerEightBall = "8ball";
+    public const string CardGlass = "glass";
+    public const string VoucherOmenGlobe = "omen_globe";
+    public const string BossTheWheel = "wheel";
     public const string JokerRiffRaff = "rif";
     public const string JokerSixthSense = "sixth";
     public const string JokerSeance = "sea";

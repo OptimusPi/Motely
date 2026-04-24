@@ -46,6 +46,28 @@ public static partial class MotelyGlobals
     public const int JokerMisprintMax = 23;
     public const double JokerCavendishChance = 1000;
     public const double JokerGrosMichelChance = 6;
+    public const double JokerSpaceChance = 4;
+    public const double JokerBusinessChance = 2;
+    public const double JokerBloodstoneChance = 2;
+    public const double JokerParkingChance = 2;
+    public const double JokerEightBallChance = 4;
+    public const double CardGlassChance = 4;
+    public const double VoucherOmenGlobeChance = 5;
+    public const double BossTheWheelChance = 7;
+
+    // Booster-pack slot counts per ante (ante 1 = 4 packs / indices 0..3; antes 2+ = 6 / 0..5)
+    // are inlined at each hot-path site via `ante == 1 ? ... : ...` — no helper function here
+    // to avoid any temptation of call overhead in per-seed SIMD loops.
+
+    /// <summary>
+    /// Default maximum pack-slot INDEX reachable in ante 1 through normal gameplay (4 packs, 0..3).
+    /// Clauses can raise their <c>EarlyAntesMaxPack</c> to 5 to opt into Hieroglyph / Petroglyph
+    /// scenarios. Scoring uses this cap; SIMD prefilter is over-permissive by design.
+    /// </summary>
+    public const int DefaultEarlyAntesMaxPack = 3;
+
+    /// <summary>Maximum pack-slot INDEX at antes 2+ (6 packs, 0..5). Not user-configurable.</summary>
+    public const int LateAntesMaxPackSlot = 5;
 
     public const double EnhancementLuckyMoneyChance = 15;
     public const double EnhancementLuckyMultChance = 5;

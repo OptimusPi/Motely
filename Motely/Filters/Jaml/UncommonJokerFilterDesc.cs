@@ -335,6 +335,7 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
                     var packStream = ctx.CreateBoosterPackStream(ante);
                     var jokerStream = ctx.CreateBuffoonPackJokerStream(ante);
 
+                    // SIMD prefilter over-permissive by design; scoring re-verifies per-ante.
                     for (int p = 0; p <= _maxBoosterPack; p++)
                     {
                         var pack = ctx.GetNextBoosterPack(ref packStream);
