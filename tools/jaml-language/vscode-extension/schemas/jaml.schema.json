@@ -504,12 +504,6 @@
       "items": {
         "type": "object",
         "properties": {
-          "type": {
-            "type": "string"
-          },
-          "value": {
-            "type": "string"
-          },
           "joker": {
             "$ref": "#/$defs/Joker"
           },
@@ -618,9 +612,6 @@
           "event": {
             "type": "string"
           },
-          "eventType": {
-            "type": "string"
-          },
           "luckyMoney": {
             "type": "array",
             "items": {
@@ -652,6 +643,42 @@
             }
           },
           "grosMichelExtinct": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "spaceLevelup": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "businessPayout": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "bloodstoneTrigger": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "parkingPayout": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "glassDestroy": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "wheelStaysFlipped": {
             "type": "array",
             "items": {
               "type": "integer"

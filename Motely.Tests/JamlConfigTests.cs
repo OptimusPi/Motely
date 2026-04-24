@@ -299,7 +299,6 @@ public class JamlConfigTests
             name: MetaTest
             author: Cascade
             description: Metadata round-trip
-            dateCreated: 2025-01-02T03:04:05Z
             must:
               - joker: Showman
             """;
@@ -311,7 +310,6 @@ public class JamlConfigTests
     Assert.Equal("MetaTest", config!.Name);
     Assert.Equal("Cascade", config.Author);
     Assert.Equal("Metadata round-trip", config.Description);
-    Assert.Equal("2025-01-02T03:04:05Z", config.DateCreated);
   }
 
   [Fact]
@@ -500,11 +498,11 @@ public class JamlConfigTests
     var jaml = """
             name: EventBadInherited
             must:
-              - type: And
-                antes: [3]
-                clauses:
-                  - event: LuckyMoney
-                    rolls: [0]
+              - and:
+                  antes: [3]
+                  clauses:
+                    - event: LuckyMoney
+                      rolls: [0]
             """;
 
     var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);

@@ -405,7 +405,7 @@ partial class Program
                 return 1;
             }
 
-            if (!config.HasAnyClauses)
+            if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
             {
                 Console.Error.WriteLine("Error: no clauses in JAML.");
                 return 1;
@@ -477,7 +477,7 @@ partial class Program
                         StartSeedSearchIndex: jStartIdx,
                         StopSeedSearchIndex: jStopIdx,
                         BatchCharacterCount: batchCharCount,
-                        JamlAestheticFallback: config.Aesthetics
+                        JamlAestheticFallback: null
                     ),
                     msg => Console.Error.WriteLine(msg),
                     out var jamlSearchModeError,
