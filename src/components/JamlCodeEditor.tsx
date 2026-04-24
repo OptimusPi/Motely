@@ -78,6 +78,11 @@ export function JamlCodeEditor({
           formatOnType: true,
           renderLineHighlight: "line",
           scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
+          // Mobile/chat-WebView UX: kill the context menu ("Change All Occurrences" etc. covering half
+          // the file on long-press) and the accessibility-help keyboard widget that's just clutter when
+          // the OS keyboard is already open.
+          contextmenu: false,
+          accessibilitySupport: "off",
         }}
       />
     </div>

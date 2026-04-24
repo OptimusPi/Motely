@@ -96,8 +96,11 @@ function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function runtimeEnumName(enumObject: Record<string, unknown>, value: number | null): string | null {
-  if (value === null) return null;
+function runtimeEnumName(
+  enumObject: Record<string, unknown> | null | undefined,
+  value: number | null,
+): string | null {
+  if (value === null || !enumObject || typeof enumObject !== "object") return null;
   const enumKey = enumObject[String(value)];
   return typeof enumKey === "string" && enumKey.length > 0 ? enumKey : null;
 }

@@ -18,21 +18,17 @@ const assetKeyByFileName = Object.fromEntries(
   Object.entries(JAML_ASSET_FILES).map(([key, fileName]) => [fileName, key]),
 ) as Record<JamlAssetFile, JamlAssetKey>;
 
-import { JAML_UI_VERSION } from "./version.js";
-
-const CDN_BASE = `https://cdn.seedfinder.app/jaml-ui/${JAML_UI_VERSION}/assets/`;
-
 const defaultAssetUrls: Record<JamlAssetKey, string> = {
-  deck: `${CDN_BASE}${JAML_ASSET_FILES.deck}`,
-  blinds: `${CDN_BASE}${JAML_ASSET_FILES.blinds}`,
-  boosters: `${CDN_BASE}${JAML_ASSET_FILES.boosters}`,
-  editions: `${CDN_BASE}${JAML_ASSET_FILES.editions}`,
-  enhancers: `${CDN_BASE}${JAML_ASSET_FILES.enhancers}`,
-  jokers: `${CDN_BASE}${JAML_ASSET_FILES.jokers}`,
-  tarots: `${CDN_BASE}${JAML_ASSET_FILES.tarots}`,
-  vouchers: `${CDN_BASE}${JAML_ASSET_FILES.vouchers}`,
-  stickers: `${CDN_BASE}${JAML_ASSET_FILES.stickers}`,
-  tags: `${CDN_BASE}${JAML_ASSET_FILES.tags}`,
+  deck: new URL(`../assets/${JAML_ASSET_FILES.deck}`, import.meta.url).href,
+  blinds: new URL(`../assets/${JAML_ASSET_FILES.blinds}`, import.meta.url).href,
+  boosters: new URL(`../assets/${JAML_ASSET_FILES.boosters}`, import.meta.url).href,
+  editions: new URL(`../assets/${JAML_ASSET_FILES.editions}`, import.meta.url).href,
+  enhancers: new URL(`../assets/${JAML_ASSET_FILES.enhancers}`, import.meta.url).href,
+  jokers: new URL(`../assets/${JAML_ASSET_FILES.jokers}`, import.meta.url).href,
+  tarots: new URL(`../assets/${JAML_ASSET_FILES.tarots}`, import.meta.url).href,
+  vouchers: new URL(`../assets/${JAML_ASSET_FILES.vouchers}`, import.meta.url).href,
+  stickers: new URL(`../assets/${JAML_ASSET_FILES.stickers}`, import.meta.url).href,
+  tags: new URL(`../assets/${JAML_ASSET_FILES.tags}`, import.meta.url).href,
 };
 
 let customAssetBaseUrl: string | null = null;

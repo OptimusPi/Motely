@@ -90,5 +90,10 @@ export function useAnalyzer(motelyWasmUrl: string) {
     }
   }, [motelyWasmUrl]);
 
-  return { antes, status, error, analyze };
+  const clearError = useCallback(() => {
+    setError(null);
+    setStatus((s) => (s === "error" ? "idle" : s));
+  }, []);
+
+  return { antes, status, error, analyze, clearError };
 }

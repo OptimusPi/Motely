@@ -164,7 +164,11 @@ function keyFromDisplayName<K extends string>(lookup: MotelyLabelLookup<K>, labe
   return lookup.labelToKey.get(label) ?? null;
 }
 
-function runtimeEnumKey(enumObject: Record<string, unknown>, value: number): string | null {
+function runtimeEnumKey(
+  enumObject: Record<string, unknown> | null | undefined,
+  value: number,
+): string | null {
+  if (!enumObject || typeof enumObject !== "object") return null;
   const key = enumObject[String(value)];
   return typeof key === "string" && key.length > 0 ? key : null;
 }
