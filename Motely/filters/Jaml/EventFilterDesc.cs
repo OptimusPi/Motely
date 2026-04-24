@@ -76,6 +76,54 @@ public sealed class GrosMichelExtinctClause : IRollClause
     public int Min { get; init; } = 1;
 }
 
+public sealed class SpaceLevelupClause : IRollClause
+{
+    public string Label { get; init; } = "";
+    public int Score { get; init; }
+    public required int[] Rolls { get; init; }
+    public int Min { get; init; } = 1;
+}
+
+public sealed class BusinessPayoutClause : IRollClause
+{
+    public string Label { get; init; } = "";
+    public int Score { get; init; }
+    public required int[] Rolls { get; init; }
+    public int Min { get; init; } = 1;
+}
+
+public sealed class BloodstoneTriggerClause : IRollClause
+{
+    public string Label { get; init; } = "";
+    public int Score { get; init; }
+    public required int[] Rolls { get; init; }
+    public int Min { get; init; } = 1;
+}
+
+public sealed class ParkingPayoutClause : IRollClause
+{
+    public string Label { get; init; } = "";
+    public int Score { get; init; }
+    public required int[] Rolls { get; init; }
+    public int Min { get; init; } = 1;
+}
+
+public sealed class GlassDestroyClause : IRollClause
+{
+    public string Label { get; init; } = "";
+    public int Score { get; init; }
+    public required int[] Rolls { get; init; }
+    public int Min { get; init; } = 1;
+}
+
+public sealed class WheelStaysFlippedClause : IRollClause
+{
+    public string Label { get; init; } = "";
+    public int Score { get; init; }
+    public required int[] Rolls { get; init; }
+    public int Min { get; init; } = 1;
+}
+
 // ── 6 individual event filter descs (one per PRNG stream) ──
 
 public struct LuckyMoneyFilterDesc(LuckyMoneyClause clause)
@@ -298,6 +346,186 @@ public struct GrosMichelExtinctFilterDesc(GrosMichelExtinctClause clause)
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextGrosMichelExtinct(ref stream);
                     return sctx.GetNextGrosMichelExtinct(ref stream);
+                },
+                ref stream
+            );
+        }
+    }
+}
+
+public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
+    : IMotelySeedFilterDesc<SpaceLevelupFilterDesc.SpaceLevelupFilter>
+{
+    private readonly SpaceLevelupClause _clause = clause;
+
+    public SpaceLevelupFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+
+    public struct SpaceLevelupFilter(SpaceLevelupClause clause) : IMotelySeedFilter
+    {
+        private readonly SpaceLevelupClause _clause = clause;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            var stream = ctx.CreateSpacePrngStream();
+            return EventFilterUtils.ProcessRollClause(
+                ref ctx,
+                _clause,
+                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                {
+                    for (int i = 0; i < rollIndex; i++)
+                        sctx.GetNextSpaceLevelup(ref stream);
+                    return sctx.GetNextSpaceLevelup(ref stream);
+                },
+                ref stream
+            );
+        }
+    }
+}
+
+public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
+    : IMotelySeedFilterDesc<BusinessPayoutFilterDesc.BusinessPayoutFilter>
+{
+    private readonly BusinessPayoutClause _clause = clause;
+
+    public BusinessPayoutFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+
+    public struct BusinessPayoutFilter(BusinessPayoutClause clause) : IMotelySeedFilter
+    {
+        private readonly BusinessPayoutClause _clause = clause;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            var stream = ctx.CreateBusinessPrngStream();
+            return EventFilterUtils.ProcessRollClause(
+                ref ctx,
+                _clause,
+                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                {
+                    for (int i = 0; i < rollIndex; i++)
+                        sctx.GetNextBusinessPayout(ref stream);
+                    return sctx.GetNextBusinessPayout(ref stream);
+                },
+                ref stream
+            );
+        }
+    }
+}
+
+public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
+    : IMotelySeedFilterDesc<BloodstoneTriggerFilterDesc.BloodstoneTriggerFilter>
+{
+    private readonly BloodstoneTriggerClause _clause = clause;
+
+    public BloodstoneTriggerFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+
+    public struct BloodstoneTriggerFilter(BloodstoneTriggerClause clause) : IMotelySeedFilter
+    {
+        private readonly BloodstoneTriggerClause _clause = clause;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            var stream = ctx.CreateBloodstonePrngStream();
+            return EventFilterUtils.ProcessRollClause(
+                ref ctx,
+                _clause,
+                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                {
+                    for (int i = 0; i < rollIndex; i++)
+                        sctx.GetNextBloodstoneTrigger(ref stream);
+                    return sctx.GetNextBloodstoneTrigger(ref stream);
+                },
+                ref stream
+            );
+        }
+    }
+}
+
+public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
+    : IMotelySeedFilterDesc<ParkingPayoutFilterDesc.ParkingPayoutFilter>
+{
+    private readonly ParkingPayoutClause _clause = clause;
+
+    public ParkingPayoutFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+
+    public struct ParkingPayoutFilter(ParkingPayoutClause clause) : IMotelySeedFilter
+    {
+        private readonly ParkingPayoutClause _clause = clause;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            var stream = ctx.CreateParkingPrngStream();
+            return EventFilterUtils.ProcessRollClause(
+                ref ctx,
+                _clause,
+                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                {
+                    for (int i = 0; i < rollIndex; i++)
+                        sctx.GetNextParkingPayout(ref stream);
+                    return sctx.GetNextParkingPayout(ref stream);
+                },
+                ref stream
+            );
+        }
+    }
+}
+
+public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
+    : IMotelySeedFilterDesc<GlassDestroyFilterDesc.GlassDestroyFilter>
+{
+    private readonly GlassDestroyClause _clause = clause;
+
+    public GlassDestroyFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+
+    public struct GlassDestroyFilter(GlassDestroyClause clause) : IMotelySeedFilter
+    {
+        private readonly GlassDestroyClause _clause = clause;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            var stream = ctx.CreateGlassPrngStream();
+            return EventFilterUtils.ProcessRollClause(
+                ref ctx,
+                _clause,
+                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                {
+                    for (int i = 0; i < rollIndex; i++)
+                        sctx.GetNextGlassDestroy(ref stream);
+                    return sctx.GetNextGlassDestroy(ref stream);
+                },
+                ref stream
+            );
+        }
+    }
+}
+
+public struct WheelStaysFlippedFilterDesc(WheelStaysFlippedClause clause)
+    : IMotelySeedFilterDesc<WheelStaysFlippedFilterDesc.WheelStaysFlippedFilter>
+{
+    private readonly WheelStaysFlippedClause _clause = clause;
+
+    public WheelStaysFlippedFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+
+    public struct WheelStaysFlippedFilter(WheelStaysFlippedClause clause) : IMotelySeedFilter
+    {
+        private readonly WheelStaysFlippedClause _clause = clause;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            var stream = ctx.CreateTheWheelPrngStream();
+            return EventFilterUtils.ProcessRollClause(
+                ref ctx,
+                _clause,
+                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                {
+                    for (int i = 0; i < rollIndex; i++)
+                        sctx.GetNextWheelStaysFlipped(ref stream);
+                    return sctx.GetNextWheelStaysFlipped(ref stream);
                 },
                 ref stream
             );

@@ -100,10 +100,16 @@ public readonly struct SoulJokerShopSoulFilterDesc(
 {
     private static readonly int[] DefaultAntes = [NegativeSoulJokerSimdFilterDesc.MinAnte, NegativeSoulJokerSimdFilterDesc.MaxAnte];
 
+    private static readonly SoulJokerSourceConfig DefaultAllBoosterSources = new()
+    {
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        SoulJokerSourceConfig normalized =
-            (boosterSources ?? new SoulJokerSourceConfig()).NormalizeSoulJokerBoostersIfEmpty();
+        // Native callers (non-JAML) default to the full booster slot range when they pass null.
+        // JAML callers pass an already-defaulted SoulJokerSourceConfig (see JamlConfigLoader.CreateSoulJokerSources).
+        SoulJokerSourceConfig normalized = boosterSources ?? DefaultAllBoosterSources;
 
         int maxPack = normalized.MaxReferencedBoosterSlot();
         int[] antes = searchAntes ?? DefaultAntes;
@@ -174,6 +180,7 @@ public readonly struct SoulJokerShopSoulFilterDesc(
                 bool tarotInit = false;
                 bool spectralInit = false;
 
+                // SIMD prefilter over-permissive by design; scoring re-verifies per-ante.
                 for (int p = 0; p <= maxBoosterPack; p++)
                 {
                     if (hasSoulMask.IsAllTrue())

@@ -78,6 +78,107 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
     #endregion
 
+    #region Space Joker
+
+    public MotelySinglePrngStream CreateSpacePrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerSpace, isCached);
+
+    public bool GetNextSpaceLevelup(
+        ref MotelySinglePrngStream spaceStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref spaceStream) < baseLuck / MotelyGlobals.JokerSpaceChance;
+
+    #endregion
+
+    #region Business Card
+
+    public MotelySinglePrngStream CreateBusinessPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerBusiness, isCached);
+
+    public bool GetNextBusinessPayout(
+        ref MotelySinglePrngStream businessStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref businessStream) < baseLuck / MotelyGlobals.JokerBusinessChance;
+
+    #endregion
+
+    #region Bloodstone
+
+    public MotelySinglePrngStream CreateBloodstonePrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerBloodstone, isCached);
+
+    public bool GetNextBloodstoneTrigger(
+        ref MotelySinglePrngStream bloodstoneStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref bloodstoneStream) < baseLuck / MotelyGlobals.JokerBloodstoneChance;
+
+    #endregion
+
+    #region Reserved Parking
+
+    public MotelySinglePrngStream CreateParkingPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerParking, isCached);
+
+    public bool GetNextParkingPayout(
+        ref MotelySinglePrngStream parkingStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref parkingStream) < baseLuck / MotelyGlobals.JokerParkingChance;
+
+    #endregion
+
+    #region 8-Ball
+
+    public MotelySinglePrngStream CreateEightBallPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerEightBall, isCached);
+
+    public bool GetNextEightBallTarot(
+        ref MotelySinglePrngStream eightBallStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref eightBallStream) < baseLuck / MotelyGlobals.JokerEightBallChance;
+
+    #endregion
+
+    #region Glass Card
+
+    public MotelySinglePrngStream CreateGlassPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.CardGlass, isCached);
+
+    public bool GetNextGlassDestroy(
+        ref MotelySinglePrngStream glassStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref glassStream) < baseLuck / MotelyGlobals.CardGlassChance;
+
+    #endregion
+
+    #region Omen Globe
+
+    public MotelySinglePrngStream CreateOmenGlobePrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.VoucherOmenGlobe, isCached);
+
+    /// <summary>
+    /// Omen Globe voucher substitutes a Spectral for a Tarot in Arcana packs.
+    /// Balatro uses <c>pseudorandom('omen_globe') &gt; 0.8</c>, i.e. fires with p = 1 - 0.8 = 0.2 = 1/5.
+    /// Returns true when a Spectral replaces the Tarot.
+    /// </summary>
+    public bool GetNextOmenGlobeSpectral(
+        ref MotelySinglePrngStream omenGlobeStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref omenGlobeStream) < baseLuck / MotelyGlobals.VoucherOmenGlobeChance;
+
+    #endregion
+
+    #region The Wheel boss
+
+    public MotelySinglePrngStream CreateTheWheelPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.BossTheWheel, isCached);
+
+    public bool GetNextWheelStaysFlipped(
+        ref MotelySinglePrngStream theWheelStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref theWheelStream) < baseLuck / MotelyGlobals.BossTheWheelChance;
+
+    #endregion
+
     #region Erratic
 
     public MotelySinglePrngStream CreateErraticDeckPrngStream(bool isCached = false) =>

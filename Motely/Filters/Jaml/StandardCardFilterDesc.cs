@@ -110,6 +110,7 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
                             var packStream = singleCtx.CreateBoosterPackStream(ante);
                             var cardStream = singleCtx.CreateStandardPackCardStream(ante);
 
+                            // SIMD prefilter over-permissive by design; scoring re-verifies per-ante.
                             for (int p = 0; p <= maxBoosterPack; p++)
                             {
                                 var pack = singleCtx.GetNextBoosterPack(ref packStream);

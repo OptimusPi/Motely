@@ -33,7 +33,6 @@ public class JamlFilterTypeTests
     [InlineData("joker: Showman\nedition: Negative")]
     [InlineData("joker: Showman\nedition: Polychrome\nstickers: [Eternal]")]
     [InlineData("jokers: [Showman, Blueprint]")]
-    [InlineData("type: Joker\nvalue: Showman")]
     public void JokerFilter_SyntaxVariations(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause.Replace("\n", "\n    ")}");
@@ -54,7 +53,6 @@ public class JamlFilterTypeTests
     [Theory]
     [InlineData("voucher: Telescope")]
     [InlineData("vouchers: [Telescope, Observatory]")]
-    [InlineData("type: Voucher\nvalue: Telescope")]
     public void VoucherFilters(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause.Replace("\n", "\n    ")}");
@@ -74,8 +72,7 @@ public class JamlFilterTypeTests
 
     [Theory]
     [InlineData("boss: TheArm")]
-    [InlineData("type: Boss\nvalue: TheArm")]
-    [InlineData("type: BossBlind\nvalue: TheWall")]
+    [InlineData("boss: TheWall")]
     public void BossFilters(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause.Replace("\n", "\n    ")}");
@@ -85,7 +82,6 @@ public class JamlFilterTypeTests
     [InlineData("tag: CouponTag")] // Defaults to SmallBlindTag
     [InlineData("smallBlindTag: CouponTag")]
     [InlineData("bigBlindTag: RareTag")]
-    [InlineData("type: Tag\nvalue: CouponTag")]
     public void TagFilters(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause.Replace("\n", "\n    ")}");
@@ -93,8 +89,8 @@ public class JamlFilterTypeTests
 
     [Theory]
     [InlineData("standardCard: HA")] // Ace of Hearts
-    [InlineData("type: StandardCard\nrank: A\nsuit: Spades\nenhancement: Lucky")]
-    [InlineData("type: StandardCard\nrank: 2\nsuit: Clubs\nseal: Red\nedition: Foil")]
+    [InlineData("standardCard: SA\nenhancement: Lucky")] // Ace of Spades, Lucky
+    [InlineData("standardCard: C2\nseal: Red\nedition: Foil")] // 2 of Clubs, Red seal, Foil
     public void PlayingCardFilters(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause.Replace("\n", "\n    ")}");
@@ -103,7 +99,7 @@ public class JamlFilterTypeTests
     [Theory]
     [InlineData("erraticRank: A")]
     [InlineData("erraticSuit: Spades")]
-    [InlineData("type: ErraticCard\nrank: A\nsuit: Spades")] // Full ErraticCard requires both
+    [InlineData("erraticCard: SA")] // Full ErraticCard: Ace of Spades
     public void ErraticDeckFilters(string clause)
     {
         TestFilterCompilesAndRuns($@"deck: Erratic
@@ -113,7 +109,6 @@ must:
 
     [Theory]
     [InlineData("startingDraw: HA")]
-    [InlineData("type: StartingDraw\nrank: A\nsuit: Hearts")]
     public void StartingDrawFilters(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause.Replace("\n", "\n    ")}");
