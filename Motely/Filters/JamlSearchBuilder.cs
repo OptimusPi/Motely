@@ -101,7 +101,7 @@ public static class JamlSearchBuilder
 
     {
 
-        if (!config.HasAnyClauses)
+        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
 
             throw new InvalidOperationException("JamlConfig has no clauses.");
 
@@ -189,7 +189,7 @@ public static class JamlSearchBuilder
     /// </summary>
     public static void EnsureRunnablePlan(JamlConfig config)
     {
-        if (!config.HasAnyClauses)
+        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
             return;
         _ = CreatePlan(config);
     }
@@ -489,6 +489,30 @@ public static class JamlSearchBuilder
 
                 new MotelySearchSettings<GrosMichelExtinctFilterDesc.GrosMichelExtinctFilter>(d),
 
+            SpaceLevelupFilterDesc d =>
+
+                new MotelySearchSettings<SpaceLevelupFilterDesc.SpaceLevelupFilter>(d),
+
+            BusinessPayoutFilterDesc d =>
+
+                new MotelySearchSettings<BusinessPayoutFilterDesc.BusinessPayoutFilter>(d),
+
+            BloodstoneTriggerFilterDesc d =>
+
+                new MotelySearchSettings<BloodstoneTriggerFilterDesc.BloodstoneTriggerFilter>(d),
+
+            ParkingPayoutFilterDesc d =>
+
+                new MotelySearchSettings<ParkingPayoutFilterDesc.ParkingPayoutFilter>(d),
+
+            GlassDestroyFilterDesc d =>
+
+                new MotelySearchSettings<GlassDestroyFilterDesc.GlassDestroyFilter>(d),
+
+            WheelStaysFlippedFilterDesc d =>
+
+                new MotelySearchSettings<WheelStaysFlippedFilterDesc.WheelStaysFlippedFilter>(d),
+
             Motely.Filters.Jaml.AndFilterDesc d => new MotelySearchSettings<Motely.Filters.Jaml.AndFilterDesc.AndFilter>(d),
 
             Motely.Filters.Jaml.OrFilterDesc d => new MotelySearchSettings<Motely.Filters.Jaml.OrFilterDesc.OrFilter>(d),
@@ -576,6 +600,18 @@ public static class JamlSearchBuilder
             CavendishExtinctClause c => new CavendishExtinctFilterDesc(c),
 
             GrosMichelExtinctClause c => new GrosMichelExtinctFilterDesc(c),
+
+            SpaceLevelupClause c => new SpaceLevelupFilterDesc(c),
+
+            BusinessPayoutClause c => new BusinessPayoutFilterDesc(c),
+
+            BloodstoneTriggerClause c => new BloodstoneTriggerFilterDesc(c),
+
+            ParkingPayoutClause c => new ParkingPayoutFilterDesc(c),
+
+            GlassDestroyClause c => new GlassDestroyFilterDesc(c),
+
+            WheelStaysFlippedClause c => new WheelStaysFlippedFilterDesc(c),
 
             StartingDrawClause c => new StartingDrawFilterDesc(c),
 
