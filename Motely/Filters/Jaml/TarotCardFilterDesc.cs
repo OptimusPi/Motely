@@ -142,6 +142,9 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                     var packStream = ctx.CreateBoosterPackStream(ante);
                     var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
 
+                    // SIMD prefilter is intentionally over-permissive: iterating past ante 1's real
+                    // pack count (4) yields phantom matches from the PRNG stream, but those are
+                    // rejected in the scoring phase which re-verifies scalar per-ante.
                     for (int p = 0; p <= maxBoosterPack; p++)
                     {
                         var pack = ctx.GetNextBoosterPack(ref packStream);

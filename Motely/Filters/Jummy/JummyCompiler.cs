@@ -276,8 +276,16 @@ public static class JummyCompiler
 
         if (int.TryParse(token, CultureInfo.InvariantCulture, out var direct))
         {
-            if (direct < 0 || direct > max)
-                throw new InvalidOperationException($"Slot index {direct} is out of range (0–{max}).");
+            if (direct < 0)
+                throw new InvalidOperationException($"Slot index {direct} is negative; must be >= 0.");
+            if (direct > max)
+            {
+                // WARN rather than throw — the user might intentionally probe beyond the
+                // recommended range (e.g. to check what a hypothetical extra pack slot rolls).
+                Console.Error.WriteLine(
+                    $"[jummy warn] Slot index {direct} exceeds recommended max {max}; continuing anyway."
+                );
+            }
             yield return direct;
             yield break;
         }
@@ -297,7 +305,11 @@ public static class JummyCompiler
         if (ord >= 0)
         {
             if (ord > max)
-                throw new InvalidOperationException($"Ordinal '{token}' maps to index {ord}, max allowed is {max}.");
+            {
+                Console.Error.WriteLine(
+                    $"[jummy warn] Ordinal '{token}' maps to index {ord}; max recommended is {max}. Continuing anyway."
+                );
+            }
             yield return ord;
             yield break;
         }
