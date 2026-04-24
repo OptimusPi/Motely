@@ -41,7 +41,7 @@ ref partial struct MotelyVectorSearchContext
 
         int resampleCount = 0;
 
-        while (true)
+        while (resampleCount < MotelyVectorResampleLimit)
         {
             Vector256<int> resampleMask = Vector256<int>.Zero;
 

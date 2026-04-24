@@ -927,7 +927,24 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return totalSeeds;
         }
     }
-    public long FilteredSeeds => 0; // TODO: rebuild score desc on JamlConfig
+    /// <summary>
+    /// Seeds searched that did not match (base filter rejected, additional filter rejected,
+    /// or below score cutoff). Equal to <see cref="TotalSeedsSearched"/> minus
+    /// <see cref="MatchingSeeds"/>. WASM consumers rely on this being non-zero during a
+    /// run to render rejection bars / throughput stats.
+    /// </summary>
+    public long FilteredSeeds
+    {
+        get
+        {
+            long total = TotalSeedsSearched;
+            long matched = MatchingSeeds;
+            long diff = total - matched;
+            // Snapshots race with workers, so on rare reads matched can momentarily
+            // exceed total by a handful of seeds. Clamp to 0 so consumers never see negatives.
+            return diff > 0 ? diff : 0;
+        }
+    }
 
     public long ElapsedMs => _elapsedTime.ElapsedMilliseconds;
     public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
@@ -1688,8 +1705,15 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         if (searchParams.SeedHashCache->Cache[partialHashLength] == null)
                             continue;
 
-                        // Cache[partialHashLength] already points to the correct Vector512<double>* for this key length
-                        // Per GitHub issue fix: use [lane] directly, NOT [i * Vector512<double>.Count + lane]
+                        // Cache[partialHashLength] already points to the correct Vector512<double>*
+                        // for this key length (set up by PartialSeedHashCache ctor:
+                        //     InitialCache[keyLength] = &partialSeedHashes[i]
+                        // ). So the source vector is one Vector512 and we just need lane `lane`.
+                        // Using `[i * Vector512<double>.Count + lane]` here reads `_hashes[2*i]`
+                        // — correct only when i == 0, wrong vector or OOB for i >= 1 — which
+                        // silently drops seeds from multi-keylength additional-filter chains.
+                        // Regression covered by Tacodiva/Motely#5 and
+                        // Motely.Tests/ChainedMustClauseSeedTests.cs.
                         double sourceValue = (
                             (double*)searchParams.SeedHashCache->Cache[partialHashLength]
                         )[lane];
@@ -1718,6 +1742,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // Zero unused lanes so IsLaneValid returns false for lane >= SeedCount.
             // Without this, stale data from the previous batch makes those lanes appear
             // valid, causing the same seeds to be re-processed and reported as duplicates.
+            //
+            // We also zero the cached partial-hash vectors for those padding lanes: BatchSeeds
+            // writes only to lane = seedBatchIndex, so any lane >= SeedCount retains a stale
+            // hash from the last partial batch that touched this slot. Filter code that reads
+            // the hash cache across all 8 SIMD lanes (voucher / tarot / planet / tag / spectral
+            // resample loops) will otherwise produce garbage PRNG output for padding lanes and
+            // can spin forever trying to reroll them into a legal value. See Tacodiva/Motely#5
+            // for the source-side handoff bug; this is the destination-side hygiene pass.
             int count = filterBatch->SeedCount;
             if (count < MotelyGlobals.MaxVectorWidth)
             {
@@ -1725,6 +1757,16 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 for (int lane = count; lane < MotelyGlobals.MaxVectorWidth; lane++)
                 {
                     chars[lane] = 0; // First char of each lane; enough for IsLaneValid
+                }
+
+                double* hashes = (double*)filterBatch->SeedHashes;
+                int keyCount = Search._pseudoHashKeyLengthCount;
+                for (int i = 0; i < keyCount; i++)
+                {
+                    for (int lane = count; lane < MotelyGlobals.MaxVectorWidth; lane++)
+                    {
+                        hashes[i * Vector512<double>.Count + lane] = 0;
+                    }
                 }
             }
 

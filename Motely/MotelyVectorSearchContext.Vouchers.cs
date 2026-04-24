@@ -35,7 +35,7 @@ ref partial struct MotelyVectorSearchContext
         );
         int resampleCount = 0;
 
-        while (true)
+        while (resampleCount < MotelyVectorResampleLimit)
         {
             // All of the odd vouchers require a prerequisite
             Vector256<int> prerequisiteRequiredMask = Vector256.Equals(
@@ -118,6 +118,9 @@ ref partial struct MotelyVectorSearchContext
             if (Vector256.EqualsAll(resampleMask, Vector256<int>.Zero))
                 break;
 
+            if (resampleCount >= MotelyVectorResampleLimit)
+                break;
+
             prngStream = CreateResamplePrngStream(
                 MotelyPrngKeys.Voucher + ante,
                 resampleCount,
@@ -183,6 +186,9 @@ ref partial struct MotelyVectorSearchContext
                 alreadyUnlockedMask | Vector256.OnesComplement(prerequisiteSatisfiedMask);
 
             if (Vector256.EqualsAll(resampleMask, Vector256<int>.Zero))
+                break;
+
+            if (resampleCount >= MotelyVectorResampleLimit)
                 break;
 
             Vector256<int> newVouchers = GetNextRandomInt(
