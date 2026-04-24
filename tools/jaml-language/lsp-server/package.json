@@ -1,0 +1,20 @@
+{
+  "name": "@motely/jaml-lsp-server",
+  "version": "12.4.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --watch dist/server.js"
+  },
+  "dependencies": {
+    "@motely/jaml-language-core": "^12.4.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,8 @@
+# Single source of truth for pnpm (pnpm ignores package.json "workspaces").
+packages:
+  - ../../motely-wasm
+  - core
+  - jaml-schema
+  - lsp-server
+  - vscode-extension
+  - monaco
