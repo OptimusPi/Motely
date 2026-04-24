@@ -64,11 +64,10 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
 /// </summary>
 public sealed class JamlConfig
 {
-    public string Id { get; set; } = "";
+    public required string Id { get; set; }
     public string? Name { get; set; }
     public string? Description { get; set; }
     public string? Author { get; set; }
-    public string DateCreated { get; set; } = System.DateTime.UtcNow.ToString("O");
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
     public List<string> Hashtags { get; set; } = [];
@@ -76,17 +75,6 @@ public sealed class JamlConfig
     public JamlClauseSet Must { get; set; } = new();
     public JamlClauseSet Should { get; set; } = new();
     public JamlClauseSet MustNot { get; set; } = new();
-
-    public bool HasAnyClauses { get; set; }
-
-    /// <summary>Normalized filter name used as the runtime identifier for this config.</summary>
-    public string FilterId { get; set; } = "";
-
-    /// <summary>
-    /// Optional seed-space constraints from the JAML document’s <c>aesthetics</c> list.
-    /// Merged into the search request during orchestration when compatible with the host search mode.
-    /// </summary>
-    public List<JamlAesthetic> Aesthetics { get; set; } = [];
 }
 
 /// <summary>
@@ -154,8 +142,6 @@ public sealed class JamlDefaultsDto
 
 public sealed class JamlClauseDto
 {
-    // Only type-as-key shorthand is supported. `type:` / `value:` were removed — every
-    // clause identifies its category via a shorthand key (joker, voucher, tarot, spaceLevelup, …).
     [YamlMember(Alias = "joker")]
     public string? Joker { get; set; }
 
@@ -536,33 +522,15 @@ public static partial class JamlConfigLoader
 
             config = new JamlConfig
             {
+                Id = NormalizeFilterId(load.Id, load.Name),
                 Name = load.Name,
                 Description = load.Description,
                 Author = load.Author,
-                DateCreated = load.DateCreated ?? System.DateTime.UtcNow.ToString("O"),
                 Deck = deck,
                 Stake = stake,
             };
 
             config.Hashtags = NormalizeHashtags(load.Hashtags);
-
-            if (load.Aesthetics is { Count: > 0 })
-            {
-                foreach (var entry in load.Aesthetics)
-                {
-                    if (string.IsNullOrWhiteSpace(entry))
-                        continue;
-                    if (!JamlAestheticParser.TryParse(entry, out var aesthetic))
-                    {
-                        error = $"Unknown aesthetics value '{entry.Trim()}'. Known: {JamlAestheticParser.KnownJamlStringsDescription()}.";
-                        config = null;
-                        return false;
-                    }
-
-                    if (!config.Aesthetics.Contains(aesthetic))
-                        config.Aesthetics.Add(aesthetic);
-                }
-            }
 
             // MUST → required filters
             PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
@@ -572,13 +540,6 @@ public static partial class JamlConfigLoader
 
             // MUSTNOT → negation filters
             PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
-
-            var baseFilterId = NormalizeFilterId(load.Id, load.Name);
-            config.Id = baseFilterId;
-            config.FilterId = baseFilterId;
-
-            // Set once — config is immutable after load
-            config.HasAnyClauses = config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
 
             return true;
         }
@@ -625,8 +586,7 @@ public static partial class JamlConfigLoader
 
             config = new JamlConfig
             {
-                Id = load.Id ?? load.Name ?? string.Empty,
-                FilterId = load.Id ?? load.Name ?? string.Empty,
+                Id = NormalizeFilterId(load.Id, load.Name),
                 Deck = deck,
                 Stake = stake,
             };
@@ -634,11 +594,6 @@ public static partial class JamlConfigLoader
             PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
             PopulateClauses(config.Should, load.Should, defaultAntes, load.Defaults);
             PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
-
-            var baseFilterId = NormalizeFilterId(load.Id, load.Name);
-            config.Id = baseFilterId;
-            config.FilterId = baseFilterId;
-            config.HasAnyClauses = config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
 
             return true;
         }
