@@ -6,6 +6,7 @@ import { SEARCH_WORKER_CODE } from "./searchWorkerCode.js";
 export interface SearchResult {
   seed: string;
   score: number;
+  tallyColumns?: number[];
 }
 
 export type SearchStatus = "idle" | "booting" | "running" | "completed" | "cancelled" | "error";
@@ -16,6 +17,8 @@ export interface UseSearchState {
   matchingSeeds: bigint;
   status: SearchStatus;
   error: string | null;
+  seedsPerSecond: number;
+  tallyLabels: string[];
 }
 
 function createWorker(motelyWasmUrl: string): Worker {
@@ -26,17 +29,22 @@ function createWorker(motelyWasmUrl: string): Worker {
   return worker;
 }
 
+const INITIAL_STATE: UseSearchState = {
+  results: [],
+  totalSearched: 0n,
+  matchingSeeds: 0n,
+  status: "idle",
+  error: null,
+  seedsPerSecond: 0,
+  tallyLabels: [],
+};
+
 export function useSearch(motelyWasmUrl: string) {
-  const [state, setState] = useState<UseSearchState>({
-    results: [],
-    totalSearched: 0n,
-    matchingSeeds: 0n,
-    status: "idle",
-    error: null,
-  });
+  const [state, setState] = useState<UseSearchState>(INITIAL_STATE);
 
   const workerRef = useRef<Worker | null>(null);
   const readyRef = useRef(false);
+  const speedRef = useRef({ lastSearched: 0n, lastTime: 0, ema: 0 });
 
   useEffect(() => {
     setState((s) => ({ ...s, status: "booting" }));
@@ -50,13 +58,49 @@ export function useSearch(motelyWasmUrl: string) {
         readyRef.current = true;
         setState((s) => s.status === "booting" ? { ...s, status: "idle" } : s);
       } else if (msg.type === "result") {
-        setState((s) => ({ ...s, results: [...s.results, { seed: msg.seed as string, score: msg.score as number }] }));
+        setState((s) => ({
+          ...s,
+          results: [...s.results, {
+            seed: msg.seed as string,
+            score: msg.score as number,
+            tallyColumns: msg.tallyColumns as number[] | undefined,
+          }],
+        }));
       } else if (msg.type === "progress") {
-        setState((s) => ({ ...s, totalSearched: BigInt(msg.searched as string), matchingSeeds: BigInt(msg.matching as string) }));
+        const searched = BigInt(msg.searched as string);
+        const matching = BigInt(msg.matching as string);
+        const now = performance.now();
+        const ref = speedRef.current;
+        let sps = ref.ema;
+
+        if (ref.lastTime > 0) {
+          const dtMs = now - ref.lastTime;
+          if (dtMs > 0) {
+            const delta = Number(searched - ref.lastSearched);
+            const instantSps = delta / (dtMs / 1000);
+            sps = ref.ema === 0 ? instantSps : ref.ema * 0.7 + instantSps * 0.3;
+          }
+        }
+        ref.lastSearched = searched;
+        ref.lastTime = now;
+        ref.ema = sps;
+
+        setState((s) => ({ ...s, totalSearched: searched, matchingSeeds: matching, seedsPerSecond: Math.round(sps) }));
       } else if (msg.type === "complete") {
-        setState((s) => ({ ...s, status: msg.status === "Completed" ? "completed" : "error", error: msg.status !== "Completed" ? msg.status as string : null, totalSearched: BigInt(msg.searched as string), matchingSeeds: BigInt(msg.matched as string) }));
+        speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
+        setState((s) => ({
+          ...s,
+          status: msg.status === "Completed" ? "completed" : "error",
+          error: msg.status !== "Completed" ? msg.status as string : null,
+          totalSearched: BigInt(msg.searched as string),
+          matchingSeeds: BigInt(msg.matched as string),
+          seedsPerSecond: 0,
+        }));
       } else if (msg.type === "cancelled") {
-        setState((s) => ({ ...s, status: "cancelled" }));
+        speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
+        setState((s) => ({ ...s, status: "cancelled", seedsPerSecond: 0 }));
+      } else if (msg.type === "tally_labels") {
+        setState((s) => ({ ...s, tallyLabels: msg.labels as string[] }));
       } else if (msg.type === "error") {
         setState((s) => ({ ...s, status: "error", error: msg.message as string }));
       }
@@ -68,24 +112,43 @@ export function useSearch(motelyWasmUrl: string) {
     };
   }, [motelyWasmUrl]);
 
-  const start = useCallback((jaml: string, count: number) => {
+  const sendStart = useCallback((payload: Record<string, unknown>) => {
     const worker = workerRef.current;
     if (!worker) return;
-    setState({ results: [], totalSearched: 0n, matchingSeeds: 0n, status: "running", error: null });
+    speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
+    setState({ ...INITIAL_STATE, status: "running", tallyLabels: state.tallyLabels });
+
+    const send = () => worker.postMessage(payload);
 
     if (readyRef.current) {
-      worker.postMessage({ type: "start", jaml, count });
+      send();
     } else {
       const orig = worker.onmessage;
       worker.onmessage = (e: MessageEvent) => {
         orig?.call(worker, e);
         if ((e.data as { type: string }).type === "ready") {
           worker.onmessage = orig;
-          worker.postMessage({ type: "start", jaml, count });
+          send();
         }
       };
     }
-  }, []);
+  }, [state.tallyLabels]);
+
+  const start = useCallback((jaml: string, count: number) => {
+    sendStart({ type: "start", mode: "random", jaml, count });
+  }, [sendStart]);
+
+  const startAesthetic = useCallback((jaml: string, aesthetic: number) => {
+    sendStart({ type: "start", mode: "aesthetic", jaml, aesthetic });
+  }, [sendStart]);
+
+  const startSeedList = useCallback((jaml: string, seeds: string[]) => {
+    sendStart({ type: "start", mode: "seedList", jaml, seeds });
+  }, [sendStart]);
+
+  const startKeyword = useCallback((jaml: string, keywords: string, padding?: string) => {
+    sendStart({ type: "start", mode: "keyword", jaml, keywords, padding });
+  }, [sendStart]);
 
   const cancel = useCallback(() => {
     workerRef.current?.postMessage({ type: "stop" });
@@ -95,5 +158,9 @@ export function useSearch(motelyWasmUrl: string) {
     setState((s) => (s.error || s.status === "error" ? { ...s, error: null, status: "idle" } : s));
   }, []);
 
-  return { ...state, start, cancel, clearError };
+  const fetchTallyLabels = useCallback((jaml: string) => {
+    workerRef.current?.postMessage({ type: "get_tally_labels", jaml });
+  }, []);
+
+  return { ...state, start, startAesthetic, startSeedList, startKeyword, cancel, clearError, fetchTallyLabels };
 }

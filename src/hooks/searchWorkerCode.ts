@@ -1,8 +1,7 @@
-// Worker code as an inline string — created as a Blob URL at runtime.
-// This avoids bundler/import.meta.url issues when shipped as an npm package.
 export const SEARCH_WORKER_CODE = `
 let MotelyWasm = null;
 let MotelyWasmEvents = null;
+let Filters = null;
 let activeSearch = null;
 
 self.addEventListener('message', async function(e) {
@@ -14,6 +13,7 @@ self.addEventListener('message', async function(e) {
       await mod.default.boot();
       MotelyWasm = mod.MotelyWasm;
       MotelyWasmEvents = mod.MotelyWasmEvents;
+      Filters = mod.Filters;
       self.postMessage({ type: 'ready' });
     } catch (err) {
       self.postMessage({ type: 'error', message: String(err) });
@@ -34,8 +34,8 @@ self.addEventListener('message', async function(e) {
       activeSearch = null;
     }
 
-    rId = MotelyWasmEvents.onResult.subscribe(function(seed, score) {
-      self.postMessage({ type: 'result', seed, score });
+    rId = MotelyWasmEvents.onResult.subscribe(function(seed, score, tallyColumns) {
+      self.postMessage({ type: 'result', seed, score, tallyColumns: Array.from(tallyColumns) });
     });
     pId = MotelyWasmEvents.onProgress.subscribe(function(searched, matching) {
       self.postMessage({ type: 'progress', searched: searched.toString(), matching: matching.toString() });
@@ -46,7 +46,23 @@ self.addEventListener('message', async function(e) {
     });
 
     try {
-      activeSearch = MotelyWasm.startRandomSearch(msg.jaml, msg.count);
+      const mode = msg.mode || 'random';
+
+      if (mode === 'random') {
+        activeSearch = MotelyWasm.startRandomSearch(msg.jaml, msg.count);
+      } else if (mode === 'aesthetic') {
+        activeSearch = MotelyWasm.startAestheticSearch(msg.jaml, msg.aesthetic);
+      } else if (mode === 'seedList') {
+        activeSearch = MotelyWasm.startSeedListSearch(msg.jaml, msg.seeds);
+      } else if (mode === 'keyword') {
+        activeSearch = MotelyWasm.startKeywordSearch(msg.jaml, msg.keywords, msg.padding || '');
+      } else if (mode === 'sequential') {
+        activeSearch = MotelyWasm.startSequentialSearch(msg.jaml, msg.batchCharCount, BigInt(msg.startBatch), BigInt(msg.endBatch));
+      } else {
+        self.postMessage({ type: 'error', message: 'Unknown search mode: ' + mode });
+        cleanup();
+        return;
+      }
     } catch (err) {
       cleanup();
       self.postMessage({ type: 'error', message: String(err) });
@@ -57,6 +73,16 @@ self.addEventListener('message', async function(e) {
   if (msg.type === 'stop') {
     if (activeSearch) { activeSearch.cancel(); activeSearch = null; }
     self.postMessage({ type: 'cancelled' });
+  }
+
+  if (msg.type === 'get_tally_labels') {
+    if (!MotelyWasm) { self.postMessage({ type: 'error', message: 'Not initialized' }); return; }
+    try {
+      const labels = MotelyWasm.getTallyLabels(msg.jaml);
+      self.postMessage({ type: 'tally_labels', labels });
+    } catch (err) {
+      self.postMessage({ type: 'error', message: String(err) });
+    }
   }
 });
 `;

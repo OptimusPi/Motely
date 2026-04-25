@@ -138,3 +138,17 @@ export {
     type AnalyzerLive,
     type MotelyJsRunState,
 } from "./hooks/useAnalyzer.js";
+
+export {
+    JamlSpeedometer,
+    type JamlSpeedometerProps,
+} from "./components/JamlSpeedometer.js";
+export {
+    JamlAestheticSelector,
+    type JamlAestheticSelectorProps,
+    type JamlAestheticOption,
+} from "./components/JamlAestheticSelector.js";
+export {
+    JamlSeedInput,
+    type JamlSeedInputProps,
+} from "./components/JamlSeedInput.js";
