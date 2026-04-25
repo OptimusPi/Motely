@@ -38,6 +38,12 @@ export {
     JamlAnalyzerFullscreen,
     type JamlAnalyzerFullscreenProps,
 } from "./components/JamlAnalyzerFullscreen.js";
+export {
+    ANALYZER_STREAM_META,
+    DEFAULT_ENABLED_STREAMS,
+    type AnalyzerStreamKey,
+    type AnalyzerStreamMeta,
+} from "./hooks/analyzerStreamRegistry.js";
 
 export { JamlMapPreview, type JamlMapPreviewProps } from "./components/JamlMapPreview.js";
 export {

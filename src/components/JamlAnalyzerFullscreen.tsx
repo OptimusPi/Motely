@@ -5,31 +5,66 @@ import { JamlBoss, JamlGameCard, JamlTag, JamlVoucher, resolveAnalyzerShopItem }
 import { useMotelyStream, type StreamItem } from "../hooks/useShopStream.js";
 import type { AnalyzerAnteView, AnalyzerItem } from "./AnalyzerExplorer.js";
 import type { AnalyzerLive } from "../hooks/useAnalyzer.js";
-import { motelyItemDisplayNameFromValue } from "../motelyDisplay.js";
+import {
+  ANALYZER_STREAM_META,
+  DEFAULT_ENABLED_STREAMS,
+  buildStreamHandle,
+  type AnalyzerStreamKey,
+} from "../hooks/analyzerStreamRegistry.js";
 import { JimboColorOption, withAlpha } from "../ui/tokens.js";
 
 const C = JimboColorOption;
 
+const TONE_COLORS: Record<string, string> = {
+  gold: C.GOLD_TEXT,
+  purple: C.TAROT_BUTTON,
+  blue: C.PLANET_BUTTON,
+  spectral: C.SPECTRAL_BUTTON,
+  default: C.GOLD_TEXT,
+};
+
 export interface JamlAnalyzerFullscreenProps {
-  /** Per-ante summaries from useAnalyzer.antes (boss/voucher/blinds/packs/initial shop slice). */
+  /** Per-ante summaries from useAnalyzer.antes. */
   antes: AnalyzerAnteView[];
-  /** Live ctx + Motely + runStates from useAnalyzer.live; null disables infinite shop streams. */
+  /** Live ctx from useAnalyzer.live; null disables additional stream lanes. */
   live: AnalyzerLive | null;
-  /** Visible className passthrough for outer container. */
+  /** Stream lanes to surface. Defaults to shop + soul jokers. */
+  enabledStreams?: AnalyzerStreamKey[];
+  /** Called when the user toggles a stream in the picker. Owners persist if desired. */
+  onEnabledStreamsChange?: (next: AnalyzerStreamKey[]) => void;
+  /** Hide the built-in stream picker overlay (e.g. when host renders its own). */
+  hidePicker?: boolean;
+  /** Pull size on each lazy load. */
+  chunkSize?: number;
   className?: string;
-  /** Initial shop pull when expanding to infinite (defaults to 12). */
-  shopChunkSize?: number;
 }
 
 export function JamlAnalyzerFullscreen({
   antes,
   live,
+  enabledStreams,
+  onEnabledStreamsChange,
+  hidePicker = false,
+  chunkSize = 12,
   className = "",
-  shopChunkSize = 12,
 }: JamlAnalyzerFullscreenProps) {
+  const [internalEnabled, setInternalEnabled] = useState<AnalyzerStreamKey[]>(
+    enabledStreams ?? DEFAULT_ENABLED_STREAMS,
+  );
+  const effectiveEnabled = enabledStreams ?? internalEnabled;
+
+  const setEnabled = useCallback(
+    (next: AnalyzerStreamKey[]) => {
+      setInternalEnabled(next);
+      onEnabledStreamsChange?.(next);
+    },
+    [onEnabledStreamsChange],
+  );
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const [currentAnte, setCurrentAnte] = useState<number>(antes[0]?.ante ?? 1);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -61,7 +96,8 @@ export function JamlAnalyzerFullscreen({
             key={ante.ante}
             ante={ante}
             live={live}
-            shopChunkSize={shopChunkSize}
+            enabledStreams={effectiveEnabled}
+            chunkSize={chunkSize}
             registerRef={(el) => {
               if (el) sectionRefs.current.set(ante.ante, el);
               else sectionRefs.current.delete(ante.ante);
@@ -69,11 +105,21 @@ export function JamlAnalyzerFullscreen({
           />
         ))}
       </div>
+
       <SideRail
         antes={antes.map((a) => a.ante)}
         currentAnte={currentAnte}
         onJump={scrollToAnte}
       />
+
+      {!hidePicker && (
+        <StreamPicker
+          enabled={effectiveEnabled}
+          onChange={setEnabled}
+          open={pickerOpen}
+          onToggle={() => setPickerOpen((v) => !v)}
+        />
+      )}
     </div>
   );
 }
@@ -81,49 +127,12 @@ export function JamlAnalyzerFullscreen({
 interface AnteSectionProps {
   ante: AnalyzerAnteView;
   live: AnalyzerLive | null;
-  shopChunkSize: number;
+  enabledStreams: AnalyzerStreamKey[];
+  chunkSize: number;
   registerRef: (el: HTMLElement | null) => void;
 }
 
-function AnteSection({ ante, live, shopChunkSize, registerRef }: AnteSectionProps) {
-  const initialShop = useMemo<StreamItem[]>(
-    () =>
-      (ante.shop ?? []).map((item) => ({
-        id: item.id,
-        name: item.name,
-        value: item.value,
-      })),
-    [ante.shop],
-  );
-
-  const { initStream, nextItem, deps } = useMemo(() => {
-    if (!live) return { initStream: null, nextItem: null, deps: [ante.ante, "no-live"] as unknown[] };
-    const Motely = live.Motely;
-    const ctx = live.ctx;
-    const runState = live.runStates[ante.ante];
-    let stream: unknown = null;
-    return {
-      initStream: () => {
-        stream = ctx.createShopItemStream(
-          ante.ante,
-          runState,
-          Motely.MotelyShopStreamFlags.Default,
-          Motely.MotelyJokerStreamFlags.Default,
-        );
-      },
-      nextItem: () => {
-        const r = ctx.getNextShopItem(stream);
-        const value = r.item.value;
-        const name = motelyItemDisplayNameFromValue(value);
-        return { id: `${ante.ante}-shop-x-${Math.random().toString(36).slice(2, 8)}`, name, value };
-      },
-      deps: [ante.ante, live.seed, live.deck, live.stake] as unknown[],
-    };
-  }, [ante.ante, live]);
-
-  const stream = useMotelyStream(initStream, nextItem, deps, initialShop);
-  const desired = live?.desiredNames ?? new Set<string>();
-
+function AnteSection({ ante, live, enabledStreams, chunkSize, registerRef }: AnteSectionProps) {
   return (
     <section
       ref={registerRef as React.RefCallback<HTMLElement>}
@@ -155,18 +164,6 @@ function AnteSection({ ante, live, shopChunkSize, registerRef }: AnteSectionProp
         )}
       </div>
 
-      <div style={styles.streamLane}>
-        <div style={styles.streamLabel}>SHOP {stream.items.length > 0 ? `· ${stream.items.length}` : ""}</div>
-        <ShopRow
-          items={stream.items}
-          desired={desired}
-          loadingMore={stream.loadingMore}
-          ready={stream.ready}
-          onPullMore={() => stream.pullMore(shopChunkSize)}
-        />
-        {stream.error && <div style={styles.errorLine}>stream error: {stream.error}</div>}
-      </div>
-
       {ante.packs && ante.packs.length > 0 && (
         <div style={styles.streamLane}>
           <div style={styles.streamLabel}>PACKS</div>
@@ -179,7 +176,69 @@ function AnteSection({ ante, live, shopChunkSize, registerRef }: AnteSectionProp
           </div>
         </div>
       )}
+
+      {enabledStreams.map((key) => {
+        const isShop = key === "shop";
+        const initialItems: StreamItem[] = isShop
+          ? (ante.shop ?? []).map((item: AnalyzerItem) => ({
+              id: item.id,
+              name: item.name,
+              value: item.value,
+            }))
+          : [];
+        return (
+          <StreamLane
+            key={`${ante.ante}-${key}`}
+            ante={ante.ante}
+            streamKey={key}
+            live={live}
+            chunkSize={chunkSize}
+            initialItems={initialItems}
+          />
+        );
+      })}
     </section>
+  );
+}
+
+interface StreamLaneProps {
+  ante: number;
+  streamKey: AnalyzerStreamKey;
+  live: AnalyzerLive | null;
+  chunkSize: number;
+  initialItems: StreamItem[];
+}
+
+function StreamLane({ ante, streamKey, live, chunkSize, initialItems }: StreamLaneProps) {
+  const meta = ANALYZER_STREAM_META[streamKey];
+  const handle = useMemo(
+    () => (live ? buildStreamHandle(live, ante, streamKey) : null),
+    [live, ante, streamKey],
+  );
+  const stream = useMotelyStream(
+    handle?.initStream ?? null,
+    handle?.nextItem ?? null,
+    [ante, streamKey, live?.seed, live?.deck, live?.stake],
+    initialItems,
+  );
+  const desired = live?.desiredNames ?? new Set<string>();
+  const toneColor = TONE_COLORS[meta.tone] ?? TONE_COLORS.default;
+
+  return (
+    <div style={styles.streamLane}>
+      <div style={{ ...styles.streamLabel, color: toneColor }}>
+        {meta.label.toUpperCase()}
+        {stream.items.length > 0 ? ` · ${stream.items.length}` : ""}
+      </div>
+      <ShopRow
+        items={stream.items}
+        desired={desired}
+        loadingMore={stream.loadingMore}
+        ready={stream.ready}
+        onPullMore={() => stream.pullMore(chunkSize)}
+      />
+      {stream.error && <div style={styles.errorLine}>stream error: {stream.error}</div>}
+    </div>
   );
 }
 
@@ -297,6 +356,62 @@ function SideRail({ antes, currentAnte, onJump }: SideRailProps) {
   );
 }
 
+interface StreamPickerProps {
+  enabled: AnalyzerStreamKey[];
+  onChange: (next: AnalyzerStreamKey[]) => void;
+  open: boolean;
+  onToggle: () => void;
+}
+
+function StreamPicker({ enabled, onChange, open, onToggle }: StreamPickerProps) {
+  const enabledSet = new Set(enabled);
+  const all = Object.values(ANALYZER_STREAM_META);
+
+  function toggle(key: AnalyzerStreamKey) {
+    const next = new Set(enabledSet);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onChange(all.map((m) => m.key).filter((k) => next.has(k)));
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        style={styles.pickerButton}
+        aria-label="Toggle stream picker"
+      >
+        {open ? "✕" : "≡"}
+      </button>
+      {open && (
+        <div style={styles.pickerPanel}>
+          <div style={styles.pickerHeader}>STREAMS</div>
+          {all.map((meta) => {
+            const isOn = enabledSet.has(meta.key);
+            const tone = TONE_COLORS[meta.tone] ?? TONE_COLORS.default;
+            return (
+              <button
+                key={meta.key}
+                type="button"
+                onClick={() => toggle(meta.key)}
+                style={{
+                  ...styles.pickerChip,
+                  borderColor: isOn ? tone : withAlpha(C.WHITE, 0.15),
+                  color: isOn ? tone : C.GREY,
+                  background: isOn ? withAlpha(tone, 0.1) : "transparent",
+                }}
+              >
+                {isOn ? "●" : "○"} {meta.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
 const styles: Record<string, React.CSSProperties> = {
   root: {
     position: "relative",
@@ -317,7 +432,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   section: {
     width: "100%",
-    height: "100svh",
+    minHeight: "100svh",
     scrollSnapAlign: "start",
     padding: "20px 16px 28px",
     display: "flex",
@@ -463,7 +578,55 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
     transition: "transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease",
   },
+  pickerButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 4,
+    border: `1px solid ${withAlpha(C.WHITE, 0.2)}`,
+    background: withAlpha(C.DARK_GREY, 0.85),
+    color: C.WHITE,
+    fontSize: 16,
+    cursor: "pointer",
+    zIndex: 6,
+    fontFamily: "inherit",
+  },
+  pickerPanel: {
+    position: "absolute",
+    top: 50,
+    right: 12,
+    width: 220,
+    maxHeight: "70vh",
+    overflowY: "auto",
+    padding: 10,
+    background: withAlpha(C.DARK_GREY, 0.95),
+    border: `1px solid ${withAlpha(C.WHITE, 0.15)}`,
+    borderRadius: 6,
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    zIndex: 6,
+    backdropFilter: "blur(4px)",
+  },
+  pickerHeader: {
+    fontSize: 10,
+    color: C.GREY,
+    letterSpacing: "0.16em",
+    marginBottom: 4,
+  },
+  pickerChip: {
+    padding: "6px 10px",
+    border: "1px solid",
+    borderRadius: 4,
+    fontSize: 11,
+    fontFamily: "inherit",
+    cursor: "pointer",
+    textAlign: "left",
+    transition: "all 0.12s ease",
+  },
 };
 
-// Suppress unused-import false-positive on AnalyzerItem (re-exported intentionally).
 export type { AnalyzerItem };
+export { ANALYZER_STREAM_META, type AnalyzerStreamKey } from "../hooks/analyzerStreamRegistry.js";
