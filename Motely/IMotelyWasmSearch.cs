@@ -40,31 +40,10 @@ public interface IMotelyWasmSearch : IDisposable
     MotelyWasmSearchSnapshot GetSnapshot();
     void Cancel();
     Task<MotelyWasmSearchCompletion> WaitForCompletion();
-    /// <summary>
-    /// Pulls up to <paramref name="max"/> buffered scored results out of the search.
-    /// Pull-based alternative to subscribing to <see cref="IMotelyWasmEvents.NotifyResult"/>;
-    /// consumers that prefer polling (e.g. for backpressure / chunked rendering) use this
-    /// instead of holding live event subscriptions. Returns an empty array when buffer is empty.
-    /// </summary>
-    MotelyWasmSearchResult[] DrainResults(int max);
 }
 
 public sealed class MotelyWasmSearch(IMotelySearch search) : IMotelyWasmSearch
 {
-    private readonly System.Collections.Concurrent.ConcurrentQueue<MotelyWasmSearchResult> _buffer = new();
-
-    /// <summary>Host-side enqueue: called from MotelyWasmHost's scored-result callback.</summary>
-    internal void EnqueueResult(MotelyWasmSearchResult result) => _buffer.Enqueue(result);
-
-    public MotelyWasmSearchResult[] DrainResults(int max)
-    {
-        if (max <= 0) return Array.Empty<MotelyWasmSearchResult>();
-        var results = new List<MotelyWasmSearchResult>(Math.Min(max, 256));
-        while (results.Count < max && _buffer.TryDequeue(out var r))
-            results.Add(r);
-        return results.ToArray();
-    }
-
     public MotelyWasmSearchSnapshot GetSnapshot()
     {
         return new(
