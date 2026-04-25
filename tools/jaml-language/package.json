@@ -3,7 +3,6 @@
   "private": true,
   "packageManager": "pnpm@9.4.0",
   "workspaces": [
-    "../../motely-wasm",
     "core",
     "jaml-schema",
     "lsp-server",

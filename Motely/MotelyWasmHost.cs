@@ -1,3 +1,5 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using Motely.Filters;
 using YamlDotNet.Core;
 
@@ -18,6 +20,15 @@ public sealed class MotelyWasmHost : IMotelyWasm
     }
 
     public string GetVersion() => VersionInfo.Version;
+
+    private static readonly JsonSerializerOptions JamlSchemaJsonOptions = new()
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    public string GetJamlSchema() =>
+        JamlSchemaGenerator.Generate().ToJsonString(JamlSchemaJsonOptions);
 
     public string ValidateJaml(string jaml)
     {
@@ -273,18 +284,27 @@ public sealed class MotelyWasmHost : IMotelyWasm
         settings = configureMode(settings);
 
         var events = _events;
+        // Wrapper is captured by the scored-result callback so DrainResults() consumers
+        // see every result the event subscribers see — wrapped is created post-Start
+        // because IMotelySearch needs the configured settings, but the closure resolves
+        // wrapped at firing time. NativeAOT fires callbacks synchronously after Start
+        // returns, so the assignment-then-fire ordering is safe.
+        MotelyWasmSearch? wrapped = null;
         settings = settings
             .WithProgressCallback(progress =>
                 events.NotifyProgress(progress.SeedsSearched, progress.MatchingSeeds))
             .WithScoredResultCallback(tally =>
             {
                 var tallyColumns = tally.TallyColumns.ToArray();
-                onResult?.Invoke(new(tally.Seed, tally.Score, tallyColumns));
+                var result = new MotelyWasmSearchResult(tally.Seed, tally.Score, tallyColumns);
+                wrapped?.EnqueueResult(result);
+                onResult?.Invoke(result);
                 events.NotifyResult(tally.Seed, tally.Score, tallyColumns);
             });
 
         var search = settings.Start();
-        return new MotelyWasmSearch(search);
+        wrapped = new MotelyWasmSearch(search);
+        return wrapped;
     }
 
     public string[] GetTallyLabels(string jaml) =>

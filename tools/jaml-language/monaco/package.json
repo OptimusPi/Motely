@@ -1,6 +1,6 @@
 {
   "name": "@motely/jaml-monaco",
-  "version": "12.4.1",
+  "version": "13.0.1",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
