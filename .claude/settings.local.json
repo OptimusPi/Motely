@@ -145,7 +145,10 @@
       "WebFetch(domain:deepwiki.com)",
       "PowerShell(Stop-Process *)",
       "PowerShell(Get-ChildItem \"X:\\\\JammySeedFinder\\\\src\\\\MotelyJAML\\\\Motely.TUI\\\\bin\\\\Debug\\\\net10.0\\\\MotelyTUI.dll\" -ErrorAction SilentlyContinue | Select-Object Name, LastWriteTime, @{N='KB';E={[int]\\($_.Length/1024\\)}}; if \\(Test-Path \"X:\\\\JammySeedFinder\\\\src\\\\MotelyJAML\\\\Motely.TUI\\\\motely-tui-crash.txt\"\\) { \"CRASH LOG:\"; Get-Content \"X:\\\\JammySeedFinder\\\\src\\\\MotelyJAML\\\\Motely.TUI\\\\motely-tui-crash.txt\" } else { \"NO_CRASH_LOG\" })",
-      "PowerShell(dotnet list *)"
+      "PowerShell(dotnet list *)",
+      "Read(//x/JammySeedFinder/**)",
+      "Read(//x/JammySeedFinder/src/**)",
+      "WebFetch(domain:anthonysimmon.com)"
     ],
     "additionalDirectories": [
       "D:\\jaml-mcp"
