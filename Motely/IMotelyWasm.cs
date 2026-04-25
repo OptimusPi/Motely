@@ -33,6 +33,14 @@ public sealed record JamlMetaResult(
 public interface IMotelyWasm
 {
     string GetVersion();
+    /// <summary>
+    /// Returns the JAML JSON Schema as a JSON string. Generated at runtime from the
+    /// same typed DTO graph the parser consumes — guaranteed in lockstep with this
+    /// version's parsing rules. Replaces the separately-versioned `jaml-schema` npm
+    /// package: consumers can do <c>const schema = JSON.parse(MotelyWasm.getJamlSchema())</c>
+    /// and feed it directly to Monaco/Ajv/etc.
+    /// </summary>
+    string GetJamlSchema();
     /// <summary>Structured validation — use instead of the legacy plain-string overload.</summary>
     JamlValidationResult ValidateJamlStructured(string jaml);
     /// <summary>Legacy plain-string validation ("valid" or error message). Kept for back-compat.</summary>
