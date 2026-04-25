@@ -14,9 +14,12 @@ import {
     EDITION_MAP,
     SPRITE_SHEETS,
     STICKER_MAP,
+    RANK_MAP,
+    SUIT_MAP,
+    ENHANCER_MAP,
+    SEAL_MAP,
 } from "../sprites/spriteData.js";
 import { BalatroItemCategory, isPackedItemValid, packedItemCategory } from "../decode/packedBalatroItem.js";
-import { getEnhancerPosition, getSealPosition, getStandardCardPosition } from "../utils/gameCardUtils.js";
 
 export interface JamlGameCardProps {
     card: {
@@ -292,9 +295,12 @@ export function JamlGameCard({ card, type, className = "", hoverTilt = false }: 
                 }),
             );
     } else if (rank && suit) {
+        const enhancerPos = (enhancements ?? [])
+            .map((m) => ENHANCER_MAP[m])
+            .find((pos): pos is { x: number; y: number } => Boolean(pos)) ?? { x: 1, y: 0 };
         layers.push(
             new Layer({
-                pos: getEnhancerPosition(enhancements ?? []),
+                pos: enhancerPos,
                 name: "background",
                 order: 0,
                 source: SPRITE_SHEETS.enhancers.src,
@@ -304,7 +310,7 @@ export function JamlGameCard({ card, type, className = "", hoverTilt = false }: 
         );
         layers.push(
             new Layer({
-                pos: getStandardCardPosition(rank, suit),
+                pos: { x: RANK_MAP[rank] ?? 0, y: SUIT_MAP[suit] ?? 0 },
                 name,
                 order: 1,
                 source: SPRITE_SHEETS.deck.src,
@@ -368,7 +374,7 @@ export function JamlGameCard({ card, type, className = "", hoverTilt = false }: 
     }
 
     if (seal) {
-        const sealPos = getSealPosition(seal);
+        const sealPos = SEAL_MAP[seal];
         if (sealPos) {
             layers.push(
                 new Layer({

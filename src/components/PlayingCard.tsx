@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { resolveJamlAssetUrl } from '../assets.js'
+import { RANK_MAP, SUIT_MAP, ENHANCER_MAP, SEAL_MAP, EDITION_MAP } from '../sprites/spriteData.js'
 function cn(...classes: (string | undefined | false)[]) { return classes.filter(Boolean).join(" "); }
 
 export type CardSuit = 'Hearts' | 'Diamonds' | 'Clubs' | 'Spades' | 'hearts' | 'diamonds' | 'clubs' | 'spades'
@@ -13,50 +14,8 @@ export type CardEdition = 'Foil' | 'Holographic' | 'Polychrome' | 'Negative' | n
 const CARD_WIDTH = 71
 const CARD_HEIGHT = 95
 
-// 8BitDeck.png is 13 columns (A,2,3,4,5,6,7,8,9,10,J,Q,K) x 4 rows (Spades, Hearts, Clubs, Diamonds)
-const RANK_TO_COL: Record<string, number> = {
-    'Ace': 0, 'A': 0,
-    '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8,
-    '10': 9,
-    'Jack': 10, 'J': 10,
-    'Queen': 11, 'Q': 11,
-    'King': 12, 'K': 12,
-}
-
-const SUIT_TO_ROW: Record<string, number> = {
-    'Spades': 0, 'spades': 0,
-    'Hearts': 1, 'hearts': 1,
-    'Clubs': 2, 'clubs': 2,
-    'Diamonds': 3, 'diamonds': 3,
-}
-
-// Enhancers.png is 7 columns x 5 rows
-// Row 0: Base, Bonus, Mult, Wild, Glass, Steel, Stone
-// Row 1: Gold, Lucky, (seals start)
-const ENHANCEMENT_TO_POS: Record<string, { x: number; y: number }> = {
-    'bonus': { x: 1, y: 0 },
-    'mult': { x: 2, y: 0 },
-    'wild': { x: 3, y: 0 },
-    'glass': { x: 4, y: 0 },
-    'steel': { x: 5, y: 0 },
-    'stone': { x: 6, y: 0 },
-    'gold': { x: 0, y: 1 },
-    'lucky': { x: 1, y: 1 },
-}
-
-const SEAL_TO_POS: Record<string, { x: number; y: number }> = {
-    'gold': { x: 2, y: 1 },
-    'red': { x: 3, y: 1 },
-    'blue': { x: 4, y: 1 },
-    'purple': { x: 5, y: 1 },
-}
-
-const EDITION_TO_POS: Record<string, { x: number; y: number }> = {
-    'Foil': { x: 0, y: 0 },
-    'Holographic': { x: 1, y: 0 },
-    'Polychrome': { x: 2, y: 0 },
-    'Negative': { x: 3, y: 0 },
-}
+const RANK_ALIAS: Record<string, string> = { A: 'Ace', K: 'King', Q: 'Queen', J: 'Jack' }
+const pascal = (s: string) => s[0].toUpperCase() + s.slice(1).toLowerCase()
 
 interface RealPlayingCardProps {
     suit: CardSuit
@@ -79,8 +38,10 @@ export function RealPlayingCard({
     size = 71,
     style
 }: RealPlayingCardProps) {
-    const col = RANK_TO_COL[rank]
-    const row = SUIT_TO_ROW[suit]
+    const rankKey = RANK_ALIAS[rank] ?? rank
+    const suitKey = pascal(suit)
+    const col = RANK_MAP[rankKey]
+    const row = SUIT_MAP[suitKey]
 
     if (col === undefined || row === undefined) {
         console.warn(`Invalid card: ${rank} of ${suit}`)
@@ -94,20 +55,20 @@ export function RealPlayingCard({
     const bgX = -col * CARD_WIDTH
     const bgY = -row * CARD_HEIGHT
 
-    // Enhancement background (if any)
-    const enhPos = enhancement ? ENHANCEMENT_TO_POS[enhancement] : { x: 0, y: 0 }
+    // Enhancement background (if any) — ENHANCER_MAP is PascalCase, prop is lowercase
+    const enhPos = enhancement ? ENHANCER_MAP[pascal(enhancement)] ?? { x: 0, y: 0 } : { x: 0, y: 0 }
     const enhBgX = -enhPos.x * CARD_WIDTH
     const enhBgY = -enhPos.y * CARD_HEIGHT
 
-    // Seal overlay
-    const sealPos = seal ? SEAL_TO_POS[seal] : null
+    // Seal overlay — SEAL_MAP is keyed by "Gold"/"Red"/"Blue"/"Purple"
+    const sealPos = seal ? SEAL_MAP[pascal(seal)] ?? null : null
     const sealBgX = sealPos ? -sealPos.x * CARD_WIDTH : 0
     const sealBgY = sealPos ? -sealPos.y * CARD_HEIGHT : 0
 
-    // Edition overlay
-    const editionPos = edition ? EDITION_TO_POS[edition] : null
-    const editionBgX = editionPos ? -editionPos.x * CARD_WIDTH : 0
-    const editionBgY = editionPos ? -editionPos.y * CARD_HEIGHT : 0
+    // Edition overlay — EDITION_MAP gives column index on 5-wide editions sheet
+    const editionCol = edition ? EDITION_MAP[edition] : undefined
+    const editionBgX = editionCol !== undefined ? -editionCol * CARD_WIDTH : 0
+    const editionBgY = 0
 
     const isNegative = edition === 'Negative'
     const baseFilter = isNegative ? 'invert(0.94)' : 'none'

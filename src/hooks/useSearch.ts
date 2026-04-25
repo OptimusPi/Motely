@@ -91,5 +91,9 @@ export function useSearch(motelyWasmUrl: string) {
     workerRef.current?.postMessage({ type: "stop" });
   }, []);
 
-  return { ...state, start, cancel };
+  const clearError = useCallback(() => {
+    setState((s) => (s.error || s.status === "error" ? { ...s, error: null, status: "idle" } : s));
+  }, []);
+
+  return { ...state, start, cancel, clearError };
 }

@@ -1,55 +1,17 @@
-export function getStandardCardPosition(rank: string, suit: string) {
-    const rankMap: { [key: string]: number } = {
-        "2": 0,
-        "3": 1,
-        "4": 2,
-        "5": 3,
-        "6": 4,
-        "7": 5,
-        "8": 6,
-        "9": 7,
-        "10": 8,
-        Jack: 9,
-        Queen: 10,
-        King: 11,
-        Ace: 12,
-    };
-    const suitMap: { [key: string]: number } = {
-        Hearts: 0,
-        Clubs: 1,
-        Diamonds: 2,
-        Spades: 3,
-    };
+import { RANK_MAP, SUIT_MAP, SEAL_MAP, ENHANCER_MAP, type SpritePos } from "../sprites/spriteData.js";
 
-    const x = rankMap[rank] ?? 0;
-    const y = suitMap[suit] ?? 0;
-
-    return { x, y };
+export function getStandardCardPosition(rank: string, suit: string): SpritePos {
+    return { x: RANK_MAP[rank] ?? 0, y: SUIT_MAP[suit] ?? 0 };
 }
 
-export function getSealPosition(seal: string) {
-    const sealMap: { [key: string]: { x: number; y: number } } = {
-        "Gold Seal": { x: 2, y: 0 },
-        "Purple Seal": { x: 4, y: 4 },
-        "Red Seal": { x: 5, y: 4 },
-        "Blue Seal": { x: 6, y: 4 },
-    };
-
-    return sealMap[seal];
+export function getSealPosition(seal: string): SpritePos | undefined {
+    return SEAL_MAP[seal];
 }
 
-export function getEnhancerPosition(modifiers: Array<string>) {
-    const enhancerMap: { [key: string]: { x: number; y: number } } = {
-        Bonus: { x: 1, y: 1 },
-        Mult: { x: 2, y: 1 },
-        Wild: { x: 3, y: 1 },
-        Glass: { x: 5, y: 1 },
-        Steel: { x: 6, y: 1 },
-        Stone: { x: 5, y: 0 },
-        Gold: { x: 6, y: 0 },
-        Lucky: { x: 4, y: 1 },
-    };
-
-    const enhancer = modifiers.find((mod: string) => Object.keys(enhancerMap).includes(mod));
-    return enhancer ? enhancerMap[enhancer] : { x: 1, y: 0 };
+export function getEnhancerPosition(modifiers: string[]): SpritePos {
+    for (const m of modifiers) {
+        const pos = ENHANCER_MAP[m];
+        if (pos) return pos;
+    }
+    return { x: 1, y: 0 };
 }

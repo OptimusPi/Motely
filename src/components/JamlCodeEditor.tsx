@@ -57,6 +57,12 @@ export function JamlCodeEditor({
 }: JamlCodeEditorProps) {
   return (
     <div style={{ width: "100%", minHeight, background: JimboColorOption.DARKEST }}>
+      {/* Kill Monaco's iPad/touch on-screen-keyboard widget — useless inside a
+          chat WebView where the OS keyboard is already pinned open. */}
+      <style>{`
+        .monaco-editor .iPadShowKeyboard,
+        .monaco-editor [class*="iPadShowKeyboard"] { display: none !important; }
+      `}</style>
       <Editor
         height={`${minHeight}px`}
         defaultLanguage="yaml"
@@ -71,6 +77,10 @@ export function JamlCodeEditor({
           lineHeight: 22,
           fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
           lineNumbers: "on",
+          lineNumbersMinChars: 2,
+          lineDecorationsWidth: 4,
+          glyphMargin: false,
+          folding: false,
           automaticLayout: true,
           padding: { top: 12, bottom: 12 },
           wordWrap: "on",
@@ -78,6 +88,11 @@ export function JamlCodeEditor({
           formatOnType: true,
           renderLineHighlight: "line",
           scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
+          // Mobile/chat-WebView UX: kill the context menu ("Change All Occurrences" etc. covering half
+          // the file on long-press) and the accessibility-help keyboard widget that's just clutter when
+          // the OS keyboard is already open.
+          contextmenu: false,
+          accessibilitySupport: "off",
         }}
       />
     </div>
