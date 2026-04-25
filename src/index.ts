@@ -98,6 +98,14 @@ export {
 export { CardList, type CardListProps } from "./components/CardList.js";
 export { CardFan, type CardFanProps } from "./components/CardFan.js";
 export {
+    RealPlayingCard,
+    type CardSuit,
+    type CardRank,
+    type CardEnhancement,
+    type CardSeal,
+    type CardEdition,
+} from "./components/PlayingCard.js";
+export {
     DeckSprite,
     DECK_SPRITE_POS,
     STAKE_SPRITE_POS,
