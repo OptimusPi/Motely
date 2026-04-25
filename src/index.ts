@@ -34,6 +34,11 @@ export {
     type AnalyzerItem,
 } from "./components/AnalyzerExplorer.js";
 
+export {
+    JamlAnalyzerFullscreen,
+    type JamlAnalyzerFullscreenProps,
+} from "./components/JamlAnalyzerFullscreen.js";
+
 export { JamlMapPreview, type JamlMapPreviewProps } from "./components/JamlMapPreview.js";
 export {
     JamlIde,
