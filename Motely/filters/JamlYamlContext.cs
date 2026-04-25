@@ -7,6 +7,7 @@ namespace Motely.Filters;
 /// Required for Native AOT, LLVM WASM, and aggressive trimming — avoids reflection in <see cref="DeserializerBuilder"/>.
 /// </summary>
 [YamlStaticContext]
+[YamlSerializable(typeof(JamlRootDocument))]
 [YamlSerializable(typeof(JamlDefaultsDto))]
 [YamlSerializable(typeof(JamlClauseDto))]
 [YamlSerializable(typeof(JamlSourcesDto))]
