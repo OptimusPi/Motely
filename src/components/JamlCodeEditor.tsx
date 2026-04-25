@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import Editor, { type BeforeMount } from "@monaco-editor/react";
+import React, { useEffect, useRef } from "react";
+import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
+import type * as monaco from "monaco-editor";
 import { JimboColorOption } from "../ui/tokens.js";
 
 // Monaco needs hex strings for its colors API. We strip the leading `#` from
@@ -55,6 +56,70 @@ export function JamlCodeEditor({
   onChange,
   minHeight = 320,
 }: JamlCodeEditorProps) {
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof monaco | null>(null);
+  // Suppress our onChange while we're applying a programmatic edit, so the
+  // streamed parent value doesn't loop back through onChange and bounce.
+  const suppressEmitRef = useRef(false);
+  // Capture initial value for the uncontrolled editor mount; subsequent
+  // updates flow through the useEffect below.
+  const initialValueRef = useRef(value);
+  // Track value across renders so we can apply only the streamed delta when
+  // the new value is a strict suffix-extension of what's already in the model.
+  const lastSyncedValueRef = useRef(value);
+
+  const handleMount: OnMount = (editor, m) => {
+    editorRef.current = editor;
+    monacoRef.current = m;
+  };
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const m = monacoRef.current;
+    if (!editor || !m) return;
+    const model = editor.getModel();
+    if (!model) return;
+
+    const current = editor.getValue();
+    if (current === value) {
+      lastSyncedValueRef.current = value;
+      return;
+    }
+
+    suppressEmitRef.current = true;
+    try {
+      // Streaming-friendly path: when the new value just appends to what
+      // Monaco already has, push an insert at end-of-document. Monaco
+      // re-tokenizes only from the insertion point — no full-doc churn,
+      // no syntax-color strobe, no cursor reset.
+      if (value.length > current.length && value.startsWith(current)) {
+        const suffix = value.slice(current.length);
+        const lastLine = model.getLineCount();
+        const lastCol = model.getLineMaxColumn(lastLine);
+        model.applyEdits([
+          {
+            range: new m.Range(lastLine, lastCol, lastLine, lastCol),
+            text: suffix,
+            forceMoveMarkers: false,
+          },
+        ]);
+      } else {
+        // Real replacement (paste from outside, parent rewrite, undo, etc.).
+        editor.executeEdits("", [
+          {
+            range: model.getFullModelRange(),
+            text: value,
+            forceMoveMarkers: true,
+          },
+        ]);
+        editor.pushUndoStop();
+      }
+    } finally {
+      suppressEmitRef.current = false;
+      lastSyncedValueRef.current = value;
+    }
+  }, [value]);
+
   return (
     <div style={{ width: "100%", minHeight, background: JimboColorOption.DARKEST }}>
       {/* Kill Monaco's iPad/touch on-screen-keyboard widget — useless inside a
@@ -66,9 +131,13 @@ export function JamlCodeEditor({
       <Editor
         height={`${minHeight}px`}
         defaultLanguage="yaml"
-        value={value}
+        defaultValue={initialValueRef.current}
         theme="jaml-balatro-dark"
-        onChange={(next) => onChange(next ?? "")}
+        onChange={(next) => {
+          if (suppressEmitRef.current) return;
+          onChange(next ?? "");
+        }}
+        onMount={handleMount}
         beforeMount={defineBalatroTheme}
         options={{
           minimap: { enabled: false },

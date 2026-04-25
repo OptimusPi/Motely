@@ -243,8 +243,10 @@ export function JamlIde({
     jamlTextToVisualFilter(jaml ?? defaultJaml ?? ""),
   );
 
-  // Adjust-state-during-render: reparse when text changes (only if not controlled).
-  if (visualFilter === undefined && text !== lastParsedText) {
+  // Adjust-state-during-render: reparse when text changes (only if not
+  // controlled). Gated on `mode === "visual"` so we don't burn CPU parsing
+  // on every streamed token while the user is in the .jaml/map/results tab.
+  if (visualFilter === undefined && mode === "visual" && text !== lastParsedText) {
     try {
       const parsed = jamlTextToVisualFilter(text);
       setLastParsedText(text);
