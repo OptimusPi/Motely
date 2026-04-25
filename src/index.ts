@@ -116,4 +116,6 @@ export {
 export {
     useAnalyzer,
     type AnalyzerStatus,
+    type AnalyzerLive,
+    type MotelyJsRunState,
 } from "./hooks/useAnalyzer.js";

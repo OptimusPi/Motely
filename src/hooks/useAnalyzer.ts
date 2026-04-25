@@ -8,13 +8,36 @@ import type { AnalyzerAnteView, AnalyzerItem } from "../components/AnalyzerExplo
 
 export type AnalyzerStatus = "idle" | "running" | "done" | "error";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export type MotelyJsRunState = { voucherBitfield: number; bossBitfield: number };
+
+/**
+ * Snapshot of the live search context after `analyze()` resolves, exposed so
+ * higher-level components can open additional streams (shop chunks, soul-
+ * joker chunks, pack contents) on demand without re-walking the seed. The
+ * `runStates` map is keyed by ante and holds the runState AFTER the boss +
+ * voucher have been resolved for that ante — i.e. the correct input for
+ * `createShopItemStream(ante, runState, ...)`.
+ */
+export interface AnalyzerLive {
+  ctx: any;
+  Motely: any;
+  runStates: Record<number, MotelyJsRunState>;
+  desiredNames: ReadonlySet<string>;
+  seed: string;
+  deck: string;
+  stake: string;
+}
+
 export function useAnalyzer(motelyWasmUrl: string) {
   const [antes, setAntes] = useState<AnalyzerAnteView[]>([]);
   const [status, setStatus] = useState<AnalyzerStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [live, setLive] = useState<AnalyzerLive | null>(null);
 
   const analyze = useCallback(async (seed: string, deck: string, stake: string, jaml?: string) => {
     setAntes([]);
+    setLive(null);
     setStatus("running");
     setError(null);
 
@@ -34,8 +57,9 @@ export function useAnalyzer(motelyWasmUrl: string) {
 
       const ctx = MotelyWasm.createSearchContext(seed, deckEnum, stakeEnum);
       const bossStream = ctx.createBossStream();
-      let runState = { voucherBitfield: 0, bossBitfield: 0 };
+      let runState: MotelyJsRunState = { voucherBitfield: 0, bossBitfield: 0 };
       const results: AnalyzerAnteView[] = [];
+      const runStates: Record<number, MotelyJsRunState> = {};
 
       for (let ante = 1; ante <= 8; ante++) {
         const bossResult = ctx.getNextBossForAnte(bossStream, ante, runState);
@@ -45,6 +69,7 @@ export function useAnalyzer(motelyWasmUrl: string) {
         const voucherResult = ctx.getAnteFirstVoucher(ante, runState);
         const voucherName = Motely.MotelyVoucher[voucherResult.voucher] ?? `Unknown(${voucherResult.voucher})`;
         runState = voucherResult.runState;
+        runStates[ante] = { ...runState };
 
         const tagStream = ctx.createTagStream(ante);
         const tag1 = ctx.getNextTag(tagStream);
@@ -83,6 +108,7 @@ export function useAnalyzer(motelyWasmUrl: string) {
       }
 
       setAntes(results);
+      setLive({ ctx, Motely, runStates, desiredNames, seed, deck, stake });
       setStatus("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -95,5 +121,5 @@ export function useAnalyzer(motelyWasmUrl: string) {
     setStatus((s) => (s === "error" ? "idle" : s));
   }, []);
 
-  return { antes, status, error, analyze, clearError };
+  return { antes, status, error, analyze, clearError, live };
 }
