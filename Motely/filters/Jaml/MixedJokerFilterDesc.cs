@@ -210,12 +210,6 @@ public struct MixedJokerFilterDesc(MixedJokerClause clause)
             if (_clause.IsWildcard)
             {
                 jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
-                if (_clause.WildcardRarity.HasValue)
-                {
-                    var rarityVec = new VectorEnum256<MotelyJokerRarity>(
-                        Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyGlobals.JokerRarityMask)));
-                    jokerMatch &= VectorEnum256.Equals(rarityVec, _clause.WildcardRarity.Value);
-                }
             }
             else
             {

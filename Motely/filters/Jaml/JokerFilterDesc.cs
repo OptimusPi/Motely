@@ -13,7 +13,6 @@ public sealed class JokerClause : IJamlClause
     public int Score { get; init; }
     public MotelyJoker[] Jokers { get; init; } = [];
     public bool IsWildcard { get; init; }
-    public MotelyJokerRarity? WildcardRarity { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();
@@ -229,12 +228,6 @@ public struct JokerFilterDesc(JokerClause clause)
             if (_clause.IsWildcard)
             {
                 jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
-                if (_clause.WildcardRarity.HasValue)
-                {
-                    var rarityVec = new VectorEnum256<MotelyJokerRarity>(
-                        Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyGlobals.JokerRarityMask)));
-                    jokerMatch &= VectorEnum256.Equals(rarityVec, _clause.WildcardRarity.Value);
-                }
             }
             else
             {
@@ -343,7 +336,6 @@ public sealed class MixedJokerClause : IJamlClause
     public int Score { get; init; }
     public MotelyJoker[] Jokers { get; init; } = [];
     public bool IsWildcard { get; init; }
-    public MotelyJokerRarity? WildcardRarity { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();

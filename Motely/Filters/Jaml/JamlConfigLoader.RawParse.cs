@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
+using Motely.Filters.Converters;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 
@@ -31,7 +32,12 @@ public static partial class JamlConfigLoader
         }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     private static readonly IDeserializer JamlFragmentDeserializer =
-        new StaticDeserializerBuilder(new JamlYamlContext()).Build();
+        new StaticDeserializerBuilder(new JamlYamlContext())
+            .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
+            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
+            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
+            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
+            .Build();
 
     /// <summary>
     /// Returns canonical JAML text by applying loader normalizations and stable YAML emission.
