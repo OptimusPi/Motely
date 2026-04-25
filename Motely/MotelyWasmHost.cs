@@ -284,27 +284,18 @@ public sealed class MotelyWasmHost : IMotelyWasm
         settings = configureMode(settings);
 
         var events = _events;
-        // Wrapper is captured by the scored-result callback so DrainResults() consumers
-        // see every result the event subscribers see — wrapped is created post-Start
-        // because IMotelySearch needs the configured settings, but the closure resolves
-        // wrapped at firing time. NativeAOT fires callbacks synchronously after Start
-        // returns, so the assignment-then-fire ordering is safe.
-        MotelyWasmSearch? wrapped = null;
         settings = settings
             .WithProgressCallback(progress =>
                 events.NotifyProgress(progress.SeedsSearched, progress.MatchingSeeds))
             .WithScoredResultCallback(tally =>
             {
                 var tallyColumns = tally.TallyColumns.ToArray();
-                var result = new MotelyWasmSearchResult(tally.Seed, tally.Score, tallyColumns);
-                wrapped?.EnqueueResult(result);
-                onResult?.Invoke(result);
+                onResult?.Invoke(new(tally.Seed, tally.Score, tallyColumns));
                 events.NotifyResult(tally.Seed, tally.Score, tallyColumns);
             });
 
         var search = settings.Start();
-        wrapped = new MotelyWasmSearch(search);
-        return wrapped;
+        return new MotelyWasmSearch(search);
     }
 
     public string[] GetTallyLabels(string jaml) =>
