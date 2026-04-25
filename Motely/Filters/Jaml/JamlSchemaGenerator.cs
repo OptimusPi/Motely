@@ -6,10 +6,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
-using Motely;
-using Motely.Filters;
 
-namespace Motely.CLI;
+namespace Motely.Filters;
 
 /// <summary>
 /// Generates <c>jaml.schema.json</c> from the Motely JAML DTO graph
