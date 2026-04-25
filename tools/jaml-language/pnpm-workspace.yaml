@@ -1,6 +1,9 @@
 # Single source of truth for pnpm (pnpm ignores package.json "workspaces").
+# motely-wasm is consumed from the npm registry (motely-wasm@^13.0.1) — the
+# stale source-tracked ../../motely-wasm/ shadow dir is no longer a workspace
+# member. For local iteration on motely-wasm itself, publish a beta or use
+# `pnpm link ../../Motely.Wasm/bin/motely-wasm` against bootsharp's output.
 packages:
-  - ../../motely-wasm
   - core
   - jaml-schema
   - lsp-server

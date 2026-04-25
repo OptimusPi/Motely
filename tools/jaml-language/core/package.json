@@ -1,6 +1,6 @@
 {
   "name": "@motely/jaml-language-core",
-  "version": "12.4.1",
+  "version": "13.0.1",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@jaml/schema": "^12.4.1"
+    "@jaml/schema": "^13.0.1"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

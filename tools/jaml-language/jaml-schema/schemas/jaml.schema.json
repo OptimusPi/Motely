@@ -807,6 +807,9 @@
               "maxPackSlot": {
                 "type": "integer"
               },
+              "earlyAntesMaxPack": {
+                "type": "integer"
+              },
               "tags": {
                 "type": "boolean"
               },

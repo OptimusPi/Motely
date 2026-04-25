@@ -1,6 +1,6 @@
 {
   "name": "@jaml/schema",
-  "version": "12.4.1",
+  "version": "13.0.1",
   "private": false,
   "type": "module",
   "main": "./index.js",
@@ -26,6 +26,6 @@
     "access": "public"
   },
   "dependencies": {
-    "motely-wasm": "^12.4.1"
+    "motely-wasm": "^13.0.1"
   }
 }
