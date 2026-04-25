@@ -148,7 +148,12 @@
       "PowerShell(dotnet list *)",
       "Read(//x/JammySeedFinder/**)",
       "Read(//x/JammySeedFinder/src/**)",
-      "WebFetch(domain:anthonysimmon.com)"
+      "WebFetch(domain:anthonysimmon.com)",
+      "PowerShell(git mv X:/JammySeedFinder/src/MotelyJAML/Motely.CLI/JamlSchemaGenerator.cs X:/JammySeedFinder/src/MotelyJAML/Motely/Filters/Jaml/JamlSchemaGenerator.cs)",
+      "PowerShell($env:UPDATE_JAML_GOLDEN = \"1\"; dotnet test X:/JammySeedFinder/src/MotelyJAML/Motely.Tests/Motely.Tests.csproj --nologo --filter \"FullyQualifiedName~Jaml\" -v:minimal; $env:UPDATE_JAML_GOLDEN = $null)",
+      "PowerShell($env:UPDATE_JAML_GOLDEN = \"1\"; dotnet test X:/JammySeedFinder/src/MotelyJAML/Motely.Tests/Motely.Tests.csproj --nologo --filter \"FullyQualifiedName~JamlFixtureLoaderTests\" -v:quiet 2>&1 | Select-Object -Last 5; $env:UPDATE_JAML_GOLDEN = $null; Write-Output \"---PROGRESS TAIL---\"; Get-Content $env:TEMP\\\\jaml-fixture-progress.txt -Tail 6)",
+      "PowerShell($old = \"X:/JammySeedFinder/src/MotelyJAML/JamlFilters/old\"; if \\(-not \\(Test-Path $old\\)\\) { New-Item -ItemType Directory -Path $old | Out-Null }; \"old/ ready\")",
+      "PowerShell($golden = \"X:/JammySeedFinder/src/MotelyJAML/Motely.Tests/golden/jaml-fixtures.baseline.txt\"; \\(Get-Content $golden | Select-String -Pattern \"FAIL:\" | Measure-Object\\).Count; \"---\"; Get-Content $golden | Select-String -Pattern \"FAIL:\" | ForEach-Object { $_.Line })"
     ],
     "additionalDirectories": [
       "D:\\jaml-mcp"
