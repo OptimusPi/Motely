@@ -32,12 +32,12 @@ public static partial class JamlSchemaGenerator
     {
         ["joker"] = "Joker",
         ["jokers"] = "Joker",
-        ["commonJoker"] = "Joker",
-        ["commonJokers"] = "Joker",
-        ["uncommonJoker"] = "Joker",
-        ["uncommonJokers"] = "Joker",
-        ["rareJoker"] = "Joker",
-        ["rareJokers"] = "Joker",
+        ["commonJoker"] = "CommonJoker",
+        ["commonJokers"] = "CommonJoker",
+        ["uncommonJoker"] = "UncommonJoker",
+        ["uncommonJokers"] = "UncommonJoker",
+        ["rareJoker"] = "RareJoker",
+        ["rareJokers"] = "RareJoker",
         ["mixedJoker"] = "Joker",
         ["mixedJokers"] = "Joker",
         ["soulJoker"] = "Joker",
@@ -66,6 +66,7 @@ public static partial class JamlSchemaGenerator
         ["erraticSuit"] = "Suit",
         ["mode"] = "Mode",
         ["aesthetics"] = "Aesthetic",
+        ["event"] = "Event",
     };
 
     [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -217,9 +218,10 @@ public static partial class JamlSchemaGenerator
     {
         return new JsonObject
         {
-            ["Joker"] = EnumDef(CombineWithWildcards(
-                Enum.GetNames<MotelyJoker>(),
-                "any", "anycommon", "anyuncommon", "anyrare", "anylegendary")),
+            ["Joker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJoker>(), "any")),
+            ["CommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerCommon>(), "any")),
+            ["UncommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerUncommon>(), "any")),
+            ["RareJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerRare>(), "any")),
             ["Voucher"] = EnumDef(Enum.GetNames<MotelyVoucher>()),
             ["Tarot"] = EnumDef(Enum.GetNames<MotelyTarotCard>()),
             ["Planet"] = EnumDef(Enum.GetNames<MotelyPlanetCard>()),
@@ -236,6 +238,7 @@ public static partial class JamlSchemaGenerator
             ["Aesthetic"] = EnumDef(JamlAestheticParser.KnownJamlStringsForSchema()),
             ["Sticker"] = EnumDef(WithoutNone(Enum.GetNames<MotelyJokerSticker>())),
             ["Mode"] = EnumDef(new[] { "any", "all", "none" }),
+            ["Event"] = EnumDef(Enum.GetNames<MotelyEventType>()),
         };
     }
 

@@ -845,7 +845,7 @@ public static class JamlScoring
     private static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, JokerClause clause, ref MotelyRunState runState)
     {
         if (clause.IsWildcard)
-            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, clause.WildcardRarity, clause.Edition, clause.Stickers, ref runState);
+            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, wildcardRarity: null, clause.Edition, clause.Stickers, ref runState);
         return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
     }
 
@@ -873,7 +873,7 @@ public static class JamlScoring
     private static int CountMixedJokerOccurrences(ref MotelySingleSearchContext ctx, MixedJokerClause clause, ref MotelyRunState runState)
     {
         if (clause.IsWildcard)
-            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, clause.WildcardRarity, clause.Edition, clause.Stickers, ref runState);
+            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, wildcardRarity: null, clause.Edition, clause.Stickers, ref runState);
         return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
     }
 
