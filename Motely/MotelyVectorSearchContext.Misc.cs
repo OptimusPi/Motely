@@ -252,9 +252,9 @@ ref partial struct MotelyVectorSearchContext
             Vector256.BitwiseOr(
                 GetNextRandomElement(
                     ref erraticDeckStream,
-                    MotelyEnum<MotelyPlayingCard>.Values
+                    MotelyEnum<MotelyStandardCard>.Values
                 ).HardwareVector,
-                Vector256.Create((int)MotelyItemTypeCategory.PlayingCard)
+                Vector256.Create((int)MotelyItemTypeCategory.Standardcard)
             )
         );
 

@@ -17,11 +17,9 @@ public static class SeedStoragePaths
 
     public static SeedStoragePath ResolveSource(string value)
     {
-        // Check if input is an HTTP/HTTPS URL
         if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            // Return URL as-is for remote sources (DuckDB supports reading Parquet from URLs)
             return new SeedStoragePath(value, value, IsExplicitPath: true);
         }
 
@@ -41,8 +39,7 @@ public static class SeedStoragePaths
         string value,
         string standardDirectory,
         string label,
-        bool ensureParentDirectory
-    )
+        bool ensureParentDirectory)
     {
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentException($"{label} path is required.", nameof(value));
@@ -145,11 +142,9 @@ public static class SeedReader
 
     private static IReadOnlyList<string> ReadParquetSeeds(string path)
     {
-        var escapedPath = path.Replace("'", "''");
-        using var conn = new DuckDB.NET.Data.DuckDBConnection("Data Source=:memory:");
-        conn.Open();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = $"SELECT seed FROM read_parquet('{escapedPath}') WHERE seed IS NOT NULL";
+        using var lake = new DuckLakeConnection(":memory:");
+        using var cmd = lake.CreateCommand();
+        cmd.CommandText = $"SELECT seed FROM read_parquet('{DuckLakeConnection.EscapePath(path)}') WHERE seed IS NOT NULL";
         using var reader = cmd.ExecuteReader();
         var seeds = new List<string>();
         while (reader.Read())
@@ -168,9 +163,7 @@ public static class SeedReader
 public interface ISeedResultSink : IDisposable
 {
     string OutputPath { get; }
-
     void AppendSeed(string seed);
-
     void AppendScoredResult(string seed, int score, ReadOnlySpan<int> tallies);
 }
 
@@ -192,18 +185,15 @@ public static class SeedResultSinkFactory
 
 public sealed class SeedResultSinkDirectory : IDisposable
 {
-    private readonly string _directoryPath;
     private readonly MotelyResultsDb _db;
     private readonly Dictionary<string, ISeedResultSink> _sinks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string _directoryPath;
     private readonly object _lock = new();
 
-    public SeedResultSinkDirectory(string directoryPath, int tallyCount = 0, string extension = ".db")
+    public SeedResultSinkDirectory(string directoryPath, int tallyCount = 0)
     {
         if (string.IsNullOrWhiteSpace(directoryPath))
             throw new ArgumentException("Sink directory path is required.", nameof(directoryPath));
-
-        if (string.IsNullOrWhiteSpace(extension))
-            throw new ArgumentException("Sink file extension is required.", nameof(extension));
 
         _directoryPath = Path.GetFullPath(directoryPath);
         Directory.CreateDirectory(_directoryPath);
@@ -234,7 +224,6 @@ public sealed class SeedResultSinkDirectory : IDisposable
                 sink.Dispose();
             _sinks.Clear();
         }
-
         _db.Dispose();
     }
 }
@@ -256,25 +245,18 @@ internal sealed class FilterScopedSeedResultSink : ISeedResultSink
     public void AppendSeed(string seed)
     {
         var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
-        if (string.IsNullOrWhiteSpace(normalizedSeed))
-            return;
-
-        _db.AppendResult(_filterId, normalizedSeed, 0, ReadOnlySpan<int>.Empty);
+        if (!string.IsNullOrWhiteSpace(normalizedSeed))
+            _db.AppendResult(_filterId, normalizedSeed, 0, ReadOnlySpan<int>.Empty);
     }
 
     public void AppendScoredResult(string seed, int score, ReadOnlySpan<int> tallies)
     {
         var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
-        if (string.IsNullOrWhiteSpace(normalizedSeed))
-            return;
-
-        _db.AppendResult(_filterId, normalizedSeed, score, tallies);
+        if (!string.IsNullOrWhiteSpace(normalizedSeed))
+            _db.AppendResult(_filterId, normalizedSeed, score, tallies);
     }
 
-    public void Dispose()
-    {
-        // Shared DuckLake lifetime belongs to SeedResultSinkDirectory.
-    }
+    public void Dispose() { }
 }
 
 internal sealed class DuckLakeSeedResultSink : ISeedResultSink
@@ -292,19 +274,15 @@ internal sealed class DuckLakeSeedResultSink : ISeedResultSink
     public void AppendSeed(string seed)
     {
         var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
-        if (string.IsNullOrWhiteSpace(normalizedSeed))
-            return;
-
-        _db.AppendResult(normalizedSeed, 0, ReadOnlySpan<int>.Empty);
+        if (!string.IsNullOrWhiteSpace(normalizedSeed))
+            _db.AppendResult(normalizedSeed, 0, ReadOnlySpan<int>.Empty);
     }
 
     public void AppendScoredResult(string seed, int score, ReadOnlySpan<int> tallies)
     {
         var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
-        if (string.IsNullOrWhiteSpace(normalizedSeed))
-            return;
-
-        _db.AppendResult(normalizedSeed, score, tallies);
+        if (!string.IsNullOrWhiteSpace(normalizedSeed))
+            _db.AppendResult(normalizedSeed, score, tallies);
     }
 
     public void Dispose() => _db.Dispose();
@@ -325,19 +303,15 @@ internal sealed class ParquetSeedResultSink : ISeedResultSink
     public void AppendSeed(string seed)
     {
         var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
-        if (string.IsNullOrWhiteSpace(normalizedSeed))
-            return;
-
-        _db.AppendResult(normalizedSeed, 0, ReadOnlySpan<int>.Empty);
+        if (!string.IsNullOrWhiteSpace(normalizedSeed))
+            _db.AppendResult(normalizedSeed, 0, ReadOnlySpan<int>.Empty);
     }
 
     public void AppendScoredResult(string seed, int score, ReadOnlySpan<int> tallies)
     {
         var normalizedSeed = SeedReader.NormalizeSeedToken(seed);
-        if (string.IsNullOrWhiteSpace(normalizedSeed))
-            return;
-
-        _db.AppendResult(normalizedSeed, score, tallies);
+        if (!string.IsNullOrWhiteSpace(normalizedSeed))
+            _db.AppendResult(normalizedSeed, score, tallies);
     }
 
     public void Dispose()

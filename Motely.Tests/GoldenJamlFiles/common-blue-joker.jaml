@@ -1,0 +1,45 @@
+name: Blue Joker Deck Size
+author: jammy
+description: Blue Joker common for +2 Chips per card remaining in deck
+deck: Plasma
+stake: White
+hashtags: ["joker", "common-joker", "copy", "negative", "planet-scaling", "deck-thinning", "stone", "legendary-synergy"]
+must:
+  - commonJoker: BlueJoker
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: StoneJoker
+    score: 55
+  - uncommonJoker: MarbleJoker
+    score: 50
+  - uncommonJoker: Hiker
+    score: 45
+  - commonJoker: Splash
+    score: 35
+  - tarot: TheTower
+    score: 35
+  - rareJoker: Stuntman
+    score: 45
+  - rareJoker: Blueprint
+    score: 35
+  - rareJoker: Brainstorm
+    score: 30
+  - tag: NegativeTag
+    score: 40
+  - mixedJoker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 30
+  - legendaryJoker: Chicot
+    score: 20
+  - tarot: TheHangedMan
+    score: -30
+  - spectral: Immolate
+    score: -25
+  - uncommonJoker: Erosion
+    score: -20

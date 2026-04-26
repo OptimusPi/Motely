@@ -28,7 +28,7 @@ public static class FormatUtils
             result.Append("Rental ");
         }
 
-        // Add seal for playing cards (BEFORE edition)
+        // Add seal for standard cards (BEFORE edition)
         if (item.Seal != MotelyItemSeal.None)
         {
             result.Append(item.Seal.ToString().Replace("Seal", "")).Append(" Seal ");
@@ -40,7 +40,7 @@ public static class FormatUtils
             result.Append(item.Edition).Append(' ');
         }
 
-        // Add enhancement for playing cards
+        // Add enhancement for standard cards
         if (item.Enhancement != MotelyItemEnhancement.None)
         {
             result.Append(item.Enhancement).Append(' ');
@@ -49,11 +49,11 @@ public static class FormatUtils
         // Format based on type
         switch (item.TypeCategory)
         {
-            case MotelyItemTypeCategory.PlayingCard:
-                var playingCard = (MotelyPlayingCard)(
+            case MotelyItemTypeCategory.Standardcard:
+                var standardcard = (MotelyStandardCard)(
                     item.Value & MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
                 );
-                result.Append(FormatPlayingCard(playingCard));
+                result.Append(FormatStandardcard(standardcard));
                 break;
 
             default:
@@ -175,7 +175,7 @@ public static class FormatUtils
         return FormatDisplayName(name);
     }
 
-    public static string FormatPlayingCardSuit(string suitAbbreviation)
+    public static string FormatStandardcardSuit(string suitAbbreviation)
     {
         return suitAbbreviation switch
         {
@@ -187,7 +187,7 @@ public static class FormatUtils
         };
     }
 
-    public static string FormatPlayingCardRank(string rankAbbreviation)
+    public static string FormatStandardcardRank(string rankAbbreviation)
     {
         return rankAbbreviation switch
         {
@@ -211,43 +211,43 @@ public static class FormatUtils
         };
     }
 
-    public static string FormatPlayingCard(MotelyPlayingCard card)
+    public static string FormatStandardcard(MotelyStandardCard card)
     {
         var rank = card.GetRank();
         var suit = card.GetSuit();
 
         var rankStr = rank switch
         {
-            MotelyPlayingCardRank.Two => "2",
-            MotelyPlayingCardRank.Three => "3",
-            MotelyPlayingCardRank.Four => "4",
-            MotelyPlayingCardRank.Five => "5",
-            MotelyPlayingCardRank.Six => "6",
-            MotelyPlayingCardRank.Seven => "7",
-            MotelyPlayingCardRank.Eight => "8",
-            MotelyPlayingCardRank.Nine => "9",
-            MotelyPlayingCardRank.Ten => "10",
-            MotelyPlayingCardRank.Jack => "Jack",
-            MotelyPlayingCardRank.Queen => "Queen",
-            MotelyPlayingCardRank.King => "King",
-            MotelyPlayingCardRank.Ace => "Ace",
+            MotelyStandardcardRank.Two => "2",
+            MotelyStandardcardRank.Three => "3",
+            MotelyStandardcardRank.Four => "4",
+            MotelyStandardcardRank.Five => "5",
+            MotelyStandardcardRank.Six => "6",
+            MotelyStandardcardRank.Seven => "7",
+            MotelyStandardcardRank.Eight => "8",
+            MotelyStandardcardRank.Nine => "9",
+            MotelyStandardcardRank.Ten => "10",
+            MotelyStandardcardRank.Jack => "Jack",
+            MotelyStandardcardRank.Queen => "Queen",
+            MotelyStandardcardRank.King => "King",
+            MotelyStandardcardRank.Ace => "Ace",
             _ => throw new InvalidEnumArgumentException(
                 nameof(rank),
                 (int)rank,
-                typeof(MotelyPlayingCardRank)
+                typeof(MotelyStandardcardRank)
             ),
         };
 
         var suitStr = suit switch
         {
-            MotelyPlayingCardSuit.Clubs => "Clubs",
-            MotelyPlayingCardSuit.Diamonds => "Diamonds",
-            MotelyPlayingCardSuit.Hearts => "Hearts",
-            MotelyPlayingCardSuit.Spades => "Spades",
+            MotelyStandardcardSuit.Clubs => "Clubs",
+            MotelyStandardcardSuit.Diamonds => "Diamonds",
+            MotelyStandardcardSuit.Hearts => "Hearts",
+            MotelyStandardcardSuit.Spades => "Spades",
             _ => throw new InvalidEnumArgumentException(
                 nameof(rank),
                 (int)rank,
-                typeof(MotelyPlayingCardRank)
+                typeof(MotelyStandardcardRank)
             ),
         };
 
@@ -280,7 +280,7 @@ public static class FormatUtils
     /// <summary>
     /// Parses a string produced by <see cref="FormatItem"/> (a &quot;jummy&quot;): sticker order
     /// <see cref="FormatItem"/>, then optional seal, then edition, enhancement, then type
-    /// (<see cref="FormatDisplayName"/> for non–playing-card types, <see cref="FormatPlayingCard"/> for cards).
+    /// (<see cref="FormatDisplayName"/> for non–playing-card types, <see cref="FormatStandardcard"/> for cards).
     /// </summary>
     public static MotelyItem ParseMotelyItem(string s)
     {
@@ -403,9 +403,9 @@ public static class FormatUtils
     {
         item = default;
 
-        foreach (MotelyPlayingCard card in Enum.GetValues<MotelyPlayingCard>())
+        foreach (MotelyStandardCard card in Enum.GetValues<MotelyStandardCard>())
         {
-            if (string.Equals(FormatPlayingCard(card), typeTail, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(FormatStandardcard(card), typeTail, StringComparison.OrdinalIgnoreCase))
             {
                 item = new MotelyItem(card);
                 ApplyMotelyItemModifiers(

@@ -29,10 +29,10 @@ public readonly struct MotelyItemVector(Vector256<int> value)
     public readonly VectorEnum256<MotelyItemEdition> Edition =>
         new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.ItemEditionMask)));
 
-    public readonly VectorEnum256<MotelyPlayingCardSuit> PlayingCardSuit =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.PlayingCardSuitMask)));
-    public readonly VectorEnum256<MotelyPlayingCardRank> PlayingCardRank =>
-        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.PlayingCardRankMask)));
+    public readonly VectorEnum256<MotelyStandardcardSuit> StandardcardSuit =>
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.StandardcardSuitMask)));
+    public readonly VectorEnum256<MotelyStandardcardRank> StandardcardRank =>
+        new(Vector256.BitwiseAnd(Value, Vector256.Create(MotelyGlobals.StandardcardRankMask)));
 
     public readonly VectorMask IsPerishable =>
         ~Vector256.IsZero(

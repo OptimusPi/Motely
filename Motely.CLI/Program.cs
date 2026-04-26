@@ -4,6 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.CLI;
 using Motely.Analysis;
+using Motely.DB;
 using Motely.DB.SeedSource;
 using Motely.Filters;
 using Motely.Filters.Native;
@@ -235,10 +236,10 @@ partial class Program
             "Seed source file name or absolute path",
             CommandOptionType.SingleValue
         );
-        var sinkOption = app.Option<string>(
-            "--sink <NAME_OR_PATH>",
-            "Result sink file name or absolute path",
-            CommandOptionType.SingleValue
+        var sinkOption = app.Option(
+            "--sink",
+            "Write results to the ducklake at ./Seeds/ducklake/ (keyed by JAML filter name)",
+            CommandOptionType.NoValue
         );
         var seedsOption = app.Option<string>(
             "--seeds <LIST>",
@@ -492,8 +493,9 @@ partial class Program
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;
 
+            var filterId = config.Name ?? Path.GetFileNameWithoutExtension(jamlOption.ParsedValue);
             using ISeedResultSink? sink = sinkOption.HasValue()
-                ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, scoreTallyColumns)
+                ? MotelyLake.GetSink(filterId, scoreTallyColumns)
                 : null;
 
             // Always attach a progress callback so 'p' hotkey stays current;
@@ -506,9 +508,11 @@ partial class Program
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
+                    // Sink gets everything past engine cutoff — lake stores all, display filters on read.
+                    sink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
+
                     if (cutoffAuto)
                     {
-                        // Running maximum: print every seed at or above the best score so far (ties at the max included).
                         if (tally.Score < currentHigh) return;
                         currentHigh = Math.Max(currentHigh, tally.Score);
                     }
@@ -517,7 +521,6 @@ partial class Program
 
                     var tallies = string.Join(",", tally.TallyValuesSpan.ToArray());
                     Console.WriteLine($"{tally.Seed},{tally.Score},{tallies}");
-                    sink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
                 });
             }
 

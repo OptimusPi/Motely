@@ -6,7 +6,7 @@ public struct MotelySingleShopItemStream
 {
     public double TarotRate;
     public double PlanetRate;
-    public double PlayingCardRate;
+    public double StandardcardRate;
     public double SpectralRate;
     public double TotalRate;
     public MotelySinglePrngStream ItemTypeStream;
@@ -75,7 +75,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
             TarotRate = 4,
             PlanetRate = 4,
-            PlayingCardRate = 0,
+            StandardcardRate = 0,
             SpectralRate = 0,
         };
 
@@ -104,14 +104,14 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
         if (runState.IsVoucherActive(MotelyVoucher.MagicTrick))
         {
-            stream.PlayingCardRate = 4;
+            stream.StandardcardRate = 4;
         }
 
         stream.TotalRate =
             ShopJokerRate
             + stream.TarotRate
             + stream.PlanetRate
-            + stream.PlayingCardRate
+            + stream.StandardcardRate
             + stream.SpectralRate;
 
         return stream;
@@ -152,9 +152,9 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
         itemTypePoll -= stream.PlanetRate;
 
-        if (itemTypePoll < stream.PlayingCardRate)
+        if (itemTypePoll < stream.StandardcardRate)
         {
-            // This shop will generate a playing card
+            // This shop will generate a standard card
             return new(MotelyItemType.NotImplemented);
         }
 

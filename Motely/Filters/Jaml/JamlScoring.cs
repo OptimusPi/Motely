@@ -603,17 +603,17 @@ public static class JamlScoring
         int count = 0;
         foreach (int ante in clause.Antes)
         {
-            MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyPlayingCard>.ValueCount];
+            MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyStandardCard>.ValueCount];
             for (int i = 0; i < deck.Length; i++)
-                deck[i] = new(MotelyEnum<MotelyPlayingCard>.Values[i]);
+                deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
 
             ctx.Shuffle("nr1", deck);
             int handSize = Math.Min(8, deck.Length);
             for (int i = 0; i < handSize; i++)
             {
                 var card = deck[deck.Length - handSize + i];
-                bool matchRank = !clause.Rank.HasValue || card.PlayingCardRank == clause.Rank.Value;
-                bool matchSuit = !clause.Suit.HasValue || card.PlayingCardSuit == clause.Suit.Value;
+                bool matchRank = !clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value;
+                bool matchSuit = !clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value;
                 if (matchRank && matchSuit)
                     count++;
             }
@@ -626,7 +626,7 @@ public static class JamlScoring
         int count = 0;
         var stream = ctx.CreateErraticDeckPrngStream();
         for (int i = 0; i < 52; i++)
-            if (ctx.GetNextErraticDeckCard(ref stream).PlayingCardRank == clause.Rank)
+            if (ctx.GetNextErraticDeckCard(ref stream).StandardcardRank == clause.Rank)
                 count++;
         return count;
     }
@@ -636,7 +636,7 @@ public static class JamlScoring
         int count = 0;
         var stream = ctx.CreateErraticDeckPrngStream();
         for (int i = 0; i < 52; i++)
-            if (ctx.GetNextErraticDeckCard(ref stream).PlayingCardSuit == clause.Suit)
+            if (ctx.GetNextErraticDeckCard(ref stream).StandardcardSuit == clause.Suit)
                 count++;
         return count;
     }
@@ -648,8 +648,8 @@ public static class JamlScoring
         for (int i = 0; i < 52; i++)
         {
             var card = ctx.GetNextErraticDeckCard(ref stream);
-            if ((!clause.Rank.HasValue || card.PlayingCardRank == clause.Rank.Value)
-                && (!clause.Suit.HasValue || card.PlayingCardSuit == clause.Suit.Value))
+            if ((!clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value)
+                && (!clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value))
                 count++;
         }
         return count;
@@ -1246,11 +1246,11 @@ public static class JamlScoring
 
     private static int MatchStandardCard(MotelyItem item, StandardCardClause clause)
     {
-        if (item.TypeCategory != MotelyItemTypeCategory.PlayingCard)
+        if (item.TypeCategory != MotelyItemTypeCategory.Standardcard)
             return 0;
-        if (clause.Rank.HasValue && item.PlayingCardRank != clause.Rank.Value)
+        if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value)
             return 0;
-        if (clause.Suit.HasValue && item.PlayingCardSuit != clause.Suit.Value)
+        if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value)
             return 0;
         if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value)
             return 0;

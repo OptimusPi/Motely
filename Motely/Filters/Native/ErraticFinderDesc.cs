@@ -4,7 +4,7 @@ namespace Motely;
 
 public struct ErraticFinderDesc() : IMotelySeedFilterDesc<ErraticFinderDesc.FilterStruct>
 {
-    public const MotelyPlayingCardSuit CardSuit = MotelyPlayingCardSuit.Hearts;
+    public const MotelyStandardcardSuit CardSuit = MotelyStandardcardSuit.Hearts;
     public const int RequiredCount = 28;
 
     public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
@@ -27,7 +27,7 @@ public struct ErraticFinderDesc() : IMotelySeedFilterDesc<ErraticFinderDesc.Filt
                 var cardVector = searchContext.GetNextErraticDeckCard(ref stream);
 
                 counts += Vector256.ConditionalSelect(
-                    VectorEnum256.Equals(cardVector.PlayingCardSuit, CardSuit),
+                    VectorEnum256.Equals(cardVector.StandardcardSuit, CardSuit),
                     Vector256<int>.One,
                     Vector256<int>.Zero
                 );

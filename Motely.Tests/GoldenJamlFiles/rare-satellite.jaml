@@ -1,0 +1,39 @@
+name: Satellite Planet Economy
+author: jammy
+description: Satellite rare joker with Astronomer for Planet card economy
+deck: Nebula
+stake: White
+hashtags: ["joker", "rare-joker", "copy", "negative", "planet-scaling", "legendary-synergy"]
+must:
+  - uncommonJoker: Satellite
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Astronomer
+    score: 75
+  - uncommonJoker: Constellation
+    score: 55
+  - voucher: PlanetMerchant
+    score: 55
+  - legendaryJoker: Perkeo
+    score: 55
+  - tarot: TheHighPriestess
+    score: 55
+  - voucher: Telescope
+    score: 50
+  - voucher: Observatory
+    score: 55
+  - voucher: PlanetTycoon
+    score: 45
+  - spectral: BlackHole
+    score: 40
+  - rareJoker: Blueprint
+    score: 40
+  - rareJoker: Brainstorm
+    score: 35
+  - mixedJoker: Any
+    edition: Negative
+    score: 35

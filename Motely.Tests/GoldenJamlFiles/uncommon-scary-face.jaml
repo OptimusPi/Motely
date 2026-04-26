@@ -1,0 +1,43 @@
+name: Scary Face Face Cards
+author: pifreak
+description: Scary Face uncommon for +30 Chips per face card scored
+deck: Erratic
+stake: White
+hashtags: ["joker", "uncommon-joker", "copy", "negative", "planet-scaling", "retrigger", "face-cards", "erratic", "legendary-synergy"]
+must:
+  - erraticRanks: [Jack, Queen, King]
+    min: 52
+  - commonJoker: ScaryFace
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Pareidolia
+    score: 75
+  - commonJoker: SmileyFace
+    score: 60
+  - commonJoker: Photograph
+    score: 55
+  - commonJoker: BusinessCard
+    score: 50
+  - uncommonJoker: SockAndBuskin
+    score: 50
+  - legendaryJoker: Triboulet
+    score: 55
+  - legendaryJoker: Canio
+    score: 45
+  - rareJoker: Blueprint
+    score: 45
+  - tag: NegativeTag
+    score: 35
+  - legendaryJoker: Perkeo
+    score: 35
+  - rareJoker: Brainstorm
+    score: 30
+  - mixedJoker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Chicot
+    score: 20

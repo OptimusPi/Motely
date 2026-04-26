@@ -9,7 +9,7 @@ public sealed class ErraticRankClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyPlayingCardRank Rank { get; init; }
+    public required MotelyStandardcardRank Rank { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
 }
@@ -41,7 +41,7 @@ public struct ErraticRankFilterDesc(ErraticRankClause clause)
             {
                 var card = ctx.GetNextErraticDeckCard(ref stream);
                 count += Vector256.ConditionalSelect(
-                    VectorEnum256.Equals(card.PlayingCardRank, clause.Rank),
+                    VectorEnum256.Equals(card.StandardcardRank, clause.Rank),
                     Vector256<int>.One,
                     Vector256<int>.Zero
                 );

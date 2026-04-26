@@ -12,22 +12,22 @@ public struct ShuffleFinderFilterDesc()
 
     public struct ShuffleFinderFilter() : IMotelySeedFilter
     {
-        private static readonly MotelyPlayingCardRank[] straightRankOrder =
+        private static readonly MotelyStandardcardRank[] straightRankOrder =
         [
-            MotelyPlayingCardRank.Ace,
-            MotelyPlayingCardRank.Two,
-            MotelyPlayingCardRank.Three,
-            MotelyPlayingCardRank.Four,
-            MotelyPlayingCardRank.Five,
-            MotelyPlayingCardRank.Six,
-            MotelyPlayingCardRank.Seven,
-            MotelyPlayingCardRank.Eight,
-            MotelyPlayingCardRank.Nine,
-            MotelyPlayingCardRank.Ten,
-            MotelyPlayingCardRank.Jack,
-            MotelyPlayingCardRank.Queen,
-            MotelyPlayingCardRank.King,
-            MotelyPlayingCardRank.Ace,
+            MotelyStandardcardRank.Ace,
+            MotelyStandardcardRank.Two,
+            MotelyStandardcardRank.Three,
+            MotelyStandardcardRank.Four,
+            MotelyStandardcardRank.Five,
+            MotelyStandardcardRank.Six,
+            MotelyStandardcardRank.Seven,
+            MotelyStandardcardRank.Eight,
+            MotelyStandardcardRank.Nine,
+            MotelyStandardcardRank.Ten,
+            MotelyStandardcardRank.Jack,
+            MotelyStandardcardRank.Queen,
+            MotelyStandardcardRank.King,
+            MotelyStandardcardRank.Ace,
         ];
 
         public enum HandType
@@ -63,7 +63,7 @@ public struct ShuffleFinderFilterDesc()
 
         public static HandInfo BestScore(Span<MotelyItem> hand)
         {
-            hand.Sort((a, b) => ((int)a.PlayingCardRank) - ((int)b.PlayingCardRank));
+            hand.Sort((a, b) => ((int)a.StandardcardRank) - ((int)b.StandardcardRank));
 
             int clubSuitCount = 0;
             int diamondSuitCount = 0;
@@ -75,27 +75,27 @@ public struct ShuffleFinderFilterDesc()
                 bestScoreMult = 0;
             HandType bestHand = HandType.HighCard;
 
-            int[] cardCounts = new int[MotelyEnum<MotelyPlayingCardRank>.ValueCount];
+            int[] cardCounts = new int[MotelyEnum<MotelyStandardcardRank>.ValueCount];
 
             for (int i = 0; i < hand.Length; i++)
             {
-                switch (hand[i].PlayingCardSuit)
+                switch (hand[i].StandardcardSuit)
                 {
-                    case MotelyPlayingCardSuit.Clubs:
+                    case MotelyStandardcardSuit.Clubs:
                         ++clubSuitCount;
                         break;
-                    case MotelyPlayingCardSuit.Diamonds:
+                    case MotelyStandardcardSuit.Diamonds:
                         ++diamondSuitCount;
                         break;
-                    case MotelyPlayingCardSuit.Hearts:
+                    case MotelyStandardcardSuit.Hearts:
                         ++heartSuitCount;
                         break;
-                    case MotelyPlayingCardSuit.Spades:
+                    case MotelyStandardcardSuit.Spades:
                         ++spadeSuitCount;
                         break;
                 }
 
-                MotelyPlayingCardRank rank = hand[i].PlayingCardRank;
+                MotelyStandardcardRank rank = hand[i].StandardcardRank;
 
                 int rankCount = ++cardCounts[(int)rank];
 
@@ -190,7 +190,7 @@ public struct ShuffleFinderFilterDesc()
                 }
             }
 
-            void ScoreFlush(Span<MotelyItem> hand, MotelyPlayingCardSuit suit)
+            void ScoreFlush(Span<MotelyItem> hand, MotelyStandardcardSuit suit)
             {
                 // Flush
 
@@ -200,11 +200,11 @@ public struct ShuffleFinderFilterDesc()
 
                 for (int j = 0; j < hand.Length; j++)
                 {
-                    if (hand[j].PlayingCardSuit == suit)
+                    if (hand[j].StandardcardSuit == suit)
                     {
                         ++cardCount;
 
-                        chips += GetCardChips(hand[j].PlayingCardRank);
+                        chips += GetCardChips(hand[j].StandardcardRank);
 
                         if (cardCount == 5)
                             break;
@@ -223,15 +223,15 @@ public struct ShuffleFinderFilterDesc()
             }
 
             if (clubSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Clubs);
+                ScoreFlush(hand, MotelyStandardcardSuit.Clubs);
             if (diamondSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Diamonds);
+                ScoreFlush(hand, MotelyStandardcardSuit.Diamonds);
             if (heartSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Hearts);
+                ScoreFlush(hand, MotelyStandardcardSuit.Hearts);
             if (spadeSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Spades);
+                ScoreFlush(hand, MotelyStandardcardSuit.Spades);
 
-            void SearchForStraightFlush(Span<MotelyItem> hand, MotelyPlayingCardSuit suit)
+            void SearchForStraightFlush(Span<MotelyItem> hand, MotelyStandardcardSuit suit)
             {
                 for (int i = 0; i < strightStartingCardCount; i++)
                 {
@@ -243,8 +243,8 @@ public struct ShuffleFinderFilterDesc()
                             !CardMatches(
                                 hand,
                                 card =>
-                                    card.PlayingCardRank == straightRankOrder[i + j]
-                                    && card.PlayingCardSuit == suit
+                                    card.StandardcardRank == straightRankOrder[i + j]
+                                    && card.StandardcardSuit == suit
                             )
                         )
                         {
@@ -278,13 +278,13 @@ public struct ShuffleFinderFilterDesc()
             if (hasStraight)
             {
                 if (clubSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Clubs);
+                    SearchForStraightFlush(hand, MotelyStandardcardSuit.Clubs);
                 if (diamondSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Diamonds);
+                    SearchForStraightFlush(hand, MotelyStandardcardSuit.Diamonds);
                 if (heartSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Hearts);
+                    SearchForStraightFlush(hand, MotelyStandardcardSuit.Hearts);
                 if (spadeSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Spades);
+                    SearchForStraightFlush(hand, MotelyStandardcardSuit.Spades);
             }
 
             {
@@ -316,8 +316,8 @@ public struct ShuffleFinderFilterDesc()
                     // Full House
                     int chips =
                         40
-                        + 3 * GetCardChips((MotelyPlayingCardRank)threeRank)
-                        + 2 * GetCardChips((MotelyPlayingCardRank)twoRankA);
+                        + 3 * GetCardChips((MotelyStandardcardRank)threeRank)
+                        + 2 * GetCardChips((MotelyStandardcardRank)twoRankA);
                     if (chips * 4 > bestScore)
                     {
                         bestScoreChips = chips;
@@ -332,8 +332,8 @@ public struct ShuffleFinderFilterDesc()
                     // Two Pair
                     int chips =
                         20
-                        + 2 * GetCardChips((MotelyPlayingCardRank)twoRankA)
-                        + 2 * GetCardChips((MotelyPlayingCardRank)twoRankB);
+                        + 2 * GetCardChips((MotelyStandardcardRank)twoRankA)
+                        + 2 * GetCardChips((MotelyStandardcardRank)twoRankB);
                     if (chips * 2 > bestScore)
                     {
                         bestScoreChips = chips;
@@ -347,23 +347,23 @@ public struct ShuffleFinderFilterDesc()
             return new(bestHand, bestScoreChips, bestScoreMult);
         }
 
-        private static int GetCardChips(MotelyPlayingCardRank rank)
+        private static int GetCardChips(MotelyStandardcardRank rank)
         {
             return rank switch
             {
-                MotelyPlayingCardRank.Ace => 11,
-                MotelyPlayingCardRank.King => 10,
-                MotelyPlayingCardRank.Queen => 10,
-                MotelyPlayingCardRank.Jack => 10,
-                MotelyPlayingCardRank.Ten => 10,
-                MotelyPlayingCardRank.Nine => 9,
-                MotelyPlayingCardRank.Eight => 8,
-                MotelyPlayingCardRank.Seven => 7,
-                MotelyPlayingCardRank.Six => 6,
-                MotelyPlayingCardRank.Five => 5,
-                MotelyPlayingCardRank.Four => 4,
-                MotelyPlayingCardRank.Three => 3,
-                MotelyPlayingCardRank.Two => 2,
+                MotelyStandardcardRank.Ace => 11,
+                MotelyStandardcardRank.King => 10,
+                MotelyStandardcardRank.Queen => 10,
+                MotelyStandardcardRank.Jack => 10,
+                MotelyStandardcardRank.Ten => 10,
+                MotelyStandardcardRank.Nine => 9,
+                MotelyStandardcardRank.Eight => 8,
+                MotelyStandardcardRank.Seven => 7,
+                MotelyStandardcardRank.Six => 6,
+                MotelyStandardcardRank.Five => 5,
+                MotelyStandardcardRank.Four => 4,
+                MotelyStandardcardRank.Three => 3,
+                MotelyStandardcardRank.Two => 2,
                 _ => throw new InvalidOperationException(),
             };
         }
@@ -391,11 +391,11 @@ public struct ShuffleFinderFilterDesc()
             return searchContext.SearchIndividualSeeds(
                 (ref MotelySingleSearchContext searchContext) =>
                 {
-                    MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyPlayingCard>.ValueCount];
+                    MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyStandardCard>.ValueCount];
 
                     for (int i = 0; i < deck.Length; i++)
                     {
-                        deck[i] = new(MotelyEnum<MotelyPlayingCard>.Values[i]);
+                        deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
                     }
 
                     searchContext.Shuffle("nr1", deck);
@@ -421,18 +421,18 @@ public struct ShuffleFinderFilterDesc()
 
                     foreach (MotelyItem item in hand)
                     {
-                        switch (item.PlayingCardRank)
+                        switch (item.StandardcardRank)
                         {
-                            case MotelyPlayingCardRank.Seven:
+                            case MotelyStandardcardRank.Seven:
                                 ++sevenCount;
                                 break;
-                            case MotelyPlayingCardRank.Five:
+                            case MotelyStandardcardRank.Five:
                                 ++fiveCount;
                                 break;
-                            // case MotelyPlayingCardRank.Six:
+                            // case MotelyStandardcardRank.Six:
                             //     ++sixCount;
                             //     break;
-                            case MotelyPlayingCardRank.Three:
+                            case MotelyStandardcardRank.Three:
                                 ++threeCount;
                                 break;
                         }

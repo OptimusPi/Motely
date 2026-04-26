@@ -1,0 +1,37 @@
+name: Grim Ace Build
+author: jammy
+description: Grim spectral with Scholar for enhanced Ace synergy
+deck: Red
+stake: White
+hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "deck-fix", "legendary-synergy"]
+must:
+  - spectral: Grim
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - commonJoker: Scholar
+    score: 75
+  - uncommonJoker: Fibonacci
+    score: 60
+  - uncommonJoker: Hologram
+    score: 55
+  - commonJoker: Superposition
+    score: 50
+  - rareJoker: DNA
+    score: 45
+  - commonJoker: Runner
+    score: 30
+  - rareJoker: Blueprint
+    score: 35
+  - tag: NegativeTag
+    score: 35
+  - mixedJoker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 30
+  - rareJoker: Brainstorm
+    score: 30

@@ -11,8 +11,8 @@ public sealed class ErraticCardClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public MotelyPlayingCardRank? Rank { get; init; }
-    public MotelyPlayingCardSuit? Suit { get; init; }
+    public MotelyStandardcardRank? Rank { get; init; }
+    public MotelyStandardcardSuit? Suit { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
 }

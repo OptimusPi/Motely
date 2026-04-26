@@ -9,7 +9,7 @@ public sealed class ErraticSuitClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyPlayingCardSuit Suit { get; init; }
+    public required MotelyStandardcardSuit Suit { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
 }
@@ -41,7 +41,7 @@ public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
             {
                 var card = ctx.GetNextErraticDeckCard(ref stream);
                 count += Vector256.ConditionalSelect(
-                    VectorEnum256.Equals(card.PlayingCardSuit, clause.Suit),
+                    VectorEnum256.Equals(card.StandardcardSuit, clause.Suit),
                     Vector256<int>.One,
                     Vector256<int>.Zero
                 );

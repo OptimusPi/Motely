@@ -73,9 +73,9 @@
     <type fullname="Motely.MotelyItemSeal" preserve="all" />
     <type fullname="Motely.MotelyItemType" preserve="all" />
     <type fullname="Motely.MotelyItemTypeCategory" preserve="all" />
-    <type fullname="Motely.MotelyPlayingCardRank" preserve="all" />
-    <type fullname="Motely.MotelyPlayingCardSuit" preserve="all" />
-    <type fullname="Motely.MotelyPlayingCard" preserve="all" />
+    <type fullname="Motely.MotelyStandardcardRank" preserve="all" />
+    <type fullname="Motely.MotelyStandardcardSuit" preserve="all" />
+    <type fullname="Motely.MotelyStandardcard" preserve="all" />
     <type fullname="Motely.MotelyDeck" preserve="all" />
     <type fullname="Motely.MotelyStake" preserve="all" />
     <type fullname="Motely.MotelySearchMode" preserve="all" />

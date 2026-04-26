@@ -304,7 +304,7 @@ ref partial struct MotelyVectorSearchContext
         for (int i = 0; i < cardCount; i++)
         {
             var tarot = GetNextTarot(ref tarotStream);
-            // Extract tarot card type using bit masking (similar to PlayingCardSuit pattern)
+            // Extract tarot card type using bit masking (similar to StandardcardSuit pattern)
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     tarot.Value,
@@ -334,7 +334,7 @@ ref partial struct MotelyVectorSearchContext
         for (int i = 0; i < cardCount; i++)
         {
             var tarot = GetNextTarot(ref tarotStream);
-            // Extract tarot card type using bit masking (similar to PlayingCardSuit pattern)
+            // Extract tarot card type using bit masking (similar to StandardcardSuit pattern)
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     tarot.Value,

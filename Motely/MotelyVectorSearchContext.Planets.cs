@@ -233,7 +233,7 @@ ref partial struct MotelyVectorSearchContext
         for (int i = 0; i < cardCount; i++)
         {
             var planet = GetNextPlanet(ref planetStream);
-            // Extract planet card type using bit masking (similar to PlayingCardSuit pattern)
+            // Extract planet card type using bit masking (similar to StandardcardSuit pattern)
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
                     planet.Value,
@@ -263,7 +263,7 @@ ref partial struct MotelyVectorSearchContext
         for (int i = 0; i < cardCount; i++)
         {
             var planet = GetNextPlanet(ref planetStream);
-            // Extract planet card type using bit masking (similar to PlayingCardSuit pattern)
+            // Extract planet card type using bit masking (similar to StandardcardSuit pattern)
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
                     planet.Value,
