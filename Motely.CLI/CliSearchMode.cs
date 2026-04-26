@@ -31,11 +31,13 @@ internal static class CliSearchMode
         in Input input,
         Action<string>? writeWarning,
         [NotNullWhen(false)] out string? error,
-        out IMotelySearchSettings updated
+        out IMotelySearchSettings updated,
+        out IDisposable? sourceLifetime
     )
     {
         updated = settings;
         error = null;
+        sourceLifetime = null;
 
         bool hasSource = !string.IsNullOrWhiteSpace(input.SourcePath);
         bool hasSeedsArg = !string.IsNullOrWhiteSpace(input.SeedsArgument);
@@ -98,18 +100,32 @@ internal static class CliSearchMode
         }
 
         string[]? explicitSeeds = null;
+        IMotelySeedProvider? streamingProvider = null;
         if (hasSource)
         {
             try
             {
-                var sourceSeeds = SeedReader.ReadSeeds(input.SourcePath!);
-                if (sourceSeeds.Count == 0)
+                if (SeedReader.TryCreateProvider(input.SourcePath!, out var provider))
                 {
-                    error = "Error: resolved source contained no seeds.";
-                    return false;
+                    if (provider!.SeedCount == 0)
+                    {
+                        (provider as IDisposable)?.Dispose();
+                        error = "Error: resolved source contained no seeds.";
+                        return false;
+                    }
+                    streamingProvider = provider;
+                    sourceLifetime = provider as IDisposable;
                 }
-
-                explicitSeeds = sourceSeeds.ToArray();
+                else
+                {
+                    var sourceSeeds = SeedReader.ReadSeeds(input.SourcePath!);
+                    if (sourceSeeds.Count == 0)
+                    {
+                        error = "Error: resolved source contained no seeds.";
+                        return false;
+                    }
+                    explicitSeeds = sourceSeeds.ToArray();
+                }
             }
             catch (Exception ex)
             {
@@ -158,7 +174,11 @@ internal static class CliSearchMode
             }
         }
 
-        if (explicitSeeds != null)
+        if (streamingProvider != null)
+        {
+            updated = updated.WithProviderSearch(streamingProvider);
+        }
+        else if (explicitSeeds != null)
         {
             updated = updated.WithListSearch(explicitSeeds, explicitSeeds.Length);
         }
