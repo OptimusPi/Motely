@@ -1031,17 +1031,6 @@ public static partial class JamlConfigLoader
                 .Range(minPack.Value, maxPack.Value - minPack.Value + 1)
                 .ToArray();
 
-        // Soul joker: arcana/spectral pack lists alone imply split matching — do not inject default [0..5] boosterPacks.
-        if (
-            itemType == MotelyFilterItemType.SoulJoker
-            && boosterPacks == null
-            && (
-                (c.Sources?.ArcanaBoosterPacks?.Length ?? 0) > 0
-                || (c.Sources?.SpectralBoosterPacks?.Length ?? 0) > 0
-            )
-        )
-            boosterPacks = [];
-
         NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, c.Sources);
 
         var (shRank, shSuit) = ParseCardShorthand(value ?? "");
@@ -1605,6 +1594,14 @@ public static partial class JamlConfigLoader
                 break;
 
             case MotelyFilterItemType.SoulJoker:
+                boosterPacks = [0, 1, 2, 3, 4, 5];
+                break;
+
+            case MotelyFilterItemType.Standardcard:
+                // Standard cards (ranked + suited playing cards) come out of standard booster
+                // packs in the shop pack stream — same default range as joker types so a bare
+                // `standardCard: { rank: King }` matches every shop pack slot at the targeted
+                // antes instead of zero.
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
         }
