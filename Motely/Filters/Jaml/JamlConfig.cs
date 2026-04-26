@@ -166,11 +166,9 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "rareJokers")]
     public List<MotelyJokerRare>? RareJokers { get; set; }
 
-    [YamlMember(Alias = "mixedJoker")]
-    public EnumOrAny<MotelyJoker>? MixedJoker { get; set; }
-
-    [YamlMember(Alias = "mixedJokers")]
-    public List<MotelyJoker>? MixedJokers { get; set; }
+    // mixedJoker:/mixedJokers: aliases removed in v14.0.2 — `joker:` IS the mixed-rarity union.
+    // Internal MixedJokerClause / MixedJokerFilterDesc kept temporarily as unreachable dead code
+    // pending a follow-up cleanup PR; nothing in the user-facing JAML can produce them.
 
     [YamlMember(Alias = "soulJoker")]
     public EnumOrAny<MotelyJoker>? SoulJoker { get; set; }
@@ -866,9 +864,6 @@ public static partial class JamlConfigLoader
             case RareJokerClause c:
                 set.RareJokers.Add(c);
                 break;
-            case MixedJokerClause c:
-                set.MixedJokers.Add(c);
-                break;
             case LegendaryJokerClause c:
                 set.LegendaryJokers.Add(c);
                 break;
@@ -1153,35 +1148,10 @@ public static partial class JamlConfigLoader
                     EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
-            MotelyFilterItemType.MixedJoker => new MixedJokerClause
-            {
-                Label = label,
-                Score = score,
-                Antes = antes,
-                Min = min,
-                IsWildcard = c.MixedJoker?.IsAny ?? false,
-                Jokers =
-                    c.MixedJoker is { IsAny: false, Value: var mjv }
-                        ? [mjv]
-                        : (c.MixedJokers ?? c.Jokers)?.ToArray() ?? [],
-                Edition = edition,
-                Stickers = c.Stickers ?? [],
-                Sources = new JokerSourceConfig
-                {
-                    ShopItems = shopItems ?? [],
-                    BoosterPacks = boosterPacks ?? [],
-                    Judgement = c.Sources?.Judgement ?? [],
-                    Wraith = c.Sources?.Wraith ?? [],
-                    RiffRaff = c.Sources?.RiffRaff ?? [],
-                    RareTag = c.Sources?.RareTag ?? [],
-                    UncommonTag = c.Sources?.UncommonTag ?? [],
-                    CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
-                    UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
-                    RareShopJokers = c.Sources?.RareShopJokers ?? [],
-                    AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
-                },
-            },
+            // MotelyFilterItemType.MixedJoker is unreachable in v14.0.2+ — the user-facing
+            // mixedJoker:/mixedJokers: aliases were removed; `joker:` IS the mixed-rarity
+            // union. The MotelyFilterItemType enum value + MixedJokerClause / MixedJokerFilterDesc
+            // are scheduled for a follow-up cleanup PR; nothing routes here anymore.
             MotelyFilterItemType.SoulJoker => new LegendaryJokerClause
             {
                 Label = label,
@@ -1634,8 +1604,6 @@ public static partial class JamlConfigLoader
         if (c.UncommonJokers is { Count: > 0 } uj) return string.Join(", ", uj);
         if (c.RareJoker is { } rareJokerValue) return LabelEnumOrAny(rareJokerValue);
         if (c.RareJokers is { Count: > 0 } rj) return string.Join(", ", rj);
-        if (c.MixedJoker is { } mixedJokerValue) return LabelEnumOrAny(mixedJokerValue);
-        if (c.MixedJokers is { Count: > 0 } mj) return string.Join(", ", mj);
         if (c.SoulJoker is { } soulJokerValue) return LabelEnumOrAny(soulJokerValue);
         if (c.LegendaryJoker is { } legendaryJokerValue) return LabelEnumOrAny(legendaryJokerValue);
         if (c.Voucher is { } voucherValue) return voucherValue.ToString();
@@ -1692,10 +1660,6 @@ public static partial class JamlConfigLoader
             return (MotelyFilterItemType.RareJoker, null);
         if (c.RareJokers != null)
             return (MotelyFilterItemType.RareJoker, null);
-        if (c.MixedJoker != null)
-            return (MotelyFilterItemType.MixedJoker, null);
-        if (c.MixedJokers != null)
-            return (MotelyFilterItemType.MixedJoker, null);
         if (c.SoulJoker != null)
             return (MotelyFilterItemType.SoulJoker, null);
         if (c.LegendaryJoker != null)
