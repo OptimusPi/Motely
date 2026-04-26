@@ -153,4 +153,3 @@ export {
     type JamlSeedInputProps,
 } from "./components/JamlSeedInput.js";
 
-export { initJamlFileSystem } from "./utils/fileSystem.js";
