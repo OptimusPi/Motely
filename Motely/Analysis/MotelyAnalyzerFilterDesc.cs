@@ -51,7 +51,7 @@ public sealed class MotelyAnalyzerFilterDesc()
             for (int i = 0; i < 52; i++)
             {
                 var card = ctx.GetNextErraticDeckCard(ref deckStream);
-                deckCards.Add(FormatCardString(card.PlayingCardRank, card.PlayingCardSuit));
+                deckCards.Add(FormatCardString(card.StandardcardRank, card.StandardcardSuit));
             }
 
             string startingDeck = string.Join(",", deckCards);
@@ -157,7 +157,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                 for (int i = 0; i < 52; i++)
                 {
                     var card = ctx.GetNextErraticDeckCard(ref deckStream);
-                    drawCards.Add(FormatCardString(card.PlayingCardRank, card.PlayingCardSuit));
+                    drawCards.Add(FormatCardString(card.StandardcardRank, card.StandardcardSuit));
                 }
             }
             else
@@ -182,10 +182,10 @@ public sealed class MotelyAnalyzerFilterDesc()
 
                         foreach (var item in packContents.AsArray())
                         {
-                            if (item.TypeCategory == MotelyItemTypeCategory.PlayingCard)
+                            if (item.TypeCategory == MotelyItemTypeCategory.Standardcard)
                             {
                                 drawCards.Add(
-                                    FormatCardString(item.PlayingCardRank, item.PlayingCardSuit)
+                                    FormatCardString(item.StandardcardRank, item.StandardcardSuit)
                                 );
                             }
                         }
@@ -200,33 +200,33 @@ public sealed class MotelyAnalyzerFilterDesc()
         /// Formats a card as "2_H" or "K_C" format
         /// </summary>
         private static string FormatCardString(
-            MotelyPlayingCardRank rank,
-            MotelyPlayingCardSuit suit
+            MotelyStandardcardRank rank,
+            MotelyStandardcardSuit suit
         )
         {
             var rankStr = rank switch
             {
-                MotelyPlayingCardRank.Two => "2",
-                MotelyPlayingCardRank.Three => "3",
-                MotelyPlayingCardRank.Four => "4",
-                MotelyPlayingCardRank.Five => "5",
-                MotelyPlayingCardRank.Six => "6",
-                MotelyPlayingCardRank.Seven => "7",
-                MotelyPlayingCardRank.Eight => "8",
-                MotelyPlayingCardRank.Nine => "9",
-                MotelyPlayingCardRank.Ten => "10",
-                MotelyPlayingCardRank.Jack => "J",
-                MotelyPlayingCardRank.Queen => "Q",
-                MotelyPlayingCardRank.King => "K",
-                MotelyPlayingCardRank.Ace => "A",
+                MotelyStandardcardRank.Two => "2",
+                MotelyStandardcardRank.Three => "3",
+                MotelyStandardcardRank.Four => "4",
+                MotelyStandardcardRank.Five => "5",
+                MotelyStandardcardRank.Six => "6",
+                MotelyStandardcardRank.Seven => "7",
+                MotelyStandardcardRank.Eight => "8",
+                MotelyStandardcardRank.Nine => "9",
+                MotelyStandardcardRank.Ten => "10",
+                MotelyStandardcardRank.Jack => "J",
+                MotelyStandardcardRank.Queen => "Q",
+                MotelyStandardcardRank.King => "K",
+                MotelyStandardcardRank.Ace => "A",
                 _ => rank.ToString(),
             };
             var suitStr = suit switch
             {
-                MotelyPlayingCardSuit.Clubs => "C",
-                MotelyPlayingCardSuit.Diamonds => "D",
-                MotelyPlayingCardSuit.Hearts => "H",
-                MotelyPlayingCardSuit.Spades => "S",
+                MotelyStandardcardSuit.Clubs => "C",
+                MotelyStandardcardSuit.Diamonds => "D",
+                MotelyStandardcardSuit.Hearts => "H",
+                MotelyStandardcardSuit.Spades => "S",
                 _ => suit.ToString(),
             };
             return $"{rankStr}_{suitStr}";

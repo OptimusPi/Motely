@@ -38,10 +38,10 @@ public struct ErraticCardFilterDesc(ErraticCardClause clause)
                 VectorMask match = VectorMask.AllBitsSet;
 
                 if (clause.Rank.HasValue)
-                    match &= VectorEnum256.Equals(card.PlayingCardRank, clause.Rank.Value);
+                    match &= VectorEnum256.Equals(card.StandardcardRank, clause.Rank.Value);
 
                 if (clause.Suit.HasValue)
-                    match &= VectorEnum256.Equals(card.PlayingCardSuit, clause.Suit.Value);
+                    match &= VectorEnum256.Equals(card.StandardcardSuit, clause.Suit.Value);
 
                 count += Vector256.ConditionalSelect(
                     VectorMaskToConditionalSelectMask(match),

@@ -7,8 +7,8 @@ public sealed class StartingDrawClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public MotelyPlayingCardRank? Rank { get; init; }
-    public MotelyPlayingCardSuit? Suit { get; init; }
+    public MotelyStandardcardRank? Rank { get; init; }
+    public MotelyStandardcardSuit? Suit { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
 }
@@ -41,11 +41,11 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
                     foreach (int ante in clause.Antes)
                     {
                         MotelyItem[] deck = new MotelyItem[
-                            MotelyEnum<MotelyPlayingCard>.ValueCount
+                            MotelyEnum<MotelyStandardCard>.ValueCount
                         ];
                         for (int i = 0; i < deck.Length; i++)
                         {
-                            deck[i] = new(MotelyEnum<MotelyPlayingCard>.Values[i]);
+                            deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
                         }
 
                         ctx.Shuffle("nr1", deck);
@@ -56,9 +56,9 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
                             var card = deck[deck.Length - handSize + i];
 
                             bool rankMatch =
-                                !clause.Rank.HasValue || card.PlayingCardRank == clause.Rank.Value;
+                                !clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value;
                             bool suitMatch =
-                                !clause.Suit.HasValue || card.PlayingCardSuit == clause.Suit.Value;
+                                !clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value;
 
                             if (rankMatch && suitMatch)
                                 matchCount++;

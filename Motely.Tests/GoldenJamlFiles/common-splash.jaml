@@ -1,0 +1,41 @@
+name: Splash All Cards Score
+author: jammy
+description: Splash common with Painted Deck for all played cards scoring
+deck: Painted
+stake: White
+hashtags: ["joker", "common-joker", "copy", "negative", "planet-scaling", "stone", "dark-suits", "legendary-synergy"]
+must:
+  - commonJoker: Splash
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: StoneJoker
+    score: 65
+  - uncommonJoker: MarbleJoker
+    score: 55
+  - tarot: TheTower
+    score: 50
+  - uncommonJoker: FlowerPot
+    score: 45
+  - commonJoker: BlueJoker
+    score: 40
+  - uncommonJoker: Blackboard
+    score: 35
+  - uncommonJoker: Hiker
+    score: 35
+  - rareJoker: Blueprint
+    score: 35
+  - rareJoker: Brainstorm
+    score: 30
+  - tag: NegativeTag
+    score: 40
+  - mixedJoker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 30
+  - legendaryJoker: Chicot
+    score: 20

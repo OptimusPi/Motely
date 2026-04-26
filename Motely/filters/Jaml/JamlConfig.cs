@@ -1277,7 +1277,7 @@ public static partial class JamlConfigLoader
                 Tags = c.BigBlindTag is { } bbt ? [bbt] : [],
                 Position = TagPosition.BigBlind,
             },
-            MotelyFilterItemType.PlayingCard => new StandardCardClause
+            MotelyFilterItemType.Standardcard => new StandardCardClause
             {
                 Label = label,
                 Score = score,
@@ -1701,7 +1701,7 @@ public static partial class JamlConfigLoader
         if (c.BigBlindTag != null)
             return (MotelyFilterItemType.BigBlindTag, null);
         if (c.StandardCard != null)
-            return (MotelyFilterItemType.PlayingCard, c.StandardCard);
+            return (MotelyFilterItemType.Standardcard, c.StandardCard);
         if (c.ErraticRank != null)
             return (MotelyFilterItemType.ErraticRank, c.ErraticRank);
         if (c.ErraticSuit != null)
@@ -1780,50 +1780,50 @@ public static partial class JamlConfigLoader
         where T : struct, Enum =>
         value != null && Enum.TryParse<T>(value, ignoreCase: true, out var result) ? result : null;
 
-    private static MotelyPlayingCardRank? ParseRank(string? value)
+    private static MotelyStandardcardRank? ParseRank(string? value)
     {
         if (string.IsNullOrEmpty(value))
             return null;
         return value.ToUpperInvariant() switch
         {
-            "2" => MotelyPlayingCardRank.Two,
-            "3" => MotelyPlayingCardRank.Three,
-            "4" => MotelyPlayingCardRank.Four,
-            "5" => MotelyPlayingCardRank.Five,
-            "6" => MotelyPlayingCardRank.Six,
-            "7" => MotelyPlayingCardRank.Seven,
-            "8" => MotelyPlayingCardRank.Eight,
-            "9" => MotelyPlayingCardRank.Nine,
-            "10" or "T" => MotelyPlayingCardRank.Ten,
-            "J" => MotelyPlayingCardRank.Jack,
-            "Q" => MotelyPlayingCardRank.Queen,
-            "K" => MotelyPlayingCardRank.King,
-            "A" => MotelyPlayingCardRank.Ace,
-            _ => ParseEnum<MotelyPlayingCardRank>(value),
+            "2" => MotelyStandardcardRank.Two,
+            "3" => MotelyStandardcardRank.Three,
+            "4" => MotelyStandardcardRank.Four,
+            "5" => MotelyStandardcardRank.Five,
+            "6" => MotelyStandardcardRank.Six,
+            "7" => MotelyStandardcardRank.Seven,
+            "8" => MotelyStandardcardRank.Eight,
+            "9" => MotelyStandardcardRank.Nine,
+            "10" or "T" => MotelyStandardcardRank.Ten,
+            "J" => MotelyStandardcardRank.Jack,
+            "Q" => MotelyStandardcardRank.Queen,
+            "K" => MotelyStandardcardRank.King,
+            "A" => MotelyStandardcardRank.Ace,
+            _ => ParseEnum<MotelyStandardcardRank>(value),
         };
     }
 
-    private static MotelyPlayingCardSuit? ParseSuit(string? value)
+    private static MotelyStandardcardSuit? ParseSuit(string? value)
     {
         if (string.IsNullOrEmpty(value))
             return null;
         return value.ToUpperInvariant() switch
         {
-            "C" or "CLUBS" => MotelyPlayingCardSuit.Clubs,
-            "D" or "DIAMONDS" => MotelyPlayingCardSuit.Diamonds,
-            "H" or "HEARTS" => MotelyPlayingCardSuit.Hearts,
-            "S" or "SPADES" => MotelyPlayingCardSuit.Spades,
-            _ => ParseEnum<MotelyPlayingCardSuit>(value),
+            "C" or "CLUBS" => MotelyStandardcardSuit.Clubs,
+            "D" or "DIAMONDS" => MotelyStandardcardSuit.Diamonds,
+            "H" or "HEARTS" => MotelyStandardcardSuit.Hearts,
+            "S" or "SPADES" => MotelyStandardcardSuit.Spades,
+            _ => ParseEnum<MotelyStandardcardSuit>(value),
         };
     }
 
-    private static (MotelyPlayingCardRank? rank, MotelyPlayingCardSuit? suit) ParseCardShorthand(
+    private static (MotelyStandardcardRank? rank, MotelyStandardcardSuit? suit) ParseCardShorthand(
         string value
     )
     {
         if (string.IsNullOrEmpty(value))
             return (null, null);
-        if (Enum.TryParse<MotelyPlayingCard>(value, true, out var card))
+        if (Enum.TryParse<MotelyStandardCard>(value, true, out var card))
         {
             return (card.GetRank(), card.GetSuit());
         }

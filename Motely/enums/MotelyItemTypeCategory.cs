@@ -2,7 +2,7 @@ namespace Motely;
 
 public enum MotelyItemTypeCategory
 {
-    PlayingCard = 0b0001 << MotelyGlobals.ItemTypeCategoryOffset,
+    Standardcard = 0b0001 << MotelyGlobals.ItemTypeCategoryOffset,
     SpectralCard = 0b0010 << MotelyGlobals.ItemTypeCategoryOffset,
     TarotCard = 0b0011 << MotelyGlobals.ItemTypeCategoryOffset,
     PlanetCard = 0b0100 << MotelyGlobals.ItemTypeCategoryOffset,

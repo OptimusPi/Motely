@@ -17,7 +17,7 @@ public enum MotelyFilterItemType
     SmallBlindTag,
     BigBlindTag,
     Voucher,
-    PlayingCard,
+    Standardcard,
     Boss,
     Event, // Random events (Lucky, Wheel of Fortune, Bananas, Misprint)
     ErraticRank, // Erratic Deck starting composition - rank filter

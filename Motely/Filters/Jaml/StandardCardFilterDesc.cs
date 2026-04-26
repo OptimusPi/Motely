@@ -7,8 +7,8 @@ public sealed class StandardCardClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public MotelyPlayingCardRank? Rank { get; init; }
-    public MotelyPlayingCardSuit? Suit { get; init; }
+    public MotelyStandardcardRank? Rank { get; init; }
+    public MotelyStandardcardSuit? Suit { get; init; }
     public MotelyItemEnhancement? Enhancement { get; init; }
     public MotelyItemSeal? Seal { get; init; }
     public MotelyItemEdition? Edition { get; init; }
@@ -95,7 +95,7 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
 
                                 if (
                                     isTarget
-                                    && item.TypeCategory == MotelyItemTypeCategory.PlayingCard
+                                    && item.TypeCategory == MotelyItemTypeCategory.Standardcard
                                     && MatchesStandardCard(item, clause)
                                 )
                                 {
@@ -161,9 +161,9 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool MatchesStandardCard(MotelyItem item, StandardCardClause clause)
         {
-            if (clause.Rank.HasValue && item.PlayingCardRank != clause.Rank.Value)
+            if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value)
                 return false;
-            if (clause.Suit.HasValue && item.PlayingCardSuit != clause.Suit.Value)
+            if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value)
                 return false;
             if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value)
                 return false;

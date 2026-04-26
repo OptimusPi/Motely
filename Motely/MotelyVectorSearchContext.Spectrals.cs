@@ -82,7 +82,7 @@ ref partial struct MotelyVectorSearchContext
         Vector512<double> totalRate,
         Vector512<double> tarotRate,
         Vector512<double> planetRate,
-        Vector512<double> playingCardRate,
+        Vector512<double> standardcardRate,
         Vector512<double> spectralRate
     )
     {
@@ -91,7 +91,7 @@ ref partial struct MotelyVectorSearchContext
         itemTypePoll -= Vector512.Create(20.0); // Skip joker range
         itemTypePoll -= tarotRate; // Skip tarot range
         itemTypePoll -= planetRate; // Skip planet range
-        itemTypePoll -= playingCardRate; // Skip playing card range
+        itemTypePoll -= standardcardRate; // Skip standard card range
         var isSpectralSlot = Vector512.LessThan(itemTypePoll, spectralRate);
 
         // Only advance spectral stream for spectral slots
@@ -352,7 +352,7 @@ ref partial struct MotelyVectorSearchContext
         for (int i = 0; i < cardCount; i++)
         {
             var spectral = GetNextSpectral(ref spectralStream);
-            // Extract spectral card type using bit masking (similar to PlayingCardSuit pattern)
+            // Extract spectral card type using bit masking (similar to StandardcardSuit pattern)
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     spectral.Value,
@@ -382,7 +382,7 @@ ref partial struct MotelyVectorSearchContext
         for (int i = 0; i < cardCount; i++)
         {
             var spectral = GetNextSpectral(ref spectralStream);
-            // Extract spectral card type using bit masking (similar to PlayingCardSuit pattern)
+            // Extract spectral card type using bit masking (similar to StandardcardSuit pattern)
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     spectral.Value,

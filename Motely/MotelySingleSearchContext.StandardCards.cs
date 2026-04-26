@@ -82,11 +82,11 @@ public partial struct MotelySingleSearchContext
     public MotelyItem GetNextStandardCard(ref MotelySingleStandardCardStream stream)
     {
         MotelyItem item = new(
-            MotelyEnum<MotelyPlayingCard>.Values[
+            MotelyEnum<MotelyStandardCard>.Values[
                 GetNextRandomInt(
                     ref stream.CardPrngStream,
                     0,
-                    MotelyEnum<MotelyPlayingCard>.ValueCount
+                    MotelyEnum<MotelyStandardCard>.ValueCount
                 )
             ]
         );
