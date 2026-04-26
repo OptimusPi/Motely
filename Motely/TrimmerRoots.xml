@@ -6,6 +6,8 @@
     <type fullname="Motely.Filters.JamlDefaultsDto" preserve="all" />
     <type fullname="Motely.Filters.JamlClauseDto" preserve="all" />
     <type fullname="Motely.Filters.JamlSourcesDto" preserve="all" />
+    <type fullname="Motely.Filters.StandardCardConfigDto" preserve="all" />
+    <type fullname="Motely.Filters.StandardCardValue" preserve="all" />
 
     <!-- ── JAML runtime config ── -->
     <type fullname="Motely.Filters.JamlConfig" preserve="all" />

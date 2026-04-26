@@ -34,11 +34,4 @@
       <Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
     </ItemGroup>
   </Target>
-
-  <!-- Exclude desktop-only code -->
-  <ItemGroup>
-    <Compile Remove="API\**\*.cs" />
-    <Compile Remove="TUI\**\*.cs" />
-    <Compile Remove="MotelySearchSync.Browser.cs" />
-  </ItemGroup>
 </Project>

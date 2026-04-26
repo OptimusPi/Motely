@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Live release smoke test against the published motely-wasm npm package. The dependency version is set at runtime by build.ps1's release-smoke action so the test always exercises the artifact that was just shipped.",
   "dependencies": {
-    "motely-wasm": "^13.0.3"
+    "motely-wasm": "^14.0.1"
   },
   "scripts": {
     "test": "node release-smoke.mjs"
