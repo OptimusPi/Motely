@@ -25,6 +25,7 @@ export interface JamlIdeProps {
   defaultMode?: JamlIdeMode;
   searchResults?: JamlIdeSearchResult[];
   className?: string;
+  style?: React.CSSProperties;
   title?: string;
   actions?: React.ReactNode;
   codePlaceholder?: string;
@@ -118,7 +119,7 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
               <span
                 style={{
                   fontFamily: "m6x11plus, monospace",
-                  fontWeight: 700,
+                  fontWeight: "normal",
                   fontSize: 14,
                   letterSpacing: 1,
                   color: JimboColorOption.GOLD_TEXT,
@@ -146,7 +147,7 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
               ) : null}
 
               {hasTally ? (
-                <span style={{ fontSize: 10, color: JimboColorOption.GREY, marginLeft: 2 }}>
+                <span style={{ fontSize: 11, color: JimboColorOption.GREY, marginLeft: 2 }}>
                   {isOpen ? "▲" : "▼"}
                 </span>
               ) : null}
@@ -210,6 +211,7 @@ export function JamlIde({
   defaultMode = "code",
   searchResults = [],
   className = "",
+  style,
   title = "JAML IDE",
   actions,
   codePlaceholder = "Enter JAML...",
@@ -288,6 +290,7 @@ export function JamlIde({
         boxShadow: `0 3px 0 0 ${JimboColorOption.BORDER_SOUTH}`,
         background: JimboColorOption.DARK_GREY,
         color: JimboColorOption.WHITE,
+        ...style,
       }}
     >
       <div
@@ -295,6 +298,7 @@ export function JamlIde({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
           gap: 12,
           padding: "10px 14px",
           borderBottom: `1px solid ${JimboColorOption.PANEL_EDGE}`,
@@ -302,7 +306,7 @@ export function JamlIde({
         }}
       >
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "m6x11plus, monospace", color: JimboColorOption.GOLD_TEXT }}>{title}</div>
+          <div style={{ fontSize: 16, fontWeight: "normal", fontFamily: "m6x11plus, monospace", color: JimboColorOption.GOLD_TEXT }}>{title}</div>
           <div style={{ fontSize: 11, color: JimboColorOption.GREY }}>Jimbo's Ante Markup Language</div>
         </div>
         {actions ? <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{actions}</div> : null}

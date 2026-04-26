@@ -31,6 +31,7 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        flexWrap: "wrap",
         gap: 8,
         padding: "10px 10px 6px",
         borderBottom: `1px solid ${JimboColorOption.PANEL_EDGE}`,

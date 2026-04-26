@@ -3,7 +3,7 @@
  *
  * MotelyItem.Value is a packed integer. The MotelyItemType enum
  * uses packed integers where the top nibble encodes category:
- *   0x1000 = PlayingCard, 0x2000 = Spectral, 0x3000 = Tarot,
+ *   0x1000 = Standardcard, 0x2000 = Spectral, 0x3000 = Tarot,
  *   0x4000 = Planet, 0x5000 = Joker, 0xF000 = Invalid
  */
 
@@ -19,7 +19,7 @@ const VALUE_ENHANCEMENT_MASK = 0x780000;
 const VALUE_EDITION_MASK = 0x3800000;
 
 const CATEGORY_TO_TYPE: Record<number, string> = {
-  0x1000: "Playing Card",
+  0x1000: "Standard card",
   0x2000: "Spectral",
   0x3000: "Tarot",
   0x4000: "Planet",
@@ -105,7 +105,7 @@ function runtimeEnumName(
   return typeof enumKey === "string" && enumKey.length > 0 ? enumKey : null;
 }
 
-function parsePlayingCardEnumKey(enumKey: string): { rank: string; suit: "Clubs" | "Diamonds" | "Hearts" | "Spades" } | null {
+function parseStandardcardEnumKey(enumKey: string): { rank: string; suit: "Clubs" | "Diamonds" | "Hearts" | "Spades" } | null {
   const match = /^([CDHS])(10|[2-9JQKA])$/.exec(enumKey);
   if (!match) return null;
 
@@ -215,24 +215,24 @@ export function motelyItemEnhancementName(input: MotelyItemInput): string | null
   return enumKey === null || enumKey === "None" ? null : enumKey;
 }
 
-export function motelyPlayingCardSuitName(input: MotelyItemInput): "Clubs" | "Diamonds" | "Hearts" | "Spades" | null {
+export function motelyStandardcardSuitName(input: MotelyItemInput): "Clubs" | "Diamonds" | "Hearts" | "Spades" | null {
   const runtimeItem = asRuntimeItem(input);
-  const directSuit = runtimeEnumName(Motely.MotelyPlayingCardSuit as Record<string, unknown>, finiteNumber(runtimeItem?.suit));
+  const directSuit = runtimeEnumName(Motely.MotelyStandardcardSuit as Record<string, unknown>, finiteNumber(runtimeItem?.suit));
   if (directSuit === "Clubs" || directSuit === "Diamonds" || directSuit === "Hearts" || directSuit === "Spades") {
     return directSuit;
   }
 
-  const parsed = parsePlayingCardEnumKey(motelyItemTypeName(input));
+  const parsed = parseStandardcardEnumKey(motelyItemTypeName(input));
   return parsed?.suit ?? null;
 }
 
-export function motelyPlayingCardRankName(input: MotelyItemInput): string | null {
+export function motelyStandardcardRankName(input: MotelyItemInput): string | null {
   const runtimeItem = asRuntimeItem(input);
-  const directRank = runtimeEnumName(Motely.MotelyPlayingCardRank as Record<string, unknown>, finiteNumber(runtimeItem?.rank));
+  const directRank = runtimeEnumName(Motely.MotelyStandardcardRank as Record<string, unknown>, finiteNumber(runtimeItem?.rank));
   const normalizedDirect = rankNameFromEnum(directRank);
   if (normalizedDirect !== null) return normalizedDirect;
 
-  const parsed = parsePlayingCardEnumKey(motelyItemTypeName(input));
+  const parsed = parseStandardcardEnumKey(motelyItemTypeName(input));
   return parsed?.rank ?? null;
 }
 
@@ -251,7 +251,7 @@ export function motelyItemCategory(input: MotelyItemInput): string {
   if (itemType === null) return "Unknown";
 
   const renderCategory = motelyItemRenderCategory(itemType);
-  if (renderCategory === "playing") return "Playing Card";
+  if (renderCategory === "playing") return "Standard card";
   if (renderCategory === "spectral") return "Spectral";
   if (renderCategory === "tarot") return "Tarot";
   if (renderCategory === "planet") return "Planet";
@@ -284,8 +284,8 @@ export function decodeMotelyItem(input: MotelyItemInput): DecodedMotelyItem | nu
     }
 
     const category = motelyItemRenderCategory(itemType);
-    const rank = motelyPlayingCardRankName(itemType);
-    const suit = motelyPlayingCardSuitName(itemType);
+    const rank = motelyStandardcardRankName(itemType);
+    const suit = motelyStandardcardSuitName(itemType);
     base = {
       itemType,
       enumKey,

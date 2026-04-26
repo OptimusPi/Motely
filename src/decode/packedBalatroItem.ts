@@ -1,7 +1,7 @@
 /** Bit-packed shop/card ids (Balatro item encoding). */
 
 export const BalatroItemCategory = {
-    PlayingCard: 1,
+    Standardcard: 1,
     Spectral: 2,
     Tarot: 3,
     Planet: 4,
@@ -28,5 +28,5 @@ export function packedItemIndex(packed: number): number {
 
 export function isPackedItemValid(packed: number): boolean {
     const category = packedItemCategory(packed);
-    return category >= BalatroItemCategory.PlayingCard && category <= BalatroItemCategory.Joker;
+    return category >= BalatroItemCategory.Standardcard && category <= BalatroItemCategory.Joker;
 }

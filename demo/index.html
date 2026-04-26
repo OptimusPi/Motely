@@ -5,8 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>jaml-ui · demo</title>
     <style>
-      html, body, #root { margin: 0; padding: 0; height: 100%; background: #0f1719; color: #fff; font-family: ui-sans-serif, system-ui, sans-serif; }
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+      @font-face {
+        font-family: 'm6x11plus';
+        src: url('../assets/fonts/m6x11plusplus.otf') format('opentype');
+      }
+      html, body, #root { margin: 0; padding: 0; height: 100%; background: #0f1719; color: #fff; font-family: 'm6x11plus', ui-sans-serif, system-ui, sans-serif; }
       * { box-sizing: border-box; }
+      code, pre, .monaco-editor { font-family: 'JetBrains Mono', monospace !important; }
     </style>
   </head>
   <body>

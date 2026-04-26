@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { RealPlayingCard, type CardRank, type CardSuit } from './PlayingCard.js'
+import { RealStandardcard, type CardRank, type CardSuit } from './Standardcard.js'
 import { JimboColorOption } from '../ui/tokens.js'
 import { JimboText } from '../ui/jimboText.js'
 
@@ -48,26 +48,26 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
 
   const cardSize =
     displayCount > 40 ? 46
-    : displayCount > 30 ? 32
-    : displayCount > 12 ? 36
-    : displayCount > 8  ? 42
-    : displayCount > 5  ? 48
-    :                      54
+      : displayCount > 30 ? 32
+        : displayCount > 12 ? 36
+          : displayCount > 8 ? 42
+            : displayCount > 5 ? 48
+              : 54
 
   const overlap =
     displayCount > 40 ? 0.88
-    : displayCount > 30 ? 0.85
-    : displayCount > 15 ? 0.75
-    : displayCount > 6  ? 0.60
-    :                      0.45
+      : displayCount > 30 ? 0.85
+        : displayCount > 15 ? 0.75
+          : displayCount > 6 ? 0.60
+            : 0.45
 
   const cardSpacing = cardSize * (1 - overlap)
 
   const maxRotation =
     displayCount > 40 ? 40
-    : displayCount > 20 ? 30
-    : displayCount > 10 ? 15
-    :                      25
+      : displayCount > 20 ? 30
+        : displayCount > 10 ? 15
+          : 25
 
   const cardsHeight = 120
 
@@ -106,7 +106,7 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
                   zIndex: i,
                 }}
               >
-                <RealPlayingCard
+                <RealStandardcard
                   rank={parsed.rank}
                   suit={parsed.suit}
                   size={cardSize}

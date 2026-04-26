@@ -17,7 +17,7 @@ const CARD_HEIGHT = 95
 const RANK_ALIAS: Record<string, string> = { A: 'Ace', K: 'King', Q: 'Queen', J: 'Jack' }
 const pascal = (s: string) => s[0].toUpperCase() + s.slice(1).toLowerCase()
 
-interface RealPlayingCardProps {
+interface RealStandardcardProps {
     suit: CardSuit
     rank: CardRank
     enhancement?: CardEnhancement
@@ -28,7 +28,7 @@ interface RealPlayingCardProps {
     style?: React.CSSProperties
 }
 
-export function RealPlayingCard({
+export function RealStandardcard({
     suit,
     rank,
     enhancement,
@@ -37,7 +37,7 @@ export function RealPlayingCard({
     className,
     size = 71,
     style
-}: RealPlayingCardProps) {
+}: RealStandardcardProps) {
     const rankKey = RANK_ALIAS[rank] ?? rank
     const suitKey = pascal(suit)
     const col = RANK_MAP[rankKey]

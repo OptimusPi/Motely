@@ -18,7 +18,7 @@ export function getItemDisplayName(enumKey: string): string {
 
   if (specials[enumKey]) return specials[enumKey];
 
-  // Playing cards: C2 = 2 of Clubs, D10 = 10 of Diamonds, etc.
+  // Standard cards: C2 = 2 of Clubs, D10 = 10 of Diamonds, etc.
   const suitMap: Record<string, string> = { C: "♣", D: "♦", H: "♥", S: "♠" };
   const cardMatch = enumKey.match(/^([CDHS])([2-9JQKA]|10)$/);
   if (cardMatch) {
@@ -56,7 +56,7 @@ export function getItemCategory(enumKey: string): CardCategory {
   if (TAROT_NAMES.has(enumKey)) return "tarot";
   if (PLANET_NAMES.has(enumKey)) return "planet";
   if (SPECTRAL_NAMES.has(enumKey)) return "spectral";
-  // Everything else between the playing cards and Invalid is a joker
+  // Everything else between the standard cards and Invalid is a joker
   return "joker";
 }
 
@@ -69,7 +69,7 @@ export const CATEGORY_COLORS: Record<CardCategory, { bg: string; border: string;
   unknown: { bg: "bg-neutral-900/30", border: "border-neutral-500/50", text: "text-neutral-300" },
 };
 
-/** Suit color for playing cards */
+/** Suit color for standard cards */
 export function getSuitColor(enumKey: string): string {
   if (enumKey.startsWith("H") || enumKey.startsWith("D")) return "text-red-500";
   return "text-neutral-900 dark:text-neutral-100";

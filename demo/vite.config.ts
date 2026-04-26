@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      "jaml-ui/ui": resolve(__dirname, "../src/ui.ts"),
       "jaml-ui": resolve(__dirname, "../src/index.ts"),
     },
   },

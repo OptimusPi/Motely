@@ -72,7 +72,7 @@ function normalizeCardSuit(raw: string): string {
     return raw.trim();
 }
 
-function parsePlayingCardName(name: string): { rank: string; suit: string } | null {
+function parseStandardcardName(name: string): { rank: string; suit: string } | null {
     const trimmed = name.trim();
     const ofMatch = /^(A|K|Q|J|10|[2-9]|Ace|King|Queen|Jack)\s+of\s+(Hearts|Clubs|Diamonds|Spades)$/i.exec(trimmed);
     if (ofMatch) {
@@ -198,15 +198,15 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
         }
     }
 
-    const playingCard = parsePlayingCardName(displayName) ?? parsePlayingCardName(baseName);
-    if (playingCard) {
+    const standardcard = parseStandardcardName(displayName) ?? parseStandardcardName(baseName);
+    if (standardcard) {
         return {
             kind: "playing",
             type: "playing",
             card: {
                 name: displayName,
-                rank: playingCard.rank,
-                suit: playingCard.suit,
+                rank: standardcard.rank,
+                suit: standardcard.suit,
                 scale,
             },
         };
@@ -253,15 +253,15 @@ export function resolveAnalyzerShopItem(item: AnalyzerShopItem, scale = 1): Anal
         }
     }
 
-    const playingCard = parsePlayingCardName(displayName) ?? parsePlayingCardName(baseName);
-    if (playingCard) {
+    const standardcard = parseStandardcardName(displayName) ?? parseStandardcardName(baseName);
+    if (standardcard) {
         return {
             kind: "playing",
             type: "playing",
             card: {
                 name: displayName,
-                rank: playingCard.rank,
-                suit: playingCard.suit,
+                rank: standardcard.rank,
+                suit: standardcard.suit,
                 scale,
             },
         };

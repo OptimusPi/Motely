@@ -27,7 +27,7 @@ export function JimboTabs({ tabs, activeTab, onTabChange, className = '', style 
     <>
       <div
         className={className}
-        style={{ display: 'flex', gap: 8, alignItems: 'flex-end', ...style }}
+        style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', ...style }}
       >
         {tabs.map((tab) => (
           <TabButton

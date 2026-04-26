@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { JamlIde, useSearch, type JamlIdeSearchResult } from "jaml-ui";
 import { JimboColorOption } from "jaml-ui/ui";
-import motelyPkg from "motely-wasm/package.json" with { type: "json" };
+import motelyWasmUrl from "motely-wasm/index.mjs?url";
 
-const MOTELY_WASM_VERSION: string = motelyPkg.version;
+const MOTELY_WASM_VERSION: string = "local";
 
 const SAMPLE_JAML = `name: Blueprint Copy Engine
 author: pifreak
@@ -37,9 +37,7 @@ function envOrThrow(key: string): string {
   return v;
 }
 
-// Version comes from motely-wasm's own package.json — single source of truth.
-// No env var lets version drift away from what npm installed.
-const MOTELY_WASM_URL = `${envOrThrow("VITE_CDN_BASE_URL")}/motely-wasm/${MOTELY_WASM_VERSION}/index.mjs`;
+const MOTELY_WASM_URL = motelyWasmUrl;
 
 export function App() {
   const [jaml, setJaml] = useState(SAMPLE_JAML);
@@ -63,29 +61,15 @@ export function App() {
   };
 
   return (
-    <div style={{ padding: 24, display: "grid", gap: 24, maxWidth: 1100, margin: "0 auto" }}>
-      <header style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-        <h1 style={{ fontSize: 20, margin: 0, color: JimboColorOption.GOLD_TEXT }}>jaml-ui demo</h1>
-        <span style={{ fontSize: 11, color: JimboColorOption.GREY }}>
-          motely-wasm @ {envOrThrow("VITE_MOTELY_WASM_VERSION")}
-        </span>
-        {bootStatus && <span style={{ fontSize: 11, color: JimboColorOption.GOLD_TEXT }}>{bootStatus}</span>}
-        {search.status === "error" && (
-          <span style={{ fontSize: 11, color: JimboColorOption.RED }}>error: {search.error}</span>
-        )}
-      </header>
-
+    <div style={{ padding: 12, display: "flex", flexDirection: "column", height: "100%", width: "100%", maxWidth: 1100, margin: "0 auto" }}>
       <JamlIde
         jaml={jaml}
         onChange={setJaml}
         searchResults={results}
         onSearch={handleSearch}
         isSearching={isSearching}
+        style={{ flex: 1 }}
       />
-
-      <footer style={{ fontSize: 11, color: JimboColorOption.DARK_GREY }}>
-        status: {search.status} · searched: {search.totalSearched.toString()} · matches: {search.matchingSeeds.toString()} · results shown: {search.results.length}
-      </footer>
     </div>
   );
 }
