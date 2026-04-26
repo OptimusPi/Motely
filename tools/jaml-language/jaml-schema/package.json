@@ -26,6 +26,6 @@
     "access": "public"
   },
   "dependencies": {
-    "motely-wasm": "^13.0.1"
+    "motely-wasm": "^14.0.0"
   }
 }
