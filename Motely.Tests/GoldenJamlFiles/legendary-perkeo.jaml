@@ -1,0 +1,43 @@
+name: Perkeo Consumable Engine
+author: jammy
+description: Perkeo legendary joker with BlackHole for infinite hand level scaling
+deck: Red
+stake: White
+hashtags: ["legendary", "soul", "rare-find", "negative", "planet-scaling", "deck-fix", "legendary-synergy"]
+must:
+  - soulJoker: Perkeo
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - spectral: TheSoul
+    score: 55
+  - tag: EtherealTag
+    score: 45
+  - voucher: Hieroglyph
+    score: 50
+  - spectral: BlackHole
+    score: 85
+  - planet: PlanetX
+    score: 70
+  - planet: Ceres
+    score: 60
+  - planet: Eris
+    score: 55
+  - tarot: TheWorld
+    score: 55
+  - tarot: Death
+    score: 50
+  - voucher: CrystalBall
+    score: 60
+  - voucher: OmenGlobe
+    score: 50
+  - uncommonJoker: Seance
+    score: 30
+  - tag: CharmTag
+    score: 35
+  - mixedJoker: Any
+    edition: Negative
+    score: 35

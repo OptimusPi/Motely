@@ -13,8 +13,8 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
     public readonly MotelyItemEnhancement Enhancement { get { return (MotelyItemEnhancement)(Value & MotelyGlobals.ItemEnhancementMask); } }
     public readonly MotelyItemEdition Edition { get { return (MotelyItemEdition)(Value & MotelyGlobals.ItemEditionMask); } }
 
-    public readonly MotelyPlayingCardSuit PlayingCardSuit { get { return (MotelyPlayingCardSuit)(Value & MotelyGlobals.PlayingCardSuitMask); } }
-    public readonly MotelyPlayingCardRank PlayingCardRank { get { return (MotelyPlayingCardRank)(Value & MotelyGlobals.PlayingCardRankMask); } }
+    public readonly MotelyStandardcardSuit StandardcardSuit { get { return (MotelyStandardcardSuit)(Value & MotelyGlobals.StandardcardSuitMask); } }
+    public readonly MotelyStandardcardRank StandardcardRank { get { return (MotelyStandardcardRank)(Value & MotelyGlobals.StandardcardRankMask); } }
 
     public readonly bool IsPerishable { get { return (Value & (1 << MotelyGlobals.PerishableStickerOffset)) != 0; } }
     public readonly bool IsEternal { get { return (Value & (1 << MotelyGlobals.EternalStickerOffset)) != 0; } }
@@ -27,8 +27,8 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
         : this((int)type) { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem(MotelyPlayingCard card)
-        : this((int)card | (int)MotelyItemTypeCategory.PlayingCard) { }
+    public MotelyItem(MotelyStandardCard card)
+        : this((int)card | (int)MotelyItemTypeCategory.Standardcard) { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem(MotelyJoker joker, MotelyItemEdition edition = MotelyItemEdition.None)

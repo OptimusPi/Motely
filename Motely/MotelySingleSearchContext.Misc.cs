@@ -185,7 +185,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
         CreatePrngStream(MotelyPrngKeys.DeckErratic, isCached);
 
     public MotelyItem GetNextErraticDeckCard(ref MotelySinglePrngStream erraticDeckStream) =>
-        new(GetNextRandomElement(ref erraticDeckStream, MotelyEnum<MotelyPlayingCard>.Values));
+        new(GetNextRandomElement(ref erraticDeckStream, MotelyEnum<MotelyStandardCard>.Values));
 
     #endregion
 }

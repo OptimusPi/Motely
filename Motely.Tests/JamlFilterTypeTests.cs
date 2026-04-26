@@ -91,7 +91,7 @@ public class JamlFilterTypeTests
     [InlineData("standardCard: HA")] // Ace of Hearts
     [InlineData("standardCard: SA\nenhancement: Lucky")] // Ace of Spades, Lucky
     [InlineData("standardCard: C2\nseal: Red\nedition: Foil")] // 2 of Clubs, Red seal, Foil
-    public void PlayingCardFilters(string clause)
+    public void StandardcardFilters(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause.Replace("\n", "\n    ")}");
     }

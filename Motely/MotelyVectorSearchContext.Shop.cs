@@ -14,7 +14,7 @@ public ref struct MotelyVectorShopItemStream
     // Rates
     public Vector512<double> TarotRate;
     public Vector512<double> PlanetRate;
-    public Vector512<double> PlayingCardRate;
+    public Vector512<double> StandardcardRate;
     public Vector512<double> SpectralRate;
     public Vector512<double> TotalRate;
 
@@ -56,7 +56,7 @@ ref partial struct MotelyVectorSearchContext
 
             TarotRate = Vector512.Create(4.0),
             PlanetRate = Vector512.Create(4.0),
-            PlayingCardRate = Vector512.Create(0.0),
+            StandardcardRate = Vector512.Create(0.0),
             SpectralRate = Deck == MotelyDeck.Ghost ? Vector512.Create(2.0) : Vector512.Create(0.0),
         };
 
@@ -71,13 +71,13 @@ ref partial struct MotelyVectorSearchContext
             stream.PlanetRate = Vector512.Create(9.6);
 
         if (runState.IsVoucherActive(MotelyVoucher.MagicTrick))
-            stream.PlayingCardRate = Vector512.Create(4.0);
+            stream.StandardcardRate = Vector512.Create(4.0);
 
         stream.TotalRate =
             Vector512.Create((double)ShopJokerRate)
             + stream.TarotRate
             + stream.PlanetRate
-            + stream.PlayingCardRate
+            + stream.StandardcardRate
             + stream.SpectralRate;
 
         return stream;
@@ -103,14 +103,14 @@ ref partial struct MotelyVectorSearchContext
         );
         itemTypePoll -= stream.PlanetRate;
 
-        var isPlayingCard = Vector512.AndNot(
+        var isStandardcard = Vector512.AndNot(
             Vector512.AndNot(
-                Vector512.AndNot(Vector512.LessThan(itemTypePoll, stream.PlayingCardRate), isJoker),
+                Vector512.AndNot(Vector512.LessThan(itemTypePoll, stream.StandardcardRate), isJoker),
                 isTarot
             ),
             isPlanet
         );
-        itemTypePoll -= stream.PlayingCardRate;
+        itemTypePoll -= stream.StandardcardRate;
 
         var isSpectral = Vector512.AndNot(
             Vector512.AndNot(
@@ -123,7 +123,7 @@ ref partial struct MotelyVectorSearchContext
                 ),
                 isPlanet
             ),
-            isPlayingCard
+            isStandardcard
         );
 
         // Get items ONLY for lanes that need them (masked advancement)

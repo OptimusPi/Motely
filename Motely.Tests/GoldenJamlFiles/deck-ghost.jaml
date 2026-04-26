@@ -1,0 +1,39 @@
+name: Ghost Deck Spectral Spam
+author: jammy
+description: Ghost Deck with Oops All 6s to double Spectral generation rate
+deck: Ghost
+stake: White
+hashtags: ["deck", "starting-deck", "copy", "negative", "planet-scaling", "probability", "legendary-synergy"]
+must:
+  - uncommonJoker: OopsAll6s
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - legendaryJoker: Perkeo
+    score: 70
+  - spectral: TheSoul
+    score: 70
+  - uncommonJoker: SixthSense
+    score: 55
+  - uncommonJoker: Seance
+    score: 50
+  - spectral: BlackHole
+    score: 55
+  - spectral: Ectoplasm
+    score: 45
+  - spectral: Hex
+    score: 45
+  - uncommonJoker: Constellation
+    score: 40
+  - rareJoker: Blueprint
+    score: 40
+  - tag: NegativeTag
+    score: 40
+  - mixedJoker: Any
+    edition: Negative
+    score: 35
+  - legendaryJoker: Chicot
+    score: 30

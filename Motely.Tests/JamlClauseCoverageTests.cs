@@ -377,8 +377,8 @@ public class JammyClauseCoverageTests
     public void Clause_StandardCard_MatchesJammy()
     {
         var analysis = AnalyzeJammy();
-        var hit = FindPackItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.PlayingCard);
-        Assert.True(hit.HasValue, "Expected at least one playing card in JAMMY booster packs");
+        var hit = FindPackItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.Standardcard);
+        Assert.True(hit.HasValue, "Expected at least one standard card in JAMMY booster packs");
 
         var d = hit!.Value;
         var clauseBody = $$"""
@@ -395,9 +395,9 @@ public class JammyClauseCoverageTests
     [Fact]
     public void Clause_StartingDraw_HasAtLeastOneMatchingCardForJammy()
     {
-        MotelyPlayingCard? matchingCard = null;
+        MotelyStandardCard? matchingCard = null;
 
-        foreach (var card in Enum.GetValues<MotelyPlayingCard>())
+        foreach (var card in Enum.GetValues<MotelyStandardCard>())
         {
             var jaml = BuildMustJaml($"startingDraw: {card}");
             var result = RunSingleSeedJaml(jaml);
@@ -418,8 +418,8 @@ public class JammyClauseCoverageTests
     [Fact]
     public void Clause_ErraticRankSuitAndCard_HaveMatchesForJammyErraticDeck()
     {
-        MotelyPlayingCardRank? matchingRank = null;
-        foreach (var rank in Enum.GetValues<MotelyPlayingCardRank>())
+        MotelyStandardcardRank? matchingRank = null;
+        foreach (var rank in Enum.GetValues<MotelyStandardcardRank>())
         {
             var jaml = BuildMustJaml($"erraticRank: {rank}", MotelyDeck.Erratic);
             if (RunSingleSeedJaml(jaml).MatchingSeeds == 1)
@@ -433,8 +433,8 @@ public class JammyClauseCoverageTests
             BuildMustAndMustNotJaml($"erraticRank: {matchingRank!.Value}", MotelyDeck.Erratic)
         );
 
-        MotelyPlayingCardSuit? matchingSuit = null;
-        foreach (var suit in Enum.GetValues<MotelyPlayingCardSuit>())
+        MotelyStandardcardSuit? matchingSuit = null;
+        foreach (var suit in Enum.GetValues<MotelyStandardcardSuit>())
         {
             var jaml = BuildMustJaml($"erraticSuit: {suit}", MotelyDeck.Erratic);
             if (RunSingleSeedJaml(jaml).MatchingSeeds == 1)
@@ -448,8 +448,8 @@ public class JammyClauseCoverageTests
             BuildMustAndMustNotJaml($"erraticSuit: {matchingSuit!.Value}", MotelyDeck.Erratic)
         );
 
-        MotelyPlayingCard? matchingCard = null;
-        foreach (var card in Enum.GetValues<MotelyPlayingCard>())
+        MotelyStandardCard? matchingCard = null;
+        foreach (var card in Enum.GetValues<MotelyStandardCard>())
         {
             var jaml = BuildMustJaml($"erraticCard: {card}", MotelyDeck.Erratic);
             if (RunSingleSeedJaml(jaml).MatchingSeeds == 1)
