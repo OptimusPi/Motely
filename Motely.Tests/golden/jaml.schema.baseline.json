@@ -625,6 +625,33 @@
         "GlassDestroy",
         "WheelStaysFlipped"
       ]
+    },
+    "StandardCard": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            }
+          }
+        }
+      ]
     }
   },
   "properties": {
@@ -771,7 +798,7 @@
             "$ref": "#/$defs/Tag"
           },
           "standardCard": {
-            "type": "string"
+            "$ref": "#/$defs/StandardCard"
           },
           "erraticRank": {
             "$ref": "#/$defs/Rank"

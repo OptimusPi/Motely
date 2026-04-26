@@ -7,8 +7,8 @@ public sealed class MotelyItemTests
     public static TheoryData<string> PlainTypeNames =>
         new()
         {
-            "C2",
-            "SA",
+            "TwoOfClubs",
+            "AceOfSpades",
             "Mercury",
             "TheFool",
             "TheHighPriestess",
@@ -47,7 +47,7 @@ public sealed class MotelyItemTests
     [Fact]
     public void Parse_round_trips_FormatItem_seal_only()
     {
-        var item = new MotelyItem(MotelyItemType.CA).WithSeal(MotelyItemSeal.Gold);
+        var item = new MotelyItem(MotelyItemType.AceOfClubs).WithSeal(MotelyItemSeal.Gold);
         Assert.Equal(item, MotelyItem.Parse(FormatUtils.FormatItem(item)));
     }
 
@@ -61,14 +61,14 @@ public sealed class MotelyItemTests
     [Fact]
     public void Parse_round_trips_FormatItem_enhancement_only_playing_card()
     {
-        var item = new MotelyItem(MotelyItemType.HA).WithEnhancement(MotelyItemEnhancement.Steel);
+        var item = new MotelyItem(MotelyItemType.AceOfHearts).WithEnhancement(MotelyItemEnhancement.Steel);
         Assert.Equal(item, MotelyItem.Parse(FormatUtils.FormatItem(item)));
     }
 
     [Fact]
     public void Parse_round_trips_FormatItem_seal_and_stickers_no_edition_enhancement()
     {
-        var item = new MotelyItem(MotelyItemType.S7)
+        var item = new MotelyItem(MotelyItemType.SevenOfSpades)
             .WithSeal(MotelyItemSeal.Blue)
             .WithPerishable(true)
             .WithEternal(true);
@@ -94,7 +94,7 @@ public sealed class MotelyItemTests
         {
             if (enh == MotelyItemEnhancement.None)
                 continue;
-            var item = new MotelyItem(MotelyItemType.D3).WithEnhancement(enh);
+            var item = new MotelyItem(MotelyItemType.ThreeOfDiamonds).WithEnhancement(enh);
             Assert.Equal(item, MotelyItem.Parse(FormatUtils.FormatItem(item)));
         }
     }

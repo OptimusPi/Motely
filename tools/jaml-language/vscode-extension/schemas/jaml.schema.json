@@ -158,11 +158,170 @@
         "Yorick",
         "Chicot",
         "Perkeo",
-        "any",
-        "anycommon",
-        "anyuncommon",
-        "anyrare",
-        "anylegendary"
+        "any"
+      ]
+    },
+    "CommonJoker": {
+      "type": "string",
+      "enum": [
+        "Joker",
+        "GreedyJoker",
+        "LustyJoker",
+        "WrathfulJoker",
+        "GluttonousJoker",
+        "JollyJoker",
+        "ZanyJoker",
+        "MadJoker",
+        "CrazyJoker",
+        "DrollJoker",
+        "SlyJoker",
+        "WilyJoker",
+        "CleverJoker",
+        "DeviousJoker",
+        "CraftyJoker",
+        "HalfJoker",
+        "CreditCard",
+        "Banner",
+        "MysticSummit",
+        "EightBall",
+        "Misprint",
+        "RaisedFist",
+        "ChaostheClown",
+        "ScaryFace",
+        "AbstractJoker",
+        "DelayedGratification",
+        "GrosMichel",
+        "EvenSteven",
+        "OddTodd",
+        "Scholar",
+        "BusinessCard",
+        "Supernova",
+        "RideTheBus",
+        "Egg",
+        "Runner",
+        "IceCream",
+        "Splash",
+        "BlueJoker",
+        "FacelessJoker",
+        "GreenJoker",
+        "Superposition",
+        "ToDoList",
+        "Cavendish",
+        "RedCard",
+        "SquareJoker",
+        "RiffRaff",
+        "Photograph",
+        "ReservedParking",
+        "MailInRebate",
+        "Hallucination",
+        "FortuneTeller",
+        "Juggler",
+        "Drunkard",
+        "GoldenJoker",
+        "Popcorn",
+        "WalkieTalkie",
+        "SmileyFace",
+        "GoldenTicket",
+        "Swashbuckler",
+        "HangingChad",
+        "ShootTheMoon",
+        "any"
+      ]
+    },
+    "UncommonJoker": {
+      "type": "string",
+      "enum": [
+        "JokerStencil",
+        "FourFingers",
+        "Mime",
+        "CeremonialDagger",
+        "MarbleJoker",
+        "LoyaltyCard",
+        "Dusk",
+        "Fibonacci",
+        "SteelJoker",
+        "Hack",
+        "Pareidolia",
+        "SpaceJoker",
+        "Burglar",
+        "Blackboard",
+        "SixthSense",
+        "Constellation",
+        "Hiker",
+        "CardSharp",
+        "Madness",
+        "Seance",
+        "Vampire",
+        "Shortcut",
+        "Hologram",
+        "Cloud9",
+        "Rocket",
+        "MidasMask",
+        "Luchador",
+        "GiftCard",
+        "TurtleBean",
+        "Erosion",
+        "ToTheMoon",
+        "StoneJoker",
+        "LuckyCat",
+        "Bull",
+        "DietCola",
+        "TradingCard",
+        "FlashCard",
+        "SpareTrousers",
+        "Ramen",
+        "Seltzer",
+        "Castle",
+        "MrBones",
+        "Acrobat",
+        "SockAndBuskin",
+        "Troubadour",
+        "Certificate",
+        "SmearedJoker",
+        "Throwback",
+        "RoughGem",
+        "Bloodstone",
+        "Arrowhead",
+        "OnyxAgate",
+        "GlassJoker",
+        "Showman",
+        "FlowerPot",
+        "MerryAndy",
+        "OopsAll6s",
+        "TheIdol",
+        "SeeingDouble",
+        "Matador",
+        "Satellite",
+        "Cartomancer",
+        "Astronomer",
+        "Bootstraps",
+        "any"
+      ]
+    },
+    "RareJoker": {
+      "type": "string",
+      "enum": [
+        "DNA",
+        "Vagabond",
+        "Baron",
+        "Obelisk",
+        "BaseballCard",
+        "AncientJoker",
+        "Campfire",
+        "Blueprint",
+        "WeeJoker",
+        "HitTheRoad",
+        "TheDuo",
+        "TheTrio",
+        "TheFamily",
+        "TheOrder",
+        "TheTribe",
+        "Stuntman",
+        "InvisibleJoker",
+        "Brainstorm",
+        "DriversLicense",
+        "BurntJoker",
+        "any"
       ]
     },
     "Voucher": {
@@ -449,6 +608,50 @@
         "all",
         "none"
       ]
+    },
+    "Event": {
+      "type": "string",
+      "enum": [
+        "LuckyMoney",
+        "LuckyMult",
+        "MisprintMult",
+        "WheelOfFortune",
+        "CavendishExtinct",
+        "GrosMichelExtinct",
+        "SpaceLevelup",
+        "BusinessPayout",
+        "BloodstoneTrigger",
+        "ParkingPayout",
+        "GlassDestroy",
+        "WheelStaysFlipped"
+      ]
+    },
+    "StandardCard": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            }
+          }
+        }
+      ]
     }
   },
   "properties": {
@@ -514,30 +717,30 @@
             }
           },
           "commonJoker": {
-            "$ref": "#/$defs/Joker"
+            "$ref": "#/$defs/CommonJoker"
           },
           "commonJokers": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/Joker"
+              "$ref": "#/$defs/CommonJoker"
             }
           },
           "uncommonJoker": {
-            "$ref": "#/$defs/Joker"
+            "$ref": "#/$defs/UncommonJoker"
           },
           "uncommonJokers": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/Joker"
+              "$ref": "#/$defs/UncommonJoker"
             }
           },
           "rareJoker": {
-            "$ref": "#/$defs/Joker"
+            "$ref": "#/$defs/RareJoker"
           },
           "rareJokers": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/Joker"
+              "$ref": "#/$defs/RareJoker"
             }
           },
           "mixedJoker": {
@@ -595,7 +798,7 @@
             "$ref": "#/$defs/Tag"
           },
           "standardCard": {
-            "type": "string"
+            "$ref": "#/$defs/StandardCard"
           },
           "erraticRank": {
             "$ref": "#/$defs/Rank"
@@ -610,7 +813,7 @@
             "type": "string"
           },
           "event": {
-            "type": "string"
+            "$ref": "#/$defs/Event"
           },
           "luckyMoney": {
             "type": "array",
