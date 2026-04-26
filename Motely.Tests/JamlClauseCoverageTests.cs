@@ -208,15 +208,16 @@ public class JammyClauseCoverageTests
     }
 
     [Fact]
-    public void Clause_MixedJoker_MatchesJammy()
+    public void Clause_Joker_MatchesJammy_MixedRarity()
     {
+        // v14.0.2: `joker:` IS the mixed-rarity union (replaces removed `mixedJoker:`).
         var analysis = AnalyzeJammy();
         var hit = FindShopItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.Joker);
         Assert.True(hit.HasValue, "Expected at least one joker in JAMMY analysis");
 
         var d = hit!.Value;
         var clauseBody = $$"""
-            mixedJoker: {{d.Item.Type}}
+            joker: {{d.Item.Type}}
             antes: [{{d.Ante}}]
             sources:
               shopItems: [{{d.ShopIndex}}]

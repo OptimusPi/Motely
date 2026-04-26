@@ -73,13 +73,14 @@ public class JamlConfigTests
   [Fact]
   public void JokerRarityClauses_ParseIntoTypedLists()
   {
+    // mixedJokers: removed in v14.0.2 — `jokers:` IS the mixed-rarity union list.
     var jaml = """
             name: TypedJokers
             must:
               - commonJoker: HalfJoker
               - uncommonJoker: Showman
               - rareJoker: Blueprint
-              - mixedJokers: [Blueprint, Showman]
+              - jokers: [Blueprint, Showman]
               - soulJoker: Perkeo
                 sources:
                   boosterPacks: [0,1,2,3]
@@ -92,7 +93,7 @@ public class JamlConfigTests
     Assert.Single(config!.Must.CommonJokers);
     Assert.Single(config.Must.UncommonJokers);
     Assert.Single(config.Must.RareJokers);
-    Assert.Single(config.Must.MixedJokers);
+    Assert.Single(config.Must.Jokers);
     Assert.Single(config.Must.LegendaryJokers);
   }
 
