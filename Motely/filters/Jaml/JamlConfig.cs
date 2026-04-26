@@ -215,7 +215,7 @@ public sealed class JamlClauseDto
     public MotelyTag? BigBlindTag { get; set; }
 
     [YamlMember(Alias = "standardCard")]
-    public string? StandardCard { get; set; }
+    public StandardCardValue? StandardCard { get; set; }
 
     [YamlMember(Alias = "erraticRank")]
     public string? ErraticRank { get; set; }
@@ -352,6 +352,33 @@ public sealed class JamlClauseDto
     public int? MaxPackSlot { get; set; }
 
     // Nested sources object
+    [YamlMember(Alias = "sources")]
+    public JamlSourcesDto? Sources { get; set; }
+}
+
+public struct StandardCardValue
+{
+    public string? StringValue;
+    public StandardCardConfigDto? ObjectValue;
+}
+
+public sealed class StandardCardConfigDto
+{
+    [YamlMember(Alias = "rank")]
+    public string? Rank { get; set; }
+
+    [YamlMember(Alias = "suit")]
+    public string? Suit { get; set; }
+
+    [YamlMember(Alias = "seal")]
+    public MotelyItemSeal? Seal { get; set; }
+
+    [YamlMember(Alias = "enhancement")]
+    public MotelyItemEnhancement? Enhancement { get; set; }
+
+    [YamlMember(Alias = "edition")]
+    public MotelyItemEdition? Edition { get; set; }
+
     [YamlMember(Alias = "sources")]
     public JamlSourcesDto? Sources { get; set; }
 }
@@ -1283,21 +1310,21 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Rank = ParseRank(c.Rank) ?? shRank,
-                Suit = ParseSuit(c.Suit) ?? shSuit,
-                Enhancement = c.Enhancement,
-                Seal = c.Seal,
-                Edition = edition,
+                Rank = ParseRank(c.StandardCard?.ObjectValue?.Rank ?? c.Rank) ?? shRank,
+                Suit = ParseSuit(c.StandardCard?.ObjectValue?.Suit ?? c.Suit) ?? shSuit,
+                Enhancement = c.StandardCard?.ObjectValue?.Enhancement ?? c.Enhancement,
+                Seal = c.StandardCard?.ObjectValue?.Seal ?? c.Seal,
+                Edition = c.StandardCard?.ObjectValue?.Edition ?? edition,
                 Sources = new StandardCardSourceConfig
                 {
-                    ShopItems = shopItems ?? [],
-                    BoosterPacks = boosterPacks ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
-                    Certificate = c.Sources?.Certificate ?? [],
-                    Incantation = c.Sources?.Incantation ?? [],
-                    Familiar = c.Sources?.Familiar ?? [],
-                    Grim = c.Sources?.Grim ?? [],
-                    DeckDraw = c.Sources?.DeckDraw ?? [],
+                    ShopItems = c.StandardCard?.ObjectValue?.Sources?.ShopItems ?? shopItems ?? [],
+                    BoosterPacks = c.StandardCard?.ObjectValue?.Sources?.BoosterPacks ?? boosterPacks ?? [],
+                    EarlyAntesMaxPack = c.StandardCard?.ObjectValue?.Sources?.EarlyAntesMaxPack ?? c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
+                    Certificate = c.StandardCard?.ObjectValue?.Sources?.Certificate ?? c.Sources?.Certificate ?? [],
+                    Incantation = c.StandardCard?.ObjectValue?.Sources?.Incantation ?? c.Sources?.Incantation ?? [],
+                    Familiar = c.StandardCard?.ObjectValue?.Sources?.Familiar ?? c.Sources?.Familiar ?? [],
+                    Grim = c.StandardCard?.ObjectValue?.Sources?.Grim ?? c.Sources?.Grim ?? [],
+                    DeckDraw = c.StandardCard?.ObjectValue?.Sources?.DeckDraw ?? c.Sources?.DeckDraw ?? [],
                 },
             },
             MotelyFilterItemType.ErraticRank => new ErraticRankClause
@@ -1626,7 +1653,7 @@ public static partial class JamlConfigLoader
         if (c.Tag is { } tagValue) return tagValue.ToString();
         if (c.SmallBlindTag is { } smallBlindTagValue) return smallBlindTagValue.ToString();
         if (c.BigBlindTag is { } bigBlindTagValue) return bigBlindTagValue.ToString();
-        if (c.StandardCard != null) return c.StandardCard;
+        if (c.StandardCard != null) return c.StandardCard.Value.StringValue ?? string.Empty;
         if (c.ErraticRank != null) return c.ErraticRank;
         if (c.ErraticSuit != null) return c.ErraticSuit;
         if (c.ErraticCard != null) return c.ErraticCard;
@@ -1701,7 +1728,7 @@ public static partial class JamlConfigLoader
         if (c.BigBlindTag != null)
             return (MotelyFilterItemType.BigBlindTag, null);
         if (c.StandardCard != null)
-            return (MotelyFilterItemType.Standardcard, c.StandardCard);
+            return (MotelyFilterItemType.Standardcard, c.StandardCard.Value.StringValue);
         if (c.ErraticRank != null)
             return (MotelyFilterItemType.ErraticRank, c.ErraticRank);
         if (c.ErraticSuit != null)
@@ -1827,6 +1854,19 @@ public static partial class JamlConfigLoader
         {
             return (card.GetRank(), card.GetSuit());
         }
+
+        // SWAP FALLBACK for old shorthands like "C2", "SK", "10H", etc.
+        if (value.Length >= 2)
+        {
+            var suit1 = ParseSuit(value.Substring(0, 1));
+            var rank1 = ParseRank(value.Substring(1));
+            if (suit1 != null && rank1 != null) return (rank1, suit1);
+
+            var rank2 = ParseRank(value.Substring(0, value.Length - 1));
+            var suit2 = ParseSuit(value.Substring(value.Length - 1));
+            if (suit2 != null && rank2 != null) return (rank2, suit2);
+        }
+
         return (null, null);
     }
 
