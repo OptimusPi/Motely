@@ -140,7 +140,7 @@
     "package": "pnpm run gen-schema && node esbuild.mjs --production && pnpm exec @vscode/vsce package --no-dependencies"
   },
   "dependencies": {
-    "motely-wasm": "^13.0.1",
+    "motely-wasm": "^14.0.0",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
