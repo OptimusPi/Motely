@@ -8,6 +8,7 @@
         <BootsharpEmbedBinaries>true</BootsharpEmbedBinaries>
         <BootsharpLlvm>true</BootsharpLlvm>
         <WasmEnableSIMD>true</WasmEnableSIMD>
+        <BootsharpAssemblies>Bootsharp.FileSystem</BootsharpAssemblies>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,7 +18,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Motely/Motely.csproj"/>
+        <ProjectReference Include="../Motely/Motely.csproj" />
+        <ProjectReference Include="d:\extra\bootsharp\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj" />
     </ItemGroup>
 
 </Project>

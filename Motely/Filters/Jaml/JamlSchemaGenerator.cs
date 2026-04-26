@@ -67,6 +67,7 @@ public static partial class JamlSchemaGenerator
         ["mode"] = "Mode",
         ["aesthetics"] = "Aesthetic",
         ["event"] = "Event",
+        ["standardCard"] = "StandardCard",
     };
 
     [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -239,6 +240,25 @@ public static partial class JamlSchemaGenerator
             ["Sticker"] = EnumDef(WithoutNone(Enum.GetNames<MotelyJokerSticker>())),
             ["Mode"] = EnumDef(new[] { "any", "all", "none" }),
             ["Event"] = EnumDef(Enum.GetNames<MotelyEventType>()),
+            ["StandardCard"] = new JsonObject
+            {
+                ["anyOf"] = new JsonArray
+                {
+                    new JsonObject { ["type"] = "string" },
+                    new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JsonObject
+                        {
+                            ["rank"] = RefNode("Rank"),
+                            ["suit"] = RefNode("Suit"),
+                            ["seal"] = RefNode("Seal"),
+                            ["enhancement"] = RefNode("Enhancement"),
+                            ["edition"] = RefNode("Edition")
+                        }
+                    }
+                }
+            },
         };
     }
 
