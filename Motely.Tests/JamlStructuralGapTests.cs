@@ -53,12 +53,17 @@ public sealed class JamlStructuralGapTests
     }
 
     /// <summary>
-    /// Shop slot 0 is always Buffoon in <see cref="Motely.Filters.LegendarySoulMatcher"/>; soul/legendary only
-    /// appears from arcana/spectral. Plan-time validation rejects <c>boosterPacks: [0]</c> only so users cannot
-    /// start a search that would burn CPU forever with zero hits.
+    /// Shop slot 0 is always Buffoon in <see cref="Motely.Filters.LegendarySoulMatcher"/> — soul/legendary
+    /// only appears from arcana/spectral, so a clause targeting only ante-1-slot-0 has zero possible matches.
+    /// <para>
+    /// Pifreak rule (2026-04-26): never block users on inferred mistakes. The validator was demoted from
+    /// throw-at-plan-time to a no-op; the search runs and returns zero, which is information enough.
+    /// Future work: surface this as a structured warning via TryLoad return shape so the CLI can print it
+    /// in red and the WASM bridge can hand it to JS, without library code touching <c>Console</c>.
+    /// </para>
     /// </summary>
     [Fact]
-    public void Soul_joker_booster_slot_zero_only_rejected_at_CreatePlan()
+    public void Soul_joker_booster_slot_zero_only_loads_and_plans_without_throwing()
     {
         var jaml = """
             id: structural-gap-buffoon-slot0
@@ -71,8 +76,10 @@ public sealed class JamlStructuralGapTests
                   boosterPacks: [0]
             """;
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var err), err);
-        var ex = Assert.Throws<InvalidOperationException>(() => JamlSearchBuilder.CreatePlan(config!));
-        Assert.Contains("booster slot 0", ex.Message, StringComparison.OrdinalIgnoreCase);
+        // Was: Assert.Throws<InvalidOperationException>(...). New design: trust the user, plan succeeds,
+        // search returns zero matches at runtime. No exception expected.
+        var plan = JamlSearchBuilder.CreatePlan(config!);
+        Assert.NotNull(plan.Settings);
     }
 
     /// <summary>
