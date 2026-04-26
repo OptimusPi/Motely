@@ -743,15 +743,6 @@
               "$ref": "#/$defs/RareJoker"
             }
           },
-          "mixedJoker": {
-            "$ref": "#/$defs/Joker"
-          },
-          "mixedJokers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/Joker"
-            }
-          },
           "soulJoker": {
             "$ref": "#/$defs/Joker"
           },

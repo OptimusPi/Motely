@@ -38,8 +38,7 @@ public static partial class JamlSchemaGenerator
         ["uncommonJokers"] = "UncommonJoker",
         ["rareJoker"] = "RareJoker",
         ["rareJokers"] = "RareJoker",
-        ["mixedJoker"] = "Joker",
-        ["mixedJokers"] = "Joker",
+        // mixedJoker:/mixedJokers: removed in v14.0.2 — `joker:` IS the mixed-rarity union.
         ["soulJoker"] = "Joker",
         ["legendaryJoker"] = "Joker",
         ["voucher"] = "Voucher",
