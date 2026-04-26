@@ -362,13 +362,16 @@ partial class Program
                         ),
                         msg => Console.Error.WriteLine(msg),
                         out var nSearchModeError,
-                        out nSettings
+                        out nSettings,
+                        out var nSourceLifetime
                     )
                 )
                 {
                     Console.Error.WriteLine(nSearchModeError);
                     return 1;
                 }
+
+                using var _nSourceLifetime = nSourceLifetime;
 
                 // Always attach a progress callback so 'p' hotkey has fresh data;
                 // quiet mode just swaps in the silent capture variant.
@@ -482,13 +485,16 @@ partial class Program
                     ),
                     msg => Console.Error.WriteLine(msg),
                     out var jamlSearchModeError,
-                    out settings
+                    out settings,
+                    out var jamlSourceLifetime
                 )
             )
             {
                 Console.Error.WriteLine(jamlSearchModeError);
                 return 1;
             }
+
+            using var _jamlSourceLifetime = jamlSourceLifetime;
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;

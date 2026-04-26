@@ -1,3 +1,5 @@
+using DuckDB.NET.Data;
+
 namespace Motely.DB.SeedSource;
 
 public sealed record SeedStoragePath(string Input, string ResolvedPath, bool IsExplicitPath)
@@ -126,6 +128,23 @@ public static class SeedReader
     {
         using var db = new MotelyResultsDb(path, 0);
         return db.GetSeeds().Select(NormalizeSeedToken).Where(static seed => !string.IsNullOrWhiteSpace(seed)).ToArray();
+    }
+
+    public static bool TryCreateProvider(string value, out IMotelySeedProvider? provider)
+    {
+        provider = null;
+
+        if (!Path.HasExtension(value) &&
+            !value.Contains(Path.DirectorySeparatorChar) &&
+            !value.Contains(Path.AltDirectorySeparatorChar))
+            return false;
+
+        var source = SeedStoragePaths.ResolveSource(value);
+        if (!string.Equals(source.Extension, ".parquet", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        provider = new ParquetSeedProvider(source.ResolvedPath);
+        return true;
     }
 
     public static IReadOnlyList<string> ReadSeedsByFilterId(string filterId)
@@ -286,6 +305,92 @@ internal sealed class DuckLakeSeedResultSink : ISeedResultSink
     }
 
     public void Dispose() => _db.Dispose();
+}
+
+public sealed class ParquetSeedProvider : IMotelySeedProvider, IDisposable
+{
+    private readonly DuckLakeConnection _lake;
+    private readonly string _escapedPath;
+    private readonly object _lock = new();
+    private DuckDBCommand? _cmd;
+    private DuckDBDataReader? _reader;
+    private bool _initialized;
+    private bool _exhausted;
+
+    public long SeedCount { get; }
+
+    public ParquetSeedProvider(string parquetPath)
+    {
+        _lake = new DuckLakeConnection(":memory:");
+        _escapedPath = DuckLakeConnection.EscapePath(parquetPath);
+
+        using var countCmd = _lake.CreateCommand();
+        countCmd.CommandText = $"SELECT count(*) FROM read_parquet('{_escapedPath}') WHERE seed IS NOT NULL";
+        SeedCount = (long)countCmd.ExecuteScalar()!;
+    }
+
+    private void EnsureReader()
+    {
+        if (_initialized) return;
+        _initialized = true;
+        _cmd = _lake.CreateCommand();
+        _cmd.CommandText = $"SELECT seed FROM read_parquet('{_escapedPath}') WHERE seed IS NOT NULL";
+        _reader = _cmd.ExecuteReader();
+    }
+
+    public ReadOnlySpan<char> NextSeed()
+    {
+        lock (_lock)
+        {
+            if (_exhausted) return ReadOnlySpan<char>.Empty;
+            EnsureReader();
+
+            while (_reader!.Read())
+            {
+                if (_reader.IsDBNull(0)) continue;
+                var raw = _reader.GetString(0);
+                var normalized = SeedReader.NormalizeSeedToken(raw);
+                if (!string.IsNullOrWhiteSpace(normalized))
+                    return normalized.AsSpan();
+            }
+            _exhausted = true;
+            return ReadOnlySpan<char>.Empty;
+        }
+    }
+
+    public int NextSeeds(string[] seeds)
+    {
+        if (seeds == null || seeds.Length == 0) return 0;
+
+        lock (_lock)
+        {
+            if (_exhausted) return 0;
+            EnsureReader();
+
+            int count = 0;
+            while (count < seeds.Length)
+            {
+                if (!_reader!.Read())
+                {
+                    _exhausted = true;
+                    break;
+                }
+                if (_reader.IsDBNull(0)) continue;
+                var raw = _reader.GetString(0);
+                var normalized = SeedReader.NormalizeSeedToken(raw);
+                if (string.IsNullOrWhiteSpace(normalized)) continue;
+                seeds[count++] = normalized;
+            }
+            return count;
+        }
+    }
+
+    public void Dispose()
+    {
+        _reader?.Dispose();
+        _cmd?.Dispose();
+        _lake.Dispose();
+    }
 }
 
 internal sealed class ParquetSeedResultSink : ISeedResultSink

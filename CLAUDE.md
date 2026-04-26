@@ -168,4 +168,4 @@ These are real mistakes from previous AI sessions:
 
 ## Version
 
-Current: v13.0.3 (defined in `Directory.Packages.props` as `MotelyVersion`)
+Current: v14.0.3 (defined in `Directory.Packages.props` as `MotelyVersion`)
