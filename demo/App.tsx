@@ -560,7 +560,7 @@ const SCENARIOS: Scenario[] = [
   { id: "buttons", label: "Buttons", render: () => <ButtonsScenario /> },
   { id: "primitives", label: "UI Primitives", render: () => <PrimitivesScenario /> },
   { id: "chrome", label: "Tabs / Modal / Tooltip", render: () => <ChromeScenario /> },
-  { id: "version", label: "Version badge + legacy", render: () => <VersionScenario /> },
+  { id: "version", label: "Version badge", render: () => <VersionScenario /> },
 ];
 
 export function App() {
@@ -572,7 +572,8 @@ export function App() {
     <div
       style={{
         position: "relative",
-        minHeight: "100svh",
+        height: "100svh",
+        overflow: "hidden",
         color: C.WHITE,
         fontFamily: "var(--font-sans, m6x11plus), monospace",
         display: "flex",
@@ -589,7 +590,7 @@ export function App() {
           flexDirection: "column",
           width: "100%",
           maxWidth: 360,
-          minHeight: "100svh",
+          height: "100%",
         }}
       >
         {/* Sticky top nav */}
@@ -630,6 +631,7 @@ export function App() {
             padding: "16px 12px",
             display: "flex",
             flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <JimboFlankNav
@@ -643,9 +645,9 @@ export function App() {
             }}
             canPrev={SCENARIOS.findIndex(s => s.id === current) > 0}
             canNext={SCENARIOS.findIndex(s => s.id === current) < SCENARIOS.length - 1}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minHeight: 0 }}
           >
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", minHeight: 0 }}>
               {scenario.render()}
             </div>
           </JimboFlankNav>

@@ -57,8 +57,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
       <div
         style={{
           marginBottom: 4,
-          opacity: active ? 1 : 0,
-          transition: 'opacity 150ms',
+          visibility: active ? 'visible' : 'hidden',
           animation: active ? 'jimbo-bounce 0.8s cubic-bezier(0.68, 0, 0.68, 1) infinite' : 'none',
         }}
         aria-hidden

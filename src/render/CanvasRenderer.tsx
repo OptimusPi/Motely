@@ -192,6 +192,8 @@ export function JamlCardRenderer({ layers, invert = false, className = "", hover
         transform: hoverTilt ? (isHovered ? transform : "none") : undefined,
         transformStyle: hoverTilt ? "preserve-3d" : undefined,
         transformOrigin: hoverTilt ? "center center" : undefined,
+        userSelect: "none",
+        WebkitUserSelect: "none",
     };
 
     const canvasStyle: React.CSSProperties = {
@@ -199,6 +201,7 @@ export function JamlCardRenderer({ layers, invert = false, className = "", hover
         boxShadow: hoverTilt && isHovered ? "0 2px 12px rgba(0,0,0,0.3)" : "0 2px 8px rgba(0,0,0,0.2)",
         imageRendering: "pixelated",
         transition: hoverTilt && !isHovered ? "box-shadow 0.4s ease-out" : undefined,
+        pointerEvents: "none",
     };
 
     return (

@@ -61,7 +61,7 @@ export function useAnalyzer(motelyWasmUrl: string) {
       const results: AnalyzerAnteView[] = [];
       const runStates: Record<number, MotelyJsRunState> = {};
 
-      for (let ante = 1; ante <= 8; ante++) {
+      for (let ante = 1; ante <= 39; ante++) {
         const bossResult = ctx.getNextBossForAnte(bossStream, ante, runState);
         const bossName = Motely.MotelyBossBlind[bossResult.boss] ?? `Unknown(${bossResult.boss})`;
         runState = bossResult.runState;
