@@ -6,10 +6,13 @@ public sealed class MotelyResultsDb : IDisposable
 {
     private readonly DuckLakeConnection _lake;
     private readonly int _tallyCount;
+    private int _tableTallyCount;
     private readonly object _lock = new();
     private const string DefaultFilterId = "";
+    private DuckDB.NET.Data.DuckDBAppender? _appender;
 
     public int TallyCount => _tallyCount;
+    public bool HasFertilizer { get; private set; }
 
     public MotelyResultsDb(string dbPath, int tallyCount)
     {
@@ -17,12 +20,51 @@ public sealed class MotelyResultsDb : IDisposable
         _lake = new DuckLakeConnection(dbPath);
         CreateTable();
         EnsureFilterIdColumn();
+        ReconcileTallyColumns();
     }
 
     private void EnsureFilterIdColumn()
     {
         _lake.Execute("ALTER TABLE results ADD COLUMN IF NOT EXISTS filter_id TEXT");
         _lake.Execute("UPDATE results SET filter_id = '' WHERE filter_id IS NULL");
+    }
+
+    private void ReconcileTallyColumns()
+    {
+        using var cmd = _lake.CreateCommand();
+        cmd.CommandText = "SELECT * FROM results LIMIT 0";
+        using var reader = cmd.ExecuteReader();
+        int existingTallyCount = reader.FieldCount - 3; // filter_id, seed, score
+        reader.Close();
+
+        if (existingTallyCount == _tallyCount)
+        {
+            _tableTallyCount = _tallyCount;
+            return;
+        }
+
+        _lake.Execute("ALTER TABLE results RENAME TO _fertilizer");
+        CreateTable();
+        _tableTallyCount = _tallyCount;
+        HasFertilizer = true;
+    }
+
+    public long DrainFertilizer(Action<string> onSeed)
+    {
+        if (!HasFertilizer) return 0;
+        long count = 0;
+        using var cmd = _lake.CreateCommand();
+        cmd.CommandText = "SELECT DISTINCT seed FROM _fertilizer";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            onSeed(reader.GetString(0));
+            count++;
+        }
+        reader.Close();
+        _lake.Execute("DROP TABLE _fertilizer");
+        HasFertilizer = false;
+        return count;
     }
 
     private void CreateTable()
@@ -35,6 +77,11 @@ public sealed class MotelyResultsDb : IDisposable
         _lake.Execute(sb.ToString());
     }
 
+    private DuckDB.NET.Data.DuckDBAppender EnsureAppender()
+    {
+        return _appender ??= _lake.CreateAppender("results");
+    }
+
     public void AppendResults(string filterId, ReadOnlySpan<ResultRow> rows)
     {
         if (rows.Length == 0)
@@ -42,14 +89,14 @@ public sealed class MotelyResultsDb : IDisposable
 
         lock (_lock)
         {
-            using var appender = _lake.CreateAppender("results");
+            var appender = EnsureAppender();
             foreach (ref readonly var row in rows)
             {
                 var r = appender.CreateRow();
                 r.AppendValue(filterId);
                 r.AppendValue(row.Seed);
                 r.AppendValue(row.Score);
-                for (int i = 0; i < _tallyCount; i++)
+                for (int i = 0; i < _tableTallyCount; i++)
                     r.AppendValue(i < row.Tallies.Length ? row.Tallies[i] : 0);
                 r.EndRow();
             }
@@ -62,12 +109,12 @@ public sealed class MotelyResultsDb : IDisposable
     {
         lock (_lock)
         {
-            using var appender = _lake.CreateAppender("results");
+            var appender = EnsureAppender();
             var r = appender.CreateRow();
             r.AppendValue(filterId);
             r.AppendValue(seed);
             r.AppendValue(score);
-            for (int i = 0; i < _tallyCount; i++)
+            for (int i = 0; i < _tableTallyCount; i++)
                 r.AppendValue(i < tallies.Length ? tallies[i] : 0);
             r.EndRow();
         }
@@ -167,7 +214,13 @@ public sealed class MotelyResultsDb : IDisposable
 
     public void Clear() => Clear(DefaultFilterId);
 
-    public void Dispose() => _lake.Dispose();
+    public void Dispose()
+    {
+        _appender?.Close();
+        _appender?.Dispose();
+        _appender = null;
+        _lake.Dispose();
+    }
 
     private string BuildTallySelectList()
     {

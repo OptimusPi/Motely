@@ -166,6 +166,33 @@ These are real mistakes from previous AI sessions:
 - `mixedJoker: Any` — VALID (alias for joker), but prefer `joker`
 - Wrong rarity: ALWAYS verify against the enums in `Motely/Enums/MotelyJokers.cs`. Example: Photograph IS common (`MotelyJokerCommon`), Astronomer and Satellite ARE uncommon (`MotelyJokerUncommon`). Don't guess rarity — read the enum.
 
+## JAML Schema
+
+`jaml.schema.json` is auto-generated from the C# DTOs via `System.Text.Json.Schema.JsonSchemaExporter`. Regenerate with:
+
+```sh
+dotnet run --project Motely.CLI -- --write-jaml-schema
+```
+
+This writes to:
+- `jaml.schema.json` (repo root)
+- `tools/jaml-language/vscode-extension/schemas/jaml.schema.json`
+
+Golden test copy: `Motely.Tests/golden/jaml.schema.json`
+
+## VS Code Extension
+
+`tools/jaml-language/vscode-extension/` — JAML language support + notebooks.
+
+- **Language**: `.jaml` files with TextMate grammar, JSON schema validation
+- **Notebooks**: `.jaml-notebook` files — each cell is a JAML filter, executed via motely-wasm
+- **Kernel**: `JamlNotebookController` boots motely-wasm, validates JAML, reports results inline
+
+```sh
+cd tools/jaml-language/vscode-extension
+npm install && npm run compile
+```
+
 ## Version
 
 Current: v14.0.3 (defined in `Directory.Packages.props` as `MotelyVersion`)
