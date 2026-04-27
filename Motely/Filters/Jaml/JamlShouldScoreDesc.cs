@@ -98,8 +98,6 @@ public struct JamlShouldScoreDesc
                     for (int i = 0; i < mustCount; i++)
                     {
                         int raw = JamlScoring.CountRawOccurrences(ref singleCtx, shouldClauses[i], ref runState);
-                        int weighted = JamlScoring.CountOccurrences(ref singleCtx, shouldClauses[i], ref runState);
-                        totalScore += weighted * shouldClauses[i].Score;
 
                         if (raw < shouldClauses[i].Min)
                             return false;
