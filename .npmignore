@@ -1,0 +1,10 @@
+src/
+demo/
+assets/Balatro Seed Curator (DesignsV2)/
+.claude/
+.git/
+tsconfig.json
+DESIGN.md
+*.ts
+*.tsx
+!dist/**
