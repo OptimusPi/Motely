@@ -120,36 +120,9 @@ partial class Program
             RequestTermination();
         };
 
-        // Key listener: Esc quits, 'p' prints the latest progress on demand.
-        // Skip entirely when stdin is redirected (Console.KeyAvailable throws in that case),
-        // and swallow exceptions so a terminal that can't check keys doesn't kill the run.
         var escCts = new CancellationTokenSource();
         var escThread = new Thread(() =>
-        {
-            if (Console.IsInputRedirected) return;
-            try
-            {
-                while (!escCts.Token.IsCancellationRequested)
-                {
-                    // Avoid Console.ReadKey — it holds an internal lock that can deadlock
-                    // with Console.WriteLine on worker threads.
-                    Thread.Sleep(100);
-                    if (!Console.KeyAvailable) continue;
-                    var key = Console.ReadKey(true);
-                    if (key.Key == ConsoleKey.Escape)
-                    {
-                        RequestTermination();
-                    }
-                    else if (key.KeyChar == 'p' || key.KeyChar == 'P')
-                    {
-                        PrintLatestProgressOnDemand();
-                    }
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch (InvalidOperationException) { /* stdin went away mid-run */ }
-            catch (IOException) { /* terminal disconnected */ }
-        })
+            ConsoleKeyMonitor.Run(RequestTermination, PrintLatestProgressOnDemand, escCts.Token))
         { IsBackground = true, Name = "Console Key Listener" };
         escThread.Start();
 
