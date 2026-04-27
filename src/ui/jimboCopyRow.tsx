@@ -23,7 +23,7 @@ export function JimboCopyRow({ value, label }: JimboCopyRowProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {label && (
-        <JimboText size="xs" tone="grey" uppercase style={{ letterSpacing: 2 }}>
+        <JimboText size="xs" tone="grey" style={{ letterSpacing: 2 }}>
           {label}
         </JimboText>
       )}
@@ -53,7 +53,6 @@ export function JimboCopyRow({ value, label }: JimboCopyRowProps) {
             cursor: 'pointer',
             flexShrink: 0,
             transition: 'color 0.15s, background 0.15s, border-color 0.15s',
-            textTransform: 'uppercase',
           }}
         >
           {copied ? 'Copied' : 'Copy'}

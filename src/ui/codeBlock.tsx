@@ -26,8 +26,8 @@ export function JimboCodeBlock({ code, language, filename, className = '' }: Jim
     >
       <div style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${JimboColorOption.INNER_BORDER}` }}>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {filename && <span style={{ fontSize: 10, textTransform: 'uppercase', opacity: 0.6 }}>{filename}</span>}
-          {language && <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, background: 'rgba(0,0,0,0.4)', color: '#60a5fa', textTransform: 'uppercase' }}>{language}</span>}
+          {filename && <span style={{ fontSize: 10, opacity: 0.6 }}>{filename}</span>}
+          {language && <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, background: 'rgba(0,0,0,0.4)', color: '#60a5fa' }}>{language}</span>}
         </div>
         <button
           onClick={copy}

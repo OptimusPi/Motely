@@ -141,7 +141,7 @@ function AnteSection({ ante, live, enabledStreams, chunkSize, registerRef }: Ant
     >
       <header style={styles.header}>
         <div>
-          <div style={styles.anteLabel}>ANTE</div>
+          <div style={styles.anteLabel}>Ante</div>
           <div style={styles.anteNumber}>{ante.ante}</div>
         </div>
         {ante.voucher && (
@@ -153,11 +153,11 @@ function AnteSection({ ante, live, enabledStreams, chunkSize, registerRef }: Ant
       </header>
 
       <div style={styles.blindRow}>
-        <BlindCell label="SMALL" tag={ante.smallBlindTag} />
-        <BlindCell label="BIG" tag={ante.bigBlindTag} />
+        <BlindCell label="Small" tag={ante.smallBlindTag} />
+        <BlindCell label="Big" tag={ante.bigBlindTag} />
         {ante.boss && (
           <div style={styles.bossCell}>
-            <div style={styles.cellLabel}>BOSS</div>
+            <div style={styles.cellLabel}>Boss</div>
             <JamlBoss bossName={ante.boss} scale={0.7} />
             <div style={styles.cellCaption}>{ante.boss}</div>
           </div>
@@ -166,7 +166,7 @@ function AnteSection({ ante, live, enabledStreams, chunkSize, registerRef }: Ant
 
       {ante.packs && ante.packs.length > 0 && (
         <div style={styles.streamLane}>
-          <div style={styles.streamLabel}>PACKS</div>
+          <div style={styles.streamLabel}>Packs</div>
           <div style={styles.packRow}>
             {ante.packs.map((pack, i) => (
               <div key={`${ante.ante}-pack-${i}`} style={styles.packPill}>
@@ -227,7 +227,7 @@ function StreamLane({ ante, streamKey, live, chunkSize, initialItems }: StreamLa
   return (
     <div style={styles.streamLane}>
       <div style={{ ...styles.streamLabel, color: toneColor }}>
-        {meta.label.toUpperCase()}
+        {meta.label}
         {stream.items.length > 0 ? ` · ${stream.items.length}` : ""}
       </div>
       <ShopRow
@@ -386,7 +386,7 @@ function StreamPicker({ enabled, onChange, open, onToggle }: StreamPickerProps) 
       </button>
       {open && (
         <div style={styles.pickerPanel}>
-          <div style={styles.pickerHeader}>STREAMS</div>
+          <div style={styles.pickerHeader}>Streams</div>
           {all.map((meta) => {
             const isOn = enabledSet.has(meta.key);
             const tone = TONE_COLORS[meta.tone] ?? TONE_COLORS.default;

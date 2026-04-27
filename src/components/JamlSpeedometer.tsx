@@ -110,25 +110,25 @@ export function JamlSpeedometer({
 
       {/* Speed readout */}
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "m6x11plus, monospace", color: isActive ? speedColor : JimboColorOption.GREY }}>
+        <div style={{ fontSize: 20, fontFamily: "m6x11plus, monospace", color: isActive ? speedColor : JimboColorOption.GREY }}>
           {isActive ? formatSpeed(seedsPerSecond) : "---"}
         </div>
-        <JimboText size="xs" tone="grey" uppercase>seeds / sec</JimboText>
+        <JimboText size="xs" tone="grey">seeds / sec</JimboText>
       </div>
 
       {/* Stats row */}
       <div style={{ display: "flex", gap: 16, marginTop: 2 }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "m6x11plus, monospace", color: JimboColorOption.WHITE }}>
+          <div style={{ fontSize: 13, fontFamily: "m6x11plus, monospace", color: JimboColorOption.WHITE }}>
             {formatCount(totalSearched)}
           </div>
-          <JimboText size="xs" tone="grey" uppercase>searched</JimboText>
+          <JimboText size="xs" tone="grey">searched</JimboText>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "m6x11plus, monospace", color: JimboColorOption.GREEN_TEXT }}>
+          <div style={{ fontSize: 13, fontFamily: "m6x11plus, monospace", color: JimboColorOption.GREEN_TEXT }}>
             {formatCount(matchingSeeds)}
           </div>
-          <JimboText size="xs" tone="grey" uppercase>matches</JimboText>
+          <JimboText size="xs" tone="grey">matches</JimboText>
         </div>
       </div>
     </div>

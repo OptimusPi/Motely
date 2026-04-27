@@ -33,7 +33,7 @@ export function JamlAestheticSelector({ value, onChange, className, style }: Jam
         ...style,
       }}
     >
-      <JimboText size="xs" tone="grey" uppercase>Seed Aesthetics</JimboText>
+      <JimboText size="xs" tone="grey">Seed Aesthetics</JimboText>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
         {AESTHETICS.map((a) => {
           const isActive = value === a.id;
@@ -51,9 +51,7 @@ export function JamlAestheticSelector({ value, onChange, className, style }: Jam
                 color: isActive ? JimboColorOption.GOLD_TEXT : JimboColorOption.GREY,
                 cursor: "pointer",
                 fontSize: 11,
-                fontWeight: 700,
                 fontFamily: "m6x11plus, monospace",
-                textTransform: "uppercase",
                 letterSpacing: 0.5,
                 transition: "border-color 100ms, background 100ms",
               }}

@@ -135,7 +135,6 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
                   <span
                     style={{
                       fontSize: 12,
-                      fontWeight: 700,
                       color: result.score > 0 ? JimboColorOption.GREEN_TEXT : JimboColorOption.GREY,
                       minWidth: 36,
                       textAlign: "right",
@@ -184,7 +183,6 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
                       <span
                         style={{
                           fontSize: 11,
-                          fontWeight: 700,
                           color: val > 0 ? JimboColorOption.GREEN_TEXT : JimboColorOption.DARK_GREY,
                           minWidth: 24,
                           textAlign: "right",

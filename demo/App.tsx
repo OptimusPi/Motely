@@ -35,10 +35,8 @@ import {
   JimboTooltip,
   JimboVerticalTabs,
 } from "jaml-ui/ui";
-import motelyWasmUrl from "motely-wasm/index.mjs?url";
-
 const C = JimboColorOption;
-const MOTELY_WASM_URL = motelyWasmUrl;
+const MOTELY_WASM_URL = `${import.meta.env.VITE_CDN_BASE_URL}/motely-wasm/${import.meta.env.VITE_MOTELY_WASM_VERSION}/index.mjs`;
 
 const SAMPLE_JAML = `name: Blueprint Copy Engine
 author: pifreak
@@ -53,12 +51,12 @@ should:
     score: 80
   - legendaryJoker: Perkeo
     score: 70
-  - uncommonJoker: Baron
+  - rareJoker: Baron
     score: 55
   - tag: NegativeTag
     antes: [1, 2]
     score: 60
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 40
 mustNot:
@@ -160,7 +158,7 @@ function SearchScenario() {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px" }}>
-          <JimboText size="xs" tone="grey" uppercase>Status</JimboText>
+          <JimboText size="xs" tone="grey">Status</JimboText>
           <JimboText size="md" tone={isSearching ? "green" : "white"}>
             {search.status}
           </JimboText>
@@ -205,7 +203,7 @@ function CodeScenario() {
   const [jaml, setJaml] = useState(SAMPLE_JAML);
   return (
     <div style={{ height: "100%", minHeight: 480, display: "flex", flexDirection: "column" }}>
-      <JimboText size="xs" tone="grey" uppercase>Raw JAML editor (no chrome)</JimboText>
+      <JimboText size="xs" tone="grey">Raw JAML editor (no chrome)</JimboText>
       <div style={{ flex: 1, marginTop: 6 }}>
         <JamlCodeEditor value={jaml} onChange={setJaml} minHeight={480} />
       </div>
@@ -476,7 +474,7 @@ function VersionScenario() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <JimboText size="xs" tone="grey" uppercase>{title}</JimboText>
+      <JimboText size="xs" tone="grey">{title}</JimboText>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start" }}>
         {children}
       </div>

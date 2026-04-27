@@ -34,7 +34,7 @@ export interface JimboFilterBarProps {
 export function JimboFilterBar({
   search,
   onSearchChange,
-  searchPlaceholder = 'SEARCH...',
+  searchPlaceholder = 'Search...',
   searchLabel = 'Search',
   sort,
   onSortChange,
@@ -84,7 +84,6 @@ export function JimboFilterBar({
                 fontFamily: "'m6x11plus', 'Courier New', monospace",
                 fontSize: 20,
                 letterSpacing: 2,
-                textTransform: 'uppercase',
                 outline: 'none',
               }}
             />
@@ -111,7 +110,6 @@ export function JimboFilterBar({
                 fontFamily: "'m6x11plus', 'Courier New', monospace",
                 fontSize: 18,
                 letterSpacing: 2,
-                textTransform: 'uppercase',
                 padding: '14px 48px 14px 24px',
                 minWidth: 200,
                 textAlign: 'center',
@@ -147,7 +145,7 @@ function FloatingLabelField({ label, children }: { label: string; children: Reac
           zIndex: 2,
         }}
       >
-        <JimboText size="xs" uppercase>{label}</JimboText>
+        <JimboText size="xs">{label}</JimboText>
       </div>
       {children}
     </div>

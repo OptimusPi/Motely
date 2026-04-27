@@ -67,7 +67,7 @@ export function Showcase({
             Balatro
           </div>
           <div style={{ fontSize: 14, letterSpacing: 4, color: C.GREY, marginTop: 4, textShadow: '1px 1px 0 rgba(0,0,0,.8)' }}>
-            SEED · CURATOR
+            Seed · Curator
           </div>
         </div>
 
@@ -84,7 +84,7 @@ export function Showcase({
           ] as const).map(([n, l]) => (
             <div key={l}>
               <div style={{ fontSize: 16, color: C.GOLD, textShadow: '1px 1px 0 rgba(0,0,0,.8)' }}>{n}</div>
-              <div style={{ fontSize: 9, color: C.GREY, letterSpacing: 2, marginTop: 2 }}>{l.toUpperCase()}</div>
+              <div style={{ fontSize: 9, color: C.GREY, letterSpacing: 2, marginTop: 2 }}>{l}</div>
             </div>
           ))}
         </div>
@@ -95,7 +95,7 @@ export function Showcase({
             fontSize: 11, letterSpacing: 2, padding: '2px 8px',
             background: C.BLUE, color: C.WHITE, borderRadius: 3,
             textShadow: '1px 1px 0 rgba(0,0,0,.8)',
-          }}>HOT FILTERS</div>
+          }}>Hot Filters</div>
           <div style={{ flex: 1, height: 2, background: `${C.BLUE}55`, borderRadius: 1 }} />
         </div>
 
@@ -139,7 +139,7 @@ export function Showcase({
             fontSize: 11, letterSpacing: 2, padding: '2px 8px',
             background: C.GREEN, color: C.WHITE, borderRadius: 3,
             textShadow: '1px 1px 0 rgba(0,0,0,.8)',
-          }}>RECENT FINDS</div>
+          }}>Recent Finds</div>
           <div style={{ flex: 1, height: 2, background: `${C.GREEN}55`, borderRadius: 1 }} />
         </div>
 

@@ -449,7 +449,6 @@ const styles: Record<string, React.CSSProperties> = {
   highlightTitle: {
     fontSize: 12,
     color: "#6f6fa1",
-    textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
   highlightSubtitle: {
@@ -504,7 +503,6 @@ const styles: Record<string, React.CSSProperties> = {
   highlightAnte: {
     fontSize: 11,
     color: "#a855f7",
-    textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
   highlightLabel: {
@@ -540,14 +538,12 @@ const styles: Record<string, React.CSSProperties> = {
   navLabel: {
     fontSize: 13,
     color: "#a855f7",
-    textTransform: "uppercase",
     letterSpacing: "0.05em",
     minWidth: 110,
     textAlign: "center",
   },
   navSubLabel: {
     color: "#5a5a88",
-    textTransform: "none",
     letterSpacing: "normal",
     fontSize: 11,
     marginLeft: 4,
@@ -579,7 +575,6 @@ const styles: Record<string, React.CSSProperties> = {
   anteHeading: {
     fontSize: 14,
     color: "#a855f7",
-    textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
   bossRow: {
@@ -597,7 +592,6 @@ const styles: Record<string, React.CSSProperties> = {
   rowLabel: {
     fontSize: 11,
     color: "#5a5a88",
-    textTransform: "uppercase",
     letterSpacing: "0.05em",
     marginBottom: 4,
   },
@@ -627,7 +621,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#7f7fa7",
     border: "1px solid #2a2a55",
     fontSize: 11,
-    textTransform: "uppercase",
   },
   itemCard: {
     display: "flex",
@@ -678,7 +671,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#c7c7ef",
     border: "1px solid #35356d",
     fontSize: 11,
-    textTransform: "uppercase",
   },
   badgeAccent: {
     padding: "1px 4px",
@@ -687,7 +679,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#f5c842",
     border: "1px solid rgba(245,200,66,0.35)",
     fontSize: 11,
-    textTransform: "uppercase",
   },
   badgeMuted: {
     padding: "1px 4px",
@@ -696,7 +687,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#7f7fa7",
     border: "1px solid #2a2a55",
     fontSize: 11,
-    textTransform: "uppercase",
   },
   packChip: {
     fontSize: 13,
@@ -719,7 +709,6 @@ const styles: Record<string, React.CSSProperties> = {
   factLabel: {
     fontSize: 11,
     color: "#7f7fa7",
-    textTransform: "uppercase",
   },
   factValue: {
     fontSize: 13,

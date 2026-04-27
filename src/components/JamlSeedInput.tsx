@@ -27,7 +27,7 @@ export function JamlSeedInput({ value, onChange, placeholder = "Enter seed (e.g.
 
   return (
     <div className={className} style={{ display: "flex", flexDirection: "column", gap: 4, ...style }}>
-      <JimboText size="xs" tone="grey" uppercase>Seed</JimboText>
+      <JimboText size="xs" tone="grey">Seed</JimboText>
       <input
         type="text"
         value={display}
@@ -43,7 +43,6 @@ export function JamlSeedInput({ value, onChange, placeholder = "Enter seed (e.g.
           background: JimboColorOption.DARKEST,
           color: JimboColorOption.GOLD_TEXT,
           fontSize: 16,
-          fontWeight: 900,
           fontFamily: "m6x11plus, monospace",
           letterSpacing: 2,
           textTransform: "uppercase",
