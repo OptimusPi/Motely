@@ -26,6 +26,8 @@ const SHEET_KEY_MAP: Record<SpriteSheetType, keyof typeof SPRITE_SHEETS> = {
   Editions: 'editions',
   BlindChips: 'blinds',
   tags: 'tags',
+  Stakes: 'stakes',
+  Decks: 'deck',
 }
 
 const _textureCache = new Map<string, THREE.Texture>()

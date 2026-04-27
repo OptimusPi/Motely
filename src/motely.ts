@@ -24,6 +24,11 @@ export {
 } from "./decode/motelyItemDecoder.js";
 
 export {
+  motelyItemToSprite,
+  type MotelySpriteData,
+} from "./decode/motelySprite.js";
+
+export {
   MOTELY_DISPLAY_SCHEMA,
   motelyBossDisplayName,
   motelyBossDisplayNameFromKey,

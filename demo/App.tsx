@@ -25,15 +25,19 @@ import {
 import {
   JimboBackButton,
   JimboBackground,
+  JimboBadge,
   JimboButton,
   JimboColorOption,
   JimboFlankNav,
+  JimboFloating,
   JimboModal,
   JimboPanel,
   JimboTabs,
   JimboText,
+  JimboToggleList,
   JimboTooltip,
   JimboVerticalTabs,
+  JimboBalatroFooter,
 } from "jaml-ui/ui";
 const C = JimboColorOption;
 const MOTELY_WASM_URL = `${import.meta.env.VITE_CDN_BASE_URL}/motely-wasm/${import.meta.env.VITE_MOTELY_WASM_VERSION}/index.mjs`;
@@ -405,8 +409,6 @@ function ChromeScenario() {
         <JimboButton tone="blue" size="sm" onClick={() => setModalOpen(true)}>Open modal</JimboButton>
         <JimboModal open={modalOpen} onClose={() => setModalOpen(false)} title="Sample Modal">
           <JimboText size="md">This is a JimboModal with a title and content.</JimboText>
-          <div style={{ height: 8 }} />
-          <JimboButton tone="orange" size="sm" onClick={() => setModalOpen(false)}>Close</JimboButton>
         </JimboModal>
       </Section>
       <Section title="JimboFlankNav (prev / next)">
@@ -429,6 +431,50 @@ function ChromeScenario() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Scenario: Primitives (Badges, Floating, ToggleList)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PrimitivesScenario() {
+  const [toggles, setToggles] = useState([
+    { id: 't1', label: 'Option A', on: true },
+    { id: 't2', label: 'Option B', on: false },
+    { id: 't3', label: 'Option C', on: false },
+  ]);
+
+  const onToggle = (id: string) => {
+    setToggles(prev => prev.map(t => t.id === id ? { ...t, on: !t.on } : t));
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Section title="JimboBadge">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {(["dark","blue","red","green","gold","grey"] as const).map((tone) => (
+            <JimboBadge key={tone} tone={tone} size="md">{tone}</JimboBadge>
+          ))}
+          <JimboBadge tone="gold" size="sm">Small Gold</JimboBadge>
+        </div>
+      </Section>
+      <Section title="JimboToggleList">
+        <JimboToggleList
+          title="Select Options"
+          items={toggles}
+          onToggle={onToggle}
+        />
+      </Section>
+      <Section title="JimboFloating">
+        <JimboPanel style={{ width: 200, height: 100, position: 'relative' }}>
+          <JimboText size="sm">A Panel with a floating badge</JimboText>
+          <JimboFloating anchor="top-right" offset={-8}>
+            <JimboBadge tone="red">New!</JimboBadge>
+          </JimboFloating>
+        </JimboPanel>
+      </Section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Scenario: Version badge + AnalyzerExplorer (legacy)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -436,13 +482,13 @@ function VersionScenario() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Section title="MotelyVersionBadge">
-        <MotelyVersionBadge version="13.0.3" />
+        <MotelyVersionBadge version="14.0.2" />
         <div style={{ height: 6 }} />
-        <MotelyVersionBadge version="13.0.3" minimal />
+        <MotelyVersionBadge version="14.0.2" minimal />
         <div style={{ height: 6 }} />
         <MotelyVersionBadge loading />
       </Section>
-      <Section title="AnalyzerExplorer (legacy, kept for back-compat)">
+      <Section title="AnalyzerExplorer">
         <AnalyzerExplorer
           antes={[
             {
@@ -512,12 +558,13 @@ const SCENARIOS: Scenario[] = [
   { id: "inputs", label: "Inputs", render: () => <InputsScenario /> },
   { id: "decks", label: "Decks + stakes", render: () => <DecksScenario /> },
   { id: "buttons", label: "Buttons", render: () => <ButtonsScenario /> },
+  { id: "primitives", label: "UI Primitives", render: () => <PrimitivesScenario /> },
   { id: "chrome", label: "Tabs / Modal / Tooltip", render: () => <ChromeScenario /> },
   { id: "version", label: "Version badge + legacy", render: () => <VersionScenario /> },
 ];
 
 export function App() {
-  const [current, setCurrent] = useState<ScenarioId>("analyzer");
+  const [current, setCurrent] = useState<ScenarioId>("primitives");
   const scenario = SCENARIOS.find((s) => s.id === current) ?? SCENARIOS[0];
   const fullBleed = scenario.fullBleed === true;
 
@@ -528,90 +575,101 @@ export function App() {
         minHeight: "100svh",
         color: C.WHITE,
         fontFamily: "var(--font-sans, m6x11plus), monospace",
+        display: "flex",
+        justifyContent: "center",
       }}
     >
       <JimboBackground />
 
-      {fullBleed ? (
-        <>
-          {scenario.render()}
-          {/* Floating exit chip — top-left so it doesn't fight with the analyzer's side rail */}
-          <div
-            style={{
-              position: "fixed",
-              top: 8,
-              left: 8,
-              zIndex: 10,
-              display: "flex",
-              gap: 6,
-              alignItems: "center",
-              background: "rgba(0,0,0,0.65)",
-              padding: "4px 8px",
-              borderRadius: 6,
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            <select
-              value={current}
-              onChange={(e) => setCurrent(e.target.value as ScenarioId)}
-              style={selectStyle}
-            >
-              {SCENARIOS.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          maxWidth: 360,
+          minHeight: "100svh",
+        }}
+      >
+        {/* Sticky top nav */}
+        <header
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 5,
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 12px",
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(6px)",
+            borderBottom: `2px solid ${C.PANEL_EDGE}`,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ color: C.GOLD, fontSize: 10, letterSpacing: 3 }}>JAML-UI</span>
           </div>
-        </>
-      ) : (
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", minHeight: "100svh" }}>
-          {/* Sticky top bar — brand + scenario picker. Mobile-first single column. */}
-          <header
-            style={{
-              position: "sticky",
-              top: 0,
-              zIndex: 5,
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "10px 12px",
-              background: "rgba(0,0,0,0.65)",
-              backdropFilter: "blur(6px)",
-              borderBottom: `1px solid ${C.PANEL_EDGE}`,
-            }}
+          <select
+            value={current}
+            onChange={(e) => setCurrent(e.target.value as ScenarioId)}
+            style={selectStyle}
+            aria-label="Pick scenario"
           >
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ color: C.GOLD, fontSize: 10, letterSpacing: 3 }}>JAML-UI</span>
-              <span style={{ color: C.WHITE, fontSize: 13 }}>component demo</span>
-            </div>
-            <select
-              value={current}
-              onChange={(e) => setCurrent(e.target.value as ScenarioId)}
-              style={selectStyle}
-              aria-label="Pick scenario"
-            >
-              {SCENARIOS.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
-          </header>
+            {SCENARIOS.map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+        </header>
 
-          <main
-            style={{
-              flex: 1,
-              padding: 12,
-              maxWidth: 1100,
-              width: "100%",
-              boxSizing: "border-box",
-              margin: "0 auto",
-              display: "flex",
-              flexDirection: "column",
+        {/* Content area */}
+        <main
+          style={{
+            flex: 1,
+            padding: "16px 12px",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <JimboFlankNav
+            onPrev={() => {
+              const idx = SCENARIOS.findIndex(s => s.id === current);
+              if (idx > 0) setCurrent(SCENARIOS[idx - 1].id);
             }}
+            onNext={() => {
+              const idx = SCENARIOS.findIndex(s => s.id === current);
+              if (idx < SCENARIOS.length - 1) setCurrent(SCENARIOS[idx + 1].id);
+            }}
+            canPrev={SCENARIOS.findIndex(s => s.id === current) > 0}
+            canNext={SCENARIOS.findIndex(s => s.id === current) < SCENARIOS.length - 1}
+            style={{ flex: 1 }}
           >
-            {scenario.render()}
-          </main>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              {scenario.render()}
+            </div>
+          </JimboFlankNav>
+        </main>
+
+        {/* Sticky bottom footer */}
+        <div
+          style={{
+            position: "sticky",
+            bottom: 0,
+            marginTop: "auto",
+            display: "flex",
+            flexDirection: "column",
+            zIndex: 5,
+          }}
+        >
+          {/* Action Row containing Back Button */}
+          <div style={{ padding: "8px 12px", background: "linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0))" }}>
+             <JimboBackButton onClick={() => alert('Back pressed')} />
+          </div>
+          {/* Attribution Footer */}
+          <JimboBalatroFooter />
         </div>
-      )}
+      </div>
     </div>
   );
 }

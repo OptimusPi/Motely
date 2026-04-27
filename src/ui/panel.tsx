@@ -88,17 +88,18 @@ export interface JimboButtonProps {
   size?: 'xs' | 'sm' | 'md' | 'lg'
   fullWidth?: boolean
   disabled?: boolean
+  uppercase?: boolean
   onClick?: () => void
   style?: React.CSSProperties
   children?: React.ReactNode
 }
 
 export function JimboButton({
-  tone = 'orange', size = 'md', fullWidth = false, disabled = false, onClick, style, children,
+  tone = 'orange', size = 'md', fullWidth = false, disabled = false, uppercase = false, onClick, style, children,
 }: JimboButtonProps) {
   const [pressed, setPressed] = useState(false)
   const [fg, sh] = JIMBO_TONE_PAIRS[tone] ?? JIMBO_TONE_PAIRS.orange
-  const pad = size === 'xs' ? '2px 8px' : size === 'sm' ? '4px 10px' : size === 'lg' ? '14px 18px' : '9px 14px'
+  const pad = size === 'xs' ? '2px 8px' : size === 'sm' ? '4px 10px' : size === 'lg' ? '10px 18px' : '6px 14px'
   const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
 
   return (
@@ -118,7 +119,7 @@ export function JimboButton({
         transition: 'transform 55ms linear',
         textAlign: 'center',
       }}>
-        <JimboText size={textSize} uppercase>{children}</JimboText>
+        <JimboText size={textSize} uppercase={uppercase}>{children}</JimboText>
       </div>
     </div>
   )
@@ -126,8 +127,8 @@ export function JimboButton({
 
 export function JimboBackButton({ onClick }: { onClick?: () => void }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '8px 10px 10px' }}>
-      <JimboButton tone="orange" size="md" onClick={onClick} style={{ width: '66.666%' }}>Back</JimboButton>
+    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '4px 0' }}>
+      <JimboButton tone="orange" size="md" fullWidth onClick={onClick}>Back</JimboButton>
     </div>
   )
 }

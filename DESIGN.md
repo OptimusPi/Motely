@@ -124,7 +124,7 @@ components:
 
 Jimbo is the design system for Balatro seed finder tools (JAML-UI, WeeJoker, Seed Finder). It recreates the cozy, tactile, chunky feel of LocalThunk's Balatro — dark panels with silver borders, 3D-press buttons, pixel typography, juice animations. Everything feels like a physical object you can poke.
 
-The system targets iPhone SE portrait (375x667) as the minimum viewport. No fat padding, no bloated margins — every pixel earns its place.
+The system is built **Mobile First**. The absolute minimum viewport width is **320px**. All components must be accessible and usable at 320px without breaking layouts or horizontal scrolling. No fat padding, no bloated margins — every pixel earns its place.
 
 ## Colors
 
@@ -153,7 +153,7 @@ All text is uppercase with generous letter-spacing (0.04em-0.1em) for labels and
 
 ## Layout
 
-Target: iPhone SE portrait (375x667). Components must fit without horizontal scroll. Vertical snap-scroll for ante pages. Horizontal swipe for seed navigation.
+Target: Minimum 320px portrait width. Components must scale gracefully using relative units and flexible layouts. Avoid fixed widths that break at 320px. Vertical snap-scroll for ante pages. Horizontal swipe for seed navigation.
 
 Panels use 2px solid borders with border-silver on top/sides and border-south on bottom, creating a subtle 3D card effect. Inner shadow: `inset 0 0 0 1px rgba(255,255,255,0.04)`. Outer shadow: `0 2px 0 #000`.
 
@@ -187,7 +187,7 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 
 - DO use m6x11plus for everything. No fallback display fonts.
 - DO eyedrop colors from the game. Never guess or approximate.
-- DO design for iPhone SE portrait first. Desktop is a stretched phone.
+- DO design for 320px portrait first. Desktop is an expanded view of the mobile baseline.
 - DO use translateY + box-shadow for button depth. Not CSS 3D transforms.
 - DO dim non-matching items (opacity 0.4 + grayscale 0.6). They stay visible for context.
 - DON'T use font-weight bold. m6x11plus is single-weight. Bold = muddy.

@@ -9,6 +9,7 @@ export const JAML_ASSET_FILES = {
   vouchers: "Vouchers.png",
   stickers: "stickers.png",
   tags: "tags.png",
+  stakes: "balatro-stake-chips.png",
 } as const;
 
 export type JamlAssetKey = keyof typeof JAML_ASSET_FILES;
@@ -29,6 +30,7 @@ const defaultAssetUrls: Record<JamlAssetKey, string> = {
   vouchers: new URL(`../assets/${JAML_ASSET_FILES.vouchers}`, import.meta.url).href,
   stickers: new URL(`../assets/${JAML_ASSET_FILES.stickers}`, import.meta.url).href,
   tags: new URL(`../assets/${JAML_ASSET_FILES.tags}`, import.meta.url).href,
+  stakes: new URL(`../assets/${JAML_ASSET_FILES.stakes}`, import.meta.url).href,
 };
 
 let customAssetBaseUrl: string | null = null;

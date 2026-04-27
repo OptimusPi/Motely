@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { resolveJamlAssetUrl, type JamlAssetKey } from '../assets.js'
-import { getSpriteData, type SpriteSheetType } from '../sprites/spriteMapper.js'
+import { getSpriteData, SHEET_META, type SpriteSheetType } from '../sprites/spriteMapper.js'
 
 export interface JimboSpriteProps {
   name: string
@@ -12,23 +12,17 @@ export interface JimboSpriteProps {
   style?: React.CSSProperties
 }
 
-const SHEET_META: Record<SpriteSheetType, { cols: number; rows: number; assetKey: JamlAssetKey }> = {
-  Jokers:    { cols: 10, rows: 16, assetKey: 'jokers' },
-  Tarots:    { cols: 10, rows: 6,  assetKey: 'tarots' },
-  Vouchers:  { cols: 9,  rows: 4,  assetKey: 'vouchers' },
-  Boosters:  { cols: 4,  rows: 9,  assetKey: 'boosters' },
-  BlindChips:{ cols: 21, rows: 31, assetKey: 'blinds' },
-  tags:      { cols: 6,  rows: 5,  assetKey: 'tags' },
-  Enhancers: { cols: 7,  rows: 5,  assetKey: 'enhancers' },
-  Editions:  { cols: 5,  rows: 1,  assetKey: 'editions' },
-}
-
 export function JimboSprite({ name, sheet, width = 40, height, style }: JimboSpriteProps) {
   const sprite = getSpriteData(name)
   const resolvedSheet: SpriteSheetType = sheet ?? sprite?.type ?? 'Jokers'
   const meta = SHEET_META[resolvedSheet]
   const pos = sprite?.pos ?? { x: 0, y: 0 }
-  const h = height ?? width
+  
+  let defaultH = width;
+  if (["Jokers", "Tarots", "Vouchers", "Boosters", "Decks", "Enhancers", "Editions"].includes(resolvedSheet)) {
+    defaultH = Math.round((width * 95) / 71);
+  }
+  const h = height ?? defaultH;
 
   if (!meta) return null
 
@@ -43,6 +37,76 @@ export function JimboSprite({ name, sheet, width = 40, height, style }: JimboSpr
       backgroundImage: `url(${resolveJamlAssetUrl(meta.assetKey)})`,
       backgroundSize: `${bgW}px ${bgH}px`,
       backgroundPosition: `${bgX}px ${bgY}px`,
+      backgroundRepeat: 'no-repeat',
+      imageRendering: 'pixelated',
+      ...style,
+    }} />
+  )
+}
+
+export interface StakeSpriteProps {
+  stake: string
+  width?: number
+  height?: number
+  style?: React.CSSProperties
+}
+
+const STAKE_MAP: string[] = ["White", "Red", "Green", "Black", "Blue", "Purple", "Orange", "Gold"]
+
+export function StakeSprite({ stake, width = 29, height, style }: StakeSpriteProps) {
+  const index = STAKE_MAP.indexOf(stake.replace(" Stake", ""))
+  const idx = index >= 0 ? index : 0
+  const x = idx % 5
+  const y = Math.floor(idx / 5)
+  const h = height ?? width
+  const bgW = width * 5
+  const bgH = h * 2
+
+  return (
+    <div style={{
+      width, height: h, flexShrink: 0,
+      backgroundImage: `url(${resolveJamlAssetUrl('stakes')})`,
+      backgroundSize: `${bgW}px ${bgH}px`,
+      backgroundPosition: `-${x * width}px -${y * h}px`,
+      backgroundRepeat: 'no-repeat',
+      imageRendering: 'pixelated',
+      ...style,
+    }} />
+  )
+}
+
+export interface DeckSpriteProps {
+  deck: string
+  width?: number
+  height?: number
+  style?: React.CSSProperties
+}
+
+const DECK_ROWS: Record<string, number> = {
+  Red: 0,
+  Blue: 1,
+  Yellow: 2,
+  Green: 3,
+  Black: 0,
+  Magic: 1,
+  Nebula: 2,
+  Ghost: 3,
+}
+
+export function DeckSprite({ deck, width = 71, height, style }: DeckSpriteProps) {
+  const baseDeck = deck.replace(" Deck", "")
+  const y = DECK_ROWS[baseDeck] ?? 0
+  const x = 12
+  const h = height ?? (width * 95 / 71)
+  const bgW = width * 13
+  const bgH = h * 4
+
+  return (
+    <div style={{
+      width, height: h, flexShrink: 0,
+      backgroundImage: `url(${resolveJamlAssetUrl('deck')})`,
+      backgroundSize: `${bgW}px ${bgH}px`,
+      backgroundPosition: `-${x * width}px -${y * h}px`,
       backgroundRepeat: 'no-repeat',
       imageRendering: 'pixelated',
       ...style,

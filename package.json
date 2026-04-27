@@ -82,7 +82,8 @@
     "react": "^18.2.0 || ^19.0.0",
     "react-dom": "^18.2.0 || ^19.0.0",
     "react-icons": ">=5.0.0",
-    "three": ">=0.150.0"
+    "three": ">=0.150.0",
+    "@react-three/drei": ">=9.0.0"
   },
   "peerDependenciesMeta": {
     "@react-spring/three": {
@@ -99,9 +100,13 @@
     },
     "three": {
       "optional": true
+    },
+    "@react-three/drei": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@google/design.md": "^0.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@react-spring/three": "^10.0.3",
     "@react-three/fiber": "^9.6.0",
@@ -116,7 +121,9 @@
     "react-icons": "^5.6.0",
     "three": "^0.184.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.9",
-    "@google/design.md": "^0.1.1"
+    "vite": "^8.0.9"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7"
   }
 }

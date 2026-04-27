@@ -78,13 +78,37 @@ interface DecodedMotelyItemBase {
 
 const _itemTypeToName = new Map<number, string>();
 
+const MOTELY_ITEM_TYPES_STANDARD = [
+  "TwoOfClubs","ThreeOfClubs","FourOfClubs","FiveOfClubs","SixOfClubs","SevenOfClubs","EightOfClubs","NineOfClubs","TenOfClubs","JackOfClubs","QueenOfClubs","KingOfClubs","AceOfClubs",
+  "TwoOfDiamonds","ThreeOfDiamonds","FourOfDiamonds","FiveOfDiamonds","SixOfDiamonds","SevenOfDiamonds","EightOfDiamonds","NineOfDiamonds","TenOfDiamonds","JackOfDiamonds","QueenOfDiamonds","KingOfDiamonds","AceOfDiamonds",
+  "TwoOfHearts","ThreeOfHearts","FourOfHearts","FiveOfHearts","SixOfHearts","SevenOfHearts","EightOfHearts","NineOfHearts","TenOfHearts","JackOfHearts","QueenOfHearts","KingOfHearts","AceOfHearts",
+  "TwoOfSpades","ThreeOfSpades","FourOfSpades","FiveOfSpades","SixOfSpades","SevenOfSpades","EightOfSpades","NineOfSpades","TenOfSpades","JackOfSpades","QueenOfSpades","KingOfSpades","AceOfSpades"
+];
+const MOTELY_ITEM_TYPES_SPECTRAL = ["Familiar","Grim","Incantation","Talisman","Aura","Wraith","Sigil","Ouija","Ectoplasm","Immolate","Ankh","DejaVu","Hex","Trance","Medium","Cryptid","TheSoul","BlackHole"];
+const MOTELY_ITEM_TYPES_TAROT = ["TheFool","TheMagician","TheHighPriestess","TheEmpress","TheEmperor","TheHierophant","TheLovers","TheChariot","Justice","TheHermit","TheWheelOfFortune","Strength","TheHangedMan","Death","Temperance","TheDevil","TheTower","TheStar","TheMoon","TheSun","Judgement","TheWorld"];
+const MOTELY_ITEM_TYPES_PLANET = ["Mercury","Venus","Earth","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","PlanetX","Ceres","Eris"];
+const MOTELY_ITEM_TYPES_JOKER = ["Joker","GreedyJoker","LustyJoker","WrathfulJoker","GluttonousJoker","JollyJoker","ZanyJoker","MadJoker","CrazyJoker","DrollJoker","SlyJoker","WilyJoker","CleverJoker","DeviousJoker","CraftyJoker","HalfJoker","CreditCard","Banner","MysticSummit","EightBall","Misprint","RaisedFist","ChaostheClown","ScaryFace","AbstractJoker","DelayedGratification","GrosMichel","EvenSteven","OddTodd","Scholar","BusinessCard","Supernova","RideTheBus","Egg","Runner","IceCream","Splash","BlueJoker","FacelessJoker","GreenJoker","Superposition","ToDoList","Cavendish","RedCard","SquareJoker","RiffRaff","Photograph","ReservedParking","MailInRebate","Hallucination","FortuneTeller","Juggler","Drunkard","GoldenJoker","Popcorn","WalkieTalkie","SmileyFace","GoldenTicket","Swashbuckler","HangingChad","ShootTheMoon","JokerStencil","FourFingers","Mime","CeremonialDagger","MarbleJoker","LoyaltyCard","Dusk","Fibonacci","SteelJoker","Hack","Pareidolia","SpaceJoker","Burglar","Blackboard","SixthSense","Constellation","Hiker","CardSharp","Madness","Seance","Vampire","Shortcut","Hologram","Cloud9","Rocket","MidasMask","Luchador","GiftCard","TurtleBean","Erosion","ToTheMoon","StoneJoker","LuckyCat","Bull","DietCola","TradingCard","FlashCard","SpareTrousers","Ramen","Seltzer","Castle","MrBones","Acrobat","SockAndBuskin","Troubadour","Certificate","SmearedJoker","Throwback","RoughGem","Bloodstone","Arrowhead","OnyxAgate","GlassJoker","Showman","FlowerPot","MerryAndy","OopsAll6s","TheIdol","SeeingDouble","Matador","Satellite","Cartomancer","Astronomer","Bootstraps","DNA","Vagabond","Baron","Obelisk","BaseballCard","AncientJoker","Campfire","Blueprint","WeeJoker","HitTheRoad","TheDuo","TheTrio","TheFamily","TheOrder","TheTribe","Stuntman","InvisibleJoker","Brainstorm","DriversLicense","BurntJoker","Canio","Triboulet","Yorick","Chicot","Perkeo"];
+const MOTELY_ITEM_TYPES_INVALID = ["Invalid","NotImplemented","JokerExcludedByStream","PlanetExcludedByStream","TarotExcludedByStream","SpectralExcludedByStream"];
+
 function ensureItemTypeMap() {
   if (_itemTypeToName.size > 0) return;
-  const e = Motely.MotelyItemType as Record<string, unknown>;
-  for (const [key, val] of Object.entries(e)) {
-    if (typeof val === "number" && typeof key === "string" && !/^\d+$/.test(key)) {
-      _itemTypeToName.set(val, key);
+  // Fallback to runtime enum if present (motely-wasm < 14)
+  const e = Motely.MotelyItemType as Record<string, unknown> | undefined;
+  if (e && Object.keys(e).length > 0) {
+    for (const [key, val] of Object.entries(e)) {
+      if (typeof val === "number" && typeof key === "string" && !/^\d+$/.test(key)) {
+        _itemTypeToName.set(val, key);
+      }
     }
+  } else {
+    // Populate using hardcoded categories (motely-wasm 14+)
+    _itemTypeToName.set(0, "None"); // Handle 0
+    MOTELY_ITEM_TYPES_STANDARD.forEach((name, i) => _itemTypeToName.set(0x1000 + i, name));
+    MOTELY_ITEM_TYPES_SPECTRAL.forEach((name, i) => _itemTypeToName.set(0x2000 + i, name));
+    MOTELY_ITEM_TYPES_TAROT.forEach((name, i) => _itemTypeToName.set(0x3000 + i, name));
+    MOTELY_ITEM_TYPES_PLANET.forEach((name, i) => _itemTypeToName.set(0x4000 + i, name));
+    MOTELY_ITEM_TYPES_JOKER.forEach((name, i) => _itemTypeToName.set(0x5000 + i, name));
+    MOTELY_ITEM_TYPES_INVALID.forEach((name, i) => _itemTypeToName.set(0xf000 + i, name));
   }
 }
 

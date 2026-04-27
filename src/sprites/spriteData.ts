@@ -49,6 +49,7 @@ export const SPRITE_SHEETS = {
   vouchers: defineSpriteSheet("vouchers", 9, 4),
   tags: defineSpriteSheet("tags", 6, 5),
   boosters: defineSpriteSheet("boosters", 4, 9),
+  stakes: defineSpriteSheet("stakes", 5, 2),
 } as const;
 
 export const JOKERS: SpriteEntry[] = [

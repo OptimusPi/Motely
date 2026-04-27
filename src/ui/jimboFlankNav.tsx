@@ -80,16 +80,16 @@ function NavButton({
         width: 48,
         border: 'none',
         borderRadius: 8,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.35 : 1,
-        backgroundColor: JimboColorOption.RED,
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: 1,
+        backgroundColor: disabled ? JimboColorOption.DARK_RED : JimboColorOption.RED,
         color: JimboColorOption.WHITE,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         transform: pressed ? `translateY(${JIMBO_ANIMATIONS.PRESS_TRANSLATE_Y}px)` : 'translateY(0)',
-        boxShadow: pressed ? 'none' : `0 ${JIMBO_ANIMATIONS.PRESS_TRANSLATE_Y}px 0 0 ${JimboColorOption.DARK_RED}`,
-        transition: `transform ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease, box-shadow ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease`,
+        boxShadow: pressed || disabled ? 'none' : `0 ${JIMBO_ANIMATIONS.PRESS_TRANSLATE_Y}px 0 0 ${JimboColorOption.DARK_RED}`,
+        transition: `transform ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease, box-shadow ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease, background-color ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease`,
       }}
     >
       <ChevronSvg direction={direction} />

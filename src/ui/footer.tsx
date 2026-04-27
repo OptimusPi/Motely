@@ -20,7 +20,7 @@ export interface JimboBalatroFooterProps {
 export function JimboBalatroFooter({ hidden = false, className = '' }: JimboBalatroFooterProps) {
   return (
     <div
-      className={['fixed right-0 bottom-0 left-0 w-screen min-w-full transition-opacity duration-200', hidden ? 'pointer-events-none opacity-0' : 'opacity-100', className].filter(Boolean).join(' ')}
+      className={['w-full transition-opacity duration-200', hidden ? 'pointer-events-none opacity-0' : 'opacity-100', className].filter(Boolean).join(' ')}
     >
       <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.9)', padding: '0 1rem 3px', textAlign: 'center' }}>
         <p style={{ fontFamily: 'm6x11plus, monospace', fontSize: 'clamp(11px, 0.8vw + 8px, 14px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0 0.5rem', color: 'white', margin: 0 }}>

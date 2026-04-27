@@ -11,7 +11,23 @@ export interface SpritePos {
 
 export type SpriteSheetType =
   | "Jokers" | "Tarots" | "Vouchers" | "Boosters"
-  | "Enhancers" | "Editions" | "BlindChips" | "tags";
+  | "Enhancers" | "Editions" | "BlindChips" | "tags"
+  | "Stakes" | "Decks";
+
+import type { JamlAssetKey } from '../assets.js';
+
+export const SHEET_META: Record<SpriteSheetType, { cols: number; rows: number; assetKey: JamlAssetKey }> = {
+  Jokers:    { cols: 10, rows: 16, assetKey: 'jokers' },
+  Tarots:    { cols: 10, rows: 6,  assetKey: 'tarots' },
+  Vouchers:  { cols: 9,  rows: 4,  assetKey: 'vouchers' },
+  Boosters:  { cols: 4,  rows: 9,  assetKey: 'boosters' },
+  BlindChips:{ cols: 21, rows: 31, assetKey: 'blinds' },
+  tags:      { cols: 6,  rows: 5,  assetKey: 'tags' },
+  Enhancers: { cols: 7,  rows: 5,  assetKey: 'enhancers' },
+  Editions:  { cols: 5,  rows: 1,  assetKey: 'editions' },
+  Stakes:    { cols: 5,  rows: 2,  assetKey: 'stakes' },
+  Decks:     { cols: 13, rows: 4,  assetKey: 'deck' },
+};
 
 export interface SpriteData {
   pos: SpritePos;
