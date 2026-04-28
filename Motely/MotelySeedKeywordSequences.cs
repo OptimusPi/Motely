@@ -63,11 +63,11 @@ public static class MotelySeedKeywordSequences
     // padLen + 1 slots). Gross keywords all have padLen ≤ 3 so they were never
     // affected by the old bug; nsfw/funny/balatro contain longer keywords and
     // went up.
-    public const long GrossKeywordAestheticSeedCount = 181_808_375L;
+    public const long GrossKeywordAestheticSeedCount = 183_030_995L;
 
     public const long NsfwKeywordAestheticSeedCount = 489_790_595L;
-    public const long FunnyKeywordAestheticSeedCount = 535_816_225L;
-    public const long BalatroKeywordAestheticSeedCount = 1_496_752_845L;
+    public const long FunnyKeywordAestheticSeedCount = 942_725_770L;
+    public const long BalatroKeywordAestheticSeedCount = 2_181_468_170L;
 
     public static readonly string[] GrossKeywords =
     [
@@ -110,6 +110,20 @@ public static class MotelySeedKeywordSequences
         "STENCH",
         "GUNK",
         "SCUM",
+        "BOOGER",
+        "DROOL",
+        "MUCUS",
+        "EARWAX",
+        "SMELLY",
+        "GOOPY",
+        "LUMPY",
+        "SEWAGE",
+        "SEWER",
+        "MOLDY",
+        "DRIPPY",
+        "CHUNKY",
+        "GOOEY",
+        "SQUISHY",
     ];
 
     public static readonly string[] NsfwKeywords =
@@ -213,6 +227,37 @@ public static class MotelySeedKeywordSequences
         "SASS",
         "SMIRK",
         "CHAOS",
+        "SUS",
+        "RIZZ",
+        "SIGMA",
+        "CHAD",
+        "KAREN",
+        "VIBE",
+        "SLAY",
+        "COPE",
+        "RATIO",
+        "BASED",
+        "CRINGE",
+        "SKIBIDI",
+        "GYATT",
+        "BUSSIN",
+        "GOAT",
+        "DRIP",
+        "CLOWN",
+        "KEKW",
+        "POGGER",
+        "MONKE",
+        "AMOG",
+        "UWUU",
+        "BEANS",
+        "TOAST",
+        "WAFFLE",
+        "PICKLE",
+        "NOODLE",
+        "CHONKY",
+        "THICC",
+        "SMOL",
+        "BIRB",
     ];
 
     public static readonly string[] BalatroKeywords =
@@ -282,5 +327,42 @@ public static class MotelySeedKeywordSequences
         "UNCOMM",
         "COMMON",
         "LEGEND",
+        "POKER",
+        "ARCANA",
+        "MEGA",
+        "JUMBO",
+        "ETERNAL",
+        "RENTAL",
+        "NEBULA",
+        "MAGIC",
+        "GHOST",
+        "ZODIAC",
+        "PLASMA",
+        "ERRATIC",
+        "PAINTED",
+        "TOWER",
+        "CHARIOT",
+        "HERMIT",
+        "WHEEL",
+        "DEATH",
+        "STAR",
+        "MOON",
+        "SUN",
+        "FOOL",
+        "DEVIL",
+        "PERKEO",
+        "CHICOT",
+        "CANIO",
+        "YORICK",
+        "SKULL",
+        "WRAITH",
+        "SIGIL",
+        "HEX",
+        "TRANCE",
+        "CRYPTID",
+        "ANKH",
+        "GRIM",
+        "MEDIUM",
+        "AURA",
     ];
 }

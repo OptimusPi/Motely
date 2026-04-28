@@ -30,6 +30,26 @@ public sealed record JamlMetaResult(
     string Stake
 );
 
+public sealed record MotelyItemLayout(
+    int ItemTypeMask,
+    int StandardcardRankMask,
+    int StandardcardSuitOffset,
+    int StandardcardSuitMask,
+    int ItemTypeCategoryOffset,
+    int ItemTypeCategoryMask,
+    int JokerRarityOffset,
+    int JokerRarityMask,
+    int ItemSealOffset,
+    int ItemSealMask,
+    int ItemEnhancementOffset,
+    int ItemEnhancementMask,
+    int ItemEditionOffset,
+    int ItemEditionMask,
+    int PerishableStickerOffset,
+    int EternalStickerOffset,
+    int RentalStickerOffset
+);
+
 public interface IMotelyWasm
 {
     string GetVersion();
@@ -41,6 +61,7 @@ public interface IMotelyWasm
     /// and feed it directly to Monaco/Ajv/etc.
     /// </summary>
     string GetJamlSchema();
+    MotelyItemLayout GetItemLayout();
     /// <summary>Structured validation — use instead of the legacy plain-string overload.</summary>
     JamlValidationResult ValidateJamlStructured(string jaml);
     /// <summary>Legacy plain-string validation ("valid" or error message). Kept for back-compat.</summary>

@@ -4,8 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.CLI;
 using Motely.Analysis;
-using Motely.DB;
-using Motely.DB.SeedSource;
+using Motely.Datalake;
 using Motely.Filters;
 using Motely.Filters.Native;
 
@@ -244,6 +243,11 @@ partial class Program
             "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...). Seed-input flags match JAML: --source, --seeds, --keyword(s), --random, --aesthetic, or default sequential (--startBatch/--endBatch/--startPercent or --startSeed/--stopSeed).",
             CommandOptionType.SingleValue
         );
+        var drownOption = app.Option(
+            "--drown",
+            "Front-load ALL seeds from the ducklake (Seeds/ducklake/*.parquet). Searches every previously-found seed against the current JAML filter.",
+            CommandOptionType.NoValue
+        );
         var quietOption = app.Option(
             "-q|--quiet|--no-progress",
             "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
@@ -325,6 +329,7 @@ partial class Program
                             PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
                             RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
                             AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
+                            Drown: drownOption.HasValue(),
                             StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                             EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                             StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
@@ -448,6 +453,7 @@ partial class Program
                         PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
                         RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
                         AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
+                        Drown: drownOption.HasValue(),
                         StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                         EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                         StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,

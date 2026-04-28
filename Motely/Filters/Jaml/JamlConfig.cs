@@ -337,17 +337,11 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "boosterPacks")]
     public int[]? BoosterPacks { get; set; }
 
-    [YamlMember(Alias = "minShopSlot")]
-    public int? MinShopSlot { get; set; }
+    [YamlMember(Alias = "minShopItem")]
+    public int? MinShopItem { get; set; }
 
-    [YamlMember(Alias = "maxShopSlot")]
-    public int? MaxShopSlot { get; set; }
-
-    [YamlMember(Alias = "minPackSlot")]
-    public int? MinPackSlot { get; set; }
-
-    [YamlMember(Alias = "maxPackSlot")]
-    public int? MaxPackSlot { get; set; }
+    [YamlMember(Alias = "maxShopItem")]
+    public int? MaxShopItem { get; set; }
 
     // Nested sources object
     [YamlMember(Alias = "sources")]
@@ -389,17 +383,11 @@ public sealed class JamlSourcesDto
     [YamlMember(Alias = "boosterPacks")]
     public int[]? BoosterPacks { get; set; }
 
-    [YamlMember(Alias = "minShopSlot")]
-    public int? MinShopSlot { get; set; }
+    [YamlMember(Alias = "minShopItem")]
+    public int? MinShopItem { get; set; }
 
-    [YamlMember(Alias = "maxShopSlot")]
-    public int? MaxShopSlot { get; set; }
-
-    [YamlMember(Alias = "minPackSlot")]
-    public int? MinPackSlot { get; set; }
-
-    [YamlMember(Alias = "maxPackSlot")]
-    public int? MaxPackSlot { get; set; }
+    [YamlMember(Alias = "maxShopItem")]
+    public int? MaxShopItem { get; set; }
 
     /// <summary>
     /// Opt-in knob for ante-1 pack-slot reachability. Balatro gameplay gives ante 1 only 4 booster
@@ -449,17 +437,17 @@ public sealed class JamlSourcesDto
     public int[]? SoulCard { get; set; }
 
     /// <summary>
-    /// Legendary / soul joker: shop pack slots where The Soul may appear in an <b>arcana</b> pack (tarot stream).
-    /// If either this or spectralBoosterPacks is non-empty, matching uses split rules (see SoulJokerSourceConfig).
+    /// Legendary / soul joker: pack indices where The Soul may appear in an <b>arcana</b> pack (tarot stream).
+    /// If either this or spectralPacks is non-empty, matching uses split rules (see SoulJokerSourceConfig).
     /// </summary>
-    [YamlMember(Alias = "arcanaBoosterPacks")]
-    public int[]? ArcanaBoosterPacks { get; set; }
+    [YamlMember(Alias = "arcanaPacks")]
+    public int[]? ArcanaPacks { get; set; }
 
     /// <summary>
-    /// Legendary / soul joker: shop pack slots where The Soul may appear in a <b>spectral</b> pack (spectral stream).
+    /// Legendary / soul joker: pack indices where The Soul may appear in a <b>spectral</b> pack (spectral stream).
     /// </summary>
-    [YamlMember(Alias = "spectralBoosterPacks")]
-    public int[]? SpectralBoosterPacks { get; set; }
+    [YamlMember(Alias = "spectralPacks")]
+    public int[]? SpectralPacks { get; set; }
 
     [YamlMember(Alias = "riffRaff")]
     public int[]? RiffRaff { get; set; }
@@ -1010,20 +998,12 @@ public static partial class JamlConfigLoader
         var shopItems = c.Sources?.ShopItems ?? c.ShopItems ?? defaults?.ShopItems;
         var boosterPacks = c.Sources?.BoosterPacks ?? c.BoosterPacks ?? defaults?.BoosterPacks;
 
-        // Support top-level range generators (e.g. minShopSlot: 0)
-        var minShop = c.Sources?.MinShopSlot ?? c.MinShopSlot;
-        var maxShop = c.Sources?.MaxShopSlot ?? c.MaxShopSlot;
-        var minPack = c.Sources?.MinPackSlot ?? c.MinPackSlot;
-        var maxPack = c.Sources?.MaxPackSlot ?? c.MaxPackSlot;
+        var minShop = c.Sources?.MinShopItem ?? c.MinShopItem;
+        var maxShop = c.Sources?.MaxShopItem ?? c.MaxShopItem;
 
         if (shopItems == null && minShop != null && maxShop != null)
             shopItems = Enumerable
                 .Range(minShop.Value, maxShop.Value - minShop.Value + 1)
-                .ToArray();
-
-        if (boosterPacks == null && minPack != null && maxPack != null)
-            boosterPacks = Enumerable
-                .Range(minPack.Value, maxPack.Value - minPack.Value + 1)
                 .ToArray();
 
         NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, c.Sources);
@@ -1169,8 +1149,8 @@ public static partial class JamlConfigLoader
                 Sources = CreateSoulJokerSources(
                     shopItems,
                     boosterPacks,
-                    c.Sources?.ArcanaBoosterPacks,
-                    c.Sources?.SpectralBoosterPacks,
+                    c.Sources?.ArcanaPacks,
+                    c.Sources?.SpectralPacks,
                     c.Sources?.SoulCard,
                     c.Sources?.RequireMega ?? false,
                     c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack
@@ -1509,15 +1489,15 @@ public static partial class JamlConfigLoader
     private static SoulJokerSourceConfig CreateSoulJokerSources(
         int[]? shopItems,
         int[]? boosterPacks,
-        int[]? arcanaBoosterPacks,
-        int[]? spectralBoosterPacks,
+        int[]? arcanaPacks,
+        int[]? spectralPacks,
         int[]? soulCard,
         bool requireMegaPack,
         int earlyAntesMaxPack
     )
     {
-        var arcana = arcanaBoosterPacks ?? [];
-        var spectral = spectralBoosterPacks ?? [];
+        var arcana = arcanaPacks ?? [];
+        var spectral = spectralPacks ?? [];
         bool split = arcana.Length > 0 || spectral.Length > 0;
 
         // If the user specified neither a plain boosterPacks list nor split arcana/spectral lists,
@@ -1532,8 +1512,8 @@ public static partial class JamlConfigLoader
             ShopItems = shopItems ?? [],
             BoosterPacks = resolvedBooster,
             EarlyAntesMaxPack = earlyAntesMaxPack,
-            ArcanaBoosterPacks = arcana,
-            SpectralBoosterPacks = spectral,
+            ArcanaPacks = arcana,
+            SpectralPacks = spectral,
             SoulCard = soulCard ?? [],
             RequireMegaPack = requireMegaPack,
         };
@@ -1879,7 +1859,7 @@ public sealed class SoulJokerSourceConfig
 
     /// <summary>
     /// Legacy: pack offering slots where The Soul may count from either arcana or spectral path.
-    /// Ignored for slot matching when <see cref="ArcanaBoosterPacks"/> or <see cref="SpectralBoosterPacks"/> is non-empty.
+    /// Ignored for slot matching when <see cref="ArcanaPacks"/> or <see cref="SpectralPacks"/> is non-empty.
     /// </summary>
     public int[] BoosterPacks { get; set; } = [];
 
@@ -1887,12 +1867,12 @@ public sealed class SoulJokerSourceConfig
     public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
 
     /// <summary>
-    /// If non-empty (or <see cref="SpectralBoosterPacks"/> non-empty), only listed slots are checked on the arcana/tarot path.
+    /// If non-empty (or <see cref="SpectralPacks"/> non-empty), only listed slots are checked on the arcana/tarot path.
     /// </summary>
-    public int[] ArcanaBoosterPacks { get; set; } = [];
+    public int[] ArcanaPacks { get; set; } = [];
 
     /// <summary>Only listed slots on the spectral pack path.</summary>
-    public int[] SpectralBoosterPacks { get; set; } = [];
+    public int[] SpectralPacks { get; set; } = [];
 
     public int[] SoulCard { get; set; } = [];
 
@@ -1906,10 +1886,10 @@ public sealed class SoulJokerSourceConfig
         foreach (var x in BoosterPacks)
             if (x > m)
                 m = x;
-        foreach (var x in ArcanaBoosterPacks)
+        foreach (var x in ArcanaPacks)
             if (x > m)
                 m = x;
-        foreach (var x in SpectralBoosterPacks)
+        foreach (var x in SpectralPacks)
             if (x > m)
                 m = x;
         return m;

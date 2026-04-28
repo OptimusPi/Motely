@@ -5,7 +5,7 @@ Bootsharp + NativeAOT-LLVM build of [`Motely/`](../Motely) that publishes the **
 ## Runtime
 
 - `TargetFramework` = **`net10.0`** (no `net10.0-browser` TFM — `<RuntimeIdentifier>browser-wasm</RuntimeIdentifier>` is what makes this build browser-targeted).
-- Published with **NativeAOT-LLVM** (`<BootsharpLLVM>true</BootsharpLLVM>`), speed-optimized, AOT-trimmed (`<BootsharpAggressiveTrimming>true</BootsharpAggressiveTrimming>`), SIMD enabled (`<WasmEnableSIMD>true</WasmEnableSIMD>` + `-msimd128` emcc flag).
+- Published with **NativeAOT-LLVM** (`<BootsharpLlvm>true</BootsharpLlvm>`), SIMD enabled (`<WasmEnableSIMD>true</WasmEnableSIMD>`), threads explicitly disabled (`<WasmEnableThreads>false</WasmEnableThreads>` — keeps the bundle COEP/SAB-free for hostile hosts like Vercel/CDNs). Trimming/speed flags come from Bootsharp.props automatically in Release; the csproj does not set them.
 - Binaries are **embedded** into the single-file ES module (`<BootsharpEmbedBinaries>true</BootsharpEmbedBinaries>`) — no sideloaded resources.
 
 ## Publish
@@ -15,11 +15,11 @@ Bootsharp + NativeAOT-LLVM build of [`Motely/`](../Motely) that publishes the **
 dotnet publish Motely.Wasm -c Release
 ```
 
-Outputs:
+Outputs (`<BootsharpPublishDirectory>` in the csproj points at `../motely-wasm/`, which is the npm pack source):
 
 - `../motely-wasm/index.mjs` — single-file ES module with embedded binaries.
 - `../motely-wasm/types/bindings.g.d.ts` — generated TS declarations (interfaces, enums, DTOs).
-- `../motely-wasm/package.json` — version stamped from `<MotelyVersion>` by the `PatchPackageJsonVersion` MSBuild target.
+- `../motely-wasm/package.json` — **hand-authored** with full npm metadata (description, author, license, repository, homepage, bugs, keywords). Bootsharp respects an existing file ([`Bootsharp.targets:182` condition `!Exists`](D:/bootsharp/src/cs/Bootsharp/Build/Bootsharp.targets)), so editing the file is how you change metadata. Version is synced from `<MotelyVersion>` at `npm pack` / `npm publish` time by the `prepack` lifecycle hook running [`sync-version.mjs`](../motely-wasm/sync-version.mjs).
 
 ## Public surface
 
@@ -90,4 +90,6 @@ If an app repo (e.g. `seedfinder.app`) starts hand-rolling Motely/JAML display l
 
 ## Package metadata
 
-`motely-wasm/package.json` is rewritten end-to-end by the `WriteFullPackageJson` MSBuild target in [`Motely.Wasm.csproj`](./Motely.Wasm.csproj) **after** Bootsharp's minimal template is emitted. This is why `description`, `homepage`, `repository.directory`, `bugs`, `keywords`, and `license` survive every publish — if any of those need to change, edit the target, not the emitted file.
+`motely-wasm/package.json` is **hand-authored and version-controlled**. Bootsharp's package-emit step at [`Bootsharp.targets:182`](D:/bootsharp/src/cs/Bootsharp/Build/Bootsharp.targets) is gated by `Condition="!Exists(...)"`, so Bootsharp only writes its 4-field default (`name`, `type`, `main`, `types`) when no file is present. Our hand-authored file is preserved on every publish.
+
+To change `description`, `homepage`, `repository`, `bugs`, `keywords`, or `license`: edit `motely-wasm/package.json` directly. To change the version: edit `<MotelyVersion>` in `Directory.Packages.props` — the `prepack` lifecycle hook (`sync-version.mjs`) reads it at `npm pack` / `npm publish` and writes it into the `version` field automatically.

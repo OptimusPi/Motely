@@ -196,7 +196,7 @@ internal static class LegendarySoulMatcher
     )
     {
         bool split =
-            src.ArcanaBoosterPacks.Length > 0 || src.SpectralBoosterPacks.Length > 0;
+            src.ArcanaPacks.Length > 0 || src.SpectralPacks.Length > 0;
         if (!split)
         {
             for (int i = 0; i < src.BoosterPacks.Length; i++)
@@ -211,9 +211,9 @@ internal static class LegendarySoulMatcher
         var type = pack.GetPackType();
         if (type == MotelyBoosterPackType.Arcana)
         {
-            for (int i = 0; i < src.ArcanaBoosterPacks.Length; i++)
+            for (int i = 0; i < src.ArcanaPacks.Length; i++)
             {
-                if (src.ArcanaBoosterPacks[i] == p)
+                if (src.ArcanaPacks[i] == p)
                     return true;
             }
 
@@ -222,9 +222,9 @@ internal static class LegendarySoulMatcher
 
         if (type == MotelyBoosterPackType.Spectral)
         {
-            for (int i = 0; i < src.SpectralBoosterPacks.Length; i++)
+            for (int i = 0; i < src.SpectralPacks.Length; i++)
             {
-                if (src.SpectralBoosterPacks[i] == p)
+                if (src.SpectralPacks[i] == p)
                     return true;
             }
 

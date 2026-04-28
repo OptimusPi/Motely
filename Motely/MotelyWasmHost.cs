@@ -21,6 +21,27 @@ public sealed class MotelyWasmHost : IMotelyWasm
 
     public string GetVersion() => VersionInfo.Version;
 
+    public MotelyItemLayout GetItemLayout() =>
+        new(
+            MotelyGlobals.ItemTypeMask,
+            MotelyGlobals.StandardcardRankMask,
+            MotelyGlobals.StandardcardSuitOffset,
+            MotelyGlobals.StandardcardSuitMask,
+            MotelyGlobals.ItemTypeCategoryOffset,
+            MotelyGlobals.ItemTypeCategoryMask,
+            MotelyGlobals.JokerRarityOffset,
+            MotelyGlobals.JokerRarityMask,
+            MotelyGlobals.ItemSealOffset,
+            MotelyGlobals.ItemSealMask,
+            MotelyGlobals.ItemEnhancementOffset,
+            MotelyGlobals.ItemEnhancementMask,
+            MotelyGlobals.ItemEditionOffset,
+            MotelyGlobals.ItemEditionMask,
+            MotelyGlobals.PerishableStickerOffset,
+            MotelyGlobals.EternalStickerOffset,
+            MotelyGlobals.RentalStickerOffset
+        );
+
     private static readonly JsonSerializerOptions JamlSchemaJsonOptions = new()
     {
         WriteIndented = false,

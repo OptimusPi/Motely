@@ -203,7 +203,7 @@ public sealed class JamlStructuralGapTests
                 soulCardOnly: true
                 antes: [1]
                 sources:
-                  arcanaBoosterPacks: [1]
+                  arcanaPacks: [1]
             """;
         var r = RunListSearch(jaml, PassSeed);
         Assert.Equal(1, r.SeedsSearched);
