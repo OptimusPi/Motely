@@ -81,7 +81,7 @@ public class JamlConfigTests
               - uncommonJoker: Showman
               - rareJoker: Blueprint
               - jokers: [Blueprint, Showman]
-              - soulJoker: Perkeo
+              - legendaryJoker: Perkeo
                 sources:
                   boosterPacks: [0,1,2,3]
             """;
@@ -176,6 +176,7 @@ public class JamlConfigTests
                   shopItems: [0,1]
                   boosterPacks: [0,1]
                 score: 100
+                max: 2
               - joker: OopsAll6s
                 antes: [1,2,3]
                 score: 1
@@ -187,6 +188,26 @@ public class JamlConfigTests
     Assert.NotNull(config);
     Assert.True(config!.Must.HasAnyClauses);
     Assert.Equal(2, config.Should.Jokers.Count);
+    Assert.Equal(2, config.Should.Jokers[0].Max);
+  }
+
+  [Fact]
+  public void Max_CapsScoringCountWithoutChangingRawTallySemantics()
+  {
+    var clause = new JokerClause
+    {
+      Label = "Showman",
+      Score = 100,
+      Min = 1,
+      Max = 2,
+    };
+
+    var rawTally = 4;
+    var weighted = JamlScoring.CapScoreCountForTesting(rawTally, clause);
+
+    Assert.Equal(4, rawTally);
+    Assert.Equal(2, weighted);
+    Assert.Equal(200, weighted * clause.Score);
   }
 
   [Fact]

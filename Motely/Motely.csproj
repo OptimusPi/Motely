@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <TrimmerRootDescriptor Include="TrimmerRoots.xml" />
+    <EmbeddedResource Include="..\jaml.schema.json" Link="jaml.schema.json" LogicalName="jaml.schema.json" />
   </ItemGroup>
 
   <!-- Generate compile-time version const — AOT safe, no reflection -->

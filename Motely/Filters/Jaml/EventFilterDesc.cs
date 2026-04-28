@@ -15,6 +15,7 @@ public sealed class ErraticCardClause : IJamlClause
     public MotelyStandardcardSuit? Suit { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 // ── Event clause definitions ──
@@ -30,6 +31,7 @@ public sealed class LuckyMoneyClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class LuckyMultClause : IRollClause
@@ -38,6 +40,7 @@ public sealed class LuckyMultClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class MisprintMultClause : IRollClause
@@ -46,6 +49,7 @@ public sealed class MisprintMultClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
     /// <summary>
     /// Specific mult value to match (0-23). If null, matches any value (always succeeds).
     /// </summary>
@@ -58,6 +62,7 @@ public sealed class WheelOfFortuneClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class CavendishExtinctClause : IRollClause
@@ -66,6 +71,7 @@ public sealed class CavendishExtinctClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class GrosMichelExtinctClause : IRollClause
@@ -74,6 +80,7 @@ public sealed class GrosMichelExtinctClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class SpaceLevelupClause : IRollClause
@@ -82,6 +89,7 @@ public sealed class SpaceLevelupClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class BusinessPayoutClause : IRollClause
@@ -90,6 +98,7 @@ public sealed class BusinessPayoutClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class BloodstoneTriggerClause : IRollClause
@@ -98,6 +107,7 @@ public sealed class BloodstoneTriggerClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class ParkingPayoutClause : IRollClause
@@ -106,6 +116,7 @@ public sealed class ParkingPayoutClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class GlassDestroyClause : IRollClause
@@ -114,6 +125,7 @@ public sealed class GlassDestroyClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class WheelStaysFlippedClause : IRollClause
@@ -122,6 +134,7 @@ public sealed class WheelStaysFlippedClause : IRollClause
     public int Score { get; init; }
     public required int[] Rolls { get; init; }
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 // ── 6 individual event filter descs (one per PRNG stream) ──

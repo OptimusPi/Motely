@@ -18,6 +18,7 @@ public sealed class JokerClause : IJamlClause
     public JokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct JokerFilterDesc(JokerClause clause)
@@ -302,6 +303,7 @@ public sealed class CommonJokerClause : IJamlClause
     public JokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class UncommonJokerClause : IJamlClause
@@ -315,6 +317,7 @@ public sealed class UncommonJokerClause : IJamlClause
     public JokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class RareJokerClause : IJamlClause
@@ -328,6 +331,7 @@ public sealed class RareJokerClause : IJamlClause
     public JokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public sealed class MixedJokerClause : IJamlClause
@@ -341,4 +345,5 @@ public sealed class MixedJokerClause : IJamlClause
     public JokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }

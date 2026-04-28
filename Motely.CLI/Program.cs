@@ -7,7 +7,7 @@ using Motely.Analysis;
 using Motely.Datalake;
 using Motely.Filters;
 using Motely.Filters.Native;
-
+using Motely.WasmTools;
 
 partial class Program
 {
@@ -255,7 +255,7 @@ partial class Program
         );
         var writeJamlSchemaOption = app.Option(
             "--write-jaml-schema",
-            "Regenerate jaml.schema.json from JamlConfig.cs via the AOT-safe schema exporter. Writes to repo root and tools/jaml-language/{jaml-schema,vscode-extension}/schemas/.",
+            "Regenerate jaml.schema.json from the public JAML schema contract via the AOT-safe schema exporter. Writes to repo root and tools/jaml-language/{jaml-schema,vscode-extension}/schemas/.",
             CommandOptionType.NoValue
         );
 
@@ -273,7 +273,7 @@ partial class Program
             // --write-jaml-schema is a standalone maintenance command; run it and exit.
             if (writeJamlSchemaOption.HasValue())
             {
-                return JamlSchemaGenerator.WriteDefault(log: Console.Error);
+                return MotelyJamlSchemaGenerator.WriteDefault(log: Console.Error);
             }
 
             // --analyze mode — supports single seed or comma-separated batch

@@ -234,7 +234,7 @@ public class JammyClauseCoverageTests
             .GetValues<MotelyJoker>()
             .First(j => GetJokerRarity(new MotelyItem(j)) == MotelyJokerRarity.Legendary);
 
-        var clauseBody = $"soulJoker: {legendary}";
+        var clauseBody = $"legendaryJoker: {legendary}";
         var jaml = BuildMustJaml(clauseBody);
         var result = RunSingleSeedJaml(jaml);
         Assert.Equal(1, result.SeedsSearched);

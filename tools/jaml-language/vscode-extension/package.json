@@ -2,7 +2,7 @@
   "name": "jaml-language-support",
   "displayName": "Jimbo's Ante Markup Language",
   "description": "Curate Balatro seeded runs with JAML: syntax highlighting, live diagnostics, and notebook support powered by motely-wasm.",
-  "version": "14.0.3",
+  "version": "14.1.0",
   "publisher": "pifreak",
   "author": {
     "name": "pifreak"
@@ -25,10 +25,15 @@
     "Programming Languages",
     "Notebooks"
   ],
-  "activationEvents": [
-    "onLanguage:jaml"
-  ],
   "main": "./out/extension.js",
+  "files": [
+    "README.md",
+    "icon.png",
+    "language-configuration.json",
+    "out/**",
+    "schemas/**",
+    "syntaxes/**"
+  ],
   "contributes": {
     "languages": [
       {
@@ -63,6 +68,7 @@
     ]
   },
   "scripts": {
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "npx @vscode/vsce package"
@@ -74,6 +80,6 @@
     "typescript": "^5.9.0"
   },
   "dependencies": {
-    "motely-wasm": "^14.0.2"
+    "motely-wasm": "^14.1.0"
   }
 }

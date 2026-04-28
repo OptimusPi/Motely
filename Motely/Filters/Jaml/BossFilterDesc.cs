@@ -10,6 +10,7 @@ public sealed class BossClause : IJamlClause
     public required MotelyBossBlind[] Bosses { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public readonly struct BossFilterDesc(BossClause clause)
