@@ -12,6 +12,7 @@ public sealed class ErraticSuitClause : IJamlClause
     public required MotelyStandardcardSuit Suit { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct ErraticSuitFilterDesc(ErraticSuitClause clause)

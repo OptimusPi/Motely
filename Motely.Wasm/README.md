@@ -19,7 +19,7 @@ Outputs (`<BootsharpPublishDirectory>` in the csproj points at `../motely-wasm/`
 
 - `../motely-wasm/index.mjs` — single-file ES module with embedded binaries.
 - `../motely-wasm/types/bindings.g.d.ts` — generated TS declarations (interfaces, enums, DTOs).
-- `../motely-wasm/package.json` — **hand-authored** with full npm metadata (description, author, license, repository, homepage, bugs, keywords). Bootsharp respects an existing file ([`Bootsharp.targets:182` condition `!Exists`](D:/bootsharp/src/cs/Bootsharp/Build/Bootsharp.targets)), so editing the file is how you change metadata. Version is synced from `<MotelyVersion>` at `npm pack` / `npm publish` time by the `prepack` lifecycle hook running [`sync-version.mjs`](../motely-wasm/sync-version.mjs).
+- `../motely-wasm/package.json` — **hand-authored** with full npm metadata (description, author, license, repository, homepage, bugs, keywords). Bootsharp respects an existing file (`Bootsharp.targets` condition `!Exists`), so editing the file is how you change metadata. Version is synced from `<MotelyVersion>` at `npm pack` / `npm publish` time by the `prepack` lifecycle hook running [`sync-version.mjs`](../motely-wasm/sync-version.mjs).
 
 ## Public surface
 
@@ -73,7 +73,7 @@ Search hits are delivered through the imported `IMotelyWasmEvents.NotifyResult(.
 - **Binaryen `wasm-opt`** on `PATH` (Bootsharp aborts publish with MSBuild error 9009 if it can't resolve it).
 - Node.js + a working `npx` — Bootsharp bundles the final ESM with `npx rollup …` and resolves `rollup` from the workspace `node_modules`.
 
-See [Bootsharp docs](https://bootsharp.com/guide/) (mirrored locally at `D:\bootsharp\docs`) for interop-interfaces, LLVM, sideloading, and serialization rules.
+See [Bootsharp docs](https://bootsharp.com/guide/) for interop-interfaces, LLVM, sideloading, and serialization rules.
 
 ## Downstream consumers (don't re-implement — use these)
 
@@ -90,6 +90,6 @@ If an app repo (e.g. `seedfinder.app`) starts hand-rolling Motely/JAML display l
 
 ## Package metadata
 
-`motely-wasm/package.json` is **hand-authored and version-controlled**. Bootsharp's package-emit step at [`Bootsharp.targets:182`](D:/bootsharp/src/cs/Bootsharp/Build/Bootsharp.targets) is gated by `Condition="!Exists(...)"`, so Bootsharp only writes its 4-field default (`name`, `type`, `main`, `types`) when no file is present. Our hand-authored file is preserved on every publish.
+`motely-wasm/package.json` is **hand-authored and version-controlled**. Bootsharp's package-emit step in `Bootsharp.targets` is gated by `Condition="!Exists(...)"`, so Bootsharp only writes its 4-field default (`name`, `type`, `main`, `types`) when no file is present. Our hand-authored file is preserved on every publish.
 
 To change `description`, `homepage`, `repository`, `bugs`, `keywords`, or `license`: edit `motely-wasm/package.json` directly. To change the version: edit `<MotelyVersion>` in `Directory.Packages.props` — the `prepack` lifecycle hook (`sync-version.mjs`) reads it at `npm pack` / `npm publish` and writes it into the `version` field automatically.

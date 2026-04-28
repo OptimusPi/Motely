@@ -14,14 +14,21 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Remove="Jaml.cs" />
+        <Compile Remove="MotelyJAML.schema.generator.cs" />
+        <None Include="Jaml.cs" />
+        <None Include="MotelyJAML.schema.generator.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Bootsharp" />
         <PackageReference Include="Bootsharp.Inject" />
+        <PackageReference Include="Bootsharp.FileSystem" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../Motely/Motely.csproj" />
-        <ProjectReference Include="d:\extra\bootsharp\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj" />
     </ItemGroup>
 
 </Project>

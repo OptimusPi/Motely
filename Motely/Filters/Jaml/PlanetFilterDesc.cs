@@ -11,6 +11,7 @@ public sealed class PlanetCardClause : IJamlClause
     public PlanetSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct PlanetCardFilterDesc(PlanetCardClause clause)

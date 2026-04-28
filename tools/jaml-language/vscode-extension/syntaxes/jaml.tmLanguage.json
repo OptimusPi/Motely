@@ -88,7 +88,7 @@
       "name": "comment.line.number-sign.jaml"
     },
     "top-level-key": {
-      "match": "^(id|name|author|dateCreated|description|deck|stake|defaults|must|should|mustNot|aesthetics|hashtags|seeds)\\s*:",
+      "match": "^(id|name|author|dateCreated|description|deck|stake|defaults|must|should|mustNot|hashtags|seeds)\\s*:",
       "captures": {
         "1": {
           "name": "keyword.control.jaml"
@@ -96,7 +96,7 @@
       }
     },
     "discriminator-key": {
-      "match": "^\\s+(?:-\\s+)?(joker|jokers|commonJoker|commonJokers|uncommonJoker|uncommonJokers|rareJoker|rareJokers|legendaryJoker|soulJoker|voucher|vouchers|tarot|tarotCard|spectral|spectralCard|planet|planetCard|boss|tag|smallBlindTag|bigBlindTag|standardCard|erraticRank|erraticSuit|erraticCard|startingDraw|event)\\s*:",
+      "match": "^\\s+(?:-\\s+)?(joker|jokers|commonJoker|commonJokers|uncommonJoker|uncommonJokers|rareJoker|rareJokers|legendaryJoker|voucher|vouchers|tarot|tarotCard|spectral|spectralCard|planet|planetCard|boss|tag|smallBlindTag|bigBlindTag|standardCard|erraticRank|erraticSuit|erraticCard|startingDraw|event)\\s*:",
       "captures": {
         "1": {
           "name": "entity.name.type.jaml"
@@ -128,7 +128,7 @@
       }
     },
     "source-property": {
-      "match": "^\\s+(earlyAntesMaxPack|tags|requireMega|charmTag|etherealTag|judgement|rareTag|uncommonTag|wraith|soulCard|arcanaBoosterPacks|spectralBoosterPacks|riffRaff|purpleSealOrEightBall|emperor|sixthSense|seance|certificate|incantation|familiar|grim|deckDraw|uncommonShopJokers|rareShopJokers|commonShopJokers|allShopJokers)\\s*:",
+      "match": "^\\s+(tags|requireMega|charmTag|etherealTag|judgement|rareTag|uncommonTag|wraith|soulCard|arcanaBoosterPacks|spectralBoosterPacks|riffRaff|purpleSealOrEightBall|emperor|sixthSense|seance|certificate|incantation|familiar|grim|deckDraw|uncommonShopJokers|rareShopJokers|commonShopJokers|allShopJokers)\\s*:",
       "captures": {
         "1": {
           "name": "variable.other.source.jaml"

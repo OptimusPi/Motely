@@ -12,6 +12,7 @@ public sealed class VoucherClause : IJamlClause
     public required MotelyVoucher[] Vouchers { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct VoucherFilterDesc(VoucherClause clause)

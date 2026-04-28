@@ -12,6 +12,7 @@ public sealed class ErraticRankClause : IJamlClause
     public required MotelyStandardcardRank Rank { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct ErraticRankFilterDesc(ErraticRankClause clause)

@@ -15,6 +15,7 @@ public sealed class StandardCardClause : IJamlClause
     public StandardCardSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct StandardCardFilterDesc(StandardCardClause clause)

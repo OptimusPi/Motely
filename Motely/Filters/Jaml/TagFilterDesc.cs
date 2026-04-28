@@ -19,6 +19,7 @@ public sealed class TagClause : IJamlClause
     public TagPosition Position { get; init; } = TagPosition.Any;
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>

@@ -1,11 +1,11 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Motely.Filters;
+using Motely.WasmTools;
 
 namespace Motely.Tests;
 
 /// <summary>
-/// Locks the JSON Schema emitted by <see cref="JamlSchemaGenerator.Generate"/> against a
+/// Locks the JSON Schema emitted by <see cref="MotelyJamlSchemaGenerator.Generate"/> against a
 /// committed golden so the in-flight DTO refactor surfaces every shape change as a diff.
 /// Set environment variable <c>UPDATE_JAML_GOLDEN=1</c> to overwrite the golden after an
 /// intentional change, then commit the new golden alongside the code change.
@@ -15,7 +15,7 @@ public class JamlSchemaSnapshotTests
   [Fact]
   public void Schema_MatchesGolden()
   {
-    var current = JamlSchemaGenerator.Generate().ToJsonString(new JsonSerializerOptions
+    var current = MotelyJamlSchemaGenerator.Generate().ToJsonString(new JsonSerializerOptions
     {
       WriteIndented = true,
       Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
