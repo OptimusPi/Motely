@@ -743,15 +743,6 @@
               "$ref": "#/$defs/RareJoker"
             }
           },
-          "mixedJoker": {
-            "$ref": "#/$defs/Joker"
-          },
-          "mixedJokers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/Joker"
-            }
-          },
           "soulJoker": {
             "$ref": "#/$defs/Joker"
           },
@@ -971,16 +962,10 @@
               "type": "integer"
             }
           },
-          "minShopSlot": {
+          "minShopItem": {
             "type": "integer"
           },
-          "maxShopSlot": {
-            "type": "integer"
-          },
-          "minPackSlot": {
-            "type": "integer"
-          },
-          "maxPackSlot": {
+          "maxShopItem": {
             "type": "integer"
           },
           "sources": {
@@ -998,16 +983,10 @@
                   "type": "integer"
                 }
               },
-              "minShopSlot": {
+              "minShopItem": {
                 "type": "integer"
               },
-              "maxShopSlot": {
-                "type": "integer"
-              },
-              "minPackSlot": {
-                "type": "integer"
-              },
-              "maxPackSlot": {
+              "maxShopItem": {
                 "type": "integer"
               },
               "earlyAntesMaxPack": {
@@ -1055,13 +1034,13 @@
                   "type": "integer"
                 }
               },
-              "arcanaBoosterPacks": {
+              "arcanaPacks": {
                 "type": "array",
                 "items": {
                   "type": "integer"
                 }
               },
-              "spectralBoosterPacks": {
+              "spectralPacks": {
                 "type": "array",
                 "items": {
                   "type": "integer"
