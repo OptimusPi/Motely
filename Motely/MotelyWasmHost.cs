@@ -1,5 +1,3 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using Motely.Filters;
 using YamlDotNet.Core;
 
@@ -42,14 +40,19 @@ public sealed class MotelyWasmHost : IMotelyWasm
             MotelyGlobals.RentalStickerOffset
         );
 
-    private static readonly JsonSerializerOptions JamlSchemaJsonOptions = new()
-    {
-        WriteIndented = false,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
+    private static readonly Lazy<string> JamlSchemaJson = new(LoadJamlSchema);
 
     public string GetJamlSchema() =>
-        JamlSchemaGenerator.Generate().ToJsonString(JamlSchemaJsonOptions);
+        JamlSchemaJson.Value;
+
+    private static string LoadJamlSchema()
+    {
+        var assembly = typeof(MotelyWasmHost).Assembly;
+        using var stream = assembly.GetManifestResourceStream("jaml.schema.json")
+            ?? throw new InvalidOperationException("Embedded JAML schema resource was not found.");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
 
     public string ValidateJaml(string jaml)
     {

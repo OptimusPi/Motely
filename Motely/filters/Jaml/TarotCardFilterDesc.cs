@@ -11,6 +11,7 @@ public sealed class TarotCardClause : IJamlClause
     public TarotCardSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 }
 
 public struct TarotCardFilterDesc(TarotCardClause clause)

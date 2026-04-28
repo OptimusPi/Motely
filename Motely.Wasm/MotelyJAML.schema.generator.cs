@@ -6,28 +6,20 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
+using Motely;
+using Motely.Filters;
 
-namespace Motely.Filters;
+namespace Motely.WasmTools;
 
-/// <summary>
-/// Generates <c>jaml.schema.json</c> from the Motely JAML DTO graph
-/// (<see cref="JamlRootDocument"/>, <see cref="JamlClauseDto"/>, <see cref="JamlSourcesDto"/>,
-/// <see cref="JamlDefaultsDto"/>) using <see cref="JsonSchemaExporter"/>.
-///
-/// AOT-safe: uses a source-generated <see cref="JsonSerializerContext"/> and a
-/// <c>TransformSchemaNode</c> callback keyed off <c>JsonPropertyInfo.Name</c>, so no
-/// runtime reflection over attributes is required.
-/// </summary>
-public static partial class JamlSchemaGenerator
+public static partial class MotelyJamlSchemaGenerator
 {
     private const string SchemaId = "https://mcp.seedfinder.app/jaml.schema.json";
-    private const string SchemaTitle = "JAML \u2014 Jimbo's Ante Markup Language";
+    private const string SchemaTitle = "JAML — Jimbo's Ante Markup Language";
     private const string SchemaDescription =
-        "Schema for Balatro seed filter files (.jaml). Generated from Motely C# DTOs via System.Text.Json.Schema.JsonSchemaExporter.";
+        "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.";
+    private const string JamlCriterionDef = nameof(JamlCriterion);
+    private const string JamlSourcesDef = nameof(JamlSources);
 
-    // Property name (camelCase, as emitted by JsonSchemaExporter under CamelCase policy)
-    // -> named enum $def. Applied to scalar string properties and to the `items` of
-    // string-array properties.
     private static readonly Dictionary<string, string> PropertyToRef = new(StringComparer.Ordinal)
     {
         ["joker"] = "Joker",
@@ -38,9 +30,7 @@ public static partial class JamlSchemaGenerator
         ["uncommonJokers"] = "UncommonJoker",
         ["rareJoker"] = "RareJoker",
         ["rareJokers"] = "RareJoker",
-        // mixedJoker:/mixedJokers: removed in v14.0.2 — `joker:` IS the mixed-rarity union.
-        ["soulJoker"] = "Joker",
-        ["legendaryJoker"] = "Joker",
+        ["legendaryJoker"] = "LegendaryJoker",
         ["voucher"] = "Voucher",
         ["vouchers"] = "Voucher",
         ["tarot"] = "Tarot",
@@ -64,60 +54,33 @@ public static partial class JamlSchemaGenerator
         ["suit"] = "Suit",
         ["erraticSuit"] = "Suit",
         ["mode"] = "Mode",
-        ["aesthetics"] = "Aesthetic",
-        ["event"] = "Event",
         ["standardCard"] = "StandardCard",
+        ["and"] = JamlCriterionDef,
+        ["or"] = JamlCriterionDef,
+        ["clauses"] = JamlCriterionDef,
+        ["sources"] = JamlSourcesDef,
     };
 
-    [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-    [JsonSerializable(typeof(JamlRootDocument))]
-    [JsonSerializable(typeof(JamlClauseDto))]
-    [JsonSerializable(typeof(JamlSourcesDto))]
-    [JsonSerializable(typeof(JamlDefaultsDto))]
+    [JsonSourceGenerationOptions(
+        PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+        GenerationMode = JsonSourceGenerationMode.Metadata)]
+    [JsonSerializable(typeof(JamlDocument))]
+    [JsonSerializable(typeof(JamlCriterion))]
+    [JsonSerializable(typeof(JamlSources))]
+    [JsonSerializable(typeof(JamlDefaults))]
     internal sealed partial class SchemaContext : JsonSerializerContext
     {
     }
 
-    /// <summary>Builds the JAML JSON Schema as an in-memory <see cref="JsonObject"/>.</summary>
     public static JsonObject Generate()
     {
-        var options = new JsonSchemaExporterOptions
-        {
-            TreatNullObliviousAsNonNullable = true,
-            TransformSchemaNode = static (ctx, schema) =>
-            {
-                // First, collapse any ["X", "null"] type arrays the exporter emits for nullable
-                // reference / value types down to plain "X" for JAML (null is always permitted by YAML).
-                SimplifyNullableType(schema);
-
-                var propName = ctx.PropertyInfo?.Name;
-                if (propName is null || schema is not JsonObject obj)
-                    return schema;
-
-                if (!PropertyToRef.TryGetValue(propName, out var defName))
-                    return schema;
-
-                // Array property -> keep array shape, swap items for a $ref.
-                if (IsArrayType(obj))
-                {
-                    obj["items"] = RefNode(defName);
-                    return obj;
-                }
-
-                // Scalar string property -> replace the whole schema with a $ref.
-                return RefNode(defName);
-            },
-        };
-
         var rootNode = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlRootDocument,
-            options);
+            SchemaContext.Default.JamlDocument,
+            ExporterOptions());
 
         var root = rootNode as JsonObject
             ?? throw new InvalidOperationException("JsonSchemaExporter did not return an object.");
 
-        // Strip any top-level metadata the exporter injects ($schema/type/etc.) so we can emit
-        // our own canonical ordering.
         root.Remove("$schema");
         root.Remove("type");
 
@@ -133,14 +96,12 @@ public static partial class JamlSchemaGenerator
 
         if (root["properties"] is JsonNode props)
         {
-            root.Remove("properties");
-            result["properties"] = props;
+            result["properties"] = RewriteCriterionArrays(props);
         }
 
         return result;
     }
 
-    /// <summary>Writes the schema to <paramref name="outputPath"/> (and optional extra copies).</summary>
     public static void WriteToFile(string outputPath, params string[] extraCopies)
     {
         var schema = Generate();
@@ -155,6 +116,22 @@ public static partial class JamlSchemaGenerator
             WriteAllText(extra, json);
     }
 
+    private static JsonObject RewriteCriterionArrays(JsonNode props)
+    {
+        var result = props.DeepClone().AsObject();
+        result["must"] = CriterionArrayDef();
+        result["should"] = CriterionArrayDef();
+        result["mustNot"] = CriterionArrayDef();
+        return result;
+    }
+
+    private static JsonObject CriterionArrayDef() =>
+        new()
+        {
+            ["type"] = "array",
+            ["items"] = RefNode(JamlCriterionDef),
+        };
+
     private static void WriteAllText(string path, string content)
     {
         var dir = Path.GetDirectoryName(path);
@@ -165,6 +142,31 @@ public static partial class JamlSchemaGenerator
 
     private static JsonObject RefNode(string defName) =>
         new() { ["$ref"] = $"#/$defs/{defName}" };
+
+    private static JsonSchemaExporterOptions ExporterOptions() =>
+        new()
+        {
+            TreatNullObliviousAsNonNullable = true,
+            TransformSchemaNode = static (ctx, schema) =>
+            {
+                SimplifyNullableType(schema);
+
+                var propName = ctx.PropertyInfo?.Name;
+                if (propName is null || schema is not JsonObject obj)
+                    return schema;
+
+                if (!PropertyToRef.TryGetValue(propName, out var defName))
+                    return schema;
+
+                if (IsArrayType(obj))
+                {
+                    obj["items"] = RefNode(defName);
+                    return obj;
+                }
+
+                return RefNode(defName);
+            },
+        };
 
     private static bool IsArrayType(JsonObject obj)
     {
@@ -182,11 +184,6 @@ public static partial class JamlSchemaGenerator
         return false;
     }
 
-    /// <summary>
-    /// When <see cref="JsonSchemaExporter"/> emits <c>"type": ["X", "null"]</c> for nullable
-    /// members, rewrite it in-place to plain <c>"type": "X"</c> so the resulting schema stays
-    /// idiomatic for hand-authored JAML.
-    /// </summary>
     private static void SimplifyNullableType(JsonNode? node)
     {
         if (node is not JsonObject obj) return;
@@ -205,7 +202,7 @@ public static partial class JamlSchemaGenerator
                 }
                 else
                 {
-                    nonNullCount = -1; // bail
+                    nonNullCount = -1;
                     break;
                 }
             }
@@ -218,10 +215,12 @@ public static partial class JamlSchemaGenerator
     {
         return new JsonObject
         {
+            [JamlCriterionDef] = CriterionDef(),
             ["Joker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJoker>(), "any")),
             ["CommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerCommon>(), "any")),
             ["UncommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerUncommon>(), "any")),
             ["RareJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerRare>(), "any")),
+            ["LegendaryJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerLegendary>(), "any")),
             ["Voucher"] = EnumDef(Enum.GetNames<MotelyVoucher>()),
             ["Tarot"] = EnumDef(Enum.GetNames<MotelyTarotCard>()),
             ["Planet"] = EnumDef(Enum.GetNames<MotelyPlanetCard>()),
@@ -235,30 +234,55 @@ public static partial class JamlSchemaGenerator
             ["Enhancement"] = EnumDef(WithoutNone(Enum.GetNames<MotelyItemEnhancement>())),
             ["Rank"] = EnumDef(Enum.GetNames<MotelyStandardcardRank>()),
             ["Suit"] = EnumDef(Enum.GetNames<MotelyStandardcardSuit>()),
-            ["Aesthetic"] = EnumDef(JamlAestheticParser.KnownJamlStringsForSchema()),
             ["Sticker"] = EnumDef(WithoutNone(Enum.GetNames<MotelyJokerSticker>())),
             ["Mode"] = EnumDef(new[] { "any", "all", "none" }),
-            ["Event"] = EnumDef(Enum.GetNames<MotelyEventType>()),
-            ["StandardCard"] = new JsonObject
-            {
-                ["anyOf"] = new JsonArray
-                {
-                    new JsonObject { ["type"] = "string" },
-                    new JsonObject
-                    {
-                        ["type"] = "object",
-                        ["properties"] = new JsonObject
-                        {
-                            ["rank"] = RefNode("Rank"),
-                            ["suit"] = RefNode("Suit"),
-                            ["seal"] = RefNode("Seal"),
-                            ["enhancement"] = RefNode("Enhancement"),
-                            ["edition"] = RefNode("Edition")
-                        }
-                    }
-                }
-            },
+            ["StandardCard"] = StandardCardDef(),
+            [JamlSourcesDef] = SourcesDef(),
         };
+    }
+
+    private static JsonObject CriterionDef()
+    {
+        var node = JsonSchemaExporter.GetJsonSchemaAsNode(
+            SchemaContext.Default.JamlCriterion,
+            ExporterOptions());
+
+        var result = node as JsonObject
+            ?? throw new InvalidOperationException("JsonSchemaExporter did not return an object.");
+        result.Remove("$schema");
+        return result;
+    }
+
+    private static JsonObject SourcesDef()
+    {
+        var node = JsonSchemaExporter.GetJsonSchemaAsNode(
+            SchemaContext.Default.JamlSources,
+            ExporterOptions());
+
+        var result = node as JsonObject
+            ?? throw new InvalidOperationException("JsonSchemaExporter did not return an object.");
+        result.Remove("$schema");
+        return result;
+    }
+
+    private static JsonObject StandardCardDef()
+    {
+        var anyOf = new JsonArray();
+        anyOf.Add((JsonNode)new JsonObject { ["type"] = "string" });
+        anyOf.Add((JsonNode)new JsonObject
+        {
+            ["type"] = "object",
+            ["properties"] = new JsonObject
+            {
+                ["rank"] = RefNode("Rank"),
+                ["suit"] = RefNode("Suit"),
+                ["seal"] = RefNode("Seal"),
+                ["enhancement"] = RefNode("Enhancement"),
+                ["edition"] = RefNode("Edition")
+            }
+        });
+
+        return new JsonObject { ["anyOf"] = anyOf };
     }
 
     private static JsonObject EnumDef(IReadOnlyList<string> values)
@@ -292,15 +316,10 @@ public static partial class JamlSchemaGenerator
         return list.ToArray();
     }
 
-    // ── CLI entry points ─────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Default output paths (relative to repo root) when invoked via
-    /// <c>dotnet run --project Motely.CLI -- --write-jaml-schema</c>.
-    /// </summary>
     public static IReadOnlyList<string> DefaultOutputPaths(string repoRoot) => new[]
     {
         Path.Combine(repoRoot, "jaml.schema.json"),
+        Path.Combine(repoRoot, "motely-wasm", "jaml.schema.json"),
         Path.Combine(repoRoot, "tools", "jaml-language", "jaml-schema", "schemas", "jaml.schema.json"),
         Path.Combine(repoRoot, "tools", "jaml-language", "vscode-extension", "schemas", "jaml.schema.json"),
     };
@@ -337,3 +356,4 @@ public static partial class JamlSchemaGenerator
         return null;
     }
 }
+

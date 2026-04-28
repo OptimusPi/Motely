@@ -42,6 +42,7 @@ public static partial class JamlConfigLoader
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
+            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
             .WithTypeConverter(new StandardCardValueConverter())
             .Build();
 

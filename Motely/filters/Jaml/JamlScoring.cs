@@ -61,6 +61,17 @@ public static class JamlScoring
         ref MotelyRunState runState
     )
     {
+        var count = CountOccurrencesUncapped(ref ctx, clause, ref runState);
+        return CapScoreCount(count, clause);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int CountOccurrencesUncapped(
+        ref MotelySingleSearchContext ctx,
+        IJamlClause clause,
+        ref MotelyRunState runState
+    )
+    {
         return clause switch
         {
             JokerClause c => CountJokerOccurrences(ref ctx, c, ref runState),
@@ -96,6 +107,16 @@ public static class JamlScoring
             OrClause c => CountOrOccurrences(ref ctx, c, ref runState),
             _ => UnhandledClauseForScoring(clause),
         };
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int CapScoreCountForTesting(int count, IJamlClause clause) => CapScoreCount(count, clause);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int CapScoreCount(int count, IJamlClause clause)
+    {
+        var max = clause.Max;
+        return max is > 0 && count > max.Value ? max.Value : count;
     }
 
     private static int UnhandledClauseForScoring(IJamlClause clause)
@@ -175,7 +196,7 @@ public static class JamlScoring
         {
             AndClause c => CountRawAndOccurrences(ref ctx, c, ref runState),
             OrClause c => CountRawOrOccurrences(ref ctx, c, ref runState),
-            _ => CountOccurrences(ref ctx, clause, ref runState),
+            _ => CountOccurrencesUncapped(ref ctx, clause, ref runState),
         };
     }
 

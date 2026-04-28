@@ -2,9 +2,273 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mcp.seedfinder.app/jaml.schema.json",
   "title": "JAML — Jimbo's Ante Markup Language",
-  "description": "Schema for Balatro seed filter files (.jaml). Generated from Motely C# DTOs via System.Text.Json.Schema.JsonSchemaExporter.",
+  "description": "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.",
   "type": "object",
   "$defs": {
+    "JamlCriterion": {
+      "type": "object",
+      "properties": {
+        "joker": {
+          "$ref": "#/$defs/Joker"
+        },
+        "jokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Joker"
+          }
+        },
+        "commonJoker": {
+          "$ref": "#/$defs/CommonJoker"
+        },
+        "commonJokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommonJoker"
+          }
+        },
+        "uncommonJoker": {
+          "$ref": "#/$defs/UncommonJoker"
+        },
+        "uncommonJokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UncommonJoker"
+          }
+        },
+        "rareJoker": {
+          "$ref": "#/$defs/RareJoker"
+        },
+        "rareJokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RareJoker"
+          }
+        },
+        "legendaryJoker": {
+          "$ref": "#/$defs/LegendaryJoker"
+        },
+        "voucher": {
+          "$ref": "#/$defs/Voucher"
+        },
+        "vouchers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Voucher"
+          }
+        },
+        "tarot": {
+          "$ref": "#/$defs/Tarot"
+        },
+        "tarotCard": {
+          "$ref": "#/$defs/Tarot"
+        },
+        "spectral": {
+          "$ref": "#/$defs/Spectral"
+        },
+        "spectralCard": {
+          "$ref": "#/$defs/Spectral"
+        },
+        "planet": {
+          "$ref": "#/$defs/Planet"
+        },
+        "planetCard": {
+          "$ref": "#/$defs/Planet"
+        },
+        "boss": {
+          "$ref": "#/$defs/Boss"
+        },
+        "tag": {
+          "$ref": "#/$defs/Tag"
+        },
+        "smallBlindTag": {
+          "$ref": "#/$defs/Tag"
+        },
+        "bigBlindTag": {
+          "$ref": "#/$defs/Tag"
+        },
+        "standardCard": true,
+        "erraticRank": {
+          "$ref": "#/$defs/Rank"
+        },
+        "erraticSuit": {
+          "$ref": "#/$defs/Suit"
+        },
+        "erraticCard": {
+          "type": "string"
+        },
+        "startingDraw": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        },
+        "luckyMoney": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "luckyMult": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "misprintMult": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wheelOfFortune": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "cavendishExtinct": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "grosMichelExtinct": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "spaceLevelup": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "businessPayout": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "bloodstoneTrigger": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "parkingPayout": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "glassDestroy": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wheelStaysFlipped": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "antes": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "score": {
+          "type": "integer"
+        },
+        "min": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "edition": {
+          "$ref": "#/$defs/Edition"
+        },
+        "stickers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Sticker"
+          }
+        },
+        "seal": {
+          "$ref": "#/$defs/Seal"
+        },
+        "enhancement": {
+          "$ref": "#/$defs/Enhancement"
+        },
+        "rank": {
+          "$ref": "#/$defs/Rank"
+        },
+        "suit": {
+          "$ref": "#/$defs/Suit"
+        },
+        "rolls": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "soulEditionRolls": {
+          "type": "integer"
+        },
+        "soulCardOnly": {
+          "type": "boolean"
+        },
+        "and": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JamlCriterion"
+          }
+        },
+        "or": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JamlCriterion"
+          }
+        },
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JamlCriterion"
+          }
+        },
+        "mode": {
+          "$ref": "#/$defs/Mode"
+        },
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "minShopItem": {
+          "type": "integer"
+        },
+        "maxShopItem": {
+          "type": "integer"
+        },
+        "sources": {
+          "$ref": "#/$defs/JamlSources"
+        }
+      }
+    },
     "Joker": {
       "type": "string",
       "enum": [
@@ -324,6 +588,17 @@
         "any"
       ]
     },
+    "LegendaryJoker": {
+      "type": "string",
+      "enum": [
+        "Canio",
+        "Triboulet",
+        "Yorick",
+        "Chicot",
+        "Perkeo",
+        "any"
+      ]
+    },
     "Voucher": {
       "type": "string",
       "enum": [
@@ -582,17 +857,6 @@
         "Spades"
       ]
     },
-    "Aesthetic": {
-      "type": "string",
-      "enum": [
-        "palindrome",
-        "psychosis",
-        "gross",
-        "nsfw",
-        "funny",
-        "balatro"
-      ]
-    },
     "Sticker": {
       "type": "string",
       "enum": [
@@ -607,23 +871,6 @@
         "any",
         "all",
         "none"
-      ]
-    },
-    "Event": {
-      "type": "string",
-      "enum": [
-        "LuckyMoney",
-        "LuckyMult",
-        "MisprintMult",
-        "WheelOfFortune",
-        "CavendishExtinct",
-        "GrosMichelExtinct",
-        "SpaceLevelup",
-        "BusinessPayout",
-        "BloodstoneTrigger",
-        "ParkingPayout",
-        "GlassDestroy",
-        "WheelStaysFlipped"
       ]
     },
     "StandardCard": {
@@ -652,6 +899,29 @@
           }
         }
       ]
+    },
+    "JamlSources": {
+      "type": "object",
+      "properties": {
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "minShopItem": {
+          "type": "integer"
+        },
+        "maxShopItem": {
+          "type": "integer"
+        }
+      }
     }
   },
   "properties": {
@@ -705,452 +975,19 @@
     "must": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "joker": {
-            "$ref": "#/$defs/Joker"
-          },
-          "jokers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/Joker"
-            }
-          },
-          "commonJoker": {
-            "$ref": "#/$defs/CommonJoker"
-          },
-          "commonJokers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/CommonJoker"
-            }
-          },
-          "uncommonJoker": {
-            "$ref": "#/$defs/UncommonJoker"
-          },
-          "uncommonJokers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/UncommonJoker"
-            }
-          },
-          "rareJoker": {
-            "$ref": "#/$defs/RareJoker"
-          },
-          "rareJokers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/RareJoker"
-            }
-          },
-          "soulJoker": {
-            "$ref": "#/$defs/Joker"
-          },
-          "legendaryJoker": {
-            "$ref": "#/$defs/Joker"
-          },
-          "voucher": {
-            "$ref": "#/$defs/Voucher"
-          },
-          "vouchers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/Voucher"
-            }
-          },
-          "tarot": {
-            "$ref": "#/$defs/Tarot"
-          },
-          "tarotCard": {
-            "$ref": "#/$defs/Tarot"
-          },
-          "spectral": {
-            "$ref": "#/$defs/Spectral"
-          },
-          "spectralCard": {
-            "$ref": "#/$defs/Spectral"
-          },
-          "planet": {
-            "$ref": "#/$defs/Planet"
-          },
-          "planetCard": {
-            "$ref": "#/$defs/Planet"
-          },
-          "boss": {
-            "$ref": "#/$defs/Boss"
-          },
-          "tag": {
-            "$ref": "#/$defs/Tag"
-          },
-          "smallBlindTag": {
-            "$ref": "#/$defs/Tag"
-          },
-          "bigBlindTag": {
-            "$ref": "#/$defs/Tag"
-          },
-          "standardCard": {
-            "$ref": "#/$defs/StandardCard"
-          },
-          "erraticRank": {
-            "$ref": "#/$defs/Rank"
-          },
-          "erraticSuit": {
-            "$ref": "#/$defs/Suit"
-          },
-          "erraticCard": {
-            "type": "string"
-          },
-          "startingDraw": {
-            "type": "string"
-          },
-          "event": {
-            "$ref": "#/$defs/Event"
-          },
-          "luckyMoney": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "luckyMult": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "misprintMult": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "wheelOfFortune": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "cavendishExtinct": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "grosMichelExtinct": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "spaceLevelup": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "businessPayout": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "bloodstoneTrigger": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "parkingPayout": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "glassDestroy": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "wheelStaysFlipped": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "antes": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "score": {
-            "type": "integer"
-          },
-          "min": {
-            "type": "integer"
-          },
-          "max": {
-            "type": "integer"
-          },
-          "label": {
-            "type": "string"
-          },
-          "edition": {
-            "$ref": "#/$defs/Edition"
-          },
-          "stickers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/Sticker"
-            }
-          },
-          "seal": {
-            "$ref": "#/$defs/Seal"
-          },
-          "enhancement": {
-            "$ref": "#/$defs/Enhancement"
-          },
-          "rank": {
-            "$ref": "#/$defs/Rank"
-          },
-          "suit": {
-            "$ref": "#/$defs/Suit"
-          },
-          "rolls": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "soulEditionRolls": {
-            "type": "integer"
-          },
-          "soulCardOnly": {
-            "type": "boolean"
-          },
-          "and": {
-            "type": "array",
-            "items": {
-              "$ref": "#/properties/must/items"
-            }
-          },
-          "or": {
-            "type": "array",
-            "items": {
-              "$ref": "#/properties/must/items"
-            }
-          },
-          "clauses": {
-            "type": "array",
-            "items": {
-              "$ref": "#/properties/must/items"
-            }
-          },
-          "mode": {
-            "$ref": "#/$defs/Mode"
-          },
-          "shopItems": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "boosterPacks": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "minShopItem": {
-            "type": "integer"
-          },
-          "maxShopItem": {
-            "type": "integer"
-          },
-          "sources": {
-            "type": "object",
-            "properties": {
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "minShopItem": {
-                "type": "integer"
-              },
-              "maxShopItem": {
-                "type": "integer"
-              },
-              "earlyAntesMaxPack": {
-                "type": "integer"
-              },
-              "tags": {
-                "type": "boolean"
-              },
-              "requireMega": {
-                "type": "boolean"
-              },
-              "charmTag": {
-                "type": "boolean"
-              },
-              "etherealTag": {
-                "type": "boolean"
-              },
-              "judgement": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "rareTag": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "uncommonTag": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "wraith": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "soulCard": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "arcanaPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "spectralPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "riffRaff": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "purpleSealOrEightBall": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "emperor": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "sixthSense": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "seance": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "certificate": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "incantation": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "familiar": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "grim": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "deckDraw": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "uncommonShopJokers": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "rareShopJokers": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "commonShopJokers": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "allShopJokers": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              }
-            }
-          }
-        }
+        "$ref": "#/$defs/JamlCriterion"
       }
     },
     "should": {
       "type": "array",
       "items": {
-        "$ref": "#/properties/must/items"
+        "$ref": "#/$defs/JamlCriterion"
       }
     },
     "mustNot": {
       "type": "array",
       "items": {
-        "$ref": "#/properties/must/items"
-      }
-    },
-    "aesthetics": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/Aesthetic"
+        "$ref": "#/$defs/JamlCriterion"
       }
     },
     "hashtags": {

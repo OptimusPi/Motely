@@ -70,7 +70,7 @@ public sealed class JamlStructuralGapTests
             deck: Red
             stake: White
             must:
-              - soulJoker: Perkeo
+              - legendaryJoker: Perkeo
                 antes: [1]
                 sources:
                   boosterPacks: [0]
@@ -96,7 +96,7 @@ public sealed class JamlStructuralGapTests
               - voucher: Telescope
                 antes: [1]
             mustNot:
-              - soulJoker: Perkeo
+              - legendaryJoker: Perkeo
                 antes: [1]
                 sources:
                   boosterPacks: [0]
@@ -199,7 +199,7 @@ public sealed class JamlStructuralGapTests
             deck: Red
             stake: White
             must:
-              - soulJoker: Perkeo
+              - legendaryJoker: Perkeo
                 soulCardOnly: true
                 antes: [1]
                 sources:

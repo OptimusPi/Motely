@@ -44,7 +44,6 @@ public class JamlFilterTypeTests
     [InlineData("rareJoker: Blueprint")]
     // mixedJoker: removed in v14.0.2 — `joker:` IS the mixed-rarity union.
     [InlineData("legendaryJoker: Perkeo")]
-    [InlineData("soulJoker: Perkeo")] // Alias for legendaryJoker internally
     public void JokerRarityFilters(string clause)
     {
         TestFilterCompilesAndRuns($"must:\n  - {clause}");

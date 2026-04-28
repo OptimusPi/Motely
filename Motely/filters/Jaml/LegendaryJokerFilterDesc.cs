@@ -13,6 +13,7 @@ public sealed class LegendaryJokerClause : IJamlClause
     public SoulJokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
+    public int? Max { get; init; }
 
     /// <summary>
     /// When true, match as soon as The Soul appears in a targeted arcana/spectral pack (tarot/spectral

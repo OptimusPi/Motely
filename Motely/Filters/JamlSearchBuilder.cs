@@ -29,6 +29,8 @@ public interface IJamlClause
 
     int Min { get; init; }
 
+    int? Max { get; init; }
+
 }
 
 
@@ -42,6 +44,8 @@ public abstract class LogicClause : IJamlClause
     public int Score { get; init; }
 
     public int Min { get; init; } = 1;
+
+    public int? Max { get; init; }
 
 }
 
