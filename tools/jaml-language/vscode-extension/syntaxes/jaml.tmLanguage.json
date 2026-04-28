@@ -120,7 +120,7 @@
       }
     },
     "clause-property": {
-      "match": "^\\s+(antes|score|min|max|edition|enhancement|seal|stickers|rank|suit|rolls|soulEditionRolls|soulCardOnly|label|boosterPacks|shopItems|minShopSlot|maxShopSlot|minPackSlot|maxPackSlot|sources)\\s*:",
+      "match": "^\\s+(antes|score|min|max|edition|enhancement|seal|stickers|rank|suit|rolls|soulEditionRolls|soulCardOnly|label|boosterPacks|shopItems|minShopItem|maxShopItem|arcanaPacks|spectralPacks|sources)\\s*:",
       "captures": {
         "1": {
           "name": "variable.parameter.jaml"

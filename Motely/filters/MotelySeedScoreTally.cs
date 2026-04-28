@@ -84,13 +84,18 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScores
     }
 }
 
-public class SharedScoreState
+// Per-plan (= per-thread) box for auto-cutoff state. Heap allocation so the scorer's
+// inner lambda can capture by reference and update plain int fields without Interlocked.
+// Each thread owns its own instance — no sharing, no contention. Multi-threaded CLI
+// tolerates per-thread divergence in LearnedCutoff (eventually converges as threads
+// see high scores) in exchange for zero locking on the hot path.
+public sealed class AutoCutoffState
 {
     public int LearnedCutoff;
     public long SeedsFiltered;
     public long StartTime;
 
-    public SharedScoreState()
+    public AutoCutoffState()
     {
         StartTime = DateTime.UtcNow.Ticks;
     }

@@ -165,7 +165,7 @@ public readonly struct SoulJokerShopSoulFilterDesc(
         )
         {
             hasSoulMask = VectorMask.NoBitsSet;
-            bool split = src.ArcanaBoosterPacks.Length > 0 || src.SpectralBoosterPacks.Length > 0;
+            bool split = src.ArcanaPacks.Length > 0 || src.SpectralPacks.Length > 0;
 
             for (int a = 0; a < antes.Length; a++)
             {
@@ -193,8 +193,8 @@ public readonly struct SoulJokerShopSoulFilterDesc(
                     bool slotTargeted;
                     if (split)
                     {
-                        bool arcSlot = ContainsSlot(src.ArcanaBoosterPacks, p);
-                        bool specSlot = ContainsSlot(src.SpectralBoosterPacks, p);
+                        bool arcSlot = ContainsSlot(src.ArcanaPacks, p);
+                        bool specSlot = ContainsSlot(src.SpectralPacks, p);
                         slotTargeted = arcSlot || specSlot;
                     }
                     else
@@ -215,9 +215,9 @@ public readonly struct SoulJokerShopSoulFilterDesc(
 
                     if (split)
                     {
-                        if (!ContainsSlot(src.ArcanaBoosterPacks, p))
+                        if (!ContainsSlot(src.ArcanaPacks, p))
                             isArcana = VectorMask.NoBitsSet;
-                        if (!ContainsSlot(src.SpectralBoosterPacks, p))
+                        if (!ContainsSlot(src.SpectralPacks, p))
                             isSpectral = VectorMask.NoBitsSet;
                     }
 

@@ -68,8 +68,8 @@ public struct LegendaryJokerFilterDesc(
             {
                 ShopItems = src.ShopItems,
                 BoosterPacks = src.BoosterPacks,
-                ArcanaBoosterPacks = src.ArcanaBoosterPacks,
-                SpectralBoosterPacks = src.SpectralBoosterPacks,
+                ArcanaPacks = src.ArcanaPacks,
+                SpectralPacks = src.SpectralPacks,
                 SoulCard = src.SoulCard,
                 RequireMegaPack = src.RequireMegaPack,
             },

@@ -1,6 +1,6 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
-using Motely.DB.SeedSource;
+using Motely.Datalake;
 using Motely.Filters;
 
 namespace Motely.CLI;
@@ -17,6 +17,7 @@ internal static class CliSearchMode
         string? PaddingCharsOption,
         int? RandomCount,
         string? AestheticName,
+        bool Drown,
         long? StartBatch,
         long? EndBatch,
         double? StartPercent,
@@ -198,6 +199,26 @@ internal static class CliSearchMode
                 paddingChars
             );
             updated = updated.WithProviderSearch(new MotelySeedListProvider(prov, keywordSeedCount));
+        }
+        else if (input.Drown)
+        {
+            var lakeDir = SeedStoragePaths.StandardLakeDirectory;
+            if (!Directory.Exists(lakeDir) || !Directory.EnumerateFiles(lakeDir, "*.parquet").Any())
+            {
+                error = $"Error: --drown requires parquet files in {lakeDir}. Run searches with --sink first to populate the ducklake.";
+                return false;
+            }
+            var drownProvider = new DuckLakeDrownProvider(lakeDir);
+            if (drownProvider.SeedCount == 0)
+            {
+                drownProvider.Dispose();
+                error = "Error: ducklake contains no seeds.";
+                return false;
+            }
+            writeWarning?.Invoke($"Drown: {drownProvider.SeedCount:N0} seeds from ducklake");
+            streamingProvider = drownProvider;
+            sourceLifetime = drownProvider;
+            updated = updated.WithProviderSearch(drownProvider);
         }
         else if (input.RandomCount.HasValue)
         {
