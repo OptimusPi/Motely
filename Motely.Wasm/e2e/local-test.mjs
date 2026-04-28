@@ -1,3 +1,4 @@
+
 // Local motely-wasm integration tests — runs against the fresh dotnet publish output.
 // Covers: boot, JAML validation, schema, search context, shop items, jokers, bosses.
 // Run: node local-test.mjs  (from this dir, after dotnet publish Motely.Wasm -c Release)
