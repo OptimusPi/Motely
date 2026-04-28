@@ -133,12 +133,12 @@ All colors are eyedropped from Balatro's actual rendered shader output. Do NOT s
 - **Red (#ff4c40):** Primary action, mult scoring, should-clause hits. The "play" color.
 - **Blue (#0093ff):** Secondary action, chips scoring, must-clause gates. The "requirement" color.
 - **Green (#429f79):** Success, positive state, money.
-- **Orange (#ff9800):** Back/return actions, warning.
+- **Orange (#ff9800):** Back/return actions, warning, configuration, misc.
 - **Gold (#e4b643):** Seed text, premium highlights, active tab. The "treasure" color.
 - **Purple (#9e74ce):** Joker rarity, tarot cards.
 - **Dark Grey (#3a5055):** Panel backgrounds — the primary surface.
 - **Darkest (#1e2b2d):** Deepest background, inset areas.
-- **Grey (#708386):** Disabled text, labels, inactive elements.
+- **Grey (#708386):** Disabled text, labels.
 - **Border Silver (#b9c2d2):** Panel top/side borders — the "silver frame."
 - **Border South (#777e89):** Panel bottom border — creates the 3D depth illusion.
 - **Panel Edge (#1e2e32):** Thin outer edge on panels.
@@ -159,7 +159,7 @@ Panels use 2px solid borders with border-silver on top/sides and border-south on
 
 ## Elevation & Depth
 
-Buttons have a colored "underside" via box-shadow (not blur). On press, translateY increases by 2-3px and the shadow collapses — the button physically sinks. On hover, translateY decreases by 2px (lifts) with a tiny brightness bump.
+Buttons have a colored "underside" via box-shadow (not blur). On press, translateY increases by 2-3px and the shadow collapses — the button physically sinks. On hover, apply a tiny brightness bump (no lift).
 
 Panels sit on a dark south-shadow (`0 3px 0 rgba(0,0,0,0.55)`). Translucent panels (for swirl-background contexts) use `rgba(15, 24, 26, 0.78)` with `backdrop-filter: blur(2px)`.
 
@@ -167,7 +167,7 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 
 ## Components
 
-**Button:** Chunky 3D press. Colored underside via box-shadow. Hover lifts -2px + brightness. Press sinks +2-3px + shadow collapse. Variants: primary (red), secondary (blue), back (orange), ghost (transparent). Sizes via padding, not font-size. Easing: `cubic-bezier(0.34, 1.56, 0.64, 1)`.
+**Button:** Chunky 3D press. Colored underside via box-shadow. Hover brightness bump. Press sinks +2-3px + shadow collapse. Variants: primary (red), secondary (blue), back (orange). Sizes via padding, not font-size. Easing: `cubic-bezier(0.34, 1.56, 0.64, 1)`.
 
 **Panel:** Dark grey (#3a5055) background, 2px solid border (silver top/sides, south bottom), border-radius 6px. Inner highlight: `inset 0 0 0 1px rgba(255,255,255,0.04)`. Drop: `0 2px 0 #000`.
 
@@ -185,13 +185,11 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 
 ## Do's and Don'ts
 
-- DO use m6x11plus for everything. No fallback display fonts.
-- DO eyedrop colors from the game. Never guess or approximate.
-- DO design for 320px portrait first. Desktop is an expanded view of the mobile baseline.
+- DO use m6x11plus for everything except code/monospace.
+- DO design for 320px portrait.
 - DO use translateY + box-shadow for button depth. Not CSS 3D transforms.
-- DO dim non-matching items (opacity 0.4 + grayscale 0.6). They stay visible for context.
 - DON'T use font-weight bold. m6x11plus is single-weight. Bold = muddy.
 - DON'T use fat padding or margins. Balatro UI is dense and cozy.
 - DON'T add horizontal scroll. Vertical snap-scroll + horizontal swipe only.
 - DON'T use rounded corners larger than 10px. Balatro is chunky, not bubbly.
-- DON'T use blur-based shadows for depth. Use solid colored box-shadows.
+- DON'T use blur-based shadows for depth. Use solid colored box-shadows 80% opaque.

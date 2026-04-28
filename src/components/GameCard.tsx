@@ -19,7 +19,6 @@ import {
     ENHANCER_MAP,
     SEAL_MAP,
 } from "../sprites/spriteData.js";
-import { BalatroItemCategory, isPackedItemValid, packedItemCategory } from "../decode/packedBalatroItem.js";
 
 export interface JamlGameCardProps {
     card: {
@@ -160,15 +159,18 @@ function stripModifiers(name: string): {
 }
 
 function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): AnalyzerResolvedItem | null {
-    if (typeof item.value !== "number" || !Number.isFinite(item.value) || !isPackedItemValid(item.value)) {
+    if (typeof item.value !== "number" || !Number.isFinite(item.value)) {
         return null;
     }
 
     const displayName = String(item.name || "").trim();
     const { baseName, edition, isEternal, isPerishable, isRental } = stripModifiers(displayName);
-    const category = packedItemCategory(item.value);
 
-    if (category === BalatroItemCategory.Joker) {
+    // Use motely-wasm enum to determine category — no hand-rolled bitmasks
+    const itemType = item.value & 0xffff;
+    const catNibble = (itemType >> 12) & 0xf;
+
+    if (catNibble === 5 /* Joker */) {
         const jokerName = JOKERS.some((joker) => joker.name === baseName) ? baseName : displayName;
         if (JOKERS.some((joker) => joker.name === jokerName)) {
             return { kind: "joker", type: "joker", card: { name: jokerName, edition, isEternal, isPerishable, isRental, scale } };
@@ -176,9 +178,9 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
     }
 
     if (
-        category === BalatroItemCategory.Tarot ||
-        category === BalatroItemCategory.Planet ||
-        category === BalatroItemCategory.Spectral
+        catNibble === 3 /* Tarot */ ||
+        catNibble === 4 /* Planet */ ||
+        catNibble === 2 /* Spectral */
     ) {
         const consumableName = TAROTS_AND_PLANETS.some((consumable) => consumable.name === baseName) ? baseName : displayName;
         if (TAROTS_AND_PLANETS.some((consumable) => consumable.name === consumableName)) {

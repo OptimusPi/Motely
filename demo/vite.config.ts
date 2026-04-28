@@ -1,16 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: __dirname,
   plugins: [react()],
-  resolve: {
-    alias: {
-      "jaml-ui/ui": resolve(__dirname, "../src/ui.ts"),
-      "jaml-ui": resolve(__dirname, "../src/index.ts"),
-    },
-  },
+  resolve: {},
   server: {
     port: 3141,
     host: true,

@@ -24,9 +24,17 @@ export function JimboBalatroFooter({ hidden = false, className = '' }: JimboBala
     >
       <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.9)', padding: '0 1rem 3px', textAlign: 'center' }}>
         <p style={{ fontFamily: 'm6x11plus, monospace', fontSize: 'clamp(11px, 0.8vw + 8px, 14px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0 0.5rem', color: 'white', margin: 0 }}>
-          <span>Not affiliated with LocalThunk or PlayStack</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-            Made with{' '}
+          <span>Not affiliated with LocalThunk or PlayStack •{' '}</span>
+          <a
+              href="https://store.steampowered.com/app/2379780/Balatro/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: JimboColorOption.GOLD, textDecoration: 'none' }}
+          >
+              BUY BALATRO
+          </a>
+          <span>{' '}• Created with{' '}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
             <span style={{ position: 'relative', display: 'inline-block', width: '1.5em', height: '1em', verticalAlign: 'middle' }}>
               {SUITS.map(({ char, kf }) => (
                 <span key={char} style={{ position: 'absolute', inset: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: 0, animationName: kf, animationDuration: CYCLE, animationDelay: '0s', animationIterationCount: 'infinite', animationTimingFunction: 'ease-out' }}>
@@ -34,9 +42,7 @@ export function JimboBalatroFooter({ hidden = false, className = '' }: JimboBala
                 </span>
               ))}
             </span>{' '}
-            for the{' '}
-            <a href="https://playbalatro.com" target="_blank" rel="noopener noreferrer" style={{ color: JimboColorOption.GOLD, textDecoration: 'none' }}>Balatro</a>{' '}
-            community
+            for the Balatro community
           </span>
         </p>
       </div>

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Text } from '@react-three/drei'
 import { resolveJamlAssetUrl } from '../assets.js'
+import { JimboColorOption } from '../ui/tokens.js'
 
 export interface JimboText3DProps {
   children: string
@@ -13,8 +14,8 @@ export interface JimboText3DProps {
 
 export function JimboText3D({
   children,
-  color = '#ffffff',
-  outlineColor = '#000000',
+  color = JimboColorOption.WHITE,
+  outlineColor = JimboColorOption.BLACK,
   outlineWidth = 0.05,
   position = [0, 0, 0],
   fontSize = 1
@@ -27,7 +28,7 @@ export function JimboText3D({
       color={color}
       outlineColor={outlineColor}
       outlineWidth={outlineWidth}
-      font={resolveJamlAssetUrl('fonts' as any) /* TODO: ensure m6x11plus ttf is accessible */}
+      font={resolveJamlAssetUrl('font')}
       anchorX="center"
       anchorY="middle"
     >

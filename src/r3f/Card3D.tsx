@@ -1,11 +1,10 @@
 'use client'
 
 import { useRef, useMemo, useState, useEffect, memo } from 'react'
-import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useFrame, useLoader, type ThreeEvent } from '@react-three/fiber'
 import { useSpring, animated } from '@react-spring/three'
 import * as THREE from 'three'
-import { SPRITE_SHEETS } from '../sprites/spriteData.js'
-import type { SpriteData, SpriteSheetType } from '../sprites/spriteMapper.js'
+import type { MotelySpriteData } from '../decode/motelySprite.js'
 
 export const CARD_DIMENSIONS = { WIDTH: 0.7, HEIGHT: 0.95, DEPTH: 0.02 } as const
 export const CARD_MAGNET = {
@@ -17,67 +16,26 @@ export const CARD_MAGNET = {
   LERP_OUT: 10,
 } as const
 
-const SHEET_KEY_MAP: Record<SpriteSheetType, keyof typeof SPRITE_SHEETS> = {
-  Jokers: 'jokers',
-  Tarots: 'tarots',
-  Vouchers: 'vouchers',
-  Boosters: 'boosters',
-  Enhancers: 'enhancers',
-  Editions: 'editions',
-  BlindChips: 'blinds',
-  tags: 'tags',
-  Stakes: 'stakes',
-  Decks: 'deck',
-}
-
-const _textureCache = new Map<string, THREE.Texture>()
-
-function useSpriteTexture(sprite: SpriteData) {
-  const [texture, setTexture] = useState<THREE.Texture | null>(null)
-  const serial = useRef(0)
-
-  useEffect(() => {
-    const id = ++serial.current
-    const sheet = SPRITE_SHEETS[SHEET_KEY_MAP[sprite.type]]
-    const url = sheet.src
-    const cols = sheet.columns
-    const rows = sheet.rows
-    const { x, y } = sprite.pos
-
-    const applySlice = (base: THREE.Texture): THREE.Texture => {
-      const t = base.clone()
-      t.repeat.set(1 / cols, 1 / rows)
-      t.offset.set(x / cols, (rows - y - 1) / rows)
-      t.needsUpdate = true
-      return t
-    }
-
-    if (_textureCache.has(url)) {
-      setTexture(applySlice(_textureCache.get(url)!))
-      return
-    }
-
-    const loader = new THREE.TextureLoader()
-    loader.load(
-      url,
-      (loaded) => {
-        if (id !== serial.current) return
-        loaded.colorSpace = THREE.SRGBColorSpace
-        loaded.magFilter = THREE.NearestFilter
-        loaded.minFilter = THREE.NearestFilter
-        _textureCache.set(url, loaded)
-        setTexture(applySlice(loaded))
-      },
-      undefined,
-      (err) => console.error('[Card3D] texture load failed:', url, err),
-    )
-  }, [sprite.type, sprite.pos.x, sprite.pos.y])
-
-  return texture
+function useSpriteTexture(sprite: MotelySpriteData) {
+  const texture = useLoader(THREE.TextureLoader, sprite.atlasPath);
+  
+  return useMemo(() => {
+    const t = texture.clone();
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.repeat.set(1 / sprite.gridCols, 1 / sprite.gridRows);
+    t.offset.set(
+      sprite.gridCol / sprite.gridCols,
+      1 - ((sprite.gridRow + 1) / sprite.gridRows)
+    );
+    t.needsUpdate = true;
+    return t;
+  }, [texture, sprite.gridCol, sprite.gridRow, sprite.gridCols, sprite.gridRows]);
 }
 
 export interface Card3DProps {
-  sprite: SpriteData
+  sprite: MotelySpriteData
   position?: [number, number, number]
   rotation?: [number, number, number]
   selected?: boolean

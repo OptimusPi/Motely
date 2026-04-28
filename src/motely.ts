@@ -25,28 +25,19 @@ export {
 
 export {
   motelyItemToSprite,
+  getMotelySpriteByName,
   type MotelySpriteData,
 } from "./decode/motelySprite.js";
 
 export {
-  MOTELY_DISPLAY_SCHEMA,
   motelyBossDisplayName,
   motelyBossDisplayNameFromKey,
-  motelyBossKeyFromDisplayName,
   motelyBoosterPackDisplayName,
   motelyBoosterPackDisplayNameFromKey,
-  motelyBoosterPackKeyFromDisplayName,
   motelyItemDisplayNameFromKey,
   motelyItemDisplayNameFromValue,
   motelyTagDisplayName,
   motelyTagDisplayNameFromKey,
-  motelyTagKeyFromDisplayName,
   motelyVoucherDisplayName,
   motelyVoucherDisplayNameFromKey,
-  motelyVoucherKeyFromDisplayName,
-  type MotelyBoosterPackKey,
-  type MotelyBossKey,
-  type MotelyDisplaySchema,
-  type MotelyTagKey,
-  type MotelyVoucherKey,
 } from "./motelyDisplay.js";

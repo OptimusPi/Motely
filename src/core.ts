@@ -32,13 +32,5 @@ export {
   type SpriteSheetInfo,
 } from "./sprites/spriteData.js";
 
-export {
-  BalatroItemCategory,
-  packedItemCategory,
-  packedJokerRarity,
-  packedItemIndex,
-  isPackedItemValid,
-} from "./decode/packedBalatroItem.js";
 
-export { getItemDisplayName, getItemCategory, getSuitColor } from "./utils/itemUtils.js";
 export { getStandardCardPosition, getSealPosition, getEnhancerPosition } from "./utils/gameCardUtils.js";

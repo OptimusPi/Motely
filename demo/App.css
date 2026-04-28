@@ -1,0 +1,181 @@
+.jaml-demo-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.jaml-demo-ide-container {
+  height: 100%;
+  min-height: 480px;
+}
+
+.jaml-demo-code-scenario {
+  height: 100%;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+}
+
+.jaml-demo-code-editor-container {
+  flex: 1;
+  margin-top: 6px;
+}
+
+.jaml-demo-ide-scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.jaml-demo-ide-component {
+  flex: 1;
+  min-height: 380px;
+}
+
+.jaml-demo-map-scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.jaml-demo-cards-scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.jaml-demo-section-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.jaml-demo-toolbar-scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jaml-demo-centered-message {
+  height: 100%;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jaml-demo-speedometer-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  background: #3a5055;
+  border: 1px solid #1e2e32;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.jaml-demo-speedometer-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 200px;
+}
+
+.jaml-demo-deck-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.jaml-demo-deck-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+
+.jaml-demo-root {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.jaml-demo-content-wrapper {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+  position: relative;
+  z-index: 0;
+}
+
+.jaml-demo-layout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+}
+
+.jaml-demo-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(6px);
+  border-bottom: 2px solid #1e2e32;
+}
+
+.jaml-demo-main {
+  flex: 1;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.jaml-demo-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+}
+
+.jaml-demo-action-row {
+  padding: 8px 12px;
+  background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0));
+}
+
+.jaml-demo-select {
+  padding: 6px 10px;
+  background: #1e2b2d;
+  color: #e4b643;
+  border: 1px solid #1e2e32;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  min-width: 160px;
+}
+

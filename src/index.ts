@@ -62,34 +62,7 @@ export {
     JamlCodeEditor,
     type JamlCodeEditorProps,
 } from "./components/JamlCodeEditor.js";
-export {
-    JimboText,
-    type JimboTextProps,
-    type JimboTextTone,
-    type JimboTextSize,
-} from "./ui/jimboText.js";
-export {
-    JimboTabs,
-    JimboVerticalTabs,
-    type JimboTabItem,
-    type JimboTabsProps,
-} from "./ui/jimboTabs.js";
-export {
-    JimboFlankNav,
-    type JimboFlankNavProps,
-} from "./ui/jimboFlankNav.js";
-export {
-    JimboFilterBar,
-    type JimboFilterBarProps,
-    type JimboFilterSortOption,
-} from "./ui/jimboFilterBar.js";
-export { JimboBackground } from "./ui/jimboBackground.js";
-export {
-    JimboTooltip,
-    type JimboTooltipProps,
-    type JimboTooltipMode,
-    type JimboTooltipPlacement,
-} from "./ui/jimboTooltip.js";
+export * from "./ui.js";
 export {
     JamlIdeToolbar,
     type JamlIdeMode,
@@ -139,10 +112,7 @@ export {
     type MotelyJsRunState,
 } from "./hooks/useAnalyzer.js";
 
-export {
-    JamlSpeedometer,
-    type JamlSpeedometerProps,
-} from "./components/JamlSpeedometer.js";
+
 export {
     JamlAestheticSelector,
     type JamlAestheticSelectorProps,

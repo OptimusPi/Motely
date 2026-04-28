@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AnalyzerExplorer,
@@ -12,17 +13,8 @@ import {
   JamlIde,
   JamlMapPreview,
   JamlSeedInput,
-  JamlSpeedometer,
   JamlTag,
   JamlVoucher,
-  MotelyVersionBadge,
-  RealStandardcard,
-  useAnalyzer,
-  useSearch,
-  type JamlAestheticOption,
-  type JamlIdeSearchResult,
-} from "jaml-ui";
-import {
   JimboBackButton,
   JimboBackground,
   JimboBadge,
@@ -38,7 +30,16 @@ import {
   JimboTooltip,
   JimboVerticalTabs,
   JimboBalatroFooter,
-} from "jaml-ui/ui";
+  MotelyVersionBadge,
+  RealStandardcard,
+  Showcase,
+  useAnalyzer,
+  useSearch,
+  type JamlAestheticOption,
+  type JamlIdeSearchResult,
+} from "../src/index.ts";
+import "./App.css";
+
 const C = JimboColorOption;
 const MOTELY_WASM_URL = `${import.meta.env.VITE_CDN_BASE_URL}/motely-wasm/${import.meta.env.VITE_MOTELY_WASM_VERSION}/index.mjs`;
 
@@ -146,22 +147,10 @@ function SearchScenario() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
+    <div className="jaml-demo-ide-scenario">
       {/* Speedometer banner — its own row, not crammed in a toolbar slot */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          padding: 10,
-          background: C.DARK_GREY,
-          border: `1px solid ${C.PANEL_EDGE}`,
-          borderRadius: 6,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px" }}>
+      <div className="jaml-demo-speedometer-banner">
+        <div className="jaml-demo-speedometer-status">
           <JimboText size="xs" tone="grey">Status</JimboText>
           <JimboText size="md" tone={isSearching ? "green" : "white"}>
             {search.status}
@@ -184,7 +173,7 @@ function SearchScenario() {
         searchResults={results}
         onSearch={handleSearch}
         isSearching={isSearching}
-        style={{ flex: 1, minHeight: 380 }}
+        className="jaml-demo-ide-component"
       />
     </div>
   );
@@ -196,7 +185,7 @@ function SearchScenario() {
 
 function IdeScenario() {
   const [jaml, setJaml] = useState(SAMPLE_JAML);
-  return <JamlIde jaml={jaml} onChange={setJaml} style={{ height: "100%", minHeight: 480 }} />;
+  return <div className="jaml-demo-ide-container"><JamlIde jaml={jaml} onChange={setJaml} style={{ height: "100%" }} /></div>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -206,9 +195,9 @@ function IdeScenario() {
 function CodeScenario() {
   const [jaml, setJaml] = useState(SAMPLE_JAML);
   return (
-    <div style={{ height: "100%", minHeight: 480, display: "flex", flexDirection: "column" }}>
+    <div className="jaml-demo-code-scenario">
       <JimboText size="xs" tone="grey">Raw JAML editor (no chrome)</JimboText>
-      <div style={{ flex: 1, marginTop: 6 }}>
+      <div className="jaml-demo-code-editor-container">
         <JamlCodeEditor value={jaml} onChange={setJaml} minHeight={480} />
       </div>
     </div>
@@ -222,7 +211,7 @@ function CodeScenario() {
 function MapScenario() {
   const [jaml, setJaml] = useState(SAMPLE_JAML);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
+    <div className="jaml-demo-map-scenario">
       <JamlMapPreview jaml={jaml} />
       <JamlCodeEditor value={jaml} onChange={setJaml} minHeight={200} />
     </div>
@@ -235,7 +224,7 @@ function MapScenario() {
 
 function CardsScenario() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="jaml-demo-cards-scenario">
       <Section title="JamlGameCard — joker">
         <JamlGameCard card={{ name: "Blueprint" }} type="joker" />
         <JamlGameCard card={{ name: "Perkeo", edition: "Negative" }} type="joker" />
@@ -306,9 +295,9 @@ function DecksScenario() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Section title="DeckSprite — every deck">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="jaml-demo-deck-list">
           {DECKS.map((d) => (
-            <div key={d} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <div key={d} className="jaml-demo-deck-item">
               <DeckSprite deck={d} size={56} />
               <JimboText size="xs" tone="grey">{d}</JimboText>
             </div>
@@ -316,9 +305,9 @@ function DecksScenario() {
         </div>
       </Section>
       <Section title="Red deck × every stake">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="jaml-demo-deck-list">
           {STAKES.map((s) => (
-            <div key={s} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <div key={s} className="jaml-demo-deck-item">
               <DeckSprite deck="Red" stake={s} size={56} />
               <JimboText size="xs" tone="grey">{s}</JimboText>
             </div>
@@ -373,7 +362,7 @@ function ChromeScenario() {
   const [page, setPage] = useState(1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="jaml-demo-chrome-container">
       <Section title="JimboTabs (horizontal)">
         <JimboTabs
           tabs={[
@@ -400,7 +389,7 @@ function ChromeScenario() {
       </Section>
       <Section title="JimboTooltip">
         <JimboTooltip content="Blueprint copies the joker to its right.">
-          <span style={{ display: "inline-block" }}>
+          <span className="jaml-demo-inline-block">
             <JamlGameCard card={{ name: "Blueprint" }} type="joker" />
           </span>
         </JimboTooltip>
@@ -446,9 +435,9 @@ function PrimitivesScenario() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="jaml-demo-primitives-container">
       <Section title="JimboBadge">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="jaml-demo-flex-wrap">
           {(["dark","blue","red","green","gold","grey"] as const).map((tone) => (
             <JimboBadge key={tone} tone={tone} size="md">{tone}</JimboBadge>
           ))}
@@ -463,7 +452,7 @@ function PrimitivesScenario() {
         />
       </Section>
       <Section title="JimboFloating">
-        <JimboPanel style={{ width: 200, height: 100, position: 'relative' }}>
+        <JimboPanel className="jaml-demo-floating-panel">
           <JimboText size="sm">A Panel with a floating badge</JimboText>
           <JimboFloating anchor="top-right" offset={-8}>
             <JimboBadge tone="red">New!</JimboBadge>
@@ -480,12 +469,12 @@ function PrimitivesScenario() {
 
 function VersionScenario() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="jaml-demo-version-container">
       <Section title="MotelyVersionBadge">
         <MotelyVersionBadge version="14.0.2" />
-        <div style={{ height: 6 }} />
+        <div className="jaml-demo-spacer" />
         <MotelyVersionBadge version="14.0.2" minimal />
-        <div style={{ height: 6 }} />
+        <div className="jaml-demo-spacer" />
         <MotelyVersionBadge loading />
       </Section>
       <Section title="AnalyzerExplorer">
@@ -519,26 +508,18 @@ function VersionScenario() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <JimboText size="xs" tone="grey">{title}</JimboText>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start" }}>
+    <JimboPanel>
+      <JimboText size="sm" tone="grey">{title}</JimboText>
+      <div className="jaml-demo-section-body" style={{ marginTop: 8 }}>
         {children}
       </div>
-    </div>
+    </JimboPanel>
   );
 }
 
 function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        height: "100%",
-        minHeight: 320,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    <div className="jaml-demo-centered-message">
       {children}
     </div>
   );
@@ -561,6 +542,7 @@ const SCENARIOS: Scenario[] = [
   { id: "primitives", label: "UI Primitives", render: () => <PrimitivesScenario /> },
   { id: "chrome", label: "Tabs / Modal / Tooltip", render: () => <ChromeScenario /> },
   { id: "version", label: "Version badge", render: () => <VersionScenario /> },
+  { id: "showcase", label: "Showcase (landing)", fullBleed: true, render: () => <Showcase /> },
 ];
 
 export function App() {
@@ -569,121 +551,55 @@ export function App() {
   const fullBleed = scenario.fullBleed === true;
 
   return (
-    <div
-      style={{
-        position: "relative",
-        height: "100svh",
-        overflow: "hidden",
-        color: C.WHITE,
-        fontFamily: "var(--font-sans, m6x11plus), monospace",
-        display: "flex",
-        justifyContent: "center",
-      }}
-    >
+      <div className="jaml-demo-root">
       <JimboBackground />
 
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-          maxWidth: 360,
-          height: "100%",
-        }}
-      >
-        {/* Sticky top nav */}
-        <header
-          style={{
-            position: "sticky",
-            top: 0,
-            zIndex: 5,
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "8px 12px",
-            background: "rgba(0,0,0,0.85)",
-            backdropFilter: "blur(6px)",
-            borderBottom: `2px solid ${C.PANEL_EDGE}`,
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ color: C.GOLD, fontSize: 10, letterSpacing: 3 }}>JAML-UI</span>
-          </div>
-          <select
-            value={current}
-            onChange={(e) => setCurrent(e.target.value as ScenarioId)}
-            style={selectStyle}
-            aria-label="Pick scenario"
-          >
-            {SCENARIOS.map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
-            ))}
-          </select>
-        </header>
-
-        {/* Content area */}
-        <main
-          style={{
-            flex: 1,
-            padding: "16px 12px",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
-          <JimboFlankNav
-            onPrev={() => {
-              const idx = SCENARIOS.findIndex(s => s.id === current);
-              if (idx > 0) setCurrent(SCENARIOS[idx - 1].id);
-            }}
-            onNext={() => {
-              const idx = SCENARIOS.findIndex(s => s.id === current);
-              if (idx < SCENARIOS.length - 1) setCurrent(SCENARIOS[idx + 1].id);
-            }}
-            canPrev={SCENARIOS.findIndex(s => s.id === current) > 0}
-            canNext={SCENARIOS.findIndex(s => s.id === current) < SCENARIOS.length - 1}
-            style={{ flex: 1, minHeight: 0 }}
-          >
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", minHeight: 0 }}>
-              {scenario.render()}
-            </div>
-          </JimboFlankNav>
-        </main>
-
-        {/* Sticky bottom footer */}
-        <div
-          style={{
-            position: "sticky",
-            bottom: 0,
-            marginTop: "auto",
-            display: "flex",
-            flexDirection: "column",
-            zIndex: 5,
-          }}
-        >
-          {/* Action Row containing Back Button */}
-          <div style={{ padding: "8px 12px", background: "linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0))" }}>
-             <JimboBackButton onClick={() => alert('Back pressed')} />
-          </div>
-          {/* Attribution Footer */}
-          <JimboBalatroFooter />
+      {/* Sticky top nav - full width */}
+      <header className="jaml-demo-header">
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ color: C.GOLD, fontSize: 10, letterSpacing: 3 }}>JAML-UI</span>
         </div>
+        <select
+          value={current}
+          onChange={(e) => setCurrent(e.target.value as ScenarioId)}
+          className="jaml-demo-select"
+          aria-label="Pick scenario"
+        >
+          {SCENARIOS.map((s) => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
+      </header>
+
+      <div className="jaml-demo-content-wrapper">
+        <div className="jaml-demo-layout">
+          {/* Content area */}
+          <main className="jaml-demo-main">
+            <JimboFlankNav
+              onPrev={() => {
+                const idx = SCENARIOS.findIndex(s => s.id === current);
+                if (idx > 0) setCurrent(SCENARIOS[idx - 1].id);
+              }}
+              onNext={() => {
+                const idx = SCENARIOS.findIndex(s => s.id === current);
+                if (idx < SCENARIOS.length - 1) setCurrent(SCENARIOS[idx + 1].id);
+              }}
+              canPrev={SCENARIOS.findIndex(s => s.id === current) > 0}
+              canNext={SCENARIOS.findIndex(s => s.id === current) < SCENARIOS.length - 1}
+              style={{ flex: 1, minHeight: 0 }}
+            >
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", minHeight: 0 }}>
+                {scenario.render()}
+              </div>
+            </JimboFlankNav>
+          </main>
+        </div>
+      </div>
+
+      {/* Sticky bottom footer - full width */}
+      <div className="jaml-demo-footer">
+        <JimboBalatroFooter />
       </div>
     </div>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  background: C.DARKEST,
-  color: C.GOLD,
-  border: `1px solid ${C.PANEL_EDGE}`,
-  borderRadius: 4,
-  fontSize: 13,
-  fontFamily: "inherit",
-  cursor: "pointer",
-  minWidth: 160,
-};

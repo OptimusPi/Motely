@@ -17,6 +17,16 @@ export function JimboBadge({ size = 'sm', tone = 'dark', children }: JimboBadgeP
     grey: C.GREY
   };
 
+  // Red and Blue get white text per DESIGN.md. Gold/Green/Grey get black text. Darkest gets white.
+  const textColors = {
+    dark: C.WHITE,
+    blue: C.WHITE,
+    red: C.WHITE,
+    green: C.BLACK,
+    gold: C.BLACK,
+    grey: C.WHITE
+  };
+
   return (
     <span style={{
       display: 'inline-flex',
@@ -24,10 +34,12 @@ export function JimboBadge({ size = 'sm', tone = 'dark', children }: JimboBadgeP
       padding: size === 'sm' ? '2px 6px' : '4px 8px',
       fontSize: size === 'sm' ? 10 : 12,
       background: bgColors[tone],
-      color: tone === 'dark' || tone === 'grey' ? C.WHITE : C.DARKEST,
+      color: textColors[tone],
       border: `1px solid ${tone === 'dark' ? C.PANEL_EDGE : C.BLACK}`,
       borderRadius: 4,
-      fontFamily: 'var(--font-sans, m6x11plus), monospace',
+      fontFamily: "'m6x11plus', 'Courier New', monospace",
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
       whiteSpace: 'nowrap'
     }}>
       {children}

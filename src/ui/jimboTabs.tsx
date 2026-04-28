@@ -52,6 +52,11 @@ const JIMBO_BOUNCE_KEYFRAMES = `
 
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   const [pressed, setPressed] = useState(false)
+  const [hovered, setHovered] = useState(false)
+
+  // ALL tabs are RED always. Hover = DARK_RED. Press = DARK_RED.
+  const bg = pressed || hovered ? JimboColorOption.DARK_RED : JimboColorOption.RED
+
   return (
     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div
@@ -71,21 +76,27 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         onClick={onClick}
         onMouseDown={() => setPressed(true)}
         onMouseUp={() => setPressed(false)}
-        onMouseLeave={() => setPressed(false)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => { setPressed(false); setHovered(false) }}
         onTouchStart={() => setPressed(true)}
         onTouchEnd={() => setPressed(false)}
         style={{
           border: 'none',
           cursor: 'pointer',
           borderRadius: 8,
-          padding: '8px 16px',
-          backgroundColor: JimboColorOption.RED,
-          transform: pressed ? `translateY(${JIMBO_ANIMATIONS.PRESS_TRANSLATE_Y}px)` : 'translateY(0)',
-          boxShadow: pressed ? 'none' : `0 ${JIMBO_ANIMATIONS.PRESS_TRANSLATE_Y}px 0 0 ${JimboColorOption.BLACK}80`,
-          transition: `transform ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease, box-shadow ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease`,
+          padding: '4px 12px',
+          backgroundColor: bg,
+          transform: pressed ? 'translateY(2px)' : 'translateY(0)',
+          boxShadow: pressed ? 'none' : '0 2px 0 0 rgba(0,0,0,0.3)',
+          transition: 'none',
         }}
       >
-        <JimboText size="sm" uppercase>{label}</JimboText>
+        <JimboText
+          size="sm"
+          style={{ color: JimboColorOption.WHITE }}
+        >
+          {label}
+        </JimboText>
       </button>
     </div>
   )
@@ -115,14 +126,14 @@ export function JimboVerticalTabs({ tabs, activeTab, onTabChange, className = ''
               cursor: 'pointer',
               borderRadius: '8px 0 0 8px',
               padding: '16px 8px',
-              backgroundColor: isActive ? JimboColorOption.DARK_GREY : JimboColorOption.INNER_BORDER,
+              backgroundColor: JimboColorOption.RED,
               writingMode: 'vertical-rl',
               textOrientation: 'mixed',
               transform: 'rotate(180deg)',
-              transition: 'background-color 120ms ease',
+              transition: 'none',
             }}
           >
-            <JimboText size="sm" uppercase tone={isActive ? 'default' : 'grey'}>
+            <JimboText size="sm" tone={isActive ? 'default' : 'grey'}>
               {tab.label}
             </JimboText>
           </button>
