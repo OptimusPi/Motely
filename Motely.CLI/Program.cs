@@ -255,7 +255,7 @@ partial class Program
         );
         var writeJamlSchemaOption = app.Option(
             "--write-jaml-schema",
-            "Regenerate jaml.schema.json from the public JAML schema contract via the AOT-safe schema exporter. Writes to repo root and tools/jaml-language/{jaml-schema,vscode-extension}/schemas/.",
+            "Regenerate jaml.schema.json from the public JAML schema contract via the AOT-safe schema exporter. Writes to repo root, motely-wasm/, and packages/jaml-language-core/.",
             CommandOptionType.NoValue
         );
 

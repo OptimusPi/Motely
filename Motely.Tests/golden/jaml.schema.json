@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mcp.seedfinder.app/jaml.schema.json",
+  "$id": "https://www.seedfinder.app/jaml.schema.json",
   "title": "JAML — Jimbo's Ante Markup Language",
   "description": "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.",
   "type": "object",

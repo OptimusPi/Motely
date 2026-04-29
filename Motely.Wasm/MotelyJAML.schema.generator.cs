@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using Motely;
 using Motely.Filters;
 
@@ -13,7 +14,7 @@ namespace Motely.WasmTools;
 
 public static partial class MotelyJamlSchemaGenerator
 {
-    private const string SchemaId = "https://mcp.seedfinder.app/jaml.schema.json";
+    private const string SchemaId = "https://www.seedfinder.app/jaml.schema.json";
     private const string SchemaTitle = "JAML — Jimbo's Ante Markup Language";
     private const string SchemaDescription =
         "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.";
@@ -88,6 +89,7 @@ public static partial class MotelyJamlSchemaGenerator
         {
             ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
             ["$id"] = SchemaId,
+            ["version"] = GetSchemaVersion(),
             ["title"] = SchemaTitle,
             ["description"] = SchemaDescription,
             ["type"] = "object",
@@ -102,6 +104,29 @@ public static partial class MotelyJamlSchemaGenerator
         return result;
     }
 
+    private static string GetSchemaVersion()
+    {
+        var repoRoot = FindRepoRoot(Environment.CurrentDirectory);
+        if (repoRoot is not null)
+        {
+            var propsPath = Path.Combine(repoRoot, "Directory.Packages.props");
+            if (File.Exists(propsPath))
+            {
+                var props = XDocument.Load(propsPath);
+                var version = props.Root?
+                    .Element("PropertyGroup")?
+                    .Element("MotelyVersion")?
+                    .Value;
+
+                if (!string.IsNullOrWhiteSpace(version))
+                    return version.Trim();
+            }
+        }
+
+        return typeof(MotelyJamlSchemaGenerator).Assembly.GetName().Version?.ToString()
+            ?? "0.0.0";
+    }
+
     public static void WriteToFile(string outputPath, params string[] extraCopies)
     {
         var schema = Generate();
@@ -109,7 +134,7 @@ public static partial class MotelyJamlSchemaGenerator
         {
             WriteIndented = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        });
+        }).ReplaceLineEndings("\n");
 
         WriteAllText(outputPath, json);
         foreach (var extra in extraCopies)
@@ -320,8 +345,7 @@ public static partial class MotelyJamlSchemaGenerator
     {
         Path.Combine(repoRoot, "jaml.schema.json"),
         Path.Combine(repoRoot, "motely-wasm", "jaml.schema.json"),
-        Path.Combine(repoRoot, "tools", "jaml-language", "jaml-schema", "schemas", "jaml.schema.json"),
-        Path.Combine(repoRoot, "tools", "jaml-language", "vscode-extension", "schemas", "jaml.schema.json"),
+        Path.Combine(repoRoot, "packages", "jaml-language-core", "schema", "jaml.schema.json"),
     };
 
     public static int WriteDefault(string? repoRootOverride = null, TextWriter? log = null)
@@ -334,7 +358,7 @@ public static partial class MotelyJamlSchemaGenerator
         {
             WriteIndented = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        });
+        }).ReplaceLineEndings("\n");
 
         foreach (var p in paths)
         {
