@@ -13,5 +13,5 @@ must:
 should:
   - uncommonJoker: Constellation
     score: 60
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 80

@@ -5,8 +5,12 @@ deck: Erratic
 stake: White
 hashtags: ["joker", "uncommon-joker", "copy", "negative", "planet-scaling", "retrigger", "face-cards", "erratic", "legendary-synergy"]
 must:
-  - erraticRanks: [Jack, Queen, King]
-    min: 52
+  - erraticRank: Jack
+    min: 18
+  - erraticRank: Queen
+    min: 18
+  - erraticRank: King
+    min: 16
   - commonJoker: ScaryFace
     antes:
       - 1
@@ -36,7 +40,7 @@ should:
     score: 35
   - rareJoker: Brainstorm
     score: 30
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - legendaryJoker: Chicot

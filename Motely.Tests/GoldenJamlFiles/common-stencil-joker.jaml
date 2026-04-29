@@ -14,7 +14,7 @@ must:
 should:
   - tag: NegativeTag
     score: 80
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 75
   - spectral: Ectoplasm

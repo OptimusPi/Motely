@@ -5,7 +5,7 @@ deck: Red
 stake: Gold
 hashtags: ["legendary", "soul", "rare-find", "copy", "negative", "planet-scaling", "face-cards", "legendary-synergy"]
 must:
-  - soulJoker: Chicot
+  - legendaryJoker: Chicot
     antes:
       - 1
       - 2
@@ -32,7 +32,7 @@ should:
     score: 40
   - legendaryJoker: Triboulet
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 40
   - tag: NegativeTag

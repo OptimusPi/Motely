@@ -15,6 +15,7 @@
 
   <!-- Packages (versions from Directory.Packages.props) -->
   <ItemGroup>
+    <PackageReference Include="Bootsharp.FileSystem" PrivateAssets="all" />
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="SixLabors.ImageSharp" />

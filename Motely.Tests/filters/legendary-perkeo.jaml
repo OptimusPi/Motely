@@ -4,7 +4,7 @@ description: Perkeo legendary joker with BlackHole for infinite hand level scali
 deck: Red
 stake: White
 must:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes:
       - 1
       - 2

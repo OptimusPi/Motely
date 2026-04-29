@@ -24,10 +24,10 @@ should:
     score: 45
   - legendaryJoker: Chicot
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Holographic
     score: 30
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - tag: NegativeTag

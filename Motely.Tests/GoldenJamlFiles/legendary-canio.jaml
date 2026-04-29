@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["legendary", "soul", "rare-find", "copy", "negative", "deck-thinning", "face-cards", "glass", "legendary-synergy"]
 must:
-  - soulJoker: Canio
+  - legendaryJoker: Canio
     antes:
       - 1
       - 2
@@ -34,6 +34,6 @@ should:
     score: 35
   - rareJoker: Brainstorm
     score: 30
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35
