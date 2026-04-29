@@ -6,14 +6,9 @@ using Xunit.Abstractions;
 namespace Motely.Tests;
 
 /// <summary>
-/// Regression test that loads every committed <c>JamlFilters/*.jaml</c> file (excluding the
-/// <c>old/</c> archive) and asserts it parses clean. Tightening the schema in v13 silently
+/// Regression test that loads committed <c>Motely.Tests/GoldenJamlFiles/*.jaml</c> fixtures and asserts it parses clean. Tightening the schema in v13 silently
 /// invalidated existing user JAML — this test exists so that never happens to anyone again
 /// without the build going red FIRST.
-///
-/// <para>Add new corpus files by simply dropping them in <c>JamlFilters/</c>. The test
-/// auto-discovers and verifies them. To deliberately exclude a broken/legacy file, move it
-/// to <c>JamlFilters/old/</c>.</para>
 /// </summary>
 public class JamlCorpusRegressionTests
 {
@@ -54,15 +49,8 @@ public class JamlCorpusRegressionTests
 
     private static string LocateCorpusRoot()
     {
-        // Test runs out of bin/{Configuration}/{TFM} — walk up to the MotelyJAML repo root.
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            var candidate = Path.Combine(dir.FullName, "JamlFilters");
-            if (Directory.Exists(candidate)) return candidate;
-            dir = dir.Parent;
-        }
-        throw new DirectoryNotFoundException(
-            "Could not locate JamlFilters/ corpus directory by walking up from " + AppContext.BaseDirectory);
+        var candidate = GoldenDirectory.ResolveGoldenJamlFiles();
+        if (Directory.Exists(candidate)) return candidate;
+        throw new DirectoryNotFoundException("Could not locate GoldenJamlFiles fixture directory at " + candidate);
     }
 }

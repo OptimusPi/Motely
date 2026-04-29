@@ -1,0 +1,35 @@
+{
+  "Basic JAML filter": {
+    "prefix": "jaml-basic",
+    "body": [
+      "deck: ${1:Red}",
+      "stake: ${2:White}",
+      "must:",
+      "  - joker: ${3:Blueprint}",
+      "    antes: [${4:1}]"
+    ],
+    "description": "Create a basic JAML filter."
+  },
+  "Scored JAML criterion": {
+    "prefix": "jaml-should",
+    "body": [
+      "should:",
+      "  - joker: ${1:Brainstorm}",
+      "    score: ${2:50}",
+      "    antes: [${3:1, 2, 3}]"
+    ],
+    "description": "Create a scored JAML criterion."
+  },
+  "Legendary joker criterion": {
+    "prefix": "jaml-legendary",
+    "body": [
+      "must:",
+      "  - legendaryJoker: ${1:Perkeo}",
+      "    antes: [${2:1}]",
+      "    sources:",
+      "      arcanaPacks: true",
+      "      spectralPacks: true"
+    ],
+    "description": "Create a legendary joker criterion."
+  }
+}
