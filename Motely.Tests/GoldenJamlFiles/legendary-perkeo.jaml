@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["legendary", "soul", "rare-find", "negative", "planet-scaling", "deck-fix", "legendary-synergy"]
 must:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes:
       - 1
       - 2
@@ -38,6 +38,6 @@ should:
     score: 30
   - tag: CharmTag
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35

@@ -40,6 +40,6 @@ should:
     score: 30
   - tag: NegativeTag
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30

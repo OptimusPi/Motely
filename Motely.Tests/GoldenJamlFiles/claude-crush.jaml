@@ -48,9 +48,9 @@ should:
     score: 45
   - rareJoker: Baron
     score: 45
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 45
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 40
   - voucher: CrystalBall

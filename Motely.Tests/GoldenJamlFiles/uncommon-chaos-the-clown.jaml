@@ -34,7 +34,7 @@ should:
     score: 30
   - rareJoker: Brainstorm
     score: 25
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 25
   - legendaryJoker: Chicot

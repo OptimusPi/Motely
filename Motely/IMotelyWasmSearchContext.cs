@@ -42,6 +42,12 @@ public record MotelyShopItemChunkResult(
     MotelySingleShopItemStream Stream
 );
 
+public interface IMotelyShopItemStream
+{
+    MotelyItem GetNext();
+    int[] GetNextChunk(int count);
+}
+
 public record MotelyJokerStreamResult(
     MotelyItem Item,
     MotelySingleJokerStream Stream

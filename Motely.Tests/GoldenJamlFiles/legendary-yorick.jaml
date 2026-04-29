@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["legendary", "soul", "rare-find", "copy", "negative", "discard", "legendary-synergy"]
 must:
-  - soulJoker: Yorick
+  - legendaryJoker: Yorick
     antes:
       - 1
       - 2
@@ -34,6 +34,6 @@ should:
     score: 30
   - rareJoker: Blueprint
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35

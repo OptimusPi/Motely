@@ -28,7 +28,7 @@ should:
     score: 40
   - legendaryJoker: Perkeo
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35
   - commonJoker: RaisedFist

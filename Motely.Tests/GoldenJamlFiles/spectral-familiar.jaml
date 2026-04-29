@@ -12,7 +12,7 @@ must:
       - 3
       - 4
 should:
-  - soulJoker: Canio
+  - legendaryJoker: Canio
     score: 60
   - commonJoker: Photograph
     score: 55
@@ -32,7 +32,7 @@ should:
     score: 35
   - tag: NegativeTag
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - legendaryJoker: Perkeo

@@ -30,10 +30,10 @@ should:
     score: 40
   - tag: NegativeTag
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35
   - legendaryJoker: Perkeo
     score: 35
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 35
