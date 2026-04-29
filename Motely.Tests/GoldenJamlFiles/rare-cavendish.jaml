@@ -30,7 +30,7 @@ should:
     score: 40
   - spectral: Ankh
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 40
   - tag: NegativeTag

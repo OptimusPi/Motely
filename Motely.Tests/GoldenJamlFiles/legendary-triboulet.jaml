@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["legendary", "soul", "rare-find", "scaling", "retrigger", "deck-fix", "face-cards", "legendary-synergy"]
 must:
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     antes:
       - 1
       - 2

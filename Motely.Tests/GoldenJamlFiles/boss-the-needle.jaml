@@ -24,13 +24,13 @@ should:
     score: 40
   - rareJoker: Baron
     score: 50
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 45
   - rareJoker: Blueprint
     score: 40
   - tag: NegativeTag
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35
   - legendaryJoker: Perkeo

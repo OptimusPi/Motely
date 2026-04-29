@@ -31,4 +31,9 @@
         <ProjectReference Include="../Motely/Motely.csproj" />
     </ItemGroup>
 
+    <Target Name="RegenerateJamlSchema" BeforeTargets="Publish">
+        <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)../Motely.CLI/Motely.CLI.csproj&quot; -- --write-jaml-schema"
+              WorkingDirectory="$(MSBuildThisFileDirectory).." />
+    </Target>
+
 </Project>

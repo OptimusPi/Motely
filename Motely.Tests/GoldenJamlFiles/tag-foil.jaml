@@ -22,10 +22,10 @@ should:
     score: 35
   - legendaryJoker: Perkeo
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Foil
     score: 25
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - tag: NegativeTag

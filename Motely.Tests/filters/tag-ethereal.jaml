@@ -13,5 +13,5 @@ must:
 should:
   - spectral: BlackHole
     score: 50
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 45

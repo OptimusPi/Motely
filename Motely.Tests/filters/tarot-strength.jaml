@@ -13,5 +13,5 @@ must:
 should:
   - rareJoker: Baron
     score: 60
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 50

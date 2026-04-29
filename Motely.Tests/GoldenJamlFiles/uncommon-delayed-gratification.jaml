@@ -26,7 +26,7 @@ should:
     score: 35
   - legendaryJoker: Perkeo
     score: 30
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - rareJoker: Brainstorm

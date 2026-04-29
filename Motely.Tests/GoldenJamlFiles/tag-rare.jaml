@@ -36,6 +36,6 @@ should:
     score: 60
   - legendaryJoker: Perkeo
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30

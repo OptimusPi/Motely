@@ -22,7 +22,7 @@ should:
     score: 45
   - commonJoker: FortuneTeller
     score: 40
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 40
   - legendaryJoker: Perkeo
     score: 40
@@ -30,7 +30,7 @@ should:
     score: 35
   - tag: NegativeTag
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - rareJoker: Brainstorm
