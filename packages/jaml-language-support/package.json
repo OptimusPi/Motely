@@ -1,0 +1,140 @@
+{
+  "name": "jaml-language-support",
+  "displayName": "Jimbo's Ante Markup Language",
+  "description": "JAML language support for Motely: highlighting, snippets, diagnostics, schema access, and editor commands.",
+  "version": "1.3.0",
+  "publisher": "pifreak",
+  "license": "MIT",
+  "author": "pifreak <nate@optimuspi.com>",
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Linters"
+  ],
+  "keywords": [
+    "balatro",
+    "jaml",
+    "jummy",
+    "motely",
+    "seed",
+    "seedfinder"
+  ],
+  "icon": "images/icon.ico",
+  "galleryBanner": {
+    "color": "#22142f",
+    "theme": "dark"
+  },
+  "homepage": "https://github.com/OptimusPi/MotelyJAML#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "packages/jaml-language-support"
+  },
+  "bugs": {
+    "url": "https://github.com/OptimusPi/MotelyJAML/issues"
+  },
+  "main": "./src/extension.cjs",
+  "contributes": {
+    "languages": [
+      {
+        "id": "jaml",
+        "aliases": [
+          "JAML",
+          "Jimbo's Ante Markup Language"
+        ],
+        "extensions": [
+          ".jaml"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/icon.ico",
+          "dark": "./images/icon.ico"
+        }
+      },
+      {
+        "id": "jummy",
+        "aliases": [
+          "Jummy"
+        ],
+        "extensions": [
+          ".jummy"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/icon.ico",
+          "dark": "./images/icon.ico"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jaml",
+        "scopeName": "source.jaml",
+        "path": "./syntaxes/jaml.tmLanguage.json"
+      },
+      {
+        "language": "jummy",
+        "scopeName": "source.jummy",
+        "path": "./syntaxes/jummy.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "jaml",
+        "path": "./snippets/jaml.code-snippets"
+      }
+    ],
+    "commands": [
+      {
+        "command": "jaml.showDocumentSummary",
+        "title": "JAML: Show Document Summary",
+        "category": "JAML"
+      },
+      {
+        "command": "jaml.openSchema",
+        "title": "JAML: Open Bundled Schema",
+        "category": "JAML"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "jaml.showDocumentSummary",
+          "when": "resourceLangId == jaml",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "jaml.showDocumentSummary",
+          "when": "resourceLangId == jaml"
+        },
+        {
+          "command": "jaml.openSchema"
+        }
+      ]
+    }
+  },
+  "files": [
+    "README.md",
+    "LICENSE.txt",
+    "package.json",
+    "language-configuration.json",
+    "src/**",
+    "syntaxes/**",
+    "snippets/**",
+    "schema/**",
+    "images/**",
+    "vendor/**"
+  ],
+  "scripts": {
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "node ./scripts/prepublish-check.mjs"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "latest"
+  }
+}

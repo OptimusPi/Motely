@@ -1,0 +1,78 @@
+{
+  "scopeName": "source.jaml",
+  "name": "JAML",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#sections" },
+    { "include": "#criteria" },
+    { "include": "#constants" },
+    { "include": "#numbers" },
+    { "include": "#strings" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "#.*$",
+          "name": "comment.line.number-sign.jaml"
+        }
+      ]
+    },
+    "sections": {
+      "patterns": [
+        {
+          "match": "^\\s*(must|should|mustNot|defaults|deck|stake|id|name|author)\\s*:",
+          "captures": {
+            "1": { "name": "keyword.control.jaml" }
+          }
+        }
+      ]
+    },
+    "criteria": {
+      "patterns": [
+        {
+          "match": "\\b(joker|jokers|commonJoker|commonJokers|uncommonJoker|uncommonJokers|rareJoker|rareJokers|legendaryJoker|voucher|vouchers|boss|tag|tags|playingCard|playingCards|tarot|planet|spectral|luckyMoney|luckyMult|wheelOfFortune|score|label|antes|sources|max|min)\\s*:",
+          "captures": {
+            "1": { "name": "entity.name.tag.jaml" }
+          }
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "match": "\\b(Red|Blue|Yellow|Green|Black|Magic|Nebula|Ghost|Abandoned|Checkered|Zodiac|Painted|Anaglyph|Plasma|Erratic|White|Red|Green|Black|Blue|Purple|Orange|Gold|Any|true|false|null)\\b",
+          "name": "constant.language.jaml"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "(?<![A-Za-z0-9_])-?\\d+(?:\\.\\d+)?(?![A-Za-z0-9_])",
+          "name": "constant.numeric.jaml"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.jaml",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.jaml"
+            }
+          ]
+        },
+        {
+          "begin": "'",
+          "end": "'",
+          "name": "string.quoted.single.jaml"
+        }
+      ]
+    }
+  }
+}
