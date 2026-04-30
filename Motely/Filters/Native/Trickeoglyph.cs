@@ -14,14 +14,14 @@ public struct TrickeoglyphFilterDesc()
 
     public struct TrickeoglyphFilter() : IMotelySeedFilter
     {
-        public static bool CheckSoulJokerInAnte(
+        public static bool CheckLegendaryJokerInAnte(
             int ante,
             MotelyItemType targetJoker,
             ref MotelySingleSearchContext searchContext,
             MotelyItemEdition? requiredEdition = null
         )
         {
-            var soulStream = searchContext.CreateSoulJokerStream(ante);
+            var soulStream = searchContext.CreateLegendaryJokerStream(ante);
             var legendaryJoker = searchContext.GetNextJoker(ref soulStream);
             if (legendaryJoker.Type != targetJoker)
                 return false;
@@ -108,14 +108,14 @@ public struct TrickeoglyphFilterDesc()
                     // Passed MUST requirements, now check SHOULD for bonus scoring
 
                     // SHOULD: Soul Perkeo Negative in ante 1
-                    bool hasPerkeoNegative = CheckSoulJokerInAnte(
+                    bool hasPerkeoNegative = CheckLegendaryJokerInAnte(
                         1,
                         MotelyItemType.Perkeo,
                         ref searchContext
                     );
 
                     // SHOULD: Soul Canio in ante 8
-                    bool hasCanio = CheckSoulJokerInAnte(
+                    bool hasCanio = CheckLegendaryJokerInAnte(
                         8,
                         MotelyItemType.Canio,
                         ref searchContext

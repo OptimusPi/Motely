@@ -10,7 +10,7 @@ public sealed class LegendaryJokerClause : IJamlClause
     public MotelyJoker[] Jokers { get; init; } = [];
     public bool IsWildcard { get; init; }
     public MotelyItemEdition? Edition { get; init; }
-    public SoulJokerSourceConfig Sources { get; init; } = new();
+    public LegendaryJokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
     public int? Max { get; init; }
@@ -23,7 +23,7 @@ public sealed class LegendaryJokerClause : IJamlClause
 
     /// <summary>
     /// Extra soul-stream edition reads per ante for the fast edition vector prefilter (0 = use
-    /// <see cref="SoulJokerSourceConfig.BoosterPacks"/> length). Raise when rare multi-soul antes
+    /// <see cref="LegendaryJokerSourceConfig.BoosterPacks"/> length). Raise when rare multi-soul antes
     /// could otherwise false-negative the prefilter.
     /// </summary>
     public int SoulEditionRolls { get; init; }
@@ -50,7 +50,7 @@ public struct LegendaryJokerFilterDesc(
 
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var src = _clause.Sources.NormalizeSoulJokerBoostersIfEmpty();
+        var src = _clause.Sources.NormalizeLegendaryJokerBoostersIfEmpty();
 
         int maxBoosterPack = src.MaxReferencedBoosterSlot();
 
@@ -65,7 +65,7 @@ public struct LegendaryJokerFilterDesc(
             Min = _clause.Min,
             SoulCardOnly = _clause.SoulCardOnly,
             SoulEditionRolls = _clause.SoulEditionRolls,
-            Sources = new SoulJokerSourceConfig
+            Sources = new LegendaryJokerSourceConfig
             {
                 ShopItems = src.ShopItems,
                 BoosterPacks = src.BoosterPacks,
@@ -86,7 +86,7 @@ public struct LegendaryJokerFilterDesc(
         )
         {
             foreach (var ante in normalizedClause.Antes)
-                ctx.CacheSoulJokerStream(
+                ctx.CacheLegendaryJokerStream(
                     ante,
                     MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
                         | MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
@@ -120,11 +120,11 @@ public struct LegendaryJokerFilterDesc(
             var maxBoosterPack = _maxBoosterPack;
             var pipeline = _pipeline;
             int needed = clause.Min;
-            Debug.Assert(needed > 0, "SoulJokerClause.Min must be > 0 — loader bug.");
+            Debug.Assert(needed > 0, "LegendaryJokerClause.Min must be > 0 — loader bug.");
 
             // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
             // souls (see LegendarySoulMatcher). Edition-only vector prefilter (Min==1) matches
-            // Negative + soul joker SIMD prefilter (see NegativeSoulJokerSimdFilterDesc);
+            // Negative + soul joker SIMD prefilter (see NegativeLegendaryJokerSimdFilterDesc);
             // pack/soul path runs as an additional filter so batches buffer before scalar work.
             // we do not drop seeds where the first soul fails edition but a later soul matches.
             uint laneMask = 0;

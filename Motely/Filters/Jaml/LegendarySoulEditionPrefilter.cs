@@ -36,7 +36,7 @@ internal static class LegendarySoulEditionPrefilter
 
         foreach (var ante in clause.Antes)
         {
-            var soulStream = ctx.CreateSoulJokerStream(
+            var soulStream = ctx.CreateLegendaryJokerStream(
                 ante,
                 MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
                     | MotelyJokerFixedRarityStreamFlags.ExcludeStickers,

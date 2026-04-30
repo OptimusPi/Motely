@@ -11,7 +11,7 @@ namespace Motely.Filters;
 /// none of that requires the library to touch <c>Console</c> directly.
 /// </para>
 /// </summary>
-internal static class JamlSoulJokerStructuralValidation
+internal static class JamlLegendaryJokerStructuralValidation
 {
     internal static void ValidateLegendaryJokerClauseOrThrow(LegendaryJokerClause clause)
     {

@@ -7,7 +7,12 @@
 // runs it automatically after `npm publish` so every future bump self-verifies
 // against the actually-published artifact (not a local build).
 
+import { readFileSync } from "node:fs";
 import bootsharp, { MotelyWasm } from "motely-wasm";
+
+const packageJson = JSON.parse(
+  readFileSync(new URL("./node_modules/motely-wasm/package.json", import.meta.url), "utf8"),
+);
 
 let failures = 0;
 const expect = (name, ok, detail) => {
@@ -22,6 +27,14 @@ console.log("Booting motely-wasm...");
 const t0 = Date.now();
 await bootsharp.boot();
 console.log(`Booted in ${Date.now() - t0}ms`);
+console.log("");
+
+console.log("Test 0: package/runtime/schema versions stay in lockstep");
+const runtimeVersion = MotelyWasm.getVersion();
+const releaseSchema = JSON.parse(MotelyWasm.getJamlSchema());
+expect("runtime version equals package.json version", runtimeVersion === packageJson.version, `${runtimeVersion} !== ${packageJson.version}`);
+expect("schema version equals package.json version", releaseSchema.version === packageJson.version, `${releaseSchema.version} !== ${packageJson.version}`);
+expect("schema no longer exposes mixedJoker", !JSON.stringify(releaseSchema).includes("mixedJoker"));
 console.log("");
 
 console.log("Test 1: typed DTO clause (Phase 2 — joker/uncommonJoker/boss/tarot)");
@@ -73,8 +86,7 @@ expect("meta.itemTypes includes UncommonJoker", meta.itemTypes.includes("Uncommo
 console.log("");
 console.log("Test 5: getJamlSchema returns the live JSON Schema (lockstep with parser)");
 if (typeof MotelyWasm.getJamlSchema === "function") {
-  const schemaJson = MotelyWasm.getJamlSchema();
-  const schema = JSON.parse(schemaJson);
+  const schema = releaseSchema;
   expect("schema has $schema field", typeof schema.$schema === "string", schema.$schema);
   expect("schema has $defs.Joker enum", Array.isArray(schema?.$defs?.Joker?.enum), JSON.stringify(schema?.$defs?.Joker)?.slice(0, 80));
   expect("Joker enum includes Blueprint", schema.$defs.Joker.enum.includes("Blueprint"));

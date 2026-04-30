@@ -8,6 +8,7 @@
     "motely-wasm": "file:../bin/motely-wasm/motely-wasm-14.3.0.tgz"
   },
   "scripts": {
-    "test": "node release-smoke.mjs"
+    "test": "node release-smoke.mjs",
+    "test:jamlyzer-preview": "node jamlyzer-preview-smoke.mjs"
   }
 }

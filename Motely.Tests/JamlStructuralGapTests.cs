@@ -192,7 +192,7 @@ public sealed class JamlStructuralGapTests
     }
 
     [Fact]
-    public void SoulJoker_soulCardOnly_loads_and_executes_list_search_TODOPASS()
+    public void LegendaryJoker_soulCardOnly_loads_and_executes_list_search_TODOPASS()
     {
         var jaml = """
             id: structural-gap-soulcardonly
