@@ -1,0 +1,22 @@
+{
+  "name": "jaml-lsp-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JAML Language Server — motely-wasm powered LSP for .jaml files",
+  "author": "pifreak <nate@optimuspi.com>",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "./out/server.js",
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "dev": "node esbuild.mjs --watch"
+  },
+  "dependencies": {
+    "motely-wasm": "^14.2.0",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

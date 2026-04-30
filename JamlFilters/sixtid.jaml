@@ -12,10 +12,14 @@ must:
   - uncommonJoker: SixthSense
     antes: [1]
     sources:
-      shopItems: [0,1]
-      boosterPacks: [0,1]
+      shopItems: [0,1,2,3]
+      boosterPacks: [0,1,2,3]
   - legendaryJoker: Perkeo
     antes: [1]
+  - joker: Baron
+    antes: [1,2,3,4]
+  - joker: Mime
+    antes: [1,2,3,4]
 should:
   - rareJoker: Blueprint
     antes: [1, 2, 3, 4]
@@ -35,12 +39,9 @@ should:
   - joker: Any
     edition: Negative
     score: 35
-  - voucher: Overstock
-    antes: [1, 2]
+  - voucher: Hieroglyph
+    antes: [1, 2, 3]
     score: 30
-  - voucher: Hone
-    antes: [1, 2]
+  - voucher: Petroglyph
+    antes: [1, 2, 3]
     score: 25
-mustNot:
-  - boss: TheNeedle
-    antes: [1, 2, 3, 4, 5, 6, 7, 8]
