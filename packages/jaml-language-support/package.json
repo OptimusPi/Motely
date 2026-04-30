@@ -165,7 +165,6 @@
   },
   "files": [
     "README.md",
-    "LICENSE.txt",
     "package.json",
     "language-configuration.json",
     "out/**",
