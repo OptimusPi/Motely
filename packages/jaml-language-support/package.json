@@ -7,7 +7,7 @@
   "license": "MIT",
   "author": "pifreak <nate@optimuspi.com>",
   "engines": {
-    "vscode": "^1.97.0"
+    "vscode": "^1.99.0"
   },
   "categories": [
     "Programming Languages",
@@ -36,7 +36,7 @@
   "bugs": {
     "url": "https://github.com/OptimusPi/MotelyJAML/issues"
   },
-  "main": "./src/extension.cjs",
+  "main": "./out/extension.js",
   "contributes": {
     "languages": [
       {
@@ -97,6 +97,32 @@
         "command": "jaml.openSchema",
         "title": "JAML: Open Bundled Schema",
         "category": "JAML"
+      },
+      {
+        "command": "jaml.openInCurator",
+        "title": "JAML: Open in Seed Curator",
+        "category": "JAML",
+        "icon": "$(search)"
+      },
+      {
+        "command": "jaml.analyzeSeed",
+        "title": "JAML: Analyze Seed",
+        "category": "JAML",
+        "icon": "$(beaker)"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "jaml.jimbo",
+        "name": "jimbo",
+        "fullName": "Jimbo (JAML Assistant)",
+        "description": "Ask Jimbo about JAML filters and Balatro seeds. Connects to the Balatro Seed Curator.",
+        "isSticky": false,
+        "commands": [
+          { "name": "explain", "description": "Explain the current .jaml filter in plain English" },
+          { "name": "analyze", "description": "Analyze a Balatro seed (select one or type it)" },
+          { "name": "search", "description": "Quickly scan for seeds matching this filter and show a data table" }
+        ]
       }
     ],
     "menus": {
@@ -105,6 +131,18 @@
           "command": "jaml.showDocumentSummary",
           "when": "resourceLangId == jaml",
           "group": "navigation"
+        },
+        {
+          "command": "jaml.openInCurator",
+          "when": "resourceLangId == jaml",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "jaml.analyzeSeed",
+          "when": "editorHasSelection",
+          "group": "jaml"
         }
       ],
       "commandPalette": [
@@ -114,6 +152,13 @@
         },
         {
           "command": "jaml.openSchema"
+        },
+        {
+          "command": "jaml.openInCurator",
+          "when": "resourceLangId == jaml"
+        },
+        {
+          "command": "jaml.analyzeSeed"
         }
       ]
     }
@@ -123,7 +168,7 @@
     "LICENSE.txt",
     "package.json",
     "language-configuration.json",
-    "src/**",
+    "out/**",
     "syntaxes/**",
     "snippets/**",
     "schema/**",
@@ -131,10 +176,17 @@
     "vendor/**"
   ],
   "scripts": {
+    "build": "node esbuild.mjs",
+    "dev": "node esbuild.mjs --watch",
+    "vendor": "node ./scripts/vendor.mjs",
     "package": "vsce package --no-dependencies",
-    "vscode:prepublish": "node ./scripts/prepublish-check.mjs"
+    "vscode:prepublish": "node ./scripts/vendor.mjs && node esbuild.mjs && node ./scripts/prepublish-check.mjs"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@vscode/vsce": "latest"
+    "@vscode/vsce": "latest",
+    "esbuild": "^0.25.0"
   }
 }

@@ -15,8 +15,7 @@ import {
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { join, dirname } from "path";
+import { join } from "path";
 
 // ---------------------------------------------------------------------------
 // Splash text — 1-in-1000 chance on startup
@@ -41,7 +40,8 @@ function maybeSplash() {
 // ---------------------------------------------------------------------------
 // Schema loader
 // ---------------------------------------------------------------------------
-const __dir = dirname(fileURLToPath(import.meta.url));
+// esbuild bundles this to CJS and injects __dirname — always use it directly.
+const __dir = __dirname;
 
 function loadSchema() {
   try {
