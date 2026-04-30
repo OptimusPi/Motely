@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useAnteTracker } from "../ui/hooks.js";
 import {
   JamlBoss,
   JamlGameCard,
@@ -9,6 +10,8 @@ import {
   resolveAnalyzerShopItem,
   type AnalyzerShopItem,
 } from "./GameCard.js";
+
+import { JamlMapPreview } from "./JamlMapPreview.js";
 
 export interface AnalyzerBadge {
   label: string;
@@ -56,6 +59,9 @@ export interface AnalyzerExplorerProps {
   visibleAntes?: number;
   totalAntes?: number;
   className?: string;
+  jaml?: string;
+  tallyColumns?: number[][];
+  tallyLabels?: string[];
 }
 
 export function AnalyzerExplorer({
@@ -64,49 +70,14 @@ export function AnalyzerExplorer({
   visibleAntes,
   totalAntes,
   className = "",
+  jaml,
+  tallyColumns,
+  tallyLabels,
 }: AnalyzerExplorerProps) {
-  const [currentAnte, setCurrentAnte] = useState(antes[0]?.ante ?? 0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const anteRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const { currentAnte, scrollRef, scrollToAnte, registerAnteRef } = useAnteTracker(antes, {
+    threshold: [0.45, 0.72, 0.9],
+  });
   const highlightRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-
-  useEffect(() => {
-    setCurrentAnte(antes[0]?.ante ?? 0);
-  }, [antes]);
-
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const mostVisibleEntry = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-
-        if (!mostVisibleEntry) {
-          return;
-        }
-
-        const ante = Number((mostVisibleEntry.target as HTMLElement).dataset.ante);
-        if (!Number.isNaN(ante)) {
-          setCurrentAnte(ante);
-        }
-      },
-      {
-        root,
-        threshold: [0.45, 0.72, 0.9],
-      },
-    );
-
-    for (const [, element] of anteRefs.current) {
-      observer.observe(element);
-    }
-
-    return () => observer.disconnect();
-  }, [antes]);
 
   useEffect(() => {
     const activeHighlight = highlights.find((highlight) => highlight.ante === currentAnte);
@@ -122,12 +93,6 @@ export function AnalyzerExplorer({
     });
   }, [currentAnte, highlights]);
 
-  const scrollToAnte = useCallback((ante: number) => {
-    anteRefs.current.get(ante)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, []);
 
   const currentAnteIndex = antes.findIndex((ante) => ante.ante === currentAnte);
   const previousAnte = currentAnteIndex > 0 ? antes[currentAnteIndex - 1]?.ante ?? null : null;
@@ -137,6 +102,20 @@ export function AnalyzerExplorer({
 
   return (
     <div className={className} style={styles.root}>
+      {jaml ? (
+        <section style={styles.jamlSection}>
+          <div style={styles.highlightHeader}>
+            <span style={styles.highlightTitle}>JAML Map</span>
+          </div>
+          <JamlMapPreview
+            jaml={jaml}
+            tallyColumns={tallyColumns?.[0]}
+            tallyLabels={tallyLabels}
+            compact
+          />
+        </section>
+      ) : null}
+
       {highlights.length > 0 ? (
         <section style={styles.highlightSection}>
           <div style={styles.highlightHeader}>
@@ -217,13 +196,7 @@ export function AnalyzerExplorer({
           <div
             key={ante.ante}
             data-ante={ante.ante}
-            ref={(element) => {
-              if (element) {
-                anteRefs.current.set(ante.ante, element);
-              } else {
-                anteRefs.current.delete(ante.ante);
-              }
-            }}
+            ref={(element) => registerAnteRef(ante.ante, element)}
             style={styles.antePage}
           >
             <AnteSection ante={ante} />
@@ -435,6 +408,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "m6x11plus, monospace",
   },
   highlightSection: {
+    padding: "6px 8px",
+    borderBottom: "1px solid #1a1a34",
+    background: "#0f0f22",
+  },
+  jamlSection: {
     padding: "6px 8px",
     borderBottom: "1px solid #1a1a34",
     background: "#0f0f22",

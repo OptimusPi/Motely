@@ -1,3 +1,6 @@
 node_modules/
 dist/
 /balatro-seed-curator
+
+*storybook.log
+storybook-static

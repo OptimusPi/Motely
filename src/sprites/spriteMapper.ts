@@ -56,7 +56,51 @@ registerAll(BOSSES, "BlindChips");
 registerAll(TAGS, "tags");
 registerAll(BOOSTER_PACKS ?? [], "Boosters");
 
+/**
+ * Per-sheet mystery/back card positions for unknown items.
+ * Used as fallback when an item name can't be resolved.
+ */
+export const MYSTERY_SPRITES: Partial<Record<SpriteSheetType, SpritePos>> = {
+  Jokers:     { x: 9, y: 9 },   // grey card back (legendary face row)
+  Tarots:     { x: 4, y: 2 },   // blank consumable
+  Vouchers:   { x: 8, y: 2 },   // mystery voucher
+  Boosters:   { x: 0, y: 5 },   // grey empty pack
+  tags:       { x: 3, y: 4 },   // grey ? tag
+  BlindChips: { x: 0, y: 30 },  // grey ? blind
+};
+
+/** Get the mystery/fallback sprite for a given sheet type. */
+export function getMysterySprite(sheet: SpriteSheetType): SpriteData {
+  return { pos: MYSTERY_SPRITES[sheet] ?? { x: 0, y: 0 }, type: sheet };
+}
+
 /** Look up sprite data by name. Accepts display names ("Icy Joker"), enum keys ("IcyJoker"), and "Joker | Name" prefixed forms. */
 export function getSpriteData(name: string): SpriteData | null {
   return ITEM_MAP.get(normalize(stripPrefix(name))) ?? ITEM_MAP.get(normalize(name)) ?? null;
+}
+
+/**
+ * Wildcard "Any" sprites from the Enhancers sheet.
+ * Used in the JAML visual editor when a clause value is "Any" (e.g. `legendaryJoker: Any`).
+ */
+export const WILDCARD_SPRITES = {
+  /** Grey silhouette — Enhancers row 3 col 5. For generic "Any" items. */
+  anySilhouette: { pos: { x: 5, y: 3 }, type: "Enhancers" as SpriteSheetType },
+  /** Grey ? circle — Enhancers row 3 col 6. For "boss: Any" etc. */
+  anyMystery:    { pos: { x: 6, y: 3 }, type: "Enhancers" as SpriteSheetType },
+  /** Red X debuff — Editions row 0 col 4. For mustNot zone indicator. */
+  mustNotDebuff: { pos: { x: 4, y: 0 }, type: "Editions" as SpriteSheetType },
+  /** The Soul card — Tarots row 2 col 2. Base for "legendaryJoker: Any" (they spawn from Soul). */
+  anyLegendary:  { pos: { x: 2, y: 2 }, type: "Tarots" as SpriteSheetType },
+  /** Blank spectral back — Tarots row 2 col 5. For "spectralCard: Any". */
+  anySpectral:   { pos: { x: 5, y: 2 }, type: "Tarots" as SpriteSheetType },
+  /** Blank tarot back — Tarots row 2 col 6. For "tarotCard: Any". */
+  anyTarot:      { pos: { x: 6, y: 2 }, type: "Tarots" as SpriteSheetType },
+  /** Blank planet back — Tarots row 2 col 7. For "planetCard: Any". */
+  anyPlanet:     { pos: { x: 7, y: 2 }, type: "Tarots" as SpriteSheetType },
+} as const;
+
+/** Look up sprite data by name, falling back to the mystery card for the given sheet if not found. */
+export function getSpriteDataOrMystery(name: string, fallbackSheet: SpriteSheetType = "Jokers"): SpriteData {
+  return getSpriteData(name) ?? getMysterySprite(fallbackSheet);
 }

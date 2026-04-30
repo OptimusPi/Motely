@@ -11,6 +11,7 @@ import {
   JamlCodeEditor,
   JamlGameCard,
   JamlIde,
+  JamlMapEditor,
   JamlMapPreview,
   JamlSeedInput,
   JamlTag,
@@ -38,10 +39,12 @@ import {
   type JamlAestheticOption,
   type JamlIdeSearchResult,
 } from "../src/index.ts";
+import { getMotelyWasmUrl } from "../src/assets.ts";
 import "./App.css";
 
 const C = JimboColorOption;
-const MOTELY_WASM_URL = `${import.meta.env.VITE_CDN_BASE_URL}/motely-wasm/${import.meta.env.VITE_MOTELY_WASM_VERSION}/index.mjs`;
+// Keep motely-wasm on a versioned Vercel Blob URL for useSearch Worker
+const MOTELY_WASM_URL = getMotelyWasmUrl(import.meta.env.VITE_MOTELY_WASM_VERSION);
 
 const SAMPLE_JAML = `name: Blueprint Copy Engine
 author: pifreak
@@ -73,32 +76,18 @@ mustNot:
 // Scenario registry
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ScenarioId =
-  | "analyzer"
-  | "search"
-  | "ide"
-  | "code"
-  | "map"
-  | "cards"
-  | "inputs"
-  | "decks"
-  | "buttons"
-  | "chrome"
-  | "version";
+// (ScenarioId and Scenario types moved to bottom with SCENARIOS registry)
 
-interface Scenario {
-  id: ScenarioId;
-  label: string;
-  fullBleed?: boolean;
-  render: () => React.ReactElement;
-}
+// Boot motely once globally
+import motely from "motely-wasm";
+motely.boot().catch(console.error);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scenario: Analyzer (full-bleed, mobile snap-y mandatory — pifreak's #1 UX)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function AnalyzerScenario() {
-  const analyzer = useAnalyzer(MOTELY_WASM_URL);
+  const analyzer = useAnalyzer();
 
   useEffect(() => {
     analyzer.analyze("ALEPH999", "Red", "White", SAMPLE_JAML);
@@ -107,7 +96,7 @@ function AnalyzerScenario() {
   if (analyzer.status === "running" || analyzer.status === "idle") {
     return (
       <CenteredMessage>
-        <JimboText size="md" tone="gold">Booting motely-wasm + analyzing seed ALEPH999…</JimboText>
+        <JimboText size="md" tone="gold">Analyzing seed ALEPH999…</JimboText>
       </CenteredMessage>
     );
   }
@@ -118,7 +107,15 @@ function AnalyzerScenario() {
       </CenteredMessage>
     );
   }
-  return <JamlAnalyzerFullscreen antes={analyzer.antes} live={analyzer.live} />;
+  return (
+    <JamlAnalyzerFullscreen
+      antes={analyzer.antes}
+      live={analyzer.live}
+      jaml={SAMPLE_JAML}
+      tallyColumns={analyzer.tallyColumns[0]}
+      tallyLabels={analyzer.tallyLabels}
+    />
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -219,6 +216,20 @@ function MapScenario() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Scenario: JAML Map Visual Editor (NEW)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function JamlMapEditorScenario() {
+  return (
+    <div className="jaml-demo-map-editor-scenario">
+      <Section title="JAML Map Editor — Shop Slots">
+        <JamlMapEditor />
+      </Section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Scenario: Card primitives
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -268,7 +279,7 @@ function InputsScenario() {
   const [seed, setSeed] = useState("");
   const [aesthetic, setAesthetic] = useState<JamlAestheticOption | null>(null);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 360 }}>
+    <div className="j-flex-col j-gap-xl">
       <Section title="JamlSeedInput">
         <JamlSeedInput value={seed} onChange={setSeed} />
         <JimboText size="xs" tone="grey">value: {seed || "(empty)"}</JimboText>
@@ -293,7 +304,7 @@ const STAKES = ["White","Red","Green","Black","Blue","Purple","Orange","Gold"];
 
 function DecksScenario() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="j-flex-col j-gap-xl">
       <Section title="DeckSprite — every deck">
         <div className="jaml-demo-deck-list">
           {DECKS.map((d) => (
@@ -324,16 +335,16 @@ function DecksScenario() {
 
 function ButtonsScenario() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="j-flex-col j-gap-xl">
       <Section title="JimboButton — every tone">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {(["red","blue","green","gold","orange","grey"] as const).map((tone) => (
+        <div className="j-flex j-flex-wrap j-gap-sm">
+          {(["red","blue","green","orange"] as const).map((tone) => (
             <JimboButton key={tone} tone={tone} size="sm">{tone}</JimboButton>
           ))}
         </div>
       </Section>
       <Section title="JimboButton — every size">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+        <div className="j-flex j-flex-wrap j-gap-sm j-items-center">
           {(["xs","sm","md","lg"] as const).map((size) => (
             <JimboButton key={size} tone="blue" size={size}>{size.toUpperCase()}</JimboButton>
           ))}
@@ -341,7 +352,7 @@ function ButtonsScenario() {
       </Section>
       <Section title="fullWidth + disabled">
         <JimboButton tone="green" size="md" fullWidth>Full width green</JimboButton>
-        <div style={{ height: 6 }} />
+        <div className="j-gap-sm" />
         <JimboButton tone="red" size="sm" disabled>Disabled red</JimboButton>
       </Section>
       <Section title="JimboBackButton (full-width, anchored)">
@@ -438,10 +449,9 @@ function PrimitivesScenario() {
     <div className="jaml-demo-primitives-container">
       <Section title="JimboBadge">
         <div className="jaml-demo-flex-wrap">
-          {(["dark","blue","red","green","gold","grey"] as const).map((tone) => (
+          {(["dark","blue","red","green","orange","purple","gold","grey"] as const).map((tone) => (
             <JimboBadge key={tone} tone={tone} size="md">{tone}</JimboBadge>
           ))}
-          <JimboBadge tone="gold" size="sm">Small Gold</JimboBadge>
         </div>
       </Section>
       <Section title="JimboToggleList">
@@ -454,8 +464,8 @@ function PrimitivesScenario() {
       <Section title="JimboFloating">
         <JimboPanel className="jaml-demo-floating-panel">
           <JimboText size="sm">A Panel with a floating badge</JimboText>
-          <JimboFloating anchor="top-right" offset={-8}>
-            <JimboBadge tone="red">New!</JimboBadge>
+          <JimboFloating anchor="top-right" offset={8}>
+            <JimboBadge tone="red" size="sm">New!</JimboBadge>
           </JimboFloating>
         </JimboPanel>
       </Section>
@@ -479,6 +489,9 @@ function VersionScenario() {
       </Section>
       <Section title="AnalyzerExplorer">
         <AnalyzerExplorer
+          jaml={SAMPLE_JAML}
+          tallyColumns={[1, 0, 1, 0, 0, 1]}
+          tallyLabels={["Blueprint", "Brainstorm", "Perkeo", "Baron", "NegativeTag", "Negative"]}
           antes={[
             {
               ante: 1,
@@ -503,17 +516,227 @@ function VersionScenario() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Consolidated: Components — all design-system primitives in one page
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ComponentsScenario() {
+  const [seed, setSeed] = useState("");
+  const [aesthetic, setAesthetic] = useState<JamlAestheticOption | null>(null);
+  const [tab, setTab] = useState("one");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [toggles, setToggles] = useState([
+    { id: 't1', label: 'Option A', on: true },
+    { id: 't2', label: 'Option B', on: false },
+    { id: 't3', label: 'Option C', on: false },
+  ]);
+
+  return (
+    <div className="jaml-demo-scenario">
+      {/* Buttons */}
+      <Section title="JimboButton — every tone">
+        <div className="j-flex j-flex-wrap j-gap-sm">
+          {(["red","blue","green","gold","orange","grey"] as const).map((tone) => (
+            <JimboButton key={tone} tone={tone} size="sm">{tone}</JimboButton>
+          ))}
+        </div>
+      </Section>
+      <Section title="JimboButton — every size">
+        <div className="j-flex j-flex-wrap j-gap-sm j-items-center">
+          {(["xs","sm","md","lg"] as const).map((size) => (
+            <JimboButton key={size} tone="blue" size={size}>{size.toUpperCase()}</JimboButton>
+          ))}
+        </div>
+      </Section>
+      <Section title="fullWidth + disabled">
+        <JimboButton tone="green" size="md" fullWidth>Full width green</JimboButton>
+        <div className="j-gap-sm" />
+        <JimboButton tone="red" size="sm" disabled>Disabled red</JimboButton>
+      </Section>
+
+      {/* Badges */}
+      <Section title="JimboBadge">
+        <div className="jaml-demo-flex-wrap">
+          {(["dark","blue","red","green","orange","purple","gold","grey"] as const).map((tone) => (
+            <JimboBadge key={tone} tone={tone} size="md">{tone}</JimboBadge>
+          ))}
+        </div>
+      </Section>
+
+      {/* Inputs */}
+      <Section title="JamlSeedInput">
+        <JamlSeedInput value={seed} onChange={setSeed} />
+        <JimboText size="xs" tone="grey">value: {seed || "(empty)"}</JimboText>
+      </Section>
+      <Section title="JamlAestheticSelector">
+        <JamlAestheticSelector value={aesthetic} onChange={(a) => setAesthetic(a)} />
+      </Section>
+
+      {/* Tabs */}
+      <Section title="JimboTabs">
+        <JimboTabs
+          tabs={[
+            { id: "one", label: "ONE" },
+            { id: "two", label: "TWO" },
+            { id: "three", label: "THREE" },
+          ]}
+          activeTab={tab}
+          onTabChange={setTab}
+        />
+      </Section>
+
+      {/* Modal */}
+      <Section title="JimboModal">
+        <JimboButton tone="blue" size="sm" onClick={() => setModalOpen(true)}>Open modal</JimboButton>
+        <JimboModal open={modalOpen} onClose={() => setModalOpen(false)} title="Sample Modal">
+          <JimboText size="md">This is a JimboModal with a title and content.</JimboText>
+        </JimboModal>
+      </Section>
+
+      {/* Tooltip */}
+      <Section title="JimboTooltip">
+        <JimboTooltip content="Blueprint copies the joker to its right.">
+          <span className="jaml-demo-inline-block">
+            <JamlGameCard card={{ name: "Blueprint" }} type="joker" />
+          </span>
+        </JimboTooltip>
+      </Section>
+
+      {/* FlankNav */}
+      <Section title="JimboFlankNav">
+        <JimboFlankNav
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => Math.min(8, p + 1))}
+          canPrev={page > 1}
+          canNext={page < 8}
+        >
+          <JimboText size="lg" tone="gold">Page {page} of 8</JimboText>
+        </JimboFlankNav>
+      </Section>
+
+      {/* Toggle list */}
+      <Section title="JimboToggleList">
+        <JimboToggleList
+          title="Select Options"
+          items={toggles}
+          onToggle={(id) => setToggles(prev => prev.map(t => t.id === id ? { ...t, on: !t.on } : t))}
+        />
+      </Section>
+
+      {/* Floating badge */}
+      <Section title="JimboFloating">
+        <JimboPanel className="jaml-demo-floating-panel">
+          <JimboText size="sm">A Panel with a floating badge</JimboText>
+          <JimboFloating anchor="top-right" offset={8}>
+            <JimboBadge tone="red" size="sm">New!</JimboBadge>
+          </JimboFloating>
+        </JimboPanel>
+      </Section>
+
+      {/* Cards */}
+      <Section title="JamlGameCard">
+        <JamlGameCard card={{ name: "Blueprint" }} type="joker" />
+        <JamlGameCard card={{ name: "Perkeo", edition: "Negative" }} type="joker" />
+        <JamlGameCard card={{ name: "The Soul" }} type="consumable" />
+      </Section>
+      <Section title="JamlVoucher · JamlTag · JamlBoss">
+        <JamlVoucher voucherName="Hieroglyph" />
+        <JamlTag tagName="NegativeTag" />
+        <JamlBoss bossName="ThePlant" />
+      </Section>
+
+      {/* CardFan */}
+      <Section title="CardFan">
+        <CardFan
+          cards={["A_S", "K_H", "Q_D", "J_C", "10_S", "9_H", "8_D", "7_C"]}
+          label="Starting hand"
+        />
+      </Section>
+
+      {/* Decks */}
+      <Section title="DeckSprite — every deck">
+        <div className="jaml-demo-deck-list">
+          {["Red","Blue","Yellow","Green","Black","Magic","Nebula","Ghost",
+            "Abandoned","Checkered","Zodiac","Painted","Anaglyph","Plasma","Erratic"].map((d) => (
+            <div key={d} className="jaml-demo-deck-item">
+              <DeckSprite deck={d} size={56} />
+              <JimboText size="xs" tone="grey">{d}</JimboText>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Version badge */}
+      <Section title="MotelyVersionBadge">
+        <MotelyVersionBadge version="14.0.2" />
+        <div className="jaml-demo-spacer" />
+        <MotelyVersionBadge version="14.0.2" minimal />
+      </Section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JAML Map — search results (stub — design ref: assets/...DesignsV2/src/v2/SearchResultsV2.jsx)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function JamlMapScenario() {
+  return (
+    <div className="jaml-demo-scenario">
+      <JimboPanel>
+        <JimboText size="lg" tone="gold">JAML Map</JimboText>
+        <JimboText size="sm" tone="grey">
+          Search results table — tap row to expand into full seed detail.
+        </JimboText>
+        <JimboText size="xs" tone="grey">
+          Design ref: SearchResultsV2.jsx · SeedDetailV2.jsx
+        </JimboText>
+      </JimboPanel>
+      <JimboPanel>
+        <JimboText size="xs" tone="grey">Coming soon — pifreak will help with the design.</JimboText>
+      </JimboPanel>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OG — social card preview (stub — design ref: assets/...DesignsV2/src/v2/SeedOGCard.jsx)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function OGScenario() {
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b1416' }}>
+      <div style={{
+        width: 600, height: 315,
+        background: 'radial-gradient(ellipse at top left, #2d4a38 0%, #0f1a13 70%)',
+        borderRadius: 8,
+        border: `2px solid ${C.PANEL_EDGE}`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'm6x11plus, monospace',
+      }}>
+        <JimboText size="lg" tone="gold">OG Card Preview</JimboText>
+        <JimboText size="sm" tone="grey">1200×630 · Vercel OG spec</JimboText>
+        <JimboText size="xs" tone="grey">Design ref: SeedOGCard.jsx</JimboText>
+        <div style={{ marginTop: 16 }}>
+          <JimboText size="xs" tone="grey">Renders: seed + score + fanned joker hand</JimboText>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <JimboPanel>
-      <JimboText size="sm" tone="grey">{title}</JimboText>
-      <div className="jaml-demo-section-body" style={{ marginTop: 8 }}>
+    <div className="jaml-demo-section">
+      <div className="jaml-demo-section-title">{title}</div>
+      <div className="jaml-demo-section-body">
         {children}
       </div>
-    </JimboPanel>
+    </div>
   );
 }
 
@@ -526,39 +749,111 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main
+// Combo IDE — tabbed power view (IDE + Visual all in one)
 // ─────────────────────────────────────────────────────────────────────────────
 
+function ComboIdeScenario() {
+  const [jaml, setJaml] = useState(SAMPLE_JAML);
+  const [activeTab, setActiveTab] = useState("editor");
+  const search = useSearch(MOTELY_WASM_URL);
+
+  const results: JamlIdeSearchResult[] = useMemo(
+    () =>
+      search.results.map((r) => ({
+        seed: r.seed,
+        score: r.score,
+        tallyColumns: r.tallyColumns,
+        tallyLabels: search.tallyLabels.length > 0 ? search.tallyLabels : undefined,
+      })),
+    [search.results, search.tallyLabels],
+  );
+
+  const isSearching = search.status === "running";
+  const handleSearch = () => {
+    if (isSearching) search.cancel();
+    else search.start(jaml, 1_000_000);
+  };
+
+  return (
+    <div className="jaml-demo-scenario" style={{ gap: 0 }}>
+      <JimboTabs
+        tabs={[
+          { id: "editor", label: "EDITOR" },
+          { id: "visual", label: "VISUAL" },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        {activeTab === "editor" && (
+          <JamlIde
+            jaml={jaml}
+            onChange={setJaml}
+            searchResults={results}
+            onSearch={handleSearch}
+            isSearching={isSearching}
+            style={{ height: "100%" }}
+          />
+        )}
+        {activeTab === "visual" && (
+          <div style={{ padding: 12 }}>
+            <JamlMapEditor />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JAML Visual — drag-and-drop builder (stub)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function VisualScenario() {
+  return (
+    <div className="jaml-demo-scenario" style={{ padding: 12 }}>
+      <JamlMapEditor />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main — 7 scenarios
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ScenarioId = "showcase" | "combo" | "ide" | "map" | "mapeditor" | "visual" | "analyzer" | "og";
+
+interface Scenario {
+  id: ScenarioId;
+  label: string;
+  render: () => React.ReactElement;
+}
+
 const SCENARIOS: Scenario[] = [
-  { id: "analyzer", label: "Analyzer (full)", fullBleed: true, render: () => <AnalyzerScenario /> },
-  { id: "search", label: "Search", render: () => <SearchScenario /> },
-  { id: "ide", label: "JAML IDE", render: () => <IdeScenario /> },
-  { id: "code", label: "Code editor", render: () => <CodeScenario /> },
-  { id: "map", label: "Map preview", render: () => <MapScenario /> },
-  { id: "cards", label: "Cards", render: () => <CardsScenario /> },
-  { id: "inputs", label: "Inputs", render: () => <InputsScenario /> },
-  { id: "decks", label: "Decks + stakes", render: () => <DecksScenario /> },
-  { id: "buttons", label: "Buttons", render: () => <ButtonsScenario /> },
-  { id: "primitives", label: "UI Primitives", render: () => <PrimitivesScenario /> },
-  { id: "chrome", label: "Tabs / Modal / Tooltip", render: () => <ChromeScenario /> },
-  { id: "version", label: "Version badge", render: () => <VersionScenario /> },
-  { id: "showcase", label: "Showcase (landing)", fullBleed: true, render: () => <Showcase /> },
+  { id: "showcase",  label: "Lib Showcase",    render: () => <ComponentsScenario /> },
+  { id: "combo",     label: "Combo IDE",       render: () => <ComboIdeScenario /> },
+  { id: "ide",       label: "JAML IDE",        render: () => <IdeScenario /> },
+  { id: "map",       label: "JAML Map",        render: () => <JamlMapScenario /> },
+  { id: "mapeditor", label: "Map Editor",      render: () => <JamlMapEditorScenario /> },
+  { id: "visual",    label: "JAML Visual",     render: () => <VisualScenario /> },
+  { id: "analyzer",  label: "Seed Analyzer",   render: () => <AnalyzerScenario /> },
+  { id: "og",        label: "OG Card",         render: () => <OGScenario /> },
 ];
 
 export function App() {
-  const [current, setCurrent] = useState<ScenarioId>("primitives");
+  const [current, setCurrent] = useState<ScenarioId>(() => {
+    const p = new URLSearchParams(window.location.search).get("scenario");
+    return SCENARIOS.some((s) => s.id === p) ? (p as ScenarioId) : "showcase";
+  });
   const scenario = SCENARIOS.find((s) => s.id === current) ?? SCENARIOS[0];
-  const fullBleed = scenario.fullBleed === true;
 
   return (
       <div className="jaml-demo-root">
       <JimboBackground />
 
-      {/* Sticky top nav - full width */}
+      {/* Sticky top nav */}
       <header className="jaml-demo-header">
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ color: C.GOLD, fontSize: 10, letterSpacing: 3 }}>JAML-UI</span>
-        </div>
+        <span className="jaml-demo-wordmark">JAML-UI</span>
         <select
           value={current}
           onChange={(e) => setCurrent(e.target.value as ScenarioId)}
@@ -573,30 +868,15 @@ export function App() {
 
       <div className="jaml-demo-content-wrapper">
         <div className="jaml-demo-layout">
-          {/* Content area */}
           <main className="jaml-demo-main">
-            <JimboFlankNav
-              onPrev={() => {
-                const idx = SCENARIOS.findIndex(s => s.id === current);
-                if (idx > 0) setCurrent(SCENARIOS[idx - 1].id);
-              }}
-              onNext={() => {
-                const idx = SCENARIOS.findIndex(s => s.id === current);
-                if (idx < SCENARIOS.length - 1) setCurrent(SCENARIOS[idx + 1].id);
-              }}
-              canPrev={SCENARIOS.findIndex(s => s.id === current) > 0}
-              canNext={SCENARIOS.findIndex(s => s.id === current) < SCENARIOS.length - 1}
-              style={{ flex: 1, minHeight: 0 }}
-            >
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", minHeight: 0 }}>
-                {scenario.render()}
-              </div>
-            </JimboFlankNav>
+            <div className="jaml-demo-scenario">
+              {scenario.render()}
+            </div>
           </main>
         </div>
       </div>
 
-      {/* Sticky bottom footer - full width */}
+      {/* Sticky bottom footer */}
       <div className="jaml-demo-footer">
         <JimboBalatroFooter />
       </div>

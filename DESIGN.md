@@ -124,7 +124,7 @@ components:
 
 Jimbo is the design system for Balatro seed finder tools (JAML-UI, WeeJoker, Seed Finder). It recreates the cozy, tactile, chunky feel of LocalThunk's Balatro — dark panels with silver borders, 3D-press buttons, pixel typography, juice animations. Everything feels like a physical object you can poke.
 
-The system is built **Mobile First**. The absolute minimum viewport width is **320px**. All components must be accessible and usable at 320px without breaking layouts or horizontal scrolling. No fat padding, no bloated margins — every pixel earns its place.
+The system is built **Mobile First**. The absolute minimum viewport width is **375px**. All components must be accessible and usable at 375px without breaking layouts or horizontal scrolling. No fat padding, no bloated margins — every pixel earns its place.
 
 ## Colors
 
@@ -147,13 +147,17 @@ Must-clause items glow blue. Should-clause items glow gold/green. Non-matching i
 
 ## Typography
 
-m6x11plus (m6x11plusplus.otf) is the ONLY font. It is a single-weight pixel font. NEVER apply font-weight bold, semibold, or any weight other than 400. Bold makes it look muddy. Use size and letter-spacing for hierarchy instead.
+m6x11plus (m6x11plusplus.otf) is the ONLY font. It is a single-weight pixel font. NEVER apply font-weight bold, semibold, or any weight other than 400. Bold makes it look muddy. NEVER USE HEAVY!
 
-All text is uppercase with generous letter-spacing (0.04em-0.1em) for labels and micro text. Seed codes use the display size (26px) in gold (#e4b643) with 0.04em tracking.
+Text is NEVER ALL CAPS. Use proper Title Case or Sentence case. Seed codes use the display size (26px) in gold (#e4b643).
+
+Contrast is critical. NEVER make grey text on top of a grey background. If using a dark grey background, use white or light contrasting text.
 
 ## Layout
 
-Target: Minimum 320px portrait width. Components must scale gracefully using relative units and flexible layouts. Avoid fixed widths that break at 320px. Vertical snap-scroll for ante pages. Horizontal swipe for seed navigation.
+Target: Minimum 375px portrait width. Components must scale gracefully using relative units and flexible layouts. Avoid fixed widths that break at 375px. 
+
+Vertical snap-scroll for ante pages using magnetic scroll-snapping (`scroll-snap-type: y mandatory`, `scroll-snap-align: start`). Horizontal swipe for seed navigation. NO visible scrollbars globally — use `::-webkit-scrollbar { display: none; }` and `-ms-overflow-style: none`.
 
 Panels use 2px solid borders with border-silver on top/sides and border-south on bottom, creating a subtle 3D card effect. Inner shadow: `inset 0 0 0 1px rgba(255,255,255,0.04)`. Outer shadow: `0 2px 0 #000`.
 
@@ -181,15 +185,22 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 
 **GlowRing:** Pulsing outline around JAML-hit items. `0 0 0 2px [color], 0 0 10px [color]`. Animation: opacity 0.55 → 1.0 over 1.6s ease-in-out infinite.
 
+**Card Hover Juice:** Cards receive a 3D magnetic tilt plus a "juice-up" scale animation (`scale(1.05) translateY(-2px)`) on hover to mimic a physical interaction.
+
+**Font Dance:** Text can be made to wiggle with a staggered `translateY` offset animation across characters (`.j-font-dance-char`), creating a cozy pixel font animation.
+
 **SeedPagerHeader:** Three columns: [left stride arrow] [identity panel with seed + copy + deck/stake] [right stride arrow]. Stride arrows are tall red bars with dark-red inset shadow. Identity panel is translucent with counter pip.
 
 ## Do's and Don'ts
 
 - DO use m6x11plus for everything except code/monospace.
-- DO design for 320px portrait.
+- DO design for 375px portrait.
 - DO use translateY + box-shadow for button depth. Not CSS 3D transforms.
-- DON'T use font-weight bold. m6x11plus is single-weight. Bold = muddy.
+- DON'T use font-weight bold or heavy. m6x11plus is single-weight.
+- DON'T use ALL CAPS. It is considered an embellishment and ruins the aesthetic.
+- DON'T put grey text on top of a grey background.
 - DON'T use fat padding or margins. Balatro UI is dense and cozy.
-- DON'T add horizontal scroll. Vertical snap-scroll + horizontal swipe only.
+- DON'T add visible scrollbars. Vertical magnetic snap-scroll + horizontal swipe only.
 - DON'T use rounded corners larger than 10px. Balatro is chunky, not bubbly.
 - DON'T use blur-based shadows for depth. Use solid colored box-shadows 80% opaque.
+- DON'T use redundant JS wrappers for `motely-wasm`. Import globally and `motely.boot()` once.

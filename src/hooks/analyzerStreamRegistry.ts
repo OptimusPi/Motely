@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { motelyItemDisplayNameFromValue } from "../motelyDisplay.js";
 import type { StreamItem } from "./useShopStream.js";
 import type { AnalyzerLive } from "./useAnalyzer.js";
@@ -82,7 +80,6 @@ export function buildStreamHandle(
   const ctx = live.ctx;
   const Motely = live.Motely;
   const runState = live.runStates[ante];
-  let stream: any = null;
   let cursor = 0;
   const idBase = `${ante}-${key}`;
 
@@ -90,124 +87,132 @@ export function buildStreamHandle(
     return motelyItemDisplayNameFromValue(value);
   }
 
-  function joker(streamFactoryName: string, nextName: string): StreamHandle {
+  function streamHandle<S>(
+    createStream: () => S,
+    getNextValue: (stream: S) => number,
+  ): StreamHandle {
+    let stream: S | null = null;
     return {
       initStream: () => {
-        stream = ctx[streamFactoryName](ante, Motely.MotelyJokerStreamFlags.Default);
+        stream = createStream();
         cursor = 0;
       },
       nextItem: () => {
-        const r = ctx[nextName](stream);
-        const value = r.joker?.value ?? r.item?.value ?? 0;
+        if (stream === null) throw new Error(`Analyzer stream ${key} was read before initialization.`);
+        const value = getNextValue(stream);
         const id = `${idBase}-${cursor++}`;
         return { id, name: nameFromValue(value), value };
       },
     };
   }
 
-  function fixedRarityJoker(streamFactoryName: string, nextName: string): StreamHandle {
-    return {
-      initStream: () => {
-        stream = ctx[streamFactoryName](ante, Motely.MotelyJokerFixedRarityStreamFlags.Default);
-        cursor = 0;
-      },
-      nextItem: () => {
-        const r = ctx[nextName](stream);
-        const value = r.joker?.value ?? 0;
-        const id = `${idBase}-${cursor++}`;
-        return { id, name: nameFromValue(value), value };
-      },
-    };
+  function joker(
+    createStream: () => ReturnType<typeof ctx.createShopJokerStream>,
+    getNext: (stream: ReturnType<typeof ctx.createShopJokerStream>) => ReturnType<typeof ctx.getNextShopJoker>,
+  ): StreamHandle {
+    return streamHandle(createStream, (stream) => getNext(stream).item.value);
   }
 
-  function tarot(streamFactoryName: string, nextName: string): StreamHandle {
-    return {
-      initStream: () => {
-        stream = ctx[streamFactoryName](ante);
-        cursor = 0;
-      },
-      nextItem: () => {
-        const r = ctx[nextName](stream);
-        const value = r.tarot?.value ?? r.item?.value ?? 0;
-        const id = `${idBase}-${cursor++}`;
-        return { id, name: nameFromValue(value), value };
-      },
-    };
+  function fixedRarityJoker(
+    createStream: () => ReturnType<typeof ctx.createSoulJokerStream>,
+    getNext: (stream: ReturnType<typeof ctx.createSoulJokerStream>) => ReturnType<typeof ctx.getNextSoulJoker>,
+  ): StreamHandle {
+    return streamHandle(createStream, (stream) => getNext(stream).item.value);
   }
 
-  function planet(streamFactoryName: string, nextName: string): StreamHandle {
-    return {
-      initStream: () => {
-        stream = ctx[streamFactoryName](ante);
-        cursor = 0;
-      },
-      nextItem: () => {
-        const r = ctx[nextName](stream);
-        const value = r.planet?.value ?? 0;
-        const id = `${idBase}-${cursor++}`;
-        return { id, name: nameFromValue(value), value };
-      },
-    };
+  function tarot(
+    createStream: () => ReturnType<typeof ctx.createShopTarotStream>,
+    getNext: (stream: ReturnType<typeof ctx.createShopTarotStream>) => ReturnType<typeof ctx.getNextShopTarot>,
+  ): StreamHandle {
+    return streamHandle(createStream, (stream) => getNext(stream).item.value);
   }
 
-  function spectral(streamFactoryName: string, nextName: string): StreamHandle {
-    return {
-      initStream: () => {
-        stream = ctx[streamFactoryName](ante);
-        cursor = 0;
-      },
-      nextItem: () => {
-        const r = ctx[nextName](stream);
-        const value = r.spectral?.value ?? 0;
-        const id = `${idBase}-${cursor++}`;
-        return { id, name: nameFromValue(value), value };
-      },
-    };
+  function planet(
+    createStream: () => ReturnType<typeof ctx.createShopPlanetStream>,
+    getNext: (stream: ReturnType<typeof ctx.createShopPlanetStream>) => ReturnType<typeof ctx.getNextShopPlanet>,
+  ): StreamHandle {
+    return streamHandle(createStream, (stream) => getNext(stream).item.value);
+  }
+
+  function spectral(
+    createStream: () => ReturnType<typeof ctx.createShopSpectralStream>,
+    getNext: (stream: ReturnType<typeof ctx.createShopSpectralStream>) => ReturnType<typeof ctx.getNextShopSpectral>,
+  ): StreamHandle {
+    return streamHandle(createStream, (stream) => getNext(stream).item.value);
   }
 
   switch (key) {
     case "shop":
-      return {
-        initStream: () => {
-          stream = ctx.createShopItemStream(
+      return streamHandle(
+        () =>
+          ctx.createShopItemStream(
             ante,
             runState,
             Motely.MotelyShopStreamFlags.Default,
             Motely.MotelyJokerStreamFlags.Default,
-          );
-          cursor = 0;
-        },
-        nextItem: () => {
-          const r = ctx.getNextShopItem(stream);
-          const value = r.item.value;
-          const id = `${idBase}-${cursor++}`;
-          return { id, name: nameFromValue(value), value };
-        },
-      };
+          ),
+        (stream) => ctx.getNextShopItem(stream).item.value,
+      );
     case "shopJoker":
-      return joker("createShopJokerStream", "getNextShopJoker");
+      return joker(
+        () => ctx.createShopJokerStream(ante, Motely.MotelyJokerStreamFlags.Default),
+        (stream) => ctx.getNextShopJoker(stream),
+      );
     case "soulJoker":
-      return fixedRarityJoker("createSoulJokerStream", "getNextSoulJoker");
+      return fixedRarityJoker(
+        () => ctx.createSoulJokerStream(ante, Motely.MotelyJokerFixedRarityStreamFlags.Default),
+        (stream) => ctx.getNextSoulJoker(stream),
+      );
     case "rareTagJoker":
-      return fixedRarityJoker("createRareTagJokerStream", "getNextRareTagJoker");
+      return fixedRarityJoker(
+        () => ctx.createRareTagJokerStream(ante, Motely.MotelyJokerFixedRarityStreamFlags.Default),
+        (stream) => ctx.getNextRareTagJoker(stream),
+      );
     case "uncommonTagJoker":
-      return fixedRarityJoker("createUncommonTagJokerStream", "getNextUncommonTagJoker");
+      return fixedRarityJoker(
+        () => ctx.createUncommonTagJokerStream(ante, Motely.MotelyJokerFixedRarityStreamFlags.Default),
+        (stream) => ctx.getNextUncommonTagJoker(stream),
+      );
     case "riffRaffJoker":
-      return fixedRarityJoker("createRiffRaffJokerStream", "getNextRiffRaffJoker");
+      return fixedRarityJoker(
+        () => ctx.createRiffRaffJokerStream(ante, Motely.MotelyJokerFixedRarityStreamFlags.Default),
+        (stream) => ctx.getNextRiffRaffJoker(stream),
+      );
     case "buffoonJoker":
-      return joker("createBuffoonPackJokerStream", "getNextBuffoonPackJoker");
+      return joker(
+        () => ctx.createBuffoonPackJokerStream(ante, Motely.MotelyJokerStreamFlags.Default),
+        (stream) => ctx.getNextBuffoonPackJoker(stream),
+      );
     case "judgementJoker":
-      return joker("createJudgementJokerStream", "getNextJudgementJoker");
+      return joker(
+        () => ctx.createJudgementJokerStream(ante, Motely.MotelyJokerStreamFlags.Default),
+        (stream) => ctx.getNextJudgementJoker(stream),
+      );
     case "wraithJoker":
-      return joker("createWraithJokerStream", "getNextWraithJoker");
+      return joker(
+        () => ctx.createWraithJokerStream(ante, Motely.MotelyJokerStreamFlags.Default),
+        (stream) => ctx.getNextWraithJoker(stream),
+      );
     case "shopTarot":
-      return tarot("createShopTarotStream", "getNextShopTarot");
+      return tarot(
+        () => ctx.createShopTarotStream(ante),
+        (stream) => ctx.getNextShopTarot(stream),
+      );
     case "shopPlanet":
-      return planet("createShopPlanetStream", "getNextShopPlanet");
+      return planet(
+        () => ctx.createShopPlanetStream(ante),
+        (stream) => ctx.getNextShopPlanet(stream),
+      );
     case "shopSpectral":
-      return spectral("createShopSpectralStream", "getNextShopSpectral");
+      return spectral(
+        () => ctx.createShopSpectralStream(ante),
+        (stream) => ctx.getNextShopSpectral(stream),
+      );
     case "purpleSealTarot":
-      return tarot("createPurpleSealTarotStream", "getNextPurpleSealTarot");
+      return tarot(
+        () => ctx.createPurpleSealTarotStream(ante),
+        (stream) => ctx.getNextPurpleSealTarot(stream),
+      );
     default:
       return null;
   }

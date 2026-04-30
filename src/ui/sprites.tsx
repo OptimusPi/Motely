@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { resolveJamlAssetUrl, type JamlAssetKey } from '../assets.js'
-import { getSpriteData, SHEET_META, type SpriteSheetType } from '../sprites/spriteMapper.js'
+import { getSpriteData, getMysterySprite, SHEET_META, type SpriteSheetType } from '../sprites/spriteMapper.js'
 
 export interface JimboSpriteProps {
   name: string
@@ -16,7 +16,8 @@ export function JimboSprite({ name, sheet, width = 40, height, style }: JimboSpr
   const sprite = getSpriteData(name)
   const resolvedSheet: SpriteSheetType = sheet ?? sprite?.type ?? 'Jokers'
   const meta = SHEET_META[resolvedSheet]
-  const pos = sprite?.pos ?? { x: 0, y: 0 }
+  const mystery = getMysterySprite(resolvedSheet)
+  const pos = sprite?.pos ?? mystery.pos
   
   let defaultH = width;
   if (["Jokers", "Tarots", "Vouchers", "Boosters", "Decks", "Enhancers", "Editions"].includes(resolvedSheet)) {

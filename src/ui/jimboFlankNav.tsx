@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { JimboColorOption, JIMBO_ANIMATIONS } from './tokens.js'
+import { JIMBO_ANIMATIONS } from './tokens.js'
 
 export interface JimboFlankNavProps {
   onPrev: () => void
@@ -17,8 +17,7 @@ export interface JimboFlankNavProps {
 
 /**
  * Prev/next navigation with flanking buttons around a central stage.
- * Generic adaptation of weejoker's DayNavigation — no hardcoded "Day"
- * labels, no lucide dep (inline chevron SVGs).
+ * No hardcoded labels, no lucide dep (inline chevron SVGs).
  */
 export function JimboFlankNav({
   onPrev,
@@ -32,20 +31,9 @@ export function JimboFlankNav({
   style,
 }: JimboFlankNavProps) {
   return (
-    <div
-      className={className}
-      style={{
-        display: 'flex',
-        alignItems: 'stretch',
-        justifyContent: 'center',
-        gap: 8,
-        width: '100%',
-        position: 'relative',
-        ...style,
-      }}
-    >
+    <div className={`j-flank ${className}`} style={style}>
       <NavButton direction="left"  onClick={onPrev} disabled={!canPrev} aria-label={prevLabel} />
-      <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>{children}</div>
+      <div className="j-flank__content">{children}</div>
       <NavButton direction="right" onClick={onNext} disabled={!canNext} aria-label={nextLabel} />
     </div>
   )
@@ -66,6 +54,8 @@ function NavButton({
   return (
     <button
       type="button"
+      className="j-flank__btn"
+      data-pressed={pressed && !disabled}
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
@@ -75,22 +65,6 @@ function NavButton({
       onMouseLeave={() => setPressed(false)}
       onTouchStart={() => !disabled && setPressed(true)}
       onTouchEnd={() => setPressed(false)}
-      style={{
-        flexShrink: 0,
-        width: 48,
-        border: 'none',
-        borderRadius: 8,
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: 1,
-        backgroundColor: disabled ? JimboColorOption.DARK_RED : JimboColorOption.RED,
-        color: JimboColorOption.WHITE,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transform: pressed ? `translateY(${JIMBO_ANIMATIONS.PRESS_TRANSLATE_Y}px)` : 'translateY(0)',
-        boxShadow: pressed || disabled ? 'none' : `0 ${JIMBO_ANIMATIONS.PRESS_TRANSLATE_Y}px 0 0 ${JimboColorOption.DARK_RED}`,
-        transition: `transform ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease, box-shadow ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease, background-color ${JIMBO_ANIMATIONS.PRESS_DURATION}ms ease`,
-      }}
     >
       <ChevronSvg direction={direction} />
     </button>
@@ -98,9 +72,9 @@ function NavButton({
 }
 
 function ChevronSvg({ direction }: { direction: 'left' | 'right' }) {
-  const points = direction === 'left' ? '20,4 8,16 20,28' : '12,4 24,16 12,28'
+  const points = direction === 'left' ? '18,4 8,14 18,24' : '10,4 20,14 10,24'
   return (
-    <svg width={32} height={32} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width={28} height={28} viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <polyline points={points} />
     </svg>
   )

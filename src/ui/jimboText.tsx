@@ -14,29 +14,9 @@ export type JimboTextTone =
   | 'orange'
   | 'purple'
   | 'grey'
+  | 'white'
 
-export type JimboTextSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-
-const TONE_COLOR: Record<JimboTextTone, string> = {
-  default: JimboColorOption.WHITE,
-  mult:    JimboColorOption.RED,
-  chips:   JimboColorOption.BLUE,
-  gold:    JimboColorOption.GOLD_TEXT,
-  green:   JimboColorOption.GREEN_TEXT,
-  red:     JimboColorOption.RED,
-  blue:    JimboColorOption.BLUE,
-  orange:  JimboColorOption.ORANGE_TEXT,
-  purple:  JimboColorOption.PURPLE,
-  grey:    JimboColorOption.GREY,
-}
-
-const SIZE_PX: Record<JimboTextSize, number> = {
-  xs: 10,
-  sm: 12,
-  md: 14,
-  lg: 18,
-  xl: 24,
-}
+export type JimboTextSize = 'micro' | 'label' | 'xs' | 'body' | 'sm' | 'md' | 'heading' | 'lg' | 'xl' | 'display'
 
 export interface JimboTextProps extends React.HTMLAttributes<HTMLElement> {
   tone?: JimboTextTone
@@ -45,6 +25,8 @@ export interface JimboTextProps extends React.HTMLAttributes<HTMLElement> {
   shadow?: boolean
   /** Uppercase + spacing — Balatro button/pill label treatment. Default false. */
   uppercase?: boolean
+  /** Wiggle effect for text characters. Default false. */
+  dance?: boolean
   /** Letter-spacing override; defaults depend on uppercase prop. */
   letterSpacing?: number | string
   as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label'
@@ -66,29 +48,48 @@ export function JimboText({
   size = 'md',
   shadow = true,
   uppercase = false,
+  dance = false,
   letterSpacing,
   as: Tag = 'span',
+  className = '',
   style,
   children,
   ...rest
 }: JimboTextProps) {
-  const resolvedLetterSpacing =
-    letterSpacing ?? (uppercase ? 2 : undefined)
+  const sizeClass = `j-text--${size}`
+  const toneClass = `j-text--${tone}`
+  const shadowClass = shadow ? '' : 'j-text--no-shadow'
+  const upperClass = uppercase ? 'j-text--upper' : ''
+  const danceClass = dance ? 'j-text--dance-container' : ''
+
+  const inlineStyle: React.CSSProperties = {}
+  if (letterSpacing != null) {
+    inlineStyle.letterSpacing = letterSpacing
+  } else if (uppercase && letterSpacing == null) {
+    inlineStyle.letterSpacing = 2
+  }
+  if (style) Object.assign(inlineStyle, style)
+
+  let content = children
+  if (dance && typeof children === 'string') {
+    content = children.split('').map((char, i) => (
+      <span
+        key={i}
+        className="j-font-dance-char"
+        style={{ animationDelay: `${i * -0.15}s` }}
+      >
+        {char === ' ' ? '\u00A0' : char}
+      </span>
+    ))
+  }
+
   return (
     <Tag
-      style={{
-        fontFamily: "'m6x11plus', 'Courier New', monospace",
-        fontSize: SIZE_PX[size],
-        color: TONE_COLOR[tone],
-        textShadow: shadow ? `1px 1px 0 ${JimboColorOption.BLACK}cc` : 'none',
-        textTransform: uppercase ? 'uppercase' : 'none',
-        letterSpacing: resolvedLetterSpacing,
-        lineHeight: 1.2,
-        ...style,
-      }}
+      className={`j-text ${sizeClass} ${toneClass} ${shadowClass} ${upperClass} ${danceClass} ${className}`.trim()}
+      style={Object.keys(inlineStyle).length > 0 ? inlineStyle : undefined}
       {...rest}
     >
-      {children}
+      {content}
     </Tag>
   )
 }

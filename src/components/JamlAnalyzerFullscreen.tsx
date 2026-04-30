@@ -3,8 +3,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JamlBoss, JamlGameCard, JamlTag, JamlVoucher, resolveAnalyzerShopItem } from "./GameCard.js";
 import { useMotelyStream, type StreamItem } from "../hooks/useShopStream.js";
+import { useInfiniteScroll } from "../hooks/useIntersectionObserver.js";
+import { useAnteTracker } from "../ui/hooks.js";
 import type { AnalyzerAnteView, AnalyzerItem } from "./AnalyzerExplorer.js";
 import type { AnalyzerLive } from "../hooks/useAnalyzer.js";
+import { JimboText } from "../ui/jimboText.js";
 import {
   ANALYZER_STREAM_META,
   DEFAULT_ENABLED_STREAMS,
@@ -28,6 +31,12 @@ export interface JamlAnalyzerFullscreenProps {
   antes: AnalyzerAnteView[];
   /** Live ctx from useAnalyzer.live; null disables additional stream lanes. */
   live: AnalyzerLive | null;
+  /** JAML string for visual breakdown. */
+  jaml?: string;
+  /** Tally column data for JAML map highlighting. */
+  tallyColumns?: number[];
+  /** Tally labels mapping to columns. */
+  tallyLabels?: string[];
   /** Stream lanes to surface. Defaults to shop + soul jokers. */
   enabledStreams?: AnalyzerStreamKey[];
   /** Called when the user toggles a stream in the picker. Owners persist if desired. */
@@ -37,16 +46,24 @@ export interface JamlAnalyzerFullscreenProps {
   /** Pull size on each lazy load. */
   chunkSize?: number;
   className?: string;
+  /** Custom top page to render as Slide 0 */
+  topPage?: React.ReactNode;
 }
+
+import { JamlMapPreview } from "./JamlMapPreview.js";
 
 export function JamlAnalyzerFullscreen({
   antes,
   live,
+  jaml,
+  tallyColumns,
+  tallyLabels,
   enabledStreams,
   onEnabledStreamsChange,
   hidePicker = false,
   chunkSize = 12,
   className = "",
+  topPage,
 }: JamlAnalyzerFullscreenProps) {
   const [internalEnabled, setInternalEnabled] = useState<AnalyzerStreamKey[]>(
     enabledStreams ?? DEFAULT_ENABLED_STREAMS,
@@ -61,36 +78,24 @@ export function JamlAnalyzerFullscreen({
     [onEnabledStreamsChange],
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Map<number, HTMLElement>>(new Map());
-  const [currentAnte, setCurrentAnte] = useState<number>(antes[0]?.ante ?? 1);
+  const { currentAnte, scrollRef, scrollToAnte, registerAnteRef } = useAnteTracker(antes);
   const [pickerOpen, setPickerOpen] = useState(false);
-
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const top = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (!top) return;
-        const ante = Number((top.target as HTMLElement).dataset.ante);
-        if (!Number.isNaN(ante)) setCurrentAnte(ante);
-      },
-      { root, threshold: [0.4, 0.6, 0.8] },
-    );
-    sectionRefs.current.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [antes]);
-
-  const scrollToAnte = useCallback((ante: number) => {
-    sectionRefs.current.get(ante)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
 
   return (
     <div className={className} style={styles.root}>
       <div ref={scrollRef} style={styles.scroller}>
+        {topPage ? topPage : jaml && (
+          <section style={{ ...styles.section, scrollSnapAlign: "start", justifyContent: 'center' }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={styles.anteLabel}>JAML</div>
+              <div style={styles.anteNumber}>MAP</div>
+            </div>
+            <JamlMapPreview jaml={jaml} tallyColumns={tallyColumns} tallyLabels={tallyLabels} />
+            <div style={{ marginTop: 24, textAlign: 'center', opacity: 0.6 }}>
+               <JimboText size="xs" tone="grey">Scroll down to explore seed details</JimboText>
+            </div>
+          </section>
+        )}
         {antes.map((ante) => (
           <AnteSection
             key={ante.ante}
@@ -98,10 +103,7 @@ export function JamlAnalyzerFullscreen({
             live={live}
             enabledStreams={effectiveEnabled}
             chunkSize={chunkSize}
-            registerRef={(el) => {
-              if (el) sectionRefs.current.set(ante.ante, el);
-              else sectionRefs.current.delete(ante.ante);
-            }}
+            registerRef={(el) => registerAnteRef(ante.ante, el)}
           />
         ))}
       </div>
@@ -262,33 +264,26 @@ interface ShopRowProps {
 }
 
 function ShopRow({ items, desired, loadingMore, ready, onPullMore }: ShopRowProps) {
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const lastTriggerRef = useRef(0);
 
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !ready) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !loadingMore) {
-          const now = Date.now();
-          if (now - lastTriggerRef.current < 200) return;
-          lastTriggerRef.current = now;
-          onPullMore();
-        }
-      },
-      { root: el.parentElement, threshold: 0.1, rootMargin: "0px 200px 0px 0px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [ready, loadingMore, onPullMore]);
+  const throttlePull = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTriggerRef.current < 200) return;
+    lastTriggerRef.current = now;
+    onPullMore();
+  }, [onPullMore]);
+
+  const sentinelRef = useInfiniteScroll(throttlePull, {
+    threshold: 0.1,
+    rootMargin: "0px 200px 0px 0px",
+  }, ready && !loadingMore);
 
   return (
     <div style={styles.shopRow}>
       {items.map((item) => (
         <ShopItem key={item.id} item={item} desired={desired.has(item.name.toLowerCase())} />
       ))}
-      <div ref={sentinelRef} style={styles.sentinel}>
+      <div ref={sentinelRef as unknown as React.RefObject<HTMLDivElement>} style={styles.sentinel}>
         {loadingMore ? "…" : ""}
       </div>
     </div>

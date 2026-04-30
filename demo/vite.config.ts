@@ -13,5 +13,7 @@ export default defineConfig({
     port: 3141,
     host: true,
     open: true,
+    cors: true,
+    allowedHosts: ["motelyjaml-pi.8pi.me", "localhost"],
   },
 });

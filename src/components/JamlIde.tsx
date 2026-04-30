@@ -59,7 +59,7 @@ function TallyBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
+function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: string }) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (results.length === 0) {
@@ -80,14 +80,13 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
     );
   }
 
-  const labels = results[0]?.tallyLabels ?? [];
   const maxScore = Math.max(...results.map((r) => r.score ?? 0));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {results.map((result) => {
         const isOpen = expanded === result.seed;
-        const hasTally = result.tallyColumns && result.tallyColumns.length > 0 && labels.length > 0;
+        const hasTally = result.tallyColumns && result.tallyColumns.length > 0;
 
         return (
           <div
@@ -156,43 +155,32 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
               <div
                 style={{
                   borderTop: `1px solid ${JimboColorOption.PANEL_EDGE}`,
-                  padding: "8px 12px 10px",
+                  padding: "4px",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 5,
+                  gap: 8,
                 }}
               >
-                {labels.map((label, i) => {
-                  const val = result.tallyColumns![i] ?? 0;
-                  const maxVal = Math.max(...results.map((r) => r.tallyColumns?.[i] ?? 0));
-                  return (
-                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: val > 0 ? JimboColorOption.WHITE : JimboColorOption.GREY,
-                          minWidth: 140,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {label}
-                      </span>
-                      <TallyBar value={val} max={maxVal} />
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: val > 0 ? JimboColorOption.GREEN_TEXT : JimboColorOption.DARK_GREY,
-                          minWidth: 24,
-                          textAlign: "right",
-                        }}
-                      >
-                        {val}
-                      </span>
-                    </div>
-                  );
-                })}
+                <JamlMapPreview 
+                  jaml={jaml} 
+                  tallyColumns={result.tallyColumns}
+                  tallyLabels={result.tallyLabels}
+                />
+                
+                {/* Fallback/Detailed tally list for debugging or non-visual clauses */}
+                <div style={{ padding: "4px 8px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
+                   <span style={{ fontSize: 9, color: JimboColorOption.WHITE, opacity: 0.8 }}>Raw Tally Data</span>
+                   {(result.tallyLabels ?? []).map((label, i) => {
+                     const val = result.tallyColumns![i] ?? 0;
+                     if (val === 0) return null;
+                     return (
+                       <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                         <span style={{ fontSize: 10, color: JimboColorOption.WHITE, flex: 1 }}>{label}</span>
+                         <span style={{ fontSize: 10, color: JimboColorOption.GREEN_TEXT }}>{val}</span>
+                       </div>
+                     );
+                   })}
+                </div>
               </div>
             ) : null}
           </div>
@@ -201,6 +189,7 @@ function ResultsView({ results }: { results: JamlIdeSearchResult[] }) {
     </div>
   );
 }
+
 
 export function JamlIde({
   jaml,
@@ -329,7 +318,7 @@ export function JamlIde({
 
         {mode === "results" ? (
           <div style={{ padding: 12 }}>
-            <ResultsView results={results} />
+            <ResultsView results={results} jaml={text} />
           </div>
         ) : null}
       </div>

@@ -10,7 +10,9 @@
     "skipLibCheck": true,
     "declaration": true,
     "jsx": "react-jsx",
+    "allowArbitraryExtensions": true,
     "lib": ["dom", "dom.iterable", "esnext"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["**/*.stories.tsx", "**/*.stories.ts", "**/*.test.tsx", "**/*.test.ts"]
 }

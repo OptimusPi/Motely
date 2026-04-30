@@ -86,3 +86,11 @@ export function resolveJamlAssetUrl(asset: JamlAssetKey | JamlAssetFile): string
 export function getDefaultJamlAssetUrlMap(): Readonly<Record<JamlAssetKey, string>> {
   return defaultAssetUrls;
 }
+
+/**
+ * Returns the versioned Vercel Blob URL for motely-wasm's Bootsharp module.
+ * Pass the same pinned motely-wasm version the app installed/uploaded.
+ */
+export function getMotelyWasmUrl(version: string): string {
+  return `https://cdn.seedfinder.app/motely-wasm/${version}/index.mjs`;
+}

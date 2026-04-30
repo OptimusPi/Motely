@@ -89,6 +89,18 @@ export {
     type MotelyVersionBadgeProps,
     type MotelyCapabilities,
 } from "./components/MotelyVersionBadge.js";
+export {
+    JamlSpeedometer,
+    type JamlSpeedometerProps,
+    type JamlSpeedometerStatus,
+} from "./components/JamlSpeedometer.js";
+export {
+    Showcase,
+    type ShowcaseFilter,
+    type ShowcaseLiveStats,
+    type ShowcaseProps,
+    type ShowcaseRecentFind,
+} from "./ui/showcase.js";
 
 export {
     extractVisualJamlItems,
@@ -123,3 +135,24 @@ export {
     type JamlSeedInputProps,
 } from "./components/JamlSeedInput.js";
 
+export {
+    JamlMapEditor,
+    JokerPicker,
+    MysterySlot,
+    CategoryPicker,
+    type JamlMapEditorProps,
+    type JokerPickerProps,
+    type JokerRarity,
+    type MysterySlotProps,
+    type SlotCategory,
+    type SlotSelection,
+    type CategoryPickerConfig,
+    type CategoryPickerProps,
+    VOUCHER_PICKER_CONFIG,
+    TAG_PICKER_CONFIG,
+    BOSS_PICKER_CONFIG,
+    TAROT_PICKER_CONFIG,
+    PLANET_PICKER_CONFIG,
+    SPECTRAL_PICKER_CONFIG,
+    PACK_PICKER_CONFIG,
+} from "./components/jamlMap/index.js";

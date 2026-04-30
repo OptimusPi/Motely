@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { JimboColorOption } from './tokens.js'
 import { JimboText } from './jimboText.js'
 
 export interface JimboFilterSortOption {
@@ -26,10 +25,7 @@ export interface JimboFilterBarProps {
 
 /**
  * Generic Balatro-styled filter row: search input with floating pill label
- * + optional sort dropdown with floating pill label. Adapted from
- * weejoker's FilterBar — no hardcoded sort options, no lucide dep.
- *
- * Pass `sortOptions` to show the sort side; omit to show search only.
+ * + optional sort dropdown with floating pill label.
  */
 export function JimboFilterBar({
   search,
@@ -44,25 +40,14 @@ export function JimboFilterBar({
   style,
 }: JimboFilterBarProps) {
   return (
-    <div
-      className={className}
-      style={{
-        display: 'flex',
-        gap: 24,
-        padding: 16,
-        backgroundColor: JimboColorOption.DARK_GREY,
-        border: `4px solid ${JimboColorOption.BORDER_SILVER}`,
-        boxShadow: `0 3px 0 0 ${JimboColorOption.BORDER_SOUTH}`,
-        borderRadius: 12,
-        position: 'relative',
-        flexWrap: 'wrap',
-        ...style,
-      }}
-    >
+    <div className={`j-filter-bar ${className}`} style={style}>
       {onSearchChange ? (
-        <FloatingLabelField label={searchLabel}>
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: JimboColorOption.BLUE, zIndex: 1 }}>
+        <div className="j-filter-bar__field">
+          <div className="j-filter-bar__pill">
+            <JimboText size="xs">{searchLabel}</JimboText>
+          </div>
+          <div className="j-relative">
+            <div className="j-filter-bar__search-icon">
               <SearchIcon />
             </div>
             <input
@@ -70,84 +55,33 @@ export function JimboFilterBar({
               value={search ?? ''}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              style={{
-                width: '100%',
-                paddingLeft: 48,
-                paddingRight: 16,
-                paddingTop: 14,
-                paddingBottom: 14,
-                backgroundColor: JimboColorOption.DARKEST,
-                border: 'none',
-                borderBottom: `4px solid ${JimboColorOption.PANEL_EDGE}`,
-                borderRadius: 8,
-                color: JimboColorOption.WHITE,
-                fontFamily: "'m6x11plus', 'Courier New', monospace",
-                fontSize: 20,
-                letterSpacing: 2,
-                outline: 'none',
-              }}
+              className="j-filter-bar__input"
             />
           </div>
-        </FloatingLabelField>
+        </div>
       ) : null}
 
       {sortOptions && onSortChange ? (
-        <FloatingLabelField label={sortLabel}>
-          <div style={{ position: 'relative' }}>
+        <div className="j-filter-bar__field">
+          <div className="j-filter-bar__pill">
+            <JimboText size="xs">{sortLabel}</JimboText>
+          </div>
+          <div className="j-relative">
             <select
               value={sort ?? sortOptions[0]?.value}
               onChange={(e) => onSortChange(e.target.value)}
-              style={{
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                backgroundColor: JimboColorOption.ORANGE,
-                color: JimboColorOption.WHITE,
-                border: 'none',
-                borderBottom: `4px solid ${JimboColorOption.DARK_ORANGE}`,
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontFamily: "'m6x11plus', 'Courier New', monospace",
-                fontSize: 18,
-                letterSpacing: 2,
-                padding: '14px 48px 14px 24px',
-                minWidth: 200,
-                textAlign: 'center',
-                outline: 'none',
-              }}
+              className="j-filter-bar__select"
             >
               {sortOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: JimboColorOption.WHITE, opacity: 0.85 }}>
+            <div className="j-filter-bar__sort-icon">
               <SortIcon />
             </div>
           </div>
-        </FloatingLabelField>
+        </div>
       ) : null}
-    </div>
-  )
-}
-
-function FloatingLabelField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ flex: 1, minWidth: 200, position: 'relative', marginTop: 10 }}>
-      <div
-        style={{
-          position: 'absolute',
-          top: -14,
-          left: 16,
-          backgroundColor: JimboColorOption.RED,
-          border: `2px solid ${JimboColorOption.DARK_RED}`,
-          borderRadius: 6,
-          padding: '4px 12px',
-          zIndex: 2,
-        }}
-      >
-        <JimboText size="xs">{label}</JimboText>
-      </div>
-      {children}
     </div>
   )
 }

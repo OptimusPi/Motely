@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { JimboColorOption } from "../ui/tokens.js";
 import { JimboText } from "../ui/jimboText.js";
 
 export interface JamlSeedInputProps {
@@ -14,10 +13,22 @@ export interface JamlSeedInputProps {
 
 const SEED_PATTERN = /^[A-Z0-9]{0,8}$/;
 
+/**
+ * Balatro-styled seed input field.
+ * Validates 1-8 uppercase alphanumeric characters.
+ * All styling via jimbo.css `.j-seed-input` classes — zero inline styles.
+ */
 export function JamlSeedInput({ value, onChange, placeholder = "Enter seed (e.g. J4SPZMWW)", className, style }: JamlSeedInputProps) {
   const [internal, setInternal] = useState(value ?? "");
   const display = value ?? internal;
   const isValid = display.length === 0 || SEED_PATTERN.test(display);
+
+  // Validation state drives data-valid attribute for CSS border color
+  const validState: string =
+    display.length === 0 ? "partial"
+    : !isValid ? "false"
+    : display.length === 8 ? "true"
+    : "partial";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
@@ -26,32 +37,21 @@ export function JamlSeedInput({ value, onChange, placeholder = "Enter seed (e.g.
   };
 
   return (
-    <div className={className} style={{ display: "flex", flexDirection: "column", gap: 4, ...style }}>
+    <div className={`j-seed-input ${className ?? ""}`} style={style}>
       <JimboText size="xs" tone="grey">Seed</JimboText>
       <input
         type="text"
+        className="j-seed-input__field"
+        data-valid={validState}
         value={display}
         onChange={handleChange}
         placeholder={placeholder}
         maxLength={8}
         spellCheck={false}
         autoComplete="off"
-        style={{
-          padding: "6px 10px",
-          borderRadius: 6,
-          border: `2px solid ${!isValid ? JimboColorOption.RED : display.length === 8 ? JimboColorOption.GREEN : JimboColorOption.PANEL_EDGE}`,
-          background: JimboColorOption.DARKEST,
-          color: JimboColorOption.GOLD_TEXT,
-          fontSize: 16,
-          fontFamily: "m6x11plus, monospace",
-          letterSpacing: 2,
-          textTransform: "uppercase",
-          outline: "none",
-          transition: "border-color 100ms",
-        }}
       />
       {display.length > 0 && display.length < 8 && (
-        <JimboText size="xs" tone="grey">{8 - display.length} more characters</JimboText>
+        <span className="j-seed-input__hint">{8 - display.length} more characters</span>
       )}
     </div>
   );

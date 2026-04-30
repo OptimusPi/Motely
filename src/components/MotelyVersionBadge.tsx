@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { JimboColorOption } from '../ui/tokens.js'
 import { JimboText } from '../ui/jimboText.js'
 
 export interface MotelyCapabilities {
@@ -30,9 +29,7 @@ export interface MotelyVersionBadgeProps {
 
 /**
  * Badge showing the loaded motely-wasm version + optional SIMD / threads
- * capability indicators. Ported from weejoker.app with no dependency on
- * weejoker's lib/api — the consumer owns capability fetching and passes
- * the result in.
+ * capability indicators. All styling via jimbo.css `.j-motely-badge`.
  */
 export function MotelyVersionBadge({
   caps,
@@ -44,7 +41,7 @@ export function MotelyVersionBadge({
 }: MotelyVersionBadgeProps) {
   if (loading) {
     return (
-      <span className={className} style={style}>
+      <span className={`j-motely-badge ${className}`} style={style}>
         <JimboText size="xs" tone="grey">Initializing…</JimboText>
       </span>
     )
@@ -56,35 +53,16 @@ export function MotelyVersionBadge({
 
   if (minimal) {
     return (
-      <span
-        className={className}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, ...style }}
-      >
+      <span className={`j-motely-badge ${className}`} style={style}>
         <JimboText size="xs" tone="grey">v{resolved}</JimboText>
-        {simd ? (
-          <JimboText size="xs" tone="blue" title="SIMD enabled">⚡</JimboText>
-        ) : null}
-        {threads ? (
-          <JimboText size="xs" tone="green" title="Multi-threaded">🧵</JimboText>
-        ) : null}
+        {simd ? <JimboText size="xs" tone="blue" title="SIMD enabled">⚡</JimboText> : null}
+        {threads ? <JimboText size="xs" tone="green" title="Multi-threaded">🧵</JimboText> : null}
       </span>
     )
   }
 
   return (
-    <div
-      className={className}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '3px 8px',
-        borderRadius: 4,
-        background: JimboColorOption.DARKEST,
-        border: `1px solid ${JimboColorOption.PANEL_EDGE}`,
-        ...style,
-      }}
-    >
+    <div className={`j-motely-badge j-motely-badge--chip ${className}`} style={style}>
       <JimboText size="xs" tone="gold" uppercase>motely v{resolved}</JimboText>
       {simd ? <JimboText size="xs" tone="blue" title="SIMD enabled">⚡</JimboText> : null}
       {threads ? <JimboText size="xs" tone="green" title="Multi-threaded">🧵</JimboText> : null}

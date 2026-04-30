@@ -109,18 +109,23 @@ export const Card3D = memo(function Card3D({
       rotation-z={rotation[2]}
       scale={scale}
     >
+      {/* Invisible hit mesh that does not shift or twist, preventing boop-cancel loops */}
+      <mesh
+        visible={false}
+        onClick={(e) => { e.stopPropagation(); onClick?.() }}
+        onPointerMove={onMove}
+        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); onPointerEnter?.(); document.body.style.cursor = 'pointer' }}
+        onPointerLeave={(e) => { e.stopPropagation(); setHovered(false); reset(); onPointerLeave?.(); document.body.style.cursor = 'auto' }}
+      >
+        <boxGeometry args={[CARD_DIMENSIONS.WIDTH, CARD_DIMENSIONS.HEIGHT, CARD_DIMENSIONS.DEPTH * 2]} />
+        <meshBasicMaterial />
+      </mesh>
+
       <group ref={tiltRef}>
         {highlighted && (
           <pointLight color={glowColor} intensity={1.5} distance={1} position={[0, 0, 0.1]} />
         )}
-        <mesh
-          onClick={(e) => { e.stopPropagation(); onClick?.() }}
-          onPointerMove={onMove}
-          onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); onPointerEnter?.(); document.body.style.cursor = 'pointer' }}
-          onPointerLeave={(e) => { e.stopPropagation(); setHovered(false); reset(); onPointerLeave?.(); document.body.style.cursor = 'auto' }}
-          castShadow
-          receiveShadow
-        >
+        <mesh castShadow receiveShadow>
           <boxGeometry args={[CARD_DIMENSIONS.WIDTH, CARD_DIMENSIONS.HEIGHT, CARD_DIMENSIONS.DEPTH]} />
           <meshBasicMaterial attach="material-4" map={texture} toneMapped={false} />
           <meshStandardMaterial attach="material-5" color="#1a1a2e" metalness={0.2} roughness={0.8} />

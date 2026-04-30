@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { JimboColorOption } from './tokens.js'
 
 const SUITS = [
   { char: '♥️', kf: 'jaml-heart' },
@@ -10,34 +9,34 @@ const SUITS = [
   { char: '♣️', kf: 'jaml-club' },
 ] as const
 
-const CYCLE = '5s'
-
 export interface JimboBalatroFooterProps {
   hidden?: boolean
   className?: string
 }
 
+/**
+ * Attribution footer with animated suit cycle.
+ * All styling via jimbo.css `.j-footer` classes — zero inline styles.
+ */
 export function JimboBalatroFooter({ hidden = false, className = '' }: JimboBalatroFooterProps) {
   return (
-    <div
-      className={['w-full transition-opacity duration-200', hidden ? 'pointer-events-none opacity-0' : 'opacity-100', className].filter(Boolean).join(' ')}
-    >
-      <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.9)', padding: '0 1rem 3px', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'm6x11plus, monospace', fontSize: 'clamp(11px, 0.8vw + 8px, 14px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0 0.5rem', color: 'white', margin: 0 }}>
+    <div className={`j-footer ${hidden ? 'j-footer--hidden' : ''} ${className}`}>
+      <div className="j-footer__bar">
+        <p className="j-footer__text">
           <span>Not affiliated with LocalThunk or PlayStack •{' '}</span>
           <a
               href="https://store.steampowered.com/app/2379780/Balatro/"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: JimboColorOption.GOLD, textDecoration: 'none' }}
+              className="j-footer__link"
           >
               BUY BALATRO
           </a>
           <span>{' '}• Created with{' '}</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-            <span style={{ position: 'relative', display: 'inline-block', width: '1.5em', height: '1em', verticalAlign: 'middle' }}>
+          <span className="j-footer__suits">
+            <span className="j-footer__suit-stage">
               {SUITS.map(({ char, kf }) => (
-                <span key={char} style={{ position: 'absolute', inset: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: 0, animationName: kf, animationDuration: CYCLE, animationDelay: '0s', animationIterationCount: 'infinite', animationTimingFunction: 'ease-out' }}>
+                <span key={char} className="j-footer__suit-char" style={{ animationName: kf }}>
                   {char}
                 </span>
               ))}

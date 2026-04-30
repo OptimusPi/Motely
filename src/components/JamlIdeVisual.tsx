@@ -1,6 +1,6 @@
 "use client";
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
+import { useJamlIdeDrag } from "../ui/hooks.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboSprite } from "../ui/sprites.js";
 import type { SpriteSheetType } from "../sprites/spriteMapper.js";
@@ -40,9 +40,9 @@ export interface JamlIdeVisualProps {
 const C = JimboColorOption;
 
 const ZONE_META: Record<JamlZone, { label: string; hint: string; color: string; accent: string }> = {
-    must: { label: "MUST", hint: "Seed must contain all of these.", color: C.BLUE, accent: "#4db5ff" },
-    should: { label: "SHOULD", hint: "Bonus points per match.", color: C.RED, accent: "#ff8076" },
-    mustnot: { label: "MUST NOT", hint: "Seed is rejected if any appear.", color: C.ORANGE, accent: "#ffb84d" },
+    must: { label: "Must", hint: "Seed must contain all of these.", color: C.BLUE, accent: "#4db5ff" },
+    should: { label: "Should", hint: "Bonus points per match.", color: C.RED, accent: "#ff8076" },
+    mustnot: { label: "Must Not", hint: "Rejected if any appear.", color: C.ORANGE, accent: "#ffb84d" },
 };
 
 function clauseSpriteSheet(type: string): SpriteSheetType | undefined {
@@ -231,10 +231,9 @@ function MysteryAddTile({ zone, onTap }: { zone: JamlZone; onTap?: () => void })
                     fontFamily: "m6x11plus, ui-monospace, monospace",
                     fontSize: 12,
                     color: z.accent,
-                    letterSpacing: 2,
                 }}
             >
-                ADD TO {z.label}
+                Add to {z.label}
             </div>
         </div>
     );
@@ -273,12 +272,11 @@ function ZoneRail({
                 <div
                     style={{
                         fontFamily: "m6x11plus, ui-monospace, monospace",
-                        fontSize: 11,
-                        padding: "2px 8px",
+                        fontSize: 12,
+                        padding: "2px 6px",
                         background: z.color,
                         color: C.WHITE,
                         borderRadius: 3,
-                        letterSpacing: 2,
                         boxShadow: `0 2px 0 ${C.BLACK}`,
                     }}
                 >
@@ -319,13 +317,8 @@ function TopMatter({
 }) {
     return (
         <div
-            style={{
-                background: C.DARK_GREY,
-                borderRadius: 6,
-                padding: 10,
-                border: `2px solid ${C.PANEL_EDGE}`,
-                boxShadow: `0 2px 0 ${C.BLACK}`,
-            }}
+            className="j-inner-panel"
+            style={{ padding: 10 }}
         >
             <input
                 value={filter.name ?? ""}
@@ -346,7 +339,7 @@ function TopMatter({
                 }}
             />
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ fontFamily: "m6x11plus, ui-monospace, monospace", fontSize: 9, color: C.GREY, letterSpacing: 2 }}>BY</div>
+                <div style={{ fontFamily: "m6x11plus, ui-monospace, monospace", fontSize: 10, color: C.WHITE }}>By</div>
                 <input
                     value={filter.author ?? ""}
                     placeholder="anonymous"
@@ -359,7 +352,6 @@ function TopMatter({
                         fontFamily: "m6x11plus, ui-monospace, monospace",
                         fontSize: 12,
                         color: C.GOLD_TEXT,
-                        letterSpacing: 1,
                         padding: 0,
                     }}
                 />
@@ -376,8 +368,9 @@ function TopMatter({
                     border: "none",
                     outline: "none",
                     fontFamily: "m6x11plus, ui-monospace, monospace",
-                    fontSize: 10,
-                    color: C.GREY,
+                    fontSize: 11,
+                    color: C.WHITE,
+                    opacity: 0.8,
                     lineHeight: 1.35,
                     padding: 0,
                 }}
@@ -396,71 +389,12 @@ interface DragState {
 }
 
 export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: JamlIdeVisualProps) {
-    const [drag, setDrag] = useState<DragState | null>(null);
-    const [hoverZone, setHoverZone] = useState<string | null>(null);
     const rootRef = useRef<HTMLDivElement>(null);
+    const { drag, hoverZone, onDragStart } = useJamlIdeDrag(filter, onChange, rootRef);
 
     const removeClause = (zone: JamlZone, id: string) => {
         onChange({ ...filter, [zone]: filter[zone].filter((c) => c.id !== id) });
     };
-
-    const onDragStart = (
-        e: React.MouseEvent | React.TouchEvent,
-        clause: JamlVisualClause,
-        fromZone: JamlZone,
-    ) => {
-        // Don't preventDefault; we want clicks to still fire if there's no actual drag.
-        const t = "touches" in e ? e.touches[0] : e;
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        setDrag({
-            clause,
-            fromZone,
-            x: t.clientX,
-            y: t.clientY,
-            offX: t.clientX - rect.left,
-            offY: t.clientY - rect.top,
-        });
-    };
-
-    useEffect(() => {
-        if (!drag) return;
-        const move = (e: MouseEvent | TouchEvent) => {
-            const t = "touches" in e ? (e as TouchEvent).touches[0] : (e as MouseEvent);
-            setDrag((d) => d && { ...d, x: t.clientX, y: t.clientY });
-            const rails = rootRef.current?.querySelectorAll("[data-zone]") ?? [];
-            let found: string | null = null;
-            for (const r of rails) {
-                const rc = r.getBoundingClientRect();
-                if (t.clientX >= rc.left && t.clientX <= rc.right && t.clientY >= rc.top && t.clientY <= rc.bottom) {
-                    found = r.getAttribute("data-zone");
-                    break;
-                }
-            }
-            setHoverZone(found);
-        };
-        const up = () => {
-            if (hoverZone && hoverZone !== drag.fromZone) {
-                const to = hoverZone as JamlZone;
-                onChange({
-                    ...filter,
-                    [drag.fromZone]: filter[drag.fromZone].filter((c) => c.id !== drag.clause.id),
-                    [to]: [...filter[to], { ...drag.clause }],
-                });
-            }
-            setDrag(null);
-            setHoverZone(null);
-        };
-        window.addEventListener("mousemove", move);
-        window.addEventListener("mouseup", up);
-        window.addEventListener("touchmove", move, { passive: false });
-        window.addEventListener("touchend", up);
-        return () => {
-            window.removeEventListener("mousemove", move);
-            window.removeEventListener("mouseup", up);
-            window.removeEventListener("touchmove", move);
-            window.removeEventListener("touchend", up);
-        };
-    }, [drag, hoverZone, filter, onChange]);
 
     return (
         <div
@@ -476,18 +410,39 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
         >
             <TopMatter filter={filter} onChange={onChange} />
 
-            {(["must", "should", "mustnot"] as const).map((zone) => (
-                <ZoneRail
-                    key={zone}
-                    zone={zone}
-                    clauses={filter[zone]}
-                    onAdd={onAddClause ? () => onAddClause(zone) : undefined}
-                    onRemove={(id) => removeClause(zone, id)}
-                    onEdit={(c) => onEditClause?.(zone, c)}
-                    onDragStart={onDragStart}
-                    highlight={hoverZone === zone}
-                />
-            ))}
+            <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <ZoneRail
+                        zone="must"
+                        clauses={filter.must}
+                        onAdd={onAddClause ? () => onAddClause("must") : undefined}
+                        onRemove={(id) => removeClause("must", id)}
+                        onEdit={(c) => onEditClause?.("must", c)}
+                        onDragStart={onDragStart}
+                        highlight={hoverZone === "must"}
+                    />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <ZoneRail
+                        zone="mustnot"
+                        clauses={filter.mustnot}
+                        onAdd={onAddClause ? () => onAddClause("mustnot") : undefined}
+                        onRemove={(id) => removeClause("mustnot", id)}
+                        onEdit={(c) => onEditClause?.("mustnot", c)}
+                        onDragStart={onDragStart}
+                        highlight={hoverZone === "mustnot"}
+                    />
+                </div>
+            </div>
+            <ZoneRail
+                zone="should"
+                clauses={filter.should}
+                onAdd={onAddClause ? () => onAddClause("should") : undefined}
+                onRemove={(id) => removeClause("should", id)}
+                onEdit={(c) => onEditClause?.("should", c)}
+                onDragStart={onDragStart}
+                highlight={hoverZone === "should"}
+            />
 
             {drag && (
                 <div
