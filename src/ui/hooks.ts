@@ -649,3 +649,52 @@ export function useJamlIdeDrag(
     onDragStart,
   }
 }
+
+/**
+ * Provides a magnetic 3D tilt effect for DOM elements, replicating the 'juice' of Balatro cards.
+ * Ensures the hit-detection area remains stable by separating container events from the transformed style.
+ */
+export function useDOMMagneticTilt(enabled: boolean = true) {
+  const [isHovered, setIsHovered] = useState(false)
+  const [transform, setTransform] = useState('none')
+
+  const onPointerEnter = (event: React.PointerEvent) => {
+    if (!enabled || event.pointerType === 'touch') return
+    setIsHovered(true)
+  }
+
+  const onPointerLeave = () => {
+    if (!enabled) return
+    setIsHovered(false)
+    setTransform('none')
+  }
+
+  const onPointerMove = (event: React.PointerEvent) => {
+    if (!enabled || event.pointerType === 'touch') return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const rotateY = (x / rect.width) * 12 - 6
+    const rotateX = (y / rect.height) * -16 + 8
+    const juiceScale = 1.05
+    const juiceY = -2 // slight move up
+    setTransform(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${juiceScale}) translateY(${juiceY}px)`)
+  }
+
+  const handlers = {
+    onPointerEnter: enabled ? onPointerEnter : undefined,
+    onPointerLeave: enabled ? onPointerLeave : undefined,
+    onPointerMove: enabled ? onPointerMove : undefined,
+  }
+
+  const tiltStyle: React.CSSProperties = {
+    transition: enabled && !isHovered ? 'transform 0.4s ease, box-shadow 0.4s ease-out' : 'transform 0.1s ease-out',
+    transform: enabled ? (isHovered ? transform : 'none') : undefined,
+    transformStyle: enabled ? 'preserve-3d' : undefined,
+    transformOrigin: enabled ? 'center center' : undefined,
+    willChange: enabled ? 'transform' : undefined,
+    pointerEvents: enabled ? 'none' : undefined,
+  }
+
+  return { handlers, tiltStyle, isHovered }
+}

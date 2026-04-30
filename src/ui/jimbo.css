@@ -92,6 +92,24 @@
   letter-spacing: 0.08em;
 }
 
+/* Font Dance Animation */
+.j-text--dance-container {
+  display: inline-block;
+  white-space: pre-wrap;
+}
+
+.j-font-dance-char {
+  display: inline-block;
+  animation: j-font-dance 1.5s infinite steps(2, end);
+}
+
+@keyframes j-font-dance {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(1px, -1px); }
+  50% { transform: translate(0, -2px); }
+  75% { transform: translate(-1px, -1px); }
+}
+
 /* Sizes (from DESIGN.md typography scale) */
 .j-text--display { font-size: 26px; letter-spacing: 0.04em; line-height: 1; }
 .j-text--xl      { font-size: 24px; letter-spacing: 0.04em; }
@@ -164,6 +182,13 @@
   -webkit-user-select: none;
   user-select: none;
 }
+/* Invisible stable hit target to prevent hover jitter when the child transforms */
+.j-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: 10;
+}
 .j-btn--full { width: 100%; }
 .j-btn--disabled {
   opacity: 0.55;
@@ -206,8 +231,6 @@
 .j-btn--red    { --j-btn-face-color: var(--j-red);     --j-btn-shadow-color: var(--j-dark-red); }
 .j-btn--blue   { --j-btn-face-color: var(--j-blue);    --j-btn-shadow-color: var(--j-dark-blue); }
 .j-btn--green  { --j-btn-face-color: var(--j-green);   --j-btn-shadow-color: var(--j-dark-green); }
-.j-btn--gold   { --j-btn-face-color: var(--j-gold);    --j-btn-shadow-color: #8a6a1e; }
-.j-btn--grey   { --j-btn-face-color: var(--j-dark-grey); --j-btn-shadow-color: var(--j-darkest); }
 
 
 /* ── Badge ─────────────────────────────────────────────────────────────── */
@@ -231,8 +254,6 @@
 .j-badge--blue   { background: var(--j-blue);     color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-blue); }
 .j-badge--red    { background: var(--j-red);      color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-red); }
 .j-badge--green  { background: var(--j-green);    color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-green); }
-.j-badge--gold   { background: var(--j-gold);     color: var(--j-black); box-shadow: 0 2px 0 0 #8a6a1e; }
-.j-badge--grey   { background: var(--j-grey);     color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-teal-grey); }
 .j-badge--orange { background: var(--j-orange);   color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-orange); }
 .j-badge--purple { background: var(--j-purple);   color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-purple); }
 
@@ -1074,13 +1095,5 @@
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-.j-juice-hover { transition: transform 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275); } .j-juice-hover:hover { transform: scale(1.05) translateY(-2px); z-index: 5; }
-. h i d e - s c r o l l b a r  
-   - m s - o v e r f l o w - s t y l e :   n o n e ;   s c r o l l b a r - w i d t h :   n o n e ;    
- . h i d e - s c r o l l b a r : : - w e b k i t - s c r o l l b a r  
-   d i s p l a y :   n o n e ;    
- 
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
 .j-juice-hover { transition: transform 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .j-juice-hover:hover { transform: scale(1.05) translateY(-2px); z-index: 5; }

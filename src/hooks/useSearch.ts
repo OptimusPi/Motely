@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { SEARCH_WORKER_CODE } from "./searchWorkerCode.js";
+import SearchWorker from "./searchWorker.ts?worker&inline";
 
 export interface SearchResult {
   seed: string;
@@ -21,12 +21,8 @@ export interface UseSearchState {
   tallyLabels: string[];
 }
 
-function createWorker(motelyWasmUrl: string): Worker {
-  const blob = new Blob([SEARCH_WORKER_CODE], { type: "text/javascript" });
-  const blobUrl = URL.createObjectURL(blob);
-  const worker = new Worker(blobUrl);
-  worker.postMessage({ type: "init", url: motelyWasmUrl });
-  return worker;
+function createWorker(): Worker {
+  return new SearchWorker();
 }
 
 const INITIAL_STATE: UseSearchState = {
@@ -39,18 +35,17 @@ const INITIAL_STATE: UseSearchState = {
   tallyLabels: [],
 };
 
-export function useSearch(motelyWasmUrl: string) {
+export function useSearch() {
   const [state, setState] = useState<UseSearchState>(INITIAL_STATE);
 
   const workerRef = useRef<Worker | null>(null);
-  const readyRef = useRef(false);
+  const readyRef = useRef(true); // Worker is ready implicitly since boot is handled by import
   const speedRef = useRef({ lastSearched: 0n, lastTime: 0, ema: 0 });
 
   useEffect(() => {
-    setState((s) => ({ ...s, status: "booting" }));
-    const worker = createWorker(motelyWasmUrl);
+    setState((s) => ({ ...s, status: "idle" }));
+    const worker = createWorker();
     workerRef.current = worker;
-    readyRef.current = false;
 
     worker.onmessage = (e: MessageEvent) => {
       const msg = e.data as { type: string; [k: string]: unknown };
@@ -110,7 +105,7 @@ export function useSearch(motelyWasmUrl: string) {
       worker.terminate();
       workerRef.current = null;
     };
-  }, [motelyWasmUrl]);
+  }, []);
 
   const sendStart = useCallback((payload: Record<string, unknown>) => {
     const worker = workerRef.current;

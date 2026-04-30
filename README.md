@@ -126,10 +126,22 @@ Import pure helpers from `jaml-ui/core` for server components. For local workspa
 const nextConfig = { transpilePackages: ["jaml-ui"] };
 ```
 
+## Search Worker Architecture
+
+The library provides `useAnalyzer` to interact with `motely-wasm`'s search context natively.
+**Important:** As of `motely-wasm@14.3.3`, the search worker utilizes Vite's `?worker&inline` pattern. You no longer need to pass `motelyWasmUrl`.
+
+Ensure `motely-wasm` is imported and booted at the module level in your application:
+
+```tsx
+import { boot } from "motely-wasm";
+boot(); // Call early in your application lifecycle
+```
+
 ## Peer dependencies
 
 | Peer | Required for |
 |------|-------------|
 | `react`, `react-dom` | All components |
-| `motely-wasm ^10 \|\| ^11 \|\| ^12` | `jaml-ui/motely`, `AnalyzerExplorer` data |
+| `motely-wasm ^14.3.3` | `jaml-ui/motely`, `AnalyzerExplorer`, `useAnalyzer` data |
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-spring/three` | `jaml-ui/r3f` only |

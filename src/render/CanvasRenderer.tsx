@@ -19,12 +19,20 @@ export function JamlCardRenderer({ layers, invert = false, className = "", hover
     });
 
     return (
-        <div
-            className={className}
-            style={containerStyle}
-            {...handlers}
-        >
+        <div className={className} style={{ ...containerStyle, position: "relative" }}>
             <canvas ref={canvasRef} style={canvasStyle} />
+            {hoverTilt && (
+                <div 
+                    style={{ position: "absolute", inset: "-15px", zIndex: 10, cursor: "pointer" }} 
+                    {...handlers} 
+                />
+            )}
+            {!hoverTilt && (
+                <div 
+                    style={{ position: "absolute", inset: "0", zIndex: 10 }} 
+                    {...handlers} 
+                />
+            )}
         </div>
     );
 }

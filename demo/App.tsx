@@ -43,8 +43,6 @@ import { getMotelyWasmUrl } from "../src/assets.ts";
 import "./App.css";
 
 const C = JimboColorOption;
-// Keep motely-wasm on a versioned Vercel Blob URL for useSearch Worker
-const MOTELY_WASM_URL = getMotelyWasmUrl(import.meta.env.VITE_MOTELY_WASM_VERSION);
 
 const SAMPLE_JAML = `name: Blueprint Copy Engine
 author: pifreak
@@ -124,7 +122,7 @@ function AnalyzerScenario() {
 
 function SearchScenario() {
   const [jaml, setJaml] = useState(SAMPLE_JAML);
-  const search = useSearch(MOTELY_WASM_URL);
+  const search = useSearch();
 
   const results: JamlIdeSearchResult[] = useMemo(
     () =>
@@ -755,7 +753,7 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
 function ComboIdeScenario() {
   const [jaml, setJaml] = useState(SAMPLE_JAML);
   const [activeTab, setActiveTab] = useState("editor");
-  const search = useSearch(MOTELY_WASM_URL);
+  const search = useSearch();
 
   const results: JamlIdeSearchResult[] = useMemo(
     () =>

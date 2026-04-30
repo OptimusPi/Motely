@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, memo } from 'react'
 import { JimboColorOption, JIMBO_ANIMATIONS } from './tokens.js'
-import { useSway, useDelayedVisibility } from './hooks.js'
+import { useSway, useDelayedVisibility, useDOMMagneticTilt } from './hooks.js'
 import { JimboText, type JimboTextSize } from './jimboText.js'
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
@@ -59,14 +59,14 @@ const JIMBO_TONE_PAIRS: Record<string, [string, string]> = {
   red:    [JimboColorOption.RED,    JimboColorOption.DARK_RED],
   blue:   [JimboColorOption.BLUE,   JimboColorOption.DARK_BLUE],
   green:  [JimboColorOption.GREEN,  JimboColorOption.DARK_GREEN],
-  gold:   [JimboColorOption.GOLD,   '#8a6a1e'],
-  grey:   [JimboColorOption.DARK_GREY, JimboColorOption.DARKEST],
   tarot:  ['#9e74ce', '#5e437e'],
   planet: ['#00a7ca', '#00657c'],
   spectral: ['#2e76fd', '#14449e'],
+  grey:   ['#888888', '#555555'],
+  gold:   ['#f1c40f', '#d35400'],
 }
 
-export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'gold' | 'grey' | 'tarot' | 'planet' | 'spectral'
+export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'tarot' | 'planet' | 'spectral' | 'grey' | 'gold'
 
 export interface JimboButtonProps {
   tone?: JimboTone
@@ -86,6 +86,7 @@ export function JimboButton({
   const [pressed, setPressed] = useState(false)
   const [fg, sh] = JIMBO_TONE_PAIRS[tone] ?? JIMBO_TONE_PAIRS.orange
   const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
+  const { handlers, tiltStyle } = useDOMMagneticTilt(!disabled)
 
   return (
     <div
@@ -93,15 +94,20 @@ export function JimboButton({
       data-pressed={pressed}
       onMouseDown={() => { if (!disabled) setPressed(true) }}
       onMouseUp={() => setPressed(false)}
-      onMouseLeave={() => setPressed(false)}
+      onMouseLeave={(e) => { setPressed(false) }}
       onTouchStart={() => { if (!disabled) setPressed(true) }}
       onTouchEnd={() => setPressed(false)}
       onClick={() => { if (!disabled) onClick?.() }}
+      onPointerEnter={handlers.onPointerEnter}
+      onPointerMove={handlers.onPointerMove}
+      onPointerLeave={handlers.onPointerLeave}
       style={style}
     >
-      <div className="j-btn__shadow" style={{ background: sh }} />
-      <div className="j-btn__face" style={{ background: fg }}>
-        <JimboText size={textSize} uppercase={uppercase}>{children}</JimboText>
+      <div style={{ ...tiltStyle, width: '100%' }}>
+        <div className="j-btn__shadow" style={{ background: sh }} />
+        <div className="j-btn__face" style={{ background: fg }}>
+          <JimboText size={textSize} uppercase={uppercase}>{children}</JimboText>
+        </div>
       </div>
     </div>
   )

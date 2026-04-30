@@ -114,8 +114,8 @@ export function buildStreamHandle(
   }
 
   function fixedRarityJoker(
-    createStream: () => ReturnType<typeof ctx.createSoulJokerStream>,
-    getNext: (stream: ReturnType<typeof ctx.createSoulJokerStream>) => ReturnType<typeof ctx.getNextSoulJoker>,
+    createStream: () => ReturnType<typeof ctx.createLegendaryJokerStream>,
+    getNext: (stream: ReturnType<typeof ctx.createLegendaryJokerStream>) => ReturnType<typeof ctx.getNextLegendaryJoker>,
   ): StreamHandle {
     return streamHandle(createStream, (stream) => getNext(stream).item.value);
   }
@@ -160,8 +160,8 @@ export function buildStreamHandle(
       );
     case "soulJoker":
       return fixedRarityJoker(
-        () => ctx.createSoulJokerStream(ante, Motely.MotelyJokerFixedRarityStreamFlags.Default),
-        (stream) => ctx.getNextSoulJoker(stream),
+        () => ctx.createLegendaryJokerStream(ante, Motely.MotelyJokerFixedRarityStreamFlags.Default),
+        (stream) => ctx.getNextLegendaryJoker(stream),
       );
     case "rareTagJoker":
       return fixedRarityJoker(

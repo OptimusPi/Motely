@@ -203,4 +203,4 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 - DON'T add visible scrollbars. Vertical magnetic snap-scroll + horizontal swipe only.
 - DON'T use rounded corners larger than 10px. Balatro is chunky, not bubbly.
 - DON'T use blur-based shadows for depth. Use solid colored box-shadows 80% opaque.
-- DON'T use redundant JS wrappers for `motely-wasm`. Import globally and `motely.boot()` once.
+- DON'T use redundant JS wrappers for `motely-wasm`. Import globally and `motely.boot()` once. Use `?worker&inline` for search workers rather than blob strings, and do not prop-drill `motelyWasmUrl`.

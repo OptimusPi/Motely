@@ -15,13 +15,12 @@ import { JamlSpeedometer } from "./JamlSpeedometer.js";
 const C = JimboColorOption;
 
 export interface JamlCuratorProps {
-  motelyWasmUrl: string;
 }
 
-export function JamlCurator({ motelyWasmUrl }: JamlCuratorProps) {
+export function JamlCurator({ }: JamlCuratorProps) {
   // Use map editor by default to generate JAML
   const [jamlText, setJamlText] = useState("");
-  const search = useSearch(motelyWasmUrl);
+  const search = useSearch();
   const analyzer = useAnalyzer();
 
   // Search results pagination
