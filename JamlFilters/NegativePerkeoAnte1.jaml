@@ -5,65 +5,65 @@ deck: Ghost
 stake: White
 
 must:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes: [1]
     edition: Negative
 
 should:
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [1]
     edition: Negative
     score: 10
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [2]
     edition: Negative
     score: 8
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [3]
     edition: Negative
     score: 8
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [4]
     edition: Negative
     score: 8
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [5]
     edition: Negative
     score: 8
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [6]
     edition: Negative
     score: 8
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [7]
     edition: Negative
     score: 8
-  - soulJoker: Any
+  - legendaryJoker: Any
     antes: [8]
     edition: Negative
     score: 10
 
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes: [1,2,3,4,5,6,7,8]
     label: "Perkeo Ante 1-8"
     score: 2
 
-  - soulJoker: Canio
+  - legendaryJoker: Canio
     antes: [1,2,3,4,5,6,7,8]
     label: "Canio Ante 1-8"
     score: 2
 
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     antes: [1,2,3,4,5,6,7,8]
     label: "Triboulet Ante 1-8"
     score: 2
 
-  - soulJoker: Chicot
+  - legendaryJoker: Chicot
     antes: [1,2,3,4,5,6,7,8]
     label: "Chicot Ante 1-8"
     score: 2
 
-  - soulJoker: Yorick
+  - legendaryJoker: Yorick
     antes: [1,2,3,4,5,6,7,8]
     label: "Yorick Ante 1-8"
     score: 2
