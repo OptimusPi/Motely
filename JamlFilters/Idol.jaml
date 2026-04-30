@@ -2,7 +2,7 @@ name: Idol
 deck: Erratic
 stake: Black
 must:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
 should:
   - joker: TheIdol
     stickers:
@@ -15,7 +15,7 @@ should:
       - Eternal
     score: 10
 
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 10
   - joker: TheIdol
     edition: Negative
@@ -27,5 +27,5 @@ should:
     stickers:
       - Eternal
     score: 10
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 10
