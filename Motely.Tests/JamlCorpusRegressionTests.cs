@@ -12,7 +12,7 @@ namespace Motely.Tests;
 /// </summary>
 public class JamlCorpusRegressionTests
 {
-    private static readonly string[] LegacyKeys = ["mixedJoker", "legendaryJoker", "shopItems"];
+    private static readonly string[] LegacyKeys = ["mixedJoker", "soulJoker", "shopSlots"];
 
     private readonly ITestOutputHelper _output;
 
@@ -67,19 +67,21 @@ public class JamlCorpusRegressionTests
         Assert.NotNull(config);
     }
 
-    [Theory]
-    [MemberData(nameof(LegacyCorpusFiles))]
-    public void EveryLegacyCommittedJamlFilter_FailsWithLegacyKeyError(string fileName)
+    [Fact]
+    public void EveryLegacyCommittedJamlFilter_FailsWithLegacyKeyError()
     {
-        var root = LocateCorpusRoot();
-        var path = Path.Combine(root, fileName);
-        var jaml = File.ReadAllText(path);
+        foreach (var fileName in LegacyCorpusFiles)
+        {
+            var root = LocateCorpusRoot();
+            var path = Path.Combine(root, fileName);
+            var jaml = File.ReadAllText(path);
 
-        var ok = JamlConfigLoader.TryLoad(jaml, out _, out var error);
+            var ok = JamlConfigLoader.TryLoad(jaml, out _, out var error);
 
-        Assert.False(ok, $"Legacy file unexpectedly parsed: {fileName}");
-        Assert.False(string.IsNullOrWhiteSpace(error), $"Expected parse error for {fileName}");
-        Assert.Contains("Unknown property", error!, StringComparison.Ordinal);
+            Assert.False(ok, $"Legacy file unexpectedly parsed: {fileName}");
+            Assert.False(string.IsNullOrWhiteSpace(error), $"Expected parse error for {fileName}");
+            Assert.Contains("Unknown property", error!, StringComparison.Ordinal);
+        }
     }
 
     private static bool ContainsLegacyKey(string jaml)
