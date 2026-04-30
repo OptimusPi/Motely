@@ -66,4 +66,22 @@ public sealed class JamlyzerUnitTests
         Assert.Contains(result.Seeds, seed => seed.Seed == "JAMMY");
         Assert.Contains(result.Seeds, seed => seed.Seed == "GPT55YA");
     }
+
+    [Fact]
+    public void AnalyzeSeed_MarksJamlMatchedItemsForPreviewCards()
+    {
+        var result = MotelyJamlyzer.AnalyzeSeed(new("ALEEB", AnyAnteOneJokerJaml));
+
+        Assert.Null(result.Error);
+        var seed = Assert.Single(result.Seeds);
+        Assert.NotNull(seed.Analysis);
+        var analysis = seed.Analysis!;
+        var anteOne = Assert.Single(analysis.Antes, ante => ante.Ante == 1);
+
+        Assert.True(
+            anteOne.ShopQueue.Any(item => item.Matched)
+                || anteOne.Packs.Any(pack => pack.Items.Any(item => item.Matched)),
+            "Jamlyzer should mark at least one inspected ante-1 joker source item as matched."
+        );
+    }
 }

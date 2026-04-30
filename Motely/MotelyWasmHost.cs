@@ -1,5 +1,6 @@
 using System.Text;
 using Bootsharp.FileSystem;
+using Motely.Analysis;
 using Motely.Filters;
 using YamlDotNet.Core;
 
@@ -329,6 +330,9 @@ public sealed class MotelyWasmHost : IMotelyWasm
 
     public string[] GetTallyLabels(string jaml) =>
         JamlSearchBuilder.CreatePlan(ParseJaml(jaml)).TallyLabels;
+
+    public MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
+        MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
 
     private static JamlConfig ParseJaml(string jaml)
     {

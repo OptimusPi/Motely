@@ -167,7 +167,7 @@ unsafe partial struct MotelyVectorSearchContext
         };
     }
 
-    public MotelyVectorJokerFixedRarityStream CreateSoulJokerStream(
+    public MotelyVectorJokerFixedRarityStream CreateLegendaryJokerStream(
         int ante,
         MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default,
         bool isCached = false

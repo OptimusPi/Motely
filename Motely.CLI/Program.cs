@@ -740,16 +740,23 @@ partial class Program
                                 ShopQueue = a
                                     .ShopQueue.Select(item => new ShopItemDto
                                     {
-                                        Id = item.ToString(),
-                                        Name = FormatUtils.FormatItem(item),
+                                        Id = $"ante-{a.Ante}-shop-{item.Value}",
+                                        Name = item.Name,
                                         Value = item.Value,
+                                        Matched = item.Matched,
                                     })
                                     .ToArray(),
                                 Packs = a
                                     .Packs.Select(p => new PackDto
                                     {
                                         Type = FormatUtils.FormatPackName(p.Type),
-                                        Items = p.Items.Select(FormatUtils.FormatItem).ToArray(),
+                                        Items = p.Items.Select((item, itemIndex) => new ShopItemDto
+                                        {
+                                            Id = $"ante-{a.Ante}-pack-{itemIndex}-{item.Value}",
+                                            Name = item.Name,
+                                            Value = item.Value,
+                                            Matched = item.Matched,
+                                        }).ToArray(),
                                     })
                                     .ToArray(),
                             })
@@ -819,16 +826,23 @@ partial class Program
                         ShopQueue = a
                             .ShopQueue.Select(item => new ShopItemDto
                             {
-                                Id = item.ToString(),
-                                Name = FormatUtils.FormatItem(item),
+                                Id = $"ante-{a.Ante}-shop-{item.Value}",
+                                Name = item.Name,
                                 Value = item.Value,
+                                Matched = item.Matched,
                             })
                             .ToArray(),
                         Packs = a
                             .Packs.Select(p => new PackDto
                             {
                                 Type = FormatUtils.FormatPackName(p.Type),
-                                Items = p.Items.Select(FormatUtils.FormatItem).ToArray(),
+                                Items = p.Items.Select((item, itemIndex) => new ShopItemDto
+                                {
+                                    Id = $"ante-{a.Ante}-pack-{itemIndex}-{item.Value}",
+                                    Name = item.Name,
+                                    Value = item.Value,
+                                    Matched = item.Matched,
+                                }).ToArray(),
                             })
                             .ToArray(),
                     })

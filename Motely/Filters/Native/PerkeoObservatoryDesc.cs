@@ -60,7 +60,7 @@ public struct PerkeoObservatoryFilterDesc()
                         )
                         {
                             if (!soulStreamInit)
-                                soulStream = searchContext.CreateSoulJokerStream(1);
+                                soulStream = searchContext.CreateLegendaryJokerStream(1);
                             return searchContext.GetNextJoker(ref soulStream).Type
                                 == MotelyItemType.Perkeo;
                         }
@@ -78,7 +78,7 @@ public struct PerkeoObservatoryFilterDesc()
                         )
                         {
                             if (!soulStreamInit)
-                                soulStream = searchContext.CreateSoulJokerStream(1);
+                                soulStream = searchContext.CreateLegendaryJokerStream(1);
                             return searchContext.GetNextJoker(ref soulStream).Type
                                 == MotelyItemType.Perkeo;
                         }
@@ -109,7 +109,7 @@ public struct PerkeoObservatoryFilterDesc()
                             )
                             {
                                 if (!soulStreamInit)
-                                    soulStream = searchContext.CreateSoulJokerStream(2);
+                                    soulStream = searchContext.CreateLegendaryJokerStream(2);
                                 return searchContext.GetNextJoker(ref soulStream).Type
                                     == MotelyItemType.Perkeo;
                             }
@@ -134,7 +134,7 @@ public struct PerkeoObservatoryFilterDesc()
                             )
                             {
                                 if (!soulStreamInit)
-                                    soulStream = searchContext.CreateSoulJokerStream(2);
+                                    soulStream = searchContext.CreateLegendaryJokerStream(2);
                                 return searchContext.GetNextJoker(ref soulStream).Type
                                     == MotelyItemType.Perkeo;
                             }

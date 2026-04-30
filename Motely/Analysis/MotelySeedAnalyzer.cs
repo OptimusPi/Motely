@@ -62,9 +62,9 @@ public sealed record class MotelyLegacyTextAnalyzer(
 
             // Shop Queue - match TheSoul format exactly: "Shop Queue: " on its own line, then numbered items
             sb.AppendLine("Shop Queue: ");
-            foreach ((int i, MotelyItem item) in ante.ShopQueue.Index())
+            foreach ((int i, MotelyAnalyzedItem item) in ante.ShopQueue.Index())
             {
-                sb.AppendLine($"{i + 1}) {FormatUtils.FormatItem(item)}");
+                sb.AppendLine($"{i + 1}) {FormatUtils.FormatItem(item.Item)}");
             }
             sb.AppendLine();
 
@@ -78,7 +78,7 @@ public sealed record class MotelyLegacyTextAnalyzer(
                         ? " - "
                             + string.Join(
                                 ", ",
-                                pack.Items.Select(item => FormatUtils.FormatItem(item))
+                                pack.Items.Select(item => FormatUtils.FormatItem(item.Item))
                             )
                         : "";
                 sb.AppendLine($"{FormatUtils.FormatPackName(pack.Type)}{contents}");
@@ -96,14 +96,36 @@ public sealed record class MotelyAnteAnalysis(
     MotelyVoucher Voucher,
     MotelyTag SmallBlindTag,
     MotelyTag BigBlindTag,
-    IReadOnlyList<MotelyItem> ShopQueue,
+    IReadOnlyList<MotelyAnalyzedItem> ShopQueue,
     IReadOnlyList<MotelyBoosterPackAnalysis> Packs,
     string? DrawOrder = null
 );
 
+public sealed record class MotelyAnalyzedItem(
+    MotelyItem Item,
+    bool Matched = false
+)
+{
+    public string Name => FormatUtils.FormatItem(Item);
+    public int Value => Item.Value;
+    public MotelyItemType Type => Item.Type;
+    public MotelyItemTypeCategory TypeCategory => Item.TypeCategory;
+    public MotelyItemSeal Seal => Item.Seal;
+    public MotelyItemEnhancement Enhancement => Item.Enhancement;
+    public MotelyItemEdition Edition => Item.Edition;
+    public MotelyStandardcardSuit StandardcardSuit => Item.StandardcardSuit;
+    public MotelyStandardcardRank StandardcardRank => Item.StandardcardRank;
+    public bool IsPerishable => Item.IsPerishable;
+    public bool IsEternal => Item.IsEternal;
+    public bool IsRental => Item.IsRental;
+    public bool IsInvalid => Item.IsInvalid;
+
+    public static implicit operator MotelyItem(MotelyAnalyzedItem item) => item.Item;
+}
+
 public sealed record class MotelyBoosterPackAnalysis(
     MotelyBoosterPack Type,
-    IReadOnlyList<MotelyItem> Items
+    IReadOnlyList<MotelyAnalyzedItem> Items
 );
 
 /// <summary>

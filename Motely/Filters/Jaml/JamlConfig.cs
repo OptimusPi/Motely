@@ -169,7 +169,7 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "rareJokers")]
     public List<MotelyJokerRare>? RareJokers { get; set; }
 
-    // mixedJoker:/mixedJokers: aliases removed in v14.0.2 — `joker:` IS the mixed-rarity union.
+    // joker:/mixedJokers: aliases removed in v14.0.2 — `joker:` IS the mixed-rarity union.
     // Internal MixedJokerClause / MixedJokerFilterDesc kept temporarily as unreachable dead code
     // pending a follow-up cleanup PR; nothing in the user-facing JAML can produce them.
 
@@ -439,7 +439,7 @@ public sealed class JamlSourcesDto
 
     /// <summary>
     /// Legendary / soul joker: pack indices where The Soul may appear in an <b>arcana</b> pack (tarot stream).
-    /// If either this or spectralPacks is non-empty, matching uses split rules (see SoulJokerSourceConfig).
+    /// If either this or spectralPacks is non-empty, matching uses split rules (see LegendaryJokerSourceConfig).
     /// </summary>
     [YamlMember(Alias = "arcanaPacks")]
     public int[]? ArcanaPacks { get; set; }
@@ -1140,7 +1140,7 @@ public static partial class JamlConfigLoader
                 },
             },
             // MotelyFilterItemType.MixedJoker is unreachable in v14.0.2+ — the user-facing
-            // mixedJoker:/mixedJokers: aliases were removed; `joker:` IS the mixed-rarity
+            // joker:/mixedJokers: aliases were removed; `joker:` IS the mixed-rarity
             // union. The MotelyFilterItemType enum value + MixedJokerClause / MixedJokerFilterDesc
             // are scheduled for a follow-up cleanup PR; nothing routes here anymore.
             MotelyFilterItemType.LegendaryJoker => new LegendaryJokerClause
@@ -1158,7 +1158,7 @@ public static partial class JamlConfigLoader
                 Edition = edition,
                 SoulCardOnly = c.SoulCardOnly ?? false,
                 SoulEditionRolls = c.SoulEditionRolls ?? 0,
-                Sources = CreateSoulJokerSources(
+                Sources = CreateLegendaryJokerSources(
                     shopItems,
                     boosterPacks,
                     c.Sources?.ArcanaPacks,
@@ -1526,7 +1526,7 @@ public static partial class JamlConfigLoader
         ?? c.GlassDestroy
         ?? c.WheelStaysFlipped;
 
-    private static SoulJokerSourceConfig CreateSoulJokerSources(
+    private static LegendaryJokerSourceConfig CreateLegendaryJokerSources(
         int[]? shopItems,
         int[]? boosterPacks,
         int[]? arcanaPacks,
@@ -1547,7 +1547,7 @@ public static partial class JamlConfigLoader
             ? System.Array.Empty<int>()
             : (boosterPacks is { Length: > 0 } bp ? bp : new[] { 0, 1, 2, 3, 4, 5 });
 
-        return new SoulJokerSourceConfig
+        return new LegendaryJokerSourceConfig
         {
             ShopItems = shopItems ?? [],
             BoosterPacks = resolvedBooster,
@@ -1578,7 +1578,6 @@ public static partial class JamlConfigLoader
             case MotelyFilterItemType.CommonJoker:
             case MotelyFilterItemType.UncommonJoker:
             case MotelyFilterItemType.RareJoker:
-            case MotelyFilterItemType.MixedJoker:
                 shopItems = [0, 1, 2, 3];
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
@@ -1914,7 +1913,7 @@ public sealed class JokerSourceConfig // # oops :( I have a complaint! )
     public int[] AllShopJokers { get; set; } = [];
 }
 
-public sealed class SoulJokerSourceConfig
+public sealed class LegendaryJokerSourceConfig
 {
     public int[] ShopItems { get; set; } = [];
 
@@ -1958,11 +1957,11 @@ public sealed class SoulJokerSourceConfig
 
     /// <summary>
     /// Historical escape hatch that used to stamp booster-slot defaults at filter-creation time.
-    /// Defaults now live in <c>JamlConfigLoader.CreateSoulJokerSources</c> (load time). This
+    /// Defaults now live in <c>JamlConfigLoader.CreateLegendaryJokerSources</c> (load time). This
     /// method is an identity pass-through kept for downstream callers until they migrate; it
     /// will be removed in a subsequent cleanup.
     /// </summary>
-    public SoulJokerSourceConfig NormalizeSoulJokerBoostersIfEmpty() => this;
+    public LegendaryJokerSourceConfig NormalizeLegendaryJokerBoostersIfEmpty() => this;
 }
 
 public sealed class TarotCardSourceConfig

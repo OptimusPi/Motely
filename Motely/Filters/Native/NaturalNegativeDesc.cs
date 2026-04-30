@@ -33,7 +33,7 @@ public struct NaturalNegativesFilterDesc()
             {
                 if (!soulStreamInit)
                 {
-                    soulStream = searchContext.CreateSoulJokerStream(ante);
+                    soulStream = searchContext.CreateLegendaryJokerStream(ante);
                     soulStreamInit = true;
                     var wouldBe = searchContext.GetNextJoker(ref soulStream);
                     if (
@@ -86,7 +86,7 @@ public struct NaturalNegativesFilterDesc()
                     )
                     {
                         if (!soulStreamInit)
-                            soulStream = searchContext.CreateSoulJokerStream(ante);
+                            soulStream = searchContext.CreateLegendaryJokerStream(ante);
                         if (
                             searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo
                         )

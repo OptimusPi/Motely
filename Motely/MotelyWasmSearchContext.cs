@@ -274,19 +274,19 @@ public sealed class MotelyWasmSearchContext : IMotelyWasmSearchContext
         return new(items, nextStream);
     }
 
-    public MotelySingleJokerFixedRarityStream CreateSoulJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags)
+    public MotelySingleJokerFixedRarityStream CreateLegendaryJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags)
     {
-        return _ctx.CreateSoulJokerStream(ante, flags);
+        return _ctx.CreateLegendaryJokerStream(ante, flags);
     }
 
-    public MotelyFixedJokerStreamResult GetNextSoulJoker(MotelySingleJokerFixedRarityStream stream)
+    public MotelyFixedJokerStreamResult GetNextLegendaryJoker(MotelySingleJokerFixedRarityStream stream)
     {
         var nextStream = stream;
         var item = _ctx.GetNextJoker(ref nextStream);
         return new(item, nextStream);
     }
 
-    public MotelyFixedJokerChunkResult GetNextSoulJokerChunk(MotelySingleJokerFixedRarityStream stream, int count)
+    public MotelyFixedJokerChunkResult GetNextLegendaryJokerChunk(MotelySingleJokerFixedRarityStream stream, int count)
     {
         ValidateChunkCount(count);
         var nextStream = stream;

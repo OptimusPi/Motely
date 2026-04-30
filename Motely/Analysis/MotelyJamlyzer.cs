@@ -77,7 +77,10 @@ public static class MotelyJamlyzer
                             tally.Score,
                             tally.TallyValuesSpan.ToArray(),
                             cfg.IncludeSeedAnalysis
-                                ? MotelySeedAnalyzer.Analyze(new(tally.Seed, config.Deck, config.Stake))
+                                ? MotelyJamlyzerHighlights.Apply(
+                                    config,
+                                    MotelySeedAnalyzer.Analyze(new(tally.Seed, config.Deck, config.Stake))
+                                )
                                 : null
                         )
                     );
@@ -129,7 +132,10 @@ public static class MotelyJamlyzer
                         tally.Score,
                         tally.TallyValuesSpan.ToArray(),
                         cfg.IncludeSeedAnalysis
-                            ? MotelySeedAnalyzer.Analyze(new(tally.Seed, config.Deck, config.Stake))
+                            ? MotelyJamlyzerHighlights.Apply(
+                                config,
+                                MotelySeedAnalyzer.Analyze(new(tally.Seed, config.Deck, config.Stake))
+                            )
                             : null
                     );
                 });
@@ -194,7 +200,7 @@ public static class MotelyJamlyzer
             search.AwaitCompletion();
 
             IReadOnlyList<MotelyJamlyzerSeedResult> results = cfg.IncludeSeedAnalysis
-                ? AttachSeedAnalysis(rows, config.Deck, config.Stake)
+                ? AttachSeedAnalysis(rows, config)
                 : rows;
 
             return new(
@@ -225,8 +231,7 @@ public static class MotelyJamlyzer
 
     private static IReadOnlyList<MotelyJamlyzerSeedResult> AttachSeedAnalysis(
         IReadOnlyList<MotelyJamlyzerSeedResult> rows,
-        MotelyDeck deck,
-        MotelyStake stake
+        JamlConfig config
     )
     {
         var analyzed = new MotelyJamlyzerSeedResult[rows.Count];
@@ -235,7 +240,10 @@ public static class MotelyJamlyzer
             var row = rows[i];
             analyzed[i] = row with
             {
-                Analysis = MotelySeedAnalyzer.Analyze(new(row.Seed, deck, stake)),
+                Analysis = MotelyJamlyzerHighlights.Apply(
+                    config,
+                    MotelySeedAnalyzer.Analyze(new(row.Seed, config.Deck, config.Stake))
+                ),
             };
         }
 

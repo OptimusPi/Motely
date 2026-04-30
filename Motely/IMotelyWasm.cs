@@ -1,4 +1,5 @@
 using Motely.Filters;
+using Motely.Analysis;
 
 namespace Motely;
 
@@ -78,6 +79,8 @@ public interface IMotelyWasm
     string[] GetTallyLabels(string jaml);
     /// <summary>Cheap structural summary without running a search. Safe to call on every keystroke.</summary>
     JamlMetaResult GetJamlMeta(string jaml);
+    /// <summary>Runs JAML against a seed list and returns compact analysis data with matched preview items highlighted. Pass a one-item array for a single seed.</summary>
+    MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds);
     // --- JAML Library (Bootsharp.FileSystem) ---
 
     /// <summary>Opens a directory picker and mounts the selected folder as a JAML library. Returns the root ID, or null if the user cancelled.</summary>
