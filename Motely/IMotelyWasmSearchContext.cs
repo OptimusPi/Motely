@@ -42,6 +42,12 @@ public record MotelyShopItemChunkResult(
     MotelySingleShopItemStream Stream
 );
 
+public interface IMotelyShopItemStream
+{
+    MotelyItem GetNext();
+    int[] GetNextChunk(int count);
+}
+
 public record MotelyJokerStreamResult(
     MotelyItem Item,
     MotelySingleJokerStream Stream
@@ -203,9 +209,9 @@ public interface IMotelyWasmSearchContext : IDisposable
     MotelyJokerStreamResult GetNextWraithJoker(MotelySingleJokerStream stream);
     MotelyJokerChunkResult GetNextWraithJokerChunk(MotelySingleJokerStream stream, int count);
 
-    MotelySingleJokerFixedRarityStream CreateSoulJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags);
-    MotelyFixedJokerStreamResult GetNextSoulJoker(MotelySingleJokerFixedRarityStream stream);
-    MotelyFixedJokerChunkResult GetNextSoulJokerChunk(MotelySingleJokerFixedRarityStream stream, int count);
+    MotelySingleJokerFixedRarityStream CreateLegendaryJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags);
+    MotelyFixedJokerStreamResult GetNextLegendaryJoker(MotelySingleJokerFixedRarityStream stream);
+    MotelyFixedJokerChunkResult GetNextLegendaryJokerChunk(MotelySingleJokerFixedRarityStream stream, int count);
 
     MotelySingleJokerFixedRarityStream CreateRareTagJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags);
     MotelyFixedJokerStreamResult GetNextRareTagJoker(MotelySingleJokerFixedRarityStream stream);

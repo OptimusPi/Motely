@@ -303,7 +303,7 @@ public ref struct MotelyFilterCreationContext
         );
     }
 
-    public readonly void CacheSoulJokerStream(
+    public readonly void CacheLegendaryJokerStream(
         int ante,
         MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default,
         bool force = false

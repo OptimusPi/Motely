@@ -109,8 +109,8 @@ public static class JamlSearchBuilder
 
             throw new InvalidOperationException("JamlConfig has no clauses.");
 
-        ValidateSoulJokerClausesForMustAndShould(config.Must);
-        ValidateSoulJokerClausesForMustAndShould(config.Should);
+        ValidateLegendaryJokerClausesForMustAndShould(config.Must);
+        ValidateLegendaryJokerClausesForMustAndShould(config.Should);
 
         var allMustDescs = new List<IMotelySeedFilterDesc>();
 
@@ -200,28 +200,28 @@ public static class JamlSearchBuilder
 
     /// <summary>
     /// Fails fast on soul joker clauses whose booster sources can never hit arcana/spectral at slot ≥1
-    /// (<see cref="JamlSoulJokerStructuralValidation"/>). Skips <c>mustNot</c>: negated dead clauses are vacuously true.
+    /// (<see cref="JamlLegendaryJokerStructuralValidation"/>). Skips <c>mustNot</c>: negated dead clauses are vacuously true.
     /// </summary>
-    private static void ValidateSoulJokerClausesForMustAndShould(JamlClauseSet set)
+    private static void ValidateLegendaryJokerClausesForMustAndShould(JamlClauseSet set)
     {
         foreach (IJamlClause c in set.OrderedClauses)
-            ValidateClauseTreeForSoulJoker(c);
+            ValidateClauseTreeForLegendaryJoker(c);
     }
 
-    private static void ValidateClauseTreeForSoulJoker(IJamlClause c)
+    private static void ValidateClauseTreeForLegendaryJoker(IJamlClause c)
     {
         switch (c)
         {
             case LegendaryJokerClause lj:
-                JamlSoulJokerStructuralValidation.ValidateLegendaryJokerClauseOrThrow(lj);
+                JamlLegendaryJokerStructuralValidation.ValidateLegendaryJokerClauseOrThrow(lj);
                 return;
             case AndClause and:
                 for (int i = 0; i < and.Clauses.Length; i++)
-                    ValidateClauseTreeForSoulJoker(and.Clauses[i]);
+                    ValidateClauseTreeForLegendaryJoker(and.Clauses[i]);
                 return;
             case OrClause or:
                 for (int i = 0; i < or.Clauses.Length; i++)
-                    ValidateClauseTreeForSoulJoker(or.Clauses[i]);
+                    ValidateClauseTreeForLegendaryJoker(or.Clauses[i]);
                 return;
             default:
                 return;
@@ -531,13 +531,13 @@ public static class JamlSearchBuilder
 
                 new MotelySearchSettings<StartingDrawFilterDesc.StartingDrawFilter>(d),
 
-            NegativeSoulJokerSimdFilterDesc d =>
+            NegativeLegendaryJokerSimdFilterDesc d =>
 
-                new MotelySearchSettings<NegativeSoulJokerSimdFilterDesc.FilterStruct>(d),
+                new MotelySearchSettings<NegativeLegendaryJokerSimdFilterDesc.FilterStruct>(d),
 
-            SoulJokerShopSoulFilterDesc d =>
+            LegendaryJokerShopSoulFilterDesc d =>
 
-                new MotelySearchSettings<SoulJokerShopSoulFilterDesc.FilterStruct>(d),
+                new MotelySearchSettings<LegendaryJokerShopSoulFilterDesc.FilterStruct>(d),
 
             _ => throw new NotSupportedException(
 

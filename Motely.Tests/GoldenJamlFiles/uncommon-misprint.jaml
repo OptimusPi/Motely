@@ -16,7 +16,7 @@ should:
     score: 55
   - rareJoker: Brainstorm
     score: 50
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 45
   - tag: NegativeTag

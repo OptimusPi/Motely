@@ -97,4 +97,5 @@ public sealed class JamlSources
     public int[]? BoosterPacks { get; set; }
     public int? MinShopItem { get; set; }
     public int? MaxShopItem { get; set; }
+    public bool? RequireMega { get; set; }
 }

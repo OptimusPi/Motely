@@ -1,3 +1,6 @@
+using System.Text;
+using Bootsharp.FileSystem;
+using Motely.Analysis;
 using Motely.Filters;
 using YamlDotNet.Core;
 
@@ -11,10 +14,13 @@ namespace Motely;
 public sealed class MotelyWasmHost : IMotelyWasm
 {
     private readonly IMotelyWasmEvents _events;
+    private readonly IFileMounter _fileMounter;
+    private readonly Dictionary<string, (IFileSystem Fs, JamlFileWatcher Watcher)> _libraries = new();
 
-    public MotelyWasmHost(IMotelyWasmEvents events)
+    public MotelyWasmHost(IMotelyWasmEvents events, IFileMounter fileMounter)
     {
         _events = events;
+        _fileMounter = fileMounter;
     }
 
     public string GetVersion() => VersionInfo.Version;
@@ -325,11 +331,91 @@ public sealed class MotelyWasmHost : IMotelyWasm
     public string[] GetTallyLabels(string jaml) =>
         JamlSearchBuilder.CreatePlan(ParseJaml(jaml)).TallyLabels;
 
+    public MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
+        MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
+
     private static JamlConfig ParseJaml(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
         JamlSearchBuilder.EnsureRunnablePlan(config);
         return config;
+    }
+
+    // --- JAML Library ---
+
+    public async Task<string?> MountJamlLibrary()
+    {
+        var rootId = await _fileMounter.PickRoot(new PickOptions
+        {
+            Mode = PermissionMode.ReadWrite
+        });
+        if (rootId is null) return null;
+
+        var watcher = new JamlFileWatcher(_events, rootId);
+        var fs = await _fileMounter.Mount(rootId, watcher, new MountOptions
+        {
+            Mode = PermissionMode.ReadWrite
+        });
+        _libraries[rootId] = (fs, watcher);
+        return rootId;
+    }
+
+    public async Task UnmountJamlLibrary(string rootId)
+    {
+        if (_libraries.Remove(rootId))
+            await _fileMounter.Unmount(rootId);
+    }
+
+    public string[] GetJamlLibraryFiles(string rootId)
+    {
+        return _libraries.TryGetValue(rootId, out var lib) ? lib.Watcher.FileUris : [];
+    }
+
+    public async Task<string> LoadJamlFile(string rootId, string uri)
+    {
+        if (!_libraries.TryGetValue(rootId, out var lib))
+            throw new InvalidOperationException($"No mounted library with root '{rootId}'.");
+        var bytes = await lib.Fs.ReadFile(uri);
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    public async Task SaveJamlFile(string rootId, string uri, string content)
+    {
+        if (!_libraries.TryGetValue(rootId, out var lib))
+            throw new InvalidOperationException($"No mounted library with root '{rootId}'.");
+        await lib.Fs.WriteFile(uri, Encoding.UTF8.GetBytes(content));
+    }
+
+    private sealed class JamlFileWatcher(IMotelyWasmEvents events, string rootId) : IFileWatcher
+    {
+        private readonly Dictionary<string, bool> _files = new();
+
+        public string[] FileUris => [.. _files.Keys.Order()];
+
+        public Task HandleFileChanges(IReadOnlyList<Change> changes)
+        {
+            foreach (var c in changes)
+            {
+                if (!c.File || !IsJamlFile(c.Entry.Uri)) continue;
+
+                if (c.Added || c.Modified)
+                    _files[c.Entry.Uri] = true;
+                else if (c.Removed)
+                    _files.Remove(c.Entry.Uri);
+                else if (c.Moved)
+                {
+                    if (c.FromUri is not null) _files.Remove(c.FromUri);
+                    if (IsJamlFile(c.Entry.Uri)) _files[c.Entry.Uri] = true;
+                }
+            }
+            events.NotifyJamlLibraryChanged(rootId, FileUris);
+            return Task.CompletedTask;
+        }
+
+        private static bool IsJamlFile(string uri) =>
+            uri.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) ||
+            uri.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) ||
+            uri.EndsWith(".yml", StringComparison.OrdinalIgnoreCase);
     }
 }

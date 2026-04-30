@@ -12,6 +12,8 @@ namespace Motely.Tests;
 /// </summary>
 public class JamlCorpusRegressionTests
 {
+    private static readonly string[] LegacyKeys = ["mixedJoker", "legendaryJoker", "shopSlots"];
+
     private readonly ITestOutputHelper _output;
 
     public JamlCorpusRegressionTests(ITestOutputHelper output)
@@ -19,7 +21,7 @@ public class JamlCorpusRegressionTests
         _output = output;
     }
 
-    public static TheoryData<string> CorpusFiles
+    public static TheoryData<string> CanonicalCorpusFiles
     {
         get
         {
@@ -27,15 +29,33 @@ public class JamlCorpusRegressionTests
             var root = LocateCorpusRoot();
             foreach (var file in Directory.EnumerateFiles(root, "*.jaml", SearchOption.TopDirectoryOnly))
             {
-                data.Add(Path.GetFileName(file));
+                var jaml = File.ReadAllText(file);
+                if (!ContainsLegacyKey(jaml))
+                    data.Add(Path.GetFileName(file));
+            }
+            return data;
+        }
+    }
+
+    public static TheoryData<string> LegacyCorpusFiles
+    {
+        get
+        {
+            var data = new TheoryData<string>();
+            var root = LocateCorpusRoot();
+            foreach (var file in Directory.EnumerateFiles(root, "*.jaml", SearchOption.TopDirectoryOnly))
+            {
+                var jaml = File.ReadAllText(file);
+                if (ContainsLegacyKey(jaml))
+                    data.Add(Path.GetFileName(file));
             }
             return data;
         }
     }
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void EveryCommittedJamlFilter_ParsesClean(string fileName)
+    [MemberData(nameof(CanonicalCorpusFiles))]
+    public void EveryCanonicalCommittedJamlFilter_ParsesClean(string fileName)
     {
         var root = LocateCorpusRoot();
         var path = Path.Combine(root, fileName);
@@ -45,6 +65,34 @@ public class JamlCorpusRegressionTests
 
         Assert.True(ok, $"Failed to parse {fileName}: {error}");
         Assert.NotNull(config);
+    }
+
+    [Fact]
+    public void EveryLegacyCommittedJamlFilter_FailsWithLegacyKeyError()
+    {
+        foreach (var fileName in LegacyCorpusFiles)
+        {
+            var root = LocateCorpusRoot();
+            var path = Path.Combine(root, fileName);
+            var jaml = File.ReadAllText(path);
+
+            var ok = JamlConfigLoader.TryLoad(jaml, out _, out var error);
+
+            Assert.False(ok, $"Legacy file unexpectedly parsed: {fileName}");
+            Assert.False(string.IsNullOrWhiteSpace(error), $"Expected parse error for {fileName}");
+            Assert.Contains("Unknown property", error!, StringComparison.Ordinal);
+        }
+    }
+
+    private static bool ContainsLegacyKey(string jaml)
+    {
+        foreach (var key in LegacyKeys)
+        {
+            if (jaml.Contains($"{key}:", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string LocateCorpusRoot()

@@ -13,5 +13,5 @@ must:
 should:
   - rareJoker: Blueprint
     score: 50
-  - soulJoker: Chicot
+  - legendaryJoker: Chicot
     score: 60

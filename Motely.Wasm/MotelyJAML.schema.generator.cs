@@ -346,6 +346,7 @@ public static partial class MotelyJamlSchemaGenerator
         Path.Combine(repoRoot, "jaml.schema.json"),
         Path.Combine(repoRoot, "motely-wasm", "jaml.schema.json"),
         Path.Combine(repoRoot, "packages", "jaml-language-core", "schema", "jaml.schema.json"),
+        Path.Combine(repoRoot, "packages", "jaml-language-support", "schema", "jaml.schema.json"),
     };
 
     public static int WriteDefault(string? repoRootOverride = null, TextWriter? log = null)

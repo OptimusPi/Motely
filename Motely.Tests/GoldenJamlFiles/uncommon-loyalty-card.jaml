@@ -26,7 +26,7 @@ should:
     score: 35
   - legendaryJoker: Perkeo
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - uncommonJoker: SpaceJoker
