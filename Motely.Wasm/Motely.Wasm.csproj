@@ -9,7 +9,6 @@
         <BootsharpLlvm>true</BootsharpLlvm>
         <WasmEnableSIMD>true</WasmEnableSIMD>
         <WasmEnableThreads>false</WasmEnableThreads>
-        <BootsharpAssemblies>Bootsharp.FileSystem</BootsharpAssemblies>
         <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
     </PropertyGroup>
 

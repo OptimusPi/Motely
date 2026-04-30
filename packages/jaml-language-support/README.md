@@ -1,23 +1,24 @@
 # JAML Language Support for VS Code
 
-JAML (Jimbo's Ante Markup Language) and Jummy language support for Motely/Balatro seed search filters.
+JAML (Jimbo's Ante Markup Language) and Jummy language support for Motely/Balatro seed filters.
 
-## Features
+## What it does
 
 - Syntax highlighting for `.jaml` and `.jummy` files.
-- Snippets for common JAML filter shapes.
-- Lightweight editor diagnostics for common JAML authoring pitfalls.
-- Schema-aware completions and hovers backed by the bundled Motely-generated JAML schema.
-- Commands for opening the bundled schema and summarizing the active JAML document.
+- Schema-aware completions and hovers backed by the generated Motely JAML schema.
+- Diagnostics for common authoring mistakes.
+- Snippets for common filter shapes.
+- Commands for opening the bundled schema, summarizing the active filter, and opening the current JAML in Seed Curator.
+- `@jimbo` chat support for explaining a filter or analyzing a selected seed.
+- A status-bar shortcut that appears when a valid seed is selected.
 
-## Usage
+## Included help
 
-Open a `.jaml` file and use the Command Palette:
+- Command Palette entries for `JAML: Show Document Summary`, `JAML: Open Bundled Schema`, `JAML: Open in Seed Curator`, and `JAML: Analyze Seed`.
+- Snippets in [snippets/jaml.code-snippets](snippets/jaml.code-snippets).
+- Language configuration, syntax grammars, and the bundled schema.
 
-- `JAML: Show Document Summary`
-- `JAML: Open Bundled Schema`
-
-Example:
+## Example
 
 ```jaml
 deck: Red
@@ -32,11 +33,13 @@ should:
 
 ## Scope
 
-This extension is language tooling. It does not run seed searches. Use Motely CLI, `motely-wasm`, or seedfinder.app for search execution.
+This extension is language tooling. It does not run seed searches itself. Use Motely CLI, `motely-wasm`, the Seed Curator site, or `@jimbo /analyze` for search-oriented workflows.
 
-## Maintainers
+This repository does not use notebooks for the extension docs or tutorials. The public help surface is the README, snippets, schema, and the VS Code command/chat UI.
 
-This package intentionally keeps the Marketplace identity:
+## Package identity
+
+Marketplace identity:
 
 ```text
 pifreak.jaml-language-support
@@ -48,4 +51,4 @@ Package with:
 npx @vscode/vsce package --no-dependencies
 ```
 
-Then upload the generated `.vsix` manually in the Visual Studio Marketplace publisher portal.
+Then upload the generated `.vsix` in the Visual Studio Marketplace publisher portal.
