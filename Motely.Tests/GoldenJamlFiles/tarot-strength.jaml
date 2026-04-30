@@ -14,7 +14,7 @@ must:
 should:
   - rareJoker: Baron
     score: 70
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 65
   - commonJoker: ShootTheMoon
     score: 55
@@ -30,7 +30,7 @@ should:
     score: 35
   - tag: NegativeTag
     score: 35
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - legendaryJoker: Perkeo

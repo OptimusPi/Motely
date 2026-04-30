@@ -4,7 +4,7 @@ description: Yorick legendary joker with Merry Andy for discard scaling
 deck: Red
 stake: White
 must:
-  - soulJoker: Yorick
+  - legendaryJoker: Yorick
     antes:
       - 1
       - 2

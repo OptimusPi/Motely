@@ -87,11 +87,11 @@ public sealed class MotelyAnalyzerFilterDesc()
                 MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante);
 
                 int maxSlots = ante == 1 ? 15 : 50;
-                MotelyItem[] shopItems = new MotelyItem[maxSlots];
+                MotelyAnalyzedItem[] shopItems = new MotelyAnalyzedItem[maxSlots];
 
                 for (int i = 0; i < maxSlots; i++)
                 {
-                    shopItems[i] = ctx.GetNextShopItem(ref shopStream);
+                    shopItems[i] = new(ctx.GetNextShopItem(ref shopStream));
                 }
 
                 // Packs - Get the actual shop packs (not tag-generated ones)
@@ -110,7 +110,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                         ref state
                     );
 
-                    packs[i] = new(pack, packContent.AsArray());
+                    packs[i] = new(pack, packContent.AsArray().Select(static item => new MotelyAnalyzedItem(item)).ToArray());
                 }
 
                 // NOTE: Per-round hand draw not yet implemented - requires shuffle PRNG per round

@@ -22,7 +22,7 @@ should:
     score: 85
   - uncommonJoker: Mime
     score: 70
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 60
   - tarot: TheChariot
     score: 55
@@ -38,7 +38,7 @@ should:
     score: 45
   - tag: NegativeTag
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35
   - legendaryJoker: Perkeo

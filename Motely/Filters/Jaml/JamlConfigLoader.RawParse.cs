@@ -37,7 +37,7 @@ public static partial class JamlConfigLoader
     // means the SIMD prefilter accepts seeds it shouldn't. The 3 `Unknown*Key_IsRejected` tests
     // in JamlConfigTests pin this behaviour. Do NOT add .IgnoreUnmatchedProperties() here.
     private static readonly IDeserializer JamlFragmentDeserializer =
-        new DeserializerBuilder()
+        new StaticDeserializerBuilder(new JamlYamlContext())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())

@@ -20,15 +20,15 @@ should:
     score: 50
   - commonJoker: Cavendish
     score: 50
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 50
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 45
   - rareJoker: Brainstorm
     score: 45
   - tag: NegativeTag
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35
   - legendaryJoker: Chicot

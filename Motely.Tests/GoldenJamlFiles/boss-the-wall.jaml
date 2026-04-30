@@ -18,7 +18,7 @@ should:
     score: 55
   - rareJoker: Baron
     score: 60
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 60
   - commonJoker: Cavendish
     score: 55
@@ -32,7 +32,7 @@ should:
     score: 40
   - tag: NegativeTag
     score: 40
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 35
   - legendaryJoker: Perkeo

@@ -62,6 +62,9 @@ public class ShopItemDto
     /// <summary>Packed <see cref="Motely.MotelyItem"/> bits — stable key for sprite / asset lookup (e.g. Balatro image loader).</summary>
     [JsonPropertyName("value")]
     public int Value { get; set; }
+
+    [JsonPropertyName("matched")]
+    public bool Matched { get; set; }
 }
 
 public class PackDto
@@ -70,9 +73,10 @@ public class PackDto
     public string Type { get; set; } = "";
 
     [JsonPropertyName("items")]
-    public string[] Items { get; set; } = [];
+    public ShopItemDto[] Items { get; set; } = [];
 }
 
 [JsonSerializable(typeof(SeedAnalysisDto))]
+[JsonSerializable(typeof(MotelyJamlyzerResult))]
 [JsonSerializable(typeof(ShopItemDto))]
 public partial class AnalysisJsonContext : JsonSerializerContext { }

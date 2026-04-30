@@ -8,10 +8,10 @@ using Motely.Filters;
 /// SIMD base filter: Negative edition + legendary-rarity joker on the soul stream (antes 1–2).
 /// Legendary rarity is detected via a single bitmask check against
 /// <see cref="MotelyJokerRarity.Legendary"/> — no per-type comparisons needed.
-/// Compose with <see cref="SoulJokerShopSoulFilterDesc"/> via WithAdditionalFilter.
+/// Compose with <see cref="LegendaryJokerShopSoulFilterDesc"/> via WithAdditionalFilter.
 /// </summary>
-public readonly struct NegativeSoulJokerSimdFilterDesc(MotelyItemType? targetJoker = null)
-    : IMotelySeedFilterDesc<NegativeSoulJokerSimdFilterDesc.FilterStruct>
+public readonly struct NegativeLegendaryJokerSimdFilterDesc(MotelyItemType? targetJoker = null)
+    : IMotelySeedFilterDesc<NegativeLegendaryJokerSimdFilterDesc.FilterStruct>
 {
     public const int MinAnte = 1;
     public const int MaxAnte = 2;
@@ -19,7 +19,7 @@ public readonly struct NegativeSoulJokerSimdFilterDesc(MotelyItemType? targetJok
     public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         for (int ante = MinAnte; ante <= MaxAnte; ante++)
-            ctx.CacheSoulJokerStream(
+            ctx.CacheLegendaryJokerStream(
                 ante,
                 MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
                     | MotelyJokerFixedRarityStreamFlags.ExcludeStickers
@@ -48,7 +48,7 @@ public readonly struct NegativeSoulJokerSimdFilterDesc(MotelyItemType? targetJok
                 if (seedMask.IsAllTrue())
                     break;
 
-                var editionStream = searchContext.CreateSoulJokerStream(
+                var editionStream = searchContext.CreateLegendaryJokerStream(
                     ante,
                     MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
                         | MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
@@ -62,7 +62,7 @@ public readonly struct NegativeSoulJokerSimdFilterDesc(MotelyItemType? targetJok
                 if (negativeMask.IsAllFalse())
                     continue;
 
-                var typeStream = searchContext.CreateSoulJokerStream(
+                var typeStream = searchContext.CreateLegendaryJokerStream(
                     ante,
                     MotelyJokerFixedRarityStreamFlags.ExcludeEdition
                         | MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
@@ -88,19 +88,19 @@ public readonly struct NegativeSoulJokerSimdFilterDesc(MotelyItemType? targetJok
 }
 
 /// <summary>
-/// Additional filter after <see cref="NegativeSoulJokerSimdFilterDesc"/>:
+/// Additional filter after <see cref="NegativeLegendaryJokerSimdFilterDesc"/>:
 /// vectorized The Soul check on arcana/spectral shop packs, with scalar fallback
-/// when pack sizes diverge across lanes. Respects <see cref="SoulJokerSourceConfig"/>
+/// when pack sizes diverge across lanes. Respects <see cref="LegendaryJokerSourceConfig"/>
 /// slot targeting and <see cref="LegendarySoulMatcher"/> stream rules.
 /// </summary>
-public readonly struct SoulJokerShopSoulFilterDesc(
-    SoulJokerSourceConfig? boosterSources = null,
+public readonly struct LegendaryJokerShopSoulFilterDesc(
+    LegendaryJokerSourceConfig? boosterSources = null,
     int[]? searchAntes = null
-) : IMotelySeedFilterDesc<SoulJokerShopSoulFilterDesc.FilterStruct>
+) : IMotelySeedFilterDesc<LegendaryJokerShopSoulFilterDesc.FilterStruct>
 {
-    private static readonly int[] DefaultAntes = [NegativeSoulJokerSimdFilterDesc.MinAnte, NegativeSoulJokerSimdFilterDesc.MaxAnte];
+    private static readonly int[] DefaultAntes = [NegativeLegendaryJokerSimdFilterDesc.MinAnte, NegativeLegendaryJokerSimdFilterDesc.MaxAnte];
 
-    private static readonly SoulJokerSourceConfig DefaultAllBoosterSources = new()
+    private static readonly LegendaryJokerSourceConfig DefaultAllBoosterSources = new()
     {
         BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
@@ -108,8 +108,8 @@ public readonly struct SoulJokerShopSoulFilterDesc(
     public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // Native callers (non-JAML) default to the full booster slot range when they pass null.
-        // JAML callers pass an already-defaulted SoulJokerSourceConfig (see JamlConfigLoader.CreateSoulJokerSources).
-        SoulJokerSourceConfig normalized = boosterSources ?? DefaultAllBoosterSources;
+        // JAML callers pass an already-defaulted LegendaryJokerSourceConfig (see JamlConfigLoader.CreateLegendaryJokerSources).
+        LegendaryJokerSourceConfig normalized = boosterSources ?? DefaultAllBoosterSources;
 
         int maxPack = normalized.MaxReferencedBoosterSlot();
         int[] antes = searchAntes ?? DefaultAntes;
@@ -121,12 +121,12 @@ public readonly struct SoulJokerShopSoulFilterDesc(
     }
 
     public readonly struct FilterStruct(
-        SoulJokerSourceConfig sources,
+        LegendaryJokerSourceConfig sources,
         int maxBoosterPack,
         int[] antes
     ) : IMotelySeedFilter
     {
-        private readonly SoulJokerSourceConfig _sources = sources;
+        private readonly LegendaryJokerSourceConfig _sources = sources;
         private readonly int _maxBoosterPack = maxBoosterPack;
         private readonly int[] _antes = antes;
 
@@ -138,7 +138,7 @@ public readonly struct SoulJokerShopSoulFilterDesc(
 
             int maxP = _maxBoosterPack;
             int[] antes = _antes;
-            SoulJokerSourceConfig src = _sources;
+            LegendaryJokerSourceConfig src = _sources;
 
             if (TryVectorPath(ref ctx, src, maxP, antes, out VectorMask result))
                 return result;
@@ -158,7 +158,7 @@ public readonly struct SoulJokerShopSoulFilterDesc(
 
         private static bool TryVectorPath(
             ref MotelyVectorSearchContext ctx,
-            SoulJokerSourceConfig src,
+            LegendaryJokerSourceConfig src,
             int maxBoosterPack,
             int[] antes,
             out VectorMask hasSoulMask

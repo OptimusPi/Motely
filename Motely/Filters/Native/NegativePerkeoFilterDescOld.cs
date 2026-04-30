@@ -11,7 +11,7 @@ public struct NegativePerkeoFilterDescOld()
     public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         for (int ante = MinAnte; ante <= MaxAnte; ante++)
-            ctx.CacheSoulJokerStream(ante, MotelyJokerFixedRarityStreamFlags.ExcludeStickers);
+            ctx.CacheLegendaryJokerStream(ante, MotelyJokerFixedRarityStreamFlags.ExcludeStickers);
 
         return new FilterStruct();
     }
@@ -25,7 +25,7 @@ public struct NegativePerkeoFilterDescOld()
 
             for (int ante = MinAnte; ante <= MaxAnte; ante++)
             {
-                var jokerEditionSteam = searchContext.CreateSoulJokerStream(
+                var jokerEditionSteam = searchContext.CreateLegendaryJokerStream(
                     ante,
                     MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
                     true

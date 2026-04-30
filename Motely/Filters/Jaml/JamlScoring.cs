@@ -847,7 +847,7 @@ public static class JamlScoring
     private static int CountLegendaryJokerOccurrences(ref MotelySingleSearchContext ctx, LegendaryJokerClause clause)
     {
         int count = 0;
-        var sources = clause.Sources.NormalizeSoulJokerBoostersIfEmpty();
+        var sources = clause.Sources.NormalizeLegendaryJokerBoostersIfEmpty();
         int userMaxPack = sources.MaxReferencedBoosterSlot();
         int earlyCap = sources.EarlyAntesMaxPack;
 

@@ -841,6 +841,8 @@ public struct MotelySearchParameters
 public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     where TBaseFilter : struct, IMotelySeedFilter
 {
+    private const long MinProgressReportIntervalMs = 800;
+
     /// <summary>Shared lock for console output (replaces removed FancyConsole.ConsoleLock).</summary>
     internal static readonly object ConsoleLock = new();
 
@@ -972,6 +974,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly Action<MotelySeedScoreTally>? _scoredResultCallback;
 
     private readonly Stopwatch _elapsedTime = new();
+    private long _lastProgressReportElapsedMs = -1;
 
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
@@ -1222,6 +1225,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return;
 
         long elapsedMS = _elapsedTime.ElapsedMilliseconds;
+        if (_lastProgressReportElapsedMs >= 0
+            && elapsedMS - _lastProgressReportElapsedMs < MinProgressReportIntervalMs)
+            return;
+        _lastProgressReportElapsedMs = elapsedMS;
+
         long thisCompletedCount = CompletedBatchCount;
         long totalBatches = _plans[0].MaxBatch;
         long seedsSearched = TotalSeedsSearched;

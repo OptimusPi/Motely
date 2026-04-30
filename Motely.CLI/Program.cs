@@ -143,6 +143,11 @@ partial class Program
             "Analyze one or more seeds (comma-separated). With --output-json emits NDJSON.",
             CommandOptionType.SingleValue
         );
+        var jamlyzerOption = app.Option(
+            "--jamlyzer",
+            "Run MotelyJamlyzer for curated seed lists. Uses `seeds: [...]` from JAML or --seeds SEED1,SEED2,...",
+            CommandOptionType.NoValue
+        );
         var outputJsonOption = app.Option(
             "--output-json",
             "Output analysis as JSON (or NDJSON for multiple seeds)",
@@ -274,6 +279,29 @@ partial class Program
             if (writeJamlSchemaOption.HasValue())
             {
                 return MotelyJamlSchemaGenerator.WriteDefault(log: Console.Error);
+            }
+
+            if (jamlyzerOption.HasValue())
+            {
+                if (!jamlOption.HasValue())
+                {
+                    Console.Error.WriteLine("Error: --jamlyzer requires --jaml <path>.");
+                    return 1;
+                }
+
+                int jamlyzerThreads = threadsOption.HasValue()
+                    ? threadsOption.ParsedValue
+                    : Environment.ProcessorCount;
+
+                return ExecuteJamlyzer(
+                    jamlOption.ParsedValue,
+                    seedsOption.HasValue() ? seedsOption.ParsedValue : null,
+                    startBatchOption.HasValue() ? startBatchOption.ParsedValue : 0,
+                    endBatchOption.HasValue() ? endBatchOption.ParsedValue : -1,
+                    batchCharCountOption.ParsedValue,
+                    jamlyzerThreads,
+                    outputJsonOption.HasValue()
+                );
             }
 
             // --analyze mode — supports single seed or comma-separated batch
@@ -583,6 +611,88 @@ partial class Program
         }
     }
 
+    // ── Jamlyzer ──
+
+    static int ExecuteJamlyzer(
+        string jamlPath,
+        string? seedsCsv,
+        long startBatch,
+        long endBatch,
+        int batchCharCount,
+        int threads,
+        bool json
+    )
+    {
+        string jaml;
+        try
+        {
+            jaml = File.ReadAllText(jamlPath);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error: could not read JAML '{jamlPath}': {ex.Message}");
+            return 1;
+        }
+
+        MotelyJamlyzerResult result;
+        var explicitSeeds = !string.IsNullOrWhiteSpace(seedsCsv)
+            ? seedsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : null;
+
+        bool jamlHasSeeds = JamlConfigLoader.TryLoad(jaml, out var loadedConfig, out _)
+            && loadedConfig.Seeds.Count > 0;
+
+        if (explicitSeeds is { Length: > 0 } || jamlHasSeeds)
+        {
+            // Seed list mode - this is the intended UX for Jamlyzer (UI previews, curated lists)
+            result = MotelyJamlyzer.AnalyzeSeeds(new(jaml, explicitSeeds));
+        }
+        else
+        {
+            Console.Error.WriteLine("Error: --jamlyzer requires at least one seed.");
+            Console.Error.WriteLine("Add `seeds: [SEED1, SEED2, ...]` at the top level of your JAML file,");
+            Console.Error.WriteLine("or use `--seeds SEED1,SEED2` on the command line.");
+            return 1;
+        }
+
+        if (!string.IsNullOrEmpty(result.Error))
+        {
+            Console.Error.WriteLine($"Error: {result.Error}");
+            return 1;
+        }
+
+        if (json)
+        {
+            Console.WriteLine(
+                JsonSerializer.Serialize(result, AnalysisJsonContext.Default.MotelyJamlyzerResult)
+            );
+        }
+        else
+        {
+            Console.WriteLine(
+                $"MotelyJamlyzer: {Path.GetFileNameWithoutExtension(jamlPath)} | {result.Deck} {result.Stake}"
+            );
+            Console.WriteLine(
+                $"Seeds: {result.TotalSeedsSearched:N0} searched, {result.MatchingSeeds:N0} matched, {result.Seeds.Count:N0} analyzed"
+            );
+            if (result.CompletedBatchCount > 0)
+                Console.WriteLine($"Batches: {result.CompletedBatchCount:N0}");
+            Console.WriteLine();
+
+            foreach (var seed in result.Seeds)
+            {
+                Console.WriteLine($"=== {seed.Seed} | score {seed.Score} ===");
+                if (seed.Tallies.Length > 0)
+                    Console.WriteLine($"Tallies: {string.Join(",", seed.Tallies)}");
+                if (seed.Analysis != null)
+                    Console.Write(seed.Analysis);
+                Console.WriteLine();
+            }
+        }
+
+        return 0;
+    }
+
     // ── Analyze (batch) ──
 
     static int ExecuteAnalyzeBatch(string[] seeds, string deckName, string stakeName, bool json)
@@ -630,16 +740,23 @@ partial class Program
                                 ShopQueue = a
                                     .ShopQueue.Select(item => new ShopItemDto
                                     {
-                                        Id = item.ToString(),
-                                        Name = FormatUtils.FormatItem(item),
+                                        Id = $"ante-{a.Ante}-shop-{item.Value}",
+                                        Name = item.Name,
                                         Value = item.Value,
+                                        Matched = item.Matched,
                                     })
                                     .ToArray(),
                                 Packs = a
                                     .Packs.Select(p => new PackDto
                                     {
                                         Type = FormatUtils.FormatPackName(p.Type),
-                                        Items = p.Items.Select(FormatUtils.FormatItem).ToArray(),
+                                        Items = p.Items.Select((item, itemIndex) => new ShopItemDto
+                                        {
+                                            Id = $"ante-{a.Ante}-pack-{itemIndex}-{item.Value}",
+                                            Name = item.Name,
+                                            Value = item.Value,
+                                            Matched = item.Matched,
+                                        }).ToArray(),
                                     })
                                     .ToArray(),
                             })
@@ -709,16 +826,23 @@ partial class Program
                         ShopQueue = a
                             .ShopQueue.Select(item => new ShopItemDto
                             {
-                                Id = item.ToString(),
-                                Name = FormatUtils.FormatItem(item),
+                                Id = $"ante-{a.Ante}-shop-{item.Value}",
+                                Name = item.Name,
                                 Value = item.Value,
+                                Matched = item.Matched,
                             })
                             .ToArray(),
                         Packs = a
                             .Packs.Select(p => new PackDto
                             {
                                 Type = FormatUtils.FormatPackName(p.Type),
-                                Items = p.Items.Select(FormatUtils.FormatItem).ToArray(),
+                                Items = p.Items.Select((item, itemIndex) => new ShopItemDto
+                                {
+                                    Id = $"ante-{a.Ante}-pack-{itemIndex}-{item.Value}",
+                                    Name = item.Name,
+                                    Value = item.Value,
+                                    Matched = item.Matched,
+                                }).ToArray(),
                             })
                             .ToArray(),
                     })

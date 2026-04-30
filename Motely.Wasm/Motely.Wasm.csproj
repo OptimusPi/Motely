@@ -22,11 +22,17 @@
     <ItemGroup>
         <PackageReference Include="Bootsharp" />
         <PackageReference Include="Bootsharp.Inject" />
+        <PackageReference Include="Bootsharp.FileSystem" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../Motely/Motely.csproj" />
     </ItemGroup>
+
+    <Target Name="RegenerateJamlSchema" BeforeTargets="Publish">
+        <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)../Motely.CLI/Motely.CLI.csproj&quot; -- --write-jaml-schema"
+              WorkingDirectory="$(MSBuildThisFileDirectory).." />
+    </Target>
 
 </Project>
