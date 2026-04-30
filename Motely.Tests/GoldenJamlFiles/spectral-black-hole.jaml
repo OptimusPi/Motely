@@ -12,7 +12,7 @@ must:
       - 3
       - 4
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 85
   - uncommonJoker: Constellation
     score: 70

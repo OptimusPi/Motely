@@ -4,7 +4,7 @@ description: Chicot legendary joker disables all Boss Blind effects
 deck: Red
 stake: Gold
 must:
-  - soulJoker: Chicot
+  - legendaryJoker: Chicot
     antes:
       - 1
       - 2

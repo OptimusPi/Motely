@@ -24,9 +24,9 @@ should:
     score: 70
   - commonJoker: Cavendish
     score: 70
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 65
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 60
   - uncommonJoker: JokerStencil
     score: 50

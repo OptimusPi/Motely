@@ -22,7 +22,7 @@ should:
     score: 45
   - commonJoker: FortuneTeller
     score: 40
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 40
   - legendaryJoker: Perkeo
     score: 40

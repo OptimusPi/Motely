@@ -22,7 +22,7 @@ should:
     score: 85
   - uncommonJoker: Mime
     score: 70
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 60
   - tarot: TheChariot
     score: 55

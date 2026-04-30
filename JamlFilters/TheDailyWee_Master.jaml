@@ -183,7 +183,7 @@ should:
     score: 20
   
   # Perkeo - the ultimate crown jewel
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes: [1, 2, 3, 4]
     score: 1000
 

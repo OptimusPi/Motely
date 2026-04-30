@@ -16,7 +16,7 @@ should:
     score: 80
   - rareJoker: WeeJoker
     score: 60
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 55
   - commonJoker: WalkieTalkie
     score: 50

@@ -14,7 +14,7 @@ must:
 should:
   - rareJoker: Baron
     score: 70
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 65
   - commonJoker: ShootTheMoon
     score: 55
