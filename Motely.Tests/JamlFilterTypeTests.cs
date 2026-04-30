@@ -42,7 +42,7 @@ public class JamlFilterTypeTests
     [InlineData("commonJoker: HalfJoker")]
     [InlineData("uncommonJoker: Showman")]
     [InlineData("rareJoker: Blueprint")]
-    // mixedJoker: removed in v14.0.2 — `joker:` IS the mixed-rarity union.
+    // joker: removed in v14.0.2 — `joker:` IS the mixed-rarity union.
     [InlineData("legendaryJoker: Perkeo")]
     public void JokerRarityFilters(string clause)
     {

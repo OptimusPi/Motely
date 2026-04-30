@@ -14,6 +14,15 @@
     <type fullname="Motely.Filters.JamlConfigLoader" preserve="all" />
     <type fullname="Motely.Filters.JamlSearchBuilder" preserve="all" />
 
+    <!-- ── Bootsharp exported WASM API surface ── -->
+    <type fullname="Motely.IMotelyWasm" preserve="all" />
+    <type fullname="Motely.IMotelyWasmEvents" preserve="all" />
+    <type fullname="Motely.IMotelyWasmSearch" preserve="all" />
+    <type fullname="Motely.IMotelyWasmSearchContext" preserve="all" />
+    <type fullname="Motely.MotelyWasmHost" preserve="all" />
+    <type fullname="Motely.MotelyWasmSearch" preserve="all" />
+    <type fullname="Motely.MotelyWasmSearchContext" preserve="all" />
+
     <!-- ── JAML typed clause POCOs ── -->
     <type fullname="Motely.Filters.IJamlClause" preserve="all" />
     <type fullname="Motely.Filters.LogicClause" preserve="all" />
@@ -43,7 +52,7 @@
 
     <!-- ── JAML source configs ── -->
     <type fullname="Motely.Filters.JokerSourceConfig" preserve="all" />
-    <type fullname="Motely.Filters.SoulJokerSourceConfig" preserve="all" />
+    <type fullname="Motely.Filters.LegendaryJokerSourceConfig" preserve="all" />
     <type fullname="Motely.Filters.TarotCardSourceConfig" preserve="all" />
     <type fullname="Motely.Filters.SpectralCardSourceConfig" preserve="all" />
     <type fullname="Motely.Filters.PlanetSourceConfig" preserve="all" />
@@ -88,6 +97,19 @@
     <!-- ── Jummy compiler (uses runtime Regex) ── -->
     <type fullname="Motely.Filters.JummyCompiler" preserve="all" />
     <type fullname="Motely.Filters.JummyMumbleLine" preserve="all" />
+
+    <!-- ── Jamlyzer / analyzer DTOs returned through Bootsharp ── -->
+    <type fullname="Motely.Analysis.MotelyJamlyzerResult" preserve="all" />
+    <type fullname="Motely.Analysis.MotelyJamlyzerSeedResult" preserve="all" />
+    <type fullname="Motely.Analysis.MotelyLegacyTextAnalyzer" preserve="all" />
+    <type fullname="Motely.Analysis.MotelyAnteAnalysis" preserve="all" />
+    <type fullname="Motely.Analysis.MotelyAnalyzedItem" preserve="all" />
+    <type fullname="Motely.Analysis.MotelyBoosterPackAnalysis" preserve="all" />
+    <type fullname="Motely.Analysis.MotelyJamlyzerHighlights" preserve="all" />
+    <type fullname="Motely.Analysis.SeedAnalysisDto" preserve="all" />
+    <type fullname="Motely.Analysis.AnteAnalysisDto" preserve="all" />
+    <type fullname="Motely.Analysis.ShopItemDto" preserve="all" />
+    <type fullname="Motely.Analysis.PackDto" preserve="all" />
 
     <!-- YamlDotNet static context + SG output (JamlYamlContext) -->
     <type fullname="Motely.Filters.JamlYamlContext" preserve="all" />

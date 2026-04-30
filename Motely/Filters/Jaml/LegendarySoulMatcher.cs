@@ -32,7 +32,7 @@ internal static class LegendarySoulMatcher
         bool stopAfterFirstMatch = false
     )
     {
-        var src = clause.Sources.NormalizeSoulJokerBoostersIfEmpty();
+        var src = clause.Sources.NormalizeLegendaryJokerBoostersIfEmpty();
 
         // Default CreateBoosterPackStream(ante) uses generatedFirstPack = (ante > 1), so ante 1
         // prepends a synthetic Buffoon — indices and pack types no longer match PerkeoObservatory.
@@ -77,7 +77,7 @@ internal static class LegendarySoulMatcher
 
                 if (!soulStreamInited)
                 {
-                    soulStream = ctx.CreateSoulJokerStream(ante);
+                    soulStream = ctx.CreateLegendaryJokerStream(ante);
                     soulStreamInited = true;
                 }
 
@@ -113,7 +113,7 @@ internal static class LegendarySoulMatcher
 
                 if (!soulStreamInited)
                 {
-                    soulStream = ctx.CreateSoulJokerStream(ante);
+                    soulStream = ctx.CreateLegendaryJokerStream(ante);
                     soulStreamInited = true;
                 }
 
@@ -136,7 +136,7 @@ internal static class LegendarySoulMatcher
     internal static bool MatchAnteShopPackHasSoulOnly(
         ref MotelySingleSearchContext ctx,
         int ante,
-        SoulJokerSourceConfig src,
+        LegendaryJokerSourceConfig src,
         int maxBoosterPack
     )
     {
@@ -185,12 +185,12 @@ internal static class LegendarySoulMatcher
 
     /// <summary>
     /// Split mode (non-empty arcana and/or spectral slot lists): only those paths count.
-    /// Legacy mode: <see cref="SoulJokerSourceConfig.BoosterPacks"/> — slot matches regardless of rolled pack type
+    /// Legacy mode: <see cref="LegendaryJokerSourceConfig.BoosterPacks"/> — slot matches regardless of rolled pack type
     /// (arcana/spectral branches still gate The Soul).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool IsBoosterSlotTargetForLegendary(
-        SoulJokerSourceConfig src,
+        LegendaryJokerSourceConfig src,
         int p,
         MotelyBoosterPack pack
     )

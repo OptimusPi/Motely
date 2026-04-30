@@ -19,7 +19,7 @@ public struct LegendarySoulEditionFilterDesc(LegendaryJokerClause clause)
         Debug.Assert(_clause.Edition.HasValue, "Soul edition filter requires an edition on the clause.");
 
         foreach (var ante in _clause.Antes)
-            ctx.CacheSoulJokerStream(
+            ctx.CacheLegendaryJokerStream(
                 ante,
                 MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
                     | MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
