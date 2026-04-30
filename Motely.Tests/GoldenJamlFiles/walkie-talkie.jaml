@@ -12,11 +12,11 @@ must:
     antes: [1]
   - tarotCard: Judgement
     antes: [2]
-    shopSlots: [0, 1]
-  - soulJoker: Perkeo
+    shopItems: [0, 1]
+  - legendaryJoker: Perkeo
     antes: [2]
     sources:
-      packSlots: [0]
+      boosterPacks: [0]
 should:
   - erraticRank: Ten
     score: 10
@@ -31,7 +31,7 @@ should:
   - jokers: [Blueprint, Brainstorm, InvisibleJoker]
     antes: [8]
     sources:
-      shopSlots: [2, 3, 4, 5]
+      shopItems: [2, 3, 4, 5]
     score: 10
   - commonJoker: WalkieTalkie
     score: 40

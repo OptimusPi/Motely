@@ -24,7 +24,7 @@ should:
     score: 50
   - uncommonJoker: SteelJoker
     score: 50
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 45
   - rareJoker: Blueprint
     score: 40

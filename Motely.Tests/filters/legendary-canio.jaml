@@ -4,7 +4,7 @@ description: Canio legendary joker with Hanged Man for face card destruction sca
 deck: Red
 stake: White
 must:
-  - soulJoker: Canio
+  - legendaryJoker: Canio
     antes:
       - 1
       - 2

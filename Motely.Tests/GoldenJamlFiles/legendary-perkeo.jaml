@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["legendary", "soul", "rare-find", "negative", "planet-scaling", "deck-fix", "legendary-synergy"]
 must:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes:
       - 1
       - 2

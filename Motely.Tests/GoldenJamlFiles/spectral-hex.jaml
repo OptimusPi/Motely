@@ -24,9 +24,9 @@ should:
     score: 70
   - rareJoker: Brainstorm
     score: 65
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 65
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 60
   - uncommonJoker: Showman
     score: 40

@@ -48,7 +48,7 @@ should:
     score: 45
   - rareJoker: Baron
     score: 45
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 45
   - mixedJoker: Any
     edition: Negative

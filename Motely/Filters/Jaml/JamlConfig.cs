@@ -1140,7 +1140,7 @@ public static partial class JamlConfigLoader
             // mixedJoker:/mixedJokers: aliases were removed; `joker:` IS the mixed-rarity
             // union. The MotelyFilterItemType enum value + MixedJokerClause / MixedJokerFilterDesc
             // are scheduled for a follow-up cleanup PR; nothing routes here anymore.
-            MotelyFilterItemType.SoulJoker => new LegendaryJokerClause
+            MotelyFilterItemType.LegendaryJoker => new LegendaryJokerClause
             {
                 Label = label,
                 Score = score,
@@ -1580,7 +1580,7 @@ public static partial class JamlConfigLoader
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
 
-            case MotelyFilterItemType.SoulJoker:
+            case MotelyFilterItemType.LegendaryJoker:
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
 
@@ -1680,7 +1680,7 @@ public static partial class JamlConfigLoader
         if (c.RareJokers != null)
             return (MotelyFilterItemType.RareJoker, null);
         if (c.LegendaryJoker != null)
-            return (MotelyFilterItemType.SoulJoker, null);
+            return (MotelyFilterItemType.LegendaryJoker, null);
         if (c.Voucher != null)
             return (MotelyFilterItemType.Voucher, null);
         if (c.Vouchers != null)

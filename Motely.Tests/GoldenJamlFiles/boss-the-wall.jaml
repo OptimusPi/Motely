@@ -18,7 +18,7 @@ should:
     score: 55
   - rareJoker: Baron
     score: 60
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 60
   - commonJoker: Cavendish
     score: 55

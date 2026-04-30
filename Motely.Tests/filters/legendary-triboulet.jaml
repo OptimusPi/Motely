@@ -4,7 +4,7 @@ description: Triboulet legendary joker with Sock and Buskin for King/Queen retri
 deck: Red
 stake: White
 must:
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     antes:
       - 1
       - 2

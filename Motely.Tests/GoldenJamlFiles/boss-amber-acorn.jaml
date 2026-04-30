@@ -26,7 +26,7 @@ should:
     score: 45
   - rareJoker: Baron
     score: 50
-  - soulJoker: Triboulet
+  - legendaryJoker: Triboulet
     score: 50
   - tag: NegativeTag
     score: 40
