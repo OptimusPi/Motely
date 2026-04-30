@@ -72,6 +72,7 @@ public sealed class JamlConfig
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
     public List<string> Hashtags { get; set; } = [];
+    public List<string> Seeds { get; set; } = [];
 
     public JamlClauseSet Must { get; set; } = new();
     public JamlClauseSet Should { get; set; } = new();
@@ -544,6 +545,7 @@ public static partial class JamlConfigLoader
             };
 
             config.Hashtags = NormalizeHashtags(load.Hashtags);
+            config.Seeds = NormalizeSeeds(load.Seeds);
 
             // MUST → required filters
             PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
@@ -603,6 +605,7 @@ public static partial class JamlConfigLoader
                 Deck = deck,
                 Stake = stake,
             };
+            config.Seeds = NormalizeSeeds(load.Seeds);
 
             PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
             PopulateClauses(config.Should, load.Should, defaultAntes, load.Defaults);
@@ -1772,6 +1775,27 @@ public static partial class JamlConfigLoader
             tag = tag.ToLowerInvariant();
             if (seen.Add(tag))
                 normalized.Add(tag);
+        }
+
+        return normalized;
+    }
+
+    private static List<string> NormalizeSeeds(List<string>? seeds)
+    {
+        if (seeds is not { Count: > 0 })
+            return [];
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var normalized = new List<string>();
+
+        foreach (var entry in seeds)
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+                continue;
+
+            var seed = entry.Trim().ToUpperInvariant().Replace('0', 'O');
+            if (seen.Add(seed))
+                normalized.Add(seed);
         }
 
         return normalized;
