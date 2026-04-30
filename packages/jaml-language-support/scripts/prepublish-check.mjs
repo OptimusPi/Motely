@@ -5,12 +5,14 @@ const requiredFiles = [
   "package.json",
   "README.md",
   "language-configuration.json",
-  "src/extension.cjs",
+  "out/extension.js",
   "syntaxes/jaml.tmLanguage.json",
   "syntaxes/jummy.tmLanguage.json",
   "snippets/jaml.code-snippets",
   "schema/jaml.schema.json",
-  "images/icon.ico"
+  "images/icon.ico",
+  "vendor/jaml-lsp-server/out/server.js",
+  "vendor/jaml-lsp-server/node_modules/motely-wasm/index.mjs"
 ];
 
 for (const file of requiredFiles) {
