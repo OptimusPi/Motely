@@ -14,7 +14,7 @@ Must:
   - joker: Hack
     antes: [1, 2]
 Should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes: [1,2,3,4]
   - joker: Showman
     antes: [1,2]

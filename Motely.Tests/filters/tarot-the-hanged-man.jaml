@@ -13,5 +13,5 @@ must:
 should:
   - uncommonJoker: Erosion
     score: 50
-  - soulJoker: Canio
+  - legendaryJoker: Canio
     score: 45

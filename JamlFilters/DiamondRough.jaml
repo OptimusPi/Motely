@@ -6,7 +6,7 @@ must:
     edition: Negative
     stickers:
       - Eternal
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
 should:
   - joker: RoughGem
     score: 3

@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["legendary", "soul", "rare-find", "copy", "negative", "discard", "legendary-synergy"]
 must:
-  - soulJoker: Yorick
+  - legendaryJoker: Yorick
     antes:
       - 1
       - 2

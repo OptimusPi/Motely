@@ -2,12 +2,12 @@ using Bootsharp;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
 
-[assembly: JSExport(typeof(Motely.IMotelyWasm))]
-[assembly: JSImport([
+[assembly: Export(typeof(Motely.IMotelyWasm))]
+[assembly: Import([
     typeof(Motely.IMotelyWasmEvents),
     typeof(Bootsharp.FileSystem.IFileMounter)
 ])]
-[assembly: JSPreferences(Space = [
+[assembly: Preferences(Space = [
     @"^Motely\.Analysis\.(\S+)", "$1",
     @"^Motely\.(\S+)", "$1"
 ])]

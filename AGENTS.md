@@ -80,7 +80,7 @@ Public schema contract goals:
 - Roll criteria like `luckyMoney`, `luckyMult`, and `wheelOfFortune` are explicit keys.
 - Public `event` is reserved for an advanced string/pseudohash-style criterion.
 - Public schema must not expose runtime-only/internal fields such as `aesthetics` or `earlyAntesMaxPack`.
-- Prefer `legendaryJoker`; do not reintroduce `soulJoker` as public syntax.
+- Prefer `legendaryJoker`; do not reintroduce `legendaryJoker` as public syntax.
 
 Regenerate schema with:
 

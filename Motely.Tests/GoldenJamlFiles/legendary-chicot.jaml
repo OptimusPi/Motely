@@ -5,7 +5,7 @@ deck: Red
 stake: Gold
 hashtags: ["legendary", "soul", "rare-find", "copy", "negative", "planet-scaling", "face-cards", "legendary-synergy"]
 must:
-  - soulJoker: Chicot
+  - legendaryJoker: Chicot
     antes:
       - 1
       - 2
