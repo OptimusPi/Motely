@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import SearchWorker from "./searchWorker.ts?worker&inline";
+import SearchWorker from "./searchWorker.js?worker&inline";
 
 export interface SearchResult {
   seed: string;
