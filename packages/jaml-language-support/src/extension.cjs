@@ -1,13 +1,324 @@
+/**
+ * JAML Language Support — VS Code Extension
+ *
+ * - Starts the jaml-lsp-server as a child process (LSP over Node IPC)
+ * - Registers the Balatro Seed Curator MCP server into Copilot Chat
+ * - Keeps syntax highlighting, snippets, and commands
+ */
+
+"use strict";
+
 const vscode = require("vscode");
 const path = require("path");
-const fs = require("fs");
+const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
 
-const JAML_SELECTOR = [{ language: "jaml", scheme: "file" }, { language: "jaml", scheme: "untitled" }];
-const JUMMY_SELECTOR = [{ language: "jummy", scheme: "file" }, { language: "jummy", scheme: "untitled" }];
-const DIAGNOSTIC_SOURCE = "jaml-language-support";
+const MCP_SERVER_ID = "balatro-seed-curator";
+const MCP_SERVER_URL = "https://mcp.seedfinder.app/mcp";
+
+let client;
 
 function activate(context) {
-  const core = loadLanguageCore(context);
+  startLspClient(context);
+  registerMcpServer(context);
+  registerCommands(context);
+  registerChatParticipant(context);
+  registerSeedAnalyzer(context);
+}
+
+function deactivate() {
+  return client?.stop();
+}
+
+// ---------------------------------------------------------------------------
+// LSP client
+// ---------------------------------------------------------------------------
+function startLspClient(context) {
+  const serverModule = context.asAbsolutePath(
+    path.join("vendor", "jaml-lsp-server", "out", "server.js")
+  );
+
+  const serverOptions = {
+    run: { module: serverModule, transport: TransportKind.ipc },
+    debug: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: { execArgv: ["--nolazy", "--inspect=6099"] },
+    },
+  };
+
+  const clientOptions = {
+    documentSelector: [
+      { scheme: "file", language: "jaml" },
+      { scheme: "untitled", language: "jaml" },
+    ],
+    synchronize: {
+      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.jaml"),
+    },
+  };
+
+  client = new LanguageClient(
+    "jaml-language-server",
+    "JAML Language Server",
+    serverOptions,
+    clientOptions
+  );
+
+  client.start();
+  context.subscriptions.push(client);
+}
+
+// ---------------------------------------------------------------------------
+// MCP server registration (VS Code 1.99+)
+// Registers Balatro Seed Curator so Copilot Chat gets it for free.
+// ---------------------------------------------------------------------------
+function registerMcpServer(context) {
+  if (!vscode.lm?.registerMcpServerDefinitionProvider) {
+    return; // older VS Code — skip silently
+  }
+
+  const provider = {
+    provideMcpServerDefinitions() {
+      return [
+        new vscode.McpHttpServerDefinition(
+          "Balatro Seed Curator",
+          vscode.Uri.parse(MCP_SERVER_URL)
+        ),
+      ];
+    },
+  };
+
+  context.subscriptions.push(
+    vscode.lm.registerMcpServerDefinitionProvider(MCP_SERVER_ID, provider)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Commands
+// ---------------------------------------------------------------------------
+function registerCommands(context) {
+  context.subscriptions.push(
+    vscode.commands.registerCommand("jaml.openInCurator", () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "jaml") {
+        vscode.window.showInformationMessage("Open a .jaml file first.");
+        return;
+      }
+      const encoded = encodeURIComponent(editor.document.getText());
+      vscode.env.openExternal(
+        vscode.Uri.parse(`https://jammy.seedfinder.app/?jaml=${encoded}`)
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("jaml.openSchema", () => {
+      const schemaPath = path.join(context.extensionPath, "schema", "jaml.schema.json");
+      vscode.workspace
+        .openTextDocument(schemaPath)
+        .then((doc) => vscode.window.showTextDocument(doc));
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("jaml.showDocumentSummary", () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "jaml") {
+        vscode.window.showInformationMessage("Open a .jaml file first.");
+        return;
+      }
+      const text = editor.document.getText();
+      const must = countItems(text, "must");
+      const should = countItems(text, "should");
+      const mustNot = countItems(text, "mustNot");
+      const diags = vscode.languages.getDiagnostics(editor.document.uri).length;
+      vscode.window.showInformationMessage(
+        `JAML: must ${must}  should ${should}  mustNot ${mustNot}  diagnostics ${diags}`
+      );
+    })
+  );
+}
+
+function countItems(text, section) {
+  const pattern = new RegExp(
+    `^${section}:\\s*\\r?\\n([\\s\\S]*?)(?=^[A-Za-z][A-Za-z0-9]*:\\s|$)`,
+    "m"
+  );
+  const match = text.match(pattern);
+  if (!match) return 0;
+  return (match[1].match(/^\s*-\s+/gm) || []).length;
+}
+
+// ---------------------------------------------------------------------------
+// Chat participant — @jimbo
+// VS Code 1.97+ Language Model API
+// ---------------------------------------------------------------------------
+function registerChatParticipant(context) {
+  if (!vscode.chat?.createChatParticipant) return; // VS Code < 1.97
+
+  const participant = vscode.chat.createChatParticipant(
+    "jaml.jimbo",
+    handleJimboChat
+  );
+  participant.iconPath = vscode.Uri.joinPath(
+    context.extensionUri,
+    "images",
+    "icon.ico"
+  );
+  context.subscriptions.push(participant);
+}
+
+async function handleJimboChat(request, _context, stream, token) {
+  const editor = vscode.window.activeTextEditor;
+  const isJaml = editor?.document.languageId === "jaml";
+
+  let userPrompt = request.prompt;
+
+  if (request.command === "explain") {
+    if (!isJaml) {
+      stream.markdown("Open a `.jaml` file first, then try `@jimbo /explain` again.");
+      return;
+    }
+    userPrompt =
+      `Explain this JAML filter in plain English — what kind of Balatro seeds would it match?\n\`\`\`yaml\n${editor.document.getText()}\n\`\`\``;
+  } else if (request.command === "search") {
+    if (!isJaml) {
+      stream.markdown("Open a `.jaml` file first, then try `@jimbo /search` again.");
+      return;
+    }
+    try {
+      const motelyMod = await import("motely-wasm");
+      const motely = motelyMod.MotelyWasm ?? motelyMod.default ?? motelyMod;
+      if (typeof motely.initialize === "function") await motely.initialize();
+      const text = editor.document.getText();
+      const labels = motely.getTallyLabels(text) ?? [];
+      const batchResult = await motely.runSequentialSearchBatch(text, 6, 0n, 500000n, 10);
+      
+      if (!batchResult || !batchResult.results || batchResult.results.length === 0) {
+        stream.markdown("No results found in a quick scan of the first 500,000 seeds.");
+        return;
+      }
+      
+      let md = `**Quick Search Results** *(First ${batchResult.results.length} found)*\n\n`;
+      md += `| Seed | Score | ${labels.join(" | ")} |\n`;
+      md += `|---|---|${labels.map(() => "---").join("|")} |\n`;
+      for (const hit of batchResult.results) {
+        md += `| **${hit.seed}** | ${hit.score} | ${Array.from(hit.tallyColumns).join(" | ")} |\n`;
+      }
+      stream.markdown(md);
+    } catch (err) {
+      stream.markdown(`Error running search: ${err?.message ?? err}`);
+    }
+    return; // Don't forward this to Copilot, we handle it natively!
+  } else if (request.command === "analyze") {
+    const sel = editor?.document.getText(editor.selection)?.trim() ?? "";
+    const seed = (sel || request.prompt.trim()).toUpperCase();
+    if (!seed || !/^[1-9A-Z]{1,8}$/.test(seed)) {
+      stream.markdown(
+        "Select or type a valid Balatro seed (1–8 characters, `[1-9A-Z]`), then try again.\n\nExample: `@jimbo /analyze 4CJQV`"
+      );
+      return;
+    }
+    userPrompt = `Analyze the Balatro seed **${seed}**: what jokers, bosses, and notable items would appear? What deck/strategy might work well?`;
+  }
+
+  const models = await vscode.lm.selectChatModels({ vendor: "copilot" });
+  if (!models.length) {
+    stream.markdown(
+      "No Copilot language model available. Install the GitHub Copilot extension and sign in."
+    );
+    return;
+  }
+
+  const jamlSnippet = isJaml
+    ? `\n\nThe user has this JAML filter open:\n\`\`\`yaml\n${editor.document.getText()}\n\`\`\``
+    : "";
+
+  const systemPrompt =
+    `You are Jimbo, the mascot and expert assistant for JAML (Jimbo's Ante Markup Language) — the YAML-based filter language for Motely, a Balatro seed search engine. Help users write, understand, and improve JAML filters. Be concise and practical.${jamlSnippet}`;
+
+  const messages = [
+    vscode.LanguageModelChatMessage.User(systemPrompt),
+    vscode.LanguageModelChatMessage.User(
+      userPrompt || "Hello! How can you help me with JAML?"
+    ),
+  ];
+
+  try {
+    const response = await models[0].sendRequest(messages, {}, token);
+    for await (const chunk of response.text) {
+      stream.markdown(chunk);
+    }
+  } catch (err) {
+    if (err?.name === "Cancelled") return;
+    stream.markdown(`Language model error: ${err?.message ?? String(err)}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Seed analyzer — status bar button + command
+// When selection looks like a Balatro seed ([1-9A-Z], 1–8 chars), the status
+// bar lights up and right-click / command palette offer "Analyze Seed".
+// ---------------------------------------------------------------------------
+function registerSeedAnalyzer(context) {
+  const statusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100
+  );
+  statusBar.command = "jaml.analyzeSeed";
+  statusBar.tooltip = "Open this seed in Balatro Seed Curator";
+  context.subscriptions.push(statusBar);
+
+  const refresh = () => {
+    const seed = getSelectedSeed();
+    if (seed) {
+      statusBar.text = `$(search) Analyze ${seed}`;
+      statusBar.show();
+    } else {
+      statusBar.hide();
+    }
+  };
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeTextEditorSelection(refresh)
+  );
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(refresh)
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("jaml.analyzeSeed", async () => {
+      let seed = getSelectedSeed();
+      if (!seed) {
+        seed = await vscode.window.showInputBox({
+          prompt: "Enter a Balatro seed to analyze",
+          placeHolder: "e.g. 4CJQV  (1–8 chars, A-Z and 1-9)",
+          validateInput: (v) =>
+            /^[1-9A-Z]{1,8}$/i.test(v.trim())
+              ? undefined
+              : "Must be 1–8 characters using A-Z and 1-9",
+        });
+        if (!seed) return;
+        seed = seed.trim().toUpperCase();
+      }
+      vscode.env.openExternal(
+        vscode.Uri.parse(
+          `https://jammy.seedfinder.app/?seed=${encodeURIComponent(seed)}`
+        )
+      );
+    })
+  );
+}
+
+function getSelectedSeed() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) return null;
+  const sel = editor.document.getText(editor.selection).trim().toUpperCase();
+  return /^[1-9A-Z]{1,8}$/.test(sel) ? sel : null;
+}
+
+// --- legacy dead code below this line, kept only for reference, never called ---
+function _unused_activate(context) {
+  const core = _unused_loadLanguageCore(context);
   const diagnostics = vscode.languages.createDiagnosticCollection("jaml");
   context.subscriptions.push(diagnostics);
 
@@ -27,174 +338,6 @@ function activate(context) {
   context.subscriptions.push(vscode.workspace.onDidCloseTextDocument(document => diagnostics.delete(document.uri)));
   context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(refreshActiveDocument));
 
-  context.subscriptions.push(vscode.languages.registerCompletionItemProvider(JAML_SELECTOR, createCompletionProvider(context), " ", "\n", ":"));
-  context.subscriptions.push(vscode.languages.registerHoverProvider(JAML_SELECTOR, createHoverProvider(context)));
-  context.subscriptions.push(vscode.languages.registerCodeActionsProvider(JAML_SELECTOR, createCodeActionProvider(), { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }));
-
-  context.subscriptions.push(vscode.commands.registerCommand("jaml.showDocumentSummary", () => showDocumentSummary(core)));
-  context.subscriptions.push(vscode.commands.registerCommand("jaml.openSchema", () => openBundledSchema(context)));
-}
-
-function deactivate() { }
-
-function loadLanguageCore(context) {
-  const corePath = path.join(context.extensionPath, "vendor", "jaml-language-core", "index.js");
-  if (!fs.existsSync(corePath)) {
-    return undefined;
-  }
-
-  const source = fs.readFileSync(corePath, "utf8");
-  const exports = {};
-  const transformed = source.replace(/export const /g, "const ").replace(/export function /g, "function ");
-  const footer = "\nObject.assign(exports, { JAML_CRITERION_SECTION_KEYS, analyzeJamlText });";
-  Function("exports", `${transformed}${footer}`)(exports);
-  return exports;
-}
-
-function updateDiagnostics(document, collection, core) {
-  if (document.languageId !== "jaml") {
-    return;
-  }
-
-  const diagnostics = [];
-  if (core && typeof core.analyzeJamlText === "function") {
-    for (const diagnostic of core.analyzeJamlText(document.getText())) {
-      diagnostics.push(toVsCodeDiagnostic(diagnostic));
-    }
-  }
-
-  collection.set(document.uri, diagnostics);
-}
-
-function toVsCodeDiagnostic(diagnostic) {
-  const range = new vscode.Range(
-    diagnostic.range.start.line,
-    diagnostic.range.start.character,
-    diagnostic.range.end.line === Number.MAX_SAFE_INTEGER ? diagnostic.range.start.line : diagnostic.range.end.line,
-    diagnostic.range.end.character === Number.MAX_SAFE_INTEGER ? 200 : diagnostic.range.end.character
-  );
-  const result = new vscode.Diagnostic(range, diagnostic.message, toSeverity(diagnostic.severity));
-  result.source = diagnostic.source || DIAGNOSTIC_SOURCE;
-  result.code = diagnostic.code;
-  return result;
-}
-
-function toSeverity(severity) {
-  switch (severity) {
-    case "error": return vscode.DiagnosticSeverity.Error;
-    case "warning": return vscode.DiagnosticSeverity.Warning;
-    case "information": return vscode.DiagnosticSeverity.Information;
-    case "hint": return vscode.DiagnosticSeverity.Hint;
-    default: return vscode.DiagnosticSeverity.Information;
-  }
-}
-
-function createCompletionProvider(context) {
-  return {
-    provideCompletionItems(document, position) {
-      const linePrefix = document.lineAt(position).text.slice(0, position.character);
-      if (/^\s*$/.test(linePrefix)) {
-        return rootCompletions();
-      }
-      return criterionCompletions(context);
-    }
-  };
-}
-
-function rootCompletions() {
-  return ["deck", "stake", "must", "should", "mustNot", "defaults"].map(key => {
-    const item = new vscode.CompletionItem(key, vscode.CompletionItemKind.Property);
-    item.insertText = `${key}: `;
-    return item;
-  });
-}
-
-function criterionCompletions(context) {
-  const schema = readSchema(context);
-  const properties = schema?.$defs?.JamlCriterion?.properties || {};
-  return Object.keys(properties).sort().map(key => {
-    const item = new vscode.CompletionItem(key, vscode.CompletionItemKind.Property);
-    item.insertText = `${key}: `;
-    const description = properties[key].description;
-    if (description) {
-      item.documentation = new vscode.MarkdownString(description);
-    }
-    return item;
-  });
-}
-
-function createHoverProvider(context) {
-  return {
-    provideHover(document, position) {
-      const range = document.getWordRangeAtPosition(position, /[A-Za-z][A-Za-z0-9]*/);
-      if (!range) {
-        return undefined;
-      }
-      const word = document.getText(range);
-      const schema = readSchema(context);
-      const criterion = schema?.$defs?.JamlCriterion?.properties?.[word];
-      if (criterion) {
-        return new vscode.Hover(new vscode.MarkdownString(`**JAML criterion** \`${word}\``), range);
-      }
-      if (["must", "should", "mustNot"].includes(word)) {
-        return new vscode.Hover(new vscode.MarkdownString(`**JAML section** \`${word}\` uses the shared \`JamlCriterion\` shape.`), range);
-      }
-      return undefined;
-    }
-  };
-}
-
-function createCodeActionProvider() {
-  return {
-    provideCodeActions(document, range, context) {
-      return context.diagnostics
-        .filter(diagnostic => diagnostic.source === "jaml-language-core")
-        .map(diagnostic => {
-          const action = new vscode.CodeAction("Show JAML summary", vscode.CodeActionKind.QuickFix);
-          action.command = { command: "jaml.showDocumentSummary", title: "Show JAML summary" };
-          action.diagnostics = [diagnostic];
-          return action;
-        });
-    }
-  };
-}
-
-function showDocumentSummary(core) {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || editor.document.languageId !== "jaml") {
-    vscode.window.showInformationMessage("Open a .jaml file first.");
-    return;
-  }
-
-  const text = editor.document.getText();
-  const warnings = core && typeof core.analyzeJamlText === "function" ? core.analyzeJamlText(text).length : 0;
-  const must = countSectionItems(text, "must");
-  const should = countSectionItems(text, "should");
-  const mustNot = countSectionItems(text, "mustNot");
-  vscode.window.showInformationMessage(`JAML summary: must ${must}, should ${should}, mustNot ${mustNot}, editor diagnostics ${warnings}.`);
-}
-
-function countSectionItems(text, section) {
-  const sectionPattern = new RegExp(`^${section}:\\s*\\r?\\n([\\s\\S]*?)(?=^[A-Za-z][A-Za-z0-9]*:\\s*$|$)`, "m");
-  const match = text.match(sectionPattern);
-  if (!match) {
-    return 0;
-  }
-  return (match[1].match(/^\s*-\s+/gm) || []).length;
-}
-
-function openBundledSchema(context) {
-  const schemaPath = path.join(context.extensionPath, "schema", "jaml.schema.json");
-  vscode.workspace.openTextDocument(schemaPath).then(document => vscode.window.showTextDocument(document));
-}
-
-function readSchema(context) {
-  const schemaPath = path.join(context.extensionPath, "schema", "jaml.schema.json");
-  try {
-    return JSON.parse(fs.readFileSync(schemaPath, "utf8"));
-  } catch {
-    return undefined;
-  }
 }
 
 module.exports = { activate, deactivate };
