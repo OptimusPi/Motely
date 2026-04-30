@@ -13,10 +13,10 @@ must:
 should:
   - erraticRank: Two
     score: 1
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes: [1]
     score: 1000
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     antes: [2]
     score: 500
   - joker: WeeJoker

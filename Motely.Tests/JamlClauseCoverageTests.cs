@@ -210,7 +210,7 @@ public class JammyClauseCoverageTests
     [Fact]
     public void Clause_Joker_MatchesJammy_MixedRarity()
     {
-        // v14.0.2: `joker:` IS the mixed-rarity union (replaces removed `mixedJoker:`).
+        // v14.0.2: `joker:` IS the mixed-rarity union (replaces removed `joker:`).
         var analysis = AnalyzeJammy();
         var hit = FindShopItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.Joker);
         Assert.True(hit.HasValue, "Expected at least one joker in JAMMY analysis");
@@ -228,7 +228,7 @@ public class JammyClauseCoverageTests
     }
 
     [Fact]
-    public void Clause_SoulJoker_ExecutesForJammy()
+    public void Clause_LegendaryJoker_ExecutesForJammy()
     {
         var legendary = Enum
             .GetValues<MotelyJoker>()

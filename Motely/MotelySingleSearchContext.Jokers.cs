@@ -204,7 +204,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
         };
     }
 
-    public MotelySingleJokerFixedRarityStream CreateSoulJokerStream(
+    public MotelySingleJokerFixedRarityStream CreateLegendaryJokerStream(
         int ante,
         MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default,
         bool isCached = false

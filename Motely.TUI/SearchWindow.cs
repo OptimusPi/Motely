@@ -308,33 +308,22 @@ public class SearchWindow : Window
 
             Application.Invoke(() => EnsureTallyColumns(scoreTallyColumns));
 
-            if (hasStructuredScores)
-            {
-                settings.WithScoredResultCallback(tally =>
-                {
-                    // Match Motely.CLI: cutoff gates BOTH sink and display.
-                    if (!PassesCutoff(tally.Score))
-                        return;
 
-                    _activeSink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
-
-                    var resultCount = Interlocked.Increment(ref _resultCount);
-                    var seed = tally.Seed;
-                    var score = tally.Score;
-                    var tallies = tally.TallyValuesSpan.ToArray();
-                    Application.Invoke(() => AppendRow(resultCount, seed, score, tallies));
-                });
-            }
-            else
+            settings.WithScoredResultCallback(tally =>
             {
-                settings.WithSeedMatchCallback(line =>
-                {
-                    _activeSink?.AppendSeed(line);
-                    var resultCount = Interlocked.Increment(ref _resultCount);
-                    var captured = line;
-                    Application.Invoke(() => AppendRow(resultCount, captured, 0, Array.Empty<int>()));
-                });
-            }
+                // Match Motely.CLI: cutoff gates BOTH sink and display.
+                if (!PassesCutoff(tally.Score))
+                    return;
+
+                _activeSink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
+
+                var resultCount = Interlocked.Increment(ref _resultCount);
+                var seed = tally.Seed;
+                var score = tally.Score;
+                var tallies = tally.TallyValuesSpan.ToArray();
+                Application.Invoke(() => AppendRow(resultCount, seed, score, tallies));
+            });
+            
 
             Application.Invoke(() =>
             {

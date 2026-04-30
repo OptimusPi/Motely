@@ -10,7 +10,7 @@ public enum MotelyFilterItemType
     UncommonJoker,
     RareJoker,
     MixedJoker,
-    SoulJoker,
+    LegendaryJoker,
     TarotCard,
     PlanetCard,
     SpectralCard,

@@ -28,10 +28,10 @@ should:
     score: 55
   - legendaryJoker: Canio
     score: 50
-  - mixedJoker: Any
+  - joker: Any
     edition: Polychrome
     score: 30
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 30
   - tag: NegativeTag

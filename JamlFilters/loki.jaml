@@ -8,7 +8,7 @@ must:
       edition: Polychrome
   - joker: Baron
   - joker: Mime
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
 should:
   - jokers: [Blueprint, Brainstorm]
   - standardCard:

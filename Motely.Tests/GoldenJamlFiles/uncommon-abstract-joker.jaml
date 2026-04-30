@@ -12,7 +12,7 @@ must:
       - 3
       - 4
 should:
-  - mixedJoker: Any
+  - joker: Any
     edition: Negative
     score: 75
   - tag: NegativeTag

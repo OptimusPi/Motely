@@ -2,13 +2,10 @@ using Bootsharp;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
 
-[assembly: JSExport(typeof(Motely.IMotelyWasm))]
-[assembly: JSImport([
-    typeof(Motely.IMotelyWasmEvents)
-])]
-[assembly: JSPreferences(Space = [
-    @"^Motely\.Analysis\.(\S+)", "$1",
-    @"^Motely\.(\S+)", "$1"
+[assembly: Export(typeof(Motely.IMotelyWasm))]
+[assembly: Import([
+    typeof(Motely.IMotelyWasmEvents),
+    typeof(Bootsharp.FileSystem.IFileMounter)
 ])]
 
 new ServiceCollection()

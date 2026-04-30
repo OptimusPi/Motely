@@ -13,5 +13,5 @@ must:
 should:
   - uncommonJoker: MerryAndy
     score: 50
-  - soulJoker: Yorick
+  - legendaryJoker: Yorick
     score: 45

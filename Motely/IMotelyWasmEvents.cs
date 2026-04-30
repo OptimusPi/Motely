@@ -6,4 +6,5 @@ public interface IMotelyWasmEvents
     void NotifyResult(string seed, int score, int[] tallyColumns);
     void NotifyComplete(string status, long totalSeedsSearched,
         long matchingSeeds);
+    void NotifyJamlLibraryChanged(string rootId, string[] fileUris);
 }

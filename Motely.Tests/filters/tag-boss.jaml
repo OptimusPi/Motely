@@ -11,5 +11,5 @@ must:
       - 3
       - 4
 should:
-  - soulJoker: Chicot
+  - legendaryJoker: Chicot
     score: 40

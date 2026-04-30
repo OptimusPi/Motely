@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     score: 100
-  - soulJoker: Chicot
+  - legendaryJoker: Chicot
     score: 90

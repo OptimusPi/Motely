@@ -27,7 +27,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
         [MethodImpl(
             MethodImplOptions.AggressiveInlining
         )]
-        public static int CheckAnteForSoulJoker(
+        public static int CheckAnteForLegendaryJoker(
             int ante,
             ref MotelySingleSearchContext searchContext
         )
@@ -38,7 +38,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
             );
             ;
             MotelySingleSpectralStream spectralStream = default;
-            MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateSoulJokerStream(
+            MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateLegendaryJokerStream(
                 ante
             );
             MotelySingleBoosterPackStream boosterPackStream = default;
@@ -196,11 +196,11 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                 (ref MotelySingleSearchContext searchContext) =>
                 {
                     // Real verify step
-                    int score1 = CheckAnteForSoulJoker(hAnte - 1, ref searchContext);
+                    int score1 = CheckAnteForLegendaryJoker(hAnte - 1, ref searchContext);
 
                     if (score1 < 110)
                         return false;
-                    int score2 = CheckAnteForSoulJoker(hAnte, ref searchContext);
+                    int score2 = CheckAnteForLegendaryJoker(hAnte, ref searchContext);
 
                     if (score1 + score2 >= 111)
                     {
