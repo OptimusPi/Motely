@@ -56,7 +56,7 @@ export default function JamlBuilder() {
 
         try {
             // Import worker using Vite's ?worker syntax
-            const Worker = (await import('@/hooks/searchWorker?worker')).default;
+            const Worker = (await import('../../hooks/searchWorker?worker')).default;
             const worker = new Worker();
             workerRef.current = worker;
 
