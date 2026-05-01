@@ -45,7 +45,7 @@ const __dir = __dirname;
 
 function loadSchema() {
   try {
-    const schemaPath = join(__dir, "..", "..", "jaml-language-core", "schema", "jaml.schema.json");
+    const schemaPath = join(__dir, "..", "..", "..", "schema", "jaml.schema.json");
     return JSON.parse(readFileSync(schemaPath, "utf8"));
   } catch {
     return null;
@@ -61,9 +61,9 @@ async function getMotely() {
   if (_motely) return _motely;
   try {
     const mod = await __importMotelyWasm();
-    const instance = mod.MotelyWasm ?? mod.default ?? mod;
-    if (typeof instance?.initialize === "function") await instance.initialize();
-    _motely = instance;
+    if (typeof mod.default?.boot === "function") await mod.default.boot();
+    else if (typeof mod.default?.initialize === "function") await mod.default.initialize();
+    _motely = mod.MotelyWasm ?? mod.default ?? mod;
   } catch (e) {
     process.stderr.write(`[JAML LSP] motely-wasm unavailable: ${e.message}\n`);
   }
