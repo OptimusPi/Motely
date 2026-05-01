@@ -1,0 +1,12 @@
+dateCreated: 2025-12-25
+name: OopsAll6s ante 1 and Ankh to duplicate it in ante 1 or 2
+author: pifreak
+deck: Red
+stake: White
+must:
+  - joker: OopsAll6s
+    antes: [1]
+mustNot: []
+should:
+  - spectralCard: Ankh
+    antes: [1, 2]

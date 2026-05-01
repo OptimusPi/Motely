@@ -1,0 +1,39 @@
+name: Sigil Flush Build
+author: jammy
+description: Sigil spectral with Blackboard for suit conversion to Flush
+deck: Red
+stake: White
+hashtags: ["spectral", "consumable", "copy", "negative", "flush", "planet-scaling", "probability", "dark-suits", "legendary-synergy"]
+must:
+  - spectral: Sigil
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Blackboard
+    score: 70
+  - uncommonJoker: SmearedJoker
+    score: 55
+  - uncommonJoker: FlowerPot
+    score: 45
+  - uncommonJoker: Bloodstone
+    score: 40
+  - uncommonJoker: Arrowhead
+    score: 40
+  - uncommonJoker: OnyxAgate
+    score: 40
+  - uncommonJoker: RoughGem
+    score: 40
+  - uncommonJoker: SeeingDouble
+    score: 35
+  - rareJoker: Blueprint
+    score: 35
+  - tag: NegativeTag
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 30

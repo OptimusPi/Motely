@@ -1,0 +1,43 @@
+name: Driver's License Enhanced
+author: jammy
+description: Driver's License rare joker with The World for 16+ enhanced cards
+deck: Red
+stake: White
+hashtags: ["joker", "rare-joker", "copy", "negative", "scaling", "planet-scaling", "stone", "glass", "steel", "legendary-synergy"]
+must:
+  - rareJoker: DriversLicense
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - legendaryJoker: Perkeo
+    score: 60
+  - tarot: TheChariot
+    score: 60
+  - tarot: TheWorld
+    score: 55
+  - tarot: Justice
+    score: 55
+  - tarot: TheEmpress
+    score: 50
+  - uncommonJoker: MarbleJoker
+    score: 45
+  - tarot: TheHierophant
+    score: 45
+  - tarot: TheMagician
+    score: 45
+  - tarot: TheDevil
+    score: 45
+  - tarot: TheTower
+    score: 45
+  - voucher: TarotMerchant
+    score: 40
+  - uncommonJoker: Vampire
+    score: 40
+  - rareJoker: Blueprint
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 35

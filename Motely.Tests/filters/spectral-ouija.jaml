@@ -1,0 +1,17 @@
+name: Ouija Rank Conversion
+author: jammy
+description: Ouija spectral with Wee Joker for rank homogenization
+deck: Red
+stake: White
+must:
+  - spectral: Ouija
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - rareJoker: WeeJoker
+    score: 60
+  - uncommonJoker: TheIdol
+    score: 50
