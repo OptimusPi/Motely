@@ -124,7 +124,7 @@ components:
 
 Jimbo is the design system for Balatro seed finder tools (JAML-UI, WeeJoker, Seed Finder). It recreates the cozy, tactile, chunky feel of LocalThunk's Balatro — dark panels with silver borders, 3D-press buttons, pixel typography, juice animations. Everything feels like a physical object you can poke.
 
-The system is built **Mobile First**. The absolute minimum viewport width is **375px**. All components must be accessible and usable at 375px without breaking layouts or horizontal scrolling. No fat padding, no bloated margins — every pixel earns its place.
+The system is built **Mobile First** for the **iPhone SE viewport: 375×667px**. This is a HARD constraint — not a minimum, it is THE target. All app screens must fit within 375×667 with **NO SCROLLING**. Content must be designed to fit, not overflow. No fat padding, no bloated margins — every pixel earns its place. If content doesn't fit, redesign it to be more compact or split it into a separate view.
 
 ## Colors
 
@@ -155,11 +155,39 @@ Contrast is critical. NEVER make grey text on top of a grey background. If using
 
 ## Layout
 
-Target: Minimum 375px portrait width. Components must scale gracefully using relative units and flexible layouts. Avoid fixed widths that break at 375px. 
+Hard target: **375×667px (iPhone SE portrait)**. No scrolling on app-level screens. Components must fit within the viewport. Snap-scrolling is ONLY allowed for internal content areas that are explicitly paginated (e.g., ante pages within a fullscreen analyzer). Top-level app views must never scroll.
 
-Vertical snap-scroll for ante pages using magnetic scroll-snapping (`scroll-snap-type: y mandatory`, `scroll-snap-align: start`). Horizontal swipe for seed navigation. NO visible scrollbars globally — use `::-webkit-scrollbar { display: none; }` and `-ms-overflow-style: none`.
+**Thumb Zone Rule:** Back buttons, navigation buttons, and primary actions ALWAYS go at the **bottom** of the screen. Users hold their phone with one hand and tap with their thumb — bottom-positioned buttons are always in reach. NEVER put back/nav buttons at the top of a mobile screen. Back buttons are ALWAYS orange and labeled "Back".
+
+**Button Consistency:** All footer buttons use `lg` size across every screen. No mixing sizes in footers.
+
+Horizontal swipe for seed navigation. NO visible scrollbars globally — use `::-webkit-scrollbar { display: none; }` and `-ms-overflow-style: none`.
 
 Panels use 2px solid borders with border-silver on top/sides and border-south on bottom, creating a subtle 3D card effect. Inner shadow: `inset 0 0 0 1px rgba(255,255,255,0.04)`. Outer shadow: `0 2px 0 #000`.
+
+### Responsive Breakpoints (Container Queries)
+
+The j-app shell uses CSS **container queries** (not media queries) because it may live inside a mobile browser, a Claude MCP artifact, or a centered desktop preview. The container determines the layout, not the viewport.
+
+| Name | Container Width | Height | Scroll | Usage |
+|---|---|---|---|---|
+| `compact` | ≤ 400px | Fixed 667px | Never | iPhone SE. Default. |
+| `cozy` | 401–750px | Flexible | Vertical OK | MCP inline artifacts, wider phones. |
+| `wide` | 751px+ | Flexible | Vertical OK | Tablet/desktop (future). |
+
+Default is `compact` (375×667 locked). Add `<JimboApp fluid>` or `.j-app--fluid` to unlock for MCP/desktop contexts. This lets the container stretch to fill its parent (up to 750px) and activates `@container jimbo` queries in CSS.
+
+**What changes compact → cozy:**
+- Height constraint lifts — content determines height
+- Vertical scroll becomes OK (host manages scroll)
+- Padding bumps from `--j-space-lg` to `--j-space-xl`
+- Stat grid values bump to 20px
+- Info card titles bump to 14px
+- Section header tags bump to 12px
+- Buttons STAY `lg` — thumb zone rule still applies
+- Footer STAYS bottom-anchored
+
+**What does NOT change:** Colors, fonts, components, spacing tokens, button behavior, animation. The design language is identical — only density shifts.
 
 ## Elevation & Depth
 
@@ -169,9 +197,9 @@ Panels sit on a dark south-shadow (`0 3px 0 rgba(0,0,0,0.55)`). Translucent pane
 
 JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]` with a 1.6s pulse animation. Must = blue glow, should = gold/green glow.
 
-## Components
+**Button:** Chunky 3D press. DO NOT ADD A COLORED EDGE/BORDER. Buttons rely entirely on a solid `box-shadow` to create the colored "underside" depth. Hover brightness bump. Press sinks +2-3px and the box-shadow collapses to 0. Variants: primary (red), secondary (blue), back (orange), default (grey). NO GOLD BUTTONS. Sizes via padding, not font-size. Easing: `cubic-bezier(0.34, 1.56, 0.64, 1)`.
 
-**Button:** Chunky 3D press. Colored underside via box-shadow. Hover brightness bump. Press sinks +2-3px + shadow collapse. Variants: primary (red), secondary (blue), back (orange). Sizes via padding, not font-size. Easing: `cubic-bezier(0.34, 1.56, 0.64, 1)`.
+**Badge (JimboBadge):** Badges indicate status and DO NOT CLICK. They are strictly flat. They have a colored background and flat borders, but NO 3D BOX-SHADOW and NO PRESS ANIMATIONS. Variants: dark, blue, red, green, orange, purple, grey. NO GOLD BADGES.
 
 **Panel:** Dark grey (#3a5055) background, 2px solid border (silver top/sides, south bottom), border-radius 6px. Inner highlight: `inset 0 0 0 1px rgba(255,255,255,0.04)`. Drop: `0 2px 0 #000`.
 
@@ -194,8 +222,9 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 ## Do's and Don'ts
 
 - DO use m6x11plus for everything except code/monospace.
-- DO design for 375px portrait.
+- DO design for 375×667px (iPhone SE). Everything must fit — no scrolling.
 - DO use translateY + box-shadow for button depth. Not CSS 3D transforms.
+- DO put back buttons and nav actions at the **bottom** of the screen (thumb zone).
 - DON'T use font-weight bold or heavy. m6x11plus is single-weight.
 - DON'T use ALL CAPS. It is considered an embellishment and ruins the aesthetic.
 - DON'T put grey text on top of a grey background.
@@ -203,4 +232,5 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 - DON'T add visible scrollbars. Vertical magnetic snap-scroll + horizontal swipe only.
 - DON'T use rounded corners larger than 10px. Balatro is chunky, not bubbly.
 - DON'T use blur-based shadows for depth. Use solid colored box-shadows 80% opaque.
+- DON'T put back/nav buttons at the top of a screen. They go at the BOTTOM.
 - DON'T use redundant JS wrappers for `motely-wasm`. Import globally and `motely.boot()` once. Use `?worker&inline` for search workers rather than blob strings, and do not prop-drill `motelyWasmUrl`.

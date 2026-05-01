@@ -107,10 +107,10 @@ export function MysterySlot({
     const ny = Math.max(-1, Math.min(1, ((e.clientY - rect.top) / rect.height - 0.5) * 2));
 
     setTilt({
-      rx: ny * -20, // max 20deg tilt
-      ry: nx * 20,
-      tx: nx * -4,  // subtle shift
-      ty: ny * -4,
+      rx: ny * -8, // subtle max 8deg tilt
+      ry: nx * 8,
+      tx: nx * -2,  // subtle shift
+      ty: ny * -2,
     });
   };
 

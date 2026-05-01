@@ -148,11 +148,11 @@ export function JamlMapEditor({
     setActiveSlot(null);
   }, []);
 
-  const jsonTree = useMemo(() => buildJsonTree(antesState), [antesState]);
+  const jamlText = useMemo(() => buildJamlText(antesState), [antesState]);
 
   useEffect(() => {
-    onChange?.(JSON.stringify(jsonTree, null, 2));
-  }, [jsonTree, onChange]);
+    onChange?.(jamlText);
+  }, [jamlText, onChange]);
 
   const renderSlot = (anteIndex: number, id: string, width: number, sheetType: SpriteSheetType, forceCategory?: SlotCategory) => {
     const sel = (antesState[anteIndex] || {})[id];
@@ -174,7 +174,7 @@ export function JamlMapEditor({
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Zone Toggle Header */}
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.DARKEST, padding: "max(32px, env(safe-area-inset-top, 32px)) 0 8px 0", borderBottom: `2px solid ${C.PANEL_EDGE}` }}>
-        <JimboText size="md" tone="white" dance={true} style={{ textAlign: "center", marginBottom: 12 }}>JAML VISUAL BUILDER</JimboText>
+        <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 12 }}>JAML VISUAL BUILDER</JimboText>
         <div className="j-flex j-gap-sm" style={{ justifyContent: "center" }}>
           {(["must", "should", "mustnot"] as JamlZone[]).map((z) => (
             <JimboButton
@@ -207,7 +207,7 @@ export function JamlMapEditor({
             gap: 24,
             borderBottom: `2px solid ${C.DARK_GREY}`
           }}>
-            <JimboText size="md" tone="white" dance={true} style={{ textAlign: "center", marginBottom: 8 }}>ANTE {a}</JimboText>
+            <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 8 }}>ANTE {a}</JimboText>
             
             {/* Row 1: Blinds & Tags & Voucher */}
             <div className="j-flex j-justify-between j-items-end">
@@ -313,47 +313,54 @@ function CategoryMenu({
   );
 }
 
-// ─── Build JSON tree from slots ──────────────────────────────────────────────
+// ─── Build JAML text from slots ──────────────────────────────────────────────
 
-function buildJsonTree(antes: Record<number, AnteSelections>): Record<string, unknown> {
-  const must: Record<string, unknown>[] = [];
-  const should: Record<string, unknown>[] = [];
-  const mustNot: Record<string, unknown>[] = [];
+function buildJamlText(antes: Record<number, AnteSelections>): string {
+  const byZone: Record<JamlZone, Record<string, { value: string; antes: number[] }[]>> = {
+    must: {}, should: {}, mustnot: {}
+  };
 
   for (const [anteStr, selections] of Object.entries(antes)) {
     const anteNum = parseInt(anteStr, 10);
-    
-    // Group by zone
-    const byZone: Record<JamlZone, Record<string, string[]>> = {
-      must: {}, should: {}, mustnot: {}
-    };
-
     for (const sel of Object.values(selections)) {
-      if (!byZone[sel.zone][sel.clauseKey]) {
-        byZone[sel.zone][sel.clauseKey] = [];
-      }
-      byZone[sel.zone][sel.clauseKey].push(sel.value);
-    }
-
-    for (const z of ["must", "should", "mustnot"] as JamlZone[]) {
-      const clauseList = Object.entries(byZone[z]);
-      if (clauseList.length === 0) continue;
-
-      const obj: Record<string, unknown> = { ante: anteNum };
-      for (const [key, values] of clauseList) {
-        obj[key] = values.length === 1 ? values[0] : values;
+      const zone = sel.zone;
+      const key = sel.clauseKey;
+      
+      if (!byZone[zone][key]) {
+        byZone[zone][key] = [];
       }
       
-      if (z === "must") must.push(obj);
-      else if (z === "should") should.push(obj);
-      else if (z === "mustnot") mustNot.push(obj);
+      const existing = byZone[zone][key].find(item => item.value === sel.value);
+      if (existing) {
+        if (!existing.antes.includes(anteNum)) existing.antes.push(anteNum);
+      } else {
+        byZone[zone][key].push({ value: sel.value, antes: [anteNum] });
+      }
     }
   }
 
-  const result: Record<string, unknown> = {};
-  if (must.length > 0) result.must = must;
-  if (should.length > 0) result.should = should;
-  if (mustNot.length > 0) result.mustNot = mustNot;
-  
-  return result;
+  let lines: string[] = [];
+  lines.push("name: My Custom Seed Map");
+  lines.push("author: JamlBuilder");
+  lines.push("description: Auto-generated from the visual editor.");
+  lines.push("deck: Red");
+  lines.push("stake: White");
+
+  for (const [zone, label] of [["must", "must"], ["should", "should"], ["mustnot", "mustNot"]] as const) {
+    const clauses = byZone[zone as JamlZone];
+    if (Object.keys(clauses).length === 0) continue;
+    
+    lines.push(`${label}:`);
+    for (const [key, items] of Object.entries(clauses)) {
+      for (const item of items) {
+        lines.push(`  - ${key}: ${item.value}`);
+        // Only emit `antes:` if it's not all 8 antes (simplification, or just emit it)
+        if (item.antes.length < 8) {
+          lines.push(`    antes: [${item.antes.sort((a,b)=>a-b).join(", ")}]`);
+        }
+      }
+    }
+  }
+
+  return lines.join("\n") + "\n";
 }

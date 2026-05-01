@@ -75,7 +75,7 @@ const RARITY_META: Record<JokerRarity, RarityInfo> = {
   common:    { label: "Common",    tone: "blue",  hint: "Found in shops and Buffoon Packs" },
   uncommon:  { label: "Uncommon",  tone: "green", hint: "Found in shops and Buffoon Packs" },
   rare:      { label: "Rare",      tone: "red",   hint: "Found in shops and Buffoon Packs" },
-  legendary: { label: "Legendary", tone: "gold",  hint: "Spawns from The Soul only!" },
+  legendary: { label: "Legendary", tone: "tarot",  hint: "Spawns from The Soul only!" },
 };
 
 // ─── Picker steps ────────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ export function JokerPicker({ onSelect, onCancel }: JokerPickerProps) {
             padding: "8px 10px",
             borderBottom: `2px solid ${C.PANEL_EDGE}`,
           }}>
-            <JimboButton tone="grey" size="xs" onClick={() => setStep("rarity")}>← Back</JimboButton>
+            <JimboButton tone="orange" size="xs" onClick={() => setStep("rarity")}>← Back</JimboButton>
             <JimboText size="md">{RARITY_META[selectedRarity].label} Jokers</JimboText>
             <div style={{ width: 44 }} />
           </div>
@@ -181,7 +181,7 @@ export function JokerPicker({ onSelect, onCancel }: JokerPickerProps) {
               onChange={(e) => setSearch(e.target.value)}
               style={{ fontSize: 13, padding: "6px 10px", textTransform: "none", letterSpacing: "0.04em" }}
             />
-            <JimboButton tone="gold" size="sm" onClick={handleAnySelect}>Any</JimboButton>
+            <JimboButton tone="orange" size="sm" onClick={handleAnySelect}>Any</JimboButton>
           </div>
 
           {/* Legendary warning */}

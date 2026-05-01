@@ -1,9 +1,7 @@
 "use client";
 
 import React from "react";
-import { JimboColorOption } from "../ui/tokens.js";
-
-const C = JimboColorOption;
+import { JimboText } from "../ui/jimboText.js";
 
 export type JamlSpeedometerStatus = "idle" | "booting" | "running" | "completed" | "cancelled" | "error";
 
@@ -12,6 +10,8 @@ export interface JamlSpeedometerProps {
   totalSearched: bigint | number;
   matchingSeeds: bigint | number;
   status: JamlSpeedometerStatus;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 function formatCount(value: bigint | number): string {
@@ -19,40 +19,48 @@ function formatCount(value: bigint | number): string {
 }
 
 function formatSpeed(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0/s";
+  if (!Number.isFinite(value) || value <= 0) return "—";
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M/s`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K/s`;
   return `${Math.round(value)}/s`;
 }
 
 /**
- * Compact live-search stats strip for MCP/app chrome.
+ * Compact live-search stats strip — NOT a car speedometer.
+ * Three stat cells in a row: speed | searched | matches.
+ * Uses j-stat-grid CSS class from jimbo.css.
  */
 export function JamlSpeedometer({
   seedsPerSecond,
   totalSearched,
   matchingSeeds,
   status,
+  className = "",
+  style,
 }: JamlSpeedometerProps) {
   const active = status === "running" || status === "booting";
-  const tone = status === "error" ? C.RED : active ? C.GOLD : C.GREY;
+  const statusTone = status === "error" ? "red" : active ? "green" : "grey";
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        color: tone,
-        fontSize: 11,
-        fontFamily: "var(--font-sans, m6x11plus), monospace",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <span>{status}</span>
-      <span>{formatSpeed(seedsPerSecond)}</span>
-      <span>{formatCount(totalSearched)} searched</span>
-      <span>{formatCount(matchingSeeds)} matches</span>
+    <div className={`j-stat-grid ${className}`} style={style}>
+      <div>
+        <div className="j-stat-grid__value">
+          <JimboText size="md" tone={active ? "gold" : "grey"}>{formatSpeed(seedsPerSecond)}</JimboText>
+        </div>
+        <div className="j-stat-grid__label">speed</div>
+      </div>
+      <div>
+        <div className="j-stat-grid__value">
+          <JimboText size="md" tone="white">{formatCount(totalSearched)}</JimboText>
+        </div>
+        <div className="j-stat-grid__label">searched</div>
+      </div>
+      <div>
+        <div className="j-stat-grid__value">
+          <JimboText size="md" tone={Number(matchingSeeds) > 0 ? "green" : "grey"}>{formatCount(matchingSeeds)}</JimboText>
+        </div>
+        <div className="j-stat-grid__label">matches</div>
+      </div>
     </div>
   );
 }

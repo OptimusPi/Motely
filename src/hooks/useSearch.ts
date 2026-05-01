@@ -145,6 +145,22 @@ export function useSearch() {
     sendStart({ type: "start", mode: "keyword", jaml, keywords, padding });
   }, [sendStart]);
 
+  const startSequential = useCallback((jaml: string, startSeed: string, endSeed?: string) => {
+    // Sequential search: single-threaded, deterministic order.
+    // batchCharCount = length of start seed, startBatch/endBatch = numeric range.
+    const charCount = startSeed.length || 1;
+    const startNum = parseInt(startSeed, 36) || 0;
+    const endNum = endSeed ? parseInt(endSeed, 36) : startNum + 10_000_000;
+    sendStart({
+      type: "start",
+      mode: "sequential",
+      jaml,
+      batchCharCount: charCount,
+      startBatch: startNum.toString(),
+      endBatch: endNum.toString(),
+    });
+  }, [sendStart]);
+
   const cancel = useCallback(() => {
     workerRef.current?.postMessage({ type: "stop" });
   }, []);
@@ -157,5 +173,5 @@ export function useSearch() {
     workerRef.current?.postMessage({ type: "get_tally_labels", jaml });
   }, []);
 
-  return { ...state, start, startAesthetic, startSeedList, startKeyword, cancel, clearError, fetchTallyLabels };
+  return { ...state, start, startAesthetic, startSeedList, startKeyword, startSequential, cancel, clearError, fetchTallyLabels };
 }

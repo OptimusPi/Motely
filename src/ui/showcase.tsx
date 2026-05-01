@@ -1,15 +1,18 @@
 'use client'
 
 import React from 'react'
-import { JimboColorOption } from './tokens.js'
 import { JimboButton } from './panel.js'
 import { JimboSprite } from './sprites.js'
+import { JimboText } from './jimboText.js'
+import { JimboApp, JimboAppFooter } from './jimboApp.js'
+import { JimboSectionHeader, type JimboSectionTone } from './jimboSectionHeader.js'
+import { JimboInfoCard, JimboInfoCardBody, JimboInfoCardTitle, JimboInfoCardSub, JimboInfoCardAside } from './jimboInfoCard.js'
 
 export interface ShowcaseFilter {
   name: string
   author: string
   hits: string
-  tone: 'blue' | 'red' | 'gold' | 'green'
+  tone: JimboSectionTone
   sample: string[]
 }
 
@@ -25,122 +28,112 @@ export interface ShowcaseLiveStats {
   speed: string
 }
 
+export interface ShowcaseMcpInfo {
+  runtime: string
+  engine: string
+  features: string
+}
+
 export interface ShowcaseProps {
+  title?: string
+  subtitle?: string
   hotFilters?: ShowcaseFilter[]
   recentFinds?: ShowcaseRecentFind[]
-  stats?: ShowcaseLiveStats
+  mcpInfo?: ShowcaseMcpInfo
   onNewSearch?: () => void
   onBrowseFilters?: () => void
-  onBack?: () => void
+  onFilterClick?: (filter: ShowcaseFilter, index: number) => void
 }
-
-const TONE_COLOR: Record<ShowcaseFilter['tone'], string> = {
-  blue: JimboColorOption.BLUE,
-  red:  JimboColorOption.RED,
-  gold: JimboColorOption.GOLD,
-  green: JimboColorOption.GREEN,
-}
-
-const DEFAULT_STATS: ShowcaseLiveStats = { searched: '0', matches: '0', speed: '0' }
 
 /**
- * Landing/showcase screen for the seed curator.
- * All styling via jimbo.css `.j-showcase` classes — zero inline styles.
+ * Landing/showcase screen — 375×667, NO SCROLL.
+ * Every pixel accounted for. No flex stretching. No gaps.
  */
 export function Showcase({
+  title = 'Balatro',
+  subtitle = 'Seed Curator',
   hotFilters = [],
   recentFinds = [],
-  stats = DEFAULT_STATS,
+  mcpInfo,
   onNewSearch,
   onBrowseFilters,
-  onBack,
+  onFilterClick,
 }: ShowcaseProps) {
-  const C = JimboColorOption
-
   return (
-    <div className="j-showcase">
-      <div className="j-showcase__scroll">
-
-        {/* Wordmark */}
-        <div className="j-showcase__wordmark">
-          <div className="j-showcase__wordmark-title">Balatro</div>
-          <div className="j-showcase__wordmark-sub">Seed · Curator</div>
+    <JimboApp>
+      {/* Content — no flex-grow, no dead space, footer follows naturally */}
+      <div style={{ padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {/* Compact title */}
+        <div className="j-text-center">
+          <JimboText size="lg" tone="gold">{title}</JimboText>
+          <JimboText size="micro" tone="grey" style={{ letterSpacing: 3 }}>{subtitle}</JimboText>
         </div>
 
-        {/* Live stats */}
-        <div className="j-showcase__stats">
-          {([
-            [stats.searched, 'searched'],
-            [stats.matches,  'matches'],
-            [stats.speed,    'speed'],
-          ] as const).map(([n, l]) => (
-            <div key={l}>
-              <div className="j-showcase__stat-value">{n}</div>
-              <div className="j-showcase__stat-label">{l}</div>
+        {/* Engine strip — single line */}
+        {mcpInfo && (
+          <div className="j-flex j-justify-between" style={{
+            padding: '3px 8px',
+            background: 'var(--j-dark-grey)', borderRadius: 4,
+            border: '1px solid var(--j-panel-edge)',
+          }}>
+            <JimboText size="micro" tone="purple">{mcpInfo.engine}</JimboText>
+            <JimboText size="micro" tone="grey">{mcpInfo.features}</JimboText>
+          </div>
+        )}
+
+        {/* Hot Filters */}
+        {hotFilters.length > 0 && (
+          <>
+            <JimboSectionHeader label="Filters" tone="blue" />
+            <div className="j-flex-col" style={{ gap: 4 }}>
+              {hotFilters.slice(0, 4).map((f, i) => (
+                <JimboInfoCard
+                  key={i}
+                  tone={f.tone}
+                  onClick={() => onFilterClick?.(f, i)}
+                  style={{ cursor: onFilterClick ? 'pointer' : undefined }}
+                >
+                  <div className="j-flex j-gap-xs">
+                    {f.sample.slice(0, 2).map((name, j) => (
+                      <div key={j} style={{ width: 22, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <JimboSprite name={name} width={20} />
+                      </div>
+                    ))}
+                  </div>
+                  <JimboInfoCardBody>
+                    <JimboInfoCardTitle>{f.name}</JimboInfoCardTitle>
+                    <JimboInfoCardSub>by {f.author}</JimboInfoCardSub>
+                  </JimboInfoCardBody>
+                  <JimboInfoCardAside>
+                    <JimboText size="xs" tone={f.tone === 'gold' ? 'gold' : f.tone}>{f.hits}</JimboText>
+                  </JimboInfoCardAside>
+                </JimboInfoCard>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
 
-        {/* Hot filters header */}
-        <div className="j-showcase__section-header">
-          <div className="j-showcase__section-tag" style={{ background: C.BLUE }}>Hot Filters</div>
-          <div className="j-showcase__section-rule" style={{ background: `${C.BLUE}55` }} />
-        </div>
-
-        {/* Filter cards */}
-        <div className="j-showcase__filter-list">
-          {hotFilters.map((f, i) => {
-            const tColor = TONE_COLOR[f.tone]
-            return (
-              <div key={i} className="j-showcase__filter-card" style={{ border: `2px solid ${tColor}` }}>
-                <div className="j-showcase__filter-sprites">
-                  {f.sample.map((name, j) => (
-                    <div key={j} className="j-showcase__filter-sprite">
-                      <JimboSprite name={name} width={28} />
-                    </div>
-                  ))}
+        {/* Recent finds — compact */}
+        {recentFinds.length > 0 && (
+          <>
+            <JimboSectionHeader label="Recent" tone="green" />
+            <div style={{ lineHeight: 1.5 }}>
+              {recentFinds.slice(0, 3).map((r, i) => (
+                <div key={i} className="j-flex j-gap-sm">
+                  <JimboText size="micro" tone="gold">{r.seed}</JimboText>
+                  <JimboText size="micro" tone="grey">{r.filterName}</JimboText>
+                  {r.score > 0 && <JimboText size="micro" tone="green">+{r.score}</JimboText>}
                 </div>
-                <div className="j-showcase__filter-info">
-                  <div className="j-showcase__filter-name">{f.name}</div>
-                  <div className="j-showcase__filter-author">by {f.author}</div>
-                </div>
-                <div className="j-showcase__filter-hits">
-                  <div className="j-showcase__filter-hits-value" style={{ color: tColor }}>{f.hits}</div>
-                  <div className="j-showcase__filter-hits-label">seeds</div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Recent finds header */}
-        <div className="j-showcase__section-header">
-          <div className="j-showcase__section-tag" style={{ background: C.GREEN }}>Recent Finds</div>
-          <div className="j-showcase__section-rule" style={{ background: `${C.GREEN}55` }} />
-        </div>
-
-        {/* Recent finds list */}
-        <div className="j-showcase__recent">
-          {recentFinds.length === 0 ? (
-            <div>No recent finds yet.</div>
-          ) : recentFinds.map((r, i) => (
-            <div key={i}>
-              <span style={{ color: C.GOLD_TEXT }}>{r.seed}</span>
-              {' · '}{r.filterName}
-              {r.score > 0 && <span style={{ color: C.GREEN_TEXT }}> +{r.score}</span>}
+              ))}
             </div>
-          ))}
-        </div>
-
-        <div style={{ height: 16 }} />
+          </>
+        )}
       </div>
 
-      {/* Bottom actions */}
-      <div className="j-showcase__actions">
-        <JimboButton tone="green"   fullWidth size="md" onClick={onNewSearch}>New Search</JimboButton>
-        <JimboButton tone="blue"    fullWidth size="md" onClick={onBrowseFilters}>Browse Filters</JimboButton>
-        <JimboButton tone="orange"  fullWidth size="md" onClick={onBack}>Back</JimboButton>
-      </div>
-    </div>
+      <JimboAppFooter>
+        <JimboButton tone="green" fullWidth size="lg" onClick={onNewSearch}>New Search</JimboButton>
+        <JimboButton tone="blue"  fullWidth size="lg" onClick={onBrowseFilters}>Browse Filters</JimboButton>
+      </JimboAppFooter>
+    </JimboApp>
   )
 }

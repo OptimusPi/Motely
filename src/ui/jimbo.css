@@ -172,7 +172,7 @@
 
 
 /* ── Button ────────────────────────────────────────────────────────────── */
-/* Chunky 3D press: colored underside via offset shadow div,
+/* Chunky 3D press: black underside via drop shadow,
    press sinks the face +3px and collapses the shadow. */
 
 .j-btn {
@@ -186,7 +186,8 @@
 .j-btn::after {
   content: '';
   position: absolute;
-  inset: -4px;
+  inset: 0;
+  background: transparent;
   z-index: 10;
 }
 .j-btn--full { width: 100%; }
@@ -195,42 +196,38 @@
   cursor: not-allowed;
 }
 
-.j-btn__shadow {
-  position: absolute;
-  left: 1px;
-  top: 3px;
-  right: -1px;
-  bottom: -3px;
-  border-radius: var(--j-radius-md);
-  background: var(--j-btn-shadow-color, var(--j-dark-orange));
-  transition: opacity var(--j-press-speed) linear;
-}
-.j-btn[data-pressed="true"] .j-btn__shadow { opacity: 0; }
-
 .j-btn__face {
   position: relative;
   border-radius: var(--j-radius-md);
   background: var(--j-btn-face-color, var(--j-orange));
   text-align: center;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  box-shadow: 0 var(--j-press-y) 0 0 rgba(0, 0, 0, 0.6);
   transform: translate(0, 0);
-  transition: transform var(--j-press-speed) linear;
+  transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear;
 }
 .j-btn[data-pressed="true"] .j-btn__face {
-  transform: translate(1px, 3px);
+  transform: translateY(var(--j-press-y));
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.6);
+}
+.j-btn:not(.j-btn--disabled):hover .j-btn__face {
+  filter: brightness(1.1);
 }
 
 /* Sizes */
-.j-btn--xs .j-btn__face { padding: 2px 8px; }
-.j-btn--sm .j-btn__face { padding: 4px 10px; }
-.j-btn--md .j-btn__face { padding: 6px 14px; }
-.j-btn--lg .j-btn__face { padding: 10px 18px; }
+.j-btn--xs .j-btn__face { padding: 4px 8px;  font-size: 11px; }
+.j-btn--sm .j-btn__face { padding: 6px 12px; font-size: 13px; }
+.j-btn--md .j-btn__face { padding: 10px 18px; font-size: 16px; }
+.j-btn--lg .j-btn__face { padding: 8px 18px; font-size: 20px; }
 
 /* Tone colors — set via CSS custom properties */
-.j-btn--orange { --j-btn-face-color: var(--j-orange);  --j-btn-shadow-color: var(--j-dark-orange); }
-.j-btn--red    { --j-btn-face-color: var(--j-red);     --j-btn-shadow-color: var(--j-dark-red); }
-.j-btn--blue   { --j-btn-face-color: var(--j-blue);    --j-btn-shadow-color: var(--j-dark-blue); }
-.j-btn--green  { --j-btn-face-color: var(--j-green);   --j-btn-shadow-color: var(--j-dark-green); }
+.j-btn--orange   { --j-btn-face-color: var(--j-orange); }
+.j-btn--red      { --j-btn-face-color: var(--j-red); }
+.j-btn--blue     { --j-btn-face-color: var(--j-blue); }
+.j-btn--green    { --j-btn-face-color: var(--j-green); }
+.j-btn--tarot    { --j-btn-face-color: var(--j-tarot-btn); }
+.j-btn--planet   { --j-btn-face-color: var(--j-planet-btn); }
+.j-btn--spectral { --j-btn-face-color: var(--j-spectral-btn); }
 
 
 /* ── Badge ─────────────────────────────────────────────────────────────── */
@@ -249,13 +246,13 @@
 .j-badge--sm { padding: 2px 6px; font-size: 10px; }
 .j-badge--md { padding: 4px 8px; font-size: 12px; }
 
-/* Badge tones — dark-colored bottom edge, no thin pixel borders */
-.j-badge--dark   { background: var(--j-darkest);  color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-panel-edge); }
-.j-badge--blue   { background: var(--j-blue);     color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-blue); }
-.j-badge--red    { background: var(--j-red);      color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-red); }
-.j-badge--green  { background: var(--j-green);    color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-green); }
-.j-badge--orange { background: var(--j-orange);   color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-orange); }
-.j-badge--purple { background: var(--j-purple);   color: var(--j-white); box-shadow: 0 2px 0 0 var(--j-dark-purple); }
+/* Badge tones — flat, no shadow, no edges */
+.j-badge--dark   { background: var(--j-darkest);  color: var(--j-white); }
+.j-badge--blue   { background: var(--j-blue);     color: var(--j-white); }
+.j-badge--red    { background: var(--j-red);      color: var(--j-white); }
+.j-badge--green  { background: var(--j-green);    color: var(--j-white); }
+.j-badge--orange { background: var(--j-orange);   color: var(--j-white); }
+.j-badge--purple { background: var(--j-purple);   color: var(--j-white); }
 
 
 /* ── Tabs ──────────────────────────────────────────────────────────────── */
@@ -632,6 +629,48 @@
   opacity: 0.85;
 }
 
+/* ── FlankNav ───────────────────────────────────────────────────────────── */
+
+.j-flank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--j-space-md);
+  width: 100%;
+}
+
+.j-flank__content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.j-flank__btn {
+  background: var(--j-red);
+  color: var(--j-white);
+  border: none;
+  border-radius: var(--j-radius-sm);
+  padding: var(--j-space-sm) var(--j-space-xs);
+  cursor: pointer;
+  box-shadow: 0 var(--j-press-y) 0 var(--j-dark-grey);
+  transition: transform 0.05s ease, box-shadow 0.05s ease, opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.j-flank__btn[data-pressed="true"] {
+  transform: translateY(var(--j-press-y));
+  box-shadow: 0 0 0 var(--j-dark-grey);
+}
+
+.j-flank__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 var(--j-press-y) 0 var(--j-dark-grey);
+}
+
 
 /* ── Modal ────────────────────────────────────────────────────────────── */
 
@@ -742,6 +781,272 @@
 .j-overflow-hidden { overflow: hidden; }
 .j-overflow-auto   { overflow: auto; }
 .j-relative   { position: relative; }
+
+/* Tone border utilities */
+.j-border--red    { border-color: var(--j-red); }
+.j-border--blue   { border-color: var(--j-blue); }
+.j-border--green  { border-color: var(--j-green); }
+.j-border--gold   { border-color: var(--j-gold); }
+.j-border--orange { border-color: var(--j-orange); }
+.j-border--purple { border-color: var(--j-purple); }
+
+/* Tone background utilities */
+.j-bg--red       { background-color: var(--j-red); }
+.j-bg--blue      { background-color: var(--j-blue); }
+.j-bg--green     { background-color: var(--j-green); }
+.j-bg--gold      { background-color: var(--j-gold); }
+.j-bg--orange    { background-color: var(--j-orange); }
+.j-bg--purple    { background-color: var(--j-purple); }
+.j-bg--dark-grey { background-color: var(--j-dark-grey); }
+.j-bg--darkest   { background-color: var(--j-darkest); }
+
+/* ── App Shell ────────────────────────────────────────────────────────── */
+/* Mobile-first 375px layout container for ALL Jimbo UI screens.
+ * Supports container queries for responsive breakpoints:
+ *   compact  ≤400px  — iPhone SE, fixed 667px height, NO scroll
+ *   cozy     401-750px — MCP inline / wider phones, flexible height, scroll OK
+ *   wide     751px+  — tablet/desktop, two-column layouts (future)
+ *
+ * Default = compact (hard lock). Add .j-app--fluid to unlock for MCP/desktop.
+ */
+
+.j-app {
+  container-type: inline-size;
+  container-name: jimbo;
+  width: 375px;
+  max-width: 375px;
+  height: 667px;
+  max-height: 667px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--j-darkest);
+  font-family: var(--j-font);
+  color: var(--j-white);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Fluid modifier — unlocks the container for MCP / desktop contexts. */
+.j-app--fluid {
+  width: 100%;
+  max-width: 750px;
+  height: auto;
+  max-height: none;
+  min-height: 400px;
+}
+
+.j-app__content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--j-space-lg) var(--j-space-lg) var(--j-space-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.j-app__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--j-space-lg) var(--j-space-lg) var(--j-space-md);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.j-app__scroll::-webkit-scrollbar { display: none; }
+
+.j-app__footer {
+  flex-shrink: 0;
+  padding: var(--j-space-md) var(--j-space-lg) var(--j-space-md);
+  border-top: 2px solid var(--j-black);
+  background: var(--j-dark-grey);
+  display: flex;
+  flex-direction: column;
+  gap: var(--j-space-sm);
+}
+
+/* ── Cozy Breakpoint (401px+) ──────────────────────────────────────── */
+/* Only activates when j-app--fluid is used AND container is wide enough. */
+
+@container jimbo (min-width: 401px) {
+  .j-app__content {
+    padding: var(--j-space-xl) var(--j-space-xl) var(--j-space-lg);
+  }
+  .j-app__scroll {
+    padding: var(--j-space-xl) var(--j-space-xl) var(--j-space-lg);
+  }
+  .j-app__footer {
+    padding: var(--j-space-md) var(--j-space-xl) var(--j-space-lg);
+  }
+}
+
+@container jimbo (min-width: 401px) {
+  .j-stat-grid__value {
+    font-size: 20px;
+  }
+  .j-info-card {
+    padding: var(--j-space-md) var(--j-space-lg);
+  }
+  .j-info-card__title {
+    font-size: 14px;
+  }
+  .j-section-header__tag {
+    font-size: 12px;
+  }
+}
+
+
+/* ── Section Header ──────────────────────────────────────────────────── */
+/* Colored tag + horizontal rule — reusable section divider. */
+
+.j-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--j-space-md);
+  margin-bottom: var(--j-space-md);
+}
+
+.j-section-header__tag {
+  font-family: var(--j-font);
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  color: var(--j-white);
+  border-radius: 3px;
+  text-shadow: var(--j-text-shadow);
+  flex-shrink: 0;
+}
+
+.j-section-header__rule {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0.33;
+}
+
+
+/* ── Stat Grid ───────────────────────────────────────────────────────── */
+/* 3-column stat bar — reusable primitive. */
+
+.j-stat-grid {
+  background: var(--j-dark-grey);
+  border-radius: var(--j-radius-md);
+  padding: var(--j-space-md);
+  border: 2px solid var(--j-panel-edge);
+  box-shadow: 0 2px 0 var(--j-black);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--j-space-md);
+  text-align: center;
+}
+
+.j-stat-grid__value {
+  font-family: var(--j-font);
+  font-size: 16px;
+  color: var(--j-gold-text);
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-stat-grid__label {
+  font-family: var(--j-font);
+  font-size: 9px;
+  color: var(--j-grey);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+
+/* ── Info Card ───────────────────────────────────────────────────────── */
+/* Generic clickable row card — used for filter lists, seed lists, etc. */
+
+.j-info-card {
+  background: var(--j-dark-grey);
+  border-radius: var(--j-radius-md);
+  padding: var(--j-space-md);
+  box-shadow: 0 2px 0 var(--j-black);
+  display: flex;
+  align-items: center;
+  gap: var(--j-space-md);
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.j-info-card:hover {
+  filter: brightness(1.08);
+}
+
+.j-info-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.j-info-card__title {
+  font-family: var(--j-font);
+  font-size: 13px;
+  color: var(--j-white);
+  letter-spacing: 1px;
+  text-shadow: var(--j-text-shadow);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.j-info-card__sub {
+  font-family: var(--j-font);
+  font-size: 9px;
+  color: var(--j-gold-text);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.j-info-card__aside {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+
+/* ── Inset Box ───────────────────────────────────────────────────────── */
+/* Dark recessed content area — for log output, recent finds, etc. */
+
+.j-inset {
+  background: var(--j-dark-grey);
+  border-radius: var(--j-radius-md);
+  padding: var(--j-space-md) var(--j-space-md);
+  border: 2px solid var(--j-panel-edge);
+  box-shadow: 0 2px 0 var(--j-black);
+  font-family: var(--j-font);
+  font-size: 11px;
+  color: var(--j-grey);
+  letter-spacing: 1px;
+  line-height: 1.7;
+}
+
+
+/* ── Wordmark ────────────────────────────────────────────────────────── */
+/* Title + subtitle hero block. */
+
+.j-wordmark {
+  text-align: center;
+  margin-bottom: var(--j-space-xl);
+}
+
+.j-wordmark__title {
+  font-family: var(--j-font);
+  font-size: 32px;
+  letter-spacing: 3px;
+  line-height: 1;
+  color: var(--j-gold-text);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+}
+
+.j-wordmark__sub {
+  font-family: var(--j-font);
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: var(--j-grey);
+  margin-top: 4px;
+  text-shadow: var(--j-text-shadow);
+}
 
 
 /* ── Seed Input ───────────────────────────────────────────────────────── */

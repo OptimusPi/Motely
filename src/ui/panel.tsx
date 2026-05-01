@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useRef, memo } from 'react'
-import { JimboColorOption, JIMBO_ANIMATIONS } from './tokens.js'
-import { useSway, useDelayedVisibility, useDOMMagneticTilt } from './hooks.js'
+import React, { useState, memo } from 'react'
+import { useSway } from './hooks.js'
 import { JimboText, type JimboTextSize } from './jimboText.js'
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
@@ -51,22 +50,10 @@ JimboInnerPanel.displayName = 'JimboInnerPanel'
 
 // ─── JimboButton ──────────────────────────────────────────────────────────────
 // Canonical flat 2D Balatro-style button.
-// Two-layer: separate shadow div (3px south + 1px east) that disappears on press.
-// Press translates the face onto the shadow. No gradients, no hover color change.
+// Tones are purely CSS-driven via j-btn--{tone} classes in jimbo.css.
+// No JS color maps. No TONE_PAIRS. Respect the design tokens.
 
-const JIMBO_TONE_PAIRS: Record<string, [string, string]> = {
-  orange: [JimboColorOption.ORANGE, JimboColorOption.DARK_ORANGE],
-  red:    [JimboColorOption.RED,    JimboColorOption.DARK_RED],
-  blue:   [JimboColorOption.BLUE,   JimboColorOption.DARK_BLUE],
-  green:  [JimboColorOption.GREEN,  JimboColorOption.DARK_GREEN],
-  tarot:  ['#9e74ce', '#5e437e'],
-  planet: ['#00a7ca', '#00657c'],
-  spectral: ['#2e76fd', '#14449e'],
-  grey:   ['#888888', '#555555'],
-  gold:   ['#f1c40f', '#d35400'],
-}
-
-export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'tarot' | 'planet' | 'spectral' | 'grey' | 'gold'
+export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'tarot' | 'planet' | 'spectral'
 
 export interface JimboButtonProps {
   tone?: JimboTone
@@ -84,9 +71,7 @@ export function JimboButton({
   tone = 'orange', size = 'md', fullWidth = false, disabled = false, uppercase = false, onClick, style, className = '', children,
 }: JimboButtonProps) {
   const [pressed, setPressed] = useState(false)
-  const [fg, sh] = JIMBO_TONE_PAIRS[tone] ?? JIMBO_TONE_PAIRS.orange
   const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
-  const { handlers, tiltStyle } = useDOMMagneticTilt(!disabled)
 
   return (
     <div
@@ -94,20 +79,14 @@ export function JimboButton({
       data-pressed={pressed}
       onMouseDown={() => { if (!disabled) setPressed(true) }}
       onMouseUp={() => setPressed(false)}
-      onMouseLeave={(e) => { setPressed(false) }}
+      onMouseLeave={() => setPressed(false)}
       onTouchStart={() => { if (!disabled) setPressed(true) }}
       onTouchEnd={() => setPressed(false)}
       onClick={() => { if (!disabled) onClick?.() }}
-      onPointerEnter={handlers.onPointerEnter}
-      onPointerMove={handlers.onPointerMove}
-      onPointerLeave={handlers.onPointerLeave}
       style={style}
     >
-      <div style={{ ...tiltStyle, width: '100%' }}>
-        <div className="j-btn__shadow" style={{ background: sh }} />
-        <div className="j-btn__face" style={{ background: fg }}>
-          <JimboText size={textSize} uppercase={uppercase}>{children}</JimboText>
-        </div>
+      <div className="j-btn__face">
+        <JimboText size={textSize} uppercase={uppercase}>{children}</JimboText>
       </div>
     </div>
   )

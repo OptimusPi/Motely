@@ -59,27 +59,13 @@ export function JamlAnalyzerFullscreen({
   tallyColumns,
   tallyLabels,
   enabledStreams,
-  onEnabledStreamsChange,
-  hidePicker = false,
   chunkSize = 12,
   className = "",
   topPage,
 }: JamlAnalyzerFullscreenProps) {
-  const [internalEnabled, setInternalEnabled] = useState<AnalyzerStreamKey[]>(
-    enabledStreams ?? DEFAULT_ENABLED_STREAMS,
-  );
-  const effectiveEnabled = enabledStreams ?? internalEnabled;
-
-  const setEnabled = useCallback(
-    (next: AnalyzerStreamKey[]) => {
-      setInternalEnabled(next);
-      onEnabledStreamsChange?.(next);
-    },
-    [onEnabledStreamsChange],
-  );
+  const effectiveEnabled = enabledStreams ?? DEFAULT_ENABLED_STREAMS;
 
   const { currentAnte, scrollRef, scrollToAnte, registerAnteRef } = useAnteTracker(antes);
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <div className={className} style={styles.root}>
@@ -113,15 +99,6 @@ export function JamlAnalyzerFullscreen({
         currentAnte={currentAnte}
         onJump={scrollToAnte}
       />
-
-      {!hidePicker && (
-        <StreamPicker
-          enabled={effectiveEnabled}
-          onChange={setEnabled}
-          open={pickerOpen}
-          onToggle={() => setPickerOpen((v) => !v)}
-        />
-      )}
     </div>
   );
 }
@@ -351,61 +328,7 @@ function SideRail({ antes, currentAnte, onJump }: SideRailProps) {
   );
 }
 
-interface StreamPickerProps {
-  enabled: AnalyzerStreamKey[];
-  onChange: (next: AnalyzerStreamKey[]) => void;
-  open: boolean;
-  onToggle: () => void;
-}
 
-function StreamPicker({ enabled, onChange, open, onToggle }: StreamPickerProps) {
-  const enabledSet = new Set(enabled);
-  const all = Object.values(ANALYZER_STREAM_META);
-
-  function toggle(key: AnalyzerStreamKey) {
-    const next = new Set(enabledSet);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    onChange(all.map((m) => m.key).filter((k) => next.has(k)));
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={onToggle}
-        style={styles.pickerButton}
-        aria-label="Toggle stream picker"
-      >
-        {open ? "✕" : "≡"}
-      </button>
-      {open && (
-        <div style={styles.pickerPanel}>
-          <div style={styles.pickerHeader}>Streams</div>
-          {all.map((meta) => {
-            const isOn = enabledSet.has(meta.key);
-            const tone = TONE_COLORS[meta.tone] ?? TONE_COLORS.default;
-            return (
-              <button
-                key={meta.key}
-                type="button"
-                onClick={() => toggle(meta.key)}
-                style={{
-                  ...styles.pickerChip,
-                  borderColor: isOn ? tone : withAlpha(C.WHITE, 0.15),
-                  color: isOn ? tone : C.GREY,
-                  background: isOn ? withAlpha(tone, 0.1) : "transparent",
-                }}
-              >
-                {isOn ? "●" : "○"} {meta.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </>
-  );
-}
 
 const styles: Record<string, React.CSSProperties> = {
   root: {
@@ -572,54 +495,6 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: 0,
     transition: "transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease",
-  },
-  pickerButton: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 4,
-    border: `1px solid ${withAlpha(C.WHITE, 0.2)}`,
-    background: withAlpha(C.DARK_GREY, 0.85),
-    color: C.WHITE,
-    fontSize: 16,
-    cursor: "pointer",
-    zIndex: 6,
-    fontFamily: "inherit",
-  },
-  pickerPanel: {
-    position: "absolute",
-    top: 50,
-    right: 12,
-    width: 220,
-    maxHeight: "70vh",
-    overflowY: "auto",
-    padding: 10,
-    background: withAlpha(C.DARK_GREY, 0.95),
-    border: `1px solid ${withAlpha(C.WHITE, 0.15)}`,
-    borderRadius: 6,
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    zIndex: 6,
-    backdropFilter: "blur(4px)",
-  },
-  pickerHeader: {
-    fontSize: 10,
-    color: C.GREY,
-    letterSpacing: "0.16em",
-    marginBottom: 4,
-  },
-  pickerChip: {
-    padding: "6px 10px",
-    border: "1px solid",
-    borderRadius: 4,
-    fontSize: 11,
-    fontFamily: "inherit",
-    cursor: "pointer",
-    textAlign: "left",
-    transition: "all 0.12s ease",
   },
 };
 

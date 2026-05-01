@@ -13,7 +13,5 @@ export default meta;
 type Story = StoryObj<typeof JamlCurator>;
 
 export const Default: Story = {
-  args: {
-    motelyWasmUrl: "https://unpkg.com/@nims11/motely@0.2.2/motely_bg.wasm",
-  },
+  args: {},
 };

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { JimboButton } from './panel';
+import { JimboButton, JimboModal } from './panel';
 import { JimboText } from './jimboText';
 import "./jimbo.css";
 
@@ -15,13 +15,13 @@ export default meta;
 export const Typography: StoryObj = {
   render: () => (
     <div className="j-panel" style={{ display: "flex", flexDirection: "column", gap: 10, padding: 20 }}>
-      <JimboText size="title" tone="white">Title Text</JimboText>
-      <JimboText size="header" tone="orange">Header Text (Orange)</JimboText>
+      <JimboText size="display" tone="white">Display Text</JimboText>
+      <JimboText size="heading" tone="orange">Heading Text (Orange)</JimboText>
       <JimboText size="lg" tone="white">Large Text</JimboText>
       <JimboText size="md" tone="white">Medium Text (White)</JimboText>
       <JimboText size="sm" tone="blue">Small Text (Blue)</JimboText>
       <JimboText size="xs" tone="red">Extra Small (Red)</JimboText>
-      <JimboText size="micro" tone="tarot">Micro Text (Tarot)</JimboText>
+      <JimboText size="micro" tone="purple">Micro Text (Purple)</JimboText>
     </div>
   ),
 };

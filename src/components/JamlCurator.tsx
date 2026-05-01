@@ -120,7 +120,7 @@ export function JamlCurator({ }: JamlCuratorProps) {
                     >
                       <div className="j-flex-col j-items-center j-gap-xs">
                         <JimboText size="lg" tone="gold" style={{ letterSpacing: 2 }}>{currentSeed}</JimboText>
-                        <JimboButton tone="grey" size="xs">Copy Seed</JimboButton>
+                        <JimboButton tone="blue" size="xs">Copy Seed</JimboButton>
                       </div>
                     </JimboFlankNav>
 

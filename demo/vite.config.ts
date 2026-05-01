@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {},
   server: {
     port: 3141,
+    strictPort: true,
     host: true,
     open: true,
     cors: true,

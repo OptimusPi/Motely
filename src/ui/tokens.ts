@@ -1,6 +1,10 @@
 /**
  * Balatro design tokens — colors eyedropped from actual game pixels.
  * Do NOT replace with Lua HEX values; the game's shader pipeline transforms them.
+ *
+ * IMPORTANT: For DOM components, use CSS custom properties (--j-red, etc.)
+ * from jimbo.css. Only use these JS constants for contexts that cannot use
+ * CSS — such as R3F/Canvas, inline SVG fills, or imperative animation APIs.
  */
 
 export const JimboColorOption = {
@@ -42,22 +46,9 @@ export const JimboColorOption = {
   SPECTRAL_BUTTON_DARK: '#14449e',
 } as const
 
-export const JAML_COLORS = {
-  RED: JimboColorOption.RED,
-  BLUE: JimboColorOption.BLUE,
-  GREEN: JimboColorOption.GREEN,
-  ORANGE: JimboColorOption.ORANGE,
-  PURPLE: JimboColorOption.PURPLE,
-  WHITE: JimboColorOption.WHITE,
-  DARK_RED: JimboColorOption.DARK_RED,
-  DARK_BLUE: JimboColorOption.DARK_BLUE,
-  DARK_ORANGE: JimboColorOption.DARK_ORANGE,
-  DARK_GREEN: JimboColorOption.DARK_GREEN,
-  DARK_PURPLE: JimboColorOption.DARK_PURPLE,
-} as const
-
 export type JimboPaletteColor = keyof typeof JimboColorOption
 
+/** Convert hex to rgba for inline styles in Canvas/SVG/R3F contexts. */
 export function withAlpha(hex: string, alpha: number): string {
   const clean = hex.replace('#', '')
   const r = parseInt(clean.slice(0, 2), 16)
@@ -83,13 +74,3 @@ export const JIMBO_ANIMATIONS = {
   LETTER_BUMP_RATE: 2.666,
 } as const
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'action' | 'back' | 'ghost'
-
-export const BUTTON_COLORS: Record<ButtonVariant, { bg: string; hover: string; text: string }> = {
-  primary:   { bg: JimboColorOption.RED,    hover: JimboColorOption.DARK_RED,    text: JimboColorOption.WHITE },
-  secondary: { bg: JimboColorOption.BLUE,   hover: JimboColorOption.DARK_BLUE,   text: JimboColorOption.WHITE },
-  danger:    { bg: JimboColorOption.RED,    hover: JimboColorOption.DARK_RED,    text: JimboColorOption.WHITE },
-  action:    { bg: JimboColorOption.RED,    hover: JimboColorOption.DARK_RED,    text: JimboColorOption.WHITE },
-  back:      { bg: JimboColorOption.ORANGE, hover: JimboColorOption.DARK_ORANGE, text: JimboColorOption.WHITE },
-  ghost:     { bg: 'transparent', hover: 'rgba(255,255,255,0.1)', text: JimboColorOption.WHITE },
-}
