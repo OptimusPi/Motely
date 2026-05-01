@@ -45,7 +45,7 @@
   <!-- Generate compile-time version const — AOT safe, no reflection -->
   <Target Name="GenerateVersionInfo" BeforeTargets="CoreCompile">
     <WriteLinesToFile File="$(IntermediateOutputPath)VersionInfo.g.cs" Overwrite="true"
-        Lines="namespace Motely { internal static partial class VersionInfo { internal const string Version = &quot;$(MotelyVersion)&quot;%3B } }" />
+        Lines="namespace Motely { public static partial class VersionInfo { public const string Version = &quot;$(MotelyVersion)&quot;%3B } }" />
     <ItemGroup>
       <Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
     </ItemGroup>
