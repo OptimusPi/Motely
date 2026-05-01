@@ -23,10 +23,13 @@ export * from './ui/jimboStatGrid.js'
 export * from './ui/jimboSectionHeader.js'
 export * from './ui/jimboInfoCard.js'
 export * from './ui/jimboInset.js'
-export * from './ui/ide/JamlBuilder.js'
+// Old IDE prototypes — orphaned, statically import motely-wasm + use Vite-only
+// `?worker` syntax. Removed from the public surface so webpack consumers don't
+// transitively bundle motely-wasm. Files left on disk for triage.
+// export * from './ui/ide/JamlBuilder.js'
 export * from './ui/ide/JamlEditor.js'
-export * from './ui/ide/WasmStatus.js'
-export * from './ui/ide/AgnosticSeedCard.js'
+// export * from './ui/ide/WasmStatus.js'
+// export * from './ui/ide/AgnosticSeedCard.js'
 export * from './ui/JimboIconButton.js'
 export * from './ui/JimboInputModal.js'
 export * from './ui/JimboSelect.js'

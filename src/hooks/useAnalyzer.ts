@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import motely, { MotelyWasm, Motely } from "motely-wasm";
-
-// Boot motely immediately when this module is loaded
-motely.boot().catch(console.error);
+import type { MotelyWasm as MotelyWasmType, Motely as MotelyEnumsType } from "motely-wasm";
 import { extractVisualJamlItems } from "../utils/jamlMapPreview.js";
 import { motelyItemDisplayNameFromValue } from "../motelyDisplay.js";
 import type { AnalyzerAnteView, AnalyzerItem } from "../components/AnalyzerExplorer.js";
@@ -14,16 +11,19 @@ export type AnalyzerStatus = "idle" | "running" | "done" | "error";
 export type MotelyJsRunState = { voucherBitfield: number; bossBitfield: number };
 
 /**
- * Snapshot of the live search context after `analyze()` resolves, exposed so
- * higher-level components can open additional streams (shop chunks, soul-
- * joker chunks, pack contents) on demand without re-walking the seed. The
- * `runStates` map is keyed by ante and holds the runState AFTER the boss +
- * voucher have been resolved for that ante — i.e. the correct input for
- * `createShopItemStream(ante, runState, ...)`.
+ * Runtime handle for motely-wasm. Consumers boot motely-wasm once and pass
+ * `{ MotelyWasm, Motely }` to hooks that need it. This keeps jaml-ui free of
+ * static motely-wasm imports so consumer bundlers don't pull the 12MB engine
+ * into their main bundle.
  */
+export interface MotelyRuntime {
+  MotelyWasm: typeof MotelyWasmType;
+  Motely: typeof MotelyEnumsType;
+}
+
 export interface AnalyzerLive {
-  ctx: ReturnType<typeof MotelyWasm.createSearchContext>;
-  Motely: typeof Motely;
+  ctx: ReturnType<typeof MotelyWasmType.createSearchContext>;
+  Motely: typeof MotelyEnumsType;
   runStates: Record<number, MotelyJsRunState>;
   desiredNames: ReadonlySet<string>;
   seed: string;
@@ -31,7 +31,9 @@ export interface AnalyzerLive {
   stake: string;
 }
 
-export function useAnalyzer() {
+export function useAnalyzer(runtime: MotelyRuntime) {
+  const { MotelyWasm, Motely } = runtime;
+
   const [antes, setAntes] = useState<AnalyzerAnteView[]>([]);
   const [status, setStatus] = useState<AnalyzerStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +123,7 @@ export function useAnalyzer() {
       setError(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
-  }, []);
+  }, [MotelyWasm, Motely]);
 
   const clearError = useCallback(() => {
     setError(null);

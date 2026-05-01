@@ -8,20 +8,21 @@ import { JimboFlankNav } from "../ui/jimboFlankNav.js";
 import { JamlMapEditor } from "./jamlMap/JamlMapEditor.js";
 import { JamlAnalyzerFullscreen } from "./JamlAnalyzerFullscreen.js";
 import { useSearch } from "../hooks/useSearch.js";
-import { useAnalyzer } from "../hooks/useAnalyzer.js";
+import { useAnalyzer, type MotelyRuntime } from "../hooks/useAnalyzer.js";
 import { visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
 import { JamlSpeedometer } from "./JamlSpeedometer.js";
 
 const C = JimboColorOption;
 
 export interface JamlCuratorProps {
+  motelyRuntime: MotelyRuntime;
 }
 
-export function JamlCurator({ }: JamlCuratorProps) {
+export function JamlCurator({ motelyRuntime }: JamlCuratorProps) {
   // Use map editor by default to generate JAML
   const [jamlText, setJamlText] = useState("");
   const search = useSearch();
-  const analyzer = useAnalyzer();
+  const analyzer = useAnalyzer(motelyRuntime);
 
   // Search results pagination
   const [resultIndex, setResultIndex] = useState(0);

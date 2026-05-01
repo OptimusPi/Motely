@@ -120,7 +120,14 @@ export {
     type AnalyzerStatus,
     type AnalyzerLive,
     type MotelyJsRunState,
+    type MotelyRuntime,
 } from "./hooks/useAnalyzer.js";
+
+// Setter pattern for motely-wasm runtime enums. Consumers boot motely-wasm
+// and call setMotelyEnums(Motely) once after boot so display/decoder helpers
+// can resolve enum keys without statically importing motely-wasm.
+export { setMotelyEnums as setMotelyDisplayEnums } from "./motelyDisplay.js";
+export { setMotelyEnums as setMotelyDecoderEnums } from "./decode/motelyItemDecoder.js";
 
 
 export {
