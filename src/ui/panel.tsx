@@ -53,7 +53,7 @@ JimboInnerPanel.displayName = 'JimboInnerPanel'
 // Tones are purely CSS-driven via j-btn--{tone} classes in jimbo.css.
 // No JS color maps. No TONE_PAIRS. Respect the design tokens.
 
-export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'tarot' | 'planet' | 'spectral'
+export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'tarot' | 'planet' | 'spectral' | 'grey'
 
 export interface JimboButtonProps {
   tone?: JimboTone

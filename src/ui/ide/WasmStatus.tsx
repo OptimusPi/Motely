@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import motely, { MotelyWasm } from 'motely-wasm';
 import { Cpu, Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 export function WasmStatus() {
     const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');

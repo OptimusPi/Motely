@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import motely, { MotelyWasm, Analysis } from 'motely-wasm';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { DeckSprite } from './DeckSprite';
 
 import { Loader2, Sparkles, ChevronRight } from 'lucide-react';

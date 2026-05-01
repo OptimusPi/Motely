@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import SearchWorker from "./searchWorker.js?worker&inline";
 
 export interface SearchResult {
   seed: string;
@@ -21,10 +20,6 @@ export interface UseSearchState {
   tallyLabels: string[];
 }
 
-function createWorker(): Worker {
-  return new SearchWorker();
-}
-
 const INITIAL_STATE: UseSearchState = {
   results: [],
   totalSearched: 0n,
@@ -35,17 +30,112 @@ const INITIAL_STATE: UseSearchState = {
   tallyLabels: [],
 };
 
-export function useSearch() {
+const SEARCH_WORKER_CODE = `
+let MotelyWasm = null;
+let MotelyWasmEvents = null;
+let activeSearch = null;
+
+self.addEventListener('message', async function(e) {
+  const msg = e.data;
+
+  if (msg.type === 'init') {
+    try {
+      const mod = await import(msg.url);
+      await mod.default.boot();
+      MotelyWasm = mod.MotelyWasm;
+      MotelyWasmEvents = mod.MotelyWasmEvents;
+      self.postMessage({ type: 'ready' });
+    } catch (err) {
+      self.postMessage({ type: 'error', message: String(err) });
+    }
+    return;
+  }
+
+  if (msg.type === 'start') {
+    if (!MotelyWasm) { self.postMessage({ type: 'error', message: 'Not initialized' }); return; }
+    const validation = MotelyWasm.validateJaml(msg.jaml);
+    if (validation !== 'valid') { self.postMessage({ type: 'error', message: validation }); return; }
+
+    function cleanup() {
+      MotelyWasmEvents.notifyResult = () => {};
+      MotelyWasmEvents.notifyProgress = () => {};
+      MotelyWasmEvents.notifyComplete = () => {};
+      activeSearch = null;
+    }
+
+    MotelyWasmEvents.notifyResult = function(seed, score, tallyColumns) {
+      self.postMessage({ type: 'result', seed, score, tallyColumns: Array.from(tallyColumns) });
+    };
+    MotelyWasmEvents.notifyProgress = function(searched, matching) {
+      self.postMessage({ type: 'progress', searched: searched.toString(), matching: matching.toString() });
+    };
+    MotelyWasmEvents.notifyComplete = function(status, searched, matched) {
+      cleanup();
+      self.postMessage({ type: 'complete', status, searched: searched.toString(), matched: matched.toString() });
+    };
+
+    try {
+      const mode = msg.mode || 'random';
+
+      if (mode === 'random') {
+        activeSearch = MotelyWasm.startRandomSearch(msg.jaml, msg.count);
+      } else if (mode === 'aesthetic') {
+        activeSearch = MotelyWasm.startAestheticSearch(msg.jaml, msg.aesthetic);
+      } else if (mode === 'seedList') {
+        activeSearch = MotelyWasm.startSeedListSearch(msg.jaml, msg.seeds);
+      } else if (mode === 'keyword') {
+        activeSearch = MotelyWasm.startKeywordSearch(msg.jaml, msg.keywords, msg.padding || '');
+      } else if (mode === 'sequential') {
+        activeSearch = MotelyWasm.startSequentialSearch(msg.jaml, msg.batchCharCount, BigInt(msg.startBatch), BigInt(msg.endBatch));
+      } else {
+        self.postMessage({ type: 'error', message: 'Unknown search mode: ' + mode });
+        cleanup();
+        return;
+      }
+    } catch (err) {
+      cleanup();
+      self.postMessage({ type: 'error', message: String(err) });
+    }
+    return;
+  }
+
+  if (msg.type === 'stop') {
+    if (activeSearch) { activeSearch.cancel(); activeSearch = null; }
+    self.postMessage({ type: 'cancelled' });
+  }
+
+  if (msg.type === 'get_tally_labels') {
+    if (!MotelyWasm) { self.postMessage({ type: 'error', message: 'Not initialized' }); return; }
+    try {
+      const labels = MotelyWasm.getTallyLabels(msg.jaml);
+      self.postMessage({ type: 'tally_labels', labels: Array.from(labels) });
+    } catch (err) {
+      self.postMessage({ type: 'error', message: String(err) });
+    }
+  }
+});
+`;
+
+function createWorker(): Worker {
+  const blob = new Blob([SEARCH_WORKER_CODE], { type: "application/javascript" });
+  return new Worker(URL.createObjectURL(blob), { type: "module" });
+}
+
+export function useSearch(motelyWasmUrl?: string) {
   const [state, setState] = useState<UseSearchState>(INITIAL_STATE);
 
   const workerRef = useRef<Worker | null>(null);
-  const readyRef = useRef(true); // Worker is ready implicitly since boot is handled by import
+  const readyRef = useRef(false); // Worker is NOT implicitly ready, must wait for 'ready' message
   const speedRef = useRef({ lastSearched: 0n, lastTime: 0, ema: 0 });
 
   useEffect(() => {
     setState((s) => ({ ...s, status: "idle" }));
     const worker = createWorker();
     workerRef.current = worker;
+    
+    if (motelyWasmUrl) {
+      worker.postMessage({ type: 'init', url: motelyWasmUrl });
+    }
 
     worker.onmessage = (e: MessageEvent) => {
       const msg = e.data as { type: string; [k: string]: unknown };
@@ -105,7 +195,7 @@ export function useSearch() {
       worker.terminate();
       workerRef.current = null;
     };
-  }, []);
+  }, [motelyWasmUrl]);
 
   const sendStart = useCallback((payload: Record<string, unknown>) => {
     const worker = workerRef.current;

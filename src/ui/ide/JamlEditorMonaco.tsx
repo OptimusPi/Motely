@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import Editor, { OnMount, loader } from "@monaco-editor/react";
 import { Copy, RotateCcw, Check, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 
 interface JamlEditorMonacoProps {

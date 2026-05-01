@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 
-import { useJamlFilter } from '@/lib/hooks/useJamlFilter';
-import { DECK_OPTIONS, STAKE_OPTIONS } from '@/lib/data/constants';
+import { useJamlFilter } from '../../lib/hooks/useJamlFilter';
+import { DECK_OPTIONS, STAKE_OPTIONS } from '../../lib/data/constants';
 import JamlEditor from './JamlEditor';
 
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { X, Edit2, Loader2, Search, Square, Copy, RotateCcw, Flame, Sparkles } from 'lucide-react';
 import { Motely } from 'motely-wasm';
 import { AgnosticSeedCard } from './AgnosticSeedCard';
