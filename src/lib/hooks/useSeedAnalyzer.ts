@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { MotelyWasm as MotelyWasmType, Motely as MotelyEnumsType, Analysis } from "motely-wasm";
+import { Motely } from "motely-wasm";
 
 export interface MotelyRuntime {
-  MotelyWasm: typeof MotelyWasmType;
-  Motely: typeof MotelyEnumsType;
+  MotelyWasm: typeof Motely.MotelyWasm;
+  Motely: typeof Motely;
 }
 
 export function useSeedAnalyzer(runtime: MotelyRuntime | null, seed: string | null) {
-  const [data, setData] = useState<Analysis.MotelyLegacyTextAnalyzer | null | undefined>(null);
+  const [data, setData] = useState<Motely.Analysis.MotelyLegacyTextAnalyzer | null | undefined>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

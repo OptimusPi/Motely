@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { MotelyWasm as MotelyWasmType, Motely as MotelyEnumsType } from "motely-wasm";
+import { Motely } from "motely-wasm";
 import { extractVisualJamlItems } from "../utils/jamlMapPreview.js";
 import { motelyItemDisplayNameFromValue } from "../motelyDisplay.js";
 import type { AnalyzerAnteView, AnalyzerItem } from "../components/AnalyzerExplorer.js";
@@ -17,13 +17,13 @@ export type MotelyJsRunState = { voucherBitfield: number; bossBitfield: number }
  * into their main bundle.
  */
 export interface MotelyRuntime {
-  MotelyWasm: typeof MotelyWasmType;
-  Motely: typeof MotelyEnumsType;
+  MotelyWasm: typeof Motely.MotelyWasm;
+  Motely: typeof Motely;
 }
 
 export interface AnalyzerLive {
-  ctx: ReturnType<typeof MotelyWasmType.createSearchContext>;
-  Motely: typeof MotelyEnumsType;
+  ctx: ReturnType<typeof Motely.MotelyWasm.createSearchContext>;
+  Motely: typeof Motely;
   runStates: Record<number, MotelyJsRunState>;
   desiredNames: ReadonlySet<string>;
   seed: string;

@@ -88,8 +88,8 @@ importers:
         specifier: ^0.55.1
         version: 0.55.1
       motely-wasm:
-        specifier: ^14.3.3
-        version: 14.3.3
+        specifier: ^14.4.0
+        version: 14.4.0
       playwright:
         specifier: ^1.59.1
         version: 1.59.1
@@ -1715,8 +1715,8 @@ packages:
   monaco-editor@0.55.1:
     resolution: {integrity: sha512-jz4x+TJNFHwHtwuV9vA9rMujcZRb0CEilTEwG2rRSpe/A7Jdkuj8xPKttCgOh+v/lkHy7HsZ64oj+q3xoAFl9A==}
 
-  motely-wasm@14.3.3:
-    resolution: {integrity: sha512-nMuTf5oAcKeThQTniokjHA2r2m+kRIVuBYHKDV7sUj+DsyplFBOzFfkikbBKc7TH4cXwV1j6bm+LMI8Z1DSmXw==}
+  motely-wasm@14.4.0:
+    resolution: {integrity: sha512-ArDIISsTLFDkvSAz0e5mhclTc+VAZZ9HhR1RtUEUdnZSYgeNSU+TorUE3lzs9iEdacQ8A/ixr1YPZThsNpaI2w==}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -4047,7 +4047,7 @@ snapshots:
       dompurify: 3.2.7
       marked: 14.0.0
 
-  motely-wasm@14.3.3: {}
+  motely-wasm@14.4.0: {}
 
   mrmime@2.0.1: {}
 

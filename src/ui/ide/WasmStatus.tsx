@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import motely, { MotelyWasm } from 'motely-wasm';
+import motely, { Motely } from 'motely-wasm';
 import { Cpu, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -17,7 +17,7 @@ export function WasmStatus() {
             try {
                 await motely.boot();
                 if (cancelled) return;
-                setVersion(MotelyWasm.getVersion());
+                setVersion(Motely.MotelyWasm.getVersion());
                 setStatus('ready');
             } catch (err: any) {
                 console.error("WASM Status Error:", err);

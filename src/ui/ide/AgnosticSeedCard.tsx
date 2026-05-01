@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import motely, { MotelyWasm, Analysis } from 'motely-wasm';
+import motely, { Motely } from 'motely-wasm';
 import { cn } from '../../lib/utils';
 import { DeckSprite } from './DeckSprite';
 
@@ -50,7 +50,7 @@ export function AgnosticSeedCard({
             try {
                 await motely.boot();
                 const jaml = `version: 1\nconfig:\n  deck: ${deckSlug}\n  stake: ${stakeSlug}\n`;
-                const rawData = MotelyWasm.analyzeJamlSeeds(jaml, [seed]);
+                const rawData = Motely.MotelyWasm.analyzeJamlSeeds(jaml, [seed]);
                 
                 if (rawData && rawData.seeds.length > 0) {
                     const seedData = rawData.seeds[0];
