@@ -2,8 +2,6 @@
 
 export {
     JAML_ASSET_FILES,
-    clearJamlAssetBaseUrl,
-    getDefaultJamlAssetUrlMap,
     resolveJamlAssetUrl,
     setJamlAssetBaseUrl,
     type JamlAssetFile,

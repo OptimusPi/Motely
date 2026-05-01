@@ -11,7 +11,7 @@ import { X, Edit2, Loader2, Search, Square, Copy, RotateCcw, Flame, Sparkles } f
 import { Motely } from 'motely-wasm';
 import { AgnosticSeedCard } from './AgnosticSeedCard';
 import { WasmStatus } from './WasmStatus';
-import { JAML_PRESETS } from '@/lib/jaml/jamlPresets';
+import { JAML_PRESETS } from '../../lib/jaml/jamlPresets.js';
 
 export default function JamlBuilder() {
     const {

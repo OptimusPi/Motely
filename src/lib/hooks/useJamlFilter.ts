@@ -41,7 +41,7 @@ import {
     EDITION_OPTIONS,
     SEAL_OPTIONS,
     ENHANCEMENT_OPTIONS
-} from '@/lib/data/constants';
+} from '../data/constants.js';
 
 export {
     DECK_OPTIONS,
