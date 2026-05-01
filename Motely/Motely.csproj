@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- net10.0: CLI, tests, server. net10.0-browser: browser BCL / Mono WASM consumers (raw engine DLL for browser-targeted apps). -->
-    <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPublishable>false</IsPublishable>
     <PublishReadyToRun>false</PublishReadyToRun>
@@ -15,12 +14,16 @@
 
   <!-- Packages (versions from Directory.Packages.props) -->
   <ItemGroup>
-    <PackageReference Include="Bootsharp.FileSystem" PrivateAssets="all" />
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <!-- Native AOT / WASM: source-generated YAML accessors (replaces reflection in DeserializerBuilder) -->
     <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- MotelyWasmHost uses Bootsharp.FileSystem types and is compiled in Motely.Wasm instead. -->
+  <ItemGroup>
+    <Compile Remove="MotelyWasmHost.cs" />
   </ItemGroup>
 
   <ItemGroup>
