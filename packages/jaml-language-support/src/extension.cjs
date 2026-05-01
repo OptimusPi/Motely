@@ -148,6 +148,12 @@ function countItems(text, section) {
   return (match[1].match(/^\s*-\s+/gm) || []).length;
 }
 
+function normalizeSeedInput(value) {
+  const seed = value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{1,8}$/.test(seed)) return null;
+  return seed.replaceAll("0", "O");
+}
+
 // ---------------------------------------------------------------------------
 // Chat participant — @jimbo
 // VS Code 1.97+ Language Model API
@@ -187,8 +193,9 @@ async function handleJimboChat(request, _context, stream, token) {
     }
     try {
       const motelyMod = await import("motely-wasm");
+      if (typeof motelyMod.default?.boot === "function") await motelyMod.default.boot();
+      else if (typeof motelyMod.default?.initialize === "function") await motelyMod.default.initialize();
       const motely = motelyMod.MotelyWasm ?? motelyMod.default ?? motelyMod;
-      if (typeof motely.initialize === "function") await motely.initialize();
       const text = editor.document.getText();
       const labels = motely.getTallyLabels(text) ?? [];
       const batchResult = await motely.runSequentialSearchBatch(text, 6, 0n, 500000n, 10);
@@ -211,10 +218,10 @@ async function handleJimboChat(request, _context, stream, token) {
     return; // Don't forward this to Copilot, we handle it natively!
   } else if (request.command === "analyze") {
     const sel = editor?.document.getText(editor.selection)?.trim() ?? "";
-    const seed = (sel || request.prompt.trim()).toUpperCase();
-    if (!seed || !/^[1-9A-Z]{1,8}$/.test(seed)) {
+    const seed = normalizeSeedInput(sel || request.prompt);
+    if (!seed) {
       stream.markdown(
-        "Select or type a valid Balatro seed (1–8 characters, `[1-9A-Z]`), then try again.\n\nExample: `@jimbo /analyze 4CJQV`"
+        "Select or type a valid Balatro seed (1-8 characters, `[A-Z0-9]`), then try again.\n\nExample: `@jimbo /analyze 4CJQV`"
       );
       return;
     }
@@ -256,7 +263,7 @@ async function handleJimboChat(request, _context, stream, token) {
 
 // ---------------------------------------------------------------------------
 // Seed analyzer — status bar button + command
-// When selection looks like a Balatro seed ([1-9A-Z], 1–8 chars), the status
+// When selection looks like a Balatro seed ([A-Z0-9], 1-8 chars), the status
 // bar lights up and right-click / command palette offer "Analyze Seed".
 // ---------------------------------------------------------------------------
 function registerSeedAnalyzer(context) {
@@ -291,15 +298,16 @@ function registerSeedAnalyzer(context) {
       if (!seed) {
         seed = await vscode.window.showInputBox({
           prompt: "Enter a Balatro seed to analyze",
-          placeHolder: "e.g. 4CJQV  (1–8 chars, A-Z and 1-9)",
+          placeHolder: "e.g. 4CJQV  (1-8 chars, A-Z and 0-9)",
           validateInput: (v) =>
-            /^[1-9A-Z]{1,8}$/i.test(v.trim())
+            normalizeSeedInput(v)
               ? undefined
-              : "Must be 1–8 characters using A-Z and 1-9",
+              : "Must be 1-8 characters using A-Z and 0-9",
         });
         if (!seed) return;
-        seed = seed.trim().toUpperCase();
+        seed = normalizeSeedInput(seed);
       }
+      if (!seed) return;
       vscode.env.openExternal(
         vscode.Uri.parse(
           `https://jammy.seedfinder.app/?seed=${encodeURIComponent(seed)}`
@@ -312,8 +320,7 @@ function registerSeedAnalyzer(context) {
 function getSelectedSeed() {
   const editor = vscode.window.activeTextEditor;
   if (!editor) return null;
-  const sel = editor.document.getText(editor.selection).trim().toUpperCase();
-  return /^[1-9A-Z]{1,8}$/.test(sel) ? sel : null;
+  return normalizeSeedInput(editor.document.getText(editor.selection));
 }
 
 // --- legacy dead code below this line, kept only for reference, never called ---
