@@ -1,0 +1,37 @@
+name: Big Blind Tag Example
+author: jammy
+description: Big Blind Tag appears after defeating Big Blind
+deck: Red
+stake: White
+hashtags: ["tag", "skip-reward", "copy", "negative", "scaling", "planet-scaling", "legendary-synergy"]
+must:
+  - bigBlindTag: RareTag
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - rareJoker: Blueprint
+    score: 70
+  - rareJoker: Brainstorm
+    score: 60
+  - rareJoker: Baron
+    score: 50
+  - rareJoker: DriversLicense
+    score: 40
+  - rareJoker: Any
+    score: 25
+  - bigBlindTag: NegativeTag
+    score: 60
+  - bigBlindTag: DoubleTag
+    score: 40
+  - tag: NegativeTag
+    score: 45
+  - tag: RareTag
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30

@@ -1,0 +1,39 @@
+name: Mime Steel Baron
+author: jammy
+description: Mime uncommon with Baron and Steel cards for held-card retrigger
+deck: Red
+stake: White
+hashtags: ["joker", "uncommon-joker", "copy", "negative", "scaling", "planet-scaling", "retrigger", "steel", "legendary-synergy"]
+must:
+  - uncommonJoker: Mime
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - rareJoker: Baron
+    score: 85
+  - uncommonJoker: SteelJoker
+    score: 70
+  - tarot: TheChariot
+    score: 60
+  - commonJoker: RaisedFist
+    score: 55
+  - commonJoker: ShootTheMoon
+    score: 50
+  - rareJoker: Blueprint
+    score: 50
+  - tag: NegativeTag
+    score: 40
+  - legendaryJoker: Perkeo
+    score: 40
+  - rareJoker: Brainstorm
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30
+  - rareJoker: DriversLicense
+    score: 25
+  - legendaryJoker: Chicot
+    score: 20

@@ -1,0 +1,17 @@
+name: TheEmperor Tarot Chain
+author: jammy
+description: TheEmperor creates 2 Tarots for Fortune Teller scaling
+deck: Red
+stake: White
+must:
+  - tarot: TheEmperor
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - commonJoker: FortuneTeller
+    score: 50
+  - tarot: TheFool
+    score: 35

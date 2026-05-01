@@ -1,0 +1,17 @@
+name: TheSoul Legendary
+author: jammy
+description: TheSoul spectral to obtain a Legendary joker
+deck: Red
+stake: White
+must:
+  - spectral: TheSoul
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - legendaryJoker: Perkeo
+    score: 100
+  - legendaryJoker: Chicot
+    score: 90

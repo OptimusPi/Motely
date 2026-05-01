@@ -1,0 +1,40 @@
+name: Charm Tag Mega Pack
+author: jammy
+description: Charm Tag for free Mega Arcana Pack in next shop
+deck: Zodiac
+stake: White
+hashtags: ["tag", "skip-reward", "copy", "negative", "planet-scaling", "tarot-engine", "legendary-synergy"]
+must:
+  - tag: CharmTag
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - commonJoker: FortuneTeller
+    score: 70
+  - uncommonJoker: Cartomancer
+    score: 65
+  - tarot: TheEmperor
+    score: 55
+  - tarot: TheHighPriestess
+    score: 40
+  - tarot: TheMagician
+    score: 30
+  - spectral: TheSoul
+    score: 60
+  - legendaryJoker: Perkeo
+    score: 55
+  - uncommonJoker: Seance
+    score: 35
+  - uncommonJoker: SixthSense
+    score: 30
+  - voucher: TarotMerchant
+    score: 45
+  - voucher: Hieroglyph
+    score: 40
+  - tag: NegativeTag
+    score: 35
+  - rareJoker: Blueprint
+    score: 30

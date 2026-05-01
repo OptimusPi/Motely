@@ -1,0 +1,17 @@
+name: Magic Deck Death Clone
+author: jammy
+description: Magic Deck starts with Death tarot - use it to clone your best card immediately
+deck: Magic
+stake: White
+must:
+  - uncommonJoker: TheIdol
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - rareJoker: DNA
+    score: 30
+  - spectral: Cryptid
+    score: 25

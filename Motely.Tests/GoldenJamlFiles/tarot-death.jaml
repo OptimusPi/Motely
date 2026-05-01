@@ -1,0 +1,39 @@
+name: Death Tarot Clone
+author: jammy
+description: Death tarot with The Idol for card cloning strategy
+deck: Red
+stake: White
+hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "deck-fix", "face-cards", "tarot-engine", "legendary-synergy"]
+must:
+  - tarot: Death
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: TheIdol
+    score: 70
+  - spectral: Cryptid
+    score: 65
+  - rareJoker: DNA
+    score: 60
+  - rareJoker: Baron
+    score: 45
+  - commonJoker: FortuneTeller
+    score: 40
+  - legendaryJoker: Triboulet
+    score: 40
+  - legendaryJoker: Perkeo
+    score: 40
+  - rareJoker: Blueprint
+    score: 35
+  - tag: NegativeTag
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30
+  - rareJoker: Brainstorm
+    score: 30
+  - legendaryJoker: Chicot
+    score: 25
