@@ -8,36 +8,34 @@ must:
   - spectralCard: Cryptid
     antes: [1]
     sources:
-      sixthSense: [0]
       seance: [0]
-  - uncommonJokers: [SixthSense, Seance]
+  - uncommonJoker: Seance
+    edition: Negative
     antes: [1]
     sources:
-      shopItems: [0,1]
-      boosterPacks: [0,1]
-      uncommonTag: [0]
+      boosterPacks: [0, 1]
   - legendaryJoker: Perkeo
     antes: [1]
     sources:
-      boosterPacks: [2,3]
+      boosterPacks: [0,1,2,3]
   - rareJokers: [Blueprint, Brainstorm]
     antes: [1]
     sources:
-      boosterPacks: [2,3]
+      boosterPacks: [0,1,2,3]
   - joker: Showman
     antes: [1,2,3,4]
 should:
   - joker: Baron
     antes: [1,2,3,4]
     sources:
-    shopItems: [0,1,2,3,4,5,6,7,8,9,10,11,12]
-    boosterPacks: [0,1,2,3,4,5]
+      shopItems: [0,1,2,3,4,5,6,7,8,9,10,11,12]
+      boosterPacks: [0,1,2,3,4,5]
   - joker: Mime
     antes: [1,2,3,4]
     sources:
-    shopItems: [0,1,2,3,4,5,6,7,8,9,10,11,12]
-    boosterPacks: [0,1,2,3,4,5]
-  - rareJoker: [Blueprint, Brainstorm, InvisibleJoker]
+      shopItems: [0,1,2,3,4,5,6,7,8,9,10,11,12]
+      boosterPacks: [0,1,2,3,4,5]
+  - rareJoker: InvisibleJoker
     antes: [2, 3, 4]
     sources:
       shopItems: [0,1,2,3,4,5,6,7,8,9,10,11,12]

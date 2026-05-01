@@ -23,6 +23,7 @@ function activate(context) {
   registerCommands(context);
   registerChatParticipant(context);
   registerSeedAnalyzer(context);
+  registerSidebar(context);
 }
 
 function deactivate() {
@@ -112,10 +113,15 @@ function registerCommands(context) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("jaml.openSchema", () => {
-      const schemaPath = path.join(context.extensionPath, "schema", "jaml.schema.json");
+      const schemaUri = vscode.Uri.joinPath(context.extensionUri, "schema", "jaml.schema.json");
       vscode.workspace
-        .openTextDocument(schemaPath)
-        .then((doc) => vscode.window.showTextDocument(doc));
+        .openTextDocument(schemaUri)
+        .then((doc) => vscode.window.showTextDocument(doc))
+        .then(undefined, (err) => {
+          vscode.window.showErrorMessage(
+            `Could not open bundled schema: ${err?.message ?? err}\nExpected: ${schemaUri.fsPath}`
+          );
+        });
     })
   );
 
@@ -323,28 +329,271 @@ function getSelectedSeed() {
   return normalizeSeedInput(editor.document.getText(editor.selection));
 }
 
-// --- legacy dead code below this line, kept only for reference, never called ---
-function _unused_activate(context) {
-  const core = _unused_loadLanguageCore(context);
-  const diagnostics = vscode.languages.createDiagnosticCollection("jaml");
-  context.subscriptions.push(diagnostics);
+// ---------------------------------------------------------------------------
+// Sidebar — Activity Bar panel
+// Filter browser + quick actions + settings
+// ---------------------------------------------------------------------------
+function registerSidebar(context) {
+  const provider = new JamlSidebarProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("jaml.sidebar", provider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    })
+  );
+}
 
-  const refreshActiveDocument = () => {
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      updateDiagnostics(editor.document, diagnostics, core);
-    }
-  };
-
-  for (const document of vscode.workspace.textDocuments) {
-    updateDiagnostics(document, diagnostics, core);
+class JamlSidebarProvider {
+  constructor(context) {
+    this._context = context;
+    this._view = null;
   }
 
-  context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(document => updateDiagnostics(document, diagnostics, core)));
-  context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => updateDiagnostics(event.document, diagnostics, core)));
-  context.subscriptions.push(vscode.workspace.onDidCloseTextDocument(document => diagnostics.delete(document.uri)));
-  context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(refreshActiveDocument));
+  resolveWebviewView(webviewView) {
+    this._view = webviewView;
+    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.html = this._getHtml();
 
+    // Refresh filter list whenever workspace changes
+    const refresh = () => this._postFilters();
+    const watcher = vscode.workspace.createFileSystemWatcher("**/*.jaml");
+    this._context.subscriptions.push(
+      watcher.onDidCreate(refresh),
+      watcher.onDidDelete(refresh),
+      watcher
+    );
+
+    // Handle messages from webview
+    webviewView.webview.onDidReceiveMessage(async (msg) => {
+      switch (msg.type) {
+        case "ready":
+          this._postFilters();
+          this._postSettings();
+          break;
+        case "openFilter":
+          vscode.workspace.openTextDocument(vscode.Uri.file(msg.path))
+            .then(doc => vscode.window.showTextDocument(doc));
+          break;
+        case "newFilter": {
+          const folders = vscode.workspace.workspaceFolders;
+          const base = folders?.[0]?.uri.fsPath ?? require("os").homedir();
+          const uri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file(require("path").join(base, "JamlFilters", "new.jaml")),
+            filters: { "JAML Filter": ["jaml"] },
+          });
+          if (!uri) break;
+          const template = `id: new-filter\nname: My Filter\ndeck: Red\nstake: White\nmust:\n  - joker: Any\n    antes: [1]\n`;
+          await vscode.workspace.fs.writeFile(uri, Buffer.from(template));
+          vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
+          this._postFilters();
+          break;
+        }
+        case "openCurator": {
+          const editor = vscode.window.activeTextEditor;
+          const jaml = editor?.document.languageId === "jaml" ? editor.document.getText() : "";
+          vscode.env.openExternal(
+            vscode.Uri.parse(`https://jammy.seedfinder.app/${jaml ? "?jaml=" + encodeURIComponent(jaml) : ""}`)
+          );
+          break;
+        }
+        case "runSearch": {
+          const editor = vscode.window.activeTextEditor;
+          if (!editor || editor.document.languageId !== "jaml") {
+            vscode.window.showWarningMessage("Open a .jaml file first.");
+            break;
+          }
+          vscode.commands.executeCommand("workbench.action.chat.open", { query: "@jimbo /search" });
+          break;
+        }
+        case "openSchema":
+          vscode.commands.executeCommand("jaml.openSchema");
+          break;
+        case "saveSetting":
+          vscode.workspace.getConfiguration("jaml").update(msg.key, msg.value, vscode.ConfigurationTarget.Global);
+          break;
+      }
+    });
+  }
+
+  async _postFilters() {
+    if (!this._view) return;
+    const uris = await vscode.workspace.findFiles("**/*.jaml", "**/node_modules/**", 100);
+    const filters = uris.map(u => ({
+      path: u.fsPath,
+      name: require("path").basename(u.fsPath, ".jaml"),
+    })).sort((a, b) => a.name.localeCompare(b.name));
+    this._view.webview.postMessage({ type: "filters", filters });
+  }
+
+  _postSettings() {
+    if (!this._view) return;
+    const cfg = vscode.workspace.getConfiguration("jaml");
+    this._view.webview.postMessage({
+      type: "settings",
+      threads: cfg.get("search.threads", 8),
+      batchSize: cfg.get("search.batchSize", 6),
+    });
+  }
+
+  _getHtml() {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<style>
+  :root {
+    --bal-red:    #fe5f55;
+    --bal-blue:   #4fc3f7;
+    --bal-orange: #ffb347;
+    --bal-grey:   #8a8fa8;
+    --bal-dark:   #1a1025;
+    --bal-purple: #22142f;
+    --radius: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--vscode-sideBar-background, var(--bal-dark));
+    color: var(--vscode-foreground, #cdd6f4);
+    font-family: var(--vscode-font-family, sans-serif);
+    font-size: 12px;
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--bal-grey);
+    margin-bottom: 4px;
+  }
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-red    { background: var(--bal-red);    color: #fff; }
+  .btn-blue   { background: var(--bal-blue);   color: #1a1a2e; }
+  .btn-orange { background: var(--bal-orange); color: #1a1a2e; }
+  .btn-ghost  {
+    background: transparent;
+    color: var(--vscode-foreground);
+    border: 1px solid var(--vscode-panel-border, #3a3a5a);
+  }
+  .filter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--vscode-foreground);
+    font-size: 12px;
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+  }
+  .filter-item:hover { background: var(--vscode-list-hoverBackground, #ffffff12); }
+  .filter-item .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bal-orange); flex-shrink: 0; }
+  .section { display: flex; flex-direction: column; gap: 4px; }
+  .divider { height: 1px; background: var(--vscode-panel-border, #3a3a5a); }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .row label { flex: 1; color: var(--bal-grey); }
+  .row input[type=number] {
+    width: 60px;
+    background: var(--vscode-input-background, #1e1e2e);
+    border: 1px solid var(--vscode-input-border, #3a3a5a);
+    color: var(--vscode-input-foreground, #cdd6f4);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .empty { color: var(--bal-grey); padding: 6px 8px; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="section">
+  <button class="btn btn-red" onclick="send('runSearch')">⚡ Quick Search</button>
+  <button class="btn btn-blue" onclick="send('openCurator')">🌐 Open in Seed Curator</button>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+  <h3>Filter Browser</h3>
+  <div class="filter-list" id="filterList"><div class="empty">Scanning workspace…</div></div>
+  <button class="btn btn-ghost" onclick="send('newFilter')" style="margin-top:2px">+ New Filter</button>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+  <h3>Search Settings</h3>
+  <div class="row">
+    <label>Threads</label>
+    <input type="number" id="threads" min="1" max="32" value="8" onchange="saveSetting('search.threads', +this.value)">
+  </div>
+  <div class="row">
+    <label>Batch Char Count</label>
+    <input type="number" id="batchSize" min="1" max="10" value="6" onchange="saveSetting('search.batchSize', +this.value)">
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+  <button class="btn btn-ghost" onclick="send('openSchema')">📋 Open JAML Schema</button>
+</div>
+
+<script>
+const vscode = acquireVsCodeApi();
+function send(type, extra) { vscode.postMessage({ type, ...extra }); }
+function saveSetting(key, value) { vscode.postMessage({ type: 'saveSetting', key, value }); }
+
+window.addEventListener('message', e => {
+  const msg = e.data;
+  if (msg.type === 'filters') {
+    const list = document.getElementById('filterList');
+    if (!msg.filters.length) {
+      list.innerHTML = '<div class="empty">No .jaml files in workspace</div>';
+      return;
+    }
+    list.innerHTML = msg.filters.map(f =>
+      \`<button class="filter-item" onclick="send('openFilter',{path:\${JSON.stringify(f.path)}})">
+        <span class="dot"></span><span>\${f.name}</span>
+      </button>\`
+    ).join('');
+  }
+  if (msg.type === 'settings') {
+    document.getElementById('threads').value = msg.threads;
+    document.getElementById('batchSize').value = msg.batchSize;
+  }
+});
+send('ready');
+</script>
+</body>
+</html>`;
+  }
 }
 
 module.exports = { activate, deactivate };

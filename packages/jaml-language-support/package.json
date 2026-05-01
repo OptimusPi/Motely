@@ -9,6 +9,13 @@
   "engines": {
     "vscode": "^1.99.0"
   },
+  "activationEvents": [
+    "onLanguage:jaml",
+    "onLanguage:jummy",
+    "onCommand:jaml.openSchema",
+    "onCommand:jaml.openInCurator",
+    "onView:jaml.sidebar"
+  ],
   "categories": [
     "Programming Languages",
     "Snippets",
@@ -38,6 +45,24 @@
   },
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "jaml-sidebar",
+          "title": "JAML / Motely",
+          "icon": "images/icon.ico"
+        }
+      ]
+    },
+    "views": {
+      "jaml-sidebar": [
+        {
+          "type": "webview",
+          "id": "jaml.sidebar",
+          "name": "Jimbo's Filters"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "jaml",
@@ -79,12 +104,6 @@
         "language": "jummy",
         "scopeName": "source.jummy",
         "path": "./syntaxes/jummy.tmLanguage.json"
-      }
-    ],
-    "snippets": [
-      {
-        "language": "jaml",
-        "path": "./snippets/jaml.code-snippets"
       }
     ],
     "commands": [
@@ -163,8 +182,78 @@
       ]
     }
   },
+  "configuration": {
+    "title": "JAML",
+    "properties": {
+      "jaml.search.threads": {
+        "type": "number",
+        "default": 8,
+        "description": "Number of threads to use for CLI seed searches."
+      },
+      "jaml.search.batchSize": {
+        "type": "number",
+        "default": 6,
+        "description": "Batch character count for sequential searches."
+      }
+    }
+  },
+  "configurationDefaults": {
+    "editor.tokenColorCustomizations": {
+      "textMateRules": [
+        {
+          "scope": "variable.other.legendary.jaml",
+          "settings": { "foreground": "#c084fc", "fontStyle": "bold" }
+        },
+        {
+          "scope": "entity.name.class.boss.jaml",
+          "settings": { "foreground": "#fe5f55", "fontStyle": "bold" }
+        },
+        {
+          "scope": "support.constant.tarot.jaml",
+          "settings": { "foreground": "#d4aaff" }
+        },
+        {
+          "scope": "support.constant.planet.jaml",
+          "settings": { "foreground": "#89dceb" }
+        },
+        {
+          "scope": "support.constant.spectral.jaml",
+          "settings": { "foreground": "#a6e3a1" }
+        },
+        {
+          "scope": "support.class.voucher.jaml",
+          "settings": { "foreground": "#4fc3f7" }
+        },
+        {
+          "scope": "support.type.tag.jaml",
+          "settings": { "foreground": "#ffb347" }
+        },
+        {
+          "scope": "comment.block.documentation.jaml",
+          "settings": { "foreground": "#c084fc", "fontStyle": "italic" }
+        },
+        {
+          "scope": "keyword.control.jaml",
+          "settings": { "foreground": "#fe5f55", "fontStyle": "bold" }
+        },
+        {
+          "scope": "entity.name.tag.jaml",
+          "settings": { "foreground": "#4fc3f7" }
+        },
+        {
+          "scope": "constant.language.jaml",
+          "settings": { "foreground": "#ffb347" }
+        },
+        {
+          "scope": "constant.numeric.jaml",
+          "settings": { "foreground": "#fab387" }
+        }
+      ]
+    }
+  },
   "files": [
     "README.md",
+    "LICENSE",
     "package.json",
     "language-configuration.json",
     "out/**",
