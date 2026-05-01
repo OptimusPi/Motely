@@ -11,7 +11,6 @@ export interface JimboPanelProps extends React.HTMLAttributes<HTMLDivElement> {
   onBack?: () => void
   hideBack?: boolean
 }
-
 export const JimboPanel = memo(({
   children, className = '', sway = false, onBack, hideBack = false, style, ...props
 }: JimboPanelProps) => {
@@ -70,25 +69,20 @@ export interface JimboButtonProps {
 export function JimboButton({
   tone = 'orange', size = 'md', fullWidth = false, disabled = false, uppercase = false, onClick, style, className = '', children,
 }: JimboButtonProps) {
-  const [pressed, setPressed] = useState(false)
   const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
 
   return (
-    <div
+    <button
+      type="button"
       className={`j-btn j-btn--${tone} j-btn--${size} ${fullWidth ? 'j-btn--full' : ''} ${disabled ? 'j-btn--disabled' : ''} ${className}`}
-      data-pressed={pressed}
-      onMouseDown={() => { if (!disabled) setPressed(true) }}
-      onMouseUp={() => setPressed(false)}
-      onMouseLeave={() => setPressed(false)}
-      onTouchStart={() => { if (!disabled) setPressed(true) }}
-      onTouchEnd={() => setPressed(false)}
-      onClick={() => { if (!disabled) onClick?.() }}
+      disabled={disabled}
+      onClick={onClick}
       style={style}
     >
       <div className="j-btn__face">
         <JimboText size={textSize} uppercase={uppercase}>{children}</JimboText>
       </div>
-    </div>
+    </button>
   )
 }
 

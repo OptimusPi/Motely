@@ -206,7 +206,8 @@
   transform: translate(0, 0);
   transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear;
 }
-.j-btn[data-pressed="true"] .j-btn__face {
+.j-btn[data-pressed="true"] .j-btn__face,
+.j-btn:active:not(:disabled):not(.j-btn--disabled) .j-btn__face {
   transform: translateY(var(--j-press-y));
   box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.6);
 }
