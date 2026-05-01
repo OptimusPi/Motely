@@ -314,6 +314,12 @@ public sealed class MotelyWasmHost : IMotelyWasm
         settings = configureMode(settings);
 
         var events = _events;
+        // Auto-cutoff: only fire NotifyResult when score >= running max ("DING (new hi score)").
+        // Browser interop crossing per match is the bottleneck — without this, a wide-net JAML
+        // pierces JS↔WASM for every passing seed and tanks throughput by orders of magnitude.
+        // Mirrors Motely.CLI's `--cutoff auto` behavior, but defaulted on (browser is single-threaded
+        // and has no opt-in CLI flag). Caller's onResult arg still gets every match for sinks that need it.
+        int currentHigh = int.MinValue;
         settings = settings
             .WithProgressCallback(progress =>
                 events.NotifyProgress(progress.SeedsSearched, progress.MatchingSeeds))
@@ -321,6 +327,8 @@ public sealed class MotelyWasmHost : IMotelyWasm
             {
                 var tallyColumns = tally.TallyColumns.ToArray();
                 onResult?.Invoke(new(tally.Seed, tally.Score, tallyColumns));
+                if (tally.Score < currentHigh) return;
+                currentHigh = tally.Score;
                 events.NotifyResult(tally.Seed, tally.Score, tallyColumns);
             });
 
