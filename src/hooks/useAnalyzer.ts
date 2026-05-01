@@ -31,9 +31,7 @@ export interface AnalyzerLive {
   stake: string;
 }
 
-export function useAnalyzer(runtime: MotelyRuntime) {
-  const { MotelyWasm, Motely } = runtime;
-
+export function useAnalyzer(runtime: MotelyRuntime | null) {
   const [antes, setAntes] = useState<AnalyzerAnteView[]>([]);
   const [status, setStatus] = useState<AnalyzerStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +40,13 @@ export function useAnalyzer(runtime: MotelyRuntime) {
   const [tallyLabels, setTallyLabels] = useState<string[]>([]);
 
   const analyze = useCallback(async (seed: string, deck: string, stake: string, jaml?: string) => {
+    if (!runtime) {
+      setError("motely-wasm runtime not ready");
+      setStatus("error");
+      return;
+    }
+    const { MotelyWasm, Motely } = runtime;
+
     setAntes([]);
     setLive(null);
     setTallyColumns([]);
@@ -123,7 +128,7 @@ export function useAnalyzer(runtime: MotelyRuntime) {
       setError(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
-  }, [MotelyWasm, Motely]);
+  }, [runtime]);
 
   const clearError = useCallback(() => {
     setError(null);

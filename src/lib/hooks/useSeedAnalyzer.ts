@@ -8,13 +8,13 @@ export interface MotelyRuntime {
   Motely: typeof MotelyEnumsType;
 }
 
-export function useSeedAnalyzer(runtime: MotelyRuntime, seed: string | null) {
+export function useSeedAnalyzer(runtime: MotelyRuntime | null, seed: string | null) {
   const [data, setData] = useState<Analysis.MotelyLegacyTextAnalyzer | null | undefined>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!seed || seed === "LOCKED") {
+    if (!seed || seed === "LOCKED" || !runtime) {
       setData(null);
       return;
     }
