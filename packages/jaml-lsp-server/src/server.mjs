@@ -248,17 +248,20 @@ function getWordRange(doc, position) {
 // ---------------------------------------------------------------------------
 function analyzeJamlText(text) {
   const diagnostics = [];
-  const legendaryAny = /^\s*-\s*legendaryJoker:\s*Any\s*$/mi.test(text) || /^\s*legendaryJoker:\s*Any\s*$/mi.test(text);
   const hasAnteZero = hasArrayValue(text, "antes", 0);
-  const hasAnteOne = hasArrayValue(text, "antes", 1);
-  const boosterPackIndexes = getArrayValues(text, "boosterPacks");
   const hasHieroglyphContext = /\b(hieroglyph|petroglyph)\b/i.test(text);
 
-  if (legendaryAny && hasAnteOne && boosterPackIndexes.includes(0)) {
-    diagnostics.push({ source: "jaml-language-core", code: "legendary-in-first-buffoon-pack", message: "`legendaryJoker: Any` in ante 1 booster pack 0 is valid JAML, but that pack is normally the guaranteed first Buffoon Pack and is expected to return zero legendary results unless you are intentionally testing that invariant.", severity: "warning", range: findRange(text, "legendaryJoker") });
-  }
-  if (hasAnteOne && boosterPackIndexes.some(i => i > 3)) {
-    diagnostics.push({ source: "jaml-language-core", code: "wide-ante-one-booster-range", message: hasHieroglyphContext ? "Wide ante 1 booster pack range with Hieroglyph context detected. Verify this is intentional." : "Ante 1 booster pack range includes slots beyond normal ante 1 availability.", severity: "warning", range: findRange(text, "boosterPacks") });
+  for (const block of getCriterionBlocks(text)) {
+    const legendaryAny = /^\s*-\s*legendaryJoker:\s*Any\s*$/mi.test(block.text) || /^\s*legendaryJoker:\s*Any\s*$/mi.test(block.text);
+    const hasAnteOne = hasArrayValue(block.text, "antes", 1);
+    const boosterPackIndexes = getArrayValues(block.text, "boosterPacks");
+
+    if (legendaryAny && hasAnteOne && boosterPackIndexes.includes(0)) {
+      diagnostics.push({ source: "jaml-language-core", code: "legendary-in-first-buffoon-pack", message: "`legendaryJoker: Any` in ante 1 booster pack 0 is valid JAML, but that pack is normally the guaranteed first Buffoon Pack and is expected to return zero legendary results unless you are intentionally testing that invariant.", severity: "warning", range: findRange(block.text, "legendaryJoker", block.startLine) });
+    }
+    if (hasAnteOne && boosterPackIndexes.some(i => i > 3)) {
+      diagnostics.push({ source: "jaml-language-core", code: "wide-ante-one-booster-range", message: hasHieroglyphContext ? "Wide ante 1 booster pack range with Hieroglyph context detected. Verify this is intentional." : "Ante 1 booster pack range includes slots beyond normal ante 1 availability.", severity: "warning", range: findRange(block.text, "boosterPacks", block.startLine) });
+    }
   }
   if (hasAnteZero) {
     diagnostics.push({ source: "jaml-language-core", code: "ante-zero-advanced-state", message: "`antes: [0]` is valid advanced Balatro state when ante rewind effects are involved. TIP: Require voucher: Hieroglyph!", severity: "information", range: findRange(text, "antes") });
@@ -285,13 +288,33 @@ function getArrayValues(text, key) {
 
 function hasArrayValue(text, key, expected) { return getArrayValues(text, key).includes(expected); }
 
-function findRange(text, token) {
+function findRange(text, token, lineOffset = 0) {
   const index = text.search(new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
   if (index < 0) return { start: { line: 0, character: 0 }, end: { line: 0, character: Number.MAX_SAFE_INTEGER } };
   const prefix = text.slice(0, index);
-  const line = prefix.split(/\r?\n/).length - 1;
+  const line = lineOffset + prefix.split(/\r?\n/).length - 1;
   const lineStart = Math.max(prefix.lastIndexOf("\n"), prefix.lastIndexOf("\r")) + 1;
   return { start: { line, character: index - lineStart }, end: { line, character: Number.MAX_SAFE_INTEGER } };
+}
+
+function getCriterionBlocks(text) {
+  const lines = text.split(/\r?\n/);
+  const blocks = [];
+  let current = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^\s*-\s+[A-Za-z][A-Za-z0-9]*\s*:/.test(line)) {
+      if (current) blocks.push(current);
+      current = { startLine: index, lines: [line] };
+      continue;
+    }
+    if (current) current.lines.push(line);
+  }
+
+  if (current) blocks.push(current);
+
+  return blocks.map(block => ({ startLine: block.startLine, text: block.lines.join("\n") }));
 }
 
 // ---------------------------------------------------------------------------
