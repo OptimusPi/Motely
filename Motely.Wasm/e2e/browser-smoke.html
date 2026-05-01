@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>motely-wasm browser smoke</title>
+</head>
+<body>
+    <h1>motely-wasm browser smoke</h1>
+    <pre id="report" style="font-family: monospace; white-space: pre-wrap;">running...</pre>
+
+    <script type="module">
+        // Browser smoke — exercises the same surface as release-smoke.mjs but in
+        // an actual browser context, proving the AOT-LLVM bundle loads and runs
+        // outside Node. window.__SMOKE_RESULT__ exposes the outcome for headless
+        // assertion (see build.ps1 browser-smoke action).
+        import bootsharp, { MotelyWasm } from "./node_modules/motely-wasm/index.mjs";
+
+        const report = document.getElementById("report");
+        const lines = [];
+        let failures = 0;
+        const log = (s) => { lines.push(s); report.textContent = lines.join("\n"); };
+        const expect = (name, ok, detail) => {
+            if (ok) log(`  ok   ${name}`);
+            else { log(`  FAIL ${name}${detail ? ` -- ${detail}` : ""}`); failures++; }
+        };
+
+        try {
+            log("Booting motely-wasm in browser...");
+            const t0 = performance.now();
+            await bootsharp.boot();
+            log(`Booted in ${Math.round(performance.now() - t0)}ms`);
+            log("");
+
+            log("Test 1: typed DTO clause (Phase 2)");
+            const validJaml = `name: e2e-test
+deck: Red
+stake: White
+must:
+  - joker: Blueprint
+  - uncommonJoker: Any
+  - boss: TheArm
+should:
+  - tarot: TheEmperor
+    score: 10`;
+            const v1 = MotelyWasm.validateJamlStructured(validJaml);
+            expect("structured-validate succeeds (.valid=true)", v1.valid === true, JSON.stringify(v1));
+
+            log("");
+            log("Test 2: case-insensitive enum parse (Phase 1)");
+            const v2 = MotelyWasm.validateJamlStructured("name: c\nmust:\n  - joker: blueprint");
+            expect("lowercase 'blueprint' parses", v2.valid === true, JSON.stringify(v2));
+
+            log("");
+            log("Test 3: deprecated AnyUncommon rejected");
+            const v3 = MotelyWasm.validateJamlStructured("name: d\nmust:\n  - joker: AnyUncommon");
+            expect("deprecated wildcard rejected (.valid=false)", v3.valid === false, JSON.stringify(v3));
+
+            log("");
+            log("Test 4: getJamlMeta typed-clause counts");
+            const meta = MotelyWasm.getJamlMeta(validJaml);
+            expect("meta.mustCount === 3", meta.mustCount === 3);
+            expect("meta.shouldCount === 1", meta.shouldCount === 1);
+            expect("meta.itemTypes includes UncommonJoker", meta.itemTypes.includes("UncommonJoker"), JSON.stringify(meta.itemTypes));
+
+            log("");
+            const ok = failures === 0;
+            log(ok ? "PASS" : `FAIL - ${failures} assertion(s) failed.`);
+            window.__SMOKE_RESULT__ = { ok, failures, lines };
+        } catch (err) {
+            log("");
+            log(`UNCAUGHT: ${err.stack || err.message || err}`);
+            window.__SMOKE_RESULT__ = { ok: false, failures: -1, lines, error: String(err) };
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+name: Hologram Deck Thin
+author: jammy
+description: Hologram rare joker with deck thinning for X0.25 Mult per card added
+deck: Red
+stake: White
+hashtags: ["joker", "rare-joker", "copy", "negative", "deck-fix", "stone"]
+must:
+  - uncommonJoker: Hologram
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - rareJoker: DNA
+    score: 70
+  - spectral: Cryptid
+    score: 70
+  - spectral: Familiar
+    score: 55
+  - spectral: Grim
+    score: 55
+  - spectral: Incantation
+    score: 55
+  - uncommonJoker: MarbleJoker
+    score: 55
+  - uncommonJoker: Certificate
+    score: 45
+  - commonJoker: RiffRaff
+    score: 35
+  - rareJoker: Blueprint
+    score: 40
+  - rareJoker: Brainstorm
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 35
+  - tag: NegativeTag
+    score: 30

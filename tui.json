@@ -1,0 +1,10 @@
+{
+  "ThreadCount": 16,
+  "BatchCharacterCount": 3,
+  "ApiServerHost": "192.168.0.171",
+  "ApiServerPort": 3141,
+  "DefaultSource": "",
+  "DefaultSink": "",
+  "WorkerPoolUrl": "https://www.seedfinder.app",
+  "WorkerThreads": 16
+}

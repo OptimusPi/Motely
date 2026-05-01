@@ -1,0 +1,18 @@
+name: Blue Seal Planet Generation
+author: jammy
+description: Standard card with Blue Seal for Planet card generation
+deck: Nebula
+stake: White
+must:
+  - standardCard: BlueSeal
+    seal: Blue
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Constellation
+    score: 60
+  - uncommonJoker: Satellite
+    score: 40

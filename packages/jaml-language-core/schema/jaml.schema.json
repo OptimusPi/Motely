@@ -1,0 +1,1010 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.seedfinder.app/jaml.schema.json",
+  "version": "14.3.3",
+  "title": "JAML — Jimbo's Ante Markup Language",
+  "description": "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.",
+  "type": "object",
+  "$defs": {
+    "JamlCriterion": {
+      "type": "object",
+      "properties": {
+        "joker": {
+          "$ref": "#/$defs/Joker"
+        },
+        "jokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Joker"
+          }
+        },
+        "commonJoker": {
+          "$ref": "#/$defs/CommonJoker"
+        },
+        "commonJokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommonJoker"
+          }
+        },
+        "uncommonJoker": {
+          "$ref": "#/$defs/UncommonJoker"
+        },
+        "uncommonJokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UncommonJoker"
+          }
+        },
+        "rareJoker": {
+          "$ref": "#/$defs/RareJoker"
+        },
+        "rareJokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RareJoker"
+          }
+        },
+        "legendaryJoker": {
+          "$ref": "#/$defs/LegendaryJoker"
+        },
+        "voucher": {
+          "$ref": "#/$defs/Voucher"
+        },
+        "vouchers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Voucher"
+          }
+        },
+        "tarot": {
+          "$ref": "#/$defs/Tarot"
+        },
+        "tarotCard": {
+          "$ref": "#/$defs/Tarot"
+        },
+        "spectral": {
+          "$ref": "#/$defs/Spectral"
+        },
+        "spectralCard": {
+          "$ref": "#/$defs/Spectral"
+        },
+        "planet": {
+          "$ref": "#/$defs/Planet"
+        },
+        "planetCard": {
+          "$ref": "#/$defs/Planet"
+        },
+        "boss": {
+          "$ref": "#/$defs/Boss"
+        },
+        "tag": {
+          "$ref": "#/$defs/Tag"
+        },
+        "smallBlindTag": {
+          "$ref": "#/$defs/Tag"
+        },
+        "bigBlindTag": {
+          "$ref": "#/$defs/Tag"
+        },
+        "standardCard": true,
+        "erraticRank": {
+          "$ref": "#/$defs/Rank"
+        },
+        "erraticSuit": {
+          "$ref": "#/$defs/Suit"
+        },
+        "erraticCard": {
+          "type": "string"
+        },
+        "startingDraw": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        },
+        "luckyMoney": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "luckyMult": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "misprintMult": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wheelOfFortune": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "cavendishExtinct": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "grosMichelExtinct": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "spaceLevelup": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "businessPayout": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "bloodstoneTrigger": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "parkingPayout": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "glassDestroy": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wheelStaysFlipped": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "antes": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "score": {
+          "type": "integer"
+        },
+        "min": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "edition": {
+          "$ref": "#/$defs/Edition"
+        },
+        "stickers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Sticker"
+          }
+        },
+        "seal": {
+          "$ref": "#/$defs/Seal"
+        },
+        "enhancement": {
+          "$ref": "#/$defs/Enhancement"
+        },
+        "rank": {
+          "$ref": "#/$defs/Rank"
+        },
+        "suit": {
+          "$ref": "#/$defs/Suit"
+        },
+        "rolls": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "soulEditionRolls": {
+          "type": "integer"
+        },
+        "soulCardOnly": {
+          "type": "boolean"
+        },
+        "and": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JamlCriterion"
+          }
+        },
+        "or": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JamlCriterion"
+          }
+        },
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JamlCriterion"
+          }
+        },
+        "mode": {
+          "$ref": "#/$defs/Mode"
+        },
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "minShopItem": {
+          "type": "integer"
+        },
+        "maxShopItem": {
+          "type": "integer"
+        },
+        "sources": {
+          "$ref": "#/$defs/JamlSources"
+        }
+      }
+    },
+    "Joker": {
+      "type": "string",
+      "enum": [
+        "Joker",
+        "GreedyJoker",
+        "LustyJoker",
+        "WrathfulJoker",
+        "GluttonousJoker",
+        "JollyJoker",
+        "ZanyJoker",
+        "MadJoker",
+        "CrazyJoker",
+        "DrollJoker",
+        "SlyJoker",
+        "WilyJoker",
+        "CleverJoker",
+        "DeviousJoker",
+        "CraftyJoker",
+        "HalfJoker",
+        "CreditCard",
+        "Banner",
+        "MysticSummit",
+        "EightBall",
+        "Misprint",
+        "RaisedFist",
+        "ChaostheClown",
+        "ScaryFace",
+        "AbstractJoker",
+        "DelayedGratification",
+        "GrosMichel",
+        "EvenSteven",
+        "OddTodd",
+        "Scholar",
+        "BusinessCard",
+        "Supernova",
+        "RideTheBus",
+        "Egg",
+        "Runner",
+        "IceCream",
+        "Splash",
+        "BlueJoker",
+        "FacelessJoker",
+        "GreenJoker",
+        "Superposition",
+        "ToDoList",
+        "Cavendish",
+        "RedCard",
+        "SquareJoker",
+        "RiffRaff",
+        "Photograph",
+        "ReservedParking",
+        "MailInRebate",
+        "Hallucination",
+        "FortuneTeller",
+        "Juggler",
+        "Drunkard",
+        "GoldenJoker",
+        "Popcorn",
+        "WalkieTalkie",
+        "SmileyFace",
+        "GoldenTicket",
+        "Swashbuckler",
+        "HangingChad",
+        "ShootTheMoon",
+        "JokerStencil",
+        "FourFingers",
+        "Mime",
+        "CeremonialDagger",
+        "MarbleJoker",
+        "LoyaltyCard",
+        "Dusk",
+        "Fibonacci",
+        "SteelJoker",
+        "Hack",
+        "Pareidolia",
+        "SpaceJoker",
+        "Burglar",
+        "Blackboard",
+        "SixthSense",
+        "Constellation",
+        "Hiker",
+        "CardSharp",
+        "Madness",
+        "Seance",
+        "Vampire",
+        "Shortcut",
+        "Hologram",
+        "Cloud9",
+        "Rocket",
+        "MidasMask",
+        "Luchador",
+        "GiftCard",
+        "TurtleBean",
+        "Erosion",
+        "ToTheMoon",
+        "StoneJoker",
+        "LuckyCat",
+        "Bull",
+        "DietCola",
+        "TradingCard",
+        "FlashCard",
+        "SpareTrousers",
+        "Ramen",
+        "Seltzer",
+        "Castle",
+        "MrBones",
+        "Acrobat",
+        "SockAndBuskin",
+        "Troubadour",
+        "Certificate",
+        "SmearedJoker",
+        "Throwback",
+        "RoughGem",
+        "Bloodstone",
+        "Arrowhead",
+        "OnyxAgate",
+        "GlassJoker",
+        "Showman",
+        "FlowerPot",
+        "MerryAndy",
+        "OopsAll6s",
+        "TheIdol",
+        "SeeingDouble",
+        "Matador",
+        "Satellite",
+        "Cartomancer",
+        "Astronomer",
+        "Bootstraps",
+        "DNA",
+        "Vagabond",
+        "Baron",
+        "Obelisk",
+        "BaseballCard",
+        "AncientJoker",
+        "Campfire",
+        "Blueprint",
+        "WeeJoker",
+        "HitTheRoad",
+        "TheDuo",
+        "TheTrio",
+        "TheFamily",
+        "TheOrder",
+        "TheTribe",
+        "Stuntman",
+        "InvisibleJoker",
+        "Brainstorm",
+        "DriversLicense",
+        "BurntJoker",
+        "Canio",
+        "Triboulet",
+        "Yorick",
+        "Chicot",
+        "Perkeo",
+        "any"
+      ]
+    },
+    "CommonJoker": {
+      "type": "string",
+      "enum": [
+        "Joker",
+        "GreedyJoker",
+        "LustyJoker",
+        "WrathfulJoker",
+        "GluttonousJoker",
+        "JollyJoker",
+        "ZanyJoker",
+        "MadJoker",
+        "CrazyJoker",
+        "DrollJoker",
+        "SlyJoker",
+        "WilyJoker",
+        "CleverJoker",
+        "DeviousJoker",
+        "CraftyJoker",
+        "HalfJoker",
+        "CreditCard",
+        "Banner",
+        "MysticSummit",
+        "EightBall",
+        "Misprint",
+        "RaisedFist",
+        "ChaostheClown",
+        "ScaryFace",
+        "AbstractJoker",
+        "DelayedGratification",
+        "GrosMichel",
+        "EvenSteven",
+        "OddTodd",
+        "Scholar",
+        "BusinessCard",
+        "Supernova",
+        "RideTheBus",
+        "Egg",
+        "Runner",
+        "IceCream",
+        "Splash",
+        "BlueJoker",
+        "FacelessJoker",
+        "GreenJoker",
+        "Superposition",
+        "ToDoList",
+        "Cavendish",
+        "RedCard",
+        "SquareJoker",
+        "RiffRaff",
+        "Photograph",
+        "ReservedParking",
+        "MailInRebate",
+        "Hallucination",
+        "FortuneTeller",
+        "Juggler",
+        "Drunkard",
+        "GoldenJoker",
+        "Popcorn",
+        "WalkieTalkie",
+        "SmileyFace",
+        "GoldenTicket",
+        "Swashbuckler",
+        "HangingChad",
+        "ShootTheMoon",
+        "any"
+      ]
+    },
+    "UncommonJoker": {
+      "type": "string",
+      "enum": [
+        "JokerStencil",
+        "FourFingers",
+        "Mime",
+        "CeremonialDagger",
+        "MarbleJoker",
+        "LoyaltyCard",
+        "Dusk",
+        "Fibonacci",
+        "SteelJoker",
+        "Hack",
+        "Pareidolia",
+        "SpaceJoker",
+        "Burglar",
+        "Blackboard",
+        "SixthSense",
+        "Constellation",
+        "Hiker",
+        "CardSharp",
+        "Madness",
+        "Seance",
+        "Vampire",
+        "Shortcut",
+        "Hologram",
+        "Cloud9",
+        "Rocket",
+        "MidasMask",
+        "Luchador",
+        "GiftCard",
+        "TurtleBean",
+        "Erosion",
+        "ToTheMoon",
+        "StoneJoker",
+        "LuckyCat",
+        "Bull",
+        "DietCola",
+        "TradingCard",
+        "FlashCard",
+        "SpareTrousers",
+        "Ramen",
+        "Seltzer",
+        "Castle",
+        "MrBones",
+        "Acrobat",
+        "SockAndBuskin",
+        "Troubadour",
+        "Certificate",
+        "SmearedJoker",
+        "Throwback",
+        "RoughGem",
+        "Bloodstone",
+        "Arrowhead",
+        "OnyxAgate",
+        "GlassJoker",
+        "Showman",
+        "FlowerPot",
+        "MerryAndy",
+        "OopsAll6s",
+        "TheIdol",
+        "SeeingDouble",
+        "Matador",
+        "Satellite",
+        "Cartomancer",
+        "Astronomer",
+        "Bootstraps",
+        "any"
+      ]
+    },
+    "RareJoker": {
+      "type": "string",
+      "enum": [
+        "DNA",
+        "Vagabond",
+        "Baron",
+        "Obelisk",
+        "BaseballCard",
+        "AncientJoker",
+        "Campfire",
+        "Blueprint",
+        "WeeJoker",
+        "HitTheRoad",
+        "TheDuo",
+        "TheTrio",
+        "TheFamily",
+        "TheOrder",
+        "TheTribe",
+        "Stuntman",
+        "InvisibleJoker",
+        "Brainstorm",
+        "DriversLicense",
+        "BurntJoker",
+        "any"
+      ]
+    },
+    "LegendaryJoker": {
+      "type": "string",
+      "enum": [
+        "Canio",
+        "Triboulet",
+        "Yorick",
+        "Chicot",
+        "Perkeo",
+        "any"
+      ]
+    },
+    "Voucher": {
+      "type": "string",
+      "enum": [
+        "Overstock",
+        "OverstockPlus",
+        "ClearanceSale",
+        "Liquidation",
+        "Hone",
+        "GlowUp",
+        "RerollSurplus",
+        "RerollGlut",
+        "CrystalBall",
+        "OmenGlobe",
+        "Telescope",
+        "Observatory",
+        "Grabber",
+        "NachoTong",
+        "Wasteful",
+        "Recyclomancy",
+        "TarotMerchant",
+        "TarotTycoon",
+        "PlanetMerchant",
+        "PlanetTycoon",
+        "SeedMoney",
+        "MoneyTree",
+        "Blank",
+        "Antimatter",
+        "MagicTrick",
+        "Illusion",
+        "Hieroglyph",
+        "Petroglyph",
+        "DirectorsCut",
+        "Retcon",
+        "PaintBrush",
+        "Palette"
+      ]
+    },
+    "Tarot": {
+      "type": "string",
+      "enum": [
+        "TheFool",
+        "TheMagician",
+        "TheHighPriestess",
+        "TheEmpress",
+        "TheEmperor",
+        "TheHierophant",
+        "TheLovers",
+        "TheChariot",
+        "Justice",
+        "TheHermit",
+        "TheWheelOfFortune",
+        "Strength",
+        "TheHangedMan",
+        "Death",
+        "Temperance",
+        "TheDevil",
+        "TheTower",
+        "TheStar",
+        "TheMoon",
+        "TheSun",
+        "Judgement",
+        "TheWorld"
+      ]
+    },
+    "Planet": {
+      "type": "string",
+      "enum": [
+        "Mercury",
+        "Venus",
+        "Earth",
+        "Mars",
+        "Jupiter",
+        "Saturn",
+        "Uranus",
+        "Neptune",
+        "Pluto",
+        "PlanetX",
+        "Ceres",
+        "Eris"
+      ]
+    },
+    "Spectral": {
+      "type": "string",
+      "enum": [
+        "Familiar",
+        "Grim",
+        "Incantation",
+        "Talisman",
+        "Aura",
+        "Wraith",
+        "Sigil",
+        "Ouija",
+        "Ectoplasm",
+        "Immolate",
+        "Ankh",
+        "DejaVu",
+        "Hex",
+        "Trance",
+        "Medium",
+        "Cryptid",
+        "TheSoul",
+        "BlackHole"
+      ]
+    },
+    "Tag": {
+      "type": "string",
+      "enum": [
+        "UncommonTag",
+        "RareTag",
+        "NegativeTag",
+        "FoilTag",
+        "HolographicTag",
+        "PolychromeTag",
+        "InvestmentTag",
+        "VoucherTag",
+        "BossTag",
+        "StandardTag",
+        "CharmTag",
+        "MeteorTag",
+        "BuffoonTag",
+        "HandyTag",
+        "GarbageTag",
+        "EtherealTag",
+        "CouponTag",
+        "DoubleTag",
+        "JuggleTag",
+        "D6Tag",
+        "TopupTag",
+        "SpeedTag",
+        "OrbitalTag",
+        "EconomyTag"
+      ]
+    },
+    "Boss": {
+      "type": "string",
+      "enum": [
+        "TheClub",
+        "TheGoad",
+        "TheHead",
+        "TheHook",
+        "TheManacle",
+        "ThePillar",
+        "ThePsychic",
+        "TheWindow",
+        "TheArm",
+        "TheFish",
+        "TheFlint",
+        "TheHouse",
+        "TheMark",
+        "TheMouth",
+        "TheNeedle",
+        "TheWall",
+        "TheWater",
+        "TheWheel",
+        "TheEye",
+        "TheTooth",
+        "ThePlant",
+        "TheSerpent",
+        "TheOx",
+        "AmberAcorn",
+        "CeruleanBell",
+        "CrimsonHeart",
+        "VerdantLeaf",
+        "VioletVessel"
+      ]
+    },
+    "Deck": {
+      "type": "string",
+      "enum": [
+        "Red",
+        "Blue",
+        "Yellow",
+        "Green",
+        "Black",
+        "Magic",
+        "Nebula",
+        "Ghost",
+        "Abandoned",
+        "Checkered",
+        "Zodiac",
+        "Painted",
+        "Anaglyph",
+        "Plasma",
+        "Erratic"
+      ]
+    },
+    "Stake": {
+      "type": "string",
+      "enum": [
+        "White",
+        "Red",
+        "Green",
+        "Black",
+        "Blue",
+        "Purple",
+        "Orange",
+        "Gold"
+      ]
+    },
+    "Edition": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Foil",
+        "Holographic",
+        "Polychrome",
+        "Negative"
+      ]
+    },
+    "Seal": {
+      "type": "string",
+      "enum": [
+        "Gold",
+        "Red",
+        "Blue",
+        "Purple"
+      ]
+    },
+    "Enhancement": {
+      "type": "string",
+      "enum": [
+        "Bonus",
+        "Mult",
+        "Wild",
+        "Glass",
+        "Steel",
+        "Stone",
+        "Gold",
+        "Lucky"
+      ]
+    },
+    "Rank": {
+      "type": "string",
+      "enum": [
+        "Two",
+        "Three",
+        "Four",
+        "Five",
+        "Six",
+        "Seven",
+        "Eight",
+        "Nine",
+        "Ten",
+        "Jack",
+        "Queen",
+        "King",
+        "Ace"
+      ]
+    },
+    "Suit": {
+      "type": "string",
+      "enum": [
+        "Clubs",
+        "Diamonds",
+        "Hearts",
+        "Spades"
+      ]
+    },
+    "Sticker": {
+      "type": "string",
+      "enum": [
+        "Eternal",
+        "Perishable",
+        "Rental"
+      ]
+    },
+    "Mode": {
+      "type": "string",
+      "enum": [
+        "any",
+        "all",
+        "none"
+      ]
+    },
+    "StandardCard": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            }
+          }
+        }
+      ]
+    },
+    "JamlSources": {
+      "type": "object",
+      "properties": {
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "minShopItem": {
+          "type": "integer"
+        },
+        "maxShopItem": {
+          "type": "integer"
+        },
+        "requireMega": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "dateCreated": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "deck": {
+      "$ref": "#/$defs/Deck"
+    },
+    "stake": {
+      "$ref": "#/$defs/Stake"
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "antes": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "score": {
+          "type": "integer"
+        }
+      }
+    },
+    "must": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlCriterion"
+      }
+    },
+    "should": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlCriterion"
+      }
+    },
+    "mustNot": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlCriterion"
+      }
+    },
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "seeds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

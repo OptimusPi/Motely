@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <BootsharpName>motely-wasm</BootsharpName>
+        <BootsharpEmbedBinaries>true</BootsharpEmbedBinaries>
+        <BootsharpLlvm>true</BootsharpLlvm>
+        <WasmEnableSIMD>true</WasmEnableSIMD>
+        <WasmEnableThreads>false</WasmEnableThreads>
+        <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Remove="Jaml.cs" />
+        <Compile Remove="MotelyJAML.schema.generator.cs" />
+        <!-- MotelyWasmHost lives in Motely/ but needs Bootsharp.FileSystem, so compile it here. -->
+        <Compile Include="../Motely/MotelyWasmHost.cs" />
+        <None Include="Jaml.cs" />
+        <None Include="MotelyJAML.schema.generator.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Bootsharp" />
+        <PackageReference Include="Bootsharp.Inject" />
+        <PackageReference Include="Bootsharp.FileSystem" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Motely/Motely.csproj" />
+    </ItemGroup>
+
+    <Target Name="RegenerateJamlSchema" BeforeTargets="Publish">
+        <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)../Motely.CLI/Motely.CLI.csproj&quot; -- --write-jaml-schema"
+              WorkingDirectory="$(MSBuildThisFileDirectory).." />
+    </Target>
+
+</Project>

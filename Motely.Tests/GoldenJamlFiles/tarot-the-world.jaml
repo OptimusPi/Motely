@@ -1,0 +1,37 @@
+name: The World Enhancement
+author: jammy
+description: The World tarot with Vampire for random enhancement consumption
+deck: Red
+stake: White
+hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "probability", "glass", "steel", "legendary-synergy"]
+must:
+  - tarot: TheWorld
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - rareJoker: DriversLicense
+    score: 70
+  - uncommonJoker: Vampire
+    score: 65
+  - uncommonJoker: GlassJoker
+    score: 40
+  - uncommonJoker: SteelJoker
+    score: 45
+  - uncommonJoker: LuckyCat
+    score: 40
+  - uncommonJoker: MidasMask
+    score: 35
+  - rareJoker: Blueprint
+    score: 40
+  - tag: NegativeTag
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 30
+  - rareJoker: Brainstorm
+    score: 30
