@@ -238,8 +238,42 @@ public sealed class MotelyWasmHost : IMotelyWasm
         return new MotelyWasmSearch(search);
     }
 
+    public string CompileJummy(string jummy)
+    {
+        if (!JummyCompiler.TryCompile(jummy, out var jaml, out var error))
+            throw new InvalidOperationException(error ?? "Invalid Jummy.");
+        return jaml;
+    }
+
+    public JamlMetaResult GetJamlMeta(string jaml)
+    {
+        var config = ParseJaml(jaml);
+        var types = new List<string>();
+        void Scan(JamlClauseSet s)
+        {
+            if (s.Jokers.Count + s.CommonJokers.Count + s.UncommonJokers.Count + s.RareJokers.Count + s.LegendaryJokers.Count > 0) types.Add("Joker");
+            if (s.Vouchers.Count > 0) types.Add("Voucher");
+            if (s.TarotCards.Count > 0) types.Add("Tarot");
+            if (s.SpectralCards.Count > 0) types.Add("Spectral");
+            if (s.PlanetCards.Count > 0) types.Add("Planet");
+            if (s.Bosses.Count > 0) types.Add("Boss");
+            if (s.Tags.Count > 0) types.Add("Tag");
+        }
+        Scan(config.Must); Scan(config.Should); Scan(config.MustNot);
+        return new JamlMetaResult(
+            [],
+            [.. types.Distinct()],
+            config.Must.Count,
+            config.Should.Count,
+            config.MustNot.Count,
+            config.Deck.ToString(),
+            config.Stake.ToString()
+        );
+    }
+
     public string[] GetTallyLabels(string jaml) =>
         JamlSearchBuilder.CreatePlan(ParseJaml(jaml)).TallyLabels;
+
 
     public MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));

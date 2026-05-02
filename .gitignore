@@ -132,3 +132,4 @@ Motely.BrowserWasm/VersionInfo.g.cs
 .claude/settings.local.json
 .claude/settings.local.json
 /.nuget-local
+nuget.config.local
