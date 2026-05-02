@@ -42,8 +42,9 @@ self.addEventListener('message', async function(e) {
     try {
       const mod = await import(msg.url);
       await mod.default.boot();
-      MotelyWasm = mod.MotelyWasm;
-      MotelyWasmEvents = mod.MotelyWasmEvents;
+      const motely = mod.Motely;
+      MotelyWasm = motely.MotelyWasm;
+      MotelyWasmEvents = motely.MotelyWasmEvents;
       self.postMessage({ type: 'ready' });
     } catch (err) {
       self.postMessage({ type: 'error', message: String(err) });
