@@ -1,20 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Motely } from "motely-wasm";
+import { type Motely } from "motely-wasm";
 
-export interface MotelyRuntime {
-  MotelyWasm: typeof Motely.MotelyWasm;
-  Motely: typeof Motely;
-}
-
-export function useSeedAnalyzer(runtime: MotelyRuntime | null, seed: string | null) {
+export function useSeedAnalyzer(motely: typeof Motely | null, seed: string | null) {
   const [data, setData] = useState<Motely.Analysis.MotelyLegacyTextAnalyzer | null | undefined>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!seed || seed === "LOCKED" || !runtime) {
+    if (!seed || seed === "LOCKED" || !motely) {
       setData(null);
       return;
     }
@@ -25,7 +20,7 @@ export function useSeedAnalyzer(runtime: MotelyRuntime | null, seed: string | nu
       setError(null);
       try {
         const jaml = `version: 1\nconfig:\n  deck: Erratic\n  stake: White\n`;
-        const rawResult = runtime.MotelyWasm.analyzeJamlSeeds(jaml, [seed]);
+        const rawResult = motely.MotelyWasm.analyzeJamlSeeds(jaml, [seed]);
         if (abortController.signal.aborted) return;
 
         if (rawResult && rawResult.seeds.length > 0) {
@@ -45,7 +40,7 @@ export function useSeedAnalyzer(runtime: MotelyRuntime | null, seed: string | nu
 
     runAnalysis();
     return () => abortController.abort();
-  }, [runtime, seed]);
+  }, [motely, seed]);
 
   return { data, loading, error };
 }

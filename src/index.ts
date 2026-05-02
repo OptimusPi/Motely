@@ -120,7 +120,6 @@ export {
     type AnalyzerStatus,
     type AnalyzerLive,
     type MotelyJsRunState,
-    type MotelyRuntime,
 } from "./hooks/useAnalyzer.js";
 
 // Setter pattern for motely-wasm runtime enums. Consumers boot motely-wasm

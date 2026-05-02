@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Motely } from "motely-wasm";
+import { type Motely } from "motely-wasm";
 import { extractVisualJamlItems } from "../utils/jamlMapPreview.js";
 import { motelyItemDisplayNameFromValue } from "../motelyDisplay.js";
 import type { AnalyzerAnteView, AnalyzerItem } from "../components/AnalyzerExplorer.js";
@@ -9,17 +9,6 @@ import type { AnalyzerAnteView, AnalyzerItem } from "../components/AnalyzerExplo
 export type AnalyzerStatus = "idle" | "running" | "done" | "error";
 
 export type MotelyJsRunState = { voucherBitfield: number; bossBitfield: number };
-
-/**
- * Runtime handle for motely-wasm. Consumers boot motely-wasm once and pass
- * `{ MotelyWasm, Motely }` to hooks that need it. This keeps jaml-ui free of
- * static motely-wasm imports so consumer bundlers don't pull the 12MB engine
- * into their main bundle.
- */
-export interface MotelyRuntime {
-  MotelyWasm: typeof Motely.MotelyWasm;
-  Motely: typeof Motely;
-}
 
 export interface AnalyzerLive {
   ctx: ReturnType<typeof Motely.MotelyWasm.createSearchContext>;
@@ -31,7 +20,7 @@ export interface AnalyzerLive {
   stake: string;
 }
 
-export function useAnalyzer(runtime: MotelyRuntime | null) {
+export function useAnalyzer(motely: typeof Motely | null) {
   const [antes, setAntes] = useState<AnalyzerAnteView[]>([]);
   const [status, setStatus] = useState<AnalyzerStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -40,12 +29,12 @@ export function useAnalyzer(runtime: MotelyRuntime | null) {
   const [tallyLabels, setTallyLabels] = useState<string[]>([]);
 
   const analyze = useCallback(async (seed: string, deck: string, stake: string, jaml?: string) => {
-    if (!runtime) {
-      setError("motely-wasm runtime not ready");
+    if (!motely) {
+      setError("motely-wasm not ready");
       setStatus("error");
       return;
     }
-    const { MotelyWasm, Motely } = runtime;
+    const MotelyWasm = motely.MotelyWasm;
 
     setAntes([]);
     setLive(null);
@@ -55,8 +44,8 @@ export function useAnalyzer(runtime: MotelyRuntime | null) {
     setError(null);
 
     try {
-      const deckEnum = Motely.MotelyDeck[deck as keyof typeof Motely.MotelyDeck] ?? Motely.MotelyDeck.Red;
-      const stakeEnum = Motely.MotelyStake[stake as keyof typeof Motely.MotelyStake] ?? Motely.MotelyStake.White;
+      const deckEnum = motely.MotelyDeck[deck as keyof typeof motely.MotelyDeck] ?? motely.MotelyDeck.Red;
+      const stakeEnum = motely.MotelyStake[stake as keyof typeof motely.MotelyStake] ?? motely.MotelyStake.White;
 
       const desiredNames = new Set<string>();
       if (jaml) {
@@ -77,11 +66,11 @@ export function useAnalyzer(runtime: MotelyRuntime | null) {
 
       for (let ante = 1; ante <= 39; ante++) {
         const bossResult = ctx.getNextBossForAnte(bossStream, ante, runState);
-        const bossName = Motely.MotelyBossBlind[bossResult.boss] ?? `Unknown(${bossResult.boss})`;
+        const bossName = motely.MotelyBossBlind[bossResult.boss] ?? `Unknown(${bossResult.boss})`;
         runState = bossResult.runState;
 
         const voucherResult = ctx.getAnteFirstVoucher(ante, runState);
-        const voucherName = Motely.MotelyVoucher[voucherResult.voucher] ?? `Unknown(${voucherResult.voucher})`;
+        const voucherName = motely.MotelyVoucher[voucherResult.voucher] ?? `Unknown(${voucherResult.voucher})`;
         runState = voucherResult.runState;
         runStates[ante] = { ...runState };
 
@@ -93,14 +82,14 @@ export function useAnalyzer(runtime: MotelyRuntime | null) {
         const packs: string[] = [];
         for (let p = 0; p < 2; p++) {
           const packResult = ctx.getNextBoosterPack(packStream);
-          packs.push(Motely.MotelyBoosterPack[packResult.pack] ?? `Unknown(${packResult.pack})`);
+          packs.push(motely.MotelyBoosterPack[packResult.pack] ?? `Unknown(${packResult.pack})`);
         }
 
         const shopStream = ctx.createShopItemStream(
           ante,
           runState,
-          Motely.MotelyShopStreamFlags.Default,
-          Motely.MotelyJokerStreamFlags.Default,
+          motely.MotelyShopStreamFlags.Default,
+          motely.MotelyJokerStreamFlags.Default,
         );
         const shop: AnalyzerItem[] = [];
         for (let i = 0; i < 4; i++) {
@@ -114,21 +103,21 @@ export function useAnalyzer(runtime: MotelyRuntime | null) {
           ante,
           boss: bossName,
           voucher: voucherName,
-          smallBlindTag: Motely.MotelyTag[tag1.tag] ?? `Unknown(${tag1.tag})`,
-          bigBlindTag: Motely.MotelyTag[tag2.tag] ?? `Unknown(${tag2.tag})`,
+          smallBlindTag: motely.MotelyTag[tag1.tag] ?? `Unknown(${tag1.tag})`,
+          bigBlindTag: motely.MotelyTag[tag2.tag] ?? `Unknown(${tag2.tag})`,
           packs,
           shop,
         });
       }
 
       setAntes(results);
-      setLive({ ctx, Motely, runStates, desiredNames, seed, deck, stake });
+      setLive({ ctx, Motely: motely, runStates, desiredNames, seed, deck, stake });
       setStatus("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
-  }, [runtime]);
+  }, [motely]);
 
   const clearError = useCallback(() => {
     setError(null);
