@@ -54,11 +54,9 @@ export function AgnosticSeedCard({
                 
                 if (rawData && rawData.seeds.length > 0) {
                     const seedData = rawData.seeds[0];
-                    // The UI needs score and matches. The WASM provides score and tallies, but no matches yet.
-                    // If filter logic is still desired, it needs to be updated. For now, pass what we have.
                     setFetchedAnalysis({
                         score: seedData.score,
-                        matches: [], // TODO: C# Agent needs to provide matches in the WASM response if required.
+                        matches: [],
                         analysis: seedData.analysis
                     });
                 }
@@ -70,7 +68,7 @@ export function AgnosticSeedCard({
         };
 
         analyze();
-    }, [seed, deckSlug, stakeSlug, propAnalysis, propResult, filter]);
+    }, [seed, deckSlug, stakeSlug, propAnalysis, propResult]);
 
     if (isLocked) {
         return (
@@ -130,7 +128,7 @@ export function AgnosticSeedCard({
                 <div className="bg-black/40 rounded-xl p-5 border border-white/5 flex flex-col items-center justify-center">
                     <span className="block text-[11px] font-pixel text-white/30 mb-2">PRIMARY MATCH</span>
                     <div className="font-header text-xl text-[var(--balatro-blue)] leading-tight text-center">
-                        {result?.matches?.[0]?.item?.name || result?.matches?.[0]?.name || "N/A"}
+                        {result?.matches?.[0]?.item?.name || result?.matches?.[0]?.name || filter?.should?.[0]?.value || filter?.must?.[0]?.value || "N/A"}
                     </div>
                 </div>
                 <div className="bg-black/40 rounded-xl p-5 border border-white/5 flex flex-col items-center justify-center">

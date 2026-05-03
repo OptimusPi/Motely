@@ -242,6 +242,7 @@ export default function JamlBuilder() {
                                             key={result.seed}
                                             seed={result.seed}
                                             result={result}
+                                            filter={filter}
                                             className="!scale-95 !origin-top"
                                         />
                                     ))}
