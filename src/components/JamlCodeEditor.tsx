@@ -1,48 +1,75 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
-import type * as monaco from "monaco-editor";
+import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, placeholder as cmPlaceholder } from "@codemirror/view";
+import { EditorState } from "@codemirror/state";
+import { yaml } from "@codemirror/lang-yaml";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import { JimboColorOption } from "../ui/tokens.js";
 
-// Monaco needs hex strings for its colors API. We strip the leading `#` from
-// JimboColor tokens where Monaco expects raw hex for syntax rules (token
-// foreground), and pass the full `#...` form for UI colors. Alpha suffix
-// (e.g. WHITE + "20") is valid for Monaco colors but not for rules.
-const hex = (token: string) => token.replace(/^#/, "");
+const balatroHighlight = HighlightStyle.define([
+  { tag: tags.comment, color: JimboColorOption.GREY, fontStyle: "italic" },
+  { tag: tags.keyword, color: JimboColorOption.RED },
+  { tag: tags.string, color: JimboColorOption.GOLD_TEXT },
+  { tag: tags.number, color: JimboColorOption.BLUE },
+  { tag: tags.bool, color: JimboColorOption.BLUE },
+  { tag: tags.null, color: JimboColorOption.GREY },
+  { tag: tags.propertyName, color: JimboColorOption.GREEN_TEXT },
+  { tag: tags.typeName, color: JimboColorOption.GREEN_TEXT },
+]);
 
-const defineBalatroTheme: BeforeMount = (monaco) => {
-  monaco.editor.defineTheme("jaml-balatro-dark", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: hex(JimboColorOption.GREY), fontStyle: "italic" },
-      { token: "keyword", foreground: hex(JimboColorOption.RED) },
-      { token: "string", foreground: hex(JimboColorOption.GOLD_TEXT) },
-      { token: "number", foreground: hex(JimboColorOption.BLUE) },
-      { token: "type", foreground: hex(JimboColorOption.GREEN_TEXT) },
-    ],
-    colors: {
-      "editor.background": JimboColorOption.DARKEST,
-      "editor.foreground": JimboColorOption.WHITE,
-      "editorLineNumber.foreground": JimboColorOption.GREY,
-      "editorLineNumber.activeForeground": JimboColorOption.GOLD_TEXT,
-      "editor.selectionBackground": `${JimboColorOption.WHITE}20`,
-      "editor.inactiveSelectionBackground": `${JimboColorOption.WHITE}10`,
-      "editor.lineHighlightBackground": `${JimboColorOption.BLACK}20`,
-      "editorCursor.foreground": JimboColorOption.GOLD_TEXT,
-      "editorWidget.background": JimboColorOption.DARK_GREY,
-      "editorWidget.border": `${JimboColorOption.WHITE}20`,
-      "editorWidget.foreground": JimboColorOption.WHITE,
-      "list.activeSelectionBackground": JimboColorOption.GOLD,
-      "list.activeSelectionForeground": JimboColorOption.DARKEST,
-      "list.hoverBackground": JimboColorOption.PANEL_EDGE,
-      "list.hoverForeground": JimboColorOption.WHITE,
-      "list.focusBackground": JimboColorOption.GOLD,
-      "list.focusForeground": JimboColorOption.DARKEST,
+const balatroTheme = EditorView.theme(
+  {
+    "&": {
+      backgroundColor: JimboColorOption.DARKEST,
+      color: JimboColorOption.WHITE,
+      fontSize: "13px",
+      height: "100%",
     },
-  });
-};
+    ".cm-content": {
+      fontFamily: "'m6x11mono', 'm6x11plus', ui-monospace, monospace",
+      lineHeight: "22px",
+      padding: "12px 0",
+      caretColor: JimboColorOption.GOLD_TEXT,
+      minHeight: "100%",
+    },
+    ".cm-gutters": {
+      backgroundColor: JimboColorOption.DARKEST,
+      color: JimboColorOption.GREY,
+      border: "none",
+    },
+    ".cm-lineNumbers .cm-gutterElement": {
+      minWidth: "2ch",
+      padding: "0 6px 0 8px",
+    },
+    ".cm-activeLineGutter": {
+      color: JimboColorOption.GOLD_TEXT,
+      backgroundColor: "transparent",
+    },
+    ".cm-activeLine": {
+      backgroundColor: `${JimboColorOption.BLACK}20`,
+    },
+    ".cm-selectionBackground": {
+      backgroundColor: `${JimboColorOption.WHITE}20 !important`,
+    },
+    "&.cm-focused .cm-selectionBackground": {
+      backgroundColor: `${JimboColorOption.WHITE}20`,
+    },
+    ".cm-cursor, .cm-dropCursor": {
+      borderLeftColor: JimboColorOption.GOLD_TEXT,
+    },
+    ".cm-scroller": {
+      overflow: "auto",
+    },
+    ".cm-placeholder": {
+      color: JimboColorOption.GREY,
+      fontStyle: "italic",
+    },
+  },
+  { dark: true },
+);
 
 export interface JamlCodeEditorProps {
   value: string;
@@ -54,33 +81,56 @@ export interface JamlCodeEditorProps {
 export function JamlCodeEditor({
   value,
   onChange,
+  placeholder = "",
   minHeight = 320,
 }: JamlCodeEditorProps) {
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const monacoRef = useRef<typeof monaco | null>(null);
-  // Suppress our onChange while we're applying a programmatic edit, so the
-  // streamed parent value doesn't loop back through onChange and bounce.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
   const suppressEmitRef = useRef(false);
-  // Capture initial value for the uncontrolled editor mount; subsequent
-  // updates flow through the useEffect below.
-  const initialValueRef = useRef(value);
-  // Track value across renders so we can apply only the streamed delta when
-  // the new value is a strict suffix-extension of what's already in the model.
   const lastSyncedValueRef = useRef(value);
-
-  const handleMount: OnMount = (editor, m) => {
-    editorRef.current = editor;
-    monacoRef.current = m;
-  };
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; });
 
   useEffect(() => {
-    const editor = editorRef.current;
-    const m = monacoRef.current;
-    if (!editor || !m) return;
-    const model = editor.getModel();
-    if (!model) return;
+    if (!containerRef.current) return;
 
-    const current = editor.getValue();
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: lastSyncedValueRef.current,
+        extensions: [
+          history(),
+          lineNumbers(),
+          highlightActiveLine(),
+          drawSelection(),
+          yaml(),
+          syntaxHighlighting(balatroHighlight),
+          balatroTheme,
+          EditorView.lineWrapping,
+          keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+          ...(placeholder ? [cmPlaceholder(placeholder)] : []),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged && !suppressEmitRef.current) {
+              onChangeRef.current(update.state.doc.toString());
+            }
+          }),
+        ],
+      }),
+      parent: containerRef.current,
+    });
+
+    viewRef.current = view;
+    return () => {
+      view.destroy();
+      viewRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    const current = view.state.doc.toString();
     if (current === value) {
       lastSyncedValueRef.current = value;
       return;
@@ -88,31 +138,15 @@ export function JamlCodeEditor({
 
     suppressEmitRef.current = true;
     try {
-      // Streaming-friendly path: when the new value just appends to what
-      // Monaco already has, push an insert at end-of-document. Monaco
-      // re-tokenizes only from the insertion point — no full-doc churn,
-      // no syntax-color strobe, no cursor reset.
+      // Streaming-friendly: append only the suffix when new value extends current.
       if (value.length > current.length && value.startsWith(current)) {
-        const suffix = value.slice(current.length);
-        const lastLine = model.getLineCount();
-        const lastCol = model.getLineMaxColumn(lastLine);
-        model.applyEdits([
-          {
-            range: new m.Range(lastLine, lastCol, lastLine, lastCol),
-            text: suffix,
-            forceMoveMarkers: false,
-          },
-        ]);
+        view.dispatch({
+          changes: { from: view.state.doc.length, insert: value.slice(current.length) },
+        });
       } else {
-        // Real replacement (paste from outside, parent rewrite, undo, etc.).
-        editor.executeEdits("", [
-          {
-            range: model.getFullModelRange(),
-            text: value,
-            forceMoveMarkers: true,
-          },
-        ]);
-        editor.pushUndoStop();
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: value },
+        });
       }
     } finally {
       suppressEmitRef.current = false;
@@ -121,49 +155,9 @@ export function JamlCodeEditor({
   }, [value]);
 
   return (
-    <div style={{ width: "100%", minHeight, background: JimboColorOption.DARKEST }}>
-      {/* Kill Monaco's iPad/touch on-screen-keyboard widget — useless inside a
-          chat WebView where the OS keyboard is already pinned open. */}
-      <style>{`
-        .monaco-editor .iPadShowKeyboard,
-        .monaco-editor [class*="iPadShowKeyboard"] { display: none !important; }
-      `}</style>
-      <Editor
-        height={`${minHeight}px`}
-        defaultLanguage="yaml"
-        defaultValue={initialValueRef.current}
-        theme="jaml-balatro-dark"
-        onChange={(next) => {
-          if (suppressEmitRef.current) return;
-          onChange(next ?? "");
-        }}
-        onMount={handleMount}
-        beforeMount={defineBalatroTheme}
-        options={{
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          fontSize: 13,
-          lineHeight: 22,
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-          lineNumbers: "on",
-          lineNumbersMinChars: 2,
-          lineDecorationsWidth: 4,
-          glyphMargin: false,
-          folding: false,
-          automaticLayout: true,
-          padding: { top: 12, bottom: 12 },
-          wordWrap: "on",
-          formatOnPaste: true,
-          formatOnType: true,
-          renderLineHighlight: "line",
-          scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
-          // Mobile/chat-WebView UX: kill the context menu ("Change All Occurrences" etc. covering half
-          // the file on long-press) and the accessibility-help keyboard widget that's just clutter when
-          // the OS keyboard is already open.
-          contextmenu: false,
-          accessibilitySupport: "off",
-        }}
-      />
-    </div>
+    <div
+      ref={containerRef}
+      style={{ width: "100%", minHeight, background: JimboColorOption.DARKEST }}
+    />
   );
 }
