@@ -4,14 +4,15 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.CLI;
 using Motely.Analysis;
-using Motely.Datalake;
 using Motely.Filters;
 using Motely.Filters.Native;
 using Motely.WasmTools;
+using YamlDotNet.RepresentationModel;
 
 partial class Program
 {
     private static readonly CancellationTokenSource _cts = new();
+    private const int SavedSeedLimit = 1000;
 
     private static List<string> BuildKeywordInputs(
         CommandOption<string> keywordOption,
@@ -150,12 +151,17 @@ partial class Program
         );
         var outputJsonOption = app.Option(
             "--output-json",
-            "Output analysis as JSON (or NDJSON for multiple seeds)",
+            "Emit JSON/NDJSON for analyzer and Jamlyzer commands instead of human-readable text.",
+            CommandOptionType.NoValue
+        );
+        var saveSeedsOption = app.Option(
+            "--save-seeds",
+            "Write the top 1000 matched seeds back into the JAML file's top-level seeds: block.",
             CommandOptionType.NoValue
         );
         var deckOption = app.Option<string>(
-            "--deck <DECK>",
-            "Deck name for analysis/search (default: Red for search, Erratic for analyze)",
+            "--deck <NAME>",
+            "Deck name (Red, Blue, Yellow, Green, Black, Magic, Nebula, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic)",
             CommandOptionType.SingleValue
         );
         var stakeOption = app.Option<string>(
@@ -213,10 +219,15 @@ partial class Program
             "Seed source file name or absolute path",
             CommandOptionType.SingleValue
         );
-        var sinkOption = app.Option(
-            "--sink",
-            "Write results to the ducklake at ./Seeds/ducklake/ (keyed by JAML filter name)",
+        var drownOption = app.Option(
+            "--drown",
+            "Replay all saved seeds for this JAML filter from results/<filterId>/results.csv using DuckDB.",
             CommandOptionType.NoValue
+        );
+        var resultsPathOption = app.Option<string>(
+            "--results-path <PATH>",
+            "Root folder containing per-filter results folders with results.csv files (default: ./results).",
+            CommandOptionType.SingleValue
         );
         var seedsOption = app.Option<string>(
             "--seeds <LIST>",
@@ -248,10 +259,10 @@ partial class Program
             "Run a native C# filter by name (e.g. PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives, ...). Seed-input flags match JAML: --source, --seeds, --keyword(s), --random, --aesthetic, or default sequential (--startBatch/--endBatch/--startPercent or --startSeed/--stopSeed).",
             CommandOptionType.SingleValue
         );
-        var drownOption = app.Option(
-            "--drown",
-            "Front-load ALL seeds from the ducklake (Seeds/ducklake/*.parquet). Searches every previously-found seed against the current JAML filter.",
-            CommandOptionType.NoValue
+        var nativeRandomCountOption = app.Option<int>(
+            "--native-random <N>",
+            "Random seed count for --native mode",
+            CommandOptionType.SingleValue
         );
         var quietOption = app.Option(
             "-q|--quiet|--no-progress",
@@ -322,6 +333,12 @@ partial class Program
             // --native mode — run a hardcoded C# filter by name
             if (nativeOption.HasValue())
             {
+                if (drownOption.HasValue())
+                {
+                    Console.Error.WriteLine("Error: --drown currently requires --jaml so the CLI can resolve the normalized filterId.");
+                    return 1;
+                }
+
                 var nDeck = deckOption.HasValue() ? Enum.Parse<MotelyDeck>(deckOption.ParsedValue, true) : MotelyDeck.Red;
                 var nStake = stakeOption.HasValue() ? Enum.Parse<MotelyStake>(stakeOption.ParsedValue, true) : MotelyStake.White;
                 int nThreads = threadsOption.HasValue() ? threadsOption.ParsedValue : Environment.ProcessorCount;
@@ -353,11 +370,13 @@ partial class Program
                         new CliSearchMode.Input(
                             SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
                             SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
+                            Drown: false,
+                            ResultsRootPath: resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
+                            FilterId: null,
                             KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
                             PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
                             RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
                             AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
-                            Drown: drownOption.HasValue(),
                             StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                             EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                             StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
@@ -423,10 +442,16 @@ partial class Program
 
             var deck = config.Deck;
             var stake = config.Stake;
-            int threads = threadsOption.HasValue()
-                ? threadsOption.ParsedValue
-                : Environment.ProcessorCount;
+            bool drown = drownOption.HasValue();
+            int threads = drown
+                ? 1
+                : threadsOption.HasValue()
+                    ? threadsOption.ParsedValue
+                    : Environment.ProcessorCount;
             int batchCharCount = batchCharCountOption.ParsedValue;
+
+            if (drown && threadsOption.HasValue() && threadsOption.ParsedValue != 1)
+                Console.Error.WriteLine("Warning: --drown forces --threads 1 for safe provider reads.");
 
             bool cutoffAuto = false;
             int cutoffFixed = int.MinValue;
@@ -477,11 +502,13 @@ partial class Program
                     new CliSearchMode.Input(
                         SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
                         SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
+                        Drown: drown,
+                        ResultsRootPath: resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
+                        FilterId: config.Id,
                         KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
                         PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
                         RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
                         AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
-                        Drown: drownOption.HasValue(),
                         StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
                         EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
                         StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
@@ -505,10 +532,14 @@ partial class Program
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;
-
-            var filterId = config.Name ?? Path.GetFileNameWithoutExtension(jamlOption.ParsedValue);
-            using ISeedResultSink? sink = sinkOption.HasValue()
-                ? MotelyLake.GetSink(filterId, scoreTallyColumns)
+            var saveSeedsCollector = saveSeedsOption.HasValue()
+                ? new TopSeedCollector(SavedSeedLimit)
+                : null;
+            var saveSeedMatches = saveSeedsOption.HasValue()
+                ? new List<string>(SavedSeedLimit)
+                : null;
+            var saveSeedMatchSet = saveSeedsOption.HasValue()
+                ? new HashSet<string>(StringComparer.Ordinal)
                 : null;
 
             // Always attach a progress callback so 'p' hotkey stays current;
@@ -521,8 +552,7 @@ partial class Program
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
-                    // Sink gets everything past engine cutoff — lake stores all, display filters on read.
-                    sink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
+                    saveSeedsCollector?.Consider(tally.Seed, tally.Score);
 
                     if (cutoffAuto)
                     {
@@ -536,20 +566,45 @@ partial class Program
                     Console.WriteLine($"{tally.Seed},{tally.Score},{tallies}");
                 });
             }
+            else
+            {
+                settings = settings.WithSeedMatchCallback(seed =>
+                {
+                    if (saveSeedMatches != null
+                        && saveSeedMatchSet != null
+                        && saveSeedMatches.Count < SavedSeedLimit
+                        && saveSeedMatchSet.Add(seed))
+                    {
+                        saveSeedMatches.Add(seed);
+                    }
+
+                    Console.WriteLine(seed);
+                });
+            }
 
             if (!quietOption.HasValue())
             {
                 Console.Error.WriteLine(
-                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} (sequential only)"
+                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| drown=results.csv via DuckDB" : "(sequential only)")}"
                 );
-                if (sink != null)
-                    Console.Error.WriteLine($"Sink: {sink.OutputPath}");
             }
 
             using var search = settings.Start(_cts.Token);
             await search.WaitForCompletionAsync(_cts.Token);
 
             bool cancelled = _cts.Token.IsCancellationRequested;
+            if (saveSeedsOption.HasValue())
+            {
+                var seedsToSave = hasStructuredScores
+                    ? saveSeedsCollector?.GetSeeds() ?? []
+                    : (IReadOnlyList<string>)(saveSeedMatches ?? []);
+
+                if (TryWriteSeedsToJamlFile(jamlOption.ParsedValue, seedsToSave, out var saveError))
+                    Console.Error.WriteLine($"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {jamlOption.ParsedValue}");
+                else
+                    Console.Error.WriteLine($"Warning: could not save seeds back into JAML: {saveError}");
+            }
+
             PrintSummary(search, batchCharCount, cancelled);
             return cancelled ? 1 : 0;
         });
@@ -575,6 +630,171 @@ partial class Program
     }
 
     // ── Summary ──
+
+    private sealed class TopSeedCollector(int limit)
+    {
+        private readonly PriorityQueue<SavedSeedEntry, (int Score, long Sequence)> _queue = new();
+        private long _sequence;
+
+        public void Consider(string seed, int score)
+        {
+            _queue.Enqueue(new(seed, score, _sequence), (score, _sequence));
+            _sequence++;
+
+            if (_queue.Count > limit)
+                _queue.Dequeue();
+        }
+
+        public IReadOnlyList<string> GetSeeds() =>
+            _queue.UnorderedItems
+                .Select(static item => item.Element)
+                .OrderByDescending(static item => item.Score)
+                .ThenBy(static item => item.Sequence)
+                .Select(static item => item.Seed)
+                .Distinct(StringComparer.Ordinal)
+                .Take(limit)
+                .ToArray();
+    }
+
+    private readonly record struct SavedSeedEntry(string Seed, int Score, long Sequence);
+
+    private static bool TryWriteSeedsToJamlFile(
+        string jamlPath,
+        IReadOnlyList<string> seeds,
+        out string? error
+    )
+    {
+        error = null;
+
+        string original;
+        try
+        {
+            original = File.ReadAllText(jamlPath);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+
+        string normalizedNewline = original.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        var normalizedSeeds = seeds
+            .Select(static seed => seed.Trim().ToUpperInvariant().Replace('0', 'O'))
+            .Where(static seed => !string.IsNullOrWhiteSpace(seed))
+            .Distinct(StringComparer.Ordinal)
+            .Take(SavedSeedLimit)
+            .ToArray();
+
+        var originalHasTrailingNewline = original.EndsWith("\n", StringComparison.Ordinal);
+        var lines = original.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
+        var replacementLines = BuildSeedsBlockLines(normalizedSeeds);
+
+        int seedsStart = FindTopLevelSeedsLine(lines);
+        if (seedsStart >= 0)
+        {
+            int seedsEndExclusive = FindNextTopLevelKeyLine(lines, seedsStart + 1);
+            lines.RemoveRange(seedsStart, seedsEndExclusive - seedsStart);
+            lines.InsertRange(seedsStart, replacementLines);
+        }
+        else
+        {
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
+                lines.RemoveAt(lines.Count - 1);
+
+            if (lines.Count > 0)
+                lines.Add(string.Empty);
+
+            lines.AddRange(replacementLines);
+        }
+
+        var updated = string.Join(normalizedNewline, lines);
+        if (originalHasTrailingNewline || lines.Count > 0)
+            updated += normalizedNewline;
+
+        try
+        {
+            var yaml = new YamlStream();
+            using var reader = new StringReader(updated);
+            yaml.Load(reader);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+
+        if (!JamlConfigLoader.TryLoad(updated, out _, out var loadError))
+        {
+            error = loadError ?? "Updated JAML did not validate.";
+            return false;
+        }
+
+        try
+        {
+            File.WriteAllText(jamlPath, updated);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static List<string> BuildSeedsBlockLines(IReadOnlyList<string> seeds)
+    {
+        if (seeds.Count == 0)
+            return ["seeds: []"];
+
+        var lines = new List<string>(seeds.Count + 1) { "seeds:" };
+        lines.AddRange(seeds.Select(static seed => $"  - {seed}"));
+        return lines;
+    }
+
+    private static int FindTopLevelSeedsLine(IReadOnlyList<string> lines)
+    {
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (!TryGetTopLevelKey(lines[i], out var key))
+                continue;
+
+            if (string.Equals(key, "seeds", StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static int FindNextTopLevelKeyLine(IReadOnlyList<string> lines, int startIndex)
+    {
+        for (int i = startIndex; i < lines.Count; i++)
+        {
+            if (TryGetTopLevelKey(lines[i], out _))
+                return i;
+        }
+
+        return lines.Count;
+    }
+
+    private static bool TryGetTopLevelKey(string line, out string? key)
+    {
+        key = null;
+        if (string.IsNullOrWhiteSpace(line))
+            return false;
+        if (char.IsWhiteSpace(line[0]))
+            return false;
+
+        var trimmed = line.Trim();
+        if (trimmed.StartsWith("#", StringComparison.Ordinal) || trimmed.StartsWith("-", StringComparison.Ordinal))
+            return false;
+
+        int colonIndex = trimmed.IndexOf(':');
+        if (colonIndex <= 0)
+            return false;
+
+        key = trimmed[..colonIndex].Trim();
+        return key.Length > 0;
+    }
 
     static void PrintSummary(IMotelySearch search, int batchCharCount, bool cancelled)
     {
@@ -718,50 +938,7 @@ partial class Program
 
                 if (json)
                 {
-                    var erratic =
-                        analysis.ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        ?? [];
-                    var dto = new SeedAnalysisDto
-                    {
-                        Seed = normalizedSeed,
-                        Deck = d.ToString(),
-                        Stake = s.ToString(),
-                        ErraticDeckComposition = erratic,
-                        Error = analysis.Error,
-                        Antes = analysis
-                            .Antes.Select(a => new AnteAnalysisDto
-                            {
-                                Ante = a.Ante,
-                                Boss = FormatUtils.FormatBoss(a.Boss),
-                                Voucher = FormatUtils.FormatVoucher(a.Voucher),
-                                SmallBlindTag = FormatUtils.FormatTag(a.SmallBlindTag),
-                                BigBlindTag = FormatUtils.FormatTag(a.BigBlindTag),
-                                DrawOrder = a.DrawOrder ?? "",
-                                ShopQueue = a
-                                    .ShopQueue.Select(item => new ShopItemDto
-                                    {
-                                        Id = $"ante-{a.Ante}-shop-{item.Value}",
-                                        Name = item.Name,
-                                        Value = item.Value,
-                                        Matched = item.Matched,
-                                    })
-                                    .ToArray(),
-                                Packs = a
-                                    .Packs.Select(p => new PackDto
-                                    {
-                                        Type = FormatUtils.FormatPackName(p.Type),
-                                        Items = p.Items.Select((item, itemIndex) => new ShopItemDto
-                                        {
-                                            Id = $"ante-{a.Ante}-pack-{itemIndex}-{item.Value}",
-                                            Name = item.Name,
-                                            Value = item.Value,
-                                            Matched = item.Matched,
-                                        }).ToArray(),
-                                    })
-                                    .ToArray(),
-                            })
-                            .ToArray(),
-                    };
+                    var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
                     // NDJSON: one JSON object per line, no extra whitespace
                     Console.WriteLine(
                         JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
@@ -804,50 +981,7 @@ partial class Program
 
         if (json)
         {
-            var erratic =
-                analysis.ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                ?? [];
-            var dto = new SeedAnalysisDto
-            {
-                Seed = normalizedSeed,
-                Deck = d.ToString(),
-                Stake = s.ToString(),
-                ErraticDeckComposition = erratic,
-                Error = analysis.Error,
-                Antes = analysis
-                    .Antes.Select(a => new AnteAnalysisDto
-                    {
-                        Ante = a.Ante,
-                        Boss = FormatUtils.FormatBoss(a.Boss),
-                        Voucher = FormatUtils.FormatVoucher(a.Voucher),
-                        SmallBlindTag = FormatUtils.FormatTag(a.SmallBlindTag),
-                        BigBlindTag = FormatUtils.FormatTag(a.BigBlindTag),
-                        DrawOrder = a.DrawOrder ?? "",
-                        ShopQueue = a
-                            .ShopQueue.Select(item => new ShopItemDto
-                            {
-                                Id = $"ante-{a.Ante}-shop-{item.Value}",
-                                Name = item.Name,
-                                Value = item.Value,
-                                Matched = item.Matched,
-                            })
-                            .ToArray(),
-                        Packs = a
-                            .Packs.Select(p => new PackDto
-                            {
-                                Type = FormatUtils.FormatPackName(p.Type),
-                                Items = p.Items.Select((item, itemIndex) => new ShopItemDto
-                                {
-                                    Id = $"ante-{a.Ante}-pack-{itemIndex}-{item.Value}",
-                                    Name = item.Name,
-                                    Value = item.Value,
-                                    Matched = item.Matched,
-                                }).ToArray(),
-                            })
-                            .ToArray(),
-                    })
-                    .ToArray(),
-            };
+            var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
             Console.WriteLine(
                 JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
             );

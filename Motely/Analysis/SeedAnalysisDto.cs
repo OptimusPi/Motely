@@ -2,7 +2,63 @@ using System.Text.Json.Serialization;
 
 namespace Motely.Analysis;
 
-public class SeedAnalysisDto
+public static class SeedAnalysisDtoMapper
+{
+    public static SeedAnalysisDto FromSeedAnalysis(
+        string seed,
+        MotelyDeck deck,
+        MotelyStake stake,
+        MotelySeedAnalysis analysis
+    )
+    {
+        var erratic = analysis.ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            ?? [];
+
+        return new SeedAnalysisDto
+        {
+            Seed = seed,
+            Deck = deck.ToString(),
+            Stake = stake.ToString(),
+            ErraticDeckComposition = erratic,
+            Error = analysis.Error,
+            Antes = analysis
+                .Antes.Select(a => new AnteAnalysisDto
+                {
+                    Ante = a.Ante,
+                    Boss = FormatUtils.FormatBoss(a.Boss),
+                    Voucher = FormatUtils.FormatVoucher(a.Voucher),
+                    SmallBlindTag = FormatUtils.FormatTag(a.SmallBlindTag),
+                    BigBlindTag = FormatUtils.FormatTag(a.BigBlindTag),
+                    DrawOrder = a.DrawOrder ?? string.Empty,
+                    ShopQueue = a
+                        .ShopQueue.Select(item => new ShopItemDto
+                        {
+                            Id = $"ante-{a.Ante}-shop-{item.Value}",
+                            Name = item.Name,
+                            Value = item.Value,
+                            Matched = item.Matched,
+                        })
+                        .ToArray(),
+                    Packs = a
+                        .Packs.Select((p, packIndex) => new PackDto
+                        {
+                            Type = FormatUtils.FormatPackName(p.Type),
+                            Items = p.Items.Select((item, itemIndex) => new ShopItemDto
+                            {
+                                Id = $"ante-{a.Ante}-pack-{packIndex}-{itemIndex}-{item.Value}",
+                                Name = item.Name,
+                                Value = item.Value,
+                                Matched = item.Matched,
+                            }).ToArray(),
+                        })
+                        .ToArray(),
+                })
+                .ToArray(),
+        };
+    }
+}
+
+public record class SeedAnalysisDto
 {
     [JsonPropertyName("seed")]
     public string Seed { get; set; } = "";
@@ -24,7 +80,7 @@ public class SeedAnalysisDto
     public AnteAnalysisDto[] Antes { get; set; } = [];
 }
 
-public class AnteAnalysisDto
+public record class AnteAnalysisDto
 {
     [JsonPropertyName("ante")]
     public int Ante { get; set; }
@@ -51,7 +107,7 @@ public class AnteAnalysisDto
     public PackDto[] Packs { get; set; } = [];
 }
 
-public class ShopItemDto
+public record class ShopItemDto
 {
     [JsonPropertyName("id")]
     public string Id { get; set; } = "";
@@ -67,7 +123,7 @@ public class ShopItemDto
     public bool Matched { get; set; }
 }
 
-public class PackDto
+public record class PackDto
 {
     [JsonPropertyName("type")]
     public string Type { get; set; } = "";
@@ -77,6 +133,8 @@ public class PackDto
 }
 
 [JsonSerializable(typeof(SeedAnalysisDto))]
+[JsonSerializable(typeof(AnteAnalysisDto))]
+[JsonSerializable(typeof(PackDto))]
 [JsonSerializable(typeof(MotelyJamlyzerResult))]
 [JsonSerializable(typeof(ShopItemDto))]
 public partial class AnalysisJsonContext : JsonSerializerContext { }

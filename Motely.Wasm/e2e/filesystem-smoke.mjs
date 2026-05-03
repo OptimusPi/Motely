@@ -121,9 +121,9 @@ console.log("1. Mount JAML library");
 let libraryChangedCount = 0;
 let lastChangedFiles = null;
 const results = [];
-MotelyWasmEvents.notifyProgress = () => {};
+MotelyWasmEvents.notifyProgress = () => { };
 MotelyWasmEvents.notifyResult = (seed, score /*, tallies */) => results.push({ seed, score });
-MotelyWasmEvents.notifyComplete = () => {};
+MotelyWasmEvents.notifyComplete = () => { };
 MotelyWasmEvents.notifyJamlLibraryChanged = (rootId, fileUris) => {
     libraryChangedCount++;
     lastChangedFiles = [...fileUris];

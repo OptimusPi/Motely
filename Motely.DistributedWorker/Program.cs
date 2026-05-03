@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Motely;
-using Motely.Datalake;
 using Motely.DistributedWorker;
 using Motely.Filters;
 
@@ -89,23 +88,8 @@ class Program
         int chunksCompleted = 0;
         var startTime = DateTime.UtcNow;
 
-        SeedResultSinkDirectory? localSinks = null;
-        if (localDbDir != null)
+        while (!cts.Token.IsCancellationRequested)
         {
-            try
-            {
-                localSinks = new SeedResultSinkDirectory(localDbDir, tallyCount: 0);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[MotelyWorker] Warning: could not open local DuckLake sink directory: {ex.Message}");
-            }
-        }
-
-        try
-        {
-            while (!cts.Token.IsCancellationRequested)
-            {
                 // ── CLAIM from pool ──────────────────────────────────────
                 PoolClaimResponseDto claim;
                 try
@@ -193,22 +177,6 @@ class Program
                 var results = matchResults.ToArray();
 
                 // ── SAVE TO LOCAL DUCKLAKE ────────────────────────────────
-                if (results.Length > 0)
-                {
-                    try
-                    {
-                        var sink = localSinks?.GetOrOpen(claim.FilterId!);
-                        if (sink != null)
-                        {
-                            foreach (var r in results)
-                                sink.AppendScoredResult(r.Seed, r.Score, ReadOnlySpan<int>.Empty);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine($"[MotelyWorker] Warning: could not write local DuckLake for {claim.FilterId}: {ex.Message}");
-                    }
-                }
 
                 // ── SUBMIT TO POOL ───────────────────────────────────────
                 var submitBody = new SubmitResultsDto
@@ -246,18 +214,6 @@ class Program
                     $"\r[MotelyWorker] Filter:{claim.FilterId} | Block:{claim.BatchIndex} | Seeds: {totalSeedsSearched:N0} | Matches: {totalMatches} | {speed:N0} seeds/s  "
                 );
             }
-        }
-        finally
-        {
-            try
-            {
-                localSinks?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"\n[MotelyWorker] Warning: DuckLake flush failed: {ex.Message}");
-            }
-        }
 
         PrintSummary(workerId, chunksCompleted, totalSeedsSearched, totalMatches, startTime);
         return cts.Token.IsCancellationRequested ? 1 : 0;

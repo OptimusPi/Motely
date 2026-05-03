@@ -5,7 +5,9 @@
 // Verifies that the WASM export can analyze a seed and mark JAML-matched
 // inspected preview items with `matched: true`.
 
-import bootsharp, { MotelyWasm } from "../../motely-wasm/index.mjs";
+import bootsharp, { Motely } from "../../motely-wasm/index.mjs";
+
+const { MotelyWasm } = Motely;
 
 let failures = 0;
 let total = 0;

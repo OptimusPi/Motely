@@ -541,6 +541,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithDeck(MotelyDeck deck);
     IMotelySearchSettings WithStake(MotelyStake stake);
     IMotelySearchSettings WithProgressCallback(Action<MotelyProgress> callback);
+    IMotelySearchSettings WithProgressReportIntervalMs(long intervalMs);
     IMotelySearchSettings WithCsvOutput(bool csvOutput);
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
@@ -597,6 +598,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// Receives MotelyProgress object with all progress data
     /// </summary>
     public Action<MotelyProgress>? ProgressCallback { get; set; }
+
+    public long ProgressReportIntervalMs { get; set; } = 800;
 
     /// <summary>
     /// Callback invoked when a seed matches all filters (no score provider).
@@ -737,6 +740,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<MotelyProgress> callback
     ) => WithProgressCallback(callback);
 
+    IMotelySearchSettings IMotelySearchSettings.WithProgressReportIntervalMs(long intervalMs) =>
+        WithProgressReportIntervalMs(intervalMs);
+
     IMotelySearchSettings IMotelySearchSettings.WithCsvOutput(bool csvOutput) =>
         WithCsvOutput(csvOutput);
 
@@ -771,6 +777,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public MotelySearchSettings<TBaseFilter> WithProgressCallback(Action<MotelyProgress> callback)
     {
         ProgressCallback = callback;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithProgressReportIntervalMs(long intervalMs)
+    {
+        ProgressReportIntervalMs = Math.Max(0, intervalMs);
         return this;
     }
 
@@ -841,8 +853,6 @@ public struct MotelySearchParameters
 public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     where TBaseFilter : struct, IMotelySeedFilter
 {
-    private const long MinProgressReportIntervalMs = 800;
-
     /// <summary>Shared lock for console output (replaces removed FancyConsole.ConsoleLock).</summary>
     internal static readonly object ConsoleLock = new();
 
@@ -972,6 +982,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
     private readonly Action<MotelySeedScoreTally>? _scoredResultCallback;
+    private readonly long _progressReportIntervalMs;
 
     private readonly Stopwatch _elapsedTime = new();
     private long _lastProgressReportElapsedMs = -1;
@@ -981,6 +992,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _isProviderMode = settings.Mode == MotelySearchMode.Provider;
         _searchParameters = new() { Deck = settings.Deck, Stake = settings.Stake };
         _progressCallback = settings.ProgressCallback;
+        _progressReportIntervalMs = settings.ProgressReportIntervalMs;
         _seedMatchCallback = settings.SeedMatchCallback;
         _scoredResultCallback = settings.ScoredResultCallback;
 
@@ -1225,8 +1237,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return;
 
         long elapsedMS = _elapsedTime.ElapsedMilliseconds;
-        if (_lastProgressReportElapsedMs >= 0
-            && elapsedMS - _lastProgressReportElapsedMs < MinProgressReportIntervalMs)
+        if (_progressReportIntervalMs > 0
+            && _lastProgressReportElapsedMs >= 0
+            && elapsedMS - _lastProgressReportElapsedMs < _progressReportIntervalMs)
             return;
         _lastProgressReportElapsedMs = elapsedMS;
 
