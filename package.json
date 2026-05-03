@@ -107,6 +107,7 @@
     "@google/design.md": "^0.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@react-spring/three": "^10.0.3",
+    "@react-three/drei": ">=9.0.0",
     "@react-three/fiber": "^9.6.0",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
@@ -120,6 +121,9 @@
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/browser-playwright": "^4.1.5",
     "@vitest/coverage-v8": "^4.1.5",
+    "clsx": "^2.1.1",
+    "js-yaml": "^4.1.1",
+    "lucide-react": "^1.14.0",
     "monaco-editor": "^0.55.1",
     "motely-wasm": "^14.4.0",
     "playwright": "^1.59.1",
@@ -127,19 +131,15 @@
     "react-dom": "^19.2.4",
     "react-icons": "^5.6.0",
     "storybook": "^10.3.6",
+    "tailwind-merge": "^2.6.1",
     "three": "^0.184.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.9",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "zustand": "^5.0.0"
   },
   "dependencies": {
     "@json-render/core": "^0.18.0",
-    "@react-three/drei": ">=9.0.0",
-    "@types/js-yaml": "^4.0.9",
-    "clsx": "^2.1.1",
-    "js-yaml": "^4.1.1",
-    "lucide-react": "^1.14.0",
-    "tailwind-merge": "^2.6.1",
-    "zustand": "^5.0.0"
+    "@types/js-yaml": "^4.0.9"
   }
 }
