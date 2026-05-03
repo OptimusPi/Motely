@@ -26,14 +26,18 @@ interface AgnosticSeedCardProps {
     filter?: any;
 }
 
-function allAnalyzedItems(analysis: Motely.Analysis.MotelyLegacyTextAnalyzer | undefined): (Motely.Analysis.MotelyAnalyzedItem & { anteIndex: number; source: string })[] {
-    if (!analysis) return [];
-    return analysis.antes.flatMap((ante, anteIndex) => [
-        ...ante.shopQueue.map(item => ({ ...item, anteIndex, source: 'shop' })),
-        ...ante.packs.flatMap(pack =>
-            pack.items.map(item => ({ ...item, anteIndex, source: 'pack' }))
-        ),
-    ]);
+function ante1Items(analysis: Motely.Analysis.MotelyLegacyTextAnalyzer | undefined): { name: string; value: number; matched: boolean }[] {
+    const ante = analysis?.antes?.[0];
+    if (!ante) return [];
+    const shop = ante.shopQueue.map((item: Motely.Analysis.MotelyAnalyzedItem) => ({
+        name: item.name, value: item.value, matched: item.matched,
+    }));
+    const packs = ante.packs.flatMap((pack: Motely.Analysis.MotelyBoosterPackAnalysis) =>
+        pack.items.map((item: Motely.Analysis.MotelyAnalyzedItem) => ({
+            name: item.name, value: item.value, matched: item.matched,
+        }))
+    );
+    return [...shop, ...packs];
 }
 
 export function AgnosticSeedCard({
@@ -80,7 +84,7 @@ export function AgnosticSeedCard({
         analyze();
     }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult]);
 
-    const items = allAnalyzedItems(result?.analysis);
+    const items = ante1Items(result?.analysis);
 
     if (isLocked) {
         return (
