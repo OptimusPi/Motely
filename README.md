@@ -89,7 +89,7 @@ Override at app startup:
 ```ts
 import { setJamlAssetBaseUrl, clearJamlAssetBaseUrl } from "jaml-ui";
 
-setJamlAssetBaseUrl("/vendor/jaml-ui/");  // custom CDN
+setJamlAssetBaseUrl("/vendor/jaml-ui/");
 clearJamlAssetBaseUrl();                   // back to default
 ```
 
@@ -129,8 +129,6 @@ const nextConfig = { transpilePackages: ["jaml-ui"] };
 ## Search Worker Architecture
 
 The library provides `useAnalyzer` to interact with `motely-wasm`'s search context natively.
-**Important:** As of `motely-wasm@14.3.3`, the search worker utilizes Vite's `?worker&inline` pattern. You no longer need to pass `motelyWasmUrl`.
-
 Ensure `motely-wasm` is imported and booted at the module level in your application:
 
 ```tsx
