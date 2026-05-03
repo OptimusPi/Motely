@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import motely, { Motely } from 'motely-wasm';
 import { cn } from '../../lib/utils';
 import { DeckSprite } from './DeckSprite';
+import { JamlGameCard, JamlVoucher, resolveAnalyzerShopItem } from '../../components/GameCard.js';
 
-import { Loader2, Sparkles, ChevronRight } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 interface AgnosticSeedCardProps {
     seed: string;
@@ -25,6 +26,16 @@ interface AgnosticSeedCardProps {
     filter?: any;
 }
 
+function allAnalyzedItems(analysis: Motely.Analysis.MotelyLegacyTextAnalyzer | undefined): (Motely.Analysis.MotelyAnalyzedItem & { anteIndex: number; source: string })[] {
+    if (!analysis) return [];
+    return analysis.antes.flatMap((ante, anteIndex) => [
+        ...ante.shopQueue.map(item => ({ ...item, anteIndex, source: 'shop' })),
+        ...ante.packs.flatMap(pack =>
+            pack.items.map(item => ({ ...item, anteIndex, source: 'pack' }))
+        ),
+    ]);
+}
+
 export function AgnosticSeedCard({
     seed,
     deckSlug = 'Erratic',
@@ -35,7 +46,7 @@ export function AgnosticSeedCard({
     onClick,
     analysis: propAnalysis,
     result: propResult,
-    filter
+    jamlConfig,
 }: AgnosticSeedCardProps) {
     const [loading, setLoading] = useState(false);
     const [fetchedAnalysis, setFetchedAnalysis] = useState<any>(null);
@@ -49,15 +60,14 @@ export function AgnosticSeedCard({
             setLoading(true);
             try {
                 await motely.boot();
-                const jaml = `version: 1\nconfig:\n  deck: ${deckSlug}\n  stake: ${stakeSlug}\n`;
+                const jaml = jamlConfig ?? `version: 1\nconfig:\n  deck: ${deckSlug}\n  stake: ${stakeSlug}\n`;
                 const rawData = Motely.MotelyWasm.analyzeJamlSeeds(jaml, [seed]);
-                
+
                 if (rawData && rawData.seeds.length > 0) {
                     const seedData = rawData.seeds[0];
                     setFetchedAnalysis({
                         score: seedData.score,
-                        matches: [],
-                        analysis: seedData.analysis
+                        analysis: seedData.analysis,
                     });
                 }
             } catch (err) {
@@ -68,7 +78,9 @@ export function AgnosticSeedCard({
         };
 
         analyze();
-    }, [seed, deckSlug, stakeSlug, propAnalysis, propResult]);
+    }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult]);
+
+    const items = allAnalyzedItems(result?.analysis);
 
     if (isLocked) {
         return (
@@ -77,7 +89,7 @@ export function AgnosticSeedCard({
                     "balatro-panel flex flex-col items-center justify-center text-center",
                     "w-[315px] h-[340px] shrink-0",
                     "border-dashed border-white/10 opacity-60 grayscale",
-                    "animate-sway", // Move sway to container
+                    "animate-sway",
                     className
                 )}
             >
@@ -100,12 +112,12 @@ export function AgnosticSeedCard({
             className={cn(
                 "balatro-panel flex flex-col cursor-pointer",
                 "w-[315px] h-[340px] shrink-0", // ONE SIZE RULE
-                "animate-sway", // Preserve the cute breathing/sway
+                "animate-sway",
                 className
             )}
             onClick={onClick}
         >
-            {/* Header - Mobile Optimized */}
+            {/* Header */}
             <div className="flex items-start gap-3 pb-4 border-b border-white/10">
                 <div className="animate-juice-pop">
                     <DeckSprite deck={deckSlug} stake={stakeSlug} size={64} />
@@ -123,24 +135,44 @@ export function AgnosticSeedCard({
                 )}
             </div>
 
-            {/* Stats Grid - Larger Touch Targets */}
-            <div className="grid grid-cols-2 gap-3 py-6">
-                <div className="bg-black/40 rounded-xl p-5 border border-white/5 flex flex-col items-center justify-center">
-                    <span className="block text-[11px] font-pixel text-white/30 mb-2">PRIMARY MATCH</span>
-                    <div className="font-header text-xl text-[var(--balatro-blue)] leading-tight text-center">
-                        {result?.matches?.[0]?.item?.name || result?.matches?.[0]?.name || filter?.should?.[0]?.value || filter?.must?.[0]?.value || "N/A"}
+            {/* All analyzed items — matched ones highlighted */}
+            <div className="flex-1 overflow-y-auto py-3 min-h-0">
+                {items.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                        {items.map((item, i) => {
+                            const resolved = resolveAnalyzerShopItem(
+                                { id: `item-${i}`, name: item.name, value: item.value },
+                                0.42
+                            );
+                            return (
+                                <div
+                                    key={i}
+                                    className={cn(
+                                        "flex-shrink-0",
+                                        item.matched && "drop-shadow-[0_0_5px_var(--balatro-gold)]"
+                                    )}
+                                >
+                                    {resolved.kind === 'voucher' ? (
+                                        <JamlVoucher voucherName={resolved.voucherName} scale={0.42} />
+                                    ) : resolved.kind === 'joker' || resolved.kind === 'consumable' || resolved.kind === 'playing' ? (
+                                        <JamlGameCard card={resolved.card} type={resolved.type} />
+                                    ) : null}
+                                </div>
+                            );
+                        })}
                     </div>
-                </div>
-                <div className="bg-black/40 rounded-xl p-5 border border-white/5 flex flex-col items-center justify-center">
-                    <span className="block text-[11px] font-pixel text-white/30 mb-2">SIM SCORE</span>
-                    <div className="font-header text-xl text-[var(--balatro-green)] leading-tight text-center">
-                        {result?.score?.toLocaleString() || "0"}
+                ) : (
+                    <div className="h-full flex items-center justify-center font-pixel text-xs text-white/20">
+                        {loading ? 'Analyzing...' : 'Pass jamlConfig to analyze'}
                     </div>
-                </div>
+                )}
             </div>
 
-            {/* Footer - Mobile Optimized */}
-            <div className="mt-auto flex items-center justify-center pt-3 border-t border-white/5">
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                <span className="font-header text-sm text-[var(--balatro-green)]">
+                    {result?.score?.toLocaleString() ?? '—'}
+                </span>
                 <span className="font-header text-lg text-[var(--balatro-gold)] group-hover:text-white transition-colors text-shadow-balatro">
                     CLICK TO VIEW STRATEGY
                 </span>
