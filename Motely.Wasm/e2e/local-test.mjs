@@ -3,7 +3,9 @@
 // Covers: boot, JAML validation, schema, search context, shop items, jokers, bosses.
 // Run: node local-test.mjs  (from this dir, after dotnet publish Motely.Wasm -c Release)
 
-import bootsharp, { MotelyWasm, MotelyWasmEvents, Motely } from "../../motely-wasm/index.mjs";
+import bootsharp, { Motely } from "../../motely-wasm/index.mjs";
+
+const { MotelyWasm, MotelyWasmEvents } = Motely;
 
 let failures = 0;
 let total = 0;

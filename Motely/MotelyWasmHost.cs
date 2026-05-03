@@ -309,7 +309,8 @@ public sealed class MotelyWasmHost : IMotelyWasm
         var settings = plan.Settings
             .WithDeck(config.Deck)
             .WithStake(config.Stake)
-            .WithThreadCount(1);
+            .WithThreadCount(1)
+            .WithProgressReportIntervalMs(250);
 
         settings = configureMode(settings);
 
@@ -381,7 +382,7 @@ public sealed class MotelyWasmHost : IMotelyWasm
         return _libraries.TryGetValue(rootId, out var lib) ? lib.Watcher.FileUris : [];
     }
 
-    public async Task<string> LoadJamlFile(string rootId, string uri)
+    public async Task<string> LoadLibraryFile(string rootId, string uri)
     {
         if (!_libraries.TryGetValue(rootId, out var lib))
             throw new InvalidOperationException($"No mounted library with root '{rootId}'.");
@@ -389,12 +390,17 @@ public sealed class MotelyWasmHost : IMotelyWasm
         return Encoding.UTF8.GetString(bytes);
     }
 
-    public async Task SaveJamlFile(string rootId, string uri, string content)
+    public async Task SaveLibraryFile(string rootId, string uri, string content)
     {
         if (!_libraries.TryGetValue(rootId, out var lib))
             throw new InvalidOperationException($"No mounted library with root '{rootId}'.");
         await lib.Fs.WriteFile(uri, Encoding.UTF8.GetBytes(content));
     }
+
+    public Task<string> LoadJamlFile(string rootId, string uri) => LoadLibraryFile(rootId, uri);
+
+    public Task SaveJamlFile(string rootId, string uri, string content) =>
+        SaveLibraryFile(rootId, uri, content);
 
     private sealed class JamlFileWatcher(IMotelyWasmEvents events, string rootId) : IFileWatcher
     {

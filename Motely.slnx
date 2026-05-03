@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="Motely.CLI/Motely.CLI.csproj" />
+  <Project Path="Motely.DistributedWorker/Motely.DistributedWorker.csproj" />
+  <Project Path="Motely.HelperAPI/Motely.HelperAPI.csproj" />
+  <Project Path="Motely.Tests/Motely.Tests.csproj" />
+  <Project Path="Motely.TUI/Motely.TUI.csproj" />
+  <Project Path="Motely.Wasm/Motely.Wasm.csproj" />
+  <Project Path="Motely/Motely.csproj" />
+</Solution>
