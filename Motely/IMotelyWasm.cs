@@ -51,7 +51,7 @@ public sealed record MotelyItemLayout(
     int RentalStickerOffset
 );
 
-public interface IMotelyWasm
+public interface IMotelyWasmMetadata
 {
     string GetVersion();
     /// <summary>
@@ -66,6 +66,15 @@ public interface IMotelyWasm
     /// <summary>Legacy plain-string validation ("valid" or error message). Kept for back-compat.</summary>
     string ValidateJaml(string jaml);
     string CompileJummy(string jummy);
+    string[] GetTallyLabels(string jaml);
+    /// <summary>Cheap structural summary without running a search. Safe to call on every keystroke.</summary>
+    JamlMetaResult GetJamlMeta(string jaml);
+    /// <summary>Runs JAML against a seed list and returns compact analysis data with matched preview items highlighted. Pass a one-item array for a single seed.</summary>
+    MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds);
+}
+
+public interface IMotelyWasmSearchApi
+{
     IMotelyWasmSearchContext CreateSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
     IMotelyWasmSearch StartRandomSearch(string jaml, int randomSeedCount);
     IMotelyWasmSearch StartAestheticSearch(string jaml, JamlAesthetic aesthetic);
@@ -76,11 +85,10 @@ public interface IMotelyWasm
     IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds);
     IMotelyWasmSearch StartKeywordSearch(string jaml, string keywordsCsv,
         string paddingChars);
-    string[] GetTallyLabels(string jaml);
-    /// <summary>Cheap structural summary without running a search. Safe to call on every keystroke.</summary>
-    JamlMetaResult GetJamlMeta(string jaml);
-    /// <summary>Runs JAML against a seed list and returns compact analysis data with matched preview items highlighted. Pass a one-item array for a single seed.</summary>
-    MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds);
+}
+
+public interface IMotelyWasmJamlLibraryApi
+{
     // --- JAML Library (Bootsharp.FileSystem) ---
 
     /// <summary>Opens a directory picker and mounts the selected folder as a JAML library. Returns the root ID, or null if the user cancelled.</summary>
@@ -89,8 +97,13 @@ public interface IMotelyWasm
     Task UnmountJamlLibrary(string rootId);
     /// <summary>Returns the current list of .jaml file URIs in a mounted library.</summary>
     string[] GetJamlLibraryFiles(string rootId);
+    Task<string> LoadLibraryFile(string rootId, string uri);
+    Task SaveLibraryFile(string rootId, string uri, string content);
     /// <summary>Reads a .jaml file from a mounted library and returns its UTF-8 content.</summary>
     Task<string> LoadJamlFile(string rootId, string uri);
     /// <summary>Writes UTF-8 content to a .jaml file in a mounted library.</summary>
     Task SaveJamlFile(string rootId, string uri, string content);
 }
+
+public interface IMotelyWasm
+    : IMotelyWasmMetadata, IMotelyWasmSearchApi, IMotelyWasmJamlLibraryApi { }

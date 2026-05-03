@@ -2,20 +2,48 @@
   "scopeName": "source.jaml",
   "name": "JAML",
   "patterns": [
-    { "include": "#comments" },
-    { "include": "#descriptionLine" },
-    { "include": "#sections" },
-    { "include": "#criteria" },
-    { "include": "#legendary" },
-    { "include": "#bosses" },
-    { "include": "#tarots" },
-    { "include": "#planets" },
-    { "include": "#spectrals" },
-    { "include": "#vouchers" },
-    { "include": "#tags" },
-    { "include": "#constants" },
-    { "include": "#numbers" },
-    { "include": "#strings" }
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#descriptionLine"
+    },
+    {
+      "include": "#sections"
+    },
+    {
+      "include": "#criteria"
+    },
+    {
+      "include": "#legendary"
+    },
+    {
+      "include": "#bosses"
+    },
+    {
+      "include": "#tarots"
+    },
+    {
+      "include": "#planets"
+    },
+    {
+      "include": "#spectrals"
+    },
+    {
+      "include": "#vouchers"
+    },
+    {
+      "include": "#tags"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#strings"
+    }
   ],
   "repository": {
     "comments": {
@@ -31,8 +59,12 @@
         {
           "match": "^(description)\\s*:\\s*(.*)$",
           "captures": {
-            "1": { "name": "entity.name.tag.jaml" },
-            "2": { "name": "comment.block.documentation.jaml" }
+            "1": {
+              "name": "entity.name.tag.jaml"
+            },
+            "2": {
+              "name": "comment.block.documentation.jaml"
+            }
           }
         }
       ]
@@ -42,7 +74,9 @@
         {
           "match": "^\\s*(must|should|mustNot|defaults|deck|stake|id|name|author)\\s*:",
           "captures": {
-            "1": { "name": "keyword.control.jaml" }
+            "1": {
+              "name": "keyword.control.jaml"
+            }
           }
         }
       ]
@@ -52,7 +86,9 @@
         {
           "match": "\\b(joker|jokers|commonJoker|commonJokers|uncommonJoker|uncommonJokers|rareJoker|rareJokers|legendaryJoker|voucher|vouchers|boss|tag|tags|smallBlindTag|bigBlindTag|playingCard|playingCards|standardCard|tarot|tarotCard|planet|planetCard|spectral|spectralCard|erraticRank|erraticSuit|erraticCard|startingDraw|event|luckyMoney|luckyMult|wheelOfFortune|score|label|antes|sources|shopItems|boosterPacks|sixthSense|seance|uncommonTag|max|min|edition|stickers|seal|enhancement|description|name|id|author|stake|deck)\\s*:",
           "captures": {
-            "1": { "name": "entity.name.tag.jaml" }
+            "1": {
+              "name": "entity.name.tag.jaml"
+            }
           }
         }
       ]
@@ -110,73 +146,6 @@
         {
           "match": "\\b(UncommonTag|RareTag|NegativeTag|FoilTag|HolographicTag|PolychromeTag|InvestmentTag|VoucherTag|BossTag|StandardTag|CharmTag|MeteorTag|BuffoonTag|HandyTag|GarbageTag|EtherealTag|CouponTag|DoubleTag|JuggleTag|D6Tag|TopupTag|SpeedTag|OrbitalTag|EconomyTag)\\b",
           "name": "support.type.tag.jaml"
-        }
-      ]
-    },
-    "constants": {
-      "patterns": [
-        {
-          "match": "\\b(Red|Blue|Yellow|Green|Black|Magic|Nebula|Ghost|Abandoned|Checkered|Zodiac|Painted|Anaglyph|Plasma|Erratic|White|Purple|Orange|Gold|Any|true|false|null|Base|Foil|Holographic|Polychrome|Negative|Eternal|Perishable|Rental|Lucky|Bonus|Mult|Glass|Steel|Stone|Wild)\\b",
-          "name": "constant.language.jaml"
-        }
-      ]
-    },
-    "numbers": {
-      "patterns": [
-        {
-          "match": "(?<![A-Za-z0-9_])-?\\d+(?:\\.\\d+)?(?![A-Za-z0-9_])",
-          "name": "constant.numeric.jaml"
-        }
-      ]
-    },
-    "strings": {
-      "patterns": [
-        {
-          "begin": "\"",
-          "end": "\"",
-          "name": "string.quoted.double.jaml",
-          "patterns": [
-            {
-              "match": "\\\\.",
-              "name": "constant.character.escape.jaml"
-            }
-          ]
-        },
-        {
-          "begin": "'",
-          "end": "'",
-          "name": "string.quoted.single.jaml"
-        }
-      ]
-    }
-  }
-}
-  "repository": {
-    "comments": {
-      "patterns": [
-        {
-          "match": "#.*$",
-          "name": "comment.line.number-sign.jaml"
-        }
-      ]
-    },
-    "sections": {
-      "patterns": [
-        {
-          "match": "^\\s*(must|should|mustNot|defaults|deck|stake|id|name|author)\\s*:",
-          "captures": {
-            "1": { "name": "keyword.control.jaml" }
-          }
-        }
-      ]
-    },
-    "criteria": {
-      "patterns": [
-        {
-          "match": "\\b(joker|jokers|commonJoker|commonJokers|uncommonJoker|uncommonJokers|rareJoker|rareJokers|legendaryJoker|voucher|vouchers|boss|tag|tags|smallBlindTag|bigBlindTag|playingCard|playingCards|standardCard|tarot|tarotCard|planet|planetCard|spectral|spectralCard|erraticRank|erraticSuit|erraticCard|startingDraw|event|luckyMoney|luckyMult|wheelOfFortune|score|label|antes|sources|max|min|edition|stickers|seal|enhancement|description|name|id|author|stake|deck)\\s*:",
-          "captures": {
-            "1": { "name": "entity.name.tag.jaml" }
-          }
         }
       ]
     },
