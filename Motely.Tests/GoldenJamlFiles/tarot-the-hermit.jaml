@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "economy", "planet-scaling", "legendary-synergy"]
 must:
-  - tarot: TheHermit
+  - tarotCard: TheHermit
     antes:
       - 1
       - 2

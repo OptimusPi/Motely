@@ -4,7 +4,7 @@ description: Wheel of Fortune tarot with Oops All 6s for doubled edition chance
 deck: Red
 stake: White
 must:
-  - tarot: TheWheelOfFortune
+  - tarotCard: TheWheelOfFortune
     antes:
       - 1
       - 2

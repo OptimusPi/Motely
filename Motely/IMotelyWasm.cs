@@ -65,7 +65,6 @@ public interface IMotelyWasmMetadata
     JamlValidationResult ValidateJamlStructured(string jaml);
     /// <summary>Legacy plain-string validation ("valid" or error message). Kept for back-compat.</summary>
     string ValidateJaml(string jaml);
-    string CompileJummy(string jummy);
     string[] GetTallyLabels(string jaml);
     /// <summary>Cheap structural summary without running a search. Safe to call on every keystroke.</summary>
     JamlMetaResult GetJamlMeta(string jaml);
@@ -106,4 +105,32 @@ public interface IMotelyWasmJamlLibraryApi
 }
 
 public interface IMotelyWasm
-    : IMotelyWasmMetadata, IMotelyWasmSearchApi, IMotelyWasmJamlLibraryApi { }
+{
+    string GetVersion();
+    string GetJamlSchema();
+    MotelyItemLayout GetItemLayout();
+    JamlValidationResult ValidateJamlStructured(string jaml);
+    string ValidateJaml(string jaml);
+    string[] GetTallyLabels(string jaml);
+    JamlMetaResult GetJamlMeta(string jaml);
+    MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds);
+
+    IMotelyWasmSearchContext CreateSearchContext(string seed, MotelyDeck deck, MotelyStake stake);
+    IMotelyWasmSearch StartRandomSearch(string jaml, int randomSeedCount);
+    IMotelyWasmSearch StartAestheticSearch(string jaml, JamlAesthetic aesthetic);
+    IMotelyWasmSearch StartSequentialSearch(string jaml, int batchCharCount,
+        long startBatch, long endBatch);
+    Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(string jaml, int batchCharCount,
+        long startBatch, long endBatch, int maxResults);
+    IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds);
+    IMotelyWasmSearch StartKeywordSearch(string jaml, string keywordsCsv,
+        string paddingChars);
+
+    Task<string?> MountJamlLibrary();
+    Task UnmountJamlLibrary(string rootId);
+    string[] GetJamlLibraryFiles(string rootId);
+    Task<string> LoadLibraryFile(string rootId, string uri);
+    Task SaveLibraryFile(string rootId, string uri, string content);
+    Task<string> LoadJamlFile(string rootId, string uri);
+    Task SaveJamlFile(string rootId, string uri, string content);
+}

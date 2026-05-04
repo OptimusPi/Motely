@@ -22,9 +22,9 @@ should:
     score: 55
   - legendaryJoker: Perkeo
     score: 60
-  - tarot: TheEmperor
+  - tarotCard: TheEmperor
     score: 45
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 40
   - voucher: CrystalBall
     score: 45

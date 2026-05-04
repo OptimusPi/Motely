@@ -3,15 +3,20 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
 
-public sealed class StandardCardClause : IJamlClause
+public sealed class StandardCardTarget
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public MotelyStandardcardRank? Rank { get; init; }
     public MotelyStandardcardSuit? Suit { get; init; }
     public MotelyItemEnhancement? Enhancement { get; init; }
     public MotelyItemSeal? Seal { get; init; }
     public MotelyItemEdition? Edition { get; init; }
+}
+
+public sealed class StandardCardClause : IJamlClause
+{
+    public string Label { get; init; } = "";
+    public int Score { get; init; }
+    public StandardCardTarget[] Cards { get; init; } = [];
     public StandardCardSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
@@ -162,17 +167,23 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool MatchesStandardCard(MotelyItem item, StandardCardClause clause)
         {
-            if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value)
-                return false;
-            if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value)
-                return false;
-            if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value)
-                return false;
-            if (clause.Seal.HasValue && item.Seal != clause.Seal.Value)
-                return false;
-            if (clause.Edition.HasValue && item.Edition != clause.Edition.Value)
-                return false;
-            return true;
+            for (int i = 0; i < clause.Cards.Length; i++)
+            {
+                var card = clause.Cards[i];
+                if (card.Rank.HasValue && item.StandardcardRank != card.Rank.Value)
+                    continue;
+                if (card.Suit.HasValue && item.StandardcardSuit != card.Suit.Value)
+                    continue;
+                if (card.Enhancement.HasValue && item.Enhancement != card.Enhancement.Value)
+                    continue;
+                if (card.Seal.HasValue && item.Seal != card.Seal.Value)
+                    continue;
+                if (card.Edition.HasValue && item.Edition != card.Edition.Value)
+                    continue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

@@ -53,7 +53,7 @@ public sealed class MotelyWasmHost : IMotelyWasm
 
     private static string LoadJamlSchema()
     {
-        var assembly = typeof(MotelyWasmHost).Assembly;
+        var assembly = typeof(VersionInfo).Assembly;
         using var stream = assembly.GetManifestResourceStream("jaml.schema.json")
             ?? throw new InvalidOperationException("Embedded JAML schema resource was not found.");
         using var reader = new StreamReader(stream);
@@ -182,13 +182,6 @@ public sealed class MotelyWasmHost : IMotelyWasm
             config.Deck.ToString(),
             config.Stake.ToString()
         );
-    }
-
-    public string CompileJummy(string jummy)
-    {
-        if (!JummyCompiler.TryCompile(jummy, out var jaml, out var error))
-            throw new InvalidOperationException(error ?? "Invalid Jummy.");
-        return jaml;
     }
 
     public IMotelyWasmSearchContext CreateSearchContext(string seed, MotelyDeck deck, MotelyStake stake)

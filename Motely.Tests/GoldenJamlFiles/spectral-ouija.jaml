@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "scaling", "planet-scaling", "deck-fix", "face-cards", "legendary-synergy"]
 must:
-  - spectral: Ouija
+  - spectralCard: Ouija
     antes:
       - 1
       - 2

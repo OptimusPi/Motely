@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "probability", "retrigger", "glass", "legendary-synergy"]
 must:
-  - tarot: Justice
+  - tarotCard: Justice
     antes:
       - 1
       - 2
@@ -26,7 +26,7 @@ should:
     score: 50
   - rareJoker: DriversLicense
     score: 45
-  - spectral: DejaVu
+  - spectralCard: DejaVu
     score: 45
   - rareJoker: Blueprint
     score: 35

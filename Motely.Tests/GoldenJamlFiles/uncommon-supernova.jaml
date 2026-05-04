@@ -14,7 +14,7 @@ must:
 should:
   - uncommonJoker: Constellation
     score: 65
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 60
   - rareJoker: BurntJoker
     score: 55

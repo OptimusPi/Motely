@@ -152,7 +152,7 @@ connection.onCompletion(({ textDocument, position }) => {
 
   // Enum values from schema for criterion keys
   if (schema) {
-    const criterionProps = schema.$defs?.JamlCriterion?.properties ?? {};
+    const criterionProps = schema.$defs?.JamlClauseDto?.properties ?? {};
     for (const [key, def] of Object.entries(criterionProps)) {
       const pattern = new RegExp(`^\\s*${key}:\\s*$`, "i");
       if (pattern.test(lineText)) {
@@ -167,10 +167,10 @@ connection.onCompletion(({ textDocument, position }) => {
 
   // Criterion key completions inside must/should/mustNot blocks
   if (schema && /^\s+-?\s*$/.test(lineText)) {
-    return criterionItems(schema.$defs?.JamlCriterion?.properties ?? {});
+    return criterionItems(schema.$defs?.JamlClauseDto?.properties ?? {});
   }
 
-  return criterionItems(schema?.$defs?.JamlCriterion?.properties ?? {});
+  return criterionItems(schema?.$defs?.JamlClauseDto?.properties ?? {});
 });
 
 function rootItems(keys) {
@@ -210,7 +210,7 @@ connection.onHover(({ textDocument, position }) => {
   if (!schema) return null;
 
   // Criterion key hover
-  const criterionProps = schema.$defs?.JamlCriterion?.properties ?? {};
+  const criterionProps = schema.$defs?.JamlClauseDto?.properties ?? {};
   if (criterionProps[word]) {
     const def = criterionProps[word];
     const enums = def?.oneOf?.flatMap(o => o.enum ?? []) ?? def?.enum ?? [];

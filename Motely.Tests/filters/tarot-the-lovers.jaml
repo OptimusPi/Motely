@@ -4,7 +4,7 @@ description: TheLovers tarot with Flower Pot for Wild suit flexibility
 deck: Red
 stake: White
 must:
-  - tarot: TheLovers
+  - tarotCard: TheLovers
     antes:
       - 1
       - 2

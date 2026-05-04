@@ -4,7 +4,7 @@ description: TheHangedMan tarot with Erosion for deck thinning synergy
 deck: Red
 stake: White
 must:
-  - tarot: TheHangedMan
+  - tarotCard: TheHangedMan
     antes:
       - 1
       - 2

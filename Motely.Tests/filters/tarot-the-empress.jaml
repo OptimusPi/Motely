@@ -4,7 +4,7 @@ description: TheEmpress tarot with Vampire for Mult enhancement consumption
 deck: Red
 stake: White
 must:
-  - tarot: TheEmpress
+  - tarotCard: TheEmpress
     antes:
       - 1
       - 2

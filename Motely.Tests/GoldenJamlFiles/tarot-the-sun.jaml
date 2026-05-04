@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "flush", "planet-scaling", "probability", "deck-fix", "legendary-synergy"]
 must:
-  - tarot: TheSun
+  - tarotCard: TheSun
     antes:
       - 1
       - 2

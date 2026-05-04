@@ -4,7 +4,7 @@ description: Hex spectral to add Polychrome to Baron joker
 deck: Red
 stake: White
 must:
-  - spectral: Hex
+  - spectralCard: Hex
     antes:
       - 1
       - 2

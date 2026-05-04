@@ -13,5 +13,5 @@ must:
 should:
   - uncommonJoker: GlassJoker
     score: 50
-  - tarot: Justice
+  - tarotCard: Justice
     score: 40

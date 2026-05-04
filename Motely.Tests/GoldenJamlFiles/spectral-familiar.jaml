@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "scaling", "planet-scaling", "retrigger", "face-cards", "legendary-synergy"]
 must:
-  - spectral: Familiar
+  - spectralCard: Familiar
     antes:
       - 1
       - 2
