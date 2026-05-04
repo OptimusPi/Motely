@@ -44,9 +44,11 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
         onTabChange={(id) => onModeChange(id as JamlIdeMode)}
       />
 
-      <JimboButton tone={isSearching ? "red" : "blue"} size="xs" onClick={onSearch ?? (() => {})}>
-        {isSearching ? "Stop" : "Search"}
-      </JimboButton>
+      {onSearch ? (
+        <JimboButton tone={isSearching ? "red" : "blue"} size="xs" onClick={onSearch}>
+          {isSearching ? "Stop" : "Search"}
+        </JimboButton>
+      ) : null}
     </div>
   );
 }
