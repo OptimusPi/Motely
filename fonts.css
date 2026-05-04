@@ -1,5 +1,5 @@
 @font-face {
   font-family: 'm6x11plus';
-  src: url('./assets/fonts/m6x11plusplus.otf') format('opentype');
-  font-display: block;
+  src: local('m6x11plus'), local('m6x11plusplus'), url('./assets/fonts/m6x11plusplus.otf') format('opentype');
+  font-display: swap;
 }
