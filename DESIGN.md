@@ -233,4 +233,4 @@ JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]`
 - DON'T use rounded corners larger than 10px. Balatro is chunky, not bubbly.
 - DON'T use blur-based shadows for depth. Use solid colored box-shadows 80% opaque.
 - DON'T put back/nav buttons at the top of a screen. They go at the BOTTOM.
-- DON'T use redundant JS wrappers for `motely-wasm`. Import globally and `motely.boot()` once. Use `?worker&inline` for search workers rather than blob strings, and do not prop-drill `motelyWasmUrl`.
+- DON'T use redundant JS wrappers for `motely-wasm`. Import globally and `motely.boot()` once.
