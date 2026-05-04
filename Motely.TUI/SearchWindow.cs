@@ -238,7 +238,8 @@ public class SearchWindow : Window
                 .Settings.WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(TuiSettings.ThreadCount)
-                .WithQuietMode(true);
+                .WithQuietMode(true)
+                .WithAutoScoreCutoff(_cutoffAuto);
 
             switch (TuiSettings.SearchMode)
             {
@@ -303,10 +304,6 @@ public class SearchWindow : Window
 
             settings.WithScoredResultCallback(tally =>
             {
-                // Match Motely.CLI: cutoff gates BOTH sink and display.
-                if (!PassesCutoff(tally.Score))
-                    return;
-
                 var resultCount = Interlocked.Increment(ref _resultCount);
                 var seed = tally.Seed;
                 var score = tally.Score;
