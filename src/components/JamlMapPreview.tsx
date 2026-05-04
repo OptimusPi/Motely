@@ -25,9 +25,9 @@ export interface JamlMapPreviewProps {
 }
 
 const ZONES: Record<JamlPreviewSection, { label: string; color: string; glow: string }> = {
-  must: { label: "MUST", color: C.BLUE, glow: C.BLUE },
-  should: { label: "SHOULD", color: C.RED, glow: C.GOLD },
-  mustNot: { label: "MUST NOT", color: C.ORANGE, glow: C.ORANGE },
+  must: { label: "Must", color: C.BLUE, glow: C.BLUE },
+  should: { label: "Should", color: C.RED, glow: C.GOLD },
+  mustNot: { label: "Must Not", color: C.ORANGE, glow: C.ORANGE },
 };
 
 const SECTION_ORDER: JamlPreviewSection[] = ["must", "should", "mustNot"];
