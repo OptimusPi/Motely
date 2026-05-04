@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { JamlMapPreview } from "./JamlMapPreview.js";
+import { JamlMapEditor } from "./jamlMap/index.js";
 import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
 import { JamlIdeVisual, type JamlVisualFilter } from "./JamlIdeVisual.js";
 import { JamlCodeEditor } from "./JamlCodeEditor.js";
@@ -314,7 +315,7 @@ export function JamlIde({
           />
         ) : null}
 
-        {mode === "map" ? <JamlMapPreview jaml={text} /> : null}
+        {mode === "map" ? <JamlMapEditor onChange={handleTextChange} /> : null}
 
         {mode === "results" ? (
           <div style={{ padding: 12 }}>
