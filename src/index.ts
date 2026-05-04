@@ -1,5 +1,7 @@
 "use client";
 
+import "./ui/jimbo.css";
+
 export {
     JAML_ASSET_FILES,
     resolveJamlAssetUrl,

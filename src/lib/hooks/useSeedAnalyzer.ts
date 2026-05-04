@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { type Motely } from "motely-wasm";
 
 export function useSeedAnalyzer(motely: typeof Motely | null, seed: string | null) {
-  const [data, setData] = useState<Motely.Analysis.MotelyLegacyTextAnalyzer | null | undefined>(null);
+  const [data, setData] = useState<Motely.Analysis.SeedAnalysisDto | null | undefined>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

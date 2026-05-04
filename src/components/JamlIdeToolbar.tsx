@@ -31,23 +31,28 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        flexWrap: "wrap",
+        flexWrap: "nowrap",
         gap: 8,
+        minWidth: 0,
         padding: "10px 10px 6px",
         borderBottom: `1px solid ${JimboColorOption.PANEL_EDGE}`,
         background: JimboColorOption.DARKEST,
       }}
     >
-      <JimboTabs
-        tabs={tabs}
-        activeTab={mode}
-        onTabChange={(id) => onModeChange(id as JamlIdeMode)}
-      />
+      <div style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden" }}>
+        <JimboTabs
+          tabs={tabs}
+          activeTab={mode}
+          onTabChange={(id) => onModeChange(id as JamlIdeMode)}
+        />
+      </div>
 
       {onSearch ? (
-        <JimboButton tone={isSearching ? "red" : "blue"} size="xs" onClick={onSearch}>
-          {isSearching ? "Stop" : "Search"}
-        </JimboButton>
+        <div style={{ flexShrink: 0 }}>
+          <JimboButton tone={isSearching ? "red" : "blue"} size="xs" onClick={onSearch}>
+            {isSearching ? "Stop" : "Search"}
+          </JimboButton>
+        </div>
       ) : null}
     </div>
   );

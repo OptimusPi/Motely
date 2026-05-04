@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cmd /c \"cd /d D:\\\\mmm && pnpm install jaml-ui@^0.24.0 motely-wasm@^14.4.0 2>&1\")",
+      "PowerShell(Test-Path *)",
+      "PowerShell(npm install *)",
+      "PowerShell(pnpm add *)",
+      "PowerShell(npm version *)"
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://www.seedfinder.app/jaml.schema.json",
-  "version": "14.4.0",
+  "version": "5.1.0.0",
   "title": "JAML — Jimbo's Ante Markup Language",
   "description": "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.",
   "type": "object",
   "$defs": {
-    "JamlCriterion": {
+    "JamlClauseDto": {
       "type": "object",
       "properties": {
         "joker": {
@@ -48,6 +48,12 @@
         "legendaryJoker": {
           "$ref": "#/$defs/LegendaryJoker"
         },
+        "legendaryJokers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LegendaryJoker"
+          }
+        },
         "voucher": {
           "$ref": "#/$defs/Voucher"
         },
@@ -57,17 +63,23 @@
             "$ref": "#/$defs/Voucher"
           }
         },
-        "tarot": {
-          "$ref": "#/$defs/Tarot"
-        },
         "tarotCard": {
           "$ref": "#/$defs/Tarot"
         },
-        "spectral": {
-          "$ref": "#/$defs/Spectral"
+        "tarotCards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Tarot"
+          }
         },
         "spectralCard": {
           "$ref": "#/$defs/Spectral"
+        },
+        "spectralCards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Spectral"
+          }
         },
         "planet": {
           "$ref": "#/$defs/Planet"
@@ -87,7 +99,15 @@
         "bigBlindTag": {
           "$ref": "#/$defs/Tag"
         },
-        "standardCard": true,
+        "standardCard": {
+          "$ref": "#/$defs/StandardCard"
+        },
+        "standardCards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StandardCard"
+          }
+        },
         "erraticRank": {
           "$ref": "#/$defs/Rank"
         },
@@ -101,7 +121,7 @@
           "type": "string"
         },
         "event": {
-          "type": "string"
+          "type": "integer"
         },
         "luckyMoney": {
           "type": "array",
@@ -229,19 +249,19 @@
         "and": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlCriterion"
+            "$ref": "#/$defs/JamlClauseDto"
           }
         },
         "or": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlCriterion"
+            "$ref": "#/$defs/JamlClauseDto"
           }
         },
         "clauses": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlCriterion"
+            "$ref": "#/$defs/JamlClauseDto"
           }
         },
         "mode": {
@@ -266,7 +286,7 @@
           "type": "integer"
         },
         "sources": {
-          "$ref": "#/$defs/JamlSources"
+          "$ref": "#/$defs/JamlSourcesDto"
         }
       }
     },
@@ -901,7 +921,7 @@
         }
       ]
     },
-    "JamlSources": {
+    "JamlSourcesDto": {
       "type": "object",
       "properties": {
         "shopItems": {
@@ -922,8 +942,143 @@
         "maxShopItem": {
           "type": "integer"
         },
+        "tags": {
+          "type": "boolean"
+        },
         "requireMega": {
           "type": "boolean"
+        },
+        "charmTag": {
+          "type": "boolean"
+        },
+        "etherealTag": {
+          "type": "boolean"
+        },
+        "judgement": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "rareTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "uncommonTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wraith": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "soulCard": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "arcanaPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "spectralPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "riffRaff": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "purpleSealOrEightBall": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "emperor": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "sixthSense": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "seance": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "certificate": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "incantation": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "familiar": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "grim": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "deckDraw": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "uncommonShopJokers": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "rareShopJokers": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "commonShopJokers": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "allShopJokers": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         }
       }
     }
@@ -979,19 +1134,19 @@
     "must": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/JamlCriterion"
+        "$ref": "#/$defs/JamlClauseDto"
       }
     },
     "should": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/JamlCriterion"
+        "$ref": "#/$defs/JamlClauseDto"
       }
     },
     "mustNot": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/JamlCriterion"
+        "$ref": "#/$defs/JamlClauseDto"
       }
     },
     "hashtags": {
