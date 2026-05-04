@@ -1,0 +1,37 @@
+name: Medium Purple Seal
+author: jammy
+description: Medium spectral with Fortune Teller for Purple Seal Tarot generation
+deck: Red
+stake: White
+hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "discard", "tarot-engine", "legendary-synergy"]
+must:
+  - spectralCard: Medium
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - commonJoker: FortuneTeller
+    score: 70
+  - uncommonJoker: Cartomancer
+    score: 55
+  - uncommonJoker: MerryAndy
+    score: 45
+  - voucher: CrystalBall
+    score: 55
+  - voucher: OmenGlobe
+    score: 45
+  - commonJoker: EightBall
+    score: 40
+  - tarotCard: TheEmperor
+    score: 40
+  - rareJoker: Blueprint
+    score: 35
+  - tag: NegativeTag
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 35

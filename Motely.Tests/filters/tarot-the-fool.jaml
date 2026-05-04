@@ -1,0 +1,17 @@
+name: TheFool Tarot Early
+author: jammy
+description: Early TheFool tarot to duplicate powerful consumables
+deck: Red
+stake: White
+must:
+  - tarotCard: TheFool
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - tarotCard: Death
+    score: 40
+  - spectralCard: BlackHole
+    score: 50
