@@ -4,7 +4,7 @@ description: TheStar tarot with Greedy Joker for Diamond suit conversion
 deck: Red
 stake: White
 must:
-  - tarot: TheStar
+  - tarotCard: TheStar
     antes:
       - 1
       - 2

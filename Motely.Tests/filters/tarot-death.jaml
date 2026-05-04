@@ -4,7 +4,7 @@ description: Death tarot with The Idol for card cloning strategy
 deck: Red
 stake: White
 must:
-  - tarot: Death
+  - tarotCard: Death
     antes:
       - 1
       - 2

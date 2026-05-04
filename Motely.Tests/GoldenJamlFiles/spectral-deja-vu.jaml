@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "probability", "retrigger", "face-cards", "glass", "legendary-synergy"]
 must:
-  - spectral: DejaVu
+  - spectralCard: DejaVu
     antes:
       - 1
       - 2

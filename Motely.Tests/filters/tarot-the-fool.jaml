@@ -4,14 +4,14 @@ description: Early TheFool tarot to duplicate powerful consumables
 deck: Red
 stake: White
 must:
-  - tarot: TheFool
+  - tarotCard: TheFool
     antes:
       - 1
       - 2
       - 3
       - 4
 should:
-  - tarot: Death
+  - tarotCard: Death
     score: 40
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 50

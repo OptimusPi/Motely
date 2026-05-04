@@ -12,13 +12,13 @@ must:
       - 3
       - 4
 should:
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     score: 55
   - tag: EtherealTag
     score: 45
   - voucher: Hieroglyph
     score: 50
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 85
   - planet: PlanetX
     score: 70
@@ -26,9 +26,9 @@ should:
     score: 60
   - planet: Eris
     score: 55
-  - tarot: TheWorld
+  - tarotCard: TheWorld
     score: 55
-  - tarot: Death
+  - tarotCard: Death
     score: 50
   - voucher: CrystalBall
     score: 60

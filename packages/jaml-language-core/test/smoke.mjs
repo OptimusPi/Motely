@@ -15,7 +15,7 @@ import {
 assert.equal(JAML_LANGUAGE_ID, "jaml");
 assert.equal(JAML_FILE_EXTENSION, ".jaml");
 assert.equal(JAML_SCHEMA_ID, "https://www.seedfinder.app/jaml.schema.json");
-assert.equal(JAML_CRITERION_DEFINITION, "JamlCriterion");
+assert.equal(JAML_CRITERION_DEFINITION, "JamlClauseDto");
 assert.deepEqual(JAML_CRITERION_SECTION_KEYS, ["must", "should", "mustNot"]);
 assert.equal(JAML_CONTRACT.schemaId, JAML_SCHEMA_ID);
 assert.deepEqual(JAML_CONTRACT.criterionSectionKeys, JAML_CRITERION_SECTION_KEYS);

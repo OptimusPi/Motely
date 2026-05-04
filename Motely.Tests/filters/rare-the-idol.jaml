@@ -11,9 +11,9 @@ must:
       - 3
       - 4
 should:
-  - tarot: Death
+  - tarotCard: Death
     score: 60
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 55
   - rareJoker: DNA
     score: 40

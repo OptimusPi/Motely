@@ -127,11 +127,11 @@ expect("joker has numeric value", typeof jokerValue === "number", `${typeof joke
 // ── Search ──
 console.log("\n9. Random search (100 seeds)");
 const results = [];
-MotelyWasmEvents.onResult.subscribe((seed, score, tallies) => {
+MotelyWasmEvents.notifyResult = (seed, score, tallies) => {
   results.push({ seed, score });
-});
+};
 let progressCount = 0;
-MotelyWasmEvents.onProgress.subscribe(() => progressCount++);
+MotelyWasmEvents.notifyProgress = () => progressCount++;
 
 const search = MotelyWasm.startRandomSearch(goodJaml, 100);
 expect("startRandomSearch returns", search != null);

@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "flush", "planet-scaling", "probability", "dark-suits", "legendary-synergy"]
 must:
-  - spectral: Sigil
+  - spectralCard: Sigil
     antes:
       - 1
       - 2

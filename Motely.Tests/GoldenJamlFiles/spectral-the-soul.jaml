@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "discard", "face-cards", "legendary-synergy"]
 must:
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     antes:
       - 1
       - 2

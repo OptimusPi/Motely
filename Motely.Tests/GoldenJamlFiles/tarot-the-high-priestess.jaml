@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "legendary-synergy"]
 must:
-  - tarot: TheHighPriestess
+  - tarotCard: TheHighPriestess
     antes:
       - 1
       - 2
@@ -22,7 +22,7 @@ should:
     score: 65
   - voucher: Telescope
     score: 55
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 50
   - commonJoker: Supernova
     score: 45

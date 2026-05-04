@@ -13,5 +13,5 @@ must:
 should:
   - rareJoker: Blueprint
     score: 50
-  - spectral: Hex
+  - spectralCard: Hex
     score: 40

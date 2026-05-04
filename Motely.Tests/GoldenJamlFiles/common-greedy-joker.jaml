@@ -12,13 +12,13 @@ must:
       - 3
       - 4
 should:
-  - tarot: TheStar
+  - tarotCard: TheStar
     score: 65
   - uncommonJoker: RoughGem
     score: 55
   - uncommonJoker: SmearedJoker
     score: 40
-  - tarot: TheLovers
+  - tarotCard: TheLovers
     score: 25
   - commonJoker: LustyJoker
     score: 15

@@ -17,7 +17,6 @@
   "keywords": [
     "balatro",
     "jaml",
-    "jummy",
     "motely",
     "seed",
     "seedfinder"
@@ -72,20 +71,6 @@
           "light": "./images/icon.ico",
           "dark": "./images/icon.ico"
         }
-      },
-      {
-        "id": "jummy",
-        "aliases": [
-          "Jummy"
-        ],
-        "extensions": [
-          ".jummy"
-        ],
-        "configuration": "./language-configuration.json",
-        "icon": {
-          "light": "./images/icon.ico",
-          "dark": "./images/icon.ico"
-        }
       }
     ],
     "grammars": [
@@ -93,11 +78,6 @@
         "language": "jaml",
         "scopeName": "source.jaml",
         "path": "./syntaxes/jaml.tmLanguage.json"
-      },
-      {
-        "language": "jummy",
-        "scopeName": "source.jummy",
-        "path": "./syntaxes/jummy.tmLanguage.json"
       }
     ],
     "commands": [

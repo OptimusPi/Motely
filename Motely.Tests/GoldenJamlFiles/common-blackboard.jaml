@@ -25,7 +25,7 @@ should:
     score: 45
   - commonJoker: GluttonousJoker
     score: 45
-  - tarot: TheMoon
+  - tarotCard: TheMoon
     score: 30
   - uncommonJoker: TurtleBean
     score: 25

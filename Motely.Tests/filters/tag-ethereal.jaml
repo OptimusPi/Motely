@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 50
   - legendaryJoker: Perkeo
     score: 45

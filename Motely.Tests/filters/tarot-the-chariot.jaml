@@ -4,7 +4,7 @@ description: TheChariot tarot with Baron for Steel enhancement synergy
 deck: Red
 stake: White
 must:
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     antes:
       - 1
       - 2

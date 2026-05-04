@@ -16,7 +16,7 @@ should:
     score: 85
   - uncommonJoker: SteelJoker
     score: 70
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 60
   - commonJoker: RaisedFist
     score: 55

@@ -97,23 +97,26 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "legendaryJoker")]
     public EnumOrAny<MotelyJokerLegendary>? LegendaryJoker { get; set; }
 
+    [YamlMember(Alias = "legendaryJokers")]
+    public List<MotelyJokerLegendary>? LegendaryJokers { get; set; }
+
     [YamlMember(Alias = "voucher")]
     public MotelyVoucher? Voucher { get; set; }
 
     [YamlMember(Alias = "vouchers")]
     public List<MotelyVoucher>? Vouchers { get; set; }
 
-    [YamlMember(Alias = "tarot")]
-    public MotelyTarotCard? Tarot { get; set; }
-
     [YamlMember(Alias = "tarotCard")]
     public MotelyTarotCard? TarotCard { get; set; }
 
-    [YamlMember(Alias = "spectral")]
-    public MotelySpectralCard? Spectral { get; set; }
+    [YamlMember(Alias = "tarotCards")]
+    public List<MotelyTarotCard>? TarotCards { get; set; }
 
     [YamlMember(Alias = "spectralCard")]
     public MotelySpectralCard? SpectralCard { get; set; }
+
+    [YamlMember(Alias = "spectralCards")]
+    public List<MotelySpectralCard>? SpectralCards { get; set; }
 
     [YamlMember(Alias = "planet")]
     public MotelyPlanetCard? Planet { get; set; }
@@ -135,6 +138,9 @@ public sealed class JamlClauseDto
 
     [YamlMember(Alias = "standardCard")]
     public StandardCardValue? StandardCard { get; set; }
+
+    [YamlMember(Alias = "standardCards")]
+    public List<StandardCardValue>? StandardCards { get; set; }
 
     [YamlMember(Alias = "erraticRank")]
     public string? ErraticRank { get; set; }
