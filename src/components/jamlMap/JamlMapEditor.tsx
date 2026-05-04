@@ -197,7 +197,7 @@ export function JamlMapEditor({
         scrollSnapType: "y mandatory",
         scrollBehavior: "smooth"
       }}>
-        {[1,2,3,4,5,6,7,8].map((a) => (
+        {Array.from({ length: 40 }, (_, i) => i).map((a) => (
           <div key={a} style={{
             scrollSnapAlign: "start",
             padding: "24px 8px 64px 8px",
