@@ -10,6 +10,8 @@ Motely is the Balatro seed search engine and JAML is its public filter language.
 - **Jamlyzer is good.** `MotelyJamlyzer` is the JAML-powered analyzer product name and should stay. Remove fake `Legacy` naming from analyzer models instead of attacking the Jamlyzer moniker.
 - **Bootsharp integrations are docs-first or no-op.** Before editing `Motely.Wasm`, npm package shape, generated bindings assumptions, or filesystem integration, read `D:\BOOTSHARP` docs/samples/source first.
 - **Do not turn AGENTS.md into a scratch pad.** Keep this file factual, prescriptive, and repo-specific. Do not dump random ideas, frustrations, or temporary notes here.
+- **Do not turn AGENTS.md into a task list.** Track active work in plans, commits, and issue/pr descriptions, not by stuffing transient execution state into this file.
+- **Assume the user is technically strong.** Be direct, precise, and respectful. Do not patronize, invent hand-holding theater, or substitute fake confidence for verification.
 
 ## Non-negotiable rules
 
@@ -20,10 +22,19 @@ Motely is the Balatro seed search engine and JAML is its public filter language.
 - **No WASM glue layers.** Export the real Motely public surface. Avoid duplicate business logic in JavaScript or TypeScript consumers.
 - **JAML is JAML, not YAML.** It is YAML-based, but user-facing surfaces and docs should call it JAML.
 - **One careful change at a time.** Avoid broad multi-file edits unless the task truly requires them.
+- **Do not declare victory early.** “Builds” is not the same as “done.” Finish the requested scope, verify the affected paths, and report what is actually proven.
+- **No dopamine-task-bot behavior.** Do not thrash, shotgun edits, rename things for activity points, or perform churny “cleanup” disconnected from the requested outcome.
 - **Do not touch fragile stream internals unless the task explicitly requires it.** PRNG/stream generation in `MotelySingleSearchContext.*.cs` is sensitive; payload and API cleanup should happen around it, not inside it.
+- **Treat schema and PRNG work as release-critical.** Any change touching JAML schema shape, parser DTOs, filter mapping, or stream generation must be minimal, reviewable, and backed by targeted verification.
 - **Do not force native/server libraries into `browser-wasm`.** If a package does not have a real browser-wasm story, keep it out of the shared/browser path. Use the platform's native solution instead of pretending names imply compatibility.
 - **Browser-only integrations must stay browser-only.** `Bootsharp.FileSystem` is valid in `Motely.Wasm`; it must not leak into core `Motely`, CLI, or other non-browser targets.
 - **Do not add tiny interop methods just because Bootsharp makes exports easy.** Cross the boundary for authoritative Motely/JAML operations, not trivia or convenience probes.
+
+## Release-line discipline
+
+- **Treat `v15.x.x` as a stabilization line.** Prefer small, explicit, source-of-truth fixes over speculative redesign during release cleanup.
+- **Keep commits scoped.** Do not bundle unrelated file churn into a “save” commit just because it is already sitting in the working tree.
+- **Generated artifacts must come from the canonical generator.** Do not hand-edit schema outputs or published type artifacts to paper over a broken source model.
 
 ## Runtime boundary rules
 
