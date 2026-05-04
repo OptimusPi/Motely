@@ -2,7 +2,7 @@ export const JAML_LANGUAGE_ID: "jaml";
 export const JAML_FILE_EXTENSION: ".jaml";
 export const JAML_SCHEMA_ID: "https://www.seedfinder.app/jaml.schema.json";
 export const JAML_SCHEMA_PATH: string;
-export const JAML_CRITERION_DEFINITION: "JamlCriterion";
+export const JAML_CRITERION_DEFINITION: "JamlClauseDto";
 export const JAML_CRITERION_SECTION_KEYS: readonly ["must", "should", "mustNot"];
 
 export interface JamlContract {

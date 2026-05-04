@@ -16,6 +16,7 @@ public sealed class JokerClause : IJamlClause
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();
+    public LegendaryJokerSourceConfig LegendarySources { get; init; } = new();
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;
     public int? Max { get; init; }
@@ -101,6 +102,16 @@ public struct JokerFilterDesc(JokerClause clause)
             Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
             int needed = _clause.Min;
             Debug.Assert(needed > 0, "JokerClause.Min must be > 0 — loader bug.");
+
+            if (UsesLegendaryPath(_clause))
+            {
+                var clause = _clause;
+                return ctx.SearchIndividualSeeds(
+                    (ref MotelySingleSearchContext singleCtx) =>
+                        JamlScoring.CountJokerClauseOccurrencesForFilter(ref singleCtx, clause) >= needed
+                );
+            }
+
             Vector256<int> matchCounts = Vector256<int>.Zero;
 
             var shopIndices = _shopIndices;
@@ -286,6 +297,20 @@ public struct JokerFilterDesc(JokerClause clause)
                     )
                 );
             }
+        }
+
+        private static bool UsesLegendaryPath(JokerClause clause)
+        {
+            if (clause.IsWildcard)
+                return true;
+
+            for (int i = 0; i < clause.Jokers.Length; i++)
+            {
+                if (((MotelyJokerRarity)((int)clause.Jokers[i] & MotelyGlobals.JokerRarityMask)) == MotelyJokerRarity.Legendary)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

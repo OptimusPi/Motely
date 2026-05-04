@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "scaling", "planet-scaling", "deck-fix", "face-cards", "glass", "steel", "legendary-synergy"]
 must:
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     antes:
       - 1
       - 2

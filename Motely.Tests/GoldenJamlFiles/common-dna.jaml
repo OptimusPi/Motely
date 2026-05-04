@@ -14,19 +14,19 @@ must:
 should:
   - uncommonJoker: TheIdol
     score: 70
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 65
-  - tarot: Death
+  - tarotCard: Death
     score: 60
   - uncommonJoker: Hologram
     score: 50
-  - spectral: Ouija
+  - spectralCard: Ouija
     score: 40
-  - spectral: Sigil
+  - spectralCard: Sigil
     score: 35
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 35
-  - tarot: Justice
+  - tarotCard: Justice
     score: 30
   - rareJoker: TheFamily
     score: 30

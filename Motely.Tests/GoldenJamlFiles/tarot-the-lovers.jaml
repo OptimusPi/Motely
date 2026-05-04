@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "flush", "planet-scaling", "probability", "legendary-synergy"]
 must:
-  - tarot: TheLovers
+  - tarotCard: TheLovers
     antes:
       - 1
       - 2

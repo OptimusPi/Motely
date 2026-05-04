@@ -17,7 +17,7 @@ should:
     score: 75
   - uncommonJoker: Cartomancer
     score: 55
-  - spectral: Medium
+  - spectralCard: Medium
     score: 45
   - commonJoker: EightBall
     score: 50
@@ -27,7 +27,7 @@ should:
     score: 50
   - voucher: OmenGlobe
     score: 45
-  - tarot: TheEmperor
+  - tarotCard: TheEmperor
     score: 40
   - rareJoker: Blueprint
     score: 35

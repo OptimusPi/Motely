@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "deck-fix", "tarot-engine", "legendary-synergy"]
 must:
-  - tarot: TheFool
+  - tarotCard: TheFool
     antes:
       - 1
       - 2
@@ -14,13 +14,13 @@ must:
 should:
   - legendaryJoker: Perkeo
     score: 55
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 50
-  - tarot: Death
+  - tarotCard: Death
     score: 45
-  - tarot: TheEmperor
+  - tarotCard: TheEmperor
     score: 45
-  - tarot: TheWorld
+  - tarotCard: TheWorld
     score: 45
   - commonJoker: FortuneTeller
     score: 40

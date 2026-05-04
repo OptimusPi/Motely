@@ -4,7 +4,7 @@ description: Judgement tarot creates a random joker for free
 deck: Red
 stake: White
 must:
-  - tarot: Judgement
+  - tarotCard: Judgement
     antes:
       - 1
       - 2

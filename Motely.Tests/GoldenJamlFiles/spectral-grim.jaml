@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "deck-fix", "legendary-synergy"]
 must:
-  - spectral: Grim
+  - spectralCard: Grim
     antes:
       - 1
       - 2

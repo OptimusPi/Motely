@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 60
   - uncommonJoker: Mime
     score: 55

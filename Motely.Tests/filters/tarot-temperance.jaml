@@ -4,7 +4,7 @@ description: Temperance tarot with Egg for high sell value economy
 deck: Red
 stake: White
 must:
-  - tarot: Temperance
+  - tarotCard: Temperance
     antes:
       - 1
       - 2

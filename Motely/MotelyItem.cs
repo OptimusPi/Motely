@@ -109,14 +109,14 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
     }
 
     /// <summary>
-    /// Parses a string produced by <see cref="FormatUtils.FormatItem"/> (a &quot;jummy&quot;).
+    /// Parses a string produced by <see cref="FormatUtils.FormatItem"/>.
     /// Prefix order matches <see cref="FormatUtils.FormatItem"/> (stickers, seal, edition, enhancement, type).
     /// </summary>
     /// <exception cref="FormatException">Unrecognized layout or unknown type.</exception>
-    public static MotelyItem Parse(string jummy) { return FormatUtils.ParseMotelyItem(jummy); }
+    public static MotelyItem Parse(string formatted) { return FormatUtils.ParseMotelyItem(formatted); }
 
     /// <inheritdoc cref="Parse"/>
-    public static bool TryParse(string jummy, out MotelyItem item) { return FormatUtils.TryParseMotelyItem(jummy, out item); }
+    public static bool TryParse(string formatted, out MotelyItem item) { return FormatUtils.TryParseMotelyItem(formatted, out item); }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(MotelyItem other)

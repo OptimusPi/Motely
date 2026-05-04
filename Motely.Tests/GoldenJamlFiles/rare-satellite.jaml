@@ -20,7 +20,7 @@ should:
     score: 55
   - legendaryJoker: Perkeo
     score: 55
-  - tarot: TheHighPriestess
+  - tarotCard: TheHighPriestess
     score: 55
   - voucher: Telescope
     score: 50
@@ -28,7 +28,7 @@ should:
     score: 55
   - voucher: PlanetTycoon
     score: 45
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 40
   - rareJoker: Blueprint
     score: 40

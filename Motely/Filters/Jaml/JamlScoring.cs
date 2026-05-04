@@ -865,9 +865,7 @@ public static class JamlScoring
 
     private static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, JokerClause clause, ref MotelyRunState runState)
     {
-        if (clause.IsWildcard)
-            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, wildcardRarity: null, clause.Edition, clause.Stickers, ref runState);
-        return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
+        return CountJokerClauseOccurrences(ref ctx, clause, ref runState);
     }
 
     private static int CountCommonJokerOccurrences(ref MotelySingleSearchContext ctx, CommonJokerClause clause, ref MotelyRunState runState)
@@ -896,6 +894,93 @@ public static class JamlScoring
         if (clause.IsWildcard)
             return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, wildcardRarity: null, clause.Edition, clause.Stickers, ref runState);
         return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
+    }
+
+    internal static int CountJokerClauseOccurrencesForFilter(
+        ref MotelySingleSearchContext ctx,
+        JokerClause clause
+    )
+    {
+        var runState = new MotelyRunState();
+        return CountJokerClauseOccurrences(ref ctx, clause, ref runState);
+    }
+
+    private static int CountJokerClauseOccurrences(
+        ref MotelySingleSearchContext ctx,
+        JokerClause clause,
+        ref MotelyRunState runState
+    )
+    {
+        if (clause.IsWildcard)
+        {
+            int normalWildcard = CountJokerOccurrencesWildcard(
+                ref ctx,
+                clause.Antes,
+                clause.Sources,
+                wildcardRarity: null,
+                clause.Edition,
+                clause.Stickers,
+                ref runState
+            );
+
+            var legendaryWildcard = new LegendaryJokerClause
+            {
+                Label = clause.Label,
+                Score = clause.Score,
+                Jokers = [],
+                IsWildcard = true,
+                Edition = clause.Edition,
+                Sources = clause.LegendarySources,
+                Antes = clause.Antes,
+                Min = clause.Min,
+                Max = clause.Max,
+            };
+
+            return normalWildcard + CountLegendaryJokerOccurrences(ref ctx, legendaryWildcard);
+        }
+
+        var nonLegendary = clause.Jokers.Where(static j =>
+            ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask)) != MotelyJokerRarity.Legendary
+        ).ToArray();
+
+        var legendary = clause.Jokers.Where(static j =>
+            ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask)) == MotelyJokerRarity.Legendary
+        ).ToArray();
+
+        int count = 0;
+
+        if (nonLegendary.Length > 0)
+        {
+            count += CountJokerOccurrencesGeneric(
+                ref ctx,
+                clause.Antes,
+                clause.Sources,
+                nonLegendary,
+                clause.Edition,
+                clause.Stickers,
+                ref runState
+            );
+        }
+
+        if (legendary.Length > 0)
+        {
+            var legendaryClause = new LegendaryJokerClause
+            {
+                Label = clause.Label,
+                Score = clause.Score,
+                Jokers = legendary,
+                IsWildcard = false,
+                Edition = clause.Edition,
+                Sources = clause.LegendarySources,
+                Antes = clause.Antes,
+                Min = clause.Min,
+                Max = clause.Max,
+            };
+
+            count += CountLegendaryJokerOccurrences(ref ctx, legendaryClause);
+        }
+
+        return count;
     }
 
     private static int CountJokerOccurrencesGeneric<TJoker>(
@@ -1269,17 +1354,23 @@ public static class JamlScoring
     {
         if (item.TypeCategory != MotelyItemTypeCategory.Standardcard)
             return 0;
-        if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value)
-            return 0;
-        if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value)
-            return 0;
-        if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value)
-            return 0;
-        if (clause.Seal.HasValue && item.Seal != clause.Seal.Value)
-            return 0;
-        if (clause.Edition.HasValue && item.Edition != clause.Edition.Value)
-            return 0;
-        return 1;
+        for (int i = 0; i < clause.Cards.Length; i++)
+        {
+            var card = clause.Cards[i];
+            if (card.Rank.HasValue && item.StandardcardRank != card.Rank.Value)
+                continue;
+            if (card.Suit.HasValue && item.StandardcardSuit != card.Suit.Value)
+                continue;
+            if (card.Enhancement.HasValue && item.Enhancement != card.Enhancement.Value)
+                continue;
+            if (card.Seal.HasValue && item.Seal != card.Seal.Value)
+                continue;
+            if (card.Edition.HasValue && item.Edition != card.Edition.Value)
+                continue;
+            return 1;
+        }
+
+        return 0;
     }
 
     private static int MatchTarot(MotelyItem item, TarotCardClause clause)

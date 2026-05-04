@@ -4,7 +4,7 @@ description: Cryptid spectral with The Idol for card duplication strategy
 deck: Red
 stake: White
 must:
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     antes:
       - 1
       - 2

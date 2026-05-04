@@ -13,11 +13,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Remove="Jaml.cs" />
         <Compile Remove="MotelyJAML.schema.generator.cs" />
         <!-- MotelyWasmHost lives in Motely/ but needs Bootsharp.FileSystem, so compile it here. -->
         <Compile Include="../Motely/MotelyWasmHost.cs" />
-        <None Include="Jaml.cs" />
         <None Include="MotelyJAML.schema.generator.cs" />
     </ItemGroup>
 

@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "economy", "planet-scaling", "deck-thinning", "legendary-synergy"]
 must:
-  - spectral: Immolate
+  - spectralCard: Immolate
     antes:
       - 1
       - 2
@@ -16,7 +16,7 @@ should:
     score: 85
   - uncommonJoker: TradingCard
     score: 45
-  - tarot: TheHangedMan
+  - tarotCard: TheHangedMan
     score: 50
   - uncommonJoker: Bull
     score: 40

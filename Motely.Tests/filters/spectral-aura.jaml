@@ -4,7 +4,7 @@ description: Aura spectral for Polychrome edition on standard cards
 deck: Red
 stake: White
 must:
-  - spectral: Aura
+  - spectralCard: Aura
     antes:
       - 1
       - 2
