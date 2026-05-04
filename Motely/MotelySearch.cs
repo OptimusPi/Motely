@@ -546,6 +546,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
+    IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -592,6 +593,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     public bool CsvOutput { get; set; } = false;
     public bool QuietMode { get; set; } = false;
+    public bool AutoScoreCutoff { get; set; } = false;
 
     /// <summary>
     /// Callback for progress updates - useful for UI progress bars and logging
@@ -756,6 +758,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<MotelySeedScoreTally> callback
     ) => WithScoredResultCallback(callback);
 
+    IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
+        WithAutoScoreCutoff(enabled);
+
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
@@ -809,6 +814,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     )
     {
         ScoredResultCallback = callback;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithAutoScoreCutoff(bool enabled = true)
+    {
+        AutoScoreCutoff = enabled;
         return this;
     }
 
@@ -982,6 +993,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
     private readonly Action<MotelySeedScoreTally>? _scoredResultCallback;
+    private readonly bool _autoScoreCutoff;
     private readonly long _progressReportIntervalMs;
 
     private readonly Stopwatch _elapsedTime = new();
@@ -995,6 +1007,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _progressReportIntervalMs = settings.ProgressReportIntervalMs;
         _seedMatchCallback = settings.SeedMatchCallback;
         _scoredResultCallback = settings.ScoredResultCallback;
+        _autoScoreCutoff = settings.AutoScoreCutoff;
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
         {
@@ -1338,6 +1351,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         internal long _localMatchingSeeds = 0;
         internal long _localBatchesCompleted = 0;
         internal long _localSeedsSearched = 0;
+        private readonly AutoCutoffState _autoCutoffState = new() { LearnedCutoff = int.MinValue };
 
         // Pre-allocated result buffer - ONE allocation per thread, reused forever
         // Old stale data is fine - mask controls which slots are valid
@@ -1587,6 +1601,18 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 if (resultMask[lane] && searchParams.IsLaneValid(lane))
                 {
+                    if (Search._autoScoreCutoff)
+                    {
+                        int score = _resultBuffer[lane].Score;
+                        if (score < _autoCutoffState.LearnedCutoff)
+                        {
+                            _autoCutoffState.SeedsFiltered++;
+                            continue;
+                        }
+
+                        _autoCutoffState.LearnedCutoff = score;
+                    }
+
                     Search._scoredResultCallback?.Invoke(_resultBuffer[lane]);
                     _localMatchingSeeds++;
                 }

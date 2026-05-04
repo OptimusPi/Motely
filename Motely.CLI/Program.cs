@@ -455,7 +455,6 @@ partial class Program
 
             bool cutoffAuto = false;
             int cutoffFixed = int.MinValue;
-            int currentHigh = int.MinValue;
             if (cutoffOption.HasValue())
             {
                 var cutoffValue = cutoffOption.ParsedValue.Trim();
@@ -546,21 +545,14 @@ partial class Program
             // quiet mode swaps in the silent capture variant.
             settings = settings.WithProgressCallback(quietOption.HasValue()
                 ? CaptureJamlProgress
-                : WriteJamlProgressLineToStderr);
+                : WriteJamlProgressLineToStderr)
+                .WithAutoScoreCutoff(cutoffAuto);
 
             if (hasStructuredScores)
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
                     saveSeedsCollector?.Consider(tally.Seed, tally.Score);
-
-                    if (cutoffAuto)
-                    {
-                        if (tally.Score < currentHigh) return;
-                        currentHigh = Math.Max(currentHigh, tally.Score);
-                    }
-                    else if (tally.Score < cutoffFixed)
-                        return;
 
                     var tallies = string.Join(",", tally.TallyValuesSpan.ToArray());
                     Console.WriteLine($"{tally.Seed},{tally.Score},{tallies}");
