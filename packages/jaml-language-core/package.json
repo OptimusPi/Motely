@@ -1,0 +1,46 @@
+{
+  "name": "jaml-language-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./schema/jaml.schema.json": "./schema/jaml.schema.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "schema/jaml.schema.json"
+  ],
+  "scripts": {
+    "test": "node ./test/smoke.mjs"
+  },
+  "sideEffects": false,
+  "description": "Shared editor-neutral JAML language core for schema discovery and Motely-powered validation.",
+  "author": "pifreak <nate@optimuspi.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/OptimusPi/MotelyJAML#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "packages/jaml-language-core"
+  },
+  "bugs": {
+    "url": "https://github.com/OptimusPi/MotelyJAML/issues"
+  },
+  "keywords": [
+    "balatro",
+    "jaml",
+    "language-server",
+    "json-schema",
+    "motely",
+    "vscode",
+    "jetbrains",
+    "windsurf"
+  ]
+}

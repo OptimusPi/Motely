@@ -1,0 +1,37 @@
+name: Trance Blue Seal
+author: jammy
+description: Trance spectral with Constellation for Blue Seal Planet generation
+deck: Red
+stake: White
+hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "legendary-synergy"]
+must:
+  - spectralCard: Trance
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Constellation
+    score: 70
+  - voucher: Observatory
+    score: 65
+  - uncommonJoker: Astronomer
+    score: 55
+  - uncommonJoker: Satellite
+    score: 55
+  - voucher: Telescope
+    score: 50
+  - legendaryJoker: Perkeo
+    score: 50
+  - spectralCard: BlackHole
+    score: 45
+  - uncommonJoker: SpaceJoker
+    score: 40
+  - rareJoker: Blueprint
+    score: 35
+  - tag: NegativeTag
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30

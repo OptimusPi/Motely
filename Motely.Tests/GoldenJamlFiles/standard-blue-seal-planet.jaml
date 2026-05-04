@@ -1,0 +1,40 @@
+name: Blue Seal Planet Generation
+author: jammy
+description: Standard card with Blue Seal for Planet card generation
+deck: Nebula
+stake: White
+hashtags: ["standard-card", "enhancement", "copy", "negative", "planet-scaling", "legendary-synergy"]
+must:
+  - standardCard: BlueSeal
+    seal: Blue
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Constellation
+    score: 75
+  - uncommonJoker: Astronomer
+    score: 70
+  - voucher: Observatory
+    score: 80
+  - uncommonJoker: Satellite
+    score: 65
+  - spectralCard: Trance
+    score: 45
+  - spectralCard: BlackHole
+    score: 50
+  - voucher: Telescope
+    score: 50
+  - uncommonJoker: SpaceJoker
+    score: 40
+  - rareJoker: Blueprint
+    score: 35
+  - tag: NegativeTag
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 35

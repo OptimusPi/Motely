@@ -1,0 +1,182 @@
+{
+  "scopeName": "source.jaml",
+  "name": "JAML",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#sections"
+    },
+    {
+      "include": "#criteria"
+    },
+    {
+      "include": "#legendary"
+    },
+    {
+      "include": "#bosses"
+    },
+    {
+      "include": "#tarots"
+    },
+    {
+      "include": "#planets"
+    },
+    {
+      "include": "#spectrals"
+    },
+    {
+      "include": "#vouchers"
+    },
+    {
+      "include": "#tags"
+    },
+    {
+      "include": "#enumValues"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#strings"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "#.*$",
+          "name": "comment.line.number-sign.jaml"
+        }
+      ]
+    },
+    "sections": {
+      "patterns": [
+        {
+          "match": "^\\s*(must|should|mustNot|defaults|deck|stake|id|name|author|dateCreated|description|hashtags|seeds|aesthetics)\\s*:",
+          "captures": {
+            "1": {
+              "name": "keyword.control.jaml"
+            }
+          }
+        }
+      ]
+    },
+    "criteria": {
+      "patterns": [
+        {
+          "match": "\\b(joker|jokers|commonJoker|commonJokers|uncommonJoker|uncommonJokers|rareJoker|rareJokers|legendaryJoker|legendaryJokers|voucher|vouchers|boss|tag|smallBlindTag|bigBlindTag|standardCard|standardCards|tarotCard|tarotCards|planet|planetCard|spectralCard|spectralCards|erraticRank|erraticSuit|erraticCard|startingDraw|event|luckyMoney|luckyMult|misprintMult|cavendishExtinct|grosMichelExtinct|spaceLevelup|businessPayout|bloodstoneTrigger|parkingPayout|glassDestroy|wheelStaysFlipped|wheelOfFortune|score|label|antes|sources|shopItems|boosterPacks|minShopItem|maxShopItem|requireMega|max|min|edition|stickers|seal|enhancement|rank|suit|rolls|soulEditionRolls|soulCardOnly|and|or|clauses|mode)\\s*:",
+          "captures": {
+            "1": {
+              "name": "entity.name.tag.jaml"
+            }
+          }
+        }
+      ]
+    },
+    "legendary": {
+      "patterns": [
+        {
+          "match": "\\b(Canio|Triboulet|Yorick|Chicot|Perkeo)\\b",
+          "name": "variable.other.legendary.jaml"
+        }
+      ]
+    },
+    "bosses": {
+      "patterns": [
+        {
+          "match": "\\b(TheArm|TheClub|TheEye|TheFish|TheFlint|TheGoad|TheHead|TheHook|TheHouse|TheManacle|TheMark|TheMouth|TheNeedle|TheOx|ThePillar|ThePlant|ThePsychic|TheSerpent|TheTooth|TheWall|TheWater|TheWheel|TheWindow|AmberAcorn|CeruleanBell|CrimsonHeart|VerdantLeaf|VioletVessel)\\b",
+          "name": "entity.name.class.boss.jaml"
+        }
+      ]
+    },
+    "tarots": {
+      "patterns": [
+        {
+          "match": "\\b(TheFool|TheMagician|TheHighPriestess|TheEmpress|TheEmperor|TheHierophant|TheLovers|TheChariot|Justice|TheHermit|TheWheelOfFortune|Strength|TheHangedMan|Death|Temperance|TheDevil|TheTower|TheStar|TheMoon|TheSun|Judgement|TheWorld)\\b",
+          "name": "support.constant.tarot.jaml"
+        }
+      ]
+    },
+    "planets": {
+      "patterns": [
+        {
+          "match": "\\b(Mercury|Venus|Earth|Mars|Jupiter|Saturn|Uranus|Neptune|Pluto|PlanetX|Ceres|Eris)\\b",
+          "name": "support.constant.planet.jaml"
+        }
+      ]
+    },
+    "spectrals": {
+      "patterns": [
+        {
+          "match": "\\b(Familiar|Grim|Incantation|Talisman|Aura|Wraith|Sigil|Ouija|Ectoplasm|Immolate|Ankh|DejaVu|Hex|Trance|Medium|Cryptid|TheSoul|BlackHole)\\b",
+          "name": "support.constant.spectral.jaml"
+        }
+      ]
+    },
+    "vouchers": {
+      "patterns": [
+        {
+          "match": "\\b(Overstock|OverstockPlus|ClearanceSale|Liquidation|Hone|GlowUp|RerollSurplus|RerollGlut|CrystalBall|OmenGlobe|Telescope|Observatory|Grabber|NachoTong|Wasteful|Recyclomancy|TarotMerchant|TarotTycoon|PlanetMerchant|PlanetTycoon|SeedMoney|MoneyTree|Blank|Antimatter|MagicTrick|Illusion|Hieroglyph|Petroglyph|DirectorsCut|Retcon|PaintBrush|Palette)\\b",
+          "name": "support.class.voucher.jaml"
+        }
+      ]
+    },
+    "tags": {
+      "patterns": [
+        {
+          "match": "\\b(UncommonTag|RareTag|NegativeTag|FoilTag|HolographicTag|PolychromeTag|InvestmentTag|VoucherTag|BossTag|StandardTag|CharmTag|MeteorTag|BuffoonTag|HandyTag|GarbageTag|EtherealTag|CouponTag|DoubleTag|JuggleTag|D6Tag|TopupTag|SpeedTag|OrbitalTag|EconomyTag)\\b",
+          "name": "support.type.tag.jaml"
+        }
+      ]
+    },
+    "enumValues": {
+      "patterns": [
+        {
+          "match": "\\b(?:[A-Z][A-Za-z0-9]*|any|all|none)\\b",
+          "name": "support.constant.enum.jaml"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "match": "\\b(true|false|null)\\b",
+          "name": "constant.language.jaml"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "(?<![A-Za-z0-9_])-?\\d+(?![A-Za-z0-9_])",
+          "name": "constant.numeric.jaml"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.jaml",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.jaml"
+            }
+          ]
+        },
+        {
+          "begin": "'",
+          "end": "'",
+          "name": "string.quoted.single.jaml"
+        }
+      ]
+    }
+  }
+}

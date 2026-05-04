@@ -1,0 +1,37 @@
+name: TheHierophant Bonus Build
+author: jammy
+description: TheHierophant tarot for Bonus enhancement chip scaling
+deck: Red
+stake: White
+hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "stone", "legendary-synergy"]
+must:
+  - tarotCard: TheHierophant
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - commonJoker: Splash
+    score: 45
+  - uncommonJoker: StoneJoker
+    score: 35
+  - commonJoker: BlueJoker
+    score: 35
+  - uncommonJoker: Hiker
+    score: 40
+  - rareJoker: Stuntman
+    score: 45
+  - commonJoker: SquareJoker
+    score: 30
+  - commonJoker: Scholar
+    score: 30
+  - rareJoker: Blueprint
+    score: 35
+  - tag: NegativeTag
+    score: 35
+  - joker: Any
+    edition: Negative
+    score: 30
+  - legendaryJoker: Perkeo
+    score: 30
