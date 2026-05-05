@@ -160,8 +160,7 @@ class Program
                 try
                 {
                     Console.WriteLine($"[MotelyWorker] Searching filter: {claim.FilterId}");
-                    using var search = settings.Start();
-                    search.Start(cts.Token);
+                    using var search = settings.Start(cts.Token);
                     await search.WaitForCompletionAsync(cts.Token);
                     seedsSearched = search.TotalSeedsSearched;
                 }

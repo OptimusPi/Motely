@@ -69,6 +69,7 @@ public static partial class MotelyJamlSchemaGenerator
     [JsonSourceGenerationOptions(
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
         GenerationMode = JsonSourceGenerationMode.Metadata)]
+    [JsonSerializable(typeof(string))]
     [JsonSerializable(typeof(JamlRootDocument))]
     [JsonSerializable(typeof(JamlClauseDto))]
     [JsonSerializable(typeof(JamlSourcesDto))]
@@ -474,7 +475,8 @@ public static partial class MotelyJamlSchemaGenerator
         return 0;
     }
 
-    private static string JsonString(string value) => JsonSerializer.Serialize(value);
+    private static string JsonString(string value) =>
+        JsonSerializer.Serialize(value, SchemaContext.Default.String);
 
     private static string? FindRepoRoot(string start)
     {
