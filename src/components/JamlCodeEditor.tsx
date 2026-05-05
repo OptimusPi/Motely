@@ -29,7 +29,7 @@ const balatroTheme = EditorView.theme(
       height: "100%",
     },
     ".cm-content": {
-      fontFamily: "'m6x11mono', 'm6x11plus', ui-monospace, monospace",
+      fontFamily: "var(--j-font-code, 'JetBrains Mono', ui-monospace, monospace)",
       lineHeight: "22px",
       padding: "12px 0",
       caretColor: JimboColorOption.GOLD_TEXT,

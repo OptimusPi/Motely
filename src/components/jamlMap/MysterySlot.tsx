@@ -21,6 +21,10 @@ export interface SlotSelection {
   value: string;
   /** JAML clause key (e.g. "commonJoker", "legendaryJoker", "voucher"). */
   clauseKey: string;
+  /** Optional selected pack display name for pack slots. */
+  packName?: string;
+  /** Optional source pack indices for pack-derived item clauses. */
+  boosterPacks?: number[];
   /** Optional rarity for jokers. */
   rarity?: "common" | "uncommon" | "rare" | "legendary";
 }
@@ -47,8 +51,8 @@ export interface MysterySlotProps {
 const C = JimboColorOption;
 
 const ZONE_BORDER: Record<JamlZone, string> = {
-  must:    C.BLUE,
-  should:  C.RED,
+  must: C.BLUE,
+  should: C.RED,
   mustnot: C.ORANGE,
 };
 
@@ -57,15 +61,15 @@ const ZONE_BORDER: Record<JamlZone, string> = {
 function getWildcardName(category?: SlotCategory): string | null {
   if (!category) return null;
   switch (category) {
-    case "joker":    return null; // uses generic mystery
-    case "voucher":  return null;
-    case "tag":      return null;
-    case "boss":     return null;
-    case "tarot":    return null;
+    case "joker": return null; // uses generic mystery
+    case "voucher": return null;
+    case "tag": return null;
+    case "boss": return null;
+    case "tarot": return null;
     case "spectral": return null;
-    case "planet":   return null;
-    case "pack":     return null;
-    default:         return null;
+    case "planet": return null;
+    case "pack": return null;
+    default: return null;
   }
 }
 
@@ -89,15 +93,18 @@ export function MysterySlot({
   const isEmpty = !selection;
   const cardH = Math.round((width * 95) / 71);
 
-  // Determine what to render
-  const spriteName = selection?.value ?? "";
-  const spriteSheet = selection ? categoryToSheet(selection.category) ?? sheetType : sheetType;
+  const spriteName = selection?.packName ?? selection?.value ?? "";
+  const spriteSheet = selection?.packName
+    ? "Boosters"
+    : selection
+      ? categoryToSheet(selection.category) ?? sheetType
+      : sheetType;
 
   const scale = pressed
     ? 0.95
     : hover
-    ? JIMBO_ANIMATIONS.JUICE_UP_SCALE
-    : 1;
+      ? JIMBO_ANIMATIONS.JUICE_UP_SCALE
+      : 1;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
@@ -161,65 +168,65 @@ export function MysterySlot({
           pointerEvents: "none",
         }}
       >
-      {/* The sprite */}
-      <JimboSprite
-        name={spriteName}
-        sheet={spriteSheet}
-        width={width}
-        style={{
-          opacity: isEmpty ? 0.5 : 1,
-          filter: isEmpty ? "saturate(0.3)" : "none",
-          transition: "opacity 200ms, filter 200ms",
-        }}
-      />
-
-      {/* Clear button (×) when selected */}
-      {selection && onClear && (
-        <div
-          onClick={(e) => { e.stopPropagation(); onClear(); }}
+        {/* The sprite */}
+        <JimboSprite
+          name={spriteName}
+          sheet={spriteSheet}
+          width={width}
           style={{
-            position: "absolute",
-            top: -6,
-            right: -6,
-            width: 18,
-            height: 18,
-            borderRadius: "50%",
-            background: C.RED,
-            color: C.WHITE,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 11,
-            fontFamily: "m6x11plus, ui-monospace, monospace",
-            cursor: "pointer",
-            lineHeight: 1,
-            boxShadow: `0 1px 4px ${withAlpha(C.BLACK, 0.5)}`,
-            transform: "translateZ(10px)", // Pop out in 3D
+            opacity: isEmpty ? 0.5 : 1,
+            filter: isEmpty ? "saturate(0.3)" : "none",
+            transition: "opacity 200ms, filter 200ms",
           }}
-        >
-          ×
-        </div>
-      )}
+        />
 
-      {/* Zone label on hover for empty slots */}
-      {isEmpty && hover && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: -16,
-            left: "50%",
-            transform: "translateX(-50%) translateZ(10px)",
-            fontFamily: "m6x11plus, ui-monospace, monospace",
-            fontSize: 10,
-            color: borderColor,
-            whiteSpace: "nowrap",
-            textTransform: "uppercase",
-            letterSpacing: 1,
-          }}
-        >
-          + tap
-        </div>
-      )}
+        {/* Clear button (×) when selected */}
+        {selection && onClear && (
+          <div
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            style={{
+              position: "absolute",
+              top: -6,
+              right: -6,
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              background: C.RED,
+              color: C.WHITE,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 11,
+              fontFamily: "m6x11plus, ui-monospace, monospace",
+              cursor: "pointer",
+              lineHeight: 1,
+              boxShadow: `0 1px 4px ${withAlpha(C.BLACK, 0.5)}`,
+              transform: "translateZ(10px)", // Pop out in 3D
+            }}
+          >
+            ×
+          </div>
+        )}
+
+        {/* Zone label on hover for empty slots */}
+        {isEmpty && hover && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: -16,
+              left: "50%",
+              transform: "translateX(-50%) translateZ(10px)",
+              fontFamily: "m6x11plus, ui-monospace, monospace",
+              fontSize: 10,
+              color: borderColor,
+              whiteSpace: "nowrap",
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            + tap
+          </div>
+        )}
       </div>
     </div>
   );
@@ -229,14 +236,14 @@ export function MysterySlot({
 
 function categoryToSheet(cat: SlotCategory): SpriteSheetType | null {
   switch (cat) {
-    case "joker":    return "Jokers";
-    case "voucher":  return "Vouchers";
-    case "tag":      return "tags";
-    case "boss":     return "BlindChips";
+    case "joker": return "Jokers";
+    case "voucher": return "Vouchers";
+    case "tag": return "tags";
+    case "boss": return "BlindChips";
     case "tarot":
     case "spectral":
-    case "planet":   return "Tarots";
-    case "pack":     return "Boosters";
-    default:         return null;
+    case "planet": return "Tarots";
+    case "pack": return "Boosters";
+    default: return null;
   }
 }

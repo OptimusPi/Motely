@@ -69,6 +69,7 @@ interface ClauseAccum {
   type: string;
   value: string;
   antes?: number[];
+  boosterPacks?: number[];
   score?: number;
   edition?: string;
 }
@@ -93,6 +94,7 @@ export function jamlTextToVisualFilter(text: string): JamlVisualFilter {
       seen.add(dedupeKey);
       const clause: JamlVisualClause = { id: uid(), type: current.type, value: current.value };
       if (current.antes && current.antes.length > 0) clause.antes = current.antes;
+      if (current.boosterPacks && current.boosterPacks.length > 0) clause.boosterPacks = current.boosterPacks;
       if (current.score !== undefined) clause.score = current.score;
       if (current.edition) clause.edition = current.edition;
       clause.label = current.value;
@@ -146,11 +148,18 @@ export function jamlTextToVisualFilter(text: string): JamlVisualFilter {
             .map(Number)
             .filter((n) => !isNaN(n));
           current.antes = nums;
+        } else if (key === "boosterPacks") {
+          const nums = parseInlineList(val)
+            .map(Number)
+            .filter((n) => !isNaN(n));
+          current.boosterPacks = nums;
         } else if (key === "score") {
           const n = Number(val);
           if (!isNaN(n)) current.score = n;
         } else if (key === "edition") {
           current.edition = parseScalarValue(val) ?? undefined;
+        } else if (key === "sources") {
+          // handled by subsequent nested lines like `boosterPacks: [0, 1]`
         }
       }
     }
@@ -171,6 +180,10 @@ function serializeClause(clause: JamlVisualClause): string {
   let out = `  - ${clause.type}: ${q(clause.value)}\n`;
   if (clause.antes && clause.antes.length > 0) {
     out += `    antes: [${clause.antes.join(", ")}]\n`;
+  }
+  if (clause.boosterPacks && clause.boosterPacks.length > 0) {
+    out += `    sources:\n`;
+    out += `      boosterPacks: [${clause.boosterPacks.join(", ")}]\n`;
   }
   if (clause.score !== undefined) {
     out += `    score: ${clause.score}\n`;

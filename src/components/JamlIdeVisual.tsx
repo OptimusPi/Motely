@@ -13,6 +13,7 @@ export interface JamlVisualClause {
     value: string;
     label?: string;
     antes?: number[];
+    boosterPacks?: number[];
     score?: number;
     edition?: string;
 }
@@ -56,9 +57,23 @@ function clauseSpriteSheet(type: string): SpriteSheetType | undefined {
         type === "mixedJoker"
     ) return "Jokers";
     if (type === "voucher") return "Vouchers";
-    if (type === "smallblindtag" || type === "bigblindtag" || type === "tag") return "tags";
+    if (
+        type === "tag" ||
+        type === "tags" ||
+        type === "smallBlindTag" ||
+        type === "bigBlindTag" ||
+        type === "smallblindtag" ||
+        type === "bigblindtag"
+    ) return "tags";
     if (type === "boss") return "BlindChips";
-    if (type === "tarot" || type === "spectral") return "Tarots";
+    if (
+        type === "tarot" ||
+        type === "tarotCard" ||
+        type === "spectral" ||
+        type === "spectralCard" ||
+        type === "planet" ||
+        type === "planetCard"
+    ) return "Tarots";
     return undefined;
 }
 

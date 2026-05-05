@@ -5,6 +5,7 @@ import { JimboButton } from './panel.js'
 import { JimboSprite } from './sprites.js'
 import { JimboText } from './jimboText.js'
 import { JimboApp, JimboAppFooter } from './jimboApp.js'
+import { JimboBalatroFooter } from './footer.js'
 import { JimboSectionHeader, type JimboSectionTone } from './jimboSectionHeader.js'
 import { JimboInfoCard, JimboInfoCardBody, JimboInfoCardTitle, JimboInfoCardSub, JimboInfoCardAside } from './jimboInfoCard.js'
 
@@ -133,6 +134,7 @@ export function Showcase({
       <JimboAppFooter>
         <JimboButton tone="green" fullWidth size="lg" onClick={onNewSearch}>New Search</JimboButton>
         <JimboButton tone="blue"  fullWidth size="lg" onClick={onBrowseFilters}>Browse Filters</JimboButton>
+        <JimboBalatroFooter />
       </JimboAppFooter>
     </JimboApp>
   )

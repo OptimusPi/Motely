@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { JimboBalatroFooter } from "../ui/footer.js";
 import { JamlMapPreview } from "./JamlMapPreview.js";
 import {
   JamlMapEditor,
@@ -59,6 +60,8 @@ export interface JamlIdeProps {
   codePlaceholder?: string;
   onSearch?: () => void;
   isSearching?: boolean;
+  /** Hide the Balatro attribution footer. Default: false (always shown). */
+  hideFooter?: boolean;
   /**
    * Controlled visual filter. When provided alongside `onVisualFilterChange`, the Visual tab
    * is fully controlled by the parent. When absent, the Visual tab auto-derives from the text.
@@ -234,6 +237,7 @@ export function JamlIde({
   codePlaceholder = "Enter JAML...",
   onSearch,
   isSearching = false,
+  hideFooter = false,
   visualFilter,
   onVisualFilterChange,
 }: JamlIdeProps) {
@@ -384,6 +388,8 @@ export function JamlIde({
           </div>
         ) : null}
       </div>
+
+      {!hideFooter && <JimboBalatroFooter />}
 
       <JimboModal open={addZone !== null} onClose={handlePickerClose}>
         {addZone !== null && (
