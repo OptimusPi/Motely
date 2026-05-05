@@ -148,11 +148,21 @@ export function JamlMapEditor({
     setActiveSlot(null);
   }, []);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const jamlText = useMemo(() => buildJamlText(antesState), [antesState]);
 
   useEffect(() => {
     onChange?.(jamlText);
   }, [jamlText, onChange]);
+
+  // Scroll to Ante 1 on mount — game starts there, Ante 0 is pre-game.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const firstChild = el.children[1] as HTMLElement | undefined;
+    if (firstChild) el.scrollTop = firstChild.offsetTop;
+  }, []);
 
   const renderSlot = (anteIndex: number, id: string, width: number, sheetType: SpriteSheetType, forceCategory?: SlotCategory) => {
     const sel = (antesState[anteIndex] || {})[id];
@@ -174,7 +184,7 @@ export function JamlMapEditor({
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Zone Toggle Header */}
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.DARKEST, padding: "max(32px, env(safe-area-inset-top, 32px)) 0 8px 0", borderBottom: `2px solid ${C.PANEL_EDGE}` }}>
-        <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 12 }}>JAML VISUAL BUILDER</JimboText>
+        <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 12 }}>Jaml Visual Builder</JimboText>
         <div className="j-flex j-gap-sm" style={{ justifyContent: "center" }}>
           {(["must", "should", "mustnot"] as JamlZone[]).map((z) => (
             <JimboButton
@@ -191,13 +201,13 @@ export function JamlMapEditor({
       </div>
 
       {/* Map Layout - Vertical Scrolling Antes */}
-      <div className="hide-scrollbar" style={{
+      <div ref={scrollRef} className="hide-scrollbar" style={{
         flex: 1,
         overflowY: "auto",
         scrollSnapType: "y mandatory",
         scrollBehavior: "smooth"
       }}>
-        {[1,2,3,4,5,6,7,8].map((a) => (
+        {Array.from({ length: 40 }, (_, i) => i).map((a) => (
           <div key={a} style={{
             scrollSnapAlign: "start",
             padding: "24px 8px 64px 8px",
@@ -207,31 +217,31 @@ export function JamlMapEditor({
             gap: 24,
             borderBottom: `2px solid ${C.DARK_GREY}`
           }}>
-            <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 8 }}>ANTE {a}</JimboText>
-            
+            <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 8 }}>Ante {a}</JimboText>
+
             {/* Row 1: Blinds & Tags & Voucher */}
             <div className="j-flex j-justify-between j-items-end">
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">VOUCHER</JimboText>
+                <JimboText size="micro" tone="grey">Voucher</JimboText>
                 {renderSlot(a, `ante_${a}_voucher`, 42, "Vouchers", "voucher")}
               </div>
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">SMALL</JimboText>
+                <JimboText size="micro" tone="grey">Small</JimboText>
                 {renderSlot(a, `ante_${a}_tag_small`, 42, "tags", "tag")}
               </div>
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">BIG</JimboText>
+                <JimboText size="micro" tone="grey">Big</JimboText>
                 {renderSlot(a, `ante_${a}_tag_big`, 42, "tags", "tag")}
               </div>
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">BOSS</JimboText>
+                <JimboText size="micro" tone="grey">Boss</JimboText>
                 {renderSlot(a, `ante_${a}_boss`, 42, "BlindChips", "boss")}
               </div>
             </div>
 
             {/* Row 2: Shop Items */}
             <div className="j-flex-col j-gap-xs">
-              <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>SHOP ITEMS</JimboText>
+              <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>Shop Items</JimboText>
               <div className="j-flex hide-scrollbar j-gap-sm" style={{ overflowX: "auto", paddingBottom: 8 }}>
                 {[1,2,3,4,5,6,7,8].map(i => renderSlot(a, `ante_${a}_shop_${i}`, 52, "Jokers"))}
               </div>
@@ -239,7 +249,7 @@ export function JamlMapEditor({
 
             {/* Row 3: Packs */}
             <div className="j-flex-col j-gap-xs">
-              <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>PACKS</JimboText>
+              <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>Packs</JimboText>
               <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap" }}>
                 {[1,2,3,4,5,6].map(i => renderSlot(a, `ante_${a}_pack_${i}`, 64, "Boosters", "pack"))}
               </div>
@@ -278,7 +288,7 @@ export function JamlMapEditor({
 
 // ─── Category Selection Menu ─────────────────────────────────────────────────
 
-function CategoryMenu({
+export function CategoryMenu({
   onSelect,
 }: {
   onSelect: (cat: SlotCategory) => void;

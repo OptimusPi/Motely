@@ -46,13 +46,14 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         data-active={active}
         aria-hidden
       >
-        <svg width={14} height={10} viewBox="0 0 14 10" fill="var(--j-red)">
+        <svg width={14} height={10} viewBox="0 0 14 10">
           <polygon points="7,10 0,0 14,0" />
         </svg>
       </div>
       <button
         type="button"
         className="j-tab__btn"
+        data-active={active}
         data-pressed={pressed}
         onClick={onClick}
         onMouseDown={() => setPressed(true)}
@@ -62,7 +63,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         onTouchStart={() => setPressed(true)}
         onTouchEnd={() => setPressed(false)}
       >
-        <JimboText size="sm">{label}</JimboText>
+        <JimboText size="sm" tone={active ? 'default' : 'grey'}>{label}</JimboText>
       </button>
     </div>
   )
@@ -81,6 +82,7 @@ export function JimboVerticalTabs({ tabs, activeTab, onTabChange, className = ''
             key={tab.id}
             type="button"
             className="j-vtab"
+            data-active={isActive}
             onClick={() => onTabChange(tab.id)}
           >
             <JimboText size="sm" tone={isActive ? 'default' : 'grey'}>{tab.label}</JimboText>

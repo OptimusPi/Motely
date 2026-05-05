@@ -1,6 +1,6 @@
 export { MysterySlot, type MysterySlotProps, type SlotSelection, type SlotCategory, type JamlZone } from "./MysterySlot.js";
 export { JokerPicker, type JokerPickerProps, type JokerRarity } from "./JokerPicker.js";
-export { JamlMapEditor, type JamlMapEditorProps } from "./JamlMapEditor.js";
+export { JamlMapEditor, CategoryMenu, type JamlMapEditorProps } from "./JamlMapEditor.js";
 export {
   CategoryPicker,
   type CategoryPickerConfig,
