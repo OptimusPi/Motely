@@ -180,15 +180,20 @@ export function JamlMapEditor({
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       <div ref={handleScrollAttach} className="hide-scrollbar" style={{
         flex: 1,
-        overflowY: "auto",
+        overflowY: "scroll",
+        overflowX: "hidden",
         scrollSnapType: "y mandatory",
-        scrollBehavior: "smooth"
+        scrollBehavior: "smooth",
+        WebkitOverflowScrolling: "touch",
+        overscrollBehaviorY: "contain",
       }}>
         {Array.from({ length: 40 }, (_, i) => i).map((a) => (
           <div key={a} style={{
             scrollSnapAlign: "start",
+            scrollSnapStop: "always",
             padding: "24px 8px 64px 8px",
-            minHeight: "100%", // ensuring each ante takes at least full viewport height to snap cleanly
+            minHeight: "100%",
+            boxSizing: "border-box",
             display: "flex",
             flexDirection: "column",
             gap: 24,

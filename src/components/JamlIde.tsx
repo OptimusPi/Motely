@@ -53,6 +53,8 @@ export interface JamlIdeProps {
   className?: string;
   style?: React.CSSProperties;
   title?: string;
+  subtitle?: React.ReactNode;
+  compactHeader?: boolean;
   actions?: React.ReactNode;
   codePlaceholder?: string;
   onSearch?: () => void;
@@ -226,6 +228,8 @@ export function JamlIde({
   className = "",
   style,
   title = "JAML IDE",
+  subtitle = "Jimbo's Ante Markup Language",
+  compactHeader = false,
   actions,
   codePlaceholder = "Enter JAML...",
   onSearch,
@@ -344,22 +348,22 @@ export function JamlIde({
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: 12,
-          padding: "10px 14px",
+          gap: compactHeader ? 8 : 12,
+          padding: compactHeader ? "8px 10px" : "10px 14px",
           borderBottom: `1px solid ${JimboColorOption.PANEL_EDGE}`,
           background: JimboColorOption.TEAL_GREY,
         }}
       >
         <div>
           <div style={{ fontSize: 16, fontWeight: "normal", fontFamily: "m6x11plus, monospace", color: JimboColorOption.GOLD_TEXT }}>{title}</div>
-          <div style={{ fontSize: 11, color: JimboColorOption.GREY }}>Jimbo's Ante Markup Language</div>
+          {subtitle ? <div style={{ fontSize: 11, color: JimboColorOption.GREY }}>{subtitle}</div> : null}
         </div>
         {actions ? <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{actions}</div> : null}
       </div>
 
       <JamlIdeToolbar mode={mode} onModeChange={setMode} resultCount={results.length} onSearch={onSearch} isSearching={isSearching} />
 
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: JimboColorOption.DARKEST }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: mode === "map" ? "hidden" : "auto", background: JimboColorOption.DARKEST }}>
         {mode === "visual" ? (
           <JamlIdeVisual filter={activeFilter} onChange={handleVisualFilterChange} onAddClause={handleAddClause} />
         ) : null}
