@@ -483,11 +483,13 @@ public static partial class MotelyJamlSchemaGenerator
         var dir = new DirectoryInfo(start);
         while (dir != null)
         {
-            if (File.Exists(Path.Combine(dir.FullName, "Motely.sln")))
+            if (
+                File.Exists(Path.Combine(dir.FullName, "Directory.Packages.props"))
+                || File.Exists(Path.Combine(dir.FullName, "Motely.sln"))
+            )
                 return dir.FullName;
             dir = dir.Parent;
         }
         return null;
     }
 }
-
