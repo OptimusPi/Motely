@@ -285,16 +285,21 @@
 .j-tab__btn {
   border: none;
   cursor: pointer;
-  border-radius: var(--j-radius-lg);
+  border-radius: var(--j-radius-sm);
   padding: 4px 12px;
-  background-color: var(--j-red);
-  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.3);
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  background-color: transparent;
+  box-shadow: none;
   transition: none;
 }
-.j-tab__btn:hover,
-.j-tab__btn:active {
-  background-color: var(--j-dark-red);
+.j-tab__btn[data-active="true"] {
+  background-color: var(--j-gold);
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.3);
+}
+.j-tab__btn[data-active="true"]:hover {
+  background-color: var(--j-gold);
+}
+.j-tab__btn[data-active="false"]:hover {
+  background-color: rgba(255, 255, 255, 0.06);
 }
 .j-tab__btn[data-pressed="true"] {
   transform: translateY(2px);
