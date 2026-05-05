@@ -31,7 +31,7 @@ function readGeometry(): { baseRadius: number; keyboardHeight: number } {
         return { baseRadius: 66, keyboardHeight: 0 };
     }
     const w = window.innerWidth;
-    const baseRadius = w < 375 ? 58 : 66;
+    const baseRadius = w < 320 ? 58 : 66;
     const vv = window.visualViewport;
     let keyboardHeight = 0;
     if (vv) {

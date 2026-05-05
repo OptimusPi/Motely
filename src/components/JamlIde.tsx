@@ -238,57 +238,56 @@ function setRootValue(jaml: string, key: "deck" | "stake", value: string): strin
   return trimmed.length > 0 ? `${line}\n${trimmed}` : line;
 }
 
+import { RunConfigModal } from "./RunConfigModal.js";
+
 function DeckStakeSelector({
   jaml,
   onChange,
+  onSearch,
 }: {
   jaml: string;
   onChange: (next: string) => void;
+  onSearch?: () => void;
 }) {
   const deck = readRootValue(jaml, "deck", "Red");
   const stake = readRootValue(jaml, "stake", "White");
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const setDeck = (nextDeck: string) => onChange(setRootValue(jaml, "deck", nextDeck));
-  const setStake = (nextStake: string) => onChange(setRootValue(jaml, "stake", nextStake));
+  const handleApply = (nextDeck: string, nextStake: string) => {
+    let next = setRootValue(jaml, "deck", nextDeck);
+    next = setRootValue(next, "stake", nextStake);
+    onChange(next);
+    onSearch?.();
+  };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-      <DeckSprite deck={deck} stake={stake} size={compactDeckSpriteSize} />
-      <select
-        value={deck}
-        onChange={(event) => setDeck(event.currentTarget.value)}
-        style={selectorStyle}
+    <>
+      <button
+        onClick={() => setModalOpen(true)}
+        className="j-btn j-btn--red"
+        style={{ height: 32, padding: 0, borderRadius: 8, overflow: 'hidden' }}
       >
-        {DECK_OPTIONS.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
-      <select
-        value={stake}
-        onChange={(event) => setStake(event.currentTarget.value)}
-        style={selectorStyle}
-      >
-        {STAKE_OPTIONS.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
-    </div>
+        <div className="j-btn__face" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px 0 4px', height: '100%' }}>
+          <DeckSprite deck={deck} stake={stake} size={compactDeckSpriteSize} />
+          <span style={{ fontFamily: "m6x11plus, monospace", fontSize: 14 }}>
+            {deck} / {stake}
+          </span>
+        </div>
+      </button>
+
+      <RunConfigModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        deck={deck}
+        stake={stake}
+        onChange={handleApply}
+      />
+    </>
   );
 }
 
 const compactDeckSpriteSize = 24;
 
-const selectorStyle: React.CSSProperties = {
-  minWidth: 0,
-  height: 28,
-  borderRadius: 8,
-  border: `1px solid ${JimboColorOption.PANEL_EDGE}`,
-  background: JimboColorOption.DARKEST,
-  color: JimboColorOption.WHITE,
-  fontFamily: "m6x11plus, monospace",
-  fontSize: 12,
-  padding: "0 8px",
-};
 
 export function JamlIde({
   jaml,
@@ -431,7 +430,7 @@ export function JamlIde({
           {subtitle ? <div style={{ fontSize: 11, color: JimboColorOption.GREY }}>{subtitle}</div> : null}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <DeckStakeSelector jaml={text} onChange={handleTextChange} />
+          <DeckStakeSelector jaml={text} onChange={handleTextChange} onSearch={onSearch} />
           {actions}
         </div>
       </div>

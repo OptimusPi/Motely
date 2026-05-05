@@ -151,7 +151,7 @@ export function RadialMenu({
     onPageNext,
 }: RadialMenuProps) {
     const rootRef = useRef<HTMLDivElement>(null);
-    const [containerW, setContainerW] = useState(375);
+    const [containerW, setContainerW] = useState(320);
 
     useLayoutEffect(() => {
         const el = rootRef.current;

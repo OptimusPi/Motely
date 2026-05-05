@@ -3,7 +3,7 @@
 import React from 'react'
 
 // ─── App Shell ──────────────────────────────────────────────────────────────
-// Mobile-first 375px layout container. This is the DEFAULT layout for ALL
+// Mobile-first 320px layout container. This is the DEFAULT layout for ALL
 // Jimbo UI screens — not just the "demo".
 //
 // Add `fluid` prop to unlock for MCP / desktop contexts (j-app--fluid).
@@ -12,11 +12,11 @@ import React from 'react'
 
 export interface JimboAppProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
-  /** Unlock width/height for MCP inline or desktop use. Default: false (375×667 locked). */
+  /** Unlock width/height for MCP inline or desktop use. Default: false (320×568 locked). */
   fluid?: boolean
 }
 
-/** Standard mobile-first app shell. 375px locked, or fluid for MCP/desktop. */
+/** Standard mobile-first app shell. 320px locked, or fluid for MCP/desktop. */
 export function JimboApp({ children, fluid, className = '', ...props }: JimboAppProps) {
   const classes = `j-app${fluid ? ' j-app--fluid' : ''} ${className}`.trim()
   return (

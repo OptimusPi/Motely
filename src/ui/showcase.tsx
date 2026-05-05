@@ -47,7 +47,7 @@ export interface ShowcaseProps {
 }
 
 /**
- * Landing/showcase screen — 375×667, NO SCROLL.
+ * Landing/showcase screen — 320×568, NO SCROLL.
  * Every pixel accounted for. No flex stretching. No gaps.
  */
 export function Showcase({

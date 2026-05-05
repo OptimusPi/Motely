@@ -18,7 +18,7 @@
 
 :root {
   /* Colors — eyedropped from Balatro's rendered shader output */
-  --j-red: #ff4c40;
+  --j-red: #fe5148;
   --j-blue: #0093ff;
   --j-green: #429f79;
   --j-orange: #ff9800;
@@ -915,7 +915,7 @@
 
 .j-modal {
   width: 100%;
-  max-width: 375px;
+  max-width: 320px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -1142,9 +1142,9 @@
 }
 
 /* ── App Shell ────────────────────────────────────────────────────────── */
-/* Mobile-first 375px layout container for ALL Jimbo UI screens.
+/* Mobile-first 320px layout container for ALL Jimbo UI screens.
  * Supports container queries for responsive breakpoints:
- *   compact  ≤400px  — iPhone SE, fixed 667px height, NO scroll
+ *   compact  ≤400px  — iPhone SE, fixed 568px height, NO scroll
  *   cozy     401-750px — MCP inline / wider phones, flexible height, scroll OK
  *   wide     751px+  — tablet/desktop, two-column layouts (future)
  *
@@ -1154,10 +1154,10 @@
 .j-app {
   container-type: inline-size;
   container-name: jimbo;
-  width: 375px;
-  max-width: 375px;
-  height: 667px;
-  max-height: 667px;
+  width: 320px;
+  max-width: 320px;
+  height: 568px;
+  max-height: 568px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
