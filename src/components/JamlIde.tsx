@@ -24,6 +24,8 @@ import { JamlCodeEditor } from "./JamlCodeEditor.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboModal } from "../ui/panel.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
+import { DeckSprite } from "./DeckSprite.js";
+import { DECK_OPTIONS, STAKE_OPTIONS } from "../lib/data/constants.js";
 
 const CATEGORY_CONFIG_MAP = {
   voucher: VOUCHER_PICKER_CONFIG,
@@ -221,6 +223,72 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
   );
 }
 
+function readRootValue(jaml: string, key: "deck" | "stake", fallback: string): string {
+  const match = jaml.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
+  return match?.[1]?.trim() || fallback;
+}
+
+function setRootValue(jaml: string, key: "deck" | "stake", value: string): string {
+  const line = `${key}: ${value}`;
+  const pattern = new RegExp(`^${key}:\\s*.*$`, "m");
+  if (pattern.test(jaml)) {
+    return jaml.replace(pattern, line);
+  }
+  const trimmed = jaml.trimEnd();
+  return trimmed.length > 0 ? `${line}\n${trimmed}` : line;
+}
+
+function DeckStakeSelector({
+  jaml,
+  onChange,
+}: {
+  jaml: string;
+  onChange: (next: string) => void;
+}) {
+  const deck = readRootValue(jaml, "deck", "Red");
+  const stake = readRootValue(jaml, "stake", "White");
+
+  const setDeck = (nextDeck: string) => onChange(setRootValue(jaml, "deck", nextDeck));
+  const setStake = (nextStake: string) => onChange(setRootValue(jaml, "stake", nextStake));
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+      <DeckSprite deck={deck} stake={stake} size={compactDeckSpriteSize} />
+      <select
+        value={deck}
+        onChange={(event) => setDeck(event.currentTarget.value)}
+        style={selectorStyle}
+      >
+        {DECK_OPTIONS.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+      <select
+        value={stake}
+        onChange={(event) => setStake(event.currentTarget.value)}
+        style={selectorStyle}
+      >
+        {STAKE_OPTIONS.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+const compactDeckSpriteSize = 24;
+
+const selectorStyle: React.CSSProperties = {
+  minWidth: 0,
+  height: 28,
+  borderRadius: 8,
+  border: `1px solid ${JimboColorOption.PANEL_EDGE}`,
+  background: JimboColorOption.DARKEST,
+  color: JimboColorOption.WHITE,
+  fontFamily: "m6x11plus, monospace",
+  fontSize: 12,
+  padding: "0 8px",
+};
 
 export function JamlIde({
   jaml,
@@ -362,7 +430,10 @@ export function JamlIde({
           <div style={{ fontSize: 16, fontWeight: "normal", fontFamily: "m6x11plus, monospace", color: JimboColorOption.GOLD_TEXT }}>{title}</div>
           {subtitle ? <div style={{ fontSize: 11, color: JimboColorOption.GREY }}>{subtitle}</div> : null}
         </div>
-        {actions ? <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{actions}</div> : null}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <DeckStakeSelector jaml={text} onChange={handleTextChange} />
+          {actions}
+        </div>
       </div>
 
       <JamlIdeToolbar mode={mode} onModeChange={setMode} resultCount={results.length} onSearch={onSearch} isSearching={isSearching} />
