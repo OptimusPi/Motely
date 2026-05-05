@@ -44,11 +44,11 @@ function topLevelScalar(lines: string[], key: string): string | undefined {
 
 const CLAUSE_ZONE_KEYS: Set<string> = new Set([
   "joker", "jokers", "commonJoker", "commonJokers", "uncommonJoker", "uncommonJokers",
-  "rareJoker", "rareJokers", "mixedJoker", "mixedJokers", "soulJoker", "legendaryJoker",
+  "rareJoker", "rareJokers", "legendaryJoker",
   "voucher", "vouchers",
   "tarot", "tarotCard", "spectral", "spectralCard", "planet", "planetCard",
-  "boss", "bosses",
-  "tag", "tags", "smallBlindTag", "bigBlindTag", "smallblindtag", "bigblindtag",
+  "boss",
+  "tag", "smallBlindTag", "bigBlindTag", "smallblindtag", "bigblindtag",
 ]);
 
 // JAML uses "mustnot" as zone key in some contexts; the visual filter uses "mustnot".

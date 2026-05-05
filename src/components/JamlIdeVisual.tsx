@@ -48,12 +48,14 @@ const ZONE_META: Record<JamlZone, { label: string; hint: string; color: string; 
 function clauseSpriteSheet(type: string): SpriteSheetType | undefined {
     if (
         type === "joker" ||
-        type === "souljoker" ||
+        type === "jokers" ||
         type === "rareJoker" ||
+        type === "rareJokers" ||
         type === "commonJoker" ||
+        type === "commonJokers" ||
         type === "uncommonJoker" ||
-        type === "legendaryJoker" ||
-        type === "mixedJoker"
+        type === "uncommonJokers" ||
+        type === "legendaryJoker"
     ) return "Jokers";
     if (type === "voucher") return "Vouchers";
     if (type === "smallblindtag" || type === "bigblindtag" || type === "tag") return "tags";
