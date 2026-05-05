@@ -4,7 +4,7 @@ namespace Motely;
 
 public sealed class MotelyWasmSearchContext : IMotelyWasmSearchContext
 {
-    private const int MaxChunkCount = 64_000;
+    private const int MaxChunkCount = 1_000_000;
 
     private readonly MotelySeedRouterDesc _router;
     private readonly MotelySingleSearchContext _ctx;
