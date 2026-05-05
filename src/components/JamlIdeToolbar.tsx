@@ -28,10 +28,9 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
     <div
       className={className}
       style={{
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: onSearch ? "1fr auto 1fr" : "1fr",
         alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "nowrap",
         gap: 8,
         minWidth: 0,
         padding: "10px 10px 6px",
@@ -39,7 +38,9 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
         background: JimboColorOption.DARKEST,
       }}
     >
-      <div style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden" }}>
+      {onSearch ? <div /> : null}
+
+      <div style={{ minWidth: 0, overflow: "hidden", width: "100%" }}>
         <JimboTabs
           tabs={tabs}
           activeTab={mode}
@@ -48,7 +49,7 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
       </div>
 
       {onSearch ? (
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ justifySelf: "end" }}>
           <JimboButton tone={isSearching ? "red" : "blue"} size="xs" onClick={onSearch}>
             {isSearching ? "Stop" : "Search"}
           </JimboButton>

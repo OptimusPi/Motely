@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { useState } from 'react'
 import { JimboText } from './jimboText.js'
 
 export interface JimboTabItem {
@@ -37,10 +36,8 @@ export function JimboTabs({ tabs, activeTab, onTabChange, className = '', style 
 }
 
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  const [pressed, setPressed] = useState(false)
-
   return (
-    <div className="j-tab">
+    <div className="j-tab" data-active={active}>
       <div
         className="j-tab__indicator"
         data-active={active}
@@ -54,16 +51,9 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         type="button"
         className="j-tab__btn"
         data-active={active}
-        data-pressed={pressed}
         onClick={onClick}
-        onMouseDown={() => setPressed(true)}
-        onMouseUp={() => setPressed(false)}
-        onMouseEnter={() => {}}
-        onMouseLeave={() => { setPressed(false) }}
-        onTouchStart={() => setPressed(true)}
-        onTouchEnd={() => setPressed(false)}
       >
-        <JimboText size="sm" tone={active ? 'default' : 'grey'}>{label}</JimboText>
+        <JimboText size="sm" tone="default">{label}</JimboText>
       </button>
     </div>
   )

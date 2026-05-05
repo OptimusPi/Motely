@@ -206,8 +206,8 @@ export function useBalatroBackground() {
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array([
-        -1.0, -1.0,  1.0, -1.0, -1.0, 1.0,
-        -1.0,  1.0,  1.0, -1.0,  1.0, 1.0,
+        -1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
+        -1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
       ]),
       gl.STATIC_DRAW,
     )
@@ -297,8 +297,8 @@ export function useJimboTooltip({
     const roomAbove = rect.top
     const align: 'top' | 'bottom' =
       placement === 'top' ? 'top'
-      : placement === 'bottom' ? 'bottom'
-      : roomAbove >= tipRect.height + 12 ? 'top' : 'bottom'
+        : placement === 'bottom' ? 'bottom'
+          : roomAbove >= tipRect.height + 12 ? 'top' : 'bottom'
 
     const left = rect.left + rect.width / 2 - tipRect.width / 2
     const top = align === 'top' ? rect.top - tipRect.height - 8 : rect.bottom + 8
@@ -416,24 +416,24 @@ export function useJamlCardRenderer({
     let cancelled = false
 
     context.clearRect(0, 0, canvas.width, canvas.height)
-    ;[...layers]
-      .sort((a, b) => a.order - b.order)
-      .forEach((layer) => {
-        if (imageCacheRef.current.has(layer.source)) {
-          const image = imageCacheRef.current.get(layer.source)
-          if (!image) return
-          const imageRatio = renderImage(canvas, context, image, layer, hasAnimatedLayer ? elapsed : undefined)
-          if (layer.order === 0) setRatio(imageRatio)
-          return
-        }
-        loadImage(layer.source).then((img) => {
-          if (cancelled || !img) return
-          const imageRatio = renderImage(canvas, context, img, layer, hasAnimatedLayer ? elapsed : undefined)
-          imageCacheRef.current.set(layer.source, img)
-          if (layer.order === 0) setRatio(imageRatio)
-          forceUpdate((prev) => prev + 1)
+      ;[...layers]
+        .sort((a, b) => a.order - b.order)
+        .forEach((layer) => {
+          if (imageCacheRef.current.has(layer.source)) {
+            const image = imageCacheRef.current.get(layer.source)
+            if (!image) return
+            const imageRatio = renderImage(canvas, context, image, layer, hasAnimatedLayer ? elapsed : undefined)
+            if (layer.order === 0) setRatio(imageRatio)
+            return
+          }
+          loadImage(layer.source).then((img) => {
+            if (cancelled || !img) return
+            const imageRatio = renderImage(canvas, context, img, layer, hasAnimatedLayer ? elapsed : undefined)
+            imageCacheRef.current.set(layer.source, img)
+            if (layer.order === 0) setRatio(imageRatio)
+            forceUpdate((prev) => prev + 1)
+          })
         })
-      })
 
     canvas.style.filter = invert ? 'invert(0.94)' : 'none'
     return () => { cancelled = true }
@@ -571,6 +571,15 @@ export interface DragState {
   offY: number
 }
 
+interface PendingDragState {
+  clause: JamlVisualClause
+  fromZone: JamlZone
+  x: number
+  y: number
+  offX: number
+  offY: number
+}
+
 /**
  * Manages drag-and-drop state for the Jaml IDE visual filter editor.
  */
@@ -580,13 +589,14 @@ export function useJamlIdeDrag(
   rootRef: React.RefObject<HTMLDivElement | null>
 ) {
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [pendingDrag, setPendingDrag] = useState<PendingDragState | null>(null)
   const [hoverZone, setHoverZone] = useState<string | null>(null)
 
   const onDragStart = useCallback(
     (e: React.MouseEvent | React.TouchEvent, clause: JamlVisualClause, fromZone: JamlZone) => {
       const t = 'touches' in e ? e.touches[0] : e
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-      setDrag({
+      setPendingDrag({
         clause,
         fromZone,
         x: t.clientX,
@@ -594,16 +604,39 @@ export function useJamlIdeDrag(
         offX: t.clientX - rect.left,
         offY: t.clientY - rect.top,
       })
+      setHoverZone(null)
     },
     []
   )
 
   useEffect(() => {
-    if (!drag) return
+    if (!pendingDrag && !drag) return
 
     const move = (e: MouseEvent | TouchEvent) => {
-      const t = 'touches' in e ? (e as TouchEvent).touches[0] : (e as MouseEvent)
-      setDrag((d) => d && { ...d, x: t.clientX, y: t.clientY })
+      const touchEvent = 'touches' in e ? (e as TouchEvent) : null
+      const t = touchEvent ? touchEvent.touches[0] : (e as MouseEvent)
+      if (!t) return
+
+      let activeDrag = drag
+
+      if (!activeDrag && pendingDrag) {
+        const dx = t.clientX - pendingDrag.x
+        const dy = t.clientY - pendingDrag.y
+        if (Math.hypot(dx, dy) < 8) return
+        activeDrag = {
+          ...pendingDrag,
+          x: t.clientX,
+          y: t.clientY,
+        }
+        setPendingDrag(null)
+        setDrag(activeDrag)
+      } else if (activeDrag) {
+        activeDrag = { ...activeDrag, x: t.clientX, y: t.clientY }
+        setDrag(activeDrag)
+      }
+
+      if (!activeDrag) return
+      if (touchEvent?.cancelable) touchEvent.preventDefault()
 
       const rails = rootRef.current?.querySelectorAll('[data-zone]') ?? []
       let found: string | null = null
@@ -618,7 +651,7 @@ export function useJamlIdeDrag(
     }
 
     const up = () => {
-      if (hoverZone && hoverZone !== drag.fromZone) {
+      if (drag && hoverZone && hoverZone !== drag.fromZone) {
         const to = hoverZone as JamlZone
         onChange({
           ...filter,
@@ -626,6 +659,7 @@ export function useJamlIdeDrag(
           [to]: [...filter[to], { ...drag.clause }],
         })
       }
+      setPendingDrag(null)
       setDrag(null)
       setHoverZone(null)
     }
@@ -641,7 +675,7 @@ export function useJamlIdeDrag(
       window.removeEventListener('touchmove', move)
       window.removeEventListener('touchend', up)
     }
-  }, [drag, hoverZone, filter, onChange, rootRef])
+  }, [pendingDrag, drag, hoverZone, filter, onChange, rootRef])
 
   return {
     drag,

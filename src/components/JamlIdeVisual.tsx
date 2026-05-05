@@ -163,6 +163,8 @@ function ClauseCard({
                 </div>
             </div>
             <button
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => {
                     e.stopPropagation();
                     onRemove();
@@ -263,9 +265,8 @@ function ZoneRail({
             style={{
                 border: `2px dashed ${highlight ? z.color : "transparent"}`,
                 borderRadius: 6,
-                padding: highlight ? 6 : 0,
+                padding: 6,
                 background: highlight ? `${z.color}11` : "transparent",
-                transition: "background 100ms, border-color 100ms",
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
@@ -452,7 +453,6 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                         top: drag.y - drag.offY,
                         pointerEvents: "none",
                         zIndex: 999,
-                        transform: "rotate(-2deg) scale(1.05)",
                         filter: `drop-shadow(0 4px 6px ${C.BLACK}99)`,
                         opacity: 0.92,
                     }}
@@ -460,9 +460,9 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                     <ClauseCard
                         clause={drag.clause}
                         zone={drag.fromZone}
-                        onRemove={() => {}}
-                        onEdit={() => {}}
-                        onDragStart={() => {}}
+                        onRemove={() => { }}
+                        onEdit={() => { }}
+                        onDragStart={() => { }}
                     />
                 </div>
             )}
