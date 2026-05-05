@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { MysterySlot, type SlotSelection, type JamlZone, type SlotCategory } from "./MysterySlot.js";
 import { JokerPicker } from "./JokerPicker.js";
 import {
@@ -55,14 +55,14 @@ interface CategoryOption {
 }
 
 const CATEGORIES: CategoryOption[] = [
-  { key: "joker",    label: "Joker",         sprite: "Joker",        sheet: "Jokers",   tone: "blue",     hint: "Shop, Buffoon Pack" },
-  { key: "voucher",  label: "Voucher",       sprite: "Blank",        sheet: "Vouchers", tone: "orange",     hint: "1 per Ante in shop" },
-  { key: "tarot",    label: "Tarot Card",    sprite: "The Fool",     sheet: "Tarots",   tone: "tarot",    hint: "Arcana Pack, shop" },
-  { key: "planet",   label: "Planet Card",   sprite: "Mercury",      sheet: "Tarots",   tone: "planet",   hint: "Celestial Pack, shop" },
-  { key: "spectral", label: "Spectral Card", sprite: "Grim",         sheet: "Tarots",   tone: "spectral", hint: "Ghost Deck, Spectral Pack" },
-  { key: "tag",      label: "Tag",           sprite: "Uncommon Tag", sheet: "tags",     tone: "green",    hint: "Skip blind reward" },
-  { key: "boss",     label: "Boss Blind",    sprite: "The Hook",     sheet: "BlindChips",tone: "red",      hint: "End of each Ante" },
-  { key: "pack",     label: "Booster Pack",  sprite: "Arcana Pack",  sheet: "Boosters", tone: "orange",   hint: "Arcana, Celestial, etc." },
+  { key: "joker", label: "Joker", sprite: "Joker", sheet: "Jokers", tone: "blue", hint: "Shop, Buffoon Pack" },
+  { key: "voucher", label: "Voucher", sprite: "Blank", sheet: "Vouchers", tone: "orange", hint: "1 per Ante in shop" },
+  { key: "tarot", label: "Tarot Card", sprite: "The Fool", sheet: "Tarots", tone: "tarot", hint: "Arcana Pack, shop" },
+  { key: "planet", label: "Planet Card", sprite: "Mercury", sheet: "Tarots", tone: "planet", hint: "Celestial Pack, shop" },
+  { key: "spectral", label: "Spectral Card", sprite: "Grim", sheet: "Tarots", tone: "spectral", hint: "Ghost Deck, Spectral Pack" },
+  { key: "tag", label: "Tag", sprite: "Uncommon Tag", sheet: "tags", tone: "green", hint: "Skip blind reward" },
+  { key: "boss", label: "Boss Blind", sprite: "The Hook", sheet: "BlindChips", tone: "red", hint: "End of each Ante" },
+  { key: "pack", label: "Booster Pack", sprite: "Arcana Pack", sheet: "Boosters", tone: "orange", hint: "Arcana, Celestial, etc." },
 ];
 
 const ZONE_TONE: Record<JamlZone, JimboTone> = {
@@ -78,14 +78,14 @@ const ZONE_LABEL: Record<JamlZone, string> = {
 };
 
 const CATEGORY_CONFIG_MAP: Record<SlotCategory, typeof VOUCHER_PICKER_CONFIG> = {
-  joker:    VOUCHER_PICKER_CONFIG,
-  voucher:  VOUCHER_PICKER_CONFIG,
-  tag:      TAG_PICKER_CONFIG,
-  boss:     BOSS_PICKER_CONFIG,
-  tarot:    TAROT_PICKER_CONFIG,
-  planet:   PLANET_PICKER_CONFIG,
+  joker: VOUCHER_PICKER_CONFIG,
+  voucher: VOUCHER_PICKER_CONFIG,
+  tag: TAG_PICKER_CONFIG,
+  boss: BOSS_PICKER_CONFIG,
+  tarot: TAROT_PICKER_CONFIG,
+  planet: PLANET_PICKER_CONFIG,
   spectral: SPECTRAL_PICKER_CONFIG,
-  pack:     PACK_PICKER_CONFIG,
+  pack: PACK_PICKER_CONFIG,
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -94,6 +94,8 @@ export function JamlMapEditor({
   zone: initialZone = "must",
   onChange,
 }: JamlMapEditorProps) {
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   const [currentZone, setCurrentZone] = useState<JamlZone>(initialZone);
   const [ante, setAnte] = useState<number>(1);
   const [antesState, setAntesState] = useState<Record<number, AnteSelections>>({});
@@ -114,6 +116,7 @@ export function JamlMapEditor({
       const nextAnte = { ...next[anteIndex] };
       delete nextAnte[id];
       next[anteIndex] = nextAnte;
+      onChangeRef.current?.(buildJamlText(next));
       return next;
     });
   }, []);
@@ -129,6 +132,7 @@ export function JamlMapEditor({
       const nextAnte = { ...(next[activeSlot.ante] || {}) };
       nextAnte[activeSlot.id] = { ...selection, zone: currentZone };
       next[activeSlot.ante] = nextAnte;
+      onChangeRef.current?.(buildJamlText(next));
       return next;
     });
     setActiveSlot(null);
@@ -148,20 +152,12 @@ export function JamlMapEditor({
     setActiveSlot(null);
   }, []);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   const jamlText = useMemo(() => buildJamlText(antesState), [antesState]);
 
-  useEffect(() => {
-    onChange?.(jamlText);
-  }, [jamlText, onChange]);
-
-  // Scroll to Ante 1 on mount — game starts there, Ante 0 is pre-game.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const firstChild = el.children[1] as HTMLElement | undefined;
-    if (firstChild) el.scrollTop = firstChild.offsetTop;
+  const handleScrollAttach = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const firstChild = node.children[1] as HTMLElement | undefined;
+    if (firstChild) node.scrollTop = firstChild.offsetTop;
   }, []);
 
   const renderSlot = (anteIndex: number, id: string, width: number, sheetType: SpriteSheetType, forceCategory?: SlotCategory) => {
@@ -201,7 +197,7 @@ export function JamlMapEditor({
       </div>
 
       {/* Map Layout - Vertical Scrolling Antes */}
-      <div ref={scrollRef} className="hide-scrollbar" style={{
+      <div ref={handleScrollAttach} className="hide-scrollbar" style={{
         flex: 1,
         overflowY: "auto",
         scrollSnapType: "y mandatory",
@@ -243,7 +239,7 @@ export function JamlMapEditor({
             <div className="j-flex-col j-gap-xs">
               <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>Shop Items</JimboText>
               <div className="j-flex hide-scrollbar j-gap-sm" style={{ overflowX: "auto", paddingBottom: 8 }}>
-                {[1,2,3,4,5,6,7,8].map(i => renderSlot(a, `ante_${a}_shop_${i}`, 52, "Jokers"))}
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => renderSlot(a, `ante_${a}_shop_${i}`, 52, "Jokers"))}
               </div>
             </div>
 
@@ -251,7 +247,7 @@ export function JamlMapEditor({
             <div className="j-flex-col j-gap-xs">
               <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>Packs</JimboText>
               <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap" }}>
-                {[1,2,3,4,5,6].map(i => renderSlot(a, `ante_${a}_pack_${i}`, 64, "Boosters", "pack"))}
+                {[1, 2, 3, 4, 5, 6].map(i => renderSlot(a, `ante_${a}_pack_${i}`, 64, "Boosters", "pack"))}
               </div>
             </div>
           </div>
@@ -335,11 +331,11 @@ function buildJamlText(antes: Record<number, AnteSelections>): string {
     for (const sel of Object.values(selections)) {
       const zone = sel.zone;
       const key = sel.clauseKey;
-      
+
       if (!byZone[zone][key]) {
         byZone[zone][key] = [];
       }
-      
+
       const existing = byZone[zone][key].find(item => item.value === sel.value);
       if (existing) {
         if (!existing.antes.includes(anteNum)) existing.antes.push(anteNum);
@@ -359,14 +355,14 @@ function buildJamlText(antes: Record<number, AnteSelections>): string {
   for (const [zone, label] of [["must", "must"], ["should", "should"], ["mustnot", "mustNot"]] as const) {
     const clauses = byZone[zone as JamlZone];
     if (Object.keys(clauses).length === 0) continue;
-    
+
     lines.push(`${label}:`);
     for (const [key, items] of Object.entries(clauses)) {
       for (const item of items) {
         lines.push(`  - ${key}: ${item.value}`);
         // Only emit `antes:` if it's not all 8 antes (simplification, or just emit it)
         if (item.antes.length < 8) {
-          lines.push(`    antes: [${item.antes.sort((a,b)=>a-b).join(", ")}]`);
+          lines.push(`    antes: [${item.antes.sort((a, b) => a - b).join(", ")}]`);
         }
       }
     }

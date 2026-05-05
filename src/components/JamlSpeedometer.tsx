@@ -39,28 +39,65 @@ export function JamlSpeedometer({
   style,
 }: JamlSpeedometerProps) {
   const active = status === "running" || status === "booting";
-  const statusTone = status === "error" ? "red" : active ? "green" : "grey";
+  const statusTone =
+    status === "error"
+      ? "red"
+      : status === "completed"
+        ? "green"
+        : status === "cancelled"
+          ? "orange"
+          : active
+            ? "gold"
+            : "grey";
+  const statusLabel =
+    status === "booting"
+      ? "booting"
+      : status === "running"
+        ? "searching"
+        : status === "completed"
+          ? "done"
+          : status === "cancelled"
+            ? "cancelled"
+            : status === "error"
+              ? "error"
+              : "idle";
+  const rootStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    padding: "8px 10px",
+    borderRadius: 12,
+    border: "1px solid var(--j-panel-edge, rgba(255,255,255,0.12))",
+    background: "rgba(0,0,0,0.28)",
+    ...style,
+  };
+  const dotStyle: React.CSSProperties = {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    background:
+      status === "error"
+        ? "var(--j-red, #ff4c40)"
+        : status === "completed"
+          ? "var(--j-green, #429f79)"
+          : status === "cancelled"
+            ? "var(--j-orange, #ff9800)"
+            : active
+              ? "var(--j-gold, #e4b643)"
+              : "var(--j-grey, #8b8b8b)",
+    flexShrink: 0,
+  };
 
   return (
-    <div className={`j-stat-grid ${className}`} style={style}>
-      <div>
-        <div className="j-stat-grid__value">
-          <JimboText size="md" tone={active ? "gold" : "grey"}>{formatSpeed(seedsPerSecond)}</JimboText>
-        </div>
-        <div className="j-stat-grid__label">speed</div>
-      </div>
-      <div>
-        <div className="j-stat-grid__value">
-          <JimboText size="md" tone="white">{formatCount(totalSearched)}</JimboText>
-        </div>
-        <div className="j-stat-grid__label">searched</div>
-      </div>
-      <div>
-        <div className="j-stat-grid__value">
-          <JimboText size="md" tone={Number(matchingSeeds) > 0 ? "green" : "grey"}>{formatCount(matchingSeeds)}</JimboText>
-        </div>
-        <div className="j-stat-grid__label">matches</div>
-      </div>
+    <div className={className} style={rootStyle}>
+      <span style={dotStyle} aria-hidden="true" />
+      <JimboText size="sm" tone={statusTone}>{statusLabel}</JimboText>
+      <JimboText size="sm" tone={active ? "gold" : "grey"}>{formatSpeed(seedsPerSecond)}</JimboText>
+      <JimboText size="sm" tone="white">{formatCount(totalSearched)} searched</JimboText>
+      <JimboText size="sm" tone={Number(matchingSeeds) > 0 ? "green" : "grey"}>
+        {formatCount(matchingSeeds)} matches
+      </JimboText>
     </div>
   );
 }

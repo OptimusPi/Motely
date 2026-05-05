@@ -1,21 +1,28 @@
-// UI Options derived from local constants (Blueprint retired)
-export const DECK_OPTIONS = ['Red', 'Blue', 'Yellow', 'Green', 'Black', 'Magic', 'Nebula', 'Ghost', 'Abandoned', 'Checkered', 'Painted', 'Anaglyph', 'Plasma', 'Erratic'];
-export const STAKE_OPTIONS = ['White', 'Red', 'Green', 'Black', 'Blue', 'Purple', 'Orange', 'Gold'];
+import {
+    CLAUSE_TYPE_KEYS,
+    DECK_VALUES,
+    EDITION_VALUES,
+    ENHANCEMENT_VALUES,
+    RANK_VALUES,
+    SEAL_VALUES,
+    SOURCE_KEYS,
+    STAKE_VALUES,
+    SUIT_VALUES,
+} from '../jaml/jamlSchema.js';
+
+// UI options derived from the shipped JAML schema wherever possible.
+export const DECK_OPTIONS = [...DECK_VALUES];
+export const STAKE_OPTIONS = [...STAKE_VALUES];
 
 export const ANTE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
 export const SLOT_OPTIONS = [1, 2, 3, 4, 5];
 
-export const RANK_OPTIONS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace'];
-export const SUIT_OPTIONS = ['Spades', 'Hearts', 'Diamonds', 'Clubs'];
-export const ENHANCEMENT_OPTIONS = ['Bonus', 'Mult', 'Wild', 'Glass', 'Steel', 'Lucky', 'Stone', 'Gold'];
-export const EDITION_OPTIONS = ['Foil', 'Holographic', 'Polychrome', 'Negative'];
-export const SEAL_OPTIONS = ['Gold', 'Red', 'Blue', 'Purple'];
+export const RANK_OPTIONS = [...RANK_VALUES];
+export const SUIT_OPTIONS = [...SUIT_VALUES];
+export const ENHANCEMENT_OPTIONS = [...ENHANCEMENT_VALUES];
+export const EDITION_OPTIONS = [...EDITION_VALUES];
+export const SEAL_OPTIONS = [...SEAL_VALUES];
 
-export const CLAUSE_TYPES = [
-    'Joker', 'Tarot', 'Planet', 'Spectral', 'Voucher', 'Tag', 'Boss', 'Standardcard', 'StandardCard'
-];
+export const CLAUSE_TYPES = [...CLAUSE_TYPE_KEYS];
 
-export const SOURCE_OPTIONS = [
-    'shop', 'arcana_pack', 'celestial_pack', 'spectral_pack', 'buffoon_pack', 'standard_pack',
-    'uncommon_tag', 'rare_tag', 'top_up_tag', 'emperor', 'vagabond', 'judgement', 'wraith'
-];
+export const SOURCE_OPTIONS = [...SOURCE_KEYS];

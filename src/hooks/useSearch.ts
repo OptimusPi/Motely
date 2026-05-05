@@ -34,6 +34,7 @@ const SEARCH_WORKER_CODE = `
 let MotelyWasm = null;
 let MotelyWasmEvents = null;
 let activeSearch = null;
+let activeSearchRunId = 0;
 
 self.addEventListener('message', async function(e) {
   const msg = e.data;
@@ -56,21 +57,27 @@ self.addEventListener('message', async function(e) {
     if (!MotelyWasm) { self.postMessage({ type: 'error', message: 'Not initialized' }); return; }
     const validation = MotelyWasm.validateJaml(msg.jaml);
     if (validation !== 'valid') { self.postMessage({ type: 'error', message: validation }); return; }
+    const runId = ++activeSearchRunId;
 
     function cleanup() {
       MotelyWasmEvents.notifyResult = () => {};
       MotelyWasmEvents.notifyProgress = () => {};
       MotelyWasmEvents.notifyComplete = () => {};
-      activeSearch = null;
+      if (runId === activeSearchRunId) {
+        activeSearch = null;
+      }
     }
 
     MotelyWasmEvents.notifyResult = function(seed, score, tallyColumns) {
+      if (runId !== activeSearchRunId) return;
       self.postMessage({ type: 'result', seed, score, tallyColumns: Array.from(tallyColumns) });
     };
     MotelyWasmEvents.notifyProgress = function(searched, matching) {
+      if (runId !== activeSearchRunId) return;
       self.postMessage({ type: 'progress', searched: searched.toString(), matching: matching.toString() });
     };
     MotelyWasmEvents.notifyComplete = function(status, searched, matched) {
+      if (runId !== activeSearchRunId) return;
       cleanup();
       self.postMessage({ type: 'complete', status, searched: searched.toString(), matched: matched.toString() });
     };
@@ -101,6 +108,10 @@ self.addEventListener('message', async function(e) {
   }
 
   if (msg.type === 'stop') {
+    activeSearchRunId++;
+    MotelyWasmEvents.notifyResult = () => {};
+    MotelyWasmEvents.notifyProgress = () => {};
+    MotelyWasmEvents.notifyComplete = () => {};
     if (activeSearch) { activeSearch.cancel(); activeSearch = null; }
     self.postMessage({ type: 'cancelled' });
   }
@@ -133,13 +144,13 @@ export function useSearch(motelyWasmUrl?: string) {
     setState((s) => ({ ...s, status: "idle" }));
     const worker = createWorker();
     workerRef.current = worker;
-    
+
     if (motelyWasmUrl) {
       worker.postMessage({ type: 'init', url: motelyWasmUrl });
     }
 
     worker.onmessage = (e: MessageEvent) => {
-      const msg = e.data as { type: string; [k: string]: unknown };
+      const msg = e.data as { type: string;[k: string]: unknown };
       if (msg.type === "ready") {
         readyRef.current = true;
         setState((s) => s.status === "booting" ? { ...s, status: "idle" } : s);
@@ -176,8 +187,16 @@ export function useSearch(motelyWasmUrl?: string) {
         speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
         setState((s) => ({
           ...s,
-          status: msg.status === "Completed" ? "completed" : "error",
-          error: msg.status !== "Completed" ? msg.status as string : null,
+          status:
+            msg.status === "Completed"
+              ? "completed"
+              : msg.status === "Cancelled"
+                ? "cancelled"
+                : "error",
+          error:
+            msg.status === "Completed" || msg.status === "Cancelled"
+              ? null
+              : msg.status as string,
           totalSearched: BigInt(msg.searched as string),
           matchingSeeds: BigInt(msg.matched as string),
           seedsPerSecond: 0,
@@ -201,6 +220,10 @@ export function useSearch(motelyWasmUrl?: string) {
   const sendStart = useCallback((payload: Record<string, unknown>) => {
     const worker = workerRef.current;
     if (!worker) return;
+    if (!motelyWasmUrl) {
+      setState((s) => ({ ...s, status: "error", error: "motelyWasmUrl is required to start search" }));
+      return;
+    }
     speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
     setState({ ...INITIAL_STATE, status: "running", tallyLabels: state.tallyLabels });
 
@@ -218,7 +241,7 @@ export function useSearch(motelyWasmUrl?: string) {
         }
       };
     }
-  }, [state.tallyLabels]);
+  }, [motelyWasmUrl, state.tallyLabels]);
 
   const start = useCallback((jaml: string, count: number) => {
     sendStart({ type: "start", mode: "random", jaml, count });

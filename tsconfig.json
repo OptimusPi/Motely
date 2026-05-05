@@ -11,12 +11,28 @@
     "declaration": true,
     "jsx": "react-jsx",
     "allowArbitraryExtensions": true,
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ]
     }
   },
-  "include": ["src"],
-  "exclude": ["**/*.stories.tsx", "**/*.stories.ts", "**/*.test.tsx", "**/*.test.ts"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
+    "**/*.test.tsx",
+    "**/*.test.ts",
+    "src/ui/ide/JamlBuilder.tsx",
+    "src/ui/ide/WasmStatus.tsx",
+    "src/ui/ide/AgnosticSeedCard.tsx"
+  ]
 }

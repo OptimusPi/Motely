@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { JimboButton, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboColorOption } from "../ui/tokens.js";
@@ -10,19 +10,19 @@ import { JamlAnalyzerFullscreen } from "./JamlAnalyzerFullscreen.js";
 import { useSearch } from "../hooks/useSearch.js";
 import { type Motely } from "motely-wasm";
 import { useAnalyzer } from "../hooks/useAnalyzer.js";
-import { visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
 import { JamlSpeedometer } from "./JamlSpeedometer.js";
 
 const C = JimboColorOption;
 
 export interface JamlCuratorProps {
   motely: typeof Motely | null;
+  motelyWasmUrl: string;
 }
 
-export function JamlCurator({ motely }: JamlCuratorProps) {
+export function JamlCurator({ motely, motelyWasmUrl }: JamlCuratorProps) {
   // Use map editor by default to generate JAML
   const [jamlText, setJamlText] = useState("");
-  const search = useSearch();
+  const search = useSearch(motelyWasmUrl);
   const analyzer = useAnalyzer(motely);
 
   // Search results pagination
@@ -82,10 +82,10 @@ export function JamlCurator({ motely }: JamlCuratorProps) {
             borderBottom: `2px solid ${C.GOLD}`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-               <JimboText size="lg" tone="gold">JAML Curator</JimboText>
-               <JimboButton tone={isSearching ? "red" : "green"} size="sm" onClick={handleSearch}>
-                 {isSearching ? "STOP" : "SEARCH"}
-               </JimboButton>
+              <JimboText size="lg" tone="gold">JAML Curator</JimboText>
+              <JimboButton tone={isSearching ? "red" : "green"} size="sm" onClick={handleSearch}>
+                {isSearching ? "STOP" : "SEARCH"}
+              </JimboButton>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="hide-scrollbar">
@@ -93,7 +93,7 @@ export function JamlCurator({ motely }: JamlCuratorProps) {
             </div>
 
             <div style={{ flexShrink: 0 }}>
-              <JamlSpeedometer 
+              <JamlSpeedometer
                 status={search.status}
                 seedsPerSecond={search.seedsPerSecond}
                 totalSearched={search.totalSearched}
@@ -113,7 +113,7 @@ export function JamlCurator({ motely }: JamlCuratorProps) {
                       <JimboText size="xs" tone="grey">SEED MATCHES</JimboText>
                       <JimboText size="xs" tone="gold">{search.matchingSeeds} FOUND</JimboText>
                     </div>
-                    
+
                     <JimboFlankNav
                       canPrev={resultIndex > 0}
                       canNext={resultIndex < search.results.length - 1}
