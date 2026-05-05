@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { JIMBO_ANIMATIONS } from './tokens.js'
+
 
 export interface JimboFlankNavProps {
   onPrev: () => void

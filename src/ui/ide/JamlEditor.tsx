@@ -223,7 +223,6 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
     const [editingLineId, setEditingLineId] = useState<string | null>(null);
     const [editingPart, setEditingPart] = useState<'key' | 'value' | 'arrayItem' | null>(null);
     const [editingArrayIndex, setEditingArrayIndex] = useState<number | null>(null);
-    const [focusedLineIndex, setFocusedLineIndex] = useState<number>(0);
 
     const editorRef = useRef<HTMLDivElement>(null);
 
@@ -287,6 +286,7 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
 
     const linesToJaml = useCallback((linesList: ParsedLine[]): string => linesList.map(l => l.raw).join('\n'), []);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => {
         const text = initialJaml || DEFAULT_JAML;
         // Prevent feedback loop: If the incoming text matches what we already have, don't re-parse/reset.
@@ -435,7 +435,6 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
                             setEditingLineId(line.id);
                             setEditingPart(part);
                             setEditingArrayIndex(idx ?? null);
-                            setFocusedLineIndex(index);
                         }}
                         onEndEdit={() => {
                             setEditingLineId(null);
@@ -495,7 +494,7 @@ function JamlLine({
     onDelete,
     onAddLine
 }: JamlLineProps) {
-    const [, setHovered] = useState(false);
+
     const [suggestions, setSuggestions] = useState<CompletionData[]>([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [localValue, setLocalValue] = useState('');
@@ -528,6 +527,7 @@ function JamlLine({
     };
 
     // Suggestions Logic
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => {
         if (isEditing && editingPart) {
             let textContext = line.raw;
@@ -544,6 +544,7 @@ function JamlLine({
     }, [isEditing, editingPart, localValue, line.raw, line.key]);
 
     // Input Focus
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => {
         if (isEditing && inputRef.current) {
             inputRef.current.focus();
@@ -603,7 +604,7 @@ function JamlLine({
     } as React.CSSProperties : {};
 
     return (
-        <div className="relative flex items-center py-0.5 group" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+        <div className="relative flex items-center py-0.5 group">
             {/* Delete Zone */}
             <div
                 className="w-6 h-full flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"

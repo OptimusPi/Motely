@@ -82,7 +82,8 @@ function parseInlineValues(raw: string): string[] {
 export function extractVisualJamlItems(jaml: string): JamlPreviewGroups {
   const groups = createEmptyGroups();
   const seen = new Set<string>();
-  const lines = jaml.replace(/\r\n/g, "\n").split("\n");
+  const safeJaml = jaml || "";
+  const lines = safeJaml.replace(/\r\n/g, "\n").split("\n");
 
   let currentSection: JamlPreviewSection | null = null;
 

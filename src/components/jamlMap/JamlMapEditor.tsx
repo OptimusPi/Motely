@@ -542,7 +542,7 @@ function buildJamlText(antes: Record<number, AnteSelections>): string {
     }
   }
 
-  let lines: string[] = [];
+  const lines: string[] = [];
   lines.push("name: My Custom Seed Map");
   lines.push("author: JamlBuilder");
   lines.push("description: Auto-generated from the visual editor.");

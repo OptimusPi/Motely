@@ -7,7 +7,17 @@
 
 import jamlSchemaJson from '../../../jaml.schema.json';
 
-const schema = jamlSchemaJson as any;
+type SchemaNode = { enum?: string[]; items?: { enum?: string[] }; properties?: Record<string, SchemaNode> };
+
+interface JamlSchema {
+    version?: string;
+    definitions?: {
+        clause?: SchemaNode;
+    };
+    properties?: Record<string, SchemaNode>;
+}
+
+const schema = jamlSchemaJson as unknown as JamlSchema;
 const clauseDef = schema.definitions?.clause?.properties ?? {};
 
 export const JAML_SCHEMA_VERSION: string = schema.version ?? 'unknown';
@@ -64,7 +74,7 @@ export function getValidValuesForKey(key: string): readonly string[] | null {
  * Get the available properties for a given clause type.
  * Returns all clause property keys (the type system doesn't restrict per-type in JSON schema v7).
  */
-export function getAvailablePropsForType(_clauseType: string): readonly string[] {
+export function getAvailablePropsForType(/* _clauseType */): readonly string[] {
   return PROPERTY_KEYS;
 }
 
@@ -72,7 +82,7 @@ export function getAvailablePropsForType(_clauseType: string): readonly string[]
  * Check if a property is invalid for a clause type.
  * In the v7 schema, all properties are available on all clause types.
  */
-export function isInvalidPropForType(_prop: string, _clauseType: string): boolean {
+export function isInvalidPropForType(/* _prop, _clauseType */): boolean {
   return false;
 }
 

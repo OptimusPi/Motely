@@ -19,6 +19,14 @@ export interface JimboTooltipProps {
   disabled?: boolean
 }
 
+function assignRef<T>(ref: React.Ref<T> | undefined | null, value: T) {
+  if (typeof ref === 'function') ref(value)
+  else if (ref && typeof ref === 'object') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ref as any).current = value
+  }
+}
+
 /**
  * Canonical Balatro-style tooltip: dark panel, silver border, pixel font.
  * Wrap any target to get a hover/focus popover.
@@ -51,12 +59,12 @@ export function JimboTooltip({
     onMouseMove?: (e: React.MouseEvent) => void
   }>
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const childRef = (child as any).ref
   const refHandler = useCallback((node: HTMLElement | null) => {
     targetRef.current = node
-    const childRef = (child as any).ref
-    if (typeof childRef === 'function') childRef(node)
-    else if (childRef && 'current' in childRef) childRef.current = node
-  }, [child, targetRef])
+    assignRef(childRef, node)
+  }, [childRef, targetRef])
 
   const wrapped = React.cloneElement(child, {
     ref: refHandler,

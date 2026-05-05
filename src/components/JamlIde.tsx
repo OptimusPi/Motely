@@ -224,12 +224,14 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
 }
 
 function readRootValue(jaml: string, key: "deck" | "stake", fallback: string): string {
+  if (!jaml) return fallback;
   const match = jaml.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
   return match?.[1]?.trim() || fallback;
 }
 
 function setRootValue(jaml: string, key: "deck" | "stake", value: string): string {
   const line = `${key}: ${value}`;
+  if (!jaml) return line;
   const pattern = new RegExp(`^${key}:\\s*.*$`, "m");
   if (pattern.test(jaml)) {
     return jaml.replace(pattern, line);
@@ -265,11 +267,11 @@ function DeckStakeSelector({
       <button
         onClick={() => setModalOpen(true)}
         className="j-btn j-btn--red"
-        style={{ height: 32, padding: 0, borderRadius: 8, overflow: 'hidden' }}
+        style={{ height: 28, padding: 0, borderRadius: 8, overflow: 'hidden' }}
       >
-        <div className="j-btn__face" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px 0 4px', height: '100%' }}>
+        <div className="j-btn__face" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 0 4px', height: '100%' }}>
           <DeckSprite deck={deck} stake={stake} size={compactDeckSpriteSize} />
-          <span style={{ fontFamily: "m6x11plus, monospace", fontSize: 14 }}>
+          <span style={{ fontFamily: "m6x11plus, monospace", fontSize: 13, paddingTop: 2 }}>
             {deck} / {stake}
           </span>
         </div>
@@ -286,7 +288,7 @@ function DeckStakeSelector({
   );
 }
 
-const compactDeckSpriteSize = 24;
+const compactDeckSpriteSize = 16;
 
 
 export function JamlIde({

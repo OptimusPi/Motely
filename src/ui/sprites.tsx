@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { resolveJamlAssetUrl, type JamlAssetKey } from '../assets.js'
+import { resolveJamlAssetUrl } from '../assets.js'
 import { getSpriteData, getMysterySprite, SHEET_META, type SpriteSheetType } from '../sprites/spriteMapper.js'
 
 export interface JimboSpriteProps {

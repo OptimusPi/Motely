@@ -78,6 +78,7 @@ function ClausePill({
         padding: "3px 8px",
         position: "relative",
         opacity: isHit ? 1 : 0.6,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore -- CSS custom property
         "--glow-color": glow,
         animation: isHit ? "j-glow-pulse 1.6s ease-in-out infinite" : "none",
@@ -122,75 +123,6 @@ function ClausePill({
   );
 }
 
-function VisualChip({ 
-  item, 
-  matchCount, 
-  compact 
-}: { 
-  item: JamlPreviewItem; 
-  matchCount: number;
-  compact?: boolean;
-}) {
-  const isHit = matchCount > 0;
-  const hasData = matchCount !== undefined;
-  const glow = ZONES[item.section].glow;
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: compact ? 3 : 6,
-        background: isHit ? `${glow}33` : C.DARKEST,
-        border: `2px solid ${isHit ? glow : C.PANEL_EDGE}`,
-        borderRadius: 4,
-        padding: compact ? "2px 4px" : "3px 8px",
-        position: "relative",
-        opacity: isHit ? 1 : 0.6,
-        // @ts-ignore
-        "--glow-color": glow,
-        animation: isHit ? "j-glow-pulse 1.6s ease-in-out infinite" : "none",
-      }}
-      title={`${item.clauseKey}: ${item.value}${hasData ? ` (Found: ${matchCount})` : ""}`}
-    >
-      <style>{GLOW_ANIMATION}</style>
-      <div style={{ color: C.GREY, fontSize: 10, lineHeight: 1, padding: "0 2px" }}>⋮⋮</div>
-      <JimboSprite 
-        name={item.value} 
-        sheet={SHEET_FOR_VISUAL[item.visualType]} 
-        width={compact ? 20 : 26} 
-      />
-      <div
-        style={{
-          fontSize: compact ? 9 : 10,
-          color: C.WHITE,
-          letterSpacing: 0.5,
-          textShadow: "1px 1px 0 rgba(0,0,0,.8)",
-        }}
-      >
-        {item.value}
-      </div>
-      {isHit && (
-        <div 
-          style={{ 
-            position: "absolute",
-            top: compact ? -4 : -6,
-            right: compact ? -4 : -6,
-            background: C.GREEN,
-            color: C.WHITE,
-            fontSize: 7,
-            padding: "1px 3px",
-            borderRadius: 3,
-            border: `1px solid ${C.BLACK}`,
-            boxShadow: `0 1px 0 ${C.BLACK}`,
-          }}
-        >
-          {matchCount > 1 ? `x${matchCount}` : "✓"}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function ZoneRail({ 
   zone, 

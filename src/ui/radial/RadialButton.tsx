@@ -185,7 +185,7 @@ export function RadialButton(props: RadialButtonProps) {
 
 // ── Internal sub-components ───────────────────────────────────────────────────
 
-function ToggleDot({ active, disabled: _disabled }: { active: boolean; disabled: boolean }) {
+function ToggleDot({ active }: { active: boolean; disabled: boolean }) {
     const dotStyle = active
         ? { backgroundColor: JimboColorOption.GREEN_TEXT, borderColor: JimboColorOption.BORDER_SILVER }
         : { backgroundColor: JimboColorOption.DARK_RED, borderColor: JimboColorOption.DARK_GREY };

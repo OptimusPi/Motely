@@ -29,20 +29,18 @@ export function JamlAestheticSelector({ value, onChange, className, style }: Jam
   return (
     <div className={`j-aesthetic-selector ${className ?? ""}`} style={style}>
       <JimboText size="xs" tone="grey">Seed Aesthetics</JimboText>
-      <div className="j-aesthetic-selector__list">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
         {AESTHETICS.map((a) => {
           const isActive = value === a.id;
           return (
-            <button
+            <JimboButton
               key={a.id}
-              type="button"
-              className="j-aesthetic-pill"
-              data-active={isActive}
+              tone={isActive ? "red" : "grey"}
+              size="sm"
               onClick={() => onChange(isActive ? null : a.id, a.value)}
-              title={a.desc}
             >
               {a.label}
-            </button>
+            </JimboButton>
           );
         })}
       </div>

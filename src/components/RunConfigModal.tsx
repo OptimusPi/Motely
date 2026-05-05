@@ -56,6 +56,34 @@ function formatTextWithColors(text: string) {
   });
 }
 
+function CarouselButton({ onClick, children }: { onClick: () => void, children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: 32,
+        height: "100%",
+        borderRadius: 8,
+        background: JimboColorOption.RED,
+        border: `2px solid ${JimboColorOption.WHITE}`,
+        color: JimboColorOption.WHITE,
+        fontSize: 24,
+        fontFamily: "m6x11plus, monospace",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        flexShrink: 0,
+      }}
+      className="j-btn j-btn--red"
+    >
+      <div className="j-btn__face" style={{ padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {children}
+      </div>
+    </button>
+  );
+}
+
 export interface RunConfigModalProps {
   open: boolean;
   onClose: () => void;
@@ -74,13 +102,14 @@ export function RunConfigModal({
   const [activeDeck, setActiveDeck] = useState(deck);
   const [activeStake, setActiveStake] = useState(stake);
 
-  // Sync state if props change when opened
-  React.useEffect(() => {
+  const [prevProps, setPrevProps] = useState({ open, deck, stake });
+  if (open !== prevProps.open || deck !== prevProps.deck || stake !== prevProps.stake) {
+    setPrevProps({ open, deck, stake });
     if (open) {
       setActiveDeck(deck);
       setActiveStake(stake);
     }
-  }, [open, deck, stake]);
+  }
 
   if (!open) return null;
 
@@ -98,31 +127,6 @@ export function RunConfigModal({
     onClose();
   };
 
-  const CarouselButton = ({ onClick, children }: { onClick: () => void, children: React.ReactNode }) => (
-    <button
-      onClick={onClick}
-      style={{
-        width: 32,
-        height: "100%",
-        borderRadius: 8,
-        background: JimboColorOption.RED,
-        border: `2px solid ${JimboColorOption.WHITE}`, // Should be dark edge with inner shadow but let's use standard red btn style
-        color: JimboColorOption.WHITE,
-        fontSize: 24,
-        fontFamily: "m6x11plus, monospace",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        flexShrink: 0,
-      }}
-      className="j-btn j-btn--red" // piggyback on Jimbo button styles
-    >
-      <div className="j-btn__face" style={{ padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {children}
-      </div>
-    </button>
-  );
 
   return (
     <JimboModal open={open} onClose={onClose}>

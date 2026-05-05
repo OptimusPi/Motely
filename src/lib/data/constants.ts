@@ -1,27 +1,21 @@
+import { Motely } from 'motely-wasm';
 import {
     CLAUSE_TYPE_KEYS,
-    DECK_VALUES,
-    EDITION_VALUES,
-    ENHANCEMENT_VALUES,
-    RANK_VALUES,
-    SEAL_VALUES,
     SOURCE_KEYS,
-    STAKE_VALUES,
-    SUIT_VALUES,
 } from '../jaml/jamlSchema.js';
 
-// UI options derived from the shipped JAML schema wherever possible.
-export const DECK_OPTIONS = [...DECK_VALUES];
-export const STAKE_OPTIONS = [...STAKE_VALUES];
+// UI options derived from motely-wasm directly
+export const DECK_OPTIONS = Object.keys(Motely.MotelyDeck).filter(k => isNaN(Number(k)));
+export const STAKE_OPTIONS = Object.keys(Motely.MotelyStake).filter(k => isNaN(Number(k)));
 
 export const ANTE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
 export const SLOT_OPTIONS = [1, 2, 3, 4, 5];
 
-export const RANK_OPTIONS = [...RANK_VALUES];
-export const SUIT_OPTIONS = [...SUIT_VALUES];
-export const ENHANCEMENT_OPTIONS = [...ENHANCEMENT_VALUES];
-export const EDITION_OPTIONS = [...EDITION_VALUES];
-export const SEAL_OPTIONS = [...SEAL_VALUES];
+export const RANK_OPTIONS = Object.keys(Motely.MotelyStandardcardRank).filter(k => isNaN(Number(k)));
+export const SUIT_OPTIONS = Object.keys(Motely.MotelyStandardcardSuit).filter(k => isNaN(Number(k)));
+export const ENHANCEMENT_OPTIONS = Object.keys(Motely.MotelyItemEnhancement).filter(k => isNaN(Number(k)) && k !== "None");
+export const EDITION_OPTIONS = Object.keys(Motely.MotelyItemEdition).filter(k => isNaN(Number(k)) && k !== "None");
+export const SEAL_OPTIONS = Object.keys(Motely.MotelyItemSeal).filter(k => isNaN(Number(k)) && k !== "None");
 
 export const CLAUSE_TYPES = [...CLAUSE_TYPE_KEYS];
 

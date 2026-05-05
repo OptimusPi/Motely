@@ -124,6 +124,7 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.1.2",
+    "@eslint/js": "^10.0.1",
     "@google/design.md": "^0.1.1",
     "@react-spring/three": "^10.0.3",
     "@react-three/drei": ">=9.0.0",
@@ -140,6 +141,10 @@
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/browser-playwright": "^4.1.5",
     "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
     "motely-wasm": "^15.1.2",
     "playwright": "^1.59.1",
     "react": "^19.2.4",
@@ -148,6 +153,7 @@
     "storybook": "^10.3.6",
     "three": "^0.184.0",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.2",
     "vite": "^8.0.9",
     "vitest": "^4.1.5"
   },

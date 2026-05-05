@@ -21,7 +21,7 @@ const SUIT_MAP: Record<string, string> = {
     "H": "Hearts", "C": "Clubs", "D": "Diamonds", "S": "Spades"
 };
 
-export function parseCardToken(item: any): ParsedCard | null {
+export function parseCardToken(item: unknown): ParsedCard | null {
     if (!item) return null;
 
     // 1. If it's already an object with rank/suit

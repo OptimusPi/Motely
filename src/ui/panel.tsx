@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, memo } from 'react'
+import React, { memo } from 'react'
 import { useSway } from './hooks.js'
 import { JimboText, type JimboTextSize } from './jimboText.js'
 
@@ -34,7 +34,7 @@ export const JimboPanel = memo(({
 })
 JimboPanel.displayName = 'JimboPanel'
 
-export interface JimboInnerPanelProps extends React.HTMLAttributes<HTMLDivElement> { }
+export type JimboInnerPanelProps = React.HTMLAttributes<HTMLDivElement>;
 
 export const JimboInnerPanel = memo(({ children, className = '', style, ...props }: JimboInnerPanelProps) => (
   <div

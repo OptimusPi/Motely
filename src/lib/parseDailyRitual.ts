@@ -49,18 +49,18 @@ const ITEM_MAP: Record<string, { id: string; name: string; type: 'joker' | 'cons
  *   ]
  * }
  */
-export function parseDailyRitualSeed(raw: any): ParsedSeed {
+export function parseDailyRitualSeed(raw: Record<string, unknown>): ParsedSeed {
     const items: ParsedItem[] = [];
 
     // Parse each field looking for pattern: letters + number (e.g., "wj2", "hc1")
     Object.keys(raw).forEach(key => {
+        if (key === 'id' || key === 't' || key === 's' || key === 'w') return;
         const match = key.match(/^([a-z]+)(\d+)$/);
         if (match) {
             const [, code, ante] = match;
             const itemData = ITEM_MAP[code];
 
             if (itemData) {
-                const count = raw[key]; // Could be used for duplicates
                 items.push({
                     ...itemData,
                     ante: Number(ante)
@@ -70,10 +70,10 @@ export function parseDailyRitualSeed(raw: any): ParsedSeed {
     });
 
     return {
-        seed: raw.id || '',
-        title: raw.t || '',
-        score: raw.s || 0,
-        twos: raw.w || 0,
+        seed: (raw.id as string) || '',
+        title: (raw.t as string) || '',
+        score: (raw.s as number) || 0,
+        twos: (raw.w as number) || 0,
         items
     };
 }

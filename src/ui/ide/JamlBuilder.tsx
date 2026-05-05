@@ -70,7 +70,7 @@ export default function JamlBuilder() {
                             seed: event.seed,
                             score: event.score,
                             tallies: event.tallyColumns || []
-                        } as any];
+                        } as Motely.MotelyWasmSearchResult];
                     });
                 } else if (event.type === 'progress') {
                     setSeedsProcessed(Number(event.searched) || 0);
@@ -95,9 +95,10 @@ export default function JamlBuilder() {
                 jaml: jamlText,
                 count: 1000 // A default random count, adjust as needed
             });
-        } catch (e: any) {
-            console.error("Local search error:", e);
-            setSearchError(e.message || 'Local search failed');
+        } catch (e) {
+            const error = e as Error;
+            console.error("Local search error:", error);
+            setSearchError(error.message || 'Local search failed');
             setIsSearching(false);
         }
     };

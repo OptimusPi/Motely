@@ -135,9 +135,9 @@ function parseJamlToFilter(text: string): JamlFilter {
             // 2. Detect Root Properties (indent 0)
             const rootMatch = line.match(/^(\w+):\s*(.+)$/);
             if (rootMatch && !line.startsWith(' ') && !line.startsWith('-')) {
-                const [_, key, val] = rootMatch;
+                const [, key, val] = rootMatch;
                 if (['name', 'deck', 'stake', 'description', 'author'].includes(key)) {
-                    (filter as any)[key] = val.trim();
+                    (filter as Record<string, unknown>)[key] = val.trim();
                 }
                 continue;
             }
@@ -147,7 +147,7 @@ function parseJamlToFilter(text: string): JamlFilter {
                 if (currentSection === 'defaults') {
                     const propMatch = trimmed.match(/^(\w+):\s*(.+)$/);
                     if (propMatch) {
-                        const [_, key, val] = propMatch;
+                        const [, key, val] = propMatch;
                         if (key === 'antes') filter.defaults.antes = parseNumArray(val);
                         if (key === 'packSlots') filter.defaults.packSlots = parseNumArray(val);
                         if (key === 'shopSlots') filter.defaults.shopSlots = parseNumArray(val);
@@ -166,11 +166,11 @@ function parseJamlToFilter(text: string): JamlFilter {
                     if (currentClause) {
                         const propMatch = trimmed.match(/^(\w+):\s*(.+)$/);
                         if (propMatch) {
-                            const [_, key, val] = propMatch;
+                            const [, key, val] = propMatch;
                             if (key === 'antes') currentClause.antes = parseNumArray(val);
                             else if (key === 'sources') currentClause.sources = parseStringArray(val);
                             else if (key === 'score') currentClause.score = parseInt(val) || 0;
-                            else (currentClause as any)[key] = val.trim();
+                            else (currentClause as Record<string, unknown>)[key] = val.trim();
                         }
                     }
                 }
@@ -185,11 +185,11 @@ function parseJamlToFilter(text: string): JamlFilter {
 }
 
 function parseNumArray(str: string): number[] {
-    return str.replace(/[\[\]]/g, '').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    return str.replace(/[[\]]/g, '').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
 }
 
 function parseStringArray(str: string): string[] {
-    return str.replace(/[\[\]]/g, '').split(',').map(s => s.trim()).filter(s => !!s);
+    return str.replace(/[[\]]/g, '').split(',').map(s => s.trim()).filter(s => !!s);
 
 }
 

@@ -19,11 +19,11 @@ export function WasmStatus() {
                 if (cancelled) return;
                 setVersion(Motely.MotelyWasm.getVersion());
                 setStatus('ready');
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("WASM Status Error:", err);
                 if (cancelled) return;
                 setStatus('error');
-                setError(err.message || String(err));
+                setError(err instanceof Error ? err.message : String(err));
             }
         };
         load();

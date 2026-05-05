@@ -13,7 +13,7 @@ export interface SpriteData {
 // Consolidate all item arrays into a single map for O(1) lookup
 const ITEM_MAP = new Map<string, SpriteData>();
 
-function addToMap(items: any[], type: SpriteData['type']) {
+function addToMap(items: { name: string; pos: SpritePos }[], type: SpriteData['type']) {
     items.forEach(item => {
         if (item.name && item.pos) {
             const data: SpriteData = { pos: item.pos, type };

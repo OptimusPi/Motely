@@ -132,6 +132,12 @@ export { setMotelyEnums as setMotelyDecoderEnums } from "./decode/motelyItemDeco
 
 
 export {
+    PaginatedFilterBrowser,
+    type PaginatedFilterBrowserProps,
+    type FilterItem,
+} from "./components/PaginatedFilterBrowser.js";
+
+export {
     JamlAestheticSelector,
     type JamlAestheticSelectorProps,
     type JamlAestheticOption,

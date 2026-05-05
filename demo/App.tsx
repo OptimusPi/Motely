@@ -79,7 +79,7 @@ function HomePage({ onNavigate }: { onNavigate: (r: Route) => void }) {
 
 function SearchPage({ onBack }: { onBack: () => void }) {
   const [jamlText, setJamlText] = useState("");
-  const [searchMode, setSearchMode] = useState<SearchMode>("sequential");
+  const [searchMode, setSearchMode] = useState<SearchMode>("random");
   const [startSeed, setStartSeed] = useState("AAAAAAAA");
   const [aesthetic, setAesthetic] = useState<JamlAestheticOption | null>(null);
   const [resultIndex, setResultIndex] = useState(0);
@@ -92,8 +92,8 @@ function SearchPage({ onBack }: { onBack: () => void }) {
   const handleSearch = useCallback(() => {
     if (isSearching) { search.cancel(); return; }
     setResultIndex(0);
-    if (searchMode === "sequential") {
-      search.startSequential(jamlText, startSeed);
+    if (searchMode === "random") {
+      search.start(jamlText, 1_000_000);
     } else if (searchMode === "aesthetic" && aesthetic) {
       const idx = ["Palindrome", "Psychosis", "Gross", "Nsfw", "Funny", "Balatro"].indexOf(aesthetic);
       search.startAesthetic(jamlText, idx >= 0 ? idx : 0);
@@ -190,7 +190,6 @@ function SearchPage({ onBack }: { onBack: () => void }) {
         {/* Mode */}
         <JimboTabs
           tabs={[
-            { id: 'sequential', label: 'Sequential' },
             { id: 'random', label: 'Random' },
             { id: 'aesthetic', label: 'Aesthetic' },
           ]}
@@ -198,13 +197,6 @@ function SearchPage({ onBack }: { onBack: () => void }) {
           onTabChange={(id) => setSearchMode(id as SearchMode)}
           style={{ marginBottom: 6 }}
         />
-
-        {searchMode === "sequential" && (
-          <div style={{ marginBottom: 6 }}>
-            <JimboText size="xs" tone="grey">Start Seed</JimboText>
-            <JamlSeedInput value={startSeed} onChange={setStartSeed} />
-          </div>
-        )}
 
         {searchMode === "aesthetic" && (
           <div style={{ marginBottom: 6 }}>
@@ -249,11 +241,13 @@ function SearchPage({ onBack }: { onBack: () => void }) {
       </div>
 
       <JimboAppFooter>
-        <JimboButton tone={isSearching ? "red" : "green"} fullWidth size="lg" onClick={handleSearch}
-          disabled={searchMode === "aesthetic" && !aesthetic}>
-          {isSearching ? "Stop Search" : "Start Search"}
-        </JimboButton>
-        <JimboButton tone="orange" fullWidth size="lg" onClick={onBack}>Back</JimboButton>
+        <div className="j-flex-col j-gap-sm">
+          <JimboButton tone={isSearching ? "red" : "green"} fullWidth size="lg" onClick={handleSearch}
+            disabled={searchMode === "aesthetic" && !aesthetic}>
+            {isSearching ? "Stop Cooking" : "Let Jimbo Cook!"}
+          </JimboButton>
+          <JimboButton tone="orange" fullWidth size="lg" onClick={onBack}>Back</JimboButton>
+        </div>
       </JimboAppFooter>
     </JimboApp>
   );

@@ -14,8 +14,8 @@ interface AgnosticSeedCardProps {
     stakeSlug?: string;
     className?: string;
     onClick?: () => void;
-    analysis?: any;
-    result?: any;
+    analysis?: Motely.Analysis.MotelyLegacyTextAnalyzer;
+    result?: Motely.MotelyWasmSearchResult;
     dayNumber?: number;
     ritualId?: string;
     jamlConfig?: string | null;
@@ -23,7 +23,7 @@ interface AgnosticSeedCardProps {
     onShowHowTo?: () => void;
     onOpenSubmit?: () => void;
     canSubmit?: boolean;
-    filter?: any;
+    filter?: unknown;
 }
 
 function allAnalyzedItems(analysis: Motely.Analysis.MotelyLegacyTextAnalyzer | undefined): { name: string; value: number; matched: boolean }[] {
@@ -54,7 +54,7 @@ export function AgnosticSeedCard({
     jamlConfig,
 }: AgnosticSeedCardProps) {
     const [loading, setLoading] = useState(false);
-    const [fetchedAnalysis, setFetchedAnalysis] = useState<any>(null);
+    const [fetchedAnalysis, setFetchedAnalysis] = useState<{ score: number, analysis: Motely.Analysis.MotelyLegacyTextAnalyzer } | null>(null);
 
     const result = propAnalysis || propResult || fetchedAnalysis;
 

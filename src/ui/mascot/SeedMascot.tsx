@@ -1,7 +1,7 @@
 import React from "react";
 
 import type { MenuItem } from "./menuConfig";
-import { RadialMenu, RadialBreadcrumb } from "../radial";
+import { RadialMenu } from "../radial";
 
 export interface SeedMascotProps {
     /** Hit target size for the mascot image (px). Default 160. */

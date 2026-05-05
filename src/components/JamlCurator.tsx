@@ -55,8 +55,9 @@ export function JamlCurator({ motely, motelyWasmUrl }: JamlCuratorProps) {
   return (
     <div style={{
       width: "100%",
-      maxWidth: 320,
-      height: "100svh",
+      maxWidth: 375,
+      height: "100dvh",
+      maxHeight: 812,
       margin: "0 auto",
       position: "relative",
       background: C.DARKEST,

@@ -75,7 +75,8 @@ interface ClauseAccum {
 }
 
 export function jamlTextToVisualFilter(text: string): JamlVisualFilter {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const safeText = text || "";
+  const lines = safeText.replace(/\r\n/g, "\n").split("\n");
   const filter: JamlVisualFilter = { must: [], should: [], mustnot: [] };
   filter.name = topLevelScalar(lines, "name");
   filter.author = topLevelScalar(lines, "author");
@@ -173,7 +174,7 @@ export function jamlTextToVisualFilter(text: string): JamlVisualFilter {
 
 function q(s: string | undefined): string {
   if (!s) return "";
-  return /[:#\[\]{}|>&*!,'"?]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s;
+  return /[:#[\]{}|>&*!,'"?]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s;
 }
 
 function serializeClause(clause: JamlVisualClause): string {

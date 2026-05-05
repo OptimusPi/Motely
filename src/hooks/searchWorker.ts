@@ -1,5 +1,7 @@
-let MotelyWasm: any = null;
-let MotelyWasmEvents: any = null;
+import type { Motely } from 'motely-wasm';
+
+let MotelyWasm: typeof Motely.MotelyWasm | null = null;
+let MotelyWasmEvents: typeof Motely.MotelyWasmEvents | null = null;
 let activeSearch: { cancel(): void } | null = null;
 let activeSearchRunId = 0;
 

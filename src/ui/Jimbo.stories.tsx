@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { JimboButton, JimboModal } from './panel';
+import { JimboButton } from './panel';
 import { JimboText } from './jimboText';
 import "./jimbo.css";
 
