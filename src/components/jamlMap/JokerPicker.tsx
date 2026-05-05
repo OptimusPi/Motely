@@ -72,10 +72,10 @@ interface RarityInfo {
 }
 
 const RARITY_META: Record<JokerRarity, RarityInfo> = {
-  common:    { label: "Common",    tone: "blue",  hint: "Found in shops and Buffoon Packs" },
-  uncommon:  { label: "Uncommon",  tone: "green", hint: "Found in shops and Buffoon Packs" },
-  rare:      { label: "Rare",      tone: "red",   hint: "Found in shops and Buffoon Packs" },
-  legendary: { label: "Legendary", tone: "tarot",  hint: "Spawns from The Soul only!" },
+  common: { label: "Common", tone: "blue", hint: "Found in shops and Buffoon Packs" },
+  uncommon: { label: "Uncommon", tone: "green", hint: "Found in shops and Buffoon Packs" },
+  rare: { label: "Rare", tone: "red", hint: "Found in shops and Buffoon Packs" },
+  legendary: { label: "Legendary", tone: "tarot", hint: "Spawns from The Soul only!" },
 };
 
 // ─── Picker steps ────────────────────────────────────────────────────────────
@@ -113,22 +113,9 @@ export function JokerPicker({ onSelect, onCancel }: JokerPickerProps) {
       value: joker.name,
       clauseKey: selectedRarity === "legendary" ? "legendaryJoker"
         : selectedRarity === "rare" ? "rareJoker"
-        : selectedRarity === "uncommon" ? "uncommonJoker"
-        : "commonJoker",
+          : selectedRarity === "uncommon" ? "uncommonJoker"
+            : "commonJoker",
       rarity: selectedRarity ?? "common",
-    });
-  }, [onSelect, selectedRarity]);
-
-  const handleAnySelect = useCallback(() => {
-    const rarity = selectedRarity ?? "common";
-    onSelect({
-      category: "joker",
-      value: "Any",
-      clauseKey: rarity === "legendary" ? "legendaryJoker"
-        : rarity === "rare" ? "rareJoker"
-        : rarity === "uncommon" ? "uncommonJoker"
-        : "commonJoker",
-      rarity,
     });
   }, [onSelect, selectedRarity]);
 
@@ -170,8 +157,7 @@ export function JokerPicker({ onSelect, onCancel }: JokerPickerProps) {
             <JimboText size="md">{RARITY_META[selectedRarity].label} Jokers</JimboText>
             <div style={{ width: 44 }} />
           </div>
-          
-          {/* Search + Any */}
+
           <div className="j-flex j-gap-sm" style={{ padding: "8px 10px 4px" }}>
             <input
               className="j-seed-input__field"
@@ -181,7 +167,6 @@ export function JokerPicker({ onSelect, onCancel }: JokerPickerProps) {
               onChange={(e) => setSearch(e.target.value)}
               style={{ fontSize: 13, padding: "6px 10px", textTransform: "none", letterSpacing: "0.04em" }}
             />
-            <JimboButton tone="orange" size="sm" onClick={handleAnySelect}>Any</JimboButton>
           </div>
 
           {/* Legendary warning */}

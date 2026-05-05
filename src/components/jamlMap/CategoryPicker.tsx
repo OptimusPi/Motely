@@ -69,14 +69,6 @@ export function CategoryPicker({ config, onSelect, onCancel }: CategoryPickerPro
     [onSelect, config],
   );
 
-  const handleAny = useCallback(() => {
-    onSelect({
-      category: config.category,
-      value: "Any",
-      clauseKey: config.clauseKey,
-    });
-  }, [onSelect, config]);
-
   const renderItem = (item: SpriteEntry, isMuted = false) => (
     <div
       key={item.name}
@@ -103,7 +95,6 @@ export function CategoryPicker({ config, onSelect, onCancel }: CategoryPickerPro
 
   return (
     <div style={{ padding: 0, maxWidth: 420, maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
-      {/* Search + Any */}
       <div className="j-flex j-gap-sm" style={{ padding: "8px 10px 4px" }}>
         <input
           className="j-seed-input__field"
@@ -113,7 +104,6 @@ export function CategoryPicker({ config, onSelect, onCancel }: CategoryPickerPro
           onChange={(e) => setSearch(e.target.value)}
           style={{ fontSize: 13, padding: "6px 10px", textTransform: "none", letterSpacing: "0.04em" }}
         />
-        <JimboButton tone="red" size="sm" onClick={handleAny}>Any</JimboButton>
       </div>
 
       {/* Hint */}
@@ -144,16 +134,16 @@ export function CategoryPicker({ config, onSelect, onCancel }: CategoryPickerPro
           ))
         ) : (
           filtered.map((item) => (
-             <div key={item.name} style={{ width: 64 }}>{renderItem(item)}</div>
+            <div key={item.name} style={{ width: 64 }}>{renderItem(item)}</div>
           ))
         )}
-        
-        {((config.category === "voucher" && pairedVouchers?.length === 0) || 
+
+        {((config.category === "voucher" && pairedVouchers?.length === 0) ||
           (config.category !== "voucher" && filtered.length === 0)) && (
-          <div style={{ width: "100%", padding: 20, textAlign: "center" }}>
-            <JimboText size="sm" tone="grey">No matches for "{search}"</JimboText>
-          </div>
-        )}
+            <div style={{ width: "100%", padding: 20, textAlign: "center" }}>
+              <JimboText size="sm" tone="grey">No matches for "{search}"</JimboText>
+            </div>
+          )}
       </div>
     </div>
   );

@@ -34,7 +34,7 @@ export const JimboPanel = memo(({
 })
 JimboPanel.displayName = 'JimboPanel'
 
-export interface JimboInnerPanelProps extends React.HTMLAttributes<HTMLDivElement> {}
+export interface JimboInnerPanelProps extends React.HTMLAttributes<HTMLDivElement> { }
 
 export const JimboInnerPanel = memo(({ children, className = '', style, ...props }: JimboInnerPanelProps) => (
   <div
@@ -113,7 +113,6 @@ export function JimboModal({ children, open, onClose, title, className }: JimboM
       onClick={onClose}
     >
       <JimboPanel
-        sway
         onBack={onClose}
         className={`j-modal ${className ?? ''}`}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
