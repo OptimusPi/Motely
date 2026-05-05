@@ -25,13 +25,13 @@ import { JimboModal } from "../ui/panel.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
 
 const CATEGORY_CONFIG_MAP = {
-  voucher:  VOUCHER_PICKER_CONFIG,
-  tag:      TAG_PICKER_CONFIG,
-  boss:     BOSS_PICKER_CONFIG,
-  tarot:    TAROT_PICKER_CONFIG,
-  planet:   PLANET_PICKER_CONFIG,
+  voucher: VOUCHER_PICKER_CONFIG,
+  tag: TAG_PICKER_CONFIG,
+  boss: BOSS_PICKER_CONFIG,
+  tarot: TAROT_PICKER_CONFIG,
+  planet: PLANET_PICKER_CONFIG,
   spectral: SPECTRAL_PICKER_CONFIG,
-  pack:     PACK_PICKER_CONFIG,
+  pack: PACK_PICKER_CONFIG,
 } as const;
 
 export interface JamlIdeSearchResult {
@@ -187,25 +187,25 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
                   gap: 8,
                 }}
               >
-                <JamlMapPreview 
-                  jaml={jaml} 
+                <JamlMapPreview
+                  jaml={jaml}
                   tallyColumns={result.tallyColumns}
                   tallyLabels={result.tallyLabels}
                 />
-                
+
                 {/* Fallback/Detailed tally list for debugging or non-visual clauses */}
                 <div style={{ padding: "4px 8px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
-                   <span style={{ fontSize: 9, color: JimboColorOption.WHITE, opacity: 0.8 }}>Raw Tally Data</span>
-                   {(result.tallyLabels ?? []).map((label, i) => {
-                     const val = result.tallyColumns![i] ?? 0;
-                     if (val === 0) return null;
-                     return (
-                       <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                         <span style={{ fontSize: 10, color: JimboColorOption.WHITE, flex: 1 }}>{label}</span>
-                         <span style={{ fontSize: 10, color: JimboColorOption.GREEN_TEXT }}>{val}</span>
-                       </div>
-                     );
-                   })}
+                  <span style={{ fontSize: 9, color: JimboColorOption.WHITE, opacity: 0.8 }}>Raw Tally Data</span>
+                  {(result.tallyLabels ?? []).map((label, i) => {
+                    const val = result.tallyColumns![i] ?? 0;
+                    if (val === 0) return null;
+                    return (
+                      <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 10, color: JimboColorOption.WHITE, flex: 1 }}>{label}</span>
+                        <span style={{ fontSize: 10, color: JimboColorOption.GREEN_TEXT }}>{val}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : null}
@@ -328,6 +328,9 @@ export function JamlIde({
         minHeight: 420,
         borderRadius: 12,
         overflow: "hidden",
+        overflowX: "clip",
+        overscrollBehaviorX: "none",
+        maxWidth: "100%",
         border: `2px solid ${JimboColorOption.BORDER_SILVER}`,
         boxShadow: `0 3px 0 0 ${JimboColorOption.BORDER_SOUTH}`,
         background: JimboColorOption.DARK_GREY,
