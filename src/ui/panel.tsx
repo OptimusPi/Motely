@@ -102,9 +102,10 @@ export interface JimboModalProps {
   onClose: () => void
   title?: string
   className?: string
+  showBack?: boolean
 }
 
-export function JimboModal({ children, open, onClose, title, className }: JimboModalProps) {
+export function JimboModal({ children, open, onClose, title, className, showBack = false }: JimboModalProps) {
   if (!open) return null
 
   return (
@@ -113,7 +114,7 @@ export function JimboModal({ children, open, onClose, title, className }: JimboM
       onClick={onClose}
     >
       <JimboPanel
-        onBack={onClose}
+        onBack={showBack ? onClose : undefined}
         className={`j-modal ${className ?? ''}`}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
