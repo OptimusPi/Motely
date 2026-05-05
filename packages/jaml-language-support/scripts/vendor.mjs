@@ -19,6 +19,7 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const root = join(__dir, "..");
 const lspDir = join(root, "..", "jaml-lsp-server");
 const vendorLsp = join(root, "vendor", "jaml-lsp-server");
+const schemaDst = join(root, "schema", "jaml.schema.json");
 
 console.log("→ Installing jaml-lsp-server deps…");
 execSync("npm install --prefer-offline", { cwd: lspDir, stdio: "inherit" });
@@ -40,5 +41,8 @@ const motelyWasmDst = join(vendorLsp, "node_modules", "motely-wasm");
 rmSync(motelyWasmDst, { recursive: true, force: true });
 mkdirSync(motelyWasmDst, { recursive: true });
 cpSync(motelyWasmSrc, motelyWasmDst, { recursive: true });
+
+console.log("→ Syncing bundled schema from motely-wasm…");
+cpSync(join(motelyWasmSrc, "jaml.schema.json"), schemaDst);
 
 console.log("✓ vendor/jaml-lsp-server ready");

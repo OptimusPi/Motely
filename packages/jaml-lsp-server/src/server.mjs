@@ -45,10 +45,15 @@ const __dir = __dirname;
 
 function loadSchema() {
   try {
-    const schemaPath = join(__dir, "..", "..", "..", "schema", "jaml.schema.json");
+    const schemaPath = join(__dir, "..", "node_modules", "motely-wasm", "jaml.schema.json");
     return JSON.parse(readFileSync(schemaPath, "utf8"));
   } catch {
-    return null;
+    try {
+      const fallbackSchemaPath = join(__dir, "..", "..", "..", "schema", "jaml.schema.json");
+      return JSON.parse(readFileSync(fallbackSchemaPath, "utf8"));
+    } catch {
+      return null;
+    }
   }
 }
 
