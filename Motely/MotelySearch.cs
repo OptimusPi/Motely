@@ -874,6 +874,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         TaskCreationOptions.RunContinuationsAsynchronously
     );
     private int _isDisposed;
+    private int _hasStarted;
 
     private readonly TBaseFilter _baseFilter;
     private readonly IMotelySeedFilter[] _additionalFilters;
@@ -1089,6 +1090,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public void RunSearchUntilCompletion()
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+        if (Interlocked.Exchange(ref _hasStarted, 1) != 0)
+            throw new InvalidOperationException("Search has already been started.");
         _elapsedTime.Start();
 
         if (_threadCount == 1)
@@ -1166,18 +1169,25 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     public Task RunSearchAsync(CancellationToken cancellationToken = default)
     {
-        _cancellationToken = cancellationToken;
-        StartSearchThreads();
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+        BeginSearch(cancellationToken);
         return _completionSource.Task;
     }
 
     public IMotelySearch Start(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-        _cancellationToken = cancellationToken;
-
-        RunSearchUntilCompletion();
+        BeginSearch(cancellationToken);
         return this;
+    }
+
+    private void BeginSearch(CancellationToken cancellationToken)
+    {
+        if (Interlocked.Exchange(ref _hasStarted, 1) != 0)
+            throw new InvalidOperationException("Search has already been started.");
+
+        _cancellationToken = cancellationToken;
+        StartSearchThreads();
     }
 
     /// <summary>
@@ -1193,13 +1203,18 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         if (_threadCount == 1)
         {
-            // No System.Threading.Thread: matches single-threaded WASM (no pthread) and mirrors
-            // <see cref="RunSearchUntilCompletion"/> for ThreadCount == 1.
-            RunWorkerBody(_plans[0]);
-
-
-            // twhat the fuick is this shit guys?   -pifreak :(
-            SignalSearchCompleted();
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    RunWorkerBody(_plans[0]);
+                    SignalSearchCompleted();
+                }
+                catch (Exception ex)
+                {
+                    _completionSource.TrySetException(ex);
+                }
+            });
         }
         else
         {
@@ -1334,7 +1349,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private abstract class MotelySearchPlan : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 200;
+        public const int MAX_SEED_WAIT_MS = 314;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;

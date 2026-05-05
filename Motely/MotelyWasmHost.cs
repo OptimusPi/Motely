@@ -221,6 +221,17 @@ public sealed class MotelyWasmHost : IMotelyWasm
         int maxResults
     )
     {
+        return RunSequentialSearchBatchCore(jaml, batchCharCount, startBatch, endBatch, maxResults);
+    }
+
+    private async Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatchCore(
+        string jaml,
+        int batchCharCount,
+        long startBatch,
+        long endBatch,
+        int maxResults
+    )
+    {
         var results = new List<MotelyWasmSearchResult>();
         using var search = StartSequentialSearch(
             jaml,
@@ -233,15 +244,14 @@ public sealed class MotelyWasmHost : IMotelyWasm
                     results.Add(result);
             }
         );
-        // NativeAOT fires all events synchronously — search is complete by here.
+        var completion = await search.WaitForCompletion();
         var snap = search.GetSnapshot();
-        var completion = new MotelyWasmSearchCompletion(
-            MotelyWasmSearchState.Completed,
-            snap.TotalSeedsSearched,
-            snap.MatchingSeeds,
-            null
-        );
-        return Task.FromResult(new MotelyWasmSearchBatchResult(completion, [.. results]));
+        var finalizedCompletion = completion with
+        {
+            TotalSeedsSearched = snap.TotalSeedsSearched,
+            MatchingSeeds = snap.MatchingSeeds,
+        };
+        return new MotelyWasmSearchBatchResult(finalizedCompletion, [.. results]);
     }
 
     public IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds)

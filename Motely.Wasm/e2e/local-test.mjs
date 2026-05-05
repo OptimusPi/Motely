@@ -135,6 +135,7 @@ MotelyWasmEvents.notifyProgress = () => progressCount++;
 
 const search = MotelyWasm.startRandomSearch(goodJaml, 100);
 expect("startRandomSearch returns", search != null);
+await search.waitForCompletion();
 const snap = search.getSnapshot();
 expect("snapshot has totalSeedsSearched", typeof snap.totalSeedsSearched === "bigint" || typeof snap.totalSeedsSearched === "number");
 expect("searched >= 100", Number(snap.totalSeedsSearched) >= 100, `searched ${snap.totalSeedsSearched}`);
