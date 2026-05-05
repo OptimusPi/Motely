@@ -67,14 +67,14 @@ const CATEGORIES: CategoryOption[] = [
 
 const ZONE_TONE: Record<JamlZone, JimboTone> = {
   must: "blue",
-  should: "red",
-  mustnot: "orange",
+  should: "green",
+  mustnot: "red",
 };
 
 const ZONE_LABEL: Record<JamlZone, string> = {
-  must: "Must",
-  should: "Should",
-  mustnot: "Must Not",
+  must: "Required",
+  should: "Bonus",
+  mustnot: "Avoid",
 };
 
 const CATEGORY_CONFIG_MAP: Record<SlotCategory, typeof VOUCHER_PICKER_CONFIG> = {
@@ -165,7 +165,7 @@ export function JamlMapEditor({
     return (
       <MysterySlot
         key={id}
-        zone={sel ? sel.zone : currentZone}
+        zone={sel ? sel.zone : "must"}
         sheetType={sheetType}
         selection={sel}
         width={width}
@@ -178,25 +178,6 @@ export function JamlMapEditor({
 
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Zone Toggle Header */}
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.DARKEST, padding: "max(32px, env(safe-area-inset-top, 32px)) 0 8px 0", borderBottom: `2px solid ${C.PANEL_EDGE}` }}>
-        <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 12 }}>Jaml Visual Builder</JimboText>
-        <div className="j-flex j-gap-sm" style={{ justifyContent: "center" }}>
-          {(["must", "should", "mustnot"] as JamlZone[]).map((z) => (
-            <JimboButton
-              key={z}
-              tone={currentZone === z ? ZONE_TONE[z] : "blue"}
-              size="sm"
-              onClick={() => setCurrentZone(z)}
-              style={{ opacity: currentZone === z ? 1 : 0.4 }}
-            >
-              {ZONE_LABEL[z]}
-            </JimboButton>
-          ))}
-        </div>
-      </div>
-
-      {/* Map Layout - Vertical Scrolling Antes */}
       <div ref={handleScrollAttach} className="hide-scrollbar" style={{
         flex: 1,
         overflowY: "auto",
@@ -262,20 +243,40 @@ export function JamlMapEditor({
         className="j-picker-modal"
       >
         {activeSlot !== null && (
-          pickerFlow === "category" ? (
-            <CategoryMenu onSelect={handleCategorySelect} />
-          ) : pickerFlow === "joker" ? (
-            <JokerPicker
-              onSelect={handleItemSelect}
-              onCancel={handlePickerCancel}
-            />
-          ) : (
-            <CategoryPicker
-              config={CATEGORY_CONFIG_MAP[pickerFlow as SlotCategory]}
-              onSelect={handleItemSelect}
-              onCancel={handlePickerCancel}
-            />
-          )
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="j-inner-panel" style={{ padding: "8px 10px", marginBottom: 2 }}>
+              <JimboText size="xs" tone="grey" style={{ display: "block", marginBottom: 6 }}>
+                This pick will be added as
+              </JimboText>
+              <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap" }}>
+                {(["must", "should", "mustnot"] as JamlZone[]).map((z) => (
+                  <JimboButton
+                    key={z}
+                    tone={currentZone === z ? ZONE_TONE[z] : "grey"}
+                    size="xs"
+                    onClick={() => setCurrentZone(z)}
+                  >
+                    {ZONE_LABEL[z]}
+                  </JimboButton>
+                ))}
+              </div>
+            </div>
+
+            {pickerFlow === "category" ? (
+              <CategoryMenu onSelect={handleCategorySelect} />
+            ) : pickerFlow === "joker" ? (
+              <JokerPicker
+                onSelect={handleItemSelect}
+                onCancel={handlePickerCancel}
+              />
+            ) : (
+              <CategoryPicker
+                config={CATEGORY_CONFIG_MAP[pickerFlow as SlotCategory]}
+                onSelect={handleItemSelect}
+                onCancel={handlePickerCancel}
+              />
+            )}
+          </div>
         )}
       </JimboModal>
     </div>
