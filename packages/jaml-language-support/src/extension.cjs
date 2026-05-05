@@ -113,7 +113,14 @@ function registerCommands(context) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("jaml.openSchema", () => {
-      const schemaUri = vscode.Uri.joinPath(context.extensionUri, "schema", "jaml.schema.json");
+      const schemaUri = vscode.Uri.joinPath(
+        context.extensionUri,
+        "vendor",
+        "jaml-lsp-server",
+        "node_modules",
+        "motely-wasm",
+        "jaml.schema.json"
+      );
       vscode.workspace
         .openTextDocument(schemaUri)
         .then((doc) => vscode.window.showTextDocument(doc))
