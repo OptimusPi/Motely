@@ -274,6 +274,12 @@
 
 .j-tab__indicator {
   margin-bottom: var(--j-space-sm);
+  display: flex;
+  justify-content: center;
+}
+.j-tab__indicator svg {
+  fill: var(--j-gold, #e4b643);
+  display: block;
 }
 .j-tab__indicator[data-active="true"] {
   animation: jimbo-bounce 0.8s cubic-bezier(0.68, 0, 0.68, 1) infinite;
@@ -323,11 +329,15 @@
   cursor: pointer;
   border-radius: 8px 0 0 8px;
   padding: 16px 8px;
-  background-color: var(--j-red);
+  background-color: transparent;
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
   transition: none;
+}
+.j-vtab[data-active="true"] {
+  background-color: var(--j-gold, #e4b643);
+  color: var(--j-black, #000000);
 }
 
 

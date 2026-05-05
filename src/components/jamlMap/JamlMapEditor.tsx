@@ -288,7 +288,7 @@ export function JamlMapEditor({
 
 // ─── Category Selection Menu ─────────────────────────────────────────────────
 
-function CategoryMenu({
+export function CategoryMenu({
   onSelect,
 }: {
   onSelect: (cat: SlotCategory) => void;

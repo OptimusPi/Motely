@@ -2,12 +2,37 @@
 
 import React, { useMemo, useState } from "react";
 import { JamlMapPreview } from "./JamlMapPreview.js";
-import { JamlMapEditor } from "./jamlMap/index.js";
+import {
+  JamlMapEditor,
+  CategoryMenu,
+  JokerPicker,
+  CategoryPicker,
+  VOUCHER_PICKER_CONFIG,
+  TAG_PICKER_CONFIG,
+  BOSS_PICKER_CONFIG,
+  TAROT_PICKER_CONFIG,
+  PLANET_PICKER_CONFIG,
+  SPECTRAL_PICKER_CONFIG,
+  PACK_PICKER_CONFIG,
+  type SlotCategory,
+  type SlotSelection,
+} from "./jamlMap/index.js";
 import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
-import { JamlIdeVisual, type JamlVisualFilter } from "./JamlIdeVisual.js";
+import { JamlIdeVisual, type JamlVisualFilter, type JamlZone, type JamlVisualClause } from "./JamlIdeVisual.js";
 import { JamlCodeEditor } from "./JamlCodeEditor.js";
 import { JimboColorOption } from "../ui/tokens.js";
+import { JimboModal } from "../ui/panel.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
+
+const CATEGORY_CONFIG_MAP = {
+  voucher:  VOUCHER_PICKER_CONFIG,
+  tag:      TAG_PICKER_CONFIG,
+  boss:     BOSS_PICKER_CONFIG,
+  tarot:    TAROT_PICKER_CONFIG,
+  planet:   PLANET_PICKER_CONFIG,
+  spectral: SPECTRAL_PICKER_CONFIG,
+  pack:     PACK_PICKER_CONFIG,
+} as const;
 
 export interface JamlIdeSearchResult {
   seed: string;
@@ -265,6 +290,35 @@ export function JamlIde({
 
   const results = useMemo(() => searchResults, [searchResults]);
 
+  // ── Add-clause picker state ──────────────────────────────────────────────
+  const [addZone, setAddZone] = useState<JamlZone | null>(null);
+  const [pickerFlow, setPickerFlow] = useState<"category" | SlotCategory>("category");
+
+  const handleAddClause = (zone: JamlZone) => {
+    setAddZone(zone);
+    setPickerFlow("category");
+  };
+
+  const handlePickerSelect = (sel: SlotSelection) => {
+    if (!addZone) return;
+    const clause: JamlVisualClause = {
+      id: `${Date.now()}-${Math.random()}`,
+      type: sel.clauseKey,
+      value: sel.value,
+      label: sel.value,
+    };
+    handleVisualFilterChange({ ...activeFilter, [addZone]: [...activeFilter[addZone], clause] });
+    setAddZone(null);
+  };
+
+  const handlePickerClose = () => {
+    if (pickerFlow !== "category") {
+      setPickerFlow("category");
+    } else {
+      setAddZone(null);
+    }
+  };
+
   return (
     <div
       className={className}
@@ -304,7 +358,7 @@ export function JamlIde({
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: JimboColorOption.DARKEST }}>
         {mode === "visual" ? (
-          <JamlIdeVisual filter={activeFilter} onChange={handleVisualFilterChange} />
+          <JamlIdeVisual filter={activeFilter} onChange={handleVisualFilterChange} onAddClause={handleAddClause} />
         ) : null}
 
         {mode === "code" ? (
@@ -323,6 +377,22 @@ export function JamlIde({
           </div>
         ) : null}
       </div>
+
+      <JimboModal open={addZone !== null} onClose={handlePickerClose}>
+        {addZone !== null && (
+          pickerFlow === "category" ? (
+            <CategoryMenu onSelect={(cat) => setPickerFlow(cat)} />
+          ) : pickerFlow === "joker" ? (
+            <JokerPicker onSelect={handlePickerSelect} onCancel={handlePickerClose} />
+          ) : (
+            <CategoryPicker
+              config={CATEGORY_CONFIG_MAP[pickerFlow as keyof typeof CATEGORY_CONFIG_MAP]}
+              onSelect={handlePickerSelect}
+              onCancel={handlePickerClose}
+            />
+          )
+        )}
+      </JimboModal>
     </div>
   );
 }

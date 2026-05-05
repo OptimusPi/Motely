@@ -46,7 +46,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         data-active={active}
         aria-hidden
       >
-        <svg width={14} height={10} viewBox="0 0 14 10" fill="var(--j-gold)">
+        <svg width={14} height={10} viewBox="0 0 14 10">
           <polygon points="7,10 0,0 14,0" />
         </svg>
       </div>
@@ -82,6 +82,7 @@ export function JimboVerticalTabs({ tabs, activeTab, onTabChange, className = ''
             key={tab.id}
             type="button"
             className="j-vtab"
+            data-active={isActive}
             onClick={() => onTabChange(tab.id)}
           >
             <JimboText size="sm" tone={isActive ? 'default' : 'grey'}>{tab.label}</JimboText>
