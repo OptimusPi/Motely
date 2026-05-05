@@ -56,7 +56,7 @@ export interface DeckSpriteProps {
  * Balatro deck box sprite — optionally overlaid with a stake sticker.
  * Draws from the Enhancers.png atlas (deck thumbnails live in the bottom
  * two rows) and stickers.png for the stake band. Uses jaml-ui's
- * `resolveJamlAssetUrl` so consumers can override the CDN base.
+ * `resolveJamlAssetUrl` so consumers can override the asset base URL.
  */
 export function DeckSprite({ deck, stake, size = 50, className = '', style }: DeckSpriteProps) {
   const deckKey = (deck || 'erratic').toLowerCase().replace(/\s*deck$/, '').trim()
