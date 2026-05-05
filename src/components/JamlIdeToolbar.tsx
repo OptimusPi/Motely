@@ -40,7 +40,7 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
     >
       {onSearch ? <div /> : null}
 
-      <div style={{ minWidth: 0, overflow: "hidden", width: "100%" }}>
+      <div style={{ minWidth: 0, width: "100%", overflow: "visible", paddingBottom: 3 }}>
         <JimboTabs
           tabs={tabs}
           activeTab={mode}
