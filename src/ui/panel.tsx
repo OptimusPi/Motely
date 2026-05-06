@@ -109,14 +109,10 @@ export function JimboModal({ children, open, onClose, title, className, showBack
   if (!open) return null
 
   return (
-    <div
-      className="j-modal-overlay"
-      onClick={onClose}
-    >
+    <div className="j-modal-overlay">
       <JimboPanel
         onBack={showBack ? onClose : undefined}
         className={`j-modal ${className ?? ''}`}
-        onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         {title && <JimboText as="h2" size="lg" className="j-modal__title">{title}</JimboText>}
         {children}
