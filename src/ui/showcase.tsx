@@ -134,8 +134,8 @@ export function Showcase({
       <JimboAppFooter>
         <JimboButton tone="green" fullWidth size="lg" onClick={onNewSearch}>New Search</JimboButton>
         <JimboButton tone="blue"  fullWidth size="lg" onClick={onBrowseFilters}>Browse Filters</JimboButton>
-        <JimboBalatroFooter />
       </JimboAppFooter>
+      <JimboBalatroFooter />
     </JimboApp>
   )
 }

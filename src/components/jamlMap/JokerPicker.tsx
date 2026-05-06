@@ -146,18 +146,11 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
       {/* Specific joker step */}
       {step === "specific" && selectedRarity && (
         <>
-          {/* Header Action Row for Specific Joker */}
-          <div className="j-flex j-items-center" style={{
-            justifyContent: "space-between",
-            padding: "8px 10px",
-            borderBottom: `2px solid ${C.PANEL_EDGE}`,
-          }}>
-            <JimboButton tone="orange" size="xs" onClick={() => setStep("rarity")}>← Back</JimboButton>
+          <div className="j-flex j-items-center j-justify-center" style={{ padding: "8px 10px 4px" }}>
             <JimboText size="md">{RARITY_META[selectedRarity].label} Jokers</JimboText>
-            <div style={{ width: 44 }} />
           </div>
 
-          <div className="j-flex j-gap-sm" style={{ padding: "8px 10px 4px" }}>
+          <div className="j-flex j-gap-sm" style={{ padding: "4px 10px 4px" }}>
             <input
               className="j-seed-input__field"
               type="text"
@@ -210,6 +203,11 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
                 <JimboText size="sm" tone="grey">No jokers match "{search}"</JimboText>
               </div>
             )}
+          </div>
+
+          {/* Back always last */}
+          <div style={{ padding: "4px 10px 10px" }}>
+            <JimboButton tone="orange" size="md" fullWidth onClick={() => setStep("rarity")}>Back</JimboButton>
           </div>
         </>
       )}

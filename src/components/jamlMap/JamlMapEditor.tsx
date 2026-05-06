@@ -87,8 +87,7 @@ const ZONE_LABEL: Record<JamlZone, string> = {
   mustnot: "Avoid",
 };
 
-const CATEGORY_CONFIG_MAP: Record<SlotCategory, typeof VOUCHER_PICKER_CONFIG> = {
-  joker: VOUCHER_PICKER_CONFIG,
+const CATEGORY_CONFIG_MAP: Partial<Record<SlotCategory, typeof VOUCHER_PICKER_CONFIG>> = {
   voucher: VOUCHER_PICKER_CONFIG,
   tag: TAG_PICKER_CONFIG,
   boss: BOSS_PICKER_CONFIG,
@@ -235,7 +234,7 @@ export function JamlMapEditor({
         WebkitOverflowScrolling: "touch",
         overscrollBehaviorY: "contain",
       }}>
-        {Array.from({ length: 40 }, (_, i) => i).map((a) => (
+        {Array.from({ length: 8 }, (_, i) => i + 1).map((a) => (
           <div key={a} style={{
             scrollSnapAlign: "start",
             scrollSnapStop: "always",
@@ -344,7 +343,7 @@ export function JamlMapEditor({
               </div>
             ) : (
               <CategoryPicker
-                config={CATEGORY_CONFIG_MAP[pickerFlow as SlotCategory]}
+                config={CATEGORY_CONFIG_MAP[pickerFlow as SlotCategory]!}
                 onSelect={handleItemSelect}
               />
             )}
