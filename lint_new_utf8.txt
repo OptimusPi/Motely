@@ -1,0 +1,127 @@
+﻿
+X:\jaml-ui\demo\App.tsx
+    7:3   error    'JamlSeedInput' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+   68:23  error    'f' is defined but never used                                                                                        @typescript-eslint/no-unused-vars
+   83:21  error    'setStartSeed' is assigned a value but never used                                                                    @typescript-eslint/no-unused-vars
+  103:6   warning  React Hook useCallback has an unnecessary dependency: 'startSeed'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+X:\jaml-ui\demo\vite.config.ts
+  3:10  error  'resolve' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\AnalyzerExplorer.tsx
+  3:17  error  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+  3:49  error  'useState' is defined but never used     @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\DeckSprite.tsx
+   6:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  26:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+X:\jaml-ui\src\components\GameCard.tsx
+  220:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+X:\jaml-ui\src\components\JamlAnalyzerFullscreen.tsx
+  3:30  error  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+  3:58  error  'useState' is defined but never used   @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\JamlIde.tsx
+  28:10  error  'DECK_OPTIONS' is defined but never used   @typescript-eslint/no-unused-vars
+  28:24  error  'STAKE_OPTIONS' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\JamlIdeVisual.tsx
+  398:11  error  'DragState' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\JamlMapPreview.tsx
+  57:3  error  'color' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\jamlMap\CategoryPicker.tsx
+    4:28  error    'withAlpha' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+    5:10  error    'JimboButton' is defined but never used                                                                                         @typescript-eslint/no-unused-vars
+   40:52  error    'onCancel' is defined but never used                                                                                            @typescript-eslint/no-unused-vars
+  174:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  183:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  192:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  202:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  212:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  222:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  232:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+X:\jaml-ui\src\components\jamlMap\JamlMapEditor.stories.tsx
+   4:15  error  'JamlVisualClause' is defined but never used  @typescript-eslint/no-unused-vars
+  31:12  error  'jamlStr' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\jamlMap\JamlMapEditor.tsx
+  2:40  error  'useMemo' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\jamlMap\JokerPicker.tsx
+   4:28  error  'withAlpha' is defined but never used         @typescript-eslint/no-unused-vars
+   8:10  error  'WILDCARD_SPRITES' is defined but never used  @typescript-eslint/no-unused-vars
+  90:41  error  'onCancel' is defined but never used          @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\components\jamlMap\MysterySlot.tsx
+   6:10  error  'WILDCARD_SPRITES' is defined but never used  @typescript-eslint/no-unused-vars
+  61:10  error  'getWildcardName' is defined but never used   @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\hooks\useShopStream.ts
+  53:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+X:\jaml-ui\src\hooks\useShopStream.ts:53:5
+  51 |     const base = initialItems.map(i => ({ ...i }));
+  52 |
+> 53 |     setItems(base);
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  54 |     setError(null);
+  55 |     setReady(false);
+  56 |     setLoading(true);  react-hooks/set-state-in-effect
+  84:6  warning  React Hook useEffect was passed a dependency list that is not an array literal. This means we can't statically verify whether you've passed the correct dependencies                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+  84:6  warning  React Hook useEffect has missing dependencies: 'initStream', 'initialItems', and 'nextItem'. Either include them or remove the dependency array. If 'initStream' changes too often, find the parent component that defines it and wrap that definition in useCallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+
+X:\jaml-ui\src\lib\SpriteMapper.ts
+  1:60  error  'editionMap' is defined but never used  @typescript-eslint/no-unused-vars
+  1:72  error  'stickerMap' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\lib\cardParser.ts
+  12:7  error  'RANKS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  13:7  error  'SUITS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\lib\hooks\useDragScroll.ts
+  1:39  error  'MouseEvent' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\r3f\Card3D.tsx
+   3:37  error    'useEffect' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+   9:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  10:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+X:\jaml-ui\src\ui\hooks.ts
+  1:41  error  'useMemo' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\ui\ide\JamlBuilder.tsx
+   6:10  error  'DECK_OPTIONS' is defined but never used               @typescript-eslint/no-unused-vars
+   6:24  error  'STAKE_OPTIONS' is defined but never used              @typescript-eslint/no-unused-vars
+   9:10  error  'cn' is defined but never used                         @typescript-eslint/no-unused-vars
+  10:10  error  'X' is defined but never used                          @typescript-eslint/no-unused-vars
+  10:13  error  'Edit2' is defined but never used                      @typescript-eslint/no-unused-vars
+  10:37  error  'Square' is defined but never used                     @typescript-eslint/no-unused-vars
+  10:62  error  'Flame' is defined but never used                      @typescript-eslint/no-unused-vars
+  14:10  error  'JAML_PRESETS' is defined but never used               @typescript-eslint/no-unused-vars
+  18:9   error  'filter' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  21:9   error  'updateFilter' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  22:9   error  'addClause' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  23:9   error  'editClause' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  24:9   error  'deleteClause' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  25:9   error  'editingClause' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  26:9   error  'setEditingClause' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\jaml-ui\src\ui\ide\JamlEditor.tsx
+  103:42  error  'onStartEdit' is defined but never used  @typescript-eslint/no-unused-vars
+  103:62  error  'darkColor' is defined but never used    @typescript-eslint/no-unused-vars
+  426:35  error  'index' is defined but never used        @typescript-eslint/no-unused-vars
+  495:5   error  'onAddLine' is defined but never used    @typescript-eslint/no-unused-vars
+
+✖ 65 problems (50 errors, 15 warnings)
+

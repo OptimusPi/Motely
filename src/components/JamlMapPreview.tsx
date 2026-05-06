@@ -54,12 +54,10 @@ const GLOW_ANIMATION = `
 
 function ClausePill({ 
   item, 
-  color, 
   glow, 
   matchCount 
 }: { 
   item: JamlPreviewItem; 
-  color: string; 
   glow: string; 
   matchCount: number;
 }) {
@@ -177,7 +175,6 @@ function ZoneRail({
               <ClausePill 
                 key={item.id} 
                 item={item} 
-                color={meta.color} 
                 glow={meta.glow}
                 matchCount={count}
               />

@@ -4,7 +4,6 @@ import {
   JamlAnalyzerFullscreen,
   JamlAestheticSelector,
   JamlMapEditor,
-  JamlSeedInput,
   JimboBackground,
   JimboButton,
   JimboPanel,
@@ -65,7 +64,7 @@ function HomePage({ onNavigate }: { onNavigate: (r: Route) => void }) {
       }}
       onNewSearch={() => onNavigate("search")}
       onBrowseFilters={() => {/* TODO: filter browser view */}}
-      onFilterClick={(f) => {
+      onFilterClick={() => {
         // TODO: load filter and navigate to search
         onNavigate("search");
       }}
@@ -80,7 +79,7 @@ function HomePage({ onNavigate }: { onNavigate: (r: Route) => void }) {
 function SearchPage({ onBack }: { onBack: () => void }) {
   const [jamlText, setJamlText] = useState("");
   const [searchMode, setSearchMode] = useState<SearchMode>("random");
-  const [startSeed, setStartSeed] = useState("AAAAAAAA");
+
   const [aesthetic, setAesthetic] = useState<JamlAestheticOption | null>(null);
   const [resultIndex, setResultIndex] = useState(0);
   const [showEditor, setShowEditor] = useState(false);
@@ -100,7 +99,7 @@ function SearchPage({ onBack }: { onBack: () => void }) {
     } else {
       search.start(jamlText, 1_000_000);
     }
-  }, [isSearching, searchMode, jamlText, startSeed, aesthetic, search]);
+  }, [isSearching, searchMode, jamlText, aesthetic, search]);
 
   const currentSeed = search.results[resultIndex]?.seed;
   const currentScore = search.results[resultIndex]?.score;

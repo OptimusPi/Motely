@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { MysterySlot, type SlotSelection, type JamlZone, type SlotCategory } from "./MysterySlot.js";
 import { JokerPicker } from "./JokerPicker.js";
 import {
@@ -105,16 +105,15 @@ export function JamlMapEditor({
   onChange,
 }: JamlMapEditorProps) {
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
   const [currentZone, setCurrentZone] = useState<JamlZone>(initialZone);
-  const [ante, setAnte] = useState<number>(1);
   const [antesState, setAntesState] = useState<Record<number, AnteSelections>>({});
   const [activeSlot, setActiveSlot] = useState<ActiveSlot | null>(null);
   const [activePackDetail, setActivePackDetail] = useState<PackDetailState | null>(null);
   const [pickerFlow, setPickerFlow] = useState<PickerFlow>("category");
   const [activePackSelection, setActivePackSelection] = useState<ActivePackSelection | null>(null);
-
-  const currentAnteSelections = antesState[ante] || {};
 
   const handleSlotTap = useCallback((anteIndex: number, id: string, forceCategory?: SlotCategory) => {
     const existing = (antesState[anteIndex] || {})[id];
@@ -198,7 +197,7 @@ export function JamlMapEditor({
     setActivePackDetail(null);
   }, []);
 
-  const jamlText = useMemo(() => buildJamlText(antesState), [antesState]);
+
   const activePackDetailSelection = activePackDetail
     ? (antesState[activePackDetail.ante] || {})[activePackDetail.id]
     : undefined;
@@ -325,7 +324,6 @@ export function JamlMapEditor({
             ) : pickerFlow === "joker" ? (
               <JokerPicker
                 onSelect={handleItemSelect}
-                onCancel={handlePickerCancel}
               />
             ) : pickerFlow === "packUnsupported" ? (
               <div className="j-flex-col j-gap-sm" style={{ padding: 10, maxWidth: 360 }}>
@@ -348,7 +346,6 @@ export function JamlMapEditor({
               <CategoryPicker
                 config={CATEGORY_CONFIG_MAP[pickerFlow as SlotCategory]}
                 onSelect={handleItemSelect}
-                onCancel={handlePickerCancel}
               />
             )}
           </div>

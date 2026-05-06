@@ -100,8 +100,8 @@ function SuggestionList({ suggestions, selectedIndex, onSelect, onHover }: {
     );
 }
 
-function AntesToggle({ values, onToggle, onStartEdit, color, darkColor }: {
-    values: string[], onToggle: (val: string) => void, onStartEdit: () => void, color: string, darkColor: string
+function AntesToggle({ values, onToggle, color }: {
+    values: string[], onToggle: (val: string) => void, color: string
 }) {
     const [expanded, setExpanded] = useState(false);
     const maxAnte = 8;
@@ -286,15 +286,15 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
 
     const linesToJaml = useCallback((linesList: ParsedLine[]): string => linesList.map(l => l.raw).join('\n'), []);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    useEffect(() => {
-        const text = initialJaml || DEFAULT_JAML;
-        // Prevent feedback loop: If the incoming text matches what we already have, don't re-parse/reset.
-        // This is crucial when onJamlChange -> parent -> initialJaml cycle exists.
-        if (lines.length > 0 && linesToJaml(lines) === text) return;
+    const [prevInitialJaml, setPrevInitialJaml] = useState(initialJaml);
 
-        setLines(parseJamlToLines(text));
-    }, [initialJaml, parseJamlToLines, lines, linesToJaml]);
+    if (initialJaml !== prevInitialJaml) {
+        setPrevInitialJaml(initialJaml);
+        const text = initialJaml || DEFAULT_JAML;
+        if (lines.length === 0 || linesToJaml(lines) !== text) {
+            setLines(parseJamlToLines(text));
+        }
+    }
 
     const updateLineValue = useCallback((lineId: string, part: 'key' | 'value', newValue: string) => {
         const newLines = lines.map(line => {
@@ -377,22 +377,7 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
         if (onJamlChange) { try { onJamlChange(txt, yaml.load(txt), true); } catch { onJamlChange(txt, null, false); } }
     }, [lines, linesToJaml, onJamlChange]);
 
-    const addLineAfter = useCallback((afterLineId: string, content: string) => {
-        const index = lines.findIndex(l => l.id === afterLineId);
-        if (index === -1) return;
-        const currentLine = lines[index];
-        const newLineRaw = ' '.repeat(currentLine.indent) + content;
-        const newParsed = parseJamlToLines(newLineRaw)[0];
-        const newLine: ParsedLine = { ...newParsed, id: `line-new-${Date.now()}`, clauseType: currentLine.clauseType };
 
-        const newLines = [...lines];
-        newLines.splice(index + 1, 0, newLine);
-        const renumbered = newLines.map((l, i) => ({ ...l, lineNumber: i, id: `line-${i}` })); // simplified ID update
-
-        setLines(renumbered);
-        const txt = linesToJaml(renumbered);
-        if (onJamlChange) { try { onJamlChange(txt, yaml.load(txt), true); } catch { onJamlChange(txt, null, false); } }
-    }, [lines, linesToJaml, onJamlChange, parseJamlToLines]);
 
     const deleteLine = useCallback((lineId: string) => {
         const filtered = lines.filter(l => l.id !== lineId);
@@ -423,7 +408,7 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
             tabIndex={0}
         >
             <div className="flex flex-col gap-0.5">
-                {lines.map((line, index) => (
+                {lines.map((line) => (
                     <JamlLine
                         key={line.id}
                         line={line}
@@ -446,7 +431,6 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
                         onArrayItemAdd={(val) => addArrayItem(line.id, val)}
                         onArrayItemRemove={(idx) => removeArrayItem(line.id, idx)}
                         onDelete={() => deleteLine(line.id)}
-                        onAddLine={(content) => addLineAfter(line.id, content)}
                     />
                 ))}
             </div>
@@ -476,7 +460,6 @@ interface JamlLineProps {
     onArrayItemAdd: (val: string) => void;
     onArrayItemRemove: (idx: number) => void;
     onDelete: () => void;
-    onAddLine: (content: string) => void;
 }
 
 function JamlLine({
@@ -491,13 +474,48 @@ function JamlLine({
     onArrayItemChange,
     onArrayItemAdd,
     onArrayItemRemove,
-    onDelete,
-    onAddLine
+    onDelete
 }: JamlLineProps) {
 
-    const [suggestions, setSuggestions] = useState<CompletionData[]>([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [localValue, setLocalValue] = useState('');
+    const [prevContext, setPrevContext] = useState('');
+    const [prevEditState, setPrevEditState] = useState({ isEditing, editingPart, editingArrayIndex, lineRaw: line.raw });
+
+    if (
+        isEditing !== prevEditState.isEditing ||
+        editingPart !== prevEditState.editingPart ||
+        editingArrayIndex !== prevEditState.editingArrayIndex ||
+        line.raw !== prevEditState.lineRaw
+    ) {
+        setPrevEditState({ isEditing, editingPart, editingArrayIndex, lineRaw: line.raw });
+        if (isEditing) {
+            if (editingPart === 'key') setLocalValue(line.key || '');
+            else if (editingPart === 'value') setLocalValue((line.value || '').replace(/^~|~$/g, ''));
+            else if (editingPart === 'arrayItem' && editingArrayIndex !== null) setLocalValue(line.arrayValues?.[editingArrayIndex] || '');
+            else setLocalValue('');
+        }
+    }
+
+    const currentContext = useMemo(() => {
+        if (!isEditing || !editingPart) return '';
+        if (editingPart === 'value' && line.key) {
+            return `${line.key}: ${localValue}`;
+        } else if (editingPart === 'key') {
+            return localValue;
+        }
+        return line.raw;
+    }, [isEditing, editingPart, localValue, line.raw, line.key]);
+
+    const suggestions = useMemo(() => {
+        if (!currentContext) return [];
+        return JamlCompletionService.getCompletions(currentContext).slice(0, 10);
+    }, [currentContext]);
+
+    if (currentContext !== prevContext) {
+        setPrevContext(currentContext);
+        setSelectedIndex(0);
+    }
     const inputRef = useRef<HTMLInputElement>(null);
     const targetRef = useRef<HTMLDivElement>(null);
 
@@ -526,34 +544,14 @@ function JamlLine({
         }
     };
 
-    // Suggestions Logic
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    useEffect(() => {
-        if (isEditing && editingPart) {
-            let textContext = line.raw;
-            if (editingPart === 'value' && line.key) {
-                textContext = `${line.key}: ${localValue}`;
-            } else if (editingPart === 'key') {
-                textContext = localValue;
-            }
-
-            const sugs = JamlCompletionService.getCompletions(textContext);
-            setSuggestions(sugs.slice(0, 10));
-            setSelectedIndex(0);
-        }
-    }, [isEditing, editingPart, localValue, line.raw, line.key]);
+    // Suggestions Logic derived above
 
     // Input Focus
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => {
         if (isEditing && inputRef.current) {
             inputRef.current.focus();
-            if (editingPart === 'key') setLocalValue(line.key || '');
-            else if (editingPart === 'value') setLocalValue((line.value || '').replace(/^~|~$/g, ''));
-            else if (editingPart === 'arrayItem' && editingArrayIndex !== null) setLocalValue(line.arrayValues?.[editingArrayIndex] || '');
-            else setLocalValue('');
         }
-    }, [isEditing, editingPart, editingArrayIndex, line]);
+    }, [isEditing]);
 
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -670,9 +668,7 @@ function JamlLine({
                                 if (idx >= 0) onArrayItemRemove(idx);
                                 else onArrayItemAdd(val);
                             }}
-                            onStartEdit={() => onStartEdit('arrayItem', 0)}
                             color={getBrightColor()}
-                            darkColor={getBaseColor()}
                         />
                     ) : (
                         <div className="flex gap-0.5 items-center">

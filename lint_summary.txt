@@ -1,0 +1,71 @@
+X:\jaml-ui\src\components\GameCard.tsx
+  220:17 react-refresh/only-export-components - Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+X:\jaml-ui\src\components\RunConfigModal.tsx
+  58:7 react-hooks/set-state-in-effect - Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+X:\jaml-ui\src\components\RunConfigModal.tsx:58:7
+  56 |   React.useEffect(() => {
+  57 |     if (open) {
+> 58 |       setActiveDeck(deck);
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  59 |       setActiveStake(stake);
+  60 |     }
+  61 |   }, [open, deck, stake]);
+X:\jaml-ui\src\components\jamlMap\JamlMapEditor.stories.tsx
+  4:15 @typescript-eslint/no-unused-vars - 'JamlVisualClause' is defined but never used.
+  31:12 @typescript-eslint/no-unused-vars - 'jamlStr' is assigned a value but never used.
+X:\jaml-ui\src\components\jamlMap\JamlMapEditor.tsx
+  2:40 @typescript-eslint/no-unused-vars - 'useMemo' is defined but never used.
+X:\jaml-ui\src\components\jamlMap\JokerPicker.tsx
+  4:28 @typescript-eslint/no-unused-vars - 'withAlpha' is defined but never used.
+  8:10 @typescript-eslint/no-unused-vars - 'WILDCARD_SPRITES' is defined but never used.
+  90:41 @typescript-eslint/no-unused-vars - 'onCancel' is defined but never used.
+X:\jaml-ui\src\components\jamlMap\MysterySlot.tsx
+  6:10 @typescript-eslint/no-unused-vars - 'WILDCARD_SPRITES' is defined but never used.
+  61:10 @typescript-eslint/no-unused-vars - 'getWildcardName' is defined but never used.
+X:\jaml-ui\src\hooks\useShopStream.ts
+  55:5 null - Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect').
+  57:5 null - Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect').
+  59:5 null - Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect').
+  61:5 null - Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect').
+X:\jaml-ui\src\lib\SpriteMapper.ts
+  1:60 @typescript-eslint/no-unused-vars - 'editionMap' is defined but never used.
+  1:72 @typescript-eslint/no-unused-vars - 'stickerMap' is defined but never used.
+X:\jaml-ui\src\lib\cardParser.ts
+  12:7 @typescript-eslint/no-unused-vars - 'RANKS' is assigned a value but never used.
+  13:7 @typescript-eslint/no-unused-vars - 'SUITS' is assigned a value but never used.
+X:\jaml-ui\src\lib\hooks\useDragScroll.ts
+  1:39 @typescript-eslint/no-unused-vars - 'MouseEvent' is defined but never used.
+X:\jaml-ui\src\r3f\Card3D.tsx
+  3:37 @typescript-eslint/no-unused-vars - 'useEffect' is defined but never used.
+  9:14 react-refresh/only-export-components - Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+  10:14 react-refresh/only-export-components - Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+X:\jaml-ui\src\ui\hooks.ts
+  1:41 @typescript-eslint/no-unused-vars - 'useMemo' is defined but never used.
+X:\jaml-ui\src\ui\ide\JamlBuilder.tsx
+  6:10 @typescript-eslint/no-unused-vars - 'DECK_OPTIONS' is defined but never used.
+  6:24 @typescript-eslint/no-unused-vars - 'STAKE_OPTIONS' is defined but never used.
+  9:10 @typescript-eslint/no-unused-vars - 'cn' is defined but never used.
+  10:10 @typescript-eslint/no-unused-vars - 'X' is defined but never used.
+  10:13 @typescript-eslint/no-unused-vars - 'Edit2' is defined but never used.
+  10:37 @typescript-eslint/no-unused-vars - 'Square' is defined but never used.
+  10:62 @typescript-eslint/no-unused-vars - 'Flame' is defined but never used.
+  14:10 @typescript-eslint/no-unused-vars - 'JAML_PRESETS' is defined but never used.
+  18:9 @typescript-eslint/no-unused-vars - 'filter' is assigned a value but never used.
+  21:9 @typescript-eslint/no-unused-vars - 'updateFilter' is assigned a value but never used.
+  22:9 @typescript-eslint/no-unused-vars - 'addClause' is assigned a value but never used.
+  23:9 @typescript-eslint/no-unused-vars - 'editClause' is assigned a value but never used.
+  24:9 @typescript-eslint/no-unused-vars - 'deleteClause' is assigned a value but never used.
+  25:9 @typescript-eslint/no-unused-vars - 'editingClause' is assigned a value but never used.
+  26:9 @typescript-eslint/no-unused-vars - 'setEditingClause' is assigned a value but never used.
+X:\jaml-ui\src\ui\ide\JamlEditor.tsx
+  103:42 @typescript-eslint/no-unused-vars - 'onStartEdit' is defined but never used.
+  103:62 @typescript-eslint/no-unused-vars - 'darkColor' is defined but never used.
+  426:35 @typescript-eslint/no-unused-vars - 'index' is defined but never used.
+  495:5 @typescript-eslint/no-unused-vars - 'onAddLine' is defined but never used.

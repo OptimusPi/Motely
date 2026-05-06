@@ -3,27 +3,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import { useJamlFilter } from '../../lib/hooks/useJamlFilter';
-import { DECK_OPTIONS, STAKE_OPTIONS } from '../../lib/data/constants';
+
 import JamlEditor from './JamlEditor';
 
-import { cn } from '../../lib/utils';
-import { X, Edit2, Loader2, Search, Square, Copy, RotateCcw, Flame, Sparkles } from 'lucide-react';
+
+import { Loader2, Search, Copy, RotateCcw, Sparkles } from 'lucide-react';
 import { Motely } from 'motely-wasm';
 import { AgnosticSeedCard } from './AgnosticSeedCard';
 import { WasmStatus } from './WasmStatus';
-import { JAML_PRESETS } from '../../lib/jaml/jamlPresets.js';
+
 
 export default function JamlBuilder() {
     const {
-        filter,
         jamlText,
-        setFromJaml,
-        updateFilter,
-        addClause,
-        editClause,
-        deleteClause,
-        editingClause,
-        setEditingClause
+        setFromJaml
     } = useJamlFilter();
 
     const [isSearching, setIsSearching] = useState(false);
@@ -33,14 +26,29 @@ export default function JamlBuilder() {
     const stopRef = useRef(false);
     const searchCleanupRef = useRef<(() => void) | null>(null);
 
+    const workerRef = useRef<Worker | null>(null);
+
+    const handleStop = async () => {
+        stopRef.current = true;
+        setIsSearching(false);
+
+        if (workerRef.current) {
+            workerRef.current.postMessage({ type: 'stop' });
+            // The worker will reply with 'cancelled' and terminate itself
+        }
+
+        if (searchCleanupRef.current) {
+            searchCleanupRef.current();
+            searchCleanupRef.current = null;
+        }
+    };
+
     useEffect(() => {
         return () => {
             if (searchCleanupRef.current) searchCleanupRef.current();
             handleStop();
         };
     }, []);
-    const pollRef = useRef<NodeJS.Timeout | null>(null);
-    const workerRef = useRef<Worker | null>(null);
 
     const handleSearch = async () => {
         // Stop any existing search
@@ -103,20 +111,7 @@ export default function JamlBuilder() {
         }
     };
 
-    const handleStop = async () => {
-        stopRef.current = true;
-        setIsSearching(false);
 
-        if (workerRef.current) {
-            workerRef.current.postMessage({ type: 'stop' });
-            // The worker will reply with 'cancelled' and terminate itself
-        }
-
-        if (searchCleanupRef.current) {
-            searchCleanupRef.current();
-            searchCleanupRef.current = null;
-        }
-    };
 
 
     const handleCopyJaml = () => {

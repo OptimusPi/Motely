@@ -3,6 +3,7 @@
 import React from 'react'
 import { resolveJamlAssetUrl } from '../assets.js'
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const DECK_SPRITE_POS: Record<string, { x: number; y: number }> = {
   red:        { x: 0, y: 0 },
   nebula:     { x: 3, y: 0 },
@@ -23,6 +24,7 @@ export const DECK_SPRITE_POS: Record<string, { x: number; y: number }> = {
   zodiac:     { x: 3, y: 4 },
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const STAKE_SPRITE_POS: Record<string, { x: number; y: number }> = {
   white:  { x: 1, y: 0 },
   red:    { x: 2, y: 0 },

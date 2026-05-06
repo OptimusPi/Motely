@@ -217,6 +217,7 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
     return { kind: "unknown", label: displayName };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function resolveAnalyzerShopItem(item: AnalyzerShopItem, scale = 1): AnalyzerResolvedItem {
     const displayName = String(item.name || "").trim();
 

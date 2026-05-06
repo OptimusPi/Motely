@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { JamlVisualClause, JamlVisualFilter, JamlZone } from '../components/JamlIdeVisual.js'
 import { JIMBO_ANIMATIONS } from './tokens.js'
 import { Layer } from '../render/Layer.js'
@@ -83,14 +83,22 @@ export function useSway(active: boolean) {
 export function useDelayedVisibility(open: boolean, delay: number) {
   const [visible, setVisible] = useState(open)
   const [opacity, setOpacity] = useState(open ? 1 : 0)
+  const [prevOpen, setPrevOpen] = useState(open)
+
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
+      setVisible(true)
+    } else {
+      setOpacity(0)
+    }
+  }
 
   useEffect(() => {
     if (open) {
-      setVisible(true)
       const frame = requestAnimationFrame(() => setOpacity(1))
       return () => cancelAnimationFrame(frame)
     } else {
-      setOpacity(0)
       const t = setTimeout(() => setVisible(false), delay)
       return () => clearTimeout(t)
     }
@@ -500,15 +508,16 @@ export function useJamlCardRenderer({
  */
 export function useAnteTracker(antes: { ante: number }[], options: { threshold?: number[] } = {}) {
   const [currentAnte, setCurrentAnte] = useState(antes[0]?.ante ?? 0)
+  const [prevFirstAnte, setPrevFirstAnte] = useState(antes[0]?.ante)
   const scrollRef = useRef<HTMLDivElement>(null)
   const anteRefs = useRef<Map<number, HTMLElement>>(new Map())
 
-  useEffect(() => {
-    // Reset to first ante when list changes
+  if (antes[0]?.ante !== prevFirstAnte) {
+    setPrevFirstAnte(antes[0]?.ante)
     if (antes.length > 0) {
       setCurrentAnte(antes[0].ante)
     }
-  }, [antes])
+  }
 
   useEffect(() => {
     const root = scrollRef.current

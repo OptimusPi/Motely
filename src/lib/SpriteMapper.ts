@@ -1,4 +1,4 @@
-import { jokers, tarotsAndPlanets, vouchers, boosterPacks, editionMap, stickerMap, jokerFaces, consumablesFaces, bosses, tags } from './const';
+import { jokers, tarotsAndPlanets, vouchers, boosterPacks, jokerFaces, consumablesFaces, bosses, tags } from './const';
 
 interface SpritePos {
     x: number;

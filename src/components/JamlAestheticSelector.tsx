@@ -2,6 +2,7 @@
 
 import React from "react";
 import { JimboText } from "../ui/jimboText.js";
+import { JimboButton } from "../ui/panel.js";
 
 export type JamlAestheticOption = "Palindrome" | "Psychosis" | "Gross" | "Nsfw" | "Funny" | "Balatro";
 

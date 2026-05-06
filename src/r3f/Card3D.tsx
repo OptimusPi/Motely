@@ -1,12 +1,14 @@
 'use client'
 
-import { useRef, useMemo, useState, useEffect, memo } from 'react'
+import { useRef, useMemo, useState, memo } from 'react'
 import { useFrame, useLoader, type ThreeEvent } from '@react-three/fiber'
 import { useSpring, animated } from '@react-spring/three'
 import * as THREE from 'three'
 import type { MotelySpriteData } from '../decode/motelySprite.js'
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const CARD_DIMENSIONS = { WIDTH: 0.7, HEIGHT: 0.95, DEPTH: 0.02 } as const
+// eslint-disable-next-line react-refresh/only-export-components
 export const CARD_MAGNET = {
   MAX_TILT_X: 0.36,
   MAX_TILT_Y: 0.42,

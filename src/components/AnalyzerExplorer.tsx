@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useAnteTracker } from "../ui/hooks.js";
 import {
   JamlBoss,

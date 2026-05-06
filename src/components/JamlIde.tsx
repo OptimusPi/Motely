@@ -25,7 +25,7 @@ import { JimboColorOption } from "../ui/tokens.js";
 import { JimboModal } from "../ui/panel.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
 import { DeckSprite } from "./DeckSprite.js";
-import { DECK_OPTIONS, STAKE_OPTIONS } from "../lib/data/constants.js";
+
 
 const CATEGORY_CONFIG_MAP = {
   voucher: VOUCHER_PICKER_CONFIG,
@@ -468,12 +468,11 @@ export function JamlIde({
           pickerFlow === "category" ? (
             <CategoryMenu onSelect={(cat) => setPickerFlow(cat)} />
           ) : pickerFlow === "joker" ? (
-            <JokerPicker onSelect={handlePickerSelect} onCancel={handlePickerClose} />
+            <JokerPicker onSelect={handlePickerSelect} />
           ) : (
             <CategoryPicker
               config={CATEGORY_CONFIG_MAP[pickerFlow as keyof typeof CATEGORY_CONFIG_MAP]}
               onSelect={handlePickerSelect}
-              onCancel={handlePickerClose}
             />
           )
         )}

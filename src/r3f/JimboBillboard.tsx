@@ -13,16 +13,18 @@ export interface JimboBillboardProps {
   position?: [number, number, number]
 }
 
-export function JimboBillboard({
+export function JimboBillboard(props: JimboBillboardProps) {
+  if (!props.sprite) return null;
+  return <JimboBillboardInner {...props} sprite={props.sprite} />;
+}
+
+function JimboBillboardInner({
   sprite,
-  label,
   width = 3.4,
   height = 4.5,
   yLockOnly = false,
   position = [0, 0, 0]
-}: JimboBillboardProps) {
-  if (!sprite) return null;
-
+}: Omit<JimboBillboardProps, 'sprite'> & { sprite: MotelySpriteData }) {
   // Memoize texture to avoid per-render allocation
   const texture = useLoader(THREE.TextureLoader, sprite.atlasPath);
 

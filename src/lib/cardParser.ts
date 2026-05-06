@@ -9,8 +9,7 @@ export interface ParsedCard {
 const ENHANCEMENTS = ["Bonus", "Mult", "Wild", "Lucky", "Glass", "Steel", "Stone", "Gold"];
 const SEALS = ["Gold", "Purple", "Red", "Blue"];
 const EDITIONS = ["Foil", "Holographic", "Polychrome", "Negative"];
-const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"];
-const SUITS = ["Hearts", "Clubs", "Diamonds", "Spades"];
+
 
 // Internal Balatro short codes
 const RANK_MAP: Record<string, string> = {
@@ -25,22 +24,26 @@ export function parseCardToken(item: unknown): ParsedCard | null {
     if (!item) return null;
 
     // 1. If it's already an object with rank/suit
-    if (typeof item === 'object' && (item.rank || item.base)) {
-        let rank = item.rank || item.base?.[2] || item.base?.[0]; // Handle different analyzer versions
-        let suit = item.suit || item.base?.[0];
+    if (typeof item === 'object') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const obj = item as Record<string, any>;
+        if (obj.rank || obj.base) {
+            let rank = obj.rank || obj.base?.[2] || obj.base?.[0]; // Handle different analyzer versions
+            let suit = obj.suit || obj.base?.[0];
 
-        // Normalize
-        rank = RANK_MAP[rank] || rank;
-        suit = SUIT_MAP[suit] || suit;
-        if (suit && !suit.endsWith('s')) suit += 's';
+            // Normalize
+            rank = RANK_MAP[rank] || rank;
+            suit = SUIT_MAP[suit] || suit;
+            if (suit && !suit.endsWith('s')) suit += 's';
 
-        return {
-            rank: rank || "Ace",
-            suit: suit || "Spades",
-            enhancement: item.enhancement || item.modifier || null,
-            seal: item.seal || null,
-            edition: item.edition || null
-        };
+            return {
+                rank: rank || "Ace",
+                suit: suit || "Spades",
+                enhancement: obj.enhancement || obj.modifier || null,
+                seal: obj.seal || null,
+                edition: obj.edition || null
+            };
+        }
     }
 
     // 2. If it's a string token

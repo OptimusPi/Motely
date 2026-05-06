@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { JamlBoss, JamlGameCard, JamlTag, JamlVoucher, resolveAnalyzerShopItem } from "./GameCard.js";
 import { useMotelyStream, type StreamItem } from "../hooks/useShopStream.js";
 import { useInfiniteScroll } from "../hooks/useIntersectionObserver.js";

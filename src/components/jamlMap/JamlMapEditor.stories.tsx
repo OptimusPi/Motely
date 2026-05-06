@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { JamlMapEditor } from './JamlMapEditor';
 import { useState } from 'react';
-import type { JamlVisualClause } from '../JamlIde';
+
 import "../../ui/jimbo.css"; // Ensure global CSS is loaded
 
 const meta = {
@@ -28,7 +28,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [jamlStr, setJamlStr] = useState<string>("");
+    const [, setJamlStr] = useState<string>("");
 
     return (
       <JamlMapEditor

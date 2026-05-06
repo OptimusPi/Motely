@@ -41,8 +41,13 @@ export function useSearch(motelyWasmUrl?: string) {
   const readyRef = useRef(false); // Worker is NOT implicitly ready, must wait for 'ready' message
   const speedRef = useRef({ lastSearched: 0n, lastTime: 0, ema: 0 });
 
-  useEffect(() => {
+  const [prevUrl, setPrevUrl] = useState(motelyWasmUrl);
+  if (motelyWasmUrl !== prevUrl) {
+    setPrevUrl(motelyWasmUrl);
     setState((s) => ({ ...s, status: "idle" }));
+  }
+
+  useEffect(() => {
     const worker = createWorker();
     workerRef.current = worker;
 

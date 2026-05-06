@@ -1,8 +1,8 @@
 "use client";
+/* eslint-disable react-refresh/only-export-components */
 import React, { useState, useCallback, useMemo } from "react";
 import { JimboSprite } from "../../ui/sprites.js";
-import { JimboColorOption, withAlpha } from "../../ui/tokens.js";
-import { JimboButton } from "../../ui/panel.js";
+import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboText } from "../../ui/jimboText.js";
 import type { SpriteEntry } from "../../sprites/spriteData.js";
 import type { SpriteSheetType } from "../../sprites/spriteMapper.js";
@@ -30,14 +30,13 @@ export interface CategoryPickerConfig {
 export interface CategoryPickerProps {
   config: CategoryPickerConfig;
   onSelect: (selection: SlotSelection) => void;
-  onCancel: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const C = JimboColorOption;
 
-export function CategoryPicker({ config, onSelect, onCancel }: CategoryPickerProps) {
+export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {

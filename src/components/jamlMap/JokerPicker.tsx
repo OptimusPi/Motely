@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useCallback, useMemo } from "react";
 import { JimboSprite } from "../../ui/sprites.js";
-import { JimboColorOption, withAlpha } from "../../ui/tokens.js";
+import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboButton, type JimboTone } from "../../ui/panel.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JOKERS, type SpriteEntry } from "../../sprites/spriteData.js";
-import { WILDCARD_SPRITES } from "../../sprites/spriteMapper.js";
+
 import type { SlotSelection } from "./MysterySlot.js";
 
 // ─── Rarity data ─────────────────────────────────────────────────────────────
@@ -84,10 +84,9 @@ type PickerStep = "rarity" | "specific";
 
 export interface JokerPickerProps {
   onSelect: (selection: SlotSelection) => void;
-  onCancel: () => void;
 }
 
-export function JokerPicker({ onSelect, onCancel }: JokerPickerProps) {
+export function JokerPicker({ onSelect }: JokerPickerProps) {
   const [step, setStep] = useState<PickerStep>("rarity");
   const [selectedRarity, setSelectedRarity] = useState<JokerRarity | null>(null);
   const [search, setSearch] = useState("");

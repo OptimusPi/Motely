@@ -623,7 +623,7 @@
 
 .j-modal {
   width: 100%;
-  max-width: 320px;
+  max-width: 355px;
   max-height: calc(100% - 32px);
   display: flex;
   flex-direction: column;
@@ -1221,10 +1221,10 @@
 .j-app {
   container-type: inline-size;
   container-name: jimbo;
-  width: 320px;
-  max-width: 320px;
-  height: 568px;
-  max-height: 568px;
+  width: 375px;
+  max-width: 375px;
+  height: 667px;
+  max-height: 667px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

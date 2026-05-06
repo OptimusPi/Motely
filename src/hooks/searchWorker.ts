@@ -60,6 +60,8 @@ self.addEventListener("message", async (e: MessageEvent<WorkerMessage>) => {
       }
     }
 
+    if (!MotelyWasmEvents) return;
+
     MotelyWasmEvents.notifyResult = (seed: string, score: number, tallyColumns: ArrayLike<number>) => {
       if (runId !== activeSearchRunId) return;
       post({ type: "result", seed, score, tallyColumns: Array.from(tallyColumns) });
@@ -80,15 +82,15 @@ self.addEventListener("message", async (e: MessageEvent<WorkerMessage>) => {
       const mode = msg.mode || "random";
 
       if (mode === "random") {
-        activeSearch = MotelyWasm.startRandomSearch(msg.jaml, msg.count);
+        activeSearch = MotelyWasm.startRandomSearch(msg.jaml, msg.count || 1);
       } else if (mode === "aesthetic") {
-        activeSearch = MotelyWasm.startAestheticSearch(msg.jaml, msg.aesthetic);
+        activeSearch = MotelyWasm.startAestheticSearch(msg.jaml, (msg.aesthetic as number) || 0);
       } else if (mode === "seedList") {
-        activeSearch = MotelyWasm.startSeedListSearch(msg.jaml, msg.seeds);
+        activeSearch = MotelyWasm.startSeedListSearch(msg.jaml, msg.seeds || []);
       } else if (mode === "keyword") {
-        activeSearch = MotelyWasm.startKeywordSearch(msg.jaml, msg.keywords, msg.padding || "");
+        activeSearch = MotelyWasm.startKeywordSearch(msg.jaml, msg.keywords || "", msg.padding || "");
       } else if (mode === "sequential") {
-        activeSearch = MotelyWasm.startSequentialSearch(msg.jaml, msg.batchCharCount, BigInt(msg.startBatch || "0"), BigInt(msg.endBatch || "0"));
+        activeSearch = MotelyWasm.startSequentialSearch(msg.jaml, msg.batchCharCount || 1, BigInt(msg.startBatch || "0"), BigInt(msg.endBatch || "0"));
       } else {
         post({ type: "error", message: `Unknown search mode: ${mode}` });
         cleanup();

@@ -137,7 +137,7 @@ function parseJamlToFilter(text: string): JamlFilter {
             if (rootMatch && !line.startsWith(' ') && !line.startsWith('-')) {
                 const [, key, val] = rootMatch;
                 if (['name', 'deck', 'stake', 'description', 'author'].includes(key)) {
-                    (filter as Record<string, unknown>)[key] = val.trim();
+                    (filter as unknown as Record<string, unknown>)[key] = val.trim();
                 }
                 continue;
             }
@@ -170,7 +170,7 @@ function parseJamlToFilter(text: string): JamlFilter {
                             if (key === 'antes') currentClause.antes = parseNumArray(val);
                             else if (key === 'sources') currentClause.sources = parseStringArray(val);
                             else if (key === 'score') currentClause.score = parseInt(val) || 0;
-                            else (currentClause as Record<string, unknown>)[key] = val.trim();
+                            else (currentClause as unknown as Record<string, unknown>)[key] = val.trim();
                         }
                     }
                 }

@@ -38,14 +38,22 @@ export function JimboInputModal({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setValue(initialValue);
       setError(null);
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
       const t = setTimeout(() => inputRef.current?.focus(), 30);
       return () => clearTimeout(t);
     }
-  }, [open, initialValue]);
+  }, [open]);
 
   function submit() {
     const err = validate?.(value) ?? null;

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboColorOption, withAlpha, JIMBO_ANIMATIONS } from "../../ui/tokens.js";
 import type { SpriteSheetType } from "../../sprites/spriteMapper.js";
-import { WILDCARD_SPRITES } from "../../sprites/spriteMapper.js";
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,20 +58,7 @@ const ZONE_BORDER: Record<JamlZone, string> = {
 
 // ─── Sheet → "Any" wildcard mapping ─────────────────────────────────────────
 
-function getWildcardName(category?: SlotCategory): string | null {
-  if (!category) return null;
-  switch (category) {
-    case "joker": return null; // uses generic mystery
-    case "voucher": return null;
-    case "tag": return null;
-    case "boss": return null;
-    case "tarot": return null;
-    case "spectral": return null;
-    case "planet": return null;
-    case "pack": return null;
-    default: return null;
-  }
-}
+
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

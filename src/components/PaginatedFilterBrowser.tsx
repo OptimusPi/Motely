@@ -105,7 +105,7 @@ export function PaginatedFilterBrowser({
                 
                 <div style={{ width: "100%" }}>
                   <JimboButton
-                    tone={isSelected ? "redHover" : "red"}
+                    tone={isSelected ? "red" : "grey"}
                     size="sm"
                     style={{ width: "100%" }}
                     onClick={() => {

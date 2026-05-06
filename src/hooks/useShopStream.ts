@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 
 const DEFAULT_PULL = 12;
 
@@ -40,7 +40,9 @@ export function useMotelyStream(
   const [loadingMore, setLoadingMore] = useState(false);
 
   const nextRef = useRef(nextItem);
-  nextRef.current = nextItem;
+  useLayoutEffect(() => {
+    nextRef.current = nextItem;
+  });
   const busyRef = useRef(false);
   const genRef = useRef(0);
 
@@ -50,17 +52,12 @@ export function useMotelyStream(
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setItems(base);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(false);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingMore(false);
 
     if (!initStream || !nextItem) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }
@@ -75,18 +72,14 @@ export function useMotelyStream(
         const prefetch: StreamItem[] = [];
         for (let i = 0; i < DEFAULT_PULL; i++) prefetch.push(nextItem());
         if (gen !== genRef.current) return;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setItems(prefetch);
       }
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReady(true);
     } catch (err) {
       if (gen !== genRef.current) return;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (gen === genRef.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

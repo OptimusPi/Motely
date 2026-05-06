@@ -395,15 +395,6 @@ function TopMatter({
     );
 }
 
-interface DragState {
-    clause: JamlVisualClause;
-    fromZone: JamlZone;
-    x: number;
-    y: number;
-    offX: number;
-    offY: number;
-}
-
 export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: JamlIdeVisualProps) {
     const rootRef = useRef<HTMLDivElement>(null);
     const { drag, hoverZone, onDragStart } = useJamlIdeDrag(filter, onChange, rootRef);

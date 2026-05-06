@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 
 export interface UseIntersectionObserverOptions extends IntersectionObserverInit {
   freezeOnceVisible?: boolean;
@@ -37,7 +37,7 @@ export function useIntersectionObserver(
     return () => {
       if (observer.current) observer.current.disconnect();
     };
-  }, [node, options.root, options.rootMargin, options.threshold, options.freezeOnceVisible]);
+  }, [node, options, options.root, options.rootMargin, options.threshold, options.freezeOnceVisible]);
 
   return { ref, entry };
 }
@@ -51,7 +51,9 @@ export function useInfiniteScroll(
   active = true,
 ) {
   const onVisibleRef = useRef(onVisible);
-  onVisibleRef.current = onVisible;
+  useLayoutEffect(() => {
+    onVisibleRef.current = onVisible;
+  });
 
   const { ref, entry } = useIntersectionObserver({
     ...options,

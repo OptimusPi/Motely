@@ -7,10 +7,17 @@ export function useSeedAnalyzer(motely: typeof Motely | null, seed: string | nul
   const [data, setData] = useState<Motely.Analysis.SeedAnalysisDto | null | undefined>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prevInputs, setPrevInputs] = useState({ seed, motely });
+
+  if (seed !== prevInputs.seed || motely !== prevInputs.motely) {
+    setPrevInputs({ seed, motely });
+    if (!seed || seed === "LOCKED" || !motely) {
+      setData(null);
+    }
+  }
 
   useEffect(() => {
     if (!seed || seed === "LOCKED" || !motely) {
-      setData(null);
       return;
     }
 

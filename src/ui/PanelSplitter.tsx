@@ -3,7 +3,7 @@
 "use client";
 
 import { JimboColorOption } from "./tokens.js";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useLayoutEffect } from "react";
 
 const C = JimboColorOption;
 
@@ -23,7 +23,9 @@ export function PanelSplitter({
   const draggingRef = useRef(false);
   const lastRef = useRef(0);
   const onDragRef = useRef(onDrag);
-  onDragRef.current = onDrag;
+  useLayoutEffect(() => {
+    onDragRef.current = onDrag;
+  });
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
