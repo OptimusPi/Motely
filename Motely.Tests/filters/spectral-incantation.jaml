@@ -4,7 +4,7 @@ description: Incantation spectral with Hack for enhanced number card synergy
 deck: Red
 stake: White
 must:
-  - spectral: Incantation
+  - spectralCard: Incantation
     antes:
       - 1
       - 2

@@ -28,7 +28,7 @@ should:
     score: 45
   - voucher: PlanetTycoon
     score: 40
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 55
   - legendaryJoker: Perkeo
     score: 45

@@ -4,7 +4,7 @@ description: TheHighPriestess creates 2 Planets for Constellation scaling
 deck: Red
 stake: White
 must:
-  - tarot: TheHighPriestess
+  - tarotCard: TheHighPriestess
     antes:
       - 1
       - 2

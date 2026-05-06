@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "legendary-synergy"]
 must:
-  - spectral: Trance
+  - spectralCard: Trance
     antes:
       - 1
       - 2
@@ -24,7 +24,7 @@ should:
     score: 50
   - legendaryJoker: Perkeo
     score: 50
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 45
   - uncommonJoker: SpaceJoker
     score: 40

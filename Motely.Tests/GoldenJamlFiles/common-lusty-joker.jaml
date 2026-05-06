@@ -12,7 +12,7 @@ must:
       - 3
       - 4
 should:
-  - tarot: TheSun
+  - tarotCard: TheSun
     score: 65
   - uncommonJoker: Bloodstone
     score: 55

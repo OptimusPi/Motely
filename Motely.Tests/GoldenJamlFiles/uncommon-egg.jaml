@@ -14,7 +14,7 @@ must:
 should:
   - uncommonJoker: CeremonialDagger
     score: 70
-  - tarot: Temperance
+  - tarotCard: Temperance
     score: 60
   - commonJoker: Swashbuckler
     score: 50

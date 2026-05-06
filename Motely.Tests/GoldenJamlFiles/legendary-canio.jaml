@@ -12,19 +12,19 @@ must:
       - 3
       - 4
 should:
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     score: 55
   - tag: EtherealTag
     score: 40
   - voucher: Hieroglyph
     score: 40
-  - tarot: TheHangedMan
+  - tarotCard: TheHangedMan
     score: 70
   - uncommonJoker: GlassJoker
     score: 55
   - uncommonJoker: Pareidolia
     score: 50
-  - spectral: Ankh
+  - spectralCard: Ankh
     score: 45
   - tag: CharmTag
     score: 35

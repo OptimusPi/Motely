@@ -61,57 +61,6 @@ public static partial class JamlConfigLoader
     /// </summary>
     internal static string NormalizeToCanonicalYaml(string jaml) => Canonicalize(jaml);
 
-    /// <summary>
-    /// Compiles Jummy (human <c>what</c>/<c>where</c> dialect) to JAML, then loads it.
-    /// </summary>
-    public static bool TryLoadJummy(
-        string jummy,
-        [NotNullWhen(true)] out JamlConfig? config,
-        out string? error
-    )
-    {
-        config = null;
-        if (!JummyCompiler.TryCompile(jummy, out var jaml, out error))
-            return false;
-        return TryLoad(jaml, out config, out error);
-    }
-
-    /// <summary>
-    /// Resolves a path to a <c>.jummy</c> file (optional extension, <c>JummyFilters/</c> fallback) and loads it.
-    /// </summary>
-    public static bool TryLoadJummyFromFile(
-        string path,
-        [NotNullWhen(true)] out JamlConfig? config,
-        out string? error
-    )
-    {
-        config = null;
-        var resolved = ResolveJummyPath(path);
-        if (resolved == null)
-        {
-            error = $"File not found: {path}";
-            return false;
-        }
-
-        return TryLoadJummy(File.ReadAllText(resolved), out config, out error);
-    }
-
-    private static string? ResolveJummyPath(string path)
-    {
-        if (File.Exists(path))
-            return path;
-        var withExt = Path.ChangeExtension(path, ".jummy");
-        if (File.Exists(withExt))
-            return withExt;
-        var inFilters = Path.Combine("JummyFilters", path);
-        if (File.Exists(inFilters))
-            return inFilters;
-        var inFiltersExt = Path.Combine("JummyFilters", withExt);
-        if (File.Exists(inFiltersExt))
-            return inFiltersExt;
-        return null;
-    }
-
     private static YamlNode CloneYamlSubtree(YamlNode node) =>
         node switch
         {

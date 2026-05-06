@@ -3,7 +3,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Motely;
-using Motely.Datalake;
 using Motely.Filters;
 
 namespace Motely.DistributedWorker;
@@ -41,23 +40,8 @@ public sealed class PoolWorkerHostedService : BackgroundService
         long totalMatches = 0;
         int chunksCompleted = 0;
 
-        SeedResultSinkDirectory? localSinks = null;
-        if (localDbDir != null)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            try
-            {
-                localSinks = new SeedResultSinkDirectory(localDbDir, tallyCount: 0);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Could not open local DuckLake sink directory");
-            }
-        }
-
-        try
-        {
-            while (!stoppingToken.IsCancellationRequested)
-            {
                 PoolClaimResponseDto claim;
                 try
                 {
@@ -127,20 +111,6 @@ public sealed class PoolWorkerHostedService : BackgroundService
                 var results = matchResults.ToArray();
 
                 // ── Save to local DuckLake ───────────────────────────────
-                if (results.Length > 0)
-                {
-                    try
-                    {
-                        var sink = localSinks?.GetOrOpen(claim.FilterId!);
-                        if (sink != null)
-                            foreach (var r in results)
-                                sink.AppendScoredResult(r.Seed, r.Score, ReadOnlySpan<int>.Empty);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger?.LogWarning(ex, "Could not write local DuckLake for {FilterId}", claim.FilterId);
-                    }
-                }
 
                 // ── Submit to pool ───────────────────────────────────────
                 var submitBody = new SubmitResultsDto
@@ -169,18 +139,6 @@ public sealed class PoolWorkerHostedService : BackgroundService
 
                 chunksCompleted++;
             }
-        }
-        finally
-        {
-            try
-            {
-                localSinks?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "DuckLake flush failed");
-            }
-        }
 
         _logger?.LogInformation("Pool worker stopped. Chunks={Chunks}, Seeds={Seeds}, Matches={Matches}",
             chunksCompleted, totalSeedsSearched, totalMatches);

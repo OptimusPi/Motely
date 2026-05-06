@@ -4,7 +4,7 @@ description: Ectoplasm spectral with Joker Stencil for Negative edition synergy
 deck: Red
 stake: White
 must:
-  - spectral: Ectoplasm
+  - spectralCard: Ectoplasm
     antes:
       - 1
       - 2

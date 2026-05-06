@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - tarot: TheHangedMan
+  - tarotCard: TheHangedMan
     score: 50
   - uncommonJoker: GlassJoker
     score: 40

@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "glass", "tarot-engine", "legendary-synergy"]
 must:
-  - tarot: TheEmpress
+  - tarotCard: TheEmpress
     antes:
       - 1
       - 2
@@ -16,7 +16,7 @@ should:
     score: 65
   - rareJoker: DriversLicense
     score: 55
-  - tarot: TheWorld
+  - tarotCard: TheWorld
     score: 45
   - rareJoker: Baron
     score: 45

@@ -16,7 +16,7 @@ should:
     score: 65
   - uncommonJoker: MarbleJoker
     score: 55
-  - tarot: TheTower
+  - tarotCard: TheTower
     score: 50
   - uncommonJoker: FlowerPot
     score: 45

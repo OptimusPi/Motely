@@ -18,9 +18,9 @@ should:
     score: 70
   - rareJoker: Baron
     score: 50
-  - tarot: Strength
+  - tarotCard: Strength
     score: 45
-  - tarot: Death
+  - tarotCard: Death
     score: 40
   - uncommonJoker: SockAndBuskin
     score: 45

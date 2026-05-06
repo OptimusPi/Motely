@@ -3,7 +3,9 @@
 // Covers: boot, JAML validation, schema, search context, shop items, jokers, bosses.
 // Run: node local-test.mjs  (from this dir, after dotnet publish Motely.Wasm -c Release)
 
-import bootsharp, { MotelyWasm, MotelyWasmEvents, Motely } from "../../motely-wasm/index.mjs";
+import bootsharp, { Motely } from "../../motely-wasm/index.mjs";
+
+const { MotelyWasm, MotelyWasmEvents } = Motely;
 
 let failures = 0;
 let total = 0;
@@ -125,14 +127,15 @@ expect("joker has numeric value", typeof jokerValue === "number", `${typeof joke
 // ── Search ──
 console.log("\n9. Random search (100 seeds)");
 const results = [];
-MotelyWasmEvents.onResult.subscribe((seed, score, tallies) => {
+MotelyWasmEvents.notifyResult = (seed, score, tallies) => {
   results.push({ seed, score });
-});
+};
 let progressCount = 0;
-MotelyWasmEvents.onProgress.subscribe(() => progressCount++);
+MotelyWasmEvents.notifyProgress = () => progressCount++;
 
 const search = MotelyWasm.startRandomSearch(goodJaml, 100);
 expect("startRandomSearch returns", search != null);
+await search.waitForCompletion();
 const snap = search.getSnapshot();
 expect("snapshot has totalSeedsSearched", typeof snap.totalSeedsSearched === "bigint" || typeof snap.totalSeedsSearched === "number");
 expect("searched >= 100", Number(snap.totalSeedsSearched) >= 100, `searched ${snap.totalSeedsSearched}`);

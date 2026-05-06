@@ -27,12 +27,12 @@ public sealed class MotelyItemTests
     {
         var type = Enum.Parse<MotelyItemType>(typeName);
         var item = new MotelyItem(type);
-        var jummy = FormatUtils.FormatItem(item);
-        Assert.Equal(item, MotelyItem.Parse(jummy));
+        var formatted = FormatUtils.FormatItem(item);
+        Assert.Equal(item, MotelyItem.Parse(formatted));
     }
 
     [Fact]
-    public void Parse_round_trips_FormatItem_full_jummy()
+    public void Parse_round_trips_FormatItem_full()
     {
         var item = new MotelyItem(MotelyItemType.Joker)
             .WithSeal(MotelyItemSeal.Purple)

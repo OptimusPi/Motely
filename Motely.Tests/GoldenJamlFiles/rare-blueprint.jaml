@@ -28,9 +28,9 @@ should:
     score: 45
   - uncommonJoker: Showman
     score: 35
-  - spectral: Hex
+  - spectralCard: Hex
     score: 35
-  - spectral: Ankh
+  - spectralCard: Ankh
     score: 30
   - joker: Any
     edition: Negative

@@ -1,6 +1,5 @@
 using System.Data;
 using Motely;
-using Motely.Datalake;
 using Motely.Filters;
 
 namespace Motely.TUI;
@@ -10,7 +9,6 @@ public class SearchWindow : Window
     private readonly string _configPath;
     private readonly string _configFormat;
     private readonly string? _source;
-    private readonly string? _sink;
     private readonly Label _statusLabel;
     private readonly Label _progressLabel;
     private readonly TextField _cutoffField;
@@ -20,7 +18,6 @@ public class SearchWindow : Window
     private readonly SpinnerView _spinner;
     private IMotelySearch? _search;
     private int _highestScoreSeen = int.MinValue;
-    private ISeedResultSink? _activeSink;
     private CancellationTokenSource? _cts;
     private bool _searchRunning = false;
     private int _resultCount = 0;
@@ -39,7 +36,7 @@ public class SearchWindow : Window
         _configPath = configPath;
         _configFormat = configFormat;
         _source = string.IsNullOrWhiteSpace(source) ? null : source;
-        _sink = string.IsNullOrWhiteSpace(sink) ? null : sink;
+        _ = sink;
 
         Title = $"Search: {Path.GetFileNameWithoutExtension(configPath)}";
         // Tile on the left half so the editor / results browser can sit next to it.
@@ -241,14 +238,15 @@ public class SearchWindow : Window
                 .Settings.WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(TuiSettings.ThreadCount)
-                .WithQuietMode(true);
+                .WithQuietMode(true)
+                .WithAutoScoreCutoff(_cutoffAuto);
 
             switch (TuiSettings.SearchMode)
             {
                 case SearchMode.FileSource:
                     if (!string.IsNullOrWhiteSpace(_source))
                     {
-                        var sourceSeeds = SeedReader.ReadSeeds(_source);
+                        var sourceSeeds = SeedTextReader.ReadSeeds(_source);
                         if (sourceSeeds.Count == 0)
                             throw new InvalidOperationException("Resolved source contained no seeds.");
                         settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
@@ -301,29 +299,17 @@ public class SearchWindow : Window
             }
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
-            bool hasStructuredScores = scoreTallyColumns > 0;
-            _activeSink = !string.IsNullOrWhiteSpace(_sink)
-                ? SeedResultSinkFactory.Create(_sink, scoreTallyColumns)
-                : null;
 
             Application.Invoke(() => EnsureTallyColumns(scoreTallyColumns));
 
-
             settings.WithScoredResultCallback(tally =>
             {
-                // Match Motely.CLI: cutoff gates BOTH sink and display.
-                if (!PassesCutoff(tally.Score))
-                    return;
-
-                _activeSink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
-
                 var resultCount = Interlocked.Increment(ref _resultCount);
                 var seed = tally.Seed;
                 var score = tally.Score;
-                var tallies = tally.TallyValuesSpan.ToArray();
-                Application.Invoke(() => AppendRow(resultCount, seed, score, tallies));
+                var tallyValues = tally.TallyValuesSpan.ToArray();
+                Application.Invoke(() => AppendRow(resultCount, seed, score, tallyValues));
             });
-            
 
             Application.Invoke(() =>
             {
@@ -458,11 +444,12 @@ public class SearchWindow : Window
         _spinner.AutoSpin = false;
         _spinner.Visible = false;
         _stopBtn.Visible = false;
-        _activeSink?.Dispose();
-        _activeSink = null;
 
         if (_search != null)
         {
+            try { _search.Dispose(); }
+            catch { }
+
             var searched = _search.TotalSeedsSearched;
             var matches = _search.MatchingSeeds;
             var elapsed = TimeSpan.FromMilliseconds(_search.ElapsedMs);
@@ -482,8 +469,6 @@ public class SearchWindow : Window
         _spinner.AutoSpin = false;
         _spinner.Visible = false;
         _stopBtn.Visible = false;
-        _activeSink?.Dispose();
-        _activeSink = null;
     }
 
     private void StopSearch()
@@ -507,12 +492,24 @@ public class SearchWindow : Window
         try
         {
             _search?.Dispose();
-            _activeSink?.Dispose();
-            _activeSink = null;
         }
         catch { }
 
         MotelyTUI.CloseWindow(this);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        try
+        {
+            _search?.Dispose();
+        }
+        catch { }
+
+        try { _cts?.Dispose(); }
+        catch { }
+
+        base.Dispose(disposing);
     }
 
     private static bool TryLoadConfig(

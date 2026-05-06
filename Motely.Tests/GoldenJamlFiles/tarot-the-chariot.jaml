@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "deck-fix", "steel", "legendary-synergy"]
 must:
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     antes:
       - 1
       - 2
@@ -22,7 +22,7 @@ should:
     score: 60
   - commonJoker: GoldenTicket
     score: 25
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 40
   - rareJoker: Blueprint
     score: 40

@@ -9,13 +9,6 @@
   "engines": {
     "vscode": "^1.99.0"
   },
-  "activationEvents": [
-    "onLanguage:jaml",
-    "onLanguage:jummy",
-    "onCommand:jaml.openSchema",
-    "onCommand:jaml.openInCurator",
-    "onView:jaml.sidebar"
-  ],
   "categories": [
     "Programming Languages",
     "Snippets",
@@ -24,7 +17,6 @@
   "keywords": [
     "balatro",
     "jaml",
-    "jummy",
     "motely",
     "seed",
     "seedfinder"
@@ -59,7 +51,8 @@
         {
           "type": "webview",
           "id": "jaml.sidebar",
-          "name": "Jimbo's Filters"
+          "name": "Jimbo's Filters",
+          "icon": "images/icon.ico"
         }
       ]
     },
@@ -78,20 +71,6 @@
           "light": "./images/icon.ico",
           "dark": "./images/icon.ico"
         }
-      },
-      {
-        "id": "jummy",
-        "aliases": [
-          "Jummy"
-        ],
-        "extensions": [
-          ".jummy"
-        ],
-        "configuration": "./language-configuration.json",
-        "icon": {
-          "light": "./images/icon.ico",
-          "dark": "./images/icon.ico"
-        }
       }
     ],
     "grammars": [
@@ -99,14 +78,15 @@
         "language": "jaml",
         "scopeName": "source.jaml",
         "path": "./syntaxes/jaml.tmLanguage.json"
-      },
-      {
-        "language": "jummy",
-        "scopeName": "source.jummy",
-        "path": "./syntaxes/jummy.tmLanguage.json"
       }
     ],
     "commands": [
+      {
+        "command": "jaml.searchCurrentFilter",
+        "title": "JAML: Search Current Filter",
+        "category": "JAML",
+        "icon": "$(search)"
+      },
       {
         "command": "jaml.showDocumentSummary",
         "title": "JAML: Show Document Summary",
@@ -138,14 +118,28 @@
         "description": "Ask Jimbo about JAML filters and Balatro seeds. Connects to the Balatro Seed Curator.",
         "isSticky": false,
         "commands": [
-          { "name": "explain", "description": "Explain the current .jaml filter in plain English" },
-          { "name": "analyze", "description": "Analyze a Balatro seed (select one or type it)" },
-          { "name": "search", "description": "Quickly scan for seeds matching this filter and show a data table" }
+          {
+            "name": "explain",
+            "description": "Explain the current .jaml filter in plain English"
+          },
+          {
+            "name": "analyze",
+            "description": "Analyze a Balatro seed (select one or type it)"
+          },
+          {
+            "name": "search",
+            "description": "Quickly scan for seeds matching this filter and show a data table"
+          }
         ]
       }
     ],
     "menus": {
       "editor/title": [
+        {
+          "command": "jaml.searchCurrentFilter",
+          "when": "resourceLangId == jaml",
+          "group": "navigation"
+        },
         {
           "command": "jaml.showDocumentSummary",
           "when": "resourceLangId == jaml",
@@ -165,6 +159,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "jaml.searchCurrentFilter",
+          "when": "resourceLangId == jaml"
+        },
         {
           "command": "jaml.showDocumentSummary",
           "when": "resourceLangId == jaml"
@@ -194,6 +192,21 @@
         "type": "number",
         "default": 6,
         "description": "Batch character count for sequential searches."
+      },
+      "jaml.search.quickBatchCount": {
+        "type": "number",
+        "default": 25,
+        "description": "Number of sequential batches to scan in the extension search panel."
+      },
+      "jaml.search.maxResults": {
+        "type": "number",
+        "default": 100,
+        "description": "Maximum number of result rows collected and written to results.csv per extension search run."
+      },
+      "jaml.search.resultsPath": {
+        "type": "string",
+        "default": "",
+        "description": "Optional local folder for extension CSV search output. Leave empty to use VS Code global storage."
       }
     }
   },
@@ -202,51 +215,79 @@
       "textMateRules": [
         {
           "scope": "variable.other.legendary.jaml",
-          "settings": { "foreground": "#c084fc", "fontStyle": "bold" }
+          "settings": {
+            "foreground": "#c084fc",
+            "fontStyle": "bold"
+          }
         },
         {
           "scope": "entity.name.class.boss.jaml",
-          "settings": { "foreground": "#fe5f55", "fontStyle": "bold" }
+          "settings": {
+            "foreground": "#fe5f55",
+            "fontStyle": "bold"
+          }
         },
         {
           "scope": "support.constant.tarot.jaml",
-          "settings": { "foreground": "#d4aaff" }
+          "settings": {
+            "foreground": "#d4aaff"
+          }
         },
         {
           "scope": "support.constant.planet.jaml",
-          "settings": { "foreground": "#89dceb" }
+          "settings": {
+            "foreground": "#89dceb"
+          }
         },
         {
           "scope": "support.constant.spectral.jaml",
-          "settings": { "foreground": "#a6e3a1" }
+          "settings": {
+            "foreground": "#a6e3a1"
+          }
         },
         {
           "scope": "support.class.voucher.jaml",
-          "settings": { "foreground": "#4fc3f7" }
+          "settings": {
+            "foreground": "#4fc3f7"
+          }
         },
         {
           "scope": "support.type.tag.jaml",
-          "settings": { "foreground": "#ffb347" }
+          "settings": {
+            "foreground": "#ffb347"
+          }
         },
         {
           "scope": "comment.block.documentation.jaml",
-          "settings": { "foreground": "#c084fc", "fontStyle": "italic" }
+          "settings": {
+            "foreground": "#c084fc",
+            "fontStyle": "italic"
+          }
         },
         {
           "scope": "keyword.control.jaml",
-          "settings": { "foreground": "#fe5f55", "fontStyle": "bold" }
+          "settings": {
+            "foreground": "#fe5f55",
+            "fontStyle": "bold"
+          }
         },
         {
           "scope": "entity.name.tag.jaml",
-          "settings": { "foreground": "#4fc3f7" }
+          "settings": {
+            "foreground": "#4fc3f7"
+          }
         },
         {
           "scope": "constant.language.jaml",
-          "settings": { "foreground": "#ffb347" }
+          "settings": {
+            "foreground": "#ffb347"
+          }
         },
         {
           "scope": "constant.numeric.jaml",
-          "settings": { "foreground": "#fab387" }
+          "settings": {
+            "foreground": "#fab387"
+          }
         }
       ]
     }

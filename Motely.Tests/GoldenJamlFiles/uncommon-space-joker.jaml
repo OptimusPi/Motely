@@ -20,7 +20,7 @@ should:
     score: 50
   - rareJoker: BurntJoker
     score: 45
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 45
   - rareJoker: Blueprint
     score: 55
