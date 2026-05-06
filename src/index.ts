@@ -128,7 +128,10 @@ export {
 // and call setMotelyEnums(Motely) once after boot so display/decoder helpers
 // can resolve enum keys without statically importing motely-wasm.
 export { setMotelyEnums as setMotelyDisplayEnums } from "./motelyDisplay.js";
-export { setMotelyEnums as setMotelyDecoderEnums } from "./decode/motelyItemDecoder.js";
+export {
+  setMotelyEnums as setMotelyDecoderEnums,
+  motelyItemRenderCategory,
+} from "./decode/motelyItemDecoder.js";
 
 
 export {
