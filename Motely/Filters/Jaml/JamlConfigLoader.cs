@@ -780,7 +780,7 @@ public static partial class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Max = max,
-                Planets = (c.Planet ?? c.PlanetCard) is { } p ? [p] : [],
+                Planets = c.PlanetCard is { } p ? [p] : [],
                 Sources = new PlanetSourceConfig
                 {
                     ShopItems = shopItems ?? [],
@@ -1222,7 +1222,6 @@ public static partial class JamlConfigLoader
         if (c.TarotCards is { Count: > 0 } tt) return string.Join(", ", tt);
         if (c.SpectralCard is { } spectralCardValue) return spectralCardValue.ToString();
         if (c.SpectralCards is { Count: > 0 } ss) return string.Join(", ", ss);
-        if (c.Planet is { } planetValue) return planetValue.ToString();
         if (c.PlanetCard is { } planetCardValue) return planetCardValue.ToString();
         if (c.Boss is { } bossValue) return bossValue.ToString();
         if (c.Tag is { } tagValue) return tagValue.ToString();
@@ -1287,8 +1286,6 @@ public static partial class JamlConfigLoader
             return (MotelyFilterItemType.SpectralCard, null);
         if (c.SpectralCards != null)
             return (MotelyFilterItemType.SpectralCard, null);
-        if (c.Planet != null)
-            return (MotelyFilterItemType.PlanetCard, null);
         if (c.PlanetCard != null)
             return (MotelyFilterItemType.PlanetCard, null);
         if (c.Boss != null)
