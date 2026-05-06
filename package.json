@@ -37,7 +37,7 @@
       "default": "./dist/r3f.js"
     },
     "./jimbo.css": "./dist/ui/jimbo.css",
-    "./fonts.css": "./fonts.css",
+    "./fonts.css": "./fonts.css"
   },
   "sideEffects": [
     "./fonts.css",
