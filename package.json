@@ -38,7 +38,6 @@
     },
     "./jimbo.css": "./dist/ui/jimbo.css",
     "./fonts.css": "./fonts.css",
-    "./jaml.schema.json": "./jaml.schema.json"
   },
   "sideEffects": [
     "./fonts.css",
@@ -58,7 +57,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc --pretty false && node -e \"const fs=require('fs');fs.mkdirSync('dist/ui',{recursive:true});fs.copyFileSync('src/ui/jimbo.css','dist/ui/jimbo.css');fs.copyFileSync('node_modules/motely-wasm/jaml.schema.json','jaml.schema.json');\"",
+    "build": "tsc --pretty false && node -e \"const fs=require('fs');fs.mkdirSync('dist/ui',{recursive:true});fs.copyFileSync('src/ui/jimbo.css','dist/ui/jimbo.css');\"",
     "dev": "tsc --watch",
     "demo": "vite --config demo/vite.config.ts",
     "typecheck": "tsc --noEmit --pretty false",
