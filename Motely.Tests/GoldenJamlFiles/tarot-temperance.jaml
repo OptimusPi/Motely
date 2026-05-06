@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "legendary-synergy"]
 must:
-  - tarot: Temperance
+  - tarotCard: Temperance
     antes:
       - 1
       - 2

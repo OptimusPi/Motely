@@ -8,7 +8,7 @@ namespace Motely.Analysis;
 public sealed class MotelyAnalyzerFilterDesc()
     : IMotelySeedFilterDesc<MotelyAnalyzerFilterDesc.AnalyzerFilter>
 {
-    public MotelyLegacyTextAnalyzer? LastAnalysis { get; private set; } = null;
+    public MotelySeedAnalysis? LastAnalysis { get; private set; } = null;
 
     public AnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

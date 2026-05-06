@@ -13,5 +13,5 @@ must:
 should:
   - rareJoker: DNA
     score: 30
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 25

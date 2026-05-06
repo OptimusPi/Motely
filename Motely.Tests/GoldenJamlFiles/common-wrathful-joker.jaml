@@ -24,7 +24,7 @@ should:
     score: 30
   - uncommonJoker: SeeingDouble
     score: 30
-  - spectral: Sigil
+  - spectralCard: Sigil
     score: 30
   - rareJoker: Blueprint
     score: 35

@@ -18,9 +18,9 @@ should:
     score: 65
   - uncommonJoker: Cartomancer
     score: 60
-  - tarot: TheEmperor
+  - tarotCard: TheEmperor
     score: 50
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 45
   - rareJoker: DNA
     score: 45

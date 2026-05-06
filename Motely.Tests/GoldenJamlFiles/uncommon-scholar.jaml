@@ -14,7 +14,7 @@ must:
 should:
   - uncommonJoker: Fibonacci
     score: 70
-  - spectral: Grim
+  - spectralCard: Grim
     score: 60
   - commonJoker: Superposition
     score: 50

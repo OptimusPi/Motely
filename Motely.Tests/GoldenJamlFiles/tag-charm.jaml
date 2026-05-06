@@ -16,13 +16,13 @@ should:
     score: 70
   - uncommonJoker: Cartomancer
     score: 65
-  - tarot: TheEmperor
+  - tarotCard: TheEmperor
     score: 55
-  - tarot: TheHighPriestess
+  - tarotCard: TheHighPriestess
     score: 40
-  - tarot: TheMagician
+  - tarotCard: TheMagician
     score: 30
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     score: 60
   - legendaryJoker: Perkeo
     score: 55

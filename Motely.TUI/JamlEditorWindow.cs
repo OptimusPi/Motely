@@ -5,8 +5,6 @@ namespace Motely.TUI;
 
 public class JamlEditorWindow : Window
 {
-    private enum DocMode { Jaml, Jummy }
-
     private readonly TextView _editor;
     private readonly Label _statusLabel;
     private readonly Label _modeLabel;
@@ -14,16 +12,14 @@ public class JamlEditorWindow : Window
     private readonly FrameView _editorFrame;
     private IReadOnlyList<FilterLibraryEntry> _localFilters = Array.Empty<FilterLibraryEntry>();
     private string? _filePath;
-    private DocMode _mode;
 
     public JamlEditorWindow(string? filePath = null)
     {
         _filePath = filePath;
-        _mode = DetectMode(filePath);
 
         Title = string.IsNullOrWhiteSpace(filePath)
-            ? "JAML / Jummy Editor"
-            : $"{(_mode == DocMode.Jummy ? "Jummy" : "JAML")} Editor: {Path.GetFileName(filePath)}";
+            ? "JAML Editor"
+            : $"JAML Editor: {Path.GetFileName(filePath)}";
         X = 0;
         Y = 0;
         Width = Dim.Fill();
@@ -55,14 +51,11 @@ public class JamlEditorWindow : Window
         refreshButton.Accept += (_, _) => ReloadFilters();
         toolbar.Add(refreshButton);
 
-        // Mode is auto-detected from the file extension — no toggle.
-        // Jummy is valid YAML-JAML too, so "Perkeo in Ante 1" works whether you
-        // called the file .jummy or .jaml; the compiler is the differentiator.
         _modeLabel = new Label
         {
             X = Pos.Right(refreshButton) + 2,
             Y = 0,
-            Text = ModeText(),
+            Text = "MODE: JAML",
         };
         _modeLabel.ColorScheme = new ColorScheme
         {
@@ -130,7 +123,7 @@ public class JamlEditorWindow : Window
             ReadOnly = false,
             WordWrap = false,
             CanFocus = true,
-            Text = LoadInitialText(filePath, _mode),
+            Text = LoadInitialText(filePath),
         };
         if (_editor.Autocomplete is { } ac)
             ac.SuggestionGenerator = new SingleWordSuggestionGenerator
@@ -163,17 +156,7 @@ public class JamlEditorWindow : Window
         _editor.SetFocus();
     }
 
-    private static DocMode DetectMode(string? filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath)) return DocMode.Jaml;
-        return Path.GetExtension(filePath).Equals(".jummy", StringComparison.OrdinalIgnoreCase)
-            ? DocMode.Jummy
-            : DocMode.Jaml;
-    }
-
-    private string ModeText() => _mode == DocMode.Jummy ? "MODE: Jummy" : "MODE: JAML";
-    private string EditorFrameTitle() =>
-        _mode == DocMode.Jummy ? "Jummy source (compiles 1:1 → JAML)" : "JAML";
+    private static string EditorFrameTitle() => "JAML";
 
     private void ReloadFilters()
     {
@@ -193,11 +176,10 @@ public class JamlEditorWindow : Window
         try
         {
             _filePath = selected.FullPath;
-            _mode = DetectMode(_filePath);
             _editor.Text = File.ReadAllText(selected.FullPath);
-            _modeLabel.Text = ModeText();
+            _modeLabel.Text = "MODE: JAML";
             _editorFrame.Title = EditorFrameTitle();
-            Title = $"{(_mode == DocMode.Jummy ? "Jummy" : "JAML")} Editor: {Path.GetFileName(_filePath)}";
+            Title = $"JAML Editor: {Path.GetFileName(_filePath)}";
             _statusLabel.Text = _filePath;
             _editor.SetFocus();
             SetNeedsDraw();
@@ -208,29 +190,18 @@ public class JamlEditorWindow : Window
         }
     }
 
-    private static string LoadInitialText(string? filePath, DocMode mode)
+    private static string LoadInitialText(string? filePath)
     {
         if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
             return File.ReadAllText(filePath);
 
-        return mode == DocMode.Jummy
-            ? "jummy: 1\nname: New Jummy Filter\ndeck: Red\nstake: White\nmust:\n  - Eternal Blueprint in Ante 1\nshould: []\n"
-            : "name: New Filter\ndescription: Created in Motely.TUI\ndeck: Red\nstake: White\nmust:\n";
+        return "name: New Filter\ndescription: Created in Motely.TUI\ndeck: Red\nstake: White\nmust:\n";
     }
 
     private bool TryGetValidatedJaml(string source, out string jaml, out string? error)
     {
         jaml = source;
         error = null;
-        if (_mode == DocMode.Jummy)
-        {
-            if (!JummyCompiler.TryCompile(source, out var compiled, out var compileError))
-            {
-                error = $"Jummy compile error: {compileError}";
-                return false;
-            }
-            jaml = compiled;
-        }
 
         if (!JamlConfigLoader.TryLoad(jaml, out _, out var loadError))
         {
@@ -249,9 +220,7 @@ public class JamlEditorWindow : Window
             return;
         }
 
-        ShowMessage(_mode == DocMode.Jummy
-            ? "Jummy compiled OK → valid JAML."
-            : "JAML validated OK.");
+        ShowMessage("JAML validated OK.");
     }
 
     private void SaveEditorContent()
@@ -271,9 +240,7 @@ public class JamlEditorWindow : Window
                 if (string.IsNullOrWhiteSpace(requestedName))
                     return;
 
-                _filePath = _mode == DocMode.Jummy
-                    ? FilterLibrary.SaveJummyFilter(requestedName, content)
-                    : FilterLibrary.SaveJamlFilter(requestedName, content);
+                _filePath = FilterLibrary.SaveJamlFilter(requestedName, content);
             }
             else
             {
@@ -281,7 +248,7 @@ public class JamlEditorWindow : Window
                 File.WriteAllText(_filePath, content);
             }
 
-            Title = $"{(_mode == DocMode.Jummy ? "Jummy" : "JAML")} Editor: {Path.GetFileName(_filePath)}";
+            Title = $"JAML Editor: {Path.GetFileName(_filePath)}";
             _statusLabel.Text = _filePath;
             ShowMessage($"Saved {_filePath}");
             ReloadFilters();
@@ -295,7 +262,7 @@ public class JamlEditorWindow : Window
     private void SaveAndSearch()
     {
         var content = _editor.Text?.ToString() ?? string.Empty;
-        if (!TryGetValidatedJaml(content, out var compiledJaml, out var error))
+        if (!TryGetValidatedJaml(content, out _, out var error))
         {
             ShowMessage(error ?? "Compile failed.", isError: true);
             return;
@@ -305,21 +272,7 @@ public class JamlEditorWindow : Window
         if (string.IsNullOrWhiteSpace(_filePath) || !File.Exists(_filePath))
             return;
 
-        // Jummy needs to be compiled to a temp .jaml for the search pipeline.
-        string searchPath;
-        if (_mode == DocMode.Jummy)
-        {
-            searchPath = Path.Combine(
-                Path.GetTempPath(),
-                $"motely-jummy-{Path.GetFileNameWithoutExtension(_filePath)}.jaml");
-            File.WriteAllText(searchPath, compiledJaml);
-        }
-        else
-        {
-            searchPath = _filePath;
-        }
-
-        var searchWindow = new SearchWindow(searchPath, "jaml", TuiSettings.DefaultSource, TuiSettings.DefaultSink);
+        var searchWindow = new SearchWindow(_filePath, "jaml", TuiSettings.DefaultSource, TuiSettings.DefaultSink);
         MotelyTUI.ShowWindow(searchWindow);
     }
 
@@ -331,7 +284,7 @@ public class JamlEditorWindow : Window
 
         var dialog = new Dialog
         {
-            Title = _mode == DocMode.Jummy ? "Save Jummy Filter" : "Save JAML Filter",
+            Title = "Save JAML Filter",
             Width = 50,
             Height = 10,
         };
@@ -385,8 +338,8 @@ public class JamlEditorWindow : Window
         foreach (var k in new[]
         {
             "name", "description", "author", "deck", "stake", "antes",
-            "must", "should", "mustNot", "jummy",
-            "what", "where", "ante", "type", "value", "edition",
+            "must", "should", "mustNot",
+            "type", "value", "edition",
             "enhancement", "sticker", "seal", "suit", "rank",
             "shopItems", "boosterPacks", "shop", "booster", "packs",
             "tarotCard", "planetCard", "spectralCard", "joker", "tag",

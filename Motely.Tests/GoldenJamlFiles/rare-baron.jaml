@@ -16,21 +16,21 @@ should:
     score: 85
   - rareJoker: Blueprint
     score: 75
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 70
   - rareJoker: Brainstorm
     score: 65
   - legendaryJoker: Triboulet
     score: 60
-  - tarot: Strength
+  - tarotCard: Strength
     score: 45
-  - tarot: Death
+  - tarotCard: Death
     score: 40
   - rareJoker: InvisibleJoker
     score: 40
   - uncommonJoker: Showman
     score: 35
-  - spectral: Hex
+  - spectralCard: Hex
     score: 30
   - joker: Any
     edition: Negative

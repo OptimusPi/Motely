@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "deck-fix", "face-cards", "tarot-engine", "legendary-synergy"]
 must:
-  - tarot: Death
+  - tarotCard: Death
     antes:
       - 1
       - 2
@@ -14,7 +14,7 @@ must:
 should:
   - uncommonJoker: TheIdol
     score: 70
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 65
   - rareJoker: DNA
     score: 60

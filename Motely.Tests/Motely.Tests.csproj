@@ -23,10 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Motely.Wasm\Jaml.cs" Link="Jaml.cs" />
-    <Compile Include="..\Motely.Wasm\MotelyJAML.schema.generator.cs" Link="MotelyJAML.schema.generator.cs" />
+    <Compile Include="..\Motely.CLI\MotelyJAML.schema.generator.cs" Link="MotelyJAML.schema.generator.cs" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.Datalake\Motely.Datalake.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -58,10 +58,12 @@ public class JamlFilterTypeTests
     }
 
     [Theory]
-    [InlineData("tarot: TheEmperor")]
+    [InlineData("tarotCard: TheEmperor")]
     [InlineData("tarotCard: TheFool")]
-    [InlineData("spectral: Familiar")]
+    [InlineData("tarotCards: [TheFool, TheEmperor]")]
+    [InlineData("spectralCard: Familiar")]
     [InlineData("spectralCard: Aura")]
+    [InlineData("spectralCards: [Familiar, Aura]")]
     [InlineData("planet: Earth")]
     [InlineData("planetCard: Pluto")]
     public void ConsumableFilters(string clause)
@@ -139,13 +141,13 @@ must:
       riffRaff: [1]
       rareTag: [1]
       uncommonTag: [1]
-  - tarot: TheEmperor
+  - tarotCard: TheEmperor
     sources:
       shopItems: [1]
       boosterPacks: [1]
       emperor: [1, 2]
       purpleSealOrEightBall: [1]
-  - spectral: Aura
+  - spectralCard: Aura
     sources:
       sixthSense: [1]
       seance: [1]
@@ -168,8 +170,8 @@ must:
       - joker: Showman
       - joker: Blueprint
   - and:
-      - tarot: TheFool
-      - spectral: Aura
+      - tarotCard: TheFool
+      - spectralCard: Aura
   - joker: HalfJoker
     min: 2
 should:

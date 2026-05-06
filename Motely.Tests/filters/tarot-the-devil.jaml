@@ -4,7 +4,7 @@ description: TheDevil tarot with Golden Ticket for Gold enhancement synergy
 deck: Red
 stake: White
 must:
-  - tarot: TheDevil
+  - tarotCard: TheDevil
     antes:
       - 1
       - 2

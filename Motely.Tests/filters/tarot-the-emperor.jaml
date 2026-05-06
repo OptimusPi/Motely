@@ -4,7 +4,7 @@ description: TheEmperor creates 2 Tarots for Fortune Teller scaling
 deck: Red
 stake: White
 must:
-  - tarot: TheEmperor
+  - tarotCard: TheEmperor
     antes:
       - 1
       - 2
@@ -13,5 +13,5 @@ must:
 should:
   - commonJoker: FortuneTeller
     score: 50
-  - tarot: TheFool
+  - tarotCard: TheFool
     score: 35

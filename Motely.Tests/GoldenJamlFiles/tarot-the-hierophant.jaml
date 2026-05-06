@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "stone", "legendary-synergy"]
 must:
-  - tarot: TheHierophant
+  - tarotCard: TheHierophant
     antes:
       - 1
       - 2

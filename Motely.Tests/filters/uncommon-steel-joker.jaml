@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 50
   - rareJoker: Baron
     score: 45

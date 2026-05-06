@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <JamlLanguageSupportDir>$(MSBuildThisFileDirectory)packages\jaml-language-support</JamlLanguageSupportDir>
+  </PropertyGroup>
+
+  <Target Name="BuildJamlVsix">
+    <Exec Command="npm run vscode:prepublish" WorkingDirectory="$(JamlLanguageSupportDir)" />
+    <Exec Command="npx vsce package --no-dependencies" WorkingDirectory="$(JamlLanguageSupportDir)" />
+  </Target>
+</Project>

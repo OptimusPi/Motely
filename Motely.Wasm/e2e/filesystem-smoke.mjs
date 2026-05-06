@@ -121,9 +121,9 @@ console.log("1. Mount JAML library");
 let libraryChangedCount = 0;
 let lastChangedFiles = null;
 const results = [];
-MotelyWasmEvents.notifyProgress = () => {};
+MotelyWasmEvents.notifyProgress = () => { };
 MotelyWasmEvents.notifyResult = (seed, score /*, tallies */) => results.push({ seed, score });
-MotelyWasmEvents.notifyComplete = () => {};
+MotelyWasmEvents.notifyComplete = () => { };
 MotelyWasmEvents.notifyJamlLibraryChanged = (rootId, fileUris) => {
     libraryChangedCount++;
     lastChangedFiles = [...fileUris];
@@ -152,6 +152,7 @@ expect("loaded JAML validates", v.valid === true, JSON.stringify(v));
 // ── 6. Run a search using the loaded JAML ──
 console.log("\n3. Run random search using loaded JAML (200 seeds)");
 const search = MotelyWasm.startRandomSearch(loaded, 200);
+await search.waitForCompletion();
 const snap = search.getSnapshot();
 const totalSearched = Number(snap.totalSeedsSearched);
 expect("search ran (>=200 seeds)", totalSearched >= 200, `searched ${totalSearched}`);

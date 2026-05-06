@@ -4,7 +4,7 @@ description: Ouija spectral with Wee Joker for rank homogenization
 deck: Red
 stake: White
 must:
-  - spectral: Ouija
+  - spectralCard: Ouija
     antes:
       - 1
       - 2

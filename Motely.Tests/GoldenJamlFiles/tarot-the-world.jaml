@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "probability", "glass", "steel", "legendary-synergy"]
 must:
-  - tarot: TheWorld
+  - tarotCard: TheWorld
     antes:
       - 1
       - 2

@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - spectral: Ectoplasm
+  - spectralCard: Ectoplasm
     score: 50
   - tag: NegativeTag
     score: 45

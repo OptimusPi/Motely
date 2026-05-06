@@ -22,7 +22,7 @@ must:
 should:
   - uncommonJoker: Certificate
     score: 45
-  - spectral: Talisman
+  - spectralCard: Talisman
     score: 45
   - uncommonJoker: Bull
     score: 40

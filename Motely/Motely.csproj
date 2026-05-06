@@ -30,4 +30,24 @@
     <TrimmerRootDescriptor Include="TrimmerRoots.xml" />
     <EmbeddedResource Include="..\jaml.schema.json" Link="jaml.schema.json" LogicalName="jaml.schema.json" />
   </ItemGroup>
+
+  <!-- Defensive guard: branch switches on Windows can stage surprising deletes.
+       Fail fast with a clear error if core filter sources vanish. -->
+  <Target Name="ValidateCoreFilterSources" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('Filters/Jaml/JamlConfig.cs')"
+           Text="Missing 'Motely/Filters/Jaml/JamlConfig.cs'. Core filter sources are required. Check branch switch/deletes before building." />
+    <Error Condition="!Exists('Filters/JamlSearchBuilder.cs')"
+           Text="Missing 'Motely/Filters/JamlSearchBuilder.cs'. Core filter sources are required. Check branch switch/deletes before building." />
+    <Error Condition="!Exists('Filters/Native/NegativeSoulJokerFilters.cs')"
+           Text="Missing 'Motely/Filters/Native/NegativeSoulJokerFilters.cs'. Core filter sources are required. Check branch switch/deletes before building." />
+  </Target>
+
+  <!-- Generate compile-time version const — AOT safe, no reflection -->
+  <Target Name="GenerateVersionInfo" BeforeTargets="CoreCompile">
+    <WriteLinesToFile File="$(IntermediateOutputPath)VersionInfo.g.cs" Overwrite="true"
+        Lines="namespace Motely { public static partial class VersionInfo { public const string Version = &quot;$(MotelyVersion)&quot;%3B } }" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
+    </ItemGroup>
+  </Target>
 </Project>
