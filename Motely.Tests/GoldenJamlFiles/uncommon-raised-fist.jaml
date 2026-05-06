@@ -20,7 +20,7 @@ should:
     score: 45
   - commonJoker: ShootTheMoon
     score: 45
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 40
   - rareJoker: Blueprint
     score: 45

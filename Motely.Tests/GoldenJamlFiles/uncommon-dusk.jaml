@@ -20,7 +20,7 @@ should:
     score: 55
   - commonJoker: Photograph
     score: 50
-  - tarot: Justice
+  - tarotCard: Justice
     score: 45
   - uncommonJoker: SockAndBuskin
     score: 45

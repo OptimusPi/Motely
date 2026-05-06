@@ -30,7 +30,7 @@ should:
     score: 45
   - commonJoker: CraftyJoker
     score: 40
-  - tarot: TheLovers
+  - tarotCard: TheLovers
     score: 40
   - uncommonJoker: Constellation
     antes:
@@ -43,7 +43,7 @@ should:
       - 1
       - 2
     score: 70
-  - tarot: TheFool
+  - tarotCard: TheFool
     antes:
       - 1
       - 2

@@ -24,7 +24,7 @@ should:
     score: 50
   - uncommonJoker: MarbleJoker
     score: 45
-  - tarot: TheTower
+  - tarotCard: TheTower
     score: 45
   - rareJoker: Blueprint
     score: 45

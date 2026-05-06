@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "scaling", "planet-scaling", "retrigger", "glass", "steel", "legendary-synergy"]
 must:
-  - spectral: Aura
+  - spectralCard: Aura
     antes:
       - 1
       - 2
@@ -22,7 +22,7 @@ should:
     score: 50
   - commonJoker: Photograph
     score: 40
-  - spectral: DejaVu
+  - spectralCard: DejaVu
     score: 40
   - uncommonJoker: Hologram
     score: 35

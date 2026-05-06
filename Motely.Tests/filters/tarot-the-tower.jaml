@@ -4,7 +4,7 @@ description: TheTower tarot with Stone Joker for Stone enhancement scaling
 deck: Red
 stake: White
 must:
-  - tarot: TheTower
+  - tarotCard: TheTower
     antes:
       - 1
       - 2

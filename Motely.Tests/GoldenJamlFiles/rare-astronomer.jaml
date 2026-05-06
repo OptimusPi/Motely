@@ -22,9 +22,9 @@ should:
     score: 55
   - legendaryJoker: Perkeo
     score: 60
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 50
-  - tarot: TheHighPriestess
+  - tarotCard: TheHighPriestess
     score: 45
   - voucher: PlanetMerchant
     score: 45

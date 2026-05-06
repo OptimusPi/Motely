@@ -4,7 +4,7 @@ description: TheSoul spectral to obtain a Legendary joker
 deck: Red
 stake: White
 must:
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     antes:
       - 1
       - 2

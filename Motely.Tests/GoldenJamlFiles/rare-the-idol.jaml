@@ -12,19 +12,19 @@ must:
       - 3
       - 4
 should:
-  - tarot: Death
+  - tarotCard: Death
     score: 75
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 75
   - rareJoker: DNA
     score: 65
-  - spectral: Ouija
+  - spectralCard: Ouija
     score: 55
-  - spectral: Sigil
+  - spectralCard: Sigil
     score: 50
-  - spectral: Familiar
+  - spectralCard: Familiar
     score: 40
-  - spectral: Grim
+  - spectralCard: Grim
     score: 35
   - uncommonJoker: Showman
     score: 30

@@ -14,23 +14,23 @@ must:
 should:
   - legendaryJoker: Perkeo
     score: 60
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 60
-  - tarot: TheWorld
+  - tarotCard: TheWorld
     score: 55
-  - tarot: Justice
+  - tarotCard: Justice
     score: 55
-  - tarot: TheEmpress
+  - tarotCard: TheEmpress
     score: 50
   - uncommonJoker: MarbleJoker
     score: 45
-  - tarot: TheHierophant
+  - tarotCard: TheHierophant
     score: 45
-  - tarot: TheMagician
+  - tarotCard: TheMagician
     score: 45
-  - tarot: TheDevil
+  - tarotCard: TheDevil
     score: 45
-  - tarot: TheTower
+  - tarotCard: TheTower
     score: 45
   - voucher: TarotMerchant
     score: 40

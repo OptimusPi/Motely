@@ -4,7 +4,7 @@ description: TheHierophant tarot for Bonus enhancement chip scaling
 deck: Red
 stake: White
 must:
-  - tarot: TheHierophant
+  - tarotCard: TheHierophant
     antes:
       - 1
       - 2

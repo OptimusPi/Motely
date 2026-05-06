@@ -278,7 +278,7 @@ public static class FormatUtils
     }
 
     /// <summary>
-    /// Parses a string produced by <see cref="FormatItem"/> (a &quot;jummy&quot;): sticker order
+    /// Parses a string produced by <see cref="FormatItem"/>: sticker order
     /// <see cref="FormatItem"/>, then optional seal, then edition, enhancement, then type
     /// (<see cref="FormatDisplayName"/> for non–playing-card types, <see cref="FormatStandardcard"/> for cards).
     /// </summary>

@@ -4,7 +4,7 @@ description: TheHermit tarot for early economy doubling
 deck: Red
 stake: White
 must:
-  - tarot: TheHermit
+  - tarotCard: TheHermit
     antes:
       - 1
       - 2

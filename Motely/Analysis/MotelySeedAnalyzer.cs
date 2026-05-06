@@ -13,7 +13,7 @@ public sealed record class MotelySeedAnalysisConfig(
 /// Classic String Block Format Analysis
 /// Matches "The Soul" and is also a great thing for Verify() unit tests.
 /// </summary>
-public sealed record class MotelyLegacyTextAnalyzer(
+public sealed record class MotelySeedAnalysis(
     string? Error,
     IReadOnlyList<MotelyAnteAnalysis> Antes,
     MotelyDeck? Deck = null,
@@ -136,7 +136,7 @@ public static partial class MotelySeedAnalyzer
     /// <summary>
     /// Analyzes a seed and returns structured data
     /// </summary>
-    public static MotelyLegacyTextAnalyzer Analyze(MotelySeedAnalysisConfig cfg)
+    public static MotelySeedAnalysis Analyze(MotelySeedAnalysisConfig cfg)
     {
         try
         {
@@ -162,7 +162,7 @@ public static partial class MotelySeedAnalyzer
         }
         catch (Exception ex)
         {
-            return new MotelyLegacyTextAnalyzer(ex.ToString(), []);
+            return new MotelySeedAnalysis(ex.ToString(), []);
         }
     }
 

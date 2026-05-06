@@ -14,13 +14,13 @@ must:
 should:
   - rareJoker: DNA
     score: 70
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 70
-  - spectral: Familiar
+  - spectralCard: Familiar
     score: 55
-  - spectral: Grim
+  - spectralCard: Grim
     score: 55
-  - spectral: Incantation
+  - spectralCard: Incantation
     score: 55
   - uncommonJoker: MarbleJoker
     score: 55

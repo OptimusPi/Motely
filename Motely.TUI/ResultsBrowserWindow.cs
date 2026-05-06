@@ -1,5 +1,4 @@
 using System.Data;
-using DuckDB.NET.Data;
 
 namespace Motely.TUI;
 
@@ -22,8 +21,6 @@ public class ResultsBrowserWindow : Window
 
     private DataTable _dataTable = new();
     private List<string> _filterIds = new();
-    private string _selectedFilterId = "";
-    private int _detectedTallyCount;
     private SortMode _sortMode = SortMode.ScoreDesc;
     private int _minScore = 0;
     private int _rowLimit = 1000;
@@ -270,164 +267,36 @@ public class ResultsBrowserWindow : Window
         return Path.GetFullPath(raw);
     }
 
-    private (string LakeDir, string MetaFile, string DataDir) ResolveLakePaths()
-    {
-        var fullPath = ResolveLakePath();
-        if (!Path.HasExtension(fullPath))
-        {
-            return (fullPath, Path.Combine(fullPath, "metadata.ducklake"), Path.Combine(fullPath, "data"));
-        }
-        var dir = Path.GetDirectoryName(fullPath)!;
-        var baseName = Path.GetFileNameWithoutExtension(fullPath);
-        var lakeDir = Path.Combine(dir, $"{baseName}_lake");
-        return (lakeDir, Path.Combine(lakeDir, "metadata.ducklake"), Path.Combine(lakeDir, "data"));
-    }
-
-    private DuckDBConnection OpenConnection()
-    {
-        var (lakeDir, metaFile, dataDir) = ResolveLakePaths();
-        if (!Directory.Exists(lakeDir) || !File.Exists(metaFile))
-            throw new FileNotFoundException($"DuckLake not found at: {lakeDir}");
-
-        var conn = new DuckDBConnection("Data Source=:memory:");
-        conn.Open();
-        using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "INSTALL ducklake; LOAD ducklake;";
-            cmd.ExecuteNonQuery();
-            cmd.CommandText = $"ATTACH 'ducklake:{EscapeSqlPath(metaFile)}' AS motely_lake (DATA_PATH '{EscapeSqlPath(dataDir)}');";
-            cmd.ExecuteNonQuery();
-            cmd.CommandText = "USE motely_lake;";
-            cmd.ExecuteNonQuery();
-        }
-        return conn;
-    }
-
-    private static string EscapeSqlPath(string path) => path.Replace("\\", "/").Replace("'", "''");
-    private static string EscapeSqlLiteral(string value) => value.Replace("'", "''");
-
     private void LoadFilterIds()
     {
         _filterIds.Clear();
         _filterList.SetSource(new System.Collections.ObjectModel.ObservableCollection<string>(new List<string>()));
         _dataTable = new DataTable();
+        _dataTable.Columns.Add("Seed", typeof(string));
+        _dataTable.Columns.Add("Score", typeof(int));
         _resultsTable.Table = new DataTableSource(_dataTable);
         _countLabel.Text = "";
 
-        try
+        _topScoreInView = int.MinValue;
+        _secondTierThreshold = int.MinValue;
+
+        var path = ResolveLakePath();
+        _statusLabel.Text = $"DuckLake browser unavailable. Use --save-seeds on JAML files. Saved path setting: {path}";
+        _statusLabel.ColorScheme = new ColorScheme
         {
-            using var conn = OpenConnection();
-            using var cmd = conn.CreateCommand();
-
-            _detectedTallyCount = DetectTallyCount(conn);
-
-            cmd.CommandText =
-                "SELECT DISTINCT filter_id FROM results ORDER BY filter_id";
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-                _filterIds.Add(reader.IsDBNull(0) ? "" : reader.GetString(0));
-
-            var display = _filterIds
-                .Select(id => string.IsNullOrEmpty(id) ? "(default)" : id)
-                .ToList();
-            _filterList.SetSource(new System.Collections.ObjectModel.ObservableCollection<string>(display));
-
-            if (_filterIds.Count > 0)
-            {
-                _filterList.SelectedItem = 0;
-                _selectedFilterId = _filterIds[0];
-                LoadResults(conn, _selectedFilterId);
-            }
-
-            _statusLabel.Text = $"OK — {_filterIds.Count} filter(s), {_detectedTallyCount} tally col(s)";
-            _statusLabel.ColorScheme = new ColorScheme
-            {
-                Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-            };
-        }
-        catch (Exception ex)
-        {
-            _statusLabel.Text = $"Error: {ex.Message}";
-            _statusLabel.ColorScheme = new ColorScheme
-            {
-                Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-            };
-        }
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey),
+        };
 
         SetNeedsDraw();
-    }
-
-    private static int DetectTallyCount(DuckDBConnection conn)
-    {
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText =
-            "SELECT COUNT(*) FROM information_schema.columns " +
-            "WHERE table_name = 'results' AND column_name LIKE 'tally%'";
-        var result = cmd.ExecuteScalar();
-        return result is long l ? (int)l : 0;
     }
 
     private void OnFilterSelected()
     {
-        if (_filterList.SelectedItem < 0 || _filterList.SelectedItem >= _filterIds.Count)
-            return;
-
-        _selectedFilterId = _filterIds[_filterList.SelectedItem];
-        try
+        _statusLabel.Text = "No DuckLake results available in the no-DB build.";
+        _statusLabel.ColorScheme = new ColorScheme
         {
-            using var conn = OpenConnection();
-            LoadResults(conn, _selectedFilterId);
-        }
-        catch (Exception ex)
-        {
-            _statusLabel.Text = $"Error: {ex.Message}";
-        }
-    }
-
-    private void LoadResults(DuckDBConnection conn, string filterId)
-    {
-        var dt = new DataTable();
-        dt.Columns.Add("Seed", typeof(string));
-        dt.Columns.Add("Score", typeof(int));
-        for (int i = 0; i < _detectedTallyCount; i++)
-            dt.Columns.Add($"t{i}", typeof(int));
-
-        using var cmd = conn.CreateCommand();
-        var tallyCols = string.Concat(Enumerable.Range(0, _detectedTallyCount).Select(i => $", tally{i}"));
-        var cutoffClause = _minScore > 0 ? $" AND score >= {_minScore}" : "";
-        cmd.CommandText =
-            $"SELECT seed, score{tallyCols} FROM results " +
-            $"WHERE filter_id = '{EscapeSqlLiteral(filterId)}'{cutoffClause} " +
-            $"ORDER BY {SortClause()} LIMIT {_rowLimit}";
-
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            var row = dt.NewRow();
-            row[0] = reader.GetString(0);
-            row[1] = reader.GetInt32(1);
-            for (int i = 0; i < _detectedTallyCount; i++)
-                row[2 + i] = reader.GetInt32(2 + i);
-            dt.Rows.Add(row);
-        }
-
-        _dataTable = dt;
-        _resultsTable.Table = new DataTableSource(_dataTable);
-
-        // Compute top-score tiers for row coloring.
-        _topScoreInView = int.MinValue;
-        for (int i = 0; i < dt.Rows.Count; i++)
-        {
-            if (dt.Rows[i][1] is int s && s > _topScoreInView) _topScoreInView = s;
-        }
-        _secondTierThreshold = _topScoreInView > 0 ? (int)Math.Ceiling(_topScoreInView * 0.9) : int.MinValue;
-
-        var displayId = string.IsNullOrEmpty(filterId) ? "(default)" : filterId;
-        var cutoffTxt = _minScore > 0 ? $" • cutoff ≥ {_minScore}" : "";
-        var topTxt = _topScoreInView > int.MinValue ? $" • top {_topScoreInView}" : "";
-        _countLabel.Text = $"{dt.Rows.Count:N0} row(s) • filter: {displayId}{cutoffTxt}{topTxt}";
-
-        SetNeedsDraw();
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey),
+        };
     }
 
     private string SortClause() => _sortMode switch
@@ -486,74 +355,24 @@ public class ResultsBrowserWindow : Window
 
     private void Reload()
     {
-        if (_filterIds.Count == 0) return;
-        try
-        {
-            using var conn = OpenConnection();
-            LoadResults(conn, _selectedFilterId);
-        }
-        catch (Exception ex)
-        {
-            _statusLabel.Text = $"Error: {ex.Message}";
-        }
+        LoadFilterIds();
     }
 
     private void ExportParquet()
     {
-        if (_dataTable.Rows.Count == 0)
+        _statusLabel.Text = "Parquet export unavailable without DuckLake.";
+        _statusLabel.ColorScheme = new ColorScheme
         {
-            _statusLabel.Text = "Nothing to export — load a filter first.";
-            return;
-        }
-
-        try
-        {
-            var target = Path.GetFullPath(
-                Path.Combine(
-                    Environment.CurrentDirectory,
-                    $"{(string.IsNullOrEmpty(_selectedFilterId) ? "default" : _selectedFilterId)}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.parquet"));
-
-            using var conn = OpenConnection();
-            using var cmd = conn.CreateCommand();
-            var tallyCols = string.Concat(Enumerable.Range(0, _detectedTallyCount).Select(i => $", tally{i}"));
-            cmd.CommandText =
-                $"COPY (SELECT seed, score{tallyCols} FROM results " +
-                $"WHERE filter_id = '{EscapeSqlLiteral(_selectedFilterId)}' " +
-                $"ORDER BY score DESC) TO '{EscapeSqlPath(target)}' (FORMAT PARQUET)";
-            cmd.ExecuteNonQuery();
-
-            _statusLabel.Text = $"Exported → {target}";
-            _statusLabel.ColorScheme = new ColorScheme
-            {
-                Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-            };
-        }
-        catch (Exception ex)
-        {
-            _statusLabel.Text = $"Export failed: {ex.Message}";
-            _statusLabel.ColorScheme = new ColorScheme
-            {
-                Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-            };
-        }
+            Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+        };
     }
 
     private void ClearFilter()
     {
-        if (string.IsNullOrEmpty(_selectedFilterId) && _filterIds.Count == 0) return;
-
-        try
+        _statusLabel.Text = "Clear unavailable without DuckLake.";
+        _statusLabel.ColorScheme = new ColorScheme
         {
-            using var conn = OpenConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = $"DELETE FROM results WHERE filter_id = '{EscapeSqlLiteral(_selectedFilterId)}'";
-            var rows = cmd.ExecuteNonQuery();
-            _statusLabel.Text = $"Cleared {rows:N0} row(s) from filter '{_selectedFilterId}'.";
-            LoadFilterIds();
-        }
-        catch (Exception ex)
-        {
-            _statusLabel.Text = $"Clear failed: {ex.Message}";
-        }
+            Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+        };
     }
 }
