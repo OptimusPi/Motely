@@ -24,7 +24,7 @@ should:
     score: 70
   - legendaryJoker: Triboulet
     score: 60
-  - tarot: TheChariot
+  - tarotCard: TheChariot
     score: 55
   - uncommonJoker: SteelJoker
     score: 55
@@ -32,7 +32,7 @@ should:
     score: 55
   - rareJoker: Brainstorm
     score: 50
-  - spectral: DejaVu
+  - spectralCard: DejaVu
     score: 50
   - uncommonJoker: Bloodstone
     score: 45

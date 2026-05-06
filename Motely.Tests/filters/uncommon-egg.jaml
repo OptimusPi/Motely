@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - tarot: Temperance
+  - tarotCard: Temperance
     score: 50
   - commonJoker: Swashbuckler
     score: 40

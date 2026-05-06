@@ -53,7 +53,7 @@ public sealed class MotelyWasmHost : IMotelyWasm
 
     private static string LoadJamlSchema()
     {
-        var assembly = typeof(MotelyWasmHost).Assembly;
+        var assembly = typeof(VersionInfo).Assembly;
         using var stream = assembly.GetManifestResourceStream("jaml.schema.json")
             ?? throw new InvalidOperationException("Embedded JAML schema resource was not found.");
         using var reader = new StreamReader(stream);
@@ -93,6 +93,97 @@ public sealed class MotelyWasmHost : IMotelyWasm
         return new JamlValidationResult(false, error ?? "Invalid JAML.", path, line, col);
     }
 
+    public JamlMetaResult GetJamlMeta(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out _))
+            return new JamlMetaResult([], [], 0, 0, 0, "Red", "White");
+
+        var antes = new SortedSet<int>();
+        var itemTypes = new SortedSet<string>();
+
+        void Walk(System.Collections.Generic.IEnumerable<IJamlClause> clauses)
+        {
+            foreach (var c in clauses)
+            {
+                switch (c)
+                {
+                    case JokerClause jc:
+                        itemTypes.Add("Joker");
+                        foreach (var a in jc.Antes) antes.Add(a);
+                        break;
+                    case CommonJokerClause cc:
+                        itemTypes.Add("CommonJoker");
+                        foreach (var a in cc.Antes) antes.Add(a);
+                        break;
+                    case UncommonJokerClause uc:
+                        itemTypes.Add("UncommonJoker");
+                        foreach (var a in uc.Antes) antes.Add(a);
+                        break;
+                    case RareJokerClause rc:
+                        itemTypes.Add("RareJoker");
+                        foreach (var a in rc.Antes) antes.Add(a);
+                        break;
+                    case LegendaryJokerClause lc:
+                        itemTypes.Add("LegendaryJoker");
+                        foreach (var a in lc.Antes) antes.Add(a);
+                        break;
+                    case VoucherClause vc:
+                        itemTypes.Add("Voucher");
+                        foreach (var a in vc.Antes) antes.Add(a);
+                        break;
+                    case BossClause bc:
+                        itemTypes.Add("Boss");
+                        foreach (var a in bc.Antes) antes.Add(a);
+                        break;
+                    case TagClause tc:
+                        itemTypes.Add("Tag");
+                        foreach (var a in tc.Antes) antes.Add(a);
+                        break;
+                    case TarotCardClause tarot:
+                        itemTypes.Add("Tarot");
+                        foreach (var a in tarot.Antes) antes.Add(a);
+                        break;
+                    case SpectralCardClause spec:
+                        itemTypes.Add("Spectral");
+                        foreach (var a in spec.Antes) antes.Add(a);
+                        break;
+                    case PlanetCardClause planet:
+                        itemTypes.Add("Planet");
+                        foreach (var a in planet.Antes) antes.Add(a);
+                        break;
+                    case ErraticRankClause erk:
+                        itemTypes.Add("ErraticRank");
+                        foreach (var a in erk.Antes) antes.Add(a);
+                        break;
+                    case ErraticSuitClause esc:
+                        itemTypes.Add("ErraticSuit");
+                        foreach (var a in esc.Antes) antes.Add(a);
+                        break;
+                    case AndClause and:
+                        Walk(and.Clauses);
+                        break;
+                    case OrClause or:
+                        Walk(or.Clauses);
+                        break;
+                }
+            }
+        }
+
+        Walk(config.Must);
+        Walk(config.Should);
+        Walk(config.MustNot);
+
+        return new JamlMetaResult(
+            [.. antes],
+            [.. itemTypes],
+            config.Must.Count,
+            config.Should.Count,
+            config.MustNot.Count,
+            config.Deck.ToString(),
+            config.Stake.ToString()
+        );
+    }
+
     public IMotelyWasmSearchContext CreateSearchContext(string seed, MotelyDeck deck, MotelyStake stake)
     {
         return new MotelyWasmSearchContext(seed, deck, stake);
@@ -130,6 +221,17 @@ public sealed class MotelyWasmHost : IMotelyWasm
         int maxResults
     )
     {
+        return RunSequentialSearchBatchCore(jaml, batchCharCount, startBatch, endBatch, maxResults);
+    }
+
+    private async Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatchCore(
+        string jaml,
+        int batchCharCount,
+        long startBatch,
+        long endBatch,
+        int maxResults
+    )
+    {
         var results = new List<MotelyWasmSearchResult>();
         using var search = StartSequentialSearch(
             jaml,
@@ -142,15 +244,14 @@ public sealed class MotelyWasmHost : IMotelyWasm
                     results.Add(result);
             }
         );
-        // NativeAOT fires all events synchronously — search is complete by here.
+        var completion = await search.WaitForCompletion();
         var snap = search.GetSnapshot();
-        var completion = new MotelyWasmSearchCompletion(
-            MotelyWasmSearchState.Completed,
-            snap.TotalSeedsSearched,
-            snap.MatchingSeeds,
-            null
-        );
-        return Task.FromResult(new MotelyWasmSearchBatchResult(completion, [.. results]));
+        var finalizedCompletion = completion with
+        {
+            TotalSeedsSearched = snap.TotalSeedsSearched,
+            MatchingSeeds = snap.MatchingSeeds,
+        };
+        return new MotelyWasmSearchBatchResult(finalizedCompletion, [.. results]);
     }
 
     public IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds)
@@ -211,7 +312,8 @@ public sealed class MotelyWasmHost : IMotelyWasm
         var settings = plan.Settings
             .WithDeck(config.Deck)
             .WithStake(config.Stake)
-            .WithThreadCount(1);
+            .WithThreadCount(1)
+            .WithProgressReportIntervalMs(250);
 
         settings = configureMode(settings);
 
@@ -240,6 +342,7 @@ public sealed class MotelyWasmHost : IMotelyWasm
 
     public string[] GetTallyLabels(string jaml) =>
         JamlSearchBuilder.CreatePlan(ParseJaml(jaml)).TallyLabels;
+
 
     public MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
@@ -282,7 +385,7 @@ public sealed class MotelyWasmHost : IMotelyWasm
         return _libraries.TryGetValue(rootId, out var lib) ? lib.Watcher.FileUris : [];
     }
 
-    public async Task<string> LoadJamlFile(string rootId, string uri)
+    public async Task<string> LoadLibraryFile(string rootId, string uri)
     {
         if (!_libraries.TryGetValue(rootId, out var lib))
             throw new InvalidOperationException($"No mounted library with root '{rootId}'.");
@@ -290,12 +393,17 @@ public sealed class MotelyWasmHost : IMotelyWasm
         return Encoding.UTF8.GetString(bytes);
     }
 
-    public async Task SaveJamlFile(string rootId, string uri, string content)
+    public async Task SaveLibraryFile(string rootId, string uri, string content)
     {
         if (!_libraries.TryGetValue(rootId, out var lib))
             throw new InvalidOperationException($"No mounted library with root '{rootId}'.");
         await lib.Fs.WriteFile(uri, Encoding.UTF8.GetBytes(content));
     }
+
+    public Task<string> LoadJamlFile(string rootId, string uri) => LoadLibraryFile(rootId, uri);
+
+    public Task SaveJamlFile(string rootId, string uri, string content) =>
+        SaveLibraryFile(rootId, uri, content);
 
     private sealed class JamlFileWatcher(IMotelyWasmEvents events, string rootId) : IFileWatcher
     {

@@ -443,7 +443,7 @@ public class SearchConsistencyTests(ITestOutputHelper output)
             deck: Red
             stake: White
             must:
-              - tarot: {{derived.TarotName}}
+              - tarotCard: {{derived.TarotName}}
                 antes: [{{derived.Ante}}]
                 sources:
                   shopItems: [{{derived.ShopSlotIndex}}]

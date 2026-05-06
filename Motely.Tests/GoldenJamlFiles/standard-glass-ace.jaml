@@ -30,7 +30,7 @@ should:
     score: 50
   - commonJoker: Photograph
     score: 45
-  - spectral: DejaVu
+  - spectralCard: DejaVu
     score: 45
   - rareJoker: Blueprint
     score: 40

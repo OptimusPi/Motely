@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "economy", "planet-scaling", "legendary-synergy"]
 must:
-  - spectral: Talisman
+  - spectralCard: Talisman
     antes:
       - 1
       - 2

@@ -1,10 +1,10 @@
 # JAML Language Support for VS Code
 
-JAML (Jimbo's Ante Markup Language) and Jummy language support for Motely/Balatro seed filters.
+JAML (Jimbo's Ante Markup Language) language support for Motely/Balatro seed filters.
 
 ## What it does
 
-- Syntax highlighting for `.jaml` and `.jummy` files.
+- Syntax highlighting for `.jaml` files.
 - Schema-aware completions and hovers backed by the generated Motely JAML schema.
 - Diagnostics for common authoring mistakes.
 - Snippets for common filter shapes.

@@ -14,17 +14,17 @@ must:
 should:
   - legendaryJoker: Perkeo
     score: 70
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     score: 70
   - uncommonJoker: SixthSense
     score: 55
   - uncommonJoker: Seance
     score: 50
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 55
-  - spectral: Ectoplasm
+  - spectralCard: Ectoplasm
     score: 45
-  - spectral: Hex
+  - spectralCard: Hex
     score: 45
   - uncommonJoker: Constellation
     score: 40

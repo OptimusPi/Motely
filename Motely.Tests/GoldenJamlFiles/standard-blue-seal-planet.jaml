@@ -21,9 +21,9 @@ should:
     score: 80
   - uncommonJoker: Satellite
     score: 65
-  - spectral: Trance
+  - spectralCard: Trance
     score: 45
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 50
   - voucher: Telescope
     score: 50

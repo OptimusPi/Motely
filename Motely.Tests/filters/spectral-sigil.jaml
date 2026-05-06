@@ -4,7 +4,7 @@ description: Sigil spectral with Blackboard for suit conversion to Flush
 deck: Red
 stake: White
 must:
-  - spectral: Sigil
+  - spectralCard: Sigil
     antes:
       - 1
       - 2

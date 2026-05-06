@@ -17,7 +17,7 @@ should:
   - joker: Any
     edition: Negative
     score: 75
-  - spectral: Ectoplasm
+  - spectralCard: Ectoplasm
     score: 65
   - voucher: Antimatter
     score: 55
@@ -37,5 +37,5 @@ should:
     score: 40
   - legendaryJoker: Chicot
     score: 25
-  - spectral: Hex
+  - spectralCard: Hex
     score: 15

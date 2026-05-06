@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "scaling", "planet-scaling", "deck-fix", "legendary-synergy"]
 must:
-  - spectral: Wraith
+  - spectralCard: Wraith
     antes:
       - 1
       - 2

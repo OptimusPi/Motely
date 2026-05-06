@@ -4,7 +4,7 @@ description: BlackHole spectral with Constellation for universal hand level upgr
 deck: Red
 stake: White
 must:
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     antes:
       - 1
       - 2

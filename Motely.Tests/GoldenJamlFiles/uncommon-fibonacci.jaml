@@ -25,7 +25,7 @@ should:
     score: 60
   - rareJoker: WeeJoker
     score: 55
-  - spectral: Grim
+  - spectralCard: Grim
     score: 45
   - commonJoker: OddTodd
     score: 40

@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "face-cards", "legendary-synergy"]
 must:
-  - tarot: Strength
+  - tarotCard: Strength
     antes:
       - 1
       - 2

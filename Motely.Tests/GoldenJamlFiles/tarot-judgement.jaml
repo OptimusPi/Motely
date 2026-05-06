@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "legendary-synergy"]
 must:
-  - tarot: Judgement
+  - tarotCard: Judgement
     antes:
       - 1
       - 2

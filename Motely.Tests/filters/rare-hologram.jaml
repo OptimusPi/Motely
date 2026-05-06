@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - spectral: Incantation
+  - spectralCard: Incantation
     score: 40
-  - spectral: Familiar
+  - spectralCard: Familiar
     score: 35

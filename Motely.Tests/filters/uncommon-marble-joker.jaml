@@ -13,5 +13,5 @@ must:
 should:
   - uncommonJoker: StoneJoker
     score: 60
-  - tarot: TheTower
+  - tarotCard: TheTower
     score: 40

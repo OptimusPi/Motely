@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,8 +20,8 @@ public static partial class MotelyJamlSchemaGenerator
     private const string SchemaTitle = "JAML — Jimbo's Ante Markup Language";
     private const string SchemaDescription =
         "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.";
-    private const string JamlCriterionDef = nameof(JamlCriterion);
-    private const string JamlSourcesDef = nameof(JamlSources);
+    private const string JamlClauseDef = nameof(JamlClauseDto);
+    private const string JamlSourcesDef = nameof(JamlSourcesDto);
 
     private static readonly Dictionary<string, string> PropertyToRef = new(StringComparer.Ordinal)
     {
@@ -32,12 +34,13 @@ public static partial class MotelyJamlSchemaGenerator
         ["rareJoker"] = "RareJoker",
         ["rareJokers"] = "RareJoker",
         ["legendaryJoker"] = "LegendaryJoker",
+        ["legendaryJokers"] = "LegendaryJoker",
         ["voucher"] = "Voucher",
         ["vouchers"] = "Voucher",
-        ["tarot"] = "Tarot",
         ["tarotCard"] = "Tarot",
-        ["spectral"] = "Spectral",
+        ["tarotCards"] = "Tarot",
         ["spectralCard"] = "Spectral",
+        ["spectralCards"] = "Spectral",
         ["planet"] = "Planet",
         ["planetCard"] = "Planet",
         ["boss"] = "Boss",
@@ -56,19 +59,21 @@ public static partial class MotelyJamlSchemaGenerator
         ["erraticSuit"] = "Suit",
         ["mode"] = "Mode",
         ["standardCard"] = "StandardCard",
-        ["and"] = JamlCriterionDef,
-        ["or"] = JamlCriterionDef,
-        ["clauses"] = JamlCriterionDef,
+        ["standardCards"] = "StandardCard",
+        ["and"] = JamlClauseDef,
+        ["or"] = JamlClauseDef,
+        ["clauses"] = JamlClauseDef,
         ["sources"] = JamlSourcesDef,
     };
 
     [JsonSourceGenerationOptions(
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
         GenerationMode = JsonSourceGenerationMode.Metadata)]
-    [JsonSerializable(typeof(JamlDocument))]
-    [JsonSerializable(typeof(JamlCriterion))]
-    [JsonSerializable(typeof(JamlSources))]
-    [JsonSerializable(typeof(JamlDefaults))]
+    [JsonSerializable(typeof(string))]
+    [JsonSerializable(typeof(JamlRootDocument))]
+    [JsonSerializable(typeof(JamlClauseDto))]
+    [JsonSerializable(typeof(JamlSourcesDto))]
+    [JsonSerializable(typeof(JamlDefaultsDto))]
     internal sealed partial class SchemaContext : JsonSerializerContext
     {
     }
@@ -76,7 +81,7 @@ public static partial class MotelyJamlSchemaGenerator
     public static JsonObject Generate()
     {
         var rootNode = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlDocument,
+            SchemaContext.Default.JamlRootDocument,
             ExporterOptions());
 
         var root = rootNode as JsonObject
@@ -154,7 +159,7 @@ public static partial class MotelyJamlSchemaGenerator
         new()
         {
             ["type"] = "array",
-            ["items"] = RefNode(JamlCriterionDef),
+            ["items"] = RefNode(JamlClauseDef),
         };
 
     private static void WriteAllText(string path, string content)
@@ -240,7 +245,7 @@ public static partial class MotelyJamlSchemaGenerator
     {
         return new JsonObject
         {
-            [JamlCriterionDef] = CriterionDef(),
+            [JamlClauseDef] = CriterionDef(),
             ["Joker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJoker>(), "any")),
             ["CommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerCommon>(), "any")),
             ["UncommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerUncommon>(), "any")),
@@ -269,7 +274,7 @@ public static partial class MotelyJamlSchemaGenerator
     private static JsonObject CriterionDef()
     {
         var node = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlCriterion,
+            SchemaContext.Default.JamlClauseDto,
             ExporterOptions());
 
         var result = node as JsonObject
@@ -281,7 +286,7 @@ public static partial class MotelyJamlSchemaGenerator
     private static JsonObject SourcesDef()
     {
         var node = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlSources,
+            SchemaContext.Default.JamlSourcesDto,
             ExporterOptions());
 
         var result = node as JsonObject
@@ -349,6 +354,93 @@ public static partial class MotelyJamlSchemaGenerator
         Path.Combine(repoRoot, "packages", "jaml-language-support", "schema", "jaml.schema.json"),
     };
 
+    public static IReadOnlyList<string> DefaultItemFormatTypeOutputPaths(string repoRoot) => new[]
+    {
+        Path.Combine(repoRoot, "motely-wasm", "motely-item-formats.d.ts"),
+        Path.Combine(repoRoot, "packages", "jaml-language-core", "motely-item-formats.d.ts"),
+        Path.Combine(repoRoot, "packages", "jaml-language-support", "schema", "motely-item-formats.d.ts"),
+    };
+
+    public static IReadOnlyList<string> DefaultItemFormatModuleOutputPaths(string repoRoot) => new[]
+    {
+        Path.Combine(repoRoot, "motely-wasm", "motely-item-formats.mjs"),
+        Path.Combine(repoRoot, "packages", "jaml-language-core", "motely-item-formats.mjs"),
+        Path.Combine(repoRoot, "packages", "jaml-language-support", "schema", "motely-item-formats.mjs"),
+    };
+
+    public static string GenerateItemFormatTypescript()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("export interface MotelyItemFormatEntry {");
+        sb.AppendLine("  readonly value: number;");
+        sb.AppendLine("  readonly enumName: string;");
+        sb.AppendLine("  readonly displayName: string;");
+        sb.AppendLine("  readonly category: string;");
+        sb.AppendLine("}");
+        sb.AppendLine();
+        sb.AppendLine("export declare const MOTELY_ITEM_FORMATS_BY_VALUE: {");
+
+        foreach (var itemType in Enum.GetValues<MotelyItemType>().OrderBy(static itemType => (int)itemType))
+        {
+            var item = new MotelyItem(itemType);
+            var value = (int)item.Value;
+            var enumName = itemType.ToString();
+            var displayName = FormatUtils.FormatItem(item);
+            var category = item.TypeCategory.ToString();
+            sb.AppendLine($"  readonly {value}: {{ readonly value: {value}; readonly enumName: {JsonString(enumName)}; readonly displayName: {JsonString(displayName)}; readonly category: {JsonString(category)}; }};");
+        }
+
+        sb.AppendLine("};");
+        sb.AppendLine();
+        sb.AppendLine("export declare const MOTELY_ITEM_FORMATS_BY_ENUM_NAME: {");
+
+        foreach (var itemType in Enum.GetValues<MotelyItemType>().OrderBy(static itemType => itemType.ToString(), StringComparer.Ordinal))
+        {
+            var item = new MotelyItem(itemType);
+            var value = (int)item.Value;
+            var enumName = itemType.ToString();
+            var displayName = FormatUtils.FormatItem(item);
+            var category = item.TypeCategory.ToString();
+            sb.AppendLine($"  readonly {enumName}: {{ readonly value: {value}; readonly enumName: {JsonString(enumName)}; readonly displayName: {JsonString(displayName)}; readonly category: {JsonString(category)}; }};");
+        }
+
+        sb.AppendLine("};");
+        sb.AppendLine();
+        sb.AppendLine("export type MotelyItemEnumName = keyof typeof MOTELY_ITEM_FORMATS_BY_ENUM_NAME;");
+        sb.AppendLine("export type MotelyItemPackedValue = keyof typeof MOTELY_ITEM_FORMATS_BY_VALUE;");
+        return sb.ToString().ReplaceLineEndings("\n");
+    }
+
+    public static string GenerateItemFormatModule()
+    {
+        var entries = Enum.GetValues<MotelyItemType>()
+            .OrderBy(static itemType => (int)itemType)
+            .Select(static itemType =>
+            {
+                var item = new MotelyItem(itemType);
+                return new
+                {
+                    value = (int)item.Value,
+                    enumName = itemType.ToString(),
+                    displayName = FormatUtils.FormatItem(item),
+                    category = item.TypeCategory.ToString(),
+                };
+            })
+            .ToArray();
+
+        var sb = new StringBuilder();
+        sb.AppendLine("export const MOTELY_ITEM_FORMATS_BY_VALUE = Object.freeze({");
+        foreach (var entry in entries)
+            sb.AppendLine($"  {entry.value}: Object.freeze({{ value: {entry.value}, enumName: {JsonString(entry.enumName)}, displayName: {JsonString(entry.displayName)}, category: {JsonString(entry.category)} }}),");
+        sb.AppendLine("});");
+        sb.AppendLine();
+        sb.AppendLine("export const MOTELY_ITEM_FORMATS_BY_ENUM_NAME = Object.freeze({");
+        foreach (var entry in entries.OrderBy(static entry => entry.enumName, StringComparer.Ordinal))
+            sb.AppendLine($"  {entry.enumName}: MOTELY_ITEM_FORMATS_BY_VALUE[{entry.value}],");
+        sb.AppendLine("});");
+        return sb.ToString().ReplaceLineEndings("\n");
+    }
+
     public static int WriteDefault(string? repoRootOverride = null, TextWriter? log = null)
     {
         var repoRoot = repoRootOverride ?? FindRepoRoot(Environment.CurrentDirectory)
@@ -366,19 +458,38 @@ public static partial class MotelyJamlSchemaGenerator
             WriteAllText(p, json);
             (log ?? Console.Out).WriteLine($"wrote {p}");
         }
+
+        var itemFormatTypescript = GenerateItemFormatTypescript();
+        foreach (var p in DefaultItemFormatTypeOutputPaths(repoRoot))
+        {
+            WriteAllText(p, itemFormatTypescript);
+            (log ?? Console.Out).WriteLine($"wrote {p}");
+        }
+
+        var itemFormatModule = GenerateItemFormatModule();
+        foreach (var p in DefaultItemFormatModuleOutputPaths(repoRoot))
+        {
+            WriteAllText(p, itemFormatModule);
+            (log ?? Console.Out).WriteLine($"wrote {p}");
+        }
         return 0;
     }
+
+    private static string JsonString(string value) =>
+        JsonSerializer.Serialize(value, SchemaContext.Default.String);
 
     private static string? FindRepoRoot(string start)
     {
         var dir = new DirectoryInfo(start);
         while (dir != null)
         {
-            if (File.Exists(Path.Combine(dir.FullName, "Motely.sln")))
+            if (
+                File.Exists(Path.Combine(dir.FullName, "Directory.Packages.props"))
+                || File.Exists(Path.Combine(dir.FullName, "Motely.sln"))
+            )
                 return dir.FullName;
             dir = dir.Parent;
         }
         return null;
     }
 }
-

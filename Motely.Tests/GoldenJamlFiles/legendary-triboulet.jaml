@@ -12,7 +12,7 @@ must:
       - 3
       - 4
 should:
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     score: 55
   - tag: EtherealTag
     score: 45
@@ -32,9 +32,9 @@ should:
     score: 45
   - commonJoker: ShootTheMoon
     score: 45
-  - tarot: Strength
+  - tarotCard: Strength
     score: 45
-  - tarot: Death
+  - tarotCard: Death
     score: 40
   - tag: CharmTag
     score: 35
