@@ -51,6 +51,23 @@ Motely is the Balatro seed search engine and JAML is its public filter language.
 - **Source cleanup is good.** Splitting large interfaces into cohesive sub-interfaces is fine if the umbrella contract remains stable and no fake new layer is invented.
 - **Structured analysis is the direction.** `SeedAnalysisDto` is the canonical Jamlyzer payload for UI/serialization. Text formatting is formatting, not the core analysis model.
 
+## Release process
+
+Do not invent steps. This is the exact flow:
+
+**Step 1 — build and publish to npm:**
+```powershell
+# from X:\JammySeedFinder\src\MotelyJAML
+dotnet publish Motely.Wasm -c Release
+cd motely-wasm
+npm publish --access public
+```
+`sync-version.mjs` runs automatically as a `prepublishOnly` hook and syncs `<MotelyVersion>` from `Directory.Packages.props` into `package.json`. The npm notice log may show the old version — check `npm view motely-wasm version` to confirm what actually landed.
+
+Consumers use unpkg/jsdelivr automatically after npm publish — no manual CDN upload step.
+
+**Version bump:** edit `<MotelyVersion>` in `Directory.Packages.props` only. Everything else syncs from there.
+
 ## Project map
 
 | Project | Purpose | Target |
