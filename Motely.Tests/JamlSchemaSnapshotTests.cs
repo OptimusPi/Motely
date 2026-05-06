@@ -40,7 +40,7 @@ public class JamlSchemaSnapshotTests
     {
       var sectionSchema = Assert.IsType<JsonObject>(properties[section]);
       var items = Assert.IsType<JsonObject>(sectionSchema["items"]);
-      Assert.Equal("#/$defs/JamlCriterion", items["$ref"]?.GetValue<string>());
+      Assert.Equal("#/$defs/JamlClauseDto", items["$ref"]?.GetValue<string>());
     }
   }
 }

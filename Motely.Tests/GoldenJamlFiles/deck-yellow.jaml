@@ -26,7 +26,7 @@ should:
     score: 40
   - uncommonJoker: Castle
     score: 35
-  - spectral: Immolate
+  - spectralCard: Immolate
     score: 40
   - rareJoker: Blueprint
     score: 40

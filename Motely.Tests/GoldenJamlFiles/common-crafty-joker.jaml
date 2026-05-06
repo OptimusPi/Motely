@@ -22,7 +22,7 @@ should:
     score: 45
   - uncommonJoker: FlowerPot
     score: 30
-  - tarot: TheLovers
+  - tarotCard: TheLovers
     score: 25
   - uncommonJoker: RoughGem
     score: 20

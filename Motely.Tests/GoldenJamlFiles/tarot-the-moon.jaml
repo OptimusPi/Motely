@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "flush", "planet-scaling", "dark-suits", "legendary-synergy"]
 must:
-  - tarot: TheMoon
+  - tarotCard: TheMoon
     antes:
       - 1
       - 2

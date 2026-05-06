@@ -12,7 +12,7 @@ must:
       - 3
       - 4
 should:
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     score: 55
   - tag: EtherealTag
     score: 40

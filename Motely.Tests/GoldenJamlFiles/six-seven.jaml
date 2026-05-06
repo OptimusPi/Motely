@@ -8,7 +8,7 @@ hashtags: ["curated", "copy", "negative", "flush", "planet-scaling", "discard", 
 must:
   - uncommonJoker: FourFingers
     antes: [1]
-  - spectral: Ankh
+  - spectralCard: Ankh
     antes: [1]
 should:
   - erraticRank: Six

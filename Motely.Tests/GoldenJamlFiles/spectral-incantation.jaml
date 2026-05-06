@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["spectral", "consumable", "copy", "negative", "planet-scaling", "legendary-synergy"]
 must:
-  - spectral: Incantation
+  - spectralCard: Incantation
     antes:
       - 1
       - 2

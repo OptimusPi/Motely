@@ -1,6 +1,5 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
-using Motely.Datalake;
 using Motely.Filters;
 
 namespace Motely.CLI;
@@ -13,11 +12,13 @@ internal static class CliSearchMode
     public readonly record struct Input(
         string? SourcePath,
         string? SeedsArgument,
+        bool Drown,
+        string? ResultsRootPath,
+        string? FilterId,
         IReadOnlyList<string> KeywordInputs,
         string? PaddingCharsOption,
         int? RandomCount,
         string? AestheticName,
-        bool Drown,
         long? StartBatch,
         long? EndBatch,
         double? StartPercent,
@@ -42,6 +43,7 @@ internal static class CliSearchMode
 
         bool hasSource = !string.IsNullOrWhiteSpace(input.SourcePath);
         bool hasSeedsArg = !string.IsNullOrWhiteSpace(input.SeedsArgument);
+        bool hasDrownMode = input.Drown;
 
         if (hasSource && hasSeedsArg)
         {
@@ -66,7 +68,7 @@ internal static class CliSearchMode
             input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
         if (hasSeedIndexOptions)
         {
-            if (hasSource || hasSeedsArg || input.KeywordInputs.Count > 0 || input.RandomCount.HasValue
+            if (hasSource || hasSeedsArg || hasDrownMode || input.KeywordInputs.Count > 0 || input.RandomCount.HasValue
                 || explicitAesthetic.HasValue)
             {
                 error = "Error: --startSeed/--stopSeed apply only to default sequential search.";
@@ -86,6 +88,8 @@ internal static class CliSearchMode
         int explicitSearchModeCount = 0;
         if (hasSeedListMode)
             explicitSearchModeCount++;
+        if (hasDrownMode)
+            explicitSearchModeCount++;
         if (hasKeywordMode)
             explicitSearchModeCount++;
         if (input.RandomCount.HasValue)
@@ -96,37 +100,52 @@ internal static class CliSearchMode
         if (explicitSearchModeCount > 1)
         {
             error =
-                "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, or --aesthetic.";
+                "Error: choose only one search input mode: --source, --seeds, --drown, --keyword, --keywords, --random, or --aesthetic.";
             return false;
         }
 
         string[]? explicitSeeds = null;
         IMotelySeedProvider? streamingProvider = null;
+
+        if (hasDrownMode)
+        {
+            if (input.StartBatch.HasValue || input.EndBatch.HasValue || input.StartPercent.HasValue)
+            {
+                error = "Error: --drown cannot be combined with --startBatch, --endBatch, or --startPercent.";
+                return false;
+            }
+
+            if (input.JamlAestheticFallback is { Count: > 0 })
+            {
+                error = "Error: --drown cannot be used when JAML declares aesthetics.";
+                return false;
+            }
+
+            if (!DuckDbResultsSeedProvider.TryCreate(
+                    input.FilterId ?? string.Empty,
+                    input.ResultsRootPath,
+                    out var drownProvider,
+                    out var drownError))
+            {
+                error = drownError ?? "Error: could not create DuckDB drown provider.";
+                return false;
+            }
+
+            streamingProvider = drownProvider;
+            sourceLifetime = drownProvider;
+        }
+
         if (hasSource)
         {
             try
             {
-                if (SeedReader.TryCreateProvider(input.SourcePath!, out var provider))
+                var sourceSeeds = SeedTextReader.ReadSeeds(input.SourcePath!);
+                if (sourceSeeds.Count == 0)
                 {
-                    if (provider!.SeedCount == 0)
-                    {
-                        (provider as IDisposable)?.Dispose();
-                        error = "Error: resolved source contained no seeds.";
-                        return false;
-                    }
-                    streamingProvider = provider;
-                    sourceLifetime = provider as IDisposable;
+                    error = "Error: resolved source contained no seeds.";
+                    return false;
                 }
-                else
-                {
-                    var sourceSeeds = SeedReader.ReadSeeds(input.SourcePath!);
-                    if (sourceSeeds.Count == 0)
-                    {
-                        error = "Error: resolved source contained no seeds.";
-                        return false;
-                    }
-                    explicitSeeds = sourceSeeds.ToArray();
-                }
+                explicitSeeds = sourceSeeds.ToArray();
             }
             catch (Exception ex)
             {
@@ -146,7 +165,7 @@ internal static class CliSearchMode
             {
                 try
                 {
-                    var sourceSeeds = SeedReader.ReadSeeds(seedsValue);
+                    var sourceSeeds = SeedTextReader.ReadSeeds(seedsValue);
                     if (sourceSeeds.Count == 0)
                     {
                         error = "Error: resolved seed source contained no seeds.";
@@ -164,7 +183,7 @@ internal static class CliSearchMode
             }
             else
             {
-                var inlineSeeds = SeedReader.ParseInlineSeeds(seedsValue);
+                var inlineSeeds = SeedTextReader.ParseInlineSeeds(seedsValue);
                 if (inlineSeeds.Count == 0)
                 {
                     error = "Error: --seeds requires at least one inline seed.";
@@ -199,26 +218,6 @@ internal static class CliSearchMode
                 paddingChars
             );
             updated = updated.WithProviderSearch(new MotelySeedListProvider(prov, keywordSeedCount));
-        }
-        else if (input.Drown)
-        {
-            var lakeDir = SeedStoragePaths.StandardLakeDirectory;
-            if (!Directory.Exists(lakeDir) || !Directory.EnumerateFiles(lakeDir, "*.parquet").Any())
-            {
-                error = $"Error: --drown requires parquet files in {lakeDir}. Run searches with --sink first to populate the ducklake.";
-                return false;
-            }
-            var drownProvider = new DuckLakeDrownProvider(lakeDir);
-            if (drownProvider.SeedCount == 0)
-            {
-                drownProvider.Dispose();
-                error = "Error: ducklake contains no seeds.";
-                return false;
-            }
-            writeWarning?.Invoke($"Drown: {drownProvider.SeedCount:N0} seeds from ducklake");
-            streamingProvider = drownProvider;
-            sourceLifetime = drownProvider;
-            updated = updated.WithProviderSearch(drownProvider);
         }
         else if (input.RandomCount.HasValue)
         {

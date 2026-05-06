@@ -4,7 +4,7 @@ description: Grim spectral with Scholar for enhanced Ace synergy
 deck: Red
 stake: White
 must:
-  - spectral: Grim
+  - spectralCard: Grim
     antes:
       - 1
       - 2

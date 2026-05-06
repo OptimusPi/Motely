@@ -4,7 +4,7 @@ description: Ankh spectral to duplicate Blueprint joker
 deck: Red
 stake: White
 must:
-  - spectral: Ankh
+  - spectralCard: Ankh
     antes:
       - 1
       - 2

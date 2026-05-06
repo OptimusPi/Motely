@@ -4,7 +4,7 @@ namespace Motely.Analysis;
 
 internal static class MotelyJamlyzerHighlights
 {
-    public static MotelyLegacyTextAnalyzer Apply(JamlConfig config, MotelyLegacyTextAnalyzer analysis)
+    public static SeedAnalysisDto Apply(JamlConfig config, SeedAnalysisDto analysis)
     {
         if (analysis.Error is not null)
             return analysis;
@@ -18,28 +18,26 @@ internal static class MotelyJamlyzerHighlights
         if (targets.Length == 0)
             return analysis;
 
-        return analysis with
-        {
-            Antes = analysis.Antes.Select(ante => HighlightAnte(ante, targets)).ToArray(),
-        };
+        analysis.Antes = analysis.Antes.Select(ante => HighlightAnte(ante, targets)).ToArray();
+        return analysis;
     }
 
-    private static MotelyAnteAnalysis HighlightAnte(
-        MotelyAnteAnalysis ante,
+    private static AnteAnalysisDto HighlightAnte(
+        AnteAnalysisDto ante,
         IReadOnlyList<JokerTarget> targets
     )
     {
-        var shop = ante.ShopQueue
+        ante.ShopQueue = ante.ShopQueue
             .Select((item, slot) => item with
             {
                 Matched = item.Matched || targets.Any(target =>
                     target.AppliesToAnte(ante.Ante)
                     && target.AppliesToShopSlot(slot)
-                    && target.Matches(item.Item)),
+                    && target.Matches(new MotelyItem(item.Value))),
             })
             .ToArray();
 
-        var packs = ante.Packs
+        ante.Packs = ante.Packs
             .Select((pack, slot) => pack with
             {
                 Items = pack.Items.Select(item => item with
@@ -47,12 +45,12 @@ internal static class MotelyJamlyzerHighlights
                     Matched = item.Matched || targets.Any(target =>
                         target.AppliesToAnte(ante.Ante)
                         && target.AppliesToBoosterSlot(slot)
-                        && target.Matches(item.Item)),
+                        && target.Matches(new MotelyItem(item.Value))),
                 }).ToArray(),
             })
             .ToArray();
 
-        return ante with { ShopQueue = shop, Packs = packs };
+        return ante;
     }
 
     private static IEnumerable<IJamlClause> EnumeratePreviewClauses(JamlConfig config)

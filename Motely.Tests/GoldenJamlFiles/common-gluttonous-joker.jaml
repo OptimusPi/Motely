@@ -18,7 +18,7 @@ should:
     score: 55
   - uncommonJoker: SeeingDouble
     score: 55
-  - tarot: TheMoon
+  - tarotCard: TheMoon
     score: 50
   - uncommonJoker: SmearedJoker
     score: 45

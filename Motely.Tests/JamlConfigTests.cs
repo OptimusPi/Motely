@@ -98,6 +98,25 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void Jokers_MixedLegendaryAndNonLegendary_StayInSingleGenericClause()
+  {
+    var jaml = """
+            name: MixedGenericJokers
+            must:
+              - jokers: [Perkeo, Blueprint]
+                antes: [1,2]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    Assert.Single(config!.Must.Jokers);
+    Assert.Equal(2, config.Must.Jokers[0].Jokers.Length);
+    Assert.Empty(config.Must.LegendaryJokers);
+  }
+
+  [Fact]
   public void JokerSources_RawShopStreams_AreMapped()
   {
     var jaml = """
@@ -154,6 +173,49 @@ public class JamlConfigTests
     Assert.True(success, $"Failed to parse: {error}");
     Assert.NotNull(config);
     Assert.Single(config!.Must.LegendaryJokers);
+  }
+
+  [Fact]
+  public void LegendaryJokers_Plural_ParsesMultipleValues()
+  {
+    var jaml = """
+            name: Test
+            must:
+              - legendaryJokers: [Perkeo, Canio]
+                antes: [1,2,3]
+                sources:
+                  boosterPacks: [0,1,2,3]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    Assert.Single(config!.Must.LegendaryJokers);
+    Assert.Equal(2, config.Must.LegendaryJokers[0].Jokers.Length);
+  }
+
+  [Fact]
+  public void CanonicalPluralCardKeys_ParseSuccessfully()
+  {
+    var jaml = """
+            name: CardPlurals
+            must:
+              - tarotCards: [TheFool, TheEmperor]
+              - spectralCards: [Familiar, Aura]
+              - standardCards: [HA, C2]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    Assert.Single(config!.Must.TarotCards);
+    Assert.Equal(2, config.Must.TarotCards[0].Tarots.Length);
+    Assert.Single(config.Must.SpectralCards);
+    Assert.Equal(2, config.Must.SpectralCards[0].Spectrals.Length);
+    Assert.Single(config.Must.StandardCards);
+    Assert.Equal(2, config.Must.StandardCards[0].Cards.Length);
   }
 
   [Fact]

@@ -4,7 +4,7 @@ description: DejaVu spectral with Glass Joker for Red Seal retrigger synergy
 deck: Red
 stake: White
 must:
-  - spectral: DejaVu
+  - spectralCard: DejaVu
     antes:
       - 1
       - 2

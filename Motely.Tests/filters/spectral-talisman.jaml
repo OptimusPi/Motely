@@ -4,7 +4,7 @@ description: Talisman spectral with Certificate for Gold Seal economy
 deck: Red
 stake: White
 must:
-  - spectral: Talisman
+  - spectralCard: Talisman
     antes:
       - 1
       - 2

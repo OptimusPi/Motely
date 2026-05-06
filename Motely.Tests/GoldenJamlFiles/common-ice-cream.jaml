@@ -20,7 +20,7 @@ should:
     score: 40
   - commonJoker: Splash
     score: 35
-  - spectral: Hex
+  - spectralCard: Hex
     score: 30
   - uncommonJoker: Dusk
     score: 30

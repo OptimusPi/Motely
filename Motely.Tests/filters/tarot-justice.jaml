@@ -4,7 +4,7 @@ description: Justice tarot with Glass Joker for Glass enhancement synergy
 deck: Red
 stake: White
 must:
-  - tarot: Justice
+  - tarotCard: Justice
     antes:
       - 1
       - 2

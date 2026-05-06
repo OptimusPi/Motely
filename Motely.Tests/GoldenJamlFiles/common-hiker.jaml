@@ -12,7 +12,7 @@ must:
       - 3
       - 4
 should:
-  - spectral: DejaVu
+  - spectralCard: DejaVu
     score: 55
   - uncommonJoker: Dusk
     score: 45
