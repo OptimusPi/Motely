@@ -13,5 +13,5 @@ must:
 should:
   - uncommonJoker: SixthSense
     score: 30
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 40

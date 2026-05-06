@@ -4,7 +4,7 @@ description: TheMoon tarot with Blackboard for Club suit conversion
 deck: Red
 stake: White
 must:
-  - tarot: TheMoon
+  - tarotCard: TheMoon
     antes:
       - 1
       - 2

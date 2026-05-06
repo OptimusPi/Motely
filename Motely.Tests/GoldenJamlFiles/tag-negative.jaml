@@ -38,5 +38,5 @@ should:
     score: 70
   - tag: RareTag
     score: 40
-  - spectral: Ectoplasm
+  - spectralCard: Ectoplasm
     score: 40

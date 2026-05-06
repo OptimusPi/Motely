@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "scaling", "planet-scaling", "probability", "face-cards", "glass", "legendary-synergy"]
 must:
-  - tarot: TheWheelOfFortune
+  - tarotCard: TheWheelOfFortune
     antes:
       - 1
       - 2

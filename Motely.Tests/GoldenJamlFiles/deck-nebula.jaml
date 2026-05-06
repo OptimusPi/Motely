@@ -18,13 +18,13 @@ should:
     score: 60
   - voucher: Observatory
     score: 60
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 55
   - commonJoker: Supernova
     score: 45
   - uncommonJoker: SpaceJoker
     score: 45
-  - tarot: TheHighPriestess
+  - tarotCard: TheHighPriestess
     score: 50
   - rareJoker: Blueprint
     score: 40

@@ -8,7 +8,7 @@ public class JammyClauseCoverageTests
 {
     private const string Seed = "JAMMY";
 
-    private static MotelyLegacyTextAnalyzer AnalyzeJammy(MotelyDeck deck = MotelyDeck.Red)
+    private static MotelySeedAnalysis AnalyzeJammy(MotelyDeck deck = MotelyDeck.Red)
     {
         var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(Seed, deck, MotelyStake.White));
         Assert.True(string.IsNullOrEmpty(analysis.Error), $"Analyzer failed for {Seed}/{deck}: {analysis.Error}");
@@ -88,7 +88,7 @@ public class JammyClauseCoverageTests
         (MotelyJokerRarity)((int)item.Type & (int)MotelyJokerRarity.Legendary);
 
     private static (int Ante, int ShopIndex, MotelyItem Item)? FindShopItem(
-        MotelyLegacyTextAnalyzer analysis,
+        MotelySeedAnalysis analysis,
         Func<MotelyItem, bool> predicate
     )
     {
@@ -106,7 +106,7 @@ public class JammyClauseCoverageTests
     }
 
     private static (int Ante, int PackIndex, MotelyItem Item)? FindPackItem(
-        MotelyLegacyTextAnalyzer analysis,
+        MotelySeedAnalysis analysis,
         Func<MotelyItem, bool> predicate
     )
     {
@@ -265,7 +265,7 @@ public class JammyClauseCoverageTests
 
         var d = hit!.Value;
         var clauseBody = $$"""
-            tarot: {{d.Item.Type}}
+            tarotCard: {{d.Item.Type}}
             antes: [{{d.Ante}}]
             sources:
               shopItems: [{{d.ShopIndex}}]
@@ -284,7 +284,7 @@ public class JammyClauseCoverageTests
         {
             var d = shopHit.Value;
             var clauseBody = $$"""
-                spectral: {{d.Item.Type}}
+                spectralCard: {{d.Item.Type}}
                 antes: [{{d.Ante}}]
                 sources:
                   shopItems: [{{d.ShopIndex}}]
@@ -299,7 +299,7 @@ public class JammyClauseCoverageTests
         Assert.True(packHit.HasValue, "Expected at least one spectral card in JAMMY packs");
         var p = packHit!.Value;
         var packClauseBody = $$"""
-            spectral: {{p.Item.Type}}
+            spectralCard: {{p.Item.Type}}
             antes: [{{p.Ante}}]
             sources:
               boosterPacks: [{{p.PackIndex}}]

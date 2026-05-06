@@ -7,7 +7,6 @@ const requiredFiles = [
   "language-configuration.json",
   "out/extension.js",
   "syntaxes/jaml.tmLanguage.json",
-  "syntaxes/jummy.tmLanguage.json",
   "snippets/jaml.code-snippets",
   "schema/jaml.schema.json",
   "images/icon.ico",

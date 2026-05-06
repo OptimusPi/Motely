@@ -31,7 +31,7 @@ The only interop contract is the interface [`Motely/IMotelyWasm.cs`](../Motely/I
 |--------|---------|
 | `GetVersion()` | `string` — `MotelyVersion` from `Directory.Packages.props`. |
 | `ValidateJaml(string jaml)` | `"valid"` or a human-readable error message. |
-| `CompileJummy(string jummy)` | Compiled JAML string (throws on invalid Jummy). |
+| `GetJamlExample()` | `string` — a JAML example. |
 
 ### Searches (return `IMotelyWasmSearch`)
 

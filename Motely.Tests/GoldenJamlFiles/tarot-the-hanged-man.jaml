@@ -5,7 +5,7 @@ deck: Red
 stake: White
 hashtags: ["tarot", "consumable", "copy", "negative", "planet-scaling", "deck-thinning", "face-cards", "legendary-synergy"]
 must:
-  - tarot: TheHangedMan
+  - tarotCard: TheHangedMan
     antes:
       - 1
       - 2
@@ -18,7 +18,7 @@ should:
     score: 80
   - uncommonJoker: TradingCard
     score: 45
-  - spectral: Immolate
+  - spectralCard: Immolate
     score: 40
   - uncommonJoker: Vampire
     score: 35

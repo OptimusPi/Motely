@@ -4,7 +4,7 @@ description: TheSun tarot with Bloodstone for Heart suit conversion
 deck: Red
 stake: White
 must:
-  - tarot: TheSun
+  - tarotCard: TheSun
     antes:
       - 1
       - 2

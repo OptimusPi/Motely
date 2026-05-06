@@ -4,7 +4,7 @@ description: Medium spectral with Fortune Teller for Purple Seal Tarot generatio
 deck: Red
 stake: White
 must:
-  - spectral: Medium
+  - spectralCard: Medium
     antes:
       - 1
       - 2

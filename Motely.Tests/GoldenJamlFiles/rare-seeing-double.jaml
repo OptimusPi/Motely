@@ -18,7 +18,7 @@ should:
     score: 60
   - commonJoker: GluttonousJoker
     score: 50
-  - tarot: TheMoon
+  - tarotCard: TheMoon
     score: 50
   - uncommonJoker: FourFingers
     score: 45

@@ -22,17 +22,17 @@ should:
     score: 60
   - legendaryJoker: Canio
     score: 70
-  - spectral: TheSoul
+  - spectralCard: TheSoul
     score: 85
-  - spectral: BlackHole
+  - spectralCard: BlackHole
     score: 60
-  - spectral: Hex
+  - spectralCard: Hex
     score: 50
-  - spectral: Ankh
+  - spectralCard: Ankh
     score: 45
-  - spectral: Ectoplasm
+  - spectralCard: Ectoplasm
     score: 45
-  - spectral: Cryptid
+  - spectralCard: Cryptid
     score: 35
   - uncommonJoker: Seance
     score: 40

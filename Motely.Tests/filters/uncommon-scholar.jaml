@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - spectral: Grim
+  - spectralCard: Grim
     score: 50
   - commonJoker: Superposition
     score: 40
