@@ -118,9 +118,6 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "spectralCards")]
     public List<MotelySpectralCard>? SpectralCards { get; set; }
 
-    [YamlMember(Alias = "planet")]
-    public MotelyPlanetCard? Planet { get; set; }
-
     [YamlMember(Alias = "planetCard")]
     public MotelyPlanetCard? PlanetCard { get; set; }
 
