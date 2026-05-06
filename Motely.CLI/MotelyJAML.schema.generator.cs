@@ -41,7 +41,6 @@ public static partial class MotelyJamlSchemaGenerator
         ["tarotCards"] = "Tarot",
         ["spectralCard"] = "Spectral",
         ["spectralCards"] = "Spectral",
-        ["planet"] = "Planet",
         ["planetCard"] = "Planet",
         ["boss"] = "Boss",
         ["tag"] = "Tag",
