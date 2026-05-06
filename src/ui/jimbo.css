@@ -4,6 +4,14 @@
    Eyedropped from actual game shader output — not Lua hex values.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+@font-face {
+  font-family: 'm6x11plus';
+  src: url('/fonts/m6x11plus.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Global Scrollbar Hide */
 * {
   scrollbar-width: none !important;
@@ -433,9 +441,12 @@
   gap: var(--j-space-sm);
   align-items: flex-end;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.j-tabs::-webkit-scrollbar { display: none; }
 
 .j-tab {
   display: flex;
@@ -459,7 +470,6 @@
 }
 
 .j-tab__indicator[data-active="true"] {
-  animation: jimbo-bounce 0.8s cubic-bezier(0.68, 0, 0.68, 1) infinite;
 }
 
 .j-tab__indicator[data-active="false"] {
@@ -987,6 +997,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 12px;
 }
 
 .j-modal .j-panel__body {

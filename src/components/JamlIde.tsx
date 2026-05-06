@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { JimboBalatroFooter } from "../ui/footer.js";
 import { JamlMapPreview } from "./JamlMapPreview.js";
 import {
   JamlMapEditor,
@@ -21,12 +20,10 @@ import {
 import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
 import { JamlIdeVisual, type JamlVisualFilter, type JamlZone, type JamlVisualClause } from "./JamlIdeVisual.js";
 import { JamlCodeEditor } from "./JamlCodeEditor.js";
+import { Jimbolate } from "./Jimbolate.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboModal } from "../ui/panel.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
-import { DeckSprite } from "./DeckSprite.js";
-
-
 const CATEGORY_CONFIG_MAP = {
   voucher: VOUCHER_PICKER_CONFIG,
   tag: TAG_PICKER_CONFIG,
@@ -62,8 +59,9 @@ export interface JamlIdeProps {
   codePlaceholder?: string;
   onSearch?: () => void;
   isSearching?: boolean;
-  /** Hide the Balatro attribution footer. Default: false (always shown). */
-  hideFooter?: boolean;
+  onTestSeed?: (seed: string) => void;
+  jimbolateResult?: "idle" | "match" | "nomatch" | "running" | "error";
+  jimbolateError?: string | null;
   /**
    * Controlled visual filter. When provided alongside `onVisualFilterChange`, the Visual tab
    * is fully controlled by the parent. When absent, the Visual tab auto-derives from the text.
@@ -223,73 +221,6 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
   );
 }
 
-function readRootValue(jaml: string, key: "deck" | "stake", fallback: string): string {
-  if (!jaml) return fallback;
-  const match = jaml.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
-  return match?.[1]?.trim() || fallback;
-}
-
-function setRootValue(jaml: string, key: "deck" | "stake", value: string): string {
-  const line = `${key}: ${value}`;
-  if (!jaml) return line;
-  const pattern = new RegExp(`^${key}:\\s*.*$`, "m");
-  if (pattern.test(jaml)) {
-    return jaml.replace(pattern, line);
-  }
-  const trimmed = jaml.trimEnd();
-  return trimmed.length > 0 ? `${line}\n${trimmed}` : line;
-}
-
-import { RunConfigModal } from "./RunConfigModal.js";
-
-function DeckStakeSelector({
-  jaml,
-  onChange,
-  onSearch,
-}: {
-  jaml: string;
-  onChange: (next: string) => void;
-  onSearch?: () => void;
-}) {
-  const deck = readRootValue(jaml, "deck", "Red");
-  const stake = readRootValue(jaml, "stake", "White");
-  const [modalOpen, setModalOpen] = useState(false);
-
-  const handleApply = (nextDeck: string, nextStake: string) => {
-    let next = setRootValue(jaml, "deck", nextDeck);
-    next = setRootValue(next, "stake", nextStake);
-    onChange(next);
-    onSearch?.();
-  };
-
-  return (
-    <>
-      <button
-        onClick={() => setModalOpen(true)}
-        className="j-btn j-btn--red"
-        style={{ height: 28, padding: 0, borderRadius: 8, overflow: 'hidden' }}
-      >
-        <div className="j-btn__face" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 0 4px', height: '100%' }}>
-          <DeckSprite deck={deck} stake={stake} size={compactDeckSpriteSize} />
-          <span style={{ fontFamily: "m6x11plus, monospace", fontSize: 13, paddingTop: 2 }}>
-            {deck} / {stake}
-          </span>
-        </div>
-      </button>
-
-      <RunConfigModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        deck={deck}
-        stake={stake}
-        onChange={handleApply}
-      />
-    </>
-  );
-}
-
-const compactDeckSpriteSize = 16;
-
 
 export function JamlIde({
   jaml,
@@ -306,7 +237,9 @@ export function JamlIde({
   codePlaceholder = "Enter JAML...",
   onSearch,
   isSearching = false,
-  hideFooter = false,
+  onTestSeed,
+  jimbolateResult = "idle",
+  jimbolateError,
   visualFilter,
   onVisualFilterChange,
 }: JamlIdeProps) {
@@ -429,12 +362,13 @@ export function JamlIde({
       >
         <div>
           <div style={{ fontSize: 16, fontWeight: "normal", fontFamily: "m6x11plus, monospace", color: JimboColorOption.GOLD_TEXT }}>{title}</div>
-          {subtitle ? <div style={{ fontSize: 11, color: JimboColorOption.GREY }}>{subtitle}</div> : null}
+          {subtitle ? <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>{subtitle}</div> : null}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <DeckStakeSelector jaml={text} onChange={handleTextChange} onSearch={onSearch} />
-          {actions}
-        </div>
+        {actions && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            {actions}
+          </div>
+        )}
       </div>
 
       <JamlIdeToolbar mode={mode} onModeChange={setMode} resultCount={results.length} onSearch={onSearch} isSearching={isSearching} />
@@ -459,9 +393,16 @@ export function JamlIde({
             <ResultsView results={results} jaml={text} />
           </div>
         ) : null}
-      </div>
 
-      {!hideFooter && <JimboBalatroFooter />}
+        {mode === "jimbolate" ? (
+          <Jimbolate
+            jaml={text}
+            onTest={(seed) => onTestSeed?.(seed)}
+            result={jimbolateResult}
+            error={jimbolateError}
+          />
+        ) : null}
+      </div>
 
       <JimboModal open={addZone !== null} onClose={handlePickerClose}>
         {addZone !== null && (

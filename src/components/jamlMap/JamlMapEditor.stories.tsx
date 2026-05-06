@@ -1,22 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { JamlMapEditor } from './JamlMapEditor';
+import { JimboBackground } from '../../ui/jimboBackground';
 import { useState } from 'react';
-
-import "../../ui/jimbo.css"; // Ensure global CSS is loaded
 
 const meta = {
   title: 'JamlMap/JamlMapEditor',
   component: JamlMapEditor,
   parameters: {
     layout: 'fullscreen',
-    viewport: {
-      defaultViewport: 'mobile1', // iPhone SE
-    },
   },
   decorators: [
     (Story) => (
-      <div style={{ width: "100%", height: "100dvh", background: "#111" }}>
-        <Story />
+      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <JimboBackground />
+        <div style={{ width: 375, height: 667, position: 'relative', zIndex: 1, overflow: 'hidden', flexShrink: 0 }}>
+          <Story />
+        </div>
       </div>
     ),
   ],

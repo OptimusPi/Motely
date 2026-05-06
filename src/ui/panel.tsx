@@ -105,7 +105,7 @@ export interface JimboModalProps {
   showBack?: boolean
 }
 
-export function JimboModal({ children, open, onClose, title, className, showBack = false }: JimboModalProps) {
+export function JimboModal({ children, open, onClose, title, className, showBack = true }: JimboModalProps) {
   if (!open) return null
 
   return (
