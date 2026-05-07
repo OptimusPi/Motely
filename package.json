@@ -62,7 +62,7 @@
     "demo": "vite --config demo/vite.config.ts",
     "typecheck": "tsc --noEmit --pretty false",
     "prepack": "npm run build",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "storybook dev -p 3141",
     "build-storybook": "storybook build",
     "lint": "eslint ."
   },
