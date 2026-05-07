@@ -11,7 +11,7 @@ namespace Motely;
 /// <c>WithThreadCount(1)</c> — browser WASM is single-threaded. Scored results stream out
 /// through <see cref="IMotelyWasmEvents"/> (Bootsharp <c>[JSImport]</c>).
 /// </summary>
-public sealed class MotelyWasmHost : IMotelyWasm
+public sealed class MotelyWasmHost
 {
     private readonly IMotelyWasmEvents _events;
     private readonly IFileMounter _fileMounter;
@@ -399,11 +399,6 @@ public sealed class MotelyWasmHost : IMotelyWasm
             throw new InvalidOperationException($"No mounted library with root '{rootId}'.");
         await lib.Fs.WriteFile(uri, Encoding.UTF8.GetBytes(content));
     }
-
-    public Task<string> LoadJamlFile(string rootId, string uri) => LoadLibraryFile(rootId, uri);
-
-    public Task SaveJamlFile(string rootId, string uri, string content) =>
-        SaveLibraryFile(rootId, uri, content);
 
     private sealed class JamlFileWatcher(IMotelyWasmEvents events, string rootId) : IFileWatcher
     {
