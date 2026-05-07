@@ -582,9 +582,17 @@ partial class Program
             }
 
             using var search = settings.Start(_cts.Token);
-            await search.WaitForCompletionAsync(_cts.Token);
+            bool cancelled = false;
+            try
+            {
+                await search.WaitForCompletionAsync(_cts.Token);
+            }
+            catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
+            {
+                cancelled = true;
+            }
 
-            bool cancelled = _cts.Token.IsCancellationRequested;
+            cancelled |= _cts.Token.IsCancellationRequested;
             if (saveSeedsOption.HasValue())
             {
                 var seedsToSave = hasStructuredScores
