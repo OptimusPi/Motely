@@ -10,6 +10,7 @@
         <WasmEnableSIMD>true</WasmEnableSIMD>
         <WasmEnableThreads>false</WasmEnableThreads>
         <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
+        <BootsharpBundleCommand>npx rollup --external url,fs,process,module</BootsharpBundleCommand>
     </PropertyGroup>
 
     <ItemGroup>
