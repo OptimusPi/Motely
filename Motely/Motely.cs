@@ -294,36 +294,86 @@ public static partial class MotelyGlobals
 
         if (padLen == 1)
         {
+            int len = keyword.Length + 1;
             foreach (var c in validChars)
             {
-                yield return c + keyword;
-                yield return keyword + c;
+                yield return string.Create(len, (c, keyword), static (span, state) =>
+                {
+                    span[0] = state.c;
+                    state.keyword.AsSpan().CopyTo(span.Slice(1));
+                });
+                yield return string.Create(len, (c, keyword), static (span, state) =>
+                {
+                    state.keyword.AsSpan().CopyTo(span);
+                    span[^1] = state.c;
+                });
             }
         }
         else if (padLen == 2)
         {
+            int len = keyword.Length + 2;
             foreach (var c1 in validChars)
             {
                 foreach (var c2 in validChars)
                 {
-                    yield return $"{c1}{c2}{keyword}";
-                    yield return $"{keyword}{c1}{c2}";
-                    yield return $"{c1}{keyword}{c2}";
+                    yield return string.Create(len, (c1, c2, keyword), static (span, state) =>
+                    {
+                        span[0] = state.c1;
+                        span[1] = state.c2;
+                        state.keyword.AsSpan().CopyTo(span.Slice(2));
+                    });
+                    yield return string.Create(len, (c1, c2, keyword), static (span, state) =>
+                    {
+                        state.keyword.AsSpan().CopyTo(span);
+                        span[^2] = state.c1;
+                        span[^1] = state.c2;
+                    });
+                    yield return string.Create(len, (c1, c2, keyword), static (span, state) =>
+                    {
+                        span[0] = state.c1;
+                        state.keyword.AsSpan().CopyTo(span.Slice(1));
+                        span[^1] = state.c2;
+                    });
                 }
             }
         }
         else if (padLen == 3)
         {
+            int len = keyword.Length + 3;
             foreach (var c1 in validChars)
             {
                 foreach (var c2 in validChars)
                 {
                     foreach (var c3 in validChars)
                     {
-                        yield return $"{c1}{c2}{c3}{keyword}";
-                        yield return $"{keyword}{c1}{c2}{c3}";
-                        yield return $"{c1}{keyword}{c2}{c3}";
-                        yield return $"{c1}{c2}{keyword}{c3}";
+                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
+                        {
+                            span[0] = state.c1;
+                            span[1] = state.c2;
+                            span[2] = state.c3;
+                            state.keyword.AsSpan().CopyTo(span.Slice(3));
+                        });
+                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
+                        {
+                            state.keyword.AsSpan().CopyTo(span);
+                            span[^3] = state.c1;
+                            span[^2] = state.c2;
+                            span[^1] = state.c3;
+                        });
+                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
+                        {
+                            span[0] = state.c1;
+                            state.keyword.AsSpan().CopyTo(span.Slice(1));
+                            span[^2] = state.c2;
+                            span[^1] = state.c3;
+                        });
+                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
+                        {
+                            span[0] = state.c1;
+                            span[1] = state.c2;
+                            state.keyword.AsSpan().CopyTo(span.Slice(2));
+                            span[^1] = state.c3;
+                        });
                     }
                 }
             }
