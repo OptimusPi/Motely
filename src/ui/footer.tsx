@@ -10,17 +10,16 @@ const SUITS = [
 ] as const
 
 export interface JimboBalatroFooterProps {
-  hidden?: boolean
   className?: string
 }
 
 /**
  * Attribution footer with animated suit cycle.
- * All styling via jimbo.css `.j-footer` classes — zero inline styles.
+ * Always rendered — required attribution for using Balatro art.
  */
-export function JimboBalatroFooter({ hidden = false, className = '' }: JimboBalatroFooterProps) {
+export function JimboBalatroFooter({ className = '' }: JimboBalatroFooterProps) {
   return (
-    <div className={`j-footer ${hidden ? 'j-footer--hidden' : ''} ${className}`}>
+    <div className={`j-footer ${className}`}>
       <div className="j-footer__bar">
         <p className="j-footer__text">
           <span>Not affiliated with LocalThunk or PlayStack •{' '}</span>

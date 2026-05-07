@@ -992,12 +992,7 @@
 
 .j-footer {
   width: 100%;
-  transition: opacity 200ms;
-}
-
-.j-footer--hidden {
-  pointer-events: none;
-  opacity: 0;
+  margin-top: auto;
 }
 
 .j-footer__bar {
