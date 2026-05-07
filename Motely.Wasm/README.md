@@ -85,8 +85,7 @@ If an app repo (e.g. `seedfinder.app`) starts hand-rolling Motely/JAML display l
 ## Distribution
 
 - **npm:** `motely-wasm` (single "compat"-shaped package, embedded binaries).
-- **CDN mirror:** `https://cdn.seedfinder.app/motely-wasm/<version>/index.mjs` and `.../latest/index.mjs` — served alongside `jammy.seedfinder.app` / `mcp.seedfinder.app`.
-- **Zero-setup fallbacks:** `https://unpkg.com/motely-wasm@<version>/index.mjs`, `https://cdn.jsdelivr.net/npm/motely-wasm@<version>/index.mjs`.
+- **CDN delivery:** `https://unpkg.com/motely-wasm@<version>/index.mjs` and `https://cdn.jsdelivr.net/npm/motely-wasm@<version>/index.mjs` — both serve the published npm artifact directly. No private CDN, no upload step.
 
 ## Package metadata
 
