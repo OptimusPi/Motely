@@ -6,8 +6,7 @@
 
 @font-face {
   font-family: 'm6x11plus';
-  src: local('m6x11plus'), local('m6x11plusplus'),
-       url('../../assets/fonts/m6x11plusplus.otf') format('opentype');
+  src: url('/fonts/m6x11plus.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -994,12 +993,6 @@
 .j-footer {
   width: 100%;
   margin-top: auto;
-  transition: opacity 200ms;
-}
-
-.j-footer--hidden {
-  pointer-events: none;
-  opacity: 0;
 }
 
 .j-footer__bar {
