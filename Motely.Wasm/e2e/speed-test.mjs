@@ -66,15 +66,11 @@ name: speed test
 deck: Red
 stake: White
 must:
-  - joker: Blueprint
-    antes: [1, 2]
+  - luckyMoney: [0, 1, 2, 3]
+    min: 3
 should:
-  - uncommonJoker: Any
-    antes: [1, 2, 3, 4]
-    score: 10
-  - rareJoker: Brainstorm
-    antes: [1, 2, 3, 4]
-    score: 25
+  - luckyMoney: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    score: 1
 `;
 
 const stagedTempDir = options.jamlPath
