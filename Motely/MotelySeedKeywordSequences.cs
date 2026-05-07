@@ -67,7 +67,7 @@ public static class MotelySeedKeywordSequences
 
     public const long NsfwKeywordAestheticSeedCount = 489_790_595L;
     public const long FunnyKeywordAestheticSeedCount = 942_725_770L;
-    public const long BalatroKeywordAestheticSeedCount = 2_181_468_170L;
+    public const long BalatroKeywordAestheticSeedCount = 920_943_170L;
 
     public static readonly string[] GrossKeywords =
     [
@@ -302,15 +302,12 @@ public static class MotelySeedKeywordSequences
         "BONUS",
         "RETRO",
         "LUCKY",
-        "RUN",
-        "WIN",
         "BEAT",
         "BOSS",
         "FLUSH",
         "FIVE",
         "HOUSE",
         "PAIR",
-        "ACE",
         "KING",
         "QUEEN",
         "JACK",
@@ -319,7 +316,6 @@ public static class MotelySeedKeywordSequences
         "TAROT",
         "PLANET",
         "VOUCHER",
-        "TAG",
         "FOIL",
         "HOLO",
         "POLY",
@@ -347,7 +343,6 @@ public static class MotelySeedKeywordSequences
         "DEATH",
         "STAR",
         "MOON",
-        "SUN",
         "FOOL",
         "DEVIL",
         "PERKEO",
@@ -357,7 +352,6 @@ public static class MotelySeedKeywordSequences
         "SKULL",
         "WRAITH",
         "SIGIL",
-        "HEX",
         "TRANCE",
         "CRYPTID",
         "ANKH",
