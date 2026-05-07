@@ -197,13 +197,13 @@ Panels sit on a dark south-shadow (`0 3px 0 rgba(0,0,0,0.55)`). Translucent pane
 
 JAML-hit items get a GlowRing: `box-shadow: 0 0 0 2px [color], 0 0 10px [color]` with a 1.6s pulse animation. Must = blue glow, should = gold/green glow.
 
-**Button:** Chunky 3D press. DO NOT ADD A COLORED EDGE/BORDER. Buttons rely entirely on a solid `box-shadow` to create the colored "underside" depth. Hover brightness bump. Press sinks +2-3px and the box-shadow collapses to 0. Variants: primary (red), secondary (blue), back (orange), default (grey). NO GOLD BUTTONS. Sizes via padding, not font-size. Easing: `cubic-bezier(0.34, 1.56, 0.64, 1)`.
+**Button:** Chunky 3D press. DO NOT ADD A COLORED EDGE/BORDER. Buttons rely entirely on a solid `box-shadow` to create the colored "underside" depth. Hover = dark variant of the button color. Press sinks +2-3px and the box-shadow collapses to 0. Variants: primary (red), secondary (blue), back (orange), default (grey). NO GOLD BUTTONS. Sizes via padding, not font-size. Easing: `cubic-bezier(0.34, 1.56, 0.64, 1)`.
 
 **Badge (JimboBadge):** Badges indicate status and DO NOT CLICK. They are strictly flat. They have a colored background and flat borders, but NO 3D BOX-SHADOW and NO PRESS ANIMATIONS. Variants: dark, blue, red, green, orange, purple, grey. NO GOLD BADGES.
 
 **Panel:** Dark grey (#3a5055) background, 2px solid border (silver top/sides, south bottom), border-radius 6px. Inner highlight: `inset 0 0 0 1px rgba(255,255,255,0.04)`. Drop: `0 2px 0 #000`.
 
-**Tabs (JimboTabs):** Active tab = gold background + black text. Inactive = transparent + grey text. No bold. Small radius (4px). Tabs are the ONLY navigation — no hamburger menus, no sidebars on mobile.
+**Tabs (JimboTabs):** All tabs are red. Active tab has the bouncing triangle indicator above it. Hover and press = dark red. No opacity changes, no dimming, no gold. Small radius (4px). Tabs are the ONLY navigation — no hamburger menus, no sidebars on mobile.
 
 **ScoreCol:** Must-clauses show as blue-framed boxes with checkmark/cross badge. Should-clauses show as bare sprites with a red corner count badge (x2, x3...). Unlit = 40% opacity + grayscale.
 

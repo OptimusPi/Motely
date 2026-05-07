@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
 import { JamlIde } from './JamlIde';
-import { JimboBackground } from '../ui/jimboBackground';
 
 const SAMPLE_JAML = `must:
   - joker: Wee Joker
@@ -16,18 +15,8 @@ const meta: Meta<typeof JamlIde> = {
   title: 'JAML/JamlIde',
   component: JamlIde,
   parameters: {
-    layout: 'fullscreen',
+    layout: 'centered',
   },
-  decorators: [
-    (Story) => (
-      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-        <JimboBackground />
-        <div style={{ width: 375, height: 667, position: 'relative', zIndex: 1, overflow: 'hidden', flexShrink: 0 }}>
-          <Story />
-        </div>
-      </div>
-    ),
-  ],
 };
 
 export default meta;
@@ -39,6 +28,7 @@ export const Default: Story = {
     const [jaml, setJaml] = useState(SAMPLE_JAML);
     return (
       <JamlIde
+        style={{ flex: 1, minHeight: 0 }}
         jaml={jaml}
         onChange={setJaml}
         title="JAML IDE"
@@ -56,6 +46,7 @@ export const WithSearch: Story = {
     const [searching, setSearching] = useState(false);
     return (
       <JamlIde
+        style={{ flex: 1, minHeight: 0 }}
         jaml={jaml}
         onChange={setJaml}
         onSearch={() => setSearching(s => !s)}
@@ -73,6 +64,7 @@ export const Jimbolate: Story = {
     const [result, setResult] = useState<'idle' | 'match' | 'nomatch'>('idle');
     return (
       <JamlIde
+        style={{ flex: 1, minHeight: 0 }}
         jaml={jaml}
         onChange={setJaml}
         defaultMode="jimbolate"
