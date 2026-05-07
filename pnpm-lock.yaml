@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.1
+        version: 6.20.1
       '@codemirror/commands':
         specifier: ^6.10.3
         version: 6.10.3
@@ -115,8 +118,8 @@ importers:
         specifier: ^17.6.0
         version: 17.6.0
       motely-wasm:
-        specifier: ^15.1.2
-        version: 15.1.2
+        specifier: ^15.1.3
+        version: 15.1.3
       playwright:
         specifier: ^1.59.1
         version: 1.59.1
@@ -2018,8 +2021,8 @@ packages:
     resolution: {integrity: sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==}
     engines: {node: '>=16 || 14 >=14.17'}
 
-  motely-wasm@15.1.2:
-    resolution: {integrity: sha512-fB0xCSj2S+s4n63RIeauYxpJvmSVCEoLcWaK2i0r4hlMJhKMocmMR9L2oLr07vpZxdV+htUm+zyLIdZm74d9Fw==}
+  motely-wasm@15.1.3:
+    resolution: {integrity: sha512-3HxZd0R11LjnLw/NhGcB7NQm6BfYz/1PsPLl7SasFpiZI1+vYbM4A/FSQGZc+BBWQngXyOKvyaB/CHujKfZWoQ==}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -4736,7 +4739,7 @@ snapshots:
 
   minipass@7.1.3: {}
 
-  motely-wasm@15.1.2: {}
+  motely-wasm@15.1.3: {}
 
   mrmime@2.0.1: {}
 
