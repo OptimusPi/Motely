@@ -2,14 +2,15 @@ using Bootsharp;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
 
-[assembly: Export(typeof(Motely.IMotelyWasm))]
+[assembly: Export(typeof(Motely.MotelyWasmHost))]
 [assembly: Import([
     typeof(Motely.IMotelyWasmEvents),
     typeof(Bootsharp.FileSystem.IFileMounter)
 ])]
+[assembly: Preferences(Space = ["Motely.MotelyWasmHost", "Motely.MotelyWasm"])]
 
 new ServiceCollection()
-    .AddSingleton<Motely.IMotelyWasm, Motely.MotelyWasmHost>()
+    .AddSingleton<Motely.MotelyWasmHost>()
     .AddBootsharp()
     .BuildServiceProvider()
     .RunBootsharp();
