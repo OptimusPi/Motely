@@ -2,7 +2,7 @@
   "name": "jaml-language-support",
   "displayName": "Jimbo's Ante Markup Language",
   "description": "JAML language support for Motely: highlighting, snippets, diagnostics, schema access, and editor commands.",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "publisher": "pifreak",
   "license": "MIT",
   "author": "pifreak <nate@optimuspi.com>",
