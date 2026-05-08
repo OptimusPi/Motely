@@ -500,6 +500,34 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void ExplainPlan_ReportsEstimatedRuntimeOrder()
+  {
+    var jaml = """
+            name: ExplainTest
+            deck: Blue
+            stake: White
+            must:
+              - label: Expensive joker
+                joker: Showman
+                antes: [2]
+              - label: Cheap boss
+                boss: TheArm
+                antes: [1]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var explanation = JamlSearchBuilder.ExplainPlan(config!);
+
+    Assert.Contains("Runtime order (estimated cheapest-first):", explanation);
+    Assert.Contains("[cost 3] boss TheArm", explanation);
+    Assert.Contains("[cost 8] joker Showman", explanation);
+  }
+
+  [Fact]
   public void NestedLogicalAndClause_ParsesSuccessfully()
   {
     var jaml = """
