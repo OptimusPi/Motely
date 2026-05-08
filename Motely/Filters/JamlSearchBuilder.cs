@@ -97,6 +97,29 @@ public static class JamlSearchBuilder
 
 {
 
+    public static string ExplainPlan(JamlConfig config)
+
+    {
+
+        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
+
+            throw new InvalidOperationException("JamlConfig has no clauses.");
+
+        ValidateLegendaryJokerClausesForMustAndShould(config.Must);
+        ValidateLegendaryJokerClausesForMustAndShould(config.Should);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# JAML filter eval plan");
+        sb.AppendLine();
+        sb.AppendLine("Contract: must clauses evaluate top-to-bottom and short-circuit on first fail. mustNot clauses reject on match. should clauses contribute score but the current scorer evaluates all should clauses.");
+
+        AppendClauseSection(sb, "must", config.Must.OrderedClauses);
+        AppendClauseSection(sb, "mustNot", config.MustNot.OrderedClauses);
+        AppendClauseSection(sb, "should", config.Should.OrderedClauses);
+
+        return sb.ToString().TrimEnd();
+    }
+
     public static IMotelySearchSettings CreateSettings(JamlConfig config) =>
 
         CreatePlan(config, 0).Settings;
@@ -250,6 +273,120 @@ public static class JamlSearchBuilder
 
     private static string CsvQuoteField(string value) =>
         $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+
+    private static void AppendClauseSection(
+        StringBuilder sb,
+        string sectionName,
+        IReadOnlyList<IJamlClause> originalClauses
+    )
+    {
+        sb.AppendLine();
+        sb.Append("## ");
+        sb.Append(sectionName);
+        sb.Append(" (");
+        sb.Append(originalClauses.Count);
+        sb.AppendLine(originalClauses.Count == 1 ? " clause)" : " clauses)");
+
+        if (originalClauses.Count == 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("No clauses.");
+            return;
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Written order:");
+        for (int i = 0; i < originalClauses.Count; i++)
+        {
+            sb.Append(i + 1);
+            sb.Append(". ");
+            sb.AppendLine(DescribeClausePlanEntry(originalClauses[i]));
+        }
+
+        var orderedClauses = OrderClausesByEstimatedCost(originalClauses);
+        bool changed = !originalClauses.SequenceEqual(orderedClauses);
+
+        sb.AppendLine();
+        sb.AppendLine(changed ? "Runtime order (estimated cheapest-first):" : "Already in runtime order:");
+        for (int i = 0; i < orderedClauses.Count; i++)
+        {
+            sb.Append(i + 1);
+            sb.Append(". ");
+            sb.AppendLine(DescribeClausePlanEntry(orderedClauses[i]));
+        }
+    }
+
+    private static string DescribeClausePlanEntry(IJamlClause clause)
+    {
+        var label = string.IsNullOrWhiteSpace(clause.Label) ? string.Empty : $" \u2014 label: {clause.Label}";
+        return $"[cost {EstimateClauseCost(clause)}] {DescribeClause(clause)}{label}";
+    }
+
+    private static string DescribeClause(IJamlClause clause)
+    {
+        return clause switch
+        {
+            JokerClause c => $"joker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            CommonJokerClause c => $"commonJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            UncommonJokerClause c => $"uncommonJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            RareJokerClause c => $"rareJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            MixedJokerClause c => $"jokers {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            LegendaryJokerClause c => $"legendaryJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            VoucherClause c => $"voucher {string.Join(", ", c.Vouchers.Select(static v => v.ToString()))}",
+            TarotCardClause c => $"tarotCard {string.Join(", ", c.Tarots.Select(static t => t.ToString()))}",
+            SpectralCardClause c => $"spectralCard {string.Join(", ", c.Spectrals.Select(static s => s.ToString()))}",
+            PlanetCardClause c => $"planetCard {string.Join(", ", c.Planets.Select(static p => p.ToString()))}",
+            BossClause c => $"boss {string.Join(", ", c.Bosses.Select(static b => b.ToString()))}",
+            TagClause c => $"tag {string.Join(", ", c.Tags.Select(static t => t.ToString()))}",
+            StandardCardClause c => $"standardCard {DescribeStandardCard(c)}",
+            ErraticRankClause c => $"erraticRank {c.Rank}",
+            ErraticSuitClause c => $"erraticSuit {c.Suit}",
+            ErraticCardClause c => $"erraticCard {DescribeErraticCard(c)}",
+            StartingDrawClause c => $"startingDraw {DescribeStartingDraw(c)}",
+            LuckyMoneyClause => "event LuckyMoney",
+            LuckyMultClause => "event LuckyMult",
+            MisprintMultClause => "event MisprintMult",
+            WheelOfFortuneClause => "event WheelOfFortune",
+            CavendishExtinctClause => "event CavendishExtinct",
+            GrosMichelExtinctClause => "event GrosMichelExtinct",
+            SpaceLevelupClause => "event SpaceLevelup",
+            BusinessPayoutClause => "event BusinessPayout",
+            BloodstoneTriggerClause => "event BloodstoneTrigger",
+            ParkingPayoutClause => "event ParkingPayout",
+            GlassDestroyClause => "event GlassDestroy",
+            WheelStaysFlippedClause => "event WheelStaysFlipped",
+            AndClause c => $"and({c.Clauses.Length})",
+            OrClause c => $"or({c.Clauses.Length})",
+            _ => clause.GetType().Name,
+        };
+    }
+
+    private static string DescribeJokerNames(bool isWildcard, IEnumerable<string> names) =>
+        isWildcard ? "Any" : string.Join(", ", names);
+
+    private static string DescribeStandardCard(StandardCardClause clause)
+    {
+        var parts = new List<string>();
+        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
+        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
+        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+    }
+
+    private static string DescribeErraticCard(ErraticCardClause clause)
+    {
+        var parts = new List<string>();
+        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
+        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
+        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+    }
+
+    private static string DescribeStartingDraw(StartingDrawClause clause)
+    {
+        var parts = new List<string>();
+        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
+        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
+        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+    }
 
 
 
