@@ -112,19 +112,23 @@ public static class JamlSearchBuilder
         ValidateLegendaryJokerClausesForMustAndShould(config.Must);
         ValidateLegendaryJokerClausesForMustAndShould(config.Should);
 
+        var orderedMustClauses = OrderClausesByEstimatedCost(config.Must.OrderedClauses);
+        var orderedShouldClauses = OrderClausesByEstimatedCost(config.Should.OrderedClauses);
+        var orderedMustNotClauses = OrderClausesByEstimatedCost(config.MustNot.OrderedClauses);
+
         var allMustDescs = new List<IMotelySeedFilterDesc>();
 
         // ── MUST: required filters (AND logic) ──
 
         var mustDescs = new List<IMotelySeedFilterDesc>();
 
-        AddDescsFromSet(mustDescs, config.Must, LegendaryClauseExpansion.SplitLegendaryEdition);
+        AddDescsFromSet(mustDescs, orderedMustClauses, LegendaryClauseExpansion.SplitLegendaryEdition);
 
         allMustDescs.AddRange(mustDescs);
 
         var mustNotDescs = new List<IMotelySeedFilterDesc>();
 
-        AddDescsFromSet(mustNotDescs, config.MustNot, LegendaryClauseExpansion.None);
+        AddDescsFromSet(mustNotDescs, orderedMustNotClauses, LegendaryClauseExpansion.None);
 
         for (int i = 0; i < mustNotDescs.Count; i++)
 
@@ -163,9 +167,9 @@ public static class JamlSearchBuilder
         // ── Scoring: must clauses first (for early-exit), then should clauses
 
         var shouldClauses = new List<IJamlClause>();
-        AddShouldScoringEntriesFromSet(shouldClauses, config.Must);
+        AddShouldScoringEntriesFromSet(shouldClauses, orderedMustClauses);
         int mustClauseCount = shouldClauses.Count;
-        AddShouldScoringEntriesFromSet(shouldClauses, config.Should);
+        AddShouldScoringEntriesFromSet(shouldClauses, orderedShouldClauses);
         settings.WithSeedScoreProvider(
             new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal, mustClauseCount)
         );
@@ -252,12 +256,12 @@ public static class JamlSearchBuilder
 
     private static void AddDescsFromSet(
         List<IMotelySeedFilterDesc> list,
-        JamlClauseSet set,
+        IReadOnlyList<IJamlClause> clauses,
         LegendaryClauseExpansion legendaryExpansion
     )
     {
         var typed = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-        AddDescsFromSet(typed, set, legendaryExpansion);
+        AddDescsFromSet(typed, clauses, legendaryExpansion);
 
         for (int i = 0; i < typed.Count; i++)
             list.Add(typed[i].desc);
@@ -274,31 +278,35 @@ public static class JamlSearchBuilder
     }
 
     /// <summary>Collects clauses for <see cref="JamlShouldScoreDesc"/> (validates each via <see cref="CreateDesc"/>).</summary>
-    private static void AddShouldScoringEntriesFromSet(List<IJamlClause> clauses, JamlClauseSet set)
+    private static void AddShouldScoringEntriesFromSet(
+        List<IJamlClause> clauses,
+        IReadOnlyList<IJamlClause> orderedClauses
+    )
     {
-        foreach (var c in set.OrderedClauses)
+        for (int i = 0; i < orderedClauses.Count; i++)
         {
-            _ = CreateDesc(c);
-            clauses.Add(c);
+            _ = CreateDesc(orderedClauses[i]);
+            clauses.Add(orderedClauses[i]);
         }
     }
 
     private static void AddDescsFromSet(
         List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)> list,
-        JamlClauseSet set,
+        IReadOnlyList<IJamlClause> clauses,
         LegendaryClauseExpansion legendaryExpansion
     )
     {
         // Merge consecutive voucher clauses into a single MultiVoucherFilterDesc so the
         // voucher PRNG state is built only once instead of once per clause.
-        var voucherClauses = set.OrderedClauses.OfType<VoucherClause>().ToArray();
+        var voucherClauses = clauses.OfType<VoucherClause>().ToArray();
         IMotelySeedFilterDesc? mergedVoucher = voucherClauses.Length > 1
             ? new MultiVoucherFilterDesc(voucherClauses)
             : null;
         bool mergedVoucherEmitted = false;
 
-        foreach (var c in set.OrderedClauses)
+        for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
         {
+            var c = clauses[clauseIndex];
             if (c is VoucherClause vc)
             {
                 if (mergedVoucher != null)
@@ -389,6 +397,126 @@ public static class JamlSearchBuilder
             (new LegendaryJokerFilterDesc(lj, LegendaryJokerPipelineKind.FullPathOnly), c, labelPath),
         ];
         return true;
+    }
+
+    private static IReadOnlyList<IJamlClause> OrderClausesByEstimatedCost(
+        IReadOnlyList<IJamlClause> clauses
+    )
+    {
+        if (clauses.Count <= 1)
+            return clauses;
+
+        return clauses
+            .Select((clause, index) => (clause, cost: EstimateClauseCost(clause), index))
+            .OrderBy(item => item.cost)
+            .ThenBy(item => item.index)
+            .Select(item => item.clause)
+            .ToArray();
+    }
+
+    private static int EstimateClauseCost(IJamlClause clause)
+    {
+        int baseCost = clause switch
+        {
+            BossClause => 2,
+            LuckyMoneyClause => 3,
+            LuckyMultClause => 3,
+            MisprintMultClause => 3,
+            WheelOfFortuneClause => 3,
+            CavendishExtinctClause => 3,
+            GrosMichelExtinctClause => 3,
+            SpaceLevelupClause => 3,
+            BusinessPayoutClause => 3,
+            BloodstoneTriggerClause => 3,
+            ParkingPayoutClause => 3,
+            GlassDestroyClause => 3,
+            WheelStaysFlippedClause => 3,
+            TagClause => 3,
+            VoucherClause => 4,
+            ErraticRankClause => 4,
+            ErraticSuitClause => 4,
+            LegendaryJokerClause => 5,
+            RareJokerClause => 5,
+            ErraticCardClause => 5,
+            JokerClause => 6,
+            CommonJokerClause => 6,
+            UncommonJokerClause => 6,
+            MixedJokerClause => 6,
+            TarotCardClause => 7,
+            SpectralCardClause => 7,
+            PlanetCardClause => 7,
+            StartingDrawClause => 7,
+            StandardCardClause => 8,
+            AndClause c => 1 + SumNestedClauseCosts(c.Clauses),
+            OrClause c => 1 + SumNestedClauseCosts(c.Clauses),
+            _ => 10,
+        };
+
+        return baseCost + GetMaxAnte(clause);
+    }
+
+    private static int SumNestedClauseCosts(IJamlClause[] clauses)
+    {
+        int total = 0;
+        for (int i = 0; i < clauses.Length; i++)
+            total += EstimateClauseCost(clauses[i]);
+        return total;
+    }
+
+    private static int GetMaxAnte(IJamlClause clause)
+    {
+        return clause switch
+        {
+            JokerClause c => ArrayMax(c.Antes),
+            CommonJokerClause c => ArrayMax(c.Antes),
+            UncommonJokerClause c => ArrayMax(c.Antes),
+            RareJokerClause c => ArrayMax(c.Antes),
+            MixedJokerClause c => ArrayMax(c.Antes),
+            LegendaryJokerClause c => ArrayMax(c.Antes),
+            VoucherClause c => ArrayMax(c.Antes),
+            TarotCardClause c => ArrayMax(c.Antes),
+            SpectralCardClause c => ArrayMax(c.Antes),
+            PlanetCardClause c => ArrayMax(c.Antes),
+            BossClause c => ArrayMax(c.Antes),
+            TagClause c => ArrayMax(c.Antes),
+            StandardCardClause c => ArrayMax(c.Antes),
+            ErraticRankClause c => ArrayMax(c.Antes),
+            ErraticSuitClause c => ArrayMax(c.Antes),
+            ErraticCardClause c => ArrayMax(c.Antes),
+            StartingDrawClause c => ArrayMax(c.Antes),
+            IRollClause c => ArrayMax(c.Rolls),
+            AndClause c => MaxNestedAnte(c.Clauses),
+            OrClause c => MaxNestedAnte(c.Clauses),
+            _ => 0,
+        };
+    }
+
+    private static int MaxNestedAnte(IJamlClause[] clauses)
+    {
+        int max = 0;
+        for (int i = 0; i < clauses.Length; i++)
+        {
+            int nestedMax = GetMaxAnte(clauses[i]);
+            if (nestedMax > max)
+                max = nestedMax;
+        }
+
+        return max;
+    }
+
+    private static int ArrayMax(int[] array)
+    {
+        if (array.Length == 0)
+            return 0;
+
+        int max = array[0];
+        for (int i = 1; i < array.Length; i++)
+        {
+            if (array[i] > max)
+                max = array[i];
+        }
+
+        return max;
     }
 
 
