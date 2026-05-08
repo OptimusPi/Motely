@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
-import { useRadialMenuStore } from "./radialMenuStore";
-import { useRadialViewportGeometry } from "./radialMenuViewport";
+import { useRadialMenuStore } from "./radialMenuStore.js";
+import { useRadialViewportGeometry } from "./radialMenuViewport.js";
 
 // ── Public Interface ──────────────────────────────────────────────────────────
 

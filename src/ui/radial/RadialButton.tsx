@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
-import { JimboColorOption } from "../tokens";
+import { JimboColorOption } from "../tokens.js";
 import "./radial-navigation.css";
 
 // ── Color Themes ──────────────────────────────────────────────────────────────

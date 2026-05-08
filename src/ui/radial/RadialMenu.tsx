@@ -2,10 +2,10 @@
 
 import React, { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { MenuItem } from "../mascot/menuConfig";
-import { RadialPill } from "./RadialPill";
-import { RadialButton } from "./RadialButton";
-import { RadialBadge } from "./RadialBadge";
+import type { MenuItem } from "../mascot/menuConfig.js";
+import { RadialPill } from "./RadialPill.js";
+import { RadialButton } from "./RadialButton.js";
+import { RadialBadge } from "./RadialBadge.js";
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 
