@@ -3,10 +3,10 @@
 import React from "react";
 import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
-import { JimboColorOption } from "../tokens";
+import { JimboColorOption } from "../tokens.js";
 import "./radial-navigation.css";
-import type { RadialButtonColor } from "./RadialButton";
-import { BUTTON_THEMES } from "./RadialButton";
+import type { RadialButtonColor } from "./RadialButton.js";
+import { BUTTON_THEMES } from "./RadialButton.js";
 
 // ── Badge State ───────────────────────────────────────────────────────────────
 

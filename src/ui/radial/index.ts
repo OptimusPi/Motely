@@ -2,14 +2,14 @@
 // Orbital/radial menu system for the Jammy mascot.
 
 // Layout
-export { RadialMenu } from "./RadialMenu";
-export type { RadialMenuProps } from "./RadialMenu";
+export { RadialMenu } from "./RadialMenu.js";
+export type { RadialMenuProps } from "./RadialMenu.js";
 
 // Primitives
-export { RadialPill } from "./RadialPill";
-export type { RadialPillProps } from "./RadialPill";
+export { RadialPill } from "./RadialPill.js";
+export type { RadialPillProps } from "./RadialPill.js";
 
-export { RadialButton } from "./RadialButton";
+export { RadialButton } from "./RadialButton.js";
 export type {
     RadialButtonProps,
     RadialButtonColor,
@@ -17,22 +17,22 @@ export type {
     RadialButtonToggleProps,
     RadialButtonCountProps,
     RadialButtonBackProps,
-} from "./RadialButton";
+} from "./RadialButton.js";
 
-export { RadialBadge } from "./RadialBadge";
-export type { RadialBadgeProps, RadialBadgeState } from "./RadialBadge";
+export { RadialBadge } from "./RadialBadge.js";
+export type { RadialBadgeProps, RadialBadgeState } from "./RadialBadge.js";
 
-export { RadialBreadcrumb } from "./RadialBreadcrumb";
-export type { RadialBreadcrumbProps } from "./RadialBreadcrumb";
+export { RadialBreadcrumb } from "./RadialBreadcrumb.js";
+export type { RadialBreadcrumbProps } from "./RadialBreadcrumb.js";
 
 // State hook
-export { useRadialMenu } from "./useRadialMenu";
-export type { UseRadialMenuProps, RadialMenuState } from "./useRadialMenu";
+export { useRadialMenu } from "./useRadialMenu.js";
+export type { UseRadialMenuProps, RadialMenuState } from "./useRadialMenu.js";
 
 // ── Backwards-compatibility aliases ───────────────────────────────────────────
 // These match the old export names from the flat RadialNavigation.tsx file.
 // Consumers using the old names will keep working without import changes.
-export { RadialButton as JimboRadialNavigationButton } from "./RadialButton";
-export { RadialBadge as JimboRadialNavigationBadge } from "./RadialBadge";
-export { RadialBreadcrumb as BreadcrumNavPill } from "./RadialBreadcrumb";
-export { RadialPill as JimboOrbitalPill } from "./RadialPill";
+export { RadialButton as JimboRadialNavigationButton } from "./RadialButton.js";
+export { RadialBadge as JimboRadialNavigationBadge } from "./RadialBadge.js";
+export { RadialBreadcrumb as BreadcrumNavPill } from "./RadialBreadcrumb.js";
+export { RadialPill as JimboOrbitalPill } from "./RadialPill.js";

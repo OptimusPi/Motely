@@ -1,6 +1,6 @@
 'use client'
 
-import { splitTtsDisplay } from '../../lib/tts/splitTtsDisplay'
+import { splitTtsDisplay } from '../../lib/tts/splitTtsDisplay.js'
 
 /** Fixed chrome so the home announcement always occupies one predictable size (ai-elements, same family as chat). */
 const speechBoxFrame =
