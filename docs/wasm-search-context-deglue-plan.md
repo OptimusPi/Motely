@@ -1,6 +1,8 @@
-# WASM Search Context De-Glue Plan
+# WASM Search Context De-Glue Plan (Deprecated)
 
 Branch intent: `V/16-GLUE-SNIFFERS-BEGONE`
+
+Deprecated note: this plan captured an exploratory de-glue direction for a WASM search-context API. The current Motely/WASM shape already works for the intended procedural use cases, so this document is now historical reference rather than active design guidance.
 
 ## Problem
 
