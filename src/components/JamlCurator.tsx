@@ -8,22 +8,16 @@ import { JimboFlankNav } from "../ui/jimboFlankNav.js";
 import { JamlMapEditor } from "./jamlMap/JamlMapEditor.js";
 import { JamlAnalyzerFullscreen } from "./JamlAnalyzerFullscreen.js";
 import { useSearch } from "../hooks/useSearch.js";
-import { type Motely } from "motely-wasm";
 import { useAnalyzer } from "../hooks/useAnalyzer.js";
 import { JamlSpeedometer } from "./JamlSpeedometer.js";
 
 const C = JimboColorOption;
 
-export interface JamlCuratorProps {
-  motely: typeof Motely | null;
-  motelyWasmUrl: string;
-}
-
-export function JamlCurator({ motely, motelyWasmUrl }: JamlCuratorProps) {
+export function JamlCurator() {
   // Use map editor by default to generate JAML
   const [jamlText, setJamlText] = useState("");
-  const search = useSearch(motelyWasmUrl);
-  const analyzer = useAnalyzer(motely);
+  const search = useSearch();
+  const analyzer = useAnalyzer();
 
   // Search results pagination
   const [resultIndex, setResultIndex] = useState(0);
@@ -57,7 +51,7 @@ export function JamlCurator({ motely, motelyWasmUrl }: JamlCuratorProps) {
       width: "100%",
       maxWidth: 375,
       height: "100dvh",
-      maxHeight: 812,
+      maxHeight: 667,
       margin: "0 auto",
       position: "relative",
       background: C.DARKEST,

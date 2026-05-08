@@ -56,7 +56,7 @@ export const WithSearch: Story = {
   },
 };
 
-export const Jimbolate: Story = {
+export const Jamlyzer: Story = {
   render: () => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const [jaml, setJaml] = useState(SAMPLE_JAML);
@@ -67,12 +67,12 @@ export const Jimbolate: Story = {
         style={{ flex: 1, minHeight: 0 }}
         jaml={jaml}
         onChange={setJaml}
-        defaultMode="jimbolate"
+        defaultMode="jamlyzer"
         onTestSeed={(seed) => {
           setResult('running' as never);
           setTimeout(() => setResult(seed.startsWith('A') ? 'match' : 'nomatch'), 600);
         }}
-        jimbolateResult={result}
+        jamlyzerResult={result}
       />
     );
   },

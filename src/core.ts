@@ -1,7 +1,6 @@
 export {
   JAML_ASSET_FILES,
   resolveJamlAssetUrl,
-  setJamlAssetBaseUrl,
   type JamlAssetFile,
   type JamlAssetKey,
 } from "./assets.js";

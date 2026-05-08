@@ -1,5 +1,7 @@
 "use client";
 
+export { Motely } from "./motelyBoot.js";
+
 export {
   decodeMotelyItem,
   decodeMotelyItemToJamlCard,

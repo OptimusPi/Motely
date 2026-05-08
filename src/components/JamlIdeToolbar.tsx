@@ -5,7 +5,7 @@ import { JimboButton } from "../ui/panel.js";
 import { JimboTabs } from "../ui/jimboTabs.js";
 import { JimboColorOption } from "../ui/tokens.js";
 
-export type JamlIdeMode = "visual" | "code" | "map" | "results" | "jimbolate";
+export type JamlIdeMode = "visual" | "code" | "map" | "results" | "jamlyzer";
 
 export interface JamlIdeToolbarProps {
   mode: JamlIdeMode;
@@ -22,7 +22,7 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
     { id: "code", label: "JAML" },
     { id: "map", label: "Map" },
     { id: "results", label: resultCount > 0 ? `Results (${resultCount})` : "Results" },
-    { id: "jimbolate", label: "Jimbolate" },
+    { id: "jamlyzer", label: "Jamlyzer" },
   ];
 
   return (

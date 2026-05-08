@@ -20,7 +20,7 @@ import {
 import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
 import { JamlIdeVisual, type JamlVisualFilter, type JamlZone, type JamlVisualClause } from "./JamlIdeVisual.js";
 import { JamlCodeEditor } from "./JamlCodeEditor.js";
-import { Jimbolate } from "./Jimbolate.js";
+import { Jamlyzer } from "./Jamlyzer.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboModal } from "../ui/panel.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
@@ -60,8 +60,8 @@ export interface JamlIdeProps {
   onSearch?: () => void;
   isSearching?: boolean;
   onTestSeed?: (seed: string) => void;
-  jimbolateResult?: "idle" | "match" | "nomatch" | "running" | "error";
-  jimbolateError?: string | null;
+  jamlyzerResult?: "idle" | "match" | "nomatch" | "running" | "error";
+  jamlyzerError?: string | null;
   /**
    * Controlled visual filter. When provided alongside `onVisualFilterChange`, the Visual tab
    * is fully controlled by the parent. When absent, the Visual tab auto-derives from the text.
@@ -238,8 +238,8 @@ export function JamlIde({
   onSearch,
   isSearching = false,
   onTestSeed,
-  jimbolateResult = "idle",
-  jimbolateError,
+  jamlyzerResult = "idle",
+  jamlyzerError,
   visualFilter,
   onVisualFilterChange,
 }: JamlIdeProps) {
@@ -394,12 +394,12 @@ export function JamlIde({
           </div>
         ) : null}
 
-        {mode === "jimbolate" ? (
-          <Jimbolate
+        {mode === "jamlyzer" ? (
+          <Jamlyzer
             jaml={text}
             onTest={(seed) => onTestSeed?.(seed)}
-            result={jimbolateResult}
-            error={jimbolateError}
+            result={jamlyzerResult}
+            error={jamlyzerError}
           />
         ) : null}
       </div>

@@ -1,12 +1,9 @@
 /*
- * Coding font: JetBrains Mono via Google Fonts (woff2, variable axis).
- * Falls through to Cascadia Code / Fira Code / ui-monospace when offline.
- * Using @import instead of @font-face keeps this stylesheet bundler-safe —
- * no absolute URLs to self-host, no extra asset copy step for consumers.
- * Must be the first rule in the file per CSS @import spec.
+ * m6x11plus — Balatro's pixel font.
+ * Relative URL resolves via the package's `./assets/*` export so consumer
+ * bundlers (Vite, webpack, etc.) can pick up the OTF from node_modules.
+ * No external CDN — keeps singlefile/iframe consumers CSP-safe.
  */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
-
 @font-face {
   font-family: 'm6x11plus';
   src: local('m6x11plus'), local('m6x11plusplus'), url('./assets/fonts/m6x11plusplus.otf') format('opentype');

@@ -4,14 +4,14 @@ import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboColorOption } from "../ui/tokens.js";
 
-export interface JimbolateProps {
+export interface JamlyzerProps {
   jaml: string;
   onTest: (seed: string) => void;
   result: "idle" | "match" | "nomatch" | "running" | "error";
   error?: string | null;
 }
 
-export function Jimbolate({ jaml, onTest, result, error }: JimbolateProps) {
+export function Jamlyzer({ jaml, onTest, result, error }: JamlyzerProps) {
   const [seed, setSeed] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 

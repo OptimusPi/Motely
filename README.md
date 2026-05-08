@@ -80,19 +80,6 @@ import { JamlMapPreview } from "jaml-ui";
 <JamlMapPreview jaml={jaml} />
 ```
 
-## Asset handling
-
-By default sprites resolve from the package `assets/` directory via `import.meta.url`.
-
-Override at app startup:
-
-```ts
-import { setJamlAssetBaseUrl, clearJamlAssetBaseUrl } from "jaml-ui";
-
-setJamlAssetBaseUrl("/vendor/jaml-ui/");
-clearJamlAssetBaseUrl();                   // back to default
-```
-
 ## Core utilities
 
 ```ts
