@@ -5,7 +5,6 @@ import "./ui/jimbo.css";
 export {
     JAML_ASSET_FILES,
     resolveJamlAssetUrl,
-    setJamlAssetBaseUrl,
     type JamlAssetFile,
     type JamlAssetKey,
 } from "./assets.js";
@@ -54,6 +53,7 @@ export {
     type JamlVisualClause,
     type JamlZone,
 } from "./components/JamlIde.js";
+export { JamlCurator } from "./components/JamlCurator.js";
 export {
     JamlIdeVisual,
     type JamlIdeVisualProps,
@@ -124,14 +124,7 @@ export {
     type MotelyJsRunState,
 } from "./hooks/useAnalyzer.js";
 
-// Setter pattern for motely-wasm runtime enums. Consumers boot motely-wasm
-// and call setMotelyEnums(Motely) once after boot so display/decoder helpers
-// can resolve enum keys without statically importing motely-wasm.
-export { setMotelyEnums as setMotelyDisplayEnums } from "./motelyDisplay.js";
-export {
-  setMotelyEnums as setMotelyDecoderEnums,
-  motelyItemRenderCategory,
-} from "./decode/motelyItemDecoder.js";
+export { motelyItemRenderCategory } from "./decode/motelyItemDecoder.js";
 
 
 export {

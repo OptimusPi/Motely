@@ -170,7 +170,7 @@ export const Tabs: StoryObj = {
               { id: 'b', label: 'JAML' },
               { id: 'c', label: 'Map' },
               { id: 'd', label: 'Results' },
-              { id: 'e', label: 'Jimbolate' },
+              { id: 'e', label: 'Jamlyzer' },
             ]}
             activeTab={tab}
             onTabChange={setTab}

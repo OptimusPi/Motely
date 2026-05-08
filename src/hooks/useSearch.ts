@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { Motely } from "../motelyBoot.js";
+
+const { MotelyWasm, MotelyWasmEvents } = Motely;
 
 export interface SearchResult {
   seed: string;
@@ -8,7 +11,7 @@ export interface SearchResult {
   tallyColumns?: number[];
 }
 
-export type SearchStatus = "idle" | "booting" | "running" | "completed" | "cancelled" | "error";
+export type SearchStatus = "idle" | "running" | "completed" | "cancelled" | "error";
 
 export interface UseSearchState {
   results: SearchResult[];
@@ -30,159 +33,128 @@ const INITIAL_STATE: UseSearchState = {
   tallyLabels: [],
 };
 
-function createWorker(): Worker {
-  return new Worker(new URL("./searchWorker.js", import.meta.url), { type: "module" });
-}
+// Module-level: only ONE search can run at a time across all useSearch
+// instances because MotelyWasmEvents handlers are shared global state.
+// runId guards against late events from a prior search bleeding into the
+// next one.
+let runIdCounter = 0;
 
-export function useSearch(motelyWasmUrl?: string) {
+export function useSearch() {
   const [state, setState] = useState<UseSearchState>(INITIAL_STATE);
-
-  const workerRef = useRef<Worker | null>(null);
-  const readyRef = useRef(false); // Worker is NOT implicitly ready, must wait for 'ready' message
+  const activeSearchRef = useRef<{ cancel(): void } | null>(null);
+  const myRunIdRef = useRef(0);
   const speedRef = useRef({ lastSearched: 0n, lastTime: 0, ema: 0 });
+  const pendingResultsRef = useRef<SearchResult[]>([]);
+  const flushScheduledRef = useRef(false);
 
-  const [prevUrl, setPrevUrl] = useState(motelyWasmUrl);
-  if (motelyWasmUrl !== prevUrl) {
-    setPrevUrl(motelyWasmUrl);
-    setState((s) => ({ ...s, status: "idle" }));
-  }
+  const flushResults = useCallback(() => {
+    flushScheduledRef.current = false;
+    if (pendingResultsRef.current.length === 0) return;
+    const batch = pendingResultsRef.current;
+    pendingResultsRef.current = [];
+    setState((s) => ({ ...s, results: [...s.results, ...batch] }));
+  }, []);
 
   useEffect(() => {
-    const worker = createWorker();
-    workerRef.current = worker;
+    return () => {
+      // On unmount, cancel any active search and zero the runId so events
+      // from in-flight searches stop mutating state.
+      activeSearchRef.current?.cancel();
+      myRunIdRef.current = 0;
+    };
+  }, []);
 
-    if (motelyWasmUrl) {
-      worker.postMessage({ type: 'init', url: motelyWasmUrl });
-    }
+  const wireSearch = useCallback((startFn: () => { cancel(): void }) => {
+    const runId = ++runIdCounter;
+    myRunIdRef.current = runId;
+    speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
+    pendingResultsRef.current = [];
+    setState((s) => ({ ...INITIAL_STATE, status: "running", tallyLabels: s.tallyLabels }));
 
-    worker.onmessage = (e: MessageEvent) => {
-      const msg = e.data as { type: string;[k: string]: unknown };
-      if (msg.type === "ready") {
-        readyRef.current = true;
-        setState((s) => s.status === "booting" ? { ...s, status: "idle" } : s);
-      } else if (msg.type === "result") {
-        setState((s) => ({
-          ...s,
-          results: [...s.results, {
-            seed: msg.seed as string,
-            score: msg.score as number,
-            tallyColumns: msg.tallyColumns as number[] | undefined,
-          }],
-        }));
-      } else if (msg.type === "progress") {
-        const searched = BigInt(msg.searched as string);
-        const matching = BigInt(msg.matching as string);
-        const now = performance.now();
-        const ref = speedRef.current;
-        let sps = ref.ema;
-
-        if (ref.lastTime > 0) {
-          const dtMs = now - ref.lastTime;
-          if (dtMs > 0) {
-            const delta = Number(searched - ref.lastSearched);
-            const instantSps = delta / (dtMs / 1000);
-            sps = ref.ema === 0 ? instantSps : ref.ema * 0.7 + instantSps * 0.3;
-          }
-        }
-        ref.lastSearched = searched;
-        ref.lastTime = now;
-        ref.ema = sps;
-
-        setState((s) => ({ ...s, totalSearched: searched, matchingSeeds: matching, seedsPerSecond: Math.round(sps) }));
-      } else if (msg.type === "complete") {
-        speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
-        setState((s) => ({
-          ...s,
-          status:
-            msg.status === "Completed"
-              ? "completed"
-              : msg.status === "Cancelled"
-                ? "cancelled"
-                : "error",
-          error:
-            msg.status === "Completed" || msg.status === "Cancelled"
-              ? null
-              : msg.status as string,
-          totalSearched: BigInt(msg.searched as string),
-          matchingSeeds: BigInt(msg.matched as string),
-          seedsPerSecond: 0,
-        }));
-      } else if (msg.type === "cancelled") {
-        speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
-        setState((s) => ({ ...s, status: "cancelled", seedsPerSecond: 0 }));
-      } else if (msg.type === "tally_labels") {
-        setState((s) => ({ ...s, tallyLabels: msg.labels as string[] }));
-      } else if (msg.type === "error") {
-        setState((s) => ({ ...s, status: "error", error: msg.message as string }));
+    MotelyWasmEvents.notifyResult = (seed, score, tallyColumns) => {
+      if (runId !== runIdCounter) return;
+      pendingResultsRef.current.push({ seed, score, tallyColumns: Array.from(tallyColumns) });
+      if (!flushScheduledRef.current) {
+        flushScheduledRef.current = true;
+        requestAnimationFrame(flushResults);
       }
     };
 
-    return () => {
-      worker.terminate();
-      workerRef.current = null;
-    };
-  }, [motelyWasmUrl]);
-
-  const sendStart = useCallback((payload: Record<string, unknown>) => {
-    const worker = workerRef.current;
-    if (!worker) return;
-    if (!motelyWasmUrl) {
-      setState((s) => ({ ...s, status: "error", error: "motelyWasmUrl is required to start search" }));
-      return;
-    }
-    speedRef.current = { lastSearched: 0n, lastTime: 0, ema: 0 };
-    setState({ ...INITIAL_STATE, status: "running", tallyLabels: state.tallyLabels });
-
-    const send = () => worker.postMessage(payload);
-
-    if (readyRef.current) {
-      send();
-    } else {
-      const orig = worker.onmessage;
-      worker.onmessage = (e: MessageEvent) => {
-        orig?.call(worker, e);
-        if ((e.data as { type: string }).type === "ready") {
-          worker.onmessage = orig;
-          send();
+    MotelyWasmEvents.notifyProgress = (searched, matching) => {
+      if (runId !== runIdCounter) return;
+      const now = performance.now();
+      const ref = speedRef.current;
+      let sps = ref.ema;
+      if (ref.lastTime > 0) {
+        const dtMs = now - ref.lastTime;
+        if (dtMs > 0) {
+          const delta = Number(searched - ref.lastSearched);
+          const instantSps = delta / (dtMs / 1000);
+          sps = ref.ema === 0 ? instantSps : ref.ema * 0.7 + instantSps * 0.3;
         }
-      };
+      }
+      ref.lastSearched = searched;
+      ref.lastTime = now;
+      ref.ema = sps;
+      setState((s) => ({ ...s, totalSearched: searched, matchingSeeds: matching, seedsPerSecond: Math.round(sps) }));
+    };
+
+    MotelyWasmEvents.notifyComplete = (status, searched, matched) => {
+      if (runId !== runIdCounter) return;
+      activeSearchRef.current = null;
+      // Final flush of any pending results before marking complete.
+      flushResults();
+      setState((s) => ({
+        ...s,
+        status: status === "Completed" ? "completed" : status === "Cancelled" ? "cancelled" : "error",
+        error: status === "Completed" || status === "Cancelled" ? null : status,
+        totalSearched: searched,
+        matchingSeeds: matched,
+        seedsPerSecond: 0,
+      }));
+    };
+
+    try {
+      activeSearchRef.current = startFn();
+    } catch (err) {
+      activeSearchRef.current = null;
+      setState((s) => ({ ...s, status: "error", error: String(err) }));
     }
-  }, [motelyWasmUrl, state.tallyLabels]);
+  }, [flushResults]);
 
   const start = useCallback((jaml: string, count: number) => {
-    sendStart({ type: "start", mode: "random", jaml, count });
-  }, [sendStart]);
+    const validation = MotelyWasm.validateJaml(jaml);
+    if (validation !== "valid") {
+      setState((s) => ({ ...s, status: "error", error: validation }));
+      return;
+    }
+    wireSearch(() => MotelyWasm.startRandomSearch(jaml, count));
+  }, [wireSearch]);
 
   const startAesthetic = useCallback((jaml: string, aesthetic: number) => {
-    sendStart({ type: "start", mode: "aesthetic", jaml, aesthetic });
-  }, [sendStart]);
+    wireSearch(() => MotelyWasm.startAestheticSearch(jaml, aesthetic));
+  }, [wireSearch]);
 
   const startSeedList = useCallback((jaml: string, seeds: string[]) => {
-    sendStart({ type: "start", mode: "seedList", jaml, seeds });
-  }, [sendStart]);
+    wireSearch(() => MotelyWasm.startSeedListSearch(jaml, seeds));
+  }, [wireSearch]);
 
   const startKeyword = useCallback((jaml: string, keywords: string, padding?: string) => {
-    sendStart({ type: "start", mode: "keyword", jaml, keywords, padding });
-  }, [sendStart]);
+    wireSearch(() => MotelyWasm.startKeywordSearch(jaml, keywords, padding ?? ""));
+  }, [wireSearch]);
 
   const startSequential = useCallback((jaml: string, startSeed: string, endSeed?: string) => {
-    // Sequential search: single-threaded, deterministic order.
-    // batchCharCount = length of start seed, startBatch/endBatch = numeric range.
     const charCount = startSeed.length || 1;
     const startNum = parseInt(startSeed, 36) || 0;
     const endNum = endSeed ? parseInt(endSeed, 36) : startNum + 10_000_000;
-    sendStart({
-      type: "start",
-      mode: "sequential",
-      jaml,
-      batchCharCount: charCount,
-      startBatch: startNum.toString(),
-      endBatch: endNum.toString(),
-    });
-  }, [sendStart]);
+    wireSearch(() => MotelyWasm.startSequentialSearch(jaml, charCount, BigInt(startNum), BigInt(endNum)));
+  }, [wireSearch]);
 
   const cancel = useCallback(() => {
-    workerRef.current?.postMessage({ type: "stop" });
+    activeSearchRef.current?.cancel();
+    activeSearchRef.current = null;
+    runIdCounter++; // invalidate any late events
+    setState((s) => ({ ...s, status: "cancelled", seedsPerSecond: 0 }));
   }, []);
 
   const clearError = useCallback(() => {
@@ -190,7 +162,12 @@ export function useSearch(motelyWasmUrl?: string) {
   }, []);
 
   const fetchTallyLabels = useCallback((jaml: string) => {
-    workerRef.current?.postMessage({ type: "get_tally_labels", jaml });
+    try {
+      const labels = MotelyWasm.getTallyLabels(jaml);
+      setState((s) => ({ ...s, tallyLabels: Array.from(labels) }));
+    } catch (err) {
+      setState((s) => ({ ...s, status: "error", error: String(err) }));
+    }
   }, []);
 
   return { ...state, start, startAesthetic, startSeedList, startKeyword, startSequential, cancel, clearError, fetchTallyLabels };
