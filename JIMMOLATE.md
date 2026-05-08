@@ -17,34 +17,71 @@ MotelySingleSearchContext (imperative, one seed, step through antes)
 
 ## JimmolateFilterDesc
 
-Takes a `Func<string, bool>` predicate and runs it via `SearchIndividualSeeds`. Write logic the Immolate way — get the seed string, do your checks imperatively — and it plugs straight into the Motely pipeline after the SIMD pre-filters.
+Takes a `JimmolateSeedPredicate` delegate and runs it via `SearchIndividualSeeds`. Write logic the Immolate way — step through antes, check packs, chase conditional streams — and it plugs straight into the Motely pipeline after the SIMD pre-filters.
 
 ```csharp
-public struct JimmolateFilterDesc(Func<string, bool> predicate)
+public delegate bool JimmolateSeedPredicate(ref MotelySingleSearchContext searchContext);
+
+public readonly struct JimmolateFilterDesc(JimmolateSeedPredicate predicate)
     : IMotelySeedFilterDesc<JimmolateFilterDesc.JimmolateFilter>
 ```
 
-## Writing a Jimmolate filter
+**Important:** Jimmolate skips SIMD entirely — it calls `SearchIndividualSeeds` on every surviving lane with no pre-filter mask. Always pair it with at least one real SIMD filter upstream (as the base filter or a previous `.WithAdditionalFilter()`). Without that, it touches every seed.
 
-The SIMD pre-filters do the heavy lifting (vouchers, bosses, tags — cheap, vectorized, early exit). `JimmolateFilterDesc` handles the logic that's too complex for SIMD: pack iteration, Soul card checks, conditional streams.
+## The reference pattern: PerkeoObservatoryFilterDesc
+
+`PerkeoObservatoryFilterDesc` is what a fully native Jimmolate-style filter looks like — SIMD voucher checks, then `SearchIndividualSeeds` on survivors only:
+
+```csharp
+// SIMD: knock out anything without Telescope → Observatory
+VectorMask matching = ...;
+return searchContext.SearchIndividualSeeds(
+    matching,                          // pre-filter mask from SIMD
+    (ref MotelySingleSearchContext ctx) =>
+    {
+        // imperative pack iteration here
+    }
+);
+```
+
+`JimmolateFilterDesc` is the generic delegate version of this pattern — plug in any predicate without writing a full filter struct.
+
+## Writing a Jimmolate predicate
 
 Use `MotelySingleSearchContext` directly for full imperative control:
 
 ```csharp
-// Example: check packs in ante 1 and 2 for a Soul card → Perkeo
-var boosterPackStream = searchContext.CreateBoosterPackStream(1, true, false);
-var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
-
-if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+// Example: check packs in ante 1 for a Soul card → Perkeo
+var desc = new JimmolateFilterDesc((ref MotelySingleSearchContext searchContext) =>
 {
-    var tarotStream = searchContext.CreateArcanaPackTarotStream(1, true);
-    if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+    var boosterPackStream = searchContext.CreateBoosterPackStream(1, true, false);
+    var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+
+    if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
     {
-        var soulStream = searchContext.CreateLegendaryJokerStream(1);
-        return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+        var tarotStream = searchContext.CreateArcanaPackTarotStream(1, true);
+        if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+        {
+            var soulStream = searchContext.CreateLegendaryJokerStream(1);
+            return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+        }
     }
-}
+
+    return false;
+});
 ```
+
+Attach it after a real SIMD base filter:
+
+```csharp
+new MotelySearchSettings<SomeSimdFilterDesc>(simdFilter)
+    .WithAdditionalFilter(desc)
+    ...
+```
+
+## UI constraint
+
+The UI **must** require at least one real SIMD clause before Jimmolate can be added. Jimmolate without a SIMD pre-filter is just a slow per-seed loop over the entire seed space.
 
 ## The name
 
