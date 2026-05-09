@@ -501,6 +501,33 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void CreatePlan_PreservesShouldClauseOrder()
+  {
+    var jaml = """
+            name: ShouldOrder
+            should:
+              - label: First blueprint
+                rareJoker: Blueprint
+                score: 10
+              - label: Lucky zero
+                luckyMoney: [0]
+                score: 6
+              - label: Last brainstorm
+                rareJoker: Brainstorm
+                score: 10
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var plan = JamlSearchBuilder.CreatePlan(config!);
+
+    Assert.Equal(["First blueprint", "Lucky zero", "Last brainstorm"], plan.TallyLabels);
+  }
+
+  [Fact]
   public void ExplainPlan_ReportsEstimatedRuntimeOrder()
   {
     var jaml = """
