@@ -338,6 +338,9 @@ public sealed class MotelyWasmHost
     public string[] GetTallyLabels(string jaml) =>
         JamlSearchBuilder.CreatePlan(ParseJaml(jaml)).TallyLabels;
 
+    public string ExplainJamlPerformance(string jaml) =>
+        JamlSearchBuilder.ExplainPlan(ParseJaml(jaml));
+
 
     public MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
