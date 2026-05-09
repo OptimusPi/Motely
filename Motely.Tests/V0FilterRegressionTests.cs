@@ -46,7 +46,7 @@ public class V0FilterRegressionTests
 
     private static JamlConfig ParseFilterOrFail(FilterFileCase filter)
     {
-        bool parsed = JamlConfigLoader.TryLoadFromFile(filter.FullPath, out var config, out var error);
+        bool parsed = JamlConfigLoader.TryLoad(File.ReadAllText(filter.FullPath), out var config, out var error);
         Assert.True(parsed, $"[{filter.FileName}] JAML parse failed: {error}");
         Assert.NotNull(config);
         return config!;

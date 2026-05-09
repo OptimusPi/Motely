@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 using System.Linq;
+using System.Text;
 
 namespace Motely.Filters;
 
@@ -366,10 +367,14 @@ public static class JamlSearchBuilder
 
     private static string DescribeStandardCard(StandardCardClause clause)
     {
-        var parts = new List<string>();
-        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
-        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
-        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+        if (clause.Cards.Length == 0) return "Any";
+        return string.Join(", ", clause.Cards.Select(t =>
+        {
+            var parts = new List<string>();
+            if (t.Rank.HasValue) parts.Add(t.Rank.Value.ToString());
+            if (t.Suit.HasValue) parts.Add(t.Suit.Value.ToString());
+            return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+        }));
     }
 
     private static string DescribeErraticCard(ErraticCardClause clause)
