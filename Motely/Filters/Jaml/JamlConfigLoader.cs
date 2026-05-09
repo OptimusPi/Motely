@@ -1133,7 +1133,10 @@ public static partial class JamlConfigLoader
     }
 
     private static string LabelEnumOrAny<T>(EnumOrAny<T> v) where T : struct, Enum =>
-        v.IsAny ? "any" : v.Value.ToString();
+        v.IsAny ? "Any" : FormatUtils.FormatDisplayName(v.Value.ToString());
+
+    private static string LabelEnums<T>(IEnumerable<T> values) where T : struct, Enum =>
+        string.Join(", ", values.Select(static value => FormatUtils.FormatDisplayName(value.ToString())));
 
     private static MotelyJoker ToMotelyJoker(MotelyJokerLegendary joker) =>
         (MotelyJoker)((int)MotelyJokerRarity.Legendary | (int)joker);
@@ -1141,47 +1144,83 @@ public static partial class JamlConfigLoader
     private static string GenerateLabel(JamlClauseDto c)
     {
         if (c.Joker is { } jokerValue) return LabelEnumOrAny(jokerValue);
-        if (c.Jokers is { Count: > 0 } jj) return string.Join(", ", jj);
+        if (c.Jokers is { Count: > 0 } jj) return LabelEnums(jj);
         if (c.CommonJoker is { } commonJokerValue) return LabelEnumOrAny(commonJokerValue);
-        if (c.CommonJokers is { Count: > 0 } cj) return string.Join(", ", cj);
+        if (c.CommonJokers is { Count: > 0 } cj) return LabelEnums(cj);
         if (c.UncommonJoker is { } uncommonJokerValue) return LabelEnumOrAny(uncommonJokerValue);
-        if (c.UncommonJokers is { Count: > 0 } uj) return string.Join(", ", uj);
+        if (c.UncommonJokers is { Count: > 0 } uj) return LabelEnums(uj);
         if (c.RareJoker is { } rareJokerValue) return LabelEnumOrAny(rareJokerValue);
-        if (c.RareJokers is { Count: > 0 } rj) return string.Join(", ", rj);
+        if (c.RareJokers is { Count: > 0 } rj) return LabelEnums(rj);
         if (c.LegendaryJoker is { } legendaryJokerValue) return LabelEnumOrAny(legendaryJokerValue);
-        if (c.LegendaryJokers is { Count: > 0 } lj) return string.Join(", ", lj);
-        if (c.Voucher is { } voucherValue) return voucherValue.ToString();
-        if (c.Vouchers is { Count: > 0 } vv) return string.Join(", ", vv);
-        if (c.TarotCard is { } tarotCardValue) return tarotCardValue.ToString();
-        if (c.TarotCards is { Count: > 0 } tt) return string.Join(", ", tt);
-        if (c.SpectralCard is { } spectralCardValue) return spectralCardValue.ToString();
-        if (c.SpectralCards is { Count: > 0 } ss) return string.Join(", ", ss);
-        if (c.PlanetCard is { } planetCardValue) return planetCardValue.ToString();
-        if (c.Boss is { } bossValue) return bossValue.ToString();
-        if (c.Tag is { } tagValue) return tagValue.ToString();
-        if (c.SmallBlindTag is { } smallBlindTagValue) return smallBlindTagValue.ToString();
-        if (c.BigBlindTag is { } bigBlindTagValue) return bigBlindTagValue.ToString();
-        if (c.StandardCard != null) return c.StandardCard.Value.StringValue ?? string.Empty;
-        if (c.StandardCards is { Count: > 0 }) return "standardCards";
-        if (c.ErraticRank != null) return c.ErraticRank;
-        if (c.ErraticSuit != null) return c.ErraticSuit;
-        if (c.ErraticCard != null) return c.ErraticCard;
-        if (c.StartingDraw != null) return c.StartingDraw;
-        if (c.Event is { } eventValue) return eventValue.ToString();
-        if (c.LuckyMoney != null) return "luckyMoney";
-        if (c.LuckyMult != null) return "luckyMult";
-        if (c.MisprintMult != null) return "misprintMult";
-        if (c.WheelOfFortune != null) return "wheelOfFortune";
-        if (c.CavendishExtinct != null) return "cavendishExtinct";
-        if (c.GrosMichelExtinct != null) return "grosMichelExtinct";
-        if (c.SpaceLevelup != null) return "spaceLevelup";
-        if (c.BusinessPayout != null) return "businessPayout";
-        if (c.BloodstoneTrigger != null) return "bloodstoneTrigger";
-        if (c.ParkingPayout != null) return "parkingPayout";
-        if (c.GlassDestroy != null) return "glassDestroy";
-        if (c.WheelStaysFlipped != null) return "wheelStaysFlipped";
-        return "clause";
+        if (c.LegendaryJokers is { Count: > 0 } lj) return LabelEnums(lj);
+        if (c.Voucher is { } voucherValue) return FormatUtils.FormatVoucher(voucherValue);
+        if (c.Vouchers is { Count: > 0 } vv) return string.Join(", ", vv.Select(FormatUtils.FormatVoucher));
+        if (c.TarotCard is { } tarotCardValue) return FormatUtils.FormatDisplayName(tarotCardValue.ToString());
+        if (c.TarotCards is { Count: > 0 } tt) return LabelEnums(tt);
+        if (c.SpectralCard is { } spectralCardValue) return FormatUtils.FormatDisplayName(spectralCardValue.ToString());
+        if (c.SpectralCards is { Count: > 0 } ss) return LabelEnums(ss);
+        if (c.PlanetCard is { } planetCardValue) return FormatUtils.FormatDisplayName(planetCardValue.ToString());
+        if (c.Boss is { } bossValue) return FormatUtils.FormatBoss(bossValue);
+        if (c.Tag is { } tagValue) return FormatUtils.FormatTag(tagValue);
+        if (c.SmallBlindTag is { } smallBlindTagValue) return FormatUtils.FormatTag(smallBlindTagValue);
+        if (c.BigBlindTag is { } bigBlindTagValue) return FormatUtils.FormatTag(bigBlindTagValue);
+        if (c.StandardCard != null) return LabelStandardCard(c);
+        if (c.StandardCards is { Count: > 0 }) return "Standard Cards";
+        if (c.ErraticRank != null) return $"Erratic {LabelRank(c.ErraticRank)}";
+        if (c.ErraticSuit != null) return $"Erratic {LabelSuit(c.ErraticSuit)}";
+        if (c.ErraticCard != null) return FormatUtils.FormatDisplayName(c.ErraticCard);
+        if (c.StartingDraw != null) return FormatUtils.FormatDisplayName(c.StartingDraw);
+        if (c.Event is { } eventValue) return FormatUtils.FormatDisplayName(eventValue.ToString());
+        if (c.LuckyMoney != null) return "Lucky Money";
+        if (c.LuckyMult != null) return "Lucky Mult";
+        if (c.MisprintMult != null) return "Misprint Mult";
+        if (c.WheelOfFortune != null) return "Wheel of Fortune";
+        if (c.CavendishExtinct != null) return "Cavendish Extinct";
+        if (c.GrosMichelExtinct != null) return "Gros Michel Extinct";
+        if (c.SpaceLevelup != null) return "Space Level Up";
+        if (c.BusinessPayout != null) return "Business Card";
+        if (c.BloodstoneTrigger != null) return "Bloodstone";
+        if (c.ParkingPayout != null) return "Parking Lot";
+        if (c.GlassDestroy != null) return "Glass Destroy";
+        if (c.WheelStaysFlipped != null) return "Wheel Stays Flipped";
+        return "Clause";
     }
+
+    private static string LabelStandardCard(JamlClauseDto c)
+    {
+        if (!string.IsNullOrWhiteSpace(c.StandardCard?.StringValue))
+            return FormatUtils.FormatDisplayName(c.StandardCard.Value.StringValue);
+
+        var parts = new List<string>();
+        if (c.StandardCard?.ObjectValue?.Rank is { } rank)
+            parts.Add(LabelRank(rank));
+        else if (c.Rank is { } rankText)
+            parts.Add(LabelRank(rankText));
+
+        if (c.StandardCard?.ObjectValue?.Suit is { } suit)
+            parts.Add(LabelSuit(suit));
+        else if (c.Suit is { } suitText)
+            parts.Add(LabelSuit(suitText));
+
+        if (c.StandardCard?.ObjectValue?.Enhancement is { } enhancement)
+            parts.Add(FormatUtils.FormatDisplayName(enhancement.ToString()));
+        if (c.StandardCard?.ObjectValue?.Seal is { } seal)
+            parts.Add(FormatUtils.FormatDisplayName(seal.ToString()));
+        if (c.StandardCard?.ObjectValue?.Edition is { } edition)
+            parts.Add(FormatUtils.FormatDisplayName(edition.ToString()));
+
+        return parts.Count == 0 ? "Standard Card" : string.Join(" ", parts);
+    }
+
+    private static string LabelRank(string rank) =>
+        ParseRank(rank) is { } parsed
+            ? FormatUtils.FormatDisplayName(parsed.ToString())
+            : FormatUtils.FormatStandardcardRank(rank);
+
+    private static string LabelSuit(string suit) =>
+        ParseSuit(suit) is { } parsed
+            ? FormatUtils.FormatDisplayName(parsed.ToString())
+            : FormatUtils.FormatStandardcardSuit(suit);
 
     // ── Resolve type from shorthand keys or explicit type field ──
 

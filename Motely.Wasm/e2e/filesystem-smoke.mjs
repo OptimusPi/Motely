@@ -2,8 +2,8 @@
 //
 // The extension's real JS implementation (@rewaffle/bootsharp-file-system) only
 // works in browsers — it sits on top of the File System Access API. To prove
-// the C#-side wiring in MotelyWasmHost.MountJamlLibrary / LoadJamlFile /
-// SaveJamlFile / GetJamlLibraryFiles, we provide a Node-side mock of
+// the C#-side wiring in mountJamlLibrary / loadLibraryFile /
+// saveLibraryFile / getJamlLibraryFiles, we provide a Node-side mock of
 // `Bootsharp.FileSystem.FileMounter` backed by node:fs, then drive a full
 // round trip: read a test JAML from disk, run a search, write the seeds
 // back into the same library directory.
