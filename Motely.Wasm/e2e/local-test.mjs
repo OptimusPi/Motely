@@ -3,9 +3,17 @@
 // Covers: boot, JAML validation, schema, search context, shop items, jokers, bosses.
 // Run: node local-test.mjs  (from this dir, after dotnet publish Motely.Wasm -c Release)
 
-import bootsharp, { Motely } from "../../motely-wasm/index.mjs";
+import { fileURLToPath } from "node:url";
+import { dirname, join, relative, resolve } from "node:path";
+import { promises as fs } from "node:fs";
+
+import bootsharp, { Bootsharp, Motely } from "../../motely-wasm/index.mjs";
 
 const { MotelyWasm, MotelyWasmEvents } = Motely;
+const { FileMounter, EntryType } = Bootsharp.FileSystem;
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fixturesDir = resolve(__dirname, "fixtures");
 
 let failures = 0;
 let total = 0;
@@ -75,57 +83,109 @@ expect("schema has $defs.Joker", Array.isArray(schema?.$defs?.Joker?.enum));
 expect("Joker enum includes Blueprint", schema.$defs.Joker.enum.includes("Blueprint"));
 expect("schema has $defs.Boss", Array.isArray(schema?.$defs?.Boss?.enum));
 
-// ── Search Context — seed analysis ──
-console.log("\n5. Search Context (seed: 1AAAAAAA, Red, White)");
-const ctx = MotelyWasm.createSearchContext("1AAAAAAA", Motely.MotelyDeck.Red, Motely.MotelyStake.White);
-expect("createSearchContext returns an object", ctx != null);
-
-// Boss stream
-console.log("\n6. Boss stream");
-const bossStream = ctx.createBossStream();
-expect("createBossStream returns", bossStream != null);
-const runState = { prngState: 0 };
-const boss1 = ctx.getNextBossForAnte(bossStream, 1, runState);
-expect("ante 1 boss is a number (enum)", typeof boss1.boss === "number");
-expect("boss value > 0", boss1.boss > 0, `got ${boss1.boss}`);
-
-// Boss chunk for antes 1-8
-const bossChunk = ctx.getNextBossForAnteChunk(bossStream, 1, 8, runState);
-expect("boss chunk has 8 entries", bossChunk.bosses.length === 8, `got ${bossChunk.bosses.length}`);
-
-// ── Shop items ──
-console.log("\n7. Shop items");
-const shopStream = ctx.createShopItemStream(1, runState, 0, 0);
-expect("createShopItemStream returns", shopStream != null);
-
-const shopItem = ctx.getNextShopItem(shopStream);
-expect("getNextShopItem returns an item", shopItem.item != null);
-const itemValue = typeof shopItem.item === "number" ? shopItem.item : shopItem.item?.value;
-expect("shop item has a numeric value", typeof itemValue === "number", `got ${typeof itemValue}: ${JSON.stringify(shopItem.item)}`);
-if (typeof itemValue === "number") {
-  expect("shop item value is nonzero (valid packed item)", itemValue !== 0, `value was 0`);
+// ── Seed analysis via analyzeJamlSeeds ──
+console.log("\n5. Seed analysis (1AAAAAAA)");
+const analysis = MotelyWasm.analyzeJamlSeeds(goodJaml, ["1AAAAAAA"]);
+expect("analyzeJamlSeeds returns result", analysis != null);
+expect("no error", !analysis.error, analysis.error);
+const seedResult = analysis.seeds?.[0];
+expect("seed result present", seedResult != null);
+const antes = seedResult?.analysis?.antes;
+expect("has antes", Array.isArray(antes) && antes.length > 0, `got ${antes?.length}`);
+if (antes?.length > 0) {
+  expect("ante 1 has boss", typeof antes[0].boss === "string" && antes[0].boss.length > 0, antes[0].boss);
+  expect("ante 1 has voucher", typeof antes[0].voucher === "string", antes[0].voucher);
 }
 
-// Shop item chunk
-const shopChunk = ctx.getNextShopItemChunk(shopStream, 5);
-// Bootsharp marshals C# int[] → JS Int32Array (NOT Array). Consumers must handle typed arrays.
-const isTypedOrArray = shopChunk.items instanceof Int32Array || Array.isArray(shopChunk.items);
-expect("shop item chunk returns Int32Array or Array", isTypedOrArray, `got ${shopChunk.items?.constructor?.name}`);
-expect("chunk has items", shopChunk.items.length > 0, `got ${shopChunk.items.length}`);
-if (shopChunk.items.length > 0) {
-  expect("chunk items are numbers (packed ints)", typeof shopChunk.items[0] === "number");
+// ── JAML library mount (Bootsharp.FileSystem 0.8.0 via node fs) ──
+console.log("\n6. JAML library mount + load from disk");
+
+const uriToPath = (uri) => fileURLToPath(uri);
+const pathToUri = (p) => "file://" + resolve(p).replace(/\\/g, "/");
+
+async function listJamlFiles(rootDir) {
+  const out = [];
+  async function walk(dir) {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.isFile() && /\.(jaml|ya?ml)$/i.test(entry.name)) out.push(full);
+    }
+  }
+  await walk(rootDir);
+  return out;
 }
 
-// ── Joker stream ──
-console.log("\n8. Shop jokers");
-const jokerStream = ctx.createShopJokerStream(1, 0);
-const joker1 = ctx.getNextShopJoker(jokerStream);
-expect("shop joker returns", joker1.item != null);
-const jokerValue = typeof joker1.item === "number" ? joker1.item : joker1.item?.value;
-expect("joker has numeric value", typeof jokerValue === "number", `${typeof jokerValue}: ${JSON.stringify(joker1.item)}`);
+const rootUri = pathToUri(fixturesDir);
+
+FileMounter.pickRoot = async (_options) => rootUri;
+
+FileMounter.unmount = async (_rootId) => { /* nothing to release */ };
+
+FileMounter.mount = async (rootId, watcher, _options) => {
+  // Build a thin IFileSystem against node fs, rooted at the dir behind rootId.
+  const rootDir = uriToPath(rootId);
+  const filesys = {
+    createDirectory: (uri) => fs.mkdir(uriToPath(uri), { recursive: true }),
+    removeDirectory: (uri) => fs.rm(uriToPath(uri), { recursive: true, force: true }),
+    moveDirectory: (from, to) => fs.rename(uriToPath(from), uriToPath(to)),
+    getFileInfo: async (uri) => {
+      const stat = await fs.stat(uriToPath(uri));
+      return {
+        type: stat.isDirectory() ? "directory" : "file",
+        bytesCount: stat.size,
+        lastModified: stat.mtime,
+      };
+    },
+    readFile: async (uri) => new Uint8Array(await fs.readFile(uriToPath(uri))),
+    writeFile: async (uri, content) => fs.writeFile(uriToPath(uri), Buffer.from(content)),
+    deleteFile: (uri) => fs.unlink(uriToPath(uri)),
+    moveFile: (from, to) => fs.rename(uriToPath(from), uriToPath(to)),
+  };
+
+  // Seed the watcher with the existing .jaml files so getJamlLibraryFiles sees them.
+  const initial = await listJamlFiles(rootDir);
+  await watcher.handleFileChanges(
+    initial.map((p) => ({
+      type: 0, // Added
+      entry: { uri: pathToUri(p), type: EntryType.File },
+      fromUri: null,
+      added: true,
+      removed: false,
+      modified: false,
+      moved: false,
+      file: true,
+      directory: false,
+    }))
+  );
+
+  return filesys;
+};
+
+const mountedRoot = await MotelyWasm.mountJamlLibrary();
+expect("mountJamlLibrary returned a rootId", typeof mountedRoot === "string" && mountedRoot.length > 0, mountedRoot);
+
+const libFiles = MotelyWasm.getJamlLibraryFiles(mountedRoot);
+expect("library has at least one .jaml file", libFiles.length >= 1, `got ${libFiles.length}`);
+
+const blueprintUri = libFiles.find((u) => u.toLowerCase().endsWith("blueprint.jaml"));
+expect("blueprint.jaml is in the library", blueprintUri != null, libFiles.join(", "));
+
+const loadedJaml = await MotelyWasm.loadLibraryFile(mountedRoot, blueprintUri);
+expect("loadLibraryFile returns non-empty string", typeof loadedJaml === "string" && loadedJaml.length > 0);
+expect("loaded content mentions Blueprint", loadedJaml.includes("Blueprint"));
+
+const v4 = MotelyWasm.validateJamlStructured(loadedJaml);
+expect("disk-loaded JAML is valid", v4.valid === true, JSON.stringify(v4));
+
+const diskAnalysis = MotelyWasm.analyzeJamlSeeds(loadedJaml, ["1AAAAAAA"]);
+expect("analyzeJamlSeeds works on disk-loaded JAML", !diskAnalysis?.error && diskAnalysis?.seeds?.[0] != null, diskAnalysis?.error);
+
+await MotelyWasm.unmountJamlLibrary(mountedRoot);
+expect("library unmounted (no files reported after)", MotelyWasm.getJamlLibraryFiles(mountedRoot).length === 0);
 
 // ── Search ──
-console.log("\n9. Random search (100 seeds)");
+console.log("\n7. Random search (100 seeds)");
 const results = [];
 MotelyWasmEvents.notifyResult = (seed, score, tallies) => {
   results.push({ seed, score });
@@ -142,8 +202,6 @@ expect("searched >= 100", Number(snap.totalSeedsSearched) >= 100, `searched ${sn
 expect("got some results or zero matches (both valid)", results.length >= 0);
 console.log(`  info: ${results.length} matches out of ${snap.totalSeedsSearched} seeds`);
 
-// Cleanup
-ctx.dispose?.() ?? ctx[Symbol.dispose]?.();
 
 // ── Summary ──
 console.log(`\n${"=".repeat(50)}`);

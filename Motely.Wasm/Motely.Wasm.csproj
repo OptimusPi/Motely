@@ -10,7 +10,6 @@
         <WasmEnableSIMD>true</WasmEnableSIMD>
         <WasmEnableThreads>false</WasmEnableThreads>
         <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
-        <BootsharpBundleCommand>npx rollup --external url,fs,process,module</BootsharpBundleCommand>
     </PropertyGroup>
 
     <ItemGroup>
@@ -27,6 +26,10 @@
 
     <ItemGroup>
         <ProjectReference Include="../Motely/Motely.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="../jaml.schema.json" LogicalName="jaml.schema.json" />
     </ItemGroup>
 
     <Target Name="RegenerateJamlSchema" BeforeTargets="Publish">
