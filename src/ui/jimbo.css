@@ -470,7 +470,7 @@
 }
 
 .j-tab__indicator[data-active="true"] {
-  animation: jimbo-bounce 0.6s ease-in-out infinite;
+  animation: jimbo-bounce 0.6s linear infinite;
 }
 
 .j-tab__indicator[data-active="false"] {
@@ -511,12 +511,17 @@
 @keyframes jimbo-bounce {
 
   0%,
-  100% {
+  15% {
     transform: translateY(0);
   }
 
   50% {
     transform: translateY(-3px);
+  }
+
+  85%,
+  100% {
+    transform: translateY(0);
   }
 }
 
