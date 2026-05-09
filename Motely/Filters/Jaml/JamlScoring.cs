@@ -1352,25 +1352,13 @@ public static class JamlScoring
 
     private static int MatchStandardCard(MotelyItem item, StandardCardClause clause)
     {
-        if (item.TypeCategory != MotelyItemTypeCategory.Standardcard)
-            return 0;
-        for (int i = 0; i < clause.Cards.Length; i++)
-        {
-            var card = clause.Cards[i];
-            if (card.Rank.HasValue && item.StandardcardRank != card.Rank.Value)
-                continue;
-            if (card.Suit.HasValue && item.StandardcardSuit != card.Suit.Value)
-                continue;
-            if (card.Enhancement.HasValue && item.Enhancement != card.Enhancement.Value)
-                continue;
-            if (card.Seal.HasValue && item.Seal != card.Seal.Value)
-                continue;
-            if (card.Edition.HasValue && item.Edition != card.Edition.Value)
-                continue;
-            return 1;
-        }
-
-        return 0;
+        if (item.TypeCategory != MotelyItemTypeCategory.Standardcard) return 0;
+        if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value) return 0;
+        if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value) return 0;
+        if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value) return 0;
+        if (clause.Seal.HasValue && item.Seal != clause.Seal.Value) return 0;
+        if (clause.Edition.HasValue && item.Edition != clause.Edition.Value) return 0;
+        return 1;
     }
 
     private static int MatchTarot(MotelyItem item, TarotCardClause clause)

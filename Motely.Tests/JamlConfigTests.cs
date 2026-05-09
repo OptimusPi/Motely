@@ -238,7 +238,12 @@ public class JamlConfigTests
             must:
               - tarotCards: [TheFool, TheEmperor]
               - spectralCards: [Familiar, Aura]
-              - standardCards: [HA, C2]
+              - standardCard:
+                  rank: Ace
+                  suit: Hearts
+              - standardCard:
+                  rank: Two
+                  suit: Clubs
             """;
 
     var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
@@ -249,8 +254,7 @@ public class JamlConfigTests
     Assert.Equal(2, config.Must.TarotCards[0].Tarots.Length);
     Assert.Single(config.Must.SpectralCards);
     Assert.Equal(2, config.Must.SpectralCards[0].Spectrals.Length);
-    Assert.Single(config.Must.StandardCards);
-    Assert.Equal(2, config.Must.StandardCards[0].Cards.Length);
+    Assert.Equal(2, config.Must.StandardCards.Count);
   }
 
   [Fact]
