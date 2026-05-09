@@ -1,5 +1,6 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
+using Motely.DataLake;
 using Motely.Filters;
 
 namespace Motely.CLI;
