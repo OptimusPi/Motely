@@ -11,6 +11,8 @@ using System.Diagnostics.CodeAnalysis;
 
 using System.Linq;
 
+using System.Text;
+
 namespace Motely.Filters;
 
 
@@ -136,7 +138,7 @@ public static class JamlSearchBuilder
         ValidateLegendaryJokerClausesForMustAndShould(config.Should);
 
         var orderedMustClauses = OrderClausesByEstimatedCost(config.Must.OrderedClauses);
-        var orderedShouldClauses = OrderClausesByEstimatedCost(config.Should.OrderedClauses);
+        var orderedShouldClauses = config.Should.OrderedClauses;
         var orderedMustNotClauses = OrderClausesByEstimatedCost(config.MustNot.OrderedClauses);
 
         var allMustDescs = new List<IMotelySeedFilterDesc>();
@@ -366,10 +368,16 @@ public static class JamlSearchBuilder
 
     private static string DescribeStandardCard(StandardCardClause clause)
     {
-        var parts = new List<string>();
-        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
-        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
-        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+        if (clause.Cards.Length == 0)
+            return "Any";
+
+        return string.Join(", ", clause.Cards.Select(card =>
+        {
+            var parts = new List<string>();
+            if (card.Rank.HasValue) parts.Add(card.Rank.Value.ToString());
+            if (card.Suit.HasValue) parts.Add(card.Suit.Value.ToString());
+            return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+        }));
     }
 
     private static string DescribeErraticCard(ErraticCardClause clause)
