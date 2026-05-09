@@ -4,6 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.CLI;
 using Motely.Analysis;
+using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
 using Motely.WasmTools;
@@ -423,7 +424,7 @@ partial class Program
             }
 
             if (
-                !JamlConfigLoader.TryLoadFromFile(
+                !JamlFileSource.TryLoadFromFile(
                     jamlOption.ParsedValue,
                     out var config,
                     out var loadError
