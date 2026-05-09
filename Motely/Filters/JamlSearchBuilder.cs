@@ -97,6 +97,29 @@ public static class JamlSearchBuilder
 
 {
 
+    public static string ExplainPlan(JamlConfig config)
+
+    {
+
+        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
+
+            throw new InvalidOperationException("JamlConfig has no clauses.");
+
+        ValidateLegendaryJokerClausesForMustAndShould(config.Must);
+        ValidateLegendaryJokerClausesForMustAndShould(config.Should);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# JAML filter eval plan");
+        sb.AppendLine();
+        sb.AppendLine("Contract: must clauses evaluate top-to-bottom and short-circuit on first fail. mustNot clauses reject on match. should clauses contribute score but the current scorer evaluates all should clauses.");
+
+        AppendClauseSection(sb, "must", config.Must.OrderedClauses);
+        AppendClauseSection(sb, "mustNot", config.MustNot.OrderedClauses);
+        AppendClauseSection(sb, "should", config.Should.OrderedClauses);
+
+        return sb.ToString().TrimEnd();
+    }
+
     public static IMotelySearchSettings CreateSettings(JamlConfig config) =>
 
         CreatePlan(config, 0).Settings;
@@ -112,19 +135,23 @@ public static class JamlSearchBuilder
         ValidateLegendaryJokerClausesForMustAndShould(config.Must);
         ValidateLegendaryJokerClausesForMustAndShould(config.Should);
 
+        var orderedMustClauses = OrderClausesByEstimatedCost(config.Must.OrderedClauses);
+        var orderedShouldClauses = OrderClausesByEstimatedCost(config.Should.OrderedClauses);
+        var orderedMustNotClauses = OrderClausesByEstimatedCost(config.MustNot.OrderedClauses);
+
         var allMustDescs = new List<IMotelySeedFilterDesc>();
 
         // ── MUST: required filters (AND logic) ──
 
         var mustDescs = new List<IMotelySeedFilterDesc>();
 
-        AddDescsFromSet(mustDescs, config.Must, LegendaryClauseExpansion.SplitLegendaryEdition);
+        AddDescsFromSet(mustDescs, orderedMustClauses, LegendaryClauseExpansion.SplitLegendaryEdition);
 
         allMustDescs.AddRange(mustDescs);
 
         var mustNotDescs = new List<IMotelySeedFilterDesc>();
 
-        AddDescsFromSet(mustNotDescs, config.MustNot, LegendaryClauseExpansion.None);
+        AddDescsFromSet(mustNotDescs, orderedMustNotClauses, LegendaryClauseExpansion.None);
 
         for (int i = 0; i < mustNotDescs.Count; i++)
 
@@ -163,9 +190,9 @@ public static class JamlSearchBuilder
         // ── Scoring: must clauses first (for early-exit), then should clauses
 
         var shouldClauses = new List<IJamlClause>();
-        AddShouldScoringEntriesFromSet(shouldClauses, config.Must);
+        AddShouldScoringEntriesFromSet(shouldClauses, orderedMustClauses);
         int mustClauseCount = shouldClauses.Count;
-        AddShouldScoringEntriesFromSet(shouldClauses, config.Should);
+        AddShouldScoringEntriesFromSet(shouldClauses, orderedShouldClauses);
         settings.WithSeedScoreProvider(
             new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal, mustClauseCount)
         );
@@ -247,17 +274,131 @@ public static class JamlSearchBuilder
     private static string CsvQuoteField(string value) =>
         $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 
+    private static void AppendClauseSection(
+        StringBuilder sb,
+        string sectionName,
+        IReadOnlyList<IJamlClause> originalClauses
+    )
+    {
+        sb.AppendLine();
+        sb.Append("## ");
+        sb.Append(sectionName);
+        sb.Append(" (");
+        sb.Append(originalClauses.Count);
+        sb.AppendLine(originalClauses.Count == 1 ? " clause)" : " clauses)");
+
+        if (originalClauses.Count == 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("No clauses.");
+            return;
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Written order:");
+        for (int i = 0; i < originalClauses.Count; i++)
+        {
+            sb.Append(i + 1);
+            sb.Append(". ");
+            sb.AppendLine(DescribeClausePlanEntry(originalClauses[i]));
+        }
+
+        var orderedClauses = OrderClausesByEstimatedCost(originalClauses);
+        bool changed = !originalClauses.SequenceEqual(orderedClauses);
+
+        sb.AppendLine();
+        sb.AppendLine(changed ? "Runtime order (estimated cheapest-first):" : "Already in runtime order:");
+        for (int i = 0; i < orderedClauses.Count; i++)
+        {
+            sb.Append(i + 1);
+            sb.Append(". ");
+            sb.AppendLine(DescribeClausePlanEntry(orderedClauses[i]));
+        }
+    }
+
+    private static string DescribeClausePlanEntry(IJamlClause clause)
+    {
+        var label = string.IsNullOrWhiteSpace(clause.Label) ? string.Empty : $" \u2014 label: {clause.Label}";
+        return $"[cost {EstimateClauseCost(clause)}] {DescribeClause(clause)}{label}";
+    }
+
+    private static string DescribeClause(IJamlClause clause)
+    {
+        return clause switch
+        {
+            JokerClause c => $"joker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            CommonJokerClause c => $"commonJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            UncommonJokerClause c => $"uncommonJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            RareJokerClause c => $"rareJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            MixedJokerClause c => $"jokers {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            LegendaryJokerClause c => $"legendaryJoker {DescribeJokerNames(c.IsWildcard, c.Jokers.Select(static j => j.ToString()))}",
+            VoucherClause c => $"voucher {string.Join(", ", c.Vouchers.Select(static v => v.ToString()))}",
+            TarotCardClause c => $"tarotCard {string.Join(", ", c.Tarots.Select(static t => t.ToString()))}",
+            SpectralCardClause c => $"spectralCard {string.Join(", ", c.Spectrals.Select(static s => s.ToString()))}",
+            PlanetCardClause c => $"planetCard {string.Join(", ", c.Planets.Select(static p => p.ToString()))}",
+            BossClause c => $"boss {string.Join(", ", c.Bosses.Select(static b => b.ToString()))}",
+            TagClause c => $"tag {string.Join(", ", c.Tags.Select(static t => t.ToString()))}",
+            StandardCardClause c => $"standardCard {DescribeStandardCard(c)}",
+            ErraticRankClause c => $"erraticRank {c.Rank}",
+            ErraticSuitClause c => $"erraticSuit {c.Suit}",
+            ErraticCardClause c => $"erraticCard {DescribeErraticCard(c)}",
+            StartingDrawClause c => $"startingDraw {DescribeStartingDraw(c)}",
+            LuckyMoneyClause => "event LuckyMoney",
+            LuckyMultClause => "event LuckyMult",
+            MisprintMultClause => "event MisprintMult",
+            WheelOfFortuneClause => "event WheelOfFortune",
+            CavendishExtinctClause => "event CavendishExtinct",
+            GrosMichelExtinctClause => "event GrosMichelExtinct",
+            SpaceLevelupClause => "event SpaceLevelup",
+            BusinessPayoutClause => "event BusinessPayout",
+            BloodstoneTriggerClause => "event BloodstoneTrigger",
+            ParkingPayoutClause => "event ParkingPayout",
+            GlassDestroyClause => "event GlassDestroy",
+            WheelStaysFlippedClause => "event WheelStaysFlipped",
+            AndClause c => $"and({c.Clauses.Length})",
+            OrClause c => $"or({c.Clauses.Length})",
+            _ => clause.GetType().Name,
+        };
+    }
+
+    private static string DescribeJokerNames(bool isWildcard, IEnumerable<string> names) =>
+        isWildcard ? "Any" : string.Join(", ", names);
+
+    private static string DescribeStandardCard(StandardCardClause clause)
+    {
+        var parts = new List<string>();
+        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
+        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
+        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+    }
+
+    private static string DescribeErraticCard(ErraticCardClause clause)
+    {
+        var parts = new List<string>();
+        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
+        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
+        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+    }
+
+    private static string DescribeStartingDraw(StartingDrawClause clause)
+    {
+        var parts = new List<string>();
+        if (clause.Rank.HasValue) parts.Add(clause.Rank.Value.ToString());
+        if (clause.Suit.HasValue) parts.Add(clause.Suit.Value.ToString());
+        return parts.Count == 0 ? "Any" : string.Join(" ", parts);
+    }
+
 
 
 
     private static void AddDescsFromSet(
         List<IMotelySeedFilterDesc> list,
-        JamlClauseSet set,
+        IReadOnlyList<IJamlClause> clauses,
         LegendaryClauseExpansion legendaryExpansion
     )
     {
         var typed = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-        AddDescsFromSet(typed, set, legendaryExpansion);
+        AddDescsFromSet(typed, clauses, legendaryExpansion);
 
         for (int i = 0; i < typed.Count; i++)
             list.Add(typed[i].desc);
@@ -274,31 +415,35 @@ public static class JamlSearchBuilder
     }
 
     /// <summary>Collects clauses for <see cref="JamlShouldScoreDesc"/> (validates each via <see cref="CreateDesc"/>).</summary>
-    private static void AddShouldScoringEntriesFromSet(List<IJamlClause> clauses, JamlClauseSet set)
+    private static void AddShouldScoringEntriesFromSet(
+        List<IJamlClause> clauses,
+        IReadOnlyList<IJamlClause> orderedClauses
+    )
     {
-        foreach (var c in set.OrderedClauses)
+        for (int i = 0; i < orderedClauses.Count; i++)
         {
-            _ = CreateDesc(c);
-            clauses.Add(c);
+            _ = CreateDesc(orderedClauses[i]);
+            clauses.Add(orderedClauses[i]);
         }
     }
 
     private static void AddDescsFromSet(
         List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)> list,
-        JamlClauseSet set,
+        IReadOnlyList<IJamlClause> clauses,
         LegendaryClauseExpansion legendaryExpansion
     )
     {
         // Merge consecutive voucher clauses into a single MultiVoucherFilterDesc so the
         // voucher PRNG state is built only once instead of once per clause.
-        var voucherClauses = set.OrderedClauses.OfType<VoucherClause>().ToArray();
+        var voucherClauses = clauses.OfType<VoucherClause>().ToArray();
         IMotelySeedFilterDesc? mergedVoucher = voucherClauses.Length > 1
             ? new MultiVoucherFilterDesc(voucherClauses)
             : null;
         bool mergedVoucherEmitted = false;
 
-        foreach (var c in set.OrderedClauses)
+        for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
         {
+            var c = clauses[clauseIndex];
             if (c is VoucherClause vc)
             {
                 if (mergedVoucher != null)
@@ -389,6 +534,126 @@ public static class JamlSearchBuilder
             (new LegendaryJokerFilterDesc(lj, LegendaryJokerPipelineKind.FullPathOnly), c, labelPath),
         ];
         return true;
+    }
+
+    private static IReadOnlyList<IJamlClause> OrderClausesByEstimatedCost(
+        IReadOnlyList<IJamlClause> clauses
+    )
+    {
+        if (clauses.Count <= 1)
+            return clauses;
+
+        return clauses
+            .Select((clause, index) => (clause, cost: EstimateClauseCost(clause), index))
+            .OrderBy(item => item.cost)
+            .ThenBy(item => item.index)
+            .Select(item => item.clause)
+            .ToArray();
+    }
+
+    private static int EstimateClauseCost(IJamlClause clause)
+    {
+        int baseCost = clause switch
+        {
+            BossClause => 2,
+            LuckyMoneyClause => 3,
+            LuckyMultClause => 3,
+            MisprintMultClause => 3,
+            WheelOfFortuneClause => 3,
+            CavendishExtinctClause => 3,
+            GrosMichelExtinctClause => 3,
+            SpaceLevelupClause => 3,
+            BusinessPayoutClause => 3,
+            BloodstoneTriggerClause => 3,
+            ParkingPayoutClause => 3,
+            GlassDestroyClause => 3,
+            WheelStaysFlippedClause => 3,
+            TagClause => 3,
+            VoucherClause => 4,
+            ErraticRankClause => 4,
+            ErraticSuitClause => 4,
+            LegendaryJokerClause => 5,
+            RareJokerClause => 5,
+            ErraticCardClause => 5,
+            JokerClause => 6,
+            CommonJokerClause => 6,
+            UncommonJokerClause => 6,
+            MixedJokerClause => 6,
+            TarotCardClause => 7,
+            SpectralCardClause => 7,
+            PlanetCardClause => 7,
+            StartingDrawClause => 7,
+            StandardCardClause => 8,
+            AndClause c => 1 + SumNestedClauseCosts(c.Clauses),
+            OrClause c => 1 + SumNestedClauseCosts(c.Clauses),
+            _ => 10,
+        };
+
+        return baseCost + GetMaxAnte(clause);
+    }
+
+    private static int SumNestedClauseCosts(IJamlClause[] clauses)
+    {
+        int total = 0;
+        for (int i = 0; i < clauses.Length; i++)
+            total += EstimateClauseCost(clauses[i]);
+        return total;
+    }
+
+    private static int GetMaxAnte(IJamlClause clause)
+    {
+        return clause switch
+        {
+            JokerClause c => ArrayMax(c.Antes),
+            CommonJokerClause c => ArrayMax(c.Antes),
+            UncommonJokerClause c => ArrayMax(c.Antes),
+            RareJokerClause c => ArrayMax(c.Antes),
+            MixedJokerClause c => ArrayMax(c.Antes),
+            LegendaryJokerClause c => ArrayMax(c.Antes),
+            VoucherClause c => ArrayMax(c.Antes),
+            TarotCardClause c => ArrayMax(c.Antes),
+            SpectralCardClause c => ArrayMax(c.Antes),
+            PlanetCardClause c => ArrayMax(c.Antes),
+            BossClause c => ArrayMax(c.Antes),
+            TagClause c => ArrayMax(c.Antes),
+            StandardCardClause c => ArrayMax(c.Antes),
+            ErraticRankClause c => ArrayMax(c.Antes),
+            ErraticSuitClause c => ArrayMax(c.Antes),
+            ErraticCardClause c => ArrayMax(c.Antes),
+            StartingDrawClause c => ArrayMax(c.Antes),
+            IRollClause c => ArrayMax(c.Rolls),
+            AndClause c => MaxNestedAnte(c.Clauses),
+            OrClause c => MaxNestedAnte(c.Clauses),
+            _ => 0,
+        };
+    }
+
+    private static int MaxNestedAnte(IJamlClause[] clauses)
+    {
+        int max = 0;
+        for (int i = 0; i < clauses.Length; i++)
+        {
+            int nestedMax = GetMaxAnte(clauses[i]);
+            if (nestedMax > max)
+                max = nestedMax;
+        }
+
+        return max;
+    }
+
+    private static int ArrayMax(int[] array)
+    {
+        if (array.Length == 0)
+            return 0;
+
+        int max = array[0];
+        for (int i = 1; i < array.Length; i++)
+        {
+            if (array[i] > max)
+                max = array[i];
+        }
+
+        return max;
     }
 
 
