@@ -427,6 +427,100 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void CreatePlan_ReordersMustClausesByEstimatedCost()
+  {
+    var jaml = """
+            name: ReorderTest
+            deck: Blue
+            stake: White
+            must:
+              - label: Expensive joker
+                joker: Showman
+                antes: [2]
+              - label: Cheap boss
+                boss: TheArm
+                antes: [1]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var mustClauses = config!.Must.OrderedClauses;
+    Assert.Equal(2, mustClauses.Count);
+    Assert.Equal("Expensive joker", mustClauses[0].Label);
+    Assert.Equal("Cheap boss", mustClauses[1].Label);
+
+    var plan = JamlSearchBuilder.CreatePlan(config);
+    var seedScoreDescProperty = plan.Settings.GetType().GetProperty("SeedScoreDesc");
+    Assert.NotNull(seedScoreDescProperty);
+
+    var provider = Assert.IsType<JamlShouldScoreDesc>(seedScoreDescProperty!.GetValue(plan.Settings));
+    var shouldClausesField = typeof(JamlShouldScoreDesc).GetField("_shouldClauses", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    Assert.NotNull(shouldClausesField);
+
+    var shouldClauses = Assert.IsAssignableFrom<IJamlClause[]>(shouldClausesField!.GetValue(provider));
+    Assert.Equal("Cheap boss", shouldClauses[0].Label);
+    Assert.Equal("Expensive joker", shouldClauses[1].Label);
+  }
+
+  [Fact]
+  public void CreatePlan_PreservesShouldClauseOrder()
+  {
+    var jaml = """
+            name: ShouldOrder
+            should:
+              - label: First blueprint
+                rareJoker: Blueprint
+                score: 10
+              - label: Lucky zero
+                luckyMoney: [0]
+                score: 6
+              - label: Last brainstorm
+                rareJoker: Brainstorm
+                score: 10
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var plan = JamlSearchBuilder.CreatePlan(config!);
+
+    Assert.Equal(["First blueprint", "Lucky zero", "Last brainstorm"], plan.TallyLabels);
+  }
+
+  [Fact]
+  public void ExplainPlan_ReportsEstimatedRuntimeOrder()
+  {
+    var jaml = """
+            name: ExplainTest
+            deck: Blue
+            stake: White
+            must:
+              - label: Expensive joker
+                joker: Showman
+                antes: [2]
+              - label: Cheap boss
+                boss: TheArm
+                antes: [1]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var explanation = JamlSearchBuilder.ExplainPlan(config!);
+
+    Assert.Contains("Runtime order (estimated cheapest-first):", explanation);
+    Assert.Contains("[cost 3] boss TheArm", explanation);
+    Assert.Contains("[cost 8] joker Showman", explanation);
+  }
+
+  [Fact]
   public void NestedLogicalAndClause_ParsesSuccessfully()
   {
     var jaml = """
