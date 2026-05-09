@@ -33,16 +33,6 @@ export {
     type AnalyzerItem,
 } from "./components/AnalyzerExplorer.js";
 
-export {
-    JamlAnalyzerFullscreen,
-    type JamlAnalyzerFullscreenProps,
-} from "./components/JamlAnalyzerFullscreen.js";
-export {
-    ANALYZER_STREAM_META,
-    DEFAULT_ENABLED_STREAMS,
-    type AnalyzerStreamKey,
-    type AnalyzerStreamMeta,
-} from "./hooks/analyzerStreamRegistry.js";
 
 export { JamlMapPreview, type JamlMapPreviewProps } from "./components/JamlMapPreview.js";
 export {
@@ -120,8 +110,6 @@ export {
 export {
     useAnalyzer,
     type AnalyzerStatus,
-    type AnalyzerLive,
-    type MotelyJsRunState,
 } from "./hooks/useAnalyzer.js";
 
 export { motelyItemRenderCategory } from "./decode/motelyItemDecoder.js";
