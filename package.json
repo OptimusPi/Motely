@@ -53,7 +53,7 @@
     "demo": "vite --config demo/vite.config.ts",
     "typecheck": "tsc --noEmit --pretty false",
     "prepack": "npm run build",
-    "storybook": "storybook dev -p 3141",
+    "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "lint": "eslint ."
   },
@@ -117,6 +117,7 @@
     "@react-three/fiber": "^9.6.1",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
+    "@storybook/addon-mcp": "^0.6.0",
     "@storybook/addon-onboarding": "^10.3.6",
     "@storybook/addon-vitest": "^10.3.6",
     "@storybook/react-vite": "^10.3.6",
