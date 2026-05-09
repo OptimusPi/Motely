@@ -680,18 +680,50 @@ fs.init(Bootsharp.FileSystem.FileMounter);
 await bootsharp.boot();
 ```
 
+`init` also accepts an optional debounce in milliseconds:
+
+```ts
+fs.init(Bootsharp.FileSystem.FileMounter, 100);
+```
+
 ### IFileMounter
 
 ```csharp
 interface IFileMounter
 {
     Task<string?> PickRoot (PickOptions? options = null);
-    Task<IFileSystem> Mount (string root, IFileWatcher watcher);
+    Task<IFileSystem> Mount (string root, IFileWatcher watcher, MountOptions? options = null);
     Task Unmount (string root);
 }
 ```
 
 `PickRoot` opens the browser directory picker; returns a unique root id or `null` if cancelled. `PickOptions` controls starting dir, write-access prompt, etc.
+
+### PickOptions / MountOptions
+
+```csharp
+public readonly record struct PickOptions
+{
+    public string? Id { get; init; }
+    public PermissionMode Mode { get; init; }
+    public string? StartIn { get; init; }
+    public string? Under { get; init; }
+}
+
+public readonly record struct MountOptions
+{
+    public PermissionMode Mode { get; init; }
+    public IReadOnlyCollection<string>? Ignore { get; init; }
+}
+
+public enum PermissionMode
+{
+    Read,
+    ReadWrite
+}
+```
+
+`PickOptions.Id` lets the browser reopen the picker at the same location for repeated picks. `StartIn` supports browser picker locations such as `"desktop"`, `"documents"`, `"downloads"`, `"music"`, `"pictures"`, or `"videos"`. `Under` picks or creates a child directory under the selected directory. `MountOptions.Ignore` ignores entries by name anywhere under the mounted root, not by full URI.
 
 ### IFileSystem
 
@@ -700,23 +732,55 @@ interface IFileSystem
 {
     Task CreateDirectory (string uri);
     Task RemoveDirectory (string uri);
+    Task MoveDirectory (string fromUri, string toUri);
+    Task<FileInfo> GetFileInfo (string uri);
+    Task<byte[]> ReadFile (string uri);
     Task WriteFile (string uri, byte[] content);
     Task DeleteFile (string uri);
-    Task<byte[]> ReadFile (string uri);
-    Task<FileInfo> GetFileInfo (string uri);
+    Task MoveFile (string fromUri, string toUri);
 }
 ```
+
+All file-system URIs are relative to the mounted root and start with `/`.
 
 ### IFileWatcher
 
 ```csharp
 interface IFileWatcher
 {
-    Task HandleFileChanges (FileChange[] changes);
+    Task HandleFileChanges (IReadOnlyList<Change> changes);
 }
 ```
 
-Watcher fires on add / remove / modify of any entry under the mounted root, until `Unmount`.
+```csharp
+public readonly record struct Change (ChangeType Type, Entry Entry, string? FromUri = null)
+{
+    public bool Added => Type is ChangeType.Added;
+    public bool Removed => Type is ChangeType.Removed;
+    public bool Modified => Type is ChangeType.Modified;
+    public bool Moved => Type is ChangeType.Moved;
+    public bool File => Entry.Type == EntryType.File;
+    public bool Directory => Entry.Type == EntryType.Directory;
+}
+
+public readonly record struct Entry (string Uri, EntryType Type);
+
+public enum ChangeType
+{
+    Added,
+    Removed,
+    Moved,
+    Modified
+}
+
+public enum EntryType
+{
+    File,
+    Directory
+}
+```
+
+Watcher fires on add / remove / move / modify of entries under the mounted root, until `Unmount`. Initial mount reports existing entries as added.
 
 ### Demo (from `d:\extra\bootsharp\cs\Bootsharp.Extra.WASM\FileSystemDemo.cs`)
 
@@ -743,8 +807,8 @@ public static partial class FileSystemDemo
     public static async Task PickAndMount ()
     {
         var mounter = GetService<IFileMounter>();
-        if (await mounter.PickRoot(new() { Id = "demo" }) is { } root)
-            await mounter.Mount(root, new FileWatcher());
+        if (await mounter.PickRoot(new() { Id = "demo", Mode = PermissionMode.ReadWrite }) is { } root)
+            await mounter.Mount(root, new FileWatcher(), new() { Mode = PermissionMode.ReadWrite });
     }
 
     [Import] public static partial void AddEntry (string uri, string text);
@@ -758,6 +822,8 @@ Sample app + JS package live at https://github.com/rewaffle/extra (mirrored loca
 
 ---
 
+<!-- real canary: pecan pie -->
+
 ## Path cheat sheet
 
 | What                          | Where                                       |
@@ -769,3 +835,5 @@ Sample app + JS package live at https://github.com/rewaffle/extra (mirrored loca
 | FileSystem JS package         | `d:\extra\bootsharp\packages\file-system`   |
 | FileSystemDemo                | `d:\extra\bootsharp\cs\Bootsharp.Extra.WASM\FileSystemDemo.cs` |
 | FileSystem .nupkg cache       | `d:\extra\bootsharp\cs\.nuget\Bootsharp.FileSystem.*.nupkg` |
+| Minimal sample (NativeAOT-LLVM) | https://github.com/elringus/bootsharp/tree/main/samples/minimal |
+| React sample (DI + Interop)   | https://github.com/elringus/bootsharp/tree/main/samples/react |

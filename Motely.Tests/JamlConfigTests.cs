@@ -72,6 +72,49 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void MissingLabels_AreGeneratedAsDisplayNames()
+  {
+    var jaml = """
+            name: Labels
+            should:
+              - rareJoker: Blueprint
+              - tarotCard: TheEmperor
+              - voucher: Hieroglyph
+              - wheelOfFortune: [0]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var plan = JamlSearchBuilder.CreatePlan(config!);
+    Assert.Equal(
+      ["Blueprint", "The Emperor", "Hieroglyph", "Wheel of Fortune"],
+      plan.TallyLabels
+    );
+  }
+
+  [Fact]
+  public void ExplicitLabels_ArePreserved()
+  {
+    var jaml = """
+            name: Labels
+            should:
+              - rareJoker: Blueprint
+                label: blueprint early
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var plan = JamlSearchBuilder.CreatePlan(config!);
+    Assert.Equal(["blueprint early"], plan.TallyLabels);
+  }
+
+  [Fact]
   public void TryLoadFromPath_ResolvesTrimmedMixedCasePaths()
   {
     var tempRoot = Path.Combine(Path.GetTempPath(), $"motely-jaml-path-{Guid.NewGuid():N}");
