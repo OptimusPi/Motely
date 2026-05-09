@@ -184,11 +184,6 @@ public sealed class MotelyWasmHost
         );
     }
 
-    public IMotelyWasmSearchContext CreateSearchContext(string seed, MotelyDeck deck, MotelyStake stake)
-    {
-        return new MotelyWasmSearchContext(seed, deck, stake);
-    }
-
     public IMotelyWasmSearch StartRandomSearch(string jaml, int randomSeedCount)
     {
         return StartSearch(jaml, settings => settings.WithRandomSearch(Math.Max(1, randomSeedCount)));
