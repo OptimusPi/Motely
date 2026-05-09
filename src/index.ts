@@ -132,6 +132,14 @@ export {
 } from "./components/JamlSeedInput.js";
 
 export {
+    setJamlAssetBaseUrl,
+    setMotelyDisplayEnums,
+    setMotelyDecoderEnums,
+    getJamlAssetBaseUrl,
+    getMotelyEnums,
+} from "./config.js";
+
+export {
     JamlMapEditor,
     JokerPicker,
     MysterySlot,
