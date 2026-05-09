@@ -23,7 +23,8 @@ public sealed class MotelyWasmHost
         _fileMounter = fileMounter;
     }
 
-    public string GetVersion() => VersionInfo.Version;
+    public string GetVersion() =>
+        typeof(MotelyWasmHost).Assembly.GetName().Version?.ToString() ?? "unknown";
 
     public MotelyItemLayout GetItemLayout() =>
         new(
@@ -53,7 +54,7 @@ public sealed class MotelyWasmHost
 
     private static string LoadJamlSchema()
     {
-        var assembly = typeof(VersionInfo).Assembly;
+        var assembly = typeof(MotelyWasmHost).Assembly;
         using var stream = assembly.GetManifestResourceStream("jaml.schema.json")
             ?? throw new InvalidOperationException("Embedded JAML schema resource was not found.");
         using var reader = new StreamReader(stream);
