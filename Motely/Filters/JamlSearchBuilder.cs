@@ -375,16 +375,6 @@ public static class JamlSearchBuilder
         if (clause.Seal.HasValue) parts.Add(clause.Seal.Value.ToString());
         if (clause.Edition.HasValue) parts.Add(clause.Edition.Value.ToString());
         return parts.Count == 0 ? "Any" : string.Join(" ", parts);
-        if (clause.Cards.Length == 0)
-            return "Any";
-
-        return string.Join(", ", clause.Cards.Select(card =>
-        {
-            var parts = new List<string>();
-            if (card.Rank.HasValue) parts.Add(card.Rank.Value.ToString());
-            if (card.Suit.HasValue) parts.Add(card.Suit.Value.ToString());
-            return parts.Count == 0 ? "Any" : string.Join(" ", parts);
-        }));
     }
 
     private static string DescribeErraticCard(ErraticCardClause clause)
