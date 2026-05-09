@@ -1,9 +1,9 @@
 using System.Data.Common;
 using DuckDB.NET.Data;
 
-namespace Motely.CLI;
+namespace Motely.DataLake;
 
-internal sealed class DuckDbResultsSeedProvider : IMotelySeedProvider, IDisposable
+public sealed class DuckDbResultsSeedProvider : IMotelySeedProvider, IDisposable
 {
     public const int DefaultChunkSize = 1225;
     private const string CsvReadOptions = "auto_detect = false, header = true, delim = ',', strict_mode = false, null_padding = true, ignore_errors = true";

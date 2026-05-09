@@ -1,3 +1,4 @@
+using Motely.DataLake;
 using Motely.Filters;
 using Xunit;
 
@@ -90,7 +91,7 @@ public class JamlConfigTests
 
       Directory.SetCurrentDirectory(tempRoot);
 
-      var success = JamlConfigLoader.TryLoadFromFile("  m.JAML  ", out var config, out var error);
+      var success = JamlFileSource.TryLoadFromFile("  m.JAML  ", out var config, out var error);
 
       Assert.True(success, $"Failed to resolve trimmed mixed-case path: {error}");
       Assert.NotNull(config);
