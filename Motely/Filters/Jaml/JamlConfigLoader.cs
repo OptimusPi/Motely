@@ -791,7 +791,11 @@ public static partial class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Max = max,
-                Cards = ResolveStandardCardTargets(c, shRank, shSuit, edition),
+                Rank = ParseRank(c.StandardCard?.ObjectValue?.Rank ?? c.Rank) ?? shRank,
+                Suit = ParseSuit(c.StandardCard?.ObjectValue?.Suit ?? c.Suit) ?? shSuit,
+                Enhancement = c.StandardCard?.ObjectValue?.Enhancement ?? c.Enhancement,
+                Seal = c.StandardCard?.ObjectValue?.Seal ?? c.Seal,
+                Edition = c.StandardCard?.ObjectValue?.Edition ?? edition,
                 Sources = new StandardCardSourceConfig
                 {
                     ShopItems = c.StandardCard?.ObjectValue?.Sources?.ShopItems ?? shopItems ?? [],
@@ -892,41 +896,6 @@ public static partial class JamlConfigLoader
         throw new NotSupportedException("ErraticCard clause requires both Rank and Suit.");
     }
 
-    private static StandardCardTarget[] ResolveStandardCardTargets(
-        JamlClauseDto c,
-        MotelyStandardcardRank? shorthandRank,
-        MotelyStandardcardSuit? shorthandSuit,
-        MotelyItemEdition? clauseEdition
-    )
-    {
-        if (c.StandardCards is { Count: > 0 } cards)
-        {
-            return cards.Select(card =>
-            {
-                var (rank, suit) = ParseCardShorthand(card.StringValue ?? string.Empty);
-                return new StandardCardTarget
-                {
-                    Rank = ParseRank(card.ObjectValue?.Rank) ?? rank,
-                    Suit = ParseSuit(card.ObjectValue?.Suit) ?? suit,
-                    Enhancement = card.ObjectValue?.Enhancement,
-                    Seal = card.ObjectValue?.Seal,
-                    Edition = card.ObjectValue?.Edition ?? clauseEdition,
-                };
-            }).ToArray();
-        }
-
-        return
-        [
-            new StandardCardTarget
-            {
-                Rank = ParseRank(c.StandardCard?.ObjectValue?.Rank ?? c.Rank) ?? shorthandRank,
-                Suit = ParseSuit(c.StandardCard?.ObjectValue?.Suit ?? c.Suit) ?? shorthandSuit,
-                Enhancement = c.StandardCard?.ObjectValue?.Enhancement ?? c.Enhancement,
-                Seal = c.StandardCard?.ObjectValue?.Seal ?? c.Seal,
-                Edition = c.StandardCard?.ObjectValue?.Edition ?? clauseEdition,
-            },
-        ];
-    }
 
     private static IRollClause CreateEventClause(
         MotelyEventType? eventType,
