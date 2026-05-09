@@ -50,7 +50,7 @@ export function Jamlyzer({ jaml, onTest, result, error }: JamlyzerProps) {
 
       {/* Result */}
       {result === "match" && (
-        <JimboPanel style={{ background: `${JimboColorOption.GREEN_TEXT}22`, textAlign: "center" }}>
+        <JimboPanel className="j-glow--match" style={{ background: `${JimboColorOption.GREEN_TEXT}22`, textAlign: "center" }}>
           <JimboText size="xl" tone="gold" style={{ letterSpacing: 3, display: "block", marginBottom: 4 }}>{seed}</JimboText>
           <JimboText size="md" tone="green">MATCH</JimboText>
         </JimboPanel>

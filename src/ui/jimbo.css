@@ -1054,6 +1054,11 @@
   animation: j-glow-pulse 1.6s ease-in-out infinite;
 }
 
+.j-glow--match {
+  box-shadow: 0 0 0 2px var(--j-green-text), 0 0 18px var(--j-green-text), 0 0 36px var(--j-green-text);
+  animation: j-glow-pulse 1.6s ease-in-out infinite;
+}
+
 @keyframes j-glow-pulse {
 
   0%,
