@@ -374,7 +374,7 @@ public sealed class MotelyWasmHost : IMotelyWasmHost
         });
         if (rootId is null) return null;
 
-        var watcher = new JamlFileWatcher(_events, rootId);
+        var watcher = new Motely.MotelyWasmHost.JamlFileWatcher(_events, rootId);
         var fs = await _fileMounter.Mount(rootId, watcher, new MountOptions
         {
             Mode = PermissionMode.ReadWrite

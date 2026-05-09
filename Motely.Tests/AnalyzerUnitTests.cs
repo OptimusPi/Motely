@@ -4,6 +4,42 @@ namespace Motely.Tests;
 
 public sealed class AnalyzerUnitTests
 {
+    [Fact]
+    public void TestJamlyzerAnalyzeSeeds_AttachesStructuredSeedAnalysis()
+    {
+        const string jaml = """
+            name: test
+            deck: Red
+            stake: White
+            should:
+              - joker: Any
+                score: 1
+            """;
+
+        var result = MotelyJamlyzer.AnalyzeSeeds(new(jaml, ["1AAAAAAA"]));
+
+        Assert.Null(result.Error);
+        var seed = Assert.Single(result.Seeds);
+        Assert.Equal("1AAAAAAA", seed.Seed);
+        Assert.NotNull(seed.Analysis);
+        Assert.NotEmpty(seed.Analysis.Antes);
+        Assert.False(string.IsNullOrWhiteSpace(seed.Analysis.Antes[0].Boss));
+    }
+
+    [Fact]
+    public void TestSeedRouter_CapturesSingleSearchContext()
+    {
+        using var router = new MotelySeedRouterDesc("1AAAAAAA", MotelyDeck.Red, MotelyStake.White);
+
+        var ctx = router.Instance();
+
+        Assert.Equal("1AAAAAAA", ctx.GetSeed());
+        var bossStream = ctx.CreateBossStream();
+        var runState = new MotelyRunState();
+        var boss = ctx.GetBossForAnte(ref bossStream, 1, ref runState);
+        Assert.NotEqual(default, boss);
+    }
+
     // Smoke test: analyzer runs end-to-end on a range of seeds/decks/stakes without
     // throwing and produces non-empty output. (Snapshot verification via Verify was
     // dropped from the project; keeping the input matrix here is still valuable

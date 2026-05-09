@@ -37,4 +37,8 @@
               WorkingDirectory="$(MSBuildThisFileDirectory).." />
     </Target>
 
+    <Target Name="RunE2ETests" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+        <Exec WorkingDirectory="$(MSBuildProjectDirectory)\e2e" Command="npm test" />
+    </Target>
+
 </Project>

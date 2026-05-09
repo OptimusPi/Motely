@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Real Motely.Wasm end-to-end tests against the fresh local Bootsharp publish output.",
   "scripts": {
-    "test": "node local-e2e.mjs",
+    "test": "node local-test.mjs",
     "test:filesystem": "node filesystem-smoke.mjs"
   }
 }
