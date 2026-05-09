@@ -1,0 +1,9 @@
+name: blueprint-from-disk
+deck: Red
+stake: White
+must:
+  - joker: Blueprint
+    antes: [1]
+should:
+  - uncommonJoker: Any
+    score: 10

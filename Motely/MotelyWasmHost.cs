@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using Bootsharp.FileSystem;
 using Motely.Analysis;
@@ -11,7 +12,7 @@ namespace Motely;
 /// <c>WithThreadCount(1)</c> — browser WASM is single-threaded. Scored results stream out
 /// through <see cref="IMotelyWasmEvents"/> (Bootsharp <c>[JSImport]</c>).
 /// </summary>
-public sealed class MotelyWasmHost
+public sealed class MotelyWasmHost : IMotelyWasmHost
 {
     private readonly IMotelyWasmEvents _events;
     private readonly IFileMounter _fileMounter;
@@ -23,8 +24,17 @@ public sealed class MotelyWasmHost
         _fileMounter = fileMounter;
     }
 
-    public string GetVersion() =>
-        typeof(MotelyWasmHost).Assembly.GetName().Version?.ToString() ?? "unknown";
+    public string GetVersion()
+    {
+        var asm = typeof(MotelyWasmHost).Assembly;
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (info is not null)
+        {
+            var plus = info.IndexOf('+');
+            return plus < 0 ? info : info[..plus];
+        }
+        return asm.GetName().Version?.ToString(3) ?? "unknown";
+    }
 
     public MotelyItemLayout GetItemLayout() =>
         new(
