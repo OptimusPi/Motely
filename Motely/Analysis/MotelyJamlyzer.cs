@@ -85,8 +85,8 @@ public static class MotelyJamlyzer
                     );
                 });
 
-            using var search = settings.Start();
-            search.AwaitCompletion();
+            using var search = settings.CreateSearch();
+            RunSearchSynchronously(search);
 
             return new(
                 null,
@@ -135,8 +135,8 @@ public static class MotelyJamlyzer
                     );
                 });
 
-            using var search = settings.Start();
-            search.AwaitCompletion();
+            using var search = settings.CreateSearch();
+            RunSearchSynchronously(search);
 
             return new(
                 null,
@@ -190,8 +190,8 @@ public static class MotelyJamlyzer
                         rows.Add(row);
                 });
 
-            using var search = settings.Start();
-            search.AwaitCompletion();
+            using var search = settings.CreateSearch();
+            RunSearchSynchronously(search);
 
             IReadOnlyList<MotelyJamlyzerSeedResult> results = cfg.IncludeSeedAnalysis
                 ? AttachSeedAnalysis(rows, config)
@@ -294,6 +294,11 @@ public static class MotelyJamlyzer
         var analysis = MotelySeedAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
         var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(seed, config.Deck, config.Stake, analysis);
         return MotelyJamlyzerHighlights.Apply(config, dto);
+    }
+
+    private static void RunSearchSynchronously(IMotelySearch search)
+    {
+        search.RunSearchUntilCompletion();
     }
 
     private static string NormalizeSeed(string seed) =>

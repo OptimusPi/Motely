@@ -209,7 +209,7 @@ public static class JamlSearchBuilder
             : "";
 
         var tallyLabels = shouldOnlyCount > 0
-            ? shouldOnlyClauses.Select((c, i) => string.IsNullOrWhiteSpace(c.Label) ? $"tally_{i}" : c.Label).ToArray()
+            ? shouldOnlyClauses.Select(static c => c.Label).ToArray()
             : [];
 
         return new JamlSearchPlan(settings, shouldOnlyCount, headerQuoted, tallyLabels);
@@ -257,7 +257,7 @@ public static class JamlSearchBuilder
         }
     }
 
-    /// <summary>Quoted CSV header for stdout sinks: <c>seed</c>, <c>score</c>, then each should-scoring clause label (or <c>tally_i</c>). Built once per plan.</summary>
+    /// <summary>Quoted CSV header for stdout sinks: <c>seed</c>, <c>score</c>, then each should-scoring clause label. Built once per plan.</summary>
     public static string BuildScoredCsvHeaderQuoted(IReadOnlyList<IJamlClause> shouldClauses)
     {
         int n = shouldClauses.Count;
@@ -266,8 +266,7 @@ public static class JamlSearchBuilder
         parts[1] = CsvQuoteField("score");
         for (int i = 0; i < n; i++)
         {
-            string col = shouldClauses[i].Label;
-            parts[2 + i] = CsvQuoteField(string.IsNullOrWhiteSpace(col) ? $"tally_{i}" : col);
+            parts[2 + i] = CsvQuoteField(shouldClauses[i].Label);
         }
 
         return string.Join(",", parts);

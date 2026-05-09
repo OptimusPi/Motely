@@ -844,6 +844,7 @@ public interface IMotelySearch : IDisposable
 
     IMotelySearch Start(CancellationToken cancellationToken = default);
     Task RunSearchAsync(CancellationToken cancellationToken = default);
+    void RunSearchUntilCompletion();
     void AwaitCompletion();
     Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
     void Cancel();

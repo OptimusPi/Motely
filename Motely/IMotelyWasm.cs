@@ -50,4 +50,3 @@ public sealed record MotelyItemLayout(
     int EternalStickerOffset,
     int RentalStickerOffset
 );
-

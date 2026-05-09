@@ -16,8 +16,19 @@ public interface IMotelyWasmHost
     MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds);
     IMotelyWasmSearch StartRandomSearch(string jaml, int randomSeedCount);
     IMotelyWasmSearch StartAestheticSearch(string jaml, JamlAesthetic aesthetic);
-    IMotelyWasmSearch StartSequentialSearch(string jaml, int batchCharCount, long startBatch, long endBatch);
-    Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(string jaml, int batchCharCount, long startBatch, long endBatch, int maxResults);
+    IMotelyWasmSearch StartSequentialSearch(
+        string jaml,
+        int batchCharCount,
+        long startBatch,
+        long endBatch
+    );
+    Task<MotelyWasmSearchBatchResult> RunSequentialSearchBatch(
+        string jaml,
+        int batchCharCount,
+        long startBatch,
+        long endBatch,
+        int maxResults
+    );
     IMotelyWasmSearch StartSeedListSearch(string jaml, string[] seeds);
     IMotelyWasmSearch StartKeywordSearch(string jaml, string keywordsCsv, string paddingChars);
     Task<string?> MountJamlLibrary();
