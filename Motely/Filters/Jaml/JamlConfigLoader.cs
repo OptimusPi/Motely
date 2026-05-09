@@ -312,21 +312,83 @@ public static partial class JamlConfigLoader
 
     private static string? ResolveJamlPath(string path)
     {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+
+        path = path.Trim();
+
         // Exact path
-        if (File.Exists(path))
-            return path;
+        if (TryResolveExistingPath(path, out var resolved))
+            return resolved;
+
         // Add .jaml extension
         var withExt = Path.ChangeExtension(path, ".jaml");
-        if (File.Exists(withExt))
-            return withExt;
+        if (TryResolveExistingPath(withExt, out resolved))
+            return resolved;
+
         // Check JamlFilters/ subdirectory
         var inFilters = Path.Combine("JamlFilters", path);
-        if (File.Exists(inFilters))
-            return inFilters;
+        if (TryResolveExistingPath(inFilters, out resolved))
+            return resolved;
+
         var inFiltersExt = Path.Combine("JamlFilters", withExt);
-        if (File.Exists(inFiltersExt))
-            return inFiltersExt;
+        if (TryResolveExistingPath(inFiltersExt, out resolved))
+            return resolved;
+
         return null;
+    }
+
+    private static bool TryResolveExistingPath(string path, [NotNullWhen(true)] out string? resolved)
+    {
+        if (File.Exists(path))
+        {
+            resolved = path;
+            return true;
+        }
+
+        resolved = ResolvePathIgnoringCase(path);
+        return resolved != null;
+    }
+
+    private static string? ResolvePathIgnoringCase(string path)
+    {
+        string fullPath;
+
+        try
+        {
+            fullPath = Path.GetFullPath(path);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var root = Path.GetPathRoot(fullPath);
+        if (string.IsNullOrEmpty(root) || !Directory.Exists(root))
+            return null;
+
+        var remainder = fullPath[root.Length..];
+        if (string.IsNullOrEmpty(remainder))
+            return File.Exists(fullPath) ? fullPath : null;
+
+        var segments = remainder
+            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries);
+
+        var current = root;
+        for (int i = 0; i < segments.Length; i++)
+        {
+            var segment = segments[i];
+            var match = Directory
+                .EnumerateFileSystemEntries(current)
+                .FirstOrDefault(entry => string.Equals(Path.GetFileName(entry), segment, StringComparison.OrdinalIgnoreCase));
+
+            if (match == null)
+                return null;
+
+            current = match;
+        }
+
+        return File.Exists(current) ? current : null;
     }
 
     // ── Clause list population — adds directly to typed lists or logic clauses ──

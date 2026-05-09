@@ -71,6 +71,40 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void TryLoadFromPath_ResolvesTrimmedMixedCasePaths()
+  {
+    var tempRoot = Path.Combine(Path.GetTempPath(), $"motely-jaml-path-{Guid.NewGuid():N}");
+    var originalDirectory = Directory.GetCurrentDirectory();
+
+    try
+    {
+      Directory.CreateDirectory(Path.Combine(tempRoot, "JamlFilters"));
+      File.WriteAllText(
+        Path.Combine(tempRoot, "JamlFilters", "M.jaml"),
+        """
+        name: PathTest
+        must:
+          - joker: Showman
+        """
+      );
+
+      Directory.SetCurrentDirectory(tempRoot);
+
+      var success = JamlConfigLoader.TryLoadFromFile("  m.JAML  ", out var config, out var error);
+
+      Assert.True(success, $"Failed to resolve trimmed mixed-case path: {error}");
+      Assert.NotNull(config);
+      Assert.Equal("PathTest", config!.Name);
+    }
+    finally
+    {
+      Directory.SetCurrentDirectory(originalDirectory);
+      if (Directory.Exists(tempRoot))
+        Directory.Delete(tempRoot, recursive: true);
+    }
+  }
+
+  [Fact]
   public void JokerRarityClauses_ParseIntoTypedLists()
   {
     // mixedJokers: removed in v14.0.2 — `jokers:` IS the mixed-rarity union list.
@@ -424,6 +458,73 @@ public class JamlConfigTests
     // Must-only configs report 0 tally columns: must-clause tallies gate execution
     // but are intentionally excluded from the CSV output (shouldOnly semantics).
     Assert.Equal(0, plan.ScoreTallyColumnCount);
+  }
+
+  [Fact]
+  public void CreatePlan_ReordersMustClausesByEstimatedCost()
+  {
+    var jaml = """
+            name: ReorderTest
+            deck: Blue
+            stake: White
+            must:
+              - label: Expensive joker
+                joker: Showman
+                antes: [2]
+              - label: Cheap boss
+                boss: TheArm
+                antes: [1]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var mustClauses = config!.Must.OrderedClauses;
+    Assert.Equal(2, mustClauses.Count);
+    Assert.Equal("Expensive joker", mustClauses[0].Label);
+    Assert.Equal("Cheap boss", mustClauses[1].Label);
+
+    var plan = JamlSearchBuilder.CreatePlan(config);
+    var seedScoreDescProperty = plan.Settings.GetType().GetProperty("SeedScoreDesc");
+    Assert.NotNull(seedScoreDescProperty);
+
+    var provider = Assert.IsType<JamlShouldScoreDesc>(seedScoreDescProperty!.GetValue(plan.Settings));
+    var shouldClausesField = typeof(JamlShouldScoreDesc).GetField("_shouldClauses", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    Assert.NotNull(shouldClausesField);
+
+    var shouldClauses = Assert.IsAssignableFrom<IJamlClause[]>(shouldClausesField!.GetValue(provider));
+    Assert.Equal("Cheap boss", shouldClauses[0].Label);
+    Assert.Equal("Expensive joker", shouldClauses[1].Label);
+  }
+
+  [Fact]
+  public void ExplainPlan_ReportsEstimatedRuntimeOrder()
+  {
+    var jaml = """
+            name: ExplainTest
+            deck: Blue
+            stake: White
+            must:
+              - label: Expensive joker
+                joker: Showman
+                antes: [2]
+              - label: Cheap boss
+                boss: TheArm
+                antes: [1]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+
+    var explanation = JamlSearchBuilder.ExplainPlan(config!);
+
+    Assert.Contains("Runtime order (estimated cheapest-first):", explanation);
+    Assert.Contains("[cost 3] boss TheArm", explanation);
+    Assert.Contains("[cost 8] joker Showman", explanation);
   }
 
   [Fact]
