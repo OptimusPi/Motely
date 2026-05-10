@@ -3,6 +3,7 @@ name: Deploy Pages
 on:
   push:
     branches:
+      - master
       - claude/code-review-8gIku
   workflow_dispatch:
 
