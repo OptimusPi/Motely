@@ -4,7 +4,6 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.CLI;
 using Motely.Analysis;
-using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
 using Motely.WasmTools;
@@ -423,13 +422,19 @@ partial class Program
                 return 1;
             }
 
-            if (
-                !JamlFileSource.TryLoadFromFile(
-                    jamlOption.ParsedValue,
-                    out var config,
-                    out var loadError
-                )
-            )
+            string jamlPath = jamlOption.ParsedValue;
+            string jamlContent;
+            try
+            {
+                jamlContent = File.ReadAllText(jamlPath);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error reading JAML file: {ex.Message}");
+                return 1;
+            }
+
+            if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var loadError))
             {
                 Console.Error.WriteLine($"Error: {loadError}");
                 return 1;
