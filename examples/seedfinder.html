@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=375, initial-scale=1, viewport-fit=cover" />
+    <title>seedfinder</title>
+    <link rel="stylesheet" href="https://esm.sh/jaml-ui@0.26.4/jimbo.css" />
+    <link rel="stylesheet" href="https://esm.sh/jaml-ui@0.26.4/fonts.css" />
+    <style>
+      html, body, #root { margin: 0; height: 100%; background: #1e2b2d; }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.2.6",
+          "react-dom": "https://esm.sh/react-dom@19.2.6",
+          "react-dom/client": "https://esm.sh/react-dom@19.2.6/client",
+          "react/jsx-runtime": "https://esm.sh/react@19.2.6/jsx-runtime",
+          "motely-wasm": "https://esm.sh/motely-wasm@16.0.1",
+          "jaml-ui": "https://esm.sh/jaml-ui@0.26.4?external=react,react-dom,motely-wasm",
+          "jaml-ui/ui": "https://esm.sh/jaml-ui@0.26.4/ui?external=react,react-dom"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import { createElement as h, useState } from "react";
+      import { createRoot } from "react-dom/client";
+      import { JamlIde, useSearch } from "jaml-ui";
+      import { JimboApp } from "jaml-ui/ui";
+
+      const STARTER_JAML = `name: Find Blueprint
+deck: Red
+stake: White
+must:
+  - joker: Blueprint
+should:
+  - voucher: Overstock
+    score: 1
+`;
+
+      function App() {
+        const [jaml, setJaml] = useState(STARTER_JAML);
+        const search = useSearch();
+
+        const onSearch = (currentJaml) => {
+          if (search.status === "running") search.cancel();
+          else search.start(currentJaml, 1_000_000);
+        };
+
+        return h(
+          JimboApp,
+          { fluid: true },
+          h(JamlIde, {
+            jaml,
+            onChange: setJaml,
+            searchResults: search.results,
+            onSearch,
+            isSearching: search.status === "running",
+          })
+        );
+      }
+
+      createRoot(document.getElementById("root")).render(h(App));
+    </script>
+  </body>
+</html>
