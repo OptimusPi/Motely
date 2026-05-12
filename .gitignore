@@ -52,8 +52,9 @@ desktop.ini
 .claude/settings.local.json
 .claude/local/
 
-# --- Motely runtime outputs (uncomment if you don't want these tracked) ---
-# /Seeds/
-# /analysis.json
+# --- Motely runtime outputs ---
+/Seeds/
+/analysis.json
 /JamlFilters/old
 nuget.config.local
+/Motely.HelperAPI/wwwroot
