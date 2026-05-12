@@ -65,9 +65,9 @@ public static class MotelySeedKeywordSequences
     // went up.
     public const long GrossKeywordAestheticSeedCount = 183_030_995L;
 
-    public const long NsfwKeywordAestheticSeedCount = 489_790_595L;
-    public const long FunnyKeywordAestheticSeedCount = 942_725_770L;
-    public const long BalatroKeywordAestheticSeedCount = 920_943_170L;
+    public const long NsfwKeywordAestheticSeedCount = 174_659_345L;
+    public const long FunnyKeywordAestheticSeedCount = 312_463_270L;
+    public const long BalatroKeywordAestheticSeedCount = 290_680_670L;
 
     public static readonly string[] GrossKeywords =
     [
@@ -146,7 +146,6 @@ public static class MotelySeedKeywordSequences
         "TWAT",
         "ARSE",
         "BUGGER",
-        "SOD",
         "TITS",
         "WANKER",
         "BASTARD",
@@ -177,7 +176,6 @@ public static class MotelySeedKeywordSequences
 
     public static readonly string[] FunnyKeywords =
     [
-        "LOL",
         "HAHA",
         "HEHE",
         "LMAO",
@@ -227,7 +225,6 @@ public static class MotelySeedKeywordSequences
         "SASS",
         "SMIRK",
         "CHAOS",
-        "SUS",
         "RIZZ",
         "SIGMA",
         "CHAD",
