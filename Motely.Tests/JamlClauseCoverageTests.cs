@@ -261,7 +261,7 @@ public class JammyClauseCoverageTests
     {
         var analysis = AnalyzeJammy();
         var hit = FindShopItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.TarotCard);
-        Assert.True(hit.HasValue, "Expected at least one tarot card in JAMMY shop queue");
+        Assert.True(hit.HasValue, "Expected at least one tarotCard card in JAMMY shop queue");
 
         var d = hit!.Value;
         var clauseBody = $$"""
@@ -296,7 +296,7 @@ public class JammyClauseCoverageTests
         }
 
         var packHit = FindPackItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.SpectralCard);
-        Assert.True(packHit.HasValue, "Expected at least one spectral card in JAMMY packs");
+        Assert.True(packHit.HasValue, "Expected at least one spectralCard card in JAMMY packs");
         var p = packHit!.Value;
         var packClauseBody = $$"""
             spectralCard: {{p.Item.Type}}
@@ -314,11 +314,11 @@ public class JammyClauseCoverageTests
     {
         var analysis = AnalyzeJammy();
         var hit = FindShopItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.PlanetCard);
-        Assert.True(hit.HasValue, "Expected at least one planet card in JAMMY shop queue");
+        Assert.True(hit.HasValue, "Expected at least one planetCard card in JAMMY shop queue");
 
         var d = hit!.Value;
         var clauseBody = $$"""
-            planet: {{d.Item.Type}}
+            planetCard: {{d.Item.Type}}
             antes: [{{d.Ante}}]
             sources:
               shopItems: [{{d.ShopIndex}}]

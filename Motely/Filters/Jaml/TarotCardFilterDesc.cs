@@ -9,7 +9,7 @@ public sealed class TarotCardClause : JamlClause
     public TarotCardSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
-    public override string Describe() => $"tarotCard {string.Join(", ", System.Array.ConvertAll(Tarots, static t => t.ToString()))}";
+    public override string Describe() => $"Tarot {string.Join(", ", System.Array.ConvertAll(Tarots, static t => t.ToString()))}";
     public override IMotelySeedFilterDesc CreateDesc() => new TarotCardFilterDesc(this);
 }
 

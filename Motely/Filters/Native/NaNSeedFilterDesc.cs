@@ -30,7 +30,7 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
             "cerulean_bell", // Cerulean Bell boss effect
             "crimson_heart", // Crimson Heart boss effect
             // Card modifications (VERIFIED FROM LUA)
-            "wheel_of_fortune", // Wheel of Fortune tarot effect
+            "wheel_of_fortune", // Wheel of Fortune Tarot effect
             "invisible", // Invisible Joker effect
             "perkeo", // Perkeo consumable copy
             "madness", // Madness joker destruction
@@ -59,12 +59,12 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
             "hook", // The Hook boss effect (with pseudoseed)
             "cerulean_bell", // Cerulean Bell boss effect (with pseudoseed)
             "crimson_heart", // Crimson Heart boss effect (with pseudoseed)
-            "aura", // Aura spectral effect
+            "aura", // Aura Spectral effect
             "edition_generic", // Generic edition poll
             "flipped_card", // Flipped card chance
             "edition_deck", // Erratic deck edition selection
             "erratic", // Erratic suit/rank selection
-            "orbital", // Orbital Tag planet selection
+            "orbital", // Orbital Tag Planet selection
         ]);
 
         // Keys that need ante suffix (1-8)

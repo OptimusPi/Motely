@@ -130,7 +130,7 @@ public static class JamlSearchBuilder
     }
 
     /// <summary>
-    /// Fails fast on soul joker clauses whose booster sources can never hit arcana/spectralCard at slot ≥1
+    /// Fails fast on soul joker clauses whose booster sources can never hit arcana/Spectral at slot ≥1
     /// (<see cref="JamlLegendaryJokerStructuralValidation"/>). Skips <c>mustNot</c>: negated dead clauses are vacuously true.
     /// </summary>
     private static void ValidateLegendaryJokerClausesForMustAndShould(JamlClauseSet set)
