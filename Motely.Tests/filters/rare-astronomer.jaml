@@ -1,6 +1,6 @@
-name: Astronomer Planet Engine
+name: Astronomer planetCard Engine
 author: jammy
-description: Astronomer rare joker with Constellation for Planet card synergy
+description: Astronomer rare joker with Constellation for planetCard card synergy
 deck: Nebula
 stake: White
 must:
