@@ -3,15 +3,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 namespace Motely.Filters;
 
-public sealed class SpectralCardClause : IJamlClause
+public sealed class SpectralCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required MotelySpectralCard[] Spectrals { get; init; }
     public SpectralCardSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 7 + MaxAnte;
+    public override string Describe() => $"spectralCard {string.Join(", ", System.Array.ConvertAll(Spectrals, static s => s.ToString()))}";
+    public override IMotelySeedFilterDesc CreateDesc() => new SpectralCardFilterDesc(this);
 }
 
 public struct SpectralCardFilterDesc(SpectralCardClause clause)
@@ -141,7 +140,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                     }
                 }
 
-                // ── Spectral packs SIMD ──
+                // ── spectralCard packs SIMD ──
                 // Note: GetNextSpectralPackContents takes scalar MotelyBoosterPackSize.
                 // Pack size varies per lane, so we use Normal as baseline.
                 if (boosterPacks.Length > 0)
@@ -165,11 +164,11 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                         var packType = pack.GetPackType();
                         VectorMask isSpectral = VectorEnum256.Equals(
                             packType,
-                            MotelyBoosterPackType.Spectral
+                            MotelyBoosterPackType.spectralCard
                         );
                         if (isSpectral.IsPartiallyTrue())
                         {
-                            // Spectral Normal = 2 cards, Jumbo/Mega = 4.
+                            // spectralCard Normal = 2 cards, Jumbo/Mega = 4.
                             // Use Normal as baseline.
                             var contents = ctx.GetNextSpectralPackContents(
                                 ref spectralStream,

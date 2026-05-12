@@ -7,134 +7,105 @@ namespace Motely.Filters;
 
 // ── ErraticCard clause definition ──
 
-public sealed class ErraticCardClause : IJamlClause
+public sealed class ErraticCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public MotelyStandardcardRank? Rank { get; init; }
     public MotelyStandardcardSuit? Suit { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 5 + MaxAnte;
+    public override string Describe()
+    {
+        var parts = new System.Collections.Generic.List<string>(2);
+        if (Rank.HasValue) parts.Add(Rank.Value.ToString());
+        if (Suit.HasValue) parts.Add(Suit.Value.ToString());
+        return $"erraticCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
+    }
+    public override IMotelySeedFilterDesc CreateDesc() => new ErraticCardFilterDesc(this);
 }
 
 // ── Event clause definitions ──
 
+/// <summary>Marker interface: clauses driven by a roll-index array (event probes), not antes.</summary>
 public interface IRollClause : IJamlClause
 {
     int[] Rolls { get; }
 }
 
-public sealed class LuckyMoneyClause : IRollClause
+public sealed class LuckyMoneyClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event LuckyMoney";
+    public override IMotelySeedFilterDesc CreateDesc() => new LuckyMoneyFilterDesc(this);
 }
 
-public sealed class LuckyMultClause : IRollClause
+public sealed class LuckyMultClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event LuckyMult";
+    public override IMotelySeedFilterDesc CreateDesc() => new LuckyMultFilterDesc(this);
 }
 
-public sealed class MisprintMultClause : IRollClause
+public sealed class MisprintMultClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
     /// <summary>
     /// Specific mult value to match (0-23). If null, matches any value (always succeeds).
     /// </summary>
     public int? Value { get; init; }
+
+    public override string Describe() => "event MisprintMult";
+    public override IMotelySeedFilterDesc CreateDesc() => new MisprintMultFilterDesc(this);
 }
 
-public sealed class WheelOfFortuneClause : IRollClause
+public sealed class WheelOfFortuneClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event WheelOfFortune";
+    public override IMotelySeedFilterDesc CreateDesc() => new WheelOfFortuneFilterDesc(this);
 }
 
-public sealed class CavendishExtinctClause : IRollClause
+public sealed class CavendishExtinctClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event CavendishExtinct";
+    public override IMotelySeedFilterDesc CreateDesc() => new CavendishExtinctFilterDesc(this);
 }
 
-public sealed class GrosMichelExtinctClause : IRollClause
+public sealed class GrosMichelExtinctClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event GrosMichelExtinct";
+    public override IMotelySeedFilterDesc CreateDesc() => new GrosMichelExtinctFilterDesc(this);
 }
 
-public sealed class SpaceLevelupClause : IRollClause
+public sealed class SpaceLevelupClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event SpaceLevelup";
+    public override IMotelySeedFilterDesc CreateDesc() => new SpaceLevelupFilterDesc(this);
 }
 
-public sealed class BusinessPayoutClause : IRollClause
+public sealed class BusinessPayoutClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event BusinessPayout";
+    public override IMotelySeedFilterDesc CreateDesc() => new BusinessPayoutFilterDesc(this);
 }
 
-public sealed class BloodstoneTriggerClause : IRollClause
+public sealed class BloodstoneTriggerClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event BloodstoneTrigger";
+    public override IMotelySeedFilterDesc CreateDesc() => new BloodstoneTriggerFilterDesc(this);
 }
 
-public sealed class ParkingPayoutClause : IRollClause
+public sealed class ParkingPayoutClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event ParkingPayout";
+    public override IMotelySeedFilterDesc CreateDesc() => new ParkingPayoutFilterDesc(this);
 }
 
-public sealed class GlassDestroyClause : IRollClause
+public sealed class GlassDestroyClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event GlassDestroy";
+    public override IMotelySeedFilterDesc CreateDesc() => new GlassDestroyFilterDesc(this);
 }
 
-public sealed class WheelStaysFlippedClause : IRollClause
+public sealed class WheelStaysFlippedClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event WheelStaysFlipped";
+    public override IMotelySeedFilterDesc CreateDesc() => new WheelStaysFlippedFilterDesc(this);
 }
 
 // ── 6 individual event filter descs (one per PRNG stream) ──
