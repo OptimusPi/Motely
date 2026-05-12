@@ -9,7 +9,7 @@ public sealed class PlanetCardClause : JamlClause
     public PlanetSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
-    public override string Describe() => $"planetCard {string.Join(", ", System.Array.ConvertAll(Planets, static p => p.ToString()))}";
+    public override string Describe() => $"Planet {string.Join(", ", System.Array.ConvertAll(Planets, static p => p.ToString()))}";
     public override IMotelySeedFilterDesc CreateDesc() => new PlanetCardFilterDesc(this);
 }
 

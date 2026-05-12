@@ -1373,12 +1373,12 @@ public static class JamlScoring
     {
         for (int i = 0; i < clause.Spectrals.Length; i++)
         {
-            var spectral = clause.Spectrals[i];
-            if (item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)spectral))
+            var Spectral = clause.Spectrals[i];
+            if (item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)Spectral))
                 return 1;
-            if (spectral == MotelySpectralCard.TheSoul && item.Type == MotelyItemType.TheSoul)
+            if (Spectral == MotelySpectralCard.TheSoul && item.Type == MotelyItemType.TheSoul)
                 return 1;
-            if (spectral == MotelySpectralCard.BlackHole && item.Type == MotelyItemType.BlackHole)
+            if (Spectral == MotelySpectralCard.BlackHole && item.Type == MotelyItemType.BlackHole)
                 return 1;
         }
         return 0;

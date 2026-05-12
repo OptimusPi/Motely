@@ -11,7 +11,7 @@ public sealed class LegendaryJokerClause : JamlClause
     public LegendaryJokerSourceConfig Sources { get; init; } = new();
 
     /// <summary>
-    /// When true, match as soon as The Soul appears in a targeted arcana/spectralCard pack (tarotCard/spectralCard
+    /// When true, match as soon as The Soul appears in a targeted arcana/Spectral pack (Tarot/Spectral
     /// card), without rolling the legendary joker. Use for "any" + soul-card-only searches.
     /// </summary>
     public bool SoulCardOnly { get; init; }

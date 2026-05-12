@@ -89,7 +89,7 @@ public readonly struct NegativeLegendaryJokerSimdFilterDesc(MotelyItemType? targ
 
 /// <summary>
 /// Additional filter after <see cref="NegativeLegendaryJokerSimdFilterDesc"/>:
-/// vectorized The Soul check on arcana/spectral shop packs, with scalar fallback
+/// vectorized The Soul check on arcana/Spectral shop packs, with scalar fallback
 /// when pack sizes diverge across lanes. Respects <see cref="LegendaryJokerSourceConfig"/>
 /// slot targeting and <see cref="LegendarySoulMatcher"/> stream rules.
 /// </summary>

@@ -9,7 +9,7 @@ public sealed class SpectralCardClause : JamlClause
     public SpectralCardSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
-    public override string Describe() => $"spectralCard {string.Join(", ", System.Array.ConvertAll(Spectrals, static s => s.ToString()))}";
+    public override string Describe() => $"Spectral {string.Join(", ", System.Array.ConvertAll(Spectrals, static s => s.ToString()))}";
     public override IMotelySeedFilterDesc CreateDesc() => new SpectralCardFilterDesc(this);
 }
 
@@ -140,7 +140,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                     }
                 }
 
-                // ── spectralCard packs SIMD ──
+                // ── Spectral packs SIMD ──
                 // Note: GetNextSpectralPackContents takes scalar MotelyBoosterPackSize.
                 // Pack size varies per lane, so we use Normal as baseline.
                 if (boosterPacks.Length > 0)
@@ -164,11 +164,11 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                         var packType = pack.GetPackType();
                         VectorMask isSpectral = VectorEnum256.Equals(
                             packType,
-                            MotelyBoosterPackType.spectralCard
+                            MotelyBoosterPackType.Spectral
                         );
                         if (isSpectral.IsPartiallyTrue())
                         {
-                            // spectralCard Normal = 2 cards, Jumbo/Mega = 4.
+                            // Spectral Normal = 2 cards, Jumbo/Mega = 4.
                             // Use Normal as baseline.
                             var contents = ctx.GetNextSpectralPackContents(
                                 ref spectralStream,
