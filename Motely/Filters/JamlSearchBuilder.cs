@@ -652,8 +652,8 @@ public static class JamlSearchBuilder
                 new MotelySearchSettings<GlassDestroyFilterDesc.GlassDestroyFilter>(d),
             WheelStaysFlippedFilterDesc d =>
                 new MotelySearchSettings<WheelStaysFlippedFilterDesc.WheelStaysFlippedFilter>(d),
-            Motely.Filters.Jaml.AndFilterDesc d => new MotelySearchSettings<Motely.Filters.Jaml.AndFilterDesc.AndFilter>(d),
-            Motely.Filters.Jaml.OrFilterDesc d => new MotelySearchSettings<Motely.Filters.Jaml.OrFilterDesc.OrFilter>(d),
+            AndFilterDesc d => new MotelySearchSettings<AndFilterDesc.AndFilter>(d),
+            OrFilterDesc d => new MotelySearchSettings<OrFilterDesc.OrFilter>(d),
             NegationFilterDesc d => new MotelySearchSettings<NegationFilterDesc.NegationFilter>(d),
             PassthroughFilterDesc d =>
                 new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(d),
@@ -707,8 +707,8 @@ public static class JamlSearchBuilder
             GlassDestroyClause c => new GlassDestroyFilterDesc(c),
             WheelStaysFlippedClause c => new WheelStaysFlippedFilterDesc(c),
             StartingDrawClause c => new StartingDrawFilterDesc(c),
-            AndClause c => new Motely.Filters.Jaml.AndFilterDesc(c.Clauses.Select(CreateDesc).ToArray()),
-            OrClause c => new Motely.Filters.Jaml.OrFilterDesc(c.Clauses.Select(CreateDesc).ToArray(), c.Min),
+            AndClause c => new AndFilterDesc(c.Clauses.Select(CreateDesc).ToArray()),
+            OrClause c => new OrFilterDesc(c.Clauses.Select(CreateDesc).ToArray(), c.Min),
             _ => throw new NotSupportedException($"Unknown clause type: {clause.GetType().Name}"),
         };
     }

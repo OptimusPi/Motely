@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
 
-namespace Motely.Filters.Jaml;
+namespace Motely.Filters;
 
 public static class MotelySeedFilterDescExtensions
 {

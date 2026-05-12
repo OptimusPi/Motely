@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters.Jaml;
+namespace Motely.Filters;
 
 public struct AndFilterDesc(IMotelySeedFilterDesc[] filters)
     : IMotelySeedFilterDesc<AndFilterDesc.AndFilter>
