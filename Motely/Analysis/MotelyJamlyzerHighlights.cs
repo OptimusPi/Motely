@@ -2,7 +2,7 @@ using Motely.Filters;
 
 namespace Motely.Analysis;
 
-internal static class MotelyJamlyzerHighlights
+public static class MotelyJamlyzerHighlights
 {
     public static SeedAnalysisDto Apply(JamlConfig config, SeedAnalysisDto analysis)
     {
