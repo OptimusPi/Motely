@@ -3,15 +3,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 namespace Motely.Filters;
 
-public sealed class TarotCardClause : IJamlClause
+public sealed class TarotCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required MotelyTarotCard[] Tarots { get; init; }
     public TarotCardSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 7 + MaxAnte;
+    public override string Describe() => $"tarotCard {string.Join(", ", System.Array.ConvertAll(Tarots, static t => t.ToString()))}";
+    public override IMotelySeedFilterDesc CreateDesc() => new TarotCardFilterDesc(this);
 }
 
 public struct TarotCardFilterDesc(TarotCardClause clause)

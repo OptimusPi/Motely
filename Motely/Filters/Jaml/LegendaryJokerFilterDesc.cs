@@ -3,20 +3,15 @@ using System.Runtime.CompilerServices;
 using Motely;
 namespace Motely.Filters;
 
-public sealed class LegendaryJokerClause : IJamlClause
+public sealed class LegendaryJokerClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public MotelyJoker[] Jokers { get; init; } = [];
     public bool IsWildcard { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public LegendaryJokerSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
 
     /// <summary>
-    /// When true, match as soon as The Soul appears in a targeted arcana/spectral pack (tarot/spectral
+    /// When true, match as soon as The Soul appears in a targeted arcana/spectralCard pack (tarotCard/spectralCard
     /// card), without rolling the legendary joker. Use for "any" + soul-card-only searches.
     /// </summary>
     public bool SoulCardOnly { get; init; }
@@ -27,6 +22,12 @@ public sealed class LegendaryJokerClause : IJamlClause
     /// could otherwise false-negative the prefilter.
     /// </summary>
     public int SoulEditionRolls { get; init; }
+
+    public override int EstimatedCost => 5 + MaxAnte;
+    public override string Describe() =>
+        IsWildcard ? "legendaryJoker Any"
+                   : $"legendaryJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+    public override IMotelySeedFilterDesc CreateDesc() => new LegendaryJokerFilterDesc(this);
 }
 
 /// <summary>

@@ -1,8 +1,16 @@
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters;
+
+public sealed class OrClause : LogicClause
+{
+    public override string Describe() => $"or({Clauses.Length})";
+    public override IMotelySeedFilterDesc CreateDesc() =>
+        new OrFilterDesc(Array.ConvertAll(Clauses, static c => c.CreateDesc()), Min);
+}
 
 public static class MotelySeedFilterDescExtensions
 {
