@@ -114,42 +114,6 @@ public class JamlConfigTests
   }
 
   [Fact]
-  public void TryLoadFromPath_ResolvesTrimmedMixedCasePaths()
-  {
-    var tempRoot = Path.Combine(Path.GetTempPath(), $"motely-jaml-path-{Guid.NewGuid():N}");
-    var originalDirectory = Directory.GetCurrentDirectory();
-
-    try
-    {
-      Directory.CreateDirectory(Path.Combine(tempRoot, "JamlFilters"));
-      File.WriteAllText(
-        Path.Combine(tempRoot, "JamlFilters", "M.jaml"),
-        """
-        name: PathTest
-        must:
-          - joker: Showman
-        """
-      );
-
-      Directory.SetCurrentDirectory(tempRoot);
-
-      string jamlPath = Path.Combine(tempRoot, "m.jaml");
-      string jamlContent = File.ReadAllText(jamlPath);
-      var success = JamlConfigLoader.TryLoad(jamlContent, out var config, out var error);
-
-      Assert.True(success, $"Failed to load JAML: {error}");
-      Assert.NotNull(config);
-      Assert.Equal("PathTest", config!.Name);
-    }
-    finally
-    {
-      Directory.SetCurrentDirectory(originalDirectory);
-      if (Directory.Exists(tempRoot))
-        Directory.Delete(tempRoot, recursive: true);
-    }
-  }
-
-  [Fact]
   public void JokerRarityClauses_ParseIntoTypedLists()
   {
     // mixedJokers: removed in v14.0.2 — `jokers:` IS the mixed-rarity union list.

@@ -21,11 +21,5 @@
     <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
   </ItemGroup>
 
-  <!-- MotelyWasmHost uses Bootsharp.FileSystem types and is compiled in Motely.Wasm instead. -->
-  <ItemGroup>
-    <Compile Remove="MotelyWasmHost.cs" />
-  </ItemGroup>
-
-
 
 </Project>
