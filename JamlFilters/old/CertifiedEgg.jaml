@@ -1,0 +1,27 @@
+name: Certified Egg
+author: ShadowBulb (M)s Unconscious Desire
+description: 🥚
+deck: Ghost
+stake: White
+
+must:
+
+  - joker: Egg
+    antes: [2]
+
+  - joker: Certificate
+    antes: [2]
+    shopItems: [0,1]
+
+should:
+  - spectralCard: Ankh
+    antes: [2]
+    sources: 
+      boosterPacks: [0, 1]
+  - tags: [CouponTag, InvestmentTag]
+    antes: [1]
+  - legendaryJoker: Perkeo
+    antes: [2]
+    sources:
+        boosterPacks: [0,1]
+  - joker: Egg
