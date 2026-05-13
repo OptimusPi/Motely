@@ -931,10 +931,9 @@ partial class Program
 
                 if (json)
                 {
-                    var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
                     // NDJSON: one JSON object per line, no extra whitespace
                     Console.WriteLine(
-                        JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+                        JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
                     );
                 }
                 else
@@ -974,9 +973,8 @@ partial class Program
 
         if (json)
         {
-            var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
             Console.WriteLine(
-                JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+                JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
             );
         }
         else

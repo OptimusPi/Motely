@@ -51,7 +51,7 @@ public struct LegendaryJokerFilterDesc(
 
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var src = _clause.Sources.NormalizeLegendaryJokerBoostersIfEmpty();
+        var src = _clause.Sources;
 
         int maxBoosterPack = src.MaxReferencedBoosterSlot();
 

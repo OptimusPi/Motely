@@ -71,24 +71,7 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
      public bool HasAnyClauses => Must.HasAnyClauses || Should.HasAnyClauses || MustNot.HasAnyClauses;
  }
 
-public sealed class JokerSource
-{
-    public JokerSourceType Source { get; set; }
-    public int[] Indices { get; set; } = [];
-}
-
-public enum JokerSourceType
-{
-    Shop,
-    BoosterPack,
-    Judgement,
-    Wraith,
-    RiffRaff,
-    RareTag,
-    UncommonTag,
-}
-
-public sealed class JokerSourceConfig // # oops :( I have a complaint! )
+public sealed class JokerSourceConfig
 {
     /// <summary>Assembled shop slots via the full shop item stream (any item type).</summary>
     public int[] ShopItems { get; set; } = [];
@@ -153,13 +136,6 @@ public sealed class LegendaryJokerSourceConfig
         return m;
     }
 
-    /// <summary>
-    /// Historical escape hatch that used to stamp booster-slot defaults at filter-creation time.
-    /// Defaults now live in <c>JamlConfigLoader.CreateLegendaryJokerSources</c> (load time). This
-    /// method is an identity pass-through kept for downstream callers until they migrate; it
-    /// will be removed in a subsequent cleanup.
-    /// </summary>
-    public LegendaryJokerSourceConfig NormalizeLegendaryJokerBoostersIfEmpty() => this;
 }
 
 public sealed class TarotCardSourceConfig

@@ -27,10 +27,6 @@ The thread lambda calls `RunWorkerBody()` with no try/catch. A worker throwing d
 **`CLAUDE.md`**
 File exists, has no content. By convention this is the codebase orientation doc — every fresh session re-ramps from scratch.
 
-### 5. Magic constants in keyword counts
-**`Motely/MotelySeedKeywordSequences.cs:68-70`**
-`NsfwKeywordAestheticSeedCount`, `FunnyKeywordAestheticSeedCount`, `BalatroKeywordAestheticSeedCount` are baked numbers with no comment on how they were derived. If keyword lists drift again (as in `bd3a902a`), you'll silently desync — no automated check.
-
 ### 6. Dead code: `JokerSource` / `JokerSourceType`
 **`Motely/Filters/Jaml/JamlConfig.cs:74-89`**
 Defined, never used anywhere in the repo. Adjacent comment `// oops :( I have a complaint!` suggests abandoned mid-thought. Clutters public API surface.
