@@ -44,5 +44,5 @@ CDN delivery (unpkg/jsdelivr) is automatic after `npm publish`. No manual upload
 
 ## Read before editing integrations
 
-- `D:\bootsharp\docs\` — Bootsharp build config, file-system extension, interop, serialization.
+- `BOOTSHARP.md` — Bootsharp reference (compiled from `D:\bootsharp\docs\` + `D:\extra\bootsharp\AGENTS.md`). Read this instead of the raw docs directories.
 - DuckDB: native packages do not compile to `browser-wasm`. Use DuckDB's own WASM/JS path separately when the browser needs it.
