@@ -9,7 +9,6 @@
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <BootsharpExtraRoot Condition="'$(BootsharpExtraRoot)' == ''">D:\extra\bootsharp</BootsharpExtraRoot>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(BootsharpExtraRoot)\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj" />
+    <ProjectReference Include="$(BootsharpExtraRoot)\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj" Condition="'$(BootsharpExtraRoot)' != ''" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 </Project>
