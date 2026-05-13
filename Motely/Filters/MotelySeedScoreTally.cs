@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
 
-public unsafe struct MotelySeedScoreTally : IMotelySeedScores
+public struct MotelySeedScoreTally : IMotelySeedScores
 {
     public const int MAX_TALLY_COUNT = 256;
 
@@ -64,10 +64,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScores
     public readonly ReadOnlySpan<int> TallyValuesSpan
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get
-        {
-            return new((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
-        }
+        get => _tallyValues.AsSpan(0, _tallyCount);
     }
 
     public readonly List<int> TallyColumns
