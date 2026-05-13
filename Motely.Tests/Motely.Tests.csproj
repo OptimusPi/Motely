@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.CLI\Motely.CLI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
