@@ -342,7 +342,7 @@ public class JamlEditorWindow : Window
             "type", "value", "edition",
             "enhancement", "sticker", "seal", "suit", "rank",
             "shopItems", "boosterPacks", "shop", "booster", "packs",
-            "tarotCard", "planetCard", "spectralCard", "joker", "tag",
+            "Tarot", "Planet", "Spectral", "joker", "tag",
             "first", "second", "third", "fourth", "fifth",
             "score", "sources", "tallyConfig", "cutoff",
         }) set.Add(k);

@@ -12,7 +12,7 @@ namespace Motely.Tests;
 /// </summary>
 public class JamlCorpusRegressionTests
 {
-    private static readonly string[] LegacyKeys = ["mixedJoker", "soulJoker", "shopSlots"];
+    private static readonly string[] LegacyKeys = ["packSlots", "tarot", "planet", "spectral", "mixedJoker", "soulJoker", "shopSlots", "erraticRanks"];
 
     private readonly ITestOutputHelper _output;
 

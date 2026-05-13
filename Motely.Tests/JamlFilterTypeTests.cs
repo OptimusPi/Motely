@@ -64,7 +64,7 @@ public class JamlFilterTypeTests
     [InlineData("spectralCard: Familiar")]
     [InlineData("spectralCard: Aura")]
     [InlineData("spectralCards: [Familiar, Aura]")]
-    [InlineData("planet: Earth")]
+    [InlineData("planetCard: Earth")]
     [InlineData("planetCard: Pluto")]
     public void ConsumableFilters(string clause)
     {

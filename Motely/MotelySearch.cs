@@ -1204,8 +1204,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         if (_threadCount == 1)
         {
-            _ = Task.Run(() =>
-            {
+
                 try
                 {
                     RunWorkerBody(_plans[0]);
@@ -1215,7 +1214,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 {
                     _completionSource.TrySetException(ex);
                 }
-            });
         }
         else
         {
@@ -1809,7 +1807,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // We also zero the cached partial-hash vectors for those padding lanes: BatchSeeds
             // writes only to lane = seedBatchIndex, so any lane >= SeedCount retains a stale
             // hash from the last partial batch that touched this slot. Filter code that reads
-            // the hash cache across all 8 SIMD lanes (voucher / tarot / planet / tag / spectral
+            // the hash cache across all 8 SIMD lanes (voucher / Tarot / Planet / tag / Spectral
             // resample loops) will otherwise produce garbage PRNG output for padding lanes and
             // can spin forever trying to reroll them into a legal value. See Tacodiva/Motely#5
             // for the source-side handoff bug; this is the destination-side hygiene pass.

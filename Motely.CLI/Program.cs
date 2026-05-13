@@ -6,7 +6,6 @@ using Motely.CLI;
 using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Native;
-using Motely.WasmTools;
 using YamlDotNet.RepresentationModel;
 
 partial class Program
@@ -269,12 +268,6 @@ partial class Program
             "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
             CommandOptionType.NoValue
         );
-        var writeJamlSchemaOption = app.Option(
-            "--write-jaml-schema",
-            "Regenerate jaml.schema.json from the public JAML schema contract via the AOT-safe schema exporter. Writes to repo root, motely-wasm/, and packages/jaml-language-core/.",
-            CommandOptionType.NoValue
-        );
-
         threadsOption.DefaultValue = Environment.ProcessorCount;
         batchCharCountOption.DefaultValue = 4;
 
@@ -284,12 +277,6 @@ partial class Program
             {
                 app.ShowHelp();
                 return 0;
-            }
-
-            // --write-jaml-schema is a standalone maintenance command; run it and exit.
-            if (writeJamlSchemaOption.HasValue())
-            {
-                return MotelyJamlSchemaGenerator.WriteDefault(log: Console.Error);
             }
 
             if (jamlyzerOption.HasValue())
@@ -944,10 +931,9 @@ partial class Program
 
                 if (json)
                 {
-                    var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
                     // NDJSON: one JSON object per line, no extra whitespace
                     Console.WriteLine(
-                        JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+                        JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
                     );
                 }
                 else
@@ -987,9 +973,8 @@ partial class Program
 
         if (json)
         {
-            var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
             Console.WriteLine(
-                JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+                JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
             );
         }
         else

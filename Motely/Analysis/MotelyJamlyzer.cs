@@ -38,7 +38,7 @@ public sealed record class MotelyJamlyzerSeedResult(
     string Seed,
     int Score,
     int[] Tallies,
-    SeedAnalysisDto? Analysis = null
+    MotelySeedAnalysis? Analysis = null
 );
 
 internal sealed record class MotelyJamlyzerResolvedConfig(
@@ -79,7 +79,7 @@ public static class MotelyJamlyzer
                             tally.Score,
                             tally.TallyValuesSpan.ToArray(),
                             cfg.IncludeSeedAnalysis
-                                ? BuildSeedAnalysisDto(tally.Seed, config)
+                                ? BuildSeedAnalysis(tally.Seed, config)
                                 : null
                         )
                     );
@@ -130,7 +130,7 @@ public static class MotelyJamlyzer
                         tally.Score,
                         tally.TallyValuesSpan.ToArray(),
                         cfg.IncludeSeedAnalysis
-                            ? BuildSeedAnalysisDto(tally.Seed, config)
+                            ? BuildSeedAnalysis(tally.Seed, config)
                             : null
                     );
                 });
@@ -234,7 +234,7 @@ public static class MotelyJamlyzer
             var row = rows[i];
             analyzed[i] = row with
             {
-                Analysis = BuildSeedAnalysisDto(row.Seed, config),
+                Analysis = BuildSeedAnalysis(row.Seed, config),
             };
         }
 
@@ -289,11 +289,10 @@ public static class MotelyJamlyzer
         return new(config, JamlSearchBuilder.CreatePlan(config));
     }
 
-    private static SeedAnalysisDto BuildSeedAnalysisDto(string seed, JamlConfig config)
+    private static MotelySeedAnalysis BuildSeedAnalysis(string seed, JamlConfig config)
     {
         var analysis = MotelySeedAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
-        var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(seed, config.Deck, config.Stake, analysis);
-        return MotelyJamlyzerHighlights.Apply(config, dto);
+        return MotelyJamlyzerHighlights.Apply(config, analysis);
     }
 
     private static void RunSearchSynchronously(IMotelySearch search)

@@ -1,6 +1,6 @@
 name: Strength Baron Build
 author: jammy
-description: Strength tarot to convert Queens to Kings for Baron
+description: Strength tarotCard to convert Queens to Kings for Baron
 deck: Red
 stake: White
 must:
