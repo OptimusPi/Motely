@@ -42,14 +42,14 @@ public static partial class Program
     [Export]
     public static JamlPlanResult ExplainJaml(string yaml)
     {
-        if (!JamlConfigLoader.TryLoad(yaml, out var config, out var error) || config is null)
+        if (!JamlConfigLoader.TryLoad(yaml, out var config, out var error))
             return new(false, error ?? "Invalid JAML.", null);
+        if (!config.HasAnyClauses)
+            return new(true, null, "");
         try
         {
-            var explanation = config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config) : "";
-            if (config.HasAnyClauses)
-                _ = JamlSearchBuilder.CreatePlan(config);
-            return new(true, null, explanation);
+            JamlSearchBuilder.CreatePlan(config);
+            return new(true, null, JamlSearchBuilder.ExplainPlan(config));
         }
         catch (Exception ex)
         {
@@ -86,14 +86,6 @@ public static partial class Program
     [Export]
     public static async Task WriteTextFile(string root, string uri, string text) =>
         await GetFileSystem(root).WriteFile(uri, Encoding.UTF8.GetBytes(text));
-
-    [Export]
-    public static async Task<JamlLoadResult> LoadJamlFile(string root, string uri) =>
-        LoadJaml(await ReadTextFile(root, uri));
-
-    [Export]
-    public static async Task<JamlPlanResult> ExplainJamlFile(string root, string uri) =>
-        ExplainJaml(await ReadTextFile(root, uri));
 
     private static IFileMounter Mounter() => services.GetRequiredService<IFileMounter>();
 
