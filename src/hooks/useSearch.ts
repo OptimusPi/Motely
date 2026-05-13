@@ -71,7 +71,7 @@ export function useSearch() {
     pendingResultsRef.current = [];
     setState((s) => ({ ...INITIAL_STATE, status: "running", tallyLabels: s.tallyLabels }));
 
-    MotelyWasmEvents.notifyResult = (seed, score, tallyColumns) => {
+    MotelyWasmEvents.notifyResult = (seed: string, score: number, tallyColumns: Iterable<number> | ArrayLike<number>) => {
       if (runId !== runIdCounter) return;
       pendingResultsRef.current.push({ seed, score, tallyColumns: Array.from(tallyColumns) });
       if (!flushScheduledRef.current) {
@@ -80,7 +80,7 @@ export function useSearch() {
       }
     };
 
-    MotelyWasmEvents.notifyProgress = (searched, matching) => {
+    MotelyWasmEvents.notifyProgress = (searched: bigint, matching: bigint) => {
       if (runId !== runIdCounter) return;
       const now = performance.now();
       const ref = speedRef.current;
@@ -99,7 +99,7 @@ export function useSearch() {
       setState((s) => ({ ...s, totalSearched: searched, matchingSeeds: matching, seedsPerSecond: Math.round(sps) }));
     };
 
-    MotelyWasmEvents.notifyComplete = (status, searched, matched) => {
+    MotelyWasmEvents.notifyComplete = (status: string, searched: bigint, matched: bigint) => {
       if (runId !== runIdCounter) return;
       activeSearchRef.current = null;
       // Final flush of any pending results before marking complete.

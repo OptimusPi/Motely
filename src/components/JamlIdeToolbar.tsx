@@ -14,9 +14,20 @@ export interface JamlIdeToolbarProps {
   className?: string;
   onSearch?: () => void;
   isSearching?: boolean;
+  onLoadFile?: () => void;
+  isLoadingFile?: boolean;
 }
 
-export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className = "", onSearch, isSearching = false }: JamlIdeToolbarProps) {
+export function JamlIdeToolbar({
+  mode,
+  onModeChange,
+  resultCount = 0,
+  className = "",
+  onSearch,
+  isSearching = false,
+  onLoadFile,
+  isLoadingFile = false,
+}: JamlIdeToolbarProps) {
   const tabs = [
     { id: "visual", label: "Visual" },
     { id: "code", label: "JAML" },
@@ -50,6 +61,14 @@ export function JamlIdeToolbar({ mode, onModeChange, resultCount = 0, className 
         <div style={{ flexShrink: 0 }}>
           <JimboButton tone={isSearching ? "red" : "orange"} size="sm" onClick={onSearch}>
             {isSearching ? "Stop" : "Search"}
+          </JimboButton>
+        </div>
+      )}
+
+      {onLoadFile && (
+        <div style={{ flexShrink: 0 }}>
+          <JimboButton tone="blue" size="sm" onClick={onLoadFile} disabled={isLoadingFile}>
+            {isLoadingFile ? "Loading..." : "Load File"}
           </JimboButton>
         </div>
       )}
