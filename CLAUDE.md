@@ -1,6 +1,6 @@
 # MotelyJAML
 
-Balatro seed searcher. Given a JAML config (the YAML-based filter DSL defined here), grind seeds in parallel and report matches with scores. Library + CLI + TUI + WebAssembly host. .NET 10, C# latest, `TreatWarningsAsErrors=true`, Nullable enabled. Current `MotelyVersion` is `17.1.0` (`Directory.Packages.props`).
+Balatro seed searcher. Given a JAML config (the YAML-based filter DSL defined here), grind seeds in parallel and report matches with scores. Library + CLI + TUI. .NET 10, C# latest, `TreatWarningsAsErrors=true`, Nullable enabled. Current `MotelyVersion` is `17.1.0` (`Directory.Packages.props`). A WebAssembly host has existed under a few names (`Motely.Wasm/`, `Motely.WebAssembly/`) — none are checked in right now; re-add when ready instead of carrying empty scaffolding.
 
 ## What "JAML" is
 
@@ -14,7 +14,7 @@ Each clause is a typed shape (Joker, Voucher, Tarot, Spectral, Planet, StandardC
 
 Top-level JAML keys (`JamlConfig`): `id`, `name`, `description`, `author`, `deck`, `stake`, `hashtags`, `seeds`, plus `must` / `should` / `mustNot`. Schema in `jaml.schema.json` (regenerated from `jaml-schema.cs`).
 
-Loader entry point: `JamlConfigLoader.cs`. Builder that turns a `JamlConfig` into a runnable native filter: `JamlSearchBuilder.CreatePlan()` — and note, it only reads `JamlClauseSet.OrderedClauses`. The 28 typed lists (`Jokers`, `CommonJokers`, …) on `JamlClauseSet` are still populated by the loader but never read at runtime. Don't add new code that depends on them.
+Loader entry point: `JamlConfigLoader.cs`. Builder that turns a `JamlConfig` into a runnable native filter: `JamlSearchBuilder.CreatePlan()` — and note, every production code path (`CreatePlan`, every `*FilterDesc`, scoring, search) reads only `JamlClauseSet.OrderedClauses`. The 28 typed lists (`Jokers`, `CommonJokers`, …) on `JamlClauseSet` are still populated by the loader (`JamlConfigLoader.cs` switch arms) and are read *only* in tests — `Motely.Tests/JamlConfigTests.cs` and `JamlEnumCaseInsensitivityTests.cs` have ~35 assertions like `Assert.Single(config.Must.Jokers)`. So they're not free to delete: the cleanup is a small refactor (drop the 28 props, drop the loader switch arms, rewrite the tests to use `OrderedClauses.OfType<JokerClause>()` etc.). Don't add new *production* code that depends on them; new tests should also prefer `OrderedClauses`.
 
 ## Projects
 
@@ -24,7 +24,6 @@ Loader entry point: `JamlConfigLoader.cs`. Builder that turns a `JamlConfig` int
 | `Motely.CLI/` | `dotnet run --project Motely.CLI`. Uses McMaster.Extensions.CommandLineUtils. |
 | `Motely.TUI/` | Terminal.Gui 2.0 front-end. Editor, results browser, distributed worker window. |
 | `Motely.Tests/` | xUnit. Golden JAML corpus in `GoldenJamlFiles/`. |
-| `Motely.WebAssembly/` | Blazor/Bootsharp WASM host. Source layout still in flux — only `bin/obj/test` populated as of writing. |
 
 `Motely.slnx` is the source-of-truth solution file.
 
@@ -64,8 +63,6 @@ Golden fixtures live in `Motely.Tests/GoldenJamlFiles/`. `JamlCorpusRegressionTe
 
 - **No comments unless the *why* is non-obvious.** This codebase is large and well-named; resist adding restatements.
 - **PRNG key strings are identities.** Treat them like protocol — don't lowercase, don't rename, don't reformat. See `MotelyPrngKeys.cs`.
-- **Keyword-list magic counts**: `Motely/MotelySeedKeywordSequences.cs` has baked `NsfwKeywordAestheticSeedCount` / `FunnyKeywordAestheticSeedCount` / `BalatroKeywordAestheticSeedCount` constants. They get out of sync when the keyword lists drift (`ISSUES.md` #5). No automated check yet — if you change a keyword list, recount manually.
-- **Dead code in JAML public surface**: `JokerSource` / `JokerSourceType` in `JamlConfig.cs:74–89` are defined and never used. Comment next to them says "oops :( I have a complaint!". Safe to remove next pass; don't build on them.
 - **TreatWarningsAsErrors is on.** A nullable-reference warning will break the build. `NU1603` is in `WarningsAsErrors`.
 - **Vector vs single must agree.** When you add a clause type, you implement it once on `MotelySingleSearchContext` and once on `MotelyVectorSearchContext`. `SearchConsistencyTests` enforces parity — don't skip the vectorized side.
 - **`InvariantGlobalization`** is on in `Motely.csproj` — don't introduce culture-dependent parsing/formatting.

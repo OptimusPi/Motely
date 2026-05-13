@@ -32,7 +32,7 @@ internal static class LegendarySoulMatcher
         bool stopAfterFirstMatch = false
     )
     {
-        var src = clause.Sources.NormalizeLegendaryJokerBoostersIfEmpty();
+        var src = clause.Sources;
 
         // Default CreateBoosterPackStream(ante) uses generatedFirstPack = (ante > 1), so ante 1
         // prepends a synthetic Buffoon — indices and pack types no longer match PerkeoObservatory.
