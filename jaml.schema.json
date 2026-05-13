@@ -28,24 +28,24 @@
       "$ref": "#/$defs/MotelyStake"
     },
     "defaults": {
-      "$ref": "#/$defs/JamlDefaultsDto"
+      "$ref": "#/$defs/JamlDefaults"
     },
     "must": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/JamlClauseDto"
+        "$ref": "#/$defs/JamlClauseUnion"
       }
     },
     "should": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/JamlClauseDto"
+        "$ref": "#/$defs/JamlClauseUnion"
       }
     },
     "mustNot": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/JamlClauseDto"
+        "$ref": "#/$defs/JamlClauseUnion"
       }
     },
     "hashtags": {
@@ -62,7 +62,7 @@
     }
   },
   "$defs": {
-    "JamlDefaultsDto": {
+    "JamlDefaults": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -89,7 +89,7 @@
         }
       }
     },
-    "JamlClauseDto": {
+    "JamlClauseUnion": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -221,7 +221,7 @@
               "type": "string"
             },
             {
-              "$ref": "#/$defs/StandardCardConfigDto"
+              "$ref": "#/$defs/StandardCardConfig"
             }
           ]
         },
@@ -233,7 +233,7 @@
                 "type": "string"
               },
               {
-                "$ref": "#/$defs/StandardCardConfigDto"
+                "$ref": "#/$defs/StandardCardConfig"
               }
             ]
           }
@@ -379,19 +379,19 @@
         "and": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlClauseDto"
+            "$ref": "#/$defs/JamlClauseUnion"
           }
         },
         "or": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlClauseDto"
+            "$ref": "#/$defs/JamlClauseUnion"
           }
         },
         "clauses": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlClauseDto"
+            "$ref": "#/$defs/JamlClauseUnion"
           }
         },
         "mode": {
@@ -416,7 +416,7 @@
           "type": "integer"
         },
         "sources": {
-          "$ref": "#/$defs/JamlSourcesDto"
+          "$ref": "#/$defs/JamlSources"
         }
       }
     },
@@ -911,7 +911,7 @@
         "EconomyTag"
       ]
     },
-    "StandardCardConfigDto": {
+    "StandardCardConfig": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -931,7 +931,7 @@
           "$ref": "#/$defs/MotelyItemEdition"
         },
         "sources": {
-          "$ref": "#/$defs/JamlSourcesDto"
+          "$ref": "#/$defs/JamlSources"
         }
       }
     },
@@ -969,7 +969,7 @@
         "Negative"
       ]
     },
-    "JamlSourcesDto": {
+    "JamlSources": {
       "type": "object",
       "additionalProperties": false,
       "properties": {

@@ -11,7 +11,7 @@ namespace Motely.DataLake;
 /// Layout under <paramref name="seedsRoot"/>:
 ///   <c>catalog.ducklake</c> (DuckDB catalog), <c>data/</c> (Parquet data files).
 /// </summary>
-public sealed class DuckLakeSeedSink : IDisposable
+public sealed class MotelyLakeSeedSink : IDisposable
 {
     private readonly object _gate = new();
     private readonly DuckDBConnection _connection;
@@ -24,7 +24,7 @@ public sealed class DuckLakeSeedSink : IDisposable
     public string CatalogPath { get; }
     public string DataPath { get; }
 
-    public DuckLakeSeedSink(string seedsRoot, string filterId, IReadOnlyList<string> tallyLabels)
+    public MotelyLakeSeedSink(string seedsRoot, string filterId, IReadOnlyList<string> tallyLabels)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(seedsRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(filterId);
@@ -125,4 +125,26 @@ public sealed class DuckLakeSeedSink : IDisposable
     private static string ToSqlPathLiteral(string path) =>
         path.Replace("\\", "/", StringComparison.Ordinal)
             .Replace("'", "''", StringComparison.Ordinal);
+}
+
+/// <summary>
+/// Backward-compatible alias for older callers. Prefer <see cref="MotelyLakeSeedSink"/>.
+/// </summary>
+[Obsolete("Use MotelyLakeSeedSink instead.")]
+public sealed class DuckLakeSeedSink : IDisposable
+{
+    private readonly MotelyLakeSeedSink _inner;
+
+    public string SeedsRoot => _inner.SeedsRoot;
+    public string CatalogPath => _inner.CatalogPath;
+    public string DataPath => _inner.DataPath;
+
+    public DuckLakeSeedSink(string seedsRoot, string filterId, IReadOnlyList<string> tallyLabels)
+    {
+        _inner = new MotelyLakeSeedSink(seedsRoot, filterId, tallyLabels);
+    }
+
+    public void Append(in MotelySeedScoreTally tally) => _inner.Append(in tally);
+
+    public void Dispose() => _inner.Dispose();
 }

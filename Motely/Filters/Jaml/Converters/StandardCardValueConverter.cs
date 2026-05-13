@@ -11,7 +11,7 @@ namespace Motely.Filters.Converters;
 /// (<c>standardCard: { rank: King, enhancement: Steel, seal: Red }</c>).
 ///
 /// <para>The earlier implementation delegated the object form to
-/// <c>rootDeserializer(typeof(StandardCardConfigDto))</c>, which under YamlDotNet's
+/// <c>rootDeserializer(typeof(StandardCardConfig))</c>, which under YamlDotNet's
 /// source-generated static context fails for strict-typed enum properties
 /// (<see cref="MotelyItemSeal"/>, <see cref="MotelyItemEnhancement"/>,
 /// <see cref="MotelyItemEdition"/>). The recursive dispatch path didn't surface a
@@ -23,7 +23,7 @@ namespace Motely.Filters.Converters;
 /// Strict types stay strict — the converter just stops asking source-gen to do the
 /// thing source-gen can't reliably do behind a discriminated-union wrapper. Nested
 /// <c>sources:</c> still goes through <c>rootDeserializer</c> because
-/// <see cref="JamlSourcesDto"/> contains only primitive/array properties — no
+/// <see cref="JamlSources"/> contains only primitive/array properties — no
 /// strict-typed enums — so the recursive path is safe there.</para>
 /// </summary>
 public sealed class StandardCardValueConverter : IYamlTypeConverter
@@ -36,7 +36,7 @@ public sealed class StandardCardValueConverter : IYamlTypeConverter
         if (parser.TryConsume<Scalar>(out var scalar))
             return new StandardCardValue { StringValue = scalar.Value };
 
-        var dto = new StandardCardConfigDto();
+        var dto = new StandardCardConfig();
         parser.Consume<MappingStart>();
         while (!parser.TryConsume<MappingEnd>(out _))
         {
@@ -71,7 +71,7 @@ public sealed class StandardCardValueConverter : IYamlTypeConverter
                     break;
                 }
                 case "sources":
-                    dto.Sources = (JamlSourcesDto?)rootDeserializer(typeof(JamlSourcesDto));
+                    dto.Sources = (JamlSources?)rootDeserializer(typeof(JamlSources));
                     break;
                 default:
                     SkipNode(parser);
