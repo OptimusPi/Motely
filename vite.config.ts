@@ -18,6 +18,8 @@ const PEER_EXTERNALS = [
   // via an importmap pointing at unpkg (browser fetches once, caches across
   // tool invocations). Bundling here would balloon the iframe HTML.
   "motely-wasm",
+  /^motely-wasm\//,
+  "@rewaffle/bootsharp-file-system",
 ];
 
 export default defineConfig({

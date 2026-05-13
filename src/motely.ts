@@ -1,6 +1,11 @@
 "use client";
 
-export { Motely } from "./motelyBoot.js";
+export {
+  Motely,
+  MotelyFileSystem,
+  isMotelyFileSystemReady,
+  motelyFileSystemInitError,
+} from "./motelyBoot.js";
 
 export {
   decodeMotelyItem,
@@ -43,3 +48,9 @@ export {
   motelyVoucherDisplayName,
   motelyVoucherDisplayNameFromKey,
 } from "./motelyDisplay.js";
+
+export {
+  useJamlLibrary,
+  type JamlLibraryStatus,
+  type UseJamlLibraryState,
+} from "./hooks/useJamlLibrary.js";

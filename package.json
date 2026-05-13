@@ -98,6 +98,9 @@
     "@react-three/fiber": {
       "optional": true
     },
+    "@rewaffle/bootsharp-file-system": {
+      "optional": true
+    },
     "react-icons": {
       "optional": true
     },
@@ -161,5 +164,8 @@
     "motely-wasm": "^16.0.1",
     "tailwind-merge": "^2.6.1",
     "zustand": "^5.0.13"
+  },
+  "optionalDependencies": {
+    "@rewaffle/bootsharp-file-system": "latest"
   }
 }

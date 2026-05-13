@@ -111,6 +111,11 @@ export {
     useAnalyzer,
     type AnalyzerStatus,
 } from "./hooks/useAnalyzer.js";
+export {
+    useJamlLibrary,
+    type JamlLibraryStatus,
+    type UseJamlLibraryState,
+} from "./hooks/useJamlLibrary.js";
 
 export { motelyItemRenderCategory } from "./decode/motelyItemDecoder.js";
 
