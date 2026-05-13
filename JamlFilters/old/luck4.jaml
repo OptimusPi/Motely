@@ -1,0 +1,137 @@
+name: luck2
+author: pifreak
+deck: Ghost
+stake: White
+
+must:  
+  - smallBlindTag: CouponTag
+    antes: [1]
+
+  - joker: Blueprint
+    antes: [1]
+    sources:
+      minShopSlot: 0
+      maxShopSlot: 1
+  
+  - joker: Showman
+    antes: [1]
+    sources:
+      minShopSlot: 0
+      maxShopSlot: 1
+
+  - joker: Blueprint
+    antes: [1]
+    boosterPacks: [0]
+
+  - legendaryJoker: Perkeo
+    antes: [1]
+    boosterPacks: [1]  
+
+should:
+  - legendaryJoker: Perkeo
+    score: 100
+  - joker: Showman
+    antes: [1,2,3]
+    score: 100
+  - legendaryJoker: Perkeo
+    antes: [1,2,3]    
+    sources:
+      minPackSlot: 0
+      maxPackSlot: 1
+    score: 17
+  - legendaryJoker: Perkeo
+    antes: [1,2,3,4]
+    sources:
+      minPackSlot: 0
+      maxPackSlot: 3
+    score: 10
+  - joker: Showman
+    antes: [1,2,3,4]
+    sources:
+      minShopSlot: 0
+      maxShopSlot: 3
+      minPackSlot: 0
+      maxPackSlot: 3
+
+
+
+  - joker: Mime
+    antes: [4]
+    sources:
+      minShopSlot: 2
+      maxShopSlot: 7
+    score: 444
+  - smallBlindTag: NegativeTag
+  - tag: DoubleTag
+    antes: [1]
+    score: 2
+  - tag: DoubleTag
+    antes: [2]
+    score: 2
+  - tag: DoubleTag
+    antes: [3]
+    score: 2
+  - tag: DoubleTag
+    antes: [4]
+    score: 2
+  - tag: DoubleTag
+    antes: [5]
+    score: 2
+  - tag: DoubleTag
+    antes: [6]
+    score: 2
+  - tag: DoubleTag
+    antes: [7]
+    score: 2
+  - tag: DoubleTag
+    antes: [8]
+    score: 2
+  - or:
+    - tarotCard: TheMagician
+      antes: [1]
+    - standardCard:
+      antes: [1]
+      enhancement: Lucky
+    score: 666
+
+  # 🌟 LEGENDARY: First roll hits in Ante 1 = JACKPOT
+  - event: LuckyMoney
+    antes: [1]
+    rolls: [0]
+    score: 100
+
+  # 💎 EPIC: Second roll in Ante 1
+  - event: LuckyMoney
+    antes: [1]
+    rolls: [1]
+    score: 50
+
+  # 🔥 RARE: Early rolls 2-5 in Ante 1
+  - event: LuckyMoney
+    antes: [1]
+    rolls: [2, 3, 4, 5]
+    score: 20
+
+  # ✨ GOOD: First couple rolls in Ante 2
+  - event: LuckyMoney
+    antes: [2]
+    rolls: [0, 1]
+    score: 30
+
+  # 🎯 NICE: More Ante 2 hits
+  - event: LuckyMoney
+    antes: [2]
+    rolls: [2, 3, 4, 5]
+    score: 10
+
+  # 💵 BONUS: Early game consistency (Antes 3-4)
+  - event: LuckyMoney
+    antes: [3, 4]
+    rolls: [0, 1, 2, 3]
+    score: 5
+
+  # 🪙 EXTRA: Late game sprinkles (Antes 5-8)
+  - event: LuckyMoney
+    antes: [5, 6, 7, 8]
+    rolls: [0, 1, 2, 3, 4, 5]
+    score: 2
