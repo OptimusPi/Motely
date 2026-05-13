@@ -59,6 +59,13 @@ export interface JamlIdeProps {
   codePlaceholder?: string;
   onSearch?: () => void;
   isSearching?: boolean;
+  /**
+   * Shows a "Load File" button in the toolbar and loads the selected file into the editor.
+   * When `onLoadFile` is provided, that callback is used (for example, a mounted library flow).
+   * Otherwise the component falls back to a browser file picker.
+   */
+  showLoadFileButton?: boolean;
+  onLoadFile?: () => Promise<string | null> | string | null;
   onTestSeed?: (seed: string) => void;
   jamlyzerResult?: "idle" | "match" | "nomatch" | "running" | "error";
   jamlyzerError?: string | null;
@@ -221,6 +228,51 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
   );
 }
 
+async function pickAndReadJamlFile(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+
+  const pickerWindow = window as Window & {
+    showOpenFilePicker?: (options?: {
+      multiple?: boolean;
+      excludeAcceptAllOption?: boolean;
+      types?: Array<{ description?: string; accept: Record<string, string[]> }>;
+    }) => Promise<Array<{ getFile(): Promise<File> }>>;
+  };
+
+  if (pickerWindow.showOpenFilePicker) {
+    const [handle] = await pickerWindow.showOpenFilePicker({
+      multiple: false,
+      excludeAcceptAllOption: false,
+      types: [
+        {
+          description: "JAML Files",
+          accept: {
+            "text/plain": [".jaml", ".yaml", ".yml", ".txt"],
+          },
+        },
+      ],
+    });
+    if (!handle) return null;
+    const file = await handle.getFile();
+    return await file.text();
+  }
+
+  return await new Promise<string | null>((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".jaml,.yaml,.yml,.txt,text/plain";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      resolve(await file.text());
+    };
+    input.click();
+  });
+}
+
 
 export function JamlIde({
   jaml,
@@ -237,6 +289,8 @@ export function JamlIde({
   codePlaceholder = "Enter JAML...",
   onSearch,
   isSearching = false,
+  showLoadFileButton = false,
+  onLoadFile,
   onTestSeed,
   jamlyzerResult = "idle",
   jamlyzerError,
@@ -246,6 +300,7 @@ export function JamlIde({
   const [mode, setMode] = useState<JamlIdeMode>(defaultMode);
   const [internalText, setInternalText] = useState<string>(jaml ?? defaultJaml ?? "");
   const [lastJamlProp, setLastJamlProp] = useState<string | undefined>(jaml);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   // Adjust-state-during-render: sync controlled `jaml` prop into internal text.
   if (jaml !== lastJamlProp) {
@@ -258,6 +313,20 @@ export function JamlIde({
   const handleTextChange = (next: string) => {
     setInternalText(next);
     onChange?.(next);
+  };
+
+  const handleLoadFile = async () => {
+    setIsLoadingFile(true);
+    try {
+      const loadedText = onLoadFile ? await onLoadFile() : await pickAndReadJamlFile();
+      if (loadedText === null) return;
+      handleTextChange(loadedText);
+      setMode("code");
+    } catch {
+      // Keep this non-fatal so users can keep editing if they cancel or picker fails.
+    } finally {
+      setIsLoadingFile(false);
+    }
   };
 
   // Derived visual filter state (used only when not externally controlled).
@@ -371,7 +440,15 @@ export function JamlIde({
         )}
       </div>
 
-      <JamlIdeToolbar mode={mode} onModeChange={setMode} resultCount={results.length} onSearch={onSearch} isSearching={isSearching} />
+      <JamlIdeToolbar
+        mode={mode}
+        onModeChange={setMode}
+        resultCount={results.length}
+        onSearch={onSearch}
+        isSearching={isSearching}
+        onLoadFile={showLoadFileButton ? handleLoadFile : undefined}
+        isLoadingFile={isLoadingFile}
+      />
 
       <div style={{ flex: 1, minHeight: 0, overflow: mode === "map" ? "hidden" : "auto", background: JimboColorOption.DARKEST }}>
         {mode === "visual" ? (

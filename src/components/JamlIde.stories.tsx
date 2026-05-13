@@ -51,6 +51,7 @@ export const WithSearch: Story = {
         onChange={setJaml}
         onSearch={() => setSearching(s => !s)}
         isSearching={searching}
+        showLoadFileButton
       />
     );
   },
