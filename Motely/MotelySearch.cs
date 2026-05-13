@@ -552,9 +552,34 @@ public interface IMotelySearchSettings
     IMotelySearch Start(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Interop-safe subset of <see cref="IMotelySearchSettings"/> for WASM/Bootsharp boundaries.
+/// Excludes members that expose ref-struct search/filter contexts.
+/// </summary>
+public interface IMotelySearchSettingsInterop
+{
+    IMotelySearchSettingsInterop WithThreadCount(int threadCount);
+    IMotelySearchSettingsInterop WithBatchCharacterCount(int batchCharacterCount);
+    IMotelySearchSettingsInterop WithStartBatchIndex(long startBatchIndex);
+    IMotelySearchSettingsInterop WithEndBatchIndex(long endBatchIndex);
+    IMotelySearchSettingsInterop WithListSearch(string[] seeds, int seedCount = -1);
+    IMotelySearchSettingsInterop WithRandomSearch(int count);
+    IMotelySearchSettingsInterop WithAestheticSearch(JamlAesthetic aesthetic);
+    IMotelySearchSettingsInterop WithSequentialSearch();
+    IMotelySearchSettingsInterop WithDeck(MotelyDeck deck);
+    IMotelySearchSettingsInterop WithStake(MotelyStake stake);
+    IMotelySearchSettingsInterop WithProgressReportIntervalMs(long intervalMs);
+    IMotelySearchSettingsInterop WithCsvOutput(bool csvOutput);
+    IMotelySearchSettingsInterop WithQuietMode(bool quietMode);
+    IMotelySearchSettingsInterop WithAutoScoreCutoff(bool enabled = true);
+
+    IMotelySearch CreateSearch();
+    IMotelySearch Start(CancellationToken cancellationToken = default);
+}
+
 public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySeedFilterDesc<TBaseFilter> baseFilterDesc
-) : IMotelySearchSettings
+) : IMotelySearchSettings, IMotelySearchSettingsInterop
     where TBaseFilter : struct, IMotelySeedFilter
 {
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
@@ -762,6 +787,55 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         WithAutoScoreCutoff(enabled);
 
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
+        Start(cancellationToken);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithThreadCount(int threadCount) =>
+        WithThreadCount(threadCount);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithBatchCharacterCount(int count) =>
+        WithBatchCharacterCount(count);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithStartBatchIndex(long index) =>
+        WithStartBatchIndex(index);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithEndBatchIndex(long index) =>
+        WithEndBatchIndex(index);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithListSearch(
+        string[] seeds,
+        int seedCount
+    ) => WithListSearch(seeds, seedCount);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithRandomSearch(int count) =>
+        WithRandomSearch(count);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithAestheticSearch(
+        JamlAesthetic aesthetic
+    ) => WithAestheticSearch(aesthetic);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithSequentialSearch() =>
+        WithSequentialSearch();
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithDeck(MotelyDeck deck) =>
+        WithDeck(deck);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithStake(MotelyStake stake) =>
+        WithStake(stake);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithProgressReportIntervalMs(
+        long intervalMs
+    ) => WithProgressReportIntervalMs(intervalMs);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithCsvOutput(bool csvOutput) =>
+        WithCsvOutput(csvOutput);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithQuietMode(bool quietMode) =>
+        WithQuietMode(quietMode);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithAutoScoreCutoff(bool enabled) =>
+        WithAutoScoreCutoff(enabled);
+
+    IMotelySearch IMotelySearchSettingsInterop.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
     /// <inheritdoc cref="IMotelySearchSettings.CreateSearch" />

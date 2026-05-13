@@ -20,13 +20,15 @@ namespace Motely.Filters;
 
 /// <summary>Compiled JAML: runnable settings plus tally width for sinks (matches scoring clause count).</summary>
 public sealed record JamlSearchPlan(
-    IMotelySearchSettings Settings,
     int ScoreTallyColumnCount,
     /// <summary>RFC-4180 style header line: quoted fields, comma-separated. Empty when <see cref="ScoreTallyColumnCount"/> is 0.</summary>
     string ScoredCsvHeaderQuoted,
     /// <summary>Authoritative tally column labels in evaluation order (must clauses first, then should).</summary>
     string[] TallyLabels
-);
+)
+{
+    internal IMotelySearchSettings Settings { get; init; } = null!;
+}
 
 /// <summary>
 
@@ -56,7 +58,11 @@ public static class JamlSearchBuilder
     }
 
     public static IMotelySearchSettings CreateSettings(JamlConfig config) =>
-        CreatePlan(config, 0).Settings;
+        CreateSettings(config, 0);
+    public static IMotelySearchSettings CreateSettings(
+        JamlConfig config,
+        int shouldScoreMinimumTotal
+    ) => CreatePlan(config, shouldScoreMinimumTotal).Settings;
     public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal = 0)
     {
         if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
@@ -114,7 +120,7 @@ public static class JamlSearchBuilder
         var tallyLabels = shouldOnlyCount > 0
             ? shouldOnlyClauses.Select(static c => c.Label).ToArray()
             : [];
-        return new JamlSearchPlan(settings, shouldOnlyCount, headerQuoted, tallyLabels);
+        return new JamlSearchPlan(shouldOnlyCount, headerQuoted, tallyLabels) { Settings = settings };
     }
 
     /// <summary>
