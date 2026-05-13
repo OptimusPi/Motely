@@ -82,6 +82,22 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScores
             return list;
         }
     }
+
+    /// <summary>
+    /// CSV row payload used by interop-safe sinks/events.
+    /// Format: seed,score,tally1,tally2,...
+    /// </summary>
+    public readonly string ToCsvRow()
+    {
+        if (_tallyCount <= 0)
+            return $"{Seed},{Score}";
+
+        var tallies = new string[_tallyCount];
+        for (int i = 0; i < _tallyCount; i++)
+            tallies[i] = _tallyValues[i].ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        return $"{Seed},{Score},{string.Join(",", tallies)}";
+    }
 }
 
 // Per-plan (= per-thread) box for auto-cutoff state. Heap allocation so the scorer's

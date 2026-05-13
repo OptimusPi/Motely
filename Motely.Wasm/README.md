@@ -36,7 +36,7 @@ if (!result.ok) console.error(result.error);
 
 When serving from the repository root, `/bin` must resolve to `motely-wasm/bin`. If the module is hosted under a subpath, pass that subpath's binary root, for example `await bootsharp.boot("/motely-wasm/bin")`.
 
-Node usage is not supported: Bootsharp boots by `fetch()`ing wasm/assemblies, and Node's built-in `fetch` does not handle `file://`. Serve the package over HTTP, or run in a real browser.
+Node usage can work in principle (Bootsharp boots via `fetch()`), but for this package the runtime assets must be HTTP-served or otherwise fetch-accessible; do not rely on raw `file://` paths. Browser usage remains the default path.
 
 ## Exported Contract
 
