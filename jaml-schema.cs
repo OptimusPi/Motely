@@ -5,8 +5,8 @@
 //   dotnet run jaml-schema.cs
 // Writes jaml.schema.json at the repo root.
 //
-// Walks the JAML deserialization POCOs (JamlRootDocument / JamlClauseDto /
-// JamlSourcesDto / JamlDefaultsDto / StandardCardConfigDto) and emits JSON
+// Walks the JAML deserialization POCOs (JamlRootDocument / JamlClauseUnion /
+// JamlSources / JamlDefaults / StandardCardConfig) and emits JSON
 // Schema 2020-12 with all enum literals inlined. Reflection is fine here —
 // this tool runs once on demand and never ships to WASM/AOT.
 
@@ -86,14 +86,14 @@ static JsonNode SchemaFor(Type type, JsonObject defs)
         };
     }
 
-    // StandardCardValue: bare string ("Ah", "Ks") or full StandardCardConfigDto object.
+    // StandardCardValue: bare string ("Ah", "Ks") or full StandardCardConfig object.
     if (type == typeof(StandardCardValue))
     {
         return new JsonObject
         {
             ["oneOf"] = new JsonArray(
                 new JsonObject { ["type"] = "string" },
-                ObjectRef(typeof(StandardCardConfigDto), defs)
+                ObjectRef(typeof(StandardCardConfig), defs)
             ),
         };
     }

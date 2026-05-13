@@ -20,8 +20,8 @@ public static partial class MotelyJamlSchemaGenerator
     private const string SchemaTitle = "JAML — Jimbo's Ante Markup Language";
     private const string SchemaDescription =
         "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.";
-    private const string JamlClauseDef = nameof(JamlClauseDto);
-    private const string JamlSourcesDef = nameof(JamlSourcesDto);
+    private const string JamlClauseDef = nameof(JamlClauseUnion);
+    private const string JamlSourcesDef = nameof(JamlSources);
     private const string JamlAestheticDef = nameof(JamlAesthetic);
     private const string EventTypeDef = nameof(MotelyEventType);
 
@@ -73,9 +73,9 @@ public static partial class MotelyJamlSchemaGenerator
         GenerationMode = JsonSourceGenerationMode.Metadata)]
     [JsonSerializable(typeof(string))]
     [JsonSerializable(typeof(JamlRootDocument))]
-    [JsonSerializable(typeof(JamlClauseDto))]
-    [JsonSerializable(typeof(JamlSourcesDto))]
-    [JsonSerializable(typeof(JamlDefaultsDto))]
+    [JsonSerializable(typeof(JamlClauseUnion))]
+    [JsonSerializable(typeof(JamlSources))]
+    [JsonSerializable(typeof(JamlDefaults))]
     internal sealed partial class SchemaContext : JsonSerializerContext
     {
     }
@@ -283,7 +283,7 @@ public static partial class MotelyJamlSchemaGenerator
     private static JsonObject CriterionDef()
     {
         var node = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlClauseDto,
+            SchemaContext.Default.JamlClauseUnion,
             ExporterOptions());
 
         var result = node as JsonObject
@@ -303,7 +303,7 @@ public static partial class MotelyJamlSchemaGenerator
     private static JsonObject SourcesDef()
     {
         var node = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlSourcesDto,
+            SchemaContext.Default.JamlSources,
             ExporterOptions());
 
         var result = node as JsonObject

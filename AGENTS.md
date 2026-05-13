@@ -1,3 +1,4 @@
+@BOOTSHARP
 # MotelyJAML
 
 Motely is the Balatro seed-search engine. JAML is its YAML-based filter language. This repo is the engine, CLI, WASM package, tests, and JAML language tooling.
