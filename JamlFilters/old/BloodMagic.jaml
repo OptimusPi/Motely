@@ -1,0 +1,106 @@
+name: Erratic Bloodstone
+author: pifreak
+# USER REQUEST WAS....
+#
+# An Erratic Deck seed with a lot of Hearts. Early Bloodstone and Dice
+#
+# NOTES: "Dice" means the green die that has 6 on every side, it's a mechanic Joker in Balatro that doubles the "luck" of things like "1 in 2 change Bloodstone triggers 1.5x for hearts"
+
+description:  An Erratic Deck seed with a lot of Hearts. Early Bloodstone and Dice Business Card *always* gives $2 on face card scored if you havbe oops all 6s
+deck: Erratic
+stake: White
+
+# all seeds are rejected that do not match ALL clauses listed in the must: filter section!!
+must:
+  # must have at least 10 Hearts
+  # seed analysis of Erratic Deck shows that desired/rare combinations of jokers are incredibly hard to find above ~17 ranks or ~31 suits
+  # seed analysis of Erratic Deck shows that desired/rare combinations of jokers are fairly easy to find with only slight advantage decks for the Erratic Deck!
+  # Slight advantage being around 10-12 ranks or about 20-26 suits...
+  - ErraticSuit: Hearts
+    min: 10
+  - joker: Bloodstone
+    antes: [1]
+    sources:
+      boosterPacks: [0,1]
+      shopItems: [0,1]
+      # this makes business card ALWAYS hti and this makes bloodstone ALWAYS hit 1.5X mult per heart card scored
+  - joker: OopsAll6s
+    antes: [1]
+    sources:
+      boosterPacks: [0,1]
+      shopItems: [0,1]
+  - joker: BusinessCard
+    antes: [1,2,3,4]
+
+should:
+  - erraticSuit: Hearts
+    score: 1
+  - joker: OopsAll6s
+    antes: [1]
+    sources:
+      boosterPacks: [1]
+      requireMega: true
+    edition: Negative
+  - joker: Bloodstone
+    antes: [1]
+    sources:
+      boosterPacks: [1]
+      requireMega: true
+    edition: Negative
+
+  # makes disamonds act as hearts (player can then make easier flushes etc)
+  - joker: SmearedJoker
+    antes: [1,2,3,4]
+
+  # plus mult when heart is scored
+  - joker: LustyJoker
+    antes: [1,2,3,4]
+
+
+  - joker: Brainstorm
+    antes: [1,2,3,4]
+  - joker: Blueprint
+    score: 2
+  - joker: Brainstorm
+    score: 2
+  - joker: SockAndBuskin
+    score: 2
+  - joker: Pareidolia
+    score: 2
+  - joker: ReservedParking
+    score: 2
+
+
+  - legendaryJoker: Perkeo
+    antes: [1,2,3]
+    edition: Negative
+    score: 20
+  - legendaryJoker: Canio
+    antes: [1,2,3]
+    edition: Negative
+    score: 20
+  - legendaryJoker: Triboulet
+    antes: [1,2,3]
+    edition: Negative
+    score: 20
+  - legendaryJoker: Chicot
+    antes: [1,2,3]
+    edition: Negative
+    score: 20
+
+
+  - legendaryJoker: Perkeo
+    antes: [1,2,3,4]
+    score: 20
+  - legendaryJoker: Canio
+    antes: [1,2,3,4]
+    score: 20
+  - legendaryJoker: Triboulet
+    antes: [1,2,3,4]
+    score: 20
+  - legendaryJoker: Chicot
+    antes: [1,2,3,4]
+    score: 20
+  - legendaryJoker: Yorick
+    antes: [1,2,3,4]
+    score: 20

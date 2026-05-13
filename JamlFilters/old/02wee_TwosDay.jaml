@@ -1,0 +1,25 @@
+name: The Daily Wee - Monday Madness
+deck: Erratic
+stake: White
+must:
+  - joker: WeeJoker
+    antes: [1]
+    boosterPacks: [0,1]
+  - joker: HangingChad
+    antes: [1]
+    boosterPacks: [1]
+    requireMega: true
+    
+should:
+  - erraticRank: Two
+    score: 1
+  - joker: Madness
+    stickers: [Eternal]
+    antes: [1]
+    score: 10
+  - joker: Madness
+    antes: [2]
+    score: 1
+  - joker: Showman
+    antes: [1, 2]
+    score: 1
