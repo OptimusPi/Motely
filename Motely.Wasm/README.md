@@ -25,27 +25,34 @@ import bootsharp, { Motely } from "./motely-wasm/index.mjs";
 
 await bootsharp.boot("/bin");
 
-const info = JSON.parse(Motely.getHostInfo());
-const validation = JSON.parse(Motely.validateJaml(`
+const version = Motely.version();
+const result = Motely.loadJaml(`
 must:
   - joker: Blueprint
     antes: [1]
-`));
+`);
+if (!result.ok) console.error(result.error);
 ```
 
 When serving from the repository root, `/bin` must resolve to `motely-wasm/bin`. If the module is hosted under a subpath, pass that subpath's binary root, for example `await bootsharp.boot("/motely-wasm/bin")`.
 
+Node usage is not supported: Bootsharp boots by `fetch()`ing wasm/assemblies, and Node's built-in `fetch` does not handle `file://`. Serve the package over HTTP, or run in a real browser.
+
 ## Exported Contract
 
-The generated `Motely` namespace exposes JSON-returning methods:
+The generated `Motely` namespace currently exposes:
 
-- `getHostInfo()`
-- `validateJaml(jaml)`
-- `analyzeSeed(seed, deck?, stake?)`
-- `analyzeJamlSeed(jaml, seed, includeSeedAnalysis?)`
-- `analyzeJamlSeeds(jaml, seeds?, includeSeedAnalysis?)`
-- `searchJamlPage(jaml, startBatch?, endBatch?, batchCharacterCount?, includeSeedAnalysis?)`
+**JAML**
+- `version()` → string (assembly informational version)
+- `loadJaml(yaml)` → `{ ok: boolean, error: string | null }`
+- `explainJaml(yaml)` → `{ ok: boolean, error: string | null, explanation: string | null }`
 
-`searchJamlPage` deliberately runs Motely's bounded Jamlyzer path with one worker thread. That keeps the browser surface deterministic and avoids leaning on the known multi-threaded search issues until the engine's threading path is fixed end-to-end.
+**File system (Bootsharp.FileSystem)**
+- `pickRoot(options?)` → `Promise<string | null>`
+- `mountRoot(root, options?)` → `Promise<string>`
+- `unmountRoot(root)` → `Promise<void>`
+- `readTextFile(root, uri)` → `Promise<string>`
+- `writeTextFile(root, uri, text)` → `Promise<void>`
+- `onFileChanges` — event of `Change[]`
 
-Browser file-system access is not included. The current host accepts JAML text and seed arrays directly; add `Bootsharp.FileSystem` later only if a UI needs user-selected local files or mounted directories.
+Search and seed analysis are not yet exported. `analyzeSeed`, `analyzeJamlSeed`, `analyzeJamlSeeds`, and `searchJamlPage` are planned; track them in `Motely.Wasm/Program.cs` before relying on them.

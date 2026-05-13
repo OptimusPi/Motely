@@ -6,7 +6,7 @@ using Motely.Filters;
 using System.Reflection;
 using System.Text;
 
-[assembly: Preferences(Space = [".+", "Motely"])]
+[assembly: Preferences(Space = [@"^Motely\.Wasm\.Program$", "Motely"])]
 
 namespace Motely.Wasm;
 
