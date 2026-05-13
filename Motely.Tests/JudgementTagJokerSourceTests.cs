@@ -3,7 +3,7 @@ using Motely.Filters;
 namespace Motely.Tests;
 
 /// <summary>
-/// Tests for Judgement tarot and Tag joker sources added in Issue #59
+/// Tests for Judgement tarotCard and Tag joker sources added in Issue #59
 /// </summary>
 public sealed class JudgementTagJokerSourceTests
 {
@@ -32,7 +32,7 @@ public sealed class JudgementTagJokerSourceTests
     }
 
     // Post-refactor, the single SourcesConfig was split into typed *-SourceConfig classes.
-    // Joker-producing specialty sources (Judgement tarot, Rare/Uncommon Tag) live on JokerSourceConfig.
+    // Joker-producing specialty sources (Judgement tarotCard, Rare/Uncommon Tag) live on JokerSourceConfig.
 
     [Fact]
     public void TestJokerSourceConfig_HasJudgementProperty()

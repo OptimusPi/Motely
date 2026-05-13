@@ -1,6 +1,6 @@
-name: Sixth Sense Spectral
+name: Sixth Sense spectralCard
 author: jammy
-description: Sixth Sense common with Ghost Deck for Spectral card generation on single 6
+description: Sixth Sense common with Ghost Deck for spectralCard card generation on single 6
 deck: Ghost
 stake: White
 must:

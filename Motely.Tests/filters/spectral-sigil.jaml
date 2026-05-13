@@ -1,6 +1,6 @@
 name: Sigil Flush Build
 author: jammy
-description: Sigil spectral with Blackboard for suit conversion to Flush
+description: Sigil spectralCard with Blackboard for suit conversion to Flush
 deck: Red
 stake: White
 must:

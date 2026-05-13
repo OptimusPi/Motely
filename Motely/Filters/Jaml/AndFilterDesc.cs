@@ -1,6 +1,14 @@
+using System;
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters.Jaml;
+namespace Motely.Filters;
+
+public sealed class AndClause : LogicClause
+{
+    public override string Describe() => $"and({Clauses.Length})";
+    public override IMotelySeedFilterDesc CreateDesc() =>
+        new AndFilterDesc(Array.ConvertAll(Clauses, static c => c.CreateDesc()));
+}
 
 public struct AndFilterDesc(IMotelySeedFilterDesc[] filters)
     : IMotelySeedFilterDesc<AndFilterDesc.AndFilter>

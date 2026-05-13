@@ -1059,10 +1059,10 @@ public static partial class JamlConfigLoader
     )
     {
         var arcana = arcanaPacks ?? [];
-        var spectral = spectralPacks ?? [];
-        bool split = arcana.Length > 0 || spectral.Length > 0;
+        var Spectral = spectralPacks ?? [];
+        bool split = arcana.Length > 0 || Spectral.Length > 0;
 
-        // If the user specified neither a plain boosterPacks list nor split arcana/spectral lists,
+        // If the user specified neither a plain boosterPacks list nor split arcana/Spectral lists,
         // default to the full per-ante PRNG slot range (0..5). Scoring clamps ante 1 using
         // EarlyAntesMaxPack (default 3 = normal gameplay, raise to 5 for Hieroglyph scans).
         var resolvedBooster = split
@@ -1075,7 +1075,7 @@ public static partial class JamlConfigLoader
             BoosterPacks = resolvedBooster,
             EarlyAntesMaxPack = earlyAntesMaxPack,
             ArcanaPacks = arcana,
-            SpectralPacks = spectral,
+            SpectralPacks = Spectral,
             SoulCard = soulCard ?? [],
             RequireMegaPack = requireMegaPack,
         };

@@ -5,14 +5,13 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters;
 
-public sealed class ErraticSuitClause : IJamlClause
+public sealed class ErraticSuitClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required MotelyStandardcardSuit Suit { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 4 + MaxAnte;
+    public override string Describe() => $"erraticSuit {Suit}";
+    public override IMotelySeedFilterDesc CreateDesc() => new ErraticSuitFilterDesc(this);
 }
 
 public struct ErraticSuitFilterDesc(ErraticSuitClause clause)

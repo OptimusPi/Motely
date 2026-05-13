@@ -11,15 +11,14 @@ public enum TagPosition
     BigBlind,
 }
 
-public sealed class TagClause : IJamlClause
+public sealed class TagClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required MotelyTag[] Tags { get; init; }
     public TagPosition Position { get; init; } = TagPosition.Any;
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 3 + MaxAnte;
+    public override string Describe() => $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))}";
+    public override IMotelySeedFilterDesc CreateDesc() => new TagFilterDesc(this);
 }
 
 public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>

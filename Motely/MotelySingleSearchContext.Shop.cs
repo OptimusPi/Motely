@@ -158,7 +158,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
             return new(MotelyItemType.NotImplemented);
         }
 
-        // This shop will generate a spectral card
+        // This shop will generate a Spectral card
         if (!stream.DoesProvideSpectrals)
             return new(MotelyItemType.SpectralExcludedByStream);
 

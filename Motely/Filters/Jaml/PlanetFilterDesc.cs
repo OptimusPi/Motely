@@ -3,15 +3,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 namespace Motely.Filters;
 
-public sealed class PlanetCardClause : IJamlClause
+public sealed class PlanetCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required MotelyPlanetCard[] Planets { get; init; }
     public PlanetSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 7 + MaxAnte;
+    public override string Describe() => $"Planet {string.Join(", ", System.Array.ConvertAll(Planets, static p => p.ToString()))}";
+    public override IMotelySeedFilterDesc CreateDesc() => new PlanetCardFilterDesc(this);
 }
 
 public struct PlanetCardFilterDesc(PlanetCardClause clause)

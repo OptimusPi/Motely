@@ -23,7 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Motely.CLI\MotelyJAML.schema.generator.cs" Link="MotelyJAML.schema.generator.cs" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Motely.Analysis;
 
@@ -102,7 +103,7 @@ public sealed record class MotelyAnteAnalysis(
 );
 
 public sealed record class MotelyAnalyzedItem(
-    MotelyItem Item,
+    [property: JsonIgnore] MotelyItem Item,
     bool Matched = false
 )
 {

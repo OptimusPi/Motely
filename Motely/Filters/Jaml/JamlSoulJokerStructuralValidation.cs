@@ -3,7 +3,7 @@ namespace Motely.Filters;
 /// <summary>
 /// Soul-joker structural validation is currently a no-op — pifreak rule: trust users, don't block
 /// on inferred mistakes, don't write to console from library code. If a user genuinely targets the
-/// only-arcana/spectral-slot-zero-at-ante-1 dead case, the search returns zero matches and that's
+/// only-arcana/Spectral-slot-zero-at-ante-1 dead case, the search returns zero matches and that's
 /// information enough.
 /// <para>
 /// Future work tracked separately: surface structured warnings via TryLoad return shape so the CLI
