@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <BootsharpName>motely-wasm</BootsharpName>
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
+    <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <BootsharpExtraRoot Condition="'$(BootsharpExtraRoot)' == ''">D:\extra\bootsharp</BootsharpExtraRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(BootsharpExtraRoot)\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj" />
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+</Project>
