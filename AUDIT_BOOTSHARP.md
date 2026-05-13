@@ -1,99 +1,166 @@
-# Bootsharp Integration Audit
+# Bootsharp Integration Audit — MotelyJAML (host-side, master)
 
 **Date:** 2026-05-13
-**Scope:** The Bootsharp (https://bootsharp.com) boundary between `optimuspi/MotelyJAML` (C#/WASM producer) and `optimuspi/jaml-ui` (TS consumer).
-**Heads commit audited:** MotelyJAML `master@84a79e4`, jaml-ui `master@c9bac26`.
+**Scope:** The Bootsharp boundary between this repo (C#/WASM producer) and `optimuspi/jaml-ui` (TS consumer).
+**Heads audited:** `MotelyJAML/master`, `jaml-ui/master`.
+**Companion:** `jaml-ui/AUDIT_BOOTSHARP.md` on branch `claude/audit-bootsharp-3mEjQ` (consumer-side mirror).
+**In-flight work:** PR [#36 — `feat(wasm): add StartSearch export with JamlSearchOptions`](https://github.com/OptimusPi/MotelyJAML/pull/36) implements a subset of the recommendations below.
 
-## TL;DR
+## TL;DR — three contracts, none agree
 
-The JS consumer and the C# host describe two different APIs. The Wasm project currently exports a JAML-validation + file-mount surface (`Version`, `LoadJaml`, `ExplainJaml`, `PickRoot`, `MountRoot`, `UnmountRoot`, `ReadTextFile`, `WriteTextFile`, event `OnFileChanges`). The React app calls a **search / analyzer / enum / progress-event** surface that has no producer. Nothing past `Motely.Version()` can work against the code in `Motely.Wasm/Program.cs`.
+There are **three different Bootsharp surfaces** in play right now, and no two of them line up:
 
-The two repos are also one major version apart on `motely-wasm` (host 17.1.1 vs consumer `^16.0.1`) and there is no CI that builds or publishes the npm package, so the wire that does exist is unreproducible from source.
+| Source | What it claims exists |
+|---|---|
+| `Motely.Wasm/Program.cs` (what actually ships) | `Version`, `LoadJaml`, `ExplainJaml`, `PickRoot`, `MountRoot`, `UnmountRoot`, `ReadTextFile`, `WriteTextFile`, event `OnFileChanges` |
+| `Motely.Wasm/README.md` (what the host's own README documents) | `getHostInfo`, `validateJaml`, `analyzeSeed`, `analyzeJamlSeed`, `analyzeJamlSeeds`, `searchJamlPage` |
+| `jaml-ui/src/hooks/*` (what the consumer calls) | `validateJaml`, `startRandomSearch`, `startAestheticSearch`, `startSeedListSearch`, `startKeywordSearch`, `startSequentialSearch`, `getTallyLabels`, `analyzeJamlSeeds`, `initShop`, `nextShopItem`, and events `notifyResult / notifyProgress / notifyComplete` |
+
+Past `Motely.Version()`, **nothing** the UI calls is wired to anything on the host. The repo's own README disagrees with the repo's own code. The decision is on the host side: pick one contract and make the other two match it.
 
 ---
 
 ## Blockers
 
 ### B1. Consumer calls a search API surface the host never declares
-`jaml-ui/src/hooks/useSearch.ts` references:
+**Cite:** `jaml-ui/src/hooks/useSearch.ts` references `MotelyWasm.validateJaml`, `startRandomSearch`, `startAestheticSearch`, `startSeedListSearch`, `startKeywordSearch`, `startSequentialSearch`, `getTallyLabels`, plus `MotelyWasmEvents.notifyResult / notifyProgress / notifyComplete`.
+**Reality (`Motely.Wasm/Program.cs`):** The only `[Export]` event declared is `OnFileChanges` (Program.cs:19-20). No `MotelyWasm` namespace, no `MotelyWasmEvents` namespace, no `startXxxSearch` methods. Every call past `Version()` throws at runtime.
 
-- `Motely.MotelyWasm.validateJaml`
-- `Motely.MotelyWasm.startRandomSearch`
-- `Motely.MotelyWasm.startAestheticSearch`
-- `Motely.MotelyWasm.startSeedListSearch`
-- `Motely.MotelyWasm.startKeywordSearch`
-- `Motely.MotelyWasm.startSequentialSearch`
-- `Motely.MotelyWasm.getTallyLabels`
-- `Motely.MotelyWasmEvents.notifyResult / notifyProgress / notifyComplete`
-
-**None** of these are `[Export]`ed in `Motely.Wasm/Program.cs`. The only declared event is `OnFileChanges`. Every call will throw at runtime.
+**Constructive next step (already started in PR #36):** Add `[Export] StartSearch(string jaml, JamlSearchOptions? options)` returning `IMotelySearch`. Because `IMotelySearch` is a *class*, Bootsharp proxies it by reference — JS gets `.cancel()`, `.matchingSeeds`, `.isCompleted` live, with no JSON round-trip (see `BOOTSHARP.md § Interop Instances` and `BOOTSHARP.md § Key Rules for MotelyJAML`).
 
 ### B2. Consumer calls analyzer API the host never declares
-`jaml-ui/src/hooks/useAnalyzer.ts` calls `Motely.MotelyWasm.analyzeJamlSeeds(jaml, [seed])`. Not exported. The README describes an intended contract, not the shipped one.
+**Cite:** `jaml-ui/src/hooks/useAnalyzer.ts` calls `(Motely.MotelyWasm as any).analyzeJamlSeeds(jaml, [seed])` (the `as any` cast is the smoking gun — the type system already knows this method doesn't exist).
+**Reality:** Not exported by `Program.cs`. Coincidentally, `Motely.Wasm/README.md`'s "Exported Contract" section *also* lists this method — but the README documents wishes, not the code.
 
 ### B3. Display layer reads enums that aren't emitted
-`jaml-ui/src/motelyDisplay.ts` reads `Motely.MotelyBossBlind`, `MotelyVoucher`, `MotelyTag`, `MotelyBoosterPack`, `MotelyItemType`. The csproj has no `<BootsharpEmit*>` / `<BootsharpInject*>` props to opt these enums into the emitted TS, and no `[Export]` on the enums. At runtime these reads return `undefined` and every display name falls through to placeholders like `boss#N` / `voucher#N`.
+**Cite:** `jaml-ui/src/motelyDisplay.ts` reads `Motely.MotelyBossBlind`, `MotelyVoucher`, `MotelyTag`, `MotelyBoosterPack`, `MotelyItemType` to turn numeric values into display names.
+**Reality:** `Motely.Wasm.csproj` declares no `<BootsharpEmitTypes>` / `<BootsharpInjectTypes>` / equivalent enum-emit opt-in. No `[Export]` on any enum, and they're not transitively referenced through an `[Export]`ed method that takes/returns them.
+**Effect at runtime:** Every read returns `undefined` → fallback labels like `boss#N`, `voucher#N`, `tag#N`, `pack#N`, `item#N` are what users see.
+**Per BOOTSHARP.md:** Enums marshal as numbers with name↔index maps — but only when the enum participates in the emitted boundary. Either add `[Export]` methods that return these enums in their signatures, or thread them through DTOs that already cross the wire.
 
-### B4. Shop stream hook expects methods the host doesn't provide
-`jaml-ui/src/hooks/useShopStream.ts` expects `analyzer.initShop(ante)` / `analyzer.nextShopItem()` streaming methods. Nothing analogous is exported.
+### B4. Shop stream hook expects iterator methods the host doesn't provide
+**Cite:** `jaml-ui/src/hooks/useShopStream.ts` docstring: `"called once to initialize the stream (e.g. analyzer.initShop(ante))"` / `"called to get the next item from the stream (e.g. analyzer.nextShopItem())"`.
+**Reality:** No `analyzer` interop instance exists. Per `BOOTSHARP.md § Interop Instances`, this would naturally be modeled as an `[Export]`ed factory returning an `IShopStream` interop instance — same pattern as `IMotelySearch`. Until then, the hook is shape-only.
 
 ### B5. `Motely.Wasm.csproj` is unbuildable off one developer's machine
-`Motely.Wasm/Motely.Wasm.csproj` hardcodes `<BootsharpExtraRoot>D:\extra\bootsharp</BootsharpExtraRoot>` and ProjectReferences `$(BootsharpExtraRoot)\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj`. No `Bootsharp.FileSystem` NuGet package is referenced. Combined with the `nuget.config` instruction that the Bootsharp alpha feed must be installed at the user level, CI and any second contributor cannot build the WASM project.
+**Cite (`Motely.Wasm/Motely.Wasm.csproj:12`):**
+```xml
+<BootsharpExtraRoot Condition="'$(BootsharpExtraRoot)' == ''">D:\extra\bootsharp</BootsharpExtraRoot>
+```
+**Cite (`Motely.Wasm/Motely.Wasm.csproj:22`):**
+```xml
+<ProjectReference Include="$(BootsharpExtraRoot)\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj" />
+```
+This directly violates the repo's own rule in `AGENTS.md`: **"No private paths in public files. No `D:\…`, `X:\…`, local NuGet feeds, or personal drive layouts in `.csproj` / `.props` / `.config` / package metadata."**
+
+Per `BOOTSHARP.md § File System Extension`, the documented way to consume Bootsharp.FileSystem is:
+```xml
+<PackageReference Include="Bootsharp.FileSystem" Version="*-*"/>
+```
+No `nuget.config` package source is committed pointing at a public Bootsharp.FileSystem feed either (`nuget.config` only declares `nuget.org`), so any second contributor and any CI runner cannot restore. The current state is "works on Pi's D: drive only".
 
 ### B6. No CI publishes the `motely-wasm` npm package
-MotelyJAML has no `.github/workflows/` directory. jaml-ui's only workflow (`pages.yml`) uploads the static `examples/` folder. The `motely-wasm@^16.0.1` package the UI consumes from npm is produced manually, with no pinning back to the MotelyJAML commit that produced it. Drift is invisible.
+There is no `.github/workflows/` directory in MotelyJAML. The only thing pinning the consumer to the producer is jaml-ui's `"motely-wasm": "^16.0.1"` in `package.json` — a floating caret range, manually published, with no commit-of-record. Drift is invisible until runtime.
+
+**Fix shape:** A workflow that runs `dotnet publish Motely.Wasm -c Release`, then `cd motely-wasm && npm publish`, and tags the commit with the published version. Pin jaml-ui to that exact version (no `^`).
 
 ### B7. Unconditional top-level `await bootsharp.boot()` on import with no resource root
-`jaml-ui/src/motelyBoot.ts` calls `await bootsharp.boot();` at module top level with no argument, contradicting the upstream Bootsharp README, which requires `boot("/bin")` (or equivalent) when serving from repo root. The `"use client"` directive on the same file is also incompatible with top-level await in Next.js client components.
+**Cite (`jaml-ui/src/motelyBoot.ts`):**
+```ts
+import bootsharp, { Motely } from "motely-wasm";
+await bootsharp.boot();
+export { Motely };
+```
+The host's own `Motely.Wasm/README.md` says: *"Bootsharp 0.8's browser boot API takes the runtime resource root directly: `await bootsharp.boot("/bin");`"* — required because `Motely.Wasm.csproj` overrides `BootsharpBinariesDirectory` to `..\motely-wasm\bin`, so the default lookup doesn't resolve.
+
+(Correction vs. the prior pass of this audit: `motelyBoot.ts` does **not** carry a `"use client"` directive — the previous report claimed one. The Next.js-incompatibility nit was misplaced. The hooks that consume `Motely` do have `"use client"`, which is correct for them.)
 
 ---
 
 ## Should-fix
 
-- **S1. Version skew.** Host: `MotelyVersion 17.1.1` + Bootsharp `0.8.0-alpha.252`. Consumer: `motely-wasm@^16.0.1`. A full major behind and `^` allows further drift.
-- **S2. `jaml-ui/test-motely.js` is committed and broken-by-design** (mixes CJS `require` with ESM-only `motely-wasm`, references undefined `Bootsharp`, has self-doubting comments). Delete or fix.
-- **S3. Bootsharp alpha pinned with `TreatWarningsAsErrors=true`** (`Directory.Packages.props`). Source-generator diagnostic updates will break the build.
-- **S4. Missing `<BootsharpEmit*>` / `<BootsharpInject*>` props** in `Motely.Wasm.csproj`, yet consumers rely on emitted enums and event hooks. The boundary contract is undefined — either opt in or stop calling them.
-- **S5. `[assembly: Preferences(Space = [".+", "Motely"])]`** in `Program.cs` maps every namespace to the JS `Motely` namespace. Overly broad and collides with any future mapping.
-- **S6. No Release / AOT story exercised.** README claims Release uses NativeAOT-LLVM, but `<RunAOTCompilation>`, `<WasmEnableSIMD>`, `<PublishTrimmed>`, and trim-warning controls are absent. Motely is large and numerics-heavy — trimming without `DynamicDependency` / roots will likely strip filter types at Release.
-- **S7. `MotelyWasmEvents` treated as mutable global handler state** in `useSearch.ts` ("only ONE search can run at a time across all useSearch instances"). If this is meant to be a Bootsharp `[Export] event`, *replacing* the handler instead of subscribing is fragile.
+### S1. Version skew, floating caret
+Host: `<MotelyVersion>17.1.1</MotelyVersion>` + Bootsharp `0.8.0-alpha.252` (`Directory.Packages.props:3,8-10`). Consumer: `motely-wasm@^16.0.1` (`jaml-ui/package.json`). One major behind, `^` allows further drift. Couple this to **B6** — once CI publishes deterministically, pin jaml-ui to exact versions.
+
+### S2. `jaml-ui/test-motely.js` is committed and broken-by-design
+Six lines, all wrong:
+```js
+const { MotelyWasm, Motely } = require('motely-wasm');     // CJS require of ESM-only package
+async function run() {
+    await Bootsharp.import(); // wait, Bootsharp is needed
+}
+const { Bootsharp } = require('motely-wasm');              // shadowed re-require, not exported anyway
+MotelyWasm.createSearchContext("1", 0, 0); // wait this is wrong
+```
+Self-doubting comments included. Delete or rewrite end-to-end.
+
+### S3. Bootsharp alpha pinned with `TreatWarningsAsErrors=true`
+**Cite (`Directory.Packages.props:5`):** `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` combined with **`Bootsharp 0.8.0-alpha.252`** (`Directory.Packages.props:9`). Any source-generator diagnostic update between alphas breaks the build with no path to ignore-and-ship. Either pin tighter (single explicit version), or whitelist Bootsharp generator diagnostics in `WarningsAsErrors`/`NoWarn` until 0.8 GA.
+
+### S4. Missing `<BootsharpEmit*>` / `<BootsharpInject*>` props in `Motely.Wasm.csproj`
+The boundary contract is undefined — consumers depend on enums (B3) and event signatures that nothing in the csproj opts into. Either opt in explicitly (recommended; makes the contract reviewable in PRs) or stop calling them.
+
+### S5. `[assembly: Preferences(Space = [".+", "Motely"])]` is dangerously broad
+**Cite (`Motely.Wasm/Program.cs:9`).** This collapses *every* C# namespace to JS `Motely`. Per `BOOTSHARP.md § Preferences`, the canonical narrow pattern is:
+```csharp
+[assembly: Preferences(Space = [@"^Motely\.Wasm\.Program$", "Motely"])]
+```
+Tightening this prevents accidental name collisions the moment any other namespace (e.g. an analyzer module) starts getting emitted.
+
+### S6. No Release / AOT story exercised
+`Motely.Wasm/README.md` claims Release uses NativeAOT-LLVM, but the csproj has no `<RunAOTCompilation>`, `<WasmEnableSIMD>`, `<PublishTrimmed>`, or trim-warning controls. Motely is large and numerics-heavy; trimming without `DynamicDependency` / roots will strip filter types at Release and Bootsharp's emitter will emit references to types that no longer exist. Validate Release end-to-end before claiming it in docs.
+
+### S7. `MotelyWasmEvents` treated as mutable global handler state
+**Cite (`jaml-ui/src/hooks/useSearch.ts`):** the comment `"only ONE search can run at a time across all useSearch instances because MotelyWasmEvents handlers are shared global state"` and the code that *replaces* handlers via `MotelyWasmEvents.notifyResult = (...) => ...`.
+Per `BOOTSHARP.md § Events`, the correct pattern is:
+```ts
+Program.onSomethingChanged.subscribe(handler);
+Program.onSomethingChanged.unsubscribe(handler);
+```
+Once the host exports events with `[Export] public static event Action<...>`, the consumer must `subscribe` / `unsubscribe` — not overwrite. The current "only one at a time" constraint is a symptom of the wrong pattern, not a real limit.
 
 ---
 
 ## Nits
 
-- N1. `"use client"` on `src/motelyBoot.ts` is meaningless with top-level await (see B7).
-- N2. `Mounter()` resolves `IFileMounter` from DI on every call (`Program.cs`); cache it.
-- N3. `UnmountRoot` removes the FS entry then unmounts via the mounter without awaiting `fs` disposal; leaks per-FS handles the mounter doesn't track.
-- N4. `Version()` reaches into `typeof(MotelyDeck).Assembly` with `!`. If `MotelyDeck` is trimmed under AOT-without-a-root, this NREs.
-- N5. `InvariantGlobalization=true` is fine for the engine, but any culture-sensitive parsing in `JamlConfigLoader` will silently diverge from the CLI host.
-- N6. `motely-wasm` is externalized in `vite.config.ts` with an unpkg importmap comment, but no importmap snippet ships in `examples/` or the README. Consumers following docs have nothing to copy.
+- **N1.** `Mounter() => services.GetRequiredService<IFileMounter>()` (`Program.cs:97`) resolves DI on every call. Cache once into a field at `Main()`.
+- **N2.** `UnmountRoot` (`Program.cs:79-84`) removes the FS entry from `MountedFileSystems` *then* calls `Mounter().Unmount(root)`. If `Unmount` throws, the dictionary is already mutated. Reverse the order or guard.
+- **N3.** `Version()` (`Program.cs:29-33`) uses `typeof(MotelyDeck).Assembly.GetCustomAttribute<...>()!` with null-forgiving `!`. If `MotelyDeck` is trimmed under AOT-without-a-root, this NREs at runtime.
+- **N4.** `<InvariantGlobalization>true</InvariantGlobalization>` (`Motely.Wasm.csproj:11`) is right for the engine, but any culture-sensitive parsing in `JamlConfigLoader` will silently diverge from the CLI host. Spot-check decimal/date paths.
+- **N5.** `jaml-ui/vite.config.ts` externalizes `motely-wasm` with a comment about an unpkg importmap, but no importmap snippet ships in `examples/` or the README. Consumers following the docs have nothing to copy.
+- **N6.** `Motely.Wasm/README.md`'s "Exported Contract" section documents a contract that doesn't ship. Either implement it or delete the section — having it sit there as aspirational copy is what produced this entire mismatch.
 
 ---
 
 ## Key files referenced
 
 **MotelyJAML**
-- `Motely.Wasm/Motely.Wasm.csproj`
-- `Motely.Wasm/Program.cs`
-- `Motely.Wasm/README.md`
-- `Directory.Packages.props`
-- `nuget.config`
+- `Motely.Wasm/Motely.Wasm.csproj` — private path B5; missing emit/AOT props S4/S6
+- `Motely.Wasm/Program.cs` — actual exports; Preferences S5; nits N1-N3
+- `Motely.Wasm/README.md` — documents a third contract; N6
+- `Directory.Packages.props` — version skew S1; alpha + warnings-as-errors S3
+- `nuget.config` — no Bootsharp.FileSystem feed declared; B5
+- `AGENTS.md` — self-cited rules ("No private paths", "No facade wrappers")
+- `BOOTSHARP.md` — compiled Bootsharp reference; cited throughout
 
 **jaml-ui**
-- `package.json`
-- `vite.config.ts`
-- `src/motelyBoot.ts`
-- `src/motelyDisplay.ts`
-- `src/motely.ts`
-- `src/hooks/useSearch.ts`
-- `src/hooks/useAnalyzer.ts`
-- `src/hooks/useShopStream.ts`
-- `test-motely.js`
-- `.github/workflows/pages.yml`
+- `package.json` — `motely-wasm@^16.0.1`; S1
+- `vite.config.ts` — unpkg importmap promise without payload; N5
+- `src/motelyBoot.ts` — top-level `boot()` no arg; B7
+- `src/motelyDisplay.ts` — enum lookups against missing emit; B3
+- `src/hooks/useSearch.ts` — phantom search API + global event mutation; B1, S7
+- `src/hooks/useAnalyzer.ts` — phantom analyzer call (with `as any` escape); B2
+- `src/hooks/useShopStream.ts` — phantom stream methods in docstring; B4
+- `test-motely.js` — broken-by-design; S2
 
 ---
 
-## Recommended next step (not yet executed)
+## Recommended next step
 
-Treat **B1–B4** as one decision: pick whether the C# host grows to match the JS contract, or the JS contract collapses back to what the host actually offers. Whichever direction, **B5 + B6** must land first (reproducible build + a CI job that publishes the npm package and pins jaml-ui to it) or the next round of drift is already loaded.
+Treat **B1–B4 as a single contract decision**, not four bugs. The host has to grow to match the JS contract, *or* the JS has to collapse to the actual `LoadJaml` / `ExplainJaml` / `MountRoot` surface. PR #36 picks the first direction for the search slice (`StartSearch` returning `IMotelySearch` proxy + `OnSeedMatch` / `OnProgress` events) — that's the right shape per `BOOTSHARP.md § Interop Instances`. Extend it to cover the analyzer (B2) and enums (B3) the same way.
+
+**Whichever direction wins, land B5 + B6 first** (drop the `D:\` ProjectReference; replace with a `PackageReference Include="Bootsharp.FileSystem"` from a real feed; add a workflow that publishes `motely-wasm` and pins `jaml-ui`). Otherwise the next iteration of drift is already loaded.
+
+---
+
+*Audit prepared on branch `claude/audit-bootsharp-3mEjQ`. Citations are file-level where line numbers were stable; inline-quoted otherwise. Bootsharp behavior claims are cross-referenced against the in-repo `BOOTSHARP.md` (compiled from upstream `D:\bootsharp\docs\`) and the project home at https://bootsharp.com.*
