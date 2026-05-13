@@ -78,7 +78,7 @@ const NON_LEGENDARY = JOKERS.filter((j) => !LEGENDARY_JOKERS.has(j.name));
 
 export interface JokerPickerProps {
   onSelect: (selection: SlotSelection) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
 }
 
 export function JokerPicker({ onSelect }: JokerPickerProps) {

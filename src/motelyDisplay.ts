@@ -1,5 +1,10 @@
 import { Motely } from "./motelyBoot.js";
 
+type RuntimeEnum = Record<string, string | number>;
+type MotelyRuntimeEnums = typeof Motely & Record<string, RuntimeEnum>;
+
+const MotelyEnums = Motely as MotelyRuntimeEnums;
+
 function runtimeEnumKey(
   enumObject: Record<string, unknown>,
   value: number,
@@ -9,7 +14,7 @@ function runtimeEnumKey(
 }
 
 export function motelyBossDisplayName(value: number): string {
-  const key = runtimeEnumKey(Motely.MotelyBossBlind as Record<string, unknown>, value & 0xff);
+  const key = runtimeEnumKey(MotelyEnums.MotelyBossBlind, value & 0xff);
   return key ?? `boss#${value}`;
 }
 
@@ -18,7 +23,7 @@ export function motelyBossDisplayNameFromKey(key: string): string {
 }
 
 export function motelyVoucherDisplayName(value: number): string {
-  const key = runtimeEnumKey(Motely.MotelyVoucher as Record<string, unknown>, value);
+  const key = runtimeEnumKey(MotelyEnums.MotelyVoucher, value);
   return key ?? `voucher#${value}`;
 }
 
@@ -27,7 +32,7 @@ export function motelyVoucherDisplayNameFromKey(key: string): string {
 }
 
 export function motelyTagDisplayName(value: number): string {
-  const key = runtimeEnumKey(Motely.MotelyTag as Record<string, unknown>, value);
+  const key = runtimeEnumKey(MotelyEnums.MotelyTag, value);
   return key ?? `tag#${value}`;
 }
 
@@ -36,7 +41,7 @@ export function motelyTagDisplayNameFromKey(key: string): string {
 }
 
 export function motelyBoosterPackDisplayName(value: number): string {
-  const key = runtimeEnumKey(Motely.MotelyBoosterPack as Record<string, unknown>, value);
+  const key = runtimeEnumKey(MotelyEnums.MotelyBoosterPack, value);
   return key ?? `pack#${value}`;
 }
 
@@ -49,6 +54,6 @@ export function motelyItemDisplayNameFromKey(key: string): string {
 }
 
 export function motelyItemDisplayNameFromValue(value: number): string {
-  const key = runtimeEnumKey(Motely.MotelyItemType as Record<string, unknown>, value & 0xffff);
+  const key = runtimeEnumKey(MotelyEnums.MotelyItemType, value & 0xffff);
   return key ?? `item#${value}`;
 }

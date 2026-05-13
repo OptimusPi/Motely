@@ -30,6 +30,7 @@ export interface CategoryPickerConfig {
 export interface CategoryPickerProps {
   config: CategoryPickerConfig;
   onSelect: (selection: SlotSelection) => void;
+  onCancel?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ npm install jaml-ui react react-dom
 ## Package exports
 
 | Entry | Contents |
-|-------|----------|
+| ----- | -------- |
 | `jaml-ui` | Game card components, JAML IDE, Analyzer Explorer, hooks |
 | `jaml-ui/ui` | Jimbo design system — JimboPanel, JimboButton, JimboModal, tokens |
 | `jaml-ui/core` | Pure asset helpers, sprite metadata, decode utilities (no React) |
@@ -115,18 +115,33 @@ const nextConfig = { transpilePackages: ["jaml-ui"] };
 
 ## Search Worker Architecture
 
-The library provides `useAnalyzer` to interact with `motely-wasm`'s search context natively.
-Ensure `motely-wasm` is imported and booted at the module level in your application:
+The library provides `useSearch` and `useAnalyzer` helpers that use `motely-wasm`'s Bootsharp-generated ES module directly.
+Importing `jaml-ui/motely` boots `motely-wasm` once at module scope. Search results stay the plain Balatro seed shape: `seed`, `score`, and optional tally columns.
 
 ```tsx
-import { boot } from "motely-wasm";
-boot(); // Call early in your application lifecycle
+import { useSearch, useJamlLibrary } from "jaml-ui/motely";
+
+const search = useSearch();
+search.start(jaml, 10_000);
+
+// result: { seed: string, score: number, tallyColumns?: number[] }
+```
+
+`useJamlLibrary` wires Bootsharp.FileSystem when `@rewaffle/bootsharp-file-system` is available, letting browser users pick a local JAML folder and read/write files through Motely's generated WASM API:
+
+```tsx
+const library = useJamlLibrary();
+await library.mount();
+
+const source = await library.loadFile(library.files[0]);
+await library.saveFile("filters/example.jaml", source);
 ```
 
 ## Peer dependencies
 
 | Peer | Required for |
-|------|-------------|
+| ---- | ------------ |
 | `react`, `react-dom` | All components |
-| `motely-wasm ^14.3.3` | `jaml-ui/motely`, `AnalyzerExplorer`, `useAnalyzer` data |
+| `motely-wasm ^16.0.1` | `jaml-ui/motely`, `AnalyzerExplorer`, `useSearch`, `useAnalyzer`, `useJamlLibrary` data |
+| `@rewaffle/bootsharp-file-system` | Optional JAML library folder mount support |
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-spring/three` | `jaml-ui/r3f` only |

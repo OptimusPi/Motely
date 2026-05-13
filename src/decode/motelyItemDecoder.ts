@@ -1,15 +1,16 @@
 import { Motely } from "../motelyBoot.js";
 
-// motely-wasm exports MotelyItemTypeCategory at runtime but its .d.ts hasn't
-// caught up — cast unblocks the type check until motely-wasm regenerates types.
-const M = Motely as unknown as Record<string, Record<string, number>>;
+type RuntimeEnum = Record<string, string | number>;
+type MotelyRuntimeEnums = typeof Motely & Record<string, RuntimeEnum>;
+
+const MotelyEnums = Motely as MotelyRuntimeEnums;
 
 const CATEGORY_MAP: Record<number, MotelyRenderableCategory> = {
-  [M.MotelyItemTypeCategory.Standardcard]: "playing",
-  [M.MotelyItemTypeCategory.SpectralCard]: "spectral",
-  [M.MotelyItemTypeCategory.TarotCard]: "tarot",
-  [M.MotelyItemTypeCategory.PlanetCard]: "planet",
-  [M.MotelyItemTypeCategory.Joker]: "joker",
+  [MotelyEnums.MotelyItemTypeCategory.Standardcard as number]: "playing",
+  [MotelyEnums.MotelyItemTypeCategory.SpectralCard as number]: "spectral",
+  [MotelyEnums.MotelyItemTypeCategory.TarotCard as number]: "tarot",
+  [MotelyEnums.MotelyItemTypeCategory.PlanetCard as number]: "planet",
+  [MotelyEnums.MotelyItemTypeCategory.Joker as number]: "joker",
 };
 
 export type CardCategory = "joker" | "consumable" | "playing" | "spectral" | "tarot" | "planet";
@@ -75,7 +76,7 @@ export function resolveMotelyItemType(input: MotelyItemInput): number | null {
 export function motelyItemTypeName(input: MotelyItemInput): string {
   const itemType = resolveMotelyItemType(input);
   if (itemType === null) return "Unknown";
-  return enumKey(Motely.MotelyItemType as Record<string, unknown>, itemType) ?? `item#${itemType}`;
+  return enumKey(MotelyEnums.MotelyItemType, itemType) ?? `item#${itemType}`;
 }
 
 export function motelyItemCategory(itemType: number): MotelyRenderableCategory {
@@ -97,7 +98,7 @@ export function motelyItemEditionName(input: MotelyItemInput): "Foil" | "Hologra
   if (input == null) return null;
   const val = typeof input === "number" ? input : input.edition;
   if (val == null) return null;
-  const key = enumKey(Motely.MotelyItemEdition as Record<string, unknown>, val);
+  const key = enumKey(MotelyEnums.MotelyItemEdition, val);
   if (!key || key === "None") return null;
   return key as "Foil" | "Holographic" | "Polychrome" | "Negative";
 }
@@ -106,7 +107,7 @@ export function motelyItemSealName(input: MotelyItemInput): "Gold" | "Red" | "Bl
   if (input == null) return null;
   const val = typeof input === "number" ? null : input.seal;
   if (val == null) return null;
-  const key = enumKey(Motely.MotelyItemSeal as Record<string, unknown>, val);
+  const key = enumKey(MotelyEnums.MotelyItemSeal, val);
   if (!key || key === "None") return null;
   return key as "Gold" | "Red" | "Blue" | "Purple";
 }
@@ -115,7 +116,7 @@ export function motelyItemEnhancementName(input: MotelyItemInput): string | null
   if (input == null) return null;
   const val = typeof input === "number" ? null : input.enhancement;
   if (val == null) return null;
-  const key = enumKey(Motely.MotelyItemEnhancement as Record<string, unknown>, val);
+  const key = enumKey(MotelyEnums.MotelyItemEnhancement, val);
   if (!key || key === "None") return null;
   return key;
 }
@@ -124,14 +125,14 @@ export function motelyStandardcardRankName(input: MotelyItemInput): string | nul
   if (input == null) return null;
   const val = typeof input === "number" ? null : input.rank;
   if (val == null) return null;
-  return enumKey(Motely.MotelyStandardcardRank as Record<string, unknown>, val);
+  return enumKey(MotelyEnums.MotelyStandardcardRank, val);
 }
 
 export function motelyStandardcardSuitName(input: MotelyItemInput): "Clubs" | "Diamonds" | "Hearts" | "Spades" | null {
   if (input == null) return null;
   const val = typeof input === "number" ? null : input.suit;
   if (val == null) return null;
-  return enumKey(Motely.MotelyStandardcardSuit as Record<string, unknown>, val) as "Clubs" | "Diamonds" | "Hearts" | "Spades" | null;
+  return enumKey(MotelyEnums.MotelyStandardcardSuit, val) as "Clubs" | "Diamonds" | "Hearts" | "Spades" | null;
 }
 
 export function decodeMotelyItemName(input: MotelyItemInput): string {
@@ -142,7 +143,7 @@ export function decodeMotelyItem(input: MotelyItemInput): DecodedMotelyItem | nu
   const itemType = resolveMotelyItemType(input);
   if (itemType === null) return null;
 
-  const enumKeyStr = enumKey(Motely.MotelyItemType as Record<string, unknown>, itemType) ?? `Unknown_${itemType}`;
+  const enumKeyStr = enumKey(MotelyEnums.MotelyItemType, itemType) ?? `Unknown_${itemType}`;
   const category = motelyItemCategory(itemType);
   const displayName = spaceSplit(enumKeyStr);
 
