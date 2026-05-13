@@ -54,5 +54,3 @@ The generated `Motely` namespace currently exposes:
 - `readTextFile(root, uri)` → `Promise<string>`
 - `writeTextFile(root, uri, text)` → `Promise<void>`
 - `onFileChanges` — event of `Change[]`
-
-Search and seed analysis are not yet exported. `analyzeSeed`, `analyzeJamlSeed`, `analyzeJamlSeeds`, and `searchJamlPage` are planned; track them in `Motely.Wasm/Program.cs` before relying on them.
