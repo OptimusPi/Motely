@@ -55,6 +55,7 @@
     "prepack": "npm run build",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
+    "serve:storybook": "npx --yes serve storybook-static -l 3141 --cors",
     "lint": "eslint ."
   },
   "engines": {
@@ -135,7 +136,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-    "motely-wasm": "^16.0.1",
     "playwright": "^1.59.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -161,11 +161,8 @@
     "clsx": "^2.1.1",
     "js-yaml": "^4.1.1",
     "lucide-react": "^1.14.0",
-    "motely-wasm": "^17.2.0",
+    "motely-wasm": "^17.3.0",
     "tailwind-merge": "^2.6.1",
     "zustand": "^5.0.13"
-  },
-  "optionalDependencies": {
-    "@rewaffle/bootsharp-file-system": "latest"
   }
 }
