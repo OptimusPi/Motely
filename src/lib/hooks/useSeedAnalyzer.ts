@@ -1,53 +1,53 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Motely } from "motely-wasm";
+import { type Motely as MotelyNamespace } from "motely-wasm";
+import type { MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
 
-export function useSeedAnalyzer(motely: typeof Motely | null, seed: string | null) {
-  const [data, setData] = useState<Motely.Analysis.SeedAnalysisDto | null | undefined>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [prevInputs, setPrevInputs] = useState({ seed, motely });
+type MotelyApi = typeof MotelyNamespace;
 
-  if (seed !== prevInputs.seed || motely !== prevInputs.motely) {
-    setPrevInputs({ seed, motely });
-    if (!seed || seed === "LOCKED" || !motely) {
-      setData(null);
-    }
-  }
+export function useSeedAnalyzer(motely: MotelyApi | null, seed: string | null, jaml?: string) {
+    const [data, setData] = useState<MotelyJamlyzerSeedResult | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!seed || seed === "LOCKED" || !motely) {
-      return;
-    }
-
-    const abortController = new AbortController();
-    const runAnalysis = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const jaml = `version: 1\nconfig:\n  deck: Erratic\n  stake: White\n`;
-        const rawResult = motely.MotelyWasm.analyzeJamlSeeds(jaml, [seed]);
-        if (abortController.signal.aborted) return;
-
-        if (rawResult && rawResult.seeds.length > 0) {
-          const result = rawResult.seeds[0];
-          setData(result.analysis || null);
-        } else {
-          throw new Error("No analysis result returned");
+    useEffect(() => {
+        if (!seed || seed === "LOCKED" || !motely) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing async-derived data when inputs invalidate
+            setData(null);
+            return;
         }
-      } catch (err) {
-        if (abortController.signal.aborted) return;
-        console.error("[useSeedAnalyzer] Analysis error:", err);
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (!abortController.signal.aborted) setLoading(false);
-      }
-    };
 
-    runAnalysis();
-    return () => abortController.abort();
-  }, [motely, seed]);
+        const abortController = new AbortController();
 
-  return { data, loading, error };
+        (async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const config = jaml ?? `version: 1\nconfig:\n  deck: Erratic\n  stake: White\n`;
+                const validation = motely.validateJaml(config);
+                if (abortController.signal.aborted) return;
+                if (validation !== "valid") {
+                    throw new Error(validation || "Invalid JAML.");
+                }
+
+                const result = motely.analyzeJamlSeeds(config, [seed]);
+                if (abortController.signal.aborted) return;
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                setData(result.seeds[0] ?? null);
+            } catch (err) {
+                if (abortController.signal.aborted) return;
+                console.error("[useSeedAnalyzer] Analysis error:", err);
+                setError(err instanceof Error ? err.message : String(err));
+            } finally {
+                if (!abortController.signal.aborted) setLoading(false);
+            }
+        })();
+
+        return () => abortController.abort();
+    }, [motely, seed, jaml]);
+
+    return { data, loading, error };
 }

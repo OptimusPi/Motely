@@ -35,7 +35,7 @@ export function Jamlyzer({ jaml, onTest, result, error }: JamlyzerProps) {
             maxLength={12}
             onChange={(e) => setSeed(e.target.value.toUpperCase())}
             onKeyDown={(e) => e.key === "Enter" && handleTest()}
-            style={{ flex: 1, fontSize: 15, padding: "6px 10px", letterSpacing: "0.1em", textTransform: "uppercase" }}
+            style={{ flex: 1, fontSize: 15, padding: "6px 10px", letterSpacing: "0.1em" }}
           />
           <JimboButton
             tone={result === "running" ? "red" : "orange"}

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
 import { JamlIde } from './JamlIde';
+import { Motely, ensureMotelyReady } from '../motelyBoot';
 
 const SAMPLE_JAML = `must:
   - joker: Wee Joker
@@ -62,7 +63,10 @@ export const Jamlyzer: Story = {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const [jaml, setJaml] = useState(SAMPLE_JAML);
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [result, setResult] = useState<'idle' | 'match' | 'nomatch'>('idle');
+    const [result, setResult] = useState<'idle' | 'match' | 'nomatch' | 'running' | 'error'>('idle');
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [jamlyzerError, setJamlyzerError] = useState<string | null>(null);
+
     return (
       <JamlIde
         style={{ flex: 1, minHeight: 0 }}
@@ -70,10 +74,33 @@ export const Jamlyzer: Story = {
         onChange={setJaml}
         defaultMode="jamlyzer"
         onTestSeed={(seed) => {
-          setResult('running' as never);
-          setTimeout(() => setResult(seed.startsWith('A') ? 'match' : 'nomatch'), 600);
+          setResult('running');
+          setJamlyzerError(null);
+          void (async () => {
+            try {
+              await ensureMotelyReady();
+              const validation = Motely.validateJaml(jaml);
+              if (validation !== 'valid') {
+                throw new Error(String(validation ?? 'Invalid JAML'));
+              }
+              const data = Motely.analyzeJamlSeeds(jaml, [seed]);
+              if (data.error) {
+                throw new Error(data.error);
+              }
+              const sr = data.seeds[0];
+              if (!sr) {
+                setResult('nomatch');
+                return;
+              }
+              setResult((sr.score ?? 0) >= 1 ? 'match' : 'nomatch');
+            } catch (e) {
+              setJamlyzerError(e instanceof Error ? e.message : String(e));
+              setResult('error');
+            }
+          })();
         }}
         jamlyzerResult={result}
+        jamlyzerError={jamlyzerError}
       />
     );
   },

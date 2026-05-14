@@ -3,8 +3,13 @@
 export {
   Motely,
   MotelyFileSystem,
+  ensureMotelyReady,
+  getMotelyRuntimeSnapshot,
   isMotelyFileSystemReady,
   motelyFileSystemInitError,
+  subscribeMotelyRuntime,
+  type MotelyRuntimeSnapshot,
+  type MotelyRuntimeStatus,
 } from "./motelyBoot.js";
 
 export {
@@ -54,3 +59,8 @@ export {
   type JamlLibraryStatus,
   type UseJamlLibraryState,
 } from "./hooks/useJamlLibrary.js";
+export {
+  useMotelyRuntime,
+  useMotelyRuntimeOwner,
+  type UseMotelyRuntimeState,
+} from "./hooks/useMotelyRuntime.js";

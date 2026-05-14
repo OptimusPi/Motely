@@ -588,7 +588,7 @@ function JamlLine({
     }
     if ((line.key === 'must' || line.key === 'should' || line.key === 'mustNot') && !line.value) {
         const color = line.key === 'must' ? COLORS.red : COLORS.blue;
-        return <div className="jaml-clause-header pl-8 py-1 text-[16px] border-b border-white/10 mt-4 mb-2 uppercase tracking-widest" {...{ style: { '--jaml-color': color } as React.CSSProperties }}>{line.raw}</div>
+        return <div className="jaml-clause-header pl-8 py-1 text-[16px] border-b border-white/10 mt-4 mb-2 tracking-widest" {...{ style: { '--jaml-color': color } as React.CSSProperties }}>{line.raw}</div>
     }
 
     const indentSpaces = ' '.repeat(line.indent);

@@ -207,7 +207,6 @@ export function MysterySlot({
               fontSize: 10,
               color: borderColor,
               whiteSpace: "nowrap",
-              textTransform: "uppercase",
               letterSpacing: 1,
             }}
           >

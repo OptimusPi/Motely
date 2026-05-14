@@ -63,7 +63,7 @@ export function MotelyVersionBadge({
 
   return (
     <div className={`j-motely-badge j-motely-badge--chip ${className}`} style={style}>
-      <JimboText size="xs" tone="gold" uppercase>motely v{resolved}</JimboText>
+      <JimboText size="xs" tone="gold">motely v{resolved}</JimboText>
       {simd ? <JimboText size="xs" tone="blue" title="SIMD enabled">⚡</JimboText> : null}
       {threads ? <JimboText size="xs" tone="green" title="Multi-threaded">🧵</JimboText> : null}
     </div>

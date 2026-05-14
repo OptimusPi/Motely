@@ -29,7 +29,7 @@ export function JimboBalatroFooter({ className = '' }: JimboBalatroFooterProps) 
               rel="noopener noreferrer"
               className="j-footer__link"
           >
-              BUY BALATRO
+              Buy Balatro
           </a>
           <span>{' '}• Created with{' '}</span>
           <span className="j-footer__suits">

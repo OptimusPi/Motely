@@ -142,7 +142,7 @@ export function useBalatroBackground() {
       const float CONTRAST = 4.5;
       const float LIGTHING = 0.5;
       const float SPIN_AMOUNT = 0.35;
-      const float PIXEL_FILTER = 1024.0;
+      const float PIXEL_FILTER = 740.0 * 0.33;
       const float PI = 3.14159265359;
 
       void main() {

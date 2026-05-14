@@ -23,12 +23,10 @@ export interface JimboTextProps extends React.HTMLAttributes<HTMLElement> {
   size?: JimboTextSize
   /** Canonical Balatro drop shadow (1px right, 1px down, ${BLACK}cc). Default true. */
   shadow?: boolean
-  /** Uppercase + spacing — Balatro button/pill label treatment. Default false. */
-  uppercase?: boolean
-  /** Wiggle effect for text characters. Default false. */
-  dance?: boolean
-  /** Letter-spacing override; defaults depend on uppercase prop. */
+  /** Letter-spacing override */
   letterSpacing?: number | string
+  /** Whether to animate letters with a dancing effect */
+  dance?: boolean
   as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label'
   children?: React.ReactNode
 }
@@ -47,7 +45,6 @@ export function JimboText({
   tone = 'default',
   size = 'md',
   shadow = true,
-  uppercase = false,
   dance = false,
   letterSpacing,
   as: Tag = 'span',
@@ -59,14 +56,11 @@ export function JimboText({
   const sizeClass = `j-text--${size}`
   const toneClass = `j-text--${tone}`
   const shadowClass = shadow ? '' : 'j-text--no-shadow'
-  const upperClass = uppercase ? 'j-text--upper' : ''
   const danceClass = dance ? 'j-text--dance-container' : ''
 
   const inlineStyle: React.CSSProperties = {}
   if (letterSpacing != null) {
     inlineStyle.letterSpacing = letterSpacing
-  } else if (uppercase && letterSpacing == null) {
-    inlineStyle.letterSpacing = 2
   }
   if (style) Object.assign(inlineStyle, style)
 
@@ -85,7 +79,7 @@ export function JimboText({
 
   return (
     <Tag
-      className={`j-text ${sizeClass} ${toneClass} ${shadowClass} ${upperClass} ${danceClass} ${className}`.trim()}
+      className={`j-text ${sizeClass} ${toneClass} ${shadowClass} ${danceClass} ${className}`.trim()}
       style={Object.keys(inlineStyle).length > 0 ? inlineStyle : undefined}
       {...rest}
     >

@@ -1,39 +1,20 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import motely, { Motely } from 'motely-wasm';
+import React, { useMemo } from 'react';
+import { Motely, getMotelyRuntimeSnapshot } from '../../motelyBoot.js';
 import { Cpu, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export function WasmStatus() {
-    const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-    const [version, setVersion] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const snapshot = getMotelyRuntimeSnapshot();
+    const status = snapshot.status;
 
-    useEffect(() => {
-        let cancelled = false;
-        const load = async () => {
-            setStatus('loading');
-            try {
-                await motely.boot();
-                if (cancelled) return;
-                setVersion(Motely.MotelyWasm.getVersion());
-                setStatus('ready');
-            } catch (err: unknown) {
-                console.error("WASM Status Error:", err);
-                if (cancelled) return;
-                setStatus('error');
-                setError(err instanceof Error ? err.message : String(err));
-            }
-        };
-        load();
+    const displayVersion = useMemo(
+        () => (status === 'ready' ? Motely.version() : null),
+        [status],
+    );
 
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    const displayVersion = version;
+    const error = snapshot.error ? String(snapshot.error) : null;
 
     return (
         <div className={cn(
@@ -48,8 +29,8 @@ export function WasmStatus() {
                         <Cpu size={16} />}
 
             <div className="flex flex-col">
-                <span className="text-[12px] uppercase tracking-widest leading-tight">
-                    WASM: {status.toUpperCase()}
+                <span className="text-[12px] tracking-widest leading-tight">
+                    Wasm: {status}
                 </span>
                 {displayVersion && (
                     <span className="text-[11px] opacity-70 leading-tight">

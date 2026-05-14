@@ -126,12 +126,12 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
             border: `1px solid ${JimboColorOption.WHITE}0d`,
             borderRadius: 8,
           }}>
-            <JimboText size="xs" uppercase tone="grey">Deck Empty</JimboText>
+            <JimboText size="xs" tone="grey">Deck Empty</JimboText>
           </div>
         )}
       </div>
 
-      {label && showLabel ? <JimboText size="xs" uppercase tone="grey">{label}</JimboText> : null}
+      {label && showLabel ? <JimboText size="xs" tone="grey">{label}</JimboText> : null}
     </div>
   )
 }

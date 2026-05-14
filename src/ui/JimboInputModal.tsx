@@ -76,7 +76,7 @@ export function JimboInputModal({
         </JimboText>
       )}
       <input
-        aria-invalid={error ? "true" : "false"}
+        aria-invalid={!!error}
         onChange={(e) => {
           setValue(e.target.value);
           if (error) {
