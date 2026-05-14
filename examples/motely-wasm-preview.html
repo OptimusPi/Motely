@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>motely-wasm preview</title>
+<style>
+:root {
+    color-scheme: dark;
+    --bg: #0b0d12;
+    --panel: #131722;
+    --edge: #1f2533;
+    --ink: #e6e8ee;
+    --ink-dim: #8e95a6;
+    --gold: #f0c674;
+    --green: #8ec07c;
+    --blue: #83a598;
+    --red: #fb4934;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.45;
+    min-height: 100dvh;
+}
+body {
+    max-width: 375px;
+    margin: 0 auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+h1 { font-size: 16px; font-weight: 500; letter-spacing: 0.02em; }
+.sub { color: var(--ink-dim); font-size: 11px; }
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+label {
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+}
+textarea, select, input {
+    width: 100%;
+    background: #0a0c11;
+    color: var(--ink);
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.5;
+}
+textarea { min-height: 180px; resize: vertical; white-space: pre; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { flex: 1; }
+button {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: border-color 120ms, background 120ms;
+    min-height: 44px;
+}
+button:hover:not(:disabled) { border-color: var(--gold); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--gold); color: #0a0c11; border-color: var(--gold); }
+button.danger { color: var(--red); border-color: #3a1c1c; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 12px; }
+.kv .k { color: var(--ink-dim); }
+.kv .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-dim); }
+.dot.booting { background: var(--blue); animation: pulse 1s ease-in-out infinite; }
+.dot.ready { background: var(--green); }
+.dot.error { background: var(--red); }
+.dot.running { background: var(--gold); animation: pulse 0.8s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.results {
+    max-height: 240px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    scrollbar-width: none;
+}
+.results::-webkit-scrollbar { display: none; }
+.result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: #0a0c11;
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    font-size: 12px;
+    scroll-snap-align: start;
+}
+.result .seed { font-weight: 500; color: var(--green); letter-spacing: 0.05em; }
+.result .score { color: var(--gold); font-variant-numeric: tabular-nums; }
+.err { color: var(--red); font-size: 11px; padding: 8px; background: #1a0e0e; border: 1px solid #3a1c1c; border-radius: 6px; }
+.log { font-size: 10px; color: var(--ink-dim); max-height: 80px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>motely-wasm preview</h1>
+    <div class="sub">single-file CDN demo · 17.3.0 · single-threaded WASM</div>
+</header>
+
+<section class="panel">
+    <div class="row" style="justify-content: space-between;">
+        <div class="status">
+            <div class="dot" id="status-dot"></div>
+            <span id="status-text">standby</span>
+        </div>
+        <div class="sub" id="version-text"></div>
+    </div>
+    <div class="err" id="boot-error" hidden></div>
+</section>
+
+<section class="panel">
+    <label for="jaml">JAML filter</label>
+    <textarea id="jaml" spellcheck="false">name: random sample
+deck: Red
+stake: White
+must:
+  - rareJoker: Blueprint
+    antes: [1, 2, 3, 4]
+should:
+  - rareJoker: Brainstorm
+    antes: [1, 2, 3, 4]
+    score: 50
+</textarea>
+    <div class="row">
+        <label for="mode" style="flex: 0 0 auto;">mode</label>
+        <select id="mode">
+            <option value="random">random (10k)</option>
+            <option value="aesthetic-palindrome">aesthetic · palindrome</option>
+            <option value="aesthetic-psychosis">aesthetic · psychosis</option>
+            <option value="aesthetic-balatro">aesthetic · balatro</option>
+        </select>
+    </div>
+    <div class="row">
+        <button id="start" disabled>start search</button>
+        <button id="stop" class="danger" disabled>stop</button>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="kv">
+        <span class="k">searched</span>      <span class="v" id="searched">0</span>
+        <span class="k">matching</span>      <span class="v" id="matching">0</span>
+        <span class="k">seeds/sec</span>     <span class="v" id="rate">0</span>
+        <span class="k">elapsed</span>       <span class="v" id="elapsed">0 ms</span>
+        <span class="k">% complete</span>    <span class="v" id="percent">0</span>
+    </div>
+    <div class="err" id="search-error" hidden></div>
+</section>
+
+<section class="panel">
+    <div class="row" style="justify-content: space-between;">
+        <label>results</label>
+        <span class="sub" id="result-count">0</span>
+    </div>
+    <div class="results" id="results"></div>
+</section>
+
+<section class="panel">
+    <label>log</label>
+    <div class="log" id="log"></div>
+</section>
+
+<script type="module">
+const CDN = "/node_modules/motely-wasm";
+
+const $ = (id) => document.getElementById(id);
+const statusDot  = $("status-dot");
+const statusText = $("status-text");
+const versionEl  = $("version-text");
+const bootErrEl  = $("boot-error");
+const startBtn   = $("start");
+const stopBtn    = $("stop");
+const jamlEl     = $("jaml");
+const modeEl     = $("mode");
+const resultsEl  = $("results");
+const resultCnt  = $("result-count");
+const searchErr  = $("search-error");
+const logEl      = $("log");
+
+function setStatus(kind, text) {
+    statusDot.className = `dot ${kind}`;
+    statusText.textContent = text;
+}
+function log(msg) {
+    const line = document.createElement("div");
+    line.textContent = `[${new Date().toLocaleTimeString([], { hour12: false })}] ${msg}`;
+    logEl.prepend(line);
+    while (logEl.childElementCount > 30) logEl.lastChild.remove();
+}
+
+let Motely, bootsharp;
+let currentSearch = null;
+let unsubs = [];
+let startedAt = 0;
+
+setStatus("booting", "loading module");
+log(`importing ${CDN}/index.mjs`);
+
+try {
+    const mod = await import(`${CDN}/index.mjs`);
+    bootsharp = mod.default;
+    Motely = mod.Motely;
+    log("import ok, booting runtime");
+    setStatus("booting", "booting runtime");
+    await bootsharp.boot(`${CDN}/bin`);
+    setStatus("ready", "ready");
+    versionEl.textContent = `v${Motely.version()}`;
+    log(`booted, motely v${Motely.version()}`);
+    startBtn.disabled = false;
+} catch (err) {
+    setStatus("error", "boot failed");
+    bootErrEl.hidden = false;
+    bootErrEl.textContent = String(err?.message ?? err);
+    log(`boot error: ${err?.message ?? err}`);
+}
+
+function detach() {
+    for (const off of unsubs) off();
+    unsubs = [];
+}
+
+function attach() {
+    detach();
+
+    const onResult = (result) => {
+        const row = document.createElement("div");
+        row.className = "result";
+        row.innerHTML = `<span class="seed">${result.seed}</span><span class="score">${result.score.toLocaleString()}</span>`;
+        resultsEl.prepend(row);
+        while (resultsEl.childElementCount > 50) resultsEl.lastChild.remove();
+        resultCnt.textContent = resultsEl.childElementCount;
+    };
+    Motely.onScoredResult.subscribe(onResult);
+    unsubs.push(() => Motely.onScoredResult.unsubscribe(onResult));
+
+    const onProgress = (progress) => {
+        $("searched").textContent = Number(progress.seedsSearched).toLocaleString();
+        $("matching").textContent = Number(progress.matchingSeeds).toLocaleString();
+        const ms = Number(progress.elapsedMilliseconds);
+        $("elapsed").textContent  = `${ms.toLocaleString()} ms`;
+        $("percent").textContent  = progress.percentComplete.toFixed(2);
+        const elapsedSec = ms / 1000;
+        const rate = elapsedSec > 0 ? Number(progress.seedsSearched) / elapsedSec : 0;
+        $("rate").textContent = Math.round(rate).toLocaleString();
+    };
+    Motely.onProgress.subscribe(onProgress);
+    unsubs.push(() => Motely.onProgress.unsubscribe(onProgress));
+}
+
+function buildSettings(jaml, mode) {
+    const settings = Motely.createSearch(jaml).withThreadCount(1);
+    if (mode === "random") return settings.withRandomSearch(10_000);
+    if (mode === "aesthetic-palindrome") return settings.withAestheticSearch(0);
+    if (mode === "aesthetic-psychosis")  return settings.withAestheticSearch(1);
+    if (mode === "aesthetic-balatro")    return settings.withAestheticSearch(5);
+    return settings.withRandomSearch(10_000);
+}
+
+startBtn.onclick = async () => {
+    searchErr.hidden = true;
+    resultsEl.innerHTML = "";
+    resultCnt.textContent = "0";
+    $("searched").textContent = "0";
+    $("matching").textContent = "0";
+    $("rate").textContent     = "0";
+    $("elapsed").textContent  = "0 ms";
+    $("percent").textContent  = "0";
+
+    const jaml = jamlEl.value;
+    const validation = Motely.validateJaml(jaml);
+    if (validation !== "valid") {
+        searchErr.hidden = false;
+        searchErr.textContent = `jaml: ${validation}`;
+        log(`validate failed: ${validation}`);
+        return;
+    }
+
+    setStatus("running", "searching");
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    startedAt = Date.now();
+
+    try {
+        attach();
+        currentSearch = buildSettings(jaml, modeEl.value).start(undefined);
+        log(`search started · mode=${modeEl.value}`);
+        await currentSearch.waitForCompletionAsync(undefined);
+        const final = currentSearch.isCompleted ? "completed" : "cancelled";
+        setStatus("ready", final);
+        log(`${final} · matched ${Number(currentSearch.matchingSeeds)} of ${Number(currentSearch.totalSeedsSearched)} in ${Date.now() - startedAt}ms`);
+    } catch (err) {
+        searchErr.hidden = false;
+        searchErr.textContent = String(err?.message ?? err);
+        setStatus("error", "search failed");
+        log(`error: ${err?.message ?? err}`);
+    } finally {
+        detach();
+        currentSearch = null;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+    }
+};
+
+stopBtn.onclick = () => {
+    if (!currentSearch) return;
+    currentSearch.cancel();
+    log("cancel requested");
+};
+</script>
+
+</body>
+</html>
