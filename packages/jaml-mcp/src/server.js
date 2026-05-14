@@ -11,6 +11,7 @@
 //   jaml_examples   curated example JAML filters
 //   validate_jaml   parse a JAML document with the real engine; report errors
 //   explain_jaml    describe what a JAML document evaluates to
+//   open_jaml_ide   open the jaml-ui JAML IDE as an in-conversation MCP app
 // Prompt:
 //   nl_to_jaml      the same priming as the tool, surfaced as an MCP prompt
 //
@@ -22,13 +23,24 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import express from "express";
 import { z } from "zod";
 
 import { loadSchema, buildGuide, buildPrimer, getSections, CURATED_EXAMPLES } from "./guide.js";
 import { validateJaml, explainJaml } from "./engine.js";
+import {
+  buildIdeApp,
+  STARTER_JAML,
+  IDE_RESOURCE_URI,
+  IDE_CSP_RESOURCE_DOMAINS,
+} from "./app.js";
 
 const PKG_VERSION = "0.1.0";
+
+// The JAML IDE app is a single static HTML document — built once, served as
+// the ui:// resource on every open_jaml_ide call.
+const IDE_APP_HTML = buildIdeApp();
 
 const { schema, path: schemaPath } = loadSchema();
 const GUIDE = buildGuide(schema);
@@ -179,6 +191,70 @@ function createServer() {
         return textResult(`explain_jaml failed to run the engine: ${err?.message ?? err}`, true);
       }
     },
+  );
+
+  // MCP App (SEP-1865): the tool links to a ui:// resource via _meta.ui, and
+  // its result's structuredContent is forwarded to the iframe as the seed.
+  registerAppTool(
+    server,
+    "open_jaml_ide",
+    {
+      title: "Open the JAML IDE",
+      description:
+        "Open the JAML IDE as an in-conversation app: the jaml-ui editor (CodeMirror " +
+        "JAML editing with live syntax, plus the visual filter view), rendered by the " +
+        "host in a sandboxed iframe. Seed it with a JAML document via 'jaml' so the " +
+        "user can review and tweak it interactively; omit 'jaml' to open a minimal " +
+        "starter document. Use this after authoring a filter, or whenever the user " +
+        "wants to edit JAML hands-on.",
+      inputSchema: {
+        jaml: z
+          .string()
+          .optional()
+          .describe("Optional JAML document to open the IDE with. Defaults to a starter filter."),
+      },
+      outputSchema: {
+        jaml: z.string().describe("The JAML document the IDE was opened with."),
+      },
+      _meta: { ui: { resourceUri: IDE_RESOURCE_URI, visibility: ["model"] } },
+    },
+    async ({ jaml }) => {
+      const seed = typeof jaml === "string" && jaml.length ? jaml : STARTER_JAML;
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Opened the JAML IDE. The editor is showing this JAML document:\n\n\`\`\`yaml\n${seed}\`\`\``,
+          },
+        ],
+        structuredContent: { jaml: seed },
+      };
+    },
+  );
+
+  // The HTML resource the open_jaml_ide tool renders. Static — the per-call
+  // seed travels through the tool result, not the markup. The CSP allowlist
+  // lets the host permit the esm.sh CDN the app loads from.
+  registerAppResource(
+    server,
+    "JAML IDE",
+    IDE_RESOURCE_URI,
+    { description: "The jaml-ui JAML editor, rendered as an MCP App." },
+    async () => ({
+      contents: [
+        {
+          uri: IDE_RESOURCE_URI,
+          mimeType: RESOURCE_MIME_TYPE,
+          text: IDE_APP_HTML,
+          _meta: {
+            ui: {
+              csp: { resourceDomains: IDE_CSP_RESOURCE_DOMAINS },
+              prefersBorder: false,
+            },
+          },
+        },
+      ],
+    }),
   );
 
   server.registerPrompt(
