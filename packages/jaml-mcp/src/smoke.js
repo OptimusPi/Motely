@@ -1,12 +1,15 @@
-// End-to-end smoke test: spawn the stdio server, exercise every tool and the
-// prompt through a real MCP client, and assert the output. The validate_jaml
-// and explain_jaml checks boot the real motely-wasm engine.
+// End-to-end smoke test: spawn the stdio server, exercise every tool, the
+// prompt, and the MCP App resource through a real MCP client, and assert the
+// output. The validate_jaml and explain_jaml checks boot the real motely-wasm
+// engine.
 // Run with: npm run smoke
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+
+import { IDE_RESOURCE_URI } from "./app.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +41,7 @@ for (const expected of [
   "jaml_examples",
   "validate_jaml",
   "explain_jaml",
+  "open_jaml_ide",
 ]) {
   assert(toolNames.includes(expected), `missing tool ${expected}; got ${toolNames.join(", ")}`);
 }
@@ -116,6 +120,59 @@ assert(
   `explain_jaml(invalid) expected an error, got ${JSON.stringify(eBad.content?.[0]?.text)}`,
 );
 
+// --- open_jaml_ide: an MCP App (SEP-1865) — tool links to a ui:// resource ---
+const ideTool = tools.find((t) => t.name === "open_jaml_ide");
+const ideToolMeta = ideTool?._meta ?? {};
+const ideResourceUri = ideToolMeta.ui?.resourceUri ?? ideToolMeta["ui/resourceUri"];
+assert(
+  ideResourceUri === IDE_RESOURCE_URI,
+  `open_jaml_ide tool should link to ${IDE_RESOURCE_URI} via _meta.ui, got ${ideResourceUri}`,
+);
+
+// The tool result carries the seed JAML as structuredContent — the host
+// forwards it to the iframe; the HTML is not in the tool result.
+const ideSeed = await client.callTool({
+  name: "open_jaml_ide",
+  arguments: { jaml: VALID_JAML },
+});
+assert(
+  ideSeed.structuredContent?.jaml === VALID_JAML,
+  "open_jaml_ide did not return the supplied JAML as structuredContent",
+);
+assert(
+  ideSeed.content?.[0]?.text?.includes("Blueprint"),
+  "open_jaml_ide text content should echo the seeded JAML for the model",
+);
+const ideDefault = await client.callTool({ name: "open_jaml_ide", arguments: {} });
+assert(
+  ideDefault.structuredContent?.jaml?.includes("deck: Magic"),
+  "open_jaml_ide with no seed did not fall back to the starter document",
+);
+
+// The ui:// resource is registered and serves the MCP App HTML.
+const { resources } = await client.listResources();
+assert(
+  resources.some((r) => r.uri === IDE_RESOURCE_URI),
+  `expected resource ${IDE_RESOURCE_URI}; got ${resources.map((r) => r.uri).join(", ")}`,
+);
+const ideResource = await client.readResource({ uri: IDE_RESOURCE_URI });
+const ideContent = ideResource.contents?.[0];
+assert(
+  ideContent?.mimeType === "text/html;profile=mcp-app",
+  `IDE resource mimeType should be text/html;profile=mcp-app, got ${ideContent?.mimeType}`,
+);
+const ideHtml = ideContent?.text ?? "";
+assert(ideHtml.includes("esm.sh/jaml-ui@"), "IDE HTML missing the jaml-ui CDN import");
+assert(ideHtml.includes("JamlIde"), "IDE HTML does not mount JamlIde");
+assert(
+  ideHtml.includes("@modelcontextprotocol/ext-apps"),
+  "IDE HTML does not load the MCP Apps client SDK",
+);
+assert(
+  ideContent?._meta?.ui?.csp?.resourceDomains?.includes("https://esm.sh"),
+  "IDE resource must declare esm.sh in its CSP resourceDomains or the host blocks the CDN",
+);
+
 // --- prompt ---
 const { prompts } = await client.listPrompts();
 assert(
@@ -131,4 +188,6 @@ assert(promptText.includes(SAMPLE), "prompt did not echo the request");
 assert(promptText.includes("JAML authoring guide"), "prompt missing the guide");
 
 await client.close();
-console.log("smoke: OK — 5 tools + prompt verified (validate/explain ran the real engine)");
+console.log(
+  "smoke: OK — 6 tools + prompt + MCP App resource verified (validate/explain ran the real engine)",
+);
