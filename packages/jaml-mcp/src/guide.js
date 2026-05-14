@@ -298,7 +298,26 @@ ${examples}
    do not invent one — flag it.
 6. Output a single valid JAML (YAML) document in a \`\`\`yaml code block and
    nothing else. Keep it minimal: no clause properties the request did not ask
-   for.`;
+   for.
+7. Confirm it: pass the document to the \`validate_jaml\` tool. If it returns an
+   error, fix the document and re-validate until it passes.`;
+}
+
+// Splits the rendered guide into addressable sections so jaml_reference can
+// return a focused slice instead of the whole guide.
+export function getSections(guide) {
+  const sections = [];
+  const parts = guide.split(/\n(?=## )/);
+  for (const part of parts) {
+    const match = part.match(/^#{1,2} (.+)$/m);
+    const title = match ? match[1].trim() : "overview";
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    sections.push({ title, slug, body: part.trim() });
+  }
+  return sections;
 }
 
 export function buildPrimer(guide, request, opts = {}) {
@@ -320,6 +339,9 @@ discriminator key per clause, only the properties the request asks for. Output
 the JAML in a single \`\`\`yaml code block. If any requested item has no matching
 enum value, still produce the closest valid document and note the unmatched
 item in one line beneath the code block.
+
+Then call the \`validate_jaml\` tool with the document. If it reports an error,
+fix the document and validate again until it passes.
 
 ## Request
 
