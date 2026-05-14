@@ -66,7 +66,7 @@ export function AgnosticSeedCard({
 
     useEffect(() => {
         if (propAnalysis || propResult || fetchedAnalysis) return;
-        
+
         const snapshot = getMotelyRuntimeSnapshot();
         if (snapshot.status === 'error') return;
 

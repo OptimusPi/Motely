@@ -10,11 +10,11 @@ import jamlSchemaJson from '../../../jaml.schema.json';
 type SchemaNode = { enum?: string[]; items?: { enum?: string[] }; properties?: Record<string, SchemaNode> };
 
 interface JamlSchema {
-    version?: string;
-    definitions?: {
-        clause?: SchemaNode;
-    };
-    properties?: Record<string, SchemaNode>;
+  version?: string;
+  definitions?: {
+    clause?: SchemaNode;
+  };
+  properties?: Record<string, SchemaNode>;
 }
 
 const schema = jamlSchemaJson as unknown as JamlSchema;
