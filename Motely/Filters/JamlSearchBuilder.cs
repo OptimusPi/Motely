@@ -15,9 +15,6 @@ using System.Text;
 
 namespace Motely.Filters;
 
-// IJamlClause / JamlClause / LogicClause moved to Motely/Filters/Jaml/JamlClause.cs.
-// AndClause moved to AndFilterDesc.cs; OrClause to OrFilterDesc.cs (co-located with their descriptors).
-
 /// <summary>Compiled JAML: runnable settings plus tally width for sinks (matches scoring clause count).</summary>
 public sealed record JamlSearchPlan(
     int ScoreTallyColumnCount,
