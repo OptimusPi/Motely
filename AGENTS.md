@@ -1,4 +1,4 @@
-@BOOTSHARP
+@AUDIT_BOOTSHARP.md
 # MotelyJAML
 
 Motely is the Balatro seed-search engine. JAML is its YAML-based filter language. This repo is the engine, CLI, WASM package, tests, and JAML language tooling.
@@ -6,15 +6,14 @@ Motely is the Balatro seed-search engine. JAML is its YAML-based filter language
 ## Project map
 
 | Project | Purpose | Target |
-|---|---|---|1`
+|---|---|---|
 | `Motely` | Core engine, JAML parser, analysis, portable runtime | `net10.0` |
 | `Motely.CLI` | Command-line searcher | `net10.0` |
 | `Motely.Tests` | xUnit + golden/corpus regression | `net10.0` |
 | `Motely.Wasm` | Browser build via Bootsharp | `net10.0` + `browser-wasm` |
+| `Motely.TUI` | Terminal UI searcher (Terminal.Gui) | `net10.0` |
+| `Motely.DataLake` | DuckDB-backed seed/result sinks | `net10.0` |
 | `motely-wasm` | Published npm package output | npm |
-| `packages/jaml-language-core` | JAML schema helpers | Node |
-| `packages/jaml-language-support` | VS Code language support | Node |
-| `Motely.Run` | Minimal host showing the core search shape | `net10.0` |
 
 ## Build & publish
 
@@ -49,5 +48,5 @@ CDN delivery (unpkg/jsdelivr) is automatic after `npm publish`. No manual upload
 
 ## Read before editing integrations
 
-- `BOOTSHARP.md` — Bootsharp reference (compiled from `D:\bootsharp\docs\` + `D:\extra\bootsharp\AGENTS.md`). Read this instead of the raw docs directories.
+- `AUDIT_BOOTSHARP.md` — Bootsharp reference and integration audit. Read this instead of the raw docs directories.
 - DuckDB: native packages do not compile to `browser-wasm`. Use DuckDB's own WASM/JS path separately when the browser needs it.

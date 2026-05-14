@@ -70,7 +70,6 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
         }
     }
 
-    // AUDIT ISSUE #3 & #5: Always inline + optimize, fix early exit check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public VectorEnum256<T> Choose(Vector512<double> poll)
     {
@@ -85,7 +84,6 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
         {
             weight += current->Weight;
 
-            // AUDIT ISSUE #4: Reduce repeated Vector512.Create calls by reusing variable
             Vector512<double> weightVec = Vector512.Create(weight);
             Vector256<int> chosenMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(
                 Vector512.GreaterThanOrEqual(weightVec, poll)
@@ -99,7 +97,6 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
             );
             finishedMask |= chosenMask;
 
-            // AUDIT ISSUE #5: More efficient early exit - check if all lanes finished
             if (Vector256.ExtractMostSignificantBits(finishedMask) == 0xFF)
                 return new(values);
 

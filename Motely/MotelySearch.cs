@@ -1271,9 +1271,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     /// </summary>
     private void StartSearchThreads()
     {
-        // what the fuck - pifreak
-        // //ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-
         _elapsedTime.Start();
 
         if (_threadCount == 1)
@@ -1297,13 +1294,23 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 int threadIdx = i;
                 var thread = new Thread(() =>
                 {
-                    RunWorkerBody(_plans[threadIdx]);
-                    if (Interlocked.Decrement(ref remaining) == 0)
+                    try
                     {
-                        Thread.MemoryBarrier();
-                        bool completed =
-                            Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
-                        _completionSource.TrySetResult(completed);
+                        RunWorkerBody(_plans[threadIdx]);
+                    }
+                    catch (Exception ex)
+                    {
+                        _completionSource.TrySetException(ex);
+                    }
+                    finally
+                    {
+                        if (Interlocked.Decrement(ref remaining) == 0)
+                        {
+                            Thread.MemoryBarrier();
+                            bool completed =
+                                Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
+                            _completionSource.TrySetResult(completed);
+                        }
                     }
                 })
                 {

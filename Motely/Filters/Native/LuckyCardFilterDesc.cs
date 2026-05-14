@@ -7,7 +7,6 @@ public struct LuckCardFilterDesc() : IMotelySeedFilterDesc<LuckCardFilterDesc.Lu
     public readonly LuckyCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CachePseudoHash("lucky_money");
-        // ctx.CachePseudoHash("space");
         return new LuckyCardFilter();
     }
 
