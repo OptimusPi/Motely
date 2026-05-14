@@ -14,6 +14,7 @@ Motely is the Balatro seed-search engine. JAML is its YAML-based filter language
 | `motely-wasm` | Published npm package output | npm |
 | `packages/jaml-language-core` | JAML schema helpers | Node |
 | `packages/jaml-language-support` | VS Code language support | Node |
+| `packages/jaml-mcp` | MCP server: natural-language → JAML | Node |
 | `Motely.Run` | Minimal host showing the core search shape | `net10.0` |
 
 ## Build & publish

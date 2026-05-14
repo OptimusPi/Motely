@@ -1,0 +1,28 @@
+{
+  "name": "jaml-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that turns natural-language Balatro seed requests into JAML filter documents.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "jaml-mcp": "src/server.js"
+  },
+  "main": "src/server.js",
+  "files": [
+    "src",
+    "jaml.schema.json"
+  ],
+  "scripts": {
+    "start": "node src/server.js",
+    "start:http": "node src/server.js --http",
+    "smoke": "node src/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "express": "^5.2.1",
+    "zod": "^3.25.76"
+  }
+}
