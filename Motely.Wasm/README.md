@@ -26,12 +26,13 @@ import bootsharp, { Motely } from "./motely-wasm/index.mjs";
 await bootsharp.boot("/bin");
 
 const version = Motely.version();
-const result = Motely.loadJaml(`
+
+const status = Motely.validateJaml(`
 must:
   - joker: Blueprint
     antes: [1]
 `);
-if (!result.ok) console.error(result.error);
+if (status !== "valid") console.error(status);
 ```
 
 When serving from the repository root, `/bin` must resolve to `motely-wasm/bin`. If the module is hosted under a subpath, pass that subpath's binary root, for example `await bootsharp.boot("/motely-wasm/bin")`.
@@ -40,12 +41,18 @@ Node usage can work in principle (Bootsharp boots via `fetch()`), but for this p
 
 ## Exported Contract
 
-The generated `Motely` namespace currently exposes:
+The generated `Motely` namespace is produced from the `[Export]` members in `Program.cs`. Method names are camel-cased on the JavaScript side.
 
 **JAML**
-- `version()` → string (assembly informational version)
-- `loadJaml(yaml)` → `{ ok: boolean, error: string | null }`
-- `explainJaml(yaml)` → `{ ok: boolean, error: string | null, explanation: string | null }`
+- `version()` → `string` — assembly informational version
+- `validateJaml(jaml)` → `string` — `"valid"`, or the parse/plan error message
+- `explainJaml(jaml)` → `string` — human-readable plan summary; `""` when the config has no clauses; throws on invalid JAML
+
+**Search & analysis**
+- `createPlan(jaml)` → `JamlSearchPlan` — compiled plan (tally column count, quoted CSV header, tally labels); throws on invalid JAML
+- `createSearch(jaml)` → `IMotelySearchSettingsInterop` — runnable search settings built from the JAML; throws on invalid JAML
+- `createSearchSettings()` → `IMotelySearchSettingsInterop` — runnable settings with a passthrough filter (no JAML)
+- `analyzeJamlSeeds(jaml, seeds)` → `MotelyJamlyzerResult` — analysis of the given seed list against the JAML
 
 **File system (Bootsharp.FileSystem)**
 - `pickRoot(options?)` → `Promise<string | null>`
@@ -53,4 +60,11 @@ The generated `Motely` namespace currently exposes:
 - `unmountRoot(root)` → `Promise<void>`
 - `readTextFile(root, uri)` → `Promise<string>`
 - `writeTextFile(root, uri, text)` → `Promise<void>`
-- `onFileChanges` — event of `Change[]`
+
+**Events**
+- `onSeedMatch` — `string` (matching seed)
+- `onScoredResult` — `MotelyScoredSeedResult`
+- `onProgress` — `MotelyProgress`
+- `onFileChanges` — `Change[]`
+
+Search callbacks (`onSeedMatch`, `onScoredResult`, `onProgress`) are wired into the settings returned by `createSearch` / `createSearchSettings`.
