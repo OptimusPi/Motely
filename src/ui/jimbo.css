@@ -105,7 +105,7 @@
 }
 
 .j-text--upper {
-  text-transform: uppercase;
+
   letter-spacing: 0.08em;
 }
 
@@ -185,7 +185,7 @@
   font-size: 9px;
   letter-spacing: 0.1em;
   line-height: 1;
-  text-transform: uppercase;
+
 }
 
 .j-text--micro {
@@ -562,7 +562,7 @@
   font-family: var(--j-font);
   font-size: 12px;
   color: var(--j-grey);
-  text-transform: uppercase;
+
   letter-spacing: 0.04em;
   margin-bottom: var(--j-space-sm);
 }
@@ -578,7 +578,7 @@
   cursor: pointer;
   font-family: var(--j-font);
   color: var(--j-white);
-  text-transform: uppercase;
+
   letter-spacing: 0.04em;
   text-align: left;
   justify-content: flex-start;
@@ -1007,9 +1007,8 @@
 
 .j-footer__bar {
   width: 100%;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.9);
-  padding: 0 1rem 3px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+  padding: 12px 1rem 4px;
   text-align: center;
 }
 
@@ -1482,7 +1481,7 @@
   font-family: var(--j-font);
   font-weight: 400;
   letter-spacing: 0.12em;
-  text-transform: uppercase;
+
   text-shadow: var(--j-text-shadow);
   outline: none;
   transition: border-color 100ms ease;
@@ -1492,7 +1491,7 @@
 .j-seed-input__field::placeholder {
   color: var(--j-grey);
   opacity: 0.6;
-  text-transform: uppercase;
+
   letter-spacing: 0.06em;
   font-size: 12px;
 }

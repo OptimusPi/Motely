@@ -27,7 +27,7 @@ export function JamlCurator() {
       search.cancel();
     } else {
       setResultIndex(0);
-      search.start(jamlText, 1_000_000);
+      search.startRandom(jamlText, 1_000_000);
     }
   };
 

@@ -1,11 +1,14 @@
 # motely-wasm
 
-SIMD-vectorized [Balatro](https://www.playbalatro.com/) seed search in the browser — the [Motely](https://github.com/OptimusPi/MotelyJAML) engine compiled to WebAssembly via NativeAOT-LLVM, driven by **JAML** (Jimbo's Ante Markup Language) filters.
+SIMD-vectorized [Balatro](https://www.playbalatro.com/) seed search compiled to WebAssembly via Bootsharp + NativeAOT-LLVM, driven by **JAML** (Jimbo's Ante Markup Language) filters.
 
-- **Single-file ES module.** Embedded WASM binary, no sideloaded resources, no `.wasm` fetch path to configure.
-- **Single-threaded.** No `SharedArrayBuffer`, no COOP/COEP headers required — runs on Vercel, Cloudflare Pages, GitHub Pages, MCP Apps iframes, and every other locked-down host.
-- **Browser + Node + Deno + Bun + Edge.** Pure ES module, no Node-only APIs.
-- **Typed.** Generated TypeScript declarations for the full Motely / JAML surface ship in `types/`.
+This README documents the **real published surface**. The generated TypeScript declarations in `motely-wasm/generated/*.g.d.mts` are the source of truth — anything documented here can be cross-checked there.
+
+## Honesty section
+
+- **Browser-first.** The package is published with a `browser` field in `package.json` that stubs out `node:fs`, `node:url`, `node:path`, `node:module`, `node:crypto`, and `node:process`. Bundlers honor that field automatically. Node, Deno, or Bun usage works in principle (Bootsharp boots via `fetch()`), but you must HTTP-serve the runtime assets — do not rely on `file://` paths — and the Node-only modules listed above must remain reachable for that target.
+- **Single-threaded WASM.** Bootsharp removed multi-threaded mode in upstream PR #203. No `SharedArrayBuffer`, no `Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy` headers are required. For parallelism, boot one Web Worker per concurrent runtime — there is one `IMotelySearch` per WASM instance.
+- **Boot cost is per runtime.** Booting Bootsharp loads ~7 MB of WASM. Pay it once per worker.
 
 ## Install
 
@@ -13,13 +16,24 @@ SIMD-vectorized [Balatro](https://www.playbalatro.com/) seed search in the brows
 npm install motely-wasm
 ```
 
-## Boot & search
+## Boot
+
+The runtime needs the binary directory passed to `bootsharp.boot(...)`. When the package is served from `node_modules/motely-wasm/`, the binaries live at `node_modules/motely-wasm/bin/`. Pick whichever URL is reachable from your page:
 
 ```ts
-import motely, { MotelyWasm, MotelyWasmEvents } from "motely-wasm";
+import bootsharp, { Motely } from "motely-wasm";
 
-await motely.boot();
+await bootsharp.boot("/bin");
+// or "/motely-wasm/bin", or "/node_modules/motely-wasm/bin" — whatever your host serves.
+```
 
+`bootsharp.getStatus()` returns `bootsharp.BootStatus.Standby | Booting | Booted`. Don't double-boot.
+
+## Search builder
+
+A search is constructed by calling `Motely.createSearch(jaml)`, chaining configuration methods, then calling `.start(undefined)`:
+
+```ts
 const jaml = `
 name: Blueprint Copy Engine
 deck: Red
@@ -32,79 +46,193 @@ should:
     score: 80
 `;
 
-// Events are mutable handler slots — assign your callback, do NOT call .subscribe().
-MotelyWasmEvents.notifyResult   = (seed, score, tallyColumns) => console.log(seed, score, tallyColumns);
-MotelyWasmEvents.notifyProgress = (seedsSearched, matchingSeeds) => { /* … */ };
-MotelyWasmEvents.notifyComplete = (status, totalSeedsSearched, matchingSeeds) => { /* … */ };
+const validation = Motely.validateJaml(jaml);
+if (validation !== "valid") {
+    throw new Error(validation);
+}
 
-const search = MotelyWasm.startRandomSearch(jaml, 10_000);
-// later: search.cancel(); search.dispose();
+const settings = Motely
+    .createSearch(jaml)
+    .withRandomSearch(10_000)
+    .withThreadCount(1);
+
+const search = settings.start(undefined);
 ```
 
-> JAML is **not** YAML — it's the Motely filter language. The schema ships at [`motely-wasm/jaml.schema.json`](./jaml.schema.json) and is also returned at runtime by `MotelyWasm.getJamlSchema()`.
+The `start(cancellationToken)` argument is a Bootsharp cancellation handle. Pass `undefined` from JS.
 
-## Search modes
+### Configuration methods
+
+All chainable, all return the settings object:
 
 | Method | Purpose |
-|---|---|
-| `startSequentialSearch(jaml, batchCharCount, startBatch, endBatch)` | Deterministic walk through a slice of the 35⁸ ≈ 2.25T seed space. |
-| `startRandomSearch(jaml, randomSeedCount)` | Random sampling. |
-| `startSeedListSearch(jaml, seeds[])` | Verify a known list of seeds against a JAML filter. |
-| `startKeywordSearch(jaml, keywordsCsv, paddingChars)` | Match seeds containing keywords (CSV input, padding controls anchoring). |
-| `startAestheticSearch(jaml, JamlAesthetic)` | Curated themed pools: `Palindrome`, `Psychosis`, `Gross`, `Nsfw`, `Funny`, `Balatro`. |
+| --- | --- |
+| `withRandomSearch(count)` | Random sampling — `count` independent seeds. |
+| `withListSearch(seeds, seedCount)` | Verify a known seed list against the JAML filter. |
+| `withSequentialSearch()` | Deterministic walk through the seed space. Combine with `withBatchCharacterCount` / `withStartBatchIndex` / `withEndBatchIndex` to slice it. |
+| `withAestheticSearch(JamlAesthetic)` | Curated themed pools: `Palindrome`, `Psychosis`, `Gross`, `Nsfw`, `Funny`, `Balatro`. |
+| `withDeck(MotelyDeck)` | Override the deck declared in the JAML. |
+| `withStake(MotelyStake)` | Override the stake declared in the JAML. |
+| `withThreadCount(n)` | Internal thread count. WASM is single-threaded — keep this at `1`. |
+| `withBatchCharacterCount(n)` | Sequential search: characters per batch. Total batch space is `35^n`. |
+| `withStartBatchIndex(bigint)` / `withEndBatchIndex(bigint)` | Sequential search: slice the batch range. |
+| `withProgressReportIntervalMs(bigint)` | How often the progress event fires. |
+| `withCsvOutput(boolean)` / `withQuietMode(boolean)` / `withAutoScoreCutoff(boolean)` | Output toggles. |
 
-All searches return an `IMotelyWasmSearch` with `getSnapshot()`, `cancel()`, `waitForCompletion()`, `dispose()`. Hits are streamed through `MotelyWasmEvents.notifyResult`.
+### Lifecycle
 
-## Single-seed inspection
+`settings.start(undefined)` returns an `IMotelySearch` proxy. The proxy exposes live properties (read every poll cycle, do not cache them):
 
 ```ts
-const ctx = MotelyWasm.createSearchContext("DPADD313", JamlDeck.Red, JamlStake.White);
-const boss = ctx.getBossForAnte(1);
-// + voucher / tag / booster / shop item / joker / tarot / spectral / planet streams,
-// each with a *Chunk variant for batched pulls.
-ctx.dispose();
+search.totalSeedsSearched;     // bigint
+search.matchingSeeds;          // bigint
+search.filteredSeeds;          // bigint
+search.elapsedMs;              // bigint
+search.batchIndex;             // bigint
+search.completedBatchCount;    // bigint
+search.isCompleted;            // boolean
+search.isSequentialBatchSearch; // boolean
 ```
+
+And control methods:
+
+```ts
+await search.waitForCompletionAsync(undefined);
+search.cancel();
+```
+
+## Events
+
+Real Bootsharp `EventSubscriber`s — use `.subscribe(fn)` and `.unsubscribe(fn)`. They are **not** mutable handler slots. The available events on the `Motely` namespace are:
+
+```ts
+import type { MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import type { Change } from "motely-wasm/bootsharp/file-system";
+
+const onResult = (result: MotelyScoredSeedResult) => {
+    // result.seed: string, result.score: number, result.tallies: Int32Array
+};
+Motely.onScoredResult.subscribe(onResult);
+
+const onProgress = (progress: MotelyProgress) => {
+    // progress.seedsSearched / matchingSeeds / percentComplete / seedsPerMillisecond / ...
+};
+Motely.onProgress.subscribe(onProgress);
+
+const onSeedMatch = (seed: string) => { /* raw seed string for every match */ };
+Motely.onSeedMatch.subscribe(onSeedMatch);
+
+const onFileChanges = (changes: Change[]) => { /* Bootsharp.FileSystem watcher events */ };
+Motely.onFileChanges.subscribe(onFileChanges);
+
+// later
+Motely.onScoredResult.unsubscribe(onResult);
+Motely.onProgress.unsubscribe(onProgress);
+Motely.onSeedMatch.unsubscribe(onSeedMatch);
+Motely.onFileChanges.unsubscribe(onFileChanges);
+```
+
+## JAML validation & analysis
+
+```ts
+Motely.version();                  // string — assembly version
+Motely.validateJaml(jaml);         // string — "valid" or an error message
+Motely.explainJaml(jaml);          // string — human-readable plan summary
+Motely.createPlan(jaml);           // JamlSearchPlan — tally column metadata
+Motely.analyzeJamlSeeds(jaml, seeds); // MotelyJamlyzerResult — full per-seed analysis
+```
+
+`MotelyJamlyzerResult` (see `motely-wasm/generated/motely/analysis.g.d.mts`) contains per-seed `MotelySeedAnalysis` with `antes[]`, `boss`, `voucher`, `smallBlindTag`, `bigBlindTag`, `shopQueue[]`, `packs[]`, and optional `drawOrder` / `erraticDeckComposition` / `erraticDeckBreakdown`.
+
+## File system (optional)
+
+The `@rewaffle/bootsharp-file-system` package is an optional peer. When present, mount it before booting and the Motely-side library APIs become available:
+
+```ts
+import bootsharp, { Motely } from "motely-wasm";
+import { IFileMounter } from "motely-wasm/bootsharp/file-system";
+import * as fs from "@rewaffle/bootsharp-file-system";
+
+fs.init(IFileMounter);
+await bootsharp.boot("/bin");
+
+const root = await Motely.pickRoot(undefined);
+if (root) {
+    await Motely.mountRoot(root, undefined);
+    const text = await Motely.readTextFile(root, "filters/example.jaml");
+    // ...
+}
+```
+
+Available file APIs: `pickRoot`, `mountRoot`, `unmountRoot`, `readTextFile`, `writeTextFile`, plus the `onFileChanges` event for live watch.
 
 ## Loading without a bundler
 
-For environments where bundling 11 MB of WASM into every deployment artifact is wrong (MCP Apps single-HTML resources, Cloudflare Workers, Vercel Functions, plain `<script type="module">`), import the package directly from a public npm CDN:
+For environments that don't bundle node modules (sandboxed iframes, `<script type="module">`, etc.), import the package from a public npm CDN. Pin the version — `@latest` defeats long-term browser caching.
 
 ```ts
-const mod = await import(
-  "https://unpkg.com/motely-wasm@16.0.0/index.mjs"
-);
-await mod.default.boot();
-const { MotelyWasm, MotelyWasmEvents } = mod;
+const mod = await import("https://unpkg.com/motely-wasm@17.3.0/index.mjs");
+await mod.default.boot("https://unpkg.com/motely-wasm@17.3.0/bin");
+const { Motely } = mod;
 ```
 
-Equivalent jsDelivr URL: `https://cdn.jsdelivr.net/npm/motely-wasm@16.0.0/index.mjs`. **Pin the version** — `@latest` defeats long-term browser caching.
+Equivalent jsDelivr URL: `https://cdn.jsdelivr.net/npm/motely-wasm@17.3.0/index.mjs`.
 
 ### Content Security Policy
 
-For sandboxed iframes (MCP Apps), allow both script loading and fetch/import from whichever CDN you chose:
+For sandboxed iframes that need the CDN, allow script and fetch from whichever host serves it:
 
-```
+```text
 script-src https://unpkg.com https://cdn.jsdelivr.net
 connect-src https://unpkg.com https://cdn.jsdelivr.net
 ```
+
+`wasm-unsafe-eval` (or the legacy `unsafe-eval`) is required for the WASM runtime to instantiate.
+
+## Parallelism via Web Workers
+
+Each WASM runtime is one search at a time. To get multi-core throughput on a device, boot one runtime per Web Worker and partition the work yourself:
+
+- **`withRandomSearch(count)`** — split `count` across workers. Each runtime's PRNG is independent.
+- **`withListSearch(seeds, count)`** — partition the seed array across workers.
+- **`withSequentialSearch()`** — use `withBatchCharacterCount(n)` then assign disjoint `[withStartBatchIndex, withEndBatchIndex)` ranges to each worker. Total batch space is `35^n`.
+- **`withAestheticSearch(JamlAesthetic)`** — the aesthetic providers hold a single shared enumerator inside one runtime. They **cannot** be partitioned across independent WASM runtimes, because each runtime gets its own enumerator that restarts from the beginning. Run aesthetic mode on a single worker, or run multiple workers and accept full duplication.
+
+`jaml-ui` ships a `useSearchPool` React hook that implements this partitioning. Read `src/hooks/searchPoolWorker.ts` and `src/hooks/useSearchPool.ts` for a working pattern.
 
 ## Types
 
 ```ts
 import type {
-  IMotelyWasmSearch,
-  IMotelyWasmSearchContext,
-  MotelyWasmSearchSnapshot,
-  MotelyWasmSearchCompletion,
-  JamlDeck, JamlStake, JamlAesthetic,
-} from "motely-wasm";
+    IMotelySearch,
+    IMotelySearchSettingsInterop,
+    MotelyProgress,
+    MotelyScoredSeedResult,
+    MotelyDeck,
+    MotelyStake,
+    MotelyBoosterPack,
+    MotelyBossBlind,
+    MotelyTag,
+    MotelyVoucher,
+    MotelyItem,
+} from "motely-wasm/motely";
+
+import type { JamlAesthetic, JamlSearchPlan } from "motely-wasm/motely/filters";
+
+import type {
+    MotelyJamlyzerResult,
+    MotelySeedAnalysis,
+    MotelyAnteAnalysis,
+    MotelyBoosterPackAnalysis,
+    MotelyAnalyzedItem,
+} from "motely-wasm/motely/analysis";
 ```
 
-The generated `types/bindings.g.d.ts` is the source of truth — Bootsharp emits it from the C# interfaces, so it never drifts from runtime behavior.
+Generated TypeScript declarations under `motely-wasm/generated/` are the source of truth — Bootsharp emits them from the C# interfaces, so they never drift from runtime behavior.
 
 ## Build details
 
-NativeAOT-LLVM with SIMD enabled (`-msimd128`), threads explicitly disabled, binaries embedded in the single `index.mjs`. The `MONO_WASM:` prefix in console logs is Bootsharp's glue log — this is **not** a Mono runtime build.
+NativeAOT-LLVM with SIMD enabled (`-msimd128`), threads explicitly disabled. The `MONO_WASM:` prefix in console logs is Bootsharp's glue log — this is **not** a Mono runtime build.
 
 ## License
 

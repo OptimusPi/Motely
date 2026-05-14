@@ -59,7 +59,6 @@ export interface JimboButtonProps {
   size?: 'xs' | 'sm' | 'md' | 'lg'
   fullWidth?: boolean
   disabled?: boolean
-  uppercase?: boolean
   onClick?: () => void
   style?: React.CSSProperties
   className?: string
@@ -67,7 +66,7 @@ export interface JimboButtonProps {
 }
 
 export function JimboButton({
-  tone = 'orange', size = 'md', fullWidth = false, disabled = false, uppercase = false, onClick, style, className = '', children,
+  tone = 'orange', size = 'md', fullWidth = false, disabled = false, onClick, style, className = '', children,
 }: JimboButtonProps) {
   const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
 
@@ -80,7 +79,7 @@ export function JimboButton({
       style={style}
     >
       <div className="j-btn__face">
-        <JimboText size={textSize} uppercase={uppercase}>{children}</JimboText>
+        <JimboText size={textSize}>{children}</JimboText>
       </div>
     </button>
   )

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Motely, isMotelyFileSystemReady, motelyFileSystemInitError } from "../motelyBoot.js";
+import { Motely, ensureMotelyReady, isMotelyFileSystemReady, motelyFileSystemInitError } from "../motelyBoot.js";
+import { PermissionMode } from "motely-wasm/bootsharp/file-system";
 
 export type JamlLibraryStatus = "idle" | "unsupported" | "mounting" | "ready" | "error";
 
@@ -31,7 +32,7 @@ export function useJamlLibrary(): UseJamlLibraryState {
 
   const refresh = useCallback(() => {
     if (!rootId) return;
-    setFiles(Array.from(Motely.MotelyWasm.getJamlLibraryFiles(rootId)));
+    setFiles((prev) => [...prev]);
   }, [rootId]);
 
   const mount = useCallback(async () => {
@@ -45,14 +46,16 @@ export function useJamlLibrary(): UseJamlLibraryState {
     setError(null);
 
     try {
-      const pickedRoot = await Motely.MotelyWasm.mountJamlLibrary();
+      await ensureMotelyReady();
+      const pickedRoot = await Motely.pickRoot({ mode: PermissionMode.ReadWrite, id: "jaml-library" });
       if (!pickedRoot) {
         setStatus("idle");
         return;
       }
 
-      setRootId(pickedRoot);
-      setFiles(Array.from(Motely.MotelyWasm.getJamlLibraryFiles(pickedRoot)));
+      const mountedRoot = await Motely.mountRoot(pickedRoot, { mode: PermissionMode.ReadWrite });
+      setRootId(mountedRoot);
+      setFiles([]);
       setStatus("ready");
     } catch (err) {
       setStatus("error");
@@ -62,7 +65,8 @@ export function useJamlLibrary(): UseJamlLibraryState {
 
   const unmount = useCallback(async () => {
     if (!rootId) return;
-    await Motely.MotelyWasm.unmountJamlLibrary(rootId);
+    await ensureMotelyReady();
+    await Motely.unmountRoot(rootId);
     setRootId(null);
     setFiles([]);
     setStatus(isMotelyFileSystemReady ? "idle" : "unsupported");
@@ -70,13 +74,15 @@ export function useJamlLibrary(): UseJamlLibraryState {
 
   const loadFile = useCallback(async (uri: string) => {
     if (!rootId) throw new Error("JAML library is not mounted.");
-    return await Motely.MotelyWasm.loadLibraryFile(rootId, uri);
+    await ensureMotelyReady();
+    return await Motely.readTextFile(rootId, uri);
   }, [rootId]);
 
   const saveFile = useCallback(async (uri: string, content: string) => {
     if (!rootId) throw new Error("JAML library is not mounted.");
-    await Motely.MotelyWasm.saveLibraryFile(rootId, uri, content);
-    setFiles(Array.from(Motely.MotelyWasm.getJamlLibraryFiles(rootId)));
+    await ensureMotelyReady();
+    await Motely.writeTextFile(rootId, uri, content);
+    setFiles((prev) => (prev.includes(uri) ? prev : [...prev, uri]).sort((a, b) => a.localeCompare(b)));
   }, [rootId]);
 
   return { status, rootId, files, error, mount, unmount, loadFile, saveFile, refresh };

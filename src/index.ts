@@ -104,9 +104,16 @@ export { useMotelyStream, type StreamItem, type StreamState } from "./hooks/useS
 export {
     useSearch,
     type SearchResult,
+    type SearchMode,
     type SearchStatus,
     type UseSearchState,
 } from "./hooks/useSearch.js";
+export {
+    useSearchPool,
+    type StartPoolOptions,
+    type UseSearchPoolOptions,
+    type UseSearchPoolState,
+} from "./hooks/useSearchPool.js";
 export {
     useAnalyzer,
     type AnalyzerStatus,
@@ -116,6 +123,11 @@ export {
     type JamlLibraryStatus,
     type UseJamlLibraryState,
 } from "./hooks/useJamlLibrary.js";
+export {
+    useMotelyRuntime,
+    useMotelyRuntimeOwner,
+    type UseMotelyRuntimeState,
+} from "./hooks/useMotelyRuntime.js";
 
 export { motelyItemRenderCategory } from "./decode/motelyItemDecoder.js";
 

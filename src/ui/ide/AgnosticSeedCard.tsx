@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import motely, { Motely } from 'motely-wasm';
+import { Motely } from '../../motelyBoot.js';
+import type { MotelyJamlyzerResult, MotelySeedAnalysis, MotelyAnteAnalysis, MotelyAnalyzedItem, MotelyBoosterPackAnalysis } from 'motely-wasm/motely/analysis';
+import type { MotelyScoredSeedResult } from 'motely-wasm/motely';
 import { cn } from '../../lib/utils';
 import { DeckSprite } from './DeckSprite';
 import { JamlGameCard, JamlVoucher, resolveAnalyzerShopItem } from '../../components/GameCard.js';
+import { getMotelyRuntimeSnapshot } from '../../motelyBoot.js';
 
 import { Loader2, Sparkles } from 'lucide-react';
 
@@ -14,8 +17,8 @@ interface AgnosticSeedCardProps {
     stakeSlug?: string;
     className?: string;
     onClick?: () => void;
-    analysis?: Motely.Analysis.MotelyLegacyTextAnalyzer;
-    result?: Motely.MotelyWasmSearchResult;
+    analysis?: MotelySeedAnalysis;
+    result?: MotelyScoredSeedResult;
     dayNumber?: number;
     ritualId?: string;
     jamlConfig?: string | null;
@@ -26,17 +29,17 @@ interface AgnosticSeedCardProps {
     filter?: unknown;
 }
 
-function allAnalyzedItems(analysis: Motely.Analysis.MotelyLegacyTextAnalyzer | undefined): { name: string; value: number; matched: boolean }[] {
+type AnalyzedItemRow = { name: string; value: number; matched: boolean };
+
+function itemRow(item: MotelyAnalyzedItem): AnalyzedItemRow {
+    return { name: String(item.item.value), value: item.item.value, matched: item.matched };
+}
+
+function allAnalyzedItems(analysis: MotelySeedAnalysis | undefined): AnalyzedItemRow[] {
     if (!analysis) return [];
-    return analysis.antes.flatMap((ante: Motely.Analysis.MotelyAnteAnalysis) => {
-        const shop = ante.shopQueue.map((item: Motely.Analysis.MotelyAnalyzedItem) => ({
-            name: item.name, value: item.value, matched: item.matched,
-        }));
-        const packs = ante.packs.flatMap((pack: Motely.Analysis.MotelyBoosterPackAnalysis) =>
-            pack.items.map((item: Motely.Analysis.MotelyAnalyzedItem) => ({
-                name: item.name, value: item.value, matched: item.matched,
-            }))
-        );
+    return analysis.antes.flatMap((ante: MotelyAnteAnalysis) => {
+        const shop = ante.shopQueue.map(itemRow);
+        const packs = ante.packs.flatMap((pack: MotelyBoosterPackAnalysis) => pack.items.map(itemRow));
         return [...shop, ...packs];
     });
 }
@@ -54,19 +57,24 @@ export function AgnosticSeedCard({
     jamlConfig,
 }: AgnosticSeedCardProps) {
     const [loading, setLoading] = useState(false);
-    const [fetchedAnalysis, setFetchedAnalysis] = useState<{ score: number, analysis: Motely.Analysis.MotelyLegacyTextAnalyzer } | null>(null);
+    const [fetchedAnalysis, setFetchedAnalysis] = useState<{ score: number; analysis: MotelySeedAnalysis | undefined } | null>(null);
 
-    const result = propAnalysis || propResult || fetchedAnalysis;
+    const resolvedAnalysis: MotelySeedAnalysis | undefined =
+        propAnalysis ?? fetchedAnalysis?.analysis ?? undefined;
+    const resolvedScore: number | undefined =
+        fetchedAnalysis?.score ?? propResult?.score;
 
     useEffect(() => {
-        if (propAnalysis || propResult) return;
+        if (propAnalysis || propResult || fetchedAnalysis) return;
+        
+        const snapshot = getMotelyRuntimeSnapshot();
+        if (snapshot.status === 'error') return;
 
         const analyze = async () => {
             setLoading(true);
             try {
-                await motely.boot();
                 const jaml = jamlConfig ?? `version: 1\nconfig:\n  deck: ${deckSlug}\n  stake: ${stakeSlug}\n`;
-                const rawData = Motely.MotelyWasm.analyzeJamlSeeds(jaml, [seed]);
+                const rawData: MotelyJamlyzerResult = Motely.analyzeJamlSeeds(jaml, [seed]);
 
                 if (rawData && rawData.seeds.length > 0) {
                     const seedData = rawData.seeds[0];
@@ -83,9 +91,9 @@ export function AgnosticSeedCard({
         };
 
         analyze();
-    }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult]);
+    }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult, fetchedAnalysis]);
 
-    const items = allAnalyzedItems(result?.analysis);
+    const items = allAnalyzedItems(resolvedAnalysis);
 
     if (isLocked) {
         return (
@@ -101,12 +109,12 @@ export function AgnosticSeedCard({
                 <div className="mb-4">
                     <DeckSprite deck={deckSlug} stake={stakeSlug} size={84} />
                 </div>
-                <h3 className="font-header text-2xl text-[var(--balatro-grey)] tracking-widest uppercase mb-2">PREVIEW ONLY</h3>
+                <h3 className="font-header text-2xl text-[var(--balatro-grey)] tracking-widest mb-2">Preview only</h3>
                 <p className="font-pixel text-[10px] text-white/30 max-w-[200px]">
                     This seed unlocks tomorrow. You can view the deck, but the strategy is hidden!
                 </p>
                 <div className="mt-6 px-4 py-2 bg-black/60 rounded-xl border-2 border-white/10 shadow-[0_4px_0_rgba(0,0,0,0.5)]">
-                    <span className="font-header text-xl text-[var(--balatro-gold)] text-shadow-balatro">UNLOCKS DAY {dayNumber}</span>
+                    <span className="font-header text-xl text-[var(--balatro-gold)] text-shadow-balatro">Unlocks day {dayNumber}</span>
                 </div>
             </div>
         );
@@ -115,9 +123,9 @@ export function AgnosticSeedCard({
     return (
         <div
             className={cn(
-                "balatro-panel flex flex-col cursor-pointer",
+                "group balatro-panel flex flex-col cursor-pointer",
                 "w-[315px] h-[340px] shrink-0", // ONE SIZE RULE
-                "animate-sway",
+                "animate-sway hover:scale-[1.02] hover:-translate-y-1 transition-all duration-300",
                 className
             )}
             onClick={onClick}
@@ -176,10 +184,10 @@ export function AgnosticSeedCard({
             {/* Footer */}
             <div className="flex items-center justify-between pt-3 border-t border-white/5">
                 <span className="font-header text-sm text-[var(--balatro-green)]">
-                    {result?.score?.toLocaleString() ?? '—'}
+                    {resolvedScore?.toLocaleString() ?? '—'}
                 </span>
                 <span className="font-header text-lg text-[var(--balatro-gold)] group-hover:text-white transition-colors text-shadow-balatro">
-                    CLICK TO VIEW STRATEGY
+                    Click to view strategy
                 </span>
             </div>
         </div>

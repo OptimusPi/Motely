@@ -13,7 +13,7 @@ export function CardList({ title, subtitle, children, className = "" }: CardList
   return (
     <div className={className}>
       <div style={{ marginBottom: 4 }}>
-        <span style={{ fontWeight: 600, fontSize: 12 }}>{title}</span>
+        <span style={{ fontSize: 12 }}>{title}</span>
         {subtitle && <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 4 }}>{subtitle}</span>}
       </div>
       <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4 }}>
