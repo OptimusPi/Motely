@@ -3,6 +3,15 @@
 
 Motely is the Balatro seed-search engine. JAML is its YAML-based filter language. This repo is the engine, CLI, WASM package, tests, and JAML language tooling.
 
+## Note for agents working in this repo
+
+This goes for **every** agent — Claude Code in a Windows 11 terminal, a cloud agent, an IDE extension, whatever you are:
+
+- **Defer to pifreak (the repo owner).** The conventions in this file are deliberate. Don't fight the established setup, don't "fix" things that aren't broken, and don't undo decisions already made by pifreak or in the open PR.
+- **Read this whole file before you touch anything.** Most "surprises" are already documented here or in `BOOTSHARP.md`.
+- **When agents disagree, the human breaks the tie** — not whichever agent ran last or argued hardest. If the cloud agent's PR and a local change conflict, stop and ask pifreak instead of overwriting each other's work.
+- **Listen.** If pifreak says the build works a certain way, it works that way. Verify, don't override.
+
 ## Project map
 
 | Project | Purpose | Target |
@@ -31,6 +40,8 @@ npm publish --access public
 ```
 
 Version lives in `<MotelyVersion>` in `Directory.Packages.props`. The `prepublishOnly` hook (`sync-version.mjs`) syncs it into `package.json`. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
+
+**Publish gotcha — check the `exports` paths.** `motely-wasm@17.3.1` and `@17.3.2` shipped with broken `exports` (`"./../motely-wasm/index.mjs"` and `"././index.mjs"` respectively) — Node refuses both, so any consumer `import` throws. `17.3.0` is the last good `17.3.x`. The publish step is mangling the `exports` targets; after `npm publish`, run `npm view motely-wasm@<version> exports` and confirm the main target is a clean `"./index.mjs"` before depending on it. `packages/jaml-mcp` is pinned to an exact known-good version for this reason.
 
 CDN delivery (unpkg/jsdelivr) is automatic after `npm publish`. No manual upload step.
 
