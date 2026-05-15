@@ -1,4 +1,4 @@
-@BOOTSHARP
+@BOOTSHARP.md
 # MotelyJAML
 
 Motely is the Balatro seed-search engine. JAML is its YAML-based filter language. This repo is the engine, CLI, WASM package, tests, and JAML language tooling.
@@ -39,7 +39,7 @@ cd motely-wasm
 npm publish --access public
 ```
 
-Version lives in `<MotelyVersion>` in `Directory.Packages.props`. The `prepublishOnly` hook (`sync-version.mjs`) syncs it into `package.json`. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
+Version lives in `<MotelyVersion>` in `Directory.Packages.props`. Bootsharp regenerates `motely-wasm/package.json` from its own template on every pack (no version field); the `FinalizeNpmPackage` target in `Motely.Wasm.csproj` injects `<MotelyVersion>` into the generated file after `BootsharpPack` runs — see `BOOTSHARP.md`. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
 
 **Publish gotcha — check the `exports` paths.** `motely-wasm@17.3.1` and `@17.3.2` shipped with broken `exports` (`"./../motely-wasm/index.mjs"` and `"././index.mjs"` respectively) — Node refuses both, so any consumer `import` throws. `17.3.0` is the last good `17.3.x`. The publish step is mangling the `exports` targets; after `npm publish`, run `npm view motely-wasm@<version> exports` and confirm the main target is a clean `"./index.mjs"` before depending on it. `packages/jaml-mcp` is pinned to an exact known-good version for this reason.
 

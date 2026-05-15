@@ -1313,14 +1313,20 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         int totalWorkers = _threadCount;
         WorkerCoordinator coordinator = new(this, totalWorkers);
 
+        if (totalWorkers == 1)
+        {
+            // Single-thread: run inline on the caller — no pthread, no deadlock risk,
+            // and exceptions propagate cleanly without corrupting unsafe SIMD state.
+            coordinator.RunWorker(0);
+            return;
+        }
+
         for (int i = 0; i < totalWorkers; i++)
         {
             int threadIdx = i;
             var thread = new Thread(() => coordinator.RunWorker(threadIdx))
             {
-                Name = totalWorkers == 1
-                    ? "Motely Search Thread"
-                    : $"Motely Search Thread {threadIdx}",
+                Name = $"Motely Search Thread {threadIdx}",
                 IsBackground = true,
             };
             thread.Start();

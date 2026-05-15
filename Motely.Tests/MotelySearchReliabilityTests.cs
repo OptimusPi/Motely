@@ -78,7 +78,7 @@ public sealed class MotelySearchReliabilityTests
         // Many lanes / multiple workers so the throw lands on a worker thread,
         // not the caller. Previously this would set _completionSource to nothing
         // and the await would hang forever.
-        var seeds = Enumerable.Range(0, 1024).Select(i => $"S{i:D7}").ToArray();
+        var seeds = ValidSeeds(1024);
         var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(new ThrowingFilterDesc())
             .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(Math.Max(2, Environment.ProcessorCount))
@@ -95,7 +95,7 @@ public sealed class MotelySearchReliabilityTests
     [Fact]
     public void RunSearchUntilCompletion_MultiThread_SurfacesWorkerException()
     {
-        var seeds = Enumerable.Range(0, 1024).Select(i => $"S{i:D7}").ToArray();
+        var seeds = ValidSeeds(1024);
         var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(new ThrowingFilterDesc())
             .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(Math.Max(2, Environment.ProcessorCount))
@@ -106,6 +106,31 @@ public sealed class MotelySearchReliabilityTests
         // marked the search "clean". Now the first error rethrows.
         var ex = Assert.ThrowsAny<Exception>(() => search.RunSearchUntilCompletion());
         Assert.Contains("boom from worker", FlattenMessages(ex));
+    }
+
+    /// <summary>
+    /// N distinct valid Balatro seeds. The seed alphabet (<see cref="MotelyGlobals.SeedDigits"/>)
+    /// is <c>123456789ABC…XYZ</c> — 35 chars, no <c>0</c>. Feeding the engine seeds with an
+    /// invalid char (e.g. <c>S0000000</c>) corrupts the unsafe SIMD batching path: it surfaces
+    /// as <see cref="ArgumentOutOfRangeException"/> with a passing filter and as an uncatchable
+    /// <c>AccessViolationException</c> with a throwing one. Tests must use valid input.
+    /// </summary>
+    private static string[] ValidSeeds(int count)
+    {
+        var digits = MotelyGlobals.SeedDigits;
+        var seeds = new string[count];
+        Span<char> chars = stackalloc char[8];
+        for (int i = 0; i < count; i++)
+        {
+            int n = i;
+            for (int p = chars.Length - 1; p >= 0; p--)
+            {
+                chars[p] = digits[n % digits.Length];
+                n /= digits.Length;
+            }
+            seeds[i] = new string(chars);
+        }
+        return seeds;
     }
 
     private static string FlattenMessages(Exception ex)

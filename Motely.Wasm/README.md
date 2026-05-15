@@ -1,56 +1,211 @@
-# Motely.Wasm
+# motely-wasm
 
-Bootsharp host for the browser/JavaScript Motely package. It keeps all Bootsharp attributes, dependency injection, and JavaScript interop concerns out of the core `Motely` library.
+WebAssembly package for [Motely](https://github.com/OptimusPi/MotelyJAML) — the Balatro seed search engine, with filters written in JAML.
 
-## Build
+## Install
 
-```powershell
-dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Debug
+```sh
+npm install motely-wasm
 ```
 
-Debug publishes use the regular .NET browser WASM toolchain and are the quickest way to verify the contract. Release publishes enable Bootsharp's NativeAOT-LLVM path and require the local Bootsharp alpha feed/toolchain described in the repo `nuget.config`; install Binaryen's `wasm-opt` for fully optimized release output.
-
-The generated ES module is written to `motely-wasm/`:
-
-- `motely-wasm/index.mjs` and generated bindings
-- `motely-wasm/package.json`
-- `motely-wasm/bin/` runtime and WASM binaries
-
-## JavaScript Usage
-
-Bootsharp 0.8's browser boot API takes the runtime resource root directly:
+## Quick start
 
 ```js
-import bootsharp, { Motely } from "./motely-wasm/index.mjs";
+import bootsharp, { Motely } from "motely-wasm";
 
-await bootsharp.boot("/bin");
+// Boot the .NET WASM runtime. The argument is the URL path to the package's
+// `bin/` directory (where dotnet.native.wasm is served from).
+await bootsharp.boot("/node_modules/motely-wasm/bin");
 
-const version = Motely.version();
-const result = Motely.loadJaml(`
+// A JAML filter — see https://github.com/OptimusPi/MotelyJAML for the language.
+const jaml = `
+name: WeeMonday
+deck: Erratic
+stake: Black
 must:
-  - joker: Blueprint
+  - joker: WeeJoker
     antes: [1]
-`);
-if (!result.ok) console.error(result.error);
+`;
+
+// Validate before searching — returns "valid" or an error message.
+const status = Motely.validateJaml(jaml);
+if (status !== "valid") throw new Error(status);
+
+// Subscribe to results before starting.
+Motely.onScoredResult.subscribe(r => console.log("match:", r.seed, r.score));
+Motely.onProgress.subscribe(p => console.log(`${p.percentComplete.toFixed(1)}%`));
+
+// Build, start, and await a search.
+const search = Motely.createSearch(jaml)
+  .withSequentialSearch()
+  .start();
+
+await search.waitForCompletionAsync();
+console.log("done:", search.totalSeedsSearched, "searched,", search.matchingSeeds, "matched");
 ```
 
-When serving from the repository root, `/bin` must resolve to `motely-wasm/bin`. If the module is hosted under a subpath, pass that subpath's binary root, for example `await bootsharp.boot("/motely-wasm/bin")`.
+## Booting
 
-Node usage can work in principle (Bootsharp boots via `fetch()`), but for this package the runtime assets must be HTTP-served or otherwise fetch-accessible; do not rely on raw `file://` paths. Browser usage remains the default path.
+`bootsharp.boot(binUrl)` initializes the .NET WASM runtime. Call it once before any
+`Motely.*` API. The argument is the URL path to the `bin/` directory that serves
+`dotnet.native.wasm` — e.g. `/node_modules/motely-wasm/bin`, or wherever your bundler
+copies the package's `bin/` folder.
 
-## Exported Contract
+```js
+import bootsharp, { BootStatus } from "motely-wasm";
 
-The generated `Motely` namespace currently exposes:
+if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+  await bootsharp.boot("/node_modules/motely-wasm/bin");
+}
 
-**JAML**
-- `version()` → string (assembly informational version)
-- `loadJaml(yaml)` → `{ ok: boolean, error: string | null }`
-- `explainJaml(yaml)` → `{ ok: boolean, error: string | null, explanation: string | null }`
+console.log(bootsharp.getStatus()); // BootStatus.Booted
+```
 
-**File system (Bootsharp.FileSystem)**
-- `pickRoot(options?)` → `Promise<string | null>`
-- `mountRoot(root, options?)` → `Promise<string>`
-- `unmountRoot(root)` → `Promise<void>`
-- `readTextFile(root, uri)` → `Promise<string>`
-- `writeTextFile(root, uri, text)` → `Promise<void>`
-- `onFileChanges` — event of `Change[]`
+## JAML API
+
+```js
+import { Motely } from "motely-wasm";
+
+// Validate a JAML filter string — returns "valid" on success, an error message on failure.
+const status = Motely.validateJaml(jaml);
+
+// Human-readable explanation of what a JAML filter does.
+const explanation = Motely.explainJaml(jaml);
+
+// Inspect the search plan (tally column count, CSV header, labels).
+const plan = Motely.createPlan(jaml);
+
+// Analyze specific seeds against a JAML filter.
+const result = Motely.analyzeJamlSeeds(jaml, ["ABCD1234", "XYZ99"]);
+
+// Engine version string.
+console.log(Motely.version());
+```
+
+## Running a search
+
+`Motely.createSearch(jaml)` returns a settings builder. Chain a search-mode method,
+then call `.start()` to get a running `IMotelySearch`.
+
+```js
+import { Motely } from "motely-wasm";
+
+Motely.onSeedMatch.subscribe(seed => { /* matching seed string */ });
+Motely.onScoredResult.subscribe(r => { /* r.seed, r.score, r.tallies */ });
+Motely.onProgress.subscribe(p => { /* p.percentComplete, p.seedsSearched, p.seedsPerMillisecond, … */ });
+
+const settings = Motely.createSearch(jaml)
+  .withSequentialSearch()          // enumerate all seeds in order
+  // .withRandomSearch(10_000)     // or pick N random seeds
+  // .withListSearch(seeds, seeds.length) // or supply a seed list
+  // .withAestheticSearch(0)       // or a JamlAesthetic mode
+  .withProgressReportIntervalMs(500n);
+
+const search = settings.start();
+
+// Async (yields between batches — good on the main thread or in a Worker)
+await search.waitForCompletionAsync();
+
+// or synchronous (blocks until done — only inside a Worker)
+// search.runSearchUntilCompletion();
+
+console.log(search.isCompleted, search.totalSeedsSearched, search.matchingSeeds);
+search.cancel(); // stop early
+```
+
+## Events
+
+| Event | Payload |
+|---|---|
+| `Motely.onSeedMatch` | `string` — matching seed |
+| `Motely.onScoredResult` | `{ seed, score, tallies }` |
+| `Motely.onProgress` | `MotelyProgress` — `percentComplete`, `seedsSearched`, `matchingSeeds`, `seedsPerMillisecond`, `elapsedMilliseconds` |
+| `Motely.onFileChanges` | `Change[]` (browser file-system mounts) |
+
+Subscribe and unsubscribe:
+
+```js
+const handler = r => console.log(r.seed);
+Motely.onScoredResult.subscribe(handler);
+Motely.onScoredResult.unsubscribe(handler);
+```
+
+## Submodule exports
+
+| Import path | Contents |
+|---|---|
+| `motely-wasm` | Default export: `boot`, `getStatus`, `BootStatus`. Named export: `Motely` (main API) |
+| `motely-wasm/motely` | Types: `IMotelySearch`, `IMotelySearchSettingsInterop`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyDeck`, `MotelyStake`, enums |
+| `motely-wasm/motely/filters` | `JamlAesthetic`, `JamlSearchPlan` |
+| `motely-wasm/motely/analysis` | `MotelyJamlyzerResult`, `MotelySeedAnalysis` |
+| `motely-wasm/bootsharp/file-system` | File-system interop (browser OPFS) — `PermissionMode`, `IFileMounter` |
+
+## Using in a Web Worker
+
+The WASM runtime is single-threaded. For a non-blocking UI, boot a runtime inside a
+Worker and drive it with messages. This mirrors the proven setup in the `jaml-ui`
+package's `searchWorker.ts`.
+
+```js
+// search-worker.js
+import bootsharp, { Motely } from "motely-wasm";
+
+let currentSearch = null;
+
+self.onmessage = async ({ data }) => {
+  if (data.type === "stop") {
+    currentSearch?.cancel();
+    self.postMessage({ type: "cancelled" });
+    return;
+  }
+  if (data.type !== "start") return;
+
+  try {
+    if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+      await bootsharp.boot("/node_modules/motely-wasm/bin");
+    }
+
+    const onResult = r =>
+      self.postMessage({ type: "result", seed: r.seed, score: r.score });
+    const onProgress = p =>
+      self.postMessage({ type: "progress", percent: p.percentComplete });
+    Motely.onScoredResult.subscribe(onResult);
+    Motely.onProgress.subscribe(onProgress);
+
+    try {
+      currentSearch = Motely.createSearch(data.jaml)
+        .withThreadCount(1)
+        .withSequentialSearch()
+        .start();
+      await currentSearch.waitForCompletionAsync();
+      self.postMessage({
+        type: "complete",
+        total: Number(currentSearch.totalSeedsSearched),
+        matched: Number(currentSearch.matchingSeeds),
+      });
+    } finally {
+      Motely.onScoredResult.unsubscribe(onResult);
+      Motely.onProgress.unsubscribe(onProgress);
+      currentSearch = null;
+    }
+  } catch (error) {
+    self.postMessage({ type: "error", message: String(error?.message ?? error) });
+  }
+};
+
+self.postMessage({ type: "ready" });
+```
+
+```js
+// main thread
+const worker = new Worker(new URL("./search-worker.js", import.meta.url), { type: "module" });
+
+worker.onmessage = ({ data }) => {
+  if (data.type === "result") console.log("match:", data.seed, data.score);
+  if (data.type === "progress") console.log(`${data.percent.toFixed(1)}%`);
+  if (data.type === "complete") console.log("done:", data.total, data.matched);
+};
+
+worker.postMessage({ type: "start", jaml });
+// worker.postMessage({ type: "stop" }); // cancel early
+```
