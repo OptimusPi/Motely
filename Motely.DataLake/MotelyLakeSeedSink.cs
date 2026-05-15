@@ -38,7 +38,8 @@ public sealed class MotelyLakeSeedSink : IDisposable
         DataPath = Path.Combine(SeedsRoot, "data");
 
         _filterId = filterId;
-        _tallyCount = tallyLabels.Count;
+        var tallyColumns = BuildUniqueColumnNames(tallyLabels);
+        _tallyCount = tallyColumns.Length;
 
         _connection = new DuckDBConnection("DataSource=:memory:");
         _connection.Open();
@@ -48,7 +49,7 @@ public sealed class MotelyLakeSeedSink : IDisposable
         Exec(
             $"ATTACH 'ducklake:{ToSqlPathLiteral(CatalogPath)}' AS lake (DATA_PATH '{ToSqlPathLiteral(DataPath)}/')"
         );
-        Exec(BuildCreateTableSql(filterId, tallyLabels));
+        Exec(BuildCreateTableSql(filterId, tallyColumns));
 
         _appender = _connection.CreateAppender("lake", $"seeds_{filterId}");
     }
@@ -99,17 +100,43 @@ public sealed class MotelyLakeSeedSink : IDisposable
         cmd.ExecuteNonQuery();
     }
 
-    private static string BuildCreateTableSql(string filterId, IReadOnlyList<string> tallyLabels)
+    internal static string[] BuildUniqueColumnNames(IReadOnlyList<string> tallyLabels)
+    {
+        var result = new string[tallyLabels.Count];
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "seed",
+            "score",
+        };
+
+        for (int i = 0; i < tallyLabels.Count; i++)
+        {
+            string baseName = string.IsNullOrWhiteSpace(tallyLabels[i])
+                ? $"tally_{i + 1}"
+                : tallyLabels[i].Trim();
+
+            string candidate = baseName;
+            int suffix = 2;
+            while (!seen.Add(candidate))
+                candidate = $"{baseName}_{suffix++}";
+
+            result[i] = candidate;
+        }
+
+        return result;
+    }
+
+    private static string BuildCreateTableSql(string filterId, IReadOnlyList<string> tallyColumns)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append("CREATE TABLE IF NOT EXISTS lake.\"seeds_");
         sb.Append(EscapeIdent(filterId));
         sb.Append("\" (\"seed\" VARCHAR, \"score\" INTEGER");
 
-        for (int i = 0; i < tallyLabels.Count; i++)
+        for (int i = 0; i < tallyColumns.Count; i++)
         {
             sb.Append(", \"");
-            sb.Append(EscapeIdent(tallyLabels[i]));
+            sb.Append(EscapeIdent(tallyColumns[i]));
             sb.Append("\" INTEGER");
         }
 

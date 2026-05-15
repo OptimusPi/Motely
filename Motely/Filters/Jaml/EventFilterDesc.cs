@@ -540,8 +540,11 @@ internal static class EventFilterUtils
         );
 
         var matchCounts = Vector256<int>.Zero;
-        foreach (var rollIndex in clause.Rolls)
+        var minVector = Vector256.Create(clause.Min);
+        var rolls = clause.Rolls;
+        for (int i = 0; i < rolls.Length; i++)
         {
+            var rollIndex = rolls[i];
             var rollMask = checker(ref ctx, ref stream, rollIndex);
             matchCounts = Vector256.Add(
                 matchCounts,
@@ -556,6 +559,29 @@ internal static class EventFilterUtils
                     rollMask[7] ? 1 : 0
                 )
             );
+
+            // SIMD Optimization: We can stop only if EVERY lane is decided.
+            // A lane is decided if it already hit 'min' (and max is null) 
+            // OR if it's impossible to reach 'min'.
+            // Checking this every iteration in SIMD is often slower than just finishing the loop
+            // UNLESS the loop is long. For events, indices are usually small, but 
+            // if rolls.Length is large (like your 0-99 example), it's worth it.
+
+            if (rolls.Length > 8)
+            {
+                int rollsRemaining = rolls.Length - 1 - i;
+                var possibleMax = Vector256.Add(matchCounts, Vector256.Create(rollsRemaining));
+                
+                // maskHit: matchCounts >= min
+                var maskHit = Vector256.GreaterThanOrEqual(matchCounts, minVector);
+                // maskFail: current + remaining < min
+                var maskFail = Vector256.LessThan(possibleMax, minVector);
+                
+                // Combined: lane is finished
+                var combined = Vector256.BitwiseOr(maskHit, maskFail);
+                if (combined.ExtractMostSignificantBits() == 0xFF)
+                    break;
+            }
         }
 
         return new VectorMask(
@@ -584,8 +610,11 @@ internal static class EventFilterUtils
         );
 
         var matchCounts = Vector256<int>.Zero;
-        foreach (var rollIndex in clause.Rolls)
+        var minVector = Vector256.Create(clause.Min);
+        var rolls = clause.Rolls;
+        for (int i = 0; i < rolls.Length; i++)
         {
+            var rollIndex = rolls[i];
             var rollMask = checker(ref ctx, ref stream, rollIndex, value);
             matchCounts = Vector256.Add(
                 matchCounts,
@@ -600,6 +629,17 @@ internal static class EventFilterUtils
                     rollMask[7] ? 1 : 0
                 )
             );
+
+            if (rolls.Length > 8)
+            {
+                int rollsRemaining = rolls.Length - 1 - i;
+                var possibleMax = Vector256.Add(matchCounts, Vector256.Create(rollsRemaining));
+                var maskHit = Vector256.GreaterThanOrEqual(matchCounts, minVector);
+                var maskFail = Vector256.LessThan(possibleMax, minVector);
+                var combined = Vector256.BitwiseOr(maskHit, maskFail);
+                if (combined.ExtractMostSignificantBits() == 0xFF)
+                    break;
+            }
         }
 
         return new VectorMask(

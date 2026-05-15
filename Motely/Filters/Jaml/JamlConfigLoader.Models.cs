@@ -254,6 +254,18 @@ public sealed class JamlClauseUnion
     [YamlMember(Alias = "mode")]
     public string? Mode { get; set; }
 
+    [YamlMember(Alias = "judgement")]
+    public int[]? Judgement { get; set; }
+
+    [YamlMember(Alias = "wraith")]
+    public int[]? Wraith { get; set; }
+
+    [YamlMember(Alias = "rareTag")]
+    public int[]? RareTag { get; set; }
+
+    [YamlMember(Alias = "uncommonTag")]
+    public int[]? UncommonTag { get; set; }
+
     // Flat source shortcuts (top-level on clause)
     [YamlMember(Alias = "shopItems")]
     public int[]? ShopItems { get; set; }

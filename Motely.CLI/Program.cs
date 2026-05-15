@@ -530,6 +530,7 @@ partial class Program
                 config.Id,
                 plan.TallyLabels
             );
+            int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
             var saveSeedsCollector = saveSeedsOption.HasValue()
                 ? new TopSeedCollector(SavedSeedLimit)
                 : null;
@@ -551,6 +552,9 @@ partial class Program
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
+                    if (!ShouldEmitScore(tally.Score, cutoffAuto, cutoffFixed, ref cliLearnedCutoff))
+                        return;
+
                     resultSink.OnScored(in tally);
                     saveSeedsCollector?.Consider(tally.Seed, tally.Score);
                 });
@@ -794,6 +798,7 @@ partial class Program
 
     static void PrintSummary(IMotelySearch search, int batchCharCount, bool cancelled)
     {
+        StickyProgress.Clear();
         Console.Out.Flush();
         Console.WriteLine();
         Console.WriteLine(cancelled ? "STOPPED" : "COMPLETED");
@@ -1035,7 +1040,7 @@ partial class Program
             ? $" | ETA {FormatEtaMs(etaMs)}"
             : "";
         string elapsed = TimeSpan.FromMilliseconds(p.ElapsedMilliseconds).ToString(@"hh\:mm\:ss\.f");
-        Console.Error.WriteLine(
+        StickyProgress.Update(
             $"Progress: {p.PercentComplete:F1}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}");
     }
 
@@ -1043,6 +1048,28 @@ partial class Program
     {
         var rem = TimeSpan.FromMilliseconds(milliseconds);
         return rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss");
+    }
+
+    static bool ShouldEmitScore(int score, bool cutoffAuto, int cutoffFixed, ref int cliLearnedCutoff)
+    {
+        if (!cutoffAuto)
+            return cutoffFixed == int.MinValue || score >= cutoffFixed;
+
+        int observed = Volatile.Read(ref cliLearnedCutoff);
+        while (true)
+        {
+            if (score < observed)
+                return false;
+
+            if (score == observed)
+                return true;
+
+            int original = Interlocked.CompareExchange(ref cliLearnedCutoff, score, observed);
+            if (original == observed)
+                return true;
+
+            observed = original;
+        }
     }
 
     static string ResolveDataLakeRootPath()

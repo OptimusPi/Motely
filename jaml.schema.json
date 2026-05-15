@@ -399,6 +399,30 @@
         "mode": {
           "type": "string"
         },
+        "judgement": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wraith": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "rareTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "uncommonTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
         "shopItems": {
           "type": "array",
           "items": {
