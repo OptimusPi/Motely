@@ -115,14 +115,17 @@ const nextConfig = { transpilePackages: ["jaml-ui"] };
 
 ## Search Worker Architecture
 
-The library provides `useSearch` and `useAnalyzer` helpers that use `motely-wasm`'s Bootsharp-generated ES module directly.
-Importing `jaml-ui/motely` boots `motely-wasm` once at module scope. Search results stay the plain Balatro seed shape: `seed`, `score`, and optional tally columns.
+The library provides `useSearch` and `useAnalyzer` helpers that use `motely-wasm`'s Bootsharp-generated ES module directly. Bootsharp handles the runtime bridge: import the generated package, boot the package `bin/` directory, then call `Motely`.
+
+```ts
+import bootsharp, { Motely } from "motely-wasm";
+
+await bootsharp.boot("/motely-wasm/bin");
+const status = Motely.validateJaml(jaml);
+```
 
 ```tsx
 import { useSearch, useJamlLibrary } from "jaml-ui/motely";
-
-const search = useSearch();
-search.start(jaml, 10_000);
 
 // result: { seed: string, score: number, tallyColumns?: number[] }
 ```
@@ -142,6 +145,6 @@ await library.saveFile("filters/example.jaml", source);
 | Peer | Required for |
 | ---- | ------------ |
 | `react`, `react-dom` | All components |
-| `motely-wasm ^16.0.1` | `jaml-ui/motely`, `AnalyzerExplorer`, `useSearch`, `useAnalyzer`, `useJamlLibrary` data |
+| `motely-wasm ^17.4.4` | `jaml-ui/motely`, `AnalyzerExplorer`, `useSearch`, `useAnalyzer`, `useJamlLibrary` data |
 | `@rewaffle/bootsharp-file-system` | Optional JAML library folder mount support |
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-spring/three` | `jaml-ui/r3f` only |

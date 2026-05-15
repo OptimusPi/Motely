@@ -208,7 +208,13 @@ self.onmessage = async (event: MessageEvent) => {
 
     try {
         if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-            await bootsharp.boot("/bin");
+            // Must match the path the host serves the package's bin/ at — same
+            // mount jaml-ui's main-thread hooks (useSearch / useAnalyzer /
+            // useSearchPool / useMotelyRuntime) use, the Storybook staticDir
+            // in jaml-ui/.storybook/main.ts, and the Next.js route in
+            // seedfinder.app/app/motely-wasm/bin/[...path]/route.ts.
+            // A hardcoded "/bin" would 404 in all three.
+            await bootsharp.boot("/motely-wasm/bin");
         }
 
         attachListeners();

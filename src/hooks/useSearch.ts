@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Motely, ensureMotelyReady } from "../motelyBoot.js";
+import bootsharp, { Motely } from "motely-wasm";
 import type { IMotelySearch, IMotelySearchSettingsInterop, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
 import type { JamlAesthetic } from "motely-wasm/motely/filters";
 
@@ -33,6 +33,12 @@ const INITIAL_STATE: UseSearchState = {
     seedsPerSecond: 0,
     tallyLabels: [],
 };
+
+async function ensureMotelyReady(): Promise<void> {
+    if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+        await bootsharp.boot("/motely-wasm/bin");
+    }
+}
 
 function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }): IMotelySearchSettingsInterop {
     const settings = Motely.createSearch(jaml);

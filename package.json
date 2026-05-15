@@ -115,13 +115,11 @@
   "devDependencies": {
     "@chromatic-com/storybook": "^5.1.2",
     "@eslint/js": "^10.0.1",
-    "@google/design.md": "^0.1.1",
     "@react-spring/three": "^10.0.3",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
-    "@storybook/addon-mcp": "^0.6.0",
     "@storybook/addon-onboarding": "^10.3.6",
     "@storybook/addon-vitest": "^10.3.6",
     "@storybook/react-vite": "^10.3.6",
@@ -163,6 +161,7 @@
     "lucide-react": "^1.14.0",
     "motely-wasm": "^17.4.4",
     "tailwind-merge": "^2.6.1",
+    "zod": "^4.0.0",
     "zustand": "^5.0.13"
   }
 }

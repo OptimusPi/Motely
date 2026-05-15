@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Motely } from '../../motelyBoot.js';
+import bootsharp, { Motely } from 'motely-wasm';
 import type { MotelyJamlyzerResult, MotelySeedAnalysis, MotelyAnteAnalysis, MotelyAnalyzedItem, MotelyBoosterPackAnalysis } from 'motely-wasm/motely/analysis';
 import type { MotelyScoredSeedResult } from 'motely-wasm/motely';
 import { cn } from '../../lib/utils';
 import { DeckSprite } from './DeckSprite';
 import { JamlGameCard, JamlVoucher, resolveAnalyzerShopItem } from '../../components/GameCard.js';
-import { getMotelyRuntimeSnapshot } from '../../motelyBoot.js';
 
 import { Loader2, Sparkles } from 'lucide-react';
 
@@ -67,12 +66,12 @@ export function AgnosticSeedCard({
     useEffect(() => {
         if (propAnalysis || propResult || fetchedAnalysis) return;
 
-        const snapshot = getMotelyRuntimeSnapshot();
-        if (snapshot.status === 'error') return;
-
         const analyze = async () => {
             setLoading(true);
             try {
+                if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+                    await bootsharp.boot('/motely-wasm/bin');
+                }
                 const jaml = jamlConfig ?? `version: 1\nconfig:\n  deck: ${deckSlug}\n  stake: ${stakeSlug}\n`;
                 const rawData: MotelyJamlyzerResult = Motely.analyzeJamlSeeds(jaml, [seed]);
 

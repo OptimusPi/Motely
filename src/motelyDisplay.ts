@@ -1,4 +1,4 @@
-import { Motely } from "./motelyBoot.js";
+import { Motely } from "motely-wasm";
 import { MOTELY_ITEM_FORMATS_BY_VALUE } from "./decode/motelyItemFormats.js";
 
 type RuntimeEnum = Record<string, string | number>;

@@ -1,16 +1,6 @@
 "use client";
 
-export {
-  Motely,
-  MotelyFileSystem,
-  ensureMotelyReady,
-  getMotelyRuntimeSnapshot,
-  isMotelyFileSystemReady,
-  motelyFileSystemInitError,
-  subscribeMotelyRuntime,
-  type MotelyRuntimeSnapshot,
-  type MotelyRuntimeStatus,
-} from "./motelyBoot.js";
+export { default as bootsharp, Motely } from "motely-wasm";
 
 export {
   decodeMotelyItem,
@@ -63,4 +53,5 @@ export {
   useMotelyRuntime,
   useMotelyRuntimeOwner,
   type UseMotelyRuntimeState,
+  type MotelyRuntimeStatus,
 } from "./hooks/useMotelyRuntime.js";

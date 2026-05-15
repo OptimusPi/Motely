@@ -1,20 +1,20 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Motely, getMotelyRuntimeSnapshot } from '../../motelyBoot.js';
+import bootsharp, { Motely } from 'motely-wasm';
 import { Cpu, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export function WasmStatus() {
-    const snapshot = getMotelyRuntimeSnapshot();
-    const status = snapshot.status;
+    const status =
+        bootsharp.getStatus() === bootsharp.BootStatus.Booted ? 'ready'
+            : bootsharp.getStatus() === bootsharp.BootStatus.Booting ? 'booting'
+                : 'idle';
 
     const displayVersion = useMemo(
         () => (status === 'ready' ? Motely.version() : null),
         [status],
     );
-
-    const error = snapshot.error ? String(snapshot.error) : null;
 
     return (
         <div className={cn(
@@ -37,7 +37,6 @@ export function WasmStatus() {
                         v{displayVersion}
                     </span>
                 )}
-                {error && <span className="text-[11px] opacity-70 truncate max-w-[200px] leading-tight">{error}</span>}
             </div>
         </div>
     );
