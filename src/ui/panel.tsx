@@ -87,7 +87,7 @@ export function JimboButton({
 
 export function JimboBackButton({ onClick }: { onClick?: () => void }) {
   return (
-    <div className="j-flex j-justify-center j-w-full" style={{ padding: '4px 0' }}>
+    <div className="j-back-btn-wrap j-flex j-justify-center j-w-full">
       <JimboButton tone="orange" size="md" fullWidth onClick={onClick} className="j-back-btn">Back</JimboButton>
     </div>
   )

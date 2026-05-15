@@ -71,7 +71,7 @@ export const Badges: StoryObj = {
     <JimboAppScroll>
       <JimboPanel>
         <JimboText size="sm" tone="grey">Flat — no press, no shadow.</JimboText>
-        <div className="j-flex j-gap-sm" style={{ flexWrap: 'wrap' }}>
+        <div className="j-flex j-gap-sm j-flex-wrap">
           <JimboBadge tone="red">Red</JimboBadge>
           <JimboBadge tone="blue">Blue</JimboBadge>
           <JimboBadge tone="green">Green</JimboBadge>
@@ -80,7 +80,7 @@ export const Badges: StoryObj = {
           <JimboBadge tone="dark">Dark</JimboBadge>
           <JimboBadge tone="grey">Grey</JimboBadge>
         </div>
-        <div className="j-flex j-gap-sm" style={{ flexWrap: 'wrap' }}>
+        <div className="j-flex j-gap-sm j-flex-wrap">
           <JimboBadge size="md" tone="blue">Must</JimboBadge>
           <JimboBadge size="md" tone="red">Should</JimboBadge>
           <JimboBadge size="md" tone="green">Match</JimboBadge>

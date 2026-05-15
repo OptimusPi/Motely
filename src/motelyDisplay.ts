@@ -1,4 +1,5 @@
 import { Motely } from "./motelyBoot.js";
+import { MOTELY_ITEM_FORMATS_BY_VALUE } from "./decode/motelyItemFormats.js";
 
 type RuntimeEnum = Record<string, string | number>;
 type MotelyRuntimeEnums = typeof Motely & Record<string, RuntimeEnum>;
@@ -54,6 +55,6 @@ export function motelyItemDisplayNameFromKey(key: string): string {
 }
 
 export function motelyItemDisplayNameFromValue(value: number): string {
-  const key = runtimeEnumKey(MotelyEnums.MotelyItemType, value & 0xffff);
-  return key ?? `item#${value}`;
+  const itemType = value & 0xffff;
+  return MOTELY_ITEM_FORMATS_BY_VALUE[itemType as keyof typeof MOTELY_ITEM_FORMATS_BY_VALUE]?.displayName ?? `item#${value}`;
 }

@@ -11,7 +11,7 @@ import { Jamlyzer } from './Jamlyzer';
 import { MotelyVersionBadge } from './MotelyVersionBadge';
 import { PaginatedFilterBrowser } from './PaginatedFilterBrowser';
 import { RunConfigModal } from './RunConfigModal';
-import { Standardcard } from './Standardcard';
+import { RealStandardcard as Standardcard } from './Standardcard';
 import { AnalyzerExplorer } from './AnalyzerExplorer';
 import { CardFan } from './CardFan';
 import { CardList } from './CardList';
