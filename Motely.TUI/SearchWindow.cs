@@ -234,8 +234,8 @@ public class SearchWindow : Window
             // via PassesCutoff() because the engine threshold is fixed per-plan.
             int engineCutoff = (!_cutoffAuto && _cutoffFixed > int.MinValue) ? _cutoffFixed : 0;
             var plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
-            var settings = plan
-                .Settings.WithDeck(config.Deck)
+            var settings = JamlSearchBuilder.CreateSettings(config, engineCutoff)
+                .WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(TuiSettings.ThreadCount)
                 .WithQuietMode(true)

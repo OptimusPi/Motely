@@ -552,9 +552,34 @@ public interface IMotelySearchSettings
     IMotelySearch Start(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Interop-safe subset of <see cref="IMotelySearchSettings"/> for WASM/Bootsharp boundaries.
+/// Excludes members that expose ref-struct search/filter contexts.
+/// </summary>
+public interface IMotelySearchSettingsInterop
+{
+    IMotelySearchSettingsInterop WithThreadCount(int threadCount);
+    IMotelySearchSettingsInterop WithBatchCharacterCount(int batchCharacterCount);
+    IMotelySearchSettingsInterop WithStartBatchIndex(long startBatchIndex);
+    IMotelySearchSettingsInterop WithEndBatchIndex(long endBatchIndex);
+    IMotelySearchSettingsInterop WithListSearch(string[] seeds, int seedCount = -1);
+    IMotelySearchSettingsInterop WithRandomSearch(int count);
+    IMotelySearchSettingsInterop WithAestheticSearch(JamlAesthetic aesthetic);
+    IMotelySearchSettingsInterop WithSequentialSearch();
+    IMotelySearchSettingsInterop WithDeck(MotelyDeck deck);
+    IMotelySearchSettingsInterop WithStake(MotelyStake stake);
+    IMotelySearchSettingsInterop WithProgressReportIntervalMs(long intervalMs);
+    IMotelySearchSettingsInterop WithCsvOutput(bool csvOutput);
+    IMotelySearchSettingsInterop WithQuietMode(bool quietMode);
+    IMotelySearchSettingsInterop WithAutoScoreCutoff(bool enabled = true);
+
+    IMotelySearch CreateSearch();
+    IMotelySearch Start(CancellationToken cancellationToken = default);
+}
+
 public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySeedFilterDesc<TBaseFilter> baseFilterDesc
-) : IMotelySearchSettings
+) : IMotelySearchSettings, IMotelySearchSettingsInterop
     where TBaseFilter : struct, IMotelySeedFilter
 {
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
@@ -762,6 +787,55 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         WithAutoScoreCutoff(enabled);
 
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
+        Start(cancellationToken);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithThreadCount(int threadCount) =>
+        WithThreadCount(threadCount);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithBatchCharacterCount(int count) =>
+        WithBatchCharacterCount(count);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithStartBatchIndex(long index) =>
+        WithStartBatchIndex(index);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithEndBatchIndex(long index) =>
+        WithEndBatchIndex(index);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithListSearch(
+        string[] seeds,
+        int seedCount
+    ) => WithListSearch(seeds, seedCount);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithRandomSearch(int count) =>
+        WithRandomSearch(count);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithAestheticSearch(
+        JamlAesthetic aesthetic
+    ) => WithAestheticSearch(aesthetic);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithSequentialSearch() =>
+        WithSequentialSearch();
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithDeck(MotelyDeck deck) =>
+        WithDeck(deck);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithStake(MotelyStake stake) =>
+        WithStake(stake);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithProgressReportIntervalMs(
+        long intervalMs
+    ) => WithProgressReportIntervalMs(intervalMs);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithCsvOutput(bool csvOutput) =>
+        WithCsvOutput(csvOutput);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithQuietMode(bool quietMode) =>
+        WithQuietMode(quietMode);
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithAutoScoreCutoff(bool enabled) =>
+        WithAutoScoreCutoff(enabled);
+
+    IMotelySearch IMotelySearchSettingsInterop.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
     /// <inheritdoc cref="IMotelySearchSettings.CreateSearch" />
@@ -1095,10 +1169,28 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             throw new InvalidOperationException("Search has already been started.");
         _elapsedTime.Start();
 
+        Exception? firstError = null;
+
+        void RunWorkerSafe(int idx)
+        {
+            try
+            {
+                RunWorkerBody(_plans[idx]);
+            }
+            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+            {
+                // cooperative cancellation
+            }
+            catch (Exception ex)
+            {
+                Interlocked.CompareExchange(ref firstError, ex, null);
+            }
+        }
+
         if (_threadCount == 1)
         {
             // Single-threaded: run directly on this thread
-            RunWorkerBody(_plans[0]);
+            RunWorkerSafe(0);
         }
         else
         {
@@ -1107,7 +1199,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             for (int i = 0; i < _threadCount; i++)
             {
                 int threadIdx = i;
-                threads[i] = new Thread(() => RunWorkerBody(_plans[threadIdx]))
+                threads[i] = new Thread(() => RunWorkerSafe(threadIdx))
                 {
                     Name = $"Motely Search Thread {threadIdx}",
                     IsBackground = true
@@ -1119,6 +1211,15 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 threads[i].Join();
             }
+        }
+
+        if (firstError is not null)
+        {
+            // Tell awaiters about the failure, then rethrow on the caller for the
+            // sync surface. Without this, a failed worker used to look like a clean
+            // completion to anyone waiting on _completionSource.
+            _completionSource.TrySetException(firstError);
+            throw firstError;
         }
 
         SignalSearchCompleted();
@@ -1195,48 +1296,91 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     /// Starts search threads without blocking the caller.
     /// Completion is signaled via <see cref="_completionSource"/>.
     /// </summary>
+    /// <remarks>
+    /// Both paths off-thread the worker bodies. The single-thread case used to run
+    /// synchronously on the caller, which broke <see cref="RunSearchAsync"/>: the Task
+    /// only returned after the search had already completed, so any code that did
+    /// <c>await search.RunSearchAsync()</c> on the same thread deadlocked. The
+    /// multi-thread case used to swallow worker exceptions silently — if a worker
+    /// threw, <see cref="_completionSource"/> never moved and the caller hung forever.
+    /// Every worker is now wrapped so the first exception is captured and surfaced
+    /// through <see cref="_completionSource"/> once the last worker drops out.
+    /// </remarks>
     private void StartSearchThreads()
     {
-        // what the fuck - pifreak
-        // //ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-
         _elapsedTime.Start();
 
-        if (_threadCount == 1)
-        {
+        int totalWorkers = _threadCount;
+        WorkerCoordinator coordinator = new(this, totalWorkers);
 
-                try
-                {
-                    RunWorkerBody(_plans[0]);
-                    SignalSearchCompleted();
-                }
-                catch (Exception ex)
-                {
-                    _completionSource.TrySetException(ex);
-                }
-        }
-        else
+        if (totalWorkers == 1)
         {
-            int remaining = _threadCount;
-            for (int i = 0; i < _threadCount; i++)
+            // Single-thread: run inline on the caller — no pthread, no deadlock risk,
+            // and exceptions propagate cleanly without corrupting unsafe SIMD state.
+            coordinator.RunWorker(0);
+            return;
+        }
+
+        for (int i = 0; i < totalWorkers; i++)
+        {
+            int threadIdx = i;
+            var thread = new Thread(() => coordinator.RunWorker(threadIdx))
             {
-                int threadIdx = i;
-                var thread = new Thread(() =>
+                Name = $"Motely Search Thread {threadIdx}",
+                IsBackground = true,
+            };
+            thread.Start();
+        }
+    }
+
+    /// <summary>
+    /// Tracks the running worker count and routes the first thrown exception back
+    /// through <see cref="_completionSource"/>. One instance per search.
+    /// </summary>
+    private sealed class WorkerCoordinator
+    {
+        private readonly MotelySearch<TBaseFilter> _owner;
+        private int _remaining;
+        private Exception? _firstError;
+
+        public WorkerCoordinator(MotelySearch<TBaseFilter> owner, int totalWorkers)
+        {
+            _owner = owner;
+            _remaining = totalWorkers;
+        }
+
+        public void RunWorker(int idx)
+        {
+            try
+            {
+                _owner.RunWorkerBody(_owner._plans[idx]);
+            }
+            catch (OperationCanceledException) when (_owner._cancellationToken.IsCancellationRequested)
+            {
+                // honour cooperative cancellation — no error
+            }
+            catch (Exception ex)
+            {
+                Interlocked.CompareExchange(ref _firstError, ex, null);
+            }
+            finally
+            {
+                if (Interlocked.Decrement(ref _remaining) == 0)
                 {
-                    RunWorkerBody(_plans[threadIdx]);
-                    if (Interlocked.Decrement(ref remaining) == 0)
+                    Thread.MemoryBarrier();
+                    var err = Volatile.Read(ref _firstError);
+                    if (err is not null)
                     {
-                        Thread.MemoryBarrier();
-                        bool completed =
-                            Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
-                        _completionSource.TrySetResult(completed);
+                        _owner._completionSource.TrySetException(err);
                     }
-                })
-                {
-                    Name = $"Motely Search Thread {threadIdx}",
-                    IsBackground = true
-                };
-                thread.Start();
+                    else
+                    {
+                        bool completed =
+                            Volatile.Read(ref _owner._isDisposed) == 0
+                            && !_owner._cancellationToken.IsCancellationRequested;
+                        _owner._completionSource.TrySetResult(completed);
+                    }
+                }
             }
         }
     }

@@ -40,7 +40,7 @@ public class JamlSchemaSnapshotTests
     {
       var sectionSchema = Assert.IsType<JsonObject>(properties[section]);
       var items = Assert.IsType<JsonObject>(sectionSchema["items"]);
-      Assert.Equal("#/$defs/JamlClauseDto", items["$ref"]?.GetValue<string>());
+      Assert.Equal("#/$defs/JamlClauseUnion", items["$ref"]?.GetValue<string>());
     }
 
     var aestheticsSchema = Assert.IsType<JsonObject>(properties["aesthetics"]);
@@ -52,12 +52,12 @@ public class JamlSchemaSnapshotTests
     var eventEnum = Assert.IsType<JsonArray>(eventTypeDef["enum"]);
     Assert.Contains(eventEnum, item => item?.GetValue<string>() == "LuckyMoney");
 
-    var clauseDef = Assert.IsType<JsonObject>(defs["JamlClauseDto"]);
+    var clauseDef = Assert.IsType<JsonObject>(defs["JamlClauseUnion"]);
     var clauseProps = Assert.IsType<JsonObject>(clauseDef["properties"]);
     var eventSchema = Assert.IsType<JsonObject>(clauseProps["event"]);
     Assert.Equal("#/$defs/MotelyEventType", eventSchema["$ref"]?.GetValue<string>());
 
-    var sourcesDef = Assert.IsType<JsonObject>(defs["JamlSourcesDto"]);
+    var sourcesDef = Assert.IsType<JsonObject>(defs["JamlSources"]);
     var sourceProps = Assert.IsType<JsonObject>(sourcesDef["properties"]);
     var earlyAntesMaxPackSchema = Assert.IsType<JsonObject>(sourceProps["earlyAntesMaxPack"]);
     Assert.Equal("integer", earlyAntesMaxPackSchema["type"]?.GetValue<string>());

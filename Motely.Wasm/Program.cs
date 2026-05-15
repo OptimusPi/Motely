@@ -2,7 +2,10 @@ using Bootsharp;
 using Bootsharp.FileSystem;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
+using Motely;
+using Motely.Analysis;
 using Motely.Filters;
+using Motely.Filters.Native;
 using System.Reflection;
 using System.Text;
 
@@ -19,6 +22,15 @@ public static partial class Program
     [Export]
     public static event Action<IReadOnlyList<Change>>? OnFileChanges;
 
+    [Export]
+    public static event Action<string>? OnSeedMatch;
+
+    [Export]
+    public static event Action<MotelyScoredSeedResult>? OnScoredResult;
+
+    [Export]
+    public static event Action<MotelyProgress>? OnProgress;
+
     public static void Main()
     {
         services = new ServiceCollection()
@@ -33,29 +45,56 @@ public static partial class Program
             .InformationalVersion;
 
     [Export]
-    public static JamlLoadResult LoadJaml(string yaml)
+    public static string ValidateJaml(string jaml)
     {
-        var ok = JamlConfigLoader.TryLoad(yaml, out _, out var error);
-        return new JamlLoadResult(ok, error);
-    }
-
-    [Export]
-    public static JamlPlanResult ExplainJaml(string yaml)
-    {
-        if (!JamlConfigLoader.TryLoad(yaml, out var config, out var error))
-            return new(false, error ?? "Invalid JAML.", null);
-        if (!config.HasAnyClauses)
-            return new(true, null, "");
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            return error ?? "Invalid JAML.";
         try
         {
-            JamlSearchBuilder.CreatePlan(config);
-            return new(true, null, JamlSearchBuilder.ExplainPlan(config));
+            JamlSearchBuilder.EnsureRunnablePlan(config);
+            return "valid";
         }
         catch (Exception ex)
         {
-            return new(false, ex.Message, null);
+            return ex.Message;
         }
     }
+
+    [Export]
+    public static string ExplainJaml(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config) : "";
+    }
+
+    [Export]
+    public static JamlSearchPlan CreatePlan(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return JamlSearchBuilder.CreatePlan(config);
+    }
+
+    [Export]
+    public static MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
+        MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
+
+    [Export]
+    public static IMotelySearchSettingsInterop CreateSearch(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return AttachInteropCallbacks(JamlSearchBuilder.CreateSettings(config));
+    }
+
+    [Export]
+    public static IMotelySearchSettingsInterop CreateSearchSettings() =>
+        AttachInteropCallbacks(
+            new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+                new PassthroughFilterDesc()
+            )
+        );
 
     [Export]
     public static async Task<string?> PickRoot(PickOptions? options = null) =>
@@ -89,6 +128,14 @@ public static partial class Program
 
     private static IFileMounter Mounter() => services.GetRequiredService<IFileMounter>();
 
+    private static IMotelySearchSettingsInterop AttachInteropCallbacks(IMotelySearchSettings settings) =>
+        (IMotelySearchSettingsInterop)settings
+            .WithSeedMatchCallback(seed => OnSeedMatch?.Invoke(seed))
+            .WithScoredResultCallback(tally =>
+                OnScoredResult?.Invoke(MotelyScoredSeedResult.FromTally(in tally))
+            )
+            .WithProgressCallback(p => OnProgress?.Invoke(p));
+
     private static IFileSystem GetFileSystem(string root) =>
         MountedFileSystems.TryGetValue(root, out var fs)
             ? fs
@@ -103,6 +150,3 @@ public static partial class Program
         }
     }
 }
-
-public sealed record JamlLoadResult(bool Ok, string? Error);
-public sealed record JamlPlanResult(bool Ok, string? Error, string? Explanation);

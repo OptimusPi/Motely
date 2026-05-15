@@ -1,1 +1,2 @@
-hey stupid it's called AGENTS.md
+@AGENTS.md
+@BOOTSHARP.md

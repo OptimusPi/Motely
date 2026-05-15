@@ -5,20 +5,44 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <BootsharpName>motely-wasm</BootsharpName>
-    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPublishDirectory>
+    <!-- Three distinct Bootsharp output sinks. motely-wasm/ (sibling, gitignored) is the
+         npm-publish root. Keeping the sinks in separate directories lets Bootsharp's
+         %MODULE_DIR% resolve to a clean "dist", so the generated package.json exports
+         read "./dist/index.mjs" instead of "././index.mjs". -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
+    <!-- dotnet.native.wasm is fetched by boot() from a URL root, not imported as a module.
+         Consumers (and Bootsharp's own boot() docs) expect that root at "<package>/bin", so
+         this stays a package-root sibling of dist/, not under it. RemoveDir'd every pack —
+         disposable, so never point it at a hand-maintained directory. -->
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
-    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Bootsharp" />
     <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Bootsharp.FileSystem" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(BootsharpExtraRoot)\cs\Bootsharp.FileSystem\Bootsharp.FileSystem.csproj" Condition="'$(BootsharpExtraRoot)' != ''" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
+
+  <!-- Bootsharp rewrites package.json from its PackageTemplate.json every pack (Overwrite=true)
+       and the template carries no "version" — but motely-wasm is npm-published and needs one.
+       Inject MotelyVersion (source of truth: <MotelyVersion> in Directory.Packages.props) right
+       after Bootsharp writes the file, and copy the README into the npm root (Bootsharp doesn't). -->
+  <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpPack">
+    <PropertyGroup>
+      <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
+      <_NpmPackageJson>$(_NpmRoot)\package.json</_NpmPackageJson>
+      <_PkgWithVersion>$([System.IO.File]::ReadAllText('$(_NpmPackageJson)').Replace('&quot;name&quot;: &quot;$(BootsharpName)&quot;,', '&quot;name&quot;: &quot;$(BootsharpName)&quot;,%0D%0A    &quot;version&quot;: &quot;$(MotelyVersion)&quot;,'))</_PkgWithVersion>
+    </PropertyGroup>
+    <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
+           Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp's PackageTemplate.json 'name' line may have changed. Update FinalizeNpmPackage in Motely.Wasm.csproj." />
+    <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
+    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" SkipUnchangedFiles="true" />
+    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
+  </Target>
 </Project>

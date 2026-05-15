@@ -140,7 +140,7 @@ public static partial class JamlConfigLoader
 
     /// <summary>
     /// Rewrites nested <c>and:</c> / <c>or:</c> blocks that use <c>clauses:</c> plus shared keys
-    /// (<c>antes</c>, <c>label</c>, <c>mode</c>, <c>score</c>, …) into the flat shape <see cref="JamlClauseDto"/> expects.
+    /// (<c>antes</c>, <c>label</c>, <c>mode</c>, <c>score</c>, …) into the flat shape <see cref="JamlClauseUnion"/> expects.
     /// Hoisted keys become siblings of <c>and</c>/<c>or</c> so <see cref="CreateClauseFromDto"/> passes shared <c>antes</c> into each child.
     /// </summary>
     private static string NormalizeNestedLogicSyntax(string jaml)
@@ -288,9 +288,9 @@ public static partial class JamlConfigLoader
         targetType switch
         {
             "Motely.Filters.JamlRootDocument" => "the top-level JAML document",
-            "Motely.Filters.JamlClauseDto" => "a clause",
-            "Motely.Filters.JamlSourcesDto" => "a clause's sources block",
-            "Motely.Filters.JamlDefaultsDto" => "the defaults block",
+            "Motely.Filters.JamlClauseUnion" => "a clause",
+            "Motely.Filters.JamlSources" => "a clause's sources block",
+            "Motely.Filters.JamlDefaults" => "the defaults block",
             _ => $"{targetType}",
         };
 
@@ -298,9 +298,9 @@ public static partial class JamlConfigLoader
 
     private static void PopulateClauses(
         JamlClauseSet set,
-        List<JamlClauseDto>? clauses,
+        List<JamlClauseUnion>? clauses,
         int[] defaultAntes,
-        JamlDefaultsDto? defaults
+        JamlDefaults? defaults
     )
     {
         if (clauses == null || clauses.Count == 0)
@@ -422,9 +422,9 @@ public static partial class JamlConfigLoader
     }
 
     private static IJamlClause CreateClauseFromDto(
-        JamlClauseDto c,
+        JamlClauseUnion c,
         int[] defaultAntes,
-        JamlDefaultsDto? defaults,
+        JamlDefaults? defaults,
         bool inheritedAntesSpecifiedByUser
     )
     {
@@ -494,7 +494,8 @@ public static partial class JamlConfigLoader
                 .Range(minShop.Value, maxShop.Value - minShop.Value + 1)
                 .ToArray();
 
-        NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, c.Sources);
+        bool hasExplicitSources = c.Sources != null;
+        NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, hasExplicitSources);
 
         var (shRank, shSuit) = ParseCardShorthand(value ?? "");
 
@@ -536,7 +537,8 @@ public static partial class JamlConfigLoader
                     c.Sources?.SpectralPacks,
                     c.Sources?.SoulCard,
                     c.Sources?.RequireMega ?? false,
-                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack
+                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
+                    hasExplicitSources
                 ),
             },
             MotelyFilterItemType.CommonJoker => new CommonJokerClause
@@ -681,7 +683,8 @@ public static partial class JamlConfigLoader
                     c.Sources?.SpectralPacks,
                     c.Sources?.SoulCard,
                     c.Sources?.RequireMega ?? false,
-                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack
+                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
+                    hasExplicitSources
                 ),
             },
             MotelyFilterItemType.Voucher => new VoucherClause
@@ -854,14 +857,15 @@ public static partial class JamlConfigLoader
                 score,
                 max,
                 label,
-                hasUserSpecifiedAntes
+                hasUserSpecifiedAntes,
+                hasExplicitSources
             ),
             _ => throw new NotSupportedException($"Unsupported clause type: {itemType}"),
         };
     }
 
     private static ErraticCardClause CreateErraticCardClause(
-        JamlClauseDto c,
+        JamlClauseUnion c,
         string? value,
         int[] antes,
         int min,
@@ -904,7 +908,8 @@ public static partial class JamlConfigLoader
         int score,
         int? max,
         string label,
-        bool hasUserSpecifiedAntes
+        bool hasUserSpecifiedAntes,
+        bool hasExplicitSources
     )
     {
         if (eventType is null)
@@ -912,6 +917,10 @@ public static partial class JamlConfigLoader
         if (hasUserSpecifiedAntes)
             throw new NotSupportedException(
                 "Event clauses do not support 'antes'. Remove 'antes' from the event clause, enclosing logic block, or defaults section."
+            );
+        if (hasExplicitSources)
+            throw new NotSupportedException(
+                "Event clauses do not support 'sources'. Remove the sources block from the event clause."
             );
 
         var r = (rolls == null || rolls.Length == 0) ? new int[] { 0 } : rolls;
@@ -1017,7 +1026,7 @@ public static partial class JamlConfigLoader
         };
     }
 
-    private static MotelyEventType? ResolveEventType(JamlClauseDto c) =>
+    private static MotelyEventType? ResolveEventType(JamlClauseUnion c) =>
         c.Event
         ?? (c.LuckyMoney != null ? MotelyEventType.LuckyMoney
             : c.LuckyMult != null ? MotelyEventType.LuckyMult
@@ -1033,7 +1042,7 @@ public static partial class JamlConfigLoader
             : c.WheelStaysFlipped != null ? MotelyEventType.WheelStaysFlipped
             : (MotelyEventType?)null);
 
-    private static int[]? ResolveEventRolls(JamlClauseDto c) =>
+    private static int[]? ResolveEventRolls(JamlClauseUnion c) =>
         c.Rolls
         ?? c.LuckyMoney
         ?? c.LuckyMult
@@ -1055,7 +1064,8 @@ public static partial class JamlConfigLoader
         int[]? spectralPacks,
         int[]? soulCard,
         bool requireMegaPack,
-        int earlyAntesMaxPack
+        int earlyAntesMaxPack,
+        bool hasExplicitSources
     )
     {
         var arcana = arcanaPacks ?? [];
@@ -1067,7 +1077,11 @@ public static partial class JamlConfigLoader
         // EarlyAntesMaxPack (default 3 = normal gameplay, raise to 5 for Hieroglyph scans).
         var resolvedBooster = split
             ? System.Array.Empty<int>()
-            : (boosterPacks is { Length: > 0 } bp ? bp : new[] { 0, 1, 2, 3, 4, 5 });
+            : boosterPacks is { } bp
+                ? bp
+                : hasExplicitSources
+                    ? System.Array.Empty<int>()
+                    : new[] { 0, 1, 2, 3, 4, 5 };
 
         return new LegendaryJokerSourceConfig
         {
@@ -1085,13 +1099,14 @@ public static partial class JamlConfigLoader
         ref int[]? shopItems,
         ref int[]? boosterPacks,
         MotelyFilterItemType itemType,
-        JamlSourcesDto? sources
+        bool hasExplicitSources
     )
     {
         if (shopItems != null || boosterPacks != null)
             return;
 
-        if (HasSpecialtySources(sources))
+        // Global rule: if any sources object is present on the clause, do not inject defaults.
+        if (hasExplicitSources)
             return;
 
         switch (itemType)
@@ -1118,20 +1133,6 @@ public static partial class JamlConfigLoader
         }
     }
 
-    private static bool HasSpecialtySources(JamlSourcesDto? sources)
-    {
-        if (sources == null) return false;
-        return (sources.Judgement?.Length ?? 0) > 0
-            || (sources.Wraith?.Length ?? 0) > 0
-            || (sources.RiffRaff?.Length ?? 0) > 0
-            || (sources.RareTag?.Length ?? 0) > 0
-            || (sources.UncommonTag?.Length ?? 0) > 0
-            || (sources.CommonShopJokers?.Length ?? 0) > 0
-            || (sources.UncommonShopJokers?.Length ?? 0) > 0
-            || (sources.RareShopJokers?.Length ?? 0) > 0
-            || (sources.AllShopJokers?.Length ?? 0) > 0;
-    }
-
     private static string LabelEnumOrAny<T>(EnumOrAny<T> v) where T : struct, Enum =>
         v.IsAny ? "Any" : FormatUtils.FormatDisplayName(v.Value.ToString());
 
@@ -1141,7 +1142,7 @@ public static partial class JamlConfigLoader
     private static MotelyJoker ToMotelyJoker(MotelyJokerLegendary joker) =>
         (MotelyJoker)((int)MotelyJokerRarity.Legendary | (int)joker);
 
-    private static string GenerateLabel(JamlClauseDto c)
+    private static string GenerateLabel(JamlClauseUnion c)
     {
         if (c.Joker is { } jokerValue) return LabelEnumOrAny(jokerValue);
         if (c.Jokers is { Count: > 0 } jj) return LabelEnums(jj);
@@ -1186,7 +1187,7 @@ public static partial class JamlConfigLoader
         return "Clause";
     }
 
-    private static string LabelStandardCard(JamlClauseDto c)
+    private static string LabelStandardCard(JamlClauseUnion c)
     {
         if (!string.IsNullOrWhiteSpace(c.StandardCard?.StringValue))
             return FormatUtils.FormatDisplayName(c.StandardCard.Value.StringValue);
@@ -1224,7 +1225,7 @@ public static partial class JamlConfigLoader
 
     // ── Resolve type from shorthand keys or explicit type field ──
 
-    private static (MotelyFilterItemType itemType, string? value) ResolveType(JamlClauseDto c)
+    private static (MotelyFilterItemType itemType, string? value) ResolveType(JamlClauseUnion c)
     {
         // Shorthand keys (type-as-key) — check each one
         if (c.Joker != null)
