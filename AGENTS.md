@@ -41,7 +41,21 @@ npm publish --access public
 
 Version lives in `<MotelyVersion>` in `Directory.Packages.props`. Bootsharp regenerates `motely-wasm/package.json` from its own template on every pack (no version field); the `FinalizeNpmPackage` target in `Motely.Wasm.csproj` injects `<MotelyVersion>` into the generated file after `BootsharpPack` runs — see `BOOTSHARP.md`. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
 
-**Publish gotcha — check the `exports` paths.** `motely-wasm@17.3.1` and `@17.3.2` shipped with broken `exports` (`"./../motely-wasm/index.mjs"` and `"././index.mjs"` respectively) — Node refuses both, so any consumer `import` throws. `17.3.0` is the last good `17.3.x`. The publish step is mangling the `exports` targets; after `npm publish`, run `npm view motely-wasm@<version> exports` and confirm the main target is a clean `"./index.mjs"` before depending on it. `packages/jaml-mcp` is pinned to an exact known-good version for this reason.
+**Publish procedure — follow in order, do not skip steps.**
+
+Pre-publish, after `dotnet publish Motely.Wasm`:
+
+1. `node Motely.Wasm/test-sanity.mjs` — must report `RESULT: PASS` (5/5). Node smoke covering the documented `Motely.*` surface, structured to mirror the xUnit shape in `Motely.Tests` (named test functions, arrange/act/assert, runner at bottom). Source of truth for "the package boots and the public API hasn't regressed."
+2. Eyeball `motely-wasm/package.json` `exports`. Must be `{ ".": "./dist/index.mjs", "./*": "./dist/generated/*.g.mjs" }`. Known-broken historic shapes: `17.3.1` shipped `"./../motely-wasm/index.mjs"`, `17.3.2` shipped `"././index.mjs"`. Both make Node refuse `import`. Bail before publishing if you see either.
+3. `npm publish --dry-run` from `motely-wasm/`. Confirm file count + tarball size are in line with prior releases (47 files / ~2.3 MB at 17.4.x).
+
+Post-publish, against the registry (not the local emit):
+
+4. `npm view motely-wasm@<version> exports` — must match step 2 byte-for-byte. If not, `npm unpublish motely-wasm@<version>` within 72h and republish a bumped patch. Local emit being clean is necessary, not sufficient — the publish pipeline has historically mangled exports on the way to the registry.
+
+`Motely.Wasm/test-browser.html` is the same coverage in-browser; boot path is host-chosen via `?bin=...` query param. Use it when the failure mode is browser-only (OPFS, worker boot, exports resolution against an HTTP server).
+
+`packages/jaml-mcp` pins an exact known-good `motely-wasm` version for the same reason — consumers should not float across the registry until a release has passed step 4.
 
 CDN delivery (unpkg/jsdelivr) is automatic after `npm publish`. No manual upload step.
 
