@@ -13,9 +13,16 @@ npm install motely-wasm
 ```js
 import bootsharp, { Motely } from "motely-wasm";
 
-// Boot the .NET WASM runtime. The argument is the URL path to the package's
-// `bin/` directory (where dotnet.native.wasm is served from).
-await bootsharp.boot("/node_modules/motely-wasm/bin");
+// Boot the .NET WASM runtime. The argument is the URL path under which your
+// host serves the package's `bin/` directory (where dotnet.native.wasm lives).
+// Pick whichever URL is actually reachable from your page — examples:
+//   "/motely-wasm/bin"          (Vite/Storybook staticDirs, Next.js route)
+//   "/bin"                       (page served from the package root)
+//   "/node_modules/motely-wasm/bin" (raw node_modules served as static)
+//   "https://unpkg.com/motely-wasm@17.4.4/bin" (CDN)
+// Workers must use the SAME path — don't pass "/bin" if your host serves
+// the assets at "/motely-wasm/bin".
+await bootsharp.boot("/motely-wasm/bin");
 
 // A JAML filter — see https://github.com/OptimusPi/MotelyJAML for the language.
 const jaml = `
@@ -47,15 +54,26 @@ console.log("done:", search.totalSeedsSearched, "searched,", search.matchingSeed
 ## Booting
 
 `bootsharp.boot(binUrl)` initializes the .NET WASM runtime. Call it once before any
-`Motely.*` API. The argument is the URL path to the `bin/` directory that serves
-`dotnet.native.wasm` — e.g. `/node_modules/motely-wasm/bin`, or wherever your bundler
-copies the package's `bin/` folder.
+`Motely.*` API. The argument is the URL path your host serves the `bin/` directory
+at (where `dotnet.native.wasm` lives). It's host-chosen — typical mountings are:
+
+| Host | Mount `bin/` at | Boot call |
+| --- | --- | --- |
+| Vite / Storybook `staticDirs` | `/motely-wasm/bin` | `boot("/motely-wasm/bin")` |
+| Next.js route handler | `/motely-wasm/bin/[...path]` | `boot("/motely-wasm/bin")` |
+| Static page in `node_modules/motely-wasm/` | `/bin` | `boot("/bin")` |
+| Raw node_modules served as static | `/node_modules/motely-wasm/bin` | `boot("/node_modules/motely-wasm/bin")` |
+| Public CDN | `https://unpkg.com/motely-wasm@17.4.4/bin` | `boot("https://unpkg.com/motely-wasm@17.4.4/bin")` |
+
+Web Workers must boot from the **same** URL as the main thread — absolute paths
+in a worker resolve against the page origin, so the path that serves the WASM
+to the main thread is the same path the worker must pass.
 
 ```js
 import bootsharp, { BootStatus } from "motely-wasm";
 
 if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-  await bootsharp.boot("/node_modules/motely-wasm/bin");
+  await bootsharp.boot("/motely-wasm/bin");
 }
 
 console.log(bootsharp.getStatus()); // BootStatus.Booted
@@ -162,7 +180,7 @@ self.onmessage = async ({ data }) => {
 
   try {
     if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-      await bootsharp.boot("/node_modules/motely-wasm/bin");
+      await bootsharp.boot("/motely-wasm/bin");
     }
 
     const onResult = r =>
