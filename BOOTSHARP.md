@@ -48,6 +48,33 @@ Run from `D:\bootsharp\src\cs`:
 4. Optional full validation: under `src/js`, `npm run build` → `npm run compile-test`
    → `npm run test` (the JS E2E suite). Run in that order, do not parallelize.
 
+## Repacking the SAME alpha version — the build-server trap
+
+**After repacking the same `0.8.0-alpha.N` (e.g. you packed once, found a generator bug,
+patched, repacked under the same N), you MUST run `dotnet build-server shutdown` before
+the next `dotnet publish Motely.Wasm`.** Wiping `bin/`, `obj/`, the NuGet HTTP cache, and
+even `%USERPROFILE%\.nuget\packages\bootsharp\0.8.0-alpha.N\` is not enough.
+
+Why: MSBuild keeps `Bootsharp.Publish.dll` (the `BootsharpEmit` / `BootsharpPack` task
+library) loaded in a long-running build-server process across `dotnet build`/`publish`
+invocations. The version-keyed package on disk is the new one, but the loaded task
+assembly in that process is still the previous one. Codegen (`Instances.g.cs`,
+`Interop.g.cs`, …) comes out of the **old** generator. Symptom: regenerated `.g.cs` files
+still show the pre-patch emission (e.g. unqualified `Bootsharp.JSImported` instead of
+`global::Bootsharp.JSImported`) even though the new nupkg's `tasks/Bootsharp.Publish.dll`
+has been overwritten on disk.
+
+Two ways to avoid the trap:
+
+- **Bump the version each repack** (`alpha.N` → `alpha.N+1`). MSBuild keys task assemblies
+  by version, so a new version forces a reload. This is the cleaner path during iteration.
+- **Or `dotnet build-server shutdown`** before publishing if you must reuse the same N.
+  Also kills `VBCSCompiler`. Survives next-publish reload of the patched task DLL.
+
+Don't go byte-grepping `Bootsharp.Publish.dll` to "verify the patch landed" — .NET metadata
+strings are UTF-16LE and won't match an ASCII `grep`. The symptom of "patched source, stale
+codegen" is the build-server cache 95% of the time. Shutdown the server first.
+
 ## Packing the alpha — extra (`D:\extra\bootsharp`)
 
 `Bootsharp.FileSystem` references `Bootsharp.Common` with a floating `*-*` version, so
