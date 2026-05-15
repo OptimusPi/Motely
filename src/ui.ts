@@ -28,6 +28,9 @@ export * from './ui/jimboInset.js'
 // transitively bundle motely-wasm. Files left on disk for triage.
 // export * from './ui/ide/JamlBuilder.js'
 export * from './ui/ide/JamlEditor.js'
+// Re-export default as named so MCP-Apps / iframe consumers can do
+// `import { JamlEditor } from 'jaml-ui/ui'` without a default binding.
+export { default as JamlEditor } from './ui/ide/JamlEditor.js'
 // export * from './ui/ide/WasmStatus.js'
 // export * from './ui/ide/AgnosticSeedCard.js'
 export * from './ui/JimboIconButton.js'
