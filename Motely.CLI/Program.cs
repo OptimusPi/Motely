@@ -4,6 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.CLI;
 using Motely.Analysis;
+using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
 using YamlDotNet.RepresentationModel;
@@ -462,13 +463,13 @@ partial class Program
                 }
             }
 
+            int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
             JamlSearchPlan plan;
             try
             {
                 // Push fixed --cutoff into the engine so low-scoring seeds are dropped at
                 // the scorer (no callback spam, no per-seed string concat). Auto still needs
                 // the caller-side running-max below since the engine threshold is static.
-                int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
                 plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
             }
             catch (InvalidOperationException ex)
@@ -477,7 +478,7 @@ partial class Program
                 return 1;
             }
 
-            IMotelySearchSettings settings = plan.Settings
+            IMotelySearchSettings settings = JamlSearchBuilder.CreateSettings(config, engineCutoff)
                 .WithDeck(deck)
                 .WithStake(stake)
                 .WithThreadCount(threads);
@@ -524,6 +525,11 @@ partial class Program
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;
+            using var resultSink = CreateResultSink(
+                hasStructuredScores,
+                config.Id,
+                plan.TallyLabels
+            );
             var saveSeedsCollector = saveSeedsOption.HasValue()
                 ? new TopSeedCollector(SavedSeedLimit)
                 : null;
@@ -545,16 +551,15 @@ partial class Program
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
+                    resultSink.OnScored(in tally);
                     saveSeedsCollector?.Consider(tally.Seed, tally.Score);
-
-                    var tallies = string.Join(",", tally.TallyValuesSpan.ToArray());
-                    Console.WriteLine($"{tally.Seed},{tally.Score},{tallies}");
                 });
             }
             else
             {
                 settings = settings.WithSeedMatchCallback(seed =>
                 {
+                    resultSink.OnSeed(seed);
                     if (saveSeedMatches != null
                         && saveSeedMatchSet != null
                         && saveSeedMatches.Count < SavedSeedLimit
@@ -562,8 +567,6 @@ partial class Program
                     {
                         saveSeedMatches.Add(seed);
                     }
-
-                    Console.WriteLine(seed);
                 });
             }
 
@@ -1040,5 +1043,34 @@ partial class Program
     {
         var rem = TimeSpan.FromMilliseconds(milliseconds);
         return rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss");
+    }
+
+    static string ResolveDataLakeRootPath()
+    {
+        var configured = Environment.GetEnvironmentVariable("MOTELY_DATALAKE_PATH");
+        return string.IsNullOrWhiteSpace(configured) ? "seeds" : configured;
+    }
+
+    static IMotelyResultSink CreateResultSink(
+        bool hasStructuredScores,
+        string filterId,
+        IReadOnlyList<string> tallyLabels
+    )
+    {
+        var sinks = new List<IMotelyResultSink> { new ConsoleResultSink() };
+
+        if (hasStructuredScores)
+        {
+            try
+            {
+                sinks.Add(new MotelyLakeResultSink(ResolveDataLakeRootPath(), filterId, tallyLabels));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Warning: DuckLake autosave unavailable: {ex.Message}");
+            }
+        }
+
+        return new CompositeMotelyResultSink(sinks);
     }
 }

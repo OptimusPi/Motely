@@ -36,5 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.DataLake\Motely.DataLake.csproj" />
   </ItemGroup>
 </Project>

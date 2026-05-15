@@ -16,7 +16,10 @@ _ReSharper.*/
 
 # --- NuGet ---
 *.nupkg
-packages/
+packages/*
+# Node packages under packages/ are real source — keep them tracked.
+!packages/jaml-mcp
+packages/jaml-mcp/node_modules/
 
 # --- Test results & coverage ---
 TestResults/

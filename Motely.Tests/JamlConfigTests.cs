@@ -71,6 +71,68 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void Sources_Absent_AppliesDefaultShopAndBoosterSlots()
+  {
+    var jaml = """
+            name: DefaultsApply
+            must:
+              - joker: Blueprint
+                antes: [1]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    var clause = Assert.Single(config!.Must.Jokers);
+    Assert.Equal([0, 1, 2, 3], clause.Sources.ShopItems);
+    Assert.Equal([0, 1, 2, 3, 4, 5], clause.Sources.BoosterPacks);
+  }
+
+  [Fact]
+  public void Sources_PresentWithSpecialtyOnly_DoesNotInjectDefaultSlots()
+  {
+    var jaml = """
+            name: SpecialtyOnlySources
+            must:
+              - joker: Brainstorm
+                antes: [1]
+                sources:
+                  wraith: [0]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    var clause = Assert.Single(config!.Must.Jokers);
+    Assert.Empty(clause.Sources.ShopItems);
+    Assert.Empty(clause.Sources.BoosterPacks);
+    Assert.Equal([0], clause.Sources.Wraith);
+  }
+
+  [Fact]
+  public void LegendarySources_Present_DoesNotInjectDefaultBoosterSlots()
+  {
+    var jaml = """
+            name: LegendarySpecialtyOnly
+            must:
+              - legendaryJoker: Perkeo
+                antes: [1]
+                sources:
+                  soulCard: [0]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    var clause = Assert.Single(config!.Must.LegendaryJokers);
+    Assert.Empty(clause.Sources.BoosterPacks);
+    Assert.Equal([0], clause.Sources.SoulCard);
+  }
+
+  [Fact]
   public void MissingLabels_AreGeneratedAsDisplayNames()
   {
     var jaml = """
@@ -137,6 +199,33 @@ public class JamlConfigTests
     Assert.Single(config.Must.UncommonJokers);
     Assert.Single(config.Must.RareJokers);
     Assert.Single(config.Must.Jokers);
+    Assert.Single(config.Must.LegendaryJokers);
+  }
+
+  [Fact]
+  public void JokerUnion_ShorthandAndTypedPluralKeys_ParseIntoExpectedBuckets()
+  {
+    var jaml = """
+            name: UnionCoverage
+            must:
+              - joker: Any
+              - jokers: [Blueprint, Perkeo]
+              - commonJokers: [HalfJoker]
+              - uncommonJoker: Showman
+              - rareJokers: [Blueprint, Brainstorm]
+              - legendaryJokers: [Perkeo, Canio]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    Assert.Equal(2, config!.Must.Jokers.Count);
+    Assert.True(config.Must.Jokers[0].IsWildcard);
+    Assert.Equal(2, config.Must.Jokers[1].Jokers.Length);
+    Assert.Single(config.Must.CommonJokers);
+    Assert.Single(config.Must.UncommonJokers);
+    Assert.Single(config.Must.RareJokers);
     Assert.Single(config.Must.LegendaryJokers);
   }
 
@@ -335,6 +424,83 @@ public class JamlConfigTests
     Assert.Null(config);
     Assert.NotNull(error);
     Assert.Contains("totallyFakeKey", error);
+  }
+
+  [Fact]
+  public void RemovedMixedJokersKey_IsRejected()
+  {
+    var jaml = """
+            name: RemovedMixed
+            must:
+              - mixedJokers: [Blueprint, Showman]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.False(success);
+    Assert.Null(config);
+    Assert.NotNull(error);
+    Assert.Contains("mixedJokers", error);
+    Assert.Contains("a clause", error);
+  }
+
+  [Fact]
+  public void RemovedByAnteAlias_IsRejected()
+  {
+    var jaml = """
+            name: RemovedByAnte
+            must:
+              - joker: Showman
+                by_ante: [1,2]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.False(success);
+    Assert.Null(config);
+    Assert.NotNull(error);
+    Assert.Contains("by_ante", error);
+    Assert.Contains("a clause", error);
+  }
+
+  [Fact]
+  public void Sources_EmptyObject_DoesNotInjectDefaultShopOrBoosterSlots()
+  {
+    var jaml = """
+            name: ExplicitEmptySources
+            must:
+              - uncommonJoker: Showman
+                antes: [1]
+                sources: {}
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    var clause = Assert.Single(config!.Must.UncommonJokers);
+    Assert.Empty(clause.Sources.ShopItems);
+    Assert.Empty(clause.Sources.BoosterPacks);
+  }
+
+  [Fact]
+  public void EventClause_WithSources_IsRejected()
+  {
+    var jaml = """
+            name: EventBadSources
+            must:
+              - event: LuckyMoney
+                rolls: [0]
+                sources:
+                  shopItems: [0]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.False(success);
+    Assert.Null(config);
+    Assert.NotNull(error);
+    Assert.Contains("Event clauses do not support 'sources'", error);
   }
 
   [Fact]

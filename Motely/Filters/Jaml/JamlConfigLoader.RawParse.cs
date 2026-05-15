@@ -8,7 +8,7 @@ namespace Motely.Filters;
 
 /// <summary>
 /// Raw YAML document walk for the JAML root: fills <see cref="JamlRootDocument"/> (no full-document YamlDotNet deserialize).
-/// Clause fragments are still materialized into <see cref="JamlClauseDto"/> for <see cref="JamlConfigLoader.CreateClauseFromDto"/>.
+/// Clause fragments are still materialized into <see cref="JamlClauseUnion"/> for <see cref="JamlConfigLoader.CreateClauseFromDto"/>.
 /// </summary>
 public static partial class JamlConfigLoader
 {
@@ -90,12 +90,12 @@ public static partial class JamlConfigLoader
     private static T DeserializeFragment<T>(YamlMappingNode mapping) =>
         JamlFragmentDeserializer.Deserialize<T>(YamlFragmentToString(mapping));
 
-    private static List<JamlClauseDto>? ParseClauseSequence(YamlMappingNode root, string key)
+    private static List<JamlClauseUnion>? ParseClauseSequence(YamlMappingNode root, string key)
     {
         if (!TryGetYamlChild(root, key, out _, out var node) || node is not YamlSequenceNode seq)
             return null;
 
-        var list = new List<JamlClauseDto>(seq.Children.Count);
+        var list = new List<JamlClauseUnion>(seq.Children.Count);
         var i = 0;
         foreach (var child in seq.Children)
         {
@@ -109,7 +109,7 @@ public static partial class JamlConfigLoader
 
             try
             {
-                list.Add(DeserializeFragment<JamlClauseDto>(map));
+                list.Add(DeserializeFragment<JamlClauseUnion>(map));
             }
             catch (Exception ex)
             {
@@ -181,12 +181,12 @@ public static partial class JamlConfigLoader
             return false;
         }
 
-        JamlDefaultsDto? defaults = null;
+        JamlDefaults? defaults = null;
         if (TryGetYamlChild(root, "defaults", out _, out var defNode) && defNode is YamlMappingNode defMap)
         {
             try
             {
-                defaults = DeserializeFragment<JamlDefaultsDto>(defMap);
+                defaults = DeserializeFragment<JamlDefaults>(defMap);
             }
             catch (Exception ex)
             {
