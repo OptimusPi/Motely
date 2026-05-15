@@ -30,9 +30,9 @@ const preview: Preview = {
     (Story) => (
       <StorybookMotelyWarmup>
         <JimboBackground />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', padding: '20px', boxSizing: 'border-box', overflow: 'auto' }}>
-          <div style={{ position: 'relative', width: 375, height: 667, flexShrink: 0, boxShadow: '0 0 20px rgba(0,0,0,0.5)', borderRadius: 12, overflow: 'hidden' }}>
-            <JimboApp style={{ margin: 0, height: '100%' }}>
+        <div className="sb-jimbo-stage">
+          <div className="sb-jimbo-frame">
+            <JimboApp className="sb-jimbo-app">
               <Story />
             </JimboApp>
           </div>

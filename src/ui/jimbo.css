@@ -263,6 +263,10 @@
   padding-bottom: 8px;
 }
 
+.j-back-btn-wrap {
+  padding: 4px 0;
+}
+
 .j-inner-panel {
   background-color: var(--j-inner-border);
   border: 2px solid var(--j-panel-edge);
@@ -1217,9 +1221,9 @@
 .j-app {
   container-type: inline-size;
   container-name: jimbo;
-  width: 375px;
+  width: min(100%, 375px);
   max-width: 375px;
-  height: 667px;
+  height: min(667px, 100dvh);
   max-height: 667px;
   margin: 0 auto;
   display: flex;

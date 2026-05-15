@@ -45,8 +45,8 @@ importers:
         specifier: ^1.14.0
         version: 1.14.0(react@19.2.6)
       motely-wasm:
-        specifier: ^17.3.0
-        version: 17.3.0
+        specifier: ^17.4.4
+        version: 17.4.4
       tailwind-merge:
         specifier: ^2.6.1
         version: 2.6.1
@@ -2101,8 +2101,8 @@ packages:
   mlly@1.8.2:
     resolution: {integrity: sha512-d+ObxMQFmbt10sretNDytwt85VrbkhhUA/JBGm1MPaWJ65Cl4wOgLaB1NYvJSZ0Ef03MMEU/0xpPMXUIQ29UfA==}
 
-  motely-wasm@17.3.0:
-    resolution: {integrity: sha512-0VzuAXNfIfvNcP4CT//WVAmJJUU78f+4tbY8Ig8VXiMswIvPlhihamw8FJoJIx1btRsrpiUHDBAW0eC3W5EQrA==}
+  motely-wasm@17.4.4:
+    resolution: {integrity: sha512-Gh4gClYyQkCjGUmR707ctSzw18W8mGEZIwCbh53p4nSewKH50iF8fHvpERUN/tl+k3Sx2roxNIpx97r6UWnoeQ==}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -4989,7 +4989,7 @@ snapshots:
       pkg-types: 1.3.1
       ufo: 1.6.4
 
-  motely-wasm@17.3.0: {}
+  motely-wasm@17.4.4: {}
 
   mrmime@2.0.1: {}
 
