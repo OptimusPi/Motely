@@ -171,12 +171,12 @@ Available file APIs: `pickRoot`, `mountRoot`, `unmountRoot`, `readTextFile`, `wr
 For environments that don't bundle node modules (sandboxed iframes, `<script type="module">`, etc.), import the package from a public npm CDN. Pin the version — `@latest` defeats long-term browser caching.
 
 ```ts
-const mod = await import("https://unpkg.com/motely-wasm@17.3.0/index.mjs");
-await mod.default.boot("https://unpkg.com/motely-wasm@17.3.0/bin");
+const mod = await import("https://unpkg.com/motely-wasm@17.4.4/dist/index.mjs");
+await mod.default.boot("https://unpkg.com/motely-wasm@17.4.4/bin");
 const { Motely } = mod;
 ```
 
-Equivalent jsDelivr URL: `https://cdn.jsdelivr.net/npm/motely-wasm@17.3.0/index.mjs`.
+Equivalent jsDelivr URL: `https://cdn.jsdelivr.net/npm/motely-wasm@17.4.4/dist/index.mjs`.
 
 ### Content Security Policy
 

@@ -1,12 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
-import {
-  ensureMotelyReady,
-  getMotelyRuntimeSnapshot,
-  subscribeMotelyRuntime,
-  type MotelyRuntimeStatus,
-} from "../motelyBoot.js";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import bootsharp from "motely-wasm";
+
+export type MotelyRuntimeStatus = "idle" | "booting" | "ready" | "error";
 
 export interface UseMotelyRuntimeState {
   status: MotelyRuntimeStatus;
@@ -17,30 +14,51 @@ export interface UseMotelyRuntimeState {
   ensureReady: () => Promise<void>;
 }
 
-function formatError(error: unknown): string | null {
-  if (!error) return null;
-  return error instanceof Error ? error.message : String(error);
+function currentStatus(): MotelyRuntimeStatus {
+  switch (bootsharp.getStatus()) {
+    case bootsharp.BootStatus.Booted:
+      return "ready";
+    case bootsharp.BootStatus.Booting:
+      return "booting";
+    default:
+      return "idle";
+  }
 }
 
 export function useMotelyRuntime(): UseMotelyRuntimeState {
-  const snapshot = useSyncExternalStore(subscribeMotelyRuntime, getMotelyRuntimeSnapshot, getMotelyRuntimeSnapshot);
-  const ensureReady = useCallback(() => ensureMotelyReady(), []);
+  const [status, setStatus] = useState<MotelyRuntimeStatus>(() => currentStatus());
+  const [error, setError] = useState<string | null>(null);
+  const ensureReady = useCallback(async () => {
+    try {
+      setError(null);
+      setStatus(currentStatus());
+      if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+        setStatus("booting");
+        await bootsharp.boot("/motely-wasm/bin");
+      }
+      setStatus(currentStatus());
+    } catch (err) {
+      setStatus("error");
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }, []);
 
   return useMemo(
     () => ({
-      status: snapshot.status,
-      ready: snapshot.status === "ready",
-      error: formatError(snapshot.error),
-      fsReady: snapshot.isFileSystemReady,
-      fsError: formatError(snapshot.fileSystemError),
+      status,
+      ready: status === "ready",
+      error,
+      fsReady: false,
+      fsError: null,
       ensureReady,
     }),
-    [snapshot, ensureReady],
+    [error, ensureReady, status],
   );
 }
 
 export function useMotelyRuntimeOwner(): void {
-  const ensureReady = useCallback(() => ensureMotelyReady(), []);
+  const { ensureReady } = useMotelyRuntime();
 
   useEffect(() => {
     void ensureReady();

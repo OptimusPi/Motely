@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Motely, ensureMotelyReady } from "../motelyBoot.js";
+import bootsharp, { Motely } from "motely-wasm";
 import type { MotelyJamlyzerResult, MotelySeedAnalysis } from "motely-wasm/motely/analysis";
 import type { AnalyzerAnteView } from "../components/AnalyzerExplorer.js";
 
@@ -14,6 +14,12 @@ export interface UseAnalyzerState {
     error: string | null;
     tallyLabels: string[];
     rawAnalysis: MotelySeedAnalysis | null;
+}
+
+async function ensureMotelyReady(): Promise<void> {
+    if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+        await bootsharp.boot("/motely-wasm/bin");
+    }
 }
 
 export function useAnalyzer() {

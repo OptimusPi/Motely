@@ -4,7 +4,13 @@ import '../src/ui/jimbo.css'
 import './preview.css'
 import { JimboBackground } from '../src/ui/jimboBackground'
 import { JimboApp } from '../src/ui/jimboApp'
-import { ensureMotelyReady } from '../src/motelyBoot'
+import bootsharp from 'motely-wasm'
+
+async function ensureMotelyReady(): Promise<void> {
+  if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+    await bootsharp.boot('/motely-wasm/bin')
+  }
+}
 
 function StorybookMotelyWarmup({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -30,13 +36,9 @@ const preview: Preview = {
     (Story) => (
       <StorybookMotelyWarmup>
         <JimboBackground />
-        <div className="sb-jimbo-stage">
-          <div className="sb-jimbo-frame">
-            <JimboApp className="sb-jimbo-app">
-              <Story />
-            </JimboApp>
-          </div>
-        </div>
+        <JimboApp>
+          <Story />
+        </JimboApp>
       </StorybookMotelyWarmup>
     ),
   ],

@@ -127,6 +127,7 @@ export {
     useMotelyRuntime,
     useMotelyRuntimeOwner,
     type UseMotelyRuntimeState,
+    type MotelyRuntimeStatus,
 } from "./hooks/useMotelyRuntime.js";
 
 export { motelyItemRenderCategory } from "./decode/motelyItemDecoder.js";
