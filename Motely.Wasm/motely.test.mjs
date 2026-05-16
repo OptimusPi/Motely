@@ -95,9 +95,9 @@ function testExplainJaml() {
     const r = Motely.explainJaml(jaml.must);
     if (!r.startsWith("# JAML filter eval plan")) throw new Error(`bad header: ${r.slice(0, 80)}`);
     if (!r.includes("WeeJoker")) throw new Error(`should mention WeeJoker`);
-    let threw = false;
-    try { Motely.explainJaml("not yaml !@#"); } catch { threw = true; }
-    if (!threw) throw new Error("explainJaml(garbage) should throw");
+    const errResult = Motely.explainJaml("not yaml !@#");
+    if (typeof errResult !== "string" || !errResult.startsWith("# ERROR:"))
+        throw new Error(`explainJaml(garbage) should return # ERROR: string, got: ${errResult?.slice(0, 80)}`);
 }
 
 function testCreatePlan() {
