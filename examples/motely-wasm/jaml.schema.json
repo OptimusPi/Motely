@@ -1,115 +1,249 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.seedfinder.app/jaml.schema.json",
-  "version": "16.0.0",
+  "$id": "https://seedfinder.app/jaml.schema.json",
   "title": "JAML — Jimbo's Ante Markup Language",
-  "description": "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.",
+  "description": "Declarative filter language for Balatro seed searches. A JAML document specifies the criteria a seed must satisfy; the Motely engine compiles and runs it.",
+  "version": "17.4.5",
   "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "dateCreated": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "deck": {
+      "$ref": "#/$defs/MotelyDeck"
+    },
+    "stake": {
+      "$ref": "#/$defs/MotelyStake"
+    },
+    "defaults": {
+      "$ref": "#/$defs/JamlDefaults"
+    },
+    "must": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlClauseUnion"
+      }
+    },
+    "should": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlClauseUnion"
+      }
+    },
+    "mustNot": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlClauseUnion"
+      }
+    },
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "seeds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
   "$defs": {
-    "JamlClauseDto": {
+    "JamlDefaults": {
       "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "antes": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "score": {
+          "type": "integer"
+        }
+      }
+    },
+    "JamlClauseUnion": {
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
         "joker": {
-          "$ref": "#/$defs/Joker"
+          "oneOf": [
+            {
+              "const": "any"
+            },
+            {
+              "$ref": "#/$defs/MotelyJoker"
+            }
+          ]
         },
         "jokers": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Joker"
+            "$ref": "#/$defs/MotelyJoker"
           }
         },
         "commonJoker": {
-          "$ref": "#/$defs/CommonJoker"
+          "oneOf": [
+            {
+              "const": "any"
+            },
+            {
+              "$ref": "#/$defs/MotelyJokerCommon"
+            }
+          ]
         },
         "commonJokers": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/CommonJoker"
+            "$ref": "#/$defs/MotelyJokerCommon"
           }
         },
         "uncommonJoker": {
-          "$ref": "#/$defs/UncommonJoker"
+          "oneOf": [
+            {
+              "const": "any"
+            },
+            {
+              "$ref": "#/$defs/MotelyJokerUncommon"
+            }
+          ]
         },
         "uncommonJokers": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/UncommonJoker"
+            "$ref": "#/$defs/MotelyJokerUncommon"
           }
         },
         "rareJoker": {
-          "$ref": "#/$defs/RareJoker"
+          "oneOf": [
+            {
+              "const": "any"
+            },
+            {
+              "$ref": "#/$defs/MotelyJokerRare"
+            }
+          ]
         },
         "rareJokers": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/RareJoker"
+            "$ref": "#/$defs/MotelyJokerRare"
           }
         },
         "legendaryJoker": {
-          "$ref": "#/$defs/LegendaryJoker"
+          "oneOf": [
+            {
+              "const": "any"
+            },
+            {
+              "$ref": "#/$defs/MotelyJokerLegendary"
+            }
+          ]
         },
         "legendaryJokers": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/LegendaryJoker"
+            "$ref": "#/$defs/MotelyJokerLegendary"
           }
         },
         "voucher": {
-          "$ref": "#/$defs/Voucher"
+          "$ref": "#/$defs/MotelyVoucher"
         },
         "vouchers": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Voucher"
+            "$ref": "#/$defs/MotelyVoucher"
           }
         },
         "tarotCard": {
-          "$ref": "#/$defs/Tarot"
+          "$ref": "#/$defs/MotelyTarotCard"
         },
         "tarotCards": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Tarot"
+            "$ref": "#/$defs/MotelyTarotCard"
           }
         },
         "spectralCard": {
-          "$ref": "#/$defs/Spectral"
+          "$ref": "#/$defs/MotelySpectralCard"
         },
         "spectralCards": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Spectral"
+            "$ref": "#/$defs/MotelySpectralCard"
           }
         },
         "planetCard": {
-          "$ref": "#/$defs/Planet"
+          "$ref": "#/$defs/MotelyPlanetCard"
         },
         "boss": {
-          "$ref": "#/$defs/Boss"
+          "$ref": "#/$defs/MotelyBossBlind"
         },
         "tag": {
-          "$ref": "#/$defs/Tag"
+          "$ref": "#/$defs/MotelyTag"
         },
         "smallBlindTag": {
-          "$ref": "#/$defs/Tag"
+          "$ref": "#/$defs/MotelyTag"
         },
         "bigBlindTag": {
-          "$ref": "#/$defs/Tag"
+          "$ref": "#/$defs/MotelyTag"
         },
         "standardCard": {
-          "$ref": "#/$defs/StandardCard"
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/StandardCardConfig"
+            }
+          ]
         },
         "standardCards": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/StandardCard"
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/StandardCardConfig"
+              }
+            ]
           }
         },
         "erraticRank": {
-          "$ref": "#/$defs/Rank"
+          "type": "string"
         },
         "erraticSuit": {
-          "$ref": "#/$defs/Suit"
+          "type": "string"
         },
         "erraticCard": {
           "type": "string"
@@ -118,7 +252,7 @@
           "type": "string"
         },
         "event": {
-          "type": "integer"
+          "$ref": "#/$defs/MotelyEventType"
         },
         "luckyMoney": {
           "type": "array",
@@ -211,25 +345,25 @@
           "type": "string"
         },
         "edition": {
-          "$ref": "#/$defs/Edition"
+          "$ref": "#/$defs/MotelyItemEdition"
         },
         "stickers": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Sticker"
+            "$ref": "#/$defs/MotelyJokerSticker"
           }
         },
         "seal": {
-          "$ref": "#/$defs/Seal"
+          "$ref": "#/$defs/MotelyItemSeal"
         },
         "enhancement": {
-          "$ref": "#/$defs/Enhancement"
+          "$ref": "#/$defs/MotelyItemEnhancement"
         },
         "rank": {
-          "$ref": "#/$defs/Rank"
+          "type": "string"
         },
         "suit": {
-          "$ref": "#/$defs/Suit"
+          "type": "string"
         },
         "rolls": {
           "type": "array",
@@ -246,23 +380,47 @@
         "and": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlClauseDto"
+            "$ref": "#/$defs/JamlClauseUnion"
           }
         },
         "or": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlClauseDto"
+            "$ref": "#/$defs/JamlClauseUnion"
           }
         },
         "clauses": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/JamlClauseDto"
+            "$ref": "#/$defs/JamlClauseUnion"
           }
         },
         "mode": {
-          "$ref": "#/$defs/Mode"
+          "type": "string"
+        },
+        "judgement": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wraith": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "rareTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "uncommonTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         },
         "shopItems": {
           "type": "array",
@@ -283,11 +441,11 @@
           "type": "integer"
         },
         "sources": {
-          "$ref": "#/$defs/JamlSourcesDto"
+          "$ref": "#/$defs/JamlSources"
         }
       }
     },
-    "Joker": {
+    "MotelyJoker": {
       "type": "string",
       "enum": [
         "Joker",
@@ -439,11 +597,10 @@
         "Triboulet",
         "Yorick",
         "Chicot",
-        "Perkeo",
-        "any"
+        "Perkeo"
       ]
     },
-    "CommonJoker": {
+    "MotelyJokerCommon": {
       "type": "string",
       "enum": [
         "Joker",
@@ -506,11 +663,10 @@
         "GoldenTicket",
         "Swashbuckler",
         "HangingChad",
-        "ShootTheMoon",
-        "any"
+        "ShootTheMoon"
       ]
     },
-    "UncommonJoker": {
+    "MotelyJokerUncommon": {
       "type": "string",
       "enum": [
         "JokerStencil",
@@ -576,11 +732,10 @@
         "Satellite",
         "Cartomancer",
         "Astronomer",
-        "Bootstraps",
-        "any"
+        "Bootstraps"
       ]
     },
-    "RareJoker": {
+    "MotelyJokerRare": {
       "type": "string",
       "enum": [
         "DNA",
@@ -602,22 +757,20 @@
         "InvisibleJoker",
         "Brainstorm",
         "DriversLicense",
-        "BurntJoker",
-        "any"
+        "BurntJoker"
       ]
     },
-    "LegendaryJoker": {
+    "MotelyJokerLegendary": {
       "type": "string",
       "enum": [
         "Canio",
         "Triboulet",
         "Yorick",
         "Chicot",
-        "Perkeo",
-        "any"
+        "Perkeo"
       ]
     },
-    "Voucher": {
+    "MotelyVoucher": {
       "type": "string",
       "enum": [
         "Overstock",
@@ -654,7 +807,7 @@
         "Palette"
       ]
     },
-    "Tarot": {
+    "MotelyTarotCard": {
       "type": "string",
       "enum": [
         "TheFool",
@@ -681,24 +834,7 @@
         "TheWorld"
       ]
     },
-    "Planet": {
-      "type": "string",
-      "enum": [
-        "Mercury",
-        "Venus",
-        "Earth",
-        "Mars",
-        "Jupiter",
-        "Saturn",
-        "Uranus",
-        "Neptune",
-        "Pluto",
-        "PlanetX",
-        "Ceres",
-        "Eris"
-      ]
-    },
-    "Spectral": {
+    "MotelySpectralCard": {
       "type": "string",
       "enum": [
         "Familiar",
@@ -721,36 +857,24 @@
         "BlackHole"
       ]
     },
-    "Tag": {
+    "MotelyPlanetCard": {
       "type": "string",
       "enum": [
-        "UncommonTag",
-        "RareTag",
-        "NegativeTag",
-        "FoilTag",
-        "HolographicTag",
-        "PolychromeTag",
-        "InvestmentTag",
-        "VoucherTag",
-        "BossTag",
-        "StandardTag",
-        "CharmTag",
-        "MeteorTag",
-        "BuffoonTag",
-        "HandyTag",
-        "GarbageTag",
-        "EtherealTag",
-        "CouponTag",
-        "DoubleTag",
-        "JuggleTag",
-        "D6Tag",
-        "TopupTag",
-        "SpeedTag",
-        "OrbitalTag",
-        "EconomyTag"
+        "Mercury",
+        "Venus",
+        "Earth",
+        "Mars",
+        "Jupiter",
+        "Saturn",
+        "Uranus",
+        "Neptune",
+        "Pluto",
+        "PlanetX",
+        "Ceres",
+        "Eris"
       ]
     },
-    "Boss": {
+    "MotelyBossBlind": {
       "type": "string",
       "enum": [
         "TheClub",
@@ -783,61 +907,73 @@
         "VioletVessel"
       ]
     },
-    "Deck": {
+    "MotelyTag": {
       "type": "string",
       "enum": [
-        "Red",
-        "Blue",
-        "Yellow",
-        "Green",
-        "Black",
-        "Magic",
-        "Nebula",
-        "Ghost",
-        "Abandoned",
-        "Checkered",
-        "Zodiac",
-        "Painted",
-        "Anaglyph",
-        "Plasma",
-        "Erratic"
+        "UncommonTag",
+        "RareTag",
+        "NegativeTag",
+        "FoilTag",
+        "HolographicTag",
+        "PolychromeTag",
+        "InvestmentTag",
+        "VoucherTag",
+        "BossTag",
+        "StandardTag",
+        "CharmTag",
+        "MeteorTag",
+        "BuffoonTag",
+        "HandyTag",
+        "GarbageTag",
+        "EtherealTag",
+        "CouponTag",
+        "DoubleTag",
+        "JuggleTag",
+        "D6Tag",
+        "TopupTag",
+        "SpeedTag",
+        "OrbitalTag",
+        "EconomyTag"
       ]
     },
-    "Stake": {
-      "type": "string",
-      "enum": [
-        "White",
-        "Red",
-        "Green",
-        "Black",
-        "Blue",
-        "Purple",
-        "Orange",
-        "Gold"
-      ]
+    "StandardCardConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rank": {
+          "type": "string"
+        },
+        "suit": {
+          "type": "string"
+        },
+        "seal": {
+          "$ref": "#/$defs/MotelyItemSeal"
+        },
+        "enhancement": {
+          "$ref": "#/$defs/MotelyItemEnhancement"
+        },
+        "edition": {
+          "$ref": "#/$defs/MotelyItemEdition"
+        },
+        "sources": {
+          "$ref": "#/$defs/JamlSources"
+        }
+      }
     },
-    "Edition": {
+    "MotelyItemSeal": {
       "type": "string",
       "enum": [
         "None",
-        "Foil",
-        "Holographic",
-        "Polychrome",
-        "Negative"
-      ]
-    },
-    "Seal": {
-      "type": "string",
-      "enum": [
         "Gold",
         "Red",
         "Blue",
         "Purple"
       ]
     },
-    "Enhancement": {
+    "MotelyItemEnhancement": {
       "type": "string",
       "enum": [
+        "None",
         "Bonus",
         "Mult",
         "Wild",
@@ -848,78 +984,19 @@
         "Lucky"
       ]
     },
-    "Rank": {
+    "MotelyItemEdition": {
       "type": "string",
       "enum": [
-        "Two",
-        "Three",
-        "Four",
-        "Five",
-        "Six",
-        "Seven",
-        "Eight",
-        "Nine",
-        "Ten",
-        "Jack",
-        "Queen",
-        "King",
-        "Ace"
+        "None",
+        "Foil",
+        "Holographic",
+        "Polychrome",
+        "Negative"
       ]
     },
-    "Suit": {
-      "type": "string",
-      "enum": [
-        "Clubs",
-        "Diamonds",
-        "Hearts",
-        "Spades"
-      ]
-    },
-    "Sticker": {
-      "type": "string",
-      "enum": [
-        "Eternal",
-        "Perishable",
-        "Rental"
-      ]
-    },
-    "Mode": {
-      "type": "string",
-      "enum": [
-        "any",
-        "all",
-        "none"
-      ]
-    },
-    "StandardCard": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "rank": {
-              "$ref": "#/$defs/Rank"
-            },
-            "suit": {
-              "$ref": "#/$defs/Suit"
-            },
-            "seal": {
-              "$ref": "#/$defs/Seal"
-            },
-            "enhancement": {
-              "$ref": "#/$defs/Enhancement"
-            },
-            "edition": {
-              "$ref": "#/$defs/Edition"
-            }
-          }
-        }
-      ]
-    },
-    "JamlSourcesDto": {
+    "JamlSources": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "shopItems": {
           "type": "array",
@@ -1078,85 +1155,65 @@
           }
         }
       }
-    }
-  },
-  "properties": {
-    "id": {
-      "type": "string"
     },
-    "name": {
-      "type": "string"
+    "MotelyEventType": {
+      "type": "string",
+      "enum": [
+        "LuckyMoney",
+        "LuckyMult",
+        "MisprintMult",
+        "WheelOfFortune",
+        "CavendishExtinct",
+        "GrosMichelExtinct",
+        "SpaceLevelup",
+        "BusinessPayout",
+        "BloodstoneTrigger",
+        "ParkingPayout",
+        "GlassDestroy",
+        "WheelStaysFlipped"
+      ]
     },
-    "author": {
-      "type": "string"
+    "MotelyJokerSticker": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Eternal",
+        "Perishable",
+        "Rental"
+      ]
     },
-    "dateCreated": {
-      "type": "string"
+    "MotelyDeck": {
+      "type": "string",
+      "enum": [
+        "Red",
+        "Blue",
+        "Yellow",
+        "Green",
+        "Black",
+        "Magic",
+        "Nebula",
+        "Ghost",
+        "Abandoned",
+        "Checkered",
+        "Zodiac",
+        "Painted",
+        "Anaglyph",
+        "Plasma",
+        "Erratic"
+      ]
     },
-    "description": {
-      "type": "string"
-    },
-    "deck": {
-      "$ref": "#/$defs/Deck"
-    },
-    "stake": {
-      "$ref": "#/$defs/Stake"
-    },
-    "defaults": {
-      "type": "object",
-      "properties": {
-        "antes": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        },
-        "boosterPacks": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        },
-        "shopItems": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        },
-        "score": {
-          "type": "integer"
-        }
-      }
-    },
-    "must": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/JamlClauseDto"
-      }
-    },
-    "should": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/JamlClauseDto"
-      }
-    },
-    "mustNot": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/JamlClauseDto"
-      }
-    },
-    "hashtags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "seeds": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "MotelyStake": {
+      "type": "string",
+      "enum": [
+        "White",
+        "Red",
+        "Green",
+        "Black",
+        "Blue",
+        "Purple",
+        "Orange",
+        "Gold"
+      ]
     }
   }
 }
