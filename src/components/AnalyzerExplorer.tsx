@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { useAnteTracker } from "../ui/hooks.js";
 import {
   JamlBoss,
@@ -78,9 +78,13 @@ export function AnalyzerExplorer({
     threshold: [0.45, 0.72, 0.9],
   });
   const highlightRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const highlightsRef = useRef(highlights);
+  useLayoutEffect(() => {
+    highlightsRef.current = highlights;
+  });
 
   useEffect(() => {
-    const activeHighlight = highlights.find((highlight) => highlight.ante === currentAnte);
+    const activeHighlight = highlightsRef.current.find((highlight) => highlight.ante === currentAnte);
     if (!activeHighlight) {
       return;
     }
@@ -91,7 +95,7 @@ export function AnalyzerExplorer({
       inline: "center",
       block: "nearest",
     });
-  }, [currentAnte, highlights]);
+  }, [currentAnte]);
 
 
   const currentAnteIndex = antes.findIndex((ante) => ante.ante === currentAnte);
