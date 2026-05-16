@@ -14,7 +14,7 @@ const entryPath = process.env.MOTELY_WASM_ENTRY
     ? resolve(process.env.MOTELY_WASM_ENTRY)
     : resolve(here, "..", "motely-wasm", "dist", "index.mjs");
 const pkgRoot = resolve(dirname(entryPath), "..");
-const { default: bootsharp, Motely } = await import(pathToFileURL(entryPath).href);
+const { default: bootsharp, Motely, MotelyItemType, MotelyItemTypeCategory, MotelyTag, MotelyBoosterPack } = await import(pathToFileURL(entryPath).href);
 
 // `voucher: Any` and `joker: Any` inside should: are rejected by the parser
 // (Motely.Tests JamlInvalidInputRejectionTests). Scoring fixtures must name specific identifiers.
@@ -46,6 +46,9 @@ should:
 `,
     invalid: "not yaml !@#",
 };
+
+// Same probe seeds as xUnit SearchConsistencyTests — chosen to cover shop/pack/tag variety.
+const probeSeeds = ["AAAAAAAA", "BBBBBBBB", "CCCCCCCC", "DDDDDDDD", "EEEEEEEE", "FFFFFFFF", "GGGGGGGG", "HHHHHHHH"];
 
 let pkgVersion;
 
@@ -188,13 +191,177 @@ function testBootStatus_StillBooted() {
     if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted) throw new Error("post-suite boot status drifted");
 }
 
+// ── Analyzer cross-check tests ───────────────────────────────────────────────
+// These mirror xUnit SearchConsistencyTests: analyzer reports X → search finds X.
+// If either side is wrong the two diverge and the test fails.
+
+function testAnalyzer_FirstAnteFirstPack_IsBuffoonNormal() {
+    // Mirrors xUnit: Analyzer_FirstAnteFirstPack_IsNormalBuffoon
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    const s = r.seeds?.[0];
+    if (!s) throw new Error("No probe seed returned analysis");
+    const pack = s.analysis?.antes?.[0]?.packs?.[0];
+    if (!pack) throw new Error("No packs in ante 1");
+    const packName = MotelyBoosterPack?.[pack.type];
+    if (packName !== "Buffoon") throw new Error(`first pack: expected Buffoon, got ${packName ?? pack.type} (is MotelyBoosterPack exported?)`);
+    if (!Array.isArray(pack.items) || pack.items.length !== 2)
+        throw new Error(`Buffoon pack items: expected 2, got ${pack.items?.length}`);
+}
+
+async function testAnalyzerDerived_BuffoonJoker_MatchesSearch() {
+    // packs[0].items[0] is always a joker (Buffoon pack). Analyzer says it's joker X →
+    // search for X in boosterPacks[0] must match the same seed.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        const ante = s.analysis?.antes?.[0];
+        const item = ante?.packs?.[0]?.items?.[0];
+        if (!item) continue;
+        const jokerName = MotelyItemType?.[item.type];
+        if (!jokerName) throw new Error(`MotelyItemType[${item.type}] undefined — enum not exported from entry`);
+        found = { seed: s.seed, ante: ante.ante, jokerName };
+        break;
+    }
+    if (!found) throw new Error("No probe seed had a Buffoon pack item");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${found.jokerName}\n    antes: [${found.ante}]\n    sources:\n      boosterPacks: [0]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 1n)
+        throw new Error(`Analyzer said ${found.seed} ante${found.ante} pack[0] = ${found.jokerName}; search got ${search.matchingSeeds} matches`);
+}
+
+async function testAnalyzerDerived_ShopJoker_MatchesSearch() {
+    // shopQueue[i] is joker X → search for X in shopItems[i] must match the same seed.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        const ante = s.analysis?.antes?.[0];
+        if (!Array.isArray(ante?.shopQueue)) continue;
+        for (let i = 0; i < ante.shopQueue.length; i++) {
+            const item = ante.shopQueue[i];
+            if (MotelyItemTypeCategory?.[item?.typeCategory] !== "Joker") continue;
+            const jokerName = MotelyItemType?.[item.type];
+            if (!jokerName) throw new Error(`MotelyItemType[${item.type}] undefined — enum not exported from entry`);
+            found = { seed: s.seed, ante: ante.ante, jokerName, slot: i };
+            break;
+        }
+        if (found) break;
+    }
+    if (!found) throw new Error("No probe seed had a joker in shopQueue (check: is MotelyItemTypeCategory exported with .Joker value?)");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${found.jokerName}\n    antes: [${found.ante}]\n    sources:\n      shopItems: [${found.slot}]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 1n)
+        throw new Error(`Analyzer said ${found.seed} ante${found.ante} shop[${found.slot}] = ${found.jokerName}; search got ${search.matchingSeeds} matches`);
+}
+
+async function testAnalyzerDerived_Tag_MatchesSearch() {
+    // bigBlindTag for ante N → tag: X in antes:[N] must match.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        for (const ante of s.analysis?.antes ?? []) {
+            if (ante.bigBlindTag === ante.smallBlindTag) continue;
+            const tagName = MotelyTag?.[ante.bigBlindTag];
+            if (!tagName) throw new Error(`MotelyTag[${ante.bigBlindTag}] undefined — enum not exported from entry`);
+            found = { seed: s.seed, ante: ante.ante, tagName };
+            break;
+        }
+        if (found) break;
+    }
+    if (!found) throw new Error("No probe seed had an ante with distinct blind tags");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${found.tagName}\n    antes: [${found.ante}]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 1n)
+        throw new Error(`Analyzer said ${found.seed} ante${found.ante} bigBlindTag = ${found.tagName}; search got ${search.matchingSeeds} matches`);
+}
+
+async function testMustNot_RejectsAnalyzerMatch() {
+    // must: tag X + mustNot: tag X → seed that has X must be rejected. Mirrors xUnit MustAndMustNot_SameTag_RejectsSeed.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    const s = r.seeds?.[0];
+    const ante = s?.analysis?.antes?.[0];
+    if (!ante) throw new Error("No probe seed returned analysis");
+    const tagName = MotelyTag?.[ante.bigBlindTag];
+    if (!tagName) throw new Error(`MotelyTag[${ante.bigBlindTag}] undefined — enum not exported from entry`);
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${tagName}\n    antes: [${ante.ante}]\nmustNot:\n  - tag: ${tagName}\n    antes: [${ante.ante}]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([s.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 0n)
+        throw new Error(`must+mustNot same tag should reject ${s.seed}; got ${search.matchingSeeds} matches`);
+}
+
+async function testSequentialSearch_MatchCountConsistentAcrossThreads() {
+    // Same 2-char sequential batch produces identical match counts across 1, 2, 4 threads.
+    // Mirrors xUnit MatchCount_ConsistentAcrossThreadCounts.
+    let baseline = null;
+    for (const threads of [1, 2, 4]) {
+        const search = Motely.createSearch(jaml.anyMust)
+            .withSequentialSearch()
+            .withBatchCharacterCount(2)
+            .withStartBatchIndex(0n)
+            .withEndBatchIndex(1n)
+            .withThreadCount(threads)
+            .start();
+        await search.waitForCompletionAsync();
+        if (!search.isCompleted) throw new Error(`threads=${threads}: search not completed`);
+        if (baseline === null) { baseline = search.matchingSeeds; continue; }
+        if (search.matchingSeeds !== baseline)
+            throw new Error(`threads=${threads}: ${search.matchingSeeds} ≠ baseline ${baseline}`);
+    }
+    if (baseline === null || baseline < 1n) throw new Error(`Sequential search matched nothing (baseline=${baseline})`);
+}
+
+async function testAnalyzerDerived_TagMin_RejectsSingleOccurrence() {
+    // A tag appearing exactly once in ante N with min:2 must NOT match.
+    // Mirrors xUnit AnalyzerDerivedTagMinFilter_RejectsSingleOccurrence.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        for (const ante of s.analysis?.antes ?? []) {
+            // distinct blind tags → each tag appears exactly once in this ante
+            if (ante.bigBlindTag === ante.smallBlindTag) continue;
+            const tagName = MotelyTag?.[ante.bigBlindTag];
+            if (!tagName) throw new Error(`MotelyTag[${ante.bigBlindTag}] undefined`);
+            found = { seed: s.seed, ante: ante.ante, tagName };
+            break;
+        }
+        if (found) break;
+    }
+    if (!found) throw new Error("No probe seed had an ante with a single-occurrence tag");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${found.tagName}\n    antes: [${found.ante}]\n    min: 2\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 0n)
+        throw new Error(`min:2 on single-occurrence tag ${found.tagName} in ${found.seed} ante${found.ante} should reject; got ${search.matchingSeeds}`);
+}
+
 // ── Runner ───────────────────────────────────────────────────────────────────
 
 const tests = [
+    // Boot surface
     testPublicApiSurface, testVersion_MatchesPackageJson, testEventContract,
+    // API smoke
     testValidateJaml, testExplainJaml, testCreatePlan, testAnalyzeJamlSeeds,
     testCreateSearchBuilder, testListSearch_Completes, testEvents_FireWithDocumentedShape,
-    testCancel_CompletesCleanly, testBootStatus_StillBooted,
+    testCancel_CompletesCleanly,
+    // Analyzer ↔ search correctness (the product actually works)
+    testAnalyzer_FirstAnteFirstPack_IsBuffoonNormal,
+    testAnalyzerDerived_BuffoonJoker_MatchesSearch,
+    testAnalyzerDerived_ShopJoker_MatchesSearch,
+    testAnalyzerDerived_Tag_MatchesSearch,
+    testMustNot_RejectsAnalyzerMatch,
+    testSequentialSearch_MatchCountConsistentAcrossThreads,
+    testAnalyzerDerived_TagMin_RejectsSingleOccurrence,
+    // Boot integrity last
+    testBootStatus_StillBooted,
 ];
 
 try { await boot(); console.log(`boot: BootStatus.Booted (package ${pkgVersion})`); }
