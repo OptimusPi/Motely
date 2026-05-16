@@ -61,36 +61,36 @@ CDN delivery (unpkg/jsdelivr) is automatic after `npm publish` — no manual upl
 motely-wasm builds against a **local NuGet feed** of Bootsharp 0.8.0-preview (locally patched). Read these files directly — do not rely on public Bootsharp docs:
 
 **Docs:**
-@D:\bootsharp\docs\guide\index.md
-@D:\bootsharp\docs\guide\getting-started.md
-@D:\bootsharp\docs\guide\build-config.md
-@D:\bootsharp\docs\guide\events.md
-@D:\bootsharp\docs\guide\serialization.md
-@D:\bootsharp\docs\guide\interop-modules.md
-@D:\bootsharp\docs\guide\interop-instances.md
-@D:\bootsharp\docs\guide\llvm.md
-@D:\bootsharp\docs\guide\nullability.md
-@D:\bootsharp\docs\guide\declarations.md
-@D:\bootsharp\docs\guide\namespaces.md
-@D:\bootsharp\docs\guide\preferences.md
-@D:\bootsharp\docs\guide\extensions\dependency-injection.md
-@D:\bootsharp\docs\guide\extensions\file-system.md
+@D:/bootsharp/docs/guide/index.md
+@D:/bootsharp/docs/guide/getting-started.md
+@D:/bootsharp/docs/guide/build-config.md
+@D:/bootsharp/docs/guide/events.md
+@D:/bootsharp/docs/guide/serialization.md
+@D:/bootsharp/docs/guide/interop-modules.md
+@D:/bootsharp/docs/guide/interop-instances.md
+@D:/bootsharp/docs/guide/llvm.md
+@D:/bootsharp/docs/guide/nullability.md
+@D:/bootsharp/docs/guide/declarations.md
+@D:/bootsharp/docs/guide/namespaces.md
+@D:/bootsharp/docs/guide/preferences.md
+@D:/bootsharp/docs/guide/extensions/dependency-injection.md
+@D:/bootsharp/docs/guide/extensions/file-system.md
 
 **JS source:**
-@D:\bootsharp\src\js\src\exports.mts
-@D:\bootsharp\src\js\src\boot.mts
-@D:\bootsharp\src\js\src\index.mts
+@D:/bootsharp/src/js/src/exports.mts
+@D:/bootsharp/src/js/src/boot.mts
+@D:/bootsharp/src/js/src/index.mts
 
 **C# publish source:**
-@D:\bootsharp\src\cs\Bootsharp.Publish\
+@D:/bootsharp/src/cs/Bootsharp.Publish/
 
 **Local patch vs upstream:**
-@X:\JammySeedFinder\src\MotelyJAML\bootsharp-fixes-vs-6edaa2c.patch
+@X:/JammySeedFinder/src/MotelyJAML/bootsharp-fixes-vs-6edaa2c.patch
 
 ## Sponsor-gated features
 
 - **`Bootsharp.FileSystem`** — The file system extension (`PickRoot`, `MountRoot`, `UnmountRoot`, `ReadTextFile`, `WriteTextFile`, `OnFileChanges`) is exclusive to [Bootsharp sponsors](https://github.com/sponsors/elringus). The NuGet package (`Bootsharp.FileSystem`) and its sample repo are not publicly available on NuGet or GitHub.
-  @D:\bootsharp\docs\guide\extensions\file-system.md
+  @D:/bootsharp/docs/guide/extensions/file-system.md
 
 ## Things that look weird but aren't
 
