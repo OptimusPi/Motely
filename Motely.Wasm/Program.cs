@@ -56,20 +56,40 @@ public static partial class Program
         }
     }
 
+    // Exception messages crossing the JSExport boundary under NativeAOT-LLVM trim mode lose
+    // their .Message and surface to JS as the opaque "C# exception from NativeAOT" husk. The
+    // result-shaped Exports below catch C#-side so the diagnostic survives — mirrors the
+    // existing pattern on MotelyJamlyzerResult.Error. CreateSearch must still throw (instance-
+    // proxied return), so its contract is "call ValidateJaml first." See README JAML API section.
+
     [Export]
     public static string ExplainJaml(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config) : "";
+            return $"# ERROR: {error ?? "Invalid JAML."}";
+        try
+        {
+            return config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config) : "";
+        }
+        catch (Exception ex)
+        {
+            return $"# ERROR: {ex.Message}";
+        }
     }
 
     [Export]
     public static JamlSearchPlan CreatePlan(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return JamlSearchBuilder.CreatePlan(config);
+            return new(0, "", []) { Error = error ?? "Invalid JAML." };
+        try
+        {
+            return JamlSearchBuilder.CreatePlan(config);
+        }
+        catch (Exception ex)
+        {
+            return new(0, "", []) { Error = ex.Message };
+        }
     }
 
     [Export]

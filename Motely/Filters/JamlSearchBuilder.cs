@@ -28,6 +28,16 @@ public sealed record JamlSearchPlan(
 )
 {
     internal IMotelySearchSettings Settings { get; init; } = null!;
+
+    /// <summary>
+    /// Non-null when the plan could not be built (invalid JAML or builder validation failure).
+    /// Populated only by the Motely.Wasm export wrappers — direct callers of
+    /// <see cref="JamlSearchBuilder.CreatePlan(JamlConfig, int)"/> get the exception path.
+    /// Why: under NativeAOT-LLVM trim mode, exceptions crossing the JSExport boundary lose their
+    /// .Message and surface as the opaque "C# exception from NativeAOT" husk. Carrying the error
+    /// as a field is the only path that preserves the diagnostic to JS callers.
+    /// </summary>
+    public string? Error { get; init; }
 }
 
 /// <summary>

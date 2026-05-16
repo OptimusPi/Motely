@@ -6,10 +6,10 @@
     <WarningsAsErrors>$(WarningsAsErrors);NU1603</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Bootsharp" Version="0.8.0-alpha.276" />
-    <PackageVersion Include="Bootsharp.Common" Version="0.8.0-alpha.276" />
-    <PackageVersion Include="Bootsharp.Inject" Version="0.8.0-alpha.276" />
-    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.5.15.1147" />
+    <PackageVersion Include="Bootsharp" Version="0.8.0-alpha.278" />
+    <PackageVersion Include="Bootsharp.Common" Version="0.8.0-alpha.278" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.8.0-alpha.278" />
+    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.5.15.2058" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.2" />
