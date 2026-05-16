@@ -64,7 +64,8 @@ export function AgnosticSeedCard({
         fetchedAnalysis?.score ?? propResult?.score;
 
     useEffect(() => {
-        if (propAnalysis || propResult || fetchedAnalysis) return;
+        if (propAnalysis || propResult) return;
+        let cancelled = false;
 
         const analyze = async () => {
             setLoading(true);
@@ -72,10 +73,11 @@ export function AgnosticSeedCard({
                 if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
                     await bootsharp.boot('/motely-wasm/bin');
                 }
+                if (cancelled) return;
                 const jaml = jamlConfig ?? `version: 1\nconfig:\n  deck: ${deckSlug}\n  stake: ${stakeSlug}\n`;
                 const rawData: MotelyJamlyzerResult = Motely.analyzeJamlSeeds(jaml, [seed]);
 
-                if (rawData && rawData.seeds.length > 0) {
+                if (!cancelled && rawData && rawData.seeds.length > 0) {
                     const seedData = rawData.seeds[0];
                     setFetchedAnalysis({
                         score: seedData.score,
@@ -83,14 +85,17 @@ export function AgnosticSeedCard({
                     });
                 }
             } catch (err) {
-                console.error(err);
+                if (!cancelled) console.error(err);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         analyze();
-    }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult, fetchedAnalysis]);
+        return () => {
+            cancelled = true;
+        };
+    }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult]);
 
     const items = allAnalyzedItems(resolvedAnalysis);
 
