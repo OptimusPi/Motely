@@ -1,32 +1,4 @@
-// Node smoke test for motely-wasm.
-//
-// Structured to mirror Motely.Tests/AnalyzerUnitTests.cs xUnit shape: one
-// named test function per case, arrange/act/assert sections, a runner at
-// the bottom that reports per-test pass/fail. The C# test surface is the
-// contract — this file shadows it for the JS consumer.
-//
-// Why Node + preloaded ArrayBuffer (not fetch a URL): per BOOTSHARP.md and
-// the README's Boot table, Node `fetch()` cannot reliably load `file://`
-// for binary resources, so server-side consumers preload the wasm bytes
-// and pass them via `boot({ wasm: ArrayBuffer })`. This mirrors what a
-// Node consumer would do; jaml-ui's browser worker uses the URL form.
-//
-// Covered:
-//   - validateJaml (good + bad input)
-//   - explainJaml
-//   - createPlan
-//   - public API surface presence (regression guard against accidentally
-//     dropping a documented method — including createSearch, which is the
-//     entry point Jimmolate will plug into once it's surfaced in JS)
-//
-// Not covered (next session):
-//   - createSearch().withSequentialSearch().start() lifecycle — needs cancel
-//     to avoid hanging Node; deserves its own test file once we wire it.
-//   - Jimmolate (C# core has it via Motely/Filters/Native/JimmolateFilterDesc.cs
-//     + Motely.Tests/JimmolateFilterDescTests.cs; JS surface in Motely.Wasm
-//     doesn't expose a delegate-passing entry point yet).
-//   - File-system mount round-trip — browser-only (OPFS); use test-browser.html.
-//
+// Node smoke for motely-wasm. Mirrors Motely.Tests/AnalyzerUnitTests.cs in JS.
 // Run: `node test-sanity.mjs` from this directory after `dotnet publish Motely.Wasm`.
 
 import { readFile } from "node:fs/promises";
@@ -46,9 +18,21 @@ must:
     antes: [1]
 `;
 
-// ---- one-time setup ---------------------------------------------------------
+// Mirrors AnalyzerUnitTests.TestJamlyzerAnalyzeSeeds_AttachesStructuredSeedAnalysis.
+const ANALYZE_JAML = `
+name: test
+deck: Red
+stake: White
+should:
+  - joker: Any
+    score: 1
+`;
+
+let pkgVersion;
 
 async function boot() {
+    const pkgJson = JSON.parse(await readFile(resolve(pkgRoot, "package.json"), "utf8"));
+    pkgVersion = pkgJson.version;
     const wasmBytes = await readFile(resolve(pkgRoot, "bin", "dotnet.native.wasm"));
     await bootsharp.boot({
         wasm: wasmBytes.buffer.slice(
@@ -61,7 +45,15 @@ async function boot() {
     }
 }
 
-// ---- tests ------------------------------------------------------------------
+function testVersion_MatchesNpmPackageJson() {
+    const v = Motely.version();
+    if (typeof v !== "string" || !/^\d+\.\d+\.\d+/.test(v)) {
+        throw new Error(`expected semver-ish string, got ${JSON.stringify(v)}`);
+    }
+    if (!v.startsWith(pkgVersion)) {
+        throw new Error(`assembly version ${v} does not match package.json ${pkgVersion} — FinalizeNpmPackage injection drifted`);
+    }
+}
 
 function testValidateJaml_ValidInput_ReturnsValid() {
     const result = Motely.validateJaml(SAMPLE_JAML);
@@ -76,24 +68,49 @@ function testValidateJaml_GarbageInput_ReturnsErrorString() {
     }
 }
 
-function testExplainJaml_ReturnsNonEmptyString() {
+function testExplainJaml_StartsWithDocumentedHeader() {
+    // JamlSearchBuilder.ExplainPlan writes "# JAML filter eval plan" as line 1.
     const result = Motely.explainJaml(SAMPLE_JAML);
-    if (typeof result !== "string" || result.length === 0) {
-        throw new Error(`expected non-empty string, got ${JSON.stringify(result)?.slice(0, 80)}`);
+    if (typeof result !== "string") throw new Error(`expected string, got ${typeof result}`);
+    if (!result.startsWith("# JAML filter eval plan")) {
+        throw new Error(`expected header '# JAML filter eval plan', got: ${result.slice(0, 80)}`);
     }
 }
 
-function testCreatePlan_ReturnsObject() {
+function testCreatePlan_HasJamlSearchPlanFields() {
+    // JamlSearchPlan record: ScoreTallyColumnCount, ScoredCsvHeaderQuoted, TallyLabels.
     const plan = Motely.createPlan(SAMPLE_JAML);
-    if (!plan || typeof plan !== "object") {
-        throw new Error(`expected plan object, got ${typeof plan}`);
+    if (!plan || typeof plan !== "object") throw new Error(`expected object, got ${typeof plan}`);
+    if (typeof plan.scoreTallyColumnCount !== "number") {
+        throw new Error(`scoreTallyColumnCount: expected number, got ${typeof plan.scoreTallyColumnCount}`);
+    }
+    if (typeof plan.scoredCsvHeaderQuoted !== "string") {
+        throw new Error(`scoredCsvHeaderQuoted: expected string, got ${typeof plan.scoredCsvHeaderQuoted}`);
+    }
+    if (!Array.isArray(plan.tallyLabels)) {
+        throw new Error(`tallyLabels: expected array, got ${typeof plan.tallyLabels}`);
     }
 }
 
-// Regression guard: the README documents this surface. If any of these go
-// missing, downstream consumers (jaml-ui, jaml-mcp) break silently at the
-// next major. Also: Jimmolate will live behind createSearch when it lands
-// in JS — keep this assert green and the next session's wiring has a hook.
+function testAnalyzeJamlSeeds_KnownSeed_AttachesStructuredAnalysis() {
+    // Mirrors AnalyzerUnitTests.TestJamlyzerAnalyzeSeeds_AttachesStructuredSeedAnalysis.
+    const result = Motely.analyzeJamlSeeds(ANALYZE_JAML, ["1AAAAAAA"]);
+    if (result.error !== null && result.error !== undefined) {
+        throw new Error(`expected null error, got ${JSON.stringify(result.error)}`);
+    }
+    if (!Array.isArray(result.seeds) || result.seeds.length !== 1) {
+        throw new Error(`expected 1 seed, got ${result.seeds?.length}`);
+    }
+    const seed = result.seeds[0];
+    if (seed.seed !== "1AAAAAAA") throw new Error(`expected seed '1AAAAAAA', got ${seed.seed}`);
+    if (!seed.analysis) throw new Error(`expected analysis object, got ${seed.analysis}`);
+    if (!Array.isArray(seed.analysis.antes) || seed.analysis.antes.length === 0) {
+        throw new Error(`expected non-empty antes array, got ${JSON.stringify(seed.analysis.antes)?.slice(0, 80)}`);
+    }
+    const ante1 = seed.analysis.antes[0];
+    if (!("boss" in ante1)) throw new Error(`expected 'boss' field on antes[0], got keys ${Object.keys(ante1).join(",")}`);
+}
+
 function testPublicApiSurface_DocumentedMembersPresent() {
     const required = [
         "validateJaml",
@@ -112,13 +129,13 @@ function testPublicApiSurface_DocumentedMembersPresent() {
     }
 }
 
-// ---- runner -----------------------------------------------------------------
-
 const tests = [
+    testVersion_MatchesNpmPackageJson,
     testValidateJaml_ValidInput_ReturnsValid,
     testValidateJaml_GarbageInput_ReturnsErrorString,
-    testExplainJaml_ReturnsNonEmptyString,
-    testCreatePlan_ReturnsObject,
+    testExplainJaml_StartsWithDocumentedHeader,
+    testCreatePlan_HasJamlSearchPlanFields,
+    testAnalyzeJamlSeeds_KnownSeed_AttachesStructuredAnalysis,
     testPublicApiSurface_DocumentedMembersPresent,
 ];
 
@@ -127,7 +144,7 @@ let failed = 0;
 
 try {
     await boot();
-    console.log(`boot: BootStatus.Booted`);
+    console.log(`boot: BootStatus.Booted (package ${pkgVersion})`);
 } catch (e) {
     console.error(`BOOT FAILED: ${e?.stack ?? e}`);
     process.exit(1);

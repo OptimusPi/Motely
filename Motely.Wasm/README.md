@@ -13,15 +13,9 @@ npm install motely-wasm
 ```js
 import bootsharp, { Motely } from "motely-wasm";
 
-// Boot the .NET WASM runtime. The argument is the URL path under which your
+// Boot the .NET WASM runtime. In a browser, pass the URL path under which your
 // host serves the package's `bin/` directory (where dotnet.native.wasm lives).
-// Pick whichever URL is actually reachable from your page — examples:
-//   "/motely-wasm/bin"          (Vite/Storybook staticDirs, Next.js route)
-//   "/bin"                       (page served from the package root)
-//   "/node_modules/motely-wasm/bin" (raw node_modules served as static)
-//   "https://unpkg.com/motely-wasm@17.4.4/bin" (CDN)
-// Workers must use the SAME path — don't pass "/bin" if your host serves
-// the assets at "/motely-wasm/bin".
+// In Node, pass the `.wasm` bytes directly — see the "Booting" section below.
 await bootsharp.boot("/motely-wasm/bin");
 
 // A JAML filter — see https://github.com/OptimusPi/MotelyJAML for the language.
@@ -53,9 +47,13 @@ console.log("done:", search.totalSeedsSearched, "searched,", search.matchingSeed
 
 ## Booting
 
-`bootsharp.boot(binUrl)` initializes the .NET WASM runtime. Call it once before any
-`Motely.*` API. The argument is the URL path your host serves the `bin/` directory
-at (where `dotnet.native.wasm` lives). It's host-chosen — typical mountings are:
+`bootsharp.boot(...)` initializes the .NET WASM runtime. Call it once before any
+`Motely.*` API. The argument shape depends on the host.
+
+### Browser
+
+Pass the URL path your host serves the package's `bin/` directory at (where
+`dotnet.native.wasm` lives). It's host-chosen — typical mountings:
 
 | Host | Mount `bin/` at | Boot call |
 | --- | --- | --- |
@@ -63,14 +61,14 @@ at (where `dotnet.native.wasm` lives). It's host-chosen — typical mountings ar
 | Next.js route handler | `/motely-wasm/bin/[...path]` | `boot("/motely-wasm/bin")` |
 | Static page in `node_modules/motely-wasm/` | `/bin` | `boot("/bin")` |
 | Raw node_modules served as static | `/node_modules/motely-wasm/bin` | `boot("/node_modules/motely-wasm/bin")` |
-| Public CDN | `https://unpkg.com/motely-wasm@17.4.4/bin` | `boot("https://unpkg.com/motely-wasm@17.4.4/bin")` |
+| Public CDN | `https://unpkg.com/motely-wasm/bin` | `boot("https://unpkg.com/motely-wasm/bin")` |
 
 Web Workers must boot from the **same** URL as the main thread — absolute paths
-in a worker resolve against the page origin, so the path that serves the WASM
-to the main thread is the same path the worker must pass.
+in a worker resolve against the page origin, so whichever URL serves the WASM
+to the main thread is the same one the worker must pass.
 
 ```js
-import bootsharp, { BootStatus } from "motely-wasm";
+import bootsharp from "motely-wasm";
 
 if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
   await bootsharp.boot("/motely-wasm/bin");
@@ -78,6 +76,31 @@ if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
 
 console.log(bootsharp.getStatus()); // BootStatus.Booted
 ```
+
+### Node / Bun / Deno
+
+There's no URL to fetch from — read `dotnet.native.wasm` off disk and hand its
+bytes to `boot`:
+
+```js
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import bootsharp from "motely-wasm";
+
+const require = createRequire(import.meta.url);
+const pkgRoot = require.resolve("motely-wasm/package.json").replace(/package\.json$/, "");
+const wasmBytes = await readFile(`${pkgRoot}bin/dotnet.native.wasm`);
+
+await bootsharp.boot({
+  wasm: wasmBytes.buffer.slice(
+    wasmBytes.byteOffset,
+    wasmBytes.byteOffset + wasmBytes.byteLength
+  ),
+});
+```
+
+`Motely.Wasm/test-sanity.mjs` in the source repo is the executable reference for
+this path — if Node boot breaks, that smoke test catches it first.
 
 ## JAML API
 
@@ -138,7 +161,7 @@ search.cancel(); // stop early
 | `Motely.onSeedMatch` | `string` — matching seed |
 | `Motely.onScoredResult` | `{ seed, score, tallies }` |
 | `Motely.onProgress` | `MotelyProgress` — `percentComplete`, `seedsSearched`, `matchingSeeds`, `seedsPerMillisecond`, `elapsedMilliseconds` |
-| `Motely.onFileChanges` | `Change[]` (browser file-system mounts) |
+| `Motely.onFileChanges` | `Change[]` — fires when files change under a directory mounted via `Motely.mountRoot` (browser File System Access API, requires `Bootsharp.FileSystem`). Ignore if your app doesn't mount local directories. |
 
 Subscribe and unsubscribe:
 

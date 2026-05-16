@@ -6,7 +6,6 @@ using Motely;
 using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Native;
-using System.Reflection;
 using System.Text;
 
 [assembly: Preferences(Space = [@"^Motely\.Wasm\.Program$", "Motely"])]
@@ -39,10 +38,7 @@ public static partial class Program
     }
 
     [Export]
-    public static string Version() =>
-        typeof(MotelyDeck).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
-            .InformationalVersion;
+    public static string Version() => MotelyVersionConstant.Value;
 
     [Export]
     public static string ValidateJaml(string jaml)
