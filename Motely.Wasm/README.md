@@ -84,12 +84,11 @@ bytes to `boot`:
 
 ```js
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import bootsharp from "motely-wasm";
 
-const require = createRequire(import.meta.url);
-const pkgRoot = require.resolve("motely-wasm/package.json").replace(/package\.json$/, "");
-const wasmBytes = await readFile(`${pkgRoot}bin/dotnet.native.wasm`);
+const wasmUrl = new URL("../bin/dotnet.native.wasm", import.meta.resolve("motely-wasm"));
+const wasmBytes = await readFile(fileURLToPath(wasmUrl));
 
 await bootsharp.boot({
   wasm: wasmBytes.buffer.slice(
@@ -99,8 +98,10 @@ await bootsharp.boot({
 });
 ```
 
-`Motely.Wasm/test-sanity.mjs` in the source repo is the executable reference for
-this path — if Node boot breaks, that smoke test catches it first.
+Requires Node ≥ 20.6 (sync `import.meta.resolve`). Node 22 LTS is the recommended floor.
+
+`Motely.Wasm/motely.test.mjs` in the source repo is the executable reference for
+this path — if Node boot breaks, that suite catches it first.
 
 ## JAML API
 
