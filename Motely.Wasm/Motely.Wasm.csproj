@@ -64,6 +64,18 @@
     </PropertyGroup>
     <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
            Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp's PackageTemplate.json 'name' line may have changed. Update FinalizeNpmPackage in Motely.Wasm.csproj." />
+    <!-- Exports-shape guard: catch the known-broken historic shapes BEFORE the file is written.
+         17.3.1 shipped './../motely-wasm/index.mjs' and 17.3.2 shipped '././index.mjs' — both
+         made Node refuse `import`. The three-distinct-sinks setup above should produce
+         './dist/index.mjs', but a Bootsharp template change or sink-directory collapse could
+         regress it. CLAUDE.md publish procedure step 2 documents this as a manual eyeball;
+         this turns it into a build failure instead. -->
+    <Error Condition="!$(_PkgWithVersion.Contains('&quot;./dist/index.mjs&quot;'))"
+           Text="motely-wasm package.json is missing the expected exports entry './dist/index.mjs'. Bootsharp's PackageTemplate.json may have changed its exports shape, or %MODULE_DIR% resolved unexpectedly. Inspect BootsharpPackageDirectory vs BootsharpPublishDirectory above — they must remain in distinct directories." />
+    <Error Condition="$(_PkgWithVersion.Contains('&quot;././index.mjs&quot;'))"
+           Text="motely-wasm package.json exports regressed to '././index.mjs' (17.3.2 bug class). BootsharpPackageDirectory and BootsharpPublishDirectory have collapsed to the same directory — keep them distinct so %MODULE_DIR% resolves to 'dist', not '.'." />
+    <Error Condition="$(_PkgWithVersion.Contains('&quot;./../motely-wasm/index.mjs&quot;'))"
+           Text="motely-wasm package.json exports regressed to './../motely-wasm/index.mjs' (17.3.1 bug class). BootsharpPublishDirectory is escaping the package root — it must be a subdirectory of BootsharpPackageDirectory (currently motely-wasm/dist)." />
     <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
     <!-- No SkipUnchangedFiles: the destination is gitignored and may carry stale manual edits with newer
          mtimes than the source. SkipUnchangedFiles would then preserve the scribble through `dotnet publish`
