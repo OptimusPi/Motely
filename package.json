@@ -1,6 +1,6 @@
 {
   "name": "jaml-ui",
-  "version": "0.27.2",
+  "version": "0.28.0",
   "description": "Balatro rendering components, sprite metadata, and optional Motely helpers for React apps.",
   "type": "module",
   "main": "./dist/index.js",
@@ -159,7 +159,7 @@
     "clsx": "^2.1.1",
     "js-yaml": "^4.1.1",
     "lucide-react": "^1.14.0",
-    "motely-wasm": "^17.4.5",
+    "motely-wasm": "^17.4.4",
     "tailwind-merge": "^2.6.1",
     "zod": "^4.0.0",
     "zustand": "^5.0.13"
