@@ -101,7 +101,7 @@ function testExplainJaml() {
 }
 
 function testCreatePlan() {
-    const plan = Motely.createPlan(SCORING_JAML);
+    const plan = Motely.createPlan(jaml.scoring);
     if (typeof plan?.scoredCsvHeaderQuoted !== "string") throw new Error("plan.scoredCsvHeaderQuoted missing");
     if (plan.scoreTallyColumnCount !== 2) throw new Error(`tally cols: ${plan.scoreTallyColumnCount}`);
     if (plan.tallyLabels?.length !== 2) throw new Error(`tally labels: ${plan.tallyLabels?.length}`);
@@ -110,7 +110,7 @@ function testCreatePlan() {
 function testAnalyzeJamlSeeds() {
     // Shape assertions matter — `{}` marshaling would silently lie here.
     const seeds = ["1AAAAAAA", "2BBBBBBB"];
-    const result = Motely.analyzeJamlSeeds(ANY_jaml.must, seeds);
+    const result = Motely.analyzeJamlSeeds(jaml.anyMust, seeds);
     if (result.error != null) throw new Error(`unexpected error: ${result.error}`);
     if (result.seeds?.length !== 2) throw new Error(`seeds.length: ${result.seeds?.length}`);
     for (let i = 0; i < seeds.length; i++)
@@ -128,14 +128,14 @@ function testCreateSearchBuilder() {
     if (!threw) throw new Error("createSearch(garbage) should throw");
     if (typeof Motely.createSearchSettings()?.withSequentialSearch !== "function")
         throw new Error("createSearchSettings builder missing");
-    const s = Motely.createSearch(SCORING_JAML)
+    const s = Motely.createSearch(jaml.scoring)
         .withSequentialSearch().withThreadCount(1).withProgressReportIntervalMs(0n);
     if (typeof s?.start !== "function") throw new Error("chained builder.start missing");
 }
 
 async function testListSearch_Completes() {
     const seeds = ["AAAAAAAA", "BBBBBBBB"];
-    const search = Motely.createSearch(ANY_jaml.must)
+    const search = Motely.createSearch(jaml.anyMust)
         .withListSearch(seeds, seeds.length).withThreadCount(1).start();
     await search.waitForCompletionAsync();
     if (!search.isCompleted) throw new Error("not completed");
@@ -153,7 +153,7 @@ async function testEvents_FireWithDocumentedShape() {
     Motely.onScoredResult.subscribe(onS);
     Motely.onProgress.subscribe(onP);
     try {
-        const search = Motely.createSearch(SCORING_JAML)
+        const search = Motely.createSearch(jaml.scoring)
             .withListSearch(seeds, seeds.length).withThreadCount(1)
             .withProgressReportIntervalMs(0n).start();
         await search.waitForCompletionAsync();
