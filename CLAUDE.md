@@ -47,6 +47,10 @@ Post-publish, against the registry (not the local emit):
 
 CDN delivery (unpkg/jsdelivr) is automatic after `npm publish` — no manual upload step.
 
+## Agent rules
+
+- **No Bash tool.** Use Read, Grep, Glob, Edit, Write for all file work. Output commands for the user to run via `! <command>` in the prompt — never invoke them yourself.
+
 ## Hard rules
 
 - **No private paths in public files.** No `D:\…`, `X:\…`, local NuGet feeds, or personal drive layouts in `.csproj` / `.props` / `.config` / package metadata. `nuget.config` deliberately omits `<clear/>` so per-user feeds merge in without leaking.
