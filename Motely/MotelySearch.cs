@@ -546,32 +546,19 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
+    /// <summary>
+    /// Bootsharp-safe DTO overload of <see cref="WithScoredResultCallback(Action{MotelySeedScoreTally})"/>.
+    /// Allocates a <see cref="MotelyScoredSeedResult"/> per scored seed; use the ref-struct overload on hot
+    /// in-process paths (CLI/TUI/tests) where you can read the tally without crossing a JS boundary.
+    /// </summary>
+    IMotelySearchSettings WithScoredResultCallback(Action<MotelyScoredSeedResult> callback);
+    /// <summary>
+    /// Array overload of <see cref="WithListSearch(IEnumerable{string}, int)"/> — Bootsharp-friendly
+    /// signature so the wide interface crosses the JS boundary without an <see cref="IEnumerable{T}"/>
+    /// proxy. Native callers can still pass any <see cref="IEnumerable{T}"/> via the other overload.
+    /// </summary>
+    IMotelySearchSettings WithListSearch(string[] seeds, int seedCount = -1);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
-
-    IMotelySearch CreateSearch();
-    IMotelySearch Start(CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Interop-safe subset of <see cref="IMotelySearchSettings"/> for WASM/Bootsharp boundaries.
-/// Excludes members that expose ref-struct search/filter contexts.
-/// </summary>
-public interface IMotelySearchSettingsInterop
-{
-    IMotelySearchSettingsInterop WithThreadCount(int threadCount);
-    IMotelySearchSettingsInterop WithBatchCharacterCount(int batchCharacterCount);
-    IMotelySearchSettingsInterop WithStartBatchIndex(long startBatchIndex);
-    IMotelySearchSettingsInterop WithEndBatchIndex(long endBatchIndex);
-    IMotelySearchSettingsInterop WithListSearch(string[] seeds, int seedCount = -1);
-    IMotelySearchSettingsInterop WithRandomSearch(int count);
-    IMotelySearchSettingsInterop WithAestheticSearch(JamlAesthetic aesthetic);
-    IMotelySearchSettingsInterop WithSequentialSearch();
-    IMotelySearchSettingsInterop WithDeck(MotelyDeck deck);
-    IMotelySearchSettingsInterop WithStake(MotelyStake stake);
-    IMotelySearchSettingsInterop WithProgressReportIntervalMs(long intervalMs);
-    IMotelySearchSettingsInterop WithCsvOutput(bool csvOutput);
-    IMotelySearchSettingsInterop WithQuietMode(bool quietMode);
-    IMotelySearchSettingsInterop WithAutoScoreCutoff(bool enabled = true);
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -579,7 +566,7 @@ public interface IMotelySearchSettingsInterop
 
 public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySeedFilterDesc<TBaseFilter> baseFilterDesc
-) : IMotelySearchSettings, IMotelySearchSettingsInterop
+) : IMotelySearchSettings
     where TBaseFilter : struct, IMotelySeedFilter
 {
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
@@ -671,6 +658,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return WithProviderSearch(new MotelySeedListProvider(seeds, seedCount));
     }
 
+    public MotelySearchSettings<TBaseFilter> WithListSearch(string[] seeds, int seedCount = -1) =>
+        WithListSearch((IEnumerable<string>)seeds, seedCount);
+
     public MotelySearchSettings<TBaseFilter> WithRandomSearch(int count)
     {
         return WithProviderSearch(new MotelyRandomSeedProvider(count));
@@ -748,6 +738,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         int seedCount
     ) => WithListSearch(seeds, seedCount);
 
+    IMotelySearchSettings IMotelySearchSettings.WithListSearch(string[] seeds, int seedCount) =>
+        WithListSearch(seeds, seedCount);
+
     IMotelySearchSettings IMotelySearchSettings.WithRandomSearch(int count) =>
         WithRandomSearch(count);
 
@@ -783,59 +776,14 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<MotelySeedScoreTally> callback
     ) => WithScoredResultCallback(callback);
 
+    IMotelySearchSettings IMotelySearchSettings.WithScoredResultCallback(
+        Action<MotelyScoredSeedResult> callback
+    ) => WithScoredResultCallback(callback);
+
     IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
 
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
-        Start(cancellationToken);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithThreadCount(int threadCount) =>
-        WithThreadCount(threadCount);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithBatchCharacterCount(int count) =>
-        WithBatchCharacterCount(count);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithStartBatchIndex(long index) =>
-        WithStartBatchIndex(index);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithEndBatchIndex(long index) =>
-        WithEndBatchIndex(index);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithListSearch(
-        string[] seeds,
-        int seedCount
-    ) => WithListSearch(seeds, seedCount);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithRandomSearch(int count) =>
-        WithRandomSearch(count);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithAestheticSearch(
-        JamlAesthetic aesthetic
-    ) => WithAestheticSearch(aesthetic);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithSequentialSearch() =>
-        WithSequentialSearch();
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithDeck(MotelyDeck deck) =>
-        WithDeck(deck);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithStake(MotelyStake stake) =>
-        WithStake(stake);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithProgressReportIntervalMs(
-        long intervalMs
-    ) => WithProgressReportIntervalMs(intervalMs);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithCsvOutput(bool csvOutput) =>
-        WithCsvOutput(csvOutput);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithQuietMode(bool quietMode) =>
-        WithQuietMode(quietMode);
-
-    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithAutoScoreCutoff(bool enabled) =>
-        WithAutoScoreCutoff(enabled);
-
-    IMotelySearch IMotelySearchSettingsInterop.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
     /// <inheritdoc cref="IMotelySearchSettings.CreateSearch" />
@@ -889,6 +837,21 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     {
         ScoredResultCallback = callback;
         return this;
+    }
+
+    /// <summary>
+    /// DTO overload for cross-boundary consumers (WASM/Bootsharp). Allocates a
+    /// <see cref="MotelyScoredSeedResult"/> per scored seed via <see cref="MotelyScoredSeedResult.FromTally"/>.
+    /// In-process callers that read the tally directly should prefer the ref-struct overload to avoid the
+    /// per-call allocation on hot paths.
+    /// </summary>
+    public MotelySearchSettings<TBaseFilter> WithScoredResultCallback(
+        Action<MotelyScoredSeedResult> callback
+    )
+    {
+        Action<MotelySeedScoreTally> tallyCallback =
+            tally => callback(MotelyScoredSeedResult.FromTally(in tally));
+        return WithScoredResultCallback(tallyCallback);
     }
 
     public MotelySearchSettings<TBaseFilter> WithAutoScoreCutoff(bool enabled = true)

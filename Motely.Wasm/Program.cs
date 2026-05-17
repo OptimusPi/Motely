@@ -97,20 +97,22 @@ public static partial class Program
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
 
     [Export]
-    public static IMotelySearchSettingsInterop CreateSearch(string jaml)
+    public static IMotelySearchSettings CreateSearch(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return AttachInteropCallbacks(JamlSearchBuilder.CreateSettings(config));
+        return JamlSearchBuilder.CreateSettings(config)
+            .WithSeedMatchCallback(seed => OnSeedMatch?.Invoke(seed))
+            .WithScoredResultCallback((Action<MotelyScoredSeedResult>)(r => OnScoredResult?.Invoke(r)))
+            .WithProgressCallback(p => OnProgress?.Invoke(p));
     }
 
     [Export]
-    public static IMotelySearchSettingsInterop CreateSearchSettings() =>
-        AttachInteropCallbacks(
-            new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
-                new PassthroughFilterDesc()
-            )
-        );
+    public static IMotelySearchSettings CreateSearchSettings() =>
+        new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(new PassthroughFilterDesc())
+            .WithSeedMatchCallback(seed => OnSeedMatch?.Invoke(seed))
+            .WithScoredResultCallback((Action<MotelyScoredSeedResult>)(r => OnScoredResult?.Invoke(r)))
+            .WithProgressCallback(p => OnProgress?.Invoke(p));
 
     [Export]
     public static async Task<string?> PickRoot(PickOptions? options = null) =>
@@ -143,14 +145,6 @@ public static partial class Program
         await GetFileSystem(root).WriteFile(uri, Encoding.UTF8.GetBytes(text));
 
     private static IFileMounter Mounter() => services.GetRequiredService<IFileMounter>();
-
-    private static IMotelySearchSettingsInterop AttachInteropCallbacks(IMotelySearchSettings settings) =>
-        (IMotelySearchSettingsInterop)settings
-            .WithSeedMatchCallback(seed => OnSeedMatch?.Invoke(seed))
-            .WithScoredResultCallback(tally =>
-                OnScoredResult?.Invoke(MotelyScoredSeedResult.FromTally(in tally))
-            )
-            .WithProgressCallback(p => OnProgress?.Invoke(p));
 
     private static IFileSystem GetFileSystem(string root) =>
         MountedFileSystems.TryGetValue(root, out var fs)

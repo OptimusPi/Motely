@@ -177,7 +177,7 @@ Motely.onScoredResult.unsubscribe(handler);
 | Import path | Contents |
 |---|---|
 | `motely-wasm` | Default export: `boot`, `getStatus`, `BootStatus`. Named export: `Motely` (main API) |
-| `motely-wasm/motely` | Types: `IMotelySearch`, `IMotelySearchSettingsInterop`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyDeck`, `MotelyStake`, enums |
+| `motely-wasm/motely` | Types: `IMotelySearch`, `IMotelySearchSettings`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyDeck`, `MotelyStake`, enums |
 | `motely-wasm/motely/filters` | `JamlAesthetic`, `JamlSearchPlan` |
 | `motely-wasm/motely/analysis` | `MotelyJamlyzerResult`, `MotelySeedAnalysis` |
 | `motely-wasm/bootsharp/file-system` | File-system interop (browser OPFS) — `PermissionMode`, `IFileMounter` |
