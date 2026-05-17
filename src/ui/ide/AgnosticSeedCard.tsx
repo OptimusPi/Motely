@@ -64,7 +64,12 @@ export function AgnosticSeedCard({
         fetchedAnalysis?.score ?? propResult?.score;
 
     useEffect(() => {
+        // Latch-once semantics: this card fetches a single analysis on mount
+        // and doesn't re-fetch on prop changes — consumers mount a fresh card
+        // per seed. Keep `fetchedAnalysis` in deps so the early return fires
+        // the second time after setFetchedAnalysis runs.
         if (propAnalysis || propResult || fetchedAnalysis) return;
+        let cancelled = false;
 
         const analyze = async () => {
             setLoading(true);
@@ -72,10 +77,11 @@ export function AgnosticSeedCard({
                 if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
                     await bootsharp.boot('/motely-wasm/bin');
                 }
+                if (cancelled) return;
                 const jaml = jamlConfig ?? `version: 1\nconfig:\n  deck: ${deckSlug}\n  stake: ${stakeSlug}\n`;
                 const rawData: MotelyJamlyzerResult = Motely.analyzeJamlSeeds(jaml, [seed]);
 
-                if (rawData && rawData.seeds.length > 0) {
+                if (!cancelled && rawData && rawData.seeds.length > 0) {
                     const seedData = rawData.seeds[0];
                     setFetchedAnalysis({
                         score: seedData.score,
@@ -83,13 +89,16 @@ export function AgnosticSeedCard({
                     });
                 }
             } catch (err) {
-                console.error(err);
+                if (!cancelled) console.error(err);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         analyze();
+        return () => {
+            cancelled = true;
+        };
     }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult, fetchedAnalysis]);
 
     const items = allAnalyzedItems(resolvedAnalysis);
