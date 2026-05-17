@@ -18,6 +18,9 @@ public static partial class Program
     private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(StringComparer.Ordinal);
     private static readonly MotelyFileWatcher FileWatcher = new();
 
+    [Import]
+    public static partial bool EvalJimmolate(string seed);
+
     [Export]
     public static event Action<IReadOnlyList<Change>>? OnFileChanges;
 
@@ -35,6 +38,7 @@ public static partial class Program
         services = new ServiceCollection()
             .AddBootsharp()
             .BuildServiceProvider();
+        JimmolateInteropBridge.Predicate = EvalJimmolate;
     }
 
     [Export]
