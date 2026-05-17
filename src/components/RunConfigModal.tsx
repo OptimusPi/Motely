@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { JimboModal, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { DECK_OPTIONS, STAKE_OPTIONS } from "../lib/data/constants.js";
@@ -49,19 +49,30 @@ export function RunConfigModal({
   stake,
   onChange,
 }: RunConfigModalProps) {
+  return (
+    <JimboModal open={open} onClose={onClose} title="Run Config">
+      {open ? (
+        <RunConfigModalBody
+          deck={deck}
+          stake={stake}
+          onChange={onChange}
+          onClose={onClose}
+        />
+      ) : null}
+    </JimboModal>
+  );
+}
+
+interface RunConfigModalBodyProps {
+  deck: string;
+  stake: string;
+  onChange: (deck: string, stake: string) => void;
+  onClose: () => void;
+}
+
+function RunConfigModalBody({ deck, stake, onChange, onClose }: RunConfigModalBodyProps) {
   const [activeDeck, setActiveDeck] = useState(deck);
   const [activeStake, setActiveStake] = useState(stake);
-
-  // Sync state if props change when opened
-  React.useEffect(() => {
-    if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setActiveDeck(deck);
-      setActiveStake(stake);
-    }
-  }, [open, deck, stake]);
-
-  if (!open) return null;
 
   const deckIdx = DECK_OPTIONS.indexOf(activeDeck) >= 0 ? DECK_OPTIONS.indexOf(activeDeck) : 0;
   const stakeIdx = STAKE_OPTIONS.indexOf(activeStake) >= 0 ? STAKE_OPTIONS.indexOf(activeStake) : 0;
@@ -78,7 +89,7 @@ export function RunConfigModal({
   };
 
   return (
-    <JimboModal open={open} onClose={onClose} title="Run Config">
+    <>
       {/* Deck carousel */}
       <div className="j-flex j-items-center j-gap-sm">
         <JimboButton tone="red" size="sm" onClick={prevDeck}>&lt;</JimboButton>
@@ -110,6 +121,6 @@ export function RunConfigModal({
         <JimboButton tone="blue" size="lg" fullWidth onClick={handleApply}>Apply</JimboButton>
         <JimboButton tone="orange" size="lg" fullWidth onClick={onClose}>Back</JimboButton>
       </div>
-    </JimboModal>
+    </>
   );
 }

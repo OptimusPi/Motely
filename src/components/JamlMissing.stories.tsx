@@ -45,14 +45,37 @@ const mockProps: any = {
 export const _JamlCodeEditor: StoryObj = { render: () => <JamlCodeEditor {...mockProps} /> };
 export const _JamlCurator: StoryObj = { render: () => <JamlCurator {...mockProps} /> };
 export const _JamlIdeToolbar: StoryObj = { render: () => <JamlIdeToolbar {...mockProps} /> };
-export const _JamlIdeVisual: StoryObj = { render: () => <JamlIdeVisual {...mockProps} /> };
+export const _JamlIdeVisual: StoryObj = {
+  render: () => (
+    <JamlIdeVisual
+      filter={{ must: [], should: [], mustnot: [] }}
+      onChange={() => {}}
+    />
+  ),
+};
 export const _JamlMapPreview: StoryObj = { render: () => <JamlMapPreview {...mockProps} /> };
 export const _Jamlyzer: StoryObj = { render: () => <Jamlyzer {...mockProps} /> };
 export const _MotelyVersionBadge: StoryObj = { render: () => <MotelyVersionBadge {...mockProps} /> };
-export const _PaginatedFilterBrowser: StoryObj = { render: () => <PaginatedFilterBrowser {...mockProps} /> };
-export const _RunConfigModal: StoryObj = { render: () => <RunConfigModal {...mockProps} /> };
-export const _Standardcard: StoryObj = { render: () => <Standardcard {...mockProps} /> };
-export const _AnalyzerExplorer: StoryObj = { render: () => <AnalyzerExplorer {...mockProps} /> };
+export const _PaginatedFilterBrowser: StoryObj = {
+  render: () => <PaginatedFilterBrowser filters={[]} />,
+};
+export const _RunConfigModal: StoryObj = {
+  render: () => (
+    <RunConfigModal
+      open
+      onClose={() => {}}
+      deck="Red"
+      stake="White"
+      onChange={() => {}}
+    />
+  ),
+};
+export const _Standardcard: StoryObj = {
+  render: () => <Standardcard suit="Hearts" rank="Ace" />,
+};
+export const _AnalyzerExplorer: StoryObj = {
+  render: () => <AnalyzerExplorer antes={[]} />,
+};
 export const _CardFan: StoryObj = { render: () => <CardFan {...mockProps} /> };
 export const _CardList: StoryObj = { render: () => <CardList {...mockProps} /> };
 
