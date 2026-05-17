@@ -8,7 +8,8 @@
       "PowerShell(npm version *)",
       "PowerShell(Get-NetTCPConnection *)",
       "PowerShell(python -m http.server 3141 --directory X:\\\\jaml-ui\\\\examples)",
-      "PowerShell(Start-Sleep -Seconds 12; \"3141: \" + \\(try {\\(Invoke-WebRequest http://localhost:3141/ -UseBasicParsing -TimeoutSec 3\\).StatusCode} catch {$_.Exception.Message}\\); \"6006: \" + \\(try {\\(Invoke-WebRequest http://localhost:6006/ -UseBasicParsing -TimeoutSec 5\\).StatusCode} catch {$_.Exception.Message}\\))"
+      "PowerShell(Start-Sleep -Seconds 12; \"3141: \" + \\(try {\\(Invoke-WebRequest http://localhost:3141/ -UseBasicParsing -TimeoutSec 3\\).StatusCode} catch {$_.Exception.Message}\\); \"6006: \" + \\(try {\\(Invoke-WebRequest http://localhost:6006/ -UseBasicParsing -TimeoutSec 5\\).StatusCode} catch {$_.Exception.Message}\\))",
+      "mcp__d8ba4228-0ca3-4d6d-a833-373c9d8163f8__validate_jaml"
     ],
     "additionalDirectories": [
       "x:\\JammySeedFinder\\src\\MotelyJAML"
