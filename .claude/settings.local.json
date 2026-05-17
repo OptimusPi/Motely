@@ -13,5 +13,8 @@
     "additionalDirectories": [
       "x:\\JammySeedFinder\\src\\MotelyJAML"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "storybook"
+  ]
 }
