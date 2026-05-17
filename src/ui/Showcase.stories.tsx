@@ -5,7 +5,8 @@ const meta = {
   title: 'JAML / Showcase',
   component: Showcase,
   parameters: {
-    layout: 'centered',
+    layout: 'fullscreen',
+    jimboHarness: true,
   },
 } satisfies Meta<typeof Showcase>;
 

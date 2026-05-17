@@ -23,6 +23,7 @@ const meta: Meta<typeof JamlIde> = {
   component: JamlIde,
   parameters: {
     layout: 'centered',
+    jimboHarness: false,
   },
 };
 

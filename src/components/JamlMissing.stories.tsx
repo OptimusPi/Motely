@@ -24,7 +24,7 @@ import { JimboFilterBar } from '../ui/jimboFilterBar';
 
 const meta = {
   title: 'JAML / Missing Components',
-  parameters: { layout: 'centered' },
+  parameters: { jimboHarness: false,  layout: 'centered' },
 } satisfies Meta;
 
 export default meta;
@@ -83,3 +83,4 @@ export const _JimboFloating: StoryObj = { render: () => <JimboFloating {...mockP
 export const _PanelSplitter: StoryObj = { render: () => <PanelSplitter {...mockProps} /> };
 export const _JimboBalatroFooter: StoryObj = { render: () => <JimboBalatroFooter {...mockProps} /> };
 export const _JimboFilterBar: StoryObj = { render: () => <JimboFilterBar {...mockProps} /> };
+

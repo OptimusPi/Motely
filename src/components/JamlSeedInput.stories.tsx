@@ -4,7 +4,7 @@ import { JamlSeedInput } from './JamlSeedInput';
 const meta = {
   title: 'JAML / JamlSeedInput',
   component: JamlSeedInput,
-  parameters: {
+  parameters: { jimboHarness: false, 
     layout: 'centered',
   },
   argTypes: {
@@ -26,3 +26,4 @@ export const PreFilled: Story = {
     initialSeed: '1A2B3C4D',
   },
 };
+

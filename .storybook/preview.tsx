@@ -33,14 +33,23 @@ const preview: Preview = {
     backgrounds: { disable: true },
   },
   decorators: [
-    (Story) => (
-      <StorybookMotelyWarmup>
-        <JimboBackground />
-        <JimboApp>
-          <Story />
-        </JimboApp>
-      </StorybookMotelyWarmup>
-    ),
+    (Story, { parameters }) => {
+      const { jimboHarness } = parameters;
+      const content = <Story />;
+
+      if (jimboHarness === false) {
+        return content;
+      }
+
+      return (
+        <StorybookMotelyWarmup>
+          <JimboBackground />
+          <JimboApp fluid={jimboHarness === 'fluid'}>
+             {content}
+          </JimboApp>
+        </StorybookMotelyWarmup>
+      );
+    },
   ],
 };
 

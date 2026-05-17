@@ -18,7 +18,7 @@ import { JimboIconButton } from './JimboIconButton';
 
 const meta = {
   title: 'JimboUI/Components',
-  parameters: { layout: 'fullscreen' },
+  parameters: { jimboHarness: true, layout: 'fullscreen' },
 } satisfies Meta;
 
 export default meta;
@@ -369,3 +369,4 @@ export const AppShell: StoryObj = {
     </>
   ),
 };
+
