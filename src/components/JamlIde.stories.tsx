@@ -22,8 +22,8 @@ const meta: Meta<typeof JamlIde> = {
   title: 'JAML/JamlIde',
   component: JamlIde,
   parameters: {
-    layout: 'centered',
-    jimboHarness: false,
+    layout: 'fullscreen',
+    jimboHarness: 'fluid',
   },
 };
 

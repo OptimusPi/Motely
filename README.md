@@ -145,6 +145,8 @@ await library.saveFile("filters/example.jaml", source);
 | Peer | Required for |
 | ---- | ------------ |
 | `react`, `react-dom` | All components |
-| `motely-wasm ^17.4.4` | `jaml-ui/motely`, `AnalyzerExplorer`, `useSearch`, `useAnalyzer`, `useJamlLibrary` data |
+| `react-icons` | Components that render icons (optional peer) |
 | `@rewaffle/bootsharp-file-system` | Optional JAML library folder mount support |
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-spring/three` | `jaml-ui/r3f` only |
+
+`motely-wasm` is a direct dependency (currently `^17.7.0`) — it ships with `jaml-ui` rather than as a peer, but is externalized from the bundle so consumers control how the Bootsharp runtime is served (see *Search Worker Architecture* above).
