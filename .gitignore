@@ -13,3 +13,4 @@ extract-errors.cjs
 sb-check*.mjs
 sb-screenshot*.png
 .claude/settings.local.json
+/examples/screenshots-balatro-movile
