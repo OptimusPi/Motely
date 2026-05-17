@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { JamlVisualClause, JamlVisualFilter, JamlZone } from '../components/JamlIdeVisual.js'
 import { JIMBO_ANIMATIONS } from './tokens.js'
 import { Layer } from '../render/Layer.js'
@@ -365,8 +365,6 @@ export function useJamlCardRenderer({
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map())
   const [ratio, setRatio] = useState(3 / 4)
   const [, forceUpdate] = useState(0)
-  const animationFrameRef = useRef<number | null>(null)
-  const [elapsed, setElapsed] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
   const [transform, setTransform] = useState('none')
 
@@ -394,58 +392,64 @@ export function useJamlCardRenderer({
     }
   }, [])
 
-  // Animation loop for animated layers
-  useEffect(() => {
-    if (!hasAnimatedLayer) return
-
-    let startTime: number
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp
-      const now = timestamp - startTime
-      if (!animationFrameRef.current || timestamp - 100 > animationFrameRef.current) {
-        animationFrameRef.current = timestamp
-        setElapsed(now)
-      }
-      animationFrameRef.current = requestAnimationFrame(animate)
-    }
-
-    animationFrameRef.current = requestAnimationFrame(animate)
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
-    }
-  }, [hasAnimatedLayer])
-
-  // Core drawing logic
+  // Drawing: RAF loop for animated layers, single paint otherwise. Previously
+  // the canvas redrew via an Effect that depended on an `elapsed` state which
+  // a separate ~10fps RAF loop kept ticking — re-running setup/teardown of
+  // the drawing Effect every animation frame. Now drawing lives inside the
+  // RAF loop and the Effect only re-runs on layer / invert / animated changes.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !layers || layers.length === 0) return
     const context = canvas.getContext('2d')
     if (!context) return
-    let cancelled = false
 
-    context.clearRect(0, 0, canvas.width, canvas.height)
+    let cancelled = false
+    let frame: number | null = null
+    let startTime: number | undefined
+
+    const drawOnce = (animTime?: number) => {
+      context.clearRect(0, 0, canvas.width, canvas.height)
       ;[...layers]
         .sort((a, b) => a.order - b.order)
         .forEach((layer) => {
-          if (imageCacheRef.current.has(layer.source)) {
-            const image = imageCacheRef.current.get(layer.source)
-            if (!image) return
-            const imageRatio = renderImage(canvas, context, image, layer, hasAnimatedLayer ? elapsed : undefined)
+          const cached = imageCacheRef.current.get(layer.source)
+          if (cached) {
+            const imageRatio = renderImage(canvas, context, cached, layer, hasAnimatedLayer ? animTime : undefined)
             if (layer.order === 0) setRatio(imageRatio)
             return
           }
           loadImage(layer.source).then((img) => {
             if (cancelled || !img) return
-            const imageRatio = renderImage(canvas, context, img, layer, hasAnimatedLayer ? elapsed : undefined)
             imageCacheRef.current.set(layer.source, img)
-            if (layer.order === 0) setRatio(imageRatio)
+            // For non-animated layers there's no RAF tick to repaint the
+            // newly-loaded image, so paint it now.
+            if (!hasAnimatedLayer) {
+              const imageRatio = renderImage(canvas, context, img, layer)
+              if (layer.order === 0) setRatio(imageRatio)
+            }
             forceUpdate((prev) => prev + 1)
           })
         })
+      canvas.style.filter = invert ? 'invert(0.94)' : 'none'
+    }
 
-    canvas.style.filter = invert ? 'invert(0.94)' : 'none'
-    return () => { cancelled = true }
-  }, [layers, elapsed, invert, hasAnimatedLayer])
+    if (hasAnimatedLayer) {
+      const tick = (timestamp: number) => {
+        if (cancelled) return
+        if (startTime === undefined) startTime = timestamp
+        drawOnce(timestamp - startTime)
+        frame = requestAnimationFrame(tick)
+      }
+      frame = requestAnimationFrame(tick)
+    } else {
+      drawOnce()
+    }
+
+    return () => {
+      cancelled = true
+      if (frame !== null) cancelAnimationFrame(frame)
+    }
+  }, [layers, invert, hasAnimatedLayer])
 
   const onPointerEnter = (event: React.PointerEvent) => {
     if (!hoverTilt || event.pointerType === 'touch') return
@@ -618,22 +622,39 @@ export function useJamlIdeDrag(
     []
   )
 
+  // Mirror live state into refs so the window listeners can read fresh values
+  // without re-binding on every drag tick.
+  const dragRef = useRef(drag)
+  const pendingRef = useRef(pendingDrag)
+  const hoverRef = useRef(hoverZone)
+  const filterRef = useRef(filter)
+  const onChangeRef = useRef(onChange)
+  useLayoutEffect(() => {
+    dragRef.current = drag
+    pendingRef.current = pendingDrag
+    hoverRef.current = hoverZone
+    filterRef.current = filter
+    onChangeRef.current = onChange
+  })
+
+  const active = drag !== null || pendingDrag !== null
+
   useEffect(() => {
-    if (!pendingDrag && !drag) return
+    if (!active) return
 
     const move = (e: MouseEvent | TouchEvent) => {
       const touchEvent = 'touches' in e ? (e as TouchEvent) : null
       const t = touchEvent ? touchEvent.touches[0] : (e as MouseEvent)
       if (!t) return
 
-      let activeDrag = drag
+      let activeDrag = dragRef.current
 
-      if (!activeDrag && pendingDrag) {
-        const dx = t.clientX - pendingDrag.x
-        const dy = t.clientY - pendingDrag.y
+      if (!activeDrag && pendingRef.current) {
+        const dx = t.clientX - pendingRef.current.x
+        const dy = t.clientY - pendingRef.current.y
         if (Math.hypot(dx, dy) < 8) return
         activeDrag = {
-          ...pendingDrag,
+          ...pendingRef.current,
           x: t.clientX,
           y: t.clientY,
         }
@@ -660,12 +681,15 @@ export function useJamlIdeDrag(
     }
 
     const up = () => {
-      if (drag && hoverZone && hoverZone !== drag.fromZone) {
-        const to = hoverZone as JamlZone
-        onChange({
-          ...filter,
-          [drag.fromZone]: filter[drag.fromZone].filter((c) => c.id !== drag.clause.id),
-          [to]: [...filter[to], { ...drag.clause }],
+      const d = dragRef.current
+      const h = hoverRef.current
+      if (d && h && h !== d.fromZone) {
+        const to = h as JamlZone
+        const f = filterRef.current
+        onChangeRef.current({
+          ...f,
+          [d.fromZone]: f[d.fromZone].filter((c) => c.id !== d.clause.id),
+          [to]: [...f[to], { ...d.clause }],
         })
       }
       setPendingDrag(null)
@@ -684,7 +708,7 @@ export function useJamlIdeDrag(
       window.removeEventListener('touchmove', move)
       window.removeEventListener('touchend', up)
     }
-  }, [pendingDrag, drag, hoverZone, filter, onChange, rootRef])
+  }, [active, rootRef])
 
   return {
     drag,
