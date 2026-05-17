@@ -112,6 +112,25 @@ public static partial class Program
             )
         );
 
+    // One-shot convenience: parse, configure, and start a search in a single call. Same JAML
+    // throw contract as CreateSearch (call ValidateJaml first). Options are serializable
+    // primitives only so the record crosses the Bootsharp boundary cleanly.
+    [Export]
+    public static IMotelySearch StartSearch(string jaml, JamlSearchOptions? options = null)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        var settings = AttachInteropCallbacks(JamlSearchBuilder.CreateSettings(config))
+            .WithDeck(options?.Deck ?? MotelyDeck.Red)
+            .WithStake(options?.Stake ?? MotelyStake.White)
+            .WithStartBatchIndex(options?.StartBatchIndex ?? 0);
+        if (options?.ThreadCount > 0)
+            settings = settings.WithThreadCount(options.ThreadCount);
+        if (options?.Seeds is { Length: > 0 } seeds)
+            settings = settings.WithListSearch(seeds);
+        return settings.Start();
+    }
+
     [Export]
     public static async Task<string?> PickRoot(PickOptions? options = null) =>
         await Mounter().PickRoot(options);
@@ -166,3 +185,13 @@ public static partial class Program
         }
     }
 }
+
+// Bootsharp-safe primitives only — no ref structs, no engine types that don't round-trip
+// across the JS boundary. Mirrors the StartSearch builder chain in JS-call shape.
+public sealed record JamlSearchOptions(
+    MotelyDeck Deck = MotelyDeck.Red,
+    MotelyStake Stake = MotelyStake.White,
+    int ThreadCount = 0,
+    string[]? Seeds = null,
+    long StartBatchIndex = 0
+);
