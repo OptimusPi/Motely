@@ -40,15 +40,17 @@ async function ensureMotelyReady(): Promise<void> {
     }
 }
 
-function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }): IMotelySearchSettingsInterop {
+function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): IMotelySearchSettingsInterop {
     const settings = Motely.createSearch(jaml);
+    let configured: IMotelySearchSettingsInterop;
     if (mode === "seedlist" && opts.seeds && opts.seeds.length > 0) {
-        return settings.withListSearch(opts.seeds, opts.seeds.length);
+        configured = settings.withListSearch(opts.seeds, opts.seeds.length);
+    } else if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
+        configured = settings.withRandomSearch(opts.count);
+    } else {
+        configured = settings.withAestheticSearch((opts.aesthetic ?? 0) as JamlAesthetic);
     }
-    if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
-        return settings.withRandomSearch(opts.count);
-    }
-    return settings.withAestheticSearch((opts.aesthetic ?? 0) as JamlAesthetic);
+    return withJimmolate ? configured.withJimmolate() : configured;
 }
 
 export function useSearch() {
@@ -66,7 +68,7 @@ export function useSearch() {
     useEffect(() => () => teardown(), [teardown]);
 
     const startSearch = useCallback(
-        async (jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number } = {}) => {
+        async (jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number; predicate?: (seed: string) => boolean } = {}) => {
             try {
                 await ensureMotelyReady();
 
@@ -109,7 +111,8 @@ export function useSearch() {
                     Motely.onProgress.unsubscribe(onProgress);
                 };
 
-                const search = configure(jaml, mode, opts).start(undefined);
+                if (opts.predicate) Motely.evalJimmolate = opts.predicate;
+                const search = configure(jaml, mode, opts, !!opts.predicate).start(undefined);
                 searchRef.current = search;
 
                 try {
@@ -122,11 +125,13 @@ export function useSearch() {
                         seedsPerSecond: 0,
                     }));
                 } finally {
+                    if (opts.predicate) Motely.evalJimmolate = () => true;
                     cleanupRef.current?.();
                     cleanupRef.current = null;
                     searchRef.current = null;
                 }
             } catch (error) {
+                Motely.evalJimmolate = () => true;
                 teardown();
                 const message = error instanceof Error ? error.message : String(error);
                 setState((s) => ({ ...s, status: "error", error: message, seedsPerSecond: 0 }));
@@ -136,17 +141,20 @@ export function useSearch() {
     );
 
     const startAesthetic = useCallback(
-        (jaml: string, aesthetic: number) => startSearch(jaml, "aesthetic", { aesthetic }),
+        (jaml: string, aesthetic: number, predicate?: (seed: string) => boolean) =>
+            startSearch(jaml, "aesthetic", { aesthetic, predicate }),
         [startSearch],
     );
 
     const startSeedList = useCallback(
-        (jaml: string, seeds: string[]) => startSearch(jaml, "seedlist", { seeds }),
+        (jaml: string, seeds: string[], predicate?: (seed: string) => boolean) =>
+            startSearch(jaml, "seedlist", { seeds, predicate }),
         [startSearch],
     );
 
     const startRandom = useCallback(
-        (jaml: string, count: number) => startSearch(jaml, "random", { count }),
+        (jaml: string, count: number, predicate?: (seed: string) => boolean) =>
+            startSearch(jaml, "random", { count, predicate }),
         [startSearch],
     );
 

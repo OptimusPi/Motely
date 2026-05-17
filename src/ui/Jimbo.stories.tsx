@@ -18,7 +18,7 @@ import { JimboIconButton } from './JimboIconButton';
 
 const meta = {
   title: 'JimboUI/Components',
-  parameters: { layout: 'centered' },
+  parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 
 export default meta;
