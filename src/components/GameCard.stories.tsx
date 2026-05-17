@@ -4,7 +4,7 @@ import { JamlGameCard } from './GameCard';
 const meta = {
   title: 'JAML / JamlGameCard',
   component: JamlGameCard,
-  parameters: {
+  parameters: { jimboHarness: false, 
     layout: 'centered',
   },
 } satisfies Meta<typeof JamlGameCard>;
@@ -56,3 +56,4 @@ export const PlayingCard: Story = {
     hoverTilt: true,
   },
 };
+

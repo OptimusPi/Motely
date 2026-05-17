@@ -4,7 +4,7 @@ import { JamlSpeedometer } from './JamlSpeedometer';
 const meta = {
   title: 'JAML / JamlSpeedometer',
   component: JamlSpeedometer,
-  parameters: {
+  parameters: { jimboHarness: false, 
     layout: 'centered',
   },
 } satisfies Meta<typeof JamlSpeedometer>;
@@ -38,3 +38,4 @@ export const Completed: Story = {
     status: 'completed',
   },
 };
+

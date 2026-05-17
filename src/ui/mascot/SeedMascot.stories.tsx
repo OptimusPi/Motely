@@ -6,7 +6,7 @@ import { RadialBreadcrumb } from '../radial';
 const meta = {
     title: 'UI/SeedMascot',
     component: SeedMascot,
-    parameters: {
+    parameters: { jimboHarness: false, 
         layout: 'centered',
     },
     tags: ['autodocs'],
@@ -50,3 +50,4 @@ export const WithManyItems: Story = {
         breadcrumb: <RadialBreadcrumb label="Menu" title="Main Menu" />,
     },
 };
+

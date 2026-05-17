@@ -4,7 +4,7 @@ import { DeckSprite } from './DeckSprite';
 const meta = {
   title: 'JAML / DeckSprite',
   component: DeckSprite,
-  parameters: {
+  parameters: { jimboHarness: false, 
     layout: 'centered',
   },
 } satisfies Meta<typeof DeckSprite>;
@@ -36,3 +36,4 @@ export const AllDecks: Story = {
     </div>
   ),
 };
+

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 const meta = {
   title: 'JAML / JamlAestheticSelector',
   component: JamlAestheticSelector,
-  parameters: {
+  parameters: { jimboHarness: false, 
     layout: 'centered',
   },
   argTypes: {
@@ -43,3 +43,4 @@ export const WithSelection: Story = {
     value: 'Palindrome',
   },
 };
+

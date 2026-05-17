@@ -6,7 +6,7 @@ import { useState } from 'react';
 const meta = {
   title: 'JamlMap/JamlMapEditor',
   component: JamlMapEditor,
-  parameters: {
+  parameters: { jimboHarness: false, 
     layout: 'fullscreen',
   },
   decorators: [
@@ -36,3 +36,4 @@ export const Default: Story = {
     );
   },
 };
+

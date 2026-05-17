@@ -4,7 +4,7 @@ import { MysterySlot } from './MysterySlot';
 const meta = {
   title: 'JAML/MysterySlot',
   component: MysterySlot,
-  parameters: {
+  parameters: { jimboHarness: false, 
     layout: 'centered',
   },
 } satisfies Meta<typeof MysterySlot>;
@@ -42,3 +42,4 @@ export const FilledJoker: Story = {
     </div>
   ),
 };
+
