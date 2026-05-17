@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { JimboButton, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboColorOption } from "../ui/tokens.js";
@@ -33,11 +33,20 @@ export function JamlCurator() {
 
   const currentSeed = search.results[resultIndex]?.seed;
 
+  // Analyze runs only when the selected seed changes — jamlText is read fresh
+  // from the ref so keystrokes don't re-trigger analysis.
+  const jamlTextRef = useRef(jamlText);
+  const analyzeRef = useRef(analyzer.analyze);
+  useLayoutEffect(() => {
+    jamlTextRef.current = jamlText;
+    analyzeRef.current = analyzer.analyze;
+  });
+
   useEffect(() => {
-    if (currentSeed && jamlText) {
-      analyzer.analyze(currentSeed, jamlText);
+    if (currentSeed && jamlTextRef.current) {
+      analyzeRef.current(currentSeed, jamlTextRef.current);
     }
-  }, [currentSeed, jamlText]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentSeed]);
 
   const handleMapChange = (jamlString: string) => {
     setJamlText(jamlString);
