@@ -282,9 +282,9 @@ export function JamlIde({
   searchResults = [],
   className = "",
   style,
-  title = "JAML IDE",
-  subtitle = "Jimbo's Ante Markup Language",
-  compactHeader = false,
+  title,
+  subtitle,
+  compactHeader = true,
   actions,
   codePlaceholder = "Enter JAML...",
   onSearch,
@@ -368,6 +368,20 @@ export function JamlIde({
   };
 
   const results = useMemo(() => searchResults, [searchResults]);
+  const showResultsTab = Boolean(onSearch || results.length > 0);
+  const showJamlyzerTab = Boolean(onTestSeed);
+  const availableModes: JamlIdeMode[] = [
+    "visual",
+    "code",
+    "map",
+    ...(showResultsTab ? (["results"] as JamlIdeMode[]) : []),
+    ...(showJamlyzerTab ? (["jamlyzer"] as JamlIdeMode[]) : []),
+  ];
+  const headerVisible = Boolean(title || subtitle || actions);
+
+  if (!availableModes.includes(mode)) {
+    setMode("code");
+  }
 
   // ── Add-clause picker state ──────────────────────────────────────────────
   const [addZone, setAddZone] = useState<JamlZone | null>(null);
@@ -400,57 +414,36 @@ export function JamlIde({
 
   return (
     <div
-      className={className}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: 420,
-        borderRadius: 12,
-        overflow: "hidden",
-        overflowX: "clip",
-        overscrollBehaviorX: "none",
-        maxWidth: "100%",
-        border: `2px solid ${JimboColorOption.BORDER_SILVER}`,
-        boxShadow: `0 3px 0 0 ${JimboColorOption.BORDER_SOUTH}`,
-        background: JimboColorOption.DARK_GREY,
-        color: JimboColorOption.WHITE,
-        ...style,
-      }}
+      className={`j-ide ${className}`.trim()}
+      style={style}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: compactHeader ? 8 : 12,
-          padding: compactHeader ? "8px 10px" : "10px 14px",
-          borderBottom: `1px solid ${JimboColorOption.PANEL_EDGE}`,
-          background: JimboColorOption.TEAL_GREY,
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 16, fontWeight: "normal", fontFamily: "m6x11plus, monospace", color: JimboColorOption.GOLD_TEXT }}>{title}</div>
-          {subtitle ? <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>{subtitle}</div> : null}
-        </div>
-        {actions && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {actions}
+      {headerVisible ? (
+        <div className={`j-ide__header ${compactHeader ? "j-ide__header--compact" : ""}`.trim()}>
+          <div className="j-ide__header-copy">
+            {title ? <div className="j-ide__title">{title}</div> : null}
+            {subtitle ? <div className="j-ide__subtitle">{subtitle}</div> : null}
           </div>
-        )}
-      </div>
+          {actions && (
+            <div className="j-ide__actions">
+              {actions}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <JamlIdeToolbar
         mode={mode}
         onModeChange={setMode}
         resultCount={results.length}
+        showResultsTab={showResultsTab}
+        showJamlyzerTab={showJamlyzerTab}
         onSearch={onSearch}
         isSearching={isSearching}
         onLoadFile={showLoadFileButton ? handleLoadFile : undefined}
         isLoadingFile={isLoadingFile}
       />
 
-      <div style={{ flex: 1, minHeight: 0, overflow: mode === "map" ? "hidden" : "auto", background: JimboColorOption.DARKEST }}>
+      <div className={`j-ide__body ${mode === "map" ? "j-ide__body--map" : ""}`.trim()}>
         {mode === "visual" ? (
           <JamlIdeVisual filter={activeFilter} onChange={handleVisualFilterChange} onAddClause={handleAddClause} />
         ) : null}
@@ -466,7 +459,7 @@ export function JamlIde({
         {mode === "map" ? <JamlMapEditor onChange={handleTextChange} /> : null}
 
         {mode === "results" ? (
-          <div style={{ padding: 12 }}>
+          <div className="j-ide__results">
             <ResultsView results={results} jaml={text} />
           </div>
         ) : null}

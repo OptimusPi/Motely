@@ -147,7 +147,13 @@ export {
 export {
     JamlSeedInput,
     type JamlSeedInputProps,
+    type JamlSeedInputVariant,
 } from "./components/JamlSeedInput.js";
+export { normalizeJamlSeed } from "./components/jamlSeedUtils.js";
+export {
+    JamlSeedSpinner,
+    type JamlSeedSpinnerProps,
+} from "./components/JamlSeedSpinner.js";
 
 export {
     setJamlAssetBaseUrl,

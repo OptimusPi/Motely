@@ -1,58 +1,107 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { JimboText } from "../ui/jimboText.js";
+import { normalizeJamlSeed } from "./jamlSeedUtils.js";
+
+export type JamlSeedInputVariant = "normal" | "dark" | "alt";
 
 export interface JamlSeedInputProps {
   value?: string;
   onChange?: (seed: string) => void;
   placeholder?: string;
+  label?: React.ReactNode;
+  variant?: JamlSeedInputVariant;
   className?: string;
   style?: React.CSSProperties;
+  autoFocus?: boolean;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onFocus?: React.FocusEventHandler<HTMLInputElement>;
+  disabled?: boolean;
+  name?: string;
+  id?: string;
+  title?: string;
+  "aria-label"?: string;
 }
 
-const SEED_PATTERN = /^[A-Z0-9]{0,8}$/;
-
 /**
- * Balatro-styled seed input field.
- * Validates 1-8 uppercase alphanumeric characters.
- * All styling via jimbo.css `.j-seed-input` classes — zero inline styles.
+ * Balatro-style seed input constrained to the real 8-character format.
  */
-export function JamlSeedInput({ value, onChange, placeholder = "Enter seed (e.g. J4SPZMWW)", className, style }: JamlSeedInputProps) {
-  const [internal, setInternal] = useState(value ?? "");
-  const display = value ?? internal;
-  const isValid = display.length === 0 || SEED_PATTERN.test(display);
+export const JamlSeedInput = React.forwardRef<HTMLInputElement, JamlSeedInputProps>(function JamlSeedInput(
+  {
+    value,
+    onChange,
+    placeholder = "Aleeb",
+    label = "Seed",
+    variant = "normal",
+    className,
+    style,
+    autoFocus,
+    onKeyDown,
+    onBlur,
+    onFocus,
+    disabled = false,
+    name,
+    id,
+    title,
+    "aria-label": ariaLabel,
+  }: JamlSeedInputProps,
+  forwardedRef,
+) {
+  const [internal, setInternal] = useState(() => normalizeJamlSeed(value ?? ""));
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const display = value === undefined ? internal : normalizeJamlSeed(value);
+  const validState = display.length === 8 ? "true" : "partial";
 
-  // Validation state drives data-valid attribute for CSS border color
-  const validState: string =
-    display.length === 0 ? "partial"
-    : !isValid ? "false"
-    : display.length === 8 ? "true"
-    : "partial";
+  const setRefs = useCallback((node: HTMLInputElement | null) => {
+    inputRef.current = node;
+    if (typeof forwardedRef === "function") {
+      forwardedRef(node);
+    } else if (forwardedRef) {
+      forwardedRef.current = node;
+    }
+  }, [forwardedRef]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    const raw = normalizeJamlSeed(e.target.value);
     setInternal(raw);
     onChange?.(raw);
   };
 
   return (
-    <div className={`j-seed-input ${className ?? ""}`} style={style}>
-      <JimboText size="xs" tone="grey">Seed</JimboText>
-      <input
-        type="text"
-        className="j-seed-input__field"
+    <div className={`j-seed-input j-seed-input--${variant} ${className ?? ""}`.trim()} style={style}>
+      {label ? <JimboText size="xs" tone="grey">{label}</JimboText> : null}
+      <div
+        className="j-seed-input__shell"
         data-valid={validState}
-        value={display}
-        onChange={handleChange}
-        placeholder={placeholder}
-        maxLength={8}
-        spellCheck={false}
-        autoComplete="off"
-      />
-      {display.length > 0 && display.length < 8 && (
-        <span className="j-seed-input__hint">{8 - display.length} more characters</span>
-      )}
+        onClick={() => inputRef.current?.focus()}
+        title={title}
+      >
+        <input
+          ref={setRefs}
+          type="text"
+          className="j-seed-input__field"
+          value={display}
+          onChange={handleChange}
+          onKeyDown={onKeyDown}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          placeholder={placeholder}
+          maxLength={8}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="characters"
+          inputMode="text"
+          enterKeyHint="done"
+          autoFocus={autoFocus}
+          disabled={disabled}
+          name={name}
+          id={id}
+          aria-label={ariaLabel ?? (typeof label === "string" ? label : "Seed")}
+        />
+      </div>
     </div>
   );
-}
+});

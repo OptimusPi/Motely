@@ -12,27 +12,22 @@ export interface JamlCardRendererProps {
 }
 
 export function JamlCardRenderer({ layers, invert = false, className = "", hoverTilt = false }: JamlCardRendererProps) {
-    const { canvasRef, containerStyle, canvasStyle, handlers } = useJamlCardRenderer({
+    const { canvasRef, containerRef, ratio, handlers } = useJamlCardRenderer({
         layers,
         invert,
         hoverTilt
     });
 
     return (
-        <div className={className} style={{ ...containerStyle, position: "relative" }}>
-            <canvas ref={canvasRef} style={canvasStyle} />
-            {hoverTilt && (
-                <div 
-                    style={{ position: "absolute", inset: "-15px", zIndex: 10, cursor: "pointer" }} 
-                    {...handlers} 
-                />
-            )}
-            {!hoverTilt && (
-                <div 
-                    style={{ position: "absolute", inset: "0", zIndex: 10 }} 
-                    {...handlers} 
-                />
-            )}
+        <div
+            ref={containerRef}
+            className={`j-card-renderer ${className}`.trim()}
+            data-hover-tilt={hoverTilt}
+            data-hovered="false"
+            style={{ "--j-card-aspect": String(ratio) } as React.CSSProperties}
+        >
+            <canvas ref={canvasRef} className="j-card-renderer__canvas" />
+            <div className="j-card-renderer__hit" {...handlers} />
         </div>
     );
 }

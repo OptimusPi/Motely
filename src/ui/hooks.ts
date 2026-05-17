@@ -362,11 +362,13 @@ export function useJamlCardRenderer({
   hoverTilt?: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map())
   const [ratio, setRatio] = useState(3 / 4)
   const [, forceUpdate] = useState(0)
-  const [isHovered, setIsHovered] = useState(false)
-  const [transform, setTransform] = useState('none')
+  const frameRef = useRef<number | null>(null)
+  const targetRef = useRef({ rx: 0, ry: 0, rz: 0 })
+  const currentRef = useRef({ rx: 0, ry: 0, rz: 0 })
 
   const hasAnimatedLayer = layers?.some((layer) => layer.animated)
 
@@ -451,53 +453,88 @@ export function useJamlCardRenderer({
     }
   }, [layers, invert, hasAnimatedLayer])
 
+  const stopTiltLoop = useCallback(() => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+    }
+  }, [])
+
+  const writeCardTransform = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const c = currentRef.current
+    canvas.style.transform = `rotateX(${c.rx}deg) rotateY(${c.ry}deg) rotateZ(${c.rz}deg)`
+  }, [])
+
+  const runTiltLoop = useCallback((rate: number, onSettled?: () => void) => {
+    stopTiltLoop()
+    let previous = performance.now()
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - previous) / 1000)
+      previous = now
+      const target = targetRef.current
+      const current = currentRef.current
+      const alpha = 1 - Math.exp(-rate * dt)
+      current.rx += (target.rx - current.rx) * alpha
+      current.ry += (target.ry - current.ry) * alpha
+      current.rz += (target.rz - current.rz) * alpha
+      writeCardTransform()
+      const settled =
+        Math.abs(target.rx - current.rx) < 0.02 &&
+        Math.abs(target.ry - current.ry) < 0.02 &&
+        Math.abs(target.rz - current.rz) < 0.02
+      if (settled) {
+        current.rx = target.rx
+        current.ry = target.ry
+        current.rz = target.rz
+        writeCardTransform()
+        frameRef.current = null
+        onSettled?.()
+        return
+      }
+      frameRef.current = requestAnimationFrame(tick)
+    }
+    frameRef.current = requestAnimationFrame(tick)
+  }, [stopTiltLoop, writeCardTransform])
+
+  useEffect(() => () => stopTiltLoop(), [stopTiltLoop])
+
   const onPointerEnter = (event: React.PointerEvent) => {
     if (!hoverTilt || event.pointerType === 'touch') return
-    setIsHovered(true)
+    containerRef.current?.setAttribute('data-hovered', 'true')
+    runTiltLoop(22)
   }
 
   const onPointerLeave = () => {
     if (!hoverTilt) return
-    setIsHovered(false)
-    setTransform('none')
+    containerRef.current?.setAttribute('data-hovered', 'false')
+    targetRef.current = { rx: 0, ry: 0, rz: 0 }
+    runTiltLoop(14, () => {
+      const canvas = canvasRef.current
+      if (canvas) canvas.style.transform = ''
+    })
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!hoverTilt || event.pointerType === 'touch') return
     const rect = event.currentTarget.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
-    const rotateY = (x / rect.width) * 12 - 6
-    const rotateX = (y / rect.height) * -16 + 8
-    const juiceScale = 1.05
-    const juiceY = -2 // slight move up
-    setTransform(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${juiceScale}) translateY(${juiceY}px)`)
-  }
-
-  const containerStyle: React.CSSProperties = {
-    aspectRatio: String(ratio),
-    width: '100%',
-    display: 'flex',
-    perspective: hoverTilt ? '1000px' : undefined,
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-  }
-
-  const canvasStyle: React.CSSProperties = {
-    transition: hoverTilt && !isHovered ? 'transform 0.4s ease, box-shadow 0.4s ease-out' : 'transform 0.1s ease-out',
-    transform: hoverTilt ? (isHovered ? transform : 'none') : undefined,
-    transformStyle: hoverTilt ? 'preserve-3d' : undefined,
-    transformOrigin: hoverTilt ? 'center center' : undefined,
-    borderRadius: '6px',
-    boxShadow: hoverTilt && isHovered ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.2)',
-    imageRendering: 'pixelated',
-    pointerEvents: 'none',
+    const nx = Math.max(-1, Math.min(1, ((event.clientX - rect.left) / rect.width - 0.5) * 2))
+    const ny = Math.max(-1, Math.min(1, ((event.clientY - rect.top) / rect.height - 0.5) * 2))
+    targetRef.current = {
+      rx: ny * -10,
+      ry: nx * 12,
+      rz: nx * ny * -1.2,
+    }
+    containerRef.current?.style.setProperty('--j-card-glare-x', `${(nx + 1) * 50}%`)
+    containerRef.current?.style.setProperty('--j-card-glare-y', `${(1 - ny) * 50}%`)
+    runTiltLoop(22)
   }
 
   return {
     canvasRef,
-    containerStyle,
-    canvasStyle,
+    containerRef,
+    ratio,
     handlers: {
       onPointerEnter: hoverTilt ? onPointerEnter : undefined,
       onPointerLeave: hoverTilt ? onPointerLeave : undefined,

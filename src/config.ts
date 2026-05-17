@@ -1,11 +1,11 @@
 export let jamlAssetBaseUrl = "";
-export let motelyEnums: any = null;
+export let motelyEnums: Record<string, unknown> | null = null;
 
 export function setJamlAssetBaseUrl(url: string) {
   jamlAssetBaseUrl = url;
 }
 
-export function setMotelyEnums(motely: any) {
+export function setMotelyEnums(motely: Record<string, unknown> | null) {
   motelyEnums = motely;
 }
 

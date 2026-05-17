@@ -392,10 +392,8 @@ export function JamlGameCard({ card, type, className = "", hoverTilt = false }: 
         }
     }
 
-    const wrapperStyle: React.CSSProperties = { width: `${71 * scale}px` };
-
     return (
-        <div style={wrapperStyle} className={className}>
+        <div className={`j-game-card ${className}`.trim()} style={{ "--j-card-width": `${71 * scale}px` } as React.CSSProperties}>
             <JamlCardRenderer invert={edition === "Negative"} layers={layers} hoverTilt={hoverTilt} />
         </div>
     );
@@ -422,10 +420,8 @@ export function JamlVoucher({ voucherName, scale = 1, className = "", hoverTilt 
         }),
     ];
 
-    const wrapperStyle: React.CSSProperties = { width: `${71 * scale}px` };
-
     return (
-        <div style={wrapperStyle} className={className}>
+        <div className={`j-game-card ${className}`.trim()} style={{ "--j-card-width": `${71 * scale}px` } as React.CSSProperties}>
             <JamlCardRenderer layers={layers} hoverTilt={hoverTilt} />
         </div>
     );
@@ -452,10 +448,8 @@ export function JamlTag({ tagName, scale = 1, className = "", hoverTilt = false 
         }),
     ];
 
-    const wrapperStyle: React.CSSProperties = { width: `${71 * scale}px` };
-
     return (
-        <div style={wrapperStyle} className={className}>
+        <div className={`j-game-card ${className}`.trim()} style={{ "--j-card-width": `${71 * scale}px` } as React.CSSProperties}>
             <JamlCardRenderer layers={layers} hoverTilt={hoverTilt} />
         </div>
     );
@@ -482,10 +476,8 @@ export function JamlBoss({ bossName, scale = 1, className = "", hoverTilt = fals
         }),
     ];
 
-    const wrapperStyle: React.CSSProperties = { width: `${71 * scale}px` };
-
     return (
-        <div style={wrapperStyle} className={className}>
+        <div className={`j-game-card ${className}`.trim()} style={{ "--j-card-width": `${71 * scale}px` } as React.CSSProperties}>
             <JamlCardRenderer layers={layers} hoverTilt={hoverTilt} />
         </div>
     );

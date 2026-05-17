@@ -14,7 +14,7 @@ import {
 } from "./CategoryPicker.js";
 import { JimboButton, JimboModal, type JimboTone } from "../../ui/panel.js";
 import { JimboText } from "../../ui/jimboText.js";
-import { JimboColorOption, withAlpha } from "../../ui/tokens.js";
+import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboSprite } from "../../ui/sprites.js";
 import { type SpriteSheetType } from "../../sprites/spriteMapper.js";
 
@@ -95,12 +95,9 @@ export function JamlMapEditor({
   onChange,
 }: JamlMapEditorProps) {
   const [currentZone, setCurrentZone] = useState<JamlZone>(initialZone);
-  const [ante, setAnte] = useState<number>(1);
   const [antesState, setAntesState] = useState<Record<number, AnteSelections>>({});
   const [activeSlot, setActiveSlot] = useState<ActiveSlot | null>(null);
   const [pickerFlow, setPickerFlow] = useState<PickerFlow>("category");
-
-  const currentAnteSelections = antesState[ante] || {};
 
   const handleSlotTap = useCallback((anteIndex: number, id: string, forceCategory?: SlotCategory) => {
     setActiveSlot({ ante: anteIndex, id, forceCategory });
@@ -143,10 +140,6 @@ export function JamlMapEditor({
       setActiveSlot(null);
     }
   }, [activeSlot, pickerFlow]);
-
-  const handleOverlayClose = useCallback(() => {
-    setActiveSlot(null);
-  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -349,7 +342,7 @@ function buildJamlText(antes: Record<number, AnteSelections>): string {
     }
   }
 
-  let lines: string[] = [];
+  const lines: string[] = [];
   lines.push("name: My Custom Seed Map");
   lines.push("author: JamlBuilder");
   lines.push("description: Auto-generated from the visual editor.");

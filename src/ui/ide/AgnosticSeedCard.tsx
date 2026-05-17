@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import bootsharp, { Motely } from 'motely-wasm';
 import type { MotelyJamlyzerResult, MotelySeedAnalysis, MotelyAnteAnalysis, MotelyAnalyzedItem, MotelyBoosterPackAnalysis } from 'motely-wasm/motely/analysis';
 import type { MotelyScoredSeedResult } from 'motely-wasm/motely';
-import { cn } from '../../lib/utils';
-import { DeckSprite } from './DeckSprite';
+import { clsx } from 'clsx';
+import { DeckSprite } from '../../components/DeckSprite.js';
 import { JamlGameCard, JamlVoucher, resolveAnalyzerShopItem } from '../../components/GameCard.js';
 
 import { Loader2, Sparkles } from 'lucide-react';
@@ -26,9 +26,10 @@ interface AgnosticSeedCardProps {
     onOpenSubmit?: () => void;
     canSubmit?: boolean;
     filter?: unknown;
+    previewItems?: AnalyzedItemRow[];
 }
 
-type AnalyzedItemRow = { name: string; value: number; matched: boolean };
+type AnalyzedItemRow = { name: string; value?: number; matched?: boolean };
 
 function itemRow(item: MotelyAnalyzedItem): AnalyzedItemRow {
     return { name: String(item.item.value), value: item.item.value, matched: item.matched };
@@ -54,6 +55,7 @@ export function AgnosticSeedCard({
     analysis: propAnalysis,
     result: propResult,
     jamlConfig,
+    previewItems,
 }: AgnosticSeedCardProps) {
     const [loading, setLoading] = useState(false);
     const [fetchedAnalysis, setFetchedAnalysis] = useState<{ score: number; analysis: MotelySeedAnalysis | undefined } | null>(null);
@@ -101,12 +103,12 @@ export function AgnosticSeedCard({
         };
     }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult, fetchedAnalysis]);
 
-    const items = allAnalyzedItems(resolvedAnalysis);
+    const items = previewItems ?? allAnalyzedItems(resolvedAnalysis);
 
     if (isLocked) {
         return (
             <div
-                className={cn(
+                className={clsx(
                     "balatro-panel flex flex-col items-center justify-center text-center",
                     "w-[315px] h-[340px] shrink-0",
                     "border-dashed border-white/10 opacity-60 grayscale",
@@ -130,7 +132,7 @@ export function AgnosticSeedCard({
 
     return (
         <div
-            className={cn(
+                className={clsx(
                 "group balatro-panel flex flex-col cursor-pointer",
                 "w-[315px] h-[340px] shrink-0", // ONE SIZE RULE
                 "animate-sway hover:scale-[1.02] hover:-translate-y-1 transition-all duration-300",
@@ -168,7 +170,7 @@ export function AgnosticSeedCard({
                             return (
                                 <div
                                     key={i}
-                                    className={cn(
+                                    className={clsx(
                                         "flex-shrink-0",
                                         item.matched && "drop-shadow-[0_0_5px_var(--balatro-gold)]"
                                     )}

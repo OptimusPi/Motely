@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { JimboModal, JimboButton } from "../ui/panel.js";
+import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
 import { JimboText } from "../ui/jimboText.js";
 import { DECK_OPTIONS, STAKE_OPTIONS } from "../lib/data/constants.js";
 import { DeckSprite } from "./DeckSprite.js";
@@ -90,34 +91,27 @@ function RunConfigModalBody({ deck, stake, onChange, onClose }: RunConfigModalBo
 
   return (
     <>
-      {/* Deck carousel */}
-      <div className="j-flex j-items-center j-gap-sm">
-        <JimboButton tone="red" size="sm" onClick={prevDeck}>&lt;</JimboButton>
-        <div className="j-flex-col j-items-center j-gap-xs" style={{ flex: 1 }}>
-          <DeckSprite deck={activeDeck} size={64} />
-          <JimboText size="md" tone="white">{activeDeck} Deck</JimboText>
-          <JimboText size="micro" tone="grey" className="j-text-center" style={{ whiteSpace: "pre-line" }}>
-            {DECK_DESCRIPTIONS[activeDeck] || "Standard 52 card deck"}
-          </JimboText>
-        </div>
-        <JimboButton tone="red" size="sm" onClick={nextDeck}>&gt;</JimboButton>
-      </div>
+      <JimboPanelSpinner
+        label="Deck"
+        title={`${activeDeck} Deck`}
+        description={DECK_DESCRIPTIONS[activeDeck] || "Standard 52 card deck"}
+        media={<DeckSprite deck={activeDeck} size={64} />}
+        onPrev={prevDeck}
+        onNext={nextDeck}
+      />
 
-      {/* Stake carousel */}
-      <div className="j-flex j-items-center j-gap-sm" style={{ marginTop: 8 }}>
-        <JimboButton tone="red" size="sm" onClick={prevStake}>&lt;</JimboButton>
-        <div className="j-flex-col j-items-center j-gap-xs" style={{ flex: 1 }}>
-          <StakeSprite stake={activeStake} width={48} />
-          <JimboText size="md" tone="white">{activeStake} Stake</JimboText>
-          <JimboText size="micro" tone="grey" className="j-text-center" style={{ whiteSpace: "pre-line" }}>
-            {STAKE_DESCRIPTIONS[activeStake] || "Base Difficulty"}
-          </JimboText>
-        </div>
-        <JimboButton tone="red" size="sm" onClick={nextStake}>&gt;</JimboButton>
-      </div>
+      <JimboPanelSpinner
+        label="Stake"
+        title={`${activeStake} Stake`}
+        description={STAKE_DESCRIPTIONS[activeStake] || "Base Difficulty"}
+        media={<StakeSprite stake={activeStake} width={48} />}
+        onPrev={prevStake}
+        onNext={nextStake}
+        className="j-mt-sm"
+      />
 
       {/* Actions */}
-      <div className="j-flex-col j-gap-sm" style={{ marginTop: 8 }}>
+      <div className="j-flex-col j-gap-sm j-mt-sm">
         <JimboButton tone="blue" size="lg" fullWidth onClick={handleApply}>Apply</JimboButton>
         <JimboButton tone="orange" size="lg" fullWidth onClick={onClose}>Back</JimboButton>
       </div>

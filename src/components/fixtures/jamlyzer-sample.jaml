@@ -1,0 +1,12 @@
+name: Jamlyzer Sample
+author: jaml-ui
+description: Demo fixture for the Jamlyzer seed spinner stories.
+deck: Red
+stake: White
+# Demo seeds:
+# - ALEEB
+# - FROGMANS
+# - PILUVYOU
+must:
+  - joker: WeeJoker
+    antes: [1]

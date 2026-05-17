@@ -1,0 +1,24 @@
+import type { Meta, StoryObj } from '@storybook/react';
+import { CategoryPicker, VOUCHER_PICKER_CONFIG } from './CategoryPicker';
+
+const meta = {
+  title: 'JAML / CategoryPicker',
+  component: CategoryPicker,
+  parameters: {
+    jimboHarness: false,
+    layout: 'centered',
+  },
+  decorators: [
+    (Story) => <div style={{ width: 320, height: 520 }}><Story /></div>,
+  ],
+} satisfies Meta<typeof CategoryPicker>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Vouchers: Story = {
+  args: {
+    config: VOUCHER_PICKER_CONFIG,
+    onSelect: () => undefined,
+  },
+};
