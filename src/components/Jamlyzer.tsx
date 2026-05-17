@@ -1,19 +1,23 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboColorOption } from "../ui/tokens.js";
+import { JamlSeedSpinner } from "./JamlSeedSpinner.js";
+import type { JamlSeedInputVariant } from "./JamlSeedInput.js";
 
 export interface JamlyzerProps {
   jaml: string;
   onTest: (seed: string) => void;
   result: "idle" | "match" | "nomatch" | "running" | "error";
   error?: string | null;
+  seeds?: string[];
+  initialSeed?: string;
+  seedVariant?: JamlSeedInputVariant;
 }
 
-export function Jamlyzer({ jaml, onTest, result, error }: JamlyzerProps) {
-  const [seed, setSeed] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+export function Jamlyzer({ jaml, onTest, result, error, seeds = [], initialSeed = "", seedVariant = "dark" }: JamlyzerProps) {
+  const [seed, setSeed] = useState(initialSeed || seeds[0] || "");
 
   const handleTest = () => {
     const s = seed.trim().toUpperCase();
@@ -25,17 +29,16 @@ export function Jamlyzer({ jaml, onTest, result, error }: JamlyzerProps) {
     <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
       {/* Seed input */}
       <JimboPanel>
-        <div style={{ display: "flex", gap: 6 }}>
-          <input
-            ref={inputRef}
-            className="j-seed-input__field"
-            type="text"
-            placeholder="Enter seed..."
+        <div style={{ display: "flex", gap: 6, alignItems: "flex-end", justifyContent: "space-between" }}>
+          <JamlSeedSpinner
+            seeds={seeds}
             value={seed}
-            maxLength={12}
-            onChange={(e) => setSeed(e.target.value.toUpperCase())}
+            onChange={setSeed}
+            label="Seed"
+            placeholder="Aleeb"
+            variant={seedVariant}
             onKeyDown={(e) => e.key === "Enter" && handleTest()}
-            style={{ flex: 1, fontSize: 15, padding: "6px 10px", letterSpacing: "0.1em" }}
+            aria-label="Jamlyzer seed"
           />
           <JimboButton
             tone={result === "running" ? "red" : "orange"}
@@ -50,16 +53,16 @@ export function Jamlyzer({ jaml, onTest, result, error }: JamlyzerProps) {
 
       {/* Result */}
       {result === "match" && (
-        <JimboPanel className="j-glow--match" style={{ background: `${JimboColorOption.GREEN_TEXT}22`, textAlign: "center" }}>
+        <JimboPanel className="j-glow--match" style={{ background: JimboColorOption.DARK_GREEN, textAlign: "center" }}>
           <JimboText size="xl" tone="gold" style={{ letterSpacing: 3, display: "block", marginBottom: 4 }}>{seed}</JimboText>
-          <JimboText size="md" tone="green">MATCH</JimboText>
+          <JimboText size="md" tone="green">Match</JimboText>
         </JimboPanel>
       )}
 
       {result === "nomatch" && (
         <JimboPanel style={{ textAlign: "center" }}>
           <JimboText size="xl" tone="grey" style={{ letterSpacing: 3, display: "block", marginBottom: 4 }}>{seed}</JimboText>
-          <JimboText size="md" tone="red">no match</JimboText>
+          <JimboText size="md" tone="red">No match</JimboText>
         </JimboPanel>
       )}
 

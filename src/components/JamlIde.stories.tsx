@@ -23,7 +23,7 @@ const meta: Meta<typeof JamlIde> = {
   component: JamlIde,
   parameters: {
     layout: 'fullscreen',
-    jimboHarness: 'fluid',
+    jimboHarness: true,
   },
 };
 
@@ -39,8 +39,6 @@ export const Default: Story = {
         style={{ flex: 1, minHeight: 0 }}
         jaml={jaml}
         onChange={setJaml}
-        title="JAML IDE"
-        subtitle="Jimbo's Ante Markup Language"
       />
     );
   },

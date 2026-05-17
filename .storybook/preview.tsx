@@ -36,17 +36,18 @@ const preview: Preview = {
     (Story, { parameters }) => {
       const { jimboHarness } = parameters;
       const content = <Story />;
-
-      if (jimboHarness === false) {
-        return content;
-      }
+      const useHarness = jimboHarness !== false;
 
       return (
         <StorybookMotelyWarmup>
           <JimboBackground />
-          <JimboApp fluid={jimboHarness === 'fluid'}>
-             {content}
-          </JimboApp>
+          {useHarness ? (
+            <JimboApp fluid={jimboHarness === 'fluid'}>
+              {content}
+            </JimboApp>
+          ) : (
+            content
+          )}
         </StorybookMotelyWarmup>
       );
     },

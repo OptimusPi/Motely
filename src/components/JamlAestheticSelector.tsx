@@ -1,7 +1,7 @@
 "use client";
 
-import { JimboButton } from "../ui/panel.js";
-import { JimboText } from "../ui/jimboText.js";
+import { JimboBadge } from "../ui/JimboBadge.js";
+import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
 
 export type JamlAestheticOption = "Palindrome" | "Psychosis" | "Gross" | "Nsfw" | "Funny" | "Balatro";
 
@@ -22,29 +22,43 @@ export interface JamlAestheticSelectorProps {
 }
 
 /**
- * Aesthetic selector for seed filters.
- * Built using strictly Jimbo UI components.
+ * Spinner-style aesthetic selector for seed filters.
+ * Uses left/right controls plus a centered badge value display.
  */
 export function JamlAestheticSelector({ value, onChange, className, style }: JamlAestheticSelectorProps) {
+  const currentIndex = value == null ? -1 : AESTHETICS.findIndex((a) => a.id === value);
+  const current = currentIndex >= 0 ? AESTHETICS[currentIndex] : null;
+
+  const step = (direction: -1 | 1) => {
+    const length = AESTHETICS.length;
+
+    // Include null as "Any" in the spinner cycle: Any -> option0 -> ... -> Any
+    const cycleIndex = currentIndex + 1;
+    const nextCycleIndex = (cycleIndex + direction + (length + 1)) % (length + 1);
+
+    if (nextCycleIndex === 0) {
+      onChange(null, -1);
+      return;
+    }
+
+    const next = AESTHETICS[nextCycleIndex - 1];
+    onChange(next.id, next.value);
+  };
+
+  const label = current?.label ?? "Any";
+  const numericValue = current?.value ?? -1;
+  const description = current?.desc ?? "No aesthetic constraint";
+
   return (
-    <div className={`j-flex j-flex-col j-gap-sm ${className ?? ""}`} style={style}>
-      <JimboText size="xs" tone="grey">Seed Aesthetics</JimboText>
-      <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap" }}>
-        {AESTHETICS.map((a) => {
-          const isActive = value === a.id;
-          return (
-            <div key={a.id} title={a.desc}>
-              <JimboButton
-                tone={isActive ? "red" : "grey"}
-                size="sm"
-                onClick={() => onChange(isActive ? null : a.id, a.value)}
-              >
-                {a.label}
-              </JimboButton>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <JimboPanelSpinner
+      label="Seed aesthetics"
+      title={label}
+      description={description}
+      meta={<JimboBadge size="md" tone={current ? "purple" : "dark"}>{numericValue}</JimboBadge>}
+      onPrev={() => step(-1)}
+      onNext={() => step(1)}
+      className={className}
+      style={style}
+    />
   );
 }

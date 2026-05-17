@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { JamlAestheticSelector } from './JamlAestheticSelector';
 import React, { useState } from 'react';
+import type { JamlAestheticOption } from './JamlAestheticSelector';
 
 const meta = {
   title: 'JAML / JamlAestheticSelector',
@@ -16,8 +17,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const StatefulSelector = (args: any) => {
-  const [value, setValue] = useState<any>(args.value || null);
+type SelectorArgs = React.ComponentProps<typeof JamlAestheticSelector> & {
+  onChange: (value: JamlAestheticOption | null, numericValue: number) => void;
+};
+
+function StatefulSelector(args: SelectorArgs) {
+  const [value, setValue] = useState<JamlAestheticOption | null>(args.value ?? null);
   return (
     <JamlAestheticSelector
       {...args}
@@ -28,7 +33,7 @@ const StatefulSelector = (args: any) => {
       }}
     />
   );
-};
+}
 
 export const Default: Story = {
   render: (args) => <StatefulSelector {...args} />,

@@ -21,7 +21,7 @@ export const Default: Story = {
 
 export const WithStake: Story = {
   args: {
-    deck: 'magic',
+    deck: 'blue',
     stake: 'gold',
     size: 100,
   },
