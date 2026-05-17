@@ -64,7 +64,11 @@ export function AgnosticSeedCard({
         fetchedAnalysis?.score ?? propResult?.score;
 
     useEffect(() => {
-        if (propAnalysis || propResult) return;
+        // Latch-once semantics: this card fetches a single analysis on mount
+        // and doesn't re-fetch on prop changes — consumers mount a fresh card
+        // per seed. Keep `fetchedAnalysis` in deps so the early return fires
+        // the second time after setFetchedAnalysis runs.
+        if (propAnalysis || propResult || fetchedAnalysis) return;
         let cancelled = false;
 
         const analyze = async () => {
@@ -95,7 +99,7 @@ export function AgnosticSeedCard({
         return () => {
             cancelled = true;
         };
-    }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult]);
+    }, [seed, deckSlug, stakeSlug, jamlConfig, propAnalysis, propResult, fetchedAnalysis]);
 
     const items = allAnalyzedItems(resolvedAnalysis);
 
