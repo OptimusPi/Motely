@@ -1,0 +1,16 @@
+name: PerkeoCanioGhostImmolate
+author: pi
+description: Ghost deck — Perkeo + Canio legendary pair with Immolate appearing in shop items [0,1,2] for early-ante consumable acceleration.
+deck: Ghost
+stake: White
+hashtags: ["ghost", "perkeo", "canio", "immolate", "legendary-pair", "shop-items"]
+
+must:
+  - legendaryJoker: Perkeo
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+  - legendaryJoker: Canio
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+  - spectral: Immolate
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2]
