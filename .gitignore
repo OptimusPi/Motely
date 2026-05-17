@@ -7,3 +7,8 @@ storybook-static
 
 .vercel
 *.tgz
+
+eslint-report.json
+extract-errors.cjs
+sb-check*.mjs
+sb-screenshot*.png

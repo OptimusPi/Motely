@@ -159,7 +159,7 @@
     "clsx": "^2.1.1",
     "js-yaml": "^4.1.1",
     "lucide-react": "^1.14.0",
-    "motely-wasm": "^17.4.5",
+    "motely-wasm": "^17.7.0",
     "tailwind-merge": "^2.6.1",
     "zod": "^4.0.0",
     "zustand": "^5.0.13"
