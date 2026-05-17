@@ -67,6 +67,7 @@ function testPublicApiSurface() {
         "createSearch", "createSearchSettings",
         "mountRoot", "unmountRoot", "pickRoot", "readTextFile", "writeTextFile",
         "onSeedMatch", "onScoredResult", "onProgress", "onFileChanges",
+        "evalJimmolate",
     ];
     const missing = required.filter(n => !(n in Motely));
     if (missing.length) throw new Error(`Motely missing: ${missing.join(", ")}`);
@@ -343,6 +344,118 @@ async function testAnalyzerDerived_TagMin_RejectsSingleOccurrence() {
         throw new Error(`min:2 on single-occurrence tag ${found.tagName} in ${found.seed} ante${found.ante} should reject; got ${search.matchingSeeds}`);
 }
 
+async function testJimmolate_JsPredicateFiltersSeeds() {
+    // Seeds whose first char is 'M' — predicate keeps only those; rest must be rejected.
+    // Mirrors xUnit JimmolateFilterDescTests.JimmolateRunsOnlyOnBaseSurvivors_AndMatchesControlFilter.
+    const seeds = ["MAAAAAAA", "MBBBBBBB", "XCCCCCCC", "MADDDDDD", "XEEEEEEE", "MAFFFFFF", "XGGGGGGG", "MAHHHHHH"];
+    const expectedMatchCount = seeds.filter(s => s[0] === "M" && s[1] === "A").length; // MAAAAAAA, MADDDDDD, MAFFFFFF, MAHHHHHH = 4
+
+    const visited = [];
+    Motely.evalJimmolate = seed => { visited.push(seed); return seed.length >= 2 && seed[1] === "A"; };
+    try {
+        const search = Motely.createSearch(jaml.anyMust)
+            .withJimmolate()
+            .withListSearch(seeds, seeds.length)
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (Number(search.matchingSeeds) !== expectedMatchCount)
+            throw new Error(`expected ${expectedMatchCount} matches, got ${search.matchingSeeds}`);
+        // Predicate must run on base survivors only (joker:Any passes all lanes through the JAML filter).
+        if (visited.length !== seeds.length)
+            throw new Error(`predicate visited ${visited.length} seeds, expected ${seeds.length} (all pass base filter)`);
+        // long → BigInt check
+        if (typeof search.totalSeedsSearched !== "bigint")
+            throw new Error(`totalSeedsSearched is ${typeof search.totalSeedsSearched}, not bigint`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
+async function testJimmolate_AllRejectPredicateYieldsZeroMatches() {
+    const seeds = probeSeeds.slice(0, 2);
+    Motely.evalJimmolate = () => false;
+    try {
+        const search = Motely.createSearch(jaml.anyMust)
+            .withJimmolate()
+            .withListSearch(seeds, seeds.length)
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (search.matchingSeeds !== 0n)
+            throw new Error(`always-false predicate should yield 0 matches, got ${search.matchingSeeds}`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
+async function testJimmolate_PredicateRunsOnlyOnBaseSurvivors() {
+    // Use the analyzer to find a joker that appears in pack[0] of at least one probe seed.
+    // Build a base JAML requiring that exact joker in boosterPacks[0]. The predicate is always
+    // true, so matchingSeeds === visited.length — proving predicate only runs on base survivors.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+
+    let jokerName = null;
+    for (const s of r.seeds ?? []) {
+        const item = s.analysis?.antes?.[0]?.packs?.[0]?.items?.[0];
+        if (!item) continue;
+        const name = MotelyItemType?.[item.type];
+        if (name) { jokerName = name; break; }
+    }
+    if (!jokerName) throw new Error("No probe seed had a joker in pack[0] — MotelyItemType not exported?");
+
+    const expectedSurvivorCount = r.seeds.filter(s => {
+        const item = s.analysis?.antes?.[0]?.packs?.[0]?.items?.[0];
+        return MotelyItemType?.[item?.type] === jokerName;
+    }).length;
+    if (expectedSurvivorCount === 0) throw new Error(`Expected at least one survivor for joker ${jokerName}`);
+
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${jokerName}\n    antes: [1]\n    sources:\n      boosterPacks: [0]\n`;
+    const visited = [];
+    Motely.evalJimmolate = seed => { visited.push(seed); return true; };
+    try {
+        const search = Motely.createSearch(derivedJaml)
+            .withJimmolate()
+            .withListSearch(probeSeeds, probeSeeds.length)
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (visited.length !== expectedSurvivorCount)
+            throw new Error(`predicate visited ${visited.length} seeds, expected ${expectedSurvivorCount} (base survivors for joker ${jokerName} in pack[0])`);
+        if (search.matchingSeeds !== BigInt(expectedSurvivorCount))
+            throw new Error(`matchingSeeds ${search.matchingSeeds} ≠ ${expectedSurvivorCount} (predicate always true, should equal survivor count)`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
+async function testJimmolate_SequentialSearch_WorksWithPredicate() {
+    // Sequential mode with a tiny 1-character batch (35 seeds) to verify the Jimmolate bridge
+    // wires correctly across sequential search plans, not just list search plans.
+    const visited = [];
+    Motely.evalJimmolate = seed => { visited.push(seed); return true; };
+    try {
+        const search = Motely.createSearch(jaml.anyMust)
+            .withSequentialSearch()
+            .withBatchCharacterCount(1)
+            .withStartBatchIndex(0n)
+            .withEndBatchIndex(0n)
+            .withJimmolate()
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (!search.isCompleted) throw new Error("sequential+jimmolate search did not complete");
+        if (typeof search.matchingSeeds !== "bigint")
+            throw new Error(`matchingSeeds is ${typeof search.matchingSeeds}, not bigint`);
+        // Always-true predicate: every survivor the base filter passes must be a match.
+        if (visited.length !== Number(search.matchingSeeds))
+            throw new Error(`visited ${visited.length} seeds but matchingSeeds=${search.matchingSeeds}; predicate return must be respected`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
 // ── Runner ───────────────────────────────────────────────────────────────────
 
 const tests = [
@@ -360,9 +473,17 @@ const tests = [
     testMustNot_RejectsAnalyzerMatch,
     testSequentialSearch_MatchCountConsistentAcrossThreads,
     testAnalyzerDerived_TagMin_RejectsSingleOccurrence,
+    // Jimmolate bridge
+    testJimmolate_JsPredicateFiltersSeeds,
+    testJimmolate_AllRejectPredicateYieldsZeroMatches,
+    testJimmolate_PredicateRunsOnlyOnBaseSurvivors,
+    testJimmolate_SequentialSearch_WorksWithPredicate,
     // Boot integrity last
     testBootStatus_StillBooted,
 ];
+
+// Default so C# doesn't fault if EvalJimmolate is invoked outside a Jimmolate test.
+Motely.evalJimmolate = () => true;
 
 try { await boot(); console.log(`boot: BootStatus.Booted (package ${pkgVersion})`); }
 catch (e) { console.error(`BOOT FAILED: ${e?.stack ?? e}`); process.exit(1); }
