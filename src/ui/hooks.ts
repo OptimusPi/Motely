@@ -421,6 +421,12 @@ export function useJamlCardRenderer({
           loadImage(layer.source).then((img) => {
             if (cancelled || !img) return
             imageCacheRef.current.set(layer.source, img)
+            // For non-animated layers there's no RAF tick to repaint the
+            // newly-loaded image, so paint it now.
+            if (!hasAnimatedLayer) {
+              const imageRatio = renderImage(canvas, context, img, layer)
+              if (layer.order === 0) setRatio(imageRatio)
+            }
             forceUpdate((prev) => prev + 1)
           })
         })
