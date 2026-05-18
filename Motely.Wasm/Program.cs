@@ -100,6 +100,31 @@ public static partial class Program
     public static MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
 
+    // ── Packed-int decoders ──────────────────────────────────────────────────
+    // Return typed enums so Bootsharp emits MotelyItemType, MotelyItemTypeCategory,
+    // MotelyJokerRarity, MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement
+    // into the generated .g.mjs — consumers call these instead of manual bit-whacking.
+    [Export] public static MotelyItemType         DecodeItemType        (int v) => (MotelyItemType)(v & MotelyGlobals.ItemTypeMask);
+    [Export] public static MotelyItemTypeCategory DecodeItemCategory    (int v) => (MotelyItemTypeCategory)(v & MotelyGlobals.ItemTypeCategoryMask);
+    [Export] public static MotelyJokerRarity      DecodeJokerRarity     (int v) => (MotelyJokerRarity)(v & MotelyGlobals.JokerRarityMask);
+    [Export] public static MotelyItemEdition      DecodeItemEdition     (int v) => (MotelyItemEdition)(v & MotelyGlobals.ItemEditionMask);
+    [Export] public static MotelyItemSeal         DecodeItemSeal        (int v) => (MotelyItemSeal)(v & MotelyGlobals.ItemSealMask);
+    [Export] public static MotelyItemEnhancement  DecodeItemEnhancement (int v) => (MotelyItemEnhancement)(v & MotelyGlobals.ItemEnhancementMask);
+    [Export] public static bool IsPerishable (int v) => (v & (1 << MotelyGlobals.PerishableStickerOffset)) != 0;
+    [Export] public static bool IsEternal    (int v) => (v & (1 << MotelyGlobals.EternalStickerOffset)) != 0;
+    [Export] public static bool IsRental     (int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
+
+    // ── Pagers ───────────────────────────────────────────────────────────────
+    [Export] public static IMotelyShopItemPager CreateShopPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyShopPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreateJokerPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyJokerPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreateTarotPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyTarotPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreatePlanetPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyPlanetPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreateSpectralPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelySpectralPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreateLegendaryJokerPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyLegendaryJokerPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreateRareTagJokerPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyRareTagJokerPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreateTagPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyTagPager(seed, deck, stake, ante);
+    [Export] public static IMotelyShopItemPager CreateVoucherPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyVoucherPager(seed, deck, stake, ante);
+
     [Export]
     public static IMotelySearchSettingsInterop CreateSearch(string jaml)
     {
