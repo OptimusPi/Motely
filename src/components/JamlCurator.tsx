@@ -6,7 +6,6 @@ import { JimboText } from "../ui/jimboText.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboFlankNav } from "../ui/jimboFlankNav.js";
 import { JamlMapEditor } from "./jamlMap/JamlMapEditor.js";
-import { AnalyzerExplorer } from "./AnalyzerExplorer.js";
 import { useSearch } from "../hooks/useSearch.js";
 import { useAnalyzer } from "../hooks/useAnalyzer.js";
 import { JamlSpeedometer } from "./JamlSpeedometer.js";
@@ -122,10 +121,6 @@ export function JamlCurator() {
           )}
         </JimboPanel>
       </section>
-
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }} className="hide-scrollbar">
-        <AnalyzerExplorer antes={analyzer.antes} jaml={jamlText} />
-      </div>
     </div>
   );
 }

@@ -15,17 +15,6 @@ export {
     type AnalyzerResolvedItem,
 } from "./components/GameCard.js";
 
-export {
-    AnalyzerExplorer,
-    type AnalyzerAnteView,
-    type AnalyzerBadge,
-    type AnalyzerExplorerProps,
-    type AnalyzerFact,
-    type AnalyzerHighlight,
-    type AnalyzerItem,
-} from "./components/AnalyzerExplorer.js";
-
-
 export { JamlMapPreview, type JamlMapPreviewProps } from "./components/JamlMapPreview.js";
 export {
     JamlIde,
