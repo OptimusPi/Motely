@@ -86,10 +86,9 @@ public static class FormatUtils
         return name;
     }
 
-    // Copy of FormatDisplayName from BalatroData.cs
     public static string FormatDisplayName(string enumName)
     {
-        // Special cases that need custom formatting - copied from BalatroData.cs
+        // Special cases that need custom formatting
         var specialCases = new Dictionary<string, string>
         {
             // Numbers
@@ -155,7 +154,7 @@ public static class FormatUtils
             return special;
         }
 
-        // Add spaces before capital letters (except the first one) - from BalatroData.cs
+        // Add spaces before capital letters (except the first one)
         var result = string.Empty;
         for (int i = 0; i < enumName.Length; i++)
         {
