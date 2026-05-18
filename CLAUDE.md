@@ -29,15 +29,15 @@ cd motely-wasm
 npm publish --access public
 ```
 
-Version source of truth: `<MotelyVersion>` in `Directory.Packages.props`. Bootsharp regenerates `motely-wasm/package.json` from its template on every pack (no version field); the `FinalizeNpmPackage` target in `Motely.Wasm.csproj` injects `<MotelyVersion>` into the generated file right after `BootsharpPack` runs and copies `Motely.Wasm/README.md` into the npm root. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
+Version source of truth: `<MotelyVersion>` in `Directory.Packages.props`. Bootsharp regenerates `motely-wasm/package.json` from its template on every pack (no version field); the `FinalizeNpmPackage` target in `Motely.Wasm.csproj` injects `<MotelyVersion>` into the generated file right after `BootsharpPack` runs and copies `Motely.Wasm/README.md` plus root `jaml.schema.json` into the npm root. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
 
 ## npm publish procedure — follow in order
 
 Pre-publish, after `dotnet publish Motely.Wasm`:
 
-1. **`node Motely.Wasm/motely.test.mjs`** — must report `RESULT: PASS`. Node suite covering the documented `Motely.*` WASM surface, structured to mirror the xUnit shape in `Motely.Tests` (named test functions, arrange/act/assert, runner at bottom). Source of truth for "the package boots and the public API hasn't regressed." Mirror new xUnit cases here when they cover behaviour the JS consumer also depends on.
+1. **`node Motely.Wasm/motely.test.mjs`** — must report `RESULT: PASS`. Node suite covering the documented `Motely.*` WASM surface (named test functions, arrange/act/assert, runner at bottom). Source of truth for "the package boots and the public API hasn't regressed." Add tests here for any WASM behaviour JS consumers depend on that `Motely.Tests` already covers in C#.
 2. **Eyeball `motely-wasm/package.json` `exports`.** Must be `{ ".": "./dist/index.mjs", "./*": "./dist/generated/*.g.mjs" }`. Known-broken historic shapes: `17.3.1` shipped `"./../motely-wasm/index.mjs"`, `17.3.2` shipped `"././index.mjs"`. Both make Node refuse `import`. Bail before publishing if you see either.
-3. **`npm publish --dry-run`** from `motely-wasm/`. Confirm file count + tarball size are in line with prior releases (47 files / ~2.3 MB at 17.4.x).
+3. **`npm publish --dry-run`** from `motely-wasm/`. Confirm file count + tarball size are in line with prior releases (~124 files / ~4.5 MB packed / ~9.9 MB unpacked at 17.8.x).
 
 Post-publish, against the registry (not the local emit):
 
@@ -49,7 +49,7 @@ CDN delivery (unpkg/jsdelivr) is automatic after `npm publish` — no manual upl
 
 ## Agent rules
 
-- **No Bash tool.** Use Read, Grep, Glob, Edit, Write for all file work. Output commands for the user to run via `! <command>` in the prompt — never invoke them yourself.
+- **Use PowerShell for commands.** Use the PowerShell tool to run build, test, and publish commands directly. Use Read, Grep, Glob, Edit, Write for all file work — not Bash or shell one-liners for file operations.
 
 ## Hard rules
 
@@ -62,7 +62,7 @@ CDN delivery (unpkg/jsdelivr) is automatic after `npm publish` — no manual upl
 
 ## Bootsharp source and docs
 
-motely-wasm builds against a **local NuGet feed** of Bootsharp 0.8.0-preview (locally patched). Read these files directly — do not rely on public Bootsharp docs:
+motely-wasm builds against Bootsharp **0.8.0-alpha.278** (`Directory.Packages.props`; sponsor `Bootsharp.FileSystem` may resolve from a local feed). Read these files directly — do not rely on public Bootsharp docs:
 
 **Docs:**
 @D:/bootsharp/docs/guide/index.md
@@ -101,21 +101,21 @@ motely-wasm builds against a **local NuGet feed** of Bootsharp 0.8.0-preview (lo
 - **`motely-wasm/` lives next to `Motely.Wasm/`, sibling not child.** Intentional — keeping the Bootsharp sinks in separate directories lets `%MODULE_DIR%` resolve to a clean `dist`, so generated `exports` read `./dist/index.mjs` instead of `././index.mjs`. See the `BootsharpPackageDirectory` / `BootsharpPublishDirectory` / `BootsharpBinariesDirectory` props in `Motely.Wasm.csproj`.
 - **`Motely.TUI` pulls files from `..\Motely\TUI\*.cs` via globbed `<Compile Include>`.** Not a mistake — the TUI shares those types with the engine.
 - **`Motely.Wasm.csproj` generates `MotelyVersion.g.cs` at build time** to bake the version as an IL const. Done because NativeAOT trims `AssemblyInformationalVersionAttribute` reflection, and Motely.csproj disables `GenerateAssemblyInfo` anyway.
-- **`FinalizeNpmPackage` never sets `SkipUnchangedFiles`** when copying the README. The destination is gitignored and may carry stale manual edits with newer mtimes — skipping would ship the scribble to npm.
+- **`FinalizeNpmPackage` never sets `SkipUnchangedFiles`** when copying README and `jaml.schema.json`. The destination is gitignored and may carry stale manual edits with newer mtimes — skipping would ship the scribble to npm.
 
 ## Interop debugging rules
 
 - **Empty `{}` in JS = Bootsharp marshaling, not engine logic.** When a Motely method returns/emits `{}` instead of populated data, the .NET side ran fine — the generated JS bindings dropped fields or serialized to empty silently. Tests that only check "didn't throw" will pass; assert shape (`assert("boss" in seed.analysis.antes[0])`, `assertArray(r.tallies)`) to catch this.
-- **Upstream-fix path is real.** The user sponsors Elingus (Bootsharp author) at the $100 tier. When an issue has the shape of a Bootsharp bug, say so — "fix upstream" is on the table, not just "patch locally forever." Don't propose hacky workarounds without flagging this option.
-- **No pin comments in tests.** Don't add `// Pins commit abc123`, `// Mirrors xUnit Foo.Bar`, or `// Regression for #42`. Tests assert behavior; they don't cite lineage. ✅ `// long → BigInt; number here means Bootsharp binding regressed.` ❌ `// Mirrors xUnit test — pins commit abc123.`
+- **Upstream-fix path is real.** The user sponsors Elringus (Bootsharp author) at the $100 tier. When an issue has the shape of a Bootsharp bug, say so — fix upstream, not a local workaround forever. Don't propose hacky workarounds without flagging this option.
+- **No pin comments in tests.** Comments explain behavior or failure mode only. Forbidden: `Pins commit`, `Mirrors xUnit Class.Method`, `Regression for #N`, `Same probe seeds as xUnit …`. Allowed: `// long must be BigInt — number means binding regressed.` `motely.test.mjs` must cover WASM behaviours JS consumers depend on (publish step 1); add tests and behavior comments, not lineage pins.
 
 ## Regression fixtures
 
-- `Motely.Tests/filters/` — auto-discovered by `V0FilterRegressionTests`. Drop a `.jaml` here to assert it parses, compiles into a search plan, and list-searches a small probe set without throwing.
-- `Motely.Tests/GoldenJamlFiles/` — the parse-stability corpus, asserted by `JamlCorpusRegressionTests`. Add here when a new construct lands.
+- `Motely.Tests/filters/` — auto-discovered by `V0FilterRegressionTests`. **Not** repo-root `JamlFilters/` (scratch; no CI). Each `.jaml` must: parse; compile a plan; pass sequential smoke (`Filter_ParsesAndRuns`); have `name` + non-empty `must`; valid deck/stake; must clauses selective on 256 list-search probes; optional inline must/mustNot checks. Drop new community filters here.
+- `Motely.Tests/GoldenJamlFiles/` — `JamlCorpusRegressionTests`. Canonical files must parse clean; legacy-key files must fail with `"Unknown property"`. Add canonical files when new syntax lands.
 
 ## Common tasks
 
-- **Add a new JAML clause** — start in `Motely/Filters/` (one descriptor per clause type, e.g. `JokerFilterDesc.cs`), wire it in `JamlClause.cs` / `JamlConfigLoader.*.cs`, regenerate the schema by running `Motely.CLI` schema generation, and add a fixture under `Motely.Tests/filters/` plus a golden file if the syntax is new.
-- **Touch the search PRNG** — run `Motely.Tests` end-to-end, not just the changed file. `SearchConsistencyTests` + `V0FilterRegressionTests` are the canary.
+- **Add a new JAML clause** — descriptor in `Motely/Filters/Jaml/` (e.g. `JokerFilterDesc.cs`); wire `JamlClause.cs`, `JamlConfigLoader.*.cs`, and `JamlSearchBuilder.cs`; regenerate schema via `Motely.CLI` schema generation; fixture in `Motely.Tests/filters/` plus `GoldenJamlFiles/` when syntax is new.
+- **Touch the search PRNG** — run `Motely.Tests` end-to-end. Canary: `SearchConsistencyTests`, `V0FilterRegressionTests`; add `JamlCorpusRegressionTests` when parse/schema changes.
 - **Bump `MotelyVersion`** — edit `Directory.Packages.props` only. The constant propagates to assembly version, npm `package.json`, and `Motely.version()`.
