@@ -62,3 +62,4 @@ desktop.ini
 nuget.config.local
 /Motely.HelperAPI/wwwroot
 /.claude
+*.lscache
