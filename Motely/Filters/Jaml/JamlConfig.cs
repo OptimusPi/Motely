@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Typed clause lists for one JAML section (must / should / mustNot).
@@ -61,7 +61,6 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
      public string? Author { get; set; }
      public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
      public MotelyStake Stake { get; set; } = MotelyStake.White;
-     public List<string> Hashtags { get; set; } = [];
      public List<string> Seeds { get; set; } = [];
 
      public JamlClauseSet Must { get; set; } = new();

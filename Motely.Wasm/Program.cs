@@ -114,17 +114,6 @@ public static partial class Program
     [Export] public static bool IsEternal    (int v) => (v & (1 << MotelyGlobals.EternalStickerOffset)) != 0;
     [Export] public static bool IsRental     (int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
 
-    // ── Pagers ───────────────────────────────────────────────────────────────
-    [Export] public static IMotelyShopItemPager CreateShopPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyShopPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreateJokerPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyJokerPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreateTarotPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyTarotPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreatePlanetPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyPlanetPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreateSpectralPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelySpectralPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreateLegendaryJokerPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyLegendaryJokerPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreateRareTagJokerPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyRareTagJokerPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreateTagPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyTagPager(seed, deck, stake, ante);
-    [Export] public static IMotelyShopItemPager CreateVoucherPager(string seed, MotelyDeck deck, MotelyStake stake, int ante) => new MotelyVoucherPager(seed, deck, stake, ante);
-
     [Export]
     public static IMotelySearchSettingsInterop CreateSearch(string jaml)
     {

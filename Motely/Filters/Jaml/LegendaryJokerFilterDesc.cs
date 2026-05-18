@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Motely;
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 public sealed class LegendaryJokerClause : JamlClause
 {

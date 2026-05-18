@@ -1,4 +1,4 @@
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Seed-space constraints declared under top-level <c>aesthetics</c> in a JAML document.

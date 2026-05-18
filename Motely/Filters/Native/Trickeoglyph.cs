@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct TrickeoglyphFilterDesc()
     : IMotelySeedFilterDesc<TrickeoglyphFilterDesc.TrickeoglyphFilter>

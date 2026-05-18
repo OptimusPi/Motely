@@ -1,4 +1,4 @@
-namespace Motely.Filters.Jaml;
+namespace Motely;
 
 public static class MotelyExtensions
 {

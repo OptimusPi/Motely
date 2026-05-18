@@ -1,6 +1,6 @@
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct LuckCardFilterDesc() : IMotelySeedFilterDesc<LuckCardFilterDesc.LuckyCardFilter>
 {

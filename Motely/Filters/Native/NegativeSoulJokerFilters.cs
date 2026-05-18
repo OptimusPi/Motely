@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Filters.Native;
 
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
