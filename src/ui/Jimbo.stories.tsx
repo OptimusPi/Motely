@@ -15,6 +15,9 @@ import { JimboWordmark } from './jimboWordmark';
 import { JimboCopyRow } from './jimboCopyRow';
 import { JimboSelect } from './JimboSelect';
 import { JimboIconButton } from './JimboIconButton';
+import { JimboStepper } from './JimboStepper';
+import { JimboSlider } from './JimboSlider';
+import { JimboDualChip } from './JimboDualChip';
 
 const meta = {
   title: 'JimboUI/Components',
@@ -323,6 +326,76 @@ export const CopyRowAndSelect: StoryObj = {
       </JimboAppScroll>
     );
   },
+};
+
+export const Stepper: StoryObj = {
+  render: () => {
+    const options = ['1', '2', '3', '4'];
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [i, setI] = useState(0);
+    return (
+      <JimboAppScroll>
+        <JimboPanel>
+          <JimboStepper
+            label="Game Speed"
+            value={options[i]}
+            onPrev={() => setI((p) => Math.max(0, p - 1))}
+            onNext={() => setI((p) => Math.min(options.length - 1, p + 1))}
+            canPrev={i > 0}
+            canNext={i < options.length - 1}
+          />
+          <JimboStepper
+            label="Pixel Art Smoothing"
+            value="On"
+            onPrev={() => undefined}
+            onNext={() => undefined}
+          />
+        </JimboPanel>
+      </JimboAppScroll>
+    );
+  },
+};
+
+export const Slider: StoryObj = {
+  render: () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [crt, setCrt] = useState(100);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [music, setMusic] = useState(28);
+    return (
+      <JimboAppScroll>
+        <JimboPanel>
+          <JimboSlider label="CRT" value={crt} onChange={setCrt} />
+          <JimboSlider label="Music Volume" value={music} onChange={setMusic} />
+          <JimboSlider value={60} onChange={() => undefined} />
+        </JimboPanel>
+      </JimboAppScroll>
+    );
+  },
+};
+
+export const DualChip: StoryObj = {
+  render: () => (
+    <JimboAppScroll>
+      <JimboPanel>
+        <JimboText size="sm" tone="grey">Hands × Discards</JimboText>
+        <JimboDualChip
+          left={{ tone: 'blue', value: 4 }}
+          right={{ tone: 'red', value: 3 }}
+        />
+        <JimboText size="sm" tone="grey">Chips × Mult</JimboText>
+        <JimboDualChip
+          left={{ tone: 'blue', value: 120 }}
+          right={{ tone: 'red', value: 8 }}
+        />
+        <JimboText size="sm" tone="grey">Score × Goal</JimboText>
+        <JimboDualChip
+          left={{ tone: 'gold', value: '1.2k' }}
+          right={{ tone: 'dark', value: '300' }}
+        />
+      </JimboPanel>
+    </JimboAppScroll>
+  ),
 };
 
 export const IconButtons: StoryObj = {

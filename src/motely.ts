@@ -50,12 +50,7 @@ export {
   type UseJamlLibraryState,
 } from "./hooks/useJamlLibrary.js";
 export {
-  useMotelyRuntime,
-  type UseMotelyRuntimeState,
+  ensureMotelyReady,
+  MOTELY_BIN_PATH,
   type MotelyRuntimeStatus,
-} from "./hooks/useMotelyRuntime.js";
-export {
-  MotelyProvider,
-  useMotelyContext,
-  type MotelyContextValue,
-} from "./providers/MotelyProvider.js";
+} from "./lib/motely/runtime.js";

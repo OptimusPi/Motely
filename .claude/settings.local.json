@@ -24,12 +24,14 @@
       "Bash(gh api *)",
       "PowerShell(pnpm typecheck *)",
       "PowerShell(pnpm lint *)",
-      "PowerShell(pnpm build *)"
+      "PowerShell(pnpm build *)",
+      "PowerShell(git *)"
     ],
     "additionalDirectories": [
       "d:\\seedfinder.app",
       "D:\\bootsharp",
-      "d:\\extra"
+      "d:\\extra",
+      "x:\\JammySeedFinder\\src\\MotelyJAML"
     ]
   },
   "enableAllProjectMcpServers": true,

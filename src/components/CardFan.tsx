@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { RealStandardcard, type CardRank, type CardSuit } from './Standardcard.js'
+import { StandardCard, type CardRank, type CardSuit } from './StandardCard.js'
 import { JimboColorOption } from '../ui/tokens.js'
 import { JimboText } from '../ui/jimboText.js'
 
@@ -101,12 +101,12 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
                   position: 'absolute',
                   left: '50%',
                   bottom: 0,
-                  transform: `translateX(calc(-50% + ${xPos}px)) translateY(${yOffset}px) rotate(${rotation}deg)`,
+                  transform: `translateX(calc(-50% + ${xPos}px)) translateY(${-yOffset}px) rotate(${rotation}deg)`,
                   transformOrigin: 'bottom center',
                   zIndex: i,
                 }}
               >
-                <RealStandardcard
+                <StandardCard
                   rank={parsed.rank}
                   suit={parsed.suit}
                   size={cardSize}
