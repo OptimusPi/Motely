@@ -572,6 +572,7 @@ public interface IMotelySearchSettingsInterop
     IMotelySearchSettingsInterop WithCsvOutput(bool csvOutput);
     IMotelySearchSettingsInterop WithQuietMode(bool quietMode);
     IMotelySearchSettingsInterop WithAutoScoreCutoff(bool enabled = true);
+    IMotelySearchSettingsInterop WithJimmolate();
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -834,6 +835,18 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
+
+    public MotelySearchSettings<TBaseFilter> WithJimmolate()
+    {
+        if (JimmolateInteropBridge.Predicate is null)
+            throw new InvalidOperationException("Assign Motely.evalJimmolate before calling withJimmolate().");
+        var pred = JimmolateInteropBridge.Predicate;
+        return WithAdditionalFilter(
+            new JimmolateFilterDesc((ref MotelySingleSearchContext ctx) => pred(ctx.GetSeed()))
+        );
+    }
+
+    IMotelySearchSettingsInterop IMotelySearchSettingsInterop.WithJimmolate() => WithJimmolate();
 
     IMotelySearch IMotelySearchSettingsInterop.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);

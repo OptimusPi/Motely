@@ -1,6 +1,6 @@
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct PerkeoObservatoryFilterDesc()
     : IMotelySeedFilterDesc<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>

@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 public sealed class StartingDrawClause : JamlClause
 {

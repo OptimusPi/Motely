@@ -64,7 +64,6 @@ public static class MotelySeedKeywordSequences
     // affected by the old bug; nsfw/funny/balatro contain longer keywords and
     // went up.
     public const long GrossKeywordAestheticSeedCount = 183_030_995L;
-
     public const long NsfwKeywordAestheticSeedCount = 174_659_345L;
     public const long FunnyKeywordAestheticSeedCount = 312_463_270L;
     public const long BalatroKeywordAestheticSeedCount = 290_680_670L;

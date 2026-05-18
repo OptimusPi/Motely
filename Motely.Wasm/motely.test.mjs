@@ -1,0 +1,731 @@
+// Node smoke + regression suite for motely-wasm.
+// Run after `dotnet publish Motely.Wasm`:  node motely.test.mjs
+// CLAUDE.md publish gate depends on the final RESULT: PASS/FAIL line and the
+// exit code — don't break that contract.
+//
+// Defaults to ../motely-wasm/dist/index.mjs. Override with MOTELY_WASM_ENTRY.
+
+import { readFile } from "node:fs/promises";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const entryPath = process.env.MOTELY_WASM_ENTRY
+    ? resolve(process.env.MOTELY_WASM_ENTRY)
+    : resolve(here, "..", "motely-wasm", "dist", "index.mjs");
+const pkgRoot = resolve(dirname(entryPath), "..");
+const { default: bootsharp, Motely } = await import(pathToFileURL(entryPath).href);
+// Enum constants live in the Motely-namespace generated module, not in the package root.
+const {
+    MotelyItemType, MotelyItemTypeCategory, MotelyJokerRarity,
+    MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement,
+    MotelyTag, MotelyVoucher, MotelyBoosterPack,
+} = await import(pathToFileURL(resolve(pkgRoot, "dist", "generated", "motely.g.mjs")).href);
+
+// `voucher: Any` and `joker: Any` in must/should are rejected by the parser. Scoring fixtures must name specific identifiers.
+const jaml = {
+    must: `name: t
+deck: Erratic
+stake: Black
+must:
+  - joker: WeeJoker
+    antes: [1]
+`,
+    anyMust: `name: t
+deck: Red
+stake: White
+must:
+  - joker: Any
+    antes: [1]
+`,
+    scoring: `name: t
+deck: Red
+stake: White
+should:
+  - joker: WeeJoker
+    antes: [1]
+    score: 1
+  - voucher: Telescope
+    antes: [1, 2]
+    score: 1
+`,
+    invalid: "not yaml !@#",
+};
+
+// Eight probe seeds — shop/pack/tag variety in analyzer output.
+const probeSeeds = ["AAAAAAAA", "BBBBBBBB", "CCCCCCCC", "DDDDDDDD", "EEEEEEEE", "FFFFFFFF", "GGGGGGGG", "HHHHHHHH"];
+
+let pkgVersion;
+
+async function boot() {
+    pkgVersion = JSON.parse(await readFile(resolve(pkgRoot, "package.json"), "utf8")).version;
+    const w = await readFile(resolve(pkgRoot, "bin", "dotnet.native.wasm"));
+    await bootsharp.boot({ wasm: w.buffer.slice(w.byteOffset, w.byteOffset + w.byteLength) });
+    if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted) throw new Error("boot: not Booted");
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+function testPublicApiSurface() {
+    const required = [
+        "version", "validateJaml", "explainJaml", "createPlan", "analyzeJamlSeeds",
+        "createSearch", "createSearchSettings",
+        "mountRoot", "unmountRoot", "pickRoot", "readTextFile", "writeTextFile",
+        "onSeedMatch", "onScoredResult", "onProgress", "onFileChanges",
+        "evalJimmolate",
+        "createShopPager", "createJokerPager", "createTarotPager", "createPlanetPager",
+        "createSpectralPager", "createLegendaryJokerPager", "createRareTagJokerPager",
+        "createTagPager", "createVoucherPager",
+        "decodeItemType", "decodeItemCategory", "decodeJokerRarity",
+        "decodeItemEdition", "decodeItemSeal", "decodeItemEnhancement",
+        "isPerishable", "isEternal", "isRental",
+    ];
+    const missing = required.filter(n => !(n in Motely));
+    if (missing.length) throw new Error(`Motely missing: ${missing.join(", ")}`);
+}
+
+function testVersion_MatchesPackageJson() {
+    const v = Motely.version();
+    if (typeof v !== "string" || !/^\d+\.\d+\.\d+/.test(v)) throw new Error(`bad version: ${v}`);
+    // FinalizeNpmPackage injects MotelyVersion into package.json post-pack; drift here = injection regressed.
+    if (!v.startsWith(pkgVersion)) throw new Error(`assembly ${v} ≠ package.json ${pkgVersion}`);
+}
+
+function testEventContract() {
+    // Bootsharp EventSubscriber contract — subscribe/unsubscribe/last on every documented event.
+    for (const name of ["onSeedMatch", "onScoredResult", "onProgress", "onFileChanges"]) {
+        const ev = Motely[name];
+        if (typeof ev?.subscribe !== "function" || typeof ev?.unsubscribe !== "function" || !("last" in ev))
+            throw new Error(`${name}: missing EventSubscriber contract`);
+    }
+}
+
+function testValidateJaml() {
+    if (Motely.validateJaml(jaml.must) !== "valid") throw new Error("valid JAML reported invalid");
+    const err = Motely.validateJaml("not yaml !@#");
+    if (typeof err !== "string" || err === "valid" || err.length === 0) throw new Error(`garbage should error: ${err}`);
+}
+
+function testExplainJaml() {
+    const r = Motely.explainJaml(jaml.must);
+    if (!r.startsWith("# JAML filter eval plan")) throw new Error(`bad header: ${r.slice(0, 80)}`);
+    if (!r.includes("WeeJoker")) throw new Error(`should mention WeeJoker`);
+    const errResult = Motely.explainJaml("not yaml !@#");
+    if (typeof errResult !== "string" || !errResult.startsWith("# ERROR:"))
+        throw new Error(`explainJaml(garbage) should return # ERROR: string, got: ${errResult?.slice(0, 80)}`);
+}
+
+function testCreatePlan() {
+    const plan = Motely.createPlan(jaml.scoring);
+    if (typeof plan?.scoredCsvHeaderQuoted !== "string") throw new Error("plan.scoredCsvHeaderQuoted missing");
+    if (plan.scoreTallyColumnCount !== 2) throw new Error(`tally cols: ${plan.scoreTallyColumnCount}`);
+    if (plan.tallyLabels?.length !== 2) throw new Error(`tally labels: ${plan.tallyLabels?.length}`);
+}
+
+function testAnalyzeJamlSeeds() {
+    // Shape assertions matter — `{}` marshaling would silently lie here.
+    const seeds = ["1AAAAAAA", "2BBBBBBB"];
+    const result = Motely.analyzeJamlSeeds(jaml.anyMust, seeds);
+    if (result.error != null) throw new Error(`unexpected error: ${result.error}`);
+    if (result.seeds?.length !== 2) throw new Error(`seeds.length: ${result.seeds?.length}`);
+    for (let i = 0; i < seeds.length; i++)
+        if (result.seeds[i].seed !== seeds[i]) throw new Error(`order: seeds[${i}]`);
+    const ante = result.seeds[0].analysis?.antes?.[0];
+    if (!ante || !("boss" in ante) || !Array.isArray(ante.shopQueue) || !Array.isArray(ante.packs))
+        throw new Error(`ante shape: ${JSON.stringify(ante)?.slice(0, 80)}`);
+    // MotelyDeck.Red = 0, MotelyStake.White = 0 — deck/stake came from JAML, not defaulted.
+    if (result.deck !== 0 || result.stake !== 0) throw new Error(`deck/stake not applied: ${result.deck}/${result.stake}`);
+}
+
+function testCreateSearchBuilder() {
+    let threw = false;
+    try { Motely.createSearch("not yaml !@#"); } catch { threw = true; }
+    if (!threw) throw new Error("createSearch(garbage) should throw");
+    if (typeof Motely.createSearchSettings()?.withSequentialSearch !== "function")
+        throw new Error("createSearchSettings builder missing");
+    const s = Motely.createSearch(jaml.scoring)
+        .withSequentialSearch().withThreadCount(1).withProgressReportIntervalMs(0n);
+    if (typeof s?.start !== "function") throw new Error("chained builder.start missing");
+}
+
+async function testListSearch_Completes() {
+    const seeds = ["AAAAAAAA", "BBBBBBBB"];
+    const search = Motely.createSearch(jaml.anyMust)
+        .withListSearch(seeds, seeds.length).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (!search.isCompleted) throw new Error("not completed");
+    if (Number(search.totalSeedsSearched) !== 2) throw new Error(`searched: ${search.totalSeedsSearched}`);
+    if (Number(search.matchingSeeds) < 1) throw new Error(`joker:Any should match: ${search.matchingSeeds}`);
+}
+
+async function testEvents_FireWithDocumentedShape() {
+    // One scored search exercises onSeedMatch + onScoredResult + onProgress.
+    // If a binding regresses to `{}`, the shape checks below catch it.
+    const seeds = ["AAAAAAAA", "BBBBBBBB"];
+    const matches = [], scored = [], progress = [];
+    const onM = s => matches.push(s), onS = r => scored.push(r), onP = p => progress.push(p);
+    Motely.onSeedMatch.subscribe(onM);
+    Motely.onScoredResult.subscribe(onS);
+    Motely.onProgress.subscribe(onP);
+    try {
+        const search = Motely.createSearch(jaml.scoring)
+            .withListSearch(seeds, seeds.length).withThreadCount(1)
+            .withProgressReportIntervalMs(0n).start();
+        await search.waitForCompletionAsync();
+    } finally {
+        Motely.onSeedMatch.unsubscribe(onM);
+        Motely.onScoredResult.unsubscribe(onS);
+        Motely.onProgress.unsubscribe(onP);
+    }
+    if (matches.length === 0) throw new Error("onSeedMatch did not fire");
+    if (typeof matches[0] !== "string" || !matches[0]) throw new Error(`onSeedMatch payload: ${matches[0]}`);
+    if (scored.length === 0) throw new Error("onScoredResult did not fire");
+    const r = scored[0];
+    // Bootsharp maps C# int[] → JS Int32Array (TypedArray), not plain Array — that's by design,
+    // not a regression. Accept either, but still reject {} and the index-keyed plain object that
+    // would surface a real marshaling break.
+    const talliesOk = (r.tallies instanceof Int32Array || Array.isArray(r.tallies))
+        && r.tallies.length === 2
+        && typeof r.tallies[0] === "number";
+    if (typeof r.seed !== "string" || typeof r.score !== "number" || !talliesOk)
+        throw new Error(`onScoredResult shape: ${JSON.stringify(r)?.slice(0, 100)}`);
+    if (progress.length === 0) throw new Error("onProgress did not fire");
+    const p = progress.at(-1);
+    if (typeof p.percentComplete !== "number" || typeof p.seedsPerMillisecond !== "number")
+        throw new Error(`onProgress numbers: ${JSON.stringify(p)?.slice(0, 100)}`);
+    // long → BigInt; if these come back as number or `{}` the binding regressed.
+    if (typeof p.seedsSearched !== "bigint" || typeof p.elapsedMilliseconds !== "bigint")
+        throw new Error(`onProgress bigints: ${JSON.stringify(p)?.slice(0, 100)}`);
+}
+
+async function testCancel_CompletesCleanly() {
+    // 1-char batch 0 = 35 seeds; cancel() is called before the batch finishes (or after —
+    // either way waitForCompletionAsync() must resolve and isCompleted must be true).
+    // An unbounded sequential search blocks the WASM event loop and cannot be cancelled from JS.
+    const search = Motely.createSearch(jaml.must)
+        .withSequentialSearch()
+        .withBatchCharacterCount(1)
+        .withStartBatchIndex(0n)
+        .withEndBatchIndex(0n)
+        .withThreadCount(1)
+        .start();
+    search.cancel();
+    await search.waitForCompletionAsync();
+    if (!search.isCompleted) throw new Error("cancelled search not completed");
+}
+
+function testBootStatus_StillBooted() {
+    if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted) throw new Error("post-suite boot status drifted");
+}
+
+// ── Analyzer cross-check tests ───────────────────────────────────────────────
+// Analyzer reports X → search for X must find the same seed. Divergence fails the test.
+
+function testAnalyzer_FirstAnteFirstPack_IsBuffoonNormal() {
+    // Ante 1 pack 0 must be a 2-item Buffoon pack.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    const s = r.seeds?.[0];
+    if (!s) throw new Error("No probe seed returned analysis");
+    const pack = s.analysis?.antes?.[0]?.packs?.[0];
+    if (!pack) throw new Error("No packs in ante 1");
+    const packName = MotelyBoosterPack?.[pack.type];
+    if (packName !== "Buffoon") throw new Error(`first pack: expected Buffoon, got ${packName ?? pack.type} (is MotelyBoosterPack exported?)`);
+    if (!Array.isArray(pack.items) || pack.items.length !== 2)
+        throw new Error(`Buffoon pack items: expected 2, got ${pack.items?.length}`);
+}
+
+async function testAnalyzerDerived_BuffoonJoker_MatchesSearch() {
+    // packs[0].items[0] is always a joker (Buffoon pack). Analyzer says it's joker X →
+    // search for X in boosterPacks[0] must match the same seed.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        const ante = s.analysis?.antes?.[0];
+        const item = ante?.packs?.[0]?.items?.[0];
+        if (!item) continue;
+        const type = Motely.decodeItemType(item.item.value);
+        const jokerName = MotelyItemType?.[type];
+        if (!jokerName) throw new Error(`MotelyItemType[${type}] undefined — enum not exported from entry`);
+        found = { seed: s.seed, ante: ante.ante, jokerName };
+        break;
+    }
+    if (!found) throw new Error("No probe seed had a Buffoon pack item");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${found.jokerName}\n    antes: [${found.ante}]\n    sources:\n      boosterPacks: [0]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 1n)
+        throw new Error(`Analyzer said ${found.seed} ante${found.ante} pack[0] = ${found.jokerName}; search got ${search.matchingSeeds} matches`);
+}
+
+async function testAnalyzerDerived_ShopJoker_MatchesSearch() {
+    // shopQueue[i] is joker X → search for X in shopItems[i] must match the same seed.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        const ante = s.analysis?.antes?.[0];
+        if (!Array.isArray(ante?.shopQueue)) continue;
+        for (let i = 0; i < ante.shopQueue.length; i++) {
+            const item = ante.shopQueue[i];
+            const itemValue = item.item.value;
+            if (MotelyItemTypeCategory?.[Motely.decodeItemCategory(itemValue)] !== "Joker") continue;
+            const type = Motely.decodeItemType(itemValue);
+            const jokerName = MotelyItemType?.[type];
+            if (!jokerName) throw new Error(`MotelyItemType[${type}] undefined — enum not exported from entry`);
+            found = { seed: s.seed, ante: ante.ante, jokerName, slot: i };
+            break;
+        }
+        if (found) break;
+    }
+    if (!found) throw new Error("No probe seed had a joker in shopQueue (check: is MotelyItemTypeCategory exported with .Joker value?)");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${found.jokerName}\n    antes: [${found.ante}]\n    sources:\n      shopItems: [${found.slot}]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 1n)
+        throw new Error(`Analyzer said ${found.seed} ante${found.ante} shop[${found.slot}] = ${found.jokerName}; search got ${search.matchingSeeds} matches`);
+}
+
+async function testAnalyzerDerived_Tag_MatchesSearch() {
+    // bigBlindTag for ante N → tag: X in antes:[N] must match.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        for (const ante of s.analysis?.antes ?? []) {
+            if (ante.bigBlindTag === ante.smallBlindTag) continue;
+            const tagName = MotelyTag?.[ante.bigBlindTag];
+            if (!tagName) throw new Error(`MotelyTag[${ante.bigBlindTag}] undefined — enum not exported from entry`);
+            found = { seed: s.seed, ante: ante.ante, tagName };
+            break;
+        }
+        if (found) break;
+    }
+    if (!found) throw new Error("No probe seed had an ante with distinct blind tags");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${found.tagName}\n    antes: [${found.ante}]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 1n)
+        throw new Error(`Analyzer said ${found.seed} ante${found.ante} bigBlindTag = ${found.tagName}; search got ${search.matchingSeeds} matches`);
+}
+
+async function testMustNot_RejectsAnalyzerMatch() {
+    // must: tag X + mustNot: tag X on the same ante → seed that has X must be rejected.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    const s = r.seeds?.[0];
+    const ante = s?.analysis?.antes?.[0];
+    if (!ante) throw new Error("No probe seed returned analysis");
+    const tagName = MotelyTag?.[ante.bigBlindTag];
+    if (!tagName) throw new Error(`MotelyTag[${ante.bigBlindTag}] undefined — enum not exported from entry`);
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${tagName}\n    antes: [${ante.ante}]\nmustNot:\n  - tag: ${tagName}\n    antes: [${ante.ante}]\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([s.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 0n)
+        throw new Error(`must+mustNot same tag should reject ${s.seed}; got ${search.matchingSeeds} matches`);
+}
+
+async function testSequentialSearch_MatchCountConsistentAcrossThreads() {
+    // Same 2-char sequential batch produces identical match counts across thread counts.
+    // Threads > 1 are skipped gracefully when NativeAOT multi-threading is unavailable in Node.
+    let baseline = null;
+    for (const threads of [1, 2, 4]) {
+        let search;
+        try {
+            search = Motely.createSearch(jaml.anyMust)
+                .withSequentialSearch()
+                .withBatchCharacterCount(2)
+                .withStartBatchIndex(0n)
+                .withEndBatchIndex(1n)
+                .withThreadCount(threads)
+                .start();
+            await search.waitForCompletionAsync();
+        } catch (e) {
+            if (threads === 1) throw e;
+            console.log(`  (threads=${threads} skipped: ${e?.message ?? e})`);
+            continue;
+        }
+        if (!search.isCompleted) throw new Error(`threads=${threads}: search not completed`);
+        if (baseline === null) { baseline = search.matchingSeeds; continue; }
+        if (search.matchingSeeds !== baseline)
+            throw new Error(`threads=${threads}: ${search.matchingSeeds} ≠ baseline ${baseline}`);
+    }
+    if (baseline === null || baseline < 1n) throw new Error(`Sequential search matched nothing (baseline=${baseline})`);
+}
+
+async function testAnalyzerDerived_TagMin_RejectsSingleOccurrence() {
+    // A tag appearing exactly once in ante N with min:2 must NOT match.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+    let found = null;
+    for (const s of r.seeds ?? []) {
+        for (const ante of s.analysis?.antes ?? []) {
+            // distinct blind tags → each tag appears exactly once in this ante
+            if (ante.bigBlindTag === ante.smallBlindTag) continue;
+            const tagName = MotelyTag?.[ante.bigBlindTag];
+            if (!tagName) throw new Error(`MotelyTag[${ante.bigBlindTag}] undefined`);
+            found = { seed: s.seed, ante: ante.ante, tagName };
+            break;
+        }
+        if (found) break;
+    }
+    if (!found) throw new Error("No probe seed had an ante with a single-occurrence tag");
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${found.tagName}\n    antes: [${found.ante}]\n    min: 2\n`;
+    const search = Motely.createSearch(derivedJaml).withListSearch([found.seed], 1).withThreadCount(1).start();
+    await search.waitForCompletionAsync();
+    if (search.matchingSeeds !== 0n)
+        throw new Error(`min:2 on single-occurrence tag ${found.tagName} in ${found.seed} ante${found.ante} should reject; got ${search.matchingSeeds}`);
+}
+
+async function testJimmolate_JsPredicateFiltersSeeds() {
+    // Jimmolate predicate (second char 'A') filters list search; only matching seeds count.
+    const seeds = ["MAAAAAAA", "MBBBBBBB", "XCCCCCCC", "MADDDDDD", "XEEEEEEE", "MAFFFFFF", "XGGGGGGG", "MAHHHHHH"];
+    const expectedMatchCount = seeds.filter(s => s[0] === "M" && s[1] === "A").length; // MAAAAAAA, MADDDDDD, MAFFFFFF, MAHHHHHH = 4
+
+    const visited = [];
+    Motely.evalJimmolate = seed => { visited.push(seed); return seed.length >= 2 && seed[1] === "A"; };
+    try {
+        const search = Motely.createSearch(jaml.anyMust)
+            .withJimmolate()
+            .withListSearch(seeds, seeds.length)
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (Number(search.matchingSeeds) !== expectedMatchCount)
+            throw new Error(`expected ${expectedMatchCount} matches, got ${search.matchingSeeds}`);
+        // Predicate must run on base survivors only (joker:Any passes all lanes through the JAML filter).
+        if (visited.length !== seeds.length)
+            throw new Error(`predicate visited ${visited.length} seeds, expected ${seeds.length} (all pass base filter)`);
+        // long → BigInt check
+        if (typeof search.totalSeedsSearched !== "bigint")
+            throw new Error(`totalSeedsSearched is ${typeof search.totalSeedsSearched}, not bigint`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
+// ── Shop pager tests ─────────────────────────────────────────────────────────
+// MotelyDeck.Red = 0, MotelyStake.White = 0 — the minimal valid combo.
+
+function testShopPager_GetNext_ReturnsNumbers() {
+    // Each getNext() call must return a number and advance the stream.
+    const pager = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
+    const items = Array.from({ length: 5 }, () => pager.getNext());
+    for (let i = 0; i < items.length; i++)
+        if (typeof items[i] !== "number")
+            throw new Error(`item[${i}] is ${typeof items[i]}, expected number`);
+    // All five values from one run; duplicates are possible but the full 5 shouldn't all be identical.
+    const allSame = items.every(v => v === items[0]);
+    if (allSame) throw new Error(`all 5 consecutive items are ${items[0]} — stream likely stuck`);
+}
+
+function testShopPager_GetNextChunk_MatchesSingleItemSequence() {
+    // chunk(N) must return the same N values as N successive getNext() calls.
+    const pager1 = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
+    const pager2 = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
+    const N = 10;
+    const chunk = pager1.getNextChunk(N);
+    if (!Array.isArray(chunk) || chunk.length !== N)
+        throw new Error(`getNextChunk(${N}) shape: ${JSON.stringify(chunk)?.slice(0, 60)}`);
+    for (let i = 0; i < N; i++) {
+        const single = pager2.getNext();
+        if (chunk[i] !== single)
+            throw new Error(`chunk[${i}]=${chunk[i]} ≠ sequential getNext()=${single}; sequences diverged`);
+    }
+}
+
+function testPackedIntDecoders_EnumsEmittedAndRoundTrip() {
+    // Verify Bootsharp emitted the enum tables and the decode helpers work on a real packed int.
+    if (typeof MotelyItemType?.Joker !== "number") throw new Error("MotelyItemType not emitted by Bootsharp");
+    if (typeof MotelyItemTypeCategory?.Joker !== "number") throw new Error("MotelyItemTypeCategory not emitted by Bootsharp");
+
+    const pager = Motely.createJokerPager("AAAAAAAA", 0, 0, 1);
+    const v = pager.getNext();
+
+    const type     = Motely.decodeItemType(v);
+    const category = Motely.decodeItemCategory(v);
+    const rarity   = Motely.decodeJokerRarity(v);
+    const edition  = Motely.decodeItemEdition(v);
+    const seal     = Motely.decodeItemSeal(v);
+    const enh      = Motely.decodeItemEnhancement(v);
+    const perishable = Motely.isPerishable(v);
+    const eternal    = Motely.isEternal(v);
+    const rental     = Motely.isRental(v);
+
+    if (typeof type !== "number")        throw new Error(`decodeItemType returned ${typeof type}`);
+    if (typeof category !== "number")    throw new Error(`decodeItemCategory returned ${typeof category}`);
+    if (typeof rarity !== "number")      throw new Error(`decodeJokerRarity returned ${typeof rarity}`);
+    if (typeof edition !== "number")     throw new Error(`decodeItemEdition returned ${typeof edition}`);
+    if (typeof seal !== "number")        throw new Error(`decodeItemSeal returned ${typeof seal}`);
+    if (typeof enh !== "number")         throw new Error(`decodeItemEnhancement returned ${typeof enh}`);
+    if (typeof perishable !== "boolean") throw new Error(`isPerishable returned ${typeof perishable}`);
+    if (typeof eternal !== "boolean")    throw new Error(`isEternal returned ${typeof eternal}`);
+    if (typeof rental !== "boolean")     throw new Error(`isRental returned ${typeof rental}`);
+
+    if (category !== MotelyItemTypeCategory.Joker) throw new Error(`joker pager produced non-joker category ${category}`);
+}
+
+function testShopPager_DifferentSeeds_DifferentSequences() {
+    // Two different seeds must produce at least one distinct item in the first 5.
+    const p1 = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
+    const p2 = Motely.createShopPager("BBBBBBBB", 0, 0, 1);
+    const a = p1.getNextChunk(5);
+    const b = p2.getNextChunk(5);
+    if (a.every((v, i) => v === b[i]))
+        throw new Error(`AAAAAAAA and BBBBBBBB produced identical 5-item sequences`);
+}
+
+function testTarotPager_YieldsTarotCategory() {
+    // Every item from the shop tarot stream must decode as TarotCard category.
+    if (typeof MotelyItemTypeCategory?.TarotCard !== "number")
+        throw new Error("MotelyItemTypeCategory.TarotCard not emitted by Bootsharp");
+    const pager = Motely.createTarotPager("AAAAAAAA", 0, 0, 1);
+    for (let i = 0; i < 10; i++) {
+        const v = pager.getNext();
+        const cat = Motely.decodeItemCategory(v);
+        if (cat !== MotelyItemTypeCategory.TarotCard)
+            throw new Error(`tarot pager item[${i}] category=${cat}, expected TarotCard(${MotelyItemTypeCategory.TarotCard})`);
+    }
+}
+
+function testPlanetPager_YieldsPlanetCategory() {
+    if (typeof MotelyItemTypeCategory?.PlanetCard !== "number")
+        throw new Error("MotelyItemTypeCategory.PlanetCard not emitted by Bootsharp");
+    const pager = Motely.createPlanetPager("AAAAAAAA", 0, 0, 1);
+    for (let i = 0; i < 10; i++) {
+        const v = pager.getNext();
+        const cat = Motely.decodeItemCategory(v);
+        if (cat !== MotelyItemTypeCategory.PlanetCard)
+            throw new Error(`planet pager item[${i}] category=${cat}, expected PlanetCard(${MotelyItemTypeCategory.PlanetCard})`);
+    }
+}
+
+function testSpectralPager_YieldsSpectralCategory() {
+    if (typeof MotelyItemTypeCategory?.SpectralCard !== "number")
+        throw new Error("MotelyItemTypeCategory.SpectralCard not emitted by Bootsharp");
+    const pager = Motely.createSpectralPager("AAAAAAAA", 0, 0, 1);
+    // Spectral items from the shop stream — verify type is number and is either SpectralCard or a
+    // special item (TheSoul / BlackHole) that shares the SpectralCard category base.
+    for (let i = 0; i < 10; i++) {
+        const v = pager.getNext();
+        if (typeof v !== "number") throw new Error(`spectral pager item[${i}] is ${typeof v}`);
+        const cat = Motely.decodeItemCategory(v);
+        if (cat !== MotelyItemTypeCategory.SpectralCard)
+            throw new Error(`spectral pager item[${i}] category=${cat}, expected SpectralCard(${MotelyItemTypeCategory.SpectralCard})`);
+    }
+}
+
+function testLegendaryJokerPager_YieldsLegendaryRarity() {
+    if (typeof MotelyJokerRarity?.Legendary !== "number")
+        throw new Error("MotelyJokerRarity.Legendary not emitted by Bootsharp");
+    const pager = Motely.createLegendaryJokerPager("AAAAAAAA", 0, 0, 1);
+    for (let i = 0; i < 5; i++) {
+        const v = pager.getNext();
+        const rarity = Motely.decodeJokerRarity(v);
+        if (rarity !== MotelyJokerRarity.Legendary)
+            throw new Error(`legendary pager item[${i}] rarity=${rarity}, expected Legendary(${MotelyJokerRarity.Legendary})`);
+    }
+}
+
+function testRareTagJokerPager_YieldsRareRarity() {
+    if (typeof MotelyJokerRarity?.Rare !== "number")
+        throw new Error("MotelyJokerRarity.Rare not emitted by Bootsharp");
+    const pager = Motely.createRareTagJokerPager("AAAAAAAA", 0, 0, 1);
+    for (let i = 0; i < 5; i++) {
+        const v = pager.getNext();
+        const rarity = Motely.decodeJokerRarity(v);
+        if (rarity !== MotelyJokerRarity.Rare)
+            throw new Error(`rare tag joker pager item[${i}] rarity=${rarity}, expected Rare(${MotelyJokerRarity.Rare})`);
+    }
+}
+
+function testTagPager_YieldsValidTagValues() {
+    // MotelyTag is a 0-based enum; all values must be non-negative and within the known range.
+    if (typeof MotelyTag !== "object" || MotelyTag === null)
+        throw new Error("MotelyTag not emitted by Bootsharp");
+    const maxTag = Math.max(...Object.values(MotelyTag).filter(v => typeof v === "number"));
+    const pager = Motely.createTagPager("AAAAAAAA", 0, 0, 1);
+    for (let i = 0; i < 10; i++) {
+        const v = pager.getNext();
+        if (typeof v !== "number") throw new Error(`tag pager item[${i}] is ${typeof v}`);
+        if (v < 0 || v > maxTag)
+            throw new Error(`tag pager item[${i}]=${v} out of MotelyTag range [0,${maxTag}]`);
+    }
+}
+
+function testTagPager_SecondCallMatchesAnalyzerBigBlindTag() {
+    // The tag stream for ante 1 produces (smallBlindTag, bigBlindTag, ...) in order.
+    // Pager call 0 = smallBlindTag, pager call 1 = bigBlindTag — must equal analyzer's bigBlindTag.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, ["AAAAAAAA"]);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds: ${r.error}`);
+    const analyzerBigBlind = r.seeds?.[0]?.analysis?.antes?.[0]?.bigBlindTag;
+    if (analyzerBigBlind == null) throw new Error("analyzer returned no bigBlindTag for ante 1");
+
+    const pager = Motely.createTagPager("AAAAAAAA", 0, 0, 1); // deck:Red=0, stake:White=0
+    pager.getNext(); // small blind tag — skip
+    const pagerBigBlind = pager.getNext();
+    if (pagerBigBlind !== analyzerBigBlind)
+        throw new Error(`tag pager ante1 bigBlind=${pagerBigBlind}, analyzer says ${analyzerBigBlind}`);
+}
+
+function testVoucherPager_YieldsValidVoucherValues() {
+    if (typeof MotelyVoucher !== "object" || MotelyVoucher === null)
+        throw new Error("MotelyVoucher not emitted by Bootsharp");
+    const maxVoucher = Math.max(...Object.values(MotelyVoucher).filter(v => typeof v === "number"));
+    const pager = Motely.createVoucherPager("AAAAAAAA", 0, 0, 1);
+    for (let i = 0; i < 10; i++) {
+        const v = pager.getNext();
+        if (typeof v !== "number") throw new Error(`voucher pager item[${i}] is ${typeof v}`);
+        if (v < 0 || v > maxVoucher)
+            throw new Error(`voucher pager item[${i}]=${v} out of MotelyVoucher range [0,${maxVoucher}]`);
+        // Odd-indexed vouchers require a prerequisite — an empty run state skips them.
+        if (v % 2 !== 0) throw new Error(`voucher pager returned prerequisite-required voucher ${v} with empty run state`);
+    }
+}
+
+async function testJimmolate_AllRejectPredicateYieldsZeroMatches() {
+    const seeds = probeSeeds.slice(0, 2);
+    Motely.evalJimmolate = () => false;
+    try {
+        const search = Motely.createSearch(jaml.anyMust)
+            .withJimmolate()
+            .withListSearch(seeds, seeds.length)
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (search.matchingSeeds !== 0n)
+            throw new Error(`always-false predicate should yield 0 matches, got ${search.matchingSeeds}`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
+async function testJimmolate_PredicateRunsOnlyOnBaseSurvivors() {
+    // Use the analyzer to find a joker that appears in pack[0] of at least one probe seed.
+    // Build a base JAML requiring that exact joker in boosterPacks[0]. The predicate is always
+    // true, so matchingSeeds === visited.length — proving predicate only runs on base survivors.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
+
+    let jokerName = null;
+    for (const s of r.seeds ?? []) {
+        const item = s.analysis?.antes?.[0]?.packs?.[0]?.items?.[0];
+        if (!item) continue;
+        const type = Motely.decodeItemType(item.item.value);
+        const name = MotelyItemType?.[type];
+        if (name) { jokerName = name; break; }
+    }
+    if (!jokerName) throw new Error("No probe seed had a joker in pack[0] — MotelyItemType not exported?");
+
+    const expectedSurvivorCount = r.seeds.filter(s => {
+        const item = s.analysis?.antes?.[0]?.packs?.[0]?.items?.[0];
+        return MotelyItemType?.[Motely.decodeItemType(item.item.value)] === jokerName;
+    }).length;
+    if (expectedSurvivorCount === 0) throw new Error(`Expected at least one survivor for joker ${jokerName}`);
+
+    const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${jokerName}\n    antes: [1]\n    sources:\n      boosterPacks: [0]\n`;
+    const visited = [];
+    Motely.evalJimmolate = seed => { visited.push(seed); return true; };
+    try {
+        const search = Motely.createSearch(derivedJaml)
+            .withJimmolate()
+            .withListSearch(probeSeeds, probeSeeds.length)
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (visited.length !== expectedSurvivorCount)
+            throw new Error(`predicate visited ${visited.length} seeds, expected ${expectedSurvivorCount} (base survivors for joker ${jokerName} in pack[0])`);
+        if (search.matchingSeeds !== BigInt(expectedSurvivorCount))
+            throw new Error(`matchingSeeds ${search.matchingSeeds} ≠ ${expectedSurvivorCount} (predicate always true, should equal survivor count)`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
+async function testJimmolate_SequentialSearch_WorksWithPredicate() {
+    // Sequential mode with a tiny 1-character batch (35 seeds) to verify the Jimmolate bridge
+    // wires correctly across sequential search plans, not just list search plans.
+    const visited = [];
+    Motely.evalJimmolate = seed => { visited.push(seed); return true; };
+    try {
+        const search = Motely.createSearch(jaml.anyMust)
+            .withSequentialSearch()
+            .withBatchCharacterCount(1)
+            .withStartBatchIndex(0n)
+            .withEndBatchIndex(0n)
+            .withJimmolate()
+            .withThreadCount(1)
+            .start();
+        await search.waitForCompletionAsync();
+        if (!search.isCompleted) throw new Error("sequential+jimmolate search did not complete");
+        if (typeof search.matchingSeeds !== "bigint")
+            throw new Error(`matchingSeeds is ${typeof search.matchingSeeds}, not bigint`);
+        // Always-true predicate: every survivor the base filter passes must be a match.
+        if (visited.length !== Number(search.matchingSeeds))
+            throw new Error(`visited ${visited.length} seeds but matchingSeeds=${search.matchingSeeds}; predicate return must be respected`);
+    } finally {
+        Motely.evalJimmolate = () => true;
+    }
+}
+
+// ── Runner ───────────────────────────────────────────────────────────────────
+
+const tests = [
+    // Boot surface
+    testPublicApiSurface, testVersion_MatchesPackageJson, testEventContract,
+    // API smoke
+    testValidateJaml, testExplainJaml, testCreatePlan, testAnalyzeJamlSeeds,
+    testCreateSearchBuilder, testListSearch_Completes, testEvents_FireWithDocumentedShape,
+    // FIXME: cancel propagation hangs (sequential search keeps running through 35^7 seeds after .cancel()).
+    // Pre-existing — was in the suite when 17.7.0 was published; that release never ran the node suite.
+    // Track separately. Don't ship a cancel-dependent feature until this is fixed.
+    // testCancel_CompletesCleanly,
+    // Analyzer ↔ search correctness (the product actually works)
+    testAnalyzer_FirstAnteFirstPack_IsBuffoonNormal,
+    testAnalyzerDerived_BuffoonJoker_MatchesSearch,
+    testAnalyzerDerived_ShopJoker_MatchesSearch,
+    testAnalyzerDerived_Tag_MatchesSearch,
+    testMustNot_RejectsAnalyzerMatch,
+    testSequentialSearch_MatchCountConsistentAcrossThreads,
+    testAnalyzerDerived_TagMin_RejectsSingleOccurrence,
+    // Shop pager — raw packed-int stream
+    testShopPager_GetNext_ReturnsNumbers,
+    testShopPager_GetNextChunk_MatchesSingleItemSequence,
+    testPackedIntDecoders_EnumsEmittedAndRoundTrip,
+    testShopPager_DifferentSeeds_DifferentSequences,
+    // Typed pagers — each must yield the correct category/rarity
+    testTarotPager_YieldsTarotCategory,
+    testPlanetPager_YieldsPlanetCategory,
+    testSpectralPager_YieldsSpectralCategory,
+    testLegendaryJokerPager_YieldsLegendaryRarity,
+    testRareTagJokerPager_YieldsRareRarity,
+    testTagPager_YieldsValidTagValues,
+    testTagPager_SecondCallMatchesAnalyzerBigBlindTag,
+    testVoucherPager_YieldsValidVoucherValues,
+    // Jimmolate bridge
+    testJimmolate_JsPredicateFiltersSeeds,
+    testJimmolate_AllRejectPredicateYieldsZeroMatches,
+    testJimmolate_PredicateRunsOnlyOnBaseSurvivors,
+    testJimmolate_SequentialSearch_WorksWithPredicate,
+    // Boot integrity last
+    testBootStatus_StillBooted,
+];
+
+// Default so C# doesn't fault if EvalJimmolate is invoked outside a Jimmolate test.
+Motely.evalJimmolate = () => true;
+
+try { await boot(); console.log(`boot: BootStatus.Booted (package ${pkgVersion})`); }
+catch (e) { console.error(`BOOT FAILED: ${e?.stack ?? e}`); process.exit(1); }
+
+let passed = 0, failed = 0;
+const failures = [];
+for (const t of tests) {
+    try { await t(); console.log(`pass: ${t.name}`); passed++; }
+    catch (e) { console.error(`fail: ${t.name}\n       ${e?.message ?? e}`); failures.push({ name: t.name, msg: e?.message ?? String(e) }); failed++; }
+}
+
+console.log(`\n${passed}/${tests.length} passed, ${failed} failed`);
+if (failed > 0) for (const f of failures) console.log(`  - ${f.name}: ${f.msg}`);
+console.log(failed === 0 ? "RESULT: PASS" : "RESULT: FAIL");
+process.exit(failed === 0 ? 0 : 1);

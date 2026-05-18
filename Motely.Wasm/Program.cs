@@ -6,7 +6,6 @@ using Motely;
 using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Native;
-using System.Reflection;
 using System.Text;
 
 [assembly: Preferences(Space = [@"^Motely\.Wasm\.Program$", "Motely"])]
@@ -18,6 +17,9 @@ public static partial class Program
     private static IServiceProvider services = null!;
     private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(StringComparer.Ordinal);
     private static readonly MotelyFileWatcher FileWatcher = new();
+
+    [Import]
+    public static partial bool EvalJimmolate(string seed);
 
     [Export]
     public static event Action<IReadOnlyList<Change>>? OnFileChanges;
@@ -36,13 +38,11 @@ public static partial class Program
         services = new ServiceCollection()
             .AddBootsharp()
             .BuildServiceProvider();
+        JimmolateInteropBridge.Predicate = EvalJimmolate;
     }
 
     [Export]
-    public static string Version() =>
-        typeof(MotelyDeck).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
-            .InformationalVersion;
+    public static string Version() => MotelyVersionConstant.Value;
 
     [Export]
     public static string ValidateJaml(string jaml)
@@ -60,25 +60,59 @@ public static partial class Program
         }
     }
 
+    // Exception messages crossing the JSExport boundary under NativeAOT-LLVM trim mode lose
+    // their .Message and surface to JS as the opaque "C# exception from NativeAOT" husk. The
+    // result-shaped Exports below catch C#-side so the diagnostic survives — mirrors the
+    // existing pattern on MotelyJamlyzerResult.Error. CreateSearch must still throw (instance-
+    // proxied return), so its contract is "call ValidateJaml first." See README JAML API section.
+
     [Export]
     public static string ExplainJaml(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config) : "";
+            return $"# ERROR: {error ?? "Invalid JAML."}";
+        try
+        {
+            return config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config) : "";
+        }
+        catch (Exception ex)
+        {
+            return $"# ERROR: {ex.Message}";
+        }
     }
 
     [Export]
     public static JamlSearchPlan CreatePlan(string jaml)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return JamlSearchBuilder.CreatePlan(config);
+            return new(0, "", []) { Error = error ?? "Invalid JAML." };
+        try
+        {
+            return JamlSearchBuilder.CreatePlan(config);
+        }
+        catch (Exception ex)
+        {
+            return new(0, "", []) { Error = ex.Message };
+        }
     }
 
     [Export]
     public static MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
+
+    // ── Packed-int decoders ──────────────────────────────────────────────────
+    // Return typed enums so Bootsharp emits MotelyItemType, MotelyItemTypeCategory,
+    // MotelyJokerRarity, MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement
+    // into the generated .g.mjs — consumers call these instead of manual bit-whacking.
+    [Export] public static MotelyItemType         DecodeItemType        (int v) => (MotelyItemType)(v & MotelyGlobals.ItemTypeMask);
+    [Export] public static MotelyItemTypeCategory DecodeItemCategory    (int v) => (MotelyItemTypeCategory)(v & MotelyGlobals.ItemTypeCategoryMask);
+    [Export] public static MotelyJokerRarity      DecodeJokerRarity     (int v) => (MotelyJokerRarity)(v & MotelyGlobals.JokerRarityMask);
+    [Export] public static MotelyItemEdition      DecodeItemEdition     (int v) => (MotelyItemEdition)(v & MotelyGlobals.ItemEditionMask);
+    [Export] public static MotelyItemSeal         DecodeItemSeal        (int v) => (MotelyItemSeal)(v & MotelyGlobals.ItemSealMask);
+    [Export] public static MotelyItemEnhancement  DecodeItemEnhancement (int v) => (MotelyItemEnhancement)(v & MotelyGlobals.ItemEnhancementMask);
+    [Export] public static bool IsPerishable (int v) => (v & (1 << MotelyGlobals.PerishableStickerOffset)) != 0;
+    [Export] public static bool IsEternal    (int v) => (v & (1 << MotelyGlobals.EternalStickerOffset)) != 0;
+    [Export] public static bool IsRental     (int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
 
     [Export]
     public static IMotelySearchSettingsInterop CreateSearch(string jaml)

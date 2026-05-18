@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Motely.Enums;
 using YamlDotNet.Serialization;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Top-level JAML document: the loader fills this from YAML; <see cref="JamlSerializer"/> and the TUI emit the same shape. Keys are camelCase (JAML convention).
@@ -41,13 +42,6 @@ public sealed class JamlRootDocument
 
     [YamlMember(Alias = "mustNot")]
     public List<JamlClauseUnion>? MustNot { get; set; }
-
-    [YamlMember(Alias = "aesthetics")]
-    [JsonIgnore]
-    public List<string>? Aesthetics { get; set; }
-
-    [YamlMember(Alias = "hashtags")]
-    public List<string>? Hashtags { get; set; }
 
     [YamlMember(Alias = "seeds")]
     public List<string>? Seeds { get; set; }
