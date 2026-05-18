@@ -4,22 +4,11 @@ import { useState, useCallback } from "react";
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { MotelyJamlyzerResult, MotelySeedAnalysis } from "motely-wasm/motely/analysis";
-import type { AnalyzerAnteView } from "../components/AnalyzerExplorer.js";
 
 export type AnalyzerStatus = "idle" | "running" | "done" | "error";
 
-export interface UseAnalyzerState {
-    antes: AnalyzerAnteView[];
-    score: number | null;
-    status: AnalyzerStatus;
-    error: string | null;
-    tallyLabels: string[];
-    rawAnalysis: MotelySeedAnalysis | null;
-}
-
 
 export function useAnalyzer() {
-    const [antes, setAntes] = useState<AnalyzerAnteView[]>([]);
     const [score, setScore] = useState<number | null>(null);
     const [status, setStatus] = useState<AnalyzerStatus>("idle");
     const [error, setError] = useState<string | null>(null);
@@ -27,7 +16,6 @@ export function useAnalyzer() {
     const [rawAnalysis, setRawAnalysis] = useState<MotelySeedAnalysis | null>(null);
 
     const analyze = useCallback((seed: string, jaml: string) => {
-        setAntes([]);
         setScore(null);
         setTallyLabels([]);
         setRawAnalysis(null);
@@ -64,5 +52,5 @@ export function useAnalyzer() {
         setStatus((s) => (s === "error" ? "idle" : s));
     }, []);
 
-    return { antes, score, status, error, analyze, clearError, tallyLabels, rawAnalysis };
+    return { score, status, error, analyze, clearError, tallyLabels, rawAnalysis };
 }

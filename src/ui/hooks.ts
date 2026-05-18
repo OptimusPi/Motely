@@ -545,7 +545,6 @@ export function useJamlCardRenderer({
 
 /**
  * Tracks which 'ante' section is currently most visible in a scrollable container.
- * Used in JamlAnalyzerFullscreen and AnalyzerExplorer.
  */
 export function useAnteTracker(antes: { ante: number }[], options: { threshold?: number[] } = {}) {
   const [currentAnte, setCurrentAnte] = useState(antes[0]?.ante ?? 0)

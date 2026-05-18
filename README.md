@@ -12,7 +12,7 @@ npm install jaml-ui react react-dom
 
 | Entry | Contents |
 | ----- | -------- |
-| `jaml-ui` | Game card components, JAML IDE, Analyzer Explorer, hooks |
+| `jaml-ui` | Game card components, JAML IDE, hooks |
 | `jaml-ui/ui` | Jimbo design system — JimboPanel, JimboButton, JimboModal, tokens |
 | `jaml-ui/core` | Pure asset helpers, sprite metadata, decode utilities (no React) |
 | `jaml-ui/motely` | motely-wasm decode helpers (requires `motely-wasm` peer) |
@@ -21,7 +21,7 @@ npm install jaml-ui react react-dom
 ## Quick start
 
 ```tsx
-import { JamlGameCard, AnalyzerExplorer, JamlIde } from "jaml-ui";
+import { JamlGameCard, JamlIde } from "jaml-ui";
 import { JimboPanel, JimboButton } from "jaml-ui/ui";
 ```
 
@@ -61,15 +61,6 @@ import { JamlIde } from "jaml-ui";
   onSearch={handleSearch}
   isSearching={isSearching}
 />
-```
-
-### Analyzer Explorer
-
-```tsx
-import { AnalyzerExplorer } from "jaml-ui";
-
-// antes: AnalyzerAnteView[] — stream from motely-wasm createSearchContext
-<AnalyzerExplorer antes={antes} totalAntes={8} highlights={highlights} />
 ```
 
 ### JAML Map Preview
