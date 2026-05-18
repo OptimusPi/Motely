@@ -51,10 +51,6 @@ When you need motely-wasm changes that aren't published yet, follow the flow in 
 
 `dist/ui/jimbo.css` is the design-system stylesheet, emitted by Vite as a single asset (`cssCodeSplit: false`, custom `assetFileNames`). `src/index.ts` and `src/ui.ts` import it as a side effect, so any consumer importing from `jaml-ui` or `jaml-ui/ui` automatically gets the CSS. `sideEffects` in `package.json` is configured to preserve this through tree-shaking.
 
-### TypeScript config quirks
-
-`tsconfig.json` excludes three orphaned IDE files (`JamlBuilder.tsx`, `WasmStatus.tsx`, `AgnosticSeedCard.tsx`) — left on disk for triage but not built or shipped. Don't re-add them to includes without checking why they were carved out (they use `?worker` Vite-only syntax and would break webpack consumers — see comments in `src/ui.ts`).
-
 ## Design rules (from AGENTS.md)
 
 These are hard constraints for any UI work in this repo:

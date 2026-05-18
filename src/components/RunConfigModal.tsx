@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { JimboModal, JimboButton } from "../ui/panel.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
-import { JimboText } from "../ui/jimboText.js";
 import { DECK_OPTIONS, STAKE_OPTIONS } from "../lib/data/constants.js";
 import { DeckSprite } from "./DeckSprite.js";
 import { StakeSprite } from "../ui/sprites.js";

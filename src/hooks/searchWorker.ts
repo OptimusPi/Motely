@@ -4,7 +4,7 @@
 // so no SharedArrayBuffer / COOP+COEP headers are required to deploy this.
 // If a future change reintroduces SAB, switch the deployment to the Cloudflare
 // permanent named tunnel so COOP/COEP can be enforced at the edge.
-import bootsharp, { Motely } from "motely-wasm";
+import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { IMotelySearch, IMotelySearchSettingsInterop, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
 import type { JamlAesthetic } from "motely-wasm/motely/filters";
