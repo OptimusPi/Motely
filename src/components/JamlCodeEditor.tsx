@@ -25,12 +25,12 @@ const balatroTheme = EditorView.theme(
     "&": {
       backgroundColor: JimboColorOption.DARKEST,
       color: JimboColorOption.WHITE,
-      fontSize: "13px",
+      fontSize: "14px",
       height: "100%",
     },
     ".cm-content": {
       fontFamily: "var(--j-font-code, 'JetBrains Mono', ui-monospace, monospace)",
-      lineHeight: "22px",
+      lineHeight: "23px",
       padding: "12px 0",
       caretColor: JimboColorOption.GOLD_TEXT,
       minHeight: "100%",
@@ -43,6 +43,7 @@ const balatroTheme = EditorView.theme(
     ".cm-lineNumbers .cm-gutterElement": {
       minWidth: "2ch",
       padding: "0 6px 0 8px",
+      fontSize: "14px",
     },
     ".cm-activeLineGutter": {
       color: JimboColorOption.GOLD_TEXT,
@@ -66,6 +67,7 @@ const balatroTheme = EditorView.theme(
     ".cm-placeholder": {
       color: JimboColorOption.GREY,
       fontStyle: "italic",
+      fontSize: "14px",
     },
   },
   { dark: true },

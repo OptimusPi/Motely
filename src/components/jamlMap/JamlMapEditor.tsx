@@ -203,47 +203,47 @@ export function JamlMapEditor({
         {Array.from({ length: 40 }, (_, i) => i).map((a) => (
           <div key={a} style={{
             scrollSnapAlign: "start",
-            padding: "24px 8px 64px 8px",
+            padding: "24px 0 64px 0",
             minHeight: "100%", // ensuring each ante takes at least full viewport height to snap cleanly
             display: "flex",
             flexDirection: "column",
             gap: 24,
             borderBottom: `2px solid ${C.DARK_GREY}`
           }}>
-            <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 8 }}>Ante {a}</JimboText>
+            <JimboText size="lg" tone="white" style={{ textAlign: "center", marginBottom: 8 }}>Ante {a}</JimboText>
 
             {/* Row 1: Blinds & Tags & Voucher */}
-            <div className="j-flex j-justify-between j-items-end">
+            <div className="j-flex j-justify-between j-items-end" style={{ padding: "0 4px" }}>
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">Voucher</JimboText>
+                <JimboText size="xs" tone="grey">Voucher</JimboText>
                 {renderSlot(a, `ante_${a}_voucher`, 42, "Vouchers", "voucher")}
               </div>
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">Small</JimboText>
+                <JimboText size="xs" tone="grey">Small</JimboText>
                 {renderSlot(a, `ante_${a}_tag_small`, 42, "tags", "tag")}
               </div>
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">Big</JimboText>
+                <JimboText size="xs" tone="grey">Big</JimboText>
                 {renderSlot(a, `ante_${a}_tag_big`, 42, "tags", "tag")}
               </div>
               <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="micro" tone="grey">Boss</JimboText>
+                <JimboText size="xs" tone="grey">Boss</JimboText>
                 {renderSlot(a, `ante_${a}_boss`, 42, "BlindChips", "boss")}
               </div>
             </div>
 
             {/* Row 2: Shop Items */}
             <div className="j-flex-col j-gap-xs">
-              <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>Shop Items</JimboText>
-              <div className="j-flex hide-scrollbar j-gap-sm" style={{ overflowX: "auto", paddingBottom: 8 }}>
+              <JimboText size="sm" tone="grey" style={{ letterSpacing: 1, padding: "0 4px" }}>Shop Items</JimboText>
+              <div className="j-flex hide-scrollbar j-gap-sm" style={{ overflowX: "auto", padding: "0 0 8px 4px" }}>
                 {[1,2,3,4,5,6,7,8].map(i => renderSlot(a, `ante_${a}_shop_${i}`, 52, "Jokers"))}
               </div>
             </div>
 
             {/* Row 3: Packs */}
             <div className="j-flex-col j-gap-xs">
-              <JimboText size="xs" tone="grey" style={{ letterSpacing: 1 }}>Packs</JimboText>
-              <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap" }}>
+              <JimboText size="sm" tone="grey" style={{ letterSpacing: 1, padding: "0 4px" }}>Packs</JimboText>
+              <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap", padding: "0 4px" }}>
                 {[1,2,3,4,5,6].map(i => renderSlot(a, `ante_${a}_pack_${i}`, 64, "Boosters", "pack"))}
               </div>
             </div>
@@ -291,7 +291,7 @@ export function CategoryMenu({
       display: "flex",
       flexDirection: "column",
       gap: 12,
-      padding: "10px 4px",
+      padding: "12px 0",
       maxHeight: "70vh",
       overflowY: "auto",
     }}>
@@ -306,8 +306,8 @@ export function CategoryMenu({
           <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left" }}>
             <JimboSprite name={cat.sprite} sheet={cat.sheet} width={24} />
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <span style={{ fontSize: 11 }}>{cat.label}</span>
-              <span style={{ fontSize: 8, opacity: 0.7, letterSpacing: "0.04em", lineHeight: 1, whiteSpace: "normal" }}>{cat.hint}</span>
+              <span style={{ fontSize: 12 }}>{cat.label}</span>
+              <span style={{ fontSize: 9, opacity: 0.7, letterSpacing: "0.04em", lineHeight: 1, whiteSpace: "normal" }}>{cat.hint}</span>
             </div>
           </div>
         </JimboButton>

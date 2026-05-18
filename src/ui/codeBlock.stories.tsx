@@ -9,7 +9,7 @@ const meta = {
     layout: 'centered',
   },
   decorators: [
-    (Story) => <div style={{ width: 320 }}><Story /></div>,
+    (Story) => <div className="j-story-panel-grid"><Story /></div>,
   ],
 } satisfies Meta<typeof JimboCodeBlock>;
 
@@ -19,7 +19,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     filename: 'route.jaml',
-    language: 'yaml',
+    language: 'JAML',
     code: 'must:\n  - joker: Blueprint\nshould:\n  - uncommonJoker: Oops! All 6s\n',
   },
 };

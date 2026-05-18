@@ -76,7 +76,7 @@ export const EternalJoker: Story = {
   },
 };
 
-export const PlayingCard: Story = {
+export const StandardCard: Story = {
   args: {
     type: 'playing',
     card: {

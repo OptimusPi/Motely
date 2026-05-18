@@ -1,19 +1,25 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { RealStandardcard } from './Standardcard';
+import { JimboPanel } from '../ui/panel';
+import { JimboText } from '../ui/jimboText';
 
 function Showcase() {
   return (
-    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', width: 320 }}>
-      <RealStandardcard rank="Ace" suit="Spades" />
-      <RealStandardcard rank="10" suit="Hearts" enhancement="gold" />
-      <RealStandardcard rank="Q" suit="Diamonds" seal="red" />
-      <RealStandardcard rank="J" suit="Clubs" edition="Foil" />
-    </div>
+    <JimboPanel className="j-story-panel-grid">
+      <JimboText size="md" tone="gold" className="j-section-header__tag">Standard Cards (standardCard)</JimboText>
+      <div className="j-story-card-grid">
+        <RealStandardcard rank="Ace" suit="Spades" size={48} />
+        <RealStandardcard rank="10" suit="Hearts" enhancement="gold" size={48} />
+        <RealStandardcard rank="Q" suit="Diamonds" seal="red" size={48} />
+        <RealStandardcard rank="J" suit="Clubs" edition="Foil" size={48} />
+        <RealStandardcard rank="King" suit="Hearts" enhancement="steel" edition="Holographic" size={48} />
+      </div>
+    </JimboPanel>
   );
 }
 
 const meta = {
-  title: 'JAML / Standardcard',
+  title: 'JAML / Standard Cards (standardCard)',
   component: RealStandardcard,
   parameters: {
     jimboHarness: false,

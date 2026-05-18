@@ -11,6 +11,11 @@ export interface JimboCodeBlockProps {
 
 export function JimboCodeBlock({ code, language, filename, className = '' }: JimboCodeBlockProps) {
   const [copied, setCopied] = useState(false)
+  const displayLanguage = filename?.toLowerCase().endsWith('.jaml')
+    ? 'JAML'
+    : language?.toLowerCase() === 'yaml'
+      ? undefined
+      : language
 
   const copy = () => {
     void navigator.clipboard.writeText(code)
@@ -23,7 +28,7 @@ export function JimboCodeBlock({ code, language, filename, className = '' }: Jim
       <div className="j-code-block__header">
         <div className="j-code-block__meta">
           {filename && <span className="j-code-block__filename">{filename}</span>}
-          {language && <span className="j-code-block__lang">{language}</span>}
+          {displayLanguage && <span className="j-code-block__lang">{displayLanguage}</span>}
         </div>
         <button
           onClick={copy}
