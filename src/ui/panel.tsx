@@ -84,10 +84,10 @@ export function JimboButton({
   )
 }
 
-export function JimboBackButton({ onClick }: { onClick?: () => void }) {
+export function JimboBackButton({ onClick, size = 'md' }: { onClick?: () => void; size?: 'sm' | 'md' | 'lg' }) {
   return (
     <div className="j-back-btn-wrap j-flex j-justify-center j-w-full">
-      <JimboButton tone="orange" size="sm" fullWidth onClick={onClick} className="j-back-btn">Back</JimboButton>
+      <JimboButton tone="orange" size={size} fullWidth onClick={onClick} className="j-back-btn">Back</JimboButton>
     </div>
   )
 }
@@ -112,7 +112,11 @@ export function JimboModal({ children, open, onClose, title, className, showBack
         onBack={showBack ? onClose : undefined}
         className={`j-modal ${className ?? ''}`}
       >
-        {title && <JimboText as="h2" size="lg" className="j-modal__title">{title}</JimboText>}
+        {title && (
+          <div className="j-modal__title-wrap" aria-hidden={false}>
+            <JimboText as="h2" size="lg" className="j-modal__title">{title}</JimboText>
+          </div>
+        )}
         {children}
       </JimboPanel>
     </div>

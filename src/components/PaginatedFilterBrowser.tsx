@@ -112,7 +112,7 @@ export function PaginatedFilterBrowser({
           >
             <div className="j-filter-browser__page-chip">
               <JimboText size="sm" tone="white" className="j-text-center">
-                {safePage + 1} / {totalPages}
+                Page {safePage + 1}/{totalPages}
               </JimboText>
             </div>
           </JimboFlankNav>

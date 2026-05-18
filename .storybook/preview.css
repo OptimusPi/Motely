@@ -1,9 +1,16 @@
 body {
-  background: transparent !important;
+  background: var(--j-darkest, #1e2b2d) !important;
   margin: 0;
   padding: 0;
 }
 
 #storybook-root {
   min-height: 100dvh;
+}
+
+#storybook-root,
+.sb-show-main,
+.docs-story,
+.sbdocs-preview {
+  background: var(--j-darkest, #1e2b2d) !important;
 }

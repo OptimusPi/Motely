@@ -1,9 +1,20 @@
 import React, { useCallback } from 'react'
 import { useJimboTooltip, type JimboTooltipMode, type JimboTooltipPlacement } from './hooks.js'
 
+export type JimboTooltipBadgeTone = 'red' | 'blue' | 'green' | 'gold' | 'orange' | 'purple' | 'dark'
+
+export interface JimboTooltipBadge {
+  tone: JimboTooltipBadgeTone
+  label: string
+}
+
 export interface JimboTooltipProps {
   /** Content rendered inside the tooltip panel. Typically a card's ability text, joker description, etc. */
   content: React.ReactNode
+  /** Optional colored chip pinned to the bottom of the tooltip — Balatro card label pattern (Bonus Card, Mult Card, etc.). */
+  badge?: JimboTooltipBadge
+  /** Tooltip surface style. `dark` (default) — silver-bordered dark panel. `card` — white card with dark text, used for in-game card descriptions. */
+  variant?: 'dark' | 'card'
   /** The target element the tooltip anchors to. */
   children: React.ReactElement
   /** `snap` (default): tooltip sits above/below the target's bounding rect.
@@ -33,6 +44,8 @@ function assignRef<T>(ref: React.Ref<T> | undefined | null, value: T) {
  */
 export function JimboTooltip({
   content,
+  badge,
+  variant = 'dark',
   children,
   mode = 'snap',
   placement = 'auto',
@@ -82,7 +95,7 @@ export function JimboTooltip({
         <div
           ref={tooltipRef}
           role="tooltip"
-          className="j-tooltip"
+          className={`j-tooltip j-tooltip--${variant}`}
           style={{
             left: pos?.left ?? -9999,
             top: pos?.top ?? -9999,
@@ -90,7 +103,10 @@ export function JimboTooltip({
             opacity: pos ? 1 : 0,
           }}
         >
-          {content}
+          <div className="j-tooltip__body">{content}</div>
+          {badge && (
+            <div className={`j-tooltip__badge j-bg--${badge.tone}`}>{badge.label}</div>
+          )}
         </div>
       ) : null}
     </>

@@ -66,8 +66,8 @@ export function Showcase({
       <div style={{ padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {/* Compact title */}
         <div className="j-text-center">
-          <JimboText size="lg" tone="gold">{title}</JimboText>
-          <JimboText size="micro" tone="grey" style={{ letterSpacing: 3 }}>{subtitle}</JimboText>
+          <JimboText size="display" tone="gold">{title}</JimboText>
+          <JimboText size="micro" tone="grey" style={{ letterSpacing: 1 }}>{subtitle}</JimboText>
         </div>
 
         {/* Engine strip — single line */}
@@ -78,7 +78,7 @@ export function Showcase({
             border: '1px solid var(--j-panel-edge)',
           }}>
             <JimboText size="micro" tone="purple">{mcpInfo.engine}</JimboText>
-            <JimboText size="micro" tone="grey">{mcpInfo.features}</JimboText>
+            <JimboText size="micro" tone="white">{mcpInfo.features}</JimboText>
           </div>
         )}
 
@@ -132,8 +132,8 @@ export function Showcase({
       </div>
 
       <JimboAppFooter>
-        <JimboButton tone="green" fullWidth size="lg" onClick={onNewSearch}>New Search</JimboButton>
-        <JimboButton tone="blue"  fullWidth size="lg" onClick={onBrowseFilters}>Browse Filters</JimboButton>
+        <JimboButton tone="red" fullWidth size="lg" onClick={onNewSearch}>New Search</JimboButton>
+        <JimboButton tone="blue" fullWidth size="lg" onClick={onBrowseFilters}>Browse Filters</JimboButton>
       </JimboAppFooter>
       <JimboBalatroFooter />
     </JimboApp>
