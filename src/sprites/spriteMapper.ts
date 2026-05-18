@@ -43,7 +43,10 @@ const ITEM_MAP = new Map<string, SpriteData>();
 function registerAll(items: SpriteEntry[], type: SpriteSheetType) {
   for (const item of items) {
     if (!item.name || !item.pos) continue;
-    ITEM_MAP.set(normalize(item.name), { pos: item.pos, type });
+    const key = normalize(item.name);
+    if (!ITEM_MAP.has(key)) {
+      ITEM_MAP.set(key, { pos: item.pos, type });
+    }
   }
 }
 

@@ -54,19 +54,17 @@ JimboInnerPanel.displayName = 'JimboInnerPanel'
 
 export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'tarot' | 'planet' | 'spectral' | 'grey'
 
-export interface JimboButtonProps {
+export interface JimboButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
   tone?: JimboTone
   size?: 'xs' | 'sm' | 'md' | 'lg'
   fullWidth?: boolean
   disabled?: boolean
   onClick?: () => void
-  style?: React.CSSProperties
-  className?: string
   children?: React.ReactNode
 }
 
 export function JimboButton({
-  tone = 'orange', size = 'md', fullWidth = false, disabled = false, onClick, style, className = '', children,
+  tone = 'orange', size = 'md', fullWidth = false, disabled = false, onClick, style, className = '', children, ...buttonProps
 }: JimboButtonProps) {
   const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
 
@@ -77,6 +75,7 @@ export function JimboButton({
       disabled={disabled}
       onClick={onClick}
       style={style}
+      {...buttonProps}
     >
       <div className="j-btn__face">
         <JimboText size={textSize}>{children}</JimboText>
@@ -88,7 +87,7 @@ export function JimboButton({
 export function JimboBackButton({ onClick }: { onClick?: () => void }) {
   return (
     <div className="j-back-btn-wrap j-flex j-justify-center j-w-full">
-      <JimboButton tone="orange" size="md" fullWidth onClick={onClick} className="j-back-btn">Back</JimboButton>
+      <JimboButton tone="orange" size="sm" fullWidth onClick={onClick} className="j-back-btn">Back</JimboButton>
     </div>
   )
 }

@@ -40,18 +40,6 @@ const SHEET_FOR_VISUAL: Record<JamlPreviewVisualType, SpriteSheetType> = {
   boss: "BlindChips",
 };
 
-/** 
- * Pulsing glow animation for hits.
- * Design ref: assets/...DesignsV2/src/v2/GlowRing.css
- */
-const GLOW_ANIMATION = `
-@keyframes j-glow-pulse {
-  0% { box-shadow: 0 0 0 1px var(--glow-color), 0 0 4px var(--glow-color); opacity: 0.8; }
-  50% { box-shadow: 0 0 0 2px var(--glow-color), 0 0 12px var(--glow-color); opacity: 1; }
-  100% { box-shadow: 0 0 0 1px var(--glow-color), 0 0 4px var(--glow-color); opacity: 0.8; }
-}
-`;
-
 function ClausePill({ 
   item, 
   glow, 
@@ -83,7 +71,6 @@ function ClausePill({
       }}
       title={`${item.clauseKey}: ${item.value}${hasData ? ` (Found: ${matchCount})` : ""}`}
     >
-      <style>{GLOW_ANIMATION}</style>
       <JimboSprite 
         name={item.value} 
         sheet={SHEET_FOR_VISUAL[item.visualType]} 
@@ -114,7 +101,7 @@ function ClausePill({
             boxShadow: `0 1px 0 ${C.BLACK}`,
           }}
         >
-          {matchCount > 1 ? `x${matchCount}` : "✓"}
+          {matchCount > 1 ? `x${matchCount}` : "1"}
         </div>
       )}
     </div>
@@ -139,7 +126,9 @@ function ZoneRail({
       style={{
         border: `2px dashed ${meta.color}55`,
         borderRadius: 6,
-        padding: compact ? 4 : 8,
+        padding: compact ? 6 : 10,
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -234,9 +223,11 @@ export function JamlMapPreview({
         display: "flex",
         flexDirection: "column",
         gap: compact ? 6 : 10,
-        padding: compact ? 6 : 10,
+          padding: compact ? 8 : 10,
         background: C.DARKEST,
         color: C.WHITE,
+          width: "100%",
+          boxSizing: "border-box",
       }}
     >
       {SECTION_ORDER.map((section) => (

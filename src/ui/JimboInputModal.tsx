@@ -3,11 +3,9 @@
 "use client";
 
 import { JimboButton, JimboModal } from "./panel.js";
-import { JimboColorOption } from "./tokens.js";
 import { JimboText } from "./jimboText.js";
+import { JimboTextInput } from "./JimboTextInput.js";
 import { useEffect, useRef, useState } from "react";
-
-const C = JimboColorOption;
 
 export interface JimboInputModalProps {
   cancelLabel?: string;
@@ -69,14 +67,14 @@ export function JimboInputModal({
       {message && (
         <JimboText
           size="sm"
-          style={{ display: "block", marginBottom: 8 }}
+          className="j-input-modal__message"
           tone="grey"
         >
           {message}
         </JimboText>
       )}
-      <input
-        aria-invalid={!!error}
+      <JimboTextInput
+        invalid={!!error}
         onChange={(e) => {
           setValue(e.target.value);
           if (error) {
@@ -93,39 +91,19 @@ export function JimboInputModal({
         }}
         placeholder={placeholder}
         ref={inputRef}
-        style={{
-          width: "100%",
-          padding: "8px 10px",
-          background: C.DARKEST,
-          color: C.WHITE,
-          border: `1px solid ${error ? C.RED : C.PANEL_EDGE}`,
-          borderRadius: 4,
-          fontSize: 13,
-          fontFamily: "m6x11plus, monospace",
-          letterSpacing: 1,
-          outline: "none",
-          boxSizing: "border-box",
-        }}
         type="text"
         value={value}
       />
       {error && (
         <JimboText
           size="sm"
-          style={{ display: "block", marginTop: 6 }}
+          className="j-input-modal__error"
           tone="red"
         >
           {error}
         </JimboText>
       )}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 8,
-          marginTop: 14,
-        }}
-      >
+      <div className="j-input-modal__actions">
         <JimboButton onClick={onCancel} size="sm" tone="red">
           {cancelLabel}
         </JimboButton>

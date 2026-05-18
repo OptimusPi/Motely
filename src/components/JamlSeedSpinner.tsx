@@ -71,7 +71,7 @@ export function JamlSeedSpinner({
         ) : null}
       </div>
       <div className="j-seed-spinner__row">
-        <JimboButton tone="red" size="sm" onClick={() => seek(-1)} disabled={normalizedSeeds.length < 2}>
+        <JimboButton tone="red" size="lg" className="j-seed-spinner__arrow" onClick={() => seek(-1)} disabled={normalizedSeeds.length < 2} aria-label="Previous seed">
           {"<"}
         </JimboButton>
         <JamlSeedInput
@@ -88,7 +88,7 @@ export function JamlSeedSpinner({
             <span>Copy</span>
           </span>
         </JimboButton>
-        <JimboButton tone="red" size="sm" onClick={() => seek(1)} disabled={normalizedSeeds.length < 2}>
+        <JimboButton tone="red" size="lg" className="j-seed-spinner__arrow" onClick={() => seek(1)} disabled={normalizedSeeds.length < 2} aria-label="Next seed">
           {">"}
         </JimboButton>
       </div>

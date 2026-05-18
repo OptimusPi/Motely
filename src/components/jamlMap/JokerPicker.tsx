@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
 import { JimboSprite } from "../../ui/sprites.js";
-import { JimboColorOption, withAlpha } from "../../ui/tokens.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JOKERS, type SpriteEntry } from "../../sprites/spriteData.js";
 import type { SlotSelection } from "./MysterySlot.js";
@@ -64,15 +63,6 @@ function rarityToClauseKey(rarity: JokerRarity): string {
   return "commonJoker";
 }
 
-const RARITY_DOT: Record<JokerRarity, string> = {
-  legendary: JimboColorOption.PURPLE,
-  rare:      JimboColorOption.RED,
-  uncommon:  JimboColorOption.GREEN,
-  common:    JimboColorOption.BLUE,
-};
-
-const C = JimboColorOption;
-
 const LEGENDARY_LIST = JOKERS.filter((j) => LEGENDARY_JOKERS.has(j.name));
 const NON_LEGENDARY = JOKERS.filter((j) => !LEGENDARY_JOKERS.has(j.name));
 
@@ -101,38 +91,15 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
   };
 
   const renderJoker = (joker: SpriteEntry) => {
-    const rarity = getJokerRarity(joker.name);
     return (
       <div
         key={joker.name}
-        className="j-juice-hover"
+        className="j-picker__item j-juice-hover"
         onClick={() => handleSelect(joker)}
         title={joker.name}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 3,
-          padding: 4,
-          borderRadius: 4,
-          cursor: "pointer",
-          position: "relative",
-        }}
       >
         <JimboSprite name={joker.name} sheet="Jokers" width={48} />
-        <div
-          style={{
-            position: "absolute",
-            top: 2,
-            right: 2,
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: RARITY_DOT[rarity],
-            boxShadow: `0 0 0 1px ${withAlpha(C.BLACK, 0.5)}`,
-          }}
-        />
-        <JimboText size="micro" tone="grey" style={{ maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <JimboText size="micro" tone="white" className="j-picker__item-label">
           {joker.name}
         </JimboText>
       </div>
@@ -140,42 +107,28 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", maxHeight: "80vh" }}>
-      {/* Legendary row — always visible, no search needed */}
-      <div style={{ padding: "8px 10px 6px", borderBottom: `1px solid ${withAlpha(C.PURPLE, 0.3)}` }}>
-        <JimboText size="micro" tone="grey" style={{ marginBottom: 6, letterSpacing: 1 }}>Legendary</JimboText>
-        <div style={{ display: "flex", gap: 4, justifyContent: "space-around" }}>
+    <div className="j-picker">
+      <div className="j-picker__section">
+        <JimboText size="micro" tone="white" className="j-picker__section-title">Legendary</JimboText>
+        <div className="j-picker__grid j-picker__grid--legendary">
           {LEGENDARY_LIST.map(renderJoker)}
         </div>
       </div>
 
-      {/* Search */}
-      <div style={{ padding: "6px 10px 4px" }}>
+      <div className="j-picker__search">
         <input
-          className="j-seed-input__field"
+          className="j-seed-input__field j-picker__search-field"
           type="text"
           placeholder="Search jokers..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ fontSize: 13, padding: "6px 10px", textTransform: "none", letterSpacing: "0.04em", width: "100%" }}
         />
       </div>
 
-      {/* Main grid */}
-      <div className="hide-scrollbar" style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 4,
-        padding: "4px 10px 10px",
-        overflowY: "auto",
-        flex: 1,
-        alignContent: "flex-start",
-      }}>
-        {filtered.map((j) => (
-          <div key={j.name} style={{ width: 64 }}>{renderJoker(j)}</div>
-        ))}
+      <div className="j-picker__grid hide-scrollbar">
+        {filtered.map(renderJoker)}
         {filtered.length === 0 && (
-          <div style={{ width: "100%", padding: 20, textAlign: "center" }}>
+          <div className="j-picker__empty">
             <JimboText size="sm" tone="grey">No jokers match "{search}"</JimboText>
           </div>
         )}

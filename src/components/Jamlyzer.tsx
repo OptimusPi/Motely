@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
-import { JimboColorOption } from "../ui/tokens.js";
 import { JamlSeedSpinner } from "./JamlSeedSpinner.js";
 import type { JamlSeedInputVariant } from "./JamlSeedInput.js";
 
@@ -26,10 +25,8 @@ export function Jamlyzer({ jaml, onTest, result, error, seeds = [], initialSeed 
   };
 
   return (
-    <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Seed input */}
-      <JimboPanel>
-        <div style={{ display: "flex", gap: 6, alignItems: "flex-end", justifyContent: "space-between" }}>
+    <div className="j-jamlyzer">
+      <div className="j-jamlyzer__control">
           <JamlSeedSpinner
             seeds={seeds}
             value={seed}
@@ -48,33 +45,31 @@ export function Jamlyzer({ jaml, onTest, result, error, seeds = [], initialSeed 
           >
             {result === "running" ? "..." : "Test"}
           </JimboButton>
-        </div>
-      </JimboPanel>
+      </div>
 
-      {/* Result */}
       {result === "match" && (
-        <JimboPanel className="j-glow--match" style={{ background: JimboColorOption.DARK_GREEN, textAlign: "center" }}>
-          <JimboText size="xl" tone="gold" style={{ letterSpacing: 3, display: "block", marginBottom: 4 }}>{seed}</JimboText>
+        <JimboPanel className="j-jamlyzer__result j-jamlyzer__result--match j-glow--match">
+          <JimboText size="xl" tone="gold" className="j-jamlyzer__seed">{seed}</JimboText>
           <JimboText size="md" tone="green">Match</JimboText>
         </JimboPanel>
       )}
 
       {result === "nomatch" && (
-        <JimboPanel style={{ textAlign: "center" }}>
-          <JimboText size="xl" tone="grey" style={{ letterSpacing: 3, display: "block", marginBottom: 4 }}>{seed}</JimboText>
+        <JimboPanel className="j-jamlyzer__result">
+          <JimboText size="xl" tone="grey" className="j-jamlyzer__seed">{seed}</JimboText>
           <JimboText size="md" tone="red">No match</JimboText>
         </JimboPanel>
       )}
 
       {result === "error" && (
-        <JimboPanel>
-          <JimboText size="xs" tone="red" style={{ display: "block", textAlign: "center" }}>{error ?? "Error"}</JimboText>
+        <JimboPanel className="j-jamlyzer__result">
+          <JimboText size="xs" tone="red" className="j-text-center">{error ?? "Error"}</JimboText>
         </JimboPanel>
       )}
 
       {result === "idle" && !jaml.trim() && (
-        <JimboPanel>
-          <JimboText size="xs" tone="grey" style={{ display: "block", textAlign: "center" }}>
+        <JimboPanel className="j-jamlyzer__result">
+          <JimboText size="xs" tone="grey" className="j-text-center">
             Write a JAML filter in the JAML tab first
           </JimboText>
         </JimboPanel>

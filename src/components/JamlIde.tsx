@@ -107,7 +107,7 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
           border: `1px dashed ${JimboColorOption.DARK_GREY}`,
           borderRadius: 10,
           padding: 16,
-          fontSize: 12,
+          fontSize: 13,
           color: JimboColorOption.GREY,
           background: `${JimboColorOption.DARKEST}88`,
           textAlign: "center",
@@ -206,15 +206,15 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
                 />
 
                 {/* Fallback/Detailed tally list for debugging or non-visual clauses */}
-                <div style={{ padding: "4px 8px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
-                  <span style={{ fontSize: 9, color: JimboColorOption.WHITE, opacity: 0.8 }}>Raw Tally Data</span>
+                <div style={{ padding: "6px 0 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontSize: 10, color: JimboColorOption.WHITE, opacity: 0.8 }}>Raw Tally Data</span>
                   {(result.tallyLabels ?? []).map((label, i) => {
                     const val = result.tallyColumns![i] ?? 0;
                     if (val === 0) return null;
                     return (
                       <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 10, color: JimboColorOption.WHITE, flex: 1 }}>{label}</span>
-                        <span style={{ fontSize: 10, color: JimboColorOption.GREEN_TEXT }}>{val}</span>
+                        <span style={{ fontSize: 11, color: JimboColorOption.WHITE, flex: 1 }}>{label}</span>
+                        <span style={{ fontSize: 11, color: JimboColorOption.GREEN_TEXT }}>{val}</span>
                       </div>
                     );
                   })}

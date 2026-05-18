@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { JimboButton, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboFlankNav } from "../ui/jimboFlankNav.js";
-import { JimboColorOption } from "../ui/tokens.js";
-
-const C = JimboColorOption;
 
 export interface FilterItem {
   id: string;
   name: string;
   description: string;
+  deckText?: string;
+  stakeText?: string;
+  targetItems?: string[];
   authorText?: string;
   dateText?: string;
   statsText?: string;
@@ -36,8 +36,8 @@ export function PaginatedFilterBrowser({
   onMainAction,
   onSecondaryAction,
   onDeleteFilter,
-  mainActionText = "SELECT",
-  secondaryActionText = "EDIT",
+  mainActionText = "Select",
+  secondaryActionText = "Edit",
   showSecondary = false,
   showDelete = false,
   emptyText = "No items found.",
@@ -56,67 +56,41 @@ export function PaginatedFilterBrowser({
   const handleNextPage = () => setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
 
   return (
-    <div
-      className="j-flex-col j-gap-md"
-      style={{
-        width: "100%",
-        height: "100%",
-        boxSizing: "border-box",
-        overflow: "hidden",
-      }}
-    >
-      {/* Scrollable List Panel */}
-      <JimboPanel style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+    <div className="j-filter-browser">
+      <JimboPanel className="j-filter-browser__list-panel">
         <div
-          style={{ flex: 1, overflowY: "auto", position: "relative" }}
-          className="hide-scrollbar j-flex-col j-items-center j-gap-xs"
+          className="j-filter-browser__list hide-scrollbar"
         >
           {pageFilters.map((filter) => {
             const isSelected = selectedId === filter.id;
+            const deckStake = [filter.deckText, filter.stakeText].filter(Boolean).join(" / ");
             return (
-              <div
+              <button
                 key={filter.id}
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  maxWidth: 240, // Matches filter-list-item MinWidth=210 approx
-                  display: "flex",
-                  justifyContent: "center",
+                type="button"
+                className="j-filter-browser__item"
+                data-active={isSelected}
+                onClick={() => {
+                  setSelectedId(filter.id);
+                  onSelectFilter?.(filter);
                 }}
               >
-                {/* Triangle Indicator */}
-                {isSelected && (
-                  <div
-                    className="j-animate-jimbo-bounce"
-                    style={{
-                      position: "absolute",
-                      left: -20, // push out to left
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: 0,
-                      height: 0,
-                      borderTop: "8px solid transparent",
-                      borderBottom: "8px solid transparent",
-                      borderLeft: `12px solid ${C.GOLD}`, // Balatro usually uses gold/white for selection triangle
-                      filter: `drop-shadow(2px 2px 2px rgba(0,0,0,0.5))`,
-                    }}
-                  />
-                )}
-                
-                <div style={{ width: "100%" }}>
-                  <JimboButton
-                    tone={isSelected ? "red" : "grey"}
-                    size="sm"
-                    style={{ width: "100%" }}
-                    onClick={() => {
-                      setSelectedId(filter.id);
-                      onSelectFilter?.(filter);
-                    }}
-                  >
+                <div className="j-filter-browser__item-main">
+                  <JimboText size="xs" tone="grey" className="j-filter-browser__deck-stake">
+                    {deckStake || "Any deck / Any stake"}
+                  </JimboText>
+                  <JimboText size="sm" tone={isSelected ? "gold" : "white"} className="j-filter-browser__name">
                     {filter.name}
-                  </JimboButton>
+                  </JimboText>
                 </div>
-              </div>
+                {filter.targetItems?.length ? (
+                  <div className="j-filter-browser__targets" aria-label="Targets">
+                    {filter.targetItems.slice(0, 4).map((target) => (
+                      <span key={target} className="j-filter-browser__target">{target}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </button>
             );
           })}
 
@@ -129,25 +103,15 @@ export function PaginatedFilterBrowser({
           )}
         </div>
 
-        {/* Pagination Controls */}
-        <div className="j-flex j-justify-center j-mt-md" style={{ flexShrink: 0 }}>
+        <div className="j-filter-browser__pager">
           <JimboFlankNav
             canPrev={safePage > 0}
             canNext={safePage < totalPages - 1}
             onPrev={handlePrevPage}
             onNext={handleNextPage}
           >
-            <div
-              style={{
-                background: C.RED,
-                padding: "8px 24px",
-                borderRadius: 8,
-                minWidth: 100,
-                boxShadow: `inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.4)`,
-              }}
-              className="j-flex j-justify-center j-items-center"
-            >
-              <JimboText size="sm" tone="white" className="j-text-center" style={{ textShadow: "1px 2px 2px rgba(0,0,0,0.5)" }}>
+            <div className="j-filter-browser__page-chip">
+              <JimboText size="sm" tone="white" className="j-text-center">
                 {safePage + 1} / {totalPages}
               </JimboText>
             </div>
@@ -155,14 +119,16 @@ export function PaginatedFilterBrowser({
         </div>
       </JimboPanel>
 
-      {/* Filter Details Panel (Bottom Context) */}
-      <JimboPanel style={{ flexShrink: 0, minHeight: 180, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <JimboPanel className="j-filter-browser__details">
         {!selectedFilter ? (
           <JimboText size="md" tone="grey" className="j-text-center">
             Select an item to view details
           </JimboText>
         ) : (
-          <div className="j-flex-col j-gap-sm j-items-center" style={{ width: "100%" }}>
+          <div className="j-filter-browser__details-body">
+            <JimboText size="xs" tone="grey" className="j-filter-browser__deck-stake">
+              {[selectedFilter.deckText, selectedFilter.stakeText].filter(Boolean).join(" / ") || "Any deck / Any stake"}
+            </JimboText>
             <JimboText size="lg" tone="gold" className="j-text-center">
               {selectedFilter.name}
             </JimboText>
@@ -171,14 +137,22 @@ export function PaginatedFilterBrowser({
               {selectedFilter.description}
             </JimboText>
 
-            <div className="j-flex-col j-gap-xs j-items-center j-mt-xs" style={{ opacity: 0.7 }}>
+            {selectedFilter.targetItems?.length ? (
+              <div className="j-filter-browser__targets j-filter-browser__targets--details">
+                {selectedFilter.targetItems.map((target) => (
+                  <span key={target} className="j-filter-browser__target">{target}</span>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="j-filter-browser__meta">
               {selectedFilter.authorText && <JimboText size="xs" tone="grey">{selectedFilter.authorText}</JimboText>}
               {selectedFilter.dateText && <JimboText size="xs" tone="grey">{selectedFilter.dateText}</JimboText>}
               {selectedFilter.statsText && <JimboText size="xs" tone="grey">{selectedFilter.statsText}</JimboText>}
             </div>
 
-            <div className="j-flex j-gap-sm j-mt-md j-justify-center j-flex-wrap">
-              <JimboButton tone="blue" size="sm" onClick={() => onMainAction?.(selectedFilter)}>
+            <div className="j-filter-browser__actions">
+              <JimboButton tone="blue" size="md" onClick={() => onMainAction?.(selectedFilter)}>
                 {mainActionText}
               </JimboButton>
               {showSecondary && onSecondaryAction && (
@@ -188,7 +162,7 @@ export function PaginatedFilterBrowser({
               )}
               {showDelete && onDeleteFilter && (
                 <JimboButton tone="red" size="sm" onClick={() => onDeleteFilter(selectedFilter)}>
-                  DELETE
+                  Delete
                 </JimboButton>
               )}
             </div>

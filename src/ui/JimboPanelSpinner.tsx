@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react'
-import { JimboButton } from './panel.js'
 import { JimboText } from './jimboText.js'
+import { JimboButton } from './panel.js'
 
 export interface JimboPanelSpinnerProps {
   label?: React.ReactNode
@@ -35,7 +35,14 @@ export function JimboPanelSpinner({
     <div className={`j-panel-spinner ${className}`.trim()} style={style}>
       {label ? <div className="j-panel-spinner__label"><JimboText size="xs" tone="grey">{label}</JimboText></div> : null}
       <div className="j-panel-spinner__row">
-        <JimboButton tone="red" size="sm" onClick={onPrev} disabled={prevDisabled}>
+        <JimboButton
+          tone="red"
+          size="lg"
+          className="j-panel-spinner__arrow j-panel-spinner__arrow--left"
+          onClick={onPrev}
+          disabled={prevDisabled}
+          aria-label="Previous"
+        >
           {'<'}
         </JimboButton>
         <div className="j-panel-spinner__panel">
@@ -44,7 +51,14 @@ export function JimboPanelSpinner({
           {meta ? <div className="j-panel-spinner__meta">{meta}</div> : null}
           {description ? <div className="j-panel-spinner__description"><JimboText size="micro" tone="grey">{description}</JimboText></div> : null}
         </div>
-        <JimboButton tone="red" size="sm" onClick={onNext} disabled={nextDisabled}>
+        <JimboButton
+          tone="red"
+          size="lg"
+          className="j-panel-spinner__arrow j-panel-spinner__arrow--right"
+          onClick={onNext}
+          disabled={nextDisabled}
+          aria-label="Next"
+        >
           {'>'}
         </JimboButton>
       </div>

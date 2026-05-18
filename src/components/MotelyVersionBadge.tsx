@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { JimboText } from '../ui/jimboText.js'
+import { JimboBadge } from '../ui/JimboBadge.js'
 
 export interface MotelyCapabilities {
   version: string
@@ -55,8 +56,8 @@ export function MotelyVersionBadge({
     return (
       <span className={`j-motely-badge ${className}`} style={style}>
         <JimboText size="xs" tone="grey">v{resolved}</JimboText>
-        {simd ? <JimboText size="xs" tone="blue" title="SIMD enabled">⚡</JimboText> : null}
-        {threads ? <JimboText size="xs" tone="green" title="Multi-threaded">🧵</JimboText> : null}
+        {simd ? <JimboBadge size="sm" tone="blue" title="SIMD enabled">SIMD</JimboBadge> : null}
+        {threads ? <JimboBadge size="sm" tone="green" title="Multi-threaded">MT</JimboBadge> : null}
       </span>
     )
   }
@@ -64,8 +65,8 @@ export function MotelyVersionBadge({
   return (
     <div className={`j-motely-badge j-motely-badge--chip ${className}`} style={style}>
       <JimboText size="xs" tone="gold">motely v{resolved}</JimboText>
-      {simd ? <JimboText size="xs" tone="blue" title="SIMD enabled">⚡</JimboText> : null}
-      {threads ? <JimboText size="xs" tone="green" title="Multi-threaded">🧵</JimboText> : null}
+      {simd ? <JimboBadge size="sm" tone="blue" title="SIMD enabled">SIMD</JimboBadge> : null}
+      {threads ? <JimboBadge size="sm" tone="green" title="Multi-threaded">MT</JimboBadge> : null}
     </div>
   )
 }

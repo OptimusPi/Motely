@@ -1,21 +1,25 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(cmd /c \"cd /d D:\\\\mmm && pnpm install jaml-ui@^0.24.0 motely-wasm@^14.4.0 2>&1\")",
-      "PowerShell(Test-Path *)",
-      "PowerShell(npm install *)",
-      "PowerShell(pnpm add *)",
-      "PowerShell(npm version *)",
-      "PowerShell(Get-NetTCPConnection *)",
-      "PowerShell(python -m http.server 3141 --directory X:\\\\jaml-ui\\\\examples)",
-      "PowerShell(Start-Sleep -Seconds 12; \"3141: \" + \\(try {\\(Invoke-WebRequest http://localhost:3141/ -UseBasicParsing -TimeoutSec 3\\).StatusCode} catch {$_.Exception.Message}\\); \"6006: \" + \\(try {\\(Invoke-WebRequest http://localhost:6006/ -UseBasicParsing -TimeoutSec 5\\).StatusCode} catch {$_.Exception.Message}\\))",
-      "mcp__d8ba4228-0ca3-4d6d-a833-373c9d8163f8__validate_jaml"
+      "PowerShell(Stop-Process *)",
+      "PowerShell(pnpm serve:storybook *)",
+      "PowerShell(Start-Sleep -Seconds 2; Invoke-WebRequest -Uri \"http://localhost:3141\" -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode)",
+      "PowerShell(pnpm storybook *)",
+      "mcp__claude_ai_Exa__web_search_exa",
+      "mcp__claude_ai_Context7__resolve-library-id",
+      "PowerShell(Get-ChildItem -Recurse -File \"D:\\\\seedfinder.app\" | Where-Object { $_.FullName -notmatch 'node_modules|\\\\.next|\\\\.git' } | Select-Object FullName | Sort-Object FullName)",
+      "PowerShell(Get-ChildItem -Recurse -File \"D:\\\\seedfinder.app\" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch 'node_modules|\\\\.next|\\\\.git' } | Select-Object FullName | Sort-Object FullName | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem \"D:\\\\seedfinder.app\\\\node_modules\\\\jaml-ui\" -File | Where-Object { $_.Name -match \"css|json\" } | Select-Object Name, FullName)",
+      "PowerShell(\\(Get-Content \"D:\\\\seedfinder.app\\\\node_modules\\\\jaml-ui\\\\package.json\" | ConvertFrom-Json\\).version)",
+      "PowerShell(head *)",
+      "PowerShell(git restore *)"
     ],
     "additionalDirectories": [
-      "x:\\JammySeedFinder\\src\\MotelyJAML"
+      "d:\\seedfinder.app"
     ]
   },
-  "disabledMcpjsonServers": [
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
     "storybook"
   ]
 }

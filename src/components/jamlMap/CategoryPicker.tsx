@@ -33,9 +33,9 @@ export interface CategoryPickerProps {
   onCancel?: () => void;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 const C = JimboColorOption;
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
   const [search, setSearch] = useState("");
@@ -72,75 +72,53 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
   const renderItem = (item: SpriteEntry, isMuted = false) => (
     <div
       key={item.name}
-      className="j-juice-hover"
+      className="j-picker__item j-juice-hover"
       onClick={() => handleSelect(item)}
       title={item.name}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 3,
-        padding: 4,
-        borderRadius: 4,
-        cursor: "pointer",
-        opacity: isMuted ? 0.3 : 1,
-      }}
+      data-muted={isMuted}
     >
       <JimboSprite name={item.name} sheet={config.sheet} width={48} />
-      <JimboText size="micro" tone="white" style={{ lineHeight: 1.1, whiteSpace: "normal", textAlign: "center" }}>
+      <JimboText size="micro" tone="white" className="j-picker__item-label">
         {item.name}
       </JimboText>
     </div>
   );
 
   return (
-    <div style={{ padding: 0, maxWidth: 420, maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
-      <div className="j-flex j-gap-sm" style={{ padding: "8px 10px 4px" }}>
+    <div className="j-picker">
+      <div className="j-picker__search">
         <input
-          className="j-seed-input__field"
+          className="j-seed-input__field j-picker__search-field"
           type="text"
-          placeholder={`Search ${config.title.toLowerCase()}...`}
+          placeholder={`Search ${config.title.toLowerCase()}`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ fontSize: 13, padding: "6px 10px", textTransform: "none", letterSpacing: "0.04em" }}
         />
       </div>
 
-      {/* Hint */}
       {config.hint && (
-        <div className="j-inner-panel" style={{ margin: "4px 10px 6px", padding: "6px 10px" }}>
+        <div className="j-inner-panel j-picker__hint">
           <JimboText size="xs" tone="grey">
             {config.hint}
           </JimboText>
         </div>
       )}
 
-      {/* Grid */}
-      <div className="hide-scrollbar" style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 6,
-        padding: "8px 10px 10px",
-        overflowY: "auto",
-        flex: 1,
-        alignContent: "flex-start",
-      }}>
+      <div className="j-picker__grid hide-scrollbar">
         {config.category === "voucher" && pairedVouchers ? (
           pairedVouchers.map((pair) => (
-            <div key={pair.base.name} style={{ display: "flex", flexDirection: "column", gap: 4, width: 64 }}>
+            <div key={pair.base.name} className="j-picker__pair">
               {renderItem(pair.base, search ? !pair.base.name.toLowerCase().includes(search.toLowerCase()) : false)}
               {pair.upgrade && renderItem(pair.upgrade, search ? !pair.upgrade.name.toLowerCase().includes(search.toLowerCase()) : false)}
             </div>
           ))
         ) : (
-          filtered.map((item) => (
-            <div key={item.name} style={{ width: 64 }}>{renderItem(item)}</div>
-          ))
+          filtered.map((item) => renderItem(item))
         )}
 
         {((config.category === "voucher" && pairedVouchers?.length === 0) ||
           (config.category !== "voucher" && filtered.length === 0)) && (
-            <div style={{ width: "100%", padding: 20, textAlign: "center" }}>
+            <div className="j-picker__empty">
               <JimboText size="sm" tone="grey">No matches for "{search}"</JimboText>
             </div>
           )}

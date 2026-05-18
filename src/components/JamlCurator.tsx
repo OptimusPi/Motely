@@ -103,8 +103,8 @@ export function JamlCurator() {
           ) : (
             <div className="j-flex-col j-gap-sm">
               <div className="j-flex j-items-center j-justify-between">
-                <JimboText size="xs" tone="grey">SEED MATCHES</JimboText>
-                <JimboText size="xs" tone="gold">{search.matchingSeeds} FOUND</JimboText>
+                <JimboText size="xs" tone="grey">Seed matches</JimboText>
+                <JimboText size="xs" tone="gold">{search.matchingSeeds} found</JimboText>
               </div>
 
               <JimboFlankNav
