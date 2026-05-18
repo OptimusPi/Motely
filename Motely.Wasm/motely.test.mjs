@@ -22,8 +22,7 @@ const {
     MotelyTag, MotelyVoucher, MotelyBoosterPack,
 } = await import(pathToFileURL(resolve(pkgRoot, "dist", "generated", "motely.g.mjs")).href);
 
-// `voucher: Any` and `joker: Any` inside should: are rejected by the parser
-// (Motely.Tests JamlInvalidInputRejectionTests). Scoring fixtures must name specific identifiers.
+// `voucher: Any` and `joker: Any` in must/should are rejected by the parser. Scoring fixtures must name specific identifiers.
 const jaml = {
     must: `name: t
 deck: Erratic
@@ -53,7 +52,7 @@ should:
     invalid: "not yaml !@#",
 };
 
-// Same probe seeds as xUnit SearchConsistencyTests — chosen to cover shop/pack/tag variety.
+// Eight probe seeds — shop/pack/tag variety in analyzer output.
 const probeSeeds = ["AAAAAAAA", "BBBBBBBB", "CCCCCCCC", "DDDDDDDD", "EEEEEEEE", "FFFFFFFF", "GGGGGGGG", "HHHHHHHH"];
 
 let pkgVersion;
@@ -220,11 +219,10 @@ function testBootStatus_StillBooted() {
 }
 
 // ── Analyzer cross-check tests ───────────────────────────────────────────────
-// These mirror xUnit SearchConsistencyTests: analyzer reports X → search finds X.
-// If either side is wrong the two diverge and the test fails.
+// Analyzer reports X → search for X must find the same seed. Divergence fails the test.
 
 function testAnalyzer_FirstAnteFirstPack_IsBuffoonNormal() {
-    // Mirrors xUnit: Analyzer_FirstAnteFirstPack_IsNormalBuffoon
+    // Ante 1 pack 0 must be a 2-item Buffoon pack.
     const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
     if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
     const s = r.seeds?.[0];
@@ -310,7 +308,7 @@ async function testAnalyzerDerived_Tag_MatchesSearch() {
 }
 
 async function testMustNot_RejectsAnalyzerMatch() {
-    // must: tag X + mustNot: tag X → seed that has X must be rejected. Mirrors xUnit MustAndMustNot_SameTag_RejectsSeed.
+    // must: tag X + mustNot: tag X on the same ante → seed that has X must be rejected.
     const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
     if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
     const s = r.seeds?.[0];
@@ -355,7 +353,6 @@ async function testSequentialSearch_MatchCountConsistentAcrossThreads() {
 
 async function testAnalyzerDerived_TagMin_RejectsSingleOccurrence() {
     // A tag appearing exactly once in ante N with min:2 must NOT match.
-    // Mirrors xUnit AnalyzerDerivedTagMinFilter_RejectsSingleOccurrence.
     const r = Motely.analyzeJamlSeeds(jaml.anyMust, probeSeeds);
     if (r.error != null) throw new Error(`analyzeJamlSeeds failed: ${r.error}`);
     let found = null;
@@ -379,8 +376,7 @@ async function testAnalyzerDerived_TagMin_RejectsSingleOccurrence() {
 }
 
 async function testJimmolate_JsPredicateFiltersSeeds() {
-    // Seeds whose first char is 'M' — predicate keeps only those; rest must be rejected.
-    // Mirrors xUnit JimmolateFilterDescTests.JimmolateRunsOnlyOnBaseSurvivors_AndMatchesControlFilter.
+    // Jimmolate predicate (second char 'A') filters list search; only matching seeds count.
     const seeds = ["MAAAAAAA", "MBBBBBBB", "XCCCCCCC", "MADDDDDD", "XEEEEEEE", "MAFFFFFF", "XGGGGGGG", "MAHHHHHH"];
     const expectedMatchCount = seeds.filter(s => s[0] === "M" && s[1] === "A").length; // MAAAAAAA, MADDDDDD, MAFFFFFF, MAHHHHHH = 4
 
