@@ -36,7 +36,6 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                 ante,
                 true
             );
-            ;
             MotelySingleSpectralStream spectralStream = default;
             MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateLegendaryJokerStream(
                 ante

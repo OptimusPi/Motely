@@ -1,5 +1,3 @@
-using Motely.Filters.Jaml;
-
 namespace Motely.Filters.Jaml;
 
 public static class MotelyExtensions
