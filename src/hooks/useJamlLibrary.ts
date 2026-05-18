@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import bootsharp, { Motely } from "motely-wasm";
+import { Motely } from "motely-wasm";
+import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { IFileMounter, PermissionMode } from "motely-wasm/bootsharp/file-system";
 
 type FileSystemPackage = typeof import("@rewaffle/bootsharp-file-system");
@@ -34,11 +35,6 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function ensureMotelyReady(): Promise<void> {
-  if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-    await bootsharp.boot("/motely-wasm/bin");
-  }
-}
 
 export function useJamlLibrary(): UseJamlLibraryState {
   const isFileSystemReady = fileSystemPackage !== null;

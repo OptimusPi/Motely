@@ -64,11 +64,9 @@ function ClausePill({
         padding: "3px 8px",
         position: "relative",
         opacity: isHit ? 1 : 0.6,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore -- CSS custom property
         "--glow-color": glow,
         animation: isHit ? "j-glow-pulse 1.6s ease-in-out infinite" : "none",
-      }}
+      } as React.CSSProperties}
       title={`${item.clauseKey}: ${item.value}${hasData ? ` (Found: ${matchCount})` : ""}`}
     >
       <JimboSprite 

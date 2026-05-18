@@ -1,66 +1,67 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import bootsharp from "motely-wasm";
+import { ensureMotelyReady, type MotelyRuntimeStatus } from "../lib/motely/runtime.js";
+import { useMotelyContext } from "../providers/MotelyProvider.js";
 
-export type MotelyRuntimeStatus = "idle" | "booting" | "ready" | "error";
+export type { MotelyRuntimeStatus };
 
 export interface UseMotelyRuntimeState {
-  status: MotelyRuntimeStatus;
-  ready: boolean;
-  error: string | null;
-  fsReady: boolean;
-  fsError: string | null;
-  ensureReady: () => Promise<void>;
+    status: MotelyRuntimeStatus;
+    ready: boolean;
+    error: string | null;
+    fsReady: boolean;
+    fsError: string | null;
+    ensureReady: () => Promise<void>;
 }
 
 function currentStatus(): MotelyRuntimeStatus {
-  switch (bootsharp.getStatus()) {
-    case bootsharp.BootStatus.Booted:
-      return "ready";
-    case bootsharp.BootStatus.Booting:
-      return "booting";
-    default:
-      return "idle";
-  }
+    switch (bootsharp.getStatus()) {
+        case bootsharp.BootStatus.Booted: return "ready";
+        case bootsharp.BootStatus.Booting: return "booting";
+        default: return "idle";
+    }
 }
 
 export function useMotelyRuntime(): UseMotelyRuntimeState {
-  const [status, setStatus] = useState<MotelyRuntimeStatus>(() => currentStatus());
-  const [error, setError] = useState<string | null>(null);
-  const ensureReady = useCallback(async () => {
-    try {
-      setError(null);
-      setStatus(currentStatus());
-      if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-        setStatus("booting");
-        await bootsharp.boot("/motely-wasm/bin");
-      }
-      setStatus(currentStatus());
-    } catch (err) {
-      setStatus("error");
-      setError(err instanceof Error ? err.message : String(err));
-      throw err;
-    }
-  }, []);
+    const ctx = useMotelyContext();
+    const [localStatus, setLocalStatus] = useState<MotelyRuntimeStatus>(currentStatus);
+    const [localError, setLocalError] = useState<string | null>(null);
 
-  return useMemo(
-    () => ({
-      status,
-      ready: status === "ready",
-      error,
-      fsReady: false,
-      fsError: null,
-      ensureReady,
-    }),
-    [error, ensureReady, status],
-  );
-}
+    const status = ctx?.status ?? localStatus;
+    const error = ctx?.error ?? localError;
 
-export function useMotelyRuntimeOwner(): void {
-  const { ensureReady } = useMotelyRuntime();
+    const ensureReady = useCallback(async () => {
+        try {
+            if (!ctx) {
+                setLocalStatus(currentStatus());
+                if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
+                    setLocalStatus("booting");
+                    await ensureMotelyReady();
+                }
+                setLocalStatus(currentStatus());
+            } else {
+                await ensureMotelyReady();
+            }
+        } catch (err) {
+            if (!ctx) {
+                setLocalStatus("error");
+                setLocalError(err instanceof Error ? err.message : String(err));
+            }
+            throw err;
+        }
+    }, [ctx]);
 
-  useEffect(() => {
-    void ensureReady();
-  }, [ensureReady]);
+    return useMemo(
+        () => ({
+            status,
+            ready: status === "ready",
+            error,
+            fsReady: false,
+            fsError: null,
+            ensureReady,
+        }),
+        [error, ensureReady, status],
+    );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import bootsharp, { Motely } from "motely-wasm";
+import { Motely } from "motely-wasm";
+import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { JamlAesthetic } from "motely-wasm/motely/filters";
 import type {
     PoolInboundMessage,
@@ -112,12 +113,6 @@ async function loadWorkerCtor(): Promise<WorkerCtor> {
     const mod = (await import("./searchPoolWorker?worker")) as { default: WorkerCtor };
     cachedWorkerCtor = mod.default;
     return cachedWorkerCtor;
-}
-
-async function ensureMotelyReady(): Promise<void> {
-    if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-        await bootsharp.boot("/motely-wasm/bin");
-    }
 }
 
 export function useSearchPool(options: UseSearchPoolOptions = {}) {
