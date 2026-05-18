@@ -21,7 +21,8 @@
       "Bash(Write-Output \"Deleted 3 orphaned files\")",
       "Bash(pnpm typecheck *)",
       "Bash(pnpm build *)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "PowerShell(pnpm typecheck *)"
     ],
     "additionalDirectories": [
       "d:\\seedfinder.app",
