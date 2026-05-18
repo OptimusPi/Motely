@@ -20,12 +20,14 @@ function currentStatus(): MotelyRuntimeStatus {
 }
 
 export function MotelyProvider({ children }: { children: ReactNode }) {
-    const [status, setStatus] = useState<MotelyRuntimeStatus>(currentStatus);
+    const [status, setStatus] = useState<MotelyRuntimeStatus>(() => {
+        const s = currentStatus();
+        return s === "idle" ? "booting" : s;
+    });
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (status === "ready") return;
-        setStatus("booting");
         ensureMotelyReady()
             .then(() => setStatus("ready"))
             .catch((err) => {

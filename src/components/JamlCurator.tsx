@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { JimboButton, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboFlankNav } from "../ui/jimboFlankNav.js";
 import { JamlMapEditor } from "./jamlMap/JamlMapEditor.js";
 import { useSearch } from "../hooks/useSearch.js";
-import { useAnalyzer } from "../hooks/useAnalyzer.js";
 import { JamlSpeedometer } from "./JamlSpeedometer.js";
 
 const C = JimboColorOption;
@@ -15,7 +14,6 @@ const C = JimboColorOption;
 export function JamlCurator() {
   const [jamlText, setJamlText] = useState("");
   const search = useSearch();
-  const analyzer = useAnalyzer();
 
   const [resultIndex, setResultIndex] = useState(0);
 
@@ -32,20 +30,11 @@ export function JamlCurator() {
 
   const currentSeed = search.results[resultIndex]?.seed;
 
-  // Analyze runs only when the selected seed changes — jamlText is read fresh
-  // from the ref so keystrokes don't re-trigger analysis.
-  const jamlTextRef = useRef(jamlText);
-  const analyzeRef = useRef(analyzer.analyze);
-  useLayoutEffect(() => {
-    jamlTextRef.current = jamlText;
-    analyzeRef.current = analyzer.analyze;
-  });
-
-  useEffect(() => {
-    if (currentSeed && jamlTextRef.current) {
-      analyzeRef.current(currentSeed, jamlTextRef.current);
+  const handleCopySeed = () => {
+    if (currentSeed && typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(currentSeed);
     }
-  }, [currentSeed]);
+  };
 
   const handleMapChange = (jamlString: string) => {
     setJamlText(jamlString);
@@ -79,7 +68,7 @@ export function JamlCurator() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <JimboText size="lg" tone="gold">JAML Curator</JimboText>
           <JimboButton tone={isSearching ? "red" : "green"} size="sm" onClick={handleSearch}>
-            {isSearching ? "STOP" : "SEARCH"}
+            {isSearching ? "Stop" : "Search"}
           </JimboButton>
         </div>
 
@@ -114,7 +103,7 @@ export function JamlCurator() {
               >
                 <div className="j-flex-col j-items-center j-gap-xs">
                   <JimboText size="lg" tone="gold" style={{ letterSpacing: 2 }}>{currentSeed}</JimboText>
-                  <JimboButton tone="blue" size="xs">Copy Seed</JimboButton>
+                  <JimboButton tone="blue" size="xs" onClick={handleCopySeed}>Copy Seed</JimboButton>
                 </div>
               </JimboFlankNav>
             </div>

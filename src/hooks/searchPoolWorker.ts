@@ -5,7 +5,7 @@
 // hook is responsible for partitioning the input space and assigning each worker
 // a disjoint slice via the fields on PoolStartMessage. This worker just runs
 // what it is told.
-import bootsharp, { Motely } from "motely-wasm";
+import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type {
     IMotelySearch,
