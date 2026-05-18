@@ -197,14 +197,13 @@
 
 .j-text--label {
   font-size: 9px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   line-height: 1;
-
 }
 
 .j-text--micro {
   font-size: 8px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   line-height: 1;
 }
 
@@ -724,6 +723,19 @@
   cursor: pointer;
   font-family: var(--j-font);
   color: var(--j-white);
+}
+
+.j-toggle-item[data-variant="stacked"] {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--j-space-xs);
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+}
+
+.j-toggle-item[data-variant="stacked"] .j-toggle-item__label {
+  text-align: center;
 
   letter-spacing: 0.04em;
   text-align: left;
@@ -731,19 +743,25 @@
 }
 
 .j-toggle-check {
-  width: 10px;
-  height: 10px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  border: 1px solid var(--j-dark-grey);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.j-toggle-check[data-on="true"] {
-  background: var(--j-orange);
-}
-
-.j-toggle-check[data-on="false"] {
+  border: 2px solid var(--j-dark-red);
+  border-radius: 3px;
   background: var(--j-darkest);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.j-toggle-check[data-on="true"]::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  background: var(--j-red);
+  border-radius: 2px;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
+  background: var(--j-white);
 }
 
 
@@ -761,6 +779,39 @@
   pointer-events: none;
   z-index: 9999;
   transition: opacity 120ms ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.j-tooltip--dark { background: var(--j-darkest); color: var(--j-white); }
+
+.j-tooltip--card {
+  background: var(--j-white);
+  color: var(--j-darkest);
+  border-color: var(--j-border-silver);
+  text-shadow: none;
+}
+
+.j-tooltip__body {
+  width: 100%;
+  text-align: center;
+  font-family: var(--j-font);
+}
+
+.j-tooltip--card .j-tooltip__body { color: var(--j-darkest); }
+
+.j-tooltip__badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--j-radius-sm);
+  font-family: var(--j-font);
+  font-size: 11px;
+  color: var(--j-white);
+  text-shadow: var(--j-text-shadow);
+  letter-spacing: 1px;
+  margin-bottom: -2px;
 }
 
 
@@ -1070,7 +1121,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--j-space-md);
-  background: rgba(0, 0, 0, 0.82);
+  background: rgba(8, 18, 22, 0.55);
 }
 
 .j-modal {
@@ -1080,7 +1131,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--j-radius-lg);
   animation: jimbo-modal-in 140ms cubic-bezier(0.2, 0, 0.2, 1.4) both;
 }
 
@@ -1089,10 +1140,23 @@
   min-height: 0;
 }
 
-.j-modal__title {
-  text-align: center;
-  margin: 0 0 var(--j-space-xl);
+.j-modal__title-wrap {
+  display: flex;
+  justify-content: center;
+  margin: calc(var(--j-space-md) * -1) 0 var(--j-space-md);
   flex-shrink: 0;
+}
+
+.j-modal__title {
+  display: inline-block;
+  text-align: center;
+  margin: 0;
+  padding: 4px 14px;
+  background: var(--j-darkest);
+  border: 2px solid var(--j-panel-edge);
+  border-radius: var(--j-radius-md);
+  box-shadow: 0 2px 0 var(--j-black);
+  color: var(--j-red);
 }
 
 .j-input-modal__message {
@@ -1518,6 +1582,130 @@
 }
 
 
+/* ── Stepper ─────────────────────────────────────────────────────────── */
+/* < value > control matching Balatro settings rows. */
+
+.j-stepper-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--j-space-xs);
+}
+
+.j-stepper__label {
+  text-align: center;
+}
+
+.j-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--j-space-sm);
+}
+
+.j-stepper__value {
+  min-width: 96px;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--j-red);
+  border-radius: var(--j-radius-md);
+  box-shadow: 0 3px 0 var(--j-dark-red);
+}
+
+
+/* ── Slider ──────────────────────────────────────────────────────────── */
+
+.j-slider-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--j-space-xs);
+  width: 100%;
+}
+
+.j-slider__label {
+  text-align: center;
+}
+
+.j-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--j-space-sm);
+  height: 22px;
+}
+
+.j-slider__track {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  background: var(--j-red);
+  border-radius: var(--j-radius-pill);
+  box-shadow: inset 0 2px 0 var(--j-dark-red);
+  overflow: hidden;
+}
+
+.j-slider__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--j-dark-red);
+  border-radius: var(--j-radius-pill) 0 0 var(--j-radius-pill);
+}
+
+.j-slider__input {
+  position: absolute;
+  inset: 0 64px 0 0;
+  width: calc(100% - 64px);
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.j-slider__value {
+  min-width: 48px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--j-dark-red);
+  border-radius: var(--j-radius-md);
+  box-shadow: 0 2px 0 var(--j-black);
+}
+
+
+/* ── Dual Chip ───────────────────────────────────────────────────────── */
+/* Two stat halves joined into one pill — used for Hands × Discards. */
+
+.j-dual-chip {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--j-radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 0 var(--j-black);
+}
+
+.j-dual-chip__half {
+  min-width: 40px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--j-white);
+}
+
+.j-dual-chip__half--left {
+  border-right: 1px solid var(--j-black);
+}
+
+.j-dual-chip__half--blue { background: var(--j-blue); }
+.j-dual-chip__half--red { background: var(--j-red); }
+.j-dual-chip__half--green { background: var(--j-green); }
+.j-dual-chip__half--gold { background: var(--j-gold); color: var(--j-black); }
+.j-dual-chip__half--dark { background: var(--j-darkest); }
+
+
 /* ── Stat Grid ───────────────────────────────────────────────────────── */
 /* 3-column stat bar — reusable primitive. */
 
@@ -1542,10 +1730,11 @@
 
 .j-stat-grid__label {
   font-family: var(--j-font);
-  font-size: 9px;
-  color: var(--j-grey);
-  letter-spacing: 2px;
+  font-size: 10px;
+  color: var(--j-white);
+  letter-spacing: 1px;
   margin-top: 2px;
+  opacity: 0.85;
 }
 
 
@@ -2433,10 +2622,12 @@
 }
 
 .j-filter-browser__page-chip {
-  min-width: 96px;
-  padding: 8px 16px;
+  min-width: 110px;
+  padding: 6px 16px;
   border-radius: var(--j-radius-md);
-  background: var(--j-teal-grey);
+  background: var(--j-red);
+  box-shadow: 0 3px 0 var(--j-dark-red);
+  text-align: center;
 }
 
 .j-filter-browser__details {

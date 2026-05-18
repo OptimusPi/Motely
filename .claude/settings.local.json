@@ -22,7 +22,9 @@
       "Bash(pnpm typecheck *)",
       "Bash(pnpm build *)",
       "Bash(gh api *)",
-      "PowerShell(pnpm typecheck *)"
+      "PowerShell(pnpm typecheck *)",
+      "PowerShell(pnpm lint *)",
+      "PowerShell(pnpm build *)"
     ],
     "additionalDirectories": [
       "d:\\seedfinder.app",
