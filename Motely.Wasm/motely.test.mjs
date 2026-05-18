@@ -245,8 +245,9 @@ async function testAnalyzerDerived_BuffoonJoker_MatchesSearch() {
         const ante = s.analysis?.antes?.[0];
         const item = ante?.packs?.[0]?.items?.[0];
         if (!item) continue;
-        const jokerName = MotelyItemType?.[item.type];
-        if (!jokerName) throw new Error(`MotelyItemType[${item.type}] undefined — enum not exported from entry`);
+        const type = Motely.decodeItemType(item.item.value);
+        const jokerName = MotelyItemType?.[type];
+        if (!jokerName) throw new Error(`MotelyItemType[${type}] undefined — enum not exported from entry`);
         found = { seed: s.seed, ante: ante.ante, jokerName };
         break;
     }
@@ -268,9 +269,11 @@ async function testAnalyzerDerived_ShopJoker_MatchesSearch() {
         if (!Array.isArray(ante?.shopQueue)) continue;
         for (let i = 0; i < ante.shopQueue.length; i++) {
             const item = ante.shopQueue[i];
-            if (MotelyItemTypeCategory?.[item?.typeCategory] !== "Joker") continue;
-            const jokerName = MotelyItemType?.[item.type];
-            if (!jokerName) throw new Error(`MotelyItemType[${item.type}] undefined — enum not exported from entry`);
+            const itemValue = item.item.value;
+            if (MotelyItemTypeCategory?.[Motely.decodeItemCategory(itemValue)] !== "Joker") continue;
+            const type = Motely.decodeItemType(itemValue);
+            const jokerName = MotelyItemType?.[type];
+            if (!jokerName) throw new Error(`MotelyItemType[${type}] undefined — enum not exported from entry`);
             found = { seed: s.seed, ante: ante.ante, jokerName, slot: i };
             break;
         }
@@ -609,14 +612,15 @@ async function testJimmolate_PredicateRunsOnlyOnBaseSurvivors() {
     for (const s of r.seeds ?? []) {
         const item = s.analysis?.antes?.[0]?.packs?.[0]?.items?.[0];
         if (!item) continue;
-        const name = MotelyItemType?.[item.type];
+        const type = Motely.decodeItemType(item.item.value);
+        const name = MotelyItemType?.[type];
         if (name) { jokerName = name; break; }
     }
     if (!jokerName) throw new Error("No probe seed had a joker in pack[0] — MotelyItemType not exported?");
 
     const expectedSurvivorCount = r.seeds.filter(s => {
         const item = s.analysis?.antes?.[0]?.packs?.[0]?.items?.[0];
-        return MotelyItemType?.[item?.type] === jokerName;
+        return MotelyItemType?.[Motely.decodeItemType(item.item.value)] === jokerName;
     }).length;
     if (expectedSurvivorCount === 0) throw new Error(`Expected at least one survivor for joker ${jokerName}`);
 

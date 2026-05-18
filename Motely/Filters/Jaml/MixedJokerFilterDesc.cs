@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 public struct MixedJokerFilterDesc(MixedJokerClause clause)
     : IMotelySeedFilterDesc<MixedJokerFilterDesc.MixedJokerFilter>

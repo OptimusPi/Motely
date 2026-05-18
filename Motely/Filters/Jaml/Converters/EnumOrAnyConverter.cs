@@ -2,7 +2,7 @@ using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
-namespace Motely.Filters.Converters;
+namespace Motely.Filters.Jaml.Converters;
 
 /// <summary>
 /// AOT-safe YAML scalar converter for <see cref="EnumOrAny{T}"/>. Reads the literal string

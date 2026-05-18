@@ -1,10 +1,9 @@
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
-using Motely.Filters.Converters;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Raw YAML document walk for the JAML root: fills <see cref="JamlRootDocument"/> (no full-document YamlDotNet deserialize).
@@ -27,7 +26,6 @@ public static partial class JamlConfigLoader
             "should",
             "mustNot",
             "aesthetics",
-            "hashtags",
             "seeds",
         }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
@@ -43,7 +41,6 @@ public static partial class JamlConfigLoader
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
-            .WithTypeConverter(new StandardCardValueConverter())
             .Build();
 
     /// <summary>
@@ -202,7 +199,6 @@ public static partial class JamlConfigLoader
                 Id = ParseOptionalScalar(root, "id"),
                 Name = ParseOptionalScalar(root, "name"),
                 Author = ParseOptionalScalar(root, "author"),
-                DateCreated = ParseOptionalScalar(root, "dateCreated"),
                 Description = ParseOptionalScalar(root, "description"),
                 Deck = ParseOptionalScalar(root, "deck"),
                 Stake = ParseOptionalScalar(root, "stake"),
@@ -210,8 +206,6 @@ public static partial class JamlConfigLoader
                 Must = ParseClauseSequence(root, "must"),
                 Should = ParseClauseSequence(root, "should"),
                 MustNot = ParseClauseSequence(root, "mustNot"),
-                Aesthetics = ParseStringSequence(root, "aesthetics"),
-                Hashtags = ParseStringSequence(root, "hashtags"),
                 Seeds = ParseStringSequence(root, "seeds"),
             };
         }

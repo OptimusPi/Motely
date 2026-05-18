@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using Motely;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Vector edition-only prefilter for legendary soul joker streams (ExcludeJokerType | ExcludeStickers).

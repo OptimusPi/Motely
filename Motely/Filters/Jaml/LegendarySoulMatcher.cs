@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using Motely;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Soul / legendary checks must follow the same pack order and RNG order as
