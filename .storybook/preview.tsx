@@ -1,25 +1,10 @@
 import type { Preview } from '@storybook/react-vite'
-import React, { useEffect } from 'react'
+import React from 'react'
 import '../src/ui/jimbo.css'
 import './preview.css'
 import { JimboBackground } from '../src/ui/jimboBackground'
 import { JimboApp } from '../src/ui/jimboApp'
-import bootsharp from 'motely-wasm'
-
-async function ensureMotelyReady(): Promise<void> {
-  if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-    await bootsharp.boot('/motely-wasm/bin')
-  }
-}
-
-function StorybookMotelyWarmup({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    void ensureMotelyReady().catch(() => {
-      /* Boot errors surface via components that call ensureMotelyReady again */
-    })
-  }, [])
-  return children
-}
+import { MotelyProvider } from '../src/providers/MotelyProvider'
 
 const preview: Preview = {
   parameters: {
@@ -39,7 +24,7 @@ const preview: Preview = {
       const useHarness = jimboHarness !== false;
 
       return (
-        <StorybookMotelyWarmup>
+        <MotelyProvider>
           <JimboBackground />
           {useHarness ? (
             <JimboApp fluid={jimboHarness === 'fluid'}>
@@ -48,7 +33,7 @@ const preview: Preview = {
           ) : (
             content
           )}
-        </StorybookMotelyWarmup>
+        </MotelyProvider>
       );
     },
   ],

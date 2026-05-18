@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { JamlMapPreview } from "./JamlMapPreview.js";
 import {
   JamlMapEditor,
@@ -367,8 +367,7 @@ export function JamlIde({
     }
   };
 
-  const results = useMemo(() => searchResults, [searchResults]);
-  const showResultsTab = Boolean(onSearch || results.length > 0);
+  const showResultsTab = Boolean(onSearch || searchResults.length > 0);
   const showJamlyzerTab = Boolean(onTestSeed);
   const availableModes: JamlIdeMode[] = [
     "visual",
@@ -434,7 +433,7 @@ export function JamlIde({
       <JamlIdeToolbar
         mode={mode}
         onModeChange={setMode}
-        resultCount={results.length}
+        resultCount={searchResults.length}
         showResultsTab={showResultsTab}
         showJamlyzerTab={showJamlyzerTab}
         onSearch={onSearch}
@@ -460,7 +459,7 @@ export function JamlIde({
 
         {mode === "results" ? (
           <div className="j-ide__results">
-            <ResultsView results={results} jaml={text} />
+            <ResultsView results={searchResults} jaml={text} />
           </div>
         ) : null}
 

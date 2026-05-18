@@ -1,13 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
 import { JamlIde } from './JamlIde';
-import bootsharp, { Motely } from 'motely-wasm';
-
-async function ensureMotelyReady(): Promise<void> {
-  if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-    await bootsharp.boot('/motely-wasm/bin');
-  }
-}
+import { Motely } from 'motely-wasm';
+import { ensureMotelyReady } from '../lib/motely/runtime';
 
 const SAMPLE_JAML = `must:
   - joker: Wee Joker

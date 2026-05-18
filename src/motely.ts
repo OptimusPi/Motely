@@ -51,7 +51,11 @@ export {
 } from "./hooks/useJamlLibrary.js";
 export {
   useMotelyRuntime,
-  useMotelyRuntimeOwner,
   type UseMotelyRuntimeState,
   type MotelyRuntimeStatus,
 } from "./hooks/useMotelyRuntime.js";
+export {
+  MotelyProvider,
+  useMotelyContext,
+  type MotelyContextValue,
+} from "./providers/MotelyProvider.js";

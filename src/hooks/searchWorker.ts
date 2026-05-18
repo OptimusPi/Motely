@@ -5,6 +5,7 @@
 // If a future change reintroduces SAB, switch the deployment to the Cloudflare
 // permanent named tunnel so COOP/COEP can be enforced at the edge.
 import bootsharp, { Motely } from "motely-wasm";
+import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { IMotelySearch, IMotelySearchSettingsInterop, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
 import type { JamlAesthetic } from "motely-wasm/motely/filters";
 
@@ -87,15 +88,7 @@ self.onmessage = async (event: MessageEvent) => {
     if (data.type !== "start") return;
 
     try {
-        if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-            // Must match the path the host serves the package's bin/ at — same
-            // mount jaml-ui's main-thread hooks (useSearch / useAnalyzer /
-            // useSearchPool / useMotelyRuntime) use, the Storybook staticDir
-            // in jaml-ui/.storybook/main.ts, and the Next.js route in
-            // seedfinder.app/app/motely-wasm/bin/[...path]/route.ts.
-            // A hardcoded "/bin" would 404 in all three.
-            await bootsharp.boot("/motely-wasm/bin");
-        }
+        await ensureMotelyReady();
 
         attachListeners();
 

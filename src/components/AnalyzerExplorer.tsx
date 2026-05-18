@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useLayoutEffect, useRef } from "react";
+
+const ANTE_TRACKER_OPTIONS = { threshold: [0.45, 0.72, 0.9] };
 import { useAnteTracker } from "../ui/hooks.js";
 import {
   JamlBoss,
@@ -74,9 +76,7 @@ export function AnalyzerExplorer({
   tallyColumns,
   tallyLabels,
 }: AnalyzerExplorerProps) {
-  const { currentAnte, scrollRef, scrollToAnte, registerAnteRef } = useAnteTracker(antes, {
-    threshold: [0.45, 0.72, 0.9],
-  });
+  const { currentAnte, scrollRef, scrollToAnte, registerAnteRef } = useAnteTracker(antes, ANTE_TRACKER_OPTIONS);
   const highlightRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const highlightsRef = useRef(highlights);
   useLayoutEffect(() => {

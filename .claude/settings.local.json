@@ -12,10 +12,21 @@
       "PowerShell(Get-ChildItem \"D:\\\\seedfinder.app\\\\node_modules\\\\jaml-ui\" -File | Where-Object { $_.Name -match \"css|json\" } | Select-Object Name, FullName)",
       "PowerShell(\\(Get-Content \"D:\\\\seedfinder.app\\\\node_modules\\\\jaml-ui\\\\package.json\" | ConvertFrom-Json\\).version)",
       "PowerShell(head *)",
-      "PowerShell(git restore *)"
+      "PowerShell(git restore *)",
+      "Bash(grep -v \"comment\\\\|//.*http\")",
+      "Bash(grep -v \"^.*//.*export\")",
+      "Bash(Remove-Item \"X:\\\\jaml-ui\\\\src\\\\ui\\\\ide\\\\JamlBuilder.tsx\" -Force)",
+      "Bash(Remove-Item \"X:\\\\jaml-ui\\\\src\\\\ui\\\\ide\\\\WasmStatus.tsx\" -Force)",
+      "Bash(Remove-Item \"X:\\\\jaml-ui\\\\src\\\\ui\\\\ide\\\\AgnosticSeedCard.tsx\" -Force)",
+      "Bash(Write-Output \"Deleted 3 orphaned files\")",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm build *)",
+      "Bash(gh api *)"
     ],
     "additionalDirectories": [
-      "d:\\seedfinder.app"
+      "d:\\seedfinder.app",
+      "D:\\bootsharp",
+      "d:\\extra"
     ]
   },
   "enableAllProjectMcpServers": true,
