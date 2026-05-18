@@ -31,21 +31,11 @@ npm publish --access public
 
 Version source of truth: `<MotelyVersion>` in `Directory.Packages.props`. Bootsharp regenerates `motely-wasm/package.json` from its template on every pack (no version field); the `FinalizeNpmPackage` target in `Motely.Wasm.csproj` injects `<MotelyVersion>` into the generated file right after `BootsharpPack` runs and copies `Motely.Wasm/README.md` into the npm root. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
 
-## npm publish procedure — follow in order
+## npm publish procedure
 
-Pre-publish, after `dotnet publish Motely.Wasm`:
+After `dotnet publish Motely.Wasm`, run `node Motely.Wasm/motely.test.mjs` — must report `RESULT: PASS`. Then `npm publish --access public` from `motely-wasm/`. CDN delivery (unpkg/jsdelivr) is automatic.
 
-1. **`node Motely.Wasm/motely.test.mjs`** — must report `RESULT: PASS`. Node suite covering the documented `Motely.*` WASM surface, structured to mirror the xUnit shape in `Motely.Tests` (named test functions, arrange/act/assert, runner at bottom). Source of truth for "the package boots and the public API hasn't regressed." Mirror new xUnit cases here when they cover behaviour the JS consumer also depends on.
-2. **Eyeball `motely-wasm/package.json` `exports`.** Must be `{ ".": "./dist/index.mjs", "./*": "./dist/generated/*.g.mjs" }`. Known-broken historic shapes: `17.3.1` shipped `"./../motely-wasm/index.mjs"`, `17.3.2` shipped `"././index.mjs"`. Both make Node refuse `import`. Bail before publishing if you see either.
-3. **`npm publish --dry-run`** from `motely-wasm/`. Confirm file count + tarball size are in line with prior releases (47 files / ~2.3 MB at 17.4.x).
-
-Post-publish, against the registry (not the local emit):
-
-4. **`npm view motely-wasm@<version> exports`** — must match step 2 byte-for-byte. If not, `npm unpublish motely-wasm@<version>` within 72h and republish a bumped patch. Local emit being clean is necessary, not sufficient — the publish pipeline has historically mangled exports on the way to the registry.
-
-`Motely.Wasm/test-browser.html` is the same coverage in-browser; boot path is host-chosen via `?bin=...` query param. Use it when the failure mode is browser-only (OPFS, worker boot, exports resolution against an HTTP server).
-
-CDN delivery (unpkg/jsdelivr) is automatic after `npm publish` — no manual upload step.
+`motely.test.mjs` covers the documented `Motely.*` WASM surface, structured to mirror the xUnit shape in `Motely.Tests`. Mirror new xUnit cases here when they cover behaviour the JS consumer depends on. `Motely.Wasm/test-browser.html` is the same coverage in-browser; boot path is host-chosen via `?bin=...` query param. Use it when the failure mode is browser-only (OPFS, worker boot).
 
 ## Agent rules
 

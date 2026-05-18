@@ -2,6 +2,8 @@
 
 WebAssembly package for [Motely](https://github.com/OptimusPi/MotelyJAML) — the Balatro seed search engine, with filters written in JAML.
 
+The package ships `jaml.schema.json` (JSON Schema for the JAML filter format) at the package root, so editors can wire it up for autocomplete / validation without an extra fetch.
+
 ## Install
 
 ```sh

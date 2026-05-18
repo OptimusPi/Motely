@@ -69,6 +69,10 @@
          mtimes than the source. SkipUnchangedFiles would then preserve the scribble through `dotnet publish`
          and ship it to npm. Always overwrite. -->
     <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
+    <!-- Ship the generated JAML schema alongside the runtime so JS consumers can
+         load it for editor tooling / validation without a separate fetch. Same
+         no-SkipUnchangedFiles reasoning as the README copy above. -->
+    <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
     <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
   </Target>
 </Project>
