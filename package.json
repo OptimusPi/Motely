@@ -87,7 +87,7 @@
     "@react-spring/three": ">=9.0.0",
     "@react-three/drei": ">=9.0.0",
     "@react-three/fiber": ">=8.0.0",
-    "motely-wasm": ">=17.0.0",
+    "motely-wasm": ">=17.7.0",
     "react": "^18.2.0 || ^19.0.0",
     "react-dom": "^18.2.0 || ^19.0.0",
     "react-icons": ">=5.0.0",
