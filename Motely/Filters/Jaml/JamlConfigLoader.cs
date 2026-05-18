@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 // ────────────────────────────── Loader ──────────────────────────────
 
@@ -60,7 +60,6 @@ public static partial class JamlConfigLoader
                 Stake = stake,
             };
 
-            config.Hashtags = NormalizeHashtags(load.Hashtags);
             config.Seeds = NormalizeSeeds(load.Seeds);
 
             // MUST → required filters
@@ -1314,34 +1313,6 @@ public static partial class JamlConfigLoader
         normalized = Regex.Replace(normalized, "-+", "-").Trim('-', '_');
 
         return string.IsNullOrWhiteSpace(normalized) ? "unnamed" : normalized.ToLowerInvariant();
-    }
-
-    private static List<string> NormalizeHashtags(List<string>? hashtags)
-    {
-        if (hashtags is not { Count: > 0 })
-            return [];
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var normalized = new List<string>();
-
-        foreach (var entry in hashtags)
-        {
-            if (string.IsNullOrWhiteSpace(entry))
-                continue;
-
-            var tag = entry.Trim();
-            if (tag.StartsWith('#'))
-                tag = tag[1..];
-
-            if (string.IsNullOrWhiteSpace(tag))
-                continue;
-
-            tag = tag.ToLowerInvariant();
-            if (seen.Add(tag))
-                normalized.Add(tag);
-        }
-
-        return normalized;
     }
 
     private static List<string> NormalizeSeeds(List<string>? seeds)

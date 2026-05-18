@@ -2,7 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://seedfinder.app/jaml.schema.json",
   "title": "JAML — Jimbo's Ante Markup Language",
-  "description": "Generated from Motely's JAML POCOs. Do not hand-edit; regenerate via `dotnet run jaml-schema.cs`.",
+  "description": "Declarative filter language for Balatro seed searches. A JAML document specifies the criteria a seed must satisfy; the Motely engine compiles and runs it.",
+  "version": "17.4.5",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -396,6 +397,30 @@
         },
         "mode": {
           "type": "string"
+        },
+        "judgement": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "wraith": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "rareTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "uncommonTag": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         },
         "shopItems": {
           "type": "array",

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      # Motely.Wasm is excluded on purpose: it needs the local Bootsharp alpha
+      # feed (see nuget.config), which CI can't restore. Build everything else.
+      - name: Restore
+        run: |
+          dotnet restore Motely.CLI/Motely.CLI.csproj
+          dotnet restore Motely.TUI/Motely.TUI.csproj
+          dotnet restore Motely.DataLake/Motely.DataLake.csproj
+          dotnet restore Motely.Tests/Motely.Tests.csproj
+
+      - name: Build
+        run: |
+          dotnet build Motely.CLI/Motely.CLI.csproj           -c Release --no-restore
+          dotnet build Motely.TUI/Motely.TUI.csproj           -c Release --no-restore
+          dotnet build Motely.DataLake/Motely.DataLake.csproj -c Release --no-restore
+          dotnet build Motely.Tests/Motely.Tests.csproj       -c Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test Motely.Tests/Motely.Tests.csproj
+          -c Release --no-build
+          --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+          if-no-files-found: warn

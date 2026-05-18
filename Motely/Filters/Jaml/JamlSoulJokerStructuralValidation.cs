@@ -1,4 +1,4 @@
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Soul-joker structural validation is currently a no-op — pifreak rule: trust users, don't block

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 public sealed class StandardCardClause : JamlClause
 {

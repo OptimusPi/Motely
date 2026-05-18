@@ -29,6 +29,29 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
+  <!-- Bake MotelyVersion as a compile-time const so Version() doesn't depend on
+       AssemblyInformationalVersionAttribute reflection (which NativeAOT trims away,
+       and which Motely.csproj already disables via GenerateAssemblyInfo=false).
+       The const is inlined into IL, so trimming can't touch it. -->
+  <Target Name="GenerateVersionConstant" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <_VersionLines Include="// &lt;auto-generated/&gt;" />
+      <_VersionLines Include="namespace Motely.Wasm%3B" />
+      <_VersionLines Include="internal static class MotelyVersionConstant" />
+      <_VersionLines Include="{" />
+      <_VersionLines Include="    public const string Value = &quot;$(MotelyVersion)&quot;%3B" />
+      <_VersionLines Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile
+        File="$(IntermediateOutputPath)MotelyVersion.g.cs"
+        Lines="@(_VersionLines)"
+        Overwrite="true"
+        WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)MotelyVersion.g.cs" />
+    </ItemGroup>
+  </Target>
+
   <!-- Bootsharp rewrites package.json from its PackageTemplate.json every pack (Overwrite=true)
        and the template carries no "version" — but motely-wasm is npm-published and needs one.
        Inject MotelyVersion (source of truth: <MotelyVersion> in Directory.Packages.props) right
@@ -42,7 +65,14 @@
     <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
            Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp's PackageTemplate.json 'name' line may have changed. Update FinalizeNpmPackage in Motely.Wasm.csproj." />
     <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
-    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" SkipUnchangedFiles="true" />
+    <!-- No SkipUnchangedFiles: the destination is gitignored and may carry stale manual edits with newer
+         mtimes than the source. SkipUnchangedFiles would then preserve the scribble through `dotnet publish`
+         and ship it to npm. Always overwrite. -->
+    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
+    <!-- Ship the generated JAML schema alongside the runtime so JS consumers can
+         load it for editor tooling / validation without a separate fetch. Same
+         no-SkipUnchangedFiles reasoning as the README copy above. -->
+    <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
     <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
   </Target>
 </Project>

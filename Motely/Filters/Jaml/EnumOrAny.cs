@@ -1,4 +1,4 @@
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Wildcard-or-specific value union for clause discriminators that accept the JAML literal

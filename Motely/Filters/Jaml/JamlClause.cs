@@ -1,4 +1,4 @@
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// JAML clause contract. The 4 polymorphic members (<see cref="MaxAnte"/>,
