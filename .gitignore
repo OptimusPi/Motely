@@ -23,4 +23,8 @@ sb-screenshot*.png
 
 .claude/settings.local.json
 /examples/screenshots-balatro-movile
-/examples
+/examples/*
+!/examples/seed-finder
+/examples/seed-finder/node_modules
+/examples/seed-finder/dist
+/examples/seed-finder/public/motely-wasm
