@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { StandardCard, CardSuit, CardRank, CardEnhancement, CardSeal, CardEdition } from './StandardCard';
+import { StandardCard } from './StandardCard';
+import { CardSuit, CardRank, CardEnhancement, CardSeal, CardEdition } from './cardEnums';
 import { JimboPanel } from '../ui/panel';
 import { JimboText } from '../ui/jimboText';
 

@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { StandardCard, type CardRank, type CardSuit } from './StandardCard.js'
+import { StandardCard } from './StandardCard.js'
+import type { CardRank, CardSuit } from './cardEnums.js'
 import { JimboColorOption } from '../ui/tokens.js'
 import { JimboText } from '../ui/jimboText.js'
 
