@@ -6,7 +6,9 @@ const meta = {
   component: Showcase,
   parameters: {
     layout: 'fullscreen',
-    jimboHarness: true,
+    // Showcase owns its own <JimboApp> shell + footer, so skip the decorator
+    // harness to avoid a double-wrap that re-paints the dark teal under us.
+    jimboHarness: false,
   },
 } satisfies Meta<typeof Showcase>;
 

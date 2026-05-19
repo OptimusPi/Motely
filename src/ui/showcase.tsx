@@ -5,7 +5,6 @@ import { JimboButton } from './panel.js'
 import { JimboSprite } from './sprites.js'
 import { JimboText } from './jimboText.js'
 import { JimboApp, JimboAppFooter } from './jimboApp.js'
-import { JimboBalatroFooter } from './footer.js'
 import { JimboSectionHeader, type JimboSectionTone } from './jimboSectionHeader.js'
 import { JimboInfoCard, JimboInfoCardBody, JimboInfoCardTitle, JimboInfoCardSub, JimboInfoCardAside } from './jimboInfoCard.js'
 
@@ -74,7 +73,7 @@ export function Showcase({
         {mcpInfo && (
           <div className="j-flex j-justify-between" style={{
             padding: '3px 8px',
-            background: 'var(--j-dark-grey)', borderRadius: 4,
+            background: 'var(--j-surface-inset)', borderRadius: 4,
             border: '1px solid var(--j-panel-edge)',
           }}>
             <JimboText size="micro" tone="purple">{mcpInfo.engine}</JimboText>
@@ -118,9 +117,22 @@ export function Showcase({
         {recentFinds.length > 0 && (
           <>
             <JimboSectionHeader label="Recent" tone="green" />
-            <div style={{ lineHeight: 1.5 }}>
+            <div style={{
+              background: 'var(--j-surface-inset)',
+              borderRadius: 'var(--j-radius-md)',
+              padding: '6px 8px',
+              lineHeight: 1.5,
+            }}>
               {recentFinds.slice(0, 3).map((r, i) => (
-                <div key={i} className="j-flex j-gap-sm">
+                <div
+                  key={i}
+                  className="j-flex j-gap-sm"
+                  style={{
+                    background: i % 2 === 1 ? 'var(--j-surface-inset-alt)' : 'transparent',
+                    borderRadius: 'var(--j-radius-sm)',
+                    padding: '1px 4px',
+                  }}
+                >
                   <JimboText size="micro" tone="gold">{r.seed}</JimboText>
                   <JimboText size="micro" tone="grey">{r.filterName}</JimboText>
                   {r.score > 0 && <JimboText size="micro" tone="green">+{r.score}</JimboText>}
@@ -135,7 +147,6 @@ export function Showcase({
         <JimboButton tone="red" fullWidth size="lg" onClick={onNewSearch}>New Search</JimboButton>
         <JimboButton tone="blue" fullWidth size="lg" onClick={onBrowseFilters}>Browse Filters</JimboButton>
       </JimboAppFooter>
-      <JimboBalatroFooter />
     </JimboApp>
   )
 }

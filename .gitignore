@@ -12,6 +12,15 @@ eslint-report.json
 extract-errors.cjs
 sb-check*.mjs
 sb-screenshot*.png
+
+# Loose playwright/MCP screenshots and ad-hoc PNGs that pile up at the repo
+# root during agent sessions. Real reference screenshots live in examples/.
+/cardfan-*.png
+/showcase-*.png
+/jimbo-*.png
+/storybook-*.png
+.playwright-mcp/
+
 .claude/settings.local.json
 /examples/screenshots-balatro-movile
 /examples

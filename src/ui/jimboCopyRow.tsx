@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { JimboText } from './jimboText.js'
+import { JimboButton } from './panel.js'
 
 export interface JimboCopyRowProps {
   value: string
@@ -9,8 +10,9 @@ export interface JimboCopyRowProps {
 }
 
 /**
- * Inline copy-to-clipboard row with label + value + button.
- * All styling via jimbo.css `.j-copy-row` classes.
+ * Inline copy-to-clipboard row: label + value chip + JimboButton.
+ * The button is a real JimboButton — toggles red ("Copy") → green ("Copied")
+ * for 1.5s after click. No raw button shell.
  */
 export function JimboCopyRow({ value, label }: JimboCopyRowProps) {
   const [copied, setCopied] = useState(false)
@@ -33,14 +35,13 @@ export function JimboCopyRow({ value, label }: JimboCopyRowProps) {
         <div className="j-copy-row__value">
           <JimboText size="sm">{value}</JimboText>
         </div>
-        <button
-          type="button"
-          className="j-copy-row__btn"
-          data-copied={copied}
+        <JimboButton
+          tone={copied ? 'green' : 'red'}
+          size="sm"
           onClick={copy}
         >
           {copied ? 'Copied' : 'Copy'}
-        </button>
+        </JimboButton>
       </div>
     </div>
   )

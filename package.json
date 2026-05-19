@@ -134,6 +134,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "motely-wasm": "^18.1.1",
     "playwright": "^1.60.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -144,7 +145,6 @@
     "typescript-eslint": "^8.59.3",
     "vite": "^8.0.13",
     "vite-plugin-dts": "^5.0.0",
-    "motely-wasm": "^18.1.0",
     "vitest": "^4.1.6"
   },
   "dependencies": {

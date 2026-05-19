@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useLayoutEffect } from "react";
 
-export interface PanelSplitterProps {
+export interface JimboPanelSplitterProps {
   "aria-label"?: string;
   className?: string;
   onDrag: (delta: number) => void;
@@ -10,13 +10,13 @@ export interface PanelSplitterProps {
   orientation?: "vertical" | "horizontal";
 }
 
-export function PanelSplitter({
+export function JimboPanelSplitter({
   orientation = "vertical",
   onDrag,
   onKeyAdjust,
   className = "",
   "aria-label": ariaLabel,
-}: PanelSplitterProps) {
+}: JimboPanelSplitterProps) {
   const draggingRef = useRef(false);
   const lastRef = useRef(0);
   const onDragRef = useRef(onDrag);

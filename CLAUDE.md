@@ -66,8 +66,11 @@ Source of truth is `AGENTS.md`. Summary of the hard constraints for any UI work 
 
 - Never use ALL CAPS.
 - Never use bold / heavy font-weight.
-- Never put grey text on a grey background.
-- Mobile-first at 375px width.
+- Never put grey text on a grey background. `tone="grey"` text on any `--j-darkest` / `--j-dark-grey` / `--j-teal-grey` / `--j-surface-inset` surface is grey-on-grey.
+- **Every component is a `Jimbo*` component.** No raw `<button>`, no inline anonymous components in consumer screens. Missing primitive? Add a `Jimbo*` to `src/ui/` with a story.
+- **No emoji as icons.** Use `react-icons` (`react-icons/fi` preferred).
+- **Item names go in `JimboTooltip`, not inline labels.** Sprite + tooltip-on-hover. Players recognize the art; the 320px surface can't afford permanent inline labels.
+- Canonical surface is **iPhone SE 5 portrait, 320×568, HARD LOCKED — for every consumer, including MCP App embeds and desktop.** The `.j-app` shell is fixed at 320×568 — no scroll, no stretch, no reflow. We design for 320×568 first; we widen only after the 320 experience is right. If your component doesn't fit, redesign the component, don't relax the lock.
 - "Juice" comes from CSS animations (`.j-font-dance-char`, `scale(1.05) translateY(-2px)`, etc.) — not JS wrappers.
 - No visible scrollbars. Use magnetic scroll snapping.
 

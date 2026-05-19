@@ -3,6 +3,7 @@
 import React from 'react'
 import { resolveJamlAssetUrl } from '../assets.js'
 import { getSpriteData, getMysterySprite, SHEET_META, type SpriteSheetType } from '../sprites/spriteMapper.js'
+import { SPRITE_SHEETS } from '../sprites/spriteData.js'
 
 export interface JimboSpriteProps {
   name: string
@@ -83,31 +84,35 @@ export interface DeckSpriteProps {
   style?: React.CSSProperties
 }
 
-const DECK_ROWS: Record<string, number> = {
-  Red: 0,
-  Blue: 1,
-  Yellow: 2,
-  Green: 3,
-  Black: 0,
-  Magic: 1,
-  Nebula: 2,
-  Ghost: 3,
+// Deck-back sprites live in Enhancers.png (the same sheet that holds card
+// enhancement backgrounds + seals). Map deck names to their (col, row) cell
+// on that sheet. Names that aren't mapped fall back to Red.
+//
+// The 8BitDeck.png sheet (registered as `deck`) is 13×4 = 52 card FACES
+// only — no deck-backs there. Earlier code sampled column 12 of deck and
+// happened to render Aces; the visible "Red Deck" in RunConfigModal works
+// because it pulls from enhancers (0,0), not from deck.
+const DECK_TILE: Record<string, { x: number; y: number }> = {
+  Red:     { x: 0, y: 0 },
+  Blue:    { x: 0, y: 2 },
+  Yellow:  { x: 1, y: 2 },
+  Green:   { x: 2, y: 2 },
+  Black:   { x: 3, y: 2 },
+  Magic:   { x: 4, y: 2 },
 }
 
 export function DeckSprite({ deck, width = 71, height, style }: DeckSpriteProps) {
   const baseDeck = deck.replace(" Deck", "")
-  const y = DECK_ROWS[baseDeck] ?? 0
-  const x = 12
+  const tile = DECK_TILE[baseDeck] ?? DECK_TILE.Red
   const h = height ?? (width * 95 / 71)
-  const bgW = width * 13
-  const bgH = h * 4
+  const sheet = SPRITE_SHEETS.enhancers
 
   return (
     <div style={{
       width, height: h, flexShrink: 0,
-      backgroundImage: `url(${resolveJamlAssetUrl('deck')})`,
-      backgroundSize: `${bgW}px ${bgH}px`,
-      backgroundPosition: `-${x * width}px -${y * h}px`,
+      backgroundImage: `url(${resolveJamlAssetUrl(sheet.asset)})`,
+      backgroundSize: `${width * sheet.columns}px ${h * sheet.rows}px`,
+      backgroundPosition: `${-tile.x * width}px ${-tile.y * h}px`,
       backgroundRepeat: 'no-repeat',
       imageRendering: 'pixelated',
       ...style,

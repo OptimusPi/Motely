@@ -16,6 +16,7 @@ import { JimboCopyRow } from './jimboCopyRow';
 import { JimboSelect } from './JimboSelect';
 import { JimboIconButton } from './JimboIconButton';
 import { JimboStepper } from './JimboStepper';
+import { JimboSpinner } from './JimboSpinner';
 import { JimboSlider } from './JimboSlider';
 import { JimboDualChip } from './JimboDualChip';
 
@@ -328,25 +329,32 @@ export const CopyRowAndSelect: StoryObj = {
   },
 };
 
-export const Stepper: StoryObj = {
+// Settings stories demonstrate SEED-SEARCHER settings — NOT Balatro game
+// settings (no Shadows, Pixel Art Smoothing, CRT, Music Volume — that's the
+// game, not this app). The app is a seed curator/searcher, so the controls
+// shown here are the ones a seed hunter actually configures.
+
+// Spinner = `< value >` two-arrow value cycler. Old name "Stepper" was a
+// misnomer; the real Stepper is the page-dot indicator below.
+export const Spinner: StoryObj = {
   render: () => {
-    const options = ['1', '2', '3', '4'];
+    const threadOptions = ['1', '2', '4', '8', '16', '32'];
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [i, setI] = useState(0);
+    const [threads, setThreads] = useState(2);
     return (
       <JimboAppScroll>
         <JimboPanel>
-          <JimboStepper
-            label="Game Speed"
-            value={options[i]}
-            onPrev={() => setI((p) => Math.max(0, p - 1))}
-            onNext={() => setI((p) => Math.min(options.length - 1, p + 1))}
-            canPrev={i > 0}
-            canNext={i < options.length - 1}
+          <JimboSpinner
+            label="Worker threads"
+            value={threadOptions[threads]}
+            onPrev={() => setThreads((p) => Math.max(0, p - 1))}
+            onNext={() => setThreads((p) => Math.min(threadOptions.length - 1, p + 1))}
+            canPrev={threads > 0}
+            canNext={threads < threadOptions.length - 1}
           />
-          <JimboStepper
-            label="Pixel Art Smoothing"
-            value="On"
+          <JimboSpinner
+            label="Ante depth"
+            value="8"
             onPrev={() => undefined}
             onNext={() => undefined}
           />
@@ -356,17 +364,34 @@ export const Stepper: StoryObj = {
   },
 };
 
-export const Slider: StoryObj = {
+// Stepper = page-dot indicator. Active page is a filled white dot; others
+// are dim grey. Used as a carousel position indicator.
+export const Stepper: StoryObj = {
   render: () => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [crt, setCrt] = useState(100);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [music, setMusic] = useState(28);
+    const [page, setPage] = useState(2);
     return (
       <JimboAppScroll>
         <JimboPanel>
-          <JimboSlider label="CRT" value={crt} onChange={setCrt} />
-          <JimboSlider label="Music Volume" value={music} onChange={setMusic} />
+          <JimboStepper count={5} index={page} onIndexChange={setPage} />
+          <JimboStepper count={8} index={3} />
+        </JimboPanel>
+      </JimboAppScroll>
+    );
+  },
+};
+
+export const Slider: StoryObj = {
+  render: () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [maxResults, setMaxResults] = useState(100);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [timeBudget, setTimeBudget] = useState(30);
+    return (
+      <JimboAppScroll>
+        <JimboPanel>
+          <JimboSlider label="Max results" value={maxResults} onChange={setMaxResults} />
+          <JimboSlider label="Time budget (s)" value={timeBudget} onChange={setTimeBudget} />
           <JimboSlider value={60} onChange={() => undefined} />
         </JimboPanel>
       </JimboAppScroll>
@@ -398,25 +423,31 @@ export const DualChip: StoryObj = {
   ),
 };
 
+// IconButton story uses react-icons (Feather set) — never emoji glyphs.
+// This is the canonical pattern: import an icon from react-icons/fi and
+// drop it directly into a JimboIconButton as a child.
 export const IconButtons: StoryObj = {
-  render: () => (
-    <JimboAppScroll>
-      <JimboPanel>
-        <JimboText size="sm" tone="grey">Square, subtle, for toolbars.</JimboText>
-        <div className="j-flex j-gap-sm">
-          <JimboIconButton title="Search">🔍</JimboIconButton>
-          <JimboIconButton title="Settings">⚙️</JimboIconButton>
-          <JimboIconButton title="Copy">📋</JimboIconButton>
-          <JimboIconButton title="Close">✕</JimboIconButton>
-          <JimboIconButton title="Disabled" disabled>✕</JimboIconButton>
-        </div>
-        <div className="j-flex j-gap-sm">
-          <JimboIconButton size="sm" title="Small">🔍</JimboIconButton>
-          <JimboIconButton size="sm" title="Small">⚙️</JimboIconButton>
-        </div>
-      </JimboPanel>
-    </JimboAppScroll>
-  ),
+  render: () => {
+    const { FiSearch, FiSettings, FiCopy, FiX } = require('react-icons/fi') as typeof import('react-icons/fi')
+    return (
+      <JimboAppScroll>
+        <JimboPanel>
+          <JimboText size="sm" tone="white">Square, subtle, for toolbars.</JimboText>
+          <div className="j-flex j-gap-sm">
+            <JimboIconButton title="Search"><FiSearch /></JimboIconButton>
+            <JimboIconButton title="Settings"><FiSettings /></JimboIconButton>
+            <JimboIconButton title="Copy"><FiCopy /></JimboIconButton>
+            <JimboIconButton title="Close"><FiX /></JimboIconButton>
+            <JimboIconButton title="Disabled" disabled><FiX /></JimboIconButton>
+          </div>
+          <div className="j-flex j-gap-sm">
+            <JimboIconButton size="sm" title="Small"><FiSearch /></JimboIconButton>
+            <JimboIconButton size="sm" title="Small"><FiSettings /></JimboIconButton>
+          </div>
+        </JimboPanel>
+      </JimboAppScroll>
+    )
+  },
 };
 
 export const AppShell: StoryObj = {

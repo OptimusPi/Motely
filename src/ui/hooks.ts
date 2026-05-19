@@ -107,12 +107,69 @@ export function useDelayedVisibility(open: boolean, delay: number) {
   return { visible, opacity }
 }
 
+export type JimboBackgroundColor = string | [number, number, number]
+
+export interface JimboBackgroundConfig {
+  /** Three palette colors. Each can be `#RRGGBB` / `#RGB` or `[r,g,b]` in 0..1. */
+  primary?: JimboBackgroundColor
+  secondary?: JimboBackgroundColor
+  dark?: JimboBackgroundColor
+  /** Animation speed multiplier on top of the base SPIN_SPEED. Default 1. */
+  speed?: number
+  /** Twirl rotation seed (default -2). */
+  spinRotation?: number
+  /** How much the twirl warps the field, 0..1ish (default 0.35). */
+  spinAmount?: number
+  /** Pixelation. Higher = finer pixels (default ~244 = 740*0.33). */
+  pixelFilter?: number
+  /** Contrast multiplier (default 4.5). */
+  contrast?: number
+  /** Bright lighting amount (default 0.5). */
+  lighting?: number
+  /** Color transition duration in ms when palette changes. Default 800. */
+  transitionMs?: number
+}
+
+const BALATRO_DEFAULTS = {
+  primary:    [1.0,  0.2,  0.2 ] as [number, number, number], // red
+  secondary:  [0.0,  0.5,  1.0 ] as [number, number, number], // blue
+  dark:       [0.05, 0.08, 0.1 ] as [number, number, number], // near-black
+  speed: 1.0,
+  spinRotation: -2.0,
+  spinAmount: 0.35,
+  pixelFilter: 740.0 * 0.33,
+  contrast: 4.5,
+  lighting: 0.5,
+  transitionMs: 800,
+}
+
+function parseColor(c: JimboBackgroundColor | undefined, fallback: [number, number, number]): [number, number, number] {
+  if (!c) return fallback
+  if (Array.isArray(c)) return [c[0], c[1], c[2]]
+  let hex = c.trim().replace(/^#/, '')
+  if (hex.length === 3) hex = hex.split('').map((ch) => ch + ch).join('')
+  if (hex.length !== 6) return fallback
+  const n = parseInt(hex, 16)
+  if (Number.isNaN(n)) return fallback
+  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255]
+}
+
 /**
  * Hook for the Balatro hypnotic swirl background.
  * Manages WebGL context, shader compilation, and animation loop.
+ *
+ * All shader constants are exposed as uniforms so they can be tuned at
+ * runtime. Color changes are interpolated over `transitionMs` so palette
+ * swaps fade smoothly instead of snapping.
  */
-export function useBalatroBackground() {
+export function useBalatroBackground(config: JimboBackgroundConfig = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // Latest config lives in a ref so the render loop can read fresh values
+  // without re-creating the WebGL context on every prop change.
+  const configRef = useRef(config)
+  useLayoutEffect(() => {
+    configRef.current = config
+  })
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -133,32 +190,30 @@ export function useBalatroBackground() {
 
       uniform float u_time;
       uniform vec2 u_resolution;
-
-      const float SPIN_ROTATION = -2.0;
-      const float SPIN_SPEED = 4.5;
-      const vec4 COLOUR_1 = vec4(1.0, 0.2, 0.2, 1.0);
-      const vec4 COLOUR_2 = vec4(0.0, 0.5, 1.0, 1.0);
-      const vec4 COLOUR_3 = vec4(0.05, 0.08, 0.1, 1.0);
-      const float CONTRAST = 4.5;
-      const float LIGTHING = 0.5;
-      const float SPIN_AMOUNT = 0.35;
-      const float PIXEL_FILTER = 740.0 * 0.33;
-      const float PI = 3.14159265359;
+      uniform vec3 u_color1;
+      uniform vec3 u_color2;
+      uniform vec3 u_color3;
+      uniform float u_spinRotation;
+      uniform float u_spinSpeed;
+      uniform float u_spinAmount;
+      uniform float u_pixelFilter;
+      uniform float u_contrast;
+      uniform float u_lighting;
 
       void main() {
         vec2 screenSize = u_resolution;
-        float pixel_size = length(screenSize.xy) / PIXEL_FILTER;
+        float pixel_size = length(screenSize.xy) / max(1.0, u_pixelFilter);
         vec2 uv = (floor(gl_FragCoord.xy*(1.0/pixel_size))*pixel_size - 0.5*screenSize.xy)/length(screenSize.xy);
         float uv_len = length(uv);
 
-        float speed = (SPIN_ROTATION * 0.2) + 302.2;
-        float new_pixel_angle = atan(uv.y, uv.x) + speed - 20.0*(1.0*SPIN_AMOUNT*uv_len + (1.0 - 1.0*SPIN_AMOUNT));
+        float speed = (u_spinRotation * 0.2) + 302.2;
+        float new_pixel_angle = atan(uv.y, uv.x) + speed - 20.0*(u_spinAmount*uv_len + (1.0 - u_spinAmount));
 
         vec2 mid = (screenSize.xy/length(screenSize.xy))/2.0;
         uv = (vec2((uv_len * cos(new_pixel_angle) + mid.x), (uv_len * sin(new_pixel_angle) + mid.y)) - mid);
 
         uv *= 30.0;
-        speed = u_time * SPIN_SPEED;
+        speed = u_time * u_spinSpeed;
         vec2 uv2 = vec2(uv.x, uv.y);
 
         for(int i=0; i < 5; i++) {
@@ -167,16 +222,15 @@ export function useBalatroBackground() {
           uv  -= 1.0*cos(uv.x + uv.y) - 1.0*sin(uv.x*0.711 - uv.y);
         }
 
-        float contrast_mod = (0.25*CONTRAST + 0.5*SPIN_AMOUNT + 1.2);
+        float contrast_mod = (0.25*u_contrast + 0.5*u_spinAmount + 1.2);
         float paint_res = min(2.0, max(0.0, length(uv)*(0.035)*contrast_mod));
         float c1p = max(0.0, 1.0 - contrast_mod*abs(1.0 - paint_res));
         float c2p = max(0.0, 1.0 - contrast_mod*abs(paint_res));
         float c3p = 1.0 - min(1.0, c1p + c2p);
-        float light = (LIGTHING - 0.2)*max(c1p*5.0 - 4.0, 0.0) + LIGTHING*max(c2p*5.0 - 4.0, 0.0);
+        float light = (u_lighting - 0.2)*max(c1p*5.0 - 4.0, 0.0) + u_lighting*max(c2p*5.0 - 4.0, 0.0);
 
-        vec4 finalCol = (0.3/CONTRAST)*COLOUR_1 + (1.0 - 0.3/CONTRAST)*(COLOUR_1*c1p + COLOUR_2*c2p + vec4(c3p*COLOUR_3.rgb, c3p*COLOUR_1.a)) + light;
-
-        gl_FragColor = finalCol;
+        vec3 base = (0.3/u_contrast)*u_color1 + (1.0 - 0.3/u_contrast)*(u_color1*c1p + u_color2*c2p + c3p*u_color3) + vec3(light);
+        gl_FragColor = vec4(base, 1.0);
       }
     `
 
@@ -224,13 +278,49 @@ export function useBalatroBackground() {
     gl.enableVertexAttribArray(positionLocation)
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
 
-    const timeLocation = gl.getUniformLocation(program, 'u_time')
-    const resolutionLocation = gl.getUniformLocation(program, 'u_resolution')
+    const u_time = gl.getUniformLocation(program, 'u_time')
+    const u_resolution = gl.getUniformLocation(program, 'u_resolution')
+    const u_color1 = gl.getUniformLocation(program, 'u_color1')
+    const u_color2 = gl.getUniformLocation(program, 'u_color2')
+    const u_color3 = gl.getUniformLocation(program, 'u_color3')
+    const u_spinRotation = gl.getUniformLocation(program, 'u_spinRotation')
+    const u_spinSpeed = gl.getUniformLocation(program, 'u_spinSpeed')
+    const u_spinAmount = gl.getUniformLocation(program, 'u_spinAmount')
+    const u_pixelFilter = gl.getUniformLocation(program, 'u_pixelFilter')
+    const u_contrast = gl.getUniformLocation(program, 'u_contrast')
+    const u_lighting = gl.getUniformLocation(program, 'u_lighting')
 
-    const startTime = Date.now()
-    let animationFrameId: number
+    // Current (interpolated) colors. Each frame they lerp toward the latest
+    // config colors over the transitionMs window so palette swaps fade in.
+    const current: [number, number, number][] = [
+      [...BALATRO_DEFAULTS.primary],
+      [...BALATRO_DEFAULTS.secondary],
+      [...BALATRO_DEFAULTS.dark],
+    ]
+    const startTime = performance.now()
+    let lastFrame = startTime
+    let animationFrameId = 0
 
     const render = () => {
+      const now = performance.now()
+      const dt = Math.max(0, now - lastFrame)
+      lastFrame = now
+
+      const cfg = configRef.current
+      const target: [number, number, number][] = [
+        parseColor(cfg.primary,   BALATRO_DEFAULTS.primary),
+        parseColor(cfg.secondary, BALATRO_DEFAULTS.secondary),
+        parseColor(cfg.dark,      BALATRO_DEFAULTS.dark),
+      ]
+      const transitionMs = Math.max(1, cfg.transitionMs ?? BALATRO_DEFAULTS.transitionMs)
+      // Frame-rate-independent lerp: alpha = 1 - exp(-dt / tau).
+      const alpha = 1 - Math.exp(-dt / transitionMs)
+      for (let i = 0; i < 3; i++) {
+        for (let c = 0; c < 3; c++) {
+          current[i][c] += (target[i][c] - current[i][c]) * alpha
+        }
+      }
+
       const displayWidth = canvas.clientWidth
       const displayHeight = canvas.clientHeight
       if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
@@ -239,15 +329,23 @@ export function useBalatroBackground() {
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)
       }
 
-      const currentTime = (Date.now() - startTime) / 1000.0
-      gl.uniform1f(timeLocation, currentTime)
-      gl.uniform2f(resolutionLocation, canvas.width, canvas.height)
+      gl.uniform1f(u_time, (now - startTime) / 1000.0)
+      gl.uniform2f(u_resolution, canvas.width, canvas.height)
+      gl.uniform3f(u_color1, current[0][0], current[0][1], current[0][2])
+      gl.uniform3f(u_color2, current[1][0], current[1][1], current[1][2])
+      gl.uniform3f(u_color3, current[2][0], current[2][1], current[2][2])
+      gl.uniform1f(u_spinRotation, cfg.spinRotation ?? BALATRO_DEFAULTS.spinRotation)
+      gl.uniform1f(u_spinSpeed,    4.5 * (cfg.speed ?? BALATRO_DEFAULTS.speed))
+      gl.uniform1f(u_spinAmount,   cfg.spinAmount ?? BALATRO_DEFAULTS.spinAmount)
+      gl.uniform1f(u_pixelFilter,  cfg.pixelFilter ?? BALATRO_DEFAULTS.pixelFilter)
+      gl.uniform1f(u_contrast,     cfg.contrast ?? BALATRO_DEFAULTS.contrast)
+      gl.uniform1f(u_lighting,     cfg.lighting ?? BALATRO_DEFAULTS.lighting)
 
       gl.drawArrays(gl.TRIANGLES, 0, 6)
       animationFrameId = requestAnimationFrame(render)
     }
 
-    render()
+    animationFrameId = requestAnimationFrame(render)
 
     return () => {
       cancelAnimationFrame(animationFrameId)

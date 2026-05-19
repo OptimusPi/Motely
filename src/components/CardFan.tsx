@@ -43,31 +43,34 @@ export interface CardFanProps {
  * Sizing, overlap, and max rotation auto-scale with card count so full
  * 52-card decks render cleanly and tiny 3-card hands look deliberate.
  */
+// Fan width budget — the horizontal space the spread is allowed to consume.
+// Cards never cross this; rotation+lift may extend a few px outside.
+const FAN_WIDTH = 240
+// Card sizing — tapers from BIG (small hand) to SMALL (full deck) linearly.
+const CARD_W_MAX = 54
+const CARD_W_MIN = 36
+// Max angular spread of the whole fan, in degrees (outermost-to-outermost).
+const FAN_ARC_MAX = 60
+// Max vertical lift of the outermost cards above the centerline.
+const LIFT_MAX = 22
+
 export function CardFan({ count = 0, cards, className = '', style, label, showLabel = true }: CardFanProps) {
-  const displayCount = cards ? cards.length : count
+  const n = cards ? cards.length : count
 
-  const cardSize =
-    displayCount > 40 ? 46
-      : displayCount > 30 ? 32
-        : displayCount > 12 ? 36
-          : displayCount > 8 ? 42
-            : displayCount > 5 ? 48
-              : 54
+  // Card width tapers smoothly; for n ≤ 5 stays at max, then linearly down to min by n ≈ 41.
+  const cardW = Math.max(CARD_W_MIN, CARD_W_MAX - Math.max(0, n - 5) * 0.5)
 
-  const overlap =
-    displayCount > 40 ? 0.88
-      : displayCount > 30 ? 0.85
-        : displayCount > 15 ? 0.75
-          : displayCount > 6 ? 0.60
-            : 0.45
+  // Step between adjacent card centers. With 1 card, step is unused.
+  // With many cards, step shrinks so the whole fan fits FAN_WIDTH.
+  // Capped at near-edge-to-edge so small hands don't spread out absurdly.
+  const maxStep = cardW * 0.9
+  const step = n > 1 ? Math.min(maxStep, (FAN_WIDTH - cardW) / (n - 1)) : 0
 
-  const cardSpacing = cardSize * (1 - overlap)
+  // Arc grows linearly with count, capped. 1 card → no rotation.
+  const halfArc = Math.min(FAN_ARC_MAX, Math.max(0, n - 1) * 3) / 2
 
-  const maxRotation =
-    displayCount > 40 ? 40
-      : displayCount > 20 ? 30
-        : displayCount > 10 ? 15
-          : 25
+  // Outer-card lift compensates for rotation tilting them down past the centerline.
+  const lift = Math.min(LIFT_MAX, n * 0.6)
 
   const cardsHeight = 120
 
@@ -83,14 +86,20 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
       }}
     >
       <div style={{ position: 'relative', width: '100%', height: cardsHeight }}>
-        {displayCount > 0 ? (
-          Array.from({ length: displayCount }).map((_, i) => {
-            const centerIndex = (displayCount - 1) / 2
-            const offset = i - centerIndex
-            const xPos = offset * cardSpacing
-            // Parabolic lift — outer cards sit higher than center (bowed upward)
-            const yOffset = Math.pow(Math.abs(offset / (centerIndex || 1)), 2) * (displayCount > 20 ? 20 : 10)
-            const rotation = (offset / (centerIndex || 1)) * maxRotation
+        {n > 0 ? (
+          Array.from({ length: n }).map((_, i) => {
+            const centerIndex = (n - 1) / 2
+            const offset = i - centerIndex            // -k … 0 … +k
+            const t = centerIndex > 0 ? offset / centerIndex : 0  // -1 … 0 … +1
+
+            const x = offset * step
+            // Circular-arc lift instead of t² parabola. Parabola was shallow
+            // through the middle and only curled at the tips; cosine of the
+            // rotation angle gives a uniform smile that bows evenly across the
+            // whole fan. `lift` is the depth (max dip at the centre).
+            const angleRad = (t * halfArc) * Math.PI / 180
+            const y = (1 - Math.cos(angleRad)) * -lift / (1 - Math.cos((halfArc) * Math.PI / 180) || 1)
+            const rot = t * halfArc
 
             const parsed = cards ? parseJamlCard(cards[i]) : { rank: '2' as CardRank, suit: 'Clubs' as CardSuit }
 
@@ -101,7 +110,7 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
                   position: 'absolute',
                   left: '50%',
                   bottom: 0,
-                  transform: `translateX(calc(-50% + ${xPos}px)) translateY(${-yOffset}px) rotate(${rotation}deg)`,
+                  transform: `translateX(calc(-50% + ${x}px)) translateY(${y}px) rotate(${rot}deg)`,
                   transformOrigin: 'bottom center',
                   zIndex: i,
                 }}
@@ -109,7 +118,7 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
                 <StandardCard
                   rank={parsed.rank}
                   suit={parsed.suit}
-                  size={cardSize}
+                  size={cardW}
                   style={{ filter: `drop-shadow(0 2px 3px ${JimboColorOption.BLACK}66)` }}
                 />
               </div>
