@@ -211,48 +211,52 @@ console.log(search.isCompleted, search.totalSeedsSearched, search.matchingSeeds)
 search.cancel(); // stop early
 ```
 
-## Stream pagers
+## Stream cursor
 
-Pagers expose Balatro's raw PRNG streams — one packed int per item, no JAML filter needed.
-**Always prefer `getNextChunk(n)` over repeated `getNext()` calls** — each call is a WASM
-interop crossing, so batching is the right default:
+`Motely.createStreamCursor(seed, deck, stake, ante, kind)` returns a stateful cursor over
+one of Balatro's per-ante PRNG streams — one packed int per item, no JAML filter needed.
+The `kind` argument selects which stream; one factory + one enum arg covers every stream
+type:
 
 ```js
-import { Motely, MotelyDeck, MotelyStake } from "motely-wasm";
+import { Motely } from "motely-wasm";
+import { MotelyStreamKind } from "motely-wasm/motely";
+import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
 
-const pager = Motely.createShopPager("AAAAAAAA", MotelyDeck.Red, MotelyStake.White, 1);
-const items = pager.getNextChunk(6); // 6 packed ints, one crossing
+const cursor = Motely.createStreamCursor("AAAAAAAA", MotelyDeck.Red, MotelyStake.White, 1, MotelyStreamKind.Shop);
+const items = cursor.getNextChunk(6); // 6 packed ints, one WASM crossing
 ```
 
-Each factory targets a distinct PRNG stream — these are not the same stream filtered, so there
-is one factory per stream type:
+**Always prefer `getNextChunk(n)` over repeated `getNext()` calls** — each call is a WASM
+interop crossing, so batching is the right default.
 
-| Factory | Stream |
-|---|---|
-| `createShopPager(seed, deck, stake, ante)` | Mixed shop (jokers, tarots, planets, spectrals on Ghost, standard cards with MagicTrick) |
-| `createJokerPager(seed, deck, stake, ante)` | Shop jokers — includes edition + sticker bits |
-| `createTarotPager(seed, deck, stake, ante)` | Shop tarots |
-| `createPlanetPager(seed, deck, stake, ante)` | Shop planets |
-| `createSpectralPager(seed, deck, stake, ante)` | Shop spectrals (non-Ghost returns `SpectralExcludedByStream`) |
-| `createLegendaryJokerPager(seed, deck, stake, ante)` | Legendary fixed-rarity joker stream |
-| `createRareTagJokerPager(seed, deck, stake, ante)` | Rare Tag hand-out joker stream |
-| `createTagPager(seed, deck, stake, ante)` | Tags — value is `MotelyTag` cast to int |
-| `createVoucherPager(seed, deck, stake, ante)` | Vouchers — value is `MotelyVoucher` cast to int |
+| `MotelyStreamKind` value | Stream | Returned int |
+|---|---|---|
+| `Shop` | Mixed shop (jokers, tarots, planets, spectrals on Ghost, standard cards with MagicTrick) | Packed item (`decodeItemType`, `decodeItemCategory`, …) |
+| `Joker` | Shop jokers — includes edition + sticker bits | Packed item |
+| `Tarot` | Shop tarots | Packed item |
+| `Planet` | Shop planets | Packed item |
+| `Spectral` | Shop spectrals (non-Ghost returns `SpectralExcludedByStream`) | Packed item |
+| `LegendaryJoker` | Legendary fixed-rarity joker stream | Packed item |
+| `RareTagJoker` | Rare Tag hand-out joker stream | Packed item |
+| `Tag` | Tags — raw `MotelyTag` enum cast to int. Decoders do not apply; use `MotelyTag[value]`. | `(int)MotelyTag` |
+| `Voucher` | Vouchers — raw `MotelyVoucher` enum cast to int. Uses an empty run state, so odd-indexed (prerequisite-required) vouchers are skipped by the engine. Use `MotelyVoucher[value]`. | `(int)MotelyVoucher` |
 
 ## Packed-int decoders
 
-All pager streams return packed integers. Bit fields are extracted with the decode helpers
-exported from the entry point:
+Stream cursors return packed integers. Bit fields are extracted with the decode helpers
+on `Motely`:
 
 ```js
+import { Motely } from "motely-wasm";
+import { MotelyStreamKind } from "motely-wasm/motely";
 import {
-    Motely,
     MotelyItemType, MotelyItemTypeCategory, MotelyJokerRarity,
     MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement,
-} from "motely-wasm";
+} from "motely-wasm/motely/enums";
 
-const pager = Motely.createJokerPager("AAAAAAAA", 0, 0, 1);
-const v = pager.getNext();
+const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Joker);
+const v = cursor.getNext();
 
 const type      = Motely.decodeItemType(v);        // → MotelyItemType value
 const category  = Motely.decodeItemCategory(v);    // → MotelyItemTypeCategory value
@@ -271,8 +275,9 @@ console.log(MotelyJokerRarity[rarity]); // e.g. "Common"
 
 All enum tables (`MotelyItemType`, `MotelyItemTypeCategory`, `MotelyJokerRarity`,
 `MotelyItemEdition`, `MotelyItemSeal`, `MotelyItemEnhancement`, `MotelyTag`,
-`MotelyVoucher`, `MotelyBoosterPack`, `MotelyDeck`, `MotelyStake`) are exported from
-`motely-wasm` and can be used for reverse-lookup by numeric value or forward-lookup by name.
+`MotelyVoucher`, `MotelyBoosterPack`, `MotelyDeck`, `MotelyStake`) live at
+`motely-wasm/motely/enums` and can be used for reverse-lookup by numeric value or
+forward-lookup by name. `MotelyStreamKind` lives at `motely-wasm/motely`.
 
 ## Events
 
@@ -296,7 +301,8 @@ Motely.onScoredResult.unsubscribe(handler);
 | Import path | Contents |
 |---|---|
 | `motely-wasm` | Default export: `boot`, `getStatus`, `BootStatus`. Named export: `Motely` (main API) |
-| `motely-wasm/motely` | Types: `IMotelySearch`, `IMotelySearchSettingsInterop`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyDeck`, `MotelyStake`, enums |
+| `motely-wasm/motely` | `IMotelySearch`, `IMotelySearchSettingsInterop`, `IMotelyStreamCursor`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyStreamKind` |
+| `motely-wasm/motely/enums` | All Balatro enums — `MotelyItemType`, `MotelyItemTypeCategory`, `MotelyJokerRarity`, `MotelyItemEdition`, `MotelyItemSeal`, `MotelyItemEnhancement`, `MotelyTag`, `MotelyVoucher`, `MotelyBoosterPack`, `MotelyDeck`, `MotelyStake`, `MotelyBossBlind`, etc. |
 | `motely-wasm/motely/filters` | `JamlAesthetic`, `JamlSearchPlan` |
 | `motely-wasm/motely/analysis` | `MotelyJamlyzerResult`, `MotelySeedAnalysis` |
 | `motely-wasm/bootsharp/file-system` | File-system interop (browser OPFS) — `PermissionMode`, `IFileMounter` |
