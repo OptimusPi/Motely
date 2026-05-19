@@ -1,6 +1,13 @@
 import React from 'react'
-import { useBalatroBackground } from './hooks.js'
+import { useBalatroBackground, type JimboBackgroundConfig } from './hooks.js'
 import { JimboBalatroFooter } from './footer.js'
+
+export type { JimboBackgroundConfig } from './hooks.js'
+
+export interface JimboBackgroundProps extends JimboBackgroundConfig {
+  /** Hide the persistent BalatroFooter attribution. Default: false. */
+  hideFooter?: boolean
+}
 
 /**
  * Fullscreen WebGL CRT/spin background — the authentic Balatro hypnotic
@@ -8,15 +15,16 @@ import { JimboBalatroFooter } from './footer.js'
  * bottom of the viewport (position: fixed) so it is always present and no
  * consumer can accidentally omit it.
  *
- * Drop it once at the root of your page:
+ * All shader parameters are exposed as props (`primary`, `secondary`,
+ * `dark`, `speed`, `spinRotation`, `spinAmount`, `pixelFilter`, `contrast`,
+ * `lighting`). Color changes interpolate over `transitionMs` so palette
+ * swaps fade smoothly. Defaults reproduce the canonical Balatro swirl.
  *
- *     <JimboBackground />
+ *     <JimboBackground primary="#ff3344" secondary="#0088ff" speed={1.2} />
  *     <YourAppContent />
- *
- * Resizes automatically. Disposes the animation frame + shader on unmount.
  */
-export function JimboBackground() {
-  const canvasRef = useBalatroBackground()
+export function JimboBackground({ hideFooter = false, ...config }: JimboBackgroundProps) {
+  const canvasRef = useBalatroBackground(config)
 
   return (
     <>
@@ -32,7 +40,7 @@ export function JimboBackground() {
           pointerEvents: 'none',
         }}
       />
-      <JimboBalatroFooter />
+      {!hideFooter && <JimboBalatroFooter />}
     </>
   )
 }

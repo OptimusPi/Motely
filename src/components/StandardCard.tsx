@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { resolveJamlAssetUrl } from '../assets.js'
-import { RANK_MAP, SUIT_MAP, ENHANCER_MAP, SEAL_MAP, EDITION_MAP } from '../sprites/spriteData.js'
+import { RANK_MAP, SUIT_MAP, ENHANCER_MAP, SEAL_MAP, EDITION_MAP, type SpritePos } from '../sprites/spriteData.js'
 
 // ── Enums ──────────────────────────────────────────────────────────────────
 // Single canonical form per value. No case tolerance, no abbreviations.
@@ -102,7 +102,12 @@ export function StandardCard({
   const bgX = -col * CARD_WIDTH
   const bgY = -row * CARD_HEIGHT
 
-  const enhPos = enhancement ? ENHANCER_MAP[enhancement] ?? null : null
+  // Cell (1,0) of the enhancer sheet is the plain blank card body — used as
+  // the base layer behind every card so transparent regions of the deck face
+  // sprite don't reveal whatever is behind. Cell (0,0) is a red-card sprite,
+  // NOT a blank base — do not fall back to it.
+  const PLAIN_BASE: SpritePos = { x: 1, y: 0 }
+  const enhPos: SpritePos = enhancement ? ENHANCER_MAP[enhancement] ?? PLAIN_BASE : PLAIN_BASE
   const sealPos = seal ? SEAL_MAP[seal] ?? null : null
   const editionCol = edition ? EDITION_MAP[edition] : undefined
 
@@ -139,17 +144,16 @@ export function StandardCard({
       }}
       title={`${rank} of ${suit}${enhancement ? ` (${enhancement})` : ''}${seal ? ` [${seal} seal]` : ''}${edition ? ` {${edition}}` : ''}`}
     >
-      {/* Enhancement background (skipped when none — was previously always cell 0,0) */}
-      {enhPos && (
-        <div
-          style={{
-            ...layerBase,
-            zIndex: 0,
-            backgroundImage: `url(${enhancersUrl})`,
-            backgroundPosition: `${-enhPos.x * CARD_WIDTH}px ${-enhPos.y * CARD_HEIGHT}px`,
-          }}
-        />
-      )}
+      {/* Card base — plain blank card body from cell (1,0) of the enhancer
+          sheet, replaced by the mapped sprite when an enhancement is set. */}
+      <div
+        style={{
+          ...layerBase,
+          zIndex: 0,
+          backgroundImage: `url(${enhancersUrl})`,
+          backgroundPosition: `${-enhPos.x * CARD_WIDTH}px ${-enhPos.y * CARD_HEIGHT}px`,
+        }}
+      />
 
       {/* Card face */}
       <div

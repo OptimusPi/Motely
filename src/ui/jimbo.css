@@ -49,8 +49,18 @@
 
   --j-dark-grey: #3a5055;
   --j-darkest: #1e2b2d;
-  --j-grey: #708386;
+  /* Bumped from #708386 to a brighter slate. The old value was dark enough
+     that tone="grey" text vanished into --j-darkest / --j-dark-grey panels
+     ("Jokers" header reading as a smear). Still reads as "grey" semantically
+     but actually visible on dark surfaces. */
+  --j-grey: #a8bcbf;
   --j-teal-grey: #404c4e;
+  /* Surface roles — semantic, not positional.
+     --j-surface-inset is a sunken tile sitting ON a panel (darker than
+     the panel face so it has visual depth). Use --j-surface-inset-alt
+     to alternate (zebra-stripe lists, paired info-cards, etc). */
+  --j-surface-inset: #2a3a3f;
+  --j-surface-inset-alt: #324347;
 
   --j-panel-edge: #1e2e32;
   --j-inner-border: #334461;
@@ -250,9 +260,17 @@
 /* ── Panel ─────────────────────────────────────────────────────────────── */
 
 .j-panel {
+  /* Rounded rectangle, light solid outline, no dashed border, no soft
+     shadow — matches IMG_3678 / IMG_3725 / IMG_3693 panel chrome. The
+     corner radius is intentionally generous (--j-radius-lg) so the panel
+     reads as a Balatro card-modal, not a 4px-rounded utility surface.
+     NOTE: overflow is intentionally visible (NOT hidden). In Balatro,
+     content frequently spills slightly past the panel edges — joker
+     stickers, card stacks, hovered cards lifting up. Clipping with
+     overflow:hidden was decapitating those bleed-outs. */
   background-color: var(--j-dark-grey);
   border: var(--j-panel-border-width) solid var(--j-border-silver);
-  border-radius: var(--j-radius-md);
+  border-radius: var(--j-radius-lg);
   box-shadow: 0 var(--j-panel-south-edge-width) 0 0 var(--j-border-south),
     0 calc(var(--j-surface-shadow-depth) + var(--j-panel-south-edge-width)) 0 0 rgba(0, 0, 0, 0.55),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
@@ -260,7 +278,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   isolation: isolate;
 }
@@ -306,12 +324,18 @@
 }
 
 .j-inner-panel {
-  background-color: var(--j-inner-border);
-  border: var(--j-panel-border-width) solid var(--j-panel-edge);
+  /* Inner panels carry the SAME light-silver outline as the outer panel —
+     this was wrong before. Reference: the Balatro Credits screen shows
+     Publishing / Localization / Porting / Testing each rounded-outlined
+     just like the outer modal. The outer panel does NOT do all the framing
+     by itself; inner panels are framed individually. overflow:visible so
+     content can spill slightly past the inner edge. */
+  background-color: var(--j-darkest);
+  border: var(--j-panel-border-width) solid var(--j-border-silver);
   border-radius: var(--j-radius-md);
   padding: var(--j-space-lg);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   isolation: isolate;
 }
 
@@ -341,13 +365,17 @@
    press sinks the face +3px and collapses the shadow. */
 
 .j-btn {
+  /* Reserve room INSIDE the wrapper for the face's drop-shadow lip — so when
+     the parent (e.g. .j-app, .j-panel) uses overflow:hidden the lip doesn't
+     get clipped off, and the empty space below the face is part of the
+     button's own box, not the surrounding gap. */
   appearance: none;
   -webkit-appearance: none;
   display: inline-block;
   position: relative;
   cursor: pointer;
   border: none;
-  padding: 0;
+  padding: 0 0 calc(var(--j-press-y) + 2px) 0;
   background: transparent;
   -webkit-user-select: none;
   user-select: none;
@@ -377,7 +405,8 @@
   background: var(--j-btn-face-color, var(--j-orange));
   text-align: center;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
-  box-shadow: 0 calc(var(--j-press-y) + 2px) 0 0 rgba(0, 0, 0, 0.8);
+  /* Drop-lip at 30% opacity per design. Stacked solid offset, no blur. */
+  box-shadow: 0 calc(var(--j-press-y) + 2px) 0 0 rgba(0, 0, 0, 0.3);
   transform: translate(0, 0);
   transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear, background-color var(--j-press-speed) linear;
   overflow: hidden;
@@ -549,17 +578,23 @@
   justify-content: center;
   flex-wrap: nowrap;
   width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
+  /* No overflow clipping. Setting overflow-x:auto forces overflow-y to clip
+     too (CSS spec), which decapitates the bouncing arrow at its apex. The
+     tab row is sized to fit 320px, so horizontal scroll is not needed. */
+  overflow: visible;
+  /* Headroom for the arrow's apex (-6px translate) plus a hair of cushion. */
+  padding-top: 10px;
 }
-.j-tabs::-webkit-scrollbar { display: none; }
 
 .j-tab {
+  /* Stack: indicator arrow on top, JimboButton below. The button does its
+     own styling — this wrapper just positions the indicator above it. */
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
   flex: 0 0 auto;
+  gap: 2px;
 }
 
 .j-tab__indicator {
@@ -576,7 +611,10 @@
 }
 
 .j-tab__indicator[data-active="true"] {
-  animation: jimbo-bounce 0.6s linear infinite;
+  /* Arrow rests on top of the tab for ~30% of the cycle, then pops up and
+     falls back. Per-keyframe easing gives it gravity (fast off the rest,
+     slow at apex, fast on the fall) instead of a sleepy linear sine. */
+  animation: jimbo-bounce 0.55s infinite;
 }
 
 .j-tab__indicator[data-active="false"] {
@@ -613,8 +651,10 @@
 }
 
 .j-tab__btn[data-active="true"] {
+  /* The tab button does NOT grow / shrink / bob — only the red arrow above
+     it animates. The button holds still so the row of tabs reads as a fixed
+     baseline. The arrow is the only motion. */
   opacity: 1;
-  animation: j-idle-bob var(--j-idle-bob-duration) ease-in-out infinite;
 }
 
 .j-tab__btn[data-active="true"]:hover {
@@ -629,16 +669,20 @@
 
 @keyframes jimbo-bounce {
 
+  /* Rest on top of the tab for the first ~30% of the cycle. */
   0%,
-  15% {
+  30% {
     transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
   }
 
-  50% {
-    transform: translateY(-3px);
+  /* Apex — pops up fast, decelerates into the top. */
+  65% {
+    transform: translateY(-6px);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
   }
 
-  85%,
+  /* Fall back down to rest. */
   100% {
     transform: translateY(0);
   }
@@ -713,12 +757,12 @@
 }
 
 .j-toggle-item {
+  /* No border on inner surfaces. Plain seated row inside the outer panel. */
   display: flex;
   align-items: center;
   gap: var(--j-space-md);
   padding: 6px 8px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: var(--j-radius-sm);
   cursor: pointer;
   font-family: var(--j-font);
@@ -743,25 +787,35 @@
 }
 
 .j-toggle-check {
+  /* Balatro checkbox: white outer square, darker grey-teal inner well, red
+     checkmark when on. The white outline IS the box; the inner well sits
+     inset from it so it reads as a chunky frame around the empty/checked
+     state. */
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  border: 2px solid var(--j-dark-red);
   border-radius: 3px;
-  background: var(--j-darkest);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  background: var(--j-white);
+  padding: 2px;
+  box-sizing: border-box;
   position: relative;
+}
+
+.j-toggle-check::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: var(--j-teal-grey);
+  border-radius: 1px;
 }
 
 .j-toggle-check[data-on="true"]::after {
   content: '';
   position: absolute;
-  inset: 1px;
-  background: var(--j-red);
-  border-radius: 2px;
+  inset: 2px;
   -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
           mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
-  background: var(--j-white);
+  background: var(--j-red);
 }
 
 
@@ -774,7 +828,7 @@
   border-radius: var(--j-radius-md);
   background: var(--j-darkest);
   border: var(--j-panel-border-width) solid var(--j-border-silver);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.8);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
   color: var(--j-white);
   pointer-events: none;
   z-index: 9999;
@@ -874,9 +928,12 @@
 }
 
 .j-flank__btn {
+  /* The flanking buttons span the FULL height of the content beside them —
+     no top/bottom margin. align-items:stretch on .j-flank then makes them
+     match content height exactly. */
   flex-shrink: 0;
+  align-self: stretch;
   width: 40px;
-  margin: var(--j-press-y) 0;
   border: none;
   border-radius: var(--j-radius-lg);
   cursor: pointer;
@@ -939,9 +996,10 @@
 }
 
 .j-copy-row__btn[data-copied="false"] {
-  color: var(--j-gold-text);
-  background: rgba(228, 182, 67, 0.12);
-  border: 1px solid var(--j-gold-text);
+  /* Red, not gold — there are no gold buttons in Balatro. */
+  color: var(--j-white);
+  background: var(--j-red);
+  border: none;
 }
 
 .j-copy-row__btn[data-copied="true"] {
@@ -978,16 +1036,16 @@
 }
 
 .j-code-block__filename {
-  font-size: 10px;
-  opacity: 0.6;
+  /* JimboText handles the size + grey color now — this is just letter-spacing
+     and a small alignment hint. */
+  letter-spacing: 0.04em;
 }
 
 .j-code-block__lang {
-  font-size: 9px;
+  display: inline-block;
   padding: 1px 6px;
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.4);
-  color: #60a5fa;
 }
 
 .j-code-block__copy {
@@ -1148,15 +1206,18 @@
 }
 
 .j-modal__title {
+  /* Red pill title chip — matches IMG_3725 "GAME OVER" and IMG_3693 "Settings"
+     header pattern. White text on bright red, rounded-pill, no border, with
+     the standard 30% drop-lip below it. Sits half-inset over the panel face. */
   display: inline-block;
   text-align: center;
   margin: 0;
-  padding: 4px 14px;
-  background: var(--j-darkest);
-  border: 2px solid var(--j-panel-edge);
-  border-radius: var(--j-radius-md);
-  box-shadow: 0 2px 0 var(--j-black);
-  color: var(--j-red);
+  padding: 4px 18px;
+  background: var(--j-red);
+  border: none;
+  border-radius: var(--j-radius-pill);
+  box-shadow: 0 3px 0 0 rgba(0, 0, 0, 0.3);
+  color: var(--j-white);
 }
 
 .j-input-modal__message {
@@ -1458,17 +1519,33 @@
  * Default = compact (hard lock). Add .j-app--fluid to unlock for MCP/desktop.
  */
 
+/* iPhone SE 5 portrait — 320×568 LOCKED. Content inside is designed to fit
+   perfectly; the panel itself does not resize, drag, or reflow. The swirl
+   behind it shows in the surrounding viewport. */
 .j-app {
   container-type: inline-size;
   container-name: jimbo;
-  width: min(100%, 320px);
+  width: 320px;
   max-width: 320px;
-  height: min(568px, 100dvh);
+  min-width: 320px;
+  height: 568px;
   max-height: 568px;
+  min-height: 568px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  background: var(--j-darkest);
+  /* Solid slate panel against the swirl, with the same chunky silver border
+     and hard south-edge shadow as JimboPanel. This IS the device-shaped panel. */
+  background: var(--j-dark-grey);
+  border: var(--j-panel-border-width) solid var(--j-border-silver);
+  border-radius: var(--j-radius-lg);
+  /* Chunky grey south-edge like a Balatro panel: 4px visible lip of
+     --j-border-south sits below the silver border, then a hard black
+     drop below that for ground shadow. No soft blur — Balatro uses
+     stacked solid offsets, not gaussian shadows. */
+  box-shadow:
+    0 4px 0 0 var(--j-border-south),
+    0 8px 0 0 rgba(0, 0, 0, 0.55);
   font-family: var(--j-font);
   color: var(--j-white);
   overflow: hidden;
@@ -1585,24 +1662,24 @@
 /* ── Stepper ─────────────────────────────────────────────────────────── */
 /* < value > control matching Balatro settings rows. */
 
-.j-stepper-wrap {
+.j-spinner-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--j-space-xs);
 }
 
-.j-stepper__label {
+.j-spinner__label {
   text-align: center;
 }
 
-.j-stepper {
+.j-spinner {
   display: inline-flex;
   align-items: stretch;
   gap: var(--j-space-sm);
 }
 
-.j-stepper__value {
+.j-spinner__value {
   min-width: 96px;
   padding: 4px 12px;
   display: flex;
@@ -1611,6 +1688,72 @@
   background: var(--j-red);
   border-radius: var(--j-radius-md);
   box-shadow: 0 3px 0 var(--j-dark-red);
+}
+
+
+/* ── CardList ────────────────────────────────────────────────────────── */
+/* Labeled horizontal strip of card groups. Children scroll horizontally
+   with magnetic snap; no visible scrollbar (per design rule). */
+
+.j-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.j-card-list__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--j-space-sm);
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.j-card-list__row::-webkit-scrollbar { display: none; }
+
+.j-card-list__row > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+
+/* ── Stepper (page-dots) ─────────────────────────────────────────────── */
+/* Row of small dots. Active page = filled white circle; other pages = a
+   dim grey circle. Carousel page indicator pattern. */
+
+.j-stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.j-stepper__hit {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.j-stepper__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--j-teal-grey);
+}
+
+.j-stepper__dot[data-active="true"] {
+  background: var(--j-white);
 }
 
 
@@ -1628,50 +1771,102 @@
   text-align: center;
 }
 
+/* Slider — track is the dark inset surface, fill is bright red (filled
+   portion), and the JimboValueBadge sits as the thumb at the fill boundary.
+   Matches Balatro audio settings (IMG_3679): red fill on dark trough, red
+   value pill riding the boundary. */
 .j-slider {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--j-space-sm);
-  height: 22px;
+  height: 28px;
+  /* Reserve half-badge width on each side so the thumb doesn't clip when
+     value is at min or max. */
+  padding: 0 20px;
 }
 
 .j-slider__track {
   position: relative;
   flex: 1;
   height: 14px;
-  background: var(--j-red);
+  background: var(--j-surface-inset);
   border-radius: var(--j-radius-pill);
-  box-shadow: inset 0 2px 0 var(--j-dark-red);
   overflow: hidden;
 }
 
 .j-slider__fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--j-dark-red);
+  background: var(--j-red);
   border-radius: var(--j-radius-pill) 0 0 var(--j-radius-pill);
 }
 
 .j-slider__input {
   position: absolute;
-  inset: 0 64px 0 0;
-  width: calc(100% - 64px);
+  inset: 0;
+  width: 100%;
   height: 100%;
   opacity: 0;
   margin: 0;
   cursor: pointer;
 }
 
-.j-slider__value {
-  min-width: 48px;
-  padding: 2px 8px;
-  display: flex;
+/* Absolute thumb wrapper positioned at the fill boundary. The badge inside
+   centers via translateX(-50%) so the pill straddles the boundary line. */
+.j-slider__thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+
+/* ── Value Badge ─────────────────────────────────────────────────────── */
+/* Red pill displaying a numeric value. Click to edit inline. */
+
+.j-value-badge {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--j-dark-red);
-  border-radius: var(--j-radius-md);
-  box-shadow: 0 2px 0 var(--j-black);
+  min-width: 40px;
+  padding: 2px 8px;
+  background: var(--j-red);
+  color: var(--j-white);
+  border: none;
+  border-radius: var(--j-radius-pill);
+  cursor: pointer;
+  font-family: var(--j-font);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.j-value-badge--static {
+  cursor: default;
+}
+
+.j-value-badge--editing {
+  padding: 0;
+}
+
+.j-value-badge__input {
+  width: 56px;
+  padding: 2px 8px;
+  background: var(--j-red);
+  color: var(--j-white);
+  border: none;
+  border-radius: var(--j-radius-pill);
+  font-family: var(--j-font);
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.j-value-badge__input::-webkit-outer-spin-button,
+.j-value-badge__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 
@@ -1710,11 +1905,9 @@
 /* 3-column stat bar — reusable primitive. */
 
 .j-stat-grid {
-  background: var(--j-dark-grey);
+  background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: var(--j-space-md);
-  border: var(--j-panel-border-width) solid var(--j-panel-edge);
-  box-shadow: 0 2px 0 var(--j-black);
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: var(--j-space-md);
@@ -1742,15 +1935,13 @@
 /* Generic clickable row card — used for filter lists, seed lists, etc. */
 
 .j-info-card {
-  background: var(--j-dark-grey);
+  background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: var(--j-space-md);
-  box-shadow: 0 2px 0 var(--j-black);
   display: flex;
   align-items: center;
   gap: var(--j-space-md);
   cursor: pointer;
-  border: var(--j-panel-border-width) solid transparent;
 }
 
 .j-info-card:hover {
@@ -1791,11 +1982,9 @@
 /* Dark recessed content area — for log output, recent finds, etc. */
 
 .j-inset {
-  background: var(--j-dark-grey);
+  background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: var(--j-space-md) var(--j-space-md);
-  border: var(--j-panel-border-width) solid var(--j-panel-edge);
-  box-shadow: 0 2px 0 var(--j-black);
   font-family: var(--j-font);
   font-size: 11px;
   color: var(--j-grey);
@@ -1920,19 +2109,21 @@
 }
 
 .j-panel-spinner__arrow {
+  /* Arrows match the fixed panel height so they flank the entire face,
+     not just the top half. */
   align-self: stretch;
-  min-height: 92px;
+  height: 140px;
   width: 30px;
 }
 
 .j-panel-spinner__arrow .j-btn__face {
   height: 100%;
-  min-height: 92px;
+  min-height: 140px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 var(--j-panel-border-width-heavy) 0 0 rgba(0, 0, 0, 0.8);
+  box-shadow: 0 var(--j-panel-border-width-heavy) 0 0 rgba(0, 0, 0, 0.3);
 }
 
 .j-panel-spinner__arrow--left {
@@ -1944,7 +2135,17 @@
 }
 
 .j-panel-spinner__panel {
+  /* Fixed height — the panel does NOT grow or shrink based on description
+     length. Cards with a 1-line description stay the same height as cards
+     with a 4-line description, so flipping through decks/stakes doesn't
+     wiggle the whole modal up and down. The description below clamps its
+     own height (and uses its own overflow:hidden for the ellipsis), so the
+     panel itself can keep overflow:visible — sprites can bleed slightly. */
   min-width: 0;
+  height: 140px;
+  min-height: 140px;
+  max-height: 140px;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1974,10 +2175,22 @@
   min-width: 0;
 }
 
+.j-panel-spinner__description {
+  /* Clamp to 2 lines max so a long description (Green deck, Plasma deck)
+     can't push the spinner panel taller. Excess gets ellipsised; the full
+     text should live in a JimboTooltip per the design rules. */
+  max-height: 32px;
+  overflow: hidden;
+}
+
 .j-panel-spinner__description .j-text {
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   white-space: pre-line;
   overflow-wrap: anywhere;
+  text-align: center;
 }
 
 
@@ -2317,11 +2530,9 @@
 }
 
 .j-showcase__stats {
-  background: var(--j-dark-grey);
+  background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: 10px;
-  border: 2px solid var(--j-panel-edge);
-  box-shadow: 0 2px 0 var(--j-black);
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: var(--j-space-md);
@@ -2372,10 +2583,9 @@
 }
 
 .j-showcase__filter-card {
-  background: var(--j-dark-grey);
+  background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: 10px;
-  box-shadow: 0 2px 0 var(--j-black);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2433,11 +2643,9 @@
 }
 
 .j-showcase__recent {
-  background: var(--j-dark-grey);
+  background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: 8px 10px;
-  border: 2px solid var(--j-panel-edge);
-  box-shadow: 0 2px 0 var(--j-black);
   font-size: 11px;
   color: var(--j-grey);
   letter-spacing: 1px;

@@ -84,7 +84,9 @@ export function JimboButton({
   )
 }
 
-export function JimboBackButton({ onClick, size = 'md' }: { onClick?: () => void; size?: 'sm' | 'md' | 'lg' }) {
+// Compact Back button. Default size 'sm' — the slab-tall 'md' Back was eating
+// real estate inside modals where it's auto-injected by JimboModal.
+export function JimboBackButton({ onClick, size = 'sm' }: { onClick?: () => void; size?: 'sm' | 'md' | 'lg' }) {
   return (
     <div className="j-back-btn-wrap j-flex j-justify-center j-w-full">
       <JimboButton tone="orange" size={size} fullWidth onClick={onClick} className="j-back-btn">Back</JimboButton>

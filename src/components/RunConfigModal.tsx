@@ -109,10 +109,10 @@ function RunConfigModalBody({ deck, stake, onChange, onClose }: RunConfigModalBo
         className="j-mt-sm"
       />
 
-      {/* Actions */}
+      {/* Actions — JimboModal already renders a Back button via showBack,
+          so we only emit Apply here. Two stacked "Back" buttons was a bug. */}
       <div className="j-flex-col j-gap-sm j-mt-sm">
         <JimboButton tone="blue" size="lg" fullWidth onClick={handleApply}>Apply</JimboButton>
-        <JimboButton tone="orange" size="lg" fullWidth onClick={onClose}>Back</JimboButton>
       </div>
     </>
   );

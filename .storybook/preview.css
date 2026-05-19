@@ -1,16 +1,22 @@
+/* Let the WebGL Balatro swirl render through — the decorator already mounts
+   <JimboBackground /> behind every story. Setting an opaque body bg here
+   would obscure it and produce inconsistent "splat green" framing. */
 body {
-  background: var(--j-darkest, #1e2b2d) !important;
+  background: transparent !important;
   margin: 0;
   padding: 0;
 }
 
 #storybook-root {
   min-height: 100dvh;
+  background: transparent !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-#storybook-root,
 .sb-show-main,
 .docs-story,
 .sbdocs-preview {
-  background: var(--j-darkest, #1e2b2d) !important;
+  background: transparent !important;
 }

@@ -3,8 +3,8 @@
 import React from 'react'
 
 // ─── App Shell ──────────────────────────────────────────────────────────────
-// Mobile-first 320px layout container. This is the DEFAULT layout for ALL
-// Jimbo UI screens — not just the "demo".
+// iPhone SE 5 portrait — 320×568 LOCKED. Content inside is designed to fit
+// perfectly; the panel itself does not resize, drag, or reflow.
 //
 // Add `fluid` prop to unlock for MCP / desktop contexts (j-app--fluid).
 // In fluid mode the container stretches to fill its parent (up to 750px)
@@ -12,11 +12,11 @@ import React from 'react'
 
 export interface JimboAppProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
-  /** Unlock width/height for MCP inline or desktop use. Default: false (320×568 locked). */
+  /** Unlock width/height for MCP inline or desktop use. Default: false (320×568 locked iPhone SE 5). */
   fluid?: boolean
 }
 
-/** Standard mobile-first app shell. 320px locked, or fluid for MCP/desktop. */
+/** iPhone SE 5 app shell. 320×568 locked, or fluid for MCP/desktop. */
 export function JimboApp({ children, fluid, className = '', ...props }: JimboAppProps) {
   const classes = `j-app${fluid ? ' j-app--fluid' : ''} ${className}`.trim()
   return (

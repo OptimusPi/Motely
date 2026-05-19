@@ -19,7 +19,7 @@ function Showcase() {
 }
 
 const meta = {
-  title: 'JAML / Standard Card',
+  title: 'JAML / StandardCard',
   component: StandardCard,
   parameters: {
     jimboHarness: false,

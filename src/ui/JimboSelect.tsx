@@ -1,94 +1,74 @@
-// PORTABLE — intended for jaml-ui/src/ui/jimboSelect.tsx
-// On paste, replace `from 'jaml-ui'` with `from './tokens.js'`.
-"use client";
+'use client'
 
-import { JimboColorOption } from "./tokens.js";
-import type React from "react";
-
-const C = JimboColorOption;
+import React from 'react'
+import { JimboSpinner } from './JimboSpinner.js'
 
 export interface JimboSelectOption {
-  disabled?: boolean;
-  label?: string;
-  value: string;
+  disabled?: boolean
+  label?: string
+  value: string
 }
 
 export interface JimboSelectProps {
-  "aria-label"?: string;
-  disabled?: boolean;
-  fullWidth?: boolean;
-  onChange: (value: string) => void;
-  options: JimboSelectOption[] | string[];
-  placeholder?: string;
-  size?: "sm" | "md";
-  style?: React.CSSProperties;
-  value: string;
+  'aria-label'?: string
+  disabled?: boolean
+  fullWidth?: boolean
+  onChange: (value: string) => void
+  options: JimboSelectOption[] | string[]
+  placeholder?: string
+  size?: 'sm' | 'md'
+  style?: React.CSSProperties
+  value: string
+  label?: string
 }
 
+/**
+ * Select one of N values. There is no native `<select>` in the Balatro UI
+ * language — options are cycled with arrows, not via an OS dropdown. So
+ * JimboSelect is a `< value >` JimboSpinner that cycles through the options
+ * list. If `value` isn't in `options`, we land on the first option.
+ *
+ * Was previously a raw `<select>` element with hand-painted gold-arrow CSS
+ * gradients. That was off-brand on every axis (native control, gold control
+ * affordance, no JimboButton). Rewritten to compose JimboSpinner so it
+ * behaves like every other selector in the design system.
+ */
 export function JimboSelect({
   value,
   options,
   onChange,
-  placeholder,
   disabled = false,
-  fullWidth = true,
-  size = "md",
+  label,
+  'aria-label': ariaLabel,
   style,
-  "aria-label": ariaLabel,
 }: JimboSelectProps) {
-  let normalized: JimboSelectOption[];
-  if (options.length === 0) {
-    normalized = [];
-  } else if (typeof options[0] === "string") {
-    normalized = (options as string[]).map((v) => ({ value: v }));
-  } else {
-    normalized = options as JimboSelectOption[];
+  const normalized: JimboSelectOption[] = options.length === 0
+    ? []
+    : typeof options[0] === 'string'
+      ? (options as string[]).map((v) => ({ value: v }))
+      : (options as JimboSelectOption[])
+
+  const enabled = normalized.filter((o) => !o.disabled)
+  const idx = Math.max(0, enabled.findIndex((o) => o.value === value))
+  const current = enabled[idx] ?? enabled[0]
+  if (!current) return null
+
+  function step(delta: number) {
+    if (disabled || enabled.length === 0) return
+    const next = (idx + delta + enabled.length) % enabled.length
+    onChange(enabled[next].value)
   }
 
-  const pad = size === "sm" ? "4px 8px" : "6px 10px";
-  const fontSize = size === "sm" ? 11 : 12;
-
   return (
-    <select
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        width: fullWidth ? "100%" : undefined,
-        padding: pad,
-        background: C.DARKEST,
-        color: C.WHITE,
-        border: `1px solid ${C.PANEL_EDGE}`,
-        borderRadius: 4,
-        fontSize,
-        fontFamily: "m6x11plus, monospace",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.55 : 1,
-        appearance: "none",
-        backgroundImage:
-          "linear-gradient(45deg, transparent 50%, " +
-          C.GOLD_TEXT +
-          " 50%), linear-gradient(135deg, " +
-          C.GOLD_TEXT +
-          " 50%, transparent 50%)",
-        backgroundPosition: "calc(100% - 12px) 50%, calc(100% - 7px) 50%",
-        backgroundSize: "5px 5px, 5px 5px",
-        backgroundRepeat: "no-repeat",
-        paddingRight: 22,
-        ...style,
-      }}
-      value={value}
-    >
-      {placeholder !== undefined && (
-        <option disabled value="">
-          {placeholder}
-        </option>
-      )}
-      {normalized.map((opt) => (
-        <option disabled={opt.disabled} key={opt.value} value={opt.value}>
-          {opt.label ?? opt.value}
-        </option>
-      ))}
-    </select>
-  );
+    <div style={style} aria-label={ariaLabel}>
+      <JimboSpinner
+        label={label}
+        value={current.label ?? current.value}
+        onPrev={() => step(-1)}
+        onNext={() => step(+1)}
+        canPrev={!disabled && enabled.length > 1}
+        canNext={!disabled && enabled.length > 1}
+      />
+    </div>
+  )
 }

@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { JimboText } from './jimboText.js'
+import { JimboValueBadge } from './JimboValueBadge.js'
 
 export interface JimboSliderProps {
   value: number
@@ -49,8 +50,14 @@ export function JimboSlider({
           value={value}
           onChange={(e) => onChange?.(Number(e.currentTarget.value))}
         />
-        <div className="j-slider__value">
-          <JimboText size="xs" tone="white">{Math.round(value)}</JimboText>
+        <div className="j-slider__thumb" style={{ left: `${pct}%` }}>
+          <JimboValueBadge
+            value={value}
+            min={min}
+            max={max}
+            step={step}
+            onChange={onChange}
+          />
         </div>
       </div>
     </div>
