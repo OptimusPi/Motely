@@ -15,12 +15,16 @@ const entryPath = process.env.MOTELY_WASM_ENTRY
     : resolve(here, "..", "motely-wasm", "dist", "index.mjs");
 const pkgRoot = resolve(dirname(entryPath), "..");
 const { default: bootsharp, Motely } = await import(pathToFileURL(entryPath).href);
-// Enum constants live in the Motely-namespace generated module, not in the package root.
+// Each C# namespace becomes its own ES module (Bootsharp namespaces.md).
+// Motely.Enums.* enums live in motely/enums.g.mjs; MotelyStreamKind sits in
+// the root Motely namespace, so it's in motely.g.mjs.
 const {
     MotelyItemType, MotelyItemTypeCategory, MotelyJokerRarity,
     MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement,
     MotelyTag, MotelyVoucher, MotelyBoosterPack,
-} = await import(pathToFileURL(resolve(pkgRoot, "dist", "generated", "motely.g.mjs")).href);
+} = await import(pathToFileURL(resolve(pkgRoot, "dist", "generated", "motely", "enums.g.mjs")).href);
+const { MotelyStreamKind } =
+    await import(pathToFileURL(resolve(pkgRoot, "dist", "generated", "motely.g.mjs")).href);
 
 // `voucher: Any` and `joker: Any` in must/should are rejected by the parser. Scoring fixtures must name specific identifiers.
 const jaml = {
@@ -73,9 +77,7 @@ function testPublicApiSurface() {
         "mountRoot", "unmountRoot", "pickRoot", "readTextFile", "writeTextFile",
         "onSeedMatch", "onScoredResult", "onProgress", "onFileChanges",
         "evalJimmolate",
-        "createShopPager", "createJokerPager", "createTarotPager", "createPlanetPager",
-        "createSpectralPager", "createLegendaryJokerPager", "createRareTagJokerPager",
-        "createTagPager", "createVoucherPager",
+        "createStreamCursor",
         "decodeItemType", "decodeItemCategory", "decodeJokerRarity",
         "decodeItemEdition", "decodeItemSeal", "decodeItemEnhancement",
         "isPerishable", "isEternal", "isRental",
@@ -405,43 +407,129 @@ async function testJimmolate_JsPredicateFiltersSeeds() {
     }
 }
 
-// ── Shop pager tests ─────────────────────────────────────────────────────────
+// ── Stream cursor tests ──────────────────────────────────────────────────────
 // MotelyDeck.Red = 0, MotelyStake.White = 0 — the minimal valid combo.
+// One generic factory + one enum arg replaces the nine deleted *Pager factories.
 
-function testShopPager_GetNext_ReturnsNumbers() {
-    // Each getNext() call must return a number and advance the stream.
-    const pager = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
-    const items = Array.from({ length: 5 }, () => pager.getNext());
-    for (let i = 0; i < items.length; i++)
-        if (typeof items[i] !== "number")
-            throw new Error(`item[${i}] is ${typeof items[i]}, expected number`);
-    // All five values from one run; duplicates are possible but the full 5 shouldn't all be identical.
-    const allSame = items.every(v => v === items[0]);
-    if (allSame) throw new Error(`all 5 consecutive items are ${items[0]} — stream likely stuck`);
+function testStreamCursor_AllKinds_GetNextReturnsNumber() {
+    // Smoke: every MotelyStreamKind must construct a cursor and yield a numeric first item.
+    for (const kind of Object.values(MotelyStreamKind).filter(v => typeof v === "number")) {
+        const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, kind);
+        const v = cursor.getNext();
+        if (typeof v !== "number")
+            throw new Error(`kind=${MotelyStreamKind[kind]}(${kind}): getNext returned ${typeof v}`);
+    }
 }
 
-function testShopPager_GetNextChunk_MatchesSingleItemSequence() {
-    // chunk(N) must return the same N values as N successive getNext() calls.
-    const pager1 = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
-    const pager2 = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
+function testStreamCursor_GetNextChunk_MatchesSingleItemSequence() {
+    // chunk(N) must return the same N values as N successive getNext() calls on a peer cursor.
+    // Bootsharp marshals C# int[] → JS Int32Array (TypedArray), not plain Array — accept both.
+    const c1 = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Shop);
+    const c2 = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Shop);
     const N = 10;
-    const chunk = pager1.getNextChunk(N);
-    if (!Array.isArray(chunk) || chunk.length !== N)
+    const chunk = c1.getNextChunk(N);
+    const chunkOk = (chunk instanceof Int32Array || Array.isArray(chunk)) && chunk.length === N;
+    if (!chunkOk)
         throw new Error(`getNextChunk(${N}) shape: ${JSON.stringify(chunk)?.slice(0, 60)}`);
     for (let i = 0; i < N; i++) {
-        const single = pager2.getNext();
+        const single = c2.getNext();
         if (chunk[i] !== single)
             throw new Error(`chunk[${i}]=${chunk[i]} ≠ sequential getNext()=${single}; sequences diverged`);
     }
 }
 
-function testPackedIntDecoders_EnumsEmittedAndRoundTrip() {
-    // Verify Bootsharp emitted the enum tables and the decode helpers work on a real packed int.
+function testStreamCursor_DifferentSeeds_DifferentSequences() {
+    // Two different seeds must produce at least one distinct item in the first 5.
+    // chunk may be Int32Array (no .every) — index manually.
+    const c1 = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Shop);
+    const c2 = Motely.createStreamCursor("BBBBBBBB", 0, 0, 1, MotelyStreamKind.Shop);
+    const a = c1.getNextChunk(5);
+    const b = c2.getNextChunk(5);
+    let allSame = true;
+    for (let i = 0; i < 5; i++) if (a[i] !== b[i]) { allSame = false; break; }
+    if (allSame) throw new Error(`AAAAAAAA and BBBBBBBB produced identical 5-item sequences`);
+}
+
+function testStreamCursor_ItemKinds_DecodeToExpectedCategory() {
+    // For each item-valued kind, the cursor's output must decode to the matching ItemTypeCategory.
+    const expectations = [
+        ["Joker",    MotelyStreamKind.Joker,    MotelyItemTypeCategory.Joker],
+        ["Tarot",    MotelyStreamKind.Tarot,    MotelyItemTypeCategory.TarotCard],
+        ["Planet",   MotelyStreamKind.Planet,   MotelyItemTypeCategory.PlanetCard],
+        ["Spectral", MotelyStreamKind.Spectral, MotelyItemTypeCategory.SpectralCard],
+    ];
+    for (const [name, kind, expectedCat] of expectations) {
+        if (typeof expectedCat !== "number")
+            throw new Error(`${name}: MotelyItemTypeCategory entry missing — Bootsharp didn't emit it`);
+        const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, kind);
+        for (let i = 0; i < 5; i++) {
+            const v = cursor.getNext();
+            const cat = Motely.decodeItemCategory(v);
+            if (cat !== expectedCat)
+                throw new Error(`${name} cursor item[${i}] cat=${cat}, expected ${expectedCat}`);
+        }
+    }
+}
+
+function testStreamCursor_LegendaryJoker_DecodesLegendaryRarity() {
+    if (typeof MotelyJokerRarity?.Legendary !== "number")
+        throw new Error("MotelyJokerRarity.Legendary not emitted by Bootsharp");
+    const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.LegendaryJoker);
+    for (let i = 0; i < 3; i++) {
+        const rarity = Motely.decodeJokerRarity(cursor.getNext());
+        if (rarity !== MotelyJokerRarity.Legendary)
+            throw new Error(`legendary cursor item[${i}] rarity=${rarity}, expected Legendary(${MotelyJokerRarity.Legendary})`);
+    }
+}
+
+function testStreamCursor_RareTagJoker_DecodesRareRarity() {
+    if (typeof MotelyJokerRarity?.Rare !== "number")
+        throw new Error("MotelyJokerRarity.Rare not emitted by Bootsharp");
+    const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.RareTagJoker);
+    for (let i = 0; i < 3; i++) {
+        const rarity = Motely.decodeJokerRarity(cursor.getNext());
+        if (rarity !== MotelyJokerRarity.Rare)
+            throw new Error(`raretag cursor item[${i}] rarity=${rarity}, expected Rare(${MotelyJokerRarity.Rare})`);
+    }
+}
+
+function testStreamCursor_Tag_SecondCallMatchesAnalyzerBigBlindTag() {
+    // Tag stream for ante 1 produces (smallBlindTag, bigBlindTag, ...) in order.
+    // Second getNext() must equal analyzer's bigBlindTag — cross-check engine consistency.
+    const r = Motely.analyzeJamlSeeds(jaml.anyMust, ["AAAAAAAA"]);
+    if (r.error != null) throw new Error(`analyzeJamlSeeds: ${r.error}`);
+    const analyzerBigBlind = r.seeds?.[0]?.analysis?.antes?.[0]?.bigBlindTag;
+    if (analyzerBigBlind == null) throw new Error("analyzer returned no bigBlindTag for ante 1");
+
+    const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Tag);
+    cursor.getNext(); // small blind tag — skip
+    const cursorBigBlind = cursor.getNext();
+    if (cursorBigBlind !== analyzerBigBlind)
+        throw new Error(`cursor ante1 bigBlind=${cursorBigBlind}, analyzer says ${analyzerBigBlind}`);
+}
+
+function testStreamCursor_Voucher_YieldsValidValuesWithEmptyState() {
+    // Voucher cursor uses an empty MotelyRunState — odd-indexed (prerequisite-required) vouchers skipped.
+    if (typeof MotelyVoucher !== "object" || MotelyVoucher === null)
+        throw new Error("MotelyVoucher not emitted by Bootsharp");
+    const maxVoucher = Math.max(...Object.values(MotelyVoucher).filter(v => typeof v === "number"));
+    const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Voucher);
+    for (let i = 0; i < 5; i++) {
+        const v = cursor.getNext();
+        if (typeof v !== "number") throw new Error(`voucher cursor item[${i}] is ${typeof v}`);
+        if (v < 0 || v > maxVoucher)
+            throw new Error(`voucher cursor item[${i}]=${v} out of MotelyVoucher range [0,${maxVoucher}]`);
+        if (v % 2 !== 0) throw new Error(`voucher cursor returned prerequisite-required voucher ${v} with empty run state`);
+    }
+}
+
+function testStreamCursor_PackedIntDecoders_EnumsEmittedAndRoundTrip() {
+    // Bootsharp emitted the enum tables; the decode helpers work on a real packed int.
     if (typeof MotelyItemType?.Joker !== "number") throw new Error("MotelyItemType not emitted by Bootsharp");
     if (typeof MotelyItemTypeCategory?.Joker !== "number") throw new Error("MotelyItemTypeCategory not emitted by Bootsharp");
 
-    const pager = Motely.createJokerPager("AAAAAAAA", 0, 0, 1);
-    const v = pager.getNext();
+    const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Joker);
+    const v = cursor.getNext();
 
     const type     = Motely.decodeItemType(v);
     const category = Motely.decodeItemCategory(v);
@@ -463,125 +551,7 @@ function testPackedIntDecoders_EnumsEmittedAndRoundTrip() {
     if (typeof eternal !== "boolean")    throw new Error(`isEternal returned ${typeof eternal}`);
     if (typeof rental !== "boolean")     throw new Error(`isRental returned ${typeof rental}`);
 
-    if (category !== MotelyItemTypeCategory.Joker) throw new Error(`joker pager produced non-joker category ${category}`);
-}
-
-function testShopPager_DifferentSeeds_DifferentSequences() {
-    // Two different seeds must produce at least one distinct item in the first 5.
-    const p1 = Motely.createShopPager("AAAAAAAA", 0, 0, 1);
-    const p2 = Motely.createShopPager("BBBBBBBB", 0, 0, 1);
-    const a = p1.getNextChunk(5);
-    const b = p2.getNextChunk(5);
-    if (a.every((v, i) => v === b[i]))
-        throw new Error(`AAAAAAAA and BBBBBBBB produced identical 5-item sequences`);
-}
-
-function testTarotPager_YieldsTarotCategory() {
-    // Every item from the shop tarot stream must decode as TarotCard category.
-    if (typeof MotelyItemTypeCategory?.TarotCard !== "number")
-        throw new Error("MotelyItemTypeCategory.TarotCard not emitted by Bootsharp");
-    const pager = Motely.createTarotPager("AAAAAAAA", 0, 0, 1);
-    for (let i = 0; i < 10; i++) {
-        const v = pager.getNext();
-        const cat = Motely.decodeItemCategory(v);
-        if (cat !== MotelyItemTypeCategory.TarotCard)
-            throw new Error(`tarot pager item[${i}] category=${cat}, expected TarotCard(${MotelyItemTypeCategory.TarotCard})`);
-    }
-}
-
-function testPlanetPager_YieldsPlanetCategory() {
-    if (typeof MotelyItemTypeCategory?.PlanetCard !== "number")
-        throw new Error("MotelyItemTypeCategory.PlanetCard not emitted by Bootsharp");
-    const pager = Motely.createPlanetPager("AAAAAAAA", 0, 0, 1);
-    for (let i = 0; i < 10; i++) {
-        const v = pager.getNext();
-        const cat = Motely.decodeItemCategory(v);
-        if (cat !== MotelyItemTypeCategory.PlanetCard)
-            throw new Error(`planet pager item[${i}] category=${cat}, expected PlanetCard(${MotelyItemTypeCategory.PlanetCard})`);
-    }
-}
-
-function testSpectralPager_YieldsSpectralCategory() {
-    if (typeof MotelyItemTypeCategory?.SpectralCard !== "number")
-        throw new Error("MotelyItemTypeCategory.SpectralCard not emitted by Bootsharp");
-    const pager = Motely.createSpectralPager("AAAAAAAA", 0, 0, 1);
-    // Spectral items from the shop stream — verify type is number and is either SpectralCard or a
-    // special item (TheSoul / BlackHole) that shares the SpectralCard category base.
-    for (let i = 0; i < 10; i++) {
-        const v = pager.getNext();
-        if (typeof v !== "number") throw new Error(`spectral pager item[${i}] is ${typeof v}`);
-        const cat = Motely.decodeItemCategory(v);
-        if (cat !== MotelyItemTypeCategory.SpectralCard)
-            throw new Error(`spectral pager item[${i}] category=${cat}, expected SpectralCard(${MotelyItemTypeCategory.SpectralCard})`);
-    }
-}
-
-function testLegendaryJokerPager_YieldsLegendaryRarity() {
-    if (typeof MotelyJokerRarity?.Legendary !== "number")
-        throw new Error("MotelyJokerRarity.Legendary not emitted by Bootsharp");
-    const pager = Motely.createLegendaryJokerPager("AAAAAAAA", 0, 0, 1);
-    for (let i = 0; i < 5; i++) {
-        const v = pager.getNext();
-        const rarity = Motely.decodeJokerRarity(v);
-        if (rarity !== MotelyJokerRarity.Legendary)
-            throw new Error(`legendary pager item[${i}] rarity=${rarity}, expected Legendary(${MotelyJokerRarity.Legendary})`);
-    }
-}
-
-function testRareTagJokerPager_YieldsRareRarity() {
-    if (typeof MotelyJokerRarity?.Rare !== "number")
-        throw new Error("MotelyJokerRarity.Rare not emitted by Bootsharp");
-    const pager = Motely.createRareTagJokerPager("AAAAAAAA", 0, 0, 1);
-    for (let i = 0; i < 5; i++) {
-        const v = pager.getNext();
-        const rarity = Motely.decodeJokerRarity(v);
-        if (rarity !== MotelyJokerRarity.Rare)
-            throw new Error(`rare tag joker pager item[${i}] rarity=${rarity}, expected Rare(${MotelyJokerRarity.Rare})`);
-    }
-}
-
-function testTagPager_YieldsValidTagValues() {
-    // MotelyTag is a 0-based enum; all values must be non-negative and within the known range.
-    if (typeof MotelyTag !== "object" || MotelyTag === null)
-        throw new Error("MotelyTag not emitted by Bootsharp");
-    const maxTag = Math.max(...Object.values(MotelyTag).filter(v => typeof v === "number"));
-    const pager = Motely.createTagPager("AAAAAAAA", 0, 0, 1);
-    for (let i = 0; i < 10; i++) {
-        const v = pager.getNext();
-        if (typeof v !== "number") throw new Error(`tag pager item[${i}] is ${typeof v}`);
-        if (v < 0 || v > maxTag)
-            throw new Error(`tag pager item[${i}]=${v} out of MotelyTag range [0,${maxTag}]`);
-    }
-}
-
-function testTagPager_SecondCallMatchesAnalyzerBigBlindTag() {
-    // The tag stream for ante 1 produces (smallBlindTag, bigBlindTag, ...) in order.
-    // Pager call 0 = smallBlindTag, pager call 1 = bigBlindTag — must equal analyzer's bigBlindTag.
-    const r = Motely.analyzeJamlSeeds(jaml.anyMust, ["AAAAAAAA"]);
-    if (r.error != null) throw new Error(`analyzeJamlSeeds: ${r.error}`);
-    const analyzerBigBlind = r.seeds?.[0]?.analysis?.antes?.[0]?.bigBlindTag;
-    if (analyzerBigBlind == null) throw new Error("analyzer returned no bigBlindTag for ante 1");
-
-    const pager = Motely.createTagPager("AAAAAAAA", 0, 0, 1); // deck:Red=0, stake:White=0
-    pager.getNext(); // small blind tag — skip
-    const pagerBigBlind = pager.getNext();
-    if (pagerBigBlind !== analyzerBigBlind)
-        throw new Error(`tag pager ante1 bigBlind=${pagerBigBlind}, analyzer says ${analyzerBigBlind}`);
-}
-
-function testVoucherPager_YieldsValidVoucherValues() {
-    if (typeof MotelyVoucher !== "object" || MotelyVoucher === null)
-        throw new Error("MotelyVoucher not emitted by Bootsharp");
-    const maxVoucher = Math.max(...Object.values(MotelyVoucher).filter(v => typeof v === "number"));
-    const pager = Motely.createVoucherPager("AAAAAAAA", 0, 0, 1);
-    for (let i = 0; i < 10; i++) {
-        const v = pager.getNext();
-        if (typeof v !== "number") throw new Error(`voucher pager item[${i}] is ${typeof v}`);
-        if (v < 0 || v > maxVoucher)
-            throw new Error(`voucher pager item[${i}]=${v} out of MotelyVoucher range [0,${maxVoucher}]`);
-        // Odd-indexed vouchers require a prerequisite — an empty run state skips them.
-        if (v % 2 !== 0) throw new Error(`voucher pager returned prerequisite-required voucher ${v} with empty run state`);
-    }
+    if (category !== MotelyItemTypeCategory.Joker) throw new Error(`joker cursor produced non-joker category ${category}`);
 }
 
 async function testJimmolate_AllRejectPredicateYieldsZeroMatches() {
@@ -689,20 +659,16 @@ const tests = [
     testMustNot_RejectsAnalyzerMatch,
     testSequentialSearch_MatchCountConsistentAcrossThreads,
     testAnalyzerDerived_TagMin_RejectsSingleOccurrence,
-    // Shop pager — raw packed-int stream
-    testShopPager_GetNext_ReturnsNumbers,
-    testShopPager_GetNextChunk_MatchesSingleItemSequence,
-    testPackedIntDecoders_EnumsEmittedAndRoundTrip,
-    testShopPager_DifferentSeeds_DifferentSequences,
-    // Typed pagers — each must yield the correct category/rarity
-    testTarotPager_YieldsTarotCategory,
-    testPlanetPager_YieldsPlanetCategory,
-    testSpectralPager_YieldsSpectralCategory,
-    testLegendaryJokerPager_YieldsLegendaryRarity,
-    testRareTagJokerPager_YieldsRareRarity,
-    testTagPager_YieldsValidTagValues,
-    testTagPager_SecondCallMatchesAnalyzerBigBlindTag,
-    testVoucherPager_YieldsValidVoucherValues,
+    // Stream cursor — one generic factory + MotelyStreamKind enum replaces 9 pager factories
+    testStreamCursor_AllKinds_GetNextReturnsNumber,
+    testStreamCursor_GetNextChunk_MatchesSingleItemSequence,
+    testStreamCursor_DifferentSeeds_DifferentSequences,
+    testStreamCursor_ItemKinds_DecodeToExpectedCategory,
+    testStreamCursor_LegendaryJoker_DecodesLegendaryRarity,
+    testStreamCursor_RareTagJoker_DecodesRareRarity,
+    testStreamCursor_Tag_SecondCallMatchesAnalyzerBigBlindTag,
+    testStreamCursor_Voucher_YieldsValidValuesWithEmptyState,
+    testStreamCursor_PackedIntDecoders_EnumsEmittedAndRoundTrip,
     // Jimmolate bridge
     testJimmolate_JsPredicateFiltersSeeds,
     testJimmolate_AllRejectPredicateYieldsZeroMatches,
