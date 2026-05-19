@@ -50,7 +50,7 @@ createRoot(document.getElementById("root")!).render(<App />);
 
 By the time any component mounts, the runtime is up. Consumers are responsible for making `bin/` reachable at that URL (Storybook does this via `staticDirs`; consuming apps must do the equivalent).
 
-Hooks like `useSearch`, `useAnalyzer`, and `useJamlLibrary` also inline a Standby-guard internally (see `src/hooks/useSearch.ts`: `bootsharp.getStatus() === bootsharp.BootStatus.Standby` → boot) so they work whether or not the consumer did the top-level await. **Don't add JS wrappers around motely-wasm** — import and call it directly (per `AGENTS.md`). As of this revision, the legacy `MotelyProvider` / `useMotelyRuntime` indirection layer is being removed; new code should not import them.
+Hooks like `useSearch`, `useAnalyzer`, and `useJamlLibrary` also inline a Standby-guard internally (see `src/hooks/useSearch.ts`: `bootsharp.getStatus() === bootsharp.BootStatus.Standby` → boot) so they work whether or not the consumer did the top-level await. **Don't add JS wrappers around motely-wasm** — import and call it directly (per `AGENTS.md`). There is no `MotelyProvider` / `useMotelyRuntime` indirection layer; do not reintroduce one.
 
 ### Local motely-wasm iteration
 
