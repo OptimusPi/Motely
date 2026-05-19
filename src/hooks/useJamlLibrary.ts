@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { IFileMounter, PermissionMode } from "motely-wasm/bootsharp/file-system";
@@ -9,12 +9,19 @@ type FileSystemPackage = typeof import("@rewaffle/bootsharp-file-system");
 
 let fileSystemPackage: FileSystemPackage | null = null;
 let fileSystemInitError: unknown = null;
+let fileSystemInitPromise: Promise<void> | null = null;
 
-try {
-  fileSystemPackage = await import("@rewaffle/bootsharp-file-system");
-  fileSystemPackage.init(IFileMounter);
-} catch (error) {
-  fileSystemInitError = error;
+function initFileSystem(): Promise<void> {
+  if (fileSystemInitPromise) return fileSystemInitPromise;
+  fileSystemInitPromise = (async () => {
+    try {
+      fileSystemPackage = await import("@rewaffle/bootsharp-file-system");
+      fileSystemPackage.init(IFileMounter);
+    } catch (error) {
+      fileSystemInitError = error;
+    }
+  })();
+  return fileSystemInitPromise;
 }
 
 export type JamlLibraryStatus = "idle" | "unsupported" | "mounting" | "ready" | "error";
@@ -37,13 +44,24 @@ function errorMessage(error: unknown): string {
 
 
 export function useJamlLibrary(): UseJamlLibraryState {
-  const isFileSystemReady = fileSystemPackage !== null;
-  const [status, setStatus] = useState<JamlLibraryStatus>(() => isFileSystemReady ? "idle" : "unsupported");
+  const [status, setStatus] = useState<JamlLibraryStatus>("idle");
   const [rootId, setRootId] = useState<string | null>(null);
   const [files, setFiles] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(() =>
-    isFileSystemReady ? null : errorMessage(fileSystemInitError ?? "Bootsharp FileSystem package is not available."),
-  );
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    initFileSystem().then(() => {
+      if (cancelled) return;
+      if (fileSystemPackage === null) {
+        setStatus("unsupported");
+        setError(errorMessage(fileSystemInitError ?? "Bootsharp FileSystem package is not available."));
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const isFileSystemReady = fileSystemPackage !== null;
 
   const refresh = useCallback(() => {
     if (!rootId) return;
@@ -51,7 +69,8 @@ export function useJamlLibrary(): UseJamlLibraryState {
   }, [rootId]);
 
   const mount = useCallback(async () => {
-    if (!isFileSystemReady) {
+    await initFileSystem();
+    if (fileSystemPackage === null) {
       setStatus("unsupported");
       setError(errorMessage(fileSystemInitError ?? "Bootsharp FileSystem package is not available."));
       return;
@@ -76,7 +95,7 @@ export function useJamlLibrary(): UseJamlLibraryState {
       setStatus("error");
       setError(errorMessage(err));
     }
-  }, [isFileSystemReady]);
+  }, []);
 
   const unmount = useCallback(async () => {
     if (!rootId) return;
