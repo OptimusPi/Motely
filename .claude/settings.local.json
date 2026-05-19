@@ -47,7 +47,8 @@
       "PowerShell(Get-ChildItem X:\\\\jaml-ui\\\\examples -Recurse -Filter *.png -ErrorAction SilentlyContinue | Select-Object FullName, Length; \"----\"; Get-ChildItem X:\\\\jaml-ui\\\\examples -Directory -ErrorAction SilentlyContinue)",
       "PowerShell(Remove-Item *)",
       "WebFetch(domain:migration.gameuidatabase.com)",
-      "mcp__claude_ai_Exa__web_fetch_exa"
+      "mcp__claude_ai_Exa__web_fetch_exa",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File C:\\\\Users\\\\pifre\\\\kill-pifreak.ps1\\\\\\\\\\\\)"
     ],
     "additionalDirectories": [
       "d:\\seedfinder.app",

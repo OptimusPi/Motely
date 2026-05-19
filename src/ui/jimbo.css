@@ -787,10 +787,10 @@
 }
 
 .j-toggle-check {
-  /* Balatro checkbox: white outer square, darker grey-teal inner well, red
-     checkmark when on. The white outline IS the box; the inner well sits
-     inset from it so it reads as a chunky frame around the empty/checked
-     state. */
+  /* Balatro checkbox: white outer square frame, dark inner well that fills
+     red when on with a white checkmark on top. The white outline IS the
+     box; the inner well sits inset from it so it reads as a chunky frame
+     around the empty/checked state. */
   width: 20px;
   height: 20px;
   flex-shrink: 0;
@@ -809,13 +809,17 @@
   border-radius: 1px;
 }
 
+.j-toggle-check[data-on="true"]::before {
+  background: var(--j-red);
+}
+
 .j-toggle-check[data-on="true"]::after {
   content: '';
   position: absolute;
   inset: 2px;
   -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
           mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
-  background: var(--j-red);
+  background: var(--j-white);
 }
 
 
@@ -1048,7 +1052,10 @@
   background: rgba(0, 0, 0, 0.4);
 }
 
-.j-code-block__copy {
+/* Legacy hand-rolled copy button styles — no longer used; JimboCodeBlock
+   now renders a JimboIconButton. Left as a dead rule until a sweep removes
+   it (kept so any leftover usages don't break visually overnight). */
+.j-code-block__copy--legacy {
   padding: 4px;
   background: none;
   border: none;
