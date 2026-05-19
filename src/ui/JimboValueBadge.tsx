@@ -37,15 +37,16 @@ export function JimboValueBadge({
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    if (!editing) setDraft(String(value))
-  }, [value, editing])
-
-  useEffect(() => {
     if (editing) {
       inputRef.current?.focus()
       inputRef.current?.select()
     }
   }, [editing])
+
+  function startEditing() {
+    setDraft(String(value))
+    setEditing(true)
+  }
 
   function commit() {
     const parsed = Number(draft)
@@ -92,7 +93,7 @@ export function JimboValueBadge({
       type="button"
       className={`j-value-badge ${interactive ? '' : 'j-value-badge--static'} ${className}`}
       style={style}
-      onClick={interactive ? () => setEditing(true) : undefined}
+      onClick={interactive ? startEditing : undefined}
       disabled={!interactive}
       tabIndex={interactive ? 0 : -1}
     >
