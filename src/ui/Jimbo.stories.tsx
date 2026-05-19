@@ -19,6 +19,7 @@ import { JimboStepper } from './JimboStepper';
 import { JimboSpinner } from './JimboSpinner';
 import { JimboSlider } from './JimboSlider';
 import { JimboDualChip } from './JimboDualChip';
+import { FiSearch, FiSettings, FiCopy, FiX } from 'react-icons/fi';
 
 const meta = {
   title: 'JimboUI/Components',
@@ -428,7 +429,6 @@ export const DualChip: StoryObj = {
 // drop it directly into a JimboIconButton as a child.
 export const IconButtons: StoryObj = {
   render: () => {
-    const { FiSearch, FiSettings, FiCopy, FiX } = require('react-icons/fi') as typeof import('react-icons/fi')
     return (
       <JimboAppScroll>
         <JimboPanel>
