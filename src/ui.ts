@@ -16,6 +16,7 @@ export * from './ui/footer.js'
 export * from './ui/sprites.js'
 export * from './ui/showcase.js'
 export * from './ui/jimboCopyRow.js'
+export * from './ui/JimboCopyButton.js'
 // Primitives
 export * from './ui/jimboApp.js'
 export * from './ui/jimboWordmark.js'
