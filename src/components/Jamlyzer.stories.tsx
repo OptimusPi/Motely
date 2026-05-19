@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { JimboPanel } from '../ui/panel';
 import { JimboText } from '../ui/jimboText';
 import { Jamlyzer } from './Jamlyzer';
@@ -12,41 +12,50 @@ import sampleJaml from './fixtures/jamlyzer-sample.jaml?raw';
 
 const SEEDS = ['ALEEB', 'FROGMANS', 'PILUVYOU'];
 
+type AnalyzeOutcome = {
+  result: 'idle' | 'match' | 'nomatch' | 'running' | 'error';
+  error: string | null;
+  analysis: MotelyJamlyzerResult | null;
+};
+
+// Synchronous — bootsharp.boot() ran at preview load (.storybook/preview.tsx).
+function runAnalyze(seed: string): AnalyzeOutcome {
+  try {
+    const validation = Motely.validateJaml(sampleJaml);
+    if (validation !== 'valid') {
+      throw new Error(String(validation ?? 'Invalid JAML'));
+    }
+    const data: MotelyJamlyzerResult = Motely.analyzeJamlSeeds(sampleJaml, [seed]);
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    const seedResult = data.seeds[0];
+    return {
+      result: (seedResult?.score ?? 0) >= 1 ? 'match' : 'nomatch',
+      error: null,
+      analysis: data,
+    };
+  } catch (e) {
+    return {
+      result: 'error',
+      error: e instanceof Error ? e.message : String(e),
+      analysis: null,
+    };
+  }
+}
+
 function JamlyzerDemo() {
-  const [result, setResult] = useState<'idle' | 'match' | 'nomatch' | 'running' | 'error'>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<MotelyJamlyzerResult | null>(null);
+  // Prime with the canonical probe seed via lazy state init so the panel is
+  // populated without an effect-driven cascade on mount.
+  const [outcome, setOutcome] = useState<AnalyzeOutcome>(() => runAnalyze('ALEEB'));
+  const { result, error, analysis } = outcome;
 
   const seeds = useMemo(() => SEEDS, []);
 
-  // Synchronous — bootsharp.boot() ran at preview load (.storybook/preview.tsx).
   function analyze(seed: string) {
-    setResult('running');
-    setError(null);
-    setAnalysis(null);
-    try {
-      const validation = Motely.validateJaml(sampleJaml);
-      if (validation !== 'valid') {
-        throw new Error(String(validation ?? 'Invalid JAML'));
-      }
-      const data: MotelyJamlyzerResult = Motely.analyzeJamlSeeds(sampleJaml, [seed]);
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      setAnalysis(data);
-      const seedResult = data.seeds[0];
-      setResult((seedResult?.score ?? 0) >= 1 ? 'match' : 'nomatch');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setResult('error');
-    }
+    setOutcome({ result: 'running', error: null, analysis: null });
+    setOutcome(runAnalyze(seed));
   }
-
-  // Prime on mount with the canonical probe seed so the panel is populated
-  // without requiring a click.
-  useEffect(() => {
-    analyze('ALEEB');
-  }, []);
 
   const seedResult: MotelyJamlyzerSeedResult | undefined = analysis?.seeds[0];
 
