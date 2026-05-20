@@ -435,7 +435,7 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedTarotShopItemFilter_MatchesSameSeed()
     {
         var match = FindAnalyzedTarotShopItem();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed tarot shop item");
+        Assert.True(match.HasValue, "Expected to find at least one analyzed tarotCard shop item");
 
         var derived = match!.Value;
         var jaml = $$"""
@@ -464,7 +464,7 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         await search.WaitForCompletionAsync();
 
         output.WriteLine(
-            $"Analyzer-derived tarot shop item test: seed={derived.Seed}, ante={derived.Ante}, tarot={derived.TarotName}, shopSlot={derived.ShopSlotIndex}, matched={search.MatchingSeeds}"
+            $"Analyzer-derived tarotCard shop item test: seed={derived.Seed}, ante={derived.Ante}, tarotCard={derived.TarotName}, shopSlot={derived.ShopSlotIndex}, matched={search.MatchingSeeds}"
         );
 
         Assert.Equal(1, search.TotalSeedsSearched);

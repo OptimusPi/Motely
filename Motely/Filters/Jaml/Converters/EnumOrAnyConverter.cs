@@ -2,7 +2,7 @@ using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
-namespace Motely.Filters.Converters;
+namespace Motely.Filters.Jaml.Converters;
 
 /// <summary>
 /// AOT-safe YAML scalar converter for <see cref="EnumOrAny{T}"/>. Reads the literal string
@@ -21,7 +21,22 @@ public sealed class EnumOrAnyConverter<T> : IYamlTypeConverter where T : struct,
         var value = scalar.Value;
         if (string.Equals(value, "any", StringComparison.OrdinalIgnoreCase))
             return EnumOrAny<T>.Any;
-        return EnumOrAny<T>.Of(Enum.Parse<T>(value, ignoreCase: true));
+        if (Enum.TryParse<T>(value, ignoreCase: true, out var parsed))
+            return EnumOrAny<T>.Of(parsed);
+
+        // Enum.Parse throws a bare ArgumentException that YamlDotNet flattens into the
+        // useless "Exception during deserialization"; throw a YamlException carrying the
+        // scalar's mark so the loader can surface the offending value and the naming rule.
+        var names = Enum.GetNames<T>();
+        var hint = names.Length <= 25
+            ? $" Expected 'Any' or one of: {string.Join(", ", names)}."
+            : " Expected 'Any' or a PascalCase identifier with no spaces or punctuation"
+                + " (e.g. WeeJoker, not 'Wee Joker').";
+        throw new YamlException(
+            scalar.Start,
+            scalar.End,
+            $"'{value}' is not a valid {typeof(T).Name}.{hint}"
+        );
     }
 
     public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)

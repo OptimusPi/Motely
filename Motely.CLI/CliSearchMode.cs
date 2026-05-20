@@ -1,6 +1,5 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
-using Motely.DataLake;
 using Motely.Filters;
 
 namespace Motely.CLI;
@@ -110,30 +109,8 @@ internal static class CliSearchMode
 
         if (hasDrownMode)
         {
-            if (input.StartBatch.HasValue || input.EndBatch.HasValue || input.StartPercent.HasValue)
-            {
-                error = "Error: --drown cannot be combined with --startBatch, --endBatch, or --startPercent.";
-                return false;
-            }
-
-            if (input.JamlAestheticFallback is { Count: > 0 })
-            {
-                error = "Error: --drown cannot be used when JAML declares aesthetics.";
-                return false;
-            }
-
-            if (!DuckDbResultsSeedProvider.TryCreate(
-                    input.FilterId ?? string.Empty,
-                    input.ResultsRootPath,
-                    out var drownProvider,
-                    out var drownError))
-            {
-                error = drownError ?? "Error: could not create DuckDB drown provider.";
-                return false;
-            }
-
-            streamingProvider = drownProvider;
-            sourceLifetime = drownProvider;
+            error = "Error: --drown mode is not currently available.";
+            return false;
         }
 
         if (hasSource)

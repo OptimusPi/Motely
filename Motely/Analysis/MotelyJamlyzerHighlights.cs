@@ -2,9 +2,9 @@ using Motely.Filters;
 
 namespace Motely.Analysis;
 
-internal static class MotelyJamlyzerHighlights
+public static class MotelyJamlyzerHighlights
 {
-    public static SeedAnalysisDto Apply(JamlConfig config, SeedAnalysisDto analysis)
+    public static MotelySeedAnalysis Apply(JamlConfig config, MotelySeedAnalysis analysis)
     {
         if (analysis.Error is not null)
             return analysis;
@@ -18,39 +18,41 @@ internal static class MotelyJamlyzerHighlights
         if (targets.Length == 0)
             return analysis;
 
-        analysis.Antes = analysis.Antes.Select(ante => HighlightAnte(ante, targets)).ToArray();
-        return analysis;
+        return analysis with
+        {
+            Antes = analysis.Antes.Select(ante => HighlightAnte(ante, targets)).ToList(),
+        };
     }
 
-    private static AnteAnalysisDto HighlightAnte(
-        AnteAnalysisDto ante,
+    private static MotelyAnteAnalysis HighlightAnte(
+        MotelyAnteAnalysis ante,
         IReadOnlyList<JokerTarget> targets
     )
     {
-        ante.ShopQueue = ante.ShopQueue
-            .Select((item, slot) => item with
+        var newShopQueue = ante.ShopQueue.Select((item, slot) => item with
+        {
+            Matched = item.Matched || targets.Any(target =>
+                target.AppliesToAnte(ante.Ante)
+                && target.AppliesToShopSlot(slot)
+                && target.Matches(item.Item)),
+        }).ToList();
+
+        var newPacks = ante.Packs.Select((pack, slot) => pack with
+        {
+            Items = pack.Items.Select(packItem => packItem with
             {
-                Matched = item.Matched || targets.Any(target =>
+                Matched = packItem.Matched || targets.Any(target =>
                     target.AppliesToAnte(ante.Ante)
-                    && target.AppliesToShopSlot(slot)
-                    && target.Matches(new MotelyItem(item.Value))),
-            })
-            .ToArray();
+                    && target.AppliesToBoosterSlot(slot)
+                    && target.Matches(packItem.Item)),
+            }).ToList(),
+        }).ToList();
 
-        ante.Packs = ante.Packs
-            .Select((pack, slot) => pack with
-            {
-                Items = pack.Items.Select(item => item with
-                {
-                    Matched = item.Matched || targets.Any(target =>
-                        target.AppliesToAnte(ante.Ante)
-                        && target.AppliesToBoosterSlot(slot)
-                        && target.Matches(new MotelyItem(item.Value))),
-                }).ToArray(),
-            })
-            .ToArray();
-
-        return ante;
+        return ante with
+        {
+            ShopQueue = newShopQueue,
+            Packs = newPacks,
+        };
     }
 
     private static IEnumerable<IJamlClause> EnumeratePreviewClauses(JamlConfig config)

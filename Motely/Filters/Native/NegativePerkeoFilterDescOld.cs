@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Filters.Native;
 
 using System.Runtime.CompilerServices;
 
@@ -25,13 +25,13 @@ public struct NegativePerkeoFilterDescOld()
 
             for (int ante = MinAnte; ante <= MaxAnte; ante++)
             {
-                var jokerEditionSteam = searchContext.CreateLegendaryJokerStream(
+                var jokerEditionStream = searchContext.CreateLegendaryJokerStream(
                     ante,
                     MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
                     true
                 );
 
-                var jokerVector = searchContext.GetNextJoker(ref jokerEditionSteam);
+                var jokerVector = searchContext.GetNextJoker(ref jokerEditionStream);
 
                 VectorMask negativePerkeoMask = VectorEnum256.Equals(
                     jokerVector.Edition,

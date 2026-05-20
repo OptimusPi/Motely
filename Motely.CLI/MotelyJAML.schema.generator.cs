@@ -20,8 +20,10 @@ public static partial class MotelyJamlSchemaGenerator
     private const string SchemaTitle = "JAML — Jimbo's Ante Markup Language";
     private const string SchemaDescription =
         "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.";
-    private const string JamlClauseDef = nameof(JamlClauseDto);
-    private const string JamlSourcesDef = nameof(JamlSourcesDto);
+    private const string JamlClauseDef = nameof(JamlClauseUnion);
+    private const string JamlSourcesDef = nameof(JamlSources);
+    private const string JamlAestheticDef = nameof(JamlAesthetic);
+    private const string EventTypeDef = nameof(MotelyEventType);
 
     private static readonly Dictionary<string, string> PropertyToRef = new(StringComparer.Ordinal)
     {
@@ -43,9 +45,13 @@ public static partial class MotelyJamlSchemaGenerator
         ["spectralCards"] = "Spectral",
         ["planetCard"] = "Planet",
         ["boss"] = "Boss",
+        ["event"] = EventTypeDef,
         ["tag"] = "Tag",
+        ["tags"] = "Tag",
         ["smallBlindTag"] = "Tag",
+        ["smallBlindTags"] = "Tag",
         ["bigBlindTag"] = "Tag",
+        ["bigBlindTags"] = "Tag",
         ["deck"] = "Deck",
         ["stake"] = "Stake",
         ["edition"] = "Edition",
@@ -65,14 +71,67 @@ public static partial class MotelyJamlSchemaGenerator
         ["sources"] = JamlSourcesDef,
     };
 
+    /// <summary>Clause keys that select the filter type (one per YAML mapping). Mirrors <see cref="JamlConfigLoader"/> ResolveType order.</summary>
+    private static readonly (string Key, string? TypeRef, bool IsArray, bool IsNestedClauseList)[] ClauseDiscriminators =
+    [
+        ("joker", "Joker", false, false),
+        ("jokers", "Joker", true, false),
+        ("commonJoker", "CommonJoker", false, false),
+        ("commonJokers", "CommonJoker", true, false),
+        ("uncommonJoker", "UncommonJoker", false, false),
+        ("uncommonJokers", "UncommonJoker", true, false),
+        ("rareJoker", "RareJoker", false, false),
+        ("rareJokers", "RareJoker", true, false),
+        ("legendaryJoker", "LegendaryJoker", false, false),
+        ("legendaryJokers", "LegendaryJoker", true, false),
+        ("voucher", "Voucher", false, false),
+        ("vouchers", "Voucher", true, false),
+        ("tarotCard", "Tarot", false, false),
+        ("tarotCards", "Tarot", true, false),
+        ("spectralCard", "Spectral", false, false),
+        ("spectralCards", "Spectral", true, false),
+        ("planetCard", "Planet", false, false),
+        ("boss", "Boss", false, false),
+        ("tag", "Tag", false, false),
+        ("tags", "Tag", true, false),
+        ("smallBlindTag", "Tag", false, false),
+        ("smallBlindTags", "Tag", true, false),
+        ("bigBlindTag", "Tag", false, false),
+        ("bigBlindTags", "Tag", true, false),
+        ("standardCard", "StandardCard", false, false),
+        ("standardCards", "StandardCard", true, false),
+        ("erraticRank", "Rank", false, false),
+        ("erraticSuit", "Suit", false, false),
+        ("erraticCard", null, false, false),
+        ("startingDraw", null, false, false),
+        ("event", EventTypeDef, false, false),
+        ("luckyMoney", null, true, false),
+        ("luckyMult", null, true, false),
+        ("misprintMult", null, true, false),
+        ("wheelOfFortune", null, true, false),
+        ("cavendishExtinct", null, true, false),
+        ("grosMichelExtinct", null, true, false),
+        ("spaceLevelup", null, true, false),
+        ("businessPayout", null, true, false),
+        ("bloodstoneTrigger", null, true, false),
+        ("parkingPayout", null, true, false),
+        ("glassDestroy", null, true, false),
+        ("wheelStaysFlipped", null, true, false),
+        ("and", JamlClauseDef, true, true),
+        ("or", JamlClauseDef, true, true),
+        ("clauses", JamlClauseDef, true, true),
+    ];
+
+    private static readonly string[] LegendaryClauseExtras = ["soulEditionRolls", "soulCardOnly"];
+
     [JsonSourceGenerationOptions(
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
         GenerationMode = JsonSourceGenerationMode.Metadata)]
     [JsonSerializable(typeof(string))]
     [JsonSerializable(typeof(JamlRootDocument))]
-    [JsonSerializable(typeof(JamlClauseDto))]
-    [JsonSerializable(typeof(JamlSourcesDto))]
-    [JsonSerializable(typeof(JamlDefaultsDto))]
+    [JsonSerializable(typeof(JamlClauseUnion))]
+    [JsonSerializable(typeof(JamlSources))]
+    [JsonSerializable(typeof(JamlDefaults))]
     internal sealed partial class SchemaContext : JsonSerializerContext
     {
     }
@@ -102,7 +161,7 @@ public static partial class MotelyJamlSchemaGenerator
 
         if (root["properties"] is JsonNode props)
         {
-            result["properties"] = RewriteCriterionArrays(props);
+            result["properties"] = RewriteRootProperties(props);
         }
 
         return result;
@@ -145,12 +204,17 @@ public static partial class MotelyJamlSchemaGenerator
             WriteAllText(extra, json);
     }
 
-    private static JsonObject RewriteCriterionArrays(JsonNode props)
+    private static JsonObject RewriteRootProperties(JsonNode props)
     {
         var result = props.DeepClone().AsObject();
         result["must"] = CriterionArrayDef();
         result["should"] = CriterionArrayDef();
         result["mustNot"] = CriterionArrayDef();
+        result["aesthetics"] = new JsonObject
+        {
+            ["type"] = "array",
+            ["items"] = RefNode(JamlAestheticDef),
+        };
         return result;
     }
 
@@ -245,6 +309,7 @@ public static partial class MotelyJamlSchemaGenerator
         return new JsonObject
         {
             [JamlClauseDef] = CriterionDef(),
+            [EventTypeDef] = EnumDef(Enum.GetNames<MotelyEventType>()),
             ["Joker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJoker>(), "any")),
             ["CommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerCommon>(), "any")),
             ["UncommonJoker"] = EnumDef(CombineWithWildcards(Enum.GetNames<MotelyJokerUncommon>(), "any")),
@@ -265,6 +330,7 @@ public static partial class MotelyJamlSchemaGenerator
             ["Suit"] = EnumDef(Enum.GetNames<MotelyStandardcardSuit>()),
             ["Sticker"] = EnumDef(WithoutNone(Enum.GetNames<MotelyJokerSticker>())),
             ["Mode"] = EnumDef(new[] { "any", "all", "none" }),
+            [JamlAestheticDef] = EnumDef(JamlAestheticParser.KnownJamlStringsForSchema()),
             ["StandardCard"] = StandardCardDef(),
             [JamlSourcesDef] = SourcesDef(),
         };
@@ -272,25 +338,136 @@ public static partial class MotelyJamlSchemaGenerator
 
     private static JsonObject CriterionDef()
     {
+        var flatProps = ExportFlatClausePropertySchemas();
+        var oneOf = new JsonArray();
+
+        foreach (var (key, typeRef, isArray, isNestedClauseList) in ClauseDiscriminators)
+        {
+            oneOf.Add(
+                BuildClauseOneOfBranch(key, typeRef, isArray, isNestedClauseList, flatProps)
+            );
+        }
+
+        return new JsonObject { ["oneOf"] = oneOf };
+    }
+
+    private static JsonObject ExportFlatClausePropertySchemas()
+    {
         var node = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlClauseDto,
+            SchemaContext.Default.JamlClauseUnion,
             ExporterOptions());
 
         var result = node as JsonObject
             ?? throw new InvalidOperationException("JsonSchemaExporter did not return an object.");
-        result.Remove("$schema");
-        return result;
+
+        return (result["properties"] as JsonObject)?.DeepClone().AsObject()
+            ?? throw new InvalidOperationException("JamlClauseUnion schema missing properties.");
+    }
+
+    private static JsonObject BuildClauseOneOfBranch(
+        string discriminatorKey,
+        string? typeRef,
+        bool isArray,
+        bool isNestedClauseList,
+        JsonObject flatProps)
+    {
+        var properties = new JsonObject();
+        var includeLegendaryExtras = discriminatorKey is "legendaryJoker" or "legendaryJokers";
+        foreach (var prop in flatProps)
+        {
+            if (IsDiscriminatorProperty(prop.Key))
+                continue;
+            if (!includeLegendaryExtras && LegendaryClauseExtras.Contains(prop.Key, StringComparer.Ordinal))
+                continue;
+            properties[prop.Key] = prop.Value?.DeepClone();
+        }
+
+        properties[discriminatorKey] = BuildDiscriminatorPropertySchema(
+            discriminatorKey,
+            typeRef,
+            isArray,
+            isNestedClauseList
+        );
+
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["required"] = new JsonArray { discriminatorKey },
+            ["properties"] = properties,
+            ["additionalProperties"] = false,
+        };
+    }
+
+    private static bool IsDiscriminatorProperty(string key) =>
+        ClauseDiscriminators.Any(v => v.Key == key);
+
+    private static JsonObject BuildDiscriminatorPropertySchema(
+        string discriminatorKey,
+        string? typeRef,
+        bool isArray,
+        bool isNestedClauseList)
+    {
+        if (isNestedClauseList)
+        {
+            return new JsonObject
+            {
+                ["type"] = "array",
+                ["items"] = RefNode(JamlClauseDef),
+            };
+        }
+
+        if (isArray && typeRef is null)
+        {
+            return new JsonObject
+            {
+                ["type"] = "array",
+                ["items"] = new JsonObject { ["type"] = "integer" },
+            };
+        }
+
+        if (isArray)
+        {
+            var arraySchema = new JsonObject
+            {
+                ["type"] = "array",
+                ["items"] = RefNode(typeRef!),
+            };
+            if (typeRef == "Tag")
+            {
+                arraySchema["description"] =
+                    "One or more tag enum names (OR). Empty [] is invalid at load. Maps to tag stream draw 0 (small) or 1 (big) for that ante.";
+            }
+            return arraySchema;
+        }
+
+        if (typeRef is null)
+        {
+            return new JsonObject { ["type"] = "string" };
+        }
+
+        if (typeRef == "StandardCard")
+            return RefNode("StandardCard");
+
+        return RefNode(typeRef);
     }
 
     private static JsonObject SourcesDef()
     {
         var node = JsonSchemaExporter.GetJsonSchemaAsNode(
-            SchemaContext.Default.JamlSourcesDto,
+            SchemaContext.Default.JamlSources,
             ExporterOptions());
 
         var result = node as JsonObject
             ?? throw new InvalidOperationException("JsonSchemaExporter did not return an object.");
         result.Remove("$schema");
+        if (result["properties"] is JsonObject props)
+        {
+            props["earlyAntesMaxPack"] = new JsonObject
+            {
+                ["type"] = "integer",
+                ["description"] = "Ante-1 booster reachability cap. Default 3 matches normal gameplay; raise to 5 to include Hieroglyph or Petroglyph scenarios.",
+            };
+        }
         return result;
     }
 

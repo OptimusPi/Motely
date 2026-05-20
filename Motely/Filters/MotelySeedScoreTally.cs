@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
 
-public unsafe struct MotelySeedScoreTally : IMotelySeedScores
+public struct MotelySeedScoreTally : IMotelySeedScores
 {
     public const int MAX_TALLY_COUNT = 256;
 
@@ -64,10 +64,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScores
     public readonly ReadOnlySpan<int> TallyValuesSpan
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get
-        {
-            return new((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
-        }
+        get => _tallyValues.AsSpan(0, _tallyCount);
     }
 
     public readonly List<int> TallyColumns
@@ -81,6 +78,22 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScores
             }
             return list;
         }
+    }
+
+    /// <summary>
+    /// CSV row payload used by interop-safe sinks/events.
+    /// Format: seed,score,tally1,tally2,...
+    /// </summary>
+    public readonly string ToCsvRow()
+    {
+        if (_tallyCount <= 0)
+            return $"{Seed},{Score}";
+
+        var tallies = new string[_tallyCount];
+        for (int i = 0; i < _tallyCount; i++)
+            tallies[i] = _tallyValues[i].ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        return $"{Seed},{Score},{string.Join(",", tallies)}";
     }
 }
 

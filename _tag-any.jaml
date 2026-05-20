@@ -1,0 +1,6 @@
+name: t
+deck: Red
+stake: White
+must:
+  - tag: any
+    antes: [1]

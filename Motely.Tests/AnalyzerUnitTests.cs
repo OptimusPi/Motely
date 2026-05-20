@@ -23,7 +23,7 @@ public sealed class AnalyzerUnitTests
         Assert.Equal("1AAAAAAA", seed.Seed);
         Assert.NotNull(seed.Analysis);
         Assert.NotEmpty(seed.Analysis.Antes);
-        Assert.False(string.IsNullOrWhiteSpace(seed.Analysis.Antes[0].Boss));
+        Assert.NotEqual(default, seed.Analysis.Antes[0].Boss);
     }
 
     [Fact]

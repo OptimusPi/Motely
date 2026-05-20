@@ -23,13 +23,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Motely.CLI\MotelyJAML.schema.generator.cs" Link="MotelyJAML.schema.generator.cs" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.DataLake\Motely.DataLake.csproj" />
+    <ProjectReference Include="..\Motely.CLI\Motely.CLI.csproj" />
+    <ProjectReference Include="..\Motely.Datalake\Motely.Datalake.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="filters\**\*.jaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="GoldenJamlFiles\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="xunit.runner.json">

@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Motely;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Fast vector filter: legendary soul stream edition only (ExcludeJokerType | ExcludeStickers).

@@ -6,7 +6,7 @@ namespace Motely.Tests;
 
 /// <summary>
 /// Regression tests for every JAML filter file in Motely.Tests/filters.
-/// Each filter must: parse without errors, compile into a search plan, and successfully search ≥1 seed.
+/// Each filter must parse, compile into a search plan, pass sequential smoke, and have selective must clauses on the probe set.
 /// New filters added to the data folder are automatically picked up — no code change needed.
 /// </summary>
 public class V0FilterRegressionTests

@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <BootsharpName>motely-wasm</BootsharpName>
+    <!-- Bootsharp build-config (https://github.com/elringus/bootsharp/blob/main/docs/guide/build-config.md):
+         separate sinks so %MODULE_DIR% → dist/ and package.json exports stay "./dist/index.mjs".
+         Same pattern as samples/react (Backend.WASM): PackageDirectory + BinariesDirectory + PublishDirectory. -->
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
+    <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Bootsharp.FileSystem" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+
+  <Target Name="GenerateVersionConstant" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <_VersionLines Include="// &lt;auto-generated/&gt;" />
+      <_VersionLines Include="namespace Motely.Wasm%3B" />
+      <_VersionLines Include="internal static class MotelyVersionConstant" />
+      <_VersionLines Include="{" />
+      <_VersionLines Include="    public const string Value = &quot;$(MotelyVersion)&quot;%3B" />
+      <_VersionLines Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile
+        File="$(IntermediateOutputPath)MotelyVersion.g.cs"
+        Lines="@(_VersionLines)"
+        Overwrite="true"
+        WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)MotelyVersion.g.cs" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Bootsharp PackageTemplate.json has no version field; npm publish requires one from MotelyVersion. -->
+  <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpPack">
+    <PropertyGroup>
+      <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
+      <_NpmPackageJson>$(_NpmRoot)\package.json</_NpmPackageJson>
+      <_PkgWithVersion>$([System.IO.File]::ReadAllText('$(_NpmPackageJson)').Replace('&quot;name&quot;: &quot;$(BootsharpName)&quot;,', '&quot;name&quot;: &quot;$(BootsharpName)&quot;,%0D%0A    &quot;version&quot;: &quot;$(MotelyVersion)&quot;,'))</_PkgWithVersion>
+    </PropertyGroup>
+    <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
+           Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp PackageTemplate.json may have changed. Update FinalizeNpmPackage." />
+    <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
+    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
+    <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
+    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
+  </Target>
+</Project>

@@ -1,16 +1,15 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
-public sealed class BossClause : IJamlClause
+public sealed class BossClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required MotelyBossBlind[] Bosses { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 2 + MaxAnte;
+    public override string Describe() => $"boss {string.Join(", ", System.Array.ConvertAll(Bosses, static b => b.ToString()))}";
+    public override IMotelySeedFilterDesc CreateDesc() => new BossFilterDesc(this);
 }
 
 public readonly struct BossFilterDesc(BossClause clause)

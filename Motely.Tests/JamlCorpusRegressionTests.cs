@@ -12,7 +12,7 @@ namespace Motely.Tests;
 /// </summary>
 public class JamlCorpusRegressionTests
 {
-    private static readonly string[] LegacyKeys = ["mixedJoker", "soulJoker", "shopSlots"];
+    private static readonly string[] LegacyKeys = ["packSlots", "tarot", "planet", "spectral", "mixedJoker", "soulJoker", "shopSlots", "erraticRanks"];
 
     private readonly ITestOutputHelper _output;
 
@@ -97,7 +97,8 @@ public class JamlCorpusRegressionTests
 
     private static string LocateCorpusRoot()
     {
-        var candidate = GoldenDirectory.ResolveGoldenJamlFiles();
+        // GoldenJamlFiles is copied next to the test assembly (see Motely.Tests.csproj).
+        var candidate = Path.Combine(AppContext.BaseDirectory, "GoldenJamlFiles");
         if (Directory.Exists(candidate)) return candidate;
         throw new DirectoryNotFoundException("Could not locate GoldenJamlFiles fixture directory at " + candidate);
     }

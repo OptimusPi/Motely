@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "ms-toolsai.jupyter",
+    "ms-python.python",
+    "ms-toolsai.datawrangler",
+    "ms-dotnettools.csdevkit",
+    "redhat.vscode-yaml"
+  ]
+}

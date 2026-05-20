@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Enums;
 
 /// <summary>
 /// Types of random events that can be filtered in searches
@@ -14,7 +14,7 @@ public enum MotelyEventType
     /// <summary>Misprint joker mult value roll</summary>
     MisprintMult,
 
-    /// <summary>Wheel of Fortune tarot gives edition to random joker</summary>
+    /// <summary>Wheel of Fortune Tarot gives edition to random joker</summary>
     WheelOfFortune,
 
     /// <summary>Cavendish banana goes extinct (destroys itself)</summary>

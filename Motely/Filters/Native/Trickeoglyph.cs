@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct TrickeoglyphFilterDesc()
     : IMotelySeedFilterDesc<TrickeoglyphFilterDesc.TrickeoglyphFilter>
@@ -78,7 +78,7 @@ public struct TrickeoglyphFilterDesc()
 
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            // Iterate all 8 antes of voucher and then add up the passing lanes
+            // Iterate antes 2-4 of voucher and then add up the passing lanes
             var state = new MotelyVectorRunState();
             VectorMask matchingHiero = VectorMask.NoBitsSet;
             VectorMask matchingMagic = VectorMask.NoBitsSet;
