@@ -264,6 +264,12 @@ import { Card3D } from "jaml-ui/r3f";
 - **CSS not applied** — make sure you imported from `jaml-ui` or `jaml-ui/ui` at least once. Both pull in `jimbo.css` as a side effect. If your bundler strips side-effect imports, add `import "jaml-ui/jimbo.css"`.
 - **Storybook hangs on boot** — Storybook's `staticDirs` already serves `motely-wasm/bin`; see `.storybook/main.ts` for the pattern.
 
+## Fonts
+
+Jimbo UI uses **m6x11** and **m6x11plus** (`.ttf` in `assets/fonts/`). Fonts by [Daniel Linssen](https://managore.itch.io/) — free to use with attribution. If you ship an app that shows this UI, include that credit in your README or notices.
+
+Code blocks use **JetBrains Mono** / system monospace via `--j-font-code`, not the pixel fonts.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Font files are separate third-party assets; attribution to Daniel Linssen is required when redistributing or displaying the pixel fonts.

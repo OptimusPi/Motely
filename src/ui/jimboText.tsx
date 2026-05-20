@@ -37,9 +37,8 @@ export interface JimboTextProps extends React.HTMLAttributes<HTMLElement> {
  * hand-rolling `fontFamily: 'm6x11plus, monospace'` + `textShadow` strings
  * throughout consumers — it keeps the styling drift-free.
  *
- * Requires `import 'jaml-ui/fonts.css'` somewhere in the consumer bundle
- * so the @font-face declaration lands (font is base64-embedded, no
- * runtime fetch).
+ * Fonts load via `jaml-ui/fonts.css` (imported from `jimbo.css`). Consumers
+ * importing `jaml-ui` or `jaml-ui/ui` get @font-face automatically.
  */
 export function JimboText({
   tone = 'default',
