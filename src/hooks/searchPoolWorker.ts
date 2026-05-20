@@ -10,12 +10,11 @@ import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type {
     IMotelySearch,
     IMotelySearchSettingsInterop,
-    MotelyDeck,
     MotelyProgress,
     MotelyScoredSeedResult,
-    MotelyStake,
 } from "motely-wasm/motely";
-import type { JamlAesthetic } from "motely-wasm/motely/filters";
+import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 

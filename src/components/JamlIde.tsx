@@ -137,17 +137,23 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
               transition: "border-color 120ms",
             }}
           >
-            <button
-              type="button"
+            <div
+              role={hasTally ? "button" : undefined}
+              tabIndex={hasTally ? 0 : -1}
               onClick={() => hasTally && setExpanded(isOpen ? null : result.seed)}
+              onKeyDown={(event) => {
+                if (!hasTally) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setExpanded(isOpen ? null : result.seed);
+                }
+              }}
               style={{
                 width: "100%",
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
                 padding: "9px 12px",
-                background: "none",
-                border: "none",
                 cursor: hasTally ? "pointer" : "default",
                 color: "inherit",
                 textAlign: "left",
@@ -187,7 +193,7 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
                   {isOpen ? "▲" : "▼"}
                 </span>
               ) : null}
-            </button>
+            </div>
 
             {isOpen && hasTally ? (
               <div

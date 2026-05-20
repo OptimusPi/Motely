@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import type { JamlAesthetic } from "motely-wasm/motely/filters";
+import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import type {
     PoolInboundMessage,
     PoolOutboundMessage,

@@ -7,7 +7,7 @@
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { IMotelySearch, IMotelySearchSettingsInterop, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { JamlAesthetic } from "motely-wasm/motely/filters";
+import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 

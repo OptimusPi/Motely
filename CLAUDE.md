@@ -65,9 +65,11 @@ By the time any component mounts, the runtime is up. Consumers are responsible f
 
 Hooks like `useSearch`, `useAnalyzer`, and `useJamlLibrary` also inline a Standby-guard internally (see `src/hooks/useSearch.ts`: `bootsharp.getStatus() === bootsharp.BootStatus.Standby` → boot) so they work whether or not the consumer did the top-level await. **Don't add JS wrappers around motely-wasm** — import and call it directly (per `AGENTS.md`). There is no `MotelyProvider` / `useMotelyRuntime` indirection layer; do not reintroduce one.
 
-### Local motely-wasm iteration
+### Updating motely-wasm
 
-When you need motely-wasm changes that aren't published yet, follow the flow in the auto-memory note `motely-wasm-local-publish-flow`: bump `MotelyVersion` in `Directory.Packages.props` in the MotelyJAML repo → `dotnet publish Motely.Wasm` → `npm pack` → copy tgz here → add `pnpm.overrides: { "motely-wasm": "file:./motely-wasm-<version>.tgz" }` in `package.json` → `pnpm install`. Remove the override when the new version actually ships.
+`motely-wasm` is a published npm package. Bump it with `pnpm update motely-wasm` (respects the `^` range) or raise the range and `pnpm install`.
+
+Bootsharp codegen sometimes relocates generated exports across subpaths. If `pnpm typecheck` reports "no exported member" after a bump, the symbol moved — locate it under `node_modules/motely-wasm/dist/generated/` and update the import. Example (18.2.x): `MotelyDeck`/`MotelyStake` → `motely-wasm/motely/enums`, `JamlAesthetic` → `motely-wasm/motely/filters/jaml`.
 
 ### CSS / styling
 
