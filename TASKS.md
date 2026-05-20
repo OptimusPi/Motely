@@ -49,7 +49,7 @@ Captured from a component-by-component Storybook walkthrough with pifreak. Every
 
 ## 🏗️ FOUNDATIONS (each unblocks many — do before the shell)
 
-- **#18 ONE canonical 320×568 story harness** ⭐ KEYSTONE. Stories use arbitrary frames (296, 300×420, 400, 320×520, layout:'centered' + Storybook padding). Build one fullscreen decorator = the locked `.j-app` 320×568, swirl outside, zero padding. Kills margin/cutoff/off-center/swirl-inside across the whole library (#41, #69, parts of #19/#39/etc.). Do this ALONE after the parallel batch.
+- ✅ **#18 ONE canonical 320×568 story harness** ⭐ KEYSTONE — DONE. Global decorator in `.storybook/preview.tsx` wraps every story in `<JimboBackground/>` (outside) + `<JimboApp>` (locked 320×568) by default; global `layout: 'fullscreen'`. Swept ~24 stories off the old `jimboHarness:false` + `layout:'centered'` + arbitrary-frame decorators (296/300×420/320×520/`j-story-phone`/`j-story-panel-grid`) onto the default harness. **Documented exceptions** (intentional opt-outs): `jimboBackground` (the full-bleed swirl itself, `jimboBackground:false`), `JimboPanelSplitter` (`jimboHarness:'fluid'`, protected #72), `Showcase` (owns its own `<JimboApp>` shell). Verified visually at 320×568 (Curator/CodeEditor). Overflow/transparency seen in some stories are existing per-component tasks (#19/#46/#6/#25/#42/#43), not harness bugs.
 - **#13 Shadow tokens.** Real language = hard-offset zero-blur. Soft-blur outliers `jimbo.css:2064` (`0 8px 16px`), `:2040` (`0 3px 8px`) are the "huge ugly" ones. Button press shadow is `rgba(0,0,0,0.3)` = 30% in 5 spots (`:374,809,1200,2116,2465`) → should be **80%**. Tokenize once.
 - **#65 Color sprawl.** ~67 inline color values (51 hex + 16 rgba) in TS/TSX, mostly slightly-off dupes of the 33 `--j-` tokens (`#e4b643`≈gold, `#429f79`≈green, `#ff4c40`≈red…). Consolidate to tokens (JimboColorOption JS constants only for R3F/canvas). Remove **teal-grey AND grey as button tones** (teal-grey stays a surface).
 - **#54 Panel bottom-edge clip.** `.j-app` `overflow:hidden` (`:1528`) + `.j-app__scroll > .j-panel{flex:1 1 auto}` (`:1567`) slices the panel's bottom 3D lip (predicted at `:334`). Reserve bottom room ≥ `--j-panel-south-edge-width + --j-surface-shadow-depth`.
@@ -137,7 +137,7 @@ Captured from a component-by-component Storybook walkthrough with pifreak. Every
 
 1. ✅ Delete pile (done; build green).
 2. Parallel batch: #15, #40, #50, #16, + rule encoding (eslint + CLAUDE.md).
-3. #18 story harness (keystone, alone).
+3. ✅ #18 story harness (keystone, alone).
 4. Foundations: #13, #65, #54.
 5. Anti-shift family (#12/#36/#56/#59/#63/#67) + per-component fixes.
 6. Consolidations + #4, #64.
