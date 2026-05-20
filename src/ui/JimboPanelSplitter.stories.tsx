@@ -1,67 +1,55 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { JimboPanelSplitter } from './JimboPanelSplitter';
 import { JimboPanel } from './panel';
 import { JimboText } from './jimboText';
-import { JimboCodeBlock } from './codeBlock';
-import { JimboInfoCard, JimboInfoCardBody, JimboInfoCardTitle, JimboInfoCardAside } from './jimboInfoCard';
-import { JimboBadge } from './JimboBadge';
 
-// The splitter slides ALL the way to either edge — left can fully collapse to
-// 0 (right pane takes the entire width), and right can fully collapse too. No
-// lower clamp keeping a stub of either side visible.
-const SHELL_WIDTH = 296   // inner content area of the locked 320 .j-app shell
-const HANDLE_WIDTH = 12
+const HANDLE_WIDTH = 12;
 
 function Demo() {
-  const [left, setLeft] = useState(140);
-  const maxLeft = SHELL_WIDTH - HANDLE_WIDTH
-  const adjust = (delta: number) => setLeft((value) => Math.max(0, Math.min(maxLeft, value + delta)));
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [trackWidth, setTrackWidth] = useState(0);
+  const [left, setLeft] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const sync = () => {
+      const w = el.clientWidth;
+      setTrackWidth(w);
+      setLeft((prev) => (prev === 0 ? Math.floor(w / 2) : Math.min(prev, Math.max(0, w - HANDLE_WIDTH))));
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const maxLeft = Math.max(0, trackWidth - HANDLE_WIDTH);
+  const adjust = (delta: number) => {
+    setLeft((value) => Math.max(0, Math.min(maxLeft, value + delta)));
+  };
+
+  const showLeft = left > 40;
+  const showRight = maxLeft - left > 40;
 
   return (
-    <div className="j-story-phone j-panel-splitter-story">
-      <JimboPanel className="j-panel-splitter-story__shell">
-        <div className="j-panel-splitter-story__header">
-          <JimboText size="md" tone="white">JAML split view</JimboText>
-          <JimboText size="xs" tone="white">Drag the divider — slides all the way</JimboText>
-        </div>
-        <div className="j-panel-splitter-story__body">
-          <section className="j-panel-splitter-story__pane" style={{ flexBasis: left }}>
-            {left > 40 && (
-              <JimboCodeBlock
-                filename="route.jaml"
-                language="JAML"
-                code={'must:\n  - joker: Blueprint\n  - legendaryJoker: Perkeo\nshould:\n  - voucher: Observatory\n'}
-              />
-            )}
-          </section>
-          <JimboPanelSplitter orientation="vertical" onDrag={adjust} onKeyAdjust={adjust} />
-          <section className="j-panel-splitter-story__pane j-panel-splitter-story__pane--results">
-            {(maxLeft - left) > 40 && (
-              <>
-                <JimboInfoCard>
-                  <JimboInfoCardBody>
-                    <JimboInfoCardTitle>Blueprint</JimboInfoCardTitle>
-                  </JimboInfoCardBody>
-                  <JimboInfoCardAside><JimboBadge tone="green">must</JimboBadge></JimboInfoCardAside>
-                </JimboInfoCard>
-                <JimboInfoCard>
-                  <JimboInfoCardBody>
-                    <JimboInfoCardTitle>Perkeo</JimboInfoCardTitle>
-                  </JimboInfoCardBody>
-                  <JimboInfoCardAside><JimboBadge tone="green">must</JimboBadge></JimboInfoCardAside>
-                </JimboInfoCard>
-                <JimboInfoCard>
-                  <JimboInfoCardBody>
-                    <JimboInfoCardTitle>Observatory</JimboInfoCardTitle>
-                  </JimboInfoCardBody>
-                  <JimboInfoCardAside><JimboBadge tone="blue">should</JimboBadge></JimboInfoCardAside>
-                </JimboInfoCard>
-              </>
-            )}
-          </section>
-        </div>
-      </JimboPanel>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <JimboPanel className="j-panel-splitter-demo">
+      <div ref={bodyRef} className="j-panel-splitter-demo__body">
+        <section className="j-panel-splitter-demo__pane" style={{ flexBasis: left }}>
+          {showLeft ? (
+            <JimboText size="sm" tone="grey">Editor</JimboText>
+          ) : null}
+        </section>
+        <JimboPanelSplitter orientation="vertical" onDrag={adjust} onKeyAdjust={adjust} />
+        <section className="j-panel-splitter-demo__pane">
+          {showRight ? (
+            <JimboText size="sm" tone="grey">Results</JimboText>
+          ) : null}
+        </section>
+      </div>
+    </JimboPanel>
     </div>
   );
 }
@@ -70,8 +58,8 @@ const meta = {
   title: 'JimboUI / JimboPanelSplitter',
   component: JimboPanelSplitter,
   parameters: {
-    jimboHarness: false,
-    layout: 'centered',
+    jimboHarness: 'fluid',
+    layout: 'fullscreen',
   },
 } satisfies Meta<typeof JimboPanelSplitter>;
 

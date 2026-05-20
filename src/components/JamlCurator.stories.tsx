@@ -4,10 +4,6 @@ import { JamlCurator } from './JamlCurator';
 const meta = {
   title: 'JAML / JamlCurator',
   component: JamlCurator,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JamlCurator>;
 
 export default meta;

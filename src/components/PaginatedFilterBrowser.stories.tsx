@@ -28,13 +28,6 @@ const filters = Array.from({ length: 18 }, (_, index) => {
 const meta = {
   title: 'JAML / PaginatedFilterBrowser',
   component: PaginatedFilterBrowser,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
-  decorators: [
-    (Story) => <div className="j-story-phone"><Story /></div>,
-  ],
 } satisfies Meta<typeof PaginatedFilterBrowser>;
 
 export default meta;

@@ -159,8 +159,8 @@ function parseColor(c: JimboBackgroundColor | undefined, fallback: [number, numb
  * Manages WebGL context, shader compilation, and animation loop.
  *
  * All shader constants are exposed as uniforms so they can be tuned at
- * runtime. Color changes are interpolated over `transitionMs` so palette
- * swaps fade smoothly instead of snapping.
+ * runtime. Palette and scalar uniforms (pixelFilter, contrast, spin, etc.)
+ * interpolate over `transitionMs` so control changes fade smoothly.
  */
 export function useBalatroBackground(config: JimboBackgroundConfig = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -290,13 +290,23 @@ export function useBalatroBackground(config: JimboBackgroundConfig = {}) {
     const u_contrast = gl.getUniformLocation(program, 'u_contrast')
     const u_lighting = gl.getUniformLocation(program, 'u_lighting')
 
-    // Current (interpolated) colors. Each frame they lerp toward the latest
-    // config colors over the transitionMs window so palette swaps fade in.
+    const resolveScalars = (cfg: JimboBackgroundConfig) => ({
+      spinRotation: cfg.spinRotation ?? BALATRO_DEFAULTS.spinRotation,
+      spinSpeed: 4.5 * (cfg.speed ?? BALATRO_DEFAULTS.speed),
+      spinAmount: cfg.spinAmount ?? BALATRO_DEFAULTS.spinAmount,
+      pixelFilter: cfg.pixelFilter ?? BALATRO_DEFAULTS.pixelFilter,
+      contrast: cfg.contrast ?? BALATRO_DEFAULTS.contrast,
+      lighting: cfg.lighting ?? BALATRO_DEFAULTS.lighting,
+    })
+
+    // Interpolated palette + shader scalars — all ease toward configRef over transitionMs.
+    const boot = configRef.current
     const current: [number, number, number][] = [
-      [...BALATRO_DEFAULTS.primary],
-      [...BALATRO_DEFAULTS.secondary],
-      [...BALATRO_DEFAULTS.dark],
+      parseColor(boot.primary, BALATRO_DEFAULTS.primary),
+      parseColor(boot.secondary, BALATRO_DEFAULTS.secondary),
+      parseColor(boot.dark, BALATRO_DEFAULTS.dark),
     ]
+    const currentScalars = resolveScalars(boot)
     const startTime = performance.now()
     let lastFrame = startTime
     let animationFrameId = 0
@@ -312,6 +322,7 @@ export function useBalatroBackground(config: JimboBackgroundConfig = {}) {
         parseColor(cfg.secondary, BALATRO_DEFAULTS.secondary),
         parseColor(cfg.dark,      BALATRO_DEFAULTS.dark),
       ]
+      const targetScalars = resolveScalars(cfg)
       const transitionMs = Math.max(1, cfg.transitionMs ?? BALATRO_DEFAULTS.transitionMs)
       // Frame-rate-independent lerp: alpha = 1 - exp(-dt / tau).
       const alpha = 1 - Math.exp(-dt / transitionMs)
@@ -320,6 +331,15 @@ export function useBalatroBackground(config: JimboBackgroundConfig = {}) {
           current[i][c] += (target[i][c] - current[i][c]) * alpha
         }
       }
+      const lerpScalar = (key: keyof typeof currentScalars) => {
+        currentScalars[key] += (targetScalars[key] - currentScalars[key]) * alpha
+      }
+      lerpScalar('spinRotation')
+      lerpScalar('spinSpeed')
+      lerpScalar('spinAmount')
+      lerpScalar('pixelFilter')
+      lerpScalar('contrast')
+      lerpScalar('lighting')
 
       const displayWidth = canvas.clientWidth
       const displayHeight = canvas.clientHeight
@@ -334,12 +354,12 @@ export function useBalatroBackground(config: JimboBackgroundConfig = {}) {
       gl.uniform3f(u_color1, current[0][0], current[0][1], current[0][2])
       gl.uniform3f(u_color2, current[1][0], current[1][1], current[1][2])
       gl.uniform3f(u_color3, current[2][0], current[2][1], current[2][2])
-      gl.uniform1f(u_spinRotation, cfg.spinRotation ?? BALATRO_DEFAULTS.spinRotation)
-      gl.uniform1f(u_spinSpeed,    4.5 * (cfg.speed ?? BALATRO_DEFAULTS.speed))
-      gl.uniform1f(u_spinAmount,   cfg.spinAmount ?? BALATRO_DEFAULTS.spinAmount)
-      gl.uniform1f(u_pixelFilter,  cfg.pixelFilter ?? BALATRO_DEFAULTS.pixelFilter)
-      gl.uniform1f(u_contrast,     cfg.contrast ?? BALATRO_DEFAULTS.contrast)
-      gl.uniform1f(u_lighting,     cfg.lighting ?? BALATRO_DEFAULTS.lighting)
+      gl.uniform1f(u_spinRotation, currentScalars.spinRotation)
+      gl.uniform1f(u_spinSpeed, currentScalars.spinSpeed)
+      gl.uniform1f(u_spinAmount, currentScalars.spinAmount)
+      gl.uniform1f(u_pixelFilter, currentScalars.pixelFilter)
+      gl.uniform1f(u_contrast, currentScalars.contrast)
+      gl.uniform1f(u_lighting, currentScalars.lighting)
 
       gl.drawArrays(gl.TRIANGLES, 0, 6)
       animationFrameId = requestAnimationFrame(render)

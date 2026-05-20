@@ -6,13 +6,6 @@ const jaml = `must:\n  - joker: Blueprint\n  - voucher: Crystal Ball\nshould:\n 
 const meta = {
   title: 'JAML / JamlMapPreview',
   component: JamlMapPreview,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
-  decorators: [
-    (Story) => <div style={{ width: 320 }}><Story /></div>,
-  ],
 } satisfies Meta<typeof JamlMapPreview>;
 
 export default meta;

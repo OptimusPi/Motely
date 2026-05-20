@@ -4,9 +4,6 @@ import { MysterySlot } from './MysterySlot';
 const meta = {
   title: 'JAML/MysterySlot',
   component: MysterySlot,
-  parameters: { jimboHarness: false, 
-    layout: 'centered',
-  },
 } satisfies Meta<typeof MysterySlot>;
 
 export default meta;

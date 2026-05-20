@@ -17,10 +17,6 @@ const STAKES = ['White', 'Red', 'Green', 'Black', 'Blue', 'Purple', 'Orange', 'G
 const meta = {
   title: 'JimboUI / JimboPanelSpinner',
   component: JimboPanelSpinner,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JimboPanelSpinner>;
 
 export default meta;

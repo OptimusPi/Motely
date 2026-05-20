@@ -2982,63 +2982,28 @@
   outline-offset: 2px;
 }
 
-.j-panel-splitter-story {
-  display: flex;
-}
-
-.j-panel-splitter-story__shell {
-  width: 100%;
-}
-
-.j-panel-splitter-story__shell .j-panel__body {
+.j-panel-splitter-demo {
+  flex: 1 1 auto;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--j-space-md);
 }
 
-.j-panel-splitter-story__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--j-space-md);
-}
-
-.j-panel-splitter-story__body {
+.j-panel-splitter-demo__body {
   min-height: 0;
-  height: 430px;
+  flex: 1 1 auto;
+  height: 420px;
   display: flex;
   overflow: hidden;
   border-radius: var(--j-radius-md);
   background: var(--j-darkest);
 }
 
-.j-panel-splitter-story__pane {
+.j-panel-splitter-demo__pane {
   min-width: 0;
   flex: 1 1 0;
   padding: var(--j-space-md);
   overflow: auto;
-}
-
-.j-panel-splitter-story__pane--results {
   display: flex;
-  flex-direction: column;
-  gap: var(--j-space-sm);
-}
-
-.j-panel-splitter-story__label {
-  display: block;
-  margin-bottom: var(--j-space-sm);
-}
-
-.j-panel-splitter-story__result-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--j-space-sm);
-  padding: var(--j-space-sm) var(--j-space-md);
-  border-radius: var(--j-radius-sm);
-  background: var(--j-teal-grey);
+  align-items: flex-start;
 }
 
 /* ── Font Dance Animation ─────────────────────────────────────────────── */

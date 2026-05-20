@@ -6,17 +6,6 @@ import { JimboSectionHeader } from '../ui/jimboSectionHeader';
 const meta = {
   title: 'JAML / CardFan',
   component: CardFan,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
-  decorators: [
-    (Story: React.ComponentType) => (
-      <div style={{ width: 296, padding: 8 }}>
-        <Story />
-      </div>
-    ),
-  ],
 } satisfies Meta<typeof CardFan>;
 
 export default meta;

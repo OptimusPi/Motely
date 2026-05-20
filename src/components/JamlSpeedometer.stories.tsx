@@ -4,9 +4,6 @@ import { JamlSpeedometer } from './JamlSpeedometer';
 const meta = {
   title: 'JAML / JamlSpeedometer',
   component: JamlSpeedometer,
-  parameters: { jimboHarness: false, 
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JamlSpeedometer>;
 
 export default meta;

@@ -4,13 +4,6 @@ import { JimboCodeBlock } from './codeBlock';
 const meta = {
   title: 'JimboUI / JimboCodeBlock',
   component: JimboCodeBlock,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
-  decorators: [
-    (Story) => <div className="j-story-panel-grid"><Story /></div>,
-  ],
 } satisfies Meta<typeof JimboCodeBlock>;
 
 export default meta;

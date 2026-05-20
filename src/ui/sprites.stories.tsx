@@ -23,10 +23,6 @@ function Showcase() {
 
 const meta = {
   title: 'JimboUI / Sprites',
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta;
 
 export default meta;

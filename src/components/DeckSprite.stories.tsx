@@ -4,9 +4,6 @@ import { DeckSprite } from './DeckSprite';
 const meta = {
   title: 'JAML / DeckSprite',
   component: DeckSprite,
-  parameters: { jimboHarness: false, 
-    layout: 'centered',
-  },
 } satisfies Meta<typeof DeckSprite>;
 
 export default meta;

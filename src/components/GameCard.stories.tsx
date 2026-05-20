@@ -32,9 +32,6 @@ function CardShowcase() {
 const meta = {
   title: 'JAML / JamlGameCard',
   component: JamlGameCard,
-  parameters: { jimboHarness: false, 
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JamlGameCard>;
 
 export default meta;

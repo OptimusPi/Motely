@@ -17,8 +17,8 @@ export interface JimboBackgroundProps extends JimboBackgroundConfig {
  *
  * All shader parameters are exposed as props (`primary`, `secondary`,
  * `dark`, `speed`, `spinRotation`, `spinAmount`, `pixelFilter`, `contrast`,
- * `lighting`). Color changes interpolate over `transitionMs` so palette
- * swaps fade smoothly. Defaults reproduce the canonical Balatro swirl.
+ * `lighting`, `transitionMs`). Palette and shader scalars ease over
+ * `transitionMs` when props change. Defaults reproduce the canonical swirl.
  *
  *     <JimboBackground primary="#ff3344" secondary="#0088ff" speed={1.2} />
  *     <YourAppContent />

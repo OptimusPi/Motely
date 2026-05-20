@@ -84,6 +84,11 @@ const config: StorybookConfig = {
       optimizeDeps: {
         include: ["motely-wasm"],
       },
+      // Allow Cloudflare-tunnel / arbitrary external hosts to reach the dev
+      // server (Vite blocks unknown Host headers by default).
+      server: {
+        allowedHosts: true,
+      },
       build: {
         chunkSizeWarningLimit: 1600,
       },
