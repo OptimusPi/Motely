@@ -753,11 +753,11 @@ public class JamlConfigTests
 
     var small = Assert.IsType<TagClause>(config.Must.Tags[0]);
     Assert.Equal([MotelyTag.NegativeTag, MotelyTag.DoubleTag], small.Tags);
-    Assert.Equal([0], small.TagDraws);
+    Assert.Equal([0], small.Rolls);
 
     var big = Assert.IsType<TagClause>(config.Must.Tags[1]);
     Assert.Equal([MotelyTag.CharmTag], big.Tags);
-    Assert.Equal([1], big.TagDraws);
+    Assert.Equal([1], big.Rolls);
   }
 
   [Fact]
@@ -772,7 +772,22 @@ public class JamlConfigTests
 
     Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
     var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
-    Assert.Equal([0, 1], clause.TagDraws);
+    Assert.Equal([0, 1], clause.Rolls);
+  }
+
+  [Fact]
+  public void Voucher_DefaultRolls_OnlyAnteAward()
+  {
+    var jaml = """
+            name: VoucherRolls
+            must:
+              - voucher: Telescope
+                antes: [1]
+            """;
+
+    Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+    var clause = Assert.IsType<VoucherClause>(Assert.Single(config!.Must.Vouchers));
+    Assert.Equal([0], clause.Rolls);
   }
 
   [Fact]
@@ -813,7 +828,54 @@ public class JamlConfigTests
 
     Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
     var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
-    Assert.Equal([1], clause.TagDraws);
+    Assert.Equal([1], clause.Rolls);
+  }
+
+  [Fact]
+  public void TagRolls_AcceptsSixthStreamDraw()
+  {
+    var jaml = """
+            name: TagRollFive
+            must:
+              - tag: DoubleTag
+                rolls: [5]
+                antes: [1]
+            """;
+
+    Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+    var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
+    Assert.Equal([5], clause.Rolls);
+  }
+
+  [Fact]
+  public void VoucherRolls_AcceptsThreeStreamDraws()
+  {
+    var jaml = """
+            name: VoucherRollsThree
+            must:
+              - voucher: Telescope
+                rolls: [0, 1, 2]
+                antes: [1]
+            """;
+
+    Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+    var clause = Assert.IsType<VoucherClause>(Assert.Single(config!.Must.Vouchers));
+    Assert.Equal([0, 1, 2], clause.Rolls);
+  }
+
+  [Fact]
+  public void TagRolls_RejectsBeyondSixthDraw()
+  {
+    var jaml = """
+            name: TagRollSixInvalid
+            must:
+              - tag: DoubleTag
+                rolls: [6]
+                antes: [1]
+            """;
+
+    Assert.False(JamlConfigLoader.TryLoad(jaml, out _, out var error));
+    Assert.Contains("rolls index 6", error ?? "");
   }
 
   [Fact]

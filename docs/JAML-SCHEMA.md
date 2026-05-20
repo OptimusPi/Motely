@@ -138,16 +138,18 @@ Use this every time you touch filter syntax. Check boxes in order.
 | `smallBlindTag`, `smallBlindTags` | SmallBlindTag | Tag |
 | `bigBlindTag`, `bigBlindTags` | BigBlindTag | Tag |
 
-**Tag stream semantics (engine today):** per ante, Motely reads **two** draws from `Tags+ante` — index **0** = small-blind offer, index **1** = big-blind offer.
+**Map features** (tag, voucher, boss) use **`rolls`** — stream indices per ante, not shop `sources` and not `any`.
 
-| Keys | Default draws checked |
-|------|------------------------|
-| `tag`, `tags` | `[0, 1]` — match if the tag appears on **either** offer |
-| `smallBlindTag`, `smallBlindTags` | `[0]` |
-| `bigBlindTag`, `bigBlindTags` | `[1]` |
-| `rolls: [n]` | override (only `0` and `1` supported today) |
+| Feature | Default `rolls` | Meaning |
+|---------|-----------------|---------|
+| `tag`, `tags` | `[0, 1]` | small-blind offer, big-blind offer |
+| `smallBlindTag`, `smallBlindTags` | `[0]` | small-blind offer only |
+| `bigBlindTag`, `bigBlindTags` | `[1]` | big-blind offer only |
+| `voucher`, `vouchers` | `[0]` | ante voucher award |
+| `voucher` + `rolls: [1]` / `[2]` | next voucher-stream draws on that ante (Hieroglyph bonus, voucher-tag extras) |
+| `boss` | `[0]` | boss blind for that ante (forward pass) |
 
-Plural lists are **OR** over acceptable tag enum names for the selected draw(s). `[]` is invalid. Extra draws on ante rewind are not modeled yet.
+Valid indices: tag `0..5` (six stream draws per ante), voucher `0..2` (three draws), boss `0..2` in JAML (filter/scoring match roll `0` until full Hieroglyph/Petroglyph rewind sim exists). Plural tag lists are **OR** over enum names on the selected rolls. `[]` is invalid.
 | `standardCard`, `standardCards` | Standardcard | StandardCard |
 | `erraticRank` | ErraticRank | Rank (value) |
 | `erraticSuit` | ErraticSuit | Suit (value) |

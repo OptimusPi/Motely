@@ -8,12 +8,15 @@ public sealed class TagClause : JamlClause
 {
     public required MotelyTag[] Tags { get; init; }
 
-    /// <summary>Tag-stream draw indices for this ante: 0 = small-blind offer, 1 = big-blind offer.</summary>
-    public required int[] TagDraws { get; init; }
+    /// <summary>
+    /// Tag-stream draw indices per ante: 0 = small-blind offer, 1 = big-blind offer,
+    /// 2+ = further draws on the same ante stream (replay / double-tag extras).
+    /// </summary>
+    public required int[] Rolls { get; init; }
 
     public override int EstimatedCost => 3 + MaxAnte;
     public override string Describe() =>
-        $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))} @ draws [{string.Join(", ", TagDraws)}]";
+        $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
     public override IMotelySeedFilterDesc CreateDesc() => new TagFilterDesc(this);
 }
 
@@ -42,18 +45,21 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
         {
             Debug.Assert(_clause.Tags.Length > 0);
             var clause = _clause;
+            int maxDraw = MapFeatureRolls.MaxRollIndex(clause.Rolls);
+            Span<VectorEnum256<MotelyTag>> draws =
+                stackalloc VectorEnum256<MotelyTag>[maxDraw + 1];
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
 
             foreach (var ante in clause.Antes)
             {
                 var tagStream = ctx.CreateTagStream(ante);
-                var draw0 = ctx.GetNextTag(ref tagStream);
-                var draw1 = ctx.GetNextTag(ref tagStream);
+                for (int i = 0; i <= maxDraw; i++)
+                    draws[i] = ctx.GetNextTag(ref tagStream);
 
-                foreach (var drawIndex in clause.TagDraws)
+                foreach (var drawIndex in clause.Rolls)
                 {
-                    var rolled = drawIndex == 0 ? draw0 : draw1;
+                    var rolled = draws[drawIndex];
                     foreach (var t in clause.Tags)
                     {
                         var match = VectorEnum256.Equals(rolled, t);

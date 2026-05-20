@@ -36,6 +36,7 @@ public static partial class JamlConfigLoader
     // in JamlConfigTests pin this behaviour. Do NOT add .IgnoreUnmatchedProperties() here.
     private static readonly IDeserializer JamlFragmentDeserializer =
         new StaticDeserializerBuilder(new JamlYamlContext())
+            .WithTypeConverter(new StandardCardValueConverter())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
