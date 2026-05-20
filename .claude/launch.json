@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Storybook",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["storybook"],
+      "port": 6006,
+      "autoPort": false
+    },
+    {
+      "name": "Storybook (static)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["serve:storybook"],
+      "port": 3141
+    }
+  ]
+}

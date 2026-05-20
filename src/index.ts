@@ -39,7 +39,6 @@ export {
     type JamlIdeMode,
     type JamlIdeToolbarProps,
 } from "./components/JamlIdeToolbar.js";
-export { CardList, type CardListProps } from "./components/CardList.js";
 export { CardFan, type CardFanProps } from "./components/CardFan.js";
 export { StandardCard } from "./components/StandardCard.js";
 export {
