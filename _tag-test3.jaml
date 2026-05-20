@@ -1,0 +1,6 @@
+name: test-sbt
+deck: Red
+stake: White
+must:
+  - smallBlindTags: [Ethereal]
+    antes: [1]

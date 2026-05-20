@@ -108,6 +108,13 @@ partial class Program
 
     static int Main(string[] args)
     {
+        if (args.Length > 0
+            && (string.Equals(args[0], "schema", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(args[0], "jaml-schema", StringComparison.OrdinalIgnoreCase)))
+        {
+            return MotelyJamlSchemaGenerator.WriteDefault();
+        }
+
         // .NET 10: runtime no longer provides default SIGTERM/SIGINT handlers (see
         // https://learn.microsoft.com/en-us/dotnet/core/compatibility/core-libraries/10.0/sigterm-signal-handler).
         // Register handlers so Ctrl+C and termination signals cancel the search gracefully.
@@ -270,12 +277,6 @@ partial class Program
             "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
             CommandOptionType.NoValue
         );
-        var writeJamlSchemaOption = app.Option(
-            "--write-jaml-schema",
-            "Regenerate jaml.schema.json from the public JAML schema contract via the AOT-safe schema exporter. Writes to repo root, motely-wasm/, and packages/jaml-language-core/.",
-            CommandOptionType.NoValue
-        );
-
         threadsOption.DefaultValue = Environment.ProcessorCount;
         batchCharCountOption.DefaultValue = 4;
 
@@ -285,12 +286,6 @@ partial class Program
             {
                 app.ShowHelp();
                 return 0;
-            }
-
-            // --write-jaml-schema is a standalone maintenance command; run it and exit.
-            if (writeJamlSchemaOption.HasValue())
-            {
-                return MotelyJamlSchemaGenerator.WriteDefault(log: Console.Error);
             }
 
             if (jamlyzerOption.HasValue())
@@ -423,13 +418,19 @@ partial class Program
                 return 1;
             }
 
-            if (
-                !JamlFileSource.TryLoadFromFile(
-                    jamlOption.ParsedValue,
-                    out var config,
-                    out var loadError
-                )
-            )
+            string jamlPath = jamlOption.ParsedValue;
+            string jamlContent;
+            try
+            {
+                jamlContent = File.ReadAllText(jamlPath);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error reading JAML file: {ex.Message}");
+                return 1;
+            }
+
+            if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var loadError))
             {
                 Console.Error.WriteLine($"Error: {loadError}");
                 return 1;
@@ -470,13 +471,13 @@ partial class Program
                 }
             }
 
+            int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
             JamlSearchPlan plan;
             try
             {
                 // Push fixed --cutoff into the engine so low-scoring seeds are dropped at
                 // the scorer (no callback spam, no per-seed string concat). Auto still needs
                 // the caller-side running-max below since the engine threshold is static.
-                int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
                 plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
             }
             catch (InvalidOperationException ex)
@@ -485,7 +486,7 @@ partial class Program
                 return 1;
             }
 
-            IMotelySearchSettings settings = plan.Settings
+            IMotelySearchSettings settings = JamlSearchBuilder.CreateSettings(config, engineCutoff)
                 .WithDeck(deck)
                 .WithStake(stake)
                 .WithThreadCount(threads);
@@ -532,6 +533,12 @@ partial class Program
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;
+            using var resultSink = CreateResultSink(
+                hasStructuredScores,
+                config.Id,
+                plan.TallyLabels
+            );
+            int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
             var saveSeedsCollector = saveSeedsOption.HasValue()
                 ? new TopSeedCollector(SavedSeedLimit)
                 : null;
@@ -553,16 +560,18 @@ partial class Program
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
-                    saveSeedsCollector?.Consider(tally.Seed, tally.Score);
+                    if (!ShouldEmitScore(tally.Score, cutoffAuto, cutoffFixed, ref cliLearnedCutoff))
+                        return;
 
-                    var tallies = string.Join(",", tally.TallyValuesSpan.ToArray());
-                    Console.WriteLine($"{tally.Seed},{tally.Score},{tallies}");
+                    resultSink.OnScored(in tally);
+                    saveSeedsCollector?.Consider(tally.Seed, tally.Score);
                 });
             }
             else
             {
                 settings = settings.WithSeedMatchCallback(seed =>
                 {
+                    resultSink.OnSeed(seed);
                     if (saveSeedMatches != null
                         && saveSeedMatchSet != null
                         && saveSeedMatches.Count < SavedSeedLimit
@@ -570,8 +579,6 @@ partial class Program
                     {
                         saveSeedMatches.Add(seed);
                     }
-
-                    Console.WriteLine(seed);
                 });
             }
 
@@ -799,6 +806,7 @@ partial class Program
 
     static void PrintSummary(IMotelySearch search, int batchCharCount, bool cancelled)
     {
+        StickyProgress.Clear();
         Console.Out.Flush();
         Console.WriteLine();
         Console.WriteLine(cancelled ? "STOPPED" : "COMPLETED");
@@ -939,10 +947,9 @@ partial class Program
 
                 if (json)
                 {
-                    var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
                     // NDJSON: one JSON object per line, no extra whitespace
                     Console.WriteLine(
-                        JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+                        JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
                     );
                 }
                 else
@@ -982,9 +989,8 @@ partial class Program
 
         if (json)
         {
-            var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(normalizedSeed, d, s, analysis);
             Console.WriteLine(
-                JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+                JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
             );
         }
         else
@@ -1042,7 +1048,7 @@ partial class Program
             ? $" | ETA {FormatEtaMs(etaMs)}"
             : "";
         string elapsed = TimeSpan.FromMilliseconds(p.ElapsedMilliseconds).ToString(@"hh\:mm\:ss\.f");
-        Console.Error.WriteLine(
+        StickyProgress.Update(
             $"Progress: {p.PercentComplete:F1}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}");
     }
 
@@ -1050,5 +1056,56 @@ partial class Program
     {
         var rem = TimeSpan.FromMilliseconds(milliseconds);
         return rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss");
+    }
+
+    static bool ShouldEmitScore(int score, bool cutoffAuto, int cutoffFixed, ref int cliLearnedCutoff)
+    {
+        if (!cutoffAuto)
+            return cutoffFixed == int.MinValue || score >= cutoffFixed;
+
+        int observed = Volatile.Read(ref cliLearnedCutoff);
+        while (true)
+        {
+            if (score < observed)
+                return false;
+
+            if (score == observed)
+                return true;
+
+            int original = Interlocked.CompareExchange(ref cliLearnedCutoff, score, observed);
+            if (original == observed)
+                return true;
+
+            observed = original;
+        }
+    }
+
+    static string ResolveDataLakeRootPath()
+    {
+        var configured = Environment.GetEnvironmentVariable("MOTELY_DATALAKE_PATH");
+        return string.IsNullOrWhiteSpace(configured) ? "seeds" : configured;
+    }
+
+    static IMotelyResultSink CreateResultSink(
+        bool hasStructuredScores,
+        string filterId,
+        IReadOnlyList<string> tallyLabels
+    )
+    {
+        var sinks = new List<IMotelyResultSink> { new ConsoleResultSink() };
+
+        if (hasStructuredScores)
+        {
+            try
+            {
+                sinks.Add(new MotelyLakeResultSink(ResolveDataLakeRootPath(), filterId, tallyLabels));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Warning: DuckLake autosave unavailable: {ex.Message}");
+            }
+        }
+
+        return new CompositeMotelyResultSink(sinks);
     }
 }

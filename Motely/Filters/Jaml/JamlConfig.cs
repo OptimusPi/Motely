@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Typed clause lists for one JAML section (must / should / mustNot).
@@ -61,7 +61,6 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
      public string? Author { get; set; }
      public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
      public MotelyStake Stake { get; set; } = MotelyStake.White;
-     public List<string> Hashtags { get; set; } = [];
      public List<string> Seeds { get; set; } = [];
 
      public JamlClauseSet Must { get; set; } = new();
@@ -71,24 +70,7 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
      public bool HasAnyClauses => Must.HasAnyClauses || Should.HasAnyClauses || MustNot.HasAnyClauses;
  }
 
-public sealed class JokerSource
-{
-    public JokerSourceType Source { get; set; }
-    public int[] Indices { get; set; } = [];
-}
-
-public enum JokerSourceType
-{
-    Shop,
-    BoosterPack,
-    Judgement,
-    Wraith,
-    RiffRaff,
-    RareTag,
-    UncommonTag,
-}
-
-public sealed class JokerSourceConfig // # oops :( I have a complaint! )
+public sealed class JokerSourceConfig
 {
     /// <summary>Assembled shop slots via the full shop item stream (any item type).</summary>
     public int[] ShopItems { get; set; } = [];
@@ -116,7 +98,7 @@ public sealed class LegendaryJokerSourceConfig
     public int[] ShopItems { get; set; } = [];
 
     /// <summary>
-    /// Legacy: pack offering slots where The Soul may count from either arcana or spectral path.
+    /// Legacy: pack offering slots where The Soul may count from either arcana or Spectral path.
     /// Ignored for slot matching when <see cref="ArcanaPacks"/> or <see cref="SpectralPacks"/> is non-empty.
     /// </summary>
     public int[] BoosterPacks { get; set; } = [];
@@ -125,11 +107,11 @@ public sealed class LegendaryJokerSourceConfig
     public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
 
     /// <summary>
-    /// If non-empty (or <see cref="SpectralPacks"/> non-empty), only listed slots are checked on the arcana/tarot path.
+    /// If non-empty (or <see cref="SpectralPacks"/> non-empty), only listed slots are checked on the arcana/Tarot path.
     /// </summary>
     public int[] ArcanaPacks { get; set; } = [];
 
-    /// <summary>Only listed slots on the spectral pack path.</summary>
+    /// <summary>Only listed slots on the Spectral pack path.</summary>
     public int[] SpectralPacks { get; set; } = [];
 
     public int[] SoulCard { get; set; } = [];
@@ -153,13 +135,6 @@ public sealed class LegendaryJokerSourceConfig
         return m;
     }
 
-    /// <summary>
-    /// Historical escape hatch that used to stamp booster-slot defaults at filter-creation time.
-    /// Defaults now live in <c>JamlConfigLoader.CreateLegendaryJokerSources</c> (load time). This
-    /// method is an identity pass-through kept for downstream callers until they migrate; it
-    /// will be removed in a subsequent cleanup.
-    /// </summary>
-    public LegendaryJokerSourceConfig NormalizeLegendaryJokerBoostersIfEmpty() => this;
 }
 
 public sealed class TarotCardSourceConfig
@@ -189,7 +164,7 @@ public sealed class SpectralCardSourceConfig
     public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
 
     /// <summary>
-    /// When true, booster spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).
+    /// When true, booster Spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).
     /// </summary>
     public bool EtherealTag { get; set; }
 }

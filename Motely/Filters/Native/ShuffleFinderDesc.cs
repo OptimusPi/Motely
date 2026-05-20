@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct ShuffleFinderFilterDesc()
     : IMotelySeedFilterDesc<ShuffleFinderFilterDesc.ShuffleFinderFilter>

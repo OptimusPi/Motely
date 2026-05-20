@@ -19,7 +19,7 @@ should:
     score: 50
   - uncommonJoker: Showman
     score: 35
-  - spectral: Hex
+  - spectralCard: Hex
     score: 35
   - joker: any
     edition: Negative

@@ -1,6 +1,6 @@
-name: Blue Seal Planet Generation
+name: Blue Seal planetCard Generation
 author: jammy
-description: Standard card with Blue Seal for Planet card generation
+description: Standard card with Blue Seal for planetCard card generation
 deck: Nebula
 stake: White
 must:

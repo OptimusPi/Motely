@@ -1,21 +1,29 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
-public sealed class StandardCardClause : IJamlClause
+public sealed class StandardCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public MotelyStandardcardRank? Rank { get; init; }
     public MotelyStandardcardSuit? Suit { get; init; }
     public MotelyItemEnhancement? Enhancement { get; init; }
     public MotelyItemSeal? Seal { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public StandardCardSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 8 + MaxAnte;
+    public override string Describe()
+    {
+        var parts = new System.Collections.Generic.List<string>(5);
+        if (Rank.HasValue) parts.Add(Rank.Value.ToString());
+        if (Suit.HasValue) parts.Add(Suit.Value.ToString());
+        if (Enhancement.HasValue) parts.Add(Enhancement.Value.ToString());
+        if (Seal.HasValue) parts.Add(Seal.Value.ToString());
+        if (Edition.HasValue) parts.Add(Edition.Value.ToString());
+        return $"standardCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
+    }
+    public override IMotelySeedFilterDesc CreateDesc() => new StandardCardFilterDesc(this);
 }
 
 public struct StandardCardFilterDesc(StandardCardClause clause)

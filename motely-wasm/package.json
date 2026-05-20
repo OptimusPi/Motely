@@ -1,0 +1,17 @@
+{
+    "name": "motely-wasm",
+    "version": "18.2.1",
+    "type": "module",
+    "exports": {
+        ".": "./dist/index.mjs",
+        "./*": "./dist/generated/*.g.mjs"
+    },
+    "browser": {
+        "node:fs": false,
+        "node:url": false,
+        "node:path": false,
+        "node:module": false,
+        "node:crypto": false,
+        "node:process": false
+    }
+}

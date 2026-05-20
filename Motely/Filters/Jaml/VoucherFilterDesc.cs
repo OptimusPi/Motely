@@ -3,16 +3,15 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
-public sealed class VoucherClause : IJamlClause
+public sealed class VoucherClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required MotelyVoucher[] Vouchers { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 4 + MaxAnte;
+    public override string Describe() => $"voucher {string.Join(", ", System.Array.ConvertAll(Vouchers, static v => v.ToString()))}";
+    public override IMotelySeedFilterDesc CreateDesc() => new VoucherFilterDesc(this);
 }
 
 public struct VoucherFilterDesc(VoucherClause clause)

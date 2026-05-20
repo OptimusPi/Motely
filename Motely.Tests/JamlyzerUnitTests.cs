@@ -34,9 +34,7 @@ public sealed class JamlyzerUnitTests
         var seed = Assert.Single(result.Seeds);
         Assert.Equal("JAMMY", seed.Seed);
         Assert.NotNull(seed.Analysis);
-        Assert.Equal("JAMMY", seed.Analysis!.Seed);
-        Assert.Equal("Red", seed.Analysis.Deck);
-        Assert.Equal("White", seed.Analysis.Stake);
+        Assert.Equal(MotelyDeck.Red, seed.Analysis!.Deck);
         Assert.Contains(seed.Analysis.Antes, ante => ante.Ante == 1);
     }
 

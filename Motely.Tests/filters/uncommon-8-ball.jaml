@@ -1,6 +1,6 @@
-name: EightBall Tarot Generation
+name: EightBall tarotCard Generation
 author: jammy
-description: EightBall uncommon with Fortune Teller for Tarot card generation on 8s
+description: EightBall uncommon with Fortune Teller for tarotCard card generation on 8s
 deck: Red
 stake: White
 must:

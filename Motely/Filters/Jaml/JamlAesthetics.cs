@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Generation and classification of JAML <see cref="JamlAesthetic"/> values over Motely’s seed alphabet and length rules.

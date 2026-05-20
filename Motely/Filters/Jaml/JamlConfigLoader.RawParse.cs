@@ -1,14 +1,13 @@
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
-using Motely.Filters.Converters;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Raw YAML document walk for the JAML root: fills <see cref="JamlRootDocument"/> (no full-document YamlDotNet deserialize).
-/// Clause fragments are still materialized into <see cref="JamlClauseDto"/> for <see cref="JamlConfigLoader.CreateClauseFromDto"/>.
+/// Clause fragments are still materialized into <see cref="JamlClauseUnion"/> for <see cref="JamlConfigLoader.CreateClauseFromDto"/>.
 /// </summary>
 public static partial class JamlConfigLoader
 {
@@ -27,7 +26,6 @@ public static partial class JamlConfigLoader
             "should",
             "mustNot",
             "aesthetics",
-            "hashtags",
             "seeds",
         }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
@@ -43,7 +41,6 @@ public static partial class JamlConfigLoader
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
             .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
-            .WithTypeConverter(new StandardCardValueConverter())
             .Build();
 
     /// <summary>
@@ -90,12 +87,12 @@ public static partial class JamlConfigLoader
     private static T DeserializeFragment<T>(YamlMappingNode mapping) =>
         JamlFragmentDeserializer.Deserialize<T>(YamlFragmentToString(mapping));
 
-    private static List<JamlClauseDto>? ParseClauseSequence(YamlMappingNode root, string key)
+    private static List<JamlClauseUnion>? ParseClauseSequence(YamlMappingNode root, string key)
     {
         if (!TryGetYamlChild(root, key, out _, out var node) || node is not YamlSequenceNode seq)
             return null;
 
-        var list = new List<JamlClauseDto>(seq.Children.Count);
+        var list = new List<JamlClauseUnion>(seq.Children.Count);
         var i = 0;
         foreach (var child in seq.Children)
         {
@@ -109,7 +106,7 @@ public static partial class JamlConfigLoader
 
             try
             {
-                list.Add(DeserializeFragment<JamlClauseDto>(map));
+                list.Add(DeserializeFragment<JamlClauseUnion>(map));
             }
             catch (Exception ex)
             {
@@ -181,12 +178,12 @@ public static partial class JamlConfigLoader
             return false;
         }
 
-        JamlDefaultsDto? defaults = null;
+        JamlDefaults? defaults = null;
         if (TryGetYamlChild(root, "defaults", out _, out var defNode) && defNode is YamlMappingNode defMap)
         {
             try
             {
-                defaults = DeserializeFragment<JamlDefaultsDto>(defMap);
+                defaults = DeserializeFragment<JamlDefaults>(defMap);
             }
             catch (Exception ex)
             {
@@ -202,7 +199,6 @@ public static partial class JamlConfigLoader
                 Id = ParseOptionalScalar(root, "id"),
                 Name = ParseOptionalScalar(root, "name"),
                 Author = ParseOptionalScalar(root, "author"),
-                DateCreated = ParseOptionalScalar(root, "dateCreated"),
                 Description = ParseOptionalScalar(root, "description"),
                 Deck = ParseOptionalScalar(root, "deck"),
                 Stake = ParseOptionalScalar(root, "stake"),
@@ -210,8 +206,6 @@ public static partial class JamlConfigLoader
                 Must = ParseClauseSequence(root, "must"),
                 Should = ParseClauseSequence(root, "should"),
                 MustNot = ParseClauseSequence(root, "mustNot"),
-                Aesthetics = ParseStringSequence(root, "aesthetics"),
-                Hashtags = ParseStringSequence(root, "hashtags"),
                 Seeds = ParseStringSequence(root, "seeds"),
             };
         }

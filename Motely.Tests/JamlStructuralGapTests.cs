@@ -54,7 +54,7 @@ public sealed class JamlStructuralGapTests
 
     /// <summary>
     /// Shop slot 0 is always Buffoon in <see cref="Motely.Filters.LegendarySoulMatcher"/> — soul/legendary
-    /// only appears from arcana/spectral, so a clause targeting only ante-1-slot-0 has zero possible matches.
+    /// only appears from arcana/spectralCard, so a clause targeting only ante-1-slot-0 has zero possible matches.
     /// <para>
     /// Pifreak rule (2026-04-26): never block users on inferred mistakes. The validator was demoted from
     /// throw-at-plan-time to a no-op; the search runs and returns zero, which is information enough.

@@ -3,138 +3,109 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 // ── ErraticCard clause definition ──
 
-public sealed class ErraticCardClause : IJamlClause
+public sealed class ErraticCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public MotelyStandardcardRank? Rank { get; init; }
     public MotelyStandardcardSuit? Suit { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+
+    public override int EstimatedCost => 5 + MaxAnte;
+    public override string Describe()
+    {
+        var parts = new System.Collections.Generic.List<string>(2);
+        if (Rank.HasValue) parts.Add(Rank.Value.ToString());
+        if (Suit.HasValue) parts.Add(Suit.Value.ToString());
+        return $"erraticCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
+    }
+    public override IMotelySeedFilterDesc CreateDesc() => new ErraticCardFilterDesc(this);
 }
 
 // ── Event clause definitions ──
 
+/// <summary>Marker interface: clauses driven by a roll-index array (event probes), not antes.</summary>
 public interface IRollClause : IJamlClause
 {
     int[] Rolls { get; }
 }
 
-public sealed class LuckyMoneyClause : IRollClause
+public sealed class LuckyMoneyClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event LuckyMoney";
+    public override IMotelySeedFilterDesc CreateDesc() => new LuckyMoneyFilterDesc(this);
 }
 
-public sealed class LuckyMultClause : IRollClause
+public sealed class LuckyMultClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event LuckyMult";
+    public override IMotelySeedFilterDesc CreateDesc() => new LuckyMultFilterDesc(this);
 }
 
-public sealed class MisprintMultClause : IRollClause
+public sealed class MisprintMultClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
     /// <summary>
     /// Specific mult value to match (0-23). If null, matches any value (always succeeds).
     /// </summary>
     public int? Value { get; init; }
+
+    public override string Describe() => "event MisprintMult";
+    public override IMotelySeedFilterDesc CreateDesc() => new MisprintMultFilterDesc(this);
 }
 
-public sealed class WheelOfFortuneClause : IRollClause
+public sealed class WheelOfFortuneClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event WheelOfFortune";
+    public override IMotelySeedFilterDesc CreateDesc() => new WheelOfFortuneFilterDesc(this);
 }
 
-public sealed class CavendishExtinctClause : IRollClause
+public sealed class CavendishExtinctClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event CavendishExtinct";
+    public override IMotelySeedFilterDesc CreateDesc() => new CavendishExtinctFilterDesc(this);
 }
 
-public sealed class GrosMichelExtinctClause : IRollClause
+public sealed class GrosMichelExtinctClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event GrosMichelExtinct";
+    public override IMotelySeedFilterDesc CreateDesc() => new GrosMichelExtinctFilterDesc(this);
 }
 
-public sealed class SpaceLevelupClause : IRollClause
+public sealed class SpaceLevelupClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event SpaceLevelup";
+    public override IMotelySeedFilterDesc CreateDesc() => new SpaceLevelupFilterDesc(this);
 }
 
-public sealed class BusinessPayoutClause : IRollClause
+public sealed class BusinessPayoutClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event BusinessPayout";
+    public override IMotelySeedFilterDesc CreateDesc() => new BusinessPayoutFilterDesc(this);
 }
 
-public sealed class BloodstoneTriggerClause : IRollClause
+public sealed class BloodstoneTriggerClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event BloodstoneTrigger";
+    public override IMotelySeedFilterDesc CreateDesc() => new BloodstoneTriggerFilterDesc(this);
 }
 
-public sealed class ParkingPayoutClause : IRollClause
+public sealed class ParkingPayoutClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event ParkingPayout";
+    public override IMotelySeedFilterDesc CreateDesc() => new ParkingPayoutFilterDesc(this);
 }
 
-public sealed class GlassDestroyClause : IRollClause
+public sealed class GlassDestroyClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event GlassDestroy";
+    public override IMotelySeedFilterDesc CreateDesc() => new GlassDestroyFilterDesc(this);
 }
 
-public sealed class WheelStaysFlippedClause : IRollClause
+public sealed class WheelStaysFlippedClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event WheelStaysFlipped";
+    public override IMotelySeedFilterDesc CreateDesc() => new WheelStaysFlippedFilterDesc(this);
 }
 
 // ── 6 individual event filter descs (one per PRNG stream) ──
@@ -569,8 +540,11 @@ internal static class EventFilterUtils
         );
 
         var matchCounts = Vector256<int>.Zero;
-        foreach (var rollIndex in clause.Rolls)
+        var minVector = Vector256.Create(clause.Min);
+        var rolls = clause.Rolls;
+        for (int i = 0; i < rolls.Length; i++)
         {
+            var rollIndex = rolls[i];
             var rollMask = checker(ref ctx, ref stream, rollIndex);
             matchCounts = Vector256.Add(
                 matchCounts,
@@ -585,6 +559,29 @@ internal static class EventFilterUtils
                     rollMask[7] ? 1 : 0
                 )
             );
+
+            // SIMD Optimization: We can stop only if EVERY lane is decided.
+            // A lane is decided if it already hit 'min' (and max is null) 
+            // OR if it's impossible to reach 'min'.
+            // Checking this every iteration in SIMD is often slower than just finishing the loop
+            // UNLESS the loop is long. For events, indices are usually small, but 
+            // if rolls.Length is large (like your 0-99 example), it's worth it.
+
+            if (rolls.Length > 8)
+            {
+                int rollsRemaining = rolls.Length - 1 - i;
+                var possibleMax = Vector256.Add(matchCounts, Vector256.Create(rollsRemaining));
+                
+                // maskHit: matchCounts >= min
+                var maskHit = Vector256.GreaterThanOrEqual(matchCounts, minVector);
+                // maskFail: current + remaining < min
+                var maskFail = Vector256.LessThan(possibleMax, minVector);
+                
+                // Combined: lane is finished
+                var combined = Vector256.BitwiseOr(maskHit, maskFail);
+                if (combined.ExtractMostSignificantBits() == 0xFF)
+                    break;
+            }
         }
 
         return new VectorMask(
@@ -613,8 +610,11 @@ internal static class EventFilterUtils
         );
 
         var matchCounts = Vector256<int>.Zero;
-        foreach (var rollIndex in clause.Rolls)
+        var minVector = Vector256.Create(clause.Min);
+        var rolls = clause.Rolls;
+        for (int i = 0; i < rolls.Length; i++)
         {
+            var rollIndex = rolls[i];
             var rollMask = checker(ref ctx, ref stream, rollIndex, value);
             matchCounts = Vector256.Add(
                 matchCounts,
@@ -629,6 +629,17 @@ internal static class EventFilterUtils
                     rollMask[7] ? 1 : 0
                 )
             );
+
+            if (rolls.Length > 8)
+            {
+                int rollsRemaining = rolls.Length - 1 - i;
+                var possibleMax = Vector256.Add(matchCounts, Vector256.Create(rollsRemaining));
+                var maskHit = Vector256.GreaterThanOrEqual(matchCounts, minVector);
+                var maskFail = Vector256.LessThan(possibleMax, minVector);
+                var combined = Vector256.BitwiseOr(maskHit, maskFail);
+                if (combined.ExtractMostSignificantBits() == 0xFF)
+                    break;
+            }
         }
 
         return new VectorMask(

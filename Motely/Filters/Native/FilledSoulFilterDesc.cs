@@ -1,7 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using Motely.Enums;
 
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDesc.FilterStruct>
 {
@@ -36,7 +37,6 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                 ante,
                 true
             );
-            ;
             MotelySingleSpectralStream spectralStream = default;
             MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateLegendaryJokerStream(
                 ante

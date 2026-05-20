@@ -1,0 +1,98 @@
+name: super-ai
+description: "Exponential Copy Cascade - Find seeds with Blueprint + Brainstorm + high-value multiplier early for mind-blowing exponential scaling. Simple concept, devastating effect!"
+author: pifreak & AI
+deck: Anaglyph
+stake: White
+
+# ===== THE MECHANIC: EXPONENTIAL COPY CASCADE =====
+# Blueprint copies the Joker to its right
+# Brainstorm copies ALL Jokers to their right
+# When combined: Blueprint copies X, Brainstorm copies Blueprint copying X = exponential scaling!
+# Add a high-value multiplier (Cavendish X3 or Baron with Kings) = mind-blowing results
+# 
+# MOBILE USERS: Use "Copy Seed" button to quickly share amazing finds! 📱✨
+
+Must:
+  # Core requirement: Blueprint early (enables copying)
+  - joker: Blueprint
+    antes: [1,2,3]
+    shopItems: [0,1,2,3,4,5]
+    score: 50
+  
+  # Core requirement: Brainstorm early (exponential copying)
+  - joker: Brainstorm
+    antes: [1,2,3]
+    shopItems: [0,1,2,3,4,5]
+    score: 50
+
+Should:
+  # High-value multiplier option 1: Cavendish (X3 Mult, unconditional)
+  # When Blueprint copies Cavendish = X3, Brainstorm copies that = X9 Mult!
+  - joker: Cavendish
+    antes: [1,2,3,4]
+    shopItems: [0,1,2,3,4,5]
+    score: 100
+  
+  # High-value multiplier option 2: Baron (X1.5 Mult per King, multiplicative)
+  # With Mime + Red Seal on Kings = exponential scaling
+  - joker: Baron
+    antes: [1,2,3,4]
+    shopItems: [0,1,2,3,4,5]
+    score: 80
+  
+  # Amplifier: Mime (doubles retrigger effects)
+  # Works with Baron's held-in-hand effect + Red Seal = even more exponential!
+  - joker: Mime
+    antes: [1,2,3,4]
+    shopItems: [0,1,2,3,4,5]
+    score: 60
+  
+  # Synergy booster: Red Seal on Kings (retriggers held-in-hand effects)
+  # With Baron + Mime = exponential multiplicative scaling per King!
+  # Note: Searching for specific sealed cards is complex, so we'll focus on Baron + Mime combo instead
+  # (Red Seal Kings are a nice-to-have bonus that amplifies Baron's effect)
+  
+  # Alternative high-value: Stuntman (+250 Chips, Blueprint copies chip bonus!)
+  - joker: Stuntman
+    antes: [1,2,3,4]
+    shopItems: [0,1,2,3,4,5]
+    score: 70
+  
+  # Utility: Painted Deck synergy (+2 hand size helps with Baron Kings)
+  # Note: This is a deck, not a Joker, so we can't search for it directly
+  # But we can note it in the description!
+  
+  # Bonus: Early Perkeo for consumable slot (can help with planetCard/tarotCard scaling)
+  - legendaryJoker: Perkeo
+    antes: [1,2,3]
+    boosterPacks: [0,1]
+    score: 30
+
+# ===== SCORING EXPLANATION =====
+# Base score: 100 (Blueprint + Brainstorm both found)
+# +100 if Cavendish found (X9 Mult potential!)
+# +80 if Baron found (exponential with Kings)
+# +70 if Stuntman found (massive chip boost)
+# +60 if Mime found (doubles retriggers)
+# +40 per Red Seal King (exponential Baron scaling)
+# +30 if Perkeo found (utility)
+# 
+# Maximum theoretical score: 100 + 100 + 80 + 70 + 60 + (40 * multiple Kings) + 30
+# = 440+ base, plus King bonuses!
+#
+# THE MIND-BLOWING PART:
+# With Blueprint + Brainstorm + Cavendish:
+# - Base: X3 Mult from Cavendish
+# - Blueprint copies: X3 Mult (total X9)
+# - Brainstorm copies Blueprint: X3 Mult again (total X27!)
+# Simple 3 Jokers = X27 Mult multiplier. That's the power of exponential copying!
+#
+# With Blueprint + Brainstorm + Baron + Mime + Red Seal Kings:
+# - Baron: X1.5 per King (multiplicative)
+# - Mime: Doubles retrigger effects
+# - Red Seal: Retriggers held-in-hand effects
+# - Blueprint: Copies Baron's effect
+# - Brainstorm: Copies Blueprint copying Baron
+# Result: Exponential multiplicative scaling that grows with each King held!
+#
+# MOBILE COPY BUTTON: 📋 Tap to copy seed instantly for sharing! 🚀

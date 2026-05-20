@@ -1,0 +1,3 @@
+Must:
+  - smallblindtag: NegativeTag
+    antes: [2,3,4]
