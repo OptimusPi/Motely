@@ -46,31 +46,3 @@ export function JimboTabs({ tabs, activeTab, onTabChange, className = '', style 
     </div>
   )
 }
-
-/**
- * Vertical tabs = a column of red JimboButtons. The active tab gets a red
- * arrow pointing right toward the panel content, bouncing on the X axis with
- * the same gravity easing. Buttons hold still; the arrow is the only motion.
- */
-export function JimboVerticalTabs({ tabs, activeTab, onTabChange, className = '', style }: JimboTabsProps) {
-  return (
-    <div className={`j-vtabs ${className}`} style={style}>
-      {tabs.map((tab) => {
-        const active = activeTab === tab.id
-        return (
-          <div className="j-vtab" data-active={active} key={tab.id}>
-            <JimboButton tone="red" size="md" fullWidth onClick={() => onTabChange(tab.id)}>
-              {tab.label}
-            </JimboButton>
-            <div className="j-vtab__indicator" data-active={active} aria-hidden>
-              <svg width={10} height={14} viewBox="0 0 10 14">
-                {/* Right-pointing triangle — apex points at the panel. */}
-                <polygon points="0,0 10,7 0,14" />
-              </svg>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}

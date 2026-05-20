@@ -3,18 +3,15 @@
 import React, { useState } from "react";
 import { JimboButton, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
-import { JimboColorOption } from "../ui/tokens.js";
 import { JimboFlankNav } from "../ui/jimboFlankNav.js";
+import { JimboApp, JimboAppFooter, JimboAppScroll } from "../ui/jimboApp.js";
 import { JamlMapEditor } from "./jamlMap/JamlMapEditor.js";
 import { useSearch } from "../hooks/useSearch.js";
 import { JamlSpeedometer } from "./JamlSpeedometer.js";
 
-const C = JimboColorOption;
-
 export function JamlCurator() {
   const [jamlText, setJamlText] = useState("");
   const search = useSearch();
-
   const [resultIndex, setResultIndex] = useState(0);
 
   const isSearching = search.status === "running";
@@ -36,80 +33,68 @@ export function JamlCurator() {
     }
   };
 
-  const handleMapChange = (jamlString: string) => {
-    setJamlText(jamlString);
-  };
-
   return (
-    <div style={{
-      width: "100%",
-      maxWidth: 375,
-      height: "100dvh",
-      maxHeight: 667,
-      margin: "0 auto",
-      position: "relative",
-      background: C.DARKEST,
-      overflow: "hidden",
-      borderLeft: `1px solid ${C.PANEL_EDGE}`,
-      borderRight: `1px solid ${C.PANEL_EDGE}`,
-      boxShadow: `0 0 20px rgba(0,0,0,0.5)`,
-      display: "flex",
-      flexDirection: "column",
-    }}>
-      <section style={{
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        padding: "16px 12px 12px",
-        boxSizing: "border-box",
-        borderBottom: `2px solid ${C.GOLD}`,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <JimboText size="lg" tone="gold">JAML Curator</JimboText>
-          <JimboButton tone={isSearching ? "red" : "green"} size="sm" onClick={handleSearch}>
-            {isSearching ? "Stop" : "Search"}
-          </JimboButton>
-        </div>
+    <JimboApp>
+      <div
+        className="j-flex j-items-center j-justify-between"
+        style={{
+          flexShrink: 0,
+          padding: "10px 12px",
+          borderBottom: "2px solid var(--j-gold)",
+        }}
+      >
+        <JimboText size="lg" tone="gold">JAML Curator</JimboText>
+      </div>
 
-        <div style={{ minHeight: 0, overflowY: "auto" }} className="hide-scrollbar">
-          <JamlMapEditor onChange={handleMapChange} />
-        </div>
+      <JimboAppScroll>
+        <div className="j-flex-col j-gap-md">
+          <JamlMapEditor onChange={(s) => setJamlText(s)} />
 
-        <JamlSpeedometer
-          status={search.status}
-          seedsPerSecond={search.seedsPerSecond}
-          totalSearched={search.totalSearched}
-          matchingSeeds={search.matchingSeeds}
-        />
+          <JamlSpeedometer
+            status={search.status}
+            seedsPerSecond={search.seedsPerSecond}
+            totalSearched={search.totalSearched}
+            matchingSeeds={search.matchingSeeds}
+          />
 
-        <JimboPanel>
-          {search.results.length === 0 ? (
-            <JimboText size="sm" tone="grey" className="j-text-center">
-              {isSearching ? "Searching..." : "No results yet."}
-            </JimboText>
-          ) : (
-            <div className="j-flex-col j-gap-sm">
-              <div className="j-flex j-items-center j-justify-between">
-                <JimboText size="xs" tone="grey">Seed matches</JimboText>
-                <JimboText size="xs" tone="gold">{search.matchingSeeds} found</JimboText>
-              </div>
-
-              <JimboFlankNav
-                canPrev={resultIndex > 0}
-                canNext={resultIndex < search.results.length - 1}
-                onPrev={() => setResultIndex(i => Math.max(0, i - 1))}
-                onNext={() => setResultIndex(i => Math.min(search.results.length - 1, i + 1))}
-              >
-                <div className="j-flex-col j-items-center j-gap-xs">
-                  <JimboText size="lg" tone="gold" style={{ letterSpacing: 2 }}>{currentSeed}</JimboText>
-                  <JimboButton tone="blue" size="xs" onClick={handleCopySeed}>Copy Seed</JimboButton>
+          <JimboPanel>
+            {search.results.length === 0 ? (
+              <JimboText size="sm" tone="grey" className="j-text-center">
+                {isSearching ? "Searching..." : "No results yet."}
+              </JimboText>
+            ) : (
+              <div className="j-flex-col j-gap-sm">
+                <div className="j-flex j-items-center j-justify-between">
+                  <JimboText size="xs" tone="grey">Seed matches</JimboText>
+                  <JimboText size="xs" tone="gold">{search.matchingSeeds} found</JimboText>
                 </div>
-              </JimboFlankNav>
-            </div>
-          )}
-        </JimboPanel>
-      </section>
-    </div>
+                <JimboFlankNav
+                  canPrev={resultIndex > 0}
+                  canNext={resultIndex < search.results.length - 1}
+                  onPrev={() => setResultIndex(i => Math.max(0, i - 1))}
+                  onNext={() => setResultIndex(i => Math.min(search.results.length - 1, i + 1))}
+                >
+                  <div className="j-flex-col j-items-center j-gap-xs">
+                    <JimboText size="lg" tone="gold" style={{ letterSpacing: 2 }}>{currentSeed}</JimboText>
+                    <JimboButton tone="blue" size="xs" onClick={handleCopySeed}>Copy Seed</JimboButton>
+                  </div>
+                </JimboFlankNav>
+              </div>
+            )}
+          </JimboPanel>
+        </div>
+      </JimboAppScroll>
+
+      <JimboAppFooter>
+        <JimboButton
+          tone={isSearching ? "red" : "green"}
+          size="md"
+          fullWidth
+          onClick={handleSearch}
+        >
+          {isSearching ? "Stop Searching" : "Search Seeds"}
+        </JimboButton>
+      </JimboAppFooter>
+    </JimboApp>
   );
 }

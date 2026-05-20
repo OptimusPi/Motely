@@ -9,10 +9,11 @@ Package manager is `pnpm` (lockfile is `pnpm-lock.yaml`).
 - `pnpm build` — Vite library build, emits `dist/` with five entry bundles + `dist/ui/jimbo.css` + `.d.ts` via `vite-plugin-dts`.
 - `pnpm dev` — `vite build --watch` (this is a library, not an app — there is no dev server for the library itself).
 - `pnpm typecheck` — `tsc --noEmit --pretty false`.
-- `pnpm lint` — ESLint over the repo.
+- `pnpm lint` — ESLint over the repo. Custom design-rule plugin lives in `eslint-rules/jaml-design.js` (rules: `no-raw-button`, `no-emoji-jsx`, `no-uppercase-text`, `no-bold-style`) — these enforce the design rules below at lint time.
 - `pnpm storybook` — Storybook dev server on `:6006`. Stories are the primary visual dev surface.
 - `pnpm build-storybook` / `pnpm serve:storybook` — build static Storybook, then serve on `:3141` with CORS (used by MCP/iframe consumers).
-- Tests run via `vitest` driven by `@storybook/addon-vitest`: stories double as tests, executed in headless Chromium through `@vitest/browser-playwright`. To run a single story-as-test, use `pnpm vitest run -t "<Story Title>"` or filter by file path. There are no separate `*.test.*` files.
+- Tests run via `vitest` driven by `@storybook/addon-vitest`: stories double as tests, executed in headless Chromium through `@vitest/browser-playwright` (see `vitest.config.ts`). To run a single story-as-test, use `pnpm vitest run -t "<Story Title>"` or filter by file path. There are no separate `*.test.*` files.
+- `examples/seed-finder` is the canonical end-to-end consumer app (boots motely-wasm, renders `JamlIde`, runs real searches): `cd examples/seed-finder && pnpm install && pnpm dev`. (There is no top-level `pnpm demo` — the script may exist in `package.json` but the `demo/` directory does not.)
 
 ## Architecture
 
@@ -28,6 +29,12 @@ This is a multi-entry React component library with five subpath exports, all bun
 
 Every entry point is a barrel — the public API is exactly what these five files re-export. Add a new public component by exporting from the relevant barrel; if it isn't re-exported there, it isn't part of the public surface.
 
+All hooks and components carry `"use client"` at the top of the file for Next.js RSC compatibility. Add it to any new hook or component.
+
+### `src/lib/` — pure utilities
+
+`src/lib/` is a pure-utility layer with no React and no motely-wasm: JAML parsing (`jamlParser.ts`, `jamlSchema.ts`, `jamlCompletion.ts`), card/TTS display helpers, constants, and shared types. Anything that must be safe for server components or workers lives here. The `src/hooks/` layer builds on top of it to expose React-specific state.
+
 ### Externalized peers
 
 `vite.config.ts` externalizes `react`, `react-dom`, `three`, `@react-three/*`, `react-icons`, `motely-wasm`, and `@rewaffle/bootsharp-file-system`. Consumers are expected to resolve these. Storybook (`.storybook/main.ts`) strips the `dts` plugin and forces `motely-wasm` to bundle so stories work; it also serves `node_modules/motely-wasm/bin` at `/motely-wasm/bin/`.
@@ -35,6 +42,12 @@ Every entry point is a barrel — the public API is exactly what these five file
 ### Asset bundling
 
 Vite bundles the sprite PNGs and other static assets via the imports in `src/assets.ts` — every `JAML_ASSET_FILES` entry is a real `import x from "../assets/x.png"`, and `resolveJamlAssetUrl()` returns the bundled URL. Consumers do nothing. There is no base URL to wire up.
+
+### Search hooks
+
+`useSearch` (`src/hooks/useSearch.ts`) runs the WASM search on the main thread — suitable for low-volume runs. `useSearchPool` (`src/hooks/useSearchPool.ts`) shards work across Web Workers (up to `navigator.hardwareConcurrency`, capped at 8) for throughput-intensive searches. Key constraint: **aesthetic mode always forces a single worker** in `useSearchPool` because the aesthetic enumerator is shared state inside one WASM runtime; multiple workers would restart and produce duplicates.
+
+Both hooks call `ensureMotelyReady()` (from `src/lib/motely/runtime.ts`, also exported from `jaml-ui/motely`) before any WASM call. Workers load via Vite's `?worker` lazy import and receive serialised `PoolStartMessage` objects.
 
 ### motely-wasm runtime contract
 
@@ -59,6 +72,8 @@ When you need motely-wasm changes that aren't published yet, follow the flow in 
 ### CSS / styling
 
 `dist/ui/jimbo.css` is the design-system stylesheet, emitted by Vite as a single asset (`cssCodeSplit: false`, custom `assetFileNames`). `src/index.ts` and `src/ui.ts` import it as a side effect, so any consumer importing from `jaml-ui` or `jaml-ui/ui` automatically gets the CSS. `sideEffects` in `package.json` is configured to preserve this through tree-shaking.
+
+For DOM components, always use CSS custom properties (`--j-red`, `--j-darkest`, etc.) defined in `jimbo.css`. Use the JS constants in `src/ui/tokens.ts` (`JimboColorOption`) only in contexts that cannot use CSS — R3F/Three.js, canvas drawing, inline SVG fills, or imperative animation APIs. Do not use the JS constants in JSX styles.
 
 ## Design rules
 

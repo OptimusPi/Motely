@@ -85,8 +85,12 @@
   /* Coding font — used by JamlCodeEditor and .j-code-block. JetBrains Mono
      with a long OS-native fallback chain so the UI still reads as code even
      when the Google Fonts stylesheet fails to load. */
-  --j-font-code: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'SF Mono', SFMono-Regular, Menlo, Consolas, ui-monospace, 'Courier New', monospace;
+  --j-font-code: 'JetBrains Mono', 'Roboto Mono', monospace;
   --j-text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  /* Drop-shadow under a card sitting on the table. Eyedropped from Balatro
+     hand/collection screens (IMG_4916, IMG_3672, IMG_4919). Used via
+     filter: drop-shadow(var(--j-card-shadow)). */
+  --j-card-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 
   /* Spacing */
   --j-space-xs: 2px;
@@ -168,7 +172,7 @@
 .j-text--display {
   font-size: 26px;
   letter-spacing: 0.04em;
-  line-height: 1;
+  line-height: 1.15;
 }
 
 .j-text--xl {
@@ -208,13 +212,13 @@
 .j-text--label {
   font-size: 9px;
   letter-spacing: 0.04em;
-  line-height: 1;
+  line-height: 1.15;
 }
 
 .j-text--micro {
   font-size: 8px;
   letter-spacing: 0.04em;
-  line-height: 1;
+  line-height: 1.15;
 }
 
 /* Tones */
@@ -283,21 +287,8 @@
   isolation: isolate;
 }
 
-.j-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.14), transparent 34%),
-    linear-gradient(125deg, transparent 0%, rgba(255, 255, 255, 0.07) 26%, transparent 52%, rgba(255, 255, 255, 0.05) 74%, transparent 100%);
-  background-size: 160% 160%, 220% 220%;
-  background-position: 0% 0%, 12% 18%;
-  opacity: 0.75;
-  pointer-events: none;
-  z-index: 0;
-  animation: j-surface-sheen var(--j-idle-sheen-duration) ease-in-out infinite;
-}
+/* No glass-sheen overlay. Balatro panels are flat solid color with a
+   chunky border + drop shadow — no diagonal sheen pass. */
 
 .j-panel__body {
   flex: 1;
@@ -324,39 +315,13 @@
 }
 
 .j-inner-panel {
-  /* Inner panels carry the SAME light-silver outline as the outer panel —
-     this was wrong before. Reference: the Balatro Credits screen shows
-     Publishing / Localization / Porting / Testing each rounded-outlined
-     just like the outer modal. The outer panel does NOT do all the framing
-     by itself; inner panels are framed individually. overflow:visible so
-     content can spill slightly past the inner edge. */
-  background-color: var(--j-darkest);
-  border: var(--j-panel-border-width) solid var(--j-border-silver);
+  /* Subtle sunken inset on the outer panel face — NOT another framed modal.
+     Balatro never nests modal-style frames; content sections sit flat or
+     drop into a darker well. No silver border, no sheen — those belong to
+     the outer .j-panel alone. */
+  background-color: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
-  padding: var(--j-space-lg);
-  position: relative;
-  overflow: visible;
-  isolation: isolate;
-}
-
-.j-inner-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 16% 10%, rgba(255, 255, 255, 0.12), transparent 28%),
-    linear-gradient(145deg, transparent 0%, rgba(255, 255, 255, 0.06) 30%, transparent 58%, rgba(255, 255, 255, 0.04) 84%, transparent 100%);
-  background-size: 180% 180%, 230% 230%;
-  opacity: 0.7;
-  pointer-events: none;
-  z-index: 0;
-  animation: j-surface-sheen calc(var(--j-idle-sheen-duration) + 800ms) ease-in-out infinite reverse;
-}
-
-.j-inner-panel > * {
-  position: relative;
-  z-index: 1;
+  padding: var(--j-space-md);
 }
 
 
@@ -757,16 +722,25 @@
 }
 
 .j-toggle-item {
-  /* No border on inner surfaces. Plain seated row inside the outer panel. */
+  /* Plain seated row inside the outer panel. No row backdrop — items rest
+     directly on the panel surface; the checkbox alone carries the visual
+     weight. Label fills, checkbox pinned right so columns align. */
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--j-space-md);
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--j-radius-sm);
+  padding: 4px 0;
+  background: transparent;
+  border: none;
   cursor: pointer;
   font-family: var(--j-font);
   color: var(--j-white);
+  text-align: left;
+}
+
+.j-toggle-item__label {
+  flex: 1;
+  min-width: 0;
 }
 
 .j-toggle-item[data-variant="stacked"] {
@@ -794,7 +768,7 @@
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  border-radius: 3px;
+  border-radius: 5px;
   background: var(--j-white);
   padding: 2px;
   box-sizing: border-box;
@@ -806,7 +780,7 @@
   position: absolute;
   inset: 2px;
   background: var(--j-teal-grey);
-  border-radius: 1px;
+  border-radius: 3px;
 }
 
 .j-toggle-check[data-on="true"]::before {
@@ -817,8 +791,8 @@
   content: '';
   position: absolute;
   inset: 2px;
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
-          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 80% 80% no-repeat;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 92% 92% no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 92% 92% no-repeat;
   background: var(--j-white);
 }
 
@@ -1279,7 +1253,6 @@
 .j-footer__bar {
   width: 100%;
   background: var(--j-black);
-  border-top: var(--j-panel-border-width) solid var(--j-panel-edge);
   padding: 4px 8px 5px;
   text-align: center;
 }
@@ -1289,7 +1262,7 @@
   font-size: 10px;
   color: white;
   margin: 0;
-  line-height: 1;
+  line-height: 1.15;
   position: relative;
   z-index: 1;
 }
@@ -1530,6 +1503,10 @@
    perfectly; the panel itself does not resize, drag, or reflow. The swirl
    behind it shows in the surrounding viewport. */
 .j-app {
+  /* The device viewport — NOT a panel. In Balatro the game table is the
+     viewport; modals (JimboPanel) sit on top of it. The 320×568 lock is a
+     clipping constraint, not a chunky-bordered frame. The swirl background
+     (JimboBackground) shows through; panels inside provide the only chrome. */
   container-type: inline-size;
   container-name: jimbo;
   width: 320px;
@@ -1541,18 +1518,10 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  /* Solid slate panel against the swirl, with the same chunky silver border
-     and hard south-edge shadow as JimboPanel. This IS the device-shaped panel. */
-  background: var(--j-dark-grey);
-  border: var(--j-panel-border-width) solid var(--j-border-silver);
-  border-radius: var(--j-radius-lg);
-  /* Chunky grey south-edge like a Balatro panel: 4px visible lip of
-     --j-border-south sits below the silver border, then a hard black
-     drop below that for ground shadow. No soft blur — Balatro uses
-     stacked solid offsets, not gaussian shadows. */
-  box-shadow:
-    0 4px 0 0 var(--j-border-south),
-    0 8px 0 0 rgba(0, 0, 0, 0.55);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   font-family: var(--j-font);
   color: var(--j-white);
   overflow: hidden;
@@ -1585,6 +1554,19 @@
   padding: var(--j-space-lg) var(--j-space-lg) var(--j-space-md);
   scrollbar-width: none;
   -ms-overflow-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--j-space-md);
+}
+
+/* When a JimboPanel is rendered as the primary content of an app scroll
+   or content area, fill the available height instead of shrink-wrapping
+   to content. Panels should not bounce vertically as content inside them
+   changes — Balatro panels are sized to their slot, not their payload. */
+.j-app__scroll > .j-panel,
+.j-app__content > .j-panel {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .j-app__scroll::-webkit-scrollbar {
@@ -1695,36 +1677,6 @@
   background: var(--j-red);
   border-radius: var(--j-radius-md);
   box-shadow: 0 3px 0 var(--j-dark-red);
-}
-
-
-/* ── CardList ────────────────────────────────────────────────────────── */
-/* Labeled horizontal strip of card groups. Children scroll horizontally
-   with magnetic snap; no visible scrollbar (per design rule). */
-
-.j-card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-}
-
-.j-card-list__row {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--j-space-sm);
-  overflow-x: auto;
-  overflow-y: visible;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  padding-bottom: 4px;
-}
-
-.j-card-list__row::-webkit-scrollbar { display: none; }
-
-.j-card-list__row > * {
-  scroll-snap-align: start;
-  flex-shrink: 0;
 }
 
 
@@ -2012,7 +1964,7 @@
   font-family: var(--j-font);
   font-size: 32px;
   letter-spacing: 3px;
-  line-height: 1;
+  line-height: 1.15;
   color: var(--j-gold-text);
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }
@@ -2523,7 +2475,7 @@
 .j-showcase__wordmark-title {
   font-size: 32px;
   letter-spacing: 3px;
-  line-height: 1;
+  line-height: 1.15;
   color: var(--j-gold-text);
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }

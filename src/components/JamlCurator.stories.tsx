@@ -8,9 +8,6 @@ const meta = {
     jimboHarness: false,
     layout: 'centered',
   },
-  decorators: [
-    (Story) => <div style={{ width: 375, height: 667 }}><Story /></div>,
-  ],
 } satisfies Meta<typeof JamlCurator>;
 
 export default meta;
