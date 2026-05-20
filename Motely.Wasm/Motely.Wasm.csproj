@@ -5,16 +5,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <BootsharpName>motely-wasm</BootsharpName>
-    <!-- Three distinct Bootsharp output sinks. motely-wasm/ (sibling, gitignored) is the
-         npm-publish root. Keeping the sinks in separate directories lets Bootsharp's
-         %MODULE_DIR% resolve to a clean "dist", so the generated package.json exports
-         read "./dist/index.mjs" instead of "././index.mjs". -->
+    <!-- Bootsharp build-config (https://github.com/elringus/bootsharp/blob/main/docs/guide/build-config.md):
+         separate sinks so %MODULE_DIR% → dist/ and package.json exports stay "./dist/index.mjs".
+         Same pattern as samples/react (Backend.WASM): PackageDirectory + BinariesDirectory + PublishDirectory. -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
-    <!-- dotnet.native.wasm is fetched by boot() from a URL root, not imported as a module.
-         Consumers (and Bootsharp's own boot() docs) expect that root at "<package>/bin", so
-         this stays a package-root sibling of dist/, not under it. RemoveDir'd every pack —
-         disposable, so never point it at a hand-maintained directory. -->
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
   </PropertyGroup>
 
@@ -29,10 +24,6 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <!-- Bake MotelyVersion as a compile-time const so Version() doesn't depend on
-       AssemblyInformationalVersionAttribute reflection (which NativeAOT trims away,
-       and which Motely.csproj already disables via GenerateAssemblyInfo=false).
-       The const is inlined into IL, so trimming can't touch it. -->
   <Target Name="GenerateVersionConstant" BeforeTargets="CoreCompile">
     <ItemGroup>
       <_VersionLines Include="// &lt;auto-generated/&gt;" />
@@ -52,10 +43,7 @@
     </ItemGroup>
   </Target>
 
-  <!-- Bootsharp rewrites package.json from its PackageTemplate.json every pack (Overwrite=true)
-       and the template carries no "version" — but motely-wasm is npm-published and needs one.
-       Inject MotelyVersion (source of truth: <MotelyVersion> in Directory.Packages.props) right
-       after Bootsharp writes the file, and copy the README into the npm root (Bootsharp doesn't). -->
+  <!-- Bootsharp PackageTemplate.json has no version field; npm publish requires one from MotelyVersion. -->
   <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpPack">
     <PropertyGroup>
       <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
@@ -63,15 +51,9 @@
       <_PkgWithVersion>$([System.IO.File]::ReadAllText('$(_NpmPackageJson)').Replace('&quot;name&quot;: &quot;$(BootsharpName)&quot;,', '&quot;name&quot;: &quot;$(BootsharpName)&quot;,%0D%0A    &quot;version&quot;: &quot;$(MotelyVersion)&quot;,'))</_PkgWithVersion>
     </PropertyGroup>
     <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
-           Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp's PackageTemplate.json 'name' line may have changed. Update FinalizeNpmPackage in Motely.Wasm.csproj." />
+           Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp PackageTemplate.json may have changed. Update FinalizeNpmPackage." />
     <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
-    <!-- No SkipUnchangedFiles: the destination is gitignored and may carry stale manual edits with newer
-         mtimes than the source. SkipUnchangedFiles would then preserve the scribble through `dotnet publish`
-         and ship it to npm. Always overwrite. -->
     <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
-    <!-- Ship the generated JAML schema alongside the runtime so JS consumers can
-         load it for editor tooling / validation without a separate fetch. Same
-         no-SkipUnchangedFiles reasoning as the README copy above. -->
     <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
     <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
   </Target>
