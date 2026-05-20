@@ -53,8 +53,34 @@ public class JamlSchemaSnapshotTests
     Assert.Contains(eventEnum, item => item?.GetValue<string>() == "LuckyMoney");
 
     var clauseDef = Assert.IsType<JsonObject>(defs["JamlClauseUnion"]);
-    var clauseProps = Assert.IsType<JsonObject>(clauseDef["properties"]);
-    var eventSchema = Assert.IsType<JsonObject>(clauseProps["event"]);
+    var oneOf = Assert.IsType<JsonArray>(clauseDef["oneOf"]);
+    Assert.True(oneOf.Count >= 40, "expected one branch per clause discriminator");
+
+    static JsonObject? FindBranch(JsonArray branches, string requiredKey)
+    {
+      foreach (var item in branches)
+      {
+        if (item is not JsonObject branch)
+          continue;
+        if (branch["required"] is not JsonArray required)
+          continue;
+        if (required.Any(r => r?.GetValue<string>() == requiredKey))
+          return branch;
+      }
+      return null;
+    }
+
+    var jokerBranch = FindBranch(oneOf, "joker");
+    Assert.NotNull(jokerBranch);
+    var jokerProps = Assert.IsType<JsonObject>(jokerBranch["properties"]);
+    Assert.False(jokerProps.ContainsKey("uncommonJoker"));
+    Assert.False(jokerProps.ContainsKey("event"));
+    Assert.Equal("#/$defs/Joker", jokerProps["joker"]?["$ref"]?.GetValue<string>());
+
+    var eventBranch = FindBranch(oneOf, "event");
+    Assert.NotNull(eventBranch);
+    var eventProps = Assert.IsType<JsonObject>(eventBranch["properties"]);
+    var eventSchema = Assert.IsType<JsonObject>(eventProps["event"]);
     Assert.Equal("#/$defs/MotelyEventType", eventSchema["$ref"]?.GetValue<string>());
 
     var sourcesDef = Assert.IsType<JsonObject>(defs["JamlSources"]);

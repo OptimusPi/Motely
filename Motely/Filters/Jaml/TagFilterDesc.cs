@@ -4,20 +4,16 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public enum TagPosition
-{
-    Any,
-    SmallBlind,
-    BigBlind,
-}
-
 public sealed class TagClause : JamlClause
 {
     public required MotelyTag[] Tags { get; init; }
-    public TagPosition Position { get; init; } = TagPosition.Any;
+
+    /// <summary>Tag-stream draw indices for this ante: 0 = small-blind offer, 1 = big-blind offer.</summary>
+    public required int[] TagDraws { get; init; }
 
     public override int EstimatedCost => 3 + MaxAnte;
-    public override string Describe() => $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))}";
+    public override string Describe() =>
+        $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))} @ draws [{string.Join(", ", TagDraws)}]";
     public override IMotelySeedFilterDesc CreateDesc() => new TagFilterDesc(this);
 }
 
@@ -52,27 +48,15 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
             foreach (var ante in clause.Antes)
             {
                 var tagStream = ctx.CreateTagStream(ante);
-                var smallTag = ctx.GetNextTag(ref tagStream);
-                var bigTag = ctx.GetNextTag(ref tagStream);
+                var draw0 = ctx.GetNextTag(ref tagStream);
+                var draw1 = ctx.GetNextTag(ref tagStream);
 
-                foreach (var t in clause.Tags)
+                foreach (var drawIndex in clause.TagDraws)
                 {
-                    if (clause.Position == TagPosition.SmallBlind || clause.Position == TagPosition.Any)
+                    var rolled = drawIndex == 0 ? draw0 : draw1;
+                    foreach (var t in clause.Tags)
                     {
-                        var match = VectorEnum256.Equals(smallTag, t);
-                        matchCounts = Vector256.Add(
-                            matchCounts,
-                            Vector256.ConditionalSelect(
-                                match,
-                                Vector256.Create(1),
-                                Vector256<int>.Zero
-                            )
-                        );
-                    }
-
-                    if (clause.Position == TagPosition.BigBlind || clause.Position == TagPosition.Any)
-                    {
-                        var match = VectorEnum256.Equals(bigTag, t);
+                        var match = VectorEnum256.Equals(rolled, t);
                         matchCounts = Vector256.Add(
                             matchCounts,
                             Vector256.ConditionalSelect(

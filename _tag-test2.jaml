@@ -1,0 +1,6 @@
+name: test-plural
+deck: Red
+stake: White
+must:
+  - tags: [EtherealTag]
+    antes: [1]

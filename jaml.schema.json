@@ -1,451 +1,4959 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://seedfinder.app/jaml.schema.json",
+  "$id": "https://www.seedfinder.app/jaml.schema.json",
+  "version": "18.2.1",
   "title": "JAML — Jimbo's Ante Markup Language",
-  "description": "Declarative filter language for Balatro seed searches. A JAML document specifies the criteria a seed must satisfy; the Motely engine compiles and runs it.",
-  "version": "17.4.5",
+  "description": "JSON Schema for JAML (.jaml), Motely's Balatro seed search language. Use it for validation, completions, and editor tooling.",
   "type": "object",
-  "additionalProperties": false,
-  "properties": {
-    "id": {
-      "type": "string"
-    },
-    "name": {
-      "type": "string"
-    },
-    "author": {
-      "type": "string"
-    },
-    "dateCreated": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "deck": {
-      "$ref": "#/$defs/MotelyDeck"
-    },
-    "stake": {
-      "$ref": "#/$defs/MotelyStake"
-    },
-    "defaults": {
-      "$ref": "#/$defs/JamlDefaults"
-    },
-    "must": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/JamlClauseUnion"
-      }
-    },
-    "should": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/JamlClauseUnion"
-      }
-    },
-    "mustNot": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/JamlClauseUnion"
-      }
-    },
-    "hashtags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "seeds": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    }
-  },
   "$defs": {
-    "JamlDefaults": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "antes": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        },
-        "boosterPacks": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        },
-        "shopItems": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        },
-        "score": {
-          "type": "integer"
-        }
-      }
-    },
     "JamlClauseUnion": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "joker": {
-          "oneOf": [
-            {
-              "const": "any"
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "joker"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
             },
-            {
-              "$ref": "#/$defs/MotelyJoker"
-            }
-          ]
-        },
-        "jokers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyJoker"
-          }
-        },
-        "commonJoker": {
-          "oneOf": [
-            {
-              "const": "any"
+            "score": {
+              "type": "integer"
             },
-            {
-              "$ref": "#/$defs/MotelyJokerCommon"
-            }
-          ]
-        },
-        "commonJokers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyJokerCommon"
-          }
-        },
-        "uncommonJoker": {
-          "oneOf": [
-            {
-              "const": "any"
+            "min": {
+              "type": "integer"
             },
-            {
-              "$ref": "#/$defs/MotelyJokerUncommon"
-            }
-          ]
-        },
-        "uncommonJokers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyJokerUncommon"
-          }
-        },
-        "rareJoker": {
-          "oneOf": [
-            {
-              "const": "any"
+            "max": {
+              "type": "integer"
             },
-            {
-              "$ref": "#/$defs/MotelyJokerRare"
-            }
-          ]
-        },
-        "rareJokers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyJokerRare"
-          }
-        },
-        "legendaryJoker": {
-          "oneOf": [
-            {
-              "const": "any"
-            },
-            {
-              "$ref": "#/$defs/MotelyJokerLegendary"
-            }
-          ]
-        },
-        "legendaryJokers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyJokerLegendary"
-          }
-        },
-        "voucher": {
-          "$ref": "#/$defs/MotelyVoucher"
-        },
-        "vouchers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyVoucher"
-          }
-        },
-        "tarotCard": {
-          "$ref": "#/$defs/MotelyTarotCard"
-        },
-        "tarotCards": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyTarotCard"
-          }
-        },
-        "spectralCard": {
-          "$ref": "#/$defs/MotelySpectralCard"
-        },
-        "spectralCards": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelySpectralCard"
-          }
-        },
-        "planetCard": {
-          "$ref": "#/$defs/MotelyPlanetCard"
-        },
-        "boss": {
-          "$ref": "#/$defs/MotelyBossBlind"
-        },
-        "tag": {
-          "$ref": "#/$defs/MotelyTag"
-        },
-        "smallBlindTag": {
-          "$ref": "#/$defs/MotelyTag"
-        },
-        "bigBlindTag": {
-          "$ref": "#/$defs/MotelyTag"
-        },
-        "standardCard": {
-          "oneOf": [
-            {
+            "label": {
               "type": "string"
             },
-            {
-              "$ref": "#/$defs/StandardCardConfig"
-            }
-          ]
-        },
-        "standardCards": {
-          "type": "array",
-          "items": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/$defs/StandardCardConfig"
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
               }
-            ]
-          }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "joker": {
+              "$ref": "#/$defs/Joker"
+            }
+          },
+          "additionalProperties": false
         },
-        "erraticRank": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "jokers"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "jokers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Joker"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "erraticSuit": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "commonJoker"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "commonJoker": {
+              "$ref": "#/$defs/CommonJoker"
+            }
+          },
+          "additionalProperties": false
         },
-        "erraticCard": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "commonJokers"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "commonJokers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/CommonJoker"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "startingDraw": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "uncommonJoker"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "uncommonJoker": {
+              "$ref": "#/$defs/UncommonJoker"
+            }
+          },
+          "additionalProperties": false
         },
-        "event": {
-          "$ref": "#/$defs/MotelyEventType"
+        {
+          "type": "object",
+          "required": [
+            "uncommonJokers"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "uncommonJokers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UncommonJoker"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "luckyMoney": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "rareJoker"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "rareJoker": {
+              "$ref": "#/$defs/RareJoker"
+            }
+          },
+          "additionalProperties": false
         },
-        "luckyMult": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "rareJokers"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "rareJokers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RareJoker"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "misprintMult": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "legendaryJoker"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "soulEditionRolls": {
+              "type": "integer"
+            },
+            "soulCardOnly": {
+              "type": "boolean"
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "legendaryJoker": {
+              "$ref": "#/$defs/LegendaryJoker"
+            }
+          },
+          "additionalProperties": false
         },
-        "wheelOfFortune": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "legendaryJokers"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "soulEditionRolls": {
+              "type": "integer"
+            },
+            "soulCardOnly": {
+              "type": "boolean"
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "legendaryJokers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LegendaryJoker"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "cavendishExtinct": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "voucher"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "voucher": {
+              "$ref": "#/$defs/Voucher"
+            }
+          },
+          "additionalProperties": false
         },
-        "grosMichelExtinct": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "vouchers"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "vouchers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Voucher"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "spaceLevelup": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "tarotCard"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "tarotCard": {
+              "$ref": "#/$defs/Tarot"
+            }
+          },
+          "additionalProperties": false
         },
-        "businessPayout": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "tarotCards"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "tarotCards": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Tarot"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "bloodstoneTrigger": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "spectralCard"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "spectralCard": {
+              "$ref": "#/$defs/Spectral"
+            }
+          },
+          "additionalProperties": false
         },
-        "parkingPayout": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "spectralCards"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "spectralCards": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Spectral"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "glassDestroy": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "planetCard"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "planetCard": {
+              "$ref": "#/$defs/Planet"
+            }
+          },
+          "additionalProperties": false
         },
-        "wheelStaysFlipped": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "boss"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "boss": {
+              "$ref": "#/$defs/Boss"
+            }
+          },
+          "additionalProperties": false
         },
-        "antes": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "tag"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "tag": {
+              "$ref": "#/$defs/Tag"
+            }
+          },
+          "additionalProperties": false
         },
-        "score": {
-          "type": "integer"
+        {
+          "type": "object",
+          "required": [
+            "tags"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Tag"
+              },
+              "description": "One or more tag enum names (OR). Empty [] is invalid at load. Maps to tag stream draw 0 (small) or 1 (big) for that ante."
+            }
+          },
+          "additionalProperties": false
         },
-        "min": {
-          "type": "integer"
+        {
+          "type": "object",
+          "required": [
+            "smallBlindTag"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "smallBlindTag": {
+              "$ref": "#/$defs/Tag"
+            }
+          },
+          "additionalProperties": false
         },
-        "max": {
-          "type": "integer"
+        {
+          "type": "object",
+          "required": [
+            "smallBlindTags"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "smallBlindTags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Tag"
+              },
+              "description": "One or more tag enum names (OR). Empty [] is invalid at load. Maps to tag stream draw 0 (small) or 1 (big) for that ante."
+            }
+          },
+          "additionalProperties": false
         },
-        "label": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "bigBlindTag"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "bigBlindTag": {
+              "$ref": "#/$defs/Tag"
+            }
+          },
+          "additionalProperties": false
         },
-        "edition": {
-          "$ref": "#/$defs/MotelyItemEdition"
+        {
+          "type": "object",
+          "required": [
+            "bigBlindTags"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "bigBlindTags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Tag"
+              },
+              "description": "One or more tag enum names (OR). Empty [] is invalid at load. Maps to tag stream draw 0 (small) or 1 (big) for that ante."
+            }
+          },
+          "additionalProperties": false
         },
-        "stickers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/MotelyJokerSticker"
-          }
+        {
+          "type": "object",
+          "required": [
+            "standardCard"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "standardCard": {
+              "$ref": "#/$defs/StandardCard"
+            }
+          },
+          "additionalProperties": false
         },
-        "seal": {
-          "$ref": "#/$defs/MotelyItemSeal"
+        {
+          "type": "object",
+          "required": [
+            "standardCards"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "standardCards": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/StandardCard"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "enhancement": {
-          "$ref": "#/$defs/MotelyItemEnhancement"
+        {
+          "type": "object",
+          "required": [
+            "erraticRank"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "erraticRank": {
+              "$ref": "#/$defs/Rank"
+            }
+          },
+          "additionalProperties": false
         },
-        "rank": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "erraticSuit"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "erraticSuit": {
+              "$ref": "#/$defs/Suit"
+            }
+          },
+          "additionalProperties": false
         },
-        "suit": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "erraticCard"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "erraticCard": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         },
-        "rolls": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "startingDraw"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "startingDraw": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         },
-        "soulEditionRolls": {
-          "type": "integer"
+        {
+          "type": "object",
+          "required": [
+            "event"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "event": {
+              "$ref": "#/$defs/MotelyEventType"
+            }
+          },
+          "additionalProperties": false
         },
-        "soulCardOnly": {
-          "type": "boolean"
+        {
+          "type": "object",
+          "required": [
+            "luckyMoney"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "luckyMoney": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "and": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/JamlClauseUnion"
-          }
+        {
+          "type": "object",
+          "required": [
+            "luckyMult"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "luckyMult": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "or": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/JamlClauseUnion"
-          }
+        {
+          "type": "object",
+          "required": [
+            "misprintMult"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "misprintMult": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "clauses": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/JamlClauseUnion"
-          }
+        {
+          "type": "object",
+          "required": [
+            "wheelOfFortune"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "wheelOfFortune": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "mode": {
-          "type": "string"
+        {
+          "type": "object",
+          "required": [
+            "cavendishExtinct"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "cavendishExtinct": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "judgement": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "grosMichelExtinct"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "grosMichelExtinct": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "wraith": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "spaceLevelup"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "spaceLevelup": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "rareTag": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "businessPayout"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "businessPayout": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "uncommonTag": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "bloodstoneTrigger"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "bloodstoneTrigger": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "shopItems": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "parkingPayout"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "parkingPayout": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "boosterPacks": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
+        {
+          "type": "object",
+          "required": [
+            "glassDestroy"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "glassDestroy": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "minShopItem": {
-          "type": "integer"
+        {
+          "type": "object",
+          "required": [
+            "wheelStaysFlipped"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "wheelStaysFlipped": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "maxShopItem": {
-          "type": "integer"
+        {
+          "type": "object",
+          "required": [
+            "and"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "and": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/JamlClauseUnion"
+              }
+            }
+          },
+          "additionalProperties": false
         },
-        "sources": {
-          "$ref": "#/$defs/JamlSources"
+        {
+          "type": "object",
+          "required": [
+            "or"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "or": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/JamlClauseUnion"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "clauses"
+          ],
+          "properties": {
+            "antes": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "score": {
+              "type": "integer"
+            },
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            },
+            "label": {
+              "type": "string"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            },
+            "stickers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Sticker"
+              }
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "rolls": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "judgement": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "rareTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "uncommonTag": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "shopItems": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "boosterPacks": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "minShopItem": {
+              "type": "integer"
+            },
+            "maxShopItem": {
+              "type": "integer"
+            },
+            "sources": {
+              "$ref": "#/$defs/JamlSources"
+            },
+            "clauses": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/JamlClauseUnion"
+              }
+            }
+          },
+          "additionalProperties": false
         }
-      }
+      ]
     },
-    "MotelyJoker": {
+    "MotelyEventType": {
+      "type": "string",
+      "enum": [
+        "LuckyMoney",
+        "LuckyMult",
+        "MisprintMult",
+        "WheelOfFortune",
+        "CavendishExtinct",
+        "GrosMichelExtinct",
+        "SpaceLevelup",
+        "BusinessPayout",
+        "BloodstoneTrigger",
+        "ParkingPayout",
+        "GlassDestroy",
+        "WheelStaysFlipped"
+      ]
+    },
+    "Joker": {
       "type": "string",
       "enum": [
         "Joker",
@@ -597,10 +5105,11 @@
         "Triboulet",
         "Yorick",
         "Chicot",
-        "Perkeo"
+        "Perkeo",
+        "any"
       ]
     },
-    "MotelyJokerCommon": {
+    "CommonJoker": {
       "type": "string",
       "enum": [
         "Joker",
@@ -663,10 +5172,11 @@
         "GoldenTicket",
         "Swashbuckler",
         "HangingChad",
-        "ShootTheMoon"
+        "ShootTheMoon",
+        "any"
       ]
     },
-    "MotelyJokerUncommon": {
+    "UncommonJoker": {
       "type": "string",
       "enum": [
         "JokerStencil",
@@ -732,10 +5242,11 @@
         "Satellite",
         "Cartomancer",
         "Astronomer",
-        "Bootstraps"
+        "Bootstraps",
+        "any"
       ]
     },
-    "MotelyJokerRare": {
+    "RareJoker": {
       "type": "string",
       "enum": [
         "DNA",
@@ -757,20 +5268,22 @@
         "InvisibleJoker",
         "Brainstorm",
         "DriversLicense",
-        "BurntJoker"
+        "BurntJoker",
+        "any"
       ]
     },
-    "MotelyJokerLegendary": {
+    "LegendaryJoker": {
       "type": "string",
       "enum": [
         "Canio",
         "Triboulet",
         "Yorick",
         "Chicot",
-        "Perkeo"
+        "Perkeo",
+        "any"
       ]
     },
-    "MotelyVoucher": {
+    "Voucher": {
       "type": "string",
       "enum": [
         "Overstock",
@@ -807,7 +5320,7 @@
         "Palette"
       ]
     },
-    "MotelyTarotCard": {
+    "Tarot": {
       "type": "string",
       "enum": [
         "TheFool",
@@ -834,7 +5347,24 @@
         "TheWorld"
       ]
     },
-    "MotelySpectralCard": {
+    "Planet": {
+      "type": "string",
+      "enum": [
+        "Mercury",
+        "Venus",
+        "Earth",
+        "Mars",
+        "Jupiter",
+        "Saturn",
+        "Uranus",
+        "Neptune",
+        "Pluto",
+        "PlanetX",
+        "Ceres",
+        "Eris"
+      ]
+    },
+    "Spectral": {
       "type": "string",
       "enum": [
         "Familiar",
@@ -857,24 +5387,36 @@
         "BlackHole"
       ]
     },
-    "MotelyPlanetCard": {
+    "Tag": {
       "type": "string",
       "enum": [
-        "Mercury",
-        "Venus",
-        "Earth",
-        "Mars",
-        "Jupiter",
-        "Saturn",
-        "Uranus",
-        "Neptune",
-        "Pluto",
-        "PlanetX",
-        "Ceres",
-        "Eris"
+        "UncommonTag",
+        "RareTag",
+        "NegativeTag",
+        "FoilTag",
+        "HolographicTag",
+        "PolychromeTag",
+        "InvestmentTag",
+        "VoucherTag",
+        "BossTag",
+        "StandardTag",
+        "CharmTag",
+        "MeteorTag",
+        "BuffoonTag",
+        "HandyTag",
+        "GarbageTag",
+        "EtherealTag",
+        "CouponTag",
+        "DoubleTag",
+        "JuggleTag",
+        "D6Tag",
+        "TopupTag",
+        "SpeedTag",
+        "OrbitalTag",
+        "EconomyTag"
       ]
     },
-    "MotelyBossBlind": {
+    "Boss": {
       "type": "string",
       "enum": [
         "TheClub",
@@ -907,73 +5449,61 @@
         "VioletVessel"
       ]
     },
-    "MotelyTag": {
+    "Deck": {
       "type": "string",
       "enum": [
-        "UncommonTag",
-        "RareTag",
-        "NegativeTag",
-        "FoilTag",
-        "HolographicTag",
-        "PolychromeTag",
-        "InvestmentTag",
-        "VoucherTag",
-        "BossTag",
-        "StandardTag",
-        "CharmTag",
-        "MeteorTag",
-        "BuffoonTag",
-        "HandyTag",
-        "GarbageTag",
-        "EtherealTag",
-        "CouponTag",
-        "DoubleTag",
-        "JuggleTag",
-        "D6Tag",
-        "TopupTag",
-        "SpeedTag",
-        "OrbitalTag",
-        "EconomyTag"
+        "Red",
+        "Blue",
+        "Yellow",
+        "Green",
+        "Black",
+        "Magic",
+        "Nebula",
+        "Ghost",
+        "Abandoned",
+        "Checkered",
+        "Zodiac",
+        "Painted",
+        "Anaglyph",
+        "Plasma",
+        "Erratic"
       ]
     },
-    "StandardCardConfig": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "rank": {
-          "type": "string"
-        },
-        "suit": {
-          "type": "string"
-        },
-        "seal": {
-          "$ref": "#/$defs/MotelyItemSeal"
-        },
-        "enhancement": {
-          "$ref": "#/$defs/MotelyItemEnhancement"
-        },
-        "edition": {
-          "$ref": "#/$defs/MotelyItemEdition"
-        },
-        "sources": {
-          "$ref": "#/$defs/JamlSources"
-        }
-      }
+    "Stake": {
+      "type": "string",
+      "enum": [
+        "White",
+        "Red",
+        "Green",
+        "Black",
+        "Blue",
+        "Purple",
+        "Orange",
+        "Gold"
+      ]
     },
-    "MotelyItemSeal": {
+    "Edition": {
       "type": "string",
       "enum": [
         "None",
+        "Foil",
+        "Holographic",
+        "Polychrome",
+        "Negative"
+      ]
+    },
+    "Seal": {
+      "type": "string",
+      "enum": [
         "Gold",
         "Red",
         "Blue",
         "Purple"
       ]
     },
-    "MotelyItemEnhancement": {
+    "Enhancement": {
       "type": "string",
       "enum": [
-        "None",
         "Bonus",
         "Mult",
         "Wild",
@@ -984,19 +5514,89 @@
         "Lucky"
       ]
     },
-    "MotelyItemEdition": {
+    "Rank": {
       "type": "string",
       "enum": [
-        "None",
-        "Foil",
-        "Holographic",
-        "Polychrome",
-        "Negative"
+        "Two",
+        "Three",
+        "Four",
+        "Five",
+        "Six",
+        "Seven",
+        "Eight",
+        "Nine",
+        "Ten",
+        "Jack",
+        "Queen",
+        "King",
+        "Ace"
+      ]
+    },
+    "Suit": {
+      "type": "string",
+      "enum": [
+        "Clubs",
+        "Diamonds",
+        "Hearts",
+        "Spades"
+      ]
+    },
+    "Sticker": {
+      "type": "string",
+      "enum": [
+        "Eternal",
+        "Perishable",
+        "Rental"
+      ]
+    },
+    "Mode": {
+      "type": "string",
+      "enum": [
+        "any",
+        "all",
+        "none"
+      ]
+    },
+    "JamlAesthetic": {
+      "type": "string",
+      "enum": [
+        "palindrome",
+        "psychosis",
+        "gross",
+        "nsfw",
+        "funny",
+        "balatro"
+      ]
+    },
+    "StandardCard": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "rank": {
+              "$ref": "#/$defs/Rank"
+            },
+            "suit": {
+              "$ref": "#/$defs/Suit"
+            },
+            "seal": {
+              "$ref": "#/$defs/Seal"
+            },
+            "enhancement": {
+              "$ref": "#/$defs/Enhancement"
+            },
+            "edition": {
+              "$ref": "#/$defs/Edition"
+            }
+          }
+        }
       ]
     },
     "JamlSources": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "shopItems": {
           "type": "array",
@@ -1017,7 +5617,7 @@
           "type": "integer"
         },
         "tags": {
-          "type": "boolean"
+          "$ref": "#/$defs/Tag"
         },
         "requireMega": {
           "type": "boolean"
@@ -1153,67 +5753,91 @@
           "items": {
             "type": "integer"
           }
+        },
+        "earlyAntesMaxPack": {
+          "type": "integer",
+          "description": "Ante-1 booster reachability cap. Default 3 matches normal gameplay; raise to 5 to include Hieroglyph or Petroglyph scenarios."
+        }
+      }
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "dateCreated": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "deck": {
+      "$ref": "#/$defs/Deck"
+    },
+    "stake": {
+      "$ref": "#/$defs/Stake"
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "antes": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "score": {
+          "type": "integer"
         }
       }
     },
-    "MotelyEventType": {
-      "type": "string",
-      "enum": [
-        "LuckyMoney",
-        "LuckyMult",
-        "MisprintMult",
-        "WheelOfFortune",
-        "CavendishExtinct",
-        "GrosMichelExtinct",
-        "SpaceLevelup",
-        "BusinessPayout",
-        "BloodstoneTrigger",
-        "ParkingPayout",
-        "GlassDestroy",
-        "WheelStaysFlipped"
-      ]
+    "must": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlClauseUnion"
+      }
     },
-    "MotelyJokerSticker": {
-      "type": "string",
-      "enum": [
-        "None",
-        "Eternal",
-        "Perishable",
-        "Rental"
-      ]
+    "should": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlClauseUnion"
+      }
     },
-    "MotelyDeck": {
-      "type": "string",
-      "enum": [
-        "Red",
-        "Blue",
-        "Yellow",
-        "Green",
-        "Black",
-        "Magic",
-        "Nebula",
-        "Ghost",
-        "Abandoned",
-        "Checkered",
-        "Zodiac",
-        "Painted",
-        "Anaglyph",
-        "Plasma",
-        "Erratic"
-      ]
+    "mustNot": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlClauseUnion"
+      }
     },
-    "MotelyStake": {
-      "type": "string",
-      "enum": [
-        "White",
-        "Red",
-        "Green",
-        "Black",
-        "Blue",
-        "Purple",
-        "Orange",
-        "Gold"
-      ]
+    "seeds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "aesthetics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/JamlAesthetic"
+      }
     }
   }
 }

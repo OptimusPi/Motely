@@ -1,0 +1,6 @@
+name: test-single
+deck: Red
+stake: White
+must:
+  - tag: Ethereal
+    antes: [1]
