@@ -734,6 +734,105 @@ public class JamlConfigTests
   }
 
   [Fact]
+  public void PluralTagKeys_ParseIntoTagClause()
+  {
+    var jaml = """
+            name: PluralTags
+            must:
+              - smallBlindTags: [NegativeTag, DoubleTag]
+                antes: [1]
+              - bigBlindTags: [CharmTag]
+                antes: [2]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+    Assert.True(success, $"Failed to parse: {error}");
+    Assert.NotNull(config);
+    Assert.Equal(2, config!.Must.Tags.Count);
+
+    var small = Assert.IsType<TagClause>(config.Must.Tags[0]);
+    Assert.Equal([MotelyTag.NegativeTag, MotelyTag.DoubleTag], small.Tags);
+    Assert.Equal([0], small.TagDraws);
+
+    var big = Assert.IsType<TagClause>(config.Must.Tags[1]);
+    Assert.Equal([MotelyTag.CharmTag], big.Tags);
+    Assert.Equal([1], big.TagDraws);
+  }
+
+  [Fact]
+  public void GenericTagKey_UsesBothStreamDraws()
+  {
+    var jaml = """
+            name: GenericTag
+            must:
+              - tag: DoubleTag
+                antes: [1]
+            """;
+
+    Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+    var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
+    Assert.Equal([0, 1], clause.TagDraws);
+  }
+
+  [Fact]
+  public void GenericTag_MatchesBigBlindDrawOnJammy()
+  {
+    var jaml = """
+            name: JammyBigTag
+            deck: Red
+            stake: White
+            must:
+              - tag: DoubleTag
+                antes: [1]
+            """;
+
+    Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+
+    var settings = JamlSearchBuilder
+      .CreateSettings(config!)
+      .WithListSearch(["JAMMY"], 1)
+      .WithThreadCount(1)
+      .WithQuietMode(true);
+
+    using var search = settings.Start();
+    search.AwaitCompletion();
+    Assert.Equal(1, search.MatchingSeeds);
+  }
+
+  [Fact]
+  public void TagRolls_PinsSingleDraw()
+  {
+    var jaml = """
+            name: RollsPin
+            must:
+              - tag: DoubleTag
+                rolls: [1]
+                antes: [1]
+            """;
+
+    Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+    var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
+    Assert.Equal([1], clause.TagDraws);
+  }
+
+  [Fact]
+  public void EmptyTagList_RejectsAtLoad()
+  {
+    var jaml = """
+            name: EmptyTags
+            must:
+              - smallBlindTags: []
+                antes: [1]
+            """;
+
+    var success = JamlConfigLoader.TryLoad(jaml, out _, out var error);
+
+    Assert.False(success);
+    Assert.Contains("at least one tag", error ?? "", StringComparison.OrdinalIgnoreCase);
+  }
+
+  [Fact]
   public void NestedLogicalAndClause_ParsesSuccessfully()
   {
     var jaml = """

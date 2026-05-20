@@ -764,28 +764,28 @@ public static partial class JamlConfigLoader
                 Max = max,
                 Bosses = c.Boss is { } b ? [b] : [],
             },
-            MotelyFilterItemType.SmallBlindTag => new TagClause
-            {
-                Label = label,
-                Score = score,
-                Antes = antes,
-                Min = min,
-                Max = max,
-                Tags = (c.Tag ?? c.SmallBlindTag) is { } sbt ? [sbt] : [],
-                Position = c.Tag != null
-                    ? TagPosition.Any
-                    : TagPosition.SmallBlind,
-            },
-            MotelyFilterItemType.BigBlindTag => new TagClause
-            {
-                Label = label,
-                Score = score,
-                Antes = antes,
-                Min = min,
-                Max = max,
-                Tags = c.BigBlindTag is { } bbt ? [bbt] : [],
-                Position = TagPosition.BigBlind,
-            },
+            MotelyFilterItemType.SmallBlindTag => CreateTagClause(
+                label,
+                score,
+                antes,
+                min,
+                max,
+                ResolveTagDraws(c, genericTagKey: c.Tag != null || c.Tags != null, blindSpecificDraws: [0]),
+                c.SmallBlindTags,
+                c.Tags,
+                c.SmallBlindTag,
+                c.Tag
+            ),
+            MotelyFilterItemType.BigBlindTag => CreateTagClause(
+                label,
+                score,
+                antes,
+                min,
+                max,
+                ResolveTagDraws(c, genericTagKey: false, blindSpecificDraws: [1]),
+                c.BigBlindTags,
+                singlePrimary: c.BigBlindTag
+            ),
             MotelyFilterItemType.Standardcard => new StandardCardClause
             {
                 Label = label,
@@ -1162,8 +1162,13 @@ public static partial class JamlConfigLoader
         if (c.PlanetCard is { } planetCardValue) return FormatUtils.FormatDisplayName(planetCardValue.ToString());
         if (c.Boss is { } bossValue) return FormatUtils.FormatBoss(bossValue);
         if (c.Tag is { } tagValue) return FormatUtils.FormatTag(tagValue);
+        if (c.Tags is { Count: > 0 } tagList) return string.Join(", ", tagList.Select(FormatUtils.FormatTag));
         if (c.SmallBlindTag is { } smallBlindTagValue) return FormatUtils.FormatTag(smallBlindTagValue);
+        if (c.SmallBlindTags is { Count: > 0 } smallBlindTagList)
+            return string.Join(", ", smallBlindTagList.Select(FormatUtils.FormatTag));
         if (c.BigBlindTag is { } bigBlindTagValue) return FormatUtils.FormatTag(bigBlindTagValue);
+        if (c.BigBlindTags is { Count: > 0 } bigBlindTagList)
+            return string.Join(", ", bigBlindTagList.Select(FormatUtils.FormatTag));
         if (c.StandardCard != null) return LabelStandardCard(c);
         if (c.StandardCards is { Count: > 0 }) return "Standard Cards";
         if (c.ErraticRank != null) return $"Erratic {LabelRank(c.ErraticRank)}";
@@ -1265,9 +1270,15 @@ public static partial class JamlConfigLoader
             return (MotelyFilterItemType.Boss, null);
         if (c.Tag != null)
             return (MotelyFilterItemType.SmallBlindTag, null);
+        if (c.Tags != null)
+            return (MotelyFilterItemType.SmallBlindTag, null);
         if (c.SmallBlindTag != null)
             return (MotelyFilterItemType.SmallBlindTag, null);
+        if (c.SmallBlindTags != null)
+            return (MotelyFilterItemType.SmallBlindTag, null);
         if (c.BigBlindTag != null)
+            return (MotelyFilterItemType.BigBlindTag, null);
+        if (c.BigBlindTags != null)
             return (MotelyFilterItemType.BigBlindTag, null);
         if (c.StandardCard != null)
             return (MotelyFilterItemType.Standardcard, c.StandardCard.Value.StringValue);
@@ -1302,6 +1313,89 @@ public static partial class JamlConfigLoader
     }
 
     // ── Helpers ──
+
+    private static TagClause CreateTagClause(
+        string label,
+        int score,
+        int[] antes,
+        int min,
+        int? max,
+        int[] tagDraws,
+        List<MotelyTag>? primary,
+        List<MotelyTag>? secondary = null,
+        MotelyTag? singlePrimary = null,
+        MotelyTag? singleSecondary = null
+    )
+    {
+        var tags = CoalesceTagList(primary, secondary, singlePrimary, singleSecondary);
+        if (tags.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "Tag clause must name at least one tag (e.g. tag: EtherealTag or smallBlindTags: [NegativeTag, DoubleTag]). "
+                    + "An empty list is invalid. Generic tag / tags check stream draws 0 and 1 (small- or big-blind offer); "
+                    + "smallBlindTag(s) pins draw 0, bigBlindTag(s) pins draw 1. Use rolls: [0] or rolls: [1] to pick a slot explicitly."
+            );
+        }
+
+        return new TagClause
+        {
+            Label = label,
+            Score = score,
+            Antes = antes,
+            Min = min,
+            Max = max,
+            Tags = tags,
+            TagDraws = tagDraws,
+        };
+    }
+
+    /// <summary>
+    /// <c>tag</c> / <c>tags</c> default to draws [0,1] (either blind). Blind-specific keys default to one draw unless <c>rolls</c> overrides.
+    /// </summary>
+    private static int[] ResolveTagDraws(
+        JamlClauseUnion c,
+        bool genericTagKey,
+        int[] blindSpecificDraws
+    )
+    {
+        if (c.Rolls is { Length: > 0 })
+        {
+            foreach (var draw in c.Rolls)
+            {
+                if (draw is not (0 or 1))
+                {
+                    throw new InvalidOperationException(
+                        $"Tag clause rolls index {draw} is not supported yet (only 0 = small-blind offer, 1 = big-blind offer). "
+                            + "Extra draws on ante rewind are not modeled in search yet."
+                    );
+                }
+            }
+
+            return c.Rolls;
+        }
+
+        return genericTagKey ? [0, 1] : blindSpecificDraws;
+    }
+
+    private static MotelyTag[] CoalesceTagList(
+        List<MotelyTag>? primary,
+        List<MotelyTag>? secondary = null,
+        params MotelyTag?[] singles)
+    {
+        if (primary is not null)
+            return primary.ToArray();
+        if (secondary is not null)
+            return secondary.ToArray();
+
+        var list = new List<MotelyTag>(singles.Length);
+        foreach (var tag in singles)
+        {
+            if (tag is { } value)
+                list.Add(value);
+        }
+
+        return list.ToArray();
+    }
 
     private static string NormalizeFilterId(string? explicitId, string? name)
     {

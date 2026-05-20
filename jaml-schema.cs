@@ -1,6 +1,14 @@
 #:project Motely/Motely.csproj
 #:property PublishAot=false
 
+// LEGACY — do not use for regeneration.
+// Canonical path:  dotnet run --project Motely.CLI/Motely.CLI.csproj -c Release -- schema
+//   or:            .\regen-jaml-schema.ps1
+// See docs/JAML-SCHEMA.md.
+//
+// This file used reflection on JamlClauseUnion and wrote only repo-root jaml.schema.json.
+// Motely.CLI/MotelyJAML.schema.generator.cs is the maintained generator (PropertyToRef, all output paths).
+//
 // Single-file .NET 10 schema generator. Run with:
 //   dotnet run jaml-schema.cs
 // Writes jaml.schema.json at the repo root.

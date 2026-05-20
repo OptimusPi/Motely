@@ -116,6 +116,6 @@ motely-wasm builds against Bootsharp **0.8.0-alpha.278** (`Directory.Packages.pr
 
 ## Common tasks
 
-- **Add a new JAML clause** — descriptor in `Motely/Filters/Jaml/` (e.g. `JokerFilterDesc.cs`); wire `JamlClause.cs`, `JamlConfigLoader.*.cs`, and `JamlSearchBuilder.cs`; regenerate schema via `Motely.CLI` schema generation; fixture in `Motely.Tests/filters/` plus `GoldenJamlFiles/` when syntax is new.
+- **Add a new JAML clause** — follow `docs/JAML-SCHEMA.md` (loader + `PropertyToRef` checklist). Regenerate: `dotnet run --project Motely.CLI/Motely.CLI.csproj -c Release -- schema` or `.\regen-jaml-schema.ps1`. Fixtures in `Motely.Tests/filters/` plus `GoldenJamlFiles/` when syntax is new.
 - **Touch the search PRNG** — run `Motely.Tests` end-to-end. Canary: `SearchConsistencyTests`, `V0FilterRegressionTests`; add `JamlCorpusRegressionTests` when parse/schema changes.
 - **Bump `MotelyVersion`** — edit `Directory.Packages.props` only. The constant propagates to assembly version, npm `package.json`, and `Motely.version()`.

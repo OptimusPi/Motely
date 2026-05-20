@@ -606,14 +606,16 @@ public static class JamlScoring
         foreach (int ante in clause.Antes)
         {
             var tagStream = ctx.CreateTagStream(ante);
-            var small = ctx.GetNextTag(ref tagStream);
-            var big = ctx.GetNextTag(ref tagStream);
-            for (int i = 0; i < clause.Tags.Length; i++)
+            var draw0 = ctx.GetNextTag(ref tagStream);
+            var draw1 = ctx.GetNextTag(ref tagStream);
+            foreach (var drawIndex in clause.TagDraws)
             {
-                if ((clause.Position == TagPosition.SmallBlind || clause.Position == TagPosition.Any) && small == clause.Tags[i])
-                    count++;
-                if ((clause.Position == TagPosition.BigBlind || clause.Position == TagPosition.Any) && big == clause.Tags[i])
-                    count++;
+                var rolled = drawIndex == 0 ? draw0 : draw1;
+                for (int i = 0; i < clause.Tags.Length; i++)
+                {
+                    if (rolled == clause.Tags[i])
+                        count++;
+                }
             }
         }
         return count;

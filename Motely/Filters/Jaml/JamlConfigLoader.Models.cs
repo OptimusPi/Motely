@@ -121,11 +121,20 @@ public sealed class JamlClauseUnion
     [YamlMember(Alias = "tag")]
     public MotelyTag? Tag { get; set; }
 
+    [YamlMember(Alias = "tags")]
+    public List<MotelyTag>? Tags { get; set; }
+
     [YamlMember(Alias = "smallBlindTag")]
     public MotelyTag? SmallBlindTag { get; set; }
 
+    [YamlMember(Alias = "smallBlindTags")]
+    public List<MotelyTag>? SmallBlindTags { get; set; }
+
     [YamlMember(Alias = "bigBlindTag")]
     public MotelyTag? BigBlindTag { get; set; }
+
+    [YamlMember(Alias = "bigBlindTags")]
+    public List<MotelyTag>? BigBlindTags { get; set; }
 
     [YamlMember(Alias = "standardCard")]
     public StandardCardValue? StandardCard { get; set; }
