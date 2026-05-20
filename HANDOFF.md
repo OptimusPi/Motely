@@ -6,6 +6,46 @@ their patience for re-derived facts is zero. Read this before you act.
 
 ---
 
+## Latest session — 2026-05-20
+
+State on exit: branch `chore/storybook-cleanup-backlog`, **working tree clean
+(all committed)**, `pnpm typecheck` + `pnpm build` green. Storybook was running
+on `:3141` (dev server, `allowedHosts: true` so the `motelyjaml-pi.8pi.me`
+tunnel + LAN IP reach it) — restart with `pnpm exec storybook dev -p 3141`.
+
+Done this session:
+- **#16 + parallel batch (#15/#40/#50) closed.** Added `### Fonts` to CLAUDE.md
+  (`--j-font` UI vs `--j-font-code`). Marked done in TASKS.md.
+- **#18 KEYSTONE done** — the 320×568 story harness. The global decorator in
+  `.storybook/preview.tsx` (JimboBackground outside + JimboApp lock, global
+  `layout: 'fullscreen'`) was already in place; the work was the *sweep*: ~22
+  stories flipped off `jimboHarness:false`+`layout:'centered'`+arbitrary-frame
+  decorators onto the default harness. Documented opt-out exceptions:
+  `jimboBackground` (the swirl itself), `JimboPanelSplitter` (`'fluid'`, #72),
+  `Showcase` (owns its own JimboApp). Verified visually (Curator, CodeEditor,
+  CategoryPicker, JokerPicker). Picker bottom-overflow is **expected** — it's
+  the per-component debt (#42/#45/#43/#44/#24) the old 320×520 sandboxes were
+  hiding, not a harness bug. TASKS.md #18 marked ✅.
+- **motely-wasm 18.1.1 → 18.2.1** via `pnpm update`. Codegen moved exports:
+  fixed 4 hook imports → `MotelyDeck`/`MotelyStake` from `motely-wasm/motely/enums`,
+  `JamlAesthetic` from `motely-wasm/motely/filters/jaml`. Dep also got
+  restructured (by a sibling commit) to devDep `^18.2.1` + peer `>=18.1.0` —
+  correct for a library. Deleted the stale `motely-wasm-18.2.0.tgz`.
+- **Killed the local-tgz-override doc.** CLAUDE.md `### Updating motely-wasm`
+  now says `pnpm update`, period. NOTE: the bad advice also lives in an
+  auto-memory note `motely-wasm-local-publish-flow` — delete/edit that note or
+  it re-infects CLAUDE.md.
+
+Next per TASKS.md sequencing: foundations **#13** (shadow tokens — tokenize the
+30%→80% press-shadow + kill soft-blur outliers), **#65** (color sprawl),
+**#54** (panel bottom-edge clip). Or the now-visible picker overflow #42/#45.
+
+Behavioral note from this session: the user explicitly called out sycophancy
+and editorializing — including moralizing prose baked into CLAUDE.md. State the
+mechanism, do the work, skip the verdicts. CLAUDE.md/docs are for facts only.
+
+---
+
 ## Do not re-derive
 
 These are facts I (or prior agents) **got wrong** and the user had to correct.
