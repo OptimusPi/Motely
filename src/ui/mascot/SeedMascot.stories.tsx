@@ -6,9 +6,6 @@ import { RadialBreadcrumb } from '../radial';
 const meta = {
     title: 'UI/SeedMascot',
     component: SeedMascot,
-    parameters: { jimboHarness: false, 
-        layout: 'centered',
-    },
     tags: ['autodocs'],
 } satisfies Meta<typeof SeedMascot>;
 

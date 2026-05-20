@@ -4,10 +4,6 @@ import { MotelyVersionBadge } from './MotelyVersionBadge';
 const meta = {
   title: 'JAML / MotelyVersionBadge',
   component: MotelyVersionBadge,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof MotelyVersionBadge>;
 
 export default meta;

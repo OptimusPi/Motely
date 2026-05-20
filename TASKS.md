@@ -54,12 +54,12 @@ Captured from a component-by-component Storybook walkthrough with pifreak. Every
 - **#65 Color sprawl.** ~67 inline color values (51 hex + 16 rgba) in TS/TSX, mostly slightly-off dupes of the 33 `--j-` tokens (`#e4b643`≈gold, `#429f79`≈green, `#ff4c40`≈red…). Consolidate to tokens (JimboColorOption JS constants only for R3F/canvas). Remove **teal-grey AND grey as button tones** (teal-grey stays a surface).
 - **#54 Panel bottom-edge clip.** `.j-app` `overflow:hidden` (`:1528`) + `.j-app__scroll > .j-panel{flex:1 1 auto}` (`:1567`) slices the panel's bottom 3D lip (predicted at `:334`). Reserve bottom room ≥ `--j-panel-south-edge-width + --j-surface-shadow-depth`.
 
-### Quick parallel batch (independent files — safe to dispatch together)
-- **#15** Add Roboto Mono to `--j-font-code` (`jimbo.css:88`, one line).
-- **#40** Remove grey line above footer: `.j-footer__bar` `border-top` (`jimbo.css:1256`).
-- **#50** `line-height:1` clips m6x11 glyphs (`.j-text--display :175`, `--label :215`, `--micro :221`, footer `:1266`). Bump to ~1.1–1.2; sweep all `line-height:1`.
-- **#16** Font docs (CLAUDE.md only).
-- Rule encoding into `eslint-rules/jaml-design.js` + CLAUDE.md/AGENTS.md.
+### Quick parallel batch (independent files — safe to dispatch together) — ✅ DONE
+- ✅ **#15** Add Roboto Mono to `--j-font-code` (`jimbo.css:88`, one line).
+- ✅ **#40** Remove grey line above footer: `.j-footer__bar` `border-top` (`jimbo.css:1256`).
+- ✅ **#50** `line-height:1` clips m6x11 glyphs — swept; no bare `line-height:1` remains (min is 1.05).
+- ✅ **#16** Font docs (CLAUDE.md `### Fonts`).
+- ⏳ Rule encoding: 4 rules live (`no-raw-button`/`no-emoji-jsx`/`no-uppercase-text`/`no-bold-style`). More PINNED RULES still uncovered by lint.
 
 ---
 

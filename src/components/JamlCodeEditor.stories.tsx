@@ -9,8 +9,8 @@ function Demo() {
   const [value, setValue] = useState(SAMPLE);
 
   return (
-    <div style={{ width: 300, height: 420 }}>
-      <JimboPanel style={{ height: '100%' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <JimboPanel style={{ flex: 1, minHeight: 0 }}>
         <JamlCodeEditor value={value} onChange={setValue} />
       </JimboPanel>
     </div>
@@ -20,10 +20,6 @@ function Demo() {
 const meta = {
   title: 'JAML / JamlCodeEditor',
   component: JamlCodeEditor,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JamlCodeEditor>;
 
 export default meta;

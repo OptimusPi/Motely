@@ -105,10 +105,6 @@ function JamlyzerDemo() {
 const meta = {
   title: 'JAML / Jamlyzer',
   component: Jamlyzer,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof Jamlyzer>;
 
 export default meta;

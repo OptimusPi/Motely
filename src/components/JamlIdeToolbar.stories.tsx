@@ -7,7 +7,7 @@ function Demo() {
   const [mode, setMode] = useState<JamlIdeMode>('code');
 
   return (
-    <div style={{ width: 300 }}>
+    <div style={{ width: '100%' }}>
       <JimboPanel>
         <JamlIdeToolbar
           mode={mode}
@@ -26,10 +26,6 @@ function Demo() {
 const meta = {
   title: 'JAML / JamlIdeToolbar',
   component: JamlIdeToolbar,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JamlIdeToolbar>;
 
 export default meta;

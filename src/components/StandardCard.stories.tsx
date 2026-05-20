@@ -22,10 +22,6 @@ function Showcase() {
 const meta = {
   title: 'JAML / StandardCard',
   component: StandardCard,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof StandardCard>;
 
 export default meta;

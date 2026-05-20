@@ -6,9 +6,6 @@ import type { JamlAestheticOption } from './JamlAestheticSelector';
 const meta = {
   title: 'JAML / JamlAestheticSelector',
   component: JamlAestheticSelector,
-  parameters: { jimboHarness: false, 
-    layout: 'centered',
-  },
   argTypes: {
     onChange: { action: 'onChange' },
   },

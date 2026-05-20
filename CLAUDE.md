@@ -75,6 +75,15 @@ When you need motely-wasm changes that aren't published yet, follow the flow in 
 
 For DOM components, always use CSS custom properties (`--j-red`, `--j-darkest`, etc.) defined in `jimbo.css`. Use the JS constants in `src/ui/tokens.ts` (`JimboColorOption`) only in contexts that cannot use CSS — R3F/Three.js, canvas drawing, inline SVG fills, or imperative animation APIs. Do not use the JS constants in JSX styles.
 
+### Fonts
+
+Two font tokens, both defined in `jimbo.css` (`:root`):
+
+- **`--j-font: 'm6x11plus', 'm6x11', monospace`** — the UI font for everything player-facing (the Balatro pixel font). All `.j-text--*` size classes and every `Jimbo*` component render in this. This is the default; use it for all UI text.
+- **`--j-font-code: 'JetBrains Mono', 'Roboto Mono', monospace`** — the coding font, used only by `JamlCodeEditor` and `.j-code-block` for JAML source. The fallback chain is OS-native so code still reads as code if the Google Fonts stylesheet fails to load.
+
+Never hardcode a `font-family`; reference one of these two tokens. `m6x11`/`m6x11plus` are bitmap pixel fonts — keep `line-height` ≥ ~1.1 (never `1`), or ascenders/descenders clip.
+
 ## Design rules
 
 Source of truth is `AGENTS.md`. Summary of the hard constraints for any UI work in this repo:

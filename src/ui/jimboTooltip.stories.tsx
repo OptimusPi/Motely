@@ -6,13 +6,6 @@ import { JimboTooltip } from './jimboTooltip';
 const meta = {
   title: 'JimboUI / JimboTooltip',
   component: JimboTooltip,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
-  decorators: [
-    (Story) => <div style={{ width: 320, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Story /></div>,
-  ],
 } satisfies Meta<typeof JimboTooltip>;
 
 export default meta;

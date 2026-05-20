@@ -21,13 +21,14 @@ const preview: Preview = {
   },
   decorators: [
     (Story, { parameters }) => {
-      const { jimboHarness } = parameters;
+      const { jimboHarness, jimboBackground } = parameters;
       const content = <Story />;
       const useHarness = jimboHarness !== false;
+      const showBackground = jimboBackground !== false;
 
       return (
         <>
-          <JimboBackground />
+          {showBackground ? <JimboBackground /> : null}
           {useHarness ? (
             <JimboApp fluid={jimboHarness === 'fluid'}>
               {content}

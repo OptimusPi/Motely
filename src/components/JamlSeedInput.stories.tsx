@@ -18,9 +18,6 @@ function ControlledSeedSpinner(props: React.ComponentProps<typeof JamlSeedSpinne
 const meta = {
   title: 'JAML / JamlSeedInput',
   component: JamlSeedInput,
-  parameters: { jimboHarness: false, 
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JamlSeedInput>;
 
 export default meta;

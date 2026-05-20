@@ -11,10 +11,6 @@ function SpinnerDemo(props: React.ComponentProps<typeof JamlSeedSpinner>) {
 const meta = {
   title: 'JAML / JamlSeedSpinner',
   component: JamlSeedSpinner,
-  parameters: {
-    jimboHarness: false,
-    layout: 'centered',
-  },
 } satisfies Meta<typeof JamlSeedSpinner>;
 
 export default meta;
