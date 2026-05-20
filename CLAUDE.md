@@ -35,7 +35,7 @@ Version source of truth: `<MotelyVersion>` in `Directory.Packages.props`. Bootsh
 
 Pre-publish, after `dotnet publish Motely.Wasm`:
 
-1. **`node Motely.Wasm/motely.test.mjs`** — must report `RESULT: PASS`. Node suite covering the documented `Motely.*` WASM surface (named test functions, arrange/act/assert, runner at bottom). Source of truth for "the package boots and the public API hasn't regressed." Add tests here for any WASM behaviour JS consumers depend on that `Motely.Tests` already covers in C#.
+1. **`node Motely.Wasm/motely.test.mjs`** — must report `RESULT: PASS`. Node `node:test` suite under `Motely.Wasm/tests/` (single WASM boot via `tests/harness.mjs`, `--test-concurrency=1`). Source of truth for "the package boots and the public API hasn't regressed." Add `*.test.mjs` files there for WASM behaviours JS consumers depend on.
 2. **Eyeball `motely-wasm/package.json` `exports`.** Must be `{ ".": "./dist/index.mjs", "./*": "./dist/generated/*.g.mjs" }`. Known-broken historic shapes: `17.3.1` shipped `"./../motely-wasm/index.mjs"`, `17.3.2` shipped `"././index.mjs"`. Both make Node refuse `import`. Bail before publishing if you see either.
 3. **`npm publish --dry-run`** from `motely-wasm/`. Confirm file count + tarball size are in line with prior releases (~124 files / ~4.5 MB packed / ~9.9 MB unpacked at 17.8.x).
 
@@ -107,7 +107,7 @@ motely-wasm builds against Bootsharp **0.8.0-alpha.278** (`Directory.Packages.pr
 
 - **Empty `{}` in JS = Bootsharp marshaling, not engine logic.** When a Motely method returns/emits `{}` instead of populated data, the .NET side ran fine — the generated JS bindings dropped fields or serialized to empty silently. Tests that only check "didn't throw" will pass; assert shape (`assert("boss" in seed.analysis.antes[0])`, `assertArray(r.tallies)`) to catch this.
 - **Upstream-fix path is real.** The user sponsors Elringus (Bootsharp author) at the $100 tier. When an issue has the shape of a Bootsharp bug, say so — fix upstream, not a local workaround forever. Don't propose hacky workarounds without flagging this option.
-- **No pin comments in tests.** Comments explain behavior or failure mode only. Forbidden: `Pins commit`, `Mirrors xUnit Class.Method`, `Regression for #N`, `Same probe seeds as xUnit …`. Allowed: `// long must be BigInt — number means binding regressed.` `motely.test.mjs` must cover WASM behaviours JS consumers depend on (publish step 1); add tests and behavior comments, not lineage pins.
+- **No pin comments in tests.** Comments explain behavior or failure mode only. Forbidden: `Pins commit`, `Mirrors xUnit Class.Method`, `Regression for #N`, `Same probe seeds as xUnit …`. Allowed: `// long must be BigInt — number means binding regressed.` `Motely.Wasm/tests/*.test.mjs` must cover WASM behaviours JS consumers depend on (publish step 1); add tests and behavior comments, not lineage pins.
 
 ## Regression fixtures
 
