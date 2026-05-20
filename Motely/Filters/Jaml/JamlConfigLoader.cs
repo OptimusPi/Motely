@@ -283,15 +283,23 @@ public static partial class JamlConfigLoader
         return message;
     }
 
-    private static string DescribeYamlTarget(string targetType) =>
-        targetType switch
+    private static string DescribeYamlTarget(string targetType)
+    {
+        var shortName = targetType.Contains('.')
+            ? targetType[(targetType.LastIndexOf('.') + 1)..]
+            : targetType;
+
+        return shortName switch
         {
-            "Motely.Filters.JamlRootDocument" => "the top-level JAML document",
-            "Motely.Filters.JamlClauseUnion" => "a clause",
-            "Motely.Filters.JamlSources" => "a clause's sources block",
-            "Motely.Filters.JamlDefaults" => "the defaults block",
-            _ => $"{targetType}",
+            "JamlRootDocument" => "the top-level JAML document",
+            "JamlClauseUnion" => "a clause",
+            "JamlSources" => "a clause's sources block",
+            "JamlDefaults" => "the defaults block",
+            "StandardCardValue" => "a standardCard value",
+            "StandardCardConfig" => "a standardCard mapping",
+            _ => targetType,
         };
+    }
 
     // ── Clause list population — adds directly to typed lists or logic clauses ──
 
@@ -697,6 +705,12 @@ public static partial class JamlConfigLoader
                     c.Voucher is { } v
                         ? [v]
                         : c.Vouchers?.ToArray() ?? [],
+                Rolls = ResolveMapRolls(
+                    c.Rolls,
+                    [0],
+                    maxRoll: MotelyGlobals.MaxMapVoucherRollIndex,
+                    "voucher"
+                ),
             },
             MotelyFilterItemType.TarotCard => new TarotCardClause
             {
@@ -763,6 +777,12 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 Bosses = c.Boss is { } b ? [b] : [],
+                Rolls = ResolveMapRolls(
+                    c.Rolls,
+                    [0],
+                    maxRoll: MotelyGlobals.MaxMapBossRollIndex,
+                    "boss"
+                ),
             },
             MotelyFilterItemType.SmallBlindTag => CreateTagClause(
                 label,
@@ -770,7 +790,12 @@ public static partial class JamlConfigLoader
                 antes,
                 min,
                 max,
-                ResolveTagDraws(c, genericTagKey: c.Tag != null || c.Tags != null, blindSpecificDraws: [0]),
+                ResolveMapRolls(
+                    c.Rolls,
+                    c.Tag != null || c.Tags != null ? [0, 1] : [0],
+                    maxRoll: MotelyGlobals.MaxMapTagRollIndex,
+                    "tag"
+                ),
                 c.SmallBlindTags,
                 c.Tags,
                 c.SmallBlindTag,
@@ -782,7 +807,7 @@ public static partial class JamlConfigLoader
                 antes,
                 min,
                 max,
-                ResolveTagDraws(c, genericTagKey: false, blindSpecificDraws: [1]),
+                ResolveMapRolls(c.Rolls, [1], maxRoll: MotelyGlobals.MaxMapTagRollIndex, "tag"),
                 c.BigBlindTags,
                 singlePrimary: c.BigBlindTag
             ),
@@ -1320,7 +1345,7 @@ public static partial class JamlConfigLoader
         int[] antes,
         int min,
         int? max,
-        int[] tagDraws,
+        int[] rolls,
         List<MotelyTag>? primary,
         List<MotelyTag>? secondary = null,
         MotelyTag? singlePrimary = null,
@@ -1345,36 +1370,27 @@ public static partial class JamlConfigLoader
             Min = min,
             Max = max,
             Tags = tags,
-            TagDraws = tagDraws,
+            Rolls = rolls,
         };
     }
 
-    /// <summary>
-    /// <c>tag</c> / <c>tags</c> default to draws [0,1] (either blind). Blind-specific keys default to one draw unless <c>rolls</c> overrides.
-    /// </summary>
-    private static int[] ResolveTagDraws(
-        JamlClauseUnion c,
-        bool genericTagKey,
-        int[] blindSpecificDraws
-    )
+    /// <summary>Map-feature stream indices (tag / voucher / boss). Not used for shop-item or event clauses.</summary>
+    private static int[] ResolveMapRolls(int[]? rolls, int[] defaults, int maxRoll, string featureName)
     {
-        if (c.Rolls is { Length: > 0 })
-        {
-            foreach (var draw in c.Rolls)
-            {
-                if (draw is not (0 or 1))
-                {
-                    throw new InvalidOperationException(
-                        $"Tag clause rolls index {draw} is not supported yet (only 0 = small-blind offer, 1 = big-blind offer). "
-                            + "Extra draws on ante rewind are not modeled in search yet."
-                    );
-                }
-            }
+        if (rolls is not { Length: > 0 })
+            return defaults;
 
-            return c.Rolls;
+        foreach (var roll in rolls)
+        {
+            if (roll < 0 || roll > maxRoll)
+            {
+                throw new InvalidOperationException(
+                    $"{featureName} clause rolls index {roll} is not supported (valid 0..{maxRoll} for current engine)."
+                );
+            }
         }
 
-        return genericTagKey ? [0, 1] : blindSpecificDraws;
+        return rolls;
     }
 
     private static MotelyTag[] CoalesceTagList(

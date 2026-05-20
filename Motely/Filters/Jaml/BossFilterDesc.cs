@@ -7,8 +7,15 @@ public sealed class BossClause : JamlClause
 {
     public required MotelyBossBlind[] Bosses { get; init; }
 
+    /// <summary>
+    /// Boss assignment index for an ante. Roll 0 is the forward-pass boss; 1+ need rewind
+    /// simulation (accepted in JAML, matched as roll 0 until that lands).
+    /// </summary>
+    public required int[] Rolls { get; init; }
+
     public override int EstimatedCost => 2 + MaxAnte;
-    public override string Describe() => $"boss {string.Join(", ", System.Array.ConvertAll(Bosses, static b => b.ToString()))}";
+    public override string Describe() =>
+        $"boss {string.Join(", ", System.Array.ConvertAll(Bosses, static b => b.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
     public override IMotelySeedFilterDesc CreateDesc() => new BossFilterDesc(this);
 }
 

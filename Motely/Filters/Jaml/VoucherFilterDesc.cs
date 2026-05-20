@@ -9,8 +9,15 @@ public sealed class VoucherClause : JamlClause
 {
     public required MotelyVoucher[] Vouchers { get; init; }
 
+    /// <summary>
+    /// Voucher-stream indices per ante: 0 = ante award, 1+ = further draws on that ante's
+    /// voucher stream (Hieroglyph bonus, voucher-tag shop extras, etc.).
+    /// </summary>
+    public required int[] Rolls { get; init; }
+
     public override int EstimatedCost => 4 + MaxAnte;
-    public override string Describe() => $"voucher {string.Join(", ", System.Array.ConvertAll(Vouchers, static v => v.ToString()))}";
+    public override string Describe() =>
+        $"voucher {string.Join(", ", System.Array.ConvertAll(Vouchers, static v => v.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
     public override IMotelySeedFilterDesc CreateDesc() => new VoucherFilterDesc(this);
 }
 
@@ -70,19 +77,14 @@ public struct VoucherFilterDesc(VoucherClause clause)
                 if (!isTarget)
                     continue;
 
-                matchCounts = AddVoucherMatches(matchCounts, vouchers, clause);
-
-                var hieroglyphMask = new VectorMask(
-                    VectorizedComparisonToMask(VectorEnum256.Equals(vouchers, MotelyVoucher.Hieroglyph))
+                matchCounts = AccumulateVoucherRolls(
+                    ref ctx,
+                    ante,
+                    ref voucherState,
+                    vouchers,
+                    clause,
+                    matchCounts
                 );
-
-                if (!hieroglyphMask.IsAllFalse())
-                {
-                    var voucherStream = ctx.CreateVoucherStream(ante);
-                    var bonusVouchers = ctx.GetNextVoucher(ref voucherStream, voucherState);
-                    matchCounts = AddVoucherMatches(matchCounts, bonusVouchers, clause, hieroglyphMask);
-                    voucherState.ActivateVoucher(bonusVouchers, hieroglyphMask);
-                }
             }
 
             var comparison = Vector256.GreaterThan(
@@ -90,6 +92,41 @@ public struct VoucherFilterDesc(VoucherClause clause)
                 Vector256.Subtract(Vector256.Create(clause.Min), Vector256.Create(1))
             );
             return new VectorMask(VectorizedComparisonToMask(comparison));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static Vector256<int> AccumulateVoucherRolls(
+            ref MotelyVectorSearchContext ctx,
+            int ante,
+            ref MotelyVectorRunState voucherState,
+            VectorEnum256<MotelyVoucher> anteVouchers,
+            VoucherClause clause,
+            Vector256<int> matchCounts
+        )
+        {
+            int maxRoll = MapFeatureRolls.MaxRollIndex(clause.Rolls);
+            VectorEnum256<MotelyVoucher> streamDraw1 = default;
+            VectorEnum256<MotelyVoucher> streamDraw2 = default;
+
+            if (maxRoll >= 1)
+            {
+                var voucherStream = ctx.CreateVoucherStream(ante);
+                streamDraw1 = ctx.GetNextVoucher(ref voucherStream, voucherState);
+                if (maxRoll >= 2)
+                    streamDraw2 = ctx.GetNextVoucher(ref voucherStream, voucherState);
+            }
+
+            foreach (var roll in clause.Rolls)
+            {
+                if (roll == 0)
+                    matchCounts = AddVoucherMatches(matchCounts, anteVouchers, clause);
+                else if (roll == 1)
+                    matchCounts = AddVoucherMatches(matchCounts, streamDraw1, clause);
+                else if (roll == 2)
+                    matchCounts = AddVoucherMatches(matchCounts, streamDraw2, clause);
+            }
+
+            return matchCounts;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -193,30 +230,14 @@ public struct MultiVoucherFilterDesc(VoucherClause[] clauses)
                         if (clause.Antes[ai] == ante) { isTarget = true; break; }
                     if (!isTarget) continue;
 
-                    matchCounts[ci] = VoucherFilterDesc.VoucherFilter.AddVoucherMatches(matchCounts[ci], vouchers, clause);
-                }
-
-                // Hieroglyph bonus voucher — computed once per ante, shared across clauses
-                var hieroglyphMask = new VectorMask(
-                    VectorizedComparisonToMask(VectorEnum256.Equals(vouchers, MotelyVoucher.Hieroglyph))
-                );
-
-                if (!hieroglyphMask.IsAllFalse())
-                {
-                    var voucherStream = ctx.CreateVoucherStream(ante);
-                    var bonusVouchers = ctx.GetNextVoucher(ref voucherStream, voucherState);
-                    voucherState.ActivateVoucher(bonusVouchers, hieroglyphMask);
-
-                    for (int ci = 0; ci < clauses.Length; ci++)
-                    {
-                        var clause = clauses[ci];
-                        bool isTarget = false;
-                        for (int ai = 0; ai < clause.Antes.Length; ai++)
-                            if (clause.Antes[ai] == ante) { isTarget = true; break; }
-                        if (!isTarget) continue;
-
-                        matchCounts[ci] = VoucherFilterDesc.VoucherFilter.AddVoucherMatches(matchCounts[ci], bonusVouchers, clause, hieroglyphMask);
-                    }
+                    matchCounts[ci] = VoucherFilterDesc.VoucherFilter.AccumulateVoucherRolls(
+                        ref ctx,
+                        ante,
+                        ref voucherState,
+                        vouchers,
+                        clause,
+                        matchCounts[ci]
+                    );
                 }
             }
 

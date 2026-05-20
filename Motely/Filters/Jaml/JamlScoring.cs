@@ -571,30 +571,34 @@ public static class JamlScoring
         var localState = new MotelyRunState();
         int count = 0;
         int maxAnte = GetMaxAnte(clause);
+        int maxVoucherRoll = MapFeatureRolls.MaxRollIndex(clause.Rolls);
+        Span<MotelyVoucher> streamDraws = stackalloc MotelyVoucher[maxVoucherRoll + 1];
 
         for (int ante = 1; ante <= maxAnte; ante++)
         {
             var voucher = ctx.GetAnteFirstVoucher(ante, localState);
             if (ArrayContains(clause.Antes, ante))
             {
-                for (int i = 0; i < clause.Vouchers.Length; i++)
-                    if (voucher == clause.Vouchers[i])
-                        count++;
+                int maxRoll = maxVoucherRoll;
+                if (maxRoll >= 1)
+                {
+                    var voucherStream = ctx.CreateVoucherStream(ante);
+                    for (int i = 1; i <= maxRoll; i++)
+                        streamDraws[i] = ctx.GetNextVoucher(ref voucherStream, localState);
+                }
+
+                foreach (var roll in clause.Rolls)
+                {
+                    var rolled = roll == 0 ? voucher : streamDraws[roll];
+                    for (int i = 0; i < clause.Vouchers.Length; i++)
+                    {
+                        if (rolled == clause.Vouchers[i])
+                            count++;
+                    }
+                }
             }
 
             localState.ActivateVoucher(voucher);
-            if (voucher == MotelyVoucher.Hieroglyph)
-            {
-                var voucherStream = ctx.CreateVoucherStream(ante);
-                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, localState);
-                if (ArrayContains(clause.Antes, ante))
-                {
-                    for (int i = 0; i < clause.Vouchers.Length; i++)
-                        if (bonusVoucher == clause.Vouchers[i])
-                            count++;
-                }
-                localState.ActivateVoucher(bonusVoucher);
-            }
         }
 
         return count;
@@ -603,14 +607,18 @@ public static class JamlScoring
     private static int CountTagOccurrences(ref MotelySingleSearchContext ctx, TagClause clause)
     {
         int count = 0;
+        int maxDraw = MapFeatureRolls.MaxRollIndex(clause.Rolls);
+        Span<MotelyTag> draws = stackalloc MotelyTag[maxDraw + 1];
+
         foreach (int ante in clause.Antes)
         {
             var tagStream = ctx.CreateTagStream(ante);
-            var draw0 = ctx.GetNextTag(ref tagStream);
-            var draw1 = ctx.GetNextTag(ref tagStream);
-            foreach (var drawIndex in clause.TagDraws)
+            for (int i = 0; i <= maxDraw; i++)
+                draws[i] = ctx.GetNextTag(ref tagStream);
+
+            foreach (var drawIndex in clause.Rolls)
             {
-                var rolled = drawIndex == 0 ? draw0 : draw1;
+                var rolled = draws[drawIndex];
                 for (int i = 0; i < clause.Tags.Length; i++)
                 {
                     if (rolled == clause.Tags[i])
