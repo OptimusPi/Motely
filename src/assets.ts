@@ -9,7 +9,7 @@ import vouchersUrl from "../assets/Vouchers.png";
 import stickersUrl from "../assets/stickers.png";
 import tagsUrl from "../assets/tags.png";
 import stakesUrl from "../assets/balatro-stake-chips.png";
-import fontUrl from "../assets/fonts/m6x11plusplus.otf";
+import fontUrl from "../assets/fonts/m6x11plus.ttf";
 
 export const JAML_ASSET_FILES = {
   deck: "8BitDeck.png",
@@ -23,7 +23,7 @@ export const JAML_ASSET_FILES = {
   stickers: "stickers.png",
   tags: "tags.png",
   stakes: "balatro-stake-chips.png",
-  font: "fonts/m6x11plusplus.otf",
+  font: "fonts/m6x11plus.ttf",
 } as const;
 
 export type JamlAssetKey = keyof typeof JAML_ASSET_FILES;

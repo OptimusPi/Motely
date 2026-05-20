@@ -1,11 +1,26 @@
 /*
- * m6x11plus — Balatro's pixel font.
- * Relative URL resolves via the package's `./assets/*` export so consumer
- * bundlers (Vite, webpack, etc.) can pick up the OTF from node_modules.
- * No external CDN — keeps singlefile/iframe consumers CSP-safe.
+ * Balatro pixel fonts by Daniel Linssen — https://managore.itch.io/
+ * Free to use with attribution. Files in assets/fonts/ (see assets/fonts/README.md).
+ *
+ * Size grids (author): m6x11 → 16, 32, 48… · m6x11plus → 18, 36, 54…
+ * Import this file (or jaml-ui/index, which pulls jimbo.css → fonts.css).
  */
 @font-face {
+  font-family: 'm6x11';
+  src:
+    local('m6x11'),
+    url('./assets/fonts/m6x11.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'm6x11plus';
-  src: local('m6x11plus'), local('m6x11plusplus'), url('./assets/fonts/m6x11plusplus.otf') format('opentype');
+  src:
+    local('m6x11plus'),
+    url('./assets/fonts/m6x11plus.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
   font-display: swap;
 }

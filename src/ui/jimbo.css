@@ -4,21 +4,7 @@
    Eyedropped from actual game shader output — not Lua hex values.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@font-face {
-  font-family: 'm6x11plus';
-  src: url('/fonts/m6x11plus.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'm6x11';
-  src: url('/fonts/m6x11plus.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+@import '../../fonts.css';
 
 /* Global Scrollbar Hide */
 * {
