@@ -3,6 +3,7 @@
 import React from 'react'
 import { StandardCard } from './StandardCard.js'
 import type { CardRank, CardSuit } from './cardEnums.js'
+import { JimboColorOption } from '../ui/tokens.js'
 import { JimboText } from '../ui/jimboText.js'
 
 const RANK_MAP: Record<string, CardRank> = {
@@ -82,11 +83,10 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
         flexDirection: 'column',
         alignItems: 'center',
         gap: 4,
-        minWidth: FAN_WIDTH,
         ...style,
       }}
     >
-      <div style={{ position: 'relative', width: FAN_WIDTH, height: cardsHeight }}>
+      <div style={{ position: 'relative', width: '100%', height: cardsHeight }}>
         {n > 0 ? (
           Array.from({ length: n }).map((_, i) => {
             const centerIndex = (n - 1) / 2
@@ -120,19 +120,28 @@ export function CardFan({ count = 0, cards, className = '', style, label, showLa
                   rank={parsed.rank}
                   suit={parsed.suit}
                   size={cardW}
-                  style={{ filter: 'drop-shadow(var(--j-card-shadow))' }}
+                  style={{ filter: `drop-shadow(0 2px 3px ${JimboColorOption.BLACK}66)` }}
                 />
               </div>
             )
           })
         ) : (
-          <div className="j-flex j-items-center j-justify-center" style={{ width: '100%', height: '100%' }}>
-            <JimboText size="xs" tone="white">Deck Empty</JimboText>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            background: `${JimboColorOption.WHITE}0d`,
+            border: `1px solid ${JimboColorOption.WHITE}0d`,
+            borderRadius: 8,
+          }}>
+            <JimboText size="xs" tone="grey">Deck Empty</JimboText>
           </div>
         )}
       </div>
 
-      {label && showLabel ? <JimboText size="xs" tone="white">{label}</JimboText> : null}
+      {label && showLabel ? <JimboText size="xs" tone="grey">{label}</JimboText> : null}
     </div>
   )
 }

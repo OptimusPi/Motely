@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { JimboAppScroll, JimboAppFooter } from './jimboApp';
 import { JimboButton, JimboPanel, JimboInnerPanel, JimboModal } from './panel';
 import { JimboText } from './jimboText';
-import { JimboTabs } from './jimboTabs';
+import { JimboTabs, JimboVerticalTabs } from './jimboTabs';
 import { JimboToggleList } from './JimboToggleList';
 import { JimboFlankNav } from './jimboFlankNav';
 import { JimboBadge } from './JimboBadge';
 import { JimboInfoCard, JimboInfoCardBody, JimboInfoCardTitle, JimboInfoCardSub, JimboInfoCardAside } from './jimboInfoCard';
+import { JimboStatGrid } from './jimboStatGrid';
 import { JimboSectionHeader } from './jimboSectionHeader';
+import { JimboInset } from './jimboInset';
 import { JimboWordmark } from './jimboWordmark';
 import { JimboCopyRow } from './jimboCopyRow';
 import { JimboSelect } from './JimboSelect';
@@ -17,12 +19,7 @@ import { JimboStepper } from './JimboStepper';
 import { JimboSpinner } from './JimboSpinner';
 import { JimboSlider } from './JimboSlider';
 import { JimboDualChip } from './JimboDualChip';
-import { JimboTextInput } from './JimboTextInput';
-import { JimboValueBadge } from './JimboValueBadge';
-import { JimboCopyButton } from './JimboCopyButton';
-import { JimboSprite } from './sprites';
-import { DeckSprite } from '../components/DeckSprite';
-import { FiSearch, FiSettings, FiCopy, FiX, FiCheck } from 'react-icons/fi';
+import { FiSearch, FiSettings, FiCopy, FiX } from 'react-icons/fi';
 
 const meta = {
   title: 'JimboUI/Components',
@@ -191,6 +188,32 @@ export const Tabs: StoryObj = {
   },
 };
 
+export const VerticalTabs: StoryObj = {
+  render: () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [tab, setTab] = useState('a');
+    return (
+      <JimboAppScroll>
+        <JimboPanel>
+          <div className="j-flex j-gap-md">
+            <JimboVerticalTabs
+              tabs={[
+                { id: 'a', label: 'One' },
+                { id: 'b', label: 'Two' },
+                { id: 'c', label: 'Three' },
+              ]}
+              activeTab={tab}
+              onTabChange={setTab}
+            />
+            <JimboInnerPanel>
+              <JimboText size="sm" tone="grey">Active: {tab}</JimboText>
+            </JimboInnerPanel>
+          </div>
+        </JimboPanel>
+      </JimboAppScroll>
+    );
+  },
+};
 
 export const ToggleList: StoryObj = {
   render: () => {
@@ -215,16 +238,7 @@ export const ToggleList: StoryObj = {
 
 export const FlankNav: StoryObj = {
   render: () => {
-    // Showcase: arrows flank a rotating gallery of different components,
-    // demonstrating the flank-nav as a universal "browse one thing at a
-    // time" affordance (jokers, tarots, seeds, decks — anything).
-    const slides = [
-      { label: 'Joker', el: <JimboSprite name="Joker" sheet="Jokers" width={72} /> },
-      { label: 'Blueprint', el: <JimboSprite name="Blueprint" sheet="Jokers" width={72} /> },
-      { label: 'The Fool', el: <JimboSprite name="The Fool" sheet="Tarots" width={72} /> },
-      { label: 'Red Deck', el: <DeckSprite deck="Red" width={72} /> },
-      { label: 'Seed: WEEJOKER', el: <JimboText size="display" tone="gold">WEEJOKER</JimboText> },
-    ];
+    const seeds = ['ABCD1234', 'WEEJOKER', 'PERKEO99', 'BLUEPRINT'];
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const [i, setI] = useState(0);
     return (
@@ -232,18 +246,13 @@ export const FlankNav: StoryObj = {
         <JimboPanel>
           <JimboFlankNav
             canPrev={i > 0}
-            canNext={i < slides.length - 1}
+            canNext={i < seeds.length - 1}
             onPrev={() => setI(p => p - 1)}
             onNext={() => setI(p => p + 1)}
           >
-            <div className="j-flex-col j-items-center j-gap-sm">
-              {slides[i].el}
-              <JimboText size="sm" tone="white">{slides[i].label}</JimboText>
-            </div>
+            <JimboText size="display" tone="gold">{seeds[i]}</JimboText>
           </JimboFlankNav>
-          <JimboText size="xs" tone="white" className="j-text-center">
-            {i + 1} / {slides.length}
-          </JimboText>
+          <JimboText size="xs" tone="grey" className="j-text-center">{i + 1} / {seeds.length}</JimboText>
         </JimboPanel>
       </JimboAppScroll>
     );
@@ -260,7 +269,7 @@ export const InfoCards: StoryObj = {
             <JimboInfoCardTitle><JimboText size="sm" tone="white">Wee Joker</JimboText></JimboInfoCardTitle>
             <JimboInfoCardSub><JimboText size="xs" tone="grey">Ante 1</JimboText></JimboInfoCardSub>
           </JimboInfoCardBody>
-          <JimboInfoCardAside><JimboBadge tone="blue"><FiCheck /></JimboBadge></JimboInfoCardAside>
+          <JimboInfoCardAside><JimboBadge tone="blue">✓</JimboBadge></JimboInfoCardAside>
         </JimboInfoCard>
         <JimboSectionHeader label="Should" tone="red" />
         <JimboInfoCard tone="red">
@@ -281,6 +290,25 @@ export const InfoCards: StoryObj = {
   ),
 };
 
+export const StatGridAndInset: StoryObj = {
+  render: () => (
+    <JimboAppScroll>
+      <JimboPanel>
+        <JimboWordmark title="WEEJOKER" subtitle="Erratic Deck · Gold Stake" />
+        <JimboStatGrid items={[
+          { value: '847', label: 'Seeds' },
+          { value: '0.8%', label: 'Match Rate' },
+          { value: '1.2s', label: 'Avg Time' },
+        ]} />
+        <JimboInset>
+          <JimboText size="xs" tone="grey">Searching ante 1–4...</JimboText>
+          <JimboText size="xs" tone="green">Found: ABCD1234</JimboText>
+          <JimboText size="xs" tone="green">Found: WEEJOKER</JimboText>
+        </JimboInset>
+      </JimboPanel>
+    </JimboAppScroll>
+  ),
+};
 
 export const CopyRowAndSelect: StoryObj = {
   render: () => {
@@ -422,85 +450,17 @@ export const IconButtons: StoryObj = {
   },
 };
 
-export const TextInput: StoryObj = {
-  render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [val, setVal] = useState('');
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [invalid, setInvalid] = useState(false);
-    return (
-      <JimboAppScroll>
-        <JimboPanel>
-          <JimboSectionHeader label="Default" tone="blue" />
-          <JimboTextInput
-            placeholder="Enter seed…"
-            value={val}
-            onChange={e => setVal(e.currentTarget.value)}
-          />
-          <JimboSectionHeader label="Invalid state" tone="red" />
-          <JimboTextInput
-            placeholder="Bad value"
-            invalid={invalid}
-            onFocus={() => setInvalid(true)}
-            onBlur={() => setInvalid(false)}
-          />
-          <JimboText size="xs" tone="white">Focus the field above to see invalid styling.</JimboText>
-          <JimboSectionHeader label="Disabled" tone="orange" />
-          <JimboTextInput placeholder="Read-only" disabled />
-        </JimboPanel>
-      </JimboAppScroll>
-    );
-  },
-};
-
-export const ValueBadge: StoryObj = {
-  render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [chips, setChips] = useState(120);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [mult, setMult] = useState(8);
-    return (
-      <JimboAppScroll>
-        <JimboPanel>
-          <JimboSectionHeader label="Click to edit inline" tone="blue" />
-          <div className="j-flex j-gap-sm j-items-center">
-            <JimboText size="sm" tone="white">Chips</JimboText>
-            <JimboValueBadge value={chips} onChange={setChips} min={0} max={9999} />
-            <JimboText size="sm" tone="white">Mult</JimboText>
-            <JimboValueBadge value={mult} onChange={setMult} min={1} max={999} />
-          </div>
-          <JimboSectionHeader label="With unit suffix" tone="gold" />
-          <JimboValueBadge value={60} onChange={() => undefined} unit="s" min={1} max={300} />
-          <JimboSectionHeader label="Read-only" tone="orange" />
-          <JimboValueBadge value={42} readOnly />
-        </JimboPanel>
-      </JimboAppScroll>
-    );
-  },
-};
-
-
-export const CopyButton: StoryObj = {
-  render: () => (
-    <JimboAppScroll>
-      <JimboPanel>
-        <JimboText size="sm" tone="grey">Default (red, sm)</JimboText>
-        <JimboCopyButton value="DEADBEEF" />
-        <JimboText size="sm" tone="grey">Extra small</JimboText>
-        <JimboCopyButton value="ABC123" size="xs" />
-        <JimboText size="sm" tone="grey">Medium</JimboText>
-        <JimboCopyButton value="FULLWIDTH" size="md" />
-      </JimboPanel>
-    </JimboAppScroll>
-  ),
-};
-
 export const AppShell: StoryObj = {
   render: () => (
     <>
       <JimboAppScroll>
         <JimboPanel>
           <JimboWordmark title="WEEJOKER" subtitle="Red Deck · White Stake" />
+          <JimboStatGrid items={[
+            { value: '4', label: 'Antes' },
+            { value: '12', label: 'Jokers' },
+            { value: '3', label: 'Specs' },
+          ]} />
           <JimboInnerPanel>
             <JimboText size="xs" tone="grey">Ante 1: Wee Joker, Blueprint</JimboText>
             <JimboText size="xs" tone="grey">Ante 2: Brainstorm</JimboText>
