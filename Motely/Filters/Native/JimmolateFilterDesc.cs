@@ -2,35 +2,26 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters.Native;
 
-public delegate bool JimmolateSeedPredicate(ref MotelySingleSearchContext searchContext);
-
 /// <summary>
-/// Routes every surviving lane to a host-supplied predicate. The predicate
-/// can inspect the full single-seed context and returns whether the seed matches.
-/// No SIMD pre-filter — pair with an upstream JAML/native filter when narrowing helps.
+/// Additional filter that runs a <see cref="MotelyIndividualSeedSearcher"/> on each lane
+/// (same hook as PerkeoObservatory's <c>SearchIndividualSeeds</c> block). Pair with JAML/SIMD
+/// filters upstream when you need narrowing first.
 /// </summary>
-public readonly struct JimmolateFilterDesc
+public readonly struct JimmolateFilterDesc(MotelyIndividualSeedSearcher searcher)
     : IMotelySeedFilterDesc<JimmolateFilterDesc.JimmolateFilter>
 {
-    private readonly JimmolateSeedPredicate _contextPredicate;
+    private readonly MotelyIndividualSeedSearcher _searcher =
+        searcher ?? throw new ArgumentNullException(nameof(searcher));
 
-    public JimmolateFilterDesc(JimmolateSeedPredicate predicate)
+    public readonly JimmolateFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
+        new(_searcher);
+
+    public readonly struct JimmolateFilter(MotelyIndividualSeedSearcher searcher) : IMotelySeedFilter
     {
-        _contextPredicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
-    }
-
-    public readonly JimmolateFilter CreateFilter(ref MotelyFilterCreationContext ctx)
-        => new JimmolateFilter(_contextPredicate);
-
-    public readonly struct JimmolateFilter(JimmolateSeedPredicate contextPredicate) : IMotelySeedFilter
-    {
-        private readonly JimmolateSeedPredicate _contextPredicate = contextPredicate;
+        private readonly MotelyIndividualSeedSearcher _searcher = searcher;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
-            => ctx.SearchIndividualSeeds(MatchesSeedContext);
-
-        private readonly bool MatchesSeedContext(ref MotelySingleSearchContext searchContext)
-            => _contextPredicate(ref searchContext);
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx) =>
+            ctx.SearchIndividualSeeds(_searcher);
     }
 }

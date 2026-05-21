@@ -8,21 +8,31 @@ using Motely.Filters;
 using Motely.Filters.Native;
 using System.Text;
 
-[assembly: Preferences(Space = [@"^Motely\.Wasm\.Program$", "Motely"])]
+[assembly: Preferences(
+    Space = [@"^Motely\.Wasm\.Program$", "Motely", @"^Motely\.Wasm\.WasmSearchSettings$", "SearchSettings", "Motely"]
+)]
 
 namespace Motely.Wasm;
 
 public static partial class Program
 {
+    /// <summary>JS probe for <see cref="WasmSearchSettings.WithJimmolate"/> — assign before boot.</summary>
+    [Import]
+    public static partial bool JimmolateProbe(string seed, MotelyDeck deck, MotelyStake stake);
+
+    internal static bool RunJimmolateImport(ref MotelySingleSearchContext ctx) =>
+        JimmolateProbe(ctx.GetSeed(), ctx.Deck, ctx.Stake);
+
     private static IServiceProvider services = null!;
     private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(StringComparer.Ordinal);
     private static readonly MotelyFileWatcher FileWatcher = new();
 
-    [Import]
-    public static partial bool EvalJimmolate(string seed);
-
     [Export]
     public static event Action<IReadOnlyList<Change>>? OnFileChanges;
+
+    /// <summary>One callback set per WASM load (<c>bootsharp.boot()</c>). Wired into every search started from this module.</summary>
+    [Export]
+    public static event Action<MotelyProgress>? OnProgress;
 
     [Export]
     public static event Action<string>? OnSeedMatch;
@@ -30,15 +40,11 @@ public static partial class Program
     [Export]
     public static event Action<MotelyScoredSeedResult>? OnScoredResult;
 
-    [Export]
-    public static event Action<MotelyProgress>? OnProgress;
-
     public static void Main()
     {
         services = new ServiceCollection()
             .AddBootsharp()
             .BuildServiceProvider();
-        JimmolateInteropBridge.Predicate = EvalJimmolate;
     }
 
     [Export]
@@ -63,8 +69,8 @@ public static partial class Program
     // Exception messages crossing the JSExport boundary under NativeAOT-LLVM trim mode lose
     // their .Message and surface to JS as the opaque "C# exception from NativeAOT" husk. The
     // result-shaped Exports below catch C#-side so the diagnostic survives — mirrors the
-    // existing pattern on MotelyJamlyzerResult.Error. CreateSearch must still throw (instance-
-    // proxied return), so its contract is "call ValidateJaml first." See README JAML API section.
+    // existing pattern on MotelyJamlyzerResult.Error. FromJaml throws on bad input — call
+    // ValidateJaml first. See README JAML API section.
 
     [Export]
     public static string ExplainJaml(string jaml)
@@ -115,20 +121,69 @@ public static partial class Program
     [Export] public static bool IsRental     (int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
 
     [Export]
-    public static IMotelySearchSettingsInterop CreateSearch(string jaml)
+    public static IMotelyStreamCursor CreateStreamCursor(
+        string seed,
+        MotelyDeck deck,
+        MotelyStake stake,
+        int ante,
+        MotelyStreamKind kind
+    ) => MotelyStreamCursor.Create(seed, deck, stake, ante, kind);
+
+    /// <summary>
+    /// Passthrough search settings (no JAML clauses). CLI requires <c>--jaml</c> or <c>--native</c>;
+    /// this is the WASM equivalent of starting from an empty filter before attaching a mode.
+    /// </summary>
+    [Export]
+    public static WasmSearchSettings CreateSearchSettings() =>
+        new(
+            AttachWasmCallbacks(
+                new global::Motely.MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+                    new PassthroughFilterDesc()
+                )
+            )
+        );
+
+    /// <summary>Built-in native C# filters (CLI <c>--native</c> set).</summary>
+    [Export]
+    public static WasmSearchSettings CreateNativeSearchSettings(string name)
     {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return AttachInteropCallbacks(JamlSearchBuilder.CreateSettings(config));
+        if (!MotelyNativeFilterNames.TryParse(name, out var filter))
+            throw new ArgumentException(
+                $"Unknown native filter '{name}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}"
+            );
+        return new WasmSearchSettings(AttachWasmCallbacks(MotelyNativeFilterFactory.CreateSettings(filter)));
     }
 
     [Export]
-    public static IMotelySearchSettingsInterop CreateSearchSettings() =>
-        AttachInteropCallbacks(
-            new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
-                new PassthroughFilterDesc()
-            )
-        );
+    public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
+
+    /// <summary>Apply a JAML document to search settings (validate with <see cref="ValidateJaml"/> first).</summary>
+    [Export]
+    public static WasmSearchSettings FromJaml(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return new WasmSearchSettings(AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config)));
+    }
+
+    private static IMotelySearchSettings AttachWasmCallbacks(IMotelySearchSettings settings)
+    {
+        if (OnProgress is not null)
+            settings = settings.WithProgressCallback(p => OnProgress(p));
+        if (OnSeedMatch is not null)
+            settings = settings.WithSeedMatchCallback(seed => OnSeedMatch(seed));
+        if (OnScoredResult is not null)
+            settings = settings.WithScoredResultCallback(tally =>
+                OnScoredResult(MotelyScoredSeedResult.FromTally(in tally))
+            );
+        return settings;
+    }
+
+    /// <summary>
+    /// One-seed passthrough search. Use <see cref="CreateStreamCursor"/> for PRNG streams (shop, joker, …).
+    /// Keep the router alive until you dispose it or finish stream reads.
+    /// </summary>
+
 
     [Export]
     public static async Task<string?> PickRoot(PickOptions? options = null) =>
@@ -161,14 +216,6 @@ public static partial class Program
         await GetFileSystem(root).WriteFile(uri, Encoding.UTF8.GetBytes(text));
 
     private static IFileMounter Mounter() => services.GetRequiredService<IFileMounter>();
-
-    private static IMotelySearchSettingsInterop AttachInteropCallbacks(IMotelySearchSettings settings) =>
-        (IMotelySearchSettingsInterop)settings
-            .WithSeedMatchCallback(seed => OnSeedMatch?.Invoke(seed))
-            .WithScoredResultCallback(tally =>
-                OnScoredResult?.Invoke(MotelyScoredSeedResult.FromTally(in tally))
-            )
-            .WithProgressCallback(p => OnProgress?.Invoke(p));
 
     private static IFileSystem GetFileSystem(string root) =>
         MountedFileSystems.TryGetValue(root, out var fs)

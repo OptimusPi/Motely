@@ -8,7 +8,7 @@ const { Motely } = harness;
 describe("search", () => {
     it("list search completes and matches joker:Any", async () => {
         const seeds = ["AAAAAAAA", "BBBBBBBB"];
-        const search = Motely.createSearch(jaml.anyMust)
+        const search = Motely.fromJaml(jaml.anyMust)
             .withListSearch(seeds, seeds.length)
             .withThreadCount(1)
             .start();
@@ -23,7 +23,7 @@ describe("search", () => {
         for (const threads of [1, 2, 4]) {
             let search;
             try {
-                search = Motely.createSearch(jaml.anyMust)
+                search = Motely.fromJaml(jaml.anyMust)
                     .withSequentialSearch()
                     .withBatchCharacterCount(2)
                     .withStartBatchIndex(0n)
@@ -53,7 +53,7 @@ describe("search", () => {
 describe("search (cancel)", () => {
     it.skip("cancel completes without hanging", async () => {
         // FIXME: sequential search keeps running after .cancel() — track separately.
-        const search = Motely.createSearch(jaml.must)
+        const search = Motely.fromJaml(jaml.must)
             .withSequentialSearch()
             .withBatchCharacterCount(1)
             .withStartBatchIndex(0n)

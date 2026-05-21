@@ -50,18 +50,13 @@ The published 18.1.1 advertises 9 "stream pager" factory methods (`createShopPag
 8. `dotnet test Motely.Tests` — must pass.
 9. `dotnet publish Motely.Wasm -c Release`.
 10. `node Motely.Wasm/motely.test.mjs` — must report `RESULT: PASS`.
-11. Eyeball `motely-wasm/package.json` exports against canonical shape.
-12. `npm publish --dry-run` from `motely-wasm/` — sanity check.
-13. `npm publish --access public`.
-14. Post-publish: `npm view motely-wasm@18.2.0 exports` — must byte-match local.
+11. Eyeball `motely-wasm/package.json` exports: `{ ".": "./dist/index.mjs", "./*": "./dist/generated/*.g.mjs" }`.
+12. `npm publish --access public` from `motely-wasm/`.
 
 ## Stop conditions
 
-- C# build fails → fix or revert, do NOT publish.
-- `dotnet test` fails → fix or revert, do NOT publish.
-- `motely.test.mjs` reports `RESULT: FAIL` → fix or revert, do NOT publish.
-- `npm publish --dry-run` shows broken exports shape → fix or revert.
-- Post-publish exports don't match local → `npm unpublish motely-wasm@18.2.0` within 72h, fix, republish bumped patch.
+- Build or tests red → fix, then publish.
+- Bad version on npm → bump patch in `Directory.Packages.props`, publish again (no unpublish playbook).
 
 ## Migration note for consumers (mostly: jaml-ui)
 

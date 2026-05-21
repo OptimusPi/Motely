@@ -23,7 +23,7 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
         _ownedSearch.AwaitCompletion();
     }
 
-    public IMotelySeedRouter CreateSeedRouter(ref MotelyFilterCreationContext ctx)
+    IMotelySeedRouter IMotelySeedRouterDesc.CreateSeedRouter(ref MotelyFilterCreationContext ctx)
         => new ContextCapturingRouter(this);
 
     private readonly struct ContextCapturingRouter(MotelySeedRouterDesc desc) : IMotelySeedRouter
@@ -36,9 +36,18 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
         }
     }
 
-    public MotelySingleSearchContext Instance()
+    /// <summary>WASM-internal: stream cursor and router helpers call this; do not serialize to JS.</summary>
+    internal MotelySingleSearchContext Instance() =>
+        new(in _searchParams, in _contextParams, _lane);
+
+    public string GetSeed() => Instance().GetSeed();
+
+    public MotelyBossBlind GetBossForAnte(int ante)
     {
-        return new MotelySingleSearchContext(in _searchParams, in _contextParams, _lane);
+        var ctx = Instance();
+        var bossStream = ctx.CreateBossStream();
+        var runState = new MotelyRunState();
+        return ctx.GetBossForAnte(ref bossStream, ante, ref runState);
     }
 
     public void Dispose() => _ownedSearch?.Dispose();

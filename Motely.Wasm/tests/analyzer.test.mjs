@@ -40,7 +40,7 @@ describe("analyzer", () => {
         assert.ok(found);
 
         const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${found.jokerName}\n    antes: [${found.ante}]\n    sources:\n      boosterPacks: [0]\n`;
-        const search = Motely.createSearch(derivedJaml)
+        const search = Motely.fromJaml(derivedJaml)
             .withListSearch([found.seed], 1)
             .withThreadCount(1)
             .start();
@@ -76,7 +76,7 @@ describe("analyzer", () => {
         assert.ok(found);
 
         const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - joker: ${found.jokerName}\n    antes: [${found.ante}]\n    sources:\n      shopItems: [${found.slot}]\n`;
-        const search = Motely.createSearch(derivedJaml)
+        const search = Motely.fromJaml(derivedJaml)
             .withListSearch([found.seed], 1)
             .withThreadCount(1)
             .start();
@@ -102,7 +102,7 @@ describe("analyzer", () => {
         assert.ok(found);
 
         const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${found.tagName}\n    antes: [${found.ante}]\n`;
-        const search = Motely.createSearch(derivedJaml)
+        const search = Motely.fromJaml(derivedJaml)
             .withListSearch([found.seed], 1)
             .withThreadCount(1)
             .start();
@@ -120,7 +120,7 @@ describe("analyzer", () => {
         assert.ok(tagName);
 
         const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${tagName}\n    antes: [${ante.ante}]\nmustNot:\n  - tag: ${tagName}\n    antes: [${ante.ante}]\n`;
-        const search = Motely.createSearch(derivedJaml)
+        const search = Motely.fromJaml(derivedJaml)
             .withListSearch([s.seed], 1)
             .withThreadCount(1)
             .start();
@@ -146,7 +146,7 @@ describe("analyzer", () => {
         assert.ok(found);
 
         const derivedJaml = `name: t\ndeck: Red\nstake: White\nmust:\n  - tag: ${found.tagName}\n    antes: [${found.ante}]\n    min: 2\n`;
-        const search = Motely.createSearch(derivedJaml)
+        const search = Motely.fromJaml(derivedJaml)
             .withListSearch([found.seed], 1)
             .withThreadCount(1)
             .start();

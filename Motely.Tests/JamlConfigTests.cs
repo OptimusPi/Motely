@@ -670,12 +670,15 @@ public class JamlConfigTests
     Assert.NotNull(seedScoreDescProperty);
 
     var provider = Assert.IsType<JamlShouldScoreDesc>(seedScoreDescProperty!.GetValue(plan.Settings));
-    var shouldClausesField = typeof(JamlShouldScoreDesc).GetField("_shouldClauses", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-    Assert.NotNull(shouldClausesField);
+    var mustClausesField = typeof(JamlShouldScoreDesc).GetField(
+        "_mustClauses",
+        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+    );
+    Assert.NotNull(mustClausesField);
 
-    var shouldClauses = Assert.IsAssignableFrom<IJamlClause[]>(shouldClausesField!.GetValue(provider));
-    Assert.Equal("Cheap boss", shouldClauses[0].Label);
-    Assert.Equal("Expensive joker", shouldClauses[1].Label);
+    var mustForScoring = Assert.IsAssignableFrom<IJamlClause[]>(mustClausesField!.GetValue(provider));
+    Assert.Equal("Cheap boss", mustForScoring[0].Label);
+    Assert.Equal("Expensive joker", mustForScoring[1].Label);
   }
 
   [Fact]

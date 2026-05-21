@@ -20,11 +20,11 @@ public sealed record JamlSearchPlan(
     int ScoreTallyColumnCount,
     /// <summary>RFC-4180 style header line: quoted fields, comma-separated. Empty when <see cref="ScoreTallyColumnCount"/> is 0.</summary>
     string ScoredCsvHeaderQuoted,
-    /// <summary>Authoritative tally column labels in evaluation order (must clauses first, then should).</summary>
+    /// <summary>Authoritative tally column labels in <c>should</c> evaluation order.</summary>
     string[] TallyLabels
 )
 {
-    internal IMotelySearchSettings Settings { get; init; } = null!;
+    public IMotelySearchSettings Settings { get; init; } = null!;
 
     /// <summary>
     /// Non-null when the plan could not be built (invalid JAML or builder validation failure).
@@ -64,13 +64,19 @@ public static class JamlSearchBuilder
         return sb.ToString().TrimEnd();
     }
 
+    /// <summary>Prefer <see cref="CreatePlan"/> — returns settings plus CSV tally metadata in one compile.</summary>
     public static IMotelySearchSettings CreateSettings(JamlConfig config) =>
-        CreateSettings(config, 0);
+        CreatePlan(config).Settings;
+
+    /// <inheritdoc cref="CreateSettings(JamlConfig)"/>
     public static IMotelySearchSettings CreateSettings(
         JamlConfig config,
         int shouldScoreMinimumTotal
     ) => CreatePlan(config, shouldScoreMinimumTotal).Settings;
-    public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal = 0)
+
+    public static JamlSearchPlan CreatePlan(JamlConfig config) => CreatePlan(config, 0);
+
+    public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal)
     {
         if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
             throw new InvalidOperationException("JamlConfig has no clauses.");
@@ -107,27 +113,32 @@ public static class JamlSearchBuilder
         for (int i = 1; i < allMustDescs.Count; i++)
             settings.WithAdditionalFilter(allMustDescs[i]);
 
-        // ── Scoring: must clauses first (for early-exit), then should clauses
+        // ── Scoring: precise per-seed pass (must re-check + should score). SIMD must is coarse.
 
+        var mustClausesForScoring = new List<IJamlClause>();
+        AddShouldScoringEntriesFromSet(mustClausesForScoring, orderedMustClauses);
         var shouldClauses = new List<IJamlClause>();
-        AddShouldScoringEntriesFromSet(shouldClauses, orderedMustClauses);
-        int mustClauseCount = shouldClauses.Count;
         AddShouldScoringEntriesFromSet(shouldClauses, orderedShouldClauses);
-        settings.WithSeedScoreProvider(
-            new JamlShouldScoreDesc(shouldClauses.ToArray(), null, shouldScoreMinimumTotal, mustClauseCount)
-        );
 
-        // Emit only should-clause columns in the CSV header and tally labels; must-clause
-        // tallies gate execution internally but no longer appear in outputs (was debug).
-        var shouldOnlyClauses = shouldClauses.Skip(mustClauseCount).ToList();
-        int shouldOnlyCount = shouldOnlyClauses.Count;
-        string headerQuoted = shouldOnlyCount > 0
-            ? BuildScoredCsvHeaderQuoted(shouldOnlyClauses)
+        if (mustClausesForScoring.Count > 0 || shouldClauses.Count > 0)
+        {
+            settings.WithSeedScoreProvider(
+                new JamlShouldScoreDesc(
+                    mustClausesForScoring.ToArray(),
+                    shouldClauses.ToArray(),
+                    minimumTotalScore: shouldScoreMinimumTotal
+                )
+            );
+        }
+
+        int shouldCount = shouldClauses.Count;
+        string headerQuoted = shouldCount > 0
+            ? BuildScoredCsvHeaderQuoted(shouldClauses)
             : "";
-        var tallyLabels = shouldOnlyCount > 0
-            ? shouldOnlyClauses.Select(static c => c.Label).ToArray()
+        var tallyLabels = shouldCount > 0
+            ? shouldClauses.Select(static c => c.Label).ToArray()
             : [];
-        return new JamlSearchPlan(shouldOnlyCount, headerQuoted, tallyLabels) { Settings = settings };
+        return new JamlSearchPlan(shouldCount, headerQuoted, tallyLabels) { Settings = settings };
     }
 
     /// <summary>
