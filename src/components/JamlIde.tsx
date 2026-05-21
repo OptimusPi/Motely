@@ -21,8 +21,11 @@ import { JamlIdeToolbar, type JamlIdeMode } from "./JamlIdeToolbar.js";
 import { JamlIdeVisual, type JamlVisualFilter, type JamlZone, type JamlVisualClause } from "./JamlIdeVisual.js";
 import { JamlCodeEditor } from "./JamlCodeEditor.js";
 import { Jamlyzer } from "./Jamlyzer.js";
+import { normalizeJamlSeed } from "./jamlSeedUtils.js";
 import { JimboColorOption } from "../ui/tokens.js";
-import { JimboModal } from "../ui/panel.js";
+import { JimboButton, JimboModal } from "../ui/panel.js";
+import { JimboText } from "../ui/jimboText.js";
+import { mergeSeedsIntoJaml } from "../lib/jaml/jamlSeeds.js";
 import { jamlTextToVisualFilter, visualFilterToJamlText } from "../utils/jamlVisualFilter.js";
 const CATEGORY_CONFIG_MAP = {
   voucher: VOUCHER_PICKER_CONFIG,
@@ -66,9 +69,6 @@ export interface JamlIdeProps {
    */
   showLoadFileButton?: boolean;
   onLoadFile?: () => Promise<string | null> | string | null;
-  onTestSeed?: (seed: string) => void;
-  jamlyzerResult?: "idle" | "match" | "nomatch" | "running" | "error";
-  jamlyzerError?: string | null;
   /**
    * Controlled visual filter. When provided alongside `onVisualFilterChange`, the Visual tab
    * is fully controlled by the parent. When absent, the Visual tab auto-derives from the text.
@@ -97,7 +97,15 @@ function TallyBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: string }) {
+function ResultsView({
+  results,
+  jaml,
+  onVerify,
+}: {
+  results: JamlIdeSearchResult[];
+  jaml: string;
+  onVerify?: () => void;
+}) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (results.length === 0) {
@@ -121,7 +129,19 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
   const maxScore = Math.max(...results.map((r) => r.score ?? 0));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div className="j-ide-results">
+      {onVerify ? (
+        <div className="j-ide-results__bridge">
+          <JimboButton tone="green" size="sm" onClick={onVerify}>
+            Verify seeds
+          </JimboButton>
+          <JimboText size="xs" tone="white" className="j-ide-results__bridge-hint">
+            Writes {results.length} hit{results.length === 1 ? "" : "s"} to seeds: and opens Test
+          </JimboText>
+        </div>
+      ) : null}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {results.map((result) => {
         const isOpen = expanded === result.seed;
         const hasTally = result.tallyColumns && result.tallyColumns.length > 0;
@@ -230,6 +250,7 @@ function ResultsView({ results, jaml }: { results: JamlIdeSearchResult[]; jaml: 
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -297,9 +318,6 @@ export function JamlIde({
   isSearching = false,
   showLoadFileButton = false,
   onLoadFile,
-  onTestSeed,
-  jamlyzerResult = "idle",
-  jamlyzerError,
   visualFilter,
   onVisualFilterChange,
 }: JamlIdeProps) {
@@ -374,13 +392,12 @@ export function JamlIde({
   };
 
   const showResultsTab = Boolean(onSearch || searchResults.length > 0);
-  const showJamlyzerTab = Boolean(onTestSeed);
   const availableModes: JamlIdeMode[] = [
     "visual",
     "code",
     "map",
     ...(showResultsTab ? (["results"] as JamlIdeMode[]) : []),
-    ...(showJamlyzerTab ? (["jamlyzer"] as JamlIdeMode[]) : []),
+    "jamlyzer",
   ];
   const headerVisible = Boolean(title || subtitle || actions);
 
@@ -417,6 +434,15 @@ export function JamlIde({
     }
   };
 
+  const handleVerifyInJamlyzer = () => {
+    const seeds = searchResults
+      .map((result) => normalizeJamlSeed(result.seed))
+      .filter((seed) => seed.length === 8);
+    if (seeds.length === 0) return;
+    handleTextChange(mergeSeedsIntoJaml(text, seeds, 1000));
+    setMode("jamlyzer");
+  };
+
   return (
     <div
       className={`j-ide ${className}`.trim()}
@@ -441,7 +467,7 @@ export function JamlIde({
         onModeChange={setMode}
         resultCount={searchResults.length}
         showResultsTab={showResultsTab}
-        showJamlyzerTab={showJamlyzerTab}
+        showJamlyzerTab
         onSearch={onSearch}
         isSearching={isSearching}
         onLoadFile={showLoadFileButton ? handleLoadFile : undefined}
@@ -465,17 +491,14 @@ export function JamlIde({
 
         {mode === "results" ? (
           <div className="j-ide__results">
-            <ResultsView results={searchResults} jaml={text} />
+            <ResultsView results={searchResults} jaml={text} onVerify={handleVerifyInJamlyzer} />
           </div>
         ) : null}
 
         {mode === "jamlyzer" ? (
-          <Jamlyzer
-            jaml={text}
-            onTest={(seed) => onTestSeed?.(seed)}
-            result={jamlyzerResult}
-            error={jamlyzerError}
-          />
+          <div className="j-ide__jamlyzer">
+            <Jamlyzer jaml={text} />
+          </div>
         ) : null}
       </div>
 

@@ -10,9 +10,8 @@ export interface JimboCopyButtonProps {
   label?: string
   /** Label briefly shown after a successful copy. Default "Copied". */
   copiedLabel?: string
-  /** Button tone. Default red — Balatro's universal action color. Do NOT
-   *  swap tone on copy (red→green is off-brand); the label change is the
-   *  signal. */
+  /** Button tone. Default blue for standalone copy actions; seed rows use
+   *  JimboSeedCopyChip (WeeJoker harvest) instead. */
   tone?: JimboTone
   /** Button size. Default "sm". */
   size?: 'xs' | 'sm' | 'md' | 'lg'
@@ -34,7 +33,7 @@ export function JimboCopyButton({
   value,
   label = 'Copy',
   copiedLabel = 'Copied',
-  tone = 'red',
+  tone = 'blue',
   size = 'sm',
   copiedDurationMs = 1500,
   onCopy,

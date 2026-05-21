@@ -317,8 +317,8 @@ export const CopyRowAndSelect: StoryObj = {
     return (
       <JimboAppScroll>
         <JimboPanel>
-          <JimboCopyRow label="Seed" value="WEEJOKER" />
-          <JimboCopyRow value="ABCD1234" />
+          <JimboCopyRow label="Seed" value="3BFYGXFE" />
+          <JimboCopyRow value="PU3L4U73" />
           <JimboSelect
             value={deck}
             onChange={setDeck}

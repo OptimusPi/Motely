@@ -3,7 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import type { IMotelySearch, IMotelySearchSettingsInterop, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import type { WasmSearchSettings } from "motely-wasm";
 import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 export interface SearchResult {
@@ -36,9 +37,9 @@ const INITIAL_STATE: UseSearchState = {
 };
 
 
-function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): IMotelySearchSettingsInterop {
-    const settings = Motely.createSearch(jaml);
-    let configured: IMotelySearchSettingsInterop;
+function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): WasmSearchSettings {
+    const settings = Motely.fromJaml(jaml);
+    let configured: WasmSearchSettings;
     if (mode === "seedlist" && opts.seeds && opts.seeds.length > 0) {
         configured = settings.withListSearch(opts.seeds, opts.seeds.length);
     } else if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
