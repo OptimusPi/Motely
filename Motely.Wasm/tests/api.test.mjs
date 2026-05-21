@@ -13,18 +13,21 @@ describe("public API surface", () => {
             "explainJaml",
             "createPlan",
             "analyzeJamlSeeds",
-            "createSearch",
             "createSearchSettings",
+            "createNativeSearchSettings",
+            "nativeFilterNames",
+            "fromJaml",
+            "createStreamCursor",
+            "createSeedRouter",
             "mountRoot",
             "unmountRoot",
             "pickRoot",
             "readTextFile",
             "writeTextFile",
+            "onFileChanges",
             "onSeedMatch",
             "onScoredResult",
             "onProgress",
-            "onFileChanges",
-            "evalJimmolate",
             "decodeItemType",
             "decodeItemCategory",
             "decodeJokerRarity",
@@ -48,14 +51,22 @@ describe("public API surface", () => {
         );
     });
 
-    it("events implement Bootsharp EventSubscriber", () => {
-        for (const name of ["onSeedMatch", "onScoredResult", "onProgress", "onFileChanges"]) {
+    it("onFileChanges is a Bootsharp EventSubscriber", () => {
+        const ev = Motely.onFileChanges;
+        assert.equal(typeof ev?.subscribe, "function", "onFileChanges.subscribe");
+        assert.equal(typeof ev?.unsubscribe, "function", "onFileChanges.unsubscribe");
+        assert.ok("last" in ev, "onFileChanges.last");
+    });
+
+    it("wasm load exposes search event subscribers on Motely", () => {
+        for (const name of ["onSeedMatch", "onScoredResult", "onProgress"]) {
             const ev = Motely[name];
             assert.equal(typeof ev?.subscribe, "function", `${name}.subscribe`);
             assert.equal(typeof ev?.unsubscribe, "function", `${name}.unsubscribe`);
             assert.ok("last" in ev, `${name}.last`);
         }
     });
+
 });
 
 describe("JAML API", () => {
@@ -98,16 +109,24 @@ describe("JAML API", () => {
         assert.equal(result.stake, 0);
     });
 
-    it("createSearch throws on garbage; builder chains", () => {
-        assert.throws(() => Motely.createSearch(jaml.invalid));
+    it("fromJaml throws on garbage; builder chains", () => {
+        assert.throws(() => Motely.fromJaml(jaml.invalid));
         assert.equal(
             typeof Motely.createSearchSettings()?.withSequentialSearch,
             "function"
         );
-        const s = Motely.createSearch(jaml.scoring)
+        const s = Motely.fromJaml(jaml.scoring)
             .withSequentialSearch()
             .withThreadCount(1)
             .withProgressReportIntervalMs(0n);
         assert.equal(typeof s?.start, "function");
+    });
+
+    it("createNativeSearchSettings accepts CLI native filter names", () => {
+        const names = Motely.nativeFilterNames();
+        assert.ok(names.length > 0);
+        assert.ok(names.includes("Observatory"));
+        const settings = Motely.createNativeSearchSettings("Observatory");
+        assert.equal(typeof settings?.withListSearch, "function");
     });
 });

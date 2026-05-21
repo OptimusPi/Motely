@@ -31,21 +31,20 @@ npm publish --access public
 
 Version source of truth: `<MotelyVersion>` in `Directory.Packages.props`. Bootsharp regenerates `motely-wasm/package.json` from its template on every pack (no version field); the `FinalizeNpmPackage` target in `Motely.Wasm.csproj` injects `<MotelyVersion>` into the generated file right after `BootsharpPack` runs and copies `Motely.Wasm/README.md` plus root `jaml.schema.json` into the npm root. Confirm the published version with `npm view motely-wasm version` — the npm CLI notice can lie.
 
-## npm publish procedure — follow in order
+## npm publish procedure
 
-Pre-publish, after `dotnet publish Motely.Wasm`:
+After `dotnet publish Motely.Wasm -c Release`:
 
-1. **`node Motely.Wasm/motely.test.mjs`** — must report `RESULT: PASS`. Node `node:test` suite under `Motely.Wasm/tests/` (single WASM boot via `tests/harness.mjs`, `--test-concurrency=1`). Source of truth for "the package boots and the public API hasn't regressed." Add `*.test.mjs` files there for WASM behaviours JS consumers depend on.
-2. **Eyeball `motely-wasm/package.json` `exports`.** Must be `{ ".": "./dist/index.mjs", "./*": "./dist/generated/*.g.mjs" }`. Known-broken historic shapes: `17.3.1` shipped `"./../motely-wasm/index.mjs"`, `17.3.2` shipped `"././index.mjs"`. Both make Node refuse `import`. Bail before publishing if you see either.
-3. **`npm publish --dry-run`** from `motely-wasm/`. Confirm file count + tarball size are in line with prior releases (~124 files / ~4.5 MB packed / ~9.9 MB unpacked at 17.8.x).
+1. **`node Motely.Wasm/motely.test.mjs`** — `RESULT: PASS`.
+2. **`node Motely.Wasm/pack-consumer-smoke.mjs`** (optional) — `npm pack` → fresh install → import → boot.
+3. **Check `motely-wasm/package.json` `exports`:** `{ ".": "./dist/index.mjs", "./*": "./dist/generated/*.g.mjs" }`.
+4. **`npm publish --access public`** from `motely-wasm/`.
 
-Post-publish, against the registry (not the local emit):
+If a bad version ships, bump `<MotelyVersion>` and publish a fixed patch — do not block fixes on unpublish/rollback rituals.
 
-4. **`npm view motely-wasm@<version> exports`** — must match step 2 byte-for-byte. If not, `npm unpublish motely-wasm@<version>` within 72h and republish a bumped patch. Local emit being clean is necessary, not sufficient — the publish pipeline has historically mangled exports on the way to the registry.
+`Motely.Wasm/test-browser.html` — browser boot via `?bin=...` when debugging host-only issues.
 
-`Motely.Wasm/test-browser.html` is the same coverage in-browser; boot path is host-chosen via `?bin=...` query param. Use it when the failure mode is browser-only (OPFS, worker boot, exports resolution against an HTTP server).
-
-CDN delivery (unpkg/jsdelivr) is automatic after `npm publish` — no manual upload step.
+CDN (unpkg/jsdelivr) updates after `npm publish`.
 
 ## Agent rules
 
@@ -62,7 +61,22 @@ CDN delivery (unpkg/jsdelivr) is automatic after `npm publish` — no manual upl
 
 ## Bootsharp source and docs
 
-motely-wasm builds against Bootsharp **0.8.0-alpha.278** (`Directory.Packages.props`; sponsor `Bootsharp.FileSystem` may resolve from a local feed). Read these files directly — do not rely on public Bootsharp docs:
+motely-wasm builds against Bootsharp pinned in `Directory.Packages.props` (`Bootsharp`, `Bootsharp.Common`, `Bootsharp.Inject` — all the same version; sponsor `Bootsharp.FileSystem` is versioned separately). Read these files directly — do not rely on public Bootsharp docs:
+
+### Building Bootsharp locally
+
+Source: `D:\bootsharp`. Branch sets the interop ABI: `feat/raw-interop` = NativeAOT-LLVM raw C-ABI (alpha.31x); older alphas use `[JSImport]`/`[JSExport]`.
+
+Repack (from `D:\bootsharp\AGENTS.md`, in order):
+
+1. Once: `bash src/cs/.scripts/llvm.sh` (downloads NativeAOT-LLVM to `src/cs/.llvm`).
+2. `cd src/js && npm run build`.
+3. Bump `<Version>` in `src/cs/Directory.Build.props` (only if sources changed).
+4. `cd src/cs && bash .scripts/pack.sh` (packs to `src/cs/.nuget`).
+
+Local feed is user-level (`%APPDATA%\NuGet\NuGet.Config`: `bootsharp-local` → `D:\bootsharp\src\cs\.nuget`), not committed. `Bootsharp.FileSystem` feed: `D:\extra\bootsharp\cs\.nuget`.
+
+Consume here: bump all three `Bootsharp*` versions in `Directory.Packages.props` together. Validate with `dotnet publish Motely.Wasm -c Release` then `node Motely.Wasm/motely.test.mjs` (`RESULT: PASS`) — Bootsharp's own E2E suite passing does not prove Motely's types generate valid bindings.
 
 **Docs:**
 @D:/bootsharp/docs/guide/index.md

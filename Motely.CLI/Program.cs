@@ -486,7 +486,7 @@ partial class Program
                 return 1;
             }
 
-            IMotelySearchSettings settings = JamlSearchBuilder.CreateSettings(config, engineCutoff)
+            IMotelySearchSettings settings = plan.Settings
                 .WithDeck(deck)
                 .WithStake(stake)
                 .WithThreadCount(threads);

@@ -34,14 +34,11 @@ must:
 const status = Motely.validateJaml(jaml);
 if (status !== "valid") throw new Error(status);
 
-// Subscribe to results before starting.
+// One callback set per WASM load — subscribe after boot, before .start().
 Motely.onScoredResult.subscribe(r => console.log("match:", r.seed, r.score));
 Motely.onProgress.subscribe(p => console.log(`${p.percentComplete.toFixed(1)}%`));
 
-// Build, start, and await a search.
-const search = Motely.createSearch(jaml)
-  .withSequentialSearch()
-  .start();
+const search = Motely.fromJaml(jaml).withSequentialSearch().start();
 
 await search.waitForCompletionAsync();
 console.log("done:", search.totalSeedsSearched, "searched,", search.matchingSeeds, "matched");
@@ -61,9 +58,7 @@ Pass the URL path your host serves the package's `bin/` directory at (where
 | --- | --- | --- |
 | Vite / Storybook `staticDirs` | `/motely-wasm/bin` | `boot("/motely-wasm/bin")` |
 | Next.js route handler | `/motely-wasm/bin/[...path]` | `boot("/motely-wasm/bin")` |
-| Static page in `node_modules/motely-wasm/` | `/bin` | `boot("/bin")` |
-| Raw node_modules served as static | `/node_modules/motely-wasm/bin` | `boot("/node_modules/motely-wasm/bin")` |
-| Public CDN | `https://unpkg.com/motely-wasm/bin` | `boot("https://unpkg.com/motely-wasm/bin")` |
+| Public CDN (pinned version) | `https://unpkg.com/motely-wasm@<version>/bin` | `boot("https://unpkg.com/motely-wasm@18.2.2/bin")` |
 
 Web Workers must boot from the **same** URL as the main thread — absolute paths
 in a worker resolve against the page origin, so whichever URL serves the WASM
@@ -81,29 +76,23 @@ console.log(bootsharp.getStatus()); // BootStatus.Booted
 
 ### Node / Bun / Deno
 
-There's no URL to fetch from — read `dotnet.native.wasm` off disk and hand its
-bytes to `boot`:
+Same ESM import as the browser. Point `boot()` at the published `bin/` directory
+(Node `fetch` accepts `file://` URLs):
 
 ```js
-import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import bootsharp from "motely-wasm";
+import bootsharp, { Motely } from "motely-wasm";
 
-const wasmUrl = new URL("../bin/dotnet.native.wasm", import.meta.resolve("motely-wasm"));
-const wasmBytes = await readFile(fileURLToPath(wasmUrl));
+const binRoot = new URL("bin/", import.meta.resolve("motely-wasm/package.json")).href;
+await bootsharp.boot(binRoot);
 
-await bootsharp.boot({
-  wasm: wasmBytes.buffer.slice(
-    wasmBytes.byteOffset,
-    wasmBytes.byteOffset + wasmBytes.byteLength
-  ),
-});
+const status = Motely.validateJaml(jaml);
 ```
 
-Requires Node ≥ 20.6 (sync `import.meta.resolve`). Node 22 LTS is the recommended floor.
+Requires Node ≥ 20.6 (`import.meta.resolve`). Node 22 LTS is the recommended floor.
 
-`Motely.Wasm/motely.test.mjs` in the source repo is the executable reference for
-this path — if Node boot breaks, that suite catches it first.
+**Publish gate (repo):** after `dotnet publish Motely.Wasm -c Release`, run
+`node Motely.Wasm/motely.test.mjs` (installed-layout harness) and
+`node Motely.Wasm/pack-consumer-smoke.mjs` (`npm pack` → fresh `npm install` → same boot path).
 
 ## JAML API
 
@@ -182,24 +171,17 @@ returns a human-readable plan; `Motely.createPlan(jaml)` returns the scoring str
 
 ## Running a search
 
-`Motely.createSearch(jaml)` returns a settings builder. Chain a search-mode method,
-then call `.start()` to get a running `IMotelySearch`.
+Use `Motely.createSearchSettings()`, `Motely.createNativeSearchSettings(name)`, or
+`Motely.fromJaml(jaml)` — then chain modes. Callbacks are registered once per WASM load on `Motely`.
 
 ```js
 import { Motely } from "motely-wasm";
 
-Motely.onSeedMatch.subscribe(seed => { /* matching seed string */ });
-Motely.onScoredResult.subscribe(r => { /* r.seed, r.score, r.tallies */ });
-Motely.onProgress.subscribe(p => { /* p.percentComplete, p.seedsSearched, p.seedsPerMillisecond, … */ });
+Motely.onSeedMatch.subscribe(seed => { /* … */ });
+Motely.onScoredResult.subscribe(r => { /* … */ });
+Motely.onProgress.subscribe(p => { /* … */ });
 
-const settings = Motely.createSearch(jaml)
-  .withSequentialSearch()          // enumerate all seeds in order
-  // .withRandomSearch(10_000)     // or pick N random seeds
-  // .withListSearch(seeds, seeds.length) // or supply a seed list
-  // .withAestheticSearch(0)       // or a JamlAesthetic mode
-  .withProgressReportIntervalMs(500n);
-
-const search = settings.start();
+const search = Motely.fromJaml(jaml).withSequentialSearch().start();
 
 // Async (yields between batches — good on the main thread or in a Worker)
 await search.waitForCompletionAsync();
@@ -281,6 +263,10 @@ forward-lookup by name. `MotelyStreamKind` lives at `motely-wasm/motely`.
 
 ## Events
 
+Callbacks are registered on `Motely` once per `bootsharp.boot()` — not on each settings
+chain. Every search started from that WASM load shares the same handlers; run one search at
+a time or use separate worker boots if you need isolated callbacks.
+
 | Event | Payload |
 |---|---|
 | `Motely.onSeedMatch` | `string` — matching seed |
@@ -301,7 +287,7 @@ Motely.onScoredResult.unsubscribe(handler);
 | Import path | Contents |
 |---|---|
 | `motely-wasm` | Default export: `boot`, `getStatus`, `BootStatus`. Named export: `Motely` (main API) |
-| `motely-wasm/motely` | `IMotelySearch`, `IMotelySearchSettingsInterop`, `IMotelyStreamCursor`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyStreamKind` |
+| `motely-wasm/motely` | `IMotelySearch`, `SearchSettings`, `IMotelyStreamCursor`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyStreamKind` |
 | `motely-wasm/motely/enums` | All Balatro enums — `MotelyItemType`, `MotelyItemTypeCategory`, `MotelyJokerRarity`, `MotelyItemEdition`, `MotelyItemSeal`, `MotelyItemEnhancement`, `MotelyTag`, `MotelyVoucher`, `MotelyBoosterPack`, `MotelyDeck`, `MotelyStake`, `MotelyBossBlind`, etc. |
 | `motely-wasm/motely/filters` | `JamlAesthetic`, `JamlSearchPlan` |
 | `motely-wasm/motely/analysis` | `MotelyJamlyzerResult`, `MotelySeedAnalysis` |

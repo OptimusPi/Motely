@@ -53,7 +53,9 @@
     <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
            Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp PackageTemplate.json may have changed. Update FinalizeNpmPackage." />
     <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
+    <Exec Command="powershell -NoProfile -Command &quot;$p = Get-Content '$(_NpmPackageJson)' -Raw; if ($p -notmatch '\&quot;node-boot\&quot;') { $p = $p -replace '(\&quot;\.\&quot;: \&quot;\./dist/index\.mjs\&quot;,)', '$1`n    &quot;./node-boot&quot;: &quot;./dist/node-boot.mjs&quot;,'; Set-Content '$(_NpmPackageJson)' $p -NoNewline }&quot;" />
     <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
+    <Copy SourceFiles="node-boot.mjs" DestinationFolder="$(_NpmRoot)\dist" />
     <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
     <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
   </Target>
