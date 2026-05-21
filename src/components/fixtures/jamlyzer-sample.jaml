@@ -1,12 +1,12 @@
 name: Jamlyzer Sample
 author: jaml-ui
-description: Demo fixture for the Jamlyzer seed spinner stories.
+description: Storybook fixture — seeds analyzed via Motely.analyzeJamlSeeds(jaml, []).
 deck: Red
 stake: White
-# Demo seeds:
-# - ALEEB
-# - FROGMANS
-# - PILUVYOU
 must:
   - joker: WeeJoker
     antes: [1]
+seeds:
+  - LVCBW4YD
+  - XRCPBFU6
+  - TJWTRHUG

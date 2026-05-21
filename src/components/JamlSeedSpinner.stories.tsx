@@ -24,6 +24,12 @@ export const Dark: Story = {
   render: () => <SpinnerDemo seeds={['ALEEB', 'FROGMANS', 'PILUVYOU']} variant="dark" value="FROGMANS" />,
 };
 
+export const Editable: Story = {
+  render: () => (
+    <SpinnerDemo seeds={['ALEEB', 'FROGMANS', 'PILUVYOU']} variant="normal" editable />
+  ),
+};
+
 export const Alt: Story = {
   render: () => <SpinnerDemo seeds={['ALEEB', 'FROGMANS', 'PILUVYOU']} variant="alt" value="PILUVYOU" />,
 };

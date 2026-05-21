@@ -120,6 +120,7 @@ export {
     JamlSeedSpinner,
     type JamlSeedSpinnerProps,
 } from "./components/JamlSeedSpinner.js";
+export { Jamlyzer, type JamlyzerProps } from "./components/Jamlyzer.js";
 
 export {
     JamlMapEditor,

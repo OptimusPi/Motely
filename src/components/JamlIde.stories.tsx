@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useMemo, useState } from 'react';
 import { JamlIde, type JamlIdeSearchResult } from './JamlIde';
-import { Motely } from 'motely-wasm';
-import { ensureMotelyReady } from '../lib/motely/runtime';
 import { useSearch } from '../hooks/useSearch.js';
 import { JimboText } from '../ui/jimboText.js';
 import sampleJaml from './fixtures/ide-sample.jaml?raw';
@@ -84,45 +82,12 @@ export const Jamlyzer: Story = {
   render: () => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const [jaml, setJaml] = useState(sampleJaml);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [result, setResult] = useState<'idle' | 'match' | 'nomatch' | 'running' | 'error'>('idle');
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [jamlyzerError, setJamlyzerError] = useState<string | null>(null);
-
     return (
       <JamlIde
         style={{ flex: 1, minHeight: 0 }}
         jaml={jaml}
         onChange={setJaml}
         defaultMode="jamlyzer"
-        onTestSeed={(seed) => {
-          setResult('running');
-          setJamlyzerError(null);
-          void (async () => {
-            try {
-              await ensureMotelyReady();
-              const validation = Motely.validateJaml(jaml);
-              if (validation !== 'valid') {
-                throw new Error(String(validation ?? 'Invalid JAML'));
-              }
-              const data = Motely.analyzeJamlSeeds(jaml, [seed]);
-              if (data.error) {
-                throw new Error(data.error);
-              }
-              const sr = data.seeds[0];
-              if (!sr) {
-                setResult('nomatch');
-                return;
-              }
-              setResult((sr.score ?? 0) >= 1 ? 'match' : 'nomatch');
-            } catch (e) {
-              setJamlyzerError(e instanceof Error ? e.message : String(e));
-              setResult('error');
-            }
-          })();
-        }}
-        jamlyzerResult={result}
-        jamlyzerError={jamlyzerError}
       />
     );
   },
