@@ -121,13 +121,15 @@ public static partial class Program
     [Export] public static bool IsRental     (int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
 
     [Export]
-    public static IMotelyStreamCursor CreateStreamCursor(
+    public static MotelySingleSearchContext GetSingleSearchContext(
         string seed,
         MotelyDeck deck,
-        MotelyStake stake,
-        int ante,
-        MotelyStreamKind kind
-    ) => MotelyStreamCursor.Create(seed, deck, stake, ante, kind);
+        MotelyStake stake
+    )
+    {
+        var router = new MotelySeedRouterDesc(seed, deck, stake);
+        return router.Instance();
+    }
 
     /// <summary>
     /// Passthrough search settings (no JAML clauses). CLI requires <c>--jaml</c> or <c>--native</c>;

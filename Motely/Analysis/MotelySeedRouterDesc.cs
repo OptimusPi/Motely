@@ -37,8 +37,10 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
     }
 
     /// <summary>WASM-internal: stream cursor and router helpers call this; do not serialize to JS.</summary>
-    internal MotelySingleSearchContext Instance() =>
-        new(in _searchParams, in _contextParams, _lane);
+    public MotelySingleSearchContext Instance()
+    {
+        return new MotelySingleSearchContext(in _searchParams, in _contextParams, _lane);
+    }
 
     public string GetSeed() => Instance().GetSeed();
 
