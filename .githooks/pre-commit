@@ -1,0 +1,5 @@
+#!/bin/sh
+# jaml-ui pre-commit hook.
+# Activate once per clone with:  git config core.hooksPath .githooks
+
+node .claude/hooks/guard-tests-precommit.mjs || exit $?

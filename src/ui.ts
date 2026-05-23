@@ -22,6 +22,7 @@ export * from './ui/jimboApp.js'
 export * from './ui/jimboWordmark.js'
 export * from './ui/jimboSectionHeader.js'
 export * from './ui/jimboInfoCard.js'
+export * from './ui/jimboStatGrid.js'
 // Old IDE prototypes — orphaned, statically import motely-wasm + use Vite-only
 // `?worker` syntax. Removed from the public surface so webpack consumers don't
 // transitively bundle motely-wasm. Files left on disk for triage.
