@@ -116,6 +116,32 @@ Consume here: bump all three `Bootsharp*` versions in `Directory.Packages.props`
 **C# publish source:**
 @D:/bootsharp/src/cs/Bootsharp.Publish/
 
+**Sample — minimal (canonical NativeAOT-LLVM boot, no framework):**
+@D:/bootsharp/samples/minimal/README.md
+@D:/bootsharp/samples/minimal/cs/Minimal.csproj
+@D:/bootsharp/samples/minimal/cs/Program.cs
+@D:/bootsharp/samples/minimal/main.mjs
+@D:/bootsharp/samples/minimal/index.html
+
+**Sample — react (Vite + React app consuming Bootsharp ESM package):**
+@D:/bootsharp/samples/react/README.md
+@D:/bootsharp/samples/react/package.json
+@D:/bootsharp/samples/react/vite.config.ts
+@D:/bootsharp/samples/react/tsconfig.json
+@D:/bootsharp/samples/react/index.html
+@D:/bootsharp/samples/react/src/main.tsx
+@D:/bootsharp/samples/react/src/computer.tsx
+@D:/bootsharp/samples/react/src/donut.tsx
+@D:/bootsharp/samples/react/backend/package.json
+@D:/bootsharp/samples/react/backend/Backend.WASM/Backend.WASM.csproj
+@D:/bootsharp/samples/react/backend/Backend.WASM/Program.cs
+@D:/bootsharp/samples/react/backend/Backend/Backend.csproj
+@D:/bootsharp/samples/react/backend/Backend/IComputer.cs
+@D:/bootsharp/samples/react/backend/Backend.Prime/Backend.Prime.csproj
+@D:/bootsharp/samples/react/backend/Backend.Prime/IPrimeUI.cs
+@D:/bootsharp/samples/react/backend/Backend.Prime/Options.cs
+@D:/bootsharp/samples/react/backend/Backend.Prime/Prime.cs
+
 **Local patch vs upstream:**
 @X:/JammySeedFinder/src/MotelyJAML/bootsharp-fixes-vs-6edaa2c.patch
 

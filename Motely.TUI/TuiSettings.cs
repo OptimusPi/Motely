@@ -50,9 +50,6 @@ public static class TuiSettings
     // DuckLake (results data lake) root directory — resolved relative to current directory.
     public static string DataLakePath { get; set; } = "seeds";
 
-    // Secret settings (in-memory only, not persisted)
-    public static bool CrudeSeedsEnabled { get; set; } = false;
-
     /// <summary>
     /// Load settings from tui.json (if exists)
     /// </summary>
