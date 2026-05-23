@@ -3,7 +3,6 @@ author: claude
 description: Erratic deck flush paradise â€” Smeared Joker makes every hand a flush. Splash for always scoring, Supernova for level scaling. The Fool for extra tarotCard plays.
 deck: Erratic
 stake: White
-hashtags: ["claude-pick", "curated", "copy", "negative", "flush", "planetCard-scaling"]
 must:
   - uncommonJoker: SmearedJoker
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: The Duo with The Trio and The Family for hand type X Mult stacking
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "flush", "straight", "pairs", "deck-fix"]
 must:
   - rareJoker: TheDuo
     antes:

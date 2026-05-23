@@ -3,7 +3,6 @@ author: jammy
 description: The Tribe with The Order for Flush/Straight X Mult stacking
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "flush", "straight"]
 must:
   - rareJoker: TheTribe
     antes:

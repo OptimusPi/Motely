@@ -3,7 +3,6 @@ author: jammy
 description: Pareidolia uncommon makes all cards count as face cards
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "retrigger", "face-cards", "legendary-synergy"]
 must:
   - uncommonJoker: Pareidolia
     antes:

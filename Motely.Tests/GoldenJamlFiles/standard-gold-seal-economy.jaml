@@ -3,7 +3,6 @@ author: jammy
 description: Multiple standard cards with Gold Seal for passive income
 deck: Red
 stake: White
-hashtags: ["standard-card", "enhancement", "copy", "negative", "economy", "planetCard-scaling", "legendary-synergy"]
 must:
   - standardCard: GoldSeal1
     seal: Gold

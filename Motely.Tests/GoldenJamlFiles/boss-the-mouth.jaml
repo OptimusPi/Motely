@@ -3,7 +3,6 @@ author: jammy
 description: TheMouth boss blind only allows one hand type per round
 deck: Red
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "flush", "planetCard-scaling", "dark-suits", "legendary-synergy"]
 must:
   - boss: TheMouth
     antes:

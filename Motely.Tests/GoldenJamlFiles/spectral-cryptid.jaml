@@ -3,7 +3,6 @@ author: jammy
 description: Cryptid spectralCard with The Idol for card duplication strategy
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "deck-fix", "face-cards", "glass", "steel", "legendary-synergy"]
 must:
   - spectralCard: Cryptid
     antes:

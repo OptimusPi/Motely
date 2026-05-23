@@ -3,7 +3,6 @@ author: jammy
 description: Hack uncommon with Abandoned Deck for 2-5 retrigger synergy
 deck: Abandoned
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "retrigger", "deck-thinning", "legendary-synergy"]
 must:
   - uncommonJoker: Hack
     antes:

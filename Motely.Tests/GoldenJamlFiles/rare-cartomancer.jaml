@@ -3,7 +3,6 @@ author: jammy
 description: Cartomancer rare joker with Fortune Teller for free tarotCard every Blind
 deck: Zodiac
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "planetCard-scaling", "tarotCard-engine", "legendary-synergy"]
 must:
   - uncommonJoker: Cartomancer
     antes:

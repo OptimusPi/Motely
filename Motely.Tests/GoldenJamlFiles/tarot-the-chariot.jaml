@@ -3,7 +3,6 @@ author: jammy
 description: TheChariot tarotCard with Baron for Steel enhancement synergy
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "deck-fix", "steel", "legendary-synergy"]
 must:
   - tarotCard: TheChariot
     antes:

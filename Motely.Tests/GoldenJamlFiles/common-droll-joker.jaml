@@ -3,7 +3,6 @@ author: jammy
 description: Droll Joker common for +10 Mult if played hand contains a Flush
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "planetCard-scaling", "probability", "legendary-synergy"]
 must:
   - commonJoker: DrollJoker
     antes:

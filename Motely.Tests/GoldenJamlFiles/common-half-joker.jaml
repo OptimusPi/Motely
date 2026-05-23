@@ -3,7 +3,6 @@ author: jammy
 description: Half Joker common for +20 Mult if played hand has 3 or fewer cards
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "scaling", "flush", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: HalfJoker
     antes:

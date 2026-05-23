@@ -3,7 +3,6 @@ author: jammy
 description: Double Tag creates a copy of next selected Tag
 deck: Anaglyph
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - tag: DoubleTag
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: TheHermit tarotCard for early economy doubling
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "economy", "planetCard-scaling", "legendary-synergy"]
 must:
   - tarotCard: TheHermit
     antes:

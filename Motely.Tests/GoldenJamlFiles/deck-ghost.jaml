@@ -3,7 +3,6 @@ author: jammy
 description: Ghost Deck with Oops All 6s to double spectralCard generation rate
 deck: Ghost
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "planetCard-scaling", "probability", "legendary-synergy"]
 must:
   - uncommonJoker: OopsAll6s
     antes:

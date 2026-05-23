@@ -3,7 +3,6 @@ author: jammy
 description: Plasma Deck with chip-heavy jokers to exploit averaging mechanic
 deck: Plasma
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "economy", "planetCard-scaling", "stone", "legendary-synergy"]
 must:
   - uncommonJoker: StoneJoker
     antes:

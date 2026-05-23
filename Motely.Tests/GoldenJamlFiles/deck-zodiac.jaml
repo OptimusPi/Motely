@@ -3,7 +3,6 @@ author: jammy
 description: Zodiac Deck with Fortune Teller to capitalize on free TarotMerchant voucher
 deck: Zodiac
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "planetCard-scaling", "tarotCard-engine", "legendary-synergy"]
 must:
   - commonJoker: FortuneTeller
     antes:

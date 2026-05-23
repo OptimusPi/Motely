@@ -3,7 +3,6 @@ author: jammy
 description: Death tarotCard with The Idol for card cloning strategy
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "deck-fix", "face-cards", "tarotCard-engine", "legendary-synergy"]
 must:
   - tarotCard: Death
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: TheSun tarotCard with Bloodstone for Heart suit conversion
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "flush", "planetCard-scaling", "probability", "deck-fix", "legendary-synergy"]
 must:
   - tarotCard: TheSun
     antes:

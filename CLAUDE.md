@@ -67,6 +67,14 @@ motely-wasm builds against Bootsharp pinned in `Directory.Packages.props` (`Boot
 
 Source: `D:\bootsharp`. Branch sets the interop ABI: `feat/raw-interop` = NativeAOT-LLVM raw C-ABI (alpha.31x); older alphas use `[JSImport]`/`[JSExport]`.
 
+**Updating to the latest push — it is NOT `git pull`.** Elringus force-pushes / rebases `feat/delegates`, so the remote history is rewritten under the same commit message (e.g. "implement delegates support" gets a new hash each push). A `git pull` sees "diverged" and would make a merge commit. Instead:
+
+```
+cd D:/bootsharp && git fetch --all --prune && git reset --hard origin/feat/delegates
+```
+
+This discards the local pointer and lands directly on his rewritten commit — linear, no merge commit. (Working tree is normally clean here, so nothing is lost.)
+
 Repack (from `D:\bootsharp\AGENTS.md`, in order):
 
 1. Once: `bash src/cs/.scripts/llvm.sh` (downloads NativeAOT-LLVM to `src/cs/.llvm`).
@@ -74,9 +82,15 @@ Repack (from `D:\bootsharp\AGENTS.md`, in order):
 3. Bump `<Version>` in `src/cs/Directory.Build.props` (only if sources changed).
 4. `cd src/cs && bash .scripts/pack.sh` (packs to `src/cs/.nuget`).
 
-Local feed is user-level (`%APPDATA%\NuGet\NuGet.Config`: `bootsharp-local` → `D:\bootsharp\src\cs\.nuget`), not committed. `Bootsharp.FileSystem` feed: `D:\extra\bootsharp\cs\.nuget`.
+**Then rebuild the sponsor FileSystem extension** — `Bootsharp.FileSystem` pins `Bootsharp.Common` as `*-*` (floats to local latest), so whenever you repack `Bootsharp.Common` you must repack FileSystem against it or the consumer restores a FileSystem built against a stale Common:
 
-Consume here: bump all three `Bootsharp*` versions in `Directory.Packages.props` together. Validate with `dotnet publish Motely.Wasm -c Release` then `node Motely.Wasm/motely.test.mjs` (`RESULT: PASS`) — Bootsharp's own E2E suite passing does not prove Motely's types generate valid bindings.
+5. `dotnet pack D:/extra/bootsharp/cs/Bootsharp.FileSystem/Bootsharp.FileSystem.csproj -c Release -o D:/extra/bootsharp/cs/.nuget` (packs the C# NuGet to the extra feed). `D:/extra/bootsharp/scripts/package.sh` is the separate JS-side build — it bundles the TypeScript and runs `npm publish` of `@rewaffle/bootsharp-file-system` to the GitHub registry; it is not part of the local C# NuGet loop.
+
+`Bootsharp.FileSystem` has no `<Version>`; it stamps a build-time timestamp `yyyy.MM.dd.HHmm` (NuGet normalizes to e.g. `2026.5.22.1237`). Read the actual emitted version from the pack log — that's the pin to use below.
+
+Local feeds are user-level (`%APPDATA%\NuGet\NuGet.Config`), not committed: `bootsharp-local` → `D:\bootsharp\src\cs\.nuget`; `Bootsharp.FileSystem` feed → `D:\extra\bootsharp\cs\.nuget`.
+
+Consume here: bump all three `Bootsharp*` versions in `Directory.Packages.props` together, **and** bump `Bootsharp.FileSystem` to the timestamp from step 5 (it tracks the same Common, just versioned separately). Validate with `dotnet publish Motely.Wasm -c Release` then `node Motely.Wasm/motely.test.mjs` (`RESULT: PASS`) — Bootsharp's own E2E suite passing does not prove Motely's types generate valid bindings.
 
 **Docs:**
 @D:/bootsharp/docs/guide/index.md

@@ -3,7 +3,6 @@ author: jammy
 description: Polychrome Tag for free Polychrome edition joker
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - tag: PolychromeTag
     antes:

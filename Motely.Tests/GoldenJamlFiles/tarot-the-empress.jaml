@@ -3,7 +3,6 @@ author: jammy
 description: TheEmpress tarotCard with Vampire for Mult enhancement consumption
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "glass", "tarotCard-engine", "legendary-synergy"]
 must:
   - tarotCard: TheEmpress
     antes:
