@@ -66,6 +66,9 @@ importers:
       '@storybook/addon-docs':
         specifier: ^10.4.0
         version: 10.4.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(esbuild@0.28.0)(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(tsx@4.22.3)(yaml@2.8.4))
+      '@storybook/addon-mcp':
+        specifier: ^0.6.0
+        version: 0.6.0(@storybook/addon-vitest@10.4.0(@vitest/browser-playwright@4.1.6)(@vitest/browser@4.1.6)(@vitest/runner@4.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(vitest@4.1.6))(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)
       '@storybook/addon-vitest':
         specifier: ^10.4.0
         version: 10.4.0(@vitest/browser-playwright@4.1.6)(@vitest/browser@4.1.6)(@vitest/runner@4.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(vitest@4.1.6)
@@ -1286,6 +1289,15 @@ packages:
       '@types/react':
         optional: true
 
+  '@storybook/addon-mcp@0.6.0':
+    resolution: {integrity: sha512-E79m2S7ik9wiF1AnI49fwbLQkrD03PicIZpCdeFhbbB19MF4tKFKyaQtbT3f6eaAP4EP2+COLDVLCQ7B3rGF4w==}
+    peerDependencies:
+      '@storybook/addon-vitest': ^0.0.0-0 || ^9.1.16 || ^10.0.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0
+      storybook: ^0.0.0-0 || ^9.1.16 || ^10.0.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0
+    peerDependenciesMeta:
+      '@storybook/addon-vitest':
+        optional: true
+
   '@storybook/addon-vitest@10.4.0':
     resolution: {integrity: sha512-fJ3aW7EgkcZXB2k8G2VSIs/NrijCR2P+ekOKmJ23EUEjaELpKvM5PMWBOQUsPpRe+P35LcDftKVAKlo0PBEvfw==}
     peerDependencies:
@@ -1336,6 +1348,9 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@storybook/mcp@0.7.0':
+    resolution: {integrity: sha512-Pr4E61tM5e7aDzqgNOL/Ylw8CGdb+BIDGOf3vbmFfkR8ZnXjPxaV/vhTEsiXynnIpjQWCzySCxOU1icxZsgjrA==}
 
   '@storybook/react-dom-shim@10.4.0':
     resolution: {integrity: sha512-dcYWzdPaJEHVlyOyyz0/0v3QJXmcnK2sjw4YiFwU9IVJhoJrBlE9lMtmbO3QqIbq4qA0hElYtGkKO7tMLSKDGw==}
@@ -1389,6 +1404,26 @@ packages:
     engines: {node: '>=12', npm: '>=6'}
     peerDependencies:
       '@testing-library/dom': '>=7.21.4'
+
+  '@tmcp/adapter-valibot@0.1.6':
+    resolution: {integrity: sha512-drirZeNinhYLiRSMksN+m//u0ImFxtGRk1Vp425Xp/7CbBXFQdjAG+f7grssyHAukbVTGzmWsMMP6ejrGVErUA==}
+    peerDependencies:
+      tmcp: ^1.17.0
+      valibot: ^1.1.0
+
+  '@tmcp/session-manager@0.2.2':
+    resolution: {integrity: sha512-UrCRpTsxh5XnMbplspvftEYboiZWgAiXqqAUbyFTHoHMJ0LoNDy8bQd0+7qtxtT4S5Qsnv650gvs/Nbec5NTCQ==}
+    peerDependencies:
+      tmcp: ^1.16.3
+
+  '@tmcp/transport-http@0.8.6':
+    resolution: {integrity: sha512-iLcxu+tEMbkVHbhFfyXQhxfPDDTfm+F0kEw8Xg/a1rm29s4cBg1vwcpbtk02XTxsdDh8RJ1AZkQwF9WDGeb/IA==}
+    peerDependencies:
+      '@tmcp/auth': ^0.3.3 || ^0.4.0
+      tmcp: ^1.18.0
+    peerDependenciesMeta:
+      '@tmcp/auth':
+        optional: true
 
   '@tweenjs/tween.js@23.1.3':
     resolution: {integrity: sha512-vJmvvwFxYuGnF2axRtPYocag6Clbb5YS7kLL+SO/TeVFzHqDIWrNKYtcsPMibjDx9O+bu+psAy9NKfWklassUA==}
@@ -1568,6 +1603,11 @@ packages:
     resolution: {integrity: sha512-Yy19y6O2GJq8f7CHf7L0nxL8bf4PZCPaVOCgJrusOeFHY1LvHgYXnmnXg6N5iwAnbgbZCDjo60SiM6IPJi9C5g==}
     peerDependencies:
       react: '>= 16.8.0'
+
+  '@valibot/to-json-schema@1.7.0':
+    resolution: {integrity: sha512-Y3pPVibbIOHzohrlxSINvO7w/bvXkoYS3BQHoImV9ynE+bXKf171bdMucPurV2zp7gdmt0L1HCcNAsbo7cFRQw==}
+    peerDependencies:
+      valibot: ^1.4.0
 
   '@vitejs/plugin-react@5.2.0':
     resolution: {integrity: sha512-YmKkfhOAi3wsB1PhJq5Scj3GXMn3WvtQ/JC0xoopuHoXSdmtdStOpFrYaT1kie2YgFBcIe64ROzMYRjCrYOdYw==}
@@ -2033,6 +2073,9 @@ packages:
       jiti:
         optional: true
 
+  esm-env@1.2.2:
+    resolution: {integrity: sha512-Epxrv+Nr/CaL4ZcFGPJIYLWFom+YeV1DqMLHJoEd9SYRxNbaFruBwfEX/kkHUJf55j2+TUbmDcmuilbP1TmXHA==}
+
   espree@11.2.0:
     resolution: {integrity: sha512-7p3DrVEIopW1B1avAGLuCSh1jubc01H2JHc8B4qqGblmg5gI9yumBgACjWo4JlIc04ufug4xJ3SQI8HkS/Rgzw==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
@@ -2352,6 +2395,9 @@ packages:
   json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
 
+  json-rpc-2.0@1.7.1:
+    resolution: {integrity: sha512-JqZjhjAanbpkXIzFE7u8mE/iFblawwlXtONaCvRqI+pyABVz7B4M1EUNpyVW+dZjqgQ2L5HFmZCmOCgUKm00hg==}
+
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
 
@@ -2661,6 +2707,9 @@ packages:
     resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
 
+  picoquery@2.5.0:
+    resolution: {integrity: sha512-j1kgOFxtaCyoFCkpoYG2Oj3OdGakadO7HZ7o5CqyRazlmBekKhbDoUnNnXASE07xSY4nDImWZkrZv7toSxMi/g==}
+
   pkce-challenge@5.0.1:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
@@ -2871,6 +2920,9 @@ packages:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
 
+  sqids@0.3.0:
+    resolution: {integrity: sha512-lOQK1ucVg+W6n3FhRwwSeUijxe93b51Bfz5PMRMihVf1iVkl82ePQG7V5vwrhzB11v0NtsR25PSZRGiSomJaJw==}
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -2990,6 +3042,9 @@ packages:
   tinyspy@4.0.4:
     resolution: {integrity: sha512-azl+t0z7pw/z958Gy9svOTuzqIk6xq+NSheJzn5MMWtWTFywIacg2wUlzKFGtt3cthx0r2SxMK0yzJOR0IES7Q==}
     engines: {node: '>=14.0.0'}
+
+  tmcp@1.19.4:
+    resolution: {integrity: sha512-fMoUJ3Gef9iA0yKZNeW2SQCCKTluCwghUyOz/qxPS8XxrQk6Jlw4lgql3S+s6L//FteLeSJ7erKxMWl727mZoQ==}
 
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -3125,6 +3180,9 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
+  uri-template-matcher@1.1.2:
+    resolution: {integrity: sha512-uZc1h12jdO3m/R77SfTEOuo6VbMhgWznaawKpBjRGSJb7i91x5PgI37NQJtG+Cerxkk0yr1pylBY2qG1kQ+aEQ==}
+
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
@@ -3133,6 +3191,14 @@ packages:
   utility-types@3.11.0:
     resolution: {integrity: sha512-6Z7Ma2aVEWisaL6TvBCy7P8rm2LQoPv6dJ7ecIaIixHcwfbJ0x7mWdbcwlIM5IGQxPZSFYeqRCqlOOeKoJYMkw==}
     engines: {node: '>= 4'}
+
+  valibot@1.2.0:
+    resolution: {integrity: sha512-mm1rxUsmOxzrwnX5arGS+U4T25RdvpPjPN4yR0u9pUBov9+zGVtO84tif1eY4r6zWxVxu3KzIyknJy3rxfRZZg==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
@@ -4200,6 +4266,21 @@ snapshots:
       - vite
       - webpack
 
+  '@storybook/addon-mcp@0.6.0(@storybook/addon-vitest@10.4.0(@vitest/browser-playwright@4.1.6)(@vitest/browser@4.1.6)(@vitest/runner@4.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(vitest@4.1.6))(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)':
+    dependencies:
+      '@storybook/mcp': 0.7.0(typescript@5.9.3)
+      '@tmcp/adapter-valibot': 0.1.6(tmcp@1.19.4(typescript@5.9.3))(valibot@1.2.0(typescript@5.9.3))
+      '@tmcp/transport-http': 0.8.6(tmcp@1.19.4(typescript@5.9.3))
+      picoquery: 2.5.0
+      storybook: 10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      tmcp: 1.19.4(typescript@5.9.3)
+      valibot: 1.2.0(typescript@5.9.3)
+    optionalDependencies:
+      '@storybook/addon-vitest': 10.4.0(@vitest/browser-playwright@4.1.6)(@vitest/browser@4.1.6)(@vitest/runner@4.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(vitest@4.1.6)
+    transitivePeerDependencies:
+      - '@tmcp/auth'
+      - typescript
+
   '@storybook/addon-vitest@10.4.0(@vitest/browser-playwright@4.1.6)(@vitest/browser@4.1.6)(@vitest/runner@4.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(vitest@4.1.6)':
     dependencies:
       '@storybook/global': 5.0.0
@@ -4239,6 +4320,16 @@ snapshots:
     dependencies:
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
+
+  '@storybook/mcp@0.7.0(typescript@5.9.3)':
+    dependencies:
+      '@tmcp/adapter-valibot': 0.1.6(tmcp@1.19.4(typescript@5.9.3))(valibot@1.2.0(typescript@5.9.3))
+      '@tmcp/transport-http': 0.8.6(tmcp@1.19.4(typescript@5.9.3))
+      tmcp: 1.19.4(typescript@5.9.3)
+      valibot: 1.2.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - '@tmcp/auth'
+      - typescript
 
   '@storybook/react-dom-shim@10.4.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@10.4.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@testing-library/dom@10.4.1)(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))':
     dependencies:
@@ -4312,6 +4403,23 @@ snapshots:
   '@testing-library/user-event@14.6.1(@testing-library/dom@10.4.1)':
     dependencies:
       '@testing-library/dom': 10.4.1
+
+  '@tmcp/adapter-valibot@0.1.6(tmcp@1.19.4(typescript@5.9.3))(valibot@1.2.0(typescript@5.9.3))':
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      '@valibot/to-json-schema': 1.7.0(valibot@1.2.0(typescript@5.9.3))
+      tmcp: 1.19.4(typescript@5.9.3)
+      valibot: 1.2.0(typescript@5.9.3)
+
+  '@tmcp/session-manager@0.2.2(tmcp@1.19.4(typescript@5.9.3))':
+    dependencies:
+      tmcp: 1.19.4(typescript@5.9.3)
+
+  '@tmcp/transport-http@0.8.6(tmcp@1.19.4(typescript@5.9.3))':
+    dependencies:
+      '@tmcp/session-manager': 0.2.2(tmcp@1.19.4(typescript@5.9.3))
+      esm-env: 1.2.2
+      tmcp: 1.19.4(typescript@5.9.3)
 
   '@tweenjs/tween.js@23.1.3': {}
 
@@ -4539,6 +4647,10 @@ snapshots:
     dependencies:
       '@use-gesture/core': 10.3.1
       react: 19.2.6
+
+  '@valibot/to-json-schema@1.7.0(valibot@1.2.0(typescript@5.9.3))':
+    dependencies:
+      valibot: 1.2.0(typescript@5.9.3)
 
   '@vitejs/plugin-react@5.2.0(vite@8.0.13(@types/node@24.12.4)(esbuild@0.28.0)(tsx@4.22.3)(yaml@2.8.4))':
     dependencies:
@@ -5091,6 +5203,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  esm-env@1.2.2: {}
+
   espree@11.2.0:
     dependencies:
       acorn: 8.16.0
@@ -5380,6 +5494,8 @@ snapshots:
   jsesc@3.1.0: {}
 
   json-buffer@3.0.1: {}
+
+  json-rpc-2.0@1.7.1: {}
 
   json-schema-traverse@0.4.1: {}
 
@@ -5674,6 +5790,8 @@ snapshots:
 
   picomatch@4.0.4: {}
 
+  picoquery@2.5.0: {}
+
   pkce-challenge@5.0.1: {}
 
   pkg-types@1.3.1:
@@ -5925,6 +6043,8 @@ snapshots:
 
   source-map@0.6.1: {}
 
+  sqids@0.3.0: {}
+
   stackback@0.0.2: {}
 
   stats-gl@2.4.2(@types/three@0.184.1)(three@0.184.0):
@@ -6038,6 +6158,16 @@ snapshots:
   tinyrainbow@3.1.0: {}
 
   tinyspy@4.0.4: {}
+
+  tmcp@1.19.4(typescript@5.9.3):
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      json-rpc-2.0: 1.7.1
+      sqids: 0.3.0
+      uri-template-matcher: 1.1.2
+      valibot: 1.2.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
 
   to-regex-range@5.0.1:
     dependencies:
@@ -6159,11 +6289,17 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
+  uri-template-matcher@1.1.2: {}
+
   use-sync-external-store@1.6.0(react@19.2.6):
     dependencies:
       react: 19.2.6
 
   utility-types@3.11.0: {}
+
+  valibot@1.2.0(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
 
   vary@1.1.2: {}
 

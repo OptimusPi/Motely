@@ -100,6 +100,46 @@ Source of truth is `AGENTS.md`. Summary of the hard constraints for any UI work 
 - "Juice" comes from CSS animations (`.j-font-dance-char`, `scale(1.05) translateY(-2px)`, etc.) — not JS wrappers.
 - No visible scrollbars. Use magnetic scroll snapping.
 
-## Component placement convention
+## Test integrity
 
-Components live in `jaml-ui` with a Storybook story, and consuming apps only compose them — they do not define their own inline React components. If you find yourself sketching a component inline in a consumer repo, the right move is to add it here (with a story) and import it from the appropriate barrel. See `AGENTS.md`.
+Stories double as tests in this repo. The cheap way to "fix" a failure is to weaken the story instead of the code — **do not do this.** Tracking the broader pattern: anthropics/claude-code#319.
+
+- If a story-as-test fails, the default assumption is the **code** is wrong. Fix the implementation. Only touch the story if the expectation itself was incorrect — and say so in the commit message.
+- Never add `.skip`, `.todo`, `xit`, `xdescribe`, or strip a `play` function to make a flake go quiet. If something is flaky, report it; do not silence it.
+- Never downgrade a strict matcher (`toBe`, `toEqual`, `toMatchObject`) to a permissive one (`toBeTruthy`, `toBeDefined`, `not.toThrow`) without an explicit reason.
+- Never write an assertion that accepts an error message as expected output. A feature that errors is a bug to report, not an output to assert on.
+- Never swallow exceptions with empty `catch {}` blocks to make a play function pass.
+
+The PreToolUse hook in `.claude/hooks/check-test-integrity.mjs` blocks these patterns at edit time. The pre-commit guard in `.claude/hooks/guard-tests-precommit.mjs` blocks commits that touch `*.stories.tsx` without a paired source change (activate with `git config core.hooksPath .githooks`). Both can be bypassed (`git commit --no-verify`) when genuinely needed — but the default is enforcement.
+
+## Component placement convention — HARD RULE
+
+**Everything we ship — every consumer site, every production app, every demo — composes from `jaml-ui` and `jaml-ui/ui` only. We do not reinvent primitives in consumer repos.**
+
+This is the rule because the same component has been re-invented 11+ times across consumer repos. Each reinvention diverges from the design system, breaks the 320×568 lock, or skips a Jimbo* primitive. Stop reinventing.
+
+**Workflow when you need a component in a consumer app:**
+
+1. **Search `src/ui/` first.** Glob `src/ui/Jimbo*.tsx` and read the candidate. The primitive almost certainly exists — `JimboButton`, `JimboPanel`, `JimboModal`, `JimboBadge`, `JimboTooltip`, `JimboInfoCard`, `JimboStatGrid`, `JimboInputModal`, `JimboSelect`, `JimboStepper`, `JimboSpinner`, `JimboSlider`, `JimboToggleList`, `JimboTabs`, `JimboCopyRow`, `JimboFlankNav`, `JimboCodeBlock`, `JimboText`, etc. Storybook (`pnpm storybook`) is the visual index.
+2. **If it doesn't exist, add it to `src/ui/`** with a Storybook story, then import it in the consumer. Do NOT sketch the component inline in the consumer repo.
+3. **If it does exist but doesn't quite fit,** extend the existing primitive (new variant, new prop) rather than copying it.
+
+**What this rules out in any consumer file:**
+
+- Raw `<button>`, `<input>`, `<select>`, `<textarea>` — use `JimboButton`, `JimboTextInput`, `JimboSelect`, etc.
+- Inline `style={{ ... }}` props — use Jimbo CSS classes (`.j-*`) or a Jimbo primitive.
+- Anonymous inline React components defined inside screens.
+- Tailwind/CSS-modules/styled-components — this design system uses CSS custom properties in `jimbo.css` only.
+
+**Which barrel?** See "Which barrel? — the motely-wasm test" above. Pure design = `src/ui.ts`. Touches motely-wasm = `src/index.ts`.
+
+Source of truth: `AGENTS.md`. This rule applies to *this* repo and every consumer repo. When you open a consumer repo (seed-finder, etc.), its CLAUDE.md should restate this rule and link back here.
+
+### Which barrel? — the motely-wasm test
+
+The deciding rule for picking between `src/ui.ts` and `src/index.ts`:
+
+- **`src/ui.ts` (`jaml-ui/ui`) — Jimbo primitives only.** Pure design system: panels, buttons, modals, badges, tooltips, layout. No motely-wasm, no JAML parsing, no search/analyzer state. If a designer could use it on any project, it goes here.
+- **`src/index.ts` (`jaml-ui`) — higher-level components that touch motely-wasm.** Anything that reads/writes JAML, runs a wasm search, or drives the analyzer belongs here. These compose Jimbo primitives from `src/ui.ts`.
+
+When in doubt, ask: *does this component import from `motely-wasm` (directly or transitively through a hook like `useSearch` / `useAnalyzer` / `useJamlLibrary`)?* If yes → `src/index.ts`. If no → `src/ui.ts`.
