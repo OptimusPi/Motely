@@ -108,8 +108,8 @@ export {
 export {
     JamlAestheticSelector,
     type JamlAestheticSelectorProps,
-    type JamlAestheticOption,
 } from "./components/JamlAestheticSelector.js";
+export { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 export {
     JamlSeedInput,
     type JamlSeedInputProps,

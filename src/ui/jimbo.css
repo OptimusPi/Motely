@@ -92,15 +92,12 @@
   --j-radius-pill: 10px;
 
   /* Animation */
-  --j-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --j-press-y: 2px;
   --j-press-speed: 55ms;
   --j-panel-border-width: 3px;
   --j-panel-south-edge-width: calc(var(--j-panel-border-width) / 2);
   --j-panel-border-width-heavy: 6px;
   --j-surface-shadow-depth: 4px;
-  --j-idle-sheen-duration: 5600ms;
-  --j-idle-bob-duration: 3400ms;
 }
 
 
@@ -1274,9 +1271,17 @@
   color: var(--j-grey);
 }
 
+/* JimboLink — canonical external link styling. j-footer__link kept as an alias
+   for back-compat; new uses should be `j-link` via the JimboLink primitive. */
+.j-link,
 .j-footer__link {
   color: var(--j-gold);
   text-decoration: none;
+}
+
+.j-link:hover,
+.j-footer__link:hover {
+  text-decoration: underline;
 }
 
 .j-footer__extra {
@@ -1338,84 +1343,17 @@
 }
 
 
-/* ── Utility ──────────────────────────────────────────────────────────── */
+/* ── Utility (extras not in the Layout Utilities block) ───────────────── */
 
-.j-flex {
-  display: flex;
-}
-
-.j-flex-col {
-  display: flex;
-  flex-direction: column;
-}
-
-.j-flex-wrap {
-  flex-wrap: wrap;
-}
-
-.j-items-center {
-  align-items: center;
-}
-
-.j-justify-center {
-  justify-content: center;
-}
-
-.j-gap-xs {
-  gap: var(--j-space-xs);
-}
-
-.j-gap-sm {
-  gap: var(--j-space-sm);
-}
-
-.j-gap-md {
-  gap: var(--j-space-md);
-}
-
-.j-gap-lg {
-  gap: var(--j-space-lg);
-}
-
-.j-gap-xl {
-  gap: var(--j-space-xl);
-}
-
-.j-mt-sm {
-  margin-top: var(--j-space-sm);
-}
-
-.j-w-full {
-  width: 100%;
-}
-
-.j-shrink-0 {
-  flex-shrink: 0;
-}
-
-.j-flex-1 {
-  flex: 1;
-}
-
-.j-min-w-0 {
-  min-width: 0;
-}
-
-.j-text-center {
-  text-align: center;
-}
-
-.j-overflow-hidden {
-  overflow: hidden;
-}
-
-.j-overflow-auto {
-  overflow: auto;
-}
-
-.j-relative {
-  position: relative;
-}
+.j-flex-wrap { flex-wrap: wrap; }
+.j-gap-xl { gap: var(--j-space-xl); }
+.j-mt-sm { margin-top: var(--j-space-sm); }
+.j-shrink-0 { flex-shrink: 0; }
+.j-flex-1 { flex: 1; }
+.j-min-w-0 { min-width: 0; }
+.j-overflow-hidden { overflow: hidden; }
+.j-overflow-auto { overflow: auto; }
+.j-relative { position: relative; }
 
 /* Tone border utilities */
 .j-border--red {
@@ -3125,3 +3063,30 @@
   transform: translateY(-2px);
   z-index: 5;
 }
+
+
+/* ── Layout primitives — JimboStack / JimboRow ─────────────────────────── */
+/* Grid-based, not flex. The 320×568 canvas is fixed; we compose the surface
+   with named tracks rather than guess-and-checking flexbox flow.            */
+
+.j-stack { display: grid; grid-auto-flow: row; grid-auto-rows: max-content; }
+.j-row   { display: grid; grid-auto-flow: column; grid-auto-columns: max-content; }
+
+.j-stack--gap-xs, .j-row--gap-xs { gap: var(--j-space-xs); }
+.j-stack--gap-sm, .j-row--gap-sm { gap: var(--j-space-sm); }
+.j-stack--gap-md, .j-row--gap-md { gap: var(--j-space-md); }
+.j-stack--gap-lg, .j-row--gap-lg { gap: var(--j-space-lg); }
+.j-stack--gap-xl, .j-row--gap-xl { gap: var(--j-space-xl); }
+
+.j-stack--align-start,   .j-row--align-start   { align-items: start; }
+.j-stack--align-center,  .j-row--align-center  { align-items: center; }
+.j-stack--align-end,     .j-row--align-end     { align-items: end; }
+.j-stack--align-stretch, .j-row--align-stretch { align-items: stretch; }
+
+.j-stack--justify-start,   .j-row--justify-start   { justify-content: start; }
+.j-stack--justify-center,  .j-row--justify-center  { justify-content: center; }
+.j-stack--justify-end,     .j-row--justify-end     { justify-content: end; }
+.j-stack--justify-between, .j-row--justify-between { justify-content: space-between; }
+
+/* Row-only: opt-in soft wrap. Stack is column-flow so wrap is meaningless. */
+.j-row--wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, max-content); }

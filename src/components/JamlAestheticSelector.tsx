@@ -1,22 +1,21 @@
 "use client";
 
+import { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import { JimboBadge } from "../ui/JimboBadge.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
 
-export type JamlAestheticOption = "Palindrome" | "Psychosis" | "Gross" | "Nsfw" | "Funny" | "Balatro";
-
-const AESTHETICS: { id: JamlAestheticOption; value: number; label: string; desc: string }[] = [
-  { id: "Palindrome", value: 0, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
-  { id: "Psychosis", value: 1, label: "Psychosis", desc: "Unsettling or eerie seed patterns" },
-  { id: "Gross", value: 2, label: "Gross", desc: "Seeds with crude or disgusting words" },
-  { id: "Nsfw", value: 3, label: "NSFW", desc: "Seeds with adult content" },
-  { id: "Funny", value: 4, label: "Funny", desc: "Seeds that spell funny words" },
-  { id: "Balatro", value: 5, label: "Balatro", desc: "Seeds referencing the game itself" },
+const AESTHETICS: { id: JamlAesthetic; label: string; desc: string }[] = [
+  { id: JamlAesthetic.Palindrome, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
+  { id: JamlAesthetic.Psychosis, label: "Psychosis", desc: "Unsettling or eerie seed patterns" },
+  { id: JamlAesthetic.Gross, label: "Gross", desc: "Seeds with crude or disgusting words" },
+  { id: JamlAesthetic.Nsfw, label: "Nsfw", desc: "Seeds with adult content" },
+  { id: JamlAesthetic.Funny, label: "Funny", desc: "Seeds that spell funny words" },
+  { id: JamlAesthetic.Balatro, label: "Balatro", desc: "Seeds referencing the game itself" },
 ];
 
 export interface JamlAestheticSelectorProps {
-  value?: JamlAestheticOption | null;
-  onChange: (aesthetic: JamlAestheticOption | null, numericValue: number) => void;
+  value?: JamlAesthetic | null;
+  onChange: (aesthetic: JamlAesthetic | null) => void;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -31,22 +30,19 @@ export function JamlAestheticSelector({ value, onChange, className, style }: Jam
 
   const step = (direction: -1 | 1) => {
     const length = AESTHETICS.length;
-
-    // Include null as "Any" in the spinner cycle: Any -> option0 -> ... -> Any
     const cycleIndex = currentIndex + 1;
     const nextCycleIndex = (cycleIndex + direction + (length + 1)) % (length + 1);
 
     if (nextCycleIndex === 0) {
-      onChange(null, -1);
+      onChange(null);
       return;
     }
 
-    const next = AESTHETICS[nextCycleIndex - 1];
-    onChange(next.id, next.value);
+    onChange(AESTHETICS[nextCycleIndex - 1].id);
   };
 
   const label = current?.label ?? "Any";
-  const numericValue = current?.value ?? -1;
+  const numericValue = current?.id ?? -1;
   const description = current?.desc ?? "No aesthetic constraint";
 
   return (

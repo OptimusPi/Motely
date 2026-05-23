@@ -872,8 +872,10 @@ export function useJamlIdeDrag(
 }
 
 /**
- * Provides a magnetic 3D tilt effect for DOM elements, replicating the 'juice' of Balatro cards.
- * Ensures the hit-detection area remains stable by separating container events from the transformed style.
+ * Provides a magnetic 3D tilt effect for DOM elements, replicating the hover-follow
+ * of Balatro cards. Continuous (tracks the cursor). For 3D/spring-physics button
+ * juice prefer `JimboButton3D` from `jaml-ui/r3f`, which uses the canonical
+ * pmndrs stack (@react-three/fiber + @react-spring/three).
  */
 export function useDOMMagneticTilt(enabled: boolean = true) {
   const [isHovered, setIsHovered] = useState(false)

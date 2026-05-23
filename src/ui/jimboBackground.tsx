@@ -1,6 +1,6 @@
 import React from 'react'
 import { useBalatroBackground, type JimboBackgroundConfig } from './hooks.js'
-import { JimboBalatroFooter } from './footer.js'
+import { JimboBalatroFooter } from './JimboBalatroFooter.js'
 
 export type { JimboBackgroundConfig } from './hooks.js'
 
