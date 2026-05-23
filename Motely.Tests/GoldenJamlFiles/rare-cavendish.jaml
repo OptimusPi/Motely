@@ -3,7 +3,6 @@ author: jammy
 description: Cavendish rare joker for X3 Mult scaling
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: Cavendish
     antes:

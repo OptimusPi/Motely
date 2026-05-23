@@ -3,7 +3,6 @@ author: jammy
 description: Dusk uncommon with Glass Joker for final hand retrigger
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "probability", "retrigger", "face-cards", "glass", "legendary-synergy"]
 must:
   - uncommonJoker: Dusk
     antes:

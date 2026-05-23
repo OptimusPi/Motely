@@ -3,7 +3,6 @@ author: jammy
 description: TheHouse boss blind disables first hand played
 deck: Red
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - boss: TheHouse
     antes:

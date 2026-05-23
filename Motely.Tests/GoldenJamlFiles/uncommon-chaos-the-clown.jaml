@@ -3,7 +3,6 @@ author: jammy
 description: Chaos the Clown uncommon for 1 free reroll per shop
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: ChaosTheClown
     antes:

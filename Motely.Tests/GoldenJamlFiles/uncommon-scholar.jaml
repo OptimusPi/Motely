@@ -3,7 +3,6 @@ author: jammy
 description: Scholar uncommon for +20 Chips +4 Mult per Ace scored
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: Scholar
     antes:

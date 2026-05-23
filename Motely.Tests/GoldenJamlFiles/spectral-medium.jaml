@@ -3,7 +3,6 @@ author: jammy
 description: Medium spectralCard with Fortune Teller for Purple Seal tarotCard generation
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "planetCard-scaling", "discard", "tarotCard-engine", "legendary-synergy"]
 must:
   - spectralCard: Medium
     antes:

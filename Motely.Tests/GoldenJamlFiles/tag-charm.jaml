@@ -3,7 +3,6 @@ author: jammy
 description: Charm Tag for free Mega Arcana Pack in next shop
 deck: Zodiac
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "planetCard-scaling", "tarotCard-engine", "legendary-synergy"]
 must:
   - tag: CharmTag
     antes:

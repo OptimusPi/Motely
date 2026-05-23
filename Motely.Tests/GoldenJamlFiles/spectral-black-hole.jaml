@@ -3,7 +3,6 @@ author: jammy
 description: BlackHole spectralCard with Constellation for universal hand level upgrade
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - spectralCard: BlackHole
     antes:

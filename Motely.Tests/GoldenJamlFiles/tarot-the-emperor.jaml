@@ -3,7 +3,6 @@ author: jammy
 description: TheEmperor creates 2 Tarots for Fortune Teller scaling
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "tarotCard-engine", "legendary-synergy"]
 must:
   - tarotCard: TheEmperor
     antes:

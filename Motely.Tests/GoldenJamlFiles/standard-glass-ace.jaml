@@ -3,7 +3,6 @@ author: jammy
 description: Standard card with Glass enhancement on Ace in early antes
 deck: Red
 stake: White
-hashtags: ["standard-card", "enhancement", "copy", "negative", "planetCard-scaling", "probability", "retrigger", "glass", "legendary-synergy"]
 must:
   - standardCard: Ace
     rank: Ace

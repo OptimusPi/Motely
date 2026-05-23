@@ -3,7 +3,6 @@ author: jammy
 description: Grim spectralCard with Scholar for enhanced Ace synergy
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "planetCard-scaling", "deck-fix", "legendary-synergy"]
 must:
   - spectralCard: Grim
     antes:

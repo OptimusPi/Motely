@@ -3,7 +3,6 @@ author: jammy
 description: Blue Joker common for +2 Chips per card remaining in deck
 deck: Plasma
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "deck-thinning", "stone", "legendary-synergy"]
 must:
   - commonJoker: BlueJoker
     antes:

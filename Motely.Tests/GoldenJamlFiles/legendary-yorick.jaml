@@ -3,7 +3,6 @@ author: jammy
 description: Yorick legendary joker with Merry Andy for discard scaling
 deck: Red
 stake: White
-hashtags: ["legendary", "soul", "rare-find", "copy", "negative", "discard", "legendary-synergy"]
 must:
   - legendaryJoker: Yorick
     antes:

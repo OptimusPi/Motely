@@ -3,7 +3,6 @@ author: jammy
 description: TheNeedle boss blind forces you to play only 1 hand
 deck: Red
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - boss: TheNeedle
     antes:

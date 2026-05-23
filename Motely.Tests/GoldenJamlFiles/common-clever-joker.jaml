@@ -3,7 +3,6 @@ author: jammy
 description: Clever Joker common for +80 Chips if played hand contains Two Pair
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "pairs", "planetCard-scaling", "retrigger", "legendary-synergy"]
 must:
   - commonJoker: CleverJoker
     antes:

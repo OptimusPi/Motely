@@ -3,7 +3,6 @@ author: jammy
 description: TheDevil tarotCard with Golden Ticket for Gold enhancement synergy
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "economy", "planetCard-scaling", "legendary-synergy"]
 must:
   - tarotCard: TheDevil
     antes:
