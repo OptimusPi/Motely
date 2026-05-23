@@ -677,27 +677,6 @@ public class MainMenuWindow : View
         };
         dialog.Add(messageLabel);
 
-        // Crude Seeds toggle - starts hidden until animation completes
-        var crudeBtn = new CleanButton()
-        {
-            X = Pos.Center(),
-            Y = 7,
-            Text = TuiSettings.CrudeSeedsEnabled
-                ? " [X] Crude Seeds (NSFW) "
-                : " [ ] Crude Seeds (NSFW) ",
-            Width = 28,
-            Visible = false,
-        };
-        crudeBtn.ColorScheme = BalatroTheme.GrayButton;
-        crudeBtn.Accept += (s, e) =>
-        {
-            TuiSettings.CrudeSeedsEnabled = !TuiSettings.CrudeSeedsEnabled;
-            crudeBtn.Text = TuiSettings.CrudeSeedsEnabled
-                ? " [X] Crude Seeds (NSFW) "
-                : " [ ] Crude Seeds (NSFW) ";
-        };
-        dialog.Add(crudeBtn);
-
         var backBtn = new CleanButton()
         {
             X = 1,
@@ -749,10 +728,7 @@ public class MainMenuWindow : View
                     // Final snap to complete message
                     messageLabel.Text = reveal;
                     dialog.Title = "pifreak loves you!";
-                    crudeBtn.Visible = true;
-                    crudeBtn.SetNeedsDraw();
                     dialog.SetNeedsDraw();
-                    crudeBtn.SetFocus();
                     return false; // Stop timer
                 }
             }

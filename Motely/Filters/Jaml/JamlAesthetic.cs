@@ -9,7 +9,6 @@ public enum JamlAesthetic
     Palindrome,
     Psychosis,
     Gross,
-    Nsfw,
     Funny,
     Balatro,
 }
@@ -24,7 +23,6 @@ public static class JamlAestheticParser
         ("palindrome", JamlAesthetic.Palindrome),
         ("psychosis", JamlAesthetic.Psychosis),
         ("gross", JamlAesthetic.Gross),
-        ("nsfw", JamlAesthetic.Nsfw),
         ("funny", JamlAesthetic.Funny),
         ("balatro", JamlAesthetic.Balatro),
     ];

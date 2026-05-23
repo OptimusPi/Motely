@@ -5,11 +5,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <BootsharpName>motely-wasm</BootsharpName>
-    <!-- Bootsharp build-config (https://github.com/elringus/bootsharp/blob/main/docs/guide/build-config.md):
-         separate sinks so %MODULE_DIR% → dist/ and package.json exports stay "./dist/index.mjs".
-         Same pattern as samples/react (Backend.WASM): PackageDirectory + BinariesDirectory + PublishDirectory. -->
+    <!-- Match samples/react/backend/Backend.WASM exactly: only set Package + Binaries.
+         Let BootsharpPublishDirectory default ($(BootsharpPackageDirectory)/bin/$(BootsharpName)). -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
-    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
   </PropertyGroup>
 
@@ -43,20 +41,8 @@
     </ItemGroup>
   </Target>
 
-  <!-- Bootsharp PackageTemplate.json has no version field; npm publish requires one from MotelyVersion. -->
+  <!-- README into the npm root. No package.json patching, no node-boot, no schema (re-add when POCO is stable). -->
   <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpPack">
-    <PropertyGroup>
-      <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
-      <_NpmPackageJson>$(_NpmRoot)\package.json</_NpmPackageJson>
-      <_PkgWithVersion>$([System.IO.File]::ReadAllText('$(_NpmPackageJson)').Replace('&quot;name&quot;: &quot;$(BootsharpName)&quot;,', '&quot;name&quot;: &quot;$(BootsharpName)&quot;,%0D%0A    &quot;version&quot;: &quot;$(MotelyVersion)&quot;,'))</_PkgWithVersion>
-    </PropertyGroup>
-    <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
-           Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp PackageTemplate.json may have changed. Update FinalizeNpmPackage." />
-    <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
-    <Exec Command="powershell -NoProfile -Command &quot;$p = Get-Content '$(_NpmPackageJson)' -Raw; if ($p -notmatch '\&quot;node-boot\&quot;') { $p = $p -replace '(\&quot;\.\&quot;: \&quot;\./dist/index\.mjs\&quot;,)', '$1`n    &quot;./node-boot&quot;: &quot;./dist/node-boot.mjs&quot;,'; Set-Content '$(_NpmPackageJson)' $p -NoNewline }&quot;" />
-    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
-    <Copy SourceFiles="node-boot.mjs" DestinationFolder="$(_NpmRoot)\dist" />
-    <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
-    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
+    <Copy SourceFiles="README.md" DestinationFolder="$(MSBuildProjectDirectory)\..\motely-wasm" />
   </Target>
 </Project>
