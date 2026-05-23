@@ -96,9 +96,19 @@ Source of truth is `AGENTS.md`. Summary of the hard constraints for any UI work 
 - **Every component is a `Jimbo*` component.** No raw `<button>`, no inline anonymous components in consumer screens. Missing primitive? Add a `Jimbo*` to `src/ui/` with a story.
 - **No emoji as icons.** Use `react-icons` (`react-icons/fi` preferred).
 - **Item names go in `JimboTooltip`, not inline labels.** Sprite + tooltip-on-hover. Players recognize the art; the 320px surface can't afford permanent inline labels.
-- Canonical surface is **iPhone SE 5 portrait, 320×568, HARD LOCKED — for every consumer, including MCP App embeds and desktop.** The `.j-app` shell is fixed at 320×568 — no scroll, no stretch, no reflow. We design for 320×568 first; we widen only after the 320 experience is right. If your component doesn't fit, redesign the component, don't relax the lock.
+- Canonical surface is **320×568, HARD LOCKED — the MCP Apps inline-iframe target.** The lock isn't iPhone-SE nostalgia: 320×568 is the canvas size MCP Apps gives an embedded View inside Claude (and the same shape suits any tight inline iframe widget). With a fixed canvas you *compose* the surface — grid tracks, named regions — instead of *guess-and-check* flexbox flow. Layout primitives (`JimboStack`, `JimboRow`) are grid-based for this reason. The `.j-app` shell is fixed at 320×568 — no scroll, no stretch, no reflow. We design for 320×568 first; we widen only after the 320 experience is right. If your component doesn't fit, redesign the component, don't relax the lock.
 - "Juice" comes from CSS animations (`.j-font-dance-char`, `scale(1.05) translateY(-2px)`, etc.) — not JS wrappers.
 - No visible scrollbars. Use magnetic scroll snapping.
+
+## Types come from motely-wasm — no schema drift
+
+**Do not declare game-domain types locally. Import them from `motely-wasm`.** Every Balatro enum (`MotelyDeck`, `MotelyStake`, `MotelyTag`, `MotelyVoucher`, `MotelyBoosterPack`, `MotelyBossBlind`, `MotelyJokerRarity`, `MotelyItemEdition`, `MotelyItemEnhancement`, `MotelyItemSeal`, `MotelyItemType`, `MotelyItemTypeCategory`) already exists at `motely-wasm/motely/enums`. The JAML filter aesthetic enum lives at `motely-wasm/motely/filters/jaml` (`JamlAesthetic`). Analysis result shapes (`MotelyJamlyzerResult`, `MotelySeedAnalysis`, etc.) live at `motely-wasm/motely/analysis`.
+
+If you find yourself writing `type DeckType = 'red' | 'blue' | …` or `type JokerRarity = 'common' | 'uncommon' | …` — stop. The enum already exists; you're forking the schema. Each fork is a drift bomb that fires when motely-wasm adds a value (e.g. a new deck) and your union silently doesn't match. Import the enum and use its members.
+
+**What stays local:** jaml-ui-specific data formats that motely-wasm has no equivalent for — JAMZ archive types (`JamzFile`, `JamzHeader`, `JamzSeedData`, `RelevantEvent`, `EventSource`), `RitualConfig`, and component-prop interfaces. These describe wire formats and UI surfaces unique to this library and are not part of motely-wasm's domain.
+
+**Source of truth for "does this exist in motely-wasm?":** grep `node_modules/motely-wasm/dist/generated/motely/**/*.g.d.mts` before declaring anything that smells like game state. If the symbol moved between minor bumps (see "Updating motely-wasm" above), update the import — don't fork.
 
 ## Test integrity
 
@@ -118,11 +128,19 @@ The PreToolUse hook in `.claude/hooks/check-test-integrity.mjs` blocks these pat
 
 This is the rule because the same component has been re-invented 11+ times across consumer repos. Each reinvention diverges from the design system, breaks the 320×568 lock, or skips a Jimbo* primitive. Stop reinventing.
 
-**Workflow when you need a component in a consumer app:**
+**The composition contract:**
 
-1. **Search `src/ui/` first.** Glob `src/ui/Jimbo*.tsx` and read the candidate. The primitive almost certainly exists — `JimboButton`, `JimboPanel`, `JimboModal`, `JimboBadge`, `JimboTooltip`, `JimboInfoCard`, `JimboStatGrid`, `JimboInputModal`, `JimboSelect`, `JimboStepper`, `JimboSpinner`, `JimboSlider`, `JimboToggleList`, `JimboTabs`, `JimboCopyRow`, `JimboFlankNav`, `JimboCodeBlock`, `JimboText`, etc. Storybook (`pnpm storybook`) is the visual index.
-2. **If it doesn't exist, add it to `src/ui/`** with a Storybook story, then import it in the consumer. Do NOT sketch the component inline in the consumer repo.
-3. **If it does exist but doesn't quite fit,** extend the existing primitive (new variant, new prop) rather than copying it.
+- **Every site, every consumer, every screen is composed from JimboUI primitives only.** Period. Consumers do not write styled `<div>`s, inline `style={{}}`, or anonymous mini-components.
+- **A real Jimbo* primitive is a React component with a typed prop API and CSS classes in `jimbo.css` — not a className helper, not a styled `<div>` shortcut.** Composable, story-covered, exported from the barrel.
+- **A component that touches JAML / MotelyJAML / motely-wasm goes in `jaml-ui` (src/index.ts).** A pure design-system primitive goes in `jaml-ui/ui` (src/ui.ts). See "Which barrel? — the motely-wasm test" above.
+- **Components in `jaml-ui` are themselves composed of `jaml-ui/ui` primitives only.** No raw HTML, no inline styles, no shortcut div wrappers. If you need a new layout or visual primitive while writing a `jaml-ui` component, the answer is: add it to `jaml-ui/ui` first (with a story), then use it.
+
+**Workflow when you think you need a new primitive:**
+
+1. **Search `src/ui/` first.** Glob `src/ui/Jimbo*.tsx` and read the candidates. The primitive almost certainly exists — `JimboButton`, `JimboPanel`, `JimboModal`, `JimboBadge`, `JimboTooltip`, `JimboInfoCard`, `JimboStatGrid`, `JimboInset`, `JimboStack`, `JimboRow`, `JimboInputModal`, `JimboSelect`, `JimboStepper`, `JimboSpinner`, `JimboSlider`, `JimboToggleList`, `JimboTabs`, `JimboCopyRow`, `JimboFlankNav`, `JimboCodeBlock`, `JimboText`, etc. Storybook is the visual index.
+2. **If you think it doesn't exist — ASK before inventing.** Describe what's missing, name what you'd call it, and wait. Most "missing" primitives are existing ones used wrong, or two existing primitives composed. Inventing a new Jimbo* primitive is a design decision, not an autonomous coding decision.
+3. **If it does exist but doesn't quite fit,** extend the existing primitive (new variant, new prop) rather than copying it. Still worth confirming the extension before writing it.
+4. **Only after confirmation, add to `src/ui/`** with a Storybook story and a barrel export. Then use it in the consumer.
 
 **What this rules out in any consumer file:**
 

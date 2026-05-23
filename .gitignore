@@ -22,6 +22,10 @@ sb-screenshot*.png
 .playwright-mcp/
 
 .claude/settings.local.json
+
+# Local-only Balatro game source / screenshots used as design reference.
+# Never commit — copyright belongs to LocalThunk/PlayStack.
+/BalatroSrc/
 /examples/screenshots-balatro-movile
 /examples/*
 !/examples/seed-finder

@@ -4,6 +4,8 @@ import { DeckSprite } from '../components/DeckSprite';
 import { JimboPanelSpinner } from './JimboPanelSpinner';
 import { JimboPanel } from './panel';
 import { JimboText } from './jimboText';
+import { JimboApp } from './jimboApp';
+import { JimboStack } from './jimboLayout';
 
 // Vanilla deck list. Matches DECK_OPTIONS in src/lib/data/constants.ts plus
 // the additional decks (Plasma, Ghost) included in DeckSprite's sprite map.
@@ -32,10 +34,8 @@ export const DeckSelector: Story = {
 };
 
 /**
- * Combined Deck + Stake selector. This is the screen a seed hunter uses to
- * configure WHICH deck/stake combination they're searching seeds for — not
- * to start a game. Two stacked JimboPanelSpinners, each cycling through the
- * vanilla options; the stake sticker overlays on the deck sprite.
+ * Combined Deck + Stake selector. The screen a seed hunter uses to configure
+ * WHICH deck/stake to search seeds for — not to start a game.
  */
 export const DeckAndStakeSelector: StoryObj = {
   render: () => {
@@ -47,29 +47,31 @@ export const DeckAndStakeSelector: StoryObj = {
     const stake = STAKES[stakeIdx];
 
     return (
-      <div style={{ width: 320 }}>
+      <JimboApp>
         <JimboPanel>
-          <JimboText size="sm" tone="white" style={{ textAlign: 'center', marginBottom: 8 }}>
-            Search for seeds matching:
-          </JimboText>
-          <JimboPanelSpinner
-            label="Deck"
-            title={`${deck} Deck`}
-            description=" "
-            media={<DeckSprite deck={deck} stake={stake} size={64} />}
-            onPrev={() => setDeckIdx((p) => (p - 1 + DECKS.length) % DECKS.length)}
-            onNext={() => setDeckIdx((p) => (p + 1) % DECKS.length)}
-          />
-          <JimboPanelSpinner
-            label="Stake"
-            title={`${stake} Stake`}
-            description=" "
-            media={<DeckSprite deck={deck} stake={stake} size={64} />}
-            onPrev={() => setStakeIdx((p) => (p - 1 + STAKES.length) % STAKES.length)}
-            onNext={() => setStakeIdx((p) => (p + 1) % STAKES.length)}
-          />
+          <JimboStack gap="md" align="stretch">
+            <JimboStack align="center">
+              <JimboText size="sm" tone="white">Search for seeds matching:</JimboText>
+            </JimboStack>
+            <JimboPanelSpinner
+              label="Deck"
+              title={`${deck} Deck`}
+              description=" "
+              media={<DeckSprite deck={deck} stake={stake} size={64} />}
+              onPrev={() => setDeckIdx((p) => (p - 1 + DECKS.length) % DECKS.length)}
+              onNext={() => setDeckIdx((p) => (p + 1) % DECKS.length)}
+            />
+            <JimboPanelSpinner
+              label="Stake"
+              title={`${stake} Stake`}
+              description=" "
+              media={<DeckSprite deck={deck} stake={stake} size={64} />}
+              onPrev={() => setStakeIdx((p) => (p - 1 + STAKES.length) % STAKES.length)}
+              onNext={() => setStakeIdx((p) => (p + 1) % STAKES.length)}
+            />
+          </JimboStack>
         </JimboPanel>
-      </div>
+      </JimboApp>
     );
   },
 };
