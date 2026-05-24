@@ -4,8 +4,9 @@ $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
 $targets = Get-ChildItem -Path $root -Recurse -Directory -Force `
+    -Include 'bin', 'obj' `
     -ErrorAction SilentlyContinue |
-    Where-Object { ($_.Name -eq 'bin' -or $_.Name -eq 'obj') -and $_.FullName -notmatch '\\node_modules\\' }
+    Where-Object { $_.FullName -notmatch '\\node_modules\\' }
 
 foreach ($dir in $targets) {
     Write-Host "rm $($dir.FullName)"

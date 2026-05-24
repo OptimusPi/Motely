@@ -7,6 +7,7 @@ using Motely.Analysis;
 using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
+using Motely.WasmTools;
 using YamlDotNet.RepresentationModel;
 
 partial class Program
