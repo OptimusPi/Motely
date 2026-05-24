@@ -6,6 +6,7 @@ namespace Motely.Filters.Jaml;
 public sealed class BossClause : JamlClause
 {
     public required MotelyBossBlind[] Bosses { get; init; }
+    public int[] Rolls { get; init; } = [];
 
     public override int EstimatedCost => 2 + MaxAnte;
     public override string Describe() =>
