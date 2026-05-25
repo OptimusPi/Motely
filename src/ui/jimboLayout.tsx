@@ -12,7 +12,7 @@ interface BaseLayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   justify?: JimboLayoutJustify
 }
 
-export interface JimboStackProps extends BaseLayoutProps {}
+export type JimboStackProps = BaseLayoutProps
 
 /**
  * Vertical stack — CSS grid column-flow with token-aligned gap.
