@@ -13,7 +13,7 @@ Package manager is `pnpm` (lockfile is `pnpm-lock.yaml`).
 - `pnpm storybook` — Storybook dev server on `:6006`. Stories are the primary visual dev surface.
 - `pnpm build-storybook` / `pnpm serve:storybook` — build static Storybook, then serve on `:3141` with CORS (used by MCP/iframe consumers).
 - Tests run via `vitest` driven by `@storybook/addon-vitest`: stories double as tests, executed in headless Chromium through `@vitest/browser-playwright` (see `vitest.config.ts`). To run a single story-as-test, use `pnpm vitest run -t "<Story Title>"` or filter by file path. There are no separate `*.test.*` files.
-- `examples/seed-finder` is the canonical end-to-end consumer app (boots motely-wasm, renders `JamlIde`, runs real searches): `cd examples/seed-finder && pnpm install && pnpm dev`. (There is no top-level `pnpm demo` — the script may exist in `package.json` but the `demo/` directory does not.)
+- `examples/mcp-seed-finder/` is the canonical end-to-end consumer (MCP App; boots motely-wasm, renders `SeedFinderApp`, runs real searches): `cd examples/mcp-seed-finder && pnpm install && pnpm dev`. The older `examples/seed-finder/` was removed in `ff64157` — CLAUDE.md used to point there. There is no top-level `pnpm demo`.
 
 ## Architecture
 
@@ -144,10 +144,15 @@ This is the rule because the same component has been re-invented 11+ times acros
 
 **What this rules out in any consumer file:**
 
-- Raw `<button>`, `<input>`, `<select>`, `<textarea>` — use `JimboButton`, `JimboTextInput`, `JimboSelect`, etc.
+- Raw `<button>`, `<input>`, `<select>`, `<textarea>` — use `JimboIconButton`/`JimboButton`, `JimboTextInput`, `JimboSelect`, etc.
 - Inline `style={{ ... }}` props — use Jimbo CSS classes (`.j-*`) or a Jimbo primitive.
 - Anonymous inline React components defined inside screens.
 - Tailwind/CSS-modules/styled-components — this design system uses CSS custom properties in `jimbo.css` only.
+
+**Two sharp edges that have bitten this codebase repeatedly:**
+
+- **`JimboButton` is R3F (Three.js), not a DOM `<button>`.** It renders inside a `<Canvas>` and won't work in normal DOM trees. For DOM-only contexts (icon buttons in cards/rows, remove-x, toolbar actions) use **`JimboIconButton`** (props: `tone="default" | "destructive"`, `size="xs" | "sm" | "md"`, plus `onMouseDown`/`onTouchStart` passthrough for drag-stop semantics). The R3F nature isn't obvious from the name. Don't reach for `JimboButton` when you mean an icon-only DOM button.
+- **`size` prop collision when extending `<input>`.** `React.InputHTMLAttributes<HTMLInputElement>` already declares `size?: number` (native HTML attr). If your new primitive uses `size` for its own scale (`'xs' | 'sm' | 'md'`), you must `Omit<..., 'size'>` or typecheck fails with `Type 'string' is not assignable to type 'number'`. `JimboInlineEdit` does this; `JimboTextInput` doesn't define `size` so doesn't need to.
 
 **Which barrel?** See "Which barrel? — the motely-wasm test" above. Pure design = `src/ui.ts`. Touches motely-wasm = `src/index.ts`.
 
