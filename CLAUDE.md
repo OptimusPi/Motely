@@ -161,6 +161,20 @@ Consume here: bump all three `Bootsharp*` versions in `Directory.Packages.props`
 - **Upstream-fix path is real.** The user sponsors Elringus (Bootsharp author) at the $100 tier. When an issue has the shape of a Bootsharp bug, say so — fix upstream, not a local workaround forever. Don't propose hacky workarounds without flagging this option.
 - **No pin comments in tests.** Comments explain behavior or failure mode only. Forbidden: `Pins commit`, `Mirrors xUnit Class.Method`, `Regression for #N`, `Same probe seeds as xUnit …`. Allowed: `// long must be BigInt — number means binding regressed.` `Motely.Wasm/tests/*.test.mjs` must cover WASM behaviours JS consumers depend on (publish step 1); add tests and behavior comments, not lineage pins.
 
+### Bootsharp ref / ref-struct projection (sharp edge — known failure cascade)
+
+Public Motely types whose member signatures contain `ref Type`, `ref struct` (`MotelyVectorSearchContext`, `MotelyFilterCreationContext`, `Span<T>`, `ReadOnlySpan<T>`), or pointers **cannot** be projected into the generated JS proxy. The IL syntax `Type&` is invalid in normal C# parameter position. Symptoms cascade depending on which generator catches it first:
+
+| Failure | Where | Meaning |
+|---|---|---|
+| CS1001 / CS1003 / CS1525 | `Instances.g.cs`, `Interop.g.cs` | Codegen literally wrote `Type&` — base failure. Local fix lives in `Bootsharp.Publish/Common/Inspection/TypeInspector.cs` (`IsNonProjectable` filter). |
+| CS0535 *"does not implement interface member"* | `Instances.g.cs` | Filter dropped a method from the proxy body but the class still claims `: IFoo`. Local fix: also drop the InstanceMeta for any interface with a non-projectable abstract member (`HasNonProjectableAbstractMember` guard). |
+| CS0144 *"Cannot create an instance of the abstract type or interface"* | `Serializer.g.cs` | Dropped interface fell through to the POCO serializer path — emits `new IFoo()`. Fix (open): also skip these in `SerializedInspector` so they never reach `BuildObject`. |
+
+**Upstream-friendly fix (Option B, not yet written):** instead of dropping non-projectable members entirely, emit `throw new NotSupportedException(...)` stub bodies so partially-projectable interfaces (one ref method + one normal method) still surface their projectable members. That's the patch worth sending to Elringus.
+
+**Local short-circuit if you're blocked shipping:** if Motely is exporting a type whose only use-from-JS would hit non-projectable members, the lowest-friction fix is to drop that type from the public surface in `Motely.Wasm` (re-export only what JS consumers actually call) rather than chase the codegen.
+
 ## Regression fixtures
 
 - `Motely.Tests/filters/` — auto-discovered by `V0FilterRegressionTests`. **Not** repo-root `JamlFilters/` (scratch; no CI). Each `.jaml` must: parse; compile a plan; pass sequential smoke (`Filter_ParsesAndRuns`); have `name` + non-empty `must`; valid deck/stake; must clauses selective on 256 list-search probes; optional inline must/mustNot checks. Drop new community filters here.
