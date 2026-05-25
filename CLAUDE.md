@@ -96,14 +96,12 @@ Consume here: bump all three `Bootsharp*` versions in `Directory.Packages.props`
 @D:/bootsharp/docs/guide/index.md
 @D:/bootsharp/docs/guide/getting-started.md
 @D:/bootsharp/docs/guide/build-config.md
-@D:/bootsharp/docs/guide/events.md
+@D:/bootsharp/docs/guide/sideloading.md
 @D:/bootsharp/docs/guide/serialization.md
 @D:/bootsharp/docs/guide/interop-modules.md
 @D:/bootsharp/docs/guide/interop-instances.md
 @D:/bootsharp/docs/guide/llvm.md
-@D:/bootsharp/docs/guide/nullability.md
 @D:/bootsharp/docs/guide/declarations.md
-@D:/bootsharp/docs/guide/namespaces.md
 @D:/bootsharp/docs/guide/preferences.md
 @D:/bootsharp/docs/guide/extensions/dependency-injection.md
 @D:/bootsharp/docs/guide/extensions/file-system.md
