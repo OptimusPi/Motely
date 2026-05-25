@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { JimboModal, JimboButton } from "../ui/panel.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
-import { DECK_OPTIONS, STAKE_OPTIONS } from "../lib/data/constants.js";
+import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+const DECK_OPTIONS = Object.keys(MotelyDeck).filter(k => isNaN(Number(k)));
+const STAKE_OPTIONS = Object.keys(MotelyStake).filter(k => isNaN(Number(k)));
 import { DeckSprite } from "./DeckSprite.js";
 import { StakeSprite } from "../ui/sprites.js";
 
