@@ -5,12 +5,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <BootsharpName>motely-wasm</BootsharpName>
-    <!-- Three distinct Bootsharp output sinks. motely-wasm/ (sibling, gitignored) is the
-         npm-publish root. Keeping the sinks in separate directories lets Bootsharp's
-         %MODULE_DIR% resolve to a clean "dist", so the generated package.json exports
-         read "./dist/index.mjs" instead of "././index.mjs". -->
+    <!-- Match samples/react/backend/Backend.WASM exactly: only set Package + Binaries.
+         Let BootsharpPublishDirectory default ($(BootsharpPackageDirectory)/bin/$(BootsharpName)). -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
-    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
   </PropertyGroup>
 
@@ -44,21 +41,8 @@
     </ItemGroup>
   </Target>
 
-  <!-- Bootsharp rewrites package.json from its PackageTemplate.json every pack (Overwrite=true)
-       and the template carries no "version" — motely-wasm is npm-published and needs one.
-       Inject MotelyVersion right after Bootsharp writes the file, copy README into npm root. -->
-  <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpJS">
-    <PropertyGroup>
-      <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
-      <_NpmPackageJson>$(_NpmRoot)\package.json</_NpmPackageJson>
-      <_PkgWithVersion>$([System.IO.File]::ReadAllText('$(_NpmPackageJson)').Replace('&quot;name&quot;: &quot;$(BootsharpName)&quot;,', '&quot;name&quot;: &quot;$(BootsharpName)&quot;,%0D%0A    &quot;version&quot;: &quot;$(MotelyVersion)&quot;,'))</_PkgWithVersion>
-    </PropertyGroup>
-    <Error Condition="!$(_PkgWithVersion.Contains('&quot;version&quot;'))"
-           Text="Failed to inject version into $(_NpmPackageJson) — Bootsharp's PackageTemplate.json 'name' line may have changed." />
-    <Error Condition="!$(_PkgWithVersion.Contains('&quot;./dist/index.mjs&quot;'))"
-           Text="motely-wasm package.json is missing './dist/index.mjs' export. BootsharpPackageDirectory and BootsharpPublishDirectory must stay in distinct directories." />
-    <WriteLinesToFile File="$(_NpmPackageJson)" Lines="$(_PkgWithVersion)" Overwrite="true" />
-    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
-    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
+  <!-- README into the npm root. No package.json patching, no node-boot, no schema (re-add when POCO is stable). -->
+  <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpPack">
+    <Copy SourceFiles="README.md" DestinationFolder="$(MSBuildProjectDirectory)\..\motely-wasm" />
   </Target>
 </Project>
