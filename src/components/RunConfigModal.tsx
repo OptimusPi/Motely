@@ -1,3 +1,8 @@
+// TODO(jimbo-primitives): pre-dates no-inline-style / no-token-in-jsx-style /
+// no-inline-component rules. Refactor to compose from Jimbo* primitives once
+// screenshot-driven primitive design lands. `git grep TODO(jimbo-primitives)`.
+/* eslint-disable jaml-design/no-inline-component */
+
 import { useState } from "react";
 import { JimboModal, JimboButton } from "../ui/panel.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";

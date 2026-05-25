@@ -1,4 +1,10 @@
 "use client";
+
+// TODO(jimbo-primitives): pre-dates no-inline-style / no-token-in-jsx-style /
+// no-inline-component rules. Refactor to compose from Jimbo* primitives once
+// screenshot-driven primitive design lands. `git grep TODO(jimbo-primitives)`.
+/* eslint-disable jaml-design/no-inline-style */
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { MysterySlot, type SlotSelection, type JamlZone, type SlotCategory } from "./MysterySlot.js";
 import { JokerPicker } from "./JokerPicker.js";
