@@ -2,6 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react";
 import { JimboText } from "../ui/jimboText.js";
+import { JimboTextInput } from "../ui/JimboTextInput.js";
 import { normalizeJamlSeed } from "./jamlSeedUtils.js";
 
 export type JamlSeedInputVariant = "normal" | "dark" | "alt";
@@ -78,7 +79,7 @@ export const JamlSeedInput = React.forwardRef<HTMLInputElement, JamlSeedInputPro
         onClick={() => inputRef.current?.focus()}
         title={title}
       >
-        <input
+        <JimboTextInput
           ref={setRefs}
           type="text"
           className="j-seed-input__field"
