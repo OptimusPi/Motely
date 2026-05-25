@@ -68,7 +68,6 @@ public struct LegendaryJokerFilterDesc(
             SoulEditionRolls = _clause.SoulEditionRolls,
             Sources = new LegendaryJokerSourceConfig
             {
-                ShopItems = src.ShopItems,
                 BoosterPacks = src.BoosterPacks,
                 ArcanaPacks = src.ArcanaPacks,
                 SpectralPacks = src.SpectralPacks,

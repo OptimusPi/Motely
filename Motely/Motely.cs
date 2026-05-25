@@ -60,11 +60,11 @@ public static partial class MotelyGlobals
     // to avoid any temptation of call overhead in per-seed SIMD loops.
 
     /// <summary>
-    /// Default maximum pack-slot INDEX reachable in ante 1 through normal gameplay (4 packs, 0..3).
-    /// Clauses can raise their <c>EarlyAntesMaxPack</c> to 5 to opt into Hieroglyph / Petroglyph
-    /// scenarios. Scoring uses this cap; SIMD prefilter is over-permissive by design.
+    /// Maximum pack-slot INDEX reachable in antes 0..1 through normal gameplay (4 packs, 0..3).
+    /// Hieroglyph/Petroglyph can rewind from ante 2 and effectively extend reachability past this;
+    /// scoring is responsible for that derived cap. SIMD prefilter is over-permissive by design.
     /// </summary>
-    public const int DefaultEarlyAntesMaxPack = 3;
+    public const int EarlyAntesMaxPackSlot = 3;
 
     /// <summary>Maximum pack-slot INDEX at antes 2+ (6 packs, 0..5). Not user-configurable.</summary>
     public const int LateAntesMaxPackSlot = 5;
