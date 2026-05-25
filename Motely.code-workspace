@@ -1,0 +1,19 @@
+{
+    "folders": [
+        { "path": "." }
+    ],
+    "settings": {
+        "dotnet.defaultSolution": "Motely.slnx",
+        "files.exclude": {
+            "**/bin": true,
+            "**/obj": true,
+            "**/.vs": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-dotnettools.csdevkit",
+            "ms-dotnettools.csharp"
+        ]
+    }
+}
