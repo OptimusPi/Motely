@@ -443,6 +443,13 @@ export const IconButtons: StoryObj = {
           <div className="j-flex j-gap-sm">
             <JimboIconButton size="sm" title="Small"><FiSearch /></JimboIconButton>
             <JimboIconButton size="sm" title="Small"><FiSettings /></JimboIconButton>
+            <JimboIconButton size="xs" title="Tiny"><FiX /></JimboIconButton>
+          </div>
+          <JimboText size="sm" tone="white">Destructive — for remove/close in card rows.</JimboText>
+          <div className="j-flex j-gap-sm">
+            <JimboIconButton tone="destructive" title="Delete"><FiX /></JimboIconButton>
+            <JimboIconButton tone="destructive" size="sm" title="Delete"><FiX /></JimboIconButton>
+            <JimboIconButton tone="destructive" size="xs" title="Delete"><FiX /></JimboIconButton>
           </div>
         </JimboPanel>
       </JimboAppScroll>
