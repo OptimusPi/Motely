@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import type { MotelyJokerRarity } from "motely-wasm/motely/enums";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboColorOption, withAlpha, JIMBO_ANIMATIONS } from "../../ui/tokens.js";
 import type { SpriteSheetType } from "../../sprites/spriteMapper.js";
@@ -26,7 +27,7 @@ export interface SlotSelection {
   /** Optional source pack indices for pack-derived item clauses. */
   boosterPacks?: number[];
   /** Optional rarity for jokers. */
-  rarity?: "common" | "uncommon" | "rare" | "legendary";
+  rarity?: MotelyJokerRarity;
 }
 
 export interface MysterySlotProps {
