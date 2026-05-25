@@ -1,13 +1,10 @@
-// Balatro deck types
-export type DeckType =
-    | 'red' | 'blue' | 'yellow' | 'green' | 'black'
-    | 'magic' | 'nebula' | 'ghost' | 'abandoned' | 'checkered'
-    | 'zodiac' | 'painted' | 'anaglyph' | 'plasma' | 'erratic';
+import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
 
-// Balatro stake types
-export type StakeType =
-    | 'white' | 'red' | 'green' | 'black'
-    | 'blue' | 'purple' | 'orange' | 'gold';
+// The motely-wasm enums ARE the schema — re-alias rather than fork. See
+// CLAUDE.md "no schema drift". JAML wire format uses the enum names (e.g.
+// `deck: Red`); convert at the load boundary via `MotelyDeck[name]`.
+export type DeckType = MotelyDeck;
+export type StakeType = MotelyStake;
 
 /**
  * Configuration for a Daily Ritual challenge

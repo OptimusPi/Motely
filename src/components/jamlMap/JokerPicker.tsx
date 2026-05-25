@@ -1,11 +1,13 @@
 "use client";
 import React, { useState, useMemo } from "react";
+import { MotelyJokerRarity } from "motely-wasm/motely/enums";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JOKERS, type SpriteEntry } from "../../sprites/spriteData.js";
 import type { SlotSelection } from "./MysterySlot.js";
 
-export type JokerRarity = "common" | "uncommon" | "rare" | "legendary";
+// JokerRarity is the motely-wasm enum — re-aliased for public-API stability.
+export type JokerRarity = MotelyJokerRarity;
 
 const LEGENDARY_JOKERS = new Set([
   "Canio", "Triboulet", "Yorick", "Chicot", "Perkeo",
@@ -49,18 +51,20 @@ const UNCOMMON_JOKERS = new Set([
   "Swashbuckler", "Troubadour", "Bootstraps",
 ]);
 
-function getJokerRarity(name: string): JokerRarity {
-  if (LEGENDARY_JOKERS.has(name)) return "legendary";
-  if (RARE_JOKERS.has(name)) return "rare";
-  if (UNCOMMON_JOKERS.has(name)) return "uncommon";
-  return "common";
+function getJokerRarity(name: string): MotelyJokerRarity {
+  if (LEGENDARY_JOKERS.has(name)) return MotelyJokerRarity.Legendary;
+  if (RARE_JOKERS.has(name)) return MotelyJokerRarity.Rare;
+  if (UNCOMMON_JOKERS.has(name)) return MotelyJokerRarity.Uncommon;
+  return MotelyJokerRarity.Common;
 }
 
-function rarityToClauseKey(rarity: JokerRarity): string {
-  if (rarity === "legendary") return "legendaryJoker";
-  if (rarity === "rare") return "rareJoker";
-  if (rarity === "uncommon") return "uncommonJoker";
-  return "commonJoker";
+function rarityToClauseKey(rarity: MotelyJokerRarity): string {
+  switch (rarity) {
+    case MotelyJokerRarity.Legendary: return "legendaryJoker";
+    case MotelyJokerRarity.Rare:      return "rareJoker";
+    case MotelyJokerRarity.Uncommon:  return "uncommonJoker";
+    case MotelyJokerRarity.Common:    return "commonJoker";
+  }
 }
 
 const LEGENDARY_LIST = JOKERS.filter((j) => LEGENDARY_JOKERS.has(j.name));
