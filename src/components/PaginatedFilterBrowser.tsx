@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { JimboButton, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboFlankNav } from "../ui/jimboFlankNav.js";
+import { JimboListItem } from "../ui/JimboListItem.js";
 
 export interface FilterItem {
   id: string;
@@ -65,11 +66,9 @@ export function PaginatedFilterBrowser({
             const isSelected = selectedId === filter.id;
             const deckStake = [filter.deckText, filter.stakeText].filter(Boolean).join(" / ");
             return (
-              <button
+              <JimboListItem
                 key={filter.id}
-                type="button"
-                className="j-filter-browser__item"
-                data-active={isSelected}
+                active={isSelected}
                 onClick={() => {
                   setSelectedId(filter.id);
                   onSelectFilter?.(filter);
@@ -90,7 +89,7 @@ export function PaginatedFilterBrowser({
                     ))}
                   </div>
                 ) : null}
-              </button>
+              </JimboListItem>
             );
           })}
 

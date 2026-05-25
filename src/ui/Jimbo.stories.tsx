@@ -15,10 +15,12 @@ import { JimboWordmark } from './jimboWordmark';
 import { JimboCopyRow } from './jimboCopyRow';
 import { JimboSelect } from './JimboSelect';
 import { JimboIconButton } from './JimboIconButton';
+import { JimboListItem } from './JimboListItem';
 import { JimboStepper } from './JimboStepper';
 import { JimboSpinner } from './JimboSpinner';
 import { JimboSlider } from './JimboSlider';
 import { JimboDualChip } from './JimboDualChip';
+import { JimboStack } from './jimboLayout';
 import { FiSearch, FiSettings, FiCopy, FiX, FiCheck } from 'react-icons/fi';
 
 const meta = {
@@ -455,6 +457,34 @@ export const IconButtons: StoryObj = {
       </JimboAppScroll>
     )
   },
+};
+
+function ListItemsDemo() {
+  const [active, setActive] = useState('wee');
+  const items = [
+    { id: 'wee', name: 'Wee Joker Farm', sub: 'Red · White' },
+    { id: 'brain', name: 'Brainstorm Combo', sub: 'Erratic · Gold' },
+    { id: 'perkeo', name: 'Perkeo Spec', sub: 'Black · Purple' },
+  ];
+  return (
+    <JimboAppScroll>
+      <JimboPanel>
+        <JimboText size="sm" tone="white">Clickable rows with active state.</JimboText>
+        <JimboStack gap="xs">
+          {items.map((item) => (
+            <JimboListItem key={item.id} active={active === item.id} onClick={() => setActive(item.id)}>
+              <JimboText size="xs" tone="grey">{item.sub}</JimboText>
+              <JimboText size="sm" tone={active === item.id ? 'gold' : 'white'}>{item.name}</JimboText>
+            </JimboListItem>
+          ))}
+        </JimboStack>
+      </JimboPanel>
+    </JimboAppScroll>
+  );
+}
+
+export const ListItems: StoryObj = {
+  render: () => <ListItemsDemo />,
 };
 
 export const AppShell: StoryObj = {

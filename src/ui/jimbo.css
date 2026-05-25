@@ -2740,6 +2740,10 @@
   gap: var(--j-space-sm);
 }
 
+/* Canonical clickable list row primitive — used by JimboListItem.
+   .j-filter-browser__item is kept as an alias for backward-compat with
+   consumers that style filter rows directly. */
+.j-list-item,
 .j-filter-browser__item {
   width: 100%;
   border: none;
@@ -2753,8 +2757,11 @@
   grid-template-columns: minmax(0, 1fr);
   gap: var(--j-space-xs);
   text-align: left;
+  font-family: var(--j-font);
 }
 
+.j-list-item[data-active="true"],
+.j-list-item:hover,
 .j-filter-browser__item[data-active="true"],
 .j-filter-browser__item:hover {
   background: var(--j-dark-red);
