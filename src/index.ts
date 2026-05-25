@@ -59,6 +59,7 @@ export {
     type MotelyVersionBadgeProps,
     type MotelyCapabilities,
 } from "./components/MotelyVersionBadge.js";
+export { MotelyHello, type MotelyHelloProps } from "./components/MotelyHello.js";
 export {
     JamlSpeedometer,
     type JamlSpeedometerProps,
