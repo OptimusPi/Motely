@@ -27,11 +27,19 @@ function seedMatches(row: MotelyJamlyzerSeedResult): boolean {
 export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
   const [load, setLoad] = useState<JamlyzerLoadState>({ status: "loading" });
   const [index, setIndex] = useState(0);
+  const [lastJaml, setLastJaml] = useState(jaml);
+
+  // Reset to loading the moment `jaml` changes — render-phase derivation
+  // (React's "Adjusting state when a prop changes" pattern) avoids the
+  // cascading render that synchronous setState-in-effect would cause.
+  if (jaml !== lastJaml) {
+    setLastJaml(jaml);
+    setLoad({ status: "loading" });
+    setIndex(0);
+  }
 
   useEffect(() => {
     let cancelled = false;
-    setLoad({ status: "loading" });
-    setIndex(0);
 
     void (async () => {
       try {
@@ -66,7 +74,10 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
     };
   }, [jaml]);
 
-  const rows = load.status === "ready" ? load.result.seeds : [];
+  const rows = useMemo(
+    () => (load.status === "ready" ? load.result.seeds : []),
+    [load],
+  );
   const seedList = useMemo(() => rows.map((row) => row.seed), [rows]);
   const safeIndex = seedList.length > 0 ? Math.min(index, seedList.length - 1) : 0;
   const current = rows[safeIndex];
