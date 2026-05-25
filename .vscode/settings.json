@@ -1,7 +1,0 @@
-{
-  "notebook.outline.showCodeCells": true,
-  "notebook.outline.showCodeCellSymbols": true,
-  "notebook.lineNumbers": "on",
-  "notebook.diff.ignoreOutputs": false,
-  "jupyter.askForKernelRestart": false
-}
