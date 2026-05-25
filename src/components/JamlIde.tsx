@@ -1,5 +1,11 @@
 "use client";
 
+// TODO(jimbo-primitives): pre-dates no-inline-style / no-token-in-jsx-style /
+// no-inline-component rules. Refactor to compose from Jimbo* primitives once
+// screenshot-driven primitive design lands. Remove the disable as each
+// section is rewritten. `git grep TODO(jimbo-primitives)` to see the queue.
+/* eslint-disable jaml-design/no-inline-style, jaml-design/no-token-in-jsx-style, jaml-design/no-inline-component */
+
 import React, { useState } from "react";
 import { JamlMapPreview } from "./JamlMapPreview.js";
 import {

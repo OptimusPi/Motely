@@ -1,5 +1,10 @@
 "use client";
 
+// TODO(jimbo-primitives): pre-dates no-inline-style / no-token-in-jsx-style /
+// no-inline-component rules. Refactor to compose from Jimbo* primitives once
+// screenshot-driven primitive design lands. `git grep TODO(jimbo-primitives)`.
+/* eslint-disable jaml-design/no-inline-style, jaml-design/no-token-in-jsx-style */
+
 import React, { useEffect, useRef } from "react";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, placeholder as cmPlaceholder } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";

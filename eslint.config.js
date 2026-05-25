@@ -32,6 +32,28 @@ export default tseslint.config(
   },
   },
   {
+    // Higher-level JAML/motely components in src/components/ must compose
+    // from Jimbo primitives in src/ui/ — they may not sketch their own UI
+    // inline. These three rules enforce that contract.
+    files: ['src/components/**/*.{ts,tsx}'],
+    ignores: [
+      'src/components/**/*.stories.{ts,tsx}',
+      // Sprite-sheet renderers: backgroundImage / backgroundPosition / filter
+      // are computed at runtime from sprite data and cannot live in CSS
+      // classes. These ARE primitives — they're in src/components/ for
+      // historical reasons, not because they break the contract.
+      'src/components/StandardCard.tsx',
+      'src/components/GameCard.tsx',
+      'src/components/CardFan.tsx',
+      'src/components/DeckSprite.tsx',
+    ],
+    rules: {
+      'jaml-design/no-inline-style': 'error',
+      'jaml-design/no-token-in-jsx-style': 'error',
+      'jaml-design/no-inline-component': 'error',
+    },
+  },
+  {
     // src/ui/ is where the Jimbo primitives live — they're allowed to use
     // raw <button>/<input> because they ARE the primitives.
     files: ['src/ui/**/*.{ts,tsx}'],
