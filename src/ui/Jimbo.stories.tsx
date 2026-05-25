@@ -19,7 +19,7 @@ import { JimboStepper } from './JimboStepper';
 import { JimboSpinner } from './JimboSpinner';
 import { JimboSlider } from './JimboSlider';
 import { JimboDualChip } from './JimboDualChip';
-import { FiSearch, FiSettings, FiCopy, FiX } from 'react-icons/fi';
+import { FiSearch, FiSettings, FiCopy, FiX, FiCheck } from 'react-icons/fi';
 
 const meta = {
   title: 'JimboUI/Components',
@@ -269,7 +269,7 @@ export const InfoCards: StoryObj = {
             <JimboInfoCardTitle><JimboText size="sm" tone="white">Wee Joker</JimboText></JimboInfoCardTitle>
             <JimboInfoCardSub><JimboText size="xs" tone="grey">Ante 1</JimboText></JimboInfoCardSub>
           </JimboInfoCardBody>
-          <JimboInfoCardAside><JimboBadge tone="blue">✓</JimboBadge></JimboInfoCardAside>
+          <JimboInfoCardAside><JimboBadge tone="blue"><FiCheck /></JimboBadge></JimboInfoCardAside>
         </JimboInfoCard>
         <JimboSectionHeader label="Should" tone="red" />
         <JimboInfoCard tone="red">
