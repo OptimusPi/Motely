@@ -7,8 +7,6 @@ using Motely.Analysis;
 using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
-using Motely.WasmTools;
-using YamlDotNet.RepresentationModel;
 
 partial class Program
 {
@@ -429,6 +427,8 @@ partial class Program
                 return 1;
             }
 
+            string filterId = Path.GetFileNameWithoutExtension(jamlPath);
+
             if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
             {
                 Console.Error.WriteLine("Error: no clauses in JAML.");
@@ -498,7 +498,7 @@ partial class Program
                         SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
                         Drown: drown,
                         ResultsRootPath: resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
-                        FilterId: config.Id,
+                        FilterId: filterId,
                         KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
                         PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
                         RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
@@ -528,7 +528,7 @@ partial class Program
             bool hasStructuredScores = scoreTallyColumns > 0;
             using var resultSink = CreateResultSink(
                 hasStructuredScores,
-                config.Id,
+                filterId,
                 plan.TallyLabels
             );
             int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
@@ -711,18 +711,6 @@ partial class Program
         var updated = string.Join(normalizedNewline, lines);
         if (originalHasTrailingNewline || lines.Count > 0)
             updated += normalizedNewline;
-
-        try
-        {
-            var yaml = new YamlStream();
-            using var reader = new StringReader(updated);
-            yaml.Load(reader);
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
 
         if (!JamlConfigLoader.TryLoad(updated, out _, out var loadError))
         {

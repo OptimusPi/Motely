@@ -50,62 +50,6 @@ public static partial class Program
     [Export]
     public static string Version() => MotelyVersionConstant.Value;
 
-    [Export]
-    public static string ValidateJaml(string jaml)
-    {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            return error ?? "Invalid JAML.";
-        try
-        {
-            JamlSearchBuilder.EnsureRunnablePlan(config);
-            return "valid";
-        }
-        catch (Exception ex)
-        {
-            return ex.Message;
-        }
-    }
-
-    // Exception messages crossing the JSExport boundary under NativeAOT-LLVM trim mode lose
-    // their .Message and surface to JS as the opaque "C# exception from NativeAOT" husk. The
-    // result-shaped Exports below catch C#-side so the diagnostic survives — mirrors the
-    // existing pattern on MotelyJamlyzerResult.Error. FromJaml throws on bad input — call
-    // ValidateJaml first. See README JAML API section.
-
-    [Export]
-    public static string ExplainJaml(string jaml)
-    {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            return $"# ERROR: {error ?? "Invalid JAML."}";
-        try
-        {
-            return config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config) : "";
-        }
-        catch (Exception ex)
-        {
-            return $"# ERROR: {ex.Message}";
-        }
-    }
-
-    [Export]
-    public static JamlSearchPlan CreatePlan(string jaml)
-    {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            return new(0, "", []) { Error = error ?? "Invalid JAML." };
-        try
-        {
-            return JamlSearchBuilder.CreatePlan(config);
-        }
-        catch (Exception ex)
-        {
-            return new(0, "", []) { Error = ex.Message };
-        }
-    }
-
-    [Export]
-    public static MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
-        MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
-
     // ── Packed-int decoders ──────────────────────────────────────────────────
     // Return typed enums so Bootsharp emits MotelyItemType, MotelyItemTypeCategory,
     // MotelyJokerRarity, MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement
@@ -158,15 +102,6 @@ public static partial class Program
 
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
-
-    /// <summary>Apply a JAML document to search settings (validate with <see cref="ValidateJaml"/> first).</summary>
-    [Export]
-    public static WasmSearchSettings FromJaml(string jaml)
-    {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return new WasmSearchSettings(AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config)));
-    }
 
     private static IMotelySearchSettings AttachWasmCallbacks(IMotelySearchSettings settings)
     {

@@ -32,7 +32,7 @@ Writes to `jaml.schema.json` at repo root. Language tooling (`tools/jaml-languag
 ## NativeAOT / trimming
 
 - `TrimmerRoots.xml` keeps reflection-reachable types alive.
-- YAML deserialization uses `Vecc.YamlDotNet.Analyzers.StaticGenerator` — do not add reflection-heavy patterns.
+- YAML deserialization uses SharpYaml v3 source-gen (`YamlSerializerContext` + `[YamlSerializable]`) — do not add reflection-heavy patterns.
 - All browser WASM interop is isolated in the `Motely.Wasm` project — see [`../Motely.Wasm/README.md`](../Motely.Wasm/README.md).
 
 ## Version

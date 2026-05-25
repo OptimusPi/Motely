@@ -18,7 +18,7 @@ const { MotelyDeck, MotelyStake } = await import(toUrl("dist/generated/modules/m
 // Node can't fetch() file:// boot resources, so preload them and hand boot the
 // content object (same shape as resources.mjs fetchResources). NativeAOT single
 // file: only the wasm has bytes, the rest are empty.
-const wasmBytes = await readFile(path.join(pkgDir, "bin/dotnet.native.wasm"));
+const wasmBytes = await readFile(path.join(pkgDir, "bin/motely-wasm.wasm"));
 await bootsharp.boot({
     wasm: wasmBytes.buffer.slice(wasmBytes.byteOffset, wasmBytes.byteOffset + wasmBytes.byteLength),
     assemblies: [],

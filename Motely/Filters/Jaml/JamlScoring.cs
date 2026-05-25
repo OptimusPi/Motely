@@ -280,7 +280,7 @@ public static class JamlScoring
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
+        int earlyCap = MotelyGlobals.EarlyAntesMaxPackSlot;
 
         foreach (int ante in clause.Antes)
         {
@@ -326,7 +326,7 @@ public static class JamlScoring
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
+        int earlyCap = MotelyGlobals.EarlyAntesMaxPackSlot;
         int maxEmperor = ArrayMax(clause.Sources.Emperor);
         int maxSeal = ArrayMax(clause.Sources.PurpleSealOrEightBall);
 
@@ -427,7 +427,7 @@ public static class JamlScoring
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
+        int earlyCap = MotelyGlobals.EarlyAntesMaxPackSlot;
         int maxSixthSense = ArrayMax(clause.Sources.SixthSense);
         int maxSeance = ArrayMax(clause.Sources.Seance);
 
@@ -524,7 +524,7 @@ public static class JamlScoring
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
+        int earlyCap = MotelyGlobals.EarlyAntesMaxPackSlot;
 
         foreach (int ante in clause.Antes)
         {
@@ -971,7 +971,7 @@ public static class JamlScoring
         int count = 0;
         var sources = clause.Sources;
         int userMaxPack = sources.MaxReferencedBoosterSlot();
-        int earlyCap = sources.EarlyAntesMaxPack;
+        int earlyCap = MotelyGlobals.EarlyAntesMaxPackSlot;
 
         foreach (int ante in clause.Antes)
         {
@@ -1121,7 +1121,7 @@ public static class JamlScoring
 
         int maxShop = ArrayMax(shopItems);
         int userMaxPack = ArrayMax(boosterPacks);
-        int earlyCap = sources.EarlyAntesMaxPack;
+        int earlyCap = MotelyGlobals.EarlyAntesMaxPackSlot;
         var targetTypes = new MotelyItemType[jokers.Length];
         for (int i = 0; i < jokers.Length; i++)
             targetTypes[i] = Enum.Parse<MotelyItemType>(jokers[i].ToString(), true);
@@ -1276,7 +1276,7 @@ public static class JamlScoring
 
         int maxShop = ArrayMax(shopItems);
         int userMaxPack = ArrayMax(boosterPacks);
-        int earlyCap = sources.EarlyAntesMaxPack;
+        int earlyCap = MotelyGlobals.EarlyAntesMaxPackSlot;
 
         foreach (int ante in antes)
         {

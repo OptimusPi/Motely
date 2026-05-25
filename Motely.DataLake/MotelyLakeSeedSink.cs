@@ -89,6 +89,7 @@ public sealed class MotelyLakeSeedSink : IDisposable
 
             try { _appender.Close(); } catch { /* swallow on dispose */ }
             _appender.Dispose();
+            try { Exec("CHECKPOINT lake"); } catch { /* best-effort WAL flush */ }
             _connection.Dispose();
         }
     }
