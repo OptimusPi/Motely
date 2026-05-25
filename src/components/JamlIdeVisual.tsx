@@ -5,6 +5,7 @@ import { useJamlIdeDrag } from "../ui/hooks.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboSprite } from "../ui/sprites.js";
 import { JimboIconButton } from "../ui/JimboIconButton.js";
+import { JimboInlineEdit } from "../ui/JimboInlineEdit.js";
 import type { SpriteSheetType } from "../sprites/spriteMapper.js";
 
 export type JamlZone = "must" | "should" | "mustnot";
@@ -323,64 +324,31 @@ function TopMatter({
     onChange: (filter: JamlVisualFilter) => void;
 }) {
     return (
-        <div
-            className="j-inner-panel"
-            style={{ padding: 10 }}
-        >
-            <input
+        <div className="j-inner-panel j-jaml-ide-visual__top-matter">
+            <JimboInlineEdit
+                size="lg"
+                tone="white"
                 value={filter.name ?? ""}
                 placeholder="Untitled"
                 onChange={(e) => onChange({ ...filter, name: e.target.value })}
-                style={{
-                    display: "block",
-                    width: "100%",
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    fontFamily: "m6x11plus, ui-monospace, monospace",
-                    fontSize: 18,
-                    color: C.WHITE,
-                    letterSpacing: 1,
-                    padding: 0,
-                    marginBottom: 4,
-                }}
             />
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ fontFamily: "m6x11plus, ui-monospace, monospace", fontSize: 10, color: C.WHITE }}>By</div>
-                <input
+            <div className="j-jaml-ide-visual__byline">
+                <span className="j-jaml-ide-visual__by-label">By</span>
+                <JimboInlineEdit
+                    size="sm"
+                    tone="gold"
                     value={filter.author ?? ""}
                     placeholder="anonymous"
                     onChange={(e) => onChange({ ...filter, author: e.target.value })}
-                    style={{
-                        flex: 1,
-                        background: "transparent",
-                        border: "none",
-                        outline: "none",
-                        fontFamily: "m6x11plus, ui-monospace, monospace",
-                        fontSize: 12,
-                        color: C.GOLD_TEXT,
-                        padding: 0,
-                    }}
                 />
             </div>
-            <input
+            <JimboInlineEdit
+                size="xs"
+                tone="white"
+                dim
                 value={filter.description ?? ""}
                 placeholder="description"
                 onChange={(e) => onChange({ ...filter, description: e.target.value })}
-                style={{
-                    display: "block",
-                    width: "100%",
-                    marginTop: 6,
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    fontFamily: "m6x11plus, ui-monospace, monospace",
-                    fontSize: 11,
-                    color: C.WHITE,
-                    opacity: 0.8,
-                    lineHeight: 1.35,
-                    padding: 0,
-                }}
             />
         </div>
     );

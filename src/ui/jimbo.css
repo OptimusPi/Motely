@@ -1208,6 +1208,53 @@
   border-color: var(--j-red);
 }
 
+/* Inline-edit: borderless transparent input that reads as text. */
+.j-inline-edit {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--j-font);
+  letter-spacing: 1px;
+  line-height: 1.35;
+  outline: none;
+}
+.j-inline-edit::placeholder {
+  color: var(--j-grey);
+  opacity: 0.7;
+}
+.j-inline-edit:focus-visible {
+  outline: 2px solid var(--j-gold);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+.j-inline-edit--xs { font-size: 11px; }
+.j-inline-edit--sm { font-size: 12px; }
+.j-inline-edit--md { font-size: 14px; }
+.j-inline-edit--lg { font-size: 18px; }
+.j-inline-edit--white { color: var(--j-white); }
+.j-inline-edit--gold  { color: var(--j-gold-text); }
+.j-inline-edit--grey  { color: var(--j-grey); }
+.j-inline-edit--dim   { opacity: 0.8; }
+
+/* JamlIdeVisual: filter metadata header (name / byline / description). */
+.j-jaml-ide-visual__top-matter {
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+.j-jaml-ide-visual__byline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.j-jaml-ide-visual__by-label {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-white);
+}
+
 .j-input-modal__error {
   display: block;
   margin-top: 6px;
