@@ -6,9 +6,9 @@
     <WarningsAsErrors>$(WarningsAsErrors);NU1603</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Bootsharp" Version="0.8.0-alpha.376" />
-    <PackageVersion Include="Bootsharp.Common" Version="0.8.0-alpha.376" />
-    <PackageVersion Include="Bootsharp.Inject" Version="0.8.0-alpha.376" />
+    <PackageVersion Include="Bootsharp" Version="0.8.0-alpha.385" />
+    <PackageVersion Include="Bootsharp.Common" Version="0.8.0-alpha.385" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.8.0-alpha.385" />
     <PackageVersion Include="Bootsharp.FileSystem" Version="2026.5.25.1302" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
