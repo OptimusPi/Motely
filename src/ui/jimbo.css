@@ -323,7 +323,7 @@
   position: relative;
   cursor: pointer;
   border: none;
-  padding: 0 0 calc(var(--j-press-y) + 2px) 0;
+  padding: 0;
   background: transparent;
   -webkit-user-select: none;
   user-select: none;
@@ -352,33 +352,6 @@
   border-radius: var(--j-radius-md);
   background: var(--j-btn-face-color, var(--j-orange));
   text-align: center;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
-  /* Drop-lip at 30% opacity per design. Stacked solid offset, no blur. */
-  box-shadow: 0 calc(var(--j-press-y) + 2px) 0 0 rgba(0, 0, 0, 0.3);
-  transform: translate(0, 0);
-  transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear, background-color var(--j-press-speed) linear;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.j-btn__face::before {
-  content: none;
-}
-
-.j-btn__face > * {
-  position: relative;
-  z-index: 1;
-}
-
-.j-btn[data-pressed="true"] .j-btn__face,
-.j-btn:active:not(:disabled):not(.j-btn--disabled) .j-btn__face {
-  background: var(--j-btn-shadow-color, var(--j-dark-orange));
-  transform: translateY(var(--j-press-y));
-  box-shadow: none;
-}
-
-.j-btn:not(.j-btn--disabled):hover .j-btn__face {
-  background: var(--j-btn-shadow-color, var(--j-dark-orange));
 }
 
 /* Sizes */
