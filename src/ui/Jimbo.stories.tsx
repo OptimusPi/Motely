@@ -16,6 +16,7 @@ import { JimboCopyRow } from './jimboCopyRow';
 import { JimboSelect } from './JimboSelect';
 import { JimboIconButton } from './JimboIconButton';
 import { JimboListItem } from './JimboListItem';
+import { JimboInlineEdit } from './JimboInlineEdit';
 import { JimboStepper } from './JimboStepper';
 import { JimboSpinner } from './JimboSpinner';
 import { JimboSlider } from './JimboSlider';
@@ -485,6 +486,30 @@ function ListItemsDemo() {
 
 export const ListItems: StoryObj = {
   render: () => <ListItemsDemo />,
+};
+
+function InlineEditDemo() {
+  const [name, setName] = useState('Wee Joker Farm');
+  const [author, setAuthor] = useState('clog');
+  const [desc, setDesc] = useState('Targets Wee Joker by ante 1, ignores stake.');
+  return (
+    <JimboAppScroll>
+      <JimboPanel>
+        <JimboText size="sm" tone="white">Borderless inputs that read as text until focused.</JimboText>
+        <JimboInnerPanel>
+          <JimboStack gap="xs">
+            <JimboInlineEdit size="lg" tone="white" value={name} onChange={(e) => setName(e.target.value)} placeholder="Untitled" />
+            <JimboInlineEdit size="sm" tone="gold" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="anonymous" />
+            <JimboInlineEdit size="xs" tone="white" dim value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="description" />
+          </JimboStack>
+        </JimboInnerPanel>
+      </JimboPanel>
+    </JimboAppScroll>
+  );
+}
+
+export const InlineEdit: StoryObj = {
+  render: () => <InlineEditDemo />,
 };
 
 export const AppShell: StoryObj = {
