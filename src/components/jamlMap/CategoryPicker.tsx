@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboText } from "../../ui/jimboText.js";
+import { JimboTextInput } from "../../ui/JimboTextInput.js";
 import type { SpriteEntry } from "../../sprites/spriteData.js";
 import type { SpriteSheetType } from "../../sprites/spriteMapper.js";
 import type { SlotSelection, SlotCategory } from "./MysterySlot.js";
@@ -87,8 +88,8 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
   return (
     <div className="j-picker">
       <div className="j-picker__search">
-        <input
-          className="j-seed-input__field j-picker__search-field"
+        <JimboTextInput
+          className="j-picker__search-field"
           type="text"
           placeholder={`Search ${config.title.toLowerCase()}`}
           value={search}

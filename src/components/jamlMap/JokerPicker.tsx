@@ -3,6 +3,7 @@ import React, { useState, useMemo } from "react";
 import { MotelyJokerRarity } from "motely-wasm/motely/enums";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
+import { JimboTextInput } from "../../ui/JimboTextInput.js";
 import { JOKERS, type SpriteEntry } from "../../sprites/spriteData.js";
 import type { SlotSelection } from "./MysterySlot.js";
 
@@ -120,8 +121,8 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
       </div>
 
       <div className="j-picker__search">
-        <input
-          className="j-seed-input__field j-picker__search-field"
+        <JimboTextInput
+          className="j-picker__search-field"
           type="text"
           placeholder="Search jokers..."
           value={search}
