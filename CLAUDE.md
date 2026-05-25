@@ -59,94 +59,19 @@ CDN (unpkg/jsdelivr) updates after `npm publish`.
 - **PRNG changes invalidate every saved seed.** `MotelySingleSearchContext.*.cs` and `MotelyVectorSearchContext.*.cs` carry stream generation; any output change here breaks reproducibility against Balatro. `Motely.Tests` will catch it — run the suite before committing.
 - **Generated artifacts come from the generator.** Do not hand-edit `jaml.schema.json` or `jaml-schema.cs` — they are emitted by `Motely.CLI/MotelyJAML.schema.generator.cs`. Do not hand-edit anything under `Motely.Wasm/obj/` (Bootsharp output) or `motely-wasm/` (Bootsharp publish root, gitignored).
 
-## Bootsharp source and docs
+## Bootsharp local build
 
-motely-wasm builds against Bootsharp pinned in `Directory.Packages.props` (`Bootsharp`, `Bootsharp.Common`, `Bootsharp.Inject` — all the same version; sponsor `Bootsharp.FileSystem` is versioned separately). Read these files directly — do not rely on public Bootsharp docs:
+Build pipeline — branch, patch series, version pins, troubleshooting — is documented in `BOOTSHARP-BUILD.md` and automated as one PowerShell script:
 
-### Building Bootsharp locally
-
-Source: `D:\bootsharp`. Branch sets the interop ABI: `feat/raw-interop` = NativeAOT-LLVM raw C-ABI (alpha.31x); older alphas use `[JSImport]`/`[JSExport]`.
-
-**Updating to the latest push — it is NOT `git pull`.** Elringus force-pushes / rebases `feat/delegates`, so the remote history is rewritten under the same commit message (e.g. "implement delegates support" gets a new hash each push). A `git pull` sees "diverged" and would make a merge commit. Instead:
-
-```
-cd D:/bootsharp && git fetch --all --prune && git reset --hard origin/feat/delegates
+```powershell
+pwsh ./scripts/build-bootsharp.ps1
 ```
 
-This discards the local pointer and lands directly on his rewritten commit — linear, no merge commit. (Working tree is normally clean here, so nothing is lost.)
-
-Repack (from `D:\bootsharp\AGENTS.md`, in order):
-
-1. Once: `bash src/cs/.scripts/llvm.sh` (downloads NativeAOT-LLVM to `src/cs/.llvm`).
-2. `cd src/js && npm run build`.
-3. Bump `<Version>` in `src/cs/Directory.Build.props` (only if sources changed).
-4. `cd src/cs && bash .scripts/pack.sh` (packs to `src/cs/.nuget`).
-
-**Then rebuild the sponsor FileSystem extension** — `Bootsharp.FileSystem` pins `Bootsharp.Common` as `*-*` (floats to local latest), so whenever you repack `Bootsharp.Common` you must repack FileSystem against it or the consumer restores a FileSystem built against a stale Common:
-
-5. `dotnet pack D:/extra/bootsharp/cs/Bootsharp.FileSystem/Bootsharp.FileSystem.csproj -c Release -o D:/extra/bootsharp/cs/.nuget` (packs the C# NuGet to the extra feed). `D:/extra/bootsharp/scripts/package.sh` is the separate JS-side build — it bundles the TypeScript and runs `npm publish` of `@rewaffle/bootsharp-file-system` to the GitHub registry; it is not part of the local C# NuGet loop.
-
-`Bootsharp.FileSystem` has no `<Version>`; it stamps a build-time timestamp `yyyy.MM.dd.HHmm` (NuGet normalizes to e.g. `2026.5.22.1237`). Read the actual emitted version from the pack log — that's the pin to use below.
-
-Local feeds are user-level (`%APPDATA%\NuGet\NuGet.Config`), not committed: `bootsharp-local` → `D:\bootsharp\src\cs\.nuget`; `Bootsharp.FileSystem` feed → `D:\extra\bootsharp\cs\.nuget`.
-
-Consume here: bump all three `Bootsharp*` versions in `Directory.Packages.props` together, **and** bump `Bootsharp.FileSystem` to the timestamp from step 5 (it tracks the same Common, just versioned separately). Validate with `dotnet publish Motely.Wasm -c Release` then `node Motely.Wasm/motely.test.mjs` (`RESULT: PASS`) — Bootsharp's own E2E suite passing does not prove Motely's types generate valid bindings.
-
-**Docs:**
-@D:/bootsharp/docs/guide/index.md
-@D:/bootsharp/docs/guide/getting-started.md
-@D:/bootsharp/docs/guide/build-config.md
-@D:/bootsharp/docs/guide/sideloading.md
-@D:/bootsharp/docs/guide/serialization.md
-@D:/bootsharp/docs/guide/interop-modules.md
-@D:/bootsharp/docs/guide/interop-instances.md
-@D:/bootsharp/docs/guide/llvm.md
-@D:/bootsharp/docs/guide/declarations.md
-@D:/bootsharp/docs/guide/preferences.md
-@D:/bootsharp/docs/guide/extensions/dependency-injection.md
-@D:/bootsharp/docs/guide/extensions/file-system.md
-
-**JS source:**
-@D:/bootsharp/src/js/src/exports.mts
-@D:/bootsharp/src/js/src/boot.mts
-@D:/bootsharp/src/js/src/index.mts
-
-**C# publish source:**
-@D:/bootsharp/src/cs/Bootsharp.Publish/
-
-**Sample — minimal (canonical NativeAOT-LLVM boot, no framework):**
-@D:/bootsharp/samples/minimal/README.md
-@D:/bootsharp/samples/minimal/cs/Minimal.csproj
-@D:/bootsharp/samples/minimal/cs/Program.cs
-@D:/bootsharp/samples/minimal/main.mjs
-@D:/bootsharp/samples/minimal/index.html
-
-**Sample — react (Vite + React app consuming Bootsharp ESM package):**
-@D:/bootsharp/samples/react/README.md
-@D:/bootsharp/samples/react/package.json
-@D:/bootsharp/samples/react/vite.config.ts
-@D:/bootsharp/samples/react/tsconfig.json
-@D:/bootsharp/samples/react/index.html
-@D:/bootsharp/samples/react/src/main.tsx
-@D:/bootsharp/samples/react/src/computer.tsx
-@D:/bootsharp/samples/react/src/donut.tsx
-@D:/bootsharp/samples/react/backend/package.json
-@D:/bootsharp/samples/react/backend/Backend.WASM/Backend.WASM.csproj
-@D:/bootsharp/samples/react/backend/Backend.WASM/Program.cs
-@D:/bootsharp/samples/react/backend/Backend/Backend.csproj
-@D:/bootsharp/samples/react/backend/Backend/IComputer.cs
-@D:/bootsharp/samples/react/backend/Backend.Prime/Backend.Prime.csproj
-@D:/bootsharp/samples/react/backend/Backend.Prime/IPrimeUI.cs
-@D:/bootsharp/samples/react/backend/Backend.Prime/Options.cs
-@D:/bootsharp/samples/react/backend/Backend.Prime/Prime.cs
-
-**Local patch vs upstream:**
-@X:/JammySeedFinder/src/MotelyJAML/bootsharp-fixes-vs-6edaa2c.patch
+That's the build. Resets `D:\bootsharp` to upstream, applies `patches/*.patch`, packs core + Bootsharp.FileSystem, bumps pins in `Directory.Packages.props`, publishes `Motely.Wasm`, runs smoke tests. If it doesn't run green, read `BOOTSHARP-BUILD.md` § Troubleshooting before improvising. Never duplicate build prose here — the script and `BOOTSHARP-BUILD.md` are the source of truth.
 
 ## Sponsor-gated features
 
 - **`Bootsharp.FileSystem`** — The file system extension (`PickRoot`, `MountRoot`, `UnmountRoot`, `ReadTextFile`, `WriteTextFile`, `OnFileChanges`) is exclusive to [Bootsharp sponsors](https://github.com/sponsors/elringus). The NuGet package (`Bootsharp.FileSystem`) and its sample repo are not publicly available on NuGet or GitHub.
-  @D:/bootsharp/docs/guide/extensions/file-system.md
 
 ## Things that look weird but aren't
 
