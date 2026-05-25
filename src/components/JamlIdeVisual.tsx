@@ -1,8 +1,10 @@
 "use client";
 import React, { useRef } from "react";
+import { FiX } from "react-icons/fi";
 import { useJamlIdeDrag } from "../ui/hooks.js";
 import { JimboColorOption } from "../ui/tokens.js";
 import { JimboSprite } from "../ui/sprites.js";
+import { JimboIconButton } from "../ui/JimboIconButton.js";
 import type { SpriteSheetType } from "../sprites/spriteMapper.js";
 
 export type JamlZone = "must" | "should" | "mustnot";
@@ -179,7 +181,9 @@ function ClauseCard({
                     )}
                 </div>
             </div>
-            <button
+            <JimboIconButton
+                size="xs"
+                tone="destructive"
                 onMouseDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => {
@@ -187,24 +191,9 @@ function ClauseCard({
                     onRemove();
                 }}
                 aria-label={`Remove ${clause.label || clause.value}`}
-                style={{
-                    width: 22,
-                    height: 22,
-                    flexShrink: 0,
-                    border: `2px solid ${C.BLACK}`,
-                    borderRadius: 4,
-                    background: C.RED,
-                    color: C.WHITE,
-                    fontFamily: "m6x11plus, ui-monospace, monospace",
-                    fontSize: 12,
-                    lineHeight: 1,
-                    cursor: "pointer",
-                    padding: 0,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,.2), 0 2px 0 ${C.BLACK}`,
-                }}
             >
-                ×
-            </button>
+                <FiX />
+            </JimboIconButton>
         </div>
     );
 }
