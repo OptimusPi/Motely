@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { JimboAppScroll, JimboAppFooter } from './jimboApp';
 import { JimboButton, JimboPanel, JimboInnerPanel, JimboModal } from './panel';
 import { JimboText } from './jimboText';
-import { JimboTabs, JimboVerticalTabs } from './jimboTabs';
+import { JimboTabs } from './jimboTabs';
 import { JimboToggleList } from './JimboToggleList';
 import { JimboFlankNav } from './jimboFlankNav';
 import { JimboBadge } from './JimboBadge';
@@ -185,33 +185,6 @@ export const Tabs: StoryObj = {
           />
           <JimboText size="sm" tone="grey">Active: {tab}</JimboText>
           <JimboText size="xs" tone="grey">All red. Triangle bounces on active. Scrolls horizontally.</JimboText>
-        </JimboPanel>
-      </JimboAppScroll>
-    );
-  },
-};
-
-export const VerticalTabs: StoryObj = {
-  render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [tab, setTab] = useState('a');
-    return (
-      <JimboAppScroll>
-        <JimboPanel>
-          <div className="j-flex j-gap-md">
-            <JimboVerticalTabs
-              tabs={[
-                { id: 'a', label: 'One' },
-                { id: 'b', label: 'Two' },
-                { id: 'c', label: 'Three' },
-              ]}
-              activeTab={tab}
-              onTabChange={setTab}
-            />
-            <JimboInnerPanel>
-              <JimboText size="sm" tone="grey">Active: {tab}</JimboText>
-            </JimboInnerPanel>
-          </div>
         </JimboPanel>
       </JimboAppScroll>
     );
