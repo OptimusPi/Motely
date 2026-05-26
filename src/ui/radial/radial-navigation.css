@@ -1,0 +1,57 @@
+/* Jimbo UI — Radial Navigation
+ * Outer pill handles orbit position + open/close; inner span does idle “life” (Balatro-ish breathe/sway). */
+
+.orbital-pill {
+    position: absolute;
+    pointer-events: auto;
+    -webkit-user-select: none;
+    user-select: none;
+    z-index: 10;
+
+    left: var(--orbital-x, 0px);
+    top: var(--orbital-y, 0px);
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    transition: left 220ms cubic-bezier(0.16, 1, 0.3, 1), top 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hiding state — collapse to center */
+.orbital-pill[data-hiding="true"] {
+    left: 0px;
+    top: 0px;
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+}
+
+.orbital-pill-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: center center;
+}
+
+/* Idle sway removed — keeps the orbit readable and predictable (re-add via class if needed). */
+
+/* Radial item labels: m6x11 (`--font-game`), white, 1px drop shadow (no blur — third value must stay 0).
+   Use weight 400 only: 500 synthesizes bold on many engines and reads as a “fat” second outline next to the shadow. */
+.jimbo-radial-label {
+    font-family: var(--font-game);
+    font-weight: 400;
+    font-synthesis: none;
+    color: #ffffff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.72);
+    white-space: nowrap;
+    text-decoration: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+.jimbo-radial-label--action {
+    font-size: 12px;
+    line-height: 1.15;
+}
+
+.jimbo-radial-label--badge {
+    font-size: 11.5px;
+    line-height: 1.15;
+}

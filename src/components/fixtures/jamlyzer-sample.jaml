@@ -1,0 +1,12 @@
+name: Jamlyzer Sample
+author: jaml-ui
+description: Storybook fixture — seeds analyzed via Motely.analyzeJamlSeeds(jaml, []).
+deck: Red
+stake: White
+must:
+  - joker: WeeJoker
+    antes: [1]
+seeds:
+  - LVCBW4YD
+  - XRCPBFU6
+  - TJWTRHUG
