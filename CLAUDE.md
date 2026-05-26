@@ -118,5 +118,4 @@ When a patch lands upstream, drop it.
 
 - **`Bootsharp.Common` resolving to a stale alpha** — NuGet cache hit on a reused version. Purge `%USERPROFILE%\.nuget\packages\bootsharp*` for the affected version.
 - **`NETSDK1083: 'browser-wasm' not recognized`** — `dotnet workload install wasm-tools`.
-- **Inspector throws on `ref struct` / byref / bare `IEnumerable<T>` / delegate-in-interface** — Bootsharp can't project the member. Either change the C# surface or carry a local projectability patch upstream-bound.
 - **Generated emit contains a backtick (`` ` ``) in a class name** — `Task<T>` was inspected as an instance instead of unwrapped. Surface-inspector bug; check `SurfaceInspector` against `SerializedInspector`.
