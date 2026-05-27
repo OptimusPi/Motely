@@ -3,7 +3,6 @@ author: jammy
 description: Incantation spectralCard with Hack for enhanced number card synergy
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - spectralCard: Incantation
     antes:

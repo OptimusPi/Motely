@@ -1,6 +1,0 @@
-name: test-single
-deck: Red
-stake: White
-must:
-  - smallBlindTag: Ethereal_Tag
-    antes: [1]

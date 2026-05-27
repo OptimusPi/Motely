@@ -3,7 +3,6 @@ author: jammy
 description: ThePlant boss blind debuffs all face cards
 deck: Abandoned
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - boss: ThePlant
     antes:

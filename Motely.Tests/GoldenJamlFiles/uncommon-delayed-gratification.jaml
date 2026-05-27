@@ -3,7 +3,6 @@ author: jammy
 description: Delayed Gratification uncommon with Blue Deck for +2 per unused discard
 deck: Blue
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "discard", "legendary-synergy"]
 must:
   - commonJoker: DelayedGratification
     antes:

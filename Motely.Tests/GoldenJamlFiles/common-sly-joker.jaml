@@ -3,7 +3,6 @@ author: jammy
 description: Sly Joker common for +50 Chips if played hand contains a Pair
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "pairs", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: SlyJoker
     antes:

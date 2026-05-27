@@ -3,7 +3,6 @@ author: jammy
 description: Lusty Joker common for +3 Mult per Heart scored
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "planetCard-scaling", "probability", "tarotCard-engine", "legendary-synergy"]
 must:
   - commonJoker: LustyJoker
     antes:

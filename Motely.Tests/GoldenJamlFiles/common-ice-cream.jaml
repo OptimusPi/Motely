@@ -3,7 +3,6 @@ author: jammy
 description: Ice Cream common for +100 Chips, -5 Chips per hand played
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "retrigger", "legendary-synergy"]
 must:
   - commonJoker: IceCream
     antes:

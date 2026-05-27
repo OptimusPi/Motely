@@ -3,7 +3,6 @@ author: jammy
 description: TheOx boss blind sets money to $0 when defeated
 deck: Red
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "economy", "planetCard-scaling", "legendary-synergy"]
 must:
   - boss: TheOx
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: TheEye boss blind prevents playing same hand type twice
 deck: Red
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "flush", "planetCard-scaling", "legendary-synergy"]
 must:
   - boss: TheEye
     antes:

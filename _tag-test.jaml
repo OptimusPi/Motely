@@ -1,6 +1,0 @@
-name: test
-deck: Red
-stake: White
-must:
-  - smallBlindTags: []
-    antes: [1]

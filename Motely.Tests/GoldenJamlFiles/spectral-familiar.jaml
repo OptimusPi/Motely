@@ -3,7 +3,6 @@ author: jammy
 description: Familiar spectralCard with Photograph for enhanced face card synergy
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "retrigger", "face-cards", "legendary-synergy"]
 must:
   - spectralCard: Familiar
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: The Idol rare joker with Death tarotCard for card cloning strategy
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "planetCard-scaling", "deck-fix", "legendary-synergy"]
 must:
   - uncommonJoker: TheIdol
     antes:

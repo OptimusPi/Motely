@@ -4,7 +4,6 @@ description: Standard card with Polychrome edition, Red Seal, Steel enhancement,
   King rank in Ante 1
 deck: Red
 stake: White
-hashtags: ["standard-card", "enhancement", "copy", "negative", "scaling", "planetCard-scaling", "probability", "face-cards", "steel", "legendary-synergy"]
 must:
   - standardCard: King
     rank: King

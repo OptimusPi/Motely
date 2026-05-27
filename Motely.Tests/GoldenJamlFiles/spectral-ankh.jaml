@@ -3,7 +3,6 @@ author: jammy
 description: Ankh spectralCard to duplicate Blueprint joker
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - spectralCard: Ankh
     antes:

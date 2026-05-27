@@ -3,7 +3,6 @@ author: jammy
 description: Stuntman rare joker for +250 Chips and +3 hand size
 deck: Painted
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "flush", "straight", "planetCard-scaling", "legendary-synergy"]
 must:
   - rareJoker: Stuntman
     antes:

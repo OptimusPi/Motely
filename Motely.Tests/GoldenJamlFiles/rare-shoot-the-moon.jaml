@@ -3,7 +3,6 @@ author: jammy
 description: Shoot TheMoon rare joker for +13 Mult per Queen held
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "scaling", "retrigger", "deck-fix", "face-cards", "legendary-synergy"]
 must:
   - commonJoker: ShootTheMoon
     antes:

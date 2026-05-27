@@ -3,7 +3,6 @@ author: jammy
 description: TheMoon tarotCard with Blackboard for Club suit conversion
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "flush", "planetCard-scaling", "dark-suits", "legendary-synergy"]
 must:
   - tarotCard: TheMoon
     antes:

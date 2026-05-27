@@ -3,7 +3,6 @@ author: jammy
 description: Rare Tag for free rare joker in next shop
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "scaling", "planetCard-scaling", "legendary-synergy"]
 must:
   - tag: RareTag
     antes:

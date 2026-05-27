@@ -3,7 +3,6 @@ author: jammy
 description: Trance spectralCard with Constellation for Blue Seal planetCard generation
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - spectralCard: Trance
     antes:

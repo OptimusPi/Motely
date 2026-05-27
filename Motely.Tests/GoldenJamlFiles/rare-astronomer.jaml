@@ -3,7 +3,6 @@ author: jammy
 description: Astronomer rare joker with Constellation for planetCard card synergy
 deck: Nebula
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - uncommonJoker: Astronomer
     antes:

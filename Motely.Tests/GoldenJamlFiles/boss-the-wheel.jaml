@@ -3,7 +3,6 @@ author: jammy
 description: TheWheel boss blind has 1 in 7 chance to destroy random joker after each hand
 deck: Red
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - boss: TheWheel
     antes:

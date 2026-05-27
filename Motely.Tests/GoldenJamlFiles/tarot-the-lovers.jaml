@@ -3,7 +3,6 @@ author: jammy
 description: TheLovers tarotCard with Flower Pot for Wild suit flexibility
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "flush", "planetCard-scaling", "probability", "legendary-synergy"]
 must:
   - tarotCard: TheLovers
     antes:
