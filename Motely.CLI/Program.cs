@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
@@ -467,6 +467,8 @@ partial class Program
             }
 
             string jamlPath = jamlOption.ParsedValue;
+            if (!Path.IsPathRooted(jamlPath) && !Path.HasExtension(jamlPath))
+                jamlPath = Path.Combine("JamlFilters", jamlPath + ".jaml");
             string jamlContent;
             try
             {
