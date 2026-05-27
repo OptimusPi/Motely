@@ -23,9 +23,6 @@ async function createHarness() {
     const enums = await import(
         pathToFileURL(resolve(pkgRoot, "dist", "generated", "modules", "motely", "enums.g.mjs")).href
     );
-    const { MotelyStreamKind } = await import(
-        pathToFileURL(resolve(pkgRoot, "dist", "generated", "modules", "motely.g.mjs")).href
-    );
 
     const pkgVersion = JSON.parse(
         await readFile(resolve(pkgRoot, "package.json"), "utf8")
@@ -43,7 +40,6 @@ async function createHarness() {
         pkgVersion,
         paths: { entryPath, pkgRoot, binDir, wasmProjectDir },
         ...enums,
-        MotelyStreamKind,
     };
 }
 
