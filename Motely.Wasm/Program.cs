@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Motely;
 using Motely.Analysis;
 using Motely.Filters;
+using Motely.Filters.Jaml;
 using Motely.Filters.Native;
 using System.Text;
 
@@ -107,6 +108,27 @@ public static partial class Program
     public static MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[]? seeds = null) =>
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
 
+    [Export]
+    public static WasmJamlConfig ParseJaml(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error) || config is null)
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return new WasmJamlConfig(config);
+    }
+
+    [Export]
+    public static string ExplainJamlConfig(WasmJamlConfig config) =>
+        config.Config.HasAnyClauses ? JamlSearchBuilder.ExplainPlan(config.Config) : "";
+
+    [Export]
+    public static JamlSearchPlan CreatePlanFromConfig(WasmJamlConfig config) =>
+        JamlSearchBuilder.CreatePlan(config.Config);
+
+    [Export]
+    public static MotelyJamlyzerResult AnalyzeJamlSeedsFromConfig(WasmJamlConfig config, string[]? seeds = null) =>
+        MotelyJamlyzer.AnalyzeSeeds(config.Config, seeds);
+
+
     // ── Packed-int decoders ──────────────────────────────────────────────────
     // Return typed enums so Bootsharp emits MotelyItemType, MotelyItemTypeCategory,
     // MotelyJokerRarity, MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement
@@ -117,6 +139,8 @@ public static partial class Program
     [Export] public static MotelyItemEdition      DecodeItemEdition     (int v) => (MotelyItemEdition)(v & MotelyGlobals.ItemEditionMask);
     [Export] public static MotelyItemSeal         DecodeItemSeal        (int v) => (MotelyItemSeal)(v & MotelyGlobals.ItemSealMask);
     [Export] public static MotelyItemEnhancement  DecodeItemEnhancement (int v) => (MotelyItemEnhancement)(v & MotelyGlobals.ItemEnhancementMask);
+    [Export] public static MotelyStandardcardSuit DecodeStandardcardSuit (int v) => (MotelyStandardcardSuit)(v & MotelyGlobals.StandardcardSuitMask);
+    [Export] public static MotelyStandardcardRank DecodeStandardcardRank (int v) => (MotelyStandardcardRank)(v & MotelyGlobals.StandardcardRankMask);
     [Export] public static bool IsPerishable (int v) => (v & (1 << MotelyGlobals.PerishableStickerOffset)) != 0;
     [Export] public static bool IsEternal    (int v) => (v & (1 << MotelyGlobals.EternalStickerOffset)) != 0;
     [Export] public static bool IsRental     (int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
@@ -165,6 +189,12 @@ public static partial class Program
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
         return new WasmSearchSettings(AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config)));
+    }
+
+    [Export]
+    public static WasmSearchSettings FromJamlConfig(WasmJamlConfig config)
+    {
+        return new WasmSearchSettings(AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config.Config)));
     }
 
     private static IMotelySearchSettings AttachWasmCallbacks(IMotelySearchSettings settings)

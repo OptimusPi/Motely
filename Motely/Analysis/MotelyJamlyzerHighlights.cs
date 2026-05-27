@@ -1,4 +1,10 @@
 using Motely.Filters;
+using Motely.Filters.Jaml;
+using Motely.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 
 namespace Motely.Analysis;
 
@@ -9,24 +15,27 @@ public static class MotelyJamlyzerHighlights
         if (analysis.Error is not null)
             return analysis;
 
-        var targets = EnumeratePreviewClauses(config)
-            .Select(CreateJokerTarget)
+        var clauses = EnumeratePreviewClauses(config).ToArray();
+
+        var targets = clauses
+            .Select(CreateHighlightTarget)
             .Where(static target => target is not null)
-            .Cast<JokerTarget>()
+            .Cast<HighlightTarget>()
             .ToArray();
 
-        if (targets.Length == 0)
+        if (clauses.Length == 0)
             return analysis;
 
         return analysis with
         {
-            Antes = analysis.Antes.Select(ante => HighlightAnte(ante, targets)).ToList(),
+            Antes = analysis.Antes.Select(ante => HighlightAnte(ante, targets, clauses)).ToList(),
         };
     }
 
     private static MotelyAnteAnalysis HighlightAnte(
         MotelyAnteAnalysis ante,
-        IReadOnlyList<JokerTarget> targets
+        IReadOnlyList<HighlightTarget> targets,
+        IReadOnlyList<IJamlClause> clauses
     )
     {
         var newShopQueue = ante.ShopQueue.Select((item, slot) => item with
@@ -48,10 +57,30 @@ public static class MotelyJamlyzerHighlights
             }).ToList(),
         }).ToList();
 
+        bool bossMatched = clauses
+            .OfType<BossClause>()
+            .Any(c => c.Antes.Contains(ante.Ante) && c.Bosses.Contains(ante.Boss));
+
+        bool voucherMatched = clauses
+            .OfType<VoucherClause>()
+            .Any(c => c.Antes.Contains(ante.Ante) && c.Rolls.Contains(0) && c.Vouchers.Contains(ante.Voucher));
+
+        bool smallBlindTagMatched = clauses
+            .OfType<TagClause>()
+            .Any(c => c.Antes.Contains(ante.Ante) && c.Rolls.Contains(0) && c.Tags.Contains(ante.SmallBlindTag));
+
+        bool bigBlindTagMatched = clauses
+            .OfType<TagClause>()
+            .Any(c => c.Antes.Contains(ante.Ante) && c.Rolls.Contains(1) && c.Tags.Contains(ante.BigBlindTag));
+
         return ante with
         {
             ShopQueue = newShopQueue,
             Packs = newPacks,
+            BossMatched = ante.BossMatched || bossMatched,
+            VoucherMatched = ante.VoucherMatched || voucherMatched,
+            SmallBlindTagMatched = ante.SmallBlindTagMatched || smallBlindTagMatched,
+            BigBlindTagMatched = ante.BigBlindTagMatched || bigBlindTagMatched
         };
     }
 
@@ -90,44 +119,99 @@ public static class MotelyJamlyzerHighlights
         }
     }
 
-    private static JokerTarget? CreateJokerTarget(IJamlClause clause) =>
+    private static HighlightTarget? CreateHighlightTarget(IJamlClause clause) =>
         clause switch
         {
             JokerClause c => new(
                 c.Antes,
                 c.Sources.ShopItems,
                 c.Sources.BoosterPacks,
-                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => j.ToString()), c.Edition, c.Stickers, null)),
+                item => MatchesJoker(item, c.IsWildcard, c.Jokers, c.Edition, c.Stickers, null)),
             CommonJokerClause c => new(
                 c.Antes,
                 c.Sources.ShopItems,
                 c.Sources.BoosterPacks,
-                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => j.ToString()), c.Edition, c.Stickers,
-                    static item => Enum.TryParse<MotelyJokerCommon>(item.Type.ToString(), out _))),
+                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => (MotelyJoker)((int)MotelyJokerRarity.Common | (int)j)).ToArray(), c.Edition, c.Stickers,
+                    static item => (MotelyJokerRarity)(item.Value & MotelyGlobals.JokerRarityMask) == MotelyJokerRarity.Common)),
             UncommonJokerClause c => new(
                 c.Antes,
                 c.Sources.ShopItems,
                 c.Sources.BoosterPacks,
-                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => j.ToString()), c.Edition, c.Stickers,
-                    static item => Enum.TryParse<MotelyJokerUncommon>(item.Type.ToString(), out _))),
+                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => (MotelyJoker)((int)MotelyJokerRarity.Uncommon | (int)j)).ToArray(), c.Edition, c.Stickers,
+                    static item => (MotelyJokerRarity)(item.Value & MotelyGlobals.JokerRarityMask) == MotelyJokerRarity.Uncommon)),
             RareJokerClause c => new(
                 c.Antes,
                 c.Sources.ShopItems,
                 c.Sources.BoosterPacks,
-                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => j.ToString()), c.Edition, c.Stickers,
-                    static item => Enum.TryParse<MotelyJokerRare>(item.Type.ToString(), out _))),
+                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => (MotelyJoker)((int)MotelyJokerRarity.Rare | (int)j)).ToArray(), c.Edition, c.Stickers,
+                    static item => (MotelyJokerRarity)(item.Value & MotelyGlobals.JokerRarityMask) == MotelyJokerRarity.Rare)),
             MixedJokerClause c => new(
                 c.Antes,
                 c.Sources.ShopItems,
                 c.Sources.BoosterPacks,
-                item => MatchesJoker(item, c.IsWildcard, c.Jokers.Select(static j => j.ToString()), c.Edition, c.Stickers, null)),
+                item => MatchesJoker(item, c.IsWildcard, c.Jokers, c.Edition, c.Stickers, null)),
+            LegendaryJokerClause c => new(
+                c.Antes,
+                c.Sources.ShopItems,
+                c.Sources.BoosterPacks,
+                item => {
+                    if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard && item.Type == MotelyItemType.TheSoul)
+                        return true;
+                    if (item.TypeCategory != MotelyItemTypeCategory.Joker) return false;
+                    bool typeMatches = c.IsWildcard || c.Jokers.Any(j => item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)MotelyJokerRarity.Legendary | (int)j));
+                    if (!typeMatches) return false;
+                    return !c.Edition.HasValue || item.Edition == c.Edition.Value;
+                }),
+            TarotCardClause c => new(
+                c.Antes,
+                c.Sources.ShopItems,
+                c.Sources.BoosterPacks,
+                item => item.TypeCategory == MotelyItemTypeCategory.TarotCard && c.Tarots.Any(t => item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)t))),
+            PlanetCardClause c => new(
+                c.Antes,
+                c.Sources.ShopItems,
+                c.Sources.BoosterPacks,
+                item => item.TypeCategory == MotelyItemTypeCategory.PlanetCard && c.Planets.Any(p => item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)p))),
+            SpectralCardClause c => new(
+                c.Antes,
+                c.Sources.ShopItems,
+                c.Sources.BoosterPacks,
+                item => item.TypeCategory == MotelyItemTypeCategory.SpectralCard && c.Spectrals.Any(s => item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)s))),
+            VoucherClause c => new(
+                c.Antes,
+                [],
+                [],
+                item => false),
+            TagClause c => new(
+                c.Antes,
+                [],
+                [],
+                item => false),
+            BossClause c => new(
+                c.Antes,
+                [],
+                [],
+                item => false),
+            StandardCardClause c => new(
+                c.Antes,
+                c.Sources.ShopItems,
+                c.Sources.BoosterPacks,
+                item => {
+                    if (item.TypeCategory != MotelyItemTypeCategory.Standardcard) return false;
+                    if (c.Rank.HasValue && item.StandardcardRank != c.Rank.Value) return false;
+                    if (c.Suit.HasValue && item.StandardcardSuit != c.Suit.Value) return false;
+                    if (c.Enhancement.HasValue && item.Enhancement != c.Enhancement.Value) return false;
+                    if (c.Seal.HasValue && item.Seal != c.Seal.Value) return false;
+                    if (c.Edition.HasValue && item.Edition != c.Edition.Value) return false;
+                    return true;
+                }),
             _ => null,
         };
 
     private static bool MatchesJoker(
         MotelyItem item,
         bool isWildcard,
-        IEnumerable<string> jokerNames,
+        IReadOnlyList<MotelyJoker> jokers,
         MotelyItemEdition? edition,
         IReadOnlyList<MotelyJokerSticker> stickers,
         Func<MotelyItem, bool>? rarityMatch
@@ -137,8 +221,20 @@ public static class MotelyJamlyzerHighlights
             return false;
         if (rarityMatch is not null && !rarityMatch(item))
             return false;
-        if (!isWildcard && !jokerNames.Contains(item.Type.ToString()))
-            return false;
+        if (!isWildcard)
+        {
+            bool found = false;
+            for (int i = 0; i < jokers.Count; i++)
+            {
+                if (item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokers[i]))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                return false;
+        }
         if (edition.HasValue && item.Edition != edition.Value)
             return false;
 
@@ -151,7 +247,7 @@ public static class MotelyJamlyzerHighlights
         });
     }
 
-    private sealed record JokerTarget(
+    private sealed record HighlightTarget(
         int[] Antes,
         int[] ShopItems,
         int[] BoosterSlots,
