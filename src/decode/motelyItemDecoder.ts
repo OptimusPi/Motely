@@ -1,4 +1,11 @@
 import { MOTELY_ITEM_FORMATS_BY_VALUE } from "./motelyItemFormats.js";
+import {
+  MotelyItemEdition,
+  MotelyItemSeal,
+  MotelyItemEnhancement,
+  MotelyStandardcardRank,
+  MotelyStandardcardSuit,
+} from "motely-wasm/motely/enums";
 
 type MotelyItemCategoryName = "Standardcard" | "SpectralCard" | "TarotCard" | "PlanetCard" | "Joker" | "Invalid";
 
@@ -11,13 +18,59 @@ const CATEGORY_MAP: Record<MotelyItemCategoryName, MotelyRenderableCategory> = {
   Invalid: "unknown",
 };
 
-const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"] as const;
-const SUITS = ["Clubs", "Diamonds", "Hearts", "Spades"] as const;
-const EDITIONS = ["Base", "Foil", "Holographic", "Polychrome", "Negative"] as const;
-const SEALS = ["None", "Gold", "Red", "Blue", "Purple"] as const;
+const EDITIONS: Record<MotelyItemEdition, string> = {
+  [MotelyItemEdition.None]: "Base",
+  [MotelyItemEdition.Foil]: "Foil",
+  [MotelyItemEdition.Holographic]: "Holographic",
+  [MotelyItemEdition.Polychrome]: "Polychrome",
+  [MotelyItemEdition.Negative]: "Negative",
+};
 
-type RankName = (typeof RANKS)[number];
-type SuitName = (typeof SUITS)[number];
+const SEALS: Record<MotelyItemSeal, string> = {
+  [MotelyItemSeal.None]: "None",
+  [MotelyItemSeal.Gold]: "Gold",
+  [MotelyItemSeal.Red]: "Red",
+  [MotelyItemSeal.Blue]: "Blue",
+  [MotelyItemSeal.Purple]: "Purple",
+};
+
+const ENHANCEMENTS: Record<MotelyItemEnhancement, string> = {
+  [MotelyItemEnhancement.None]: "None",
+  [MotelyItemEnhancement.Bonus]: "Bonus",
+  [MotelyItemEnhancement.Mult]: "Mult",
+  [MotelyItemEnhancement.Wild]: "Wild",
+  [MotelyItemEnhancement.Glass]: "Glass",
+  [MotelyItemEnhancement.Steel]: "Steel",
+  [MotelyItemEnhancement.Stone]: "Stone",
+  [MotelyItemEnhancement.Gold]: "Gold",
+  [MotelyItemEnhancement.Lucky]: "Lucky",
+};
+
+const RANKS: Record<MotelyStandardcardRank, string> = {
+  [MotelyStandardcardRank.Two]: "2",
+  [MotelyStandardcardRank.Three]: "3",
+  [MotelyStandardcardRank.Four]: "4",
+  [MotelyStandardcardRank.Five]: "5",
+  [MotelyStandardcardRank.Six]: "6",
+  [MotelyStandardcardRank.Seven]: "7",
+  [MotelyStandardcardRank.Eight]: "8",
+  [MotelyStandardcardRank.Nine]: "9",
+  [MotelyStandardcardRank.Ten]: "10",
+  [MotelyStandardcardRank.Jack]: "Jack",
+  [MotelyStandardcardRank.Queen]: "Queen",
+  [MotelyStandardcardRank.King]: "King",
+  [MotelyStandardcardRank.Ace]: "Ace",
+};
+
+const SUITS: Record<MotelyStandardcardSuit, "Clubs" | "Diamonds" | "Hearts" | "Spades"> = {
+  [MotelyStandardcardSuit.Clubs]: "Clubs",
+  [MotelyStandardcardSuit.Diamonds]: "Diamonds",
+  [MotelyStandardcardSuit.Hearts]: "Hearts",
+  [MotelyStandardcardSuit.Spades]: "Spades",
+};
+
+type RankName = string;
+type SuitName = "Clubs" | "Diamonds" | "Hearts" | "Spades";
 
 export type CardCategory = "joker" | "consumable" | "playing" | "spectral" | "tarot" | "planet";
 export type MotelyRenderableCategory = CardCategory | "unknown";
@@ -44,7 +97,11 @@ export interface DecodedMotelyItem {
   enhancement: string | null;
   rank: string | null;
   suit: "Clubs" | "Diamonds" | "Hearts" | "Spades" | null;
+  isEternal: boolean;
+  isPerishable: boolean;
+  isRental: boolean;
 }
+
 
 export interface MotelyJamlCard {
   type: "joker" | "consumable" | "playing";
@@ -55,6 +112,9 @@ export interface MotelyJamlCard {
     enhancements?: string[];
     rank?: string;
     suit?: string;
+    isEternal?: boolean;
+    isPerishable?: boolean;
+    isRental?: boolean;
     scale?: number;
   };
 }
@@ -101,48 +161,50 @@ export function motelyItemDisplayName(input: MotelyItemInput): string {
   return itemFormat(itemType)?.displayName ?? spaceSplit(motelyItemTypeName(input));
 }
 
+import { Motely } from "motely-wasm";
+
+function isStickerSet(input: MotelyItemInput, bitOffset: number): boolean {
+  const val = resolvePackedValue(input);
+  if (val === null) return false;
+  return (val & (1 << bitOffset)) !== 0;
+}
+
 export function motelyItemEditionName(input: MotelyItemInput): "Foil" | "Holographic" | "Polychrome" | "Negative" | null {
   if (input == null) return null;
-  const val = typeof input === "number" ? input : input.edition;
-  if (val == null) return null;
-  const key = EDITIONS[val as keyof typeof EDITIONS];
-  if (!key || key === "Base") return null;
-  return key as "Foil" | "Holographic" | "Polychrome" | "Negative";
+  const val = typeof input === "number" ? Motely.decodeItemEdition(input) : input.edition;
+  if (val == null || val === MotelyItemEdition.None) return null;
+  return EDITIONS[val] as "Foil" | "Holographic" | "Polychrome" | "Negative";
 }
 
 export function motelyItemSealName(input: MotelyItemInput): "Gold" | "Red" | "Blue" | "Purple" | null {
   if (input == null) return null;
-  const val = typeof input === "number" ? null : input.seal;
-  if (val == null) return null;
-  const key = SEALS[val as keyof typeof SEALS];
-  if (!key || key === "None") return null;
-  return key as "Gold" | "Red" | "Blue" | "Purple";
+  const val = typeof input === "number" ? Motely.decodeItemSeal(input) : input.seal;
+  if (val == null || val === MotelyItemSeal.None) return null;
+  return SEALS[val] as "Gold" | "Red" | "Blue" | "Purple";
 }
 
 export function motelyItemEnhancementName(input: MotelyItemInput): string | null {
   if (input == null) return null;
-  const val = typeof input === "number" ? null : input.enhancement;
-  if (val == null) return null;
-  // Enhancements are not part of the current motely-wasm JS contract.
-  return null;
+  const val = typeof input === "number" ? Motely.decodeItemEnhancement(input) : input.enhancement;
+  if (val == null || val === MotelyItemEnhancement.None) return null;
+  return ENHANCEMENTS[val] ?? null;
 }
+
 
 export function motelyStandardcardRankName(input: MotelyItemInput): string | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
-  const val = typeof input === "number" ? resolveMotelyItemType(input) : input.rank;
+  const val = typeof input === "number" ? Motely.decodeStandardcardRank(input) : input.rank;
   if (val == null) return null;
-  if (typeof input === "number") return RANKS[val & 0xf] ?? null;
-  return RANKS[val] as RankName | undefined ?? null;
+  return RANKS[val] ?? null;
 }
 
 export function motelyStandardcardSuitName(input: MotelyItemInput): "Clubs" | "Diamonds" | "Hearts" | "Spades" | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
-  const val = typeof input === "number" ? resolveMotelyItemType(input) : input.suit;
+  const val = typeof input === "number" ? Motely.decodeStandardcardSuit(input) : input.suit;
   if (val == null) return null;
-  if (typeof input === "number") return SUITS[(val >> 4) & 0xf] ?? null;
-  return SUITS[val] as SuitName | undefined ?? null;
+  return SUITS[val] ?? null;
 }
 
 export function decodeMotelyItemName(input: MotelyItemInput): string {
@@ -168,6 +230,9 @@ export function decodeMotelyItem(input: MotelyItemInput): DecodedMotelyItem | nu
     enhancement: motelyItemEnhancementName(input),
     rank: motelyStandardcardRankName(input),
     suit: motelyStandardcardSuitName(input),
+    isEternal: typeof input === "number" ? Motely.isEternal(input) : isStickerSet(input, 30),
+    isPerishable: typeof input === "number" ? Motely.isPerishable(input) : isStickerSet(input, 31),
+    isRental: typeof input === "number" ? Motely.isRental(input) : isStickerSet(input, 29),
   };
 }
 
@@ -189,6 +254,9 @@ export function decodeMotelyItemToJamlCard(input: MotelyItemInput, scale?: numbe
       enhancements: decoded.enhancement ? [decoded.enhancement] : undefined,
       rank: decoded.rank ?? undefined,
       suit: decoded.suit ?? undefined,
+      isEternal: decoded.isEternal,
+      isPerishable: decoded.isPerishable,
+      isRental: decoded.isRental,
       scale,
     },
   };
