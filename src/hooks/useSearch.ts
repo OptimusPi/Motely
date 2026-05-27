@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { WasmSearchSettings } from "motely-wasm";
+import type { SearchSettings } from "motely-wasm";
 import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 export interface SearchResult {
@@ -37,9 +37,9 @@ const INITIAL_STATE: UseSearchState = {
 };
 
 
-function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): WasmSearchSettings {
+function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): SearchSettings {
     const settings = Motely.fromJaml(jaml);
-    let configured: WasmSearchSettings;
+    let configured: SearchSettings;
     if (mode === "seedlist" && opts.seeds && opts.seeds.length > 0) {
         configured = settings.withListSearch(opts.seeds, opts.seeds.length);
     } else if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
@@ -108,7 +108,10 @@ export function useSearch() {
                     Motely.onProgress.unsubscribe(onProgress);
                 };
 
-                if (opts.predicate) Motely.evalJimmolate = opts.predicate;
+                if (opts.predicate) {
+                    const pred = opts.predicate;
+                    Motely.jimmolateProbe = (seed) => pred(seed);
+                }
                 const search = configure(jaml, mode, opts, !!opts.predicate).start(undefined);
                 searchRef.current = search;
 
@@ -122,13 +125,13 @@ export function useSearch() {
                         seedsPerSecond: 0,
                     }));
                 } finally {
-                    if (opts.predicate) Motely.evalJimmolate = () => true;
+                    if (opts.predicate) Motely.jimmolateProbe = () => true;
                     cleanupRef.current?.();
                     cleanupRef.current = null;
                     searchRef.current = null;
                 }
             } catch (error) {
-                Motely.evalJimmolate = () => true;
+                Motely.jimmolateProbe = () => true;
                 teardown();
                 const message = error instanceof Error ? error.message : String(error);
                 setState((s) => ({ ...s, status: "error", error: message, seedsPerSecond: 0 }));
