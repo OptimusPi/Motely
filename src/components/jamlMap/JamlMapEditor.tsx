@@ -18,11 +18,13 @@ import {
   SPECTRAL_PICKER_CONFIG,
   PACK_PICKER_CONFIG,
 } from "./CategoryPicker.js";
-import { JimboButton, JimboModal, type JimboTone } from "../../ui/panel.js";
+import { JimboButton, JimboInnerPanel, JimboModal, type JimboTone } from "../../ui/panel.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboSprite } from "../../ui/sprites.js";
 import { type SpriteSheetType } from "../../sprites/spriteMapper.js";
+import { JimboTabs } from "../../ui/jimboTabs.js";
+import { JimboListItem } from "../../ui/JimboListItem.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -184,19 +186,15 @@ export function JamlMapEditor({
       {/* Zone Toggle Header */}
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.DARKEST, padding: "max(32px, env(safe-area-inset-top, 32px)) 0 8px 0", borderBottom: `2px solid ${C.PANEL_EDGE}` }}>
         <JimboText size="md" tone="white" style={{ textAlign: "center", marginBottom: 12 }}>Jaml Visual Builder</JimboText>
-        <div className="j-flex j-gap-sm" style={{ justifyContent: "center" }}>
-          {(["must", "should", "mustnot"] as JamlZone[]).map((z) => (
-            <JimboButton
-              key={z}
-              tone={currentZone === z ? ZONE_TONE[z] : "blue"}
-              size="sm"
-              onClick={() => setCurrentZone(z)}
-              style={{ opacity: currentZone === z ? 1 : 0.4 }}
-            >
-              {ZONE_LABEL[z]}
-            </JimboButton>
-          ))}
-        </div>
+        <JimboTabs
+          tabs={[
+            { id: "must", label: "Must" },
+            { id: "should", label: "Should" },
+            { id: "mustnot", label: "Must Not" },
+          ]}
+          activeTab={currentZone}
+          onTabChange={(tabId) => setCurrentZone(tabId as JamlZone)}
+        />
       </div>
 
       {/* Map Layout - Vertical Scrolling Antes */}
@@ -209,50 +207,51 @@ export function JamlMapEditor({
         {Array.from({ length: 40 }, (_, i) => i).map((a) => (
           <div key={a} style={{
             scrollSnapAlign: "start",
-            padding: "24px 0 64px 0",
+            padding: "16px 8px 24px 8px",
             minHeight: "100%", // ensuring each ante takes at least full viewport height to snap cleanly
             display: "flex",
             flexDirection: "column",
-            gap: 24,
-            borderBottom: `2px solid ${C.DARK_GREY}`
+            justifyContent: "center",
           }}>
-            <JimboText size="lg" tone="white" style={{ textAlign: "center", marginBottom: 8 }}>Ante {a}</JimboText>
+            <JimboInnerPanel style={{ display: "flex", flexDirection: "column", gap: 16, padding: "12px 8px" }}>
+              <JimboText size="lg" tone="white" style={{ textAlign: "center" }}>Ante {a}</JimboText>
 
-            {/* Row 1: Blinds & Tags & Voucher */}
-            <div className="j-flex j-justify-between j-items-end" style={{ padding: "0 4px" }}>
-              <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="xs" tone="grey">Voucher</JimboText>
-                {renderSlot(a, `ante_${a}_voucher`, 42, "Vouchers", "voucher")}
+              {/* Row 1: Blinds & Tags & Voucher */}
+              <div className="j-flex j-justify-between j-items-end" style={{ padding: "0 4px" }}>
+                <div className="j-flex-col j-items-center j-gap-xs">
+                  <JimboText size="xs" tone="grey">Voucher</JimboText>
+                  {renderSlot(a, `ante_${a}_voucher`, 42, "Vouchers", "voucher")}
+                </div>
+                <div className="j-flex-col j-items-center j-gap-xs">
+                  <JimboText size="xs" tone="grey">Small</JimboText>
+                  {renderSlot(a, `ante_${a}_tag_small`, 42, "tags", "tag")}
+                </div>
+                <div className="j-flex-col j-items-center j-gap-xs">
+                  <JimboText size="xs" tone="grey">Big</JimboText>
+                  {renderSlot(a, `ante_${a}_tag_big`, 42, "tags", "tag")}
+                </div>
+                <div className="j-flex-col j-items-center j-gap-xs">
+                  <JimboText size="xs" tone="grey">Boss</JimboText>
+                  {renderSlot(a, `ante_${a}_boss`, 42, "BlindChips", "boss")}
+                </div>
               </div>
-              <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="xs" tone="grey">Small</JimboText>
-                {renderSlot(a, `ante_${a}_tag_small`, 42, "tags", "tag")}
-              </div>
-              <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="xs" tone="grey">Big</JimboText>
-                {renderSlot(a, `ante_${a}_tag_big`, 42, "tags", "tag")}
-              </div>
-              <div className="j-flex-col j-items-center j-gap-xs">
-                <JimboText size="xs" tone="grey">Boss</JimboText>
-                {renderSlot(a, `ante_${a}_boss`, 42, "BlindChips", "boss")}
-              </div>
-            </div>
 
-            {/* Row 2: Shop Items */}
-            <div className="j-flex-col j-gap-xs">
-              <JimboText size="sm" tone="grey" style={{ letterSpacing: 1, padding: "0 4px" }}>Shop Items</JimboText>
-              <div className="j-flex hide-scrollbar j-gap-sm" style={{ overflowX: "auto", padding: "0 0 8px 4px" }}>
-                {[1,2,3,4,5,6,7,8].map(i => renderSlot(a, `ante_${a}_shop_${i}`, 52, "Jokers"))}
+              {/* Row 2: Shop Items */}
+              <div className="j-flex-col j-gap-xs">
+                <JimboText size="sm" tone="grey" style={{ letterSpacing: 1, padding: "0 4px" }}>Shop Items</JimboText>
+                <div className="j-flex hide-scrollbar j-gap-sm" style={{ overflowX: "auto", padding: "0 0 8px 4px" }}>
+                  {[1,2,3,4,5,6,7,8].map(i => renderSlot(a, `ante_${a}_shop_${i}`, 52, "Jokers"))}
+                </div>
               </div>
-            </div>
 
-            {/* Row 3: Packs */}
-            <div className="j-flex-col j-gap-xs">
-              <JimboText size="sm" tone="grey" style={{ letterSpacing: 1, padding: "0 4px" }}>Packs</JimboText>
-              <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap", padding: "0 4px" }}>
-                {[1,2,3,4,5,6].map(i => renderSlot(a, `ante_${a}_pack_${i}`, 64, "Boosters", "pack"))}
+              {/* Row 3: Packs */}
+              <div className="j-flex-col j-gap-xs">
+                <JimboText size="sm" tone="grey" style={{ letterSpacing: 1, padding: "0 4px" }}>Packs</JimboText>
+                <div className="j-flex j-gap-sm" style={{ flexWrap: "wrap", padding: "0 4px" }}>
+                  {[1,2,3,4,5,6].map(i => renderSlot(a, `ante_${a}_pack_${i}`, 64, "Boosters", "pack"))}
+                </div>
               </div>
-            </div>
+            </JimboInnerPanel>
           </div>
         ))}
       </div>
@@ -261,7 +260,13 @@ export function JamlMapEditor({
       <JimboModal
         open={activeSlot !== null}
         onClose={handlePickerCancel}
-        title={pickerFlow === "category" ? "Select Category" : undefined}
+        title={
+          pickerFlow === "category"
+            ? "Select Category"
+            : pickerFlow === "joker"
+            ? "Select Joker"
+            : CATEGORY_CONFIG_MAP[pickerFlow as SlotCategory]?.title ?? "Select Item"
+        }
         className="j-picker-modal"
       >
         {activeSlot !== null && (
@@ -302,21 +307,18 @@ export function CategoryMenu({
       overflowY: "auto",
     }}>
       {CATEGORIES.map((cat) => (
-        <JimboButton
+        <JimboListItem
           key={cat.key}
-          tone={cat.tone}
-          size="sm"
-          fullWidth
           onClick={() => onSelect(cat.key)}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left" }}>
-            <JimboSprite name={cat.sprite} sheet={cat.sheet} width={24} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <span style={{ fontSize: 12 }}>{cat.label}</span>
-              <span style={{ fontSize: 9, opacity: 0.7, letterSpacing: "0.04em", lineHeight: 1, whiteSpace: "normal" }}>{cat.hint}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left" }}>
+            <JimboSprite name={cat.sprite} sheet={cat.sheet} width={32} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <JimboText size="sm" tone="white">{cat.label}</JimboText>
+              <JimboText size="micro" tone="grey">{cat.hint}</JimboText>
             </div>
           </div>
-        </JimboButton>
+        </JimboListItem>
       ))}
     </div>
   );
