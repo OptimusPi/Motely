@@ -8,7 +8,7 @@
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { WasmSearchSettings } from "motely-wasm";
+import type { SearchSettings } from "motely-wasm";
 import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
 import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
@@ -142,9 +142,9 @@ function attachListeners(): void {
 }
 
 function applyCommonOverrides(
-    settings: WasmSearchSettings,
+    settings: SearchSettings,
     message: PoolStartMessage,
-): WasmSearchSettings {
+): SearchSettings {
     let s = settings.withThreadCount(1);
     if (typeof message.deck === "number") {
         s = s.withDeck(message.deck as MotelyDeck);
@@ -155,7 +155,7 @@ function applyCommonOverrides(
     return s;
 }
 
-function configureSettings(message: PoolStartMessage): WasmSearchSettings {
+function configureSettings(message: PoolStartMessage): SearchSettings {
     const base = Motely.fromJaml(message.jaml);
     const s = applyCommonOverrides(base, message);
 
