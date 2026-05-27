@@ -29,8 +29,7 @@ export async function loadBootResourcesFromDir(binDir) {
     return { wasm, assemblies, icu, symbols, pdb };
 }
 
-/** @param {string} [packageName] npm package name (default motely-wasm). */
-export function resolvePackageBinDir(packageName = "motely-wasm") {
-    const pkgJson = fileURLToPath(import.meta.resolve(`${packageName}/package.json`));
-    return join(dirname(pkgJson), "bin");
+export function resolvePackageBinDir() {
+    const loaderPath = fileURLToPath(import.meta.url);
+    return join(dirname(dirname(loaderPath)), "bin");
 }

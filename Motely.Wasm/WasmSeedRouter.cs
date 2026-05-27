@@ -1,4 +1,5 @@
 using System;
+using Bootsharp;
 using Motely;
 using Motely.Analysis;
 
@@ -13,9 +14,29 @@ public sealed class WasmSeedRouter : IDisposable
         _inner = new MotelySeedRouterDesc(seed, deck, stake);
     }
 
-    public string GetSeed() => _inner.GetSeed();
+    public string GetSeed()
+    {
+        var ctx = _inner.Instance();
+        return ctx.GetSeed();
+    }
 
-    public int GetBossForAnte(int ante) => (int)_inner.GetBossForAnte(ante);
+    public int GetBossForAnte(int ante)
+    {
+        var ctx = _inner.Instance();
+        var bossStream = ctx.CreateBossStream();
+        var voucherState = new MotelyRunState();
+        MotelyBossBlind boss = default;
+        for (int a = 1; a <= ante; a++)
+        {
+            boss = ctx.GetBossForAnte(ref bossStream, a, ref voucherState);
+        }
+        return (int)boss;
+    }
+
+    public WasmSingleSearchContext GetContext()
+    {
+        return new WasmSingleSearchContext(_inner);
+    }
 
     public void Dispose() => _inner.Dispose();
 }

@@ -99,7 +99,11 @@ public sealed record class MotelyAnteAnalysis(
     MotelyTag BigBlindTag,
     IReadOnlyList<MotelyAnalyzedItem> ShopQueue,
     IReadOnlyList<MotelyBoosterPackAnalysis> Packs,
-    string? DrawOrder = null
+    string? DrawOrder = null,
+    bool BossMatched = false,
+    bool VoucherMatched = false,
+    bool SmallBlindTagMatched = false,
+    bool BigBlindTagMatched = false
 );
 
 public sealed record class MotelyAnalyzedItem(
@@ -151,8 +155,8 @@ public static partial class MotelySeedAnalyzer
                 .WithListSearch([cfg.Seed]) // Single seed analysis
                 .WithThreadCount(1);
 
-            using var search = searchSettings.Start();
-            search.AwaitCompletion();
+            using var search = searchSettings.CreateSearch();
+            search.RunSearchUntilCompletion();
 
             Debug.Assert(filterDesc.LastAnalysis != null);
 
