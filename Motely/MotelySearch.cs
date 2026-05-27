@@ -120,6 +120,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
+    IMotelySearchSettings WithJimmolate();
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -334,6 +335,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
 
+    IMotelySearchSettings IMotelySearchSettings.WithJimmolate() =>
+        WithJimmolate();
+
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
@@ -396,12 +400,24 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
+    public MotelySearchSettings<TBaseFilter> WithJimmolate()
+    {
+        if (MotelyWasmInterop.JimmolateSearcher is null)
+            throw new InvalidOperationException("Jimmolate searcher is not registered.");
+        return WithAdditionalFilter(new Filters.Native.JimmolateFilterDesc(MotelyWasmInterop.JimmolateSearcher));
+    }
+
     public IMotelySearch Start(CancellationToken cancellationToken = default)
     {
         MotelySearch<TBaseFilter> search = new(this);
 
         return search.Start(cancellationToken);
     }
+}
+
+public static class MotelyWasmInterop
+{
+    public static MotelyIndividualSeedSearcher? JimmolateSearcher { get; set; }
 }
 
 public interface IMotelySearch : IDisposable

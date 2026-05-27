@@ -28,6 +28,8 @@ async function createHarness() {
         await readFile(resolve(pkgRoot, "package.json"), "utf8")
     ).version;
 
+    Motely.reportWasmError = (message) => console.error("[WASM ERROR]", message);
+
     await bootsharp.boot(await loadBootResourcesFromDir(binDir));
 
     if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted) {

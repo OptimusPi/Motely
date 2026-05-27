@@ -19,7 +19,7 @@ public sealed record JamlSearchPlan(
     string[] TallyLabels
 )
 {
-    public IMotelySearchSettings Settings { get; init; } = null!;
+    internal IMotelySearchSettings Settings { get; init; } = null!;
 
     /// <summary>
     /// Non-null when the plan could not be built (invalid JAML or builder validation failure).
