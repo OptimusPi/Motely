@@ -215,27 +215,27 @@ public sealed class JamlStructuralGapTests
         string[] jams =
         [
             """
-            id: plan-and
-            deck: Red
-            stake: White
-            must:
-              - and:
-                - boss: TheHook
-                  antes: [1]
-                - boss: TheHook
-                  antes: [1]
-            """,
+                id: plan-and
+                deck: Red
+                stake: White
+                must:
+                  - and:
+                    - boss: TheHook
+                      antes: [1]
+                    - boss: TheHook
+                      antes: [1]
+                """,
             """
-            id: plan-or
-            deck: Red
-            stake: White
-            must:
-              - or:
-                - event: LuckyMoney
-                  rolls: [0]
-                - event: LuckyMult
-                  rolls: [0]
-            """,
+                id: plan-or
+                deck: Red
+                stake: White
+                must:
+                  - or:
+                    - event: LuckyMoney
+                      rolls: [0]
+                    - event: LuckyMult
+                      rolls: [0]
+                """,
         ];
 
         foreach (var jaml in jams)

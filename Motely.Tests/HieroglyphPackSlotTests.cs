@@ -21,7 +21,10 @@ public class HieroglyphPackSlotTests
 {
     private const string HieroglyphPerkeoSeed = "KHTW99TC";
 
-    private static (long SeedsSearched, long MatchingSeeds) RunSingleSeedJaml(string jaml, string seed)
+    private static (long SeedsSearched, long MatchingSeeds) RunSingleSeedJaml(
+        string jaml,
+        string seed
+    )
     {
         Assert.True(
             JamlConfigLoader.TryLoad(jaml, out var config, out var error),

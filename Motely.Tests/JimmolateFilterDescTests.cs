@@ -67,8 +67,8 @@ public sealed class JimmolateFilterDescTests
         var jimmolateVisited = new List<string>();
 
         var settings = new MotelySearchSettings<FirstCharEqualsFilterDesc.FirstCharMaskFilter>(
-                new FirstCharEqualsFilterDesc('M')
-            )
+            new FirstCharEqualsFilterDesc('M')
+        )
             .WithAdditionalFilter(
                 new JimmolateFilterDesc(
                     (ref MotelySingleSearchContext ctx) =>

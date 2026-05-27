@@ -22,7 +22,10 @@
     <NoWarn>$(NoWarn)</NoWarn>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PublishAot Condition="'$(EnableCliAot)' == 'true' and '$(RuntimeIdentifier)' != 'browser-wasm' and '$(DesignTimeBuild)' != 'true'">true</PublishAot>
+    <PublishAot
+      Condition="'$(EnableCliAot)' == 'true' and '$(RuntimeIdentifier)' != 'browser-wasm' and '$(DesignTimeBuild)' != 'true'"
+      >true</PublishAot
+    >
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 

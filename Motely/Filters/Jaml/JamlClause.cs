@@ -25,7 +25,8 @@ public abstract class JamlClause : IJamlClause
         {
             int max = 0;
             for (int i = 0; i < Antes.Length; i++)
-                if (Antes[i] > max) max = Antes[i];
+                if (Antes[i] > max)
+                    max = Antes[i];
             return max;
         }
     }

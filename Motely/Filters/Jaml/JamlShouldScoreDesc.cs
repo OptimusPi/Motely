@@ -29,8 +29,8 @@ public struct JamlShouldScoreDesc
         _minimumTotalScore = minimumTotalScore;
     }
 
-    public JamlShouldScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
-        => new(
+    public JamlShouldScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx) =>
+        new(
             _mustClauses,
             _shouldClauses,
             _seedMatchCallback ?? ctx.SeedMatchCallback,

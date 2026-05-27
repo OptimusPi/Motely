@@ -38,7 +38,10 @@ public class StandardcardMatchingTests
         using var search = settings.Start();
         search.AwaitCompletion();
         Assert.True(search.IsCompleted, "Search should complete");
-        Assert.True(search.TotalSeedsSearched >= 1000, $"Expected ~1225 seeds searched, got {search.TotalSeedsSearched}");
+        Assert.True(
+            search.TotalSeedsSearched >= 1000,
+            $"Expected ~1225 seeds searched, got {search.TotalSeedsSearched}"
+        );
         return search.MatchingSeeds;
     }
 
@@ -57,7 +60,10 @@ public class StandardcardMatchingTests
             """;
 
         var matches = RunOneBatch(jaml);
-        Assert.True(matches > 0, $"rank-only King clause should match >0 of ~1225 seeds, got {matches}");
+        Assert.True(
+            matches > 0,
+            $"rank-only King clause should match >0 of ~1225 seeds, got {matches}"
+        );
     }
 
     /// <summary>Suit-only: just a suit constraint, no rank.</summary>
@@ -75,7 +81,10 @@ public class StandardcardMatchingTests
             """;
 
         var matches = RunOneBatch(jaml);
-        Assert.True(matches > 0, $"suit-only Hearts clause should match >0 of ~1225 seeds, got {matches}");
+        Assert.True(
+            matches > 0,
+            $"suit-only Hearts clause should match >0 of ~1225 seeds, got {matches}"
+        );
     }
 
     /// <summary>Both rank + suit: targets a specific card (Ace of Spades).</summary>
@@ -94,7 +103,10 @@ public class StandardcardMatchingTests
             """;
 
         var matches = RunOneBatch(jaml);
-        Assert.True(matches > 0, $"Ace of Spades clause should match >0 of ~1225 seeds across all 8 antes, got {matches}");
+        Assert.True(
+            matches > 0,
+            $"Ace of Spades clause should match >0 of ~1225 seeds across all 8 antes, got {matches}"
+        );
     }
 
     /// <summary>Rank + enhancement + seal: King with Steel + Red Seal (sixtid pattern).</summary>

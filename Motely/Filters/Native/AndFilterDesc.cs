@@ -6,6 +6,7 @@ namespace Motely.Filters;
 public sealed class AndClause : LogicClause
 {
     public override string Describe() => $"and({Clauses.Length})";
+
     public override IMotelySeedFilterDesc CreateDesc() =>
         new AndFilterDesc(Array.ConvertAll(Clauses, static c => c.CreateDesc()));
 }
@@ -27,9 +28,7 @@ public struct AndFilterDesc(IMotelySeedFilterDesc[] filters)
     {
         private readonly IMotelySeedFilter[] _filters = filters;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var mask = VectorMask.AllBitsSet;

@@ -2,8 +2,8 @@
 using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
-using Motely.CLI;
 using Motely.Analysis;
+using Motely.CLI;
 using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
@@ -43,7 +43,8 @@ partial class Program
         CommandOption<string> stopSeedOption,
         out long? startIndex,
         out long? stopIndex,
-        out string? error)
+        out string? error
+    )
     {
         startIndex = null;
         stopIndex = null;
@@ -82,7 +83,12 @@ partial class Program
         }
         // Pad to 8 chars — short seeds like "A" mean "A1111111" (leftmost significant)
         if (seed.Length < MotelyGlobals.MaxSeedLength)
-            seed = seed + new string(MotelyGlobals.SeedDigits[0], MotelyGlobals.MaxSeedLength - seed.Length);
+            seed =
+                seed
+                + new string(
+                    MotelyGlobals.SeedDigits[0],
+                    MotelyGlobals.MaxSeedLength - seed.Length
+                );
         foreach (char c in seed)
         {
             if (!MotelyGlobals.SeedDigits.Contains(c))
@@ -122,8 +128,12 @@ partial class Program
 
         var escCts = new CancellationTokenSource();
         var escThread = new Thread(() =>
-            ConsoleKeyMonitor.Run(RequestTermination, PrintLatestProgressOnDemand, escCts.Token))
-        { IsBackground = true, Name = "Console Key Listener" };
+            ConsoleKeyMonitor.Run(RequestTermination, PrintLatestProgressOnDemand, escCts.Token)
+        )
+        {
+            IsBackground = true,
+            Name = "Console Key Listener",
+        };
         escThread.Start();
 
         var app = new CommandLineApplication
@@ -308,14 +318,26 @@ partial class Program
             {
                 var analyzeDeck = deckOption.HasValue() ? deckOption.ParsedValue : "Erratic";
                 var analyzeStake = stakeOption.HasValue() ? stakeOption.ParsedValue : "White";
-                var seedTokens = analyzeOption.ParsedValue
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var seedTokens = analyzeOption.ParsedValue.Split(
+                    ',',
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                );
 
                 if (seedTokens.Length == 1)
-                    return ExecuteAnalyze(seedTokens[0], analyzeDeck, analyzeStake, outputJsonOption.HasValue());
+                    return ExecuteAnalyze(
+                        seedTokens[0],
+                        analyzeDeck,
+                        analyzeStake,
+                        outputJsonOption.HasValue()
+                    );
 
                 // Batch mode — emit NDJSON for each seed (one JSON object per line)
-                return ExecuteAnalyzeBatch(seedTokens, analyzeDeck, analyzeStake, outputJsonOption.HasValue());
+                return ExecuteAnalyzeBatch(
+                    seedTokens,
+                    analyzeDeck,
+                    analyzeStake,
+                    outputJsonOption.HasValue()
+                );
             }
 
             // --native mode — run a hardcoded C# filter by name
@@ -323,30 +345,51 @@ partial class Program
             {
                 if (drownOption.HasValue())
                 {
-                    Console.Error.WriteLine("Error: --drown currently requires --jaml so the CLI can resolve the normalized filterId.");
+                    Console.Error.WriteLine(
+                        "Error: --drown currently requires --jaml so the CLI can resolve the normalized filterId."
+                    );
                     return 1;
                 }
 
-                var nDeck = deckOption.HasValue() ? Enum.Parse<MotelyDeck>(deckOption.ParsedValue, true) : MotelyDeck.Red;
-                var nStake = stakeOption.HasValue() ? Enum.Parse<MotelyStake>(stakeOption.ParsedValue, true) : MotelyStake.White;
-                int nThreads = threadsOption.HasValue() ? threadsOption.ParsedValue : Environment.ProcessorCount;
+                var nDeck = deckOption.HasValue()
+                    ? Enum.Parse<MotelyDeck>(deckOption.ParsedValue, true)
+                    : MotelyDeck.Red;
+                var nStake = stakeOption.HasValue()
+                    ? Enum.Parse<MotelyStake>(stakeOption.ParsedValue, true)
+                    : MotelyStake.White;
+                int nThreads = threadsOption.HasValue()
+                    ? threadsOption.ParsedValue
+                    : Environment.ProcessorCount;
                 int nBatch = batchCharCountOption.ParsedValue;
 
-                if (!MotelyNativeFilterNames.TryParse(nativeOption.ParsedValue, out var nativeFilter))
+                if (
+                    !MotelyNativeFilterNames.TryParse(
+                        nativeOption.ParsedValue,
+                        out var nativeFilter
+                    )
+                )
                 {
                     Console.Error.WriteLine(
-                        $"Error: unknown native filter '{nativeOption.ParsedValue}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}");
+                        $"Error: unknown native filter '{nativeOption.ParsedValue}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}"
+                    );
                     return 1;
                 }
 
-                IMotelySearchSettings nSettings = MotelyNativeFilterFactory.CreateSettings(nativeFilter);
+                IMotelySearchSettings nSettings = MotelyNativeFilterFactory.CreateSettings(
+                    nativeFilter
+                );
 
-                nSettings = nSettings
-                    .WithDeck(nDeck)
-                    .WithStake(nStake)
-                    .WithThreadCount(nThreads);
+                nSettings = nSettings.WithDeck(nDeck).WithStake(nStake).WithThreadCount(nThreads);
 
-                if (!TryParseSeedOptions(startSeedOption, stopSeedOption, out var nStartIdx, out var nStopIdx, out var seedOptError))
+                if (
+                    !TryParseSeedOptions(
+                        startSeedOption,
+                        stopSeedOption,
+                        out var nStartIdx,
+                        out var nStopIdx,
+                        out var seedOptError
+                    )
+                )
                 {
                     Console.Error.WriteLine(seedOptError);
                     return 1;
@@ -359,15 +402,25 @@ partial class Program
                             SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
                             SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
                             Drown: false,
-                            ResultsRootPath: resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
+                            ResultsRootPath: resultsPathOption.HasValue()
+                                ? resultsPathOption.ParsedValue
+                                : null,
                             FilterId: null,
                             KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
-                            PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
+                            PaddingCharsOption: paddingOption.HasValue()
+                                ? paddingOption.ParsedValue
+                                : null,
                             RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
-                            AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
-                            StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
+                            AestheticName: aestheticOption.HasValue()
+                                ? aestheticOption.ParsedValue
+                                : null,
+                            StartBatch: startBatchOption.HasValue()
+                                ? startBatchOption.ParsedValue
+                                : null,
                             EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
-                            StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
+                            StartPercent: startPercentOption.HasValue()
+                                ? startPercentOption.ParsedValue
+                                : null,
                             StartSeedSearchIndex: nStartIdx,
                             StopSeedSearchIndex: nStopIdx,
                             BatchCharacterCount: nBatch,
@@ -390,13 +443,16 @@ partial class Program
                 // quiet mode just swaps in the silent capture variant.
                 nSettings = nSettings
                     .WithSeedMatchCallback(seed => Console.WriteLine(seed))
-                    .WithProgressCallback(quietOption.HasValue()
-                        ? CaptureNativeProgress
-                        : WriteNativeProgressLineToStderr);
+                    .WithProgressCallback(
+                        quietOption.HasValue()
+                            ? CaptureNativeProgress
+                            : WriteNativeProgressLineToStderr
+                    );
 
                 if (!quietOption.HasValue())
                     Console.Error.WriteLine(
-                        $"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} | batchCharCount={nBatch} (sequential only)");
+                        $"Motely native: {nativeOption.ParsedValue} | {nDeck} {nStake} | threads={nThreads} | batchCharCount={nBatch} (sequential only)"
+                    );
                 using var nSearch = nSettings.Start(_cts.Token);
                 await nSearch.WaitForCompletionAsync(_cts.Token);
                 PrintSummary(nSearch, nBatch, _cts.Token.IsCancellationRequested);
@@ -428,7 +484,11 @@ partial class Program
                 return 1;
             }
 
-            if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
+            if (
+                !config.Must.HasAnyClauses
+                && !config.Should.HasAnyClauses
+                && !config.MustNot.HasAnyClauses
+            )
             {
                 Console.Error.WriteLine("Error: no clauses in JAML.");
                 return 1;
@@ -437,15 +497,16 @@ partial class Program
             var deck = config.Deck;
             var stake = config.Stake;
             bool drown = drownOption.HasValue();
-            int threads = drown
-                ? 1
-                : threadsOption.HasValue()
-                    ? threadsOption.ParsedValue
-                    : Environment.ProcessorCount;
+            int threads =
+                drown ? 1
+                : threadsOption.HasValue() ? threadsOption.ParsedValue
+                : Environment.ProcessorCount;
             int batchCharCount = batchCharCountOption.ParsedValue;
 
             if (drown && threadsOption.HasValue() && threadsOption.ParsedValue != 1)
-                Console.Error.WriteLine("Warning: --drown forces --threads 1 for safe provider reads.");
+                Console.Error.WriteLine(
+                    "Warning: --drown forces --threads 1 for safe provider reads."
+                );
 
             bool cutoffAuto = false;
             int cutoffFixed = int.MinValue;
@@ -478,12 +539,20 @@ partial class Program
                 return 1;
             }
 
-            IMotelySearchSettings settings = plan.Settings
-                .WithDeck(deck)
+            IMotelySearchSettings settings = plan
+                .Settings.WithDeck(deck)
                 .WithStake(stake)
                 .WithThreadCount(threads);
 
-            if (!TryParseSeedOptions(startSeedOption, stopSeedOption, out var jStartIdx, out var jStopIdx, out var jSeedOptError))
+            if (
+                !TryParseSeedOptions(
+                    startSeedOption,
+                    stopSeedOption,
+                    out var jStartIdx,
+                    out var jStopIdx,
+                    out var jSeedOptError
+                )
+            )
             {
                 Console.Error.WriteLine(jSeedOptError);
                 return 1;
@@ -496,15 +565,25 @@ partial class Program
                         SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
                         SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
                         Drown: drown,
-                        ResultsRootPath: resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
+                        ResultsRootPath: resultsPathOption.HasValue()
+                            ? resultsPathOption.ParsedValue
+                            : null,
                         FilterId: config.Id,
                         KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
-                        PaddingCharsOption: paddingOption.HasValue() ? paddingOption.ParsedValue : null,
+                        PaddingCharsOption: paddingOption.HasValue()
+                            ? paddingOption.ParsedValue
+                            : null,
                         RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
-                        AestheticName: aestheticOption.HasValue() ? aestheticOption.ParsedValue : null,
-                        StartBatch: startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
+                        AestheticName: aestheticOption.HasValue()
+                            ? aestheticOption.ParsedValue
+                            : null,
+                        StartBatch: startBatchOption.HasValue()
+                            ? startBatchOption.ParsedValue
+                            : null,
                         EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
-                        StartPercent: startPercentOption.HasValue() ? startPercentOption.ParsedValue : null,
+                        StartPercent: startPercentOption.HasValue()
+                            ? startPercentOption.ParsedValue
+                            : null,
                         StartSeedSearchIndex: jStartIdx,
                         StopSeedSearchIndex: jStopIdx,
                         BatchCharacterCount: batchCharCount,
@@ -543,16 +622,19 @@ partial class Program
 
             // Always attach a progress callback so 'p' hotkey stays current;
             // quiet mode swaps in the silent capture variant.
-            settings = settings.WithProgressCallback(quietOption.HasValue()
-                ? CaptureJamlProgress
-                : WriteJamlProgressLineToStderr)
+            settings = settings
+                .WithProgressCallback(
+                    quietOption.HasValue() ? CaptureJamlProgress : WriteJamlProgressLineToStderr
+                )
                 .WithAutoScoreCutoff(cutoffAuto);
 
             if (hasStructuredScores)
             {
                 settings = settings.WithScoredResultCallback(tally =>
                 {
-                    if (!ShouldEmitScore(tally.Score, cutoffAuto, cutoffFixed, ref cliLearnedCutoff))
+                    if (
+                        !ShouldEmitScore(tally.Score, cutoffAuto, cutoffFixed, ref cliLearnedCutoff)
+                    )
                         return;
 
                     resultSink.OnScored(in tally);
@@ -564,10 +646,12 @@ partial class Program
                 settings = settings.WithSeedMatchCallback(seed =>
                 {
                     resultSink.OnSeed(seed);
-                    if (saveSeedMatches != null
+                    if (
+                        saveSeedMatches != null
                         && saveSeedMatchSet != null
                         && saveSeedMatches.Count < SavedSeedLimit
-                        && saveSeedMatchSet.Add(seed))
+                        && saveSeedMatchSet.Add(seed)
+                    )
                     {
                         saveSeedMatches.Add(seed);
                     }
@@ -600,9 +684,13 @@ partial class Program
                     : (IReadOnlyList<string>)(saveSeedMatches ?? []);
 
                 if (TryWriteSeedsToJamlFile(jamlOption.ParsedValue, seedsToSave, out var saveError))
-                    Console.Error.WriteLine($"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {jamlOption.ParsedValue}");
+                    Console.Error.WriteLine(
+                        $"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {jamlOption.ParsedValue}"
+                    );
                 else
-                    Console.Error.WriteLine($"Warning: could not save seeds back into JAML: {saveError}");
+                    Console.Error.WriteLine(
+                        $"Warning: could not save seeds back into JAML: {saveError}"
+                    );
             }
 
             PrintSummary(search, batchCharCount, cancelled);
@@ -646,8 +734,8 @@ partial class Program
         }
 
         public IReadOnlyList<string> GetSeeds() =>
-            _queue.UnorderedItems
-                .Select(static item => item.Element)
+            _queue
+                .UnorderedItems.Select(static item => item.Element)
                 .OrderByDescending(static item => item.Score)
                 .ThenBy(static item => item.Sequence)
                 .Select(static item => item.Seed)
@@ -677,7 +765,9 @@ partial class Program
             return false;
         }
 
-        string normalizedNewline = original.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        string normalizedNewline = original.Contains("\r\n", StringComparison.Ordinal)
+            ? "\r\n"
+            : "\n";
         var normalizedSeeds = seeds
             .Select(static seed => seed.Trim().ToUpperInvariant().Replace('0', 'O'))
             .Where(static seed => !string.IsNullOrWhiteSpace(seed))
@@ -785,7 +875,10 @@ partial class Program
             return false;
 
         var trimmed = line.Trim();
-        if (trimmed.StartsWith("#", StringComparison.Ordinal) || trimmed.StartsWith("-", StringComparison.Ordinal))
+        if (
+            trimmed.StartsWith("#", StringComparison.Ordinal)
+            || trimmed.StartsWith("-", StringComparison.Ordinal)
+        )
             return false;
 
         int colonIndex = trimmed.IndexOf(':');
@@ -808,9 +901,7 @@ partial class Program
         var elapsed = TimeSpan.FromMilliseconds(search.ElapsedMs);
         Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
         double speed =
-            elapsed.TotalSeconds > 0
-                ? search.TotalSeedsSearched / elapsed.TotalSeconds
-                : 0;
+            elapsed.TotalSeconds > 0 ? search.TotalSeedsSearched / elapsed.TotalSeconds : 0;
         Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
         if (search.IsSequentialBatchSearch)
         {
@@ -857,10 +948,14 @@ partial class Program
 
         MotelyJamlyzerResult result;
         var explicitSeeds = !string.IsNullOrWhiteSpace(seedsCsv)
-            ? seedsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ? seedsCsv.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            )
             : null;
 
-        bool jamlHasSeeds = JamlConfigLoader.TryLoad(jaml, out var loadedConfig, out _)
+        bool jamlHasSeeds =
+            JamlConfigLoader.TryLoad(jaml, out var loadedConfig, out _)
             && loadedConfig.Seeds.Count > 0;
 
         if (explicitSeeds is { Length: > 0 } || jamlHasSeeds)
@@ -871,7 +966,9 @@ partial class Program
         else
         {
             Console.Error.WriteLine("Error: --jamlyzer requires at least one seed.");
-            Console.Error.WriteLine("Add `seeds: [SEED1, SEED2, ...]` at the top level of your JAML file,");
+            Console.Error.WriteLine(
+                "Add `seeds: [SEED1, SEED2, ...]` at the top level of your JAML file,"
+            );
             Console.Error.WriteLine("or use `--seeds SEED1,SEED2` on the command line.");
             return 1;
         }
@@ -935,13 +1032,18 @@ partial class Program
             try
             {
                 var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
-                var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(normalizedSeed, d, s));
+                var analysis = MotelySeedAnalyzer.Analyze(
+                    new MotelySeedAnalysisConfig(normalizedSeed, d, s)
+                );
 
                 if (json)
                 {
                     // NDJSON: one JSON object per line, no extra whitespace
                     Console.WriteLine(
-                        JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
+                        JsonSerializer.Serialize(
+                            analysis,
+                            AnalysisJsonContext.Default.MotelySeedAnalysis
+                        )
                     );
                 }
                 else
@@ -977,7 +1079,9 @@ partial class Program
         }
 
         var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
-        var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(normalizedSeed, d, s));
+        var analysis = MotelySeedAnalyzer.Analyze(
+            new MotelySeedAnalysisConfig(normalizedSeed, d, s)
+        );
 
         if (json)
         {
@@ -998,21 +1102,25 @@ partial class Program
     static MotelyProgress? _latestProgress;
 
     static int _lastNativePercent = -1;
+
     static void WriteNativeProgressLineToStderr(MotelyProgress p)
     {
         _latestProgress = p;
         int pct = (int)p.PercentComplete;
-        if (pct <= _lastNativePercent) return;
+        if (pct <= _lastNativePercent)
+            return;
         _lastNativePercent = pct;
         FormatProgressToStderr(p);
     }
 
     static int _lastJamlPercent = -1;
+
     static void WriteJamlProgressLineToStderr(MotelyProgress p)
     {
         _latestProgress = p;
         int pct = (int)p.PercentComplete;
-        if (pct <= _lastJamlPercent) return;
+        if (pct <= _lastJamlPercent)
+            return;
         _lastJamlPercent = pct;
         FormatProgressToStderr(p);
     }
@@ -1020,28 +1128,32 @@ partial class Program
     // Quiet-mode callbacks: capture latest progress silently so the 'p' hotkey
     // still has something to print.
     static void CaptureNativeProgress(MotelyProgress p) => _latestProgress = p;
+
     static void CaptureJamlProgress(MotelyProgress p) => _latestProgress = p;
 
     static void PrintLatestProgressOnDemand()
     {
-        if (_latestProgress is { } p) FormatProgressToStderr(p);
+        if (_latestProgress is { } p)
+            FormatProgressToStderr(p);
     }
 
     static void FormatProgressToStderr(MotelyProgress p)
     {
         double perSec = p.SeedsPerMillisecond * 1000.0;
         string speed =
-            perSec >= 1_000_000
-                ? $"{perSec / 1_000_000:F2} M/s"
-                : perSec >= 1_000
-                    ? $"{perSec / 1_000:F1} K/s"
-                    : $"{perSec:F0}/s";
-        string eta = p.EstimatedTimeRemainingMilliseconds is long etaMs && etaMs > 0
-            ? $" | ETA {FormatEtaMs(etaMs)}"
-            : "";
-        string elapsed = TimeSpan.FromMilliseconds(p.ElapsedMilliseconds).ToString(@"hh\:mm\:ss\.f");
+            perSec >= 1_000_000 ? $"{perSec / 1_000_000:F2} M/s"
+            : perSec >= 1_000 ? $"{perSec / 1_000:F1} K/s"
+            : $"{perSec:F0}/s";
+        string eta =
+            p.EstimatedTimeRemainingMilliseconds is long etaMs && etaMs > 0
+                ? $" | ETA {FormatEtaMs(etaMs)}"
+                : "";
+        string elapsed = TimeSpan
+            .FromMilliseconds(p.ElapsedMilliseconds)
+            .ToString(@"hh\:mm\:ss\.f");
         StickyProgress.Update(
-            $"Progress: {p.PercentComplete:F1}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}");
+            $"Progress: {p.PercentComplete:F1}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}"
+        );
     }
 
     static string FormatEtaMs(long milliseconds)
@@ -1050,7 +1162,12 @@ partial class Program
         return rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss");
     }
 
-    static bool ShouldEmitScore(int score, bool cutoffAuto, int cutoffFixed, ref int cliLearnedCutoff)
+    static bool ShouldEmitScore(
+        int score,
+        bool cutoffAuto,
+        int cutoffFixed,
+        ref int cliLearnedCutoff
+    )
     {
         if (!cutoffAuto)
             return cutoffFixed == int.MinValue || score >= cutoffFixed;
@@ -1090,7 +1207,9 @@ partial class Program
         {
             try
             {
-                sinks.Add(new MotelyLakeResultSink(ResolveDataLakeRootPath(), filterId, tallyLabels));
+                sinks.Add(
+                    new MotelyLakeResultSink(ResolveDataLakeRootPath(), filterId, tallyLabels)
+                );
             }
             catch (Exception ex)
             {

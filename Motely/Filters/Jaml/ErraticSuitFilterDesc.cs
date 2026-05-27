@@ -10,7 +10,9 @@ public sealed class ErraticSuitClause : JamlClause
     public required MotelyStandardcardSuit Suit { get; init; }
 
     public override int EstimatedCost => 4 + MaxAnte;
+
     public override string Describe() => $"erraticSuit {Suit}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new ErraticSuitFilterDesc(this);
 }
 
@@ -29,9 +31,7 @@ public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
     {
         private readonly ErraticSuitClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;

@@ -17,9 +17,12 @@ public sealed class JokerClause : JamlClause
     public LegendaryJokerSourceConfig LegendarySources { get; init; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
+
     public override string Describe() =>
-        IsWildcard ? "joker Any"
-                   : $"joker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+        IsWildcard
+            ? "joker Any"
+            : $"joker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new JokerFilterDesc(this);
 }
 
@@ -56,8 +59,10 @@ public struct JokerFilterDesc(JokerClause clause)
         var shopIndices = _clause.Sources.ShopItems;
         var boosterIndices = _clause.Sources.BoosterPacks;
 
-        Debug.Assert(shopIndices.Length > 0 || boosterIndices.Length > 0,
-            "Joker clause should have normalized default sources at config load time.");
+        Debug.Assert(
+            shopIndices.Length > 0 || boosterIndices.Length > 0,
+            "Joker clause should have normalized default sources at config load time."
+        );
 
         int maxShopItem = 0;
         foreach (var idx in shopIndices)
@@ -95,9 +100,7 @@ public struct JokerFilterDesc(JokerClause clause)
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
@@ -109,7 +112,8 @@ public struct JokerFilterDesc(JokerClause clause)
                 var clause = _clause;
                 return ctx.SearchIndividualSeeds(
                     (ref MotelySingleSearchContext singleCtx) =>
-                        JamlScoring.CountJokerClauseOccurrencesForFilter(ref singleCtx, clause) >= needed
+                        JamlScoring.CountJokerClauseOccurrencesForFilter(ref singleCtx, clause)
+                        >= needed
                 );
             }
 
@@ -307,7 +311,10 @@ public struct JokerFilterDesc(JokerClause clause)
 
             for (int i = 0; i < clause.Jokers.Length; i++)
             {
-                if (((MotelyJokerRarity)((int)clause.Jokers[i] & MotelyGlobals.JokerRarityMask)) == MotelyJokerRarity.Legendary)
+                if (
+                    ((MotelyJokerRarity)((int)clause.Jokers[i] & MotelyGlobals.JokerRarityMask))
+                    == MotelyJokerRarity.Legendary
+                )
                     return true;
             }
 
@@ -327,9 +334,12 @@ public sealed class CommonJokerClause : JamlClause
     public JokerSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
+
     public override string Describe() =>
-        IsWildcard ? "commonJoker Any"
-                   : $"commonJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+        IsWildcard
+            ? "commonJoker Any"
+            : $"commonJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new CommonJokerFilterDesc(this);
 }
 
@@ -342,9 +352,12 @@ public sealed class UncommonJokerClause : JamlClause
     public JokerSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
+
     public override string Describe() =>
-        IsWildcard ? "uncommonJoker Any"
-                   : $"uncommonJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+        IsWildcard
+            ? "uncommonJoker Any"
+            : $"uncommonJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new UncommonJokerFilterDesc(this);
 }
 
@@ -357,9 +370,12 @@ public sealed class RareJokerClause : JamlClause
     public JokerSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 5 + MaxAnte;
+
     public override string Describe() =>
-        IsWildcard ? "rareJoker Any"
-                   : $"rareJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+        IsWildcard
+            ? "rareJoker Any"
+            : $"rareJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new RareJokerFilterDesc(this);
 }
 
@@ -372,8 +388,11 @@ public sealed class MixedJokerClause : JamlClause
     public JokerSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
+
     public override string Describe() =>
-        IsWildcard ? "jokers Any"
-                   : $"jokers {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+        IsWildcard
+            ? "jokers Any"
+            : $"jokers {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new MixedJokerFilterDesc(this);
 }

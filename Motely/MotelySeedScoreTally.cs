@@ -55,10 +55,7 @@ public struct MotelySeedScoreTally : IMotelySeedScores
 
     public readonly int TallyCount
     {
-        get
-        {
-            return _tallyCount;
-        }
+        get { return _tallyCount; }
     }
 
     public readonly ReadOnlySpan<int> TallyValuesSpan
@@ -91,7 +88,8 @@ public struct MotelySeedScoreTally : IMotelySeedScores
 
         var tallies = new string[_tallyCount];
         for (int i = 0; i < _tallyCount; i++)
-            tallies[i] = _tallyValues[i].ToString(System.Globalization.CultureInfo.InvariantCulture);
+            tallies[i] = _tallyValues[i]
+                .ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         return $"{Seed},{Score},{string.Join(",", tallies)}";
     }

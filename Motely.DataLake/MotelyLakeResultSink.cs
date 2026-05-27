@@ -6,7 +6,11 @@ public sealed class MotelyLakeResultSink : IMotelyResultSink
 {
     private readonly MotelyLakeSeedSink inner;
 
-    public MotelyLakeResultSink(string seedsRoot, string filterId, IReadOnlyList<string> tallyLabels)
+    public MotelyLakeResultSink(
+        string seedsRoot,
+        string filterId,
+        IReadOnlyList<string> tallyLabels
+    )
     {
         inner = new MotelyLakeSeedSink(seedsRoot, filterId, tallyLabels);
     }

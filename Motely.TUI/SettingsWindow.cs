@@ -140,10 +140,16 @@ public class SettingsWindow : Window
         {
             X = 2,
             Y = 16,
-            RadioLabels = new string[] {
-                "Sequential", "Random", "Palindrome", "Psychosis", "Keyword", "FileSource"
+            RadioLabels = new string[]
+            {
+                "Sequential",
+                "Random",
+                "Palindrome",
+                "Psychosis",
+                "Keyword",
+                "FileSource",
             },
-            SelectedItem = (int)TuiSettings.SearchMode
+            SelectedItem = (int)TuiSettings.SearchMode,
         };
         Add(modeRadio);
 
@@ -218,7 +224,10 @@ public class SettingsWindow : Window
                 {
                     if (threadCount < 1 || threadCount > Environment.ProcessorCount)
                     {
-                        ShowErrorDialog("Invalid Thread Count", $"Thread count must be between 1 and {Environment.ProcessorCount}");
+                        ShowErrorDialog(
+                            "Invalid Thread Count",
+                            $"Thread count must be between 1 and {Environment.ProcessorCount}"
+                        );
                         return;
                     }
                     TuiSettings.ThreadCount = threadCount;
@@ -228,14 +237,17 @@ public class SettingsWindow : Window
                 {
                     if (batchCount < 1 || batchCount > 7)
                     {
-                        ShowErrorDialog("Invalid Batch Count", "Batch character count must be between 1 and 7");
+                        ShowErrorDialog(
+                            "Invalid Batch Count",
+                            "Batch character count must be between 1 and 7"
+                        );
                         return;
                     }
                     TuiSettings.BatchCharacterCount = batchCount;
                 }
 
                 TuiSettings.ApiServerHost = _apiHostField.Text?.ToString() ?? "localhost";
-                
+
                 if (int.TryParse(_apiPortField.Text, out int port))
                 {
                     if (port < 1 || port > 65535)
@@ -269,7 +281,7 @@ public class SettingsWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         cancelButton.ColorScheme = BalatroTheme.BackButton;
@@ -314,7 +326,7 @@ public class SettingsWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         okBtn.ColorScheme = BalatroTheme.BackButton;

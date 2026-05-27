@@ -32,7 +32,7 @@ public static class MotelyTUI
         {
             X = 2,
             Y = 2,
-            Width = Dim.Fill()! -4,
+            Width = Dim.Fill()! - 4,
             Height = 5,
             Text = message,
         };
@@ -51,13 +51,19 @@ public static class MotelyTUI
     private static BalatroShaderBackground? _shaderBackground;
     private static Window? _desktop;
     private static MainMenuWindow? _mainMenu;
+
     /// <summary>Window stack — open overlay windows in order they were opened.</summary>
     private static readonly List<Window> _windowStack = [];
 
     /// <summary>Cascade offset applied to each new window so stacked windows are distinguishable.</summary>
     private static readonly (int X, int Y)[] _cascadeOffsets =
     [
-        (0, 0), (2, 1), (4, 2), (6, 3), (8, 4), (10, 5),
+        (0, 0),
+        (2, 1),
+        (4, 2),
+        (6, 3),
+        (8, 4),
+        (10, 5),
     ];
 
     /// <summary>Number of overlay windows currently open.</summary>
@@ -187,18 +193,20 @@ public static class MotelyTUI
                 Height = 1,
             };
             statusBar.ColorScheme = BalatroTheme.Title;
-            foreach (var s in new[]
-            {
-                new Shortcut(Key.F1, "Help", () => { }, "F1"),
-                new Shortcut(Key.F5, "Refresh", () => { }, "F5"),
-                new Shortcut(Key.F7, "Compile", () => { }, "F7"),
-                new Shortcut(Key.Esc, "Back", () => { }, "Esc"),
-                new Shortcut(Key.Tab.WithAlt, "Cycle", () => { }, "Alt+Tab"),
-                new Shortcut((KeyCode)'S', "Search", () => { }, "S"),
-                new Shortcut((KeyCode)'D', "Designer", () => { }, "D"),
-                new Shortcut((KeyCode)'R', "Results", () => { }, "R"),
-                new Shortcut((KeyCode)'C', "Config", () => { }, "C"),
-            })
+            foreach (
+                var s in new[]
+                {
+                    new Shortcut(Key.F1, "Help", () => { }, "F1"),
+                    new Shortcut(Key.F5, "Refresh", () => { }, "F5"),
+                    new Shortcut(Key.F7, "Compile", () => { }, "F7"),
+                    new Shortcut(Key.Esc, "Back", () => { }, "Esc"),
+                    new Shortcut(Key.Tab.WithAlt, "Cycle", () => { }, "Alt+Tab"),
+                    new Shortcut((KeyCode)'S', "Search", () => { }, "S"),
+                    new Shortcut((KeyCode)'D', "Designer", () => { }, "D"),
+                    new Shortcut((KeyCode)'R', "Results", () => { }, "R"),
+                    new Shortcut((KeyCode)'C', "Config", () => { }, "C"),
+                }
+            )
             {
                 statusBar.Add(s);
             }

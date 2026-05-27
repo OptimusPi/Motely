@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+
 namespace Motely.Filters.Jaml;
 
 public sealed class PlanetCardClause : JamlClause
@@ -9,7 +10,10 @@ public sealed class PlanetCardClause : JamlClause
     public PlanetSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
-    public override string Describe() => $"Planet {string.Join(", ", System.Array.ConvertAll(Planets, static p => p.ToString()))}";
+
+    public override string Describe() =>
+        $"Planet {string.Join(", ", System.Array.ConvertAll(Planets, static p => p.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new PlanetCardFilterDesc(this);
 }
 
@@ -50,9 +54,7 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Planets.Length > 0);

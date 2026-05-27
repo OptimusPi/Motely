@@ -103,9 +103,11 @@ public class JamlFilterTypeTests
     [InlineData("erraticCard: SA")] // Full ErraticCard: Ace of Spades
     public void ErraticDeckFilters(string clause)
     {
-        TestFilterCompilesAndRuns($@"deck: Erratic
+        TestFilterCompilesAndRuns(
+            $@"deck: Erratic
 must:
-  - {clause.Replace("\n", "\n    ")}");
+  - {clause.Replace("\n", "\n    ")}"
+        );
     }
 
     [Theory]
@@ -130,7 +132,8 @@ must:
     [Fact]
     public void Sources_Targeting()
     {
-        var jaml = @"
+        var jaml =
+            @"
 must:
   - joker: Showman
     sources:
@@ -164,7 +167,8 @@ must:
     [Fact]
     public void LogicalCombinators_AndOr()
     {
-        var jaml = @"
+        var jaml =
+            @"
 must:
   - or:
       - joker: Showman

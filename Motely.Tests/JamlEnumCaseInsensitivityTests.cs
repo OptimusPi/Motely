@@ -10,81 +10,81 @@ namespace Motely.Tests;
 /// </summary>
 public class JamlEnumCaseInsensitivityTests
 {
-  [Theory]
-  [InlineData("Blueprint")]
-  [InlineData("blueprint")]
-  [InlineData("BLUEPRINT")]
-  [InlineData("BluePrint")]
-  public void Joker_ParsesAnyCasing(string casing)
-  {
-    var jaml = $$"""
-                 name: case-test
-                 must:
-                   - joker: {{casing}}
-                 """;
+    [Theory]
+    [InlineData("Blueprint")]
+    [InlineData("blueprint")]
+    [InlineData("BLUEPRINT")]
+    [InlineData("BluePrint")]
+    public void Joker_ParsesAnyCasing(string casing)
+    {
+        var jaml = $$"""
+            name: case-test
+            must:
+              - joker: {{casing}}
+            """;
 
-    var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+        var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-    Assert.True(ok, $"Failed to parse '{casing}': {error}");
-    Assert.NotNull(config);
-    var clause = Assert.Single(config!.Must.Jokers);
-    Assert.False(clause.IsWildcard);
-    Assert.Equal([MotelyJoker.Blueprint], clause.Jokers);
-  }
+        Assert.True(ok, $"Failed to parse '{casing}': {error}");
+        Assert.NotNull(config);
+        var clause = Assert.Single(config!.Must.Jokers);
+        Assert.False(clause.IsWildcard);
+        Assert.Equal([MotelyJoker.Blueprint], clause.Jokers);
+    }
 
-  [Theory]
-  [InlineData("any")]
-  [InlineData("Any")]
-  [InlineData("ANY")]
-  [InlineData("aNy")]
-  public void Joker_AnyWildcard_ParsesAnyCasing(string casing)
-  {
-    var jaml = $$"""
-                 name: case-test
-                 must:
-                   - joker: {{casing}}
-                 """;
+    [Theory]
+    [InlineData("any")]
+    [InlineData("Any")]
+    [InlineData("ANY")]
+    [InlineData("aNy")]
+    public void Joker_AnyWildcard_ParsesAnyCasing(string casing)
+    {
+        var jaml = $$"""
+            name: case-test
+            must:
+              - joker: {{casing}}
+            """;
 
-    var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+        var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-    Assert.True(ok, $"Failed to parse '{casing}': {error}");
-    Assert.NotNull(config);
-    var clause = Assert.Single(config!.Must.Jokers);
-    Assert.True(clause.IsWildcard);
-    Assert.Empty(clause.Jokers);
-  }
+        Assert.True(ok, $"Failed to parse '{casing}': {error}");
+        Assert.NotNull(config);
+        var clause = Assert.Single(config!.Must.Jokers);
+        Assert.True(clause.IsWildcard);
+        Assert.Empty(clause.Jokers);
+    }
 
-  [Theory]
-  [InlineData("uncommonJoker", "showman")]
-  [InlineData("commonJoker", "BLUEJOKER")]
-  [InlineData("rareJoker", "Blueprint")]
-  public void RarityNarrowedJoker_ParsesAnyCasing(string key, string casing)
-  {
-    var jaml = $$"""
-                 name: case-test
-                 must:
-                   - {{key}}: {{casing}}
-                 """;
+    [Theory]
+    [InlineData("uncommonJoker", "showman")]
+    [InlineData("commonJoker", "BLUEJOKER")]
+    [InlineData("rareJoker", "Blueprint")]
+    public void RarityNarrowedJoker_ParsesAnyCasing(string key, string casing)
+    {
+        var jaml = $$"""
+            name: case-test
+            must:
+              - {{key}}: {{casing}}
+            """;
 
-    var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+        var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-    Assert.True(ok, $"Failed to parse '{key}: {casing}': {error}");
-    Assert.NotNull(config);
-  }
+        Assert.True(ok, $"Failed to parse '{key}: {casing}': {error}");
+        Assert.NotNull(config);
+    }
 
-  [Fact]
-  public void Boss_ParsesLowercase()
-  {
-    var jaml = """
-               name: case-test
-               must:
-                 - boss: thearm
-               """;
+    [Fact]
+    public void Boss_ParsesLowercase()
+    {
+        var jaml = """
+            name: case-test
+            must:
+              - boss: thearm
+            """;
 
-    var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+        var ok = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-    Assert.True(ok, $"Failed: {error}");
-    Assert.NotNull(config);
-    Assert.Equal([MotelyBossBlind.TheArm], config!.Must.Bosses[0].Bosses);
-  }
+        Assert.True(ok, $"Failed: {error}");
+        Assert.NotNull(config);
+        Assert.Equal([MotelyBossBlind.TheArm], config!.Must.Bosses[0].Bosses);
+    }
 }

@@ -12,39 +12,39 @@ namespace Motely.Filters.Jaml;
 /// </summary>
 public static partial class JamlConfigLoader
 {
-    private static readonly FrozenSet<string> AllowedRootKeys =
-        new[]
-        {
-            "id",
-            "name",
-            "author",
-            "dateCreated",
-            "description",
-            "deck",
-            "stake",
-            "defaults",
-            "must",
-            "should",
-            "mustNot",
-            "aesthetics",
-            "seeds",
-            "hashtags",
-        }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+    private static readonly FrozenSet<string> AllowedRootKeys = new[]
+    {
+        "id",
+        "name",
+        "author",
+        "dateCreated",
+        "description",
+        "deck",
+        "stake",
+        "defaults",
+        "must",
+        "should",
+        "mustNot",
+        "aesthetics",
+        "seeds",
+        "hashtags",
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     // Strict mode (default for DeserializerBuilder): unknown YAML keys throw with line+col so a
     // typo like `boses:` or `boosterPakcz:` is rejected up front instead of silently dropped.
     // Silent drops were the root cause of the v13/v14 false-positive class — a missing constraint
     // means the SIMD prefilter accepts seeds it shouldn't. The 3 `Unknown*Key_IsRejected` tests
     // in JamlConfigTests pin this behaviour. Do NOT add .IgnoreUnmatchedProperties() here.
-    private static readonly IDeserializer JamlFragmentDeserializer =
-        new StaticDeserializerBuilder(new JamlYamlContext())
-            .WithTypeConverter(new StandardCardValueConverter())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
-            .Build();
+    private static readonly IDeserializer JamlFragmentDeserializer = new StaticDeserializerBuilder(
+        new JamlYamlContext()
+    )
+        .WithTypeConverter(new StandardCardValueConverter())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
+        .Build();
 
     /// <summary>
     /// Returns canonical JAML text by applying loader normalizations and stable YAML emission.
@@ -67,14 +67,14 @@ public static partial class JamlConfigLoader
             YamlScalarNode s => new YamlScalarNode(s.Value ?? "") { Style = s.Style },
             YamlSequenceNode seq => new YamlSequenceNode(seq.Select(CloneYamlSubtree)),
             YamlMappingNode map => new YamlMappingNode(
-                map.Children.Select(kvp =>
-                    new KeyValuePair<YamlNode, YamlNode>(
-                        CloneYamlSubtree(kvp.Key),
-                        CloneYamlSubtree(kvp.Value)
-                    )
-                )
+                map.Children.Select(kvp => new KeyValuePair<YamlNode, YamlNode>(
+                    CloneYamlSubtree(kvp.Key),
+                    CloneYamlSubtree(kvp.Value)
+                ))
             ),
-            _ => throw new InvalidOperationException($"Unsupported YAML node in JAML: {node.GetType().Name}"),
+            _ => throw new InvalidOperationException(
+                $"Unsupported YAML node in JAML: {node.GetType().Name}"
+            ),
         };
 
     private static string YamlFragmentToString(YamlNode root)
@@ -173,16 +173,16 @@ public static partial class JamlConfigLoader
 
             var mark = kn.Start;
             var location =
-                mark.Line > 0 && mark.Column > 0
-                    ? $"on line {mark.Line}, col {mark.Column}: "
-                    : "";
-            error =
-                $"{location}Unknown property '{kn.Value}' in the top-level JAML document.";
+                mark.Line > 0 && mark.Column > 0 ? $"on line {mark.Line}, col {mark.Column}: " : "";
+            error = $"{location}Unknown property '{kn.Value}' in the top-level JAML document.";
             return false;
         }
 
         JamlDefaults? defaults = null;
-        if (TryGetYamlChild(root, "defaults", out _, out var defNode) && defNode is YamlMappingNode defMap)
+        if (
+            TryGetYamlChild(root, "defaults", out _, out var defNode)
+            && defNode is YamlMappingNode defMap
+        )
         {
             try
             {

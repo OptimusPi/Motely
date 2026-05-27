@@ -10,7 +10,7 @@ public enum SearchMode
     Palindrome,
     Psychosis,
     Keyword,
-    FileSource
+    FileSource,
 }
 
 /// <summary>
@@ -112,7 +112,8 @@ public class SettingsService
                 TuiSettings.Keywords = settings.Keywords ?? string.Empty;
                 TuiSettings.PaddingChars = settings.PaddingChars ?? string.Empty;
                 TuiSettings.RandomSeedCount = settings.RandomSeedCount ?? 1000000;
-                TuiSettings.SequentialStartSeedSearchIndex = settings.SequentialStartSeedSearchIndex;
+                TuiSettings.SequentialStartSeedSearchIndex =
+                    settings.SequentialStartSeedSearchIndex;
                 TuiSettings.SequentialStopSeedSearchIndex = settings.SequentialStopSeedSearchIndex;
                 TuiSettings.WorkerPoolUrl = settings.WorkerPoolUrl ?? "https://www.seedfinder.app";
                 TuiSettings.WorkerThreads = settings.WorkerThreads ?? Environment.ProcessorCount;

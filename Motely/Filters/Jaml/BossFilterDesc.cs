@@ -9,8 +9,10 @@ public sealed class BossClause : JamlClause
     public int[] Rolls { get; init; } = [];
 
     public override int EstimatedCost => 2 + MaxAnte;
+
     public override string Describe() =>
         $"boss {string.Join(", ", System.Array.ConvertAll(Bosses, static b => b.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
+
     public override IMotelySeedFilterDesc CreateDesc() => new BossFilterDesc(this);
 }
 
@@ -35,9 +37,7 @@ public readonly struct BossFilterDesc(BossClause clause)
         private readonly BossClause _clause = clause;
         private readonly int _maxAnte = maxAnte;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Bosses.Length > 0);

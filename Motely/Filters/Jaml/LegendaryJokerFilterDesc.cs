@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Motely;
+
 namespace Motely.Filters.Jaml;
 
 public sealed class LegendaryJokerClause : JamlClause
@@ -24,9 +25,12 @@ public sealed class LegendaryJokerClause : JamlClause
     public int SoulEditionRolls { get; init; }
 
     public override int EstimatedCost => 5 + MaxAnte;
+
     public override string Describe() =>
-        IsWildcard ? "legendaryJoker Any"
-                   : $"legendaryJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+        IsWildcard
+            ? "legendaryJoker Any"
+            : $"legendaryJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new LegendaryJokerFilterDesc(this);
 }
 
@@ -108,14 +112,10 @@ public struct LegendaryJokerFilterDesc(
         private readonly int _maxBoosterPack = maxBoosterPack;
         private readonly LegendaryJokerPipelineKind _pipeline = pipeline;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(
-                _clause.SoulCardOnly || _clause.IsWildcard || _clause.Jokers.Length > 0
-            );
+            Debug.Assert(_clause.SoulCardOnly || _clause.IsWildcard || _clause.Jokers.Length > 0);
 
             var clause = _clause;
             var maxBoosterPack = _maxBoosterPack;

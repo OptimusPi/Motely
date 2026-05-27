@@ -12,7 +12,17 @@ namespace Motely.Tests;
 /// </summary>
 public class JamlCorpusRegressionTests
 {
-    private static readonly string[] LegacyKeys = ["packSlots", "tarot", "planet", "spectral", "mixedJoker", "soulJoker", "shopSlots", "erraticRanks"];
+    private static readonly string[] LegacyKeys =
+    [
+        "packSlots",
+        "tarot",
+        "planet",
+        "spectral",
+        "mixedJoker",
+        "soulJoker",
+        "shopSlots",
+        "erraticRanks",
+    ];
 
     private readonly ITestOutputHelper _output;
 
@@ -27,7 +37,9 @@ public class JamlCorpusRegressionTests
         {
             var data = new TheoryData<string>();
             var root = LocateCorpusRoot();
-            foreach (var file in Directory.EnumerateFiles(root, "*.jaml", SearchOption.TopDirectoryOnly))
+            foreach (
+                var file in Directory.EnumerateFiles(root, "*.jaml", SearchOption.TopDirectoryOnly)
+            )
             {
                 var jaml = File.ReadAllText(file);
                 if (!ContainsLegacyKey(jaml))
@@ -43,7 +55,9 @@ public class JamlCorpusRegressionTests
         {
             var data = new TheoryData<string>();
             var root = LocateCorpusRoot();
-            foreach (var file in Directory.EnumerateFiles(root, "*.jaml", SearchOption.TopDirectoryOnly))
+            foreach (
+                var file in Directory.EnumerateFiles(root, "*.jaml", SearchOption.TopDirectoryOnly)
+            )
             {
                 var jaml = File.ReadAllText(file);
                 if (ContainsLegacyKey(jaml))
@@ -99,7 +113,10 @@ public class JamlCorpusRegressionTests
     {
         // GoldenJamlFiles is copied next to the test assembly (see Motely.Tests.csproj).
         var candidate = Path.Combine(AppContext.BaseDirectory, "GoldenJamlFiles");
-        if (Directory.Exists(candidate)) return candidate;
-        throw new DirectoryNotFoundException("Could not locate GoldenJamlFiles fixture directory at " + candidate);
+        if (Directory.Exists(candidate))
+            return candidate;
+        throw new DirectoryNotFoundException(
+            "Could not locate GoldenJamlFiles fixture directory at " + candidate
+        );
     }
 }

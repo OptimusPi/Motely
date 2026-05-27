@@ -11,7 +11,10 @@ namespace Motely.Tests;
 /// </summary>
 public class V0FilterRegressionTests
 {
-    private static readonly string FilterDataPath = Path.Combine(AppContext.BaseDirectory, "filters");
+    private static readonly string FilterDataPath = Path.Combine(
+        AppContext.BaseDirectory,
+        "filters"
+    );
     private static readonly string[] LogicProbeSeeds = BuildLogicProbeSeeds(256);
     private static readonly string[] AnalyzerSeedCandidates =
     [
@@ -46,7 +49,11 @@ public class V0FilterRegressionTests
 
     private static JamlConfig ParseFilterOrFail(FilterFileCase filter)
     {
-        bool parsed = JamlConfigLoader.TryLoad(File.ReadAllText(filter.FullPath), out var config, out var error);
+        bool parsed = JamlConfigLoader.TryLoad(
+            File.ReadAllText(filter.FullPath),
+            out var config,
+            out var error
+        );
         Assert.True(parsed, $"[{filter.FileName}] JAML parse failed: {error}");
         Assert.NotNull(config);
         return config!;
@@ -105,11 +112,7 @@ public class V0FilterRegressionTests
 
         using var search = settings.Start();
         search.AwaitCompletion();
-        return (
-            search.TotalSeedsSearched,
-            search.MatchingSeeds,
-            matchedSeeds?.ToArray() ?? []
-        );
+        return (search.TotalSeedsSearched, search.MatchingSeeds, matchedSeeds?.ToArray() ?? []);
     }
 
     private static (string Seed, string TagName, int Ante)? FindAnalyzedSingleTagOccurrence()
@@ -125,9 +128,8 @@ public class V0FilterRegressionTests
 
             foreach (var ante in analysis.Antes)
             {
-                var targetTag = ante.BigBlindTag != ante.SmallBlindTag
-                    ? ante.BigBlindTag
-                    : ante.SmallBlindTag;
+                var targetTag =
+                    ante.BigBlindTag != ante.SmallBlindTag ? ante.BigBlindTag : ante.SmallBlindTag;
 
                 return (seed, targetTag.ToString(), ante.Ante);
             }
@@ -156,7 +158,10 @@ public class V0FilterRegressionTests
             search.AwaitCompletion();
 
             Assert.True(search.IsCompleted, $"[{filter.FileName}] Search did not complete");
-            Assert.True(search.TotalSeedsSearched > 0, $"[{filter.FileName}] No seeds were searched");
+            Assert.True(
+                search.TotalSeedsSearched > 0,
+                $"[{filter.FileName}] No seeds were searched"
+            );
         }
     }
 
@@ -203,7 +208,10 @@ public class V0FilterRegressionTests
         foreach (var filter in GetFilterFiles())
         {
             var config = ParseFilterOrFail(filter);
-            Assert.True(config.Must.HasAnyClauses, $"[{filter.FileName}] Expected at least one must clause");
+            Assert.True(
+                config.Must.HasAnyClauses,
+                $"[{filter.FileName}] Expected at least one must clause"
+            );
 
             var filtered = RunListSearch(config, LogicProbeSeeds);
 
@@ -219,7 +227,10 @@ public class V0FilterRegressionTests
     public void MustAndMustNot_SameTag_RejectsSeed()
     {
         var match = FindAnalyzedSingleTagOccurrence();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed seed with a tag occurrence");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed seed with a tag occurrence"
+        );
 
         var derived = match!.Value;
         var jaml = $$"""

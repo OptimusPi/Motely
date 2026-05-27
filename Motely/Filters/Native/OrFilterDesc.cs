@@ -8,6 +8,7 @@ namespace Motely.Filters;
 public sealed class OrClause : LogicClause
 {
     public override string Describe() => $"or({Clauses.Length})";
+
     public override IMotelySeedFilterDesc CreateDesc() =>
         new OrFilterDesc(Array.ConvertAll(Clauses, static c => c.CreateDesc()), Min);
 }
@@ -50,9 +51,7 @@ public struct OrFilterDesc(IMotelySeedFilterDesc[] filters, int min = 1)
         private readonly IMotelySeedFilter[] _filters = filters;
         private readonly int _min = min;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             if (_min == 1) // Optimization for standard OR

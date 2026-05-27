@@ -356,7 +356,9 @@ ref partial struct MotelyVectorSearchContext
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     Spectral.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(spectralType, targetSpectral);
@@ -386,7 +388,9 @@ ref partial struct MotelyVectorSearchContext
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     Spectral.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
 

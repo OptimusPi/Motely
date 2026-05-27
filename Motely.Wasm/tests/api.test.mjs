@@ -17,7 +17,6 @@ describe("public API surface", () => {
             "createNativeSearchSettings",
             "nativeFilterNames",
             "fromJaml",
-            "createStreamCursor",
             "createSeedRouter",
             "mountRoot",
             "unmountRoot",

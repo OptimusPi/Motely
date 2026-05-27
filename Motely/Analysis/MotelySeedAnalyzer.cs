@@ -170,5 +170,4 @@ public static partial class MotelySeedAnalyzer
             return new MotelySeedAnalysis(ex.ToString(), []);
         }
     }
-
 }

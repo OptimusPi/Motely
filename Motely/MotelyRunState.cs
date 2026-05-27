@@ -9,7 +9,11 @@ public record MotelyJsRunState(int VoucherBitfield, int BossBitfield)
 
     public MotelyRunState ToRunState()
     {
-        return new MotelyRunState { VoucherBitfield = VoucherBitfield, BossBitfield = BossBitfield };
+        return new MotelyRunState
+        {
+            VoucherBitfield = VoucherBitfield,
+            BossBitfield = BossBitfield,
+        };
     }
 }
 

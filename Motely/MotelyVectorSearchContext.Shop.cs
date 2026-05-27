@@ -105,7 +105,10 @@ ref partial struct MotelyVectorSearchContext
 
         var isStandardcard = Vector512.AndNot(
             Vector512.AndNot(
-                Vector512.AndNot(Vector512.LessThan(itemTypePoll, stream.StandardcardRate), isJoker),
+                Vector512.AndNot(
+                    Vector512.LessThan(itemTypePoll, stream.StandardcardRate),
+                    isJoker
+                ),
                 isTarot
             ),
             isPlanet

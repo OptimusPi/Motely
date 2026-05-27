@@ -12,31 +12,11 @@ public sealed class WasmSeedRouter : IDisposable
     public WasmSeedRouter(string seed, MotelyDeck deck, MotelyStake stake)
     {
         _inner = new MotelySeedRouterDesc(seed, deck, stake);
+        return _inner.Instance(); // Force context capture and keep it alive.
     }
 
-    public string GetSeed()
+    public void Dispose()
     {
-        var ctx = _inner.Instance();
-        return ctx.GetSeed();
+        _inner.Dispose();
     }
-
-    public int GetBossForAnte(int ante)
-    {
-        var ctx = _inner.Instance();
-        var bossStream = ctx.CreateBossStream();
-        var voucherState = new MotelyRunState();
-        MotelyBossBlind boss = default;
-        for (int a = 1; a <= ante; a++)
-        {
-            boss = ctx.GetBossForAnte(ref bossStream, a, ref voucherState);
-        }
-        return (int)boss;
-    }
-
-    public WasmSingleSearchContext GetContext()
-    {
-        return new WasmSingleSearchContext(_inner);
-    }
-
-    public void Dispose() => _inner.Dispose();
 }

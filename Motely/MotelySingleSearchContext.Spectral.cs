@@ -16,7 +16,7 @@ public struct MotelySingleSpectralStream(
     public readonly bool IsSoulBlackHoleable => !SoulBlackHolePrngStream.IsInvalid;
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySingleSpectralStream CreateSpectralStream(

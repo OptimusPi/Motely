@@ -32,7 +32,7 @@ public enum MotelyShopStreamFlags
     Default = 0,
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     private const int ShopJokerRate = 20;
 

@@ -10,10 +10,10 @@ namespace Motely.Filters.Jaml.Converters;
 /// case-insensitive enum parse via <see cref="Enum.Parse{TEnum}(string, bool)"/>.
 /// Register one instance per closed enum type on the deserializer/serializer.
 /// </summary>
-public sealed class EnumOrAnyConverter<T> : IYamlTypeConverter where T : struct, Enum
+public sealed class EnumOrAnyConverter<T> : IYamlTypeConverter
+    where T : struct, Enum
 {
-    public bool Accepts(Type type) =>
-        type == typeof(EnumOrAny<T>) || type == typeof(EnumOrAny<T>?);
+    public bool Accepts(Type type) => type == typeof(EnumOrAny<T>) || type == typeof(EnumOrAny<T>?);
 
     public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
     {
@@ -28,10 +28,11 @@ public sealed class EnumOrAnyConverter<T> : IYamlTypeConverter where T : struct,
         // useless "Exception during deserialization"; throw a YamlException carrying the
         // scalar's mark so the loader can surface the offending value and the naming rule.
         var names = Enum.GetNames<T>();
-        var hint = names.Length <= 25
-            ? $" Expected 'Any' or one of: {string.Join(", ", names)}."
-            : " Expected 'Any' or a PascalCase identifier with no spaces or punctuation"
-                + " (e.g. WeeJoker, not 'Wee Joker').";
+        var hint =
+            names.Length <= 25
+                ? $" Expected 'Any' or one of: {string.Join(", ", names)}."
+                : " Expected 'Any' or a PascalCase identifier with no spaces or punctuation"
+                    + " (e.g. WeeJoker, not 'Wee Joker').";
         throw new YamlException(
             scalar.Start,
             scalar.End,

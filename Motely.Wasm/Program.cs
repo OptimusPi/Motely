@@ -1,3 +1,4 @@
+using System.Text;
 using Bootsharp;
 using Bootsharp.FileSystem;
 using Bootsharp.Inject;
@@ -7,11 +8,17 @@ using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
-using System.Text;
 
 [assembly: Preferences(
     Space = [@"^Motely\.Wasm$", "index"],
-    Name = [@"^Program$", "Motely", @"^WasmSearchSettings$", "SearchSettings", @"^WasmSeedRouter$", "SeedRouter"]
+    Name = [
+        @"^Program$",
+        "Motely",
+        @"^WasmSearchSettings$",
+        "SearchSettings",
+        @"^WasmSeedRouter$",
+        "SeedRouter",
+    ]
 )]
 
 namespace Motely.Wasm;
@@ -22,11 +29,13 @@ public static partial class Program
     [Import]
     public static partial bool JimmolateProbe(string seed, MotelyDeck deck, MotelyStake stake);
 
-    internal static bool RunJimmolateImport(ref MotelySingleSearchContext ctx) =>
+    internal static bool RunJimmolateImport(ref global::Motely.MotelySingleSearchContext ctx) =>
         JimmolateProbe(ctx.GetSeed(), ctx.Deck, ctx.Stake);
 
     private static IServiceProvider services = null!;
-    private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(
+        StringComparer.Ordinal
+    );
     private static readonly MotelyFileWatcher FileWatcher = new();
 
     [Export]
@@ -44,9 +53,7 @@ public static partial class Program
 
     public static void Main()
     {
-        services = new ServiceCollection()
-            .AddBootsharp()
-            .BuildServiceProvider();
+        services = new ServiceCollection().AddBootsharp().BuildServiceProvider();
     }
 
     [Export]
@@ -125,34 +132,56 @@ public static partial class Program
         JamlSearchBuilder.CreatePlan(config.Config);
 
     [Export]
-    public static MotelyJamlyzerResult AnalyzeJamlSeedsFromConfig(WasmJamlConfig config, string[]? seeds = null) =>
-        MotelyJamlyzer.AnalyzeSeeds(config.Config, seeds);
-
+    public static MotelyJamlyzerResult AnalyzeJamlSeedsFromConfig(
+        WasmJamlConfig config,
+        string[]? seeds = null
+    ) => MotelyJamlyzer.AnalyzeSeeds(config.Config, seeds);
 
     // ── Packed-int decoders ──────────────────────────────────────────────────
     // Return typed enums so Bootsharp emits MotelyItemType, MotelyItemTypeCategory,
     // MotelyJokerRarity, MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement
     // into the generated .g.mjs — consumers call these instead of manual bit-whacking.
-    [Export] public static MotelyItemType         DecodeItemType        (int v) => (MotelyItemType)(v & MotelyGlobals.ItemTypeMask);
-    [Export] public static MotelyItemTypeCategory DecodeItemCategory    (int v) => (MotelyItemTypeCategory)(v & MotelyGlobals.ItemTypeCategoryMask);
-    [Export] public static MotelyJokerRarity      DecodeJokerRarity     (int v) => (MotelyJokerRarity)(v & MotelyGlobals.JokerRarityMask);
-    [Export] public static MotelyItemEdition      DecodeItemEdition     (int v) => (MotelyItemEdition)(v & MotelyGlobals.ItemEditionMask);
-    [Export] public static MotelyItemSeal         DecodeItemSeal        (int v) => (MotelyItemSeal)(v & MotelyGlobals.ItemSealMask);
-    [Export] public static MotelyItemEnhancement  DecodeItemEnhancement (int v) => (MotelyItemEnhancement)(v & MotelyGlobals.ItemEnhancementMask);
-    [Export] public static MotelyStandardcardSuit DecodeStandardcardSuit (int v) => (MotelyStandardcardSuit)(v & MotelyGlobals.StandardcardSuitMask);
-    [Export] public static MotelyStandardcardRank DecodeStandardcardRank (int v) => (MotelyStandardcardRank)(v & MotelyGlobals.StandardcardRankMask);
-    [Export] public static bool IsPerishable (int v) => (v & (1 << MotelyGlobals.PerishableStickerOffset)) != 0;
-    [Export] public static bool IsEternal    (int v) => (v & (1 << MotelyGlobals.EternalStickerOffset)) != 0;
-    [Export] public static bool IsRental     (int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
+    [Export]
+    public static MotelyItemType DecodeItemType(int v) =>
+        (MotelyItemType)(v & MotelyGlobals.ItemTypeMask);
 
     [Export]
-    public static IMotelyStreamCursor CreateStreamCursor(
-        string seed,
-        MotelyDeck deck,
-        MotelyStake stake,
-        int ante,
-        MotelyStreamKind kind
-    ) => MotelyStreamCursor.Create(seed, deck, stake, ante, kind);
+    public static MotelyItemTypeCategory DecodeItemCategory(int v) =>
+        (MotelyItemTypeCategory)(v & MotelyGlobals.ItemTypeCategoryMask);
+
+    [Export]
+    public static MotelyJokerRarity DecodeJokerRarity(int v) =>
+        (MotelyJokerRarity)(v & MotelyGlobals.JokerRarityMask);
+
+    [Export]
+    public static MotelyItemEdition DecodeItemEdition(int v) =>
+        (MotelyItemEdition)(v & MotelyGlobals.ItemEditionMask);
+
+    [Export]
+    public static MotelyItemSeal DecodeItemSeal(int v) =>
+        (MotelyItemSeal)(v & MotelyGlobals.ItemSealMask);
+
+    [Export]
+    public static MotelyItemEnhancement DecodeItemEnhancement(int v) =>
+        (MotelyItemEnhancement)(v & MotelyGlobals.ItemEnhancementMask);
+
+    [Export]
+    public static MotelyStandardcardSuit DecodeStandardcardSuit(int v) =>
+        (MotelyStandardcardSuit)(v & MotelyGlobals.StandardcardSuitMask);
+
+    [Export]
+    public static MotelyStandardcardRank DecodeStandardcardRank(int v) =>
+        (MotelyStandardcardRank)(v & MotelyGlobals.StandardcardRankMask);
+
+    [Export]
+    public static bool IsPerishable(int v) =>
+        (v & (1 << MotelyGlobals.PerishableStickerOffset)) != 0;
+
+    [Export]
+    public static bool IsEternal(int v) => (v & (1 << MotelyGlobals.EternalStickerOffset)) != 0;
+
+    [Export]
+    public static bool IsRental(int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
 
     /// <summary>
     /// Passthrough search settings (no JAML clauses). CLI requires <c>--jaml</c> or <c>--native</c>;
@@ -176,7 +205,9 @@ public static partial class Program
             throw new ArgumentException(
                 $"Unknown native filter '{name}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}"
             );
-        return new WasmSearchSettings(AttachWasmCallbacks(MotelyNativeFilterFactory.CreateSettings(filter)));
+        return new WasmSearchSettings(
+            AttachWasmCallbacks(MotelyNativeFilterFactory.CreateSettings(filter))
+        );
     }
 
     [Export]
@@ -188,13 +219,17 @@ public static partial class Program
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
             throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return new WasmSearchSettings(AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config)));
+        return new WasmSearchSettings(
+            AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config))
+        );
     }
 
     [Export]
     public static WasmSearchSettings FromJamlConfig(WasmJamlConfig config)
     {
-        return new WasmSearchSettings(AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config.Config)));
+        return new WasmSearchSettings(
+            AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config.Config))
+        );
     }
 
     private static IMotelySearchSettings AttachWasmCallbacks(IMotelySearchSettings settings)

@@ -35,11 +35,19 @@ public class DistributedWorkerWindow : Window
             Y = 1,
             Text = "Stopped",
         };
-        _statusLabel.ColorScheme = new ColorScheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) };
+        _statusLabel.ColorScheme = new ColorScheme()
+        {
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey),
+        };
         Add(_statusLabel);
 
         // Pool URL label
-        var poolLabel = new Label() { X = 1, Y = 3, Text = "Pool URL:" };
+        var poolLabel = new Label()
+        {
+            X = 1,
+            Y = 3,
+            Text = "Pool URL:",
+        };
         poolLabel.ColorScheme = BalatroTheme.Hint;
         Add(poolLabel);
 
@@ -47,13 +55,18 @@ public class DistributedWorkerWindow : Window
         {
             X = 1,
             Y = 4,
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             Text = TuiSettings.WorkerPoolUrl,
         };
         Add(_poolUrlField);
 
         // Thread count
-        var threadsLabel = new Label() { X = 1, Y = 6, Text = "Threads:" };
+        var threadsLabel = new Label()
+        {
+            X = 1,
+            Y = 6,
+            Text = "Threads:",
+        };
         threadsLabel.ColorScheme = BalatroTheme.Hint;
         Add(threadsLabel);
 
@@ -80,8 +93,8 @@ public class DistributedWorkerWindow : Window
         {
             X = 1,
             Y = 9,
-            Width = Dim.Fill()! -2,
-            Height = Dim.Fill()! -5,
+            Width = Dim.Fill()! - 2,
+            Height = Dim.Fill()! - 5,
             Title = "Worker Log",
         };
         logFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -99,12 +112,15 @@ public class DistributedWorkerWindow : Window
             CopyToClipboard(_logView.Text?.ToString() ?? "");
             copyLogsButton.Text = "COPIED!";
             copyLogsButton.ColorScheme = BalatroTheme.GreenButton;
-            Application.AddTimeout(TimeSpan.FromSeconds(1.5), () =>
-            {
-                copyLogsButton.Text = "Copy Logs";
-                copyLogsButton.ColorScheme = BalatroTheme.BackButton;
-                return false;
-            });
+            Application.AddTimeout(
+                TimeSpan.FromSeconds(1.5),
+                () =>
+                {
+                    copyLogsButton.Text = "Copy Logs";
+                    copyLogsButton.ColorScheme = BalatroTheme.BackButton;
+                    return false;
+                }
+            );
         };
         logFrame.Add(copyLogsButton);
 
@@ -182,7 +198,8 @@ public class DistributedWorkerWindow : Window
 
     private void StartWorker()
     {
-        if (_isRunning) return;
+        if (_isRunning)
+            return;
 
         var poolUrl = _poolUrlField.Text?.ToString()?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(poolUrl))
@@ -231,41 +248,62 @@ public class DistributedWorkerWindow : Window
         {
             _workerProcess = Process.Start(psi)!;
 
-            _ = Task.Run(async () =>
-            {
-                string? line;
-                while (!_cts.Token.IsCancellationRequested
-                    && (line = await _workerProcess.StandardOutput.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
+            _ = Task.Run(
+                async () =>
                 {
-                    var captured = line;
-                    Application.Invoke(() => LogMessage(captured));
-                }
-            }, _cts.Token);
+                    string? line;
+                    while (
+                        !_cts.Token.IsCancellationRequested
+                        && (
+                            line = await _workerProcess
+                                .StandardOutput.ReadLineAsync(_cts.Token)
+                                .ConfigureAwait(false)
+                        ) != null
+                    )
+                    {
+                        var captured = line;
+                        Application.Invoke(() => LogMessage(captured));
+                    }
+                },
+                _cts.Token
+            );
 
-            _ = Task.Run(async () =>
-            {
-                string? line;
-                while (!_cts.Token.IsCancellationRequested
-                    && (line = await _workerProcess.StandardError.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
+            _ = Task.Run(
+                async () =>
                 {
-                    var captured = line;
-                    Application.Invoke(() => LogMessage(captured));
-                }
-            }, _cts.Token);
+                    string? line;
+                    while (
+                        !_cts.Token.IsCancellationRequested
+                        && (
+                            line = await _workerProcess
+                                .StandardError.ReadLineAsync(_cts.Token)
+                                .ConfigureAwait(false)
+                        ) != null
+                    )
+                    {
+                        var captured = line;
+                        Application.Invoke(() => LogMessage(captured));
+                    }
+                },
+                _cts.Token
+            );
 
-            _ = Task.Run(async () =>
-            {
-                await _workerProcess.WaitForExitAsync(_cts.Token).ConfigureAwait(false);
-                var code = _workerProcess.ExitCode;
-                Application.Invoke(() =>
+            _ = Task.Run(
+                async () =>
                 {
-                    _isRunning = false;
-                    SetStatus("Stopped", BalatroTheme.Orange);
-                    _startButton.Enabled = true;
-                    _stopButton.Enabled = false;
-                    LogMessage($"\n[{DateTime.Now:HH:mm:ss}] Worker exited (code {code})");
-                });
-            }, _cts.Token);
+                    await _workerProcess.WaitForExitAsync(_cts.Token).ConfigureAwait(false);
+                    var code = _workerProcess.ExitCode;
+                    Application.Invoke(() =>
+                    {
+                        _isRunning = false;
+                        SetStatus("Stopped", BalatroTheme.Orange);
+                        _startButton.Enabled = true;
+                        _stopButton.Enabled = false;
+                        LogMessage($"\n[{DateTime.Now:HH:mm:ss}] Worker exited (code {code})");
+                    });
+                },
+                _cts.Token
+            );
         }
         catch (Exception ex)
         {
@@ -279,8 +317,13 @@ public class DistributedWorkerWindow : Window
 
     private void StopWorker()
     {
-        if (!_isRunning || _workerProcess == null) return;
-        try { _workerProcess.Kill(entireProcessTree: true); } catch { }
+        if (!_isRunning || _workerProcess == null)
+            return;
+        try
+        {
+            _workerProcess.Kill(entireProcessTree: true);
+        }
+        catch { }
         _isRunning = false;
         SetStatus("Stopped", BalatroTheme.Orange);
         _startButton.Enabled = true;
@@ -297,10 +340,52 @@ public class DistributedWorkerWindow : Window
             Path.Combine(baseDir, "MotelyWorker.exe"),
             Path.Combine(baseDir, "..", "Motely.DistributedWorker", "MotelyWorker"),
             Path.Combine(baseDir, "..", "Motely.DistributedWorker", "MotelyWorker.exe"),
-            Path.Combine(baseDir, "..", "..", "..", "Motely.DistributedWorker", "bin", "Debug", "net10.0", "MotelyWorker.exe"),
-            Path.Combine(baseDir, "..", "..", "..", "Motely.DistributedWorker", "bin", "Release", "net10.0", "MotelyWorker.exe"),
-            Path.Combine(baseDir, "..", "..", "Motely.DistributedWorker", "bin", "Release", "net10.0", "linux-x64", "publish", "MotelyWorker"),
-            Path.Combine(baseDir, "..", "..", "Motely.DistributedWorker", "bin", "Release", "net10.0", "win-x64", "publish", "MotelyWorker.exe"),
+            Path.Combine(
+                baseDir,
+                "..",
+                "..",
+                "..",
+                "Motely.DistributedWorker",
+                "bin",
+                "Debug",
+                "net10.0",
+                "MotelyWorker.exe"
+            ),
+            Path.Combine(
+                baseDir,
+                "..",
+                "..",
+                "..",
+                "Motely.DistributedWorker",
+                "bin",
+                "Release",
+                "net10.0",
+                "MotelyWorker.exe"
+            ),
+            Path.Combine(
+                baseDir,
+                "..",
+                "..",
+                "Motely.DistributedWorker",
+                "bin",
+                "Release",
+                "net10.0",
+                "linux-x64",
+                "publish",
+                "MotelyWorker"
+            ),
+            Path.Combine(
+                baseDir,
+                "..",
+                "..",
+                "Motely.DistributedWorker",
+                "bin",
+                "Release",
+                "net10.0",
+                "win-x64",
+                "publish",
+                "MotelyWorker.exe"
+            ),
         };
 
         foreach (var candidate in candidates)
@@ -309,12 +394,16 @@ public class DistributedWorkerWindow : Window
                 return Path.GetFullPath(candidate);
         }
 
-        foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+        foreach (
+            var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator)
+        )
         {
             var exeLinux = Path.Combine(dir, "MotelyWorker");
-            if (File.Exists(exeLinux)) return exeLinux;
+            if (File.Exists(exeLinux))
+                return exeLinux;
             var exeWin = exeLinux + ".exe";
-            if (File.Exists(exeWin)) return exeWin;
+            if (File.Exists(exeWin))
+                return exeWin;
         }
 
         return null;
@@ -329,12 +418,19 @@ public class DistributedWorkerWindow : Window
     private void SetStatus(string text, Color color)
     {
         _statusLabel.Text = text;
-        _statusLabel.ColorScheme = new ColorScheme() { Normal = new Attribute(color, BalatroTheme.ModalGrey) };
+        _statusLabel.ColorScheme = new ColorScheme()
+        {
+            Normal = new Attribute(color, BalatroTheme.ModalGrey),
+        };
     }
 
     private static void CopyToClipboard(string text)
     {
-        try { Clipboard.TrySetClipboardData(text); } catch { }
+        try
+        {
+            Clipboard.TrySetClipboardData(text);
+        }
+        catch { }
     }
 
     protected override void Dispose(bool disposing)

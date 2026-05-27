@@ -110,7 +110,13 @@ public sealed class MotelyAnalyzerFilterDesc()
                         ref state
                     );
 
-                    packs[i] = new(pack, packContent.AsArray().Select(static item => new MotelyAnalyzedItem(item)).ToArray());
+                    packs[i] = new(
+                        pack,
+                        packContent
+                            .AsArray()
+                            .Select(static item => new MotelyAnalyzedItem(item))
+                            .ToArray()
+                    );
                 }
 
                 // NOTE: Per-round hand draw not yet implemented - requires shuffle PRNG per round
@@ -275,7 +281,7 @@ public sealed class MotelyAnalyzerFilterDesc()
             {
                 int count = rankCounts.GetValueOrDefault(rank, 0);
                 string marker = count == maxRankCount && count > 0 ? "*" : "";
-                sb.AppendLine($"  {rank,2}: {count}{marker}");
+                sb.AppendLine($"  {rank, 2}: {count}{marker}");
             }
 
             // Suits breakdown with ASCII symbols

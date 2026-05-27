@@ -14,9 +14,8 @@ public static class JamlAesthetics
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.SeedCount,
             JamlAesthetic.Psychosis => PsychosisAestheticSeeds.SeedCount,
-            JamlAesthetic.Gross
-            or JamlAesthetic.Funny
-            or JamlAesthetic.Balatro => MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic),
+            JamlAesthetic.Gross or JamlAesthetic.Funny or JamlAesthetic.Balatro =>
+                MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -26,9 +25,8 @@ public static class JamlAesthetics
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Enumerate(),
             JamlAesthetic.Psychosis => PsychosisAestheticSeeds.Enumerate(),
-            JamlAesthetic.Gross
-            or JamlAesthetic.Funny
-            or JamlAesthetic.Balatro => MotelySeedKeywordSequences.EnumerateAestheticSeeds(aesthetic),
+            JamlAesthetic.Gross or JamlAesthetic.Funny or JamlAesthetic.Balatro =>
+                MotelySeedKeywordSequences.EnumerateAestheticSeeds(aesthetic),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 }
@@ -61,7 +59,12 @@ file static class PalindromeAestheticSeeds
             yield return palindrome;
     }
 
-    private static IEnumerable<string> GenerateRecursive(char[] buffer, int pos, int halfLen, int totalLen)
+    private static IEnumerable<string> GenerateRecursive(
+        char[] buffer,
+        int pos,
+        int halfLen,
+        int totalLen
+    )
     {
         if (pos >= halfLen)
         {

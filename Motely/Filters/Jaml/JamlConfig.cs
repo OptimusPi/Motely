@@ -41,34 +41,50 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
     public List<OrClause> Or { get; set; } = [];
 
     /// <summary>Number of clauses in <see cref="OrderedClauses"/> (evaluation order).</summary>
-    public int Count { get { return OrderedClauses.Count; } }
+    public int Count
+    {
+        get { return OrderedClauses.Count; }
+    }
 
-    public bool HasAnyClauses { get { return OrderedClauses.Count > 0; } }
+    public bool HasAnyClauses
+    {
+        get { return OrderedClauses.Count > 0; }
+    }
 
-    public IEnumerator<IJamlClause> GetEnumerator() { return OrderedClauses.GetEnumerator(); }
+    public IEnumerator<IJamlClause> GetEnumerator()
+    {
+        return OrderedClauses.GetEnumerator();
+    }
 
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { return GetEnumerator(); }
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
 }
 
 /// <summary>
 /// JAML config consumed by JamlSearchBuilder.
 /// </summary>
- public sealed class JamlConfig
- {
-     public required string Id { get; set; }
-     public string? Name { get; set; }
-     public string? Description { get; set; }
-     public string? Author { get; set; }
-     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
-     public MotelyStake Stake { get; set; } = MotelyStake.White;
-     public List<string> Seeds { get; set; } = [];
+public sealed class JamlConfig
+{
+    public required string Id { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public string? Author { get; set; }
+    public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
+    public MotelyStake Stake { get; set; } = MotelyStake.White;
+    public List<string> Seeds { get; set; } = [];
 
-     public JamlClauseSet Must { get; set; } = new();
-     public JamlClauseSet Should { get; set; } = new();
-     public JamlClauseSet MustNot { get; set; } = new();
+    public JamlClauseSet Must { get; set; } = new();
+    public JamlClauseSet Should { get; set; } = new();
+    public JamlClauseSet MustNot { get; set; } = new();
+}
 
-     public bool HasAnyClauses => Must.HasAnyClauses || Should.HasAnyClauses || MustNot.HasAnyClauses;
- }
+public static class JamlConfigExtensions
+{
+    public static bool HasAnyClauses(this JamlConfig config) =>
+        config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
+}
 
 public sealed class JokerSourceConfig
 {
@@ -83,12 +99,16 @@ public sealed class JokerSourceConfig
     public int[] RiffRaff { get; set; } = [];
     public int[] RareTag { get; set; } = [];
     public int[] UncommonTag { get; set; } = [];
+
     /// <summary>0..n rolls on the common shop joker PRNG only (fast path).</summary>
     public int[] CommonShopJokers { get; set; } = [];
+
     /// <summary>0..n rolls on the uncommon shop joker PRNG only (fast path; not the same indices as <see cref="ShopItems"/> when slots mix types).</summary>
     public int[] UncommonShopJokers { get; set; } = [];
+
     /// <summary>0..n rolls on the rare shop joker PRNG only (fast path).</summary>
     public int[] RareShopJokers { get; set; } = [];
+
     /// <summary>0..n rolls on the all-rarity shop joker stream (fast path).</summary>
     public int[] AllShopJokers { get; set; } = [];
 }
@@ -134,7 +154,6 @@ public sealed class LegendaryJokerSourceConfig
                 m = x;
         return m;
     }
-
 }
 
 public sealed class TarotCardSourceConfig

@@ -308,7 +308,9 @@ ref partial struct MotelyVectorSearchContext
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     Tarot.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(tarotType, targetTarot);
@@ -338,7 +340,9 @@ ref partial struct MotelyVectorSearchContext
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     Tarot.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
 
