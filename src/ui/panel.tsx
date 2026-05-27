@@ -2,12 +2,7 @@
 
 import React, { memo } from 'react'
 import { useSway } from './hooks.js'
-import { JimboText } from './jimboText.js'
-import { JimboBackButton } from './JimboButton.js'
-
-// JimboButton + JimboBackButton + JimboTone live in JimboButton.tsx (R3F).
-// Re-exported here for back-compat with any code that imported from './panel'.
-export { JimboButton, JimboBackButton, type JimboTone, type JimboButtonProps, type JimboButtonSize } from './JimboButton.js'
+import { JimboText, type JimboTextSize } from './jimboText.js'
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
@@ -51,6 +46,53 @@ export const JimboInnerPanel = memo(({ children, className = '', style, ...props
   </div>
 ))
 JimboInnerPanel.displayName = 'JimboInnerPanel'
+
+// ─── JimboButton ──────────────────────────────────────────────────────────────
+// Canonical flat 2D Balatro-style button.
+// Tones are purely CSS-driven via j-btn--{tone} classes in jimbo.css.
+// No JS color maps. No TONE_PAIRS. Respect the design tokens.
+
+export type JimboTone = 'orange' | 'red' | 'blue' | 'green' | 'tarot' | 'planet' | 'spectral' | 'grey'
+
+export interface JimboButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
+  tone?: JimboTone
+  size?: 'xs' | 'sm' | 'md' | 'lg'
+  fullWidth?: boolean
+  disabled?: boolean
+  onClick?: () => void
+  children?: React.ReactNode
+}
+
+export function JimboButton({
+  tone = 'orange', size = 'md', fullWidth = false, disabled = false, onClick, style, className = '', children, ...buttonProps
+}: JimboButtonProps) {
+  const textSize: JimboTextSize = size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
+
+  return (
+    <button
+      type="button"
+      className={`j-btn j-btn--${tone} j-btn--${size} ${fullWidth ? 'j-btn--full' : ''} ${disabled ? 'j-btn--disabled' : ''} ${className}`}
+      disabled={disabled}
+      onClick={onClick}
+      style={style}
+      {...buttonProps}
+    >
+      <div className="j-btn__face">
+        <JimboText size={textSize}>{children}</JimboText>
+      </div>
+    </button>
+  )
+}
+
+// Compact Back button. Default size 'sm' — the slab-tall 'md' Back was eating
+// real estate inside modals where it's auto-injected by JimboModal.
+export function JimboBackButton({ onClick, size = 'sm' }: { onClick?: () => void; size?: 'sm' | 'md' | 'lg' }) {
+  return (
+    <div className="j-back-btn-wrap j-flex j-justify-center j-w-full">
+      <JimboButton tone="orange" size={size} fullWidth onClick={onClick} className="j-back-btn">Back</JimboButton>
+    </div>
+  )
+}
 
 // ─── Modal ───────────────────────────────────────────────────────────────────
 

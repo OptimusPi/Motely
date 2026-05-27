@@ -2,7 +2,6 @@ export * from './ui/tokens.js'
 // Side-effect: design system CSS custom properties + component classes
 import './ui/jimbo.css'
 export * from './ui/jimboText.js'
-export * from './ui/JimboButton.js'
 export * from './ui/panel.js'
 export * from './ui/jimboTabs.js'
 export * from './ui/JimboToggleList.js'

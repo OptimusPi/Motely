@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 import jamlDesign from './eslint-rules/jaml-design.js';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'storybook-static/**', 'node_modules/**', 'assets/**', '**/*.d.ts', 'examples/**', '.claude/', '.claude/**'] },
+  { ignores: ['dist/**', 'storybook-static/**', 'node_modules/**', 'assets/**', '**/*.d.ts', 'examples/**', 'ClaudeDesign001-BalatroSeedCurator/**', '.claude/', '.claude/**'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

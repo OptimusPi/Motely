@@ -55,7 +55,7 @@
     "prepack": "npm run build",
     "storybook": "storybook dev -p 3141",
     "build-storybook": "storybook build",
-    "serve:storybook": "npx --yes serve storybook-static -l 3141 --cors",
+    "serve:storybook": "npx --yes serve storybook-static -l tcp://0.0.0.0:3141 --cors",
     "lint": "eslint ."
   },
   "engines": {
