@@ -74,7 +74,9 @@ public static class MotelySeedKeywordSequences
     /// </summary>
     public static IEnumerable<string> EnumerateAestheticSeeds(JamlAesthetic aesthetic)
     {
-        foreach (var seed in MotelyGlobals.GeneratePaddedSeedsForKeywords(KeywordsFor(aesthetic), null))
+        foreach (
+            var seed in MotelyGlobals.GeneratePaddedSeedsForKeywords(KeywordsFor(aesthetic), null)
+        )
             yield return seed;
     }
 
@@ -85,7 +87,11 @@ public static class MotelySeedKeywordSequences
             JamlAesthetic.Gross => GrossKeywordAestheticSeedCount,
             JamlAesthetic.Funny => FunnyKeywordAestheticSeedCount,
             JamlAesthetic.Balatro => BalatroKeywordAestheticSeedCount,
-            _ => throw new ArgumentOutOfRangeException(nameof(aesthetic), aesthetic, "Not a keyword aesthetic."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(aesthetic),
+                aesthetic,
+                "Not a keyword aesthetic."
+            ),
         };
 
     private static string[] KeywordsFor(JamlAesthetic aesthetic) =>
@@ -94,7 +100,11 @@ public static class MotelySeedKeywordSequences
             JamlAesthetic.Gross => GrossKeywords,
             JamlAesthetic.Funny => FunnyKeywords,
             JamlAesthetic.Balatro => BalatroKeywords,
-            _ => throw new ArgumentOutOfRangeException(nameof(aesthetic), aesthetic, "Not a keyword aesthetic."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(aesthetic),
+                aesthetic,
+                "Not a keyword aesthetic."
+            ),
         };
 
     public static readonly string[] GrossKeywords =

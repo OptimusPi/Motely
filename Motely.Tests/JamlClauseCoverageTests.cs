@@ -10,16 +10,22 @@ public class JammyClauseCoverageTests
 
     private static MotelySeedAnalysis AnalyzeJammy(MotelyDeck deck = MotelyDeck.Red)
     {
-        var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(Seed, deck, MotelyStake.White));
-        Assert.True(string.IsNullOrEmpty(analysis.Error), $"Analyzer failed for {Seed}/{deck}: {analysis.Error}");
+        var analysis = MotelySeedAnalyzer.Analyze(
+            new MotelySeedAnalysisConfig(Seed, deck, MotelyStake.White)
+        );
+        Assert.True(
+            string.IsNullOrEmpty(analysis.Error),
+            $"Analyzer failed for {Seed}/{deck}: {analysis.Error}"
+        );
         return analysis;
     }
 
     private static string BuildMustJaml(string clauseBody, MotelyDeck deck = MotelyDeck.Red)
     {
         var lines = clauseBody.Replace("\r\n", "\n").Trim().Split('\n');
-        var clauseLines = lines
-            .Select((line, idx) => idx == 0 ? $"  - {line.TrimEnd()}" : $"    {line.TrimEnd()}");
+        var clauseLines = lines.Select(
+            (line, idx) => idx == 0 ? $"  - {line.TrimEnd()}" : $"    {line.TrimEnd()}"
+        );
 
         return $$"""
             name: JammyClauseCoverage
@@ -30,7 +36,10 @@ public class JammyClauseCoverageTests
             """;
     }
 
-    private static string BuildMustAndMustNotJaml(string clauseBody, MotelyDeck deck = MotelyDeck.Red)
+    private static string BuildMustAndMustNotJaml(
+        string clauseBody,
+        MotelyDeck deck = MotelyDeck.Red
+    )
     {
         var lines = clauseBody.Replace("\r\n", "\n").Trim().Split('\n');
         var clauseLines = lines
@@ -151,7 +160,9 @@ public class JammyClauseCoverageTests
         var analysis = AnalyzeJammy();
         var hit = FindShopItem(
             analysis,
-            i => i.TypeCategory == MotelyItemTypeCategory.Joker && GetJokerRarity(i) == MotelyJokerRarity.Common
+            i =>
+                i.TypeCategory == MotelyItemTypeCategory.Joker
+                && GetJokerRarity(i) == MotelyJokerRarity.Common
         );
         Assert.True(hit.HasValue, "Expected at least one common joker in JAMMY analysis");
 
@@ -173,7 +184,9 @@ public class JammyClauseCoverageTests
         var analysis = AnalyzeJammy();
         var hit = FindShopItem(
             analysis,
-            i => i.TypeCategory == MotelyItemTypeCategory.Joker && GetJokerRarity(i) == MotelyJokerRarity.Uncommon
+            i =>
+                i.TypeCategory == MotelyItemTypeCategory.Joker
+                && GetJokerRarity(i) == MotelyJokerRarity.Uncommon
         );
         Assert.True(hit.HasValue, "Expected at least one uncommon joker in JAMMY analysis");
 
@@ -203,7 +216,10 @@ public class JammyClauseCoverageTests
             }
         }
 
-        Assert.True(matching.HasValue, $"Expected at least one rareJoker clause to match seed {Seed}.");
+        Assert.True(
+            matching.HasValue,
+            $"Expected at least one rareJoker clause to match seed {Seed}."
+        );
         AssertRejectsJammy(BuildMustAndMustNotJaml($"rareJoker: {matching!.Value}"));
     }
 
@@ -230,8 +246,7 @@ public class JammyClauseCoverageTests
     [Fact]
     public void Clause_LegendaryJoker_ExecutesForJammy()
     {
-        var legendary = Enum
-            .GetValues<MotelyJoker>()
+        var legendary = Enum.GetValues<MotelyJoker>()
             .First(j => GetJokerRarity(new MotelyItem(j)) == MotelyJokerRarity.Legendary);
 
         var clauseBody = $"legendaryJoker: {legendary}";
@@ -279,7 +294,10 @@ public class JammyClauseCoverageTests
     public void Clause_Spectral_MatchesJammy()
     {
         var analysis = AnalyzeJammy();
-        var shopHit = FindShopItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.SpectralCard);
+        var shopHit = FindShopItem(
+            analysis,
+            i => i.TypeCategory == MotelyItemTypeCategory.SpectralCard
+        );
         if (shopHit.HasValue)
         {
             var d = shopHit.Value;
@@ -295,7 +313,10 @@ public class JammyClauseCoverageTests
             return;
         }
 
-        var packHit = FindPackItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.SpectralCard);
+        var packHit = FindPackItem(
+            analysis,
+            i => i.TypeCategory == MotelyItemTypeCategory.SpectralCard
+        );
         Assert.True(packHit.HasValue, "Expected at least one spectralCard card in JAMMY packs");
         var p = packHit!.Value;
         var packClauseBody = $$"""
@@ -378,7 +399,10 @@ public class JammyClauseCoverageTests
     public void Clause_StandardCard_MatchesJammy()
     {
         var analysis = AnalyzeJammy();
-        var hit = FindPackItem(analysis, i => i.TypeCategory == MotelyItemTypeCategory.Standardcard);
+        var hit = FindPackItem(
+            analysis,
+            i => i.TypeCategory == MotelyItemTypeCategory.Standardcard
+        );
         Assert.True(hit.HasValue, "Expected at least one standard card in JAMMY booster packs");
 
         var d = hit!.Value;
@@ -429,7 +453,10 @@ public class JammyClauseCoverageTests
                 break;
             }
         }
-        Assert.True(matchingRank.HasValue, "Expected at least one erraticRank to match JAMMY/Erratic.");
+        Assert.True(
+            matchingRank.HasValue,
+            "Expected at least one erraticRank to match JAMMY/Erratic."
+        );
         AssertRejectsJammy(
             BuildMustAndMustNotJaml($"erraticRank: {matchingRank!.Value}", MotelyDeck.Erratic)
         );
@@ -444,7 +471,10 @@ public class JammyClauseCoverageTests
                 break;
             }
         }
-        Assert.True(matchingSuit.HasValue, "Expected at least one erraticSuit to match JAMMY/Erratic.");
+        Assert.True(
+            matchingSuit.HasValue,
+            "Expected at least one erraticSuit to match JAMMY/Erratic."
+        );
         AssertRejectsJammy(
             BuildMustAndMustNotJaml($"erraticSuit: {matchingSuit!.Value}", MotelyDeck.Erratic)
         );
@@ -459,7 +489,10 @@ public class JammyClauseCoverageTests
                 break;
             }
         }
-        Assert.True(matchingCard.HasValue, "Expected at least one erraticCard to match JAMMY/Erratic.");
+        Assert.True(
+            matchingCard.HasValue,
+            "Expected at least one erraticCard to match JAMMY/Erratic."
+        );
         AssertRejectsJammy(
             BuildMustAndMustNotJaml($"erraticCard: {matchingCard!.Value}", MotelyDeck.Erratic)
         );

@@ -15,7 +15,7 @@ public struct MotelySinglePlanetStream(
     public readonly bool IsBlackHoleable => !BlackHolePrngStream.IsInvalid;
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySinglePlanetStream CreatePlanetStream(

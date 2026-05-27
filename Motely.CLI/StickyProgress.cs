@@ -19,8 +19,7 @@ internal static class StickyProgress
     private static readonly TextWriter LiveWriter = Console.Out;
 
     /// <summary>True when sticky mode is active (both streams are live TTYs).</summary>
-    public static readonly bool IsLive =
-        !Console.IsOutputRedirected && !Console.IsErrorRedirected;
+    public static readonly bool IsLive = !Console.IsOutputRedirected && !Console.IsErrorRedirected;
 
     /// <summary>
     /// Update the sticky progress line.
@@ -68,7 +67,8 @@ internal static class StickyProgress
     /// </summary>
     public static void Clear()
     {
-        if (!IsLive) return;
+        if (!IsLive)
+            return;
         lock (_gate)
         {
             _current = "";

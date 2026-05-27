@@ -15,7 +15,10 @@ namespace Motely.Tests
         {
             var analysis = MotelySeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
 
-            Assert.True(string.IsNullOrEmpty(analysis.Error), $"Analyzer failed for {seed}: {analysis.Error}");
+            Assert.True(
+                string.IsNullOrEmpty(analysis.Error),
+                $"Analyzer failed for {seed}: {analysis.Error}"
+            );
             Assert.NotEmpty(analysis.Antes);
 
             foreach (var ante in analysis.Antes)

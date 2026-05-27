@@ -23,8 +23,14 @@ public sealed class JamlInvalidInputRejectionTests
 
         bool parsed = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-        Assert.False(parsed, "voucher:Any inside should: should not parse — it is a no-op match that always contributes its score to every seed, so it has no scoring value.");
+        Assert.False(
+            parsed,
+            "voucher:Any inside should: should not parse — it is a no-op match that always contributes its score to every seed, so it has no scoring value."
+        );
         Assert.Null(config);
-        Assert.False(string.IsNullOrWhiteSpace(error), "rejection must produce a non-empty error message");
+        Assert.False(
+            string.IsNullOrWhiteSpace(error),
+            "rejection must produce a non-empty error message"
+        );
     }
 }

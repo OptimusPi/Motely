@@ -88,7 +88,10 @@ public sealed class AnalyzerUnitTests
     {
         string actualOutput = GetAnalyzerOutput(seed, deck, stake);
 
-        Assert.False(string.IsNullOrWhiteSpace(actualOutput), $"Analyzer returned empty output for {seed}");
+        Assert.False(
+            string.IsNullOrWhiteSpace(actualOutput),
+            $"Analyzer returned empty output for {seed}"
+        );
         Assert.Contains("==ANTE 1==", actualOutput);
     }
 

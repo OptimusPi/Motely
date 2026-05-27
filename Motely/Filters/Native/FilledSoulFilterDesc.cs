@@ -25,9 +25,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
 
     public struct FilterStruct() : IMotelySeedFilter
     {
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CheckAnteForLegendaryJoker(
             int ante,
             ref MotelySingleSearchContext searchContext
@@ -38,9 +36,8 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                 true
             );
             MotelySingleSpectralStream spectralStream = default;
-            MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateLegendaryJokerStream(
-                ante
-            );
+            MotelySingleJokerFixedRarityStream soulStream =
+                searchContext.CreateLegendaryJokerStream(ante);
             MotelySingleBoosterPackStream boosterPackStream = default;
             bool boosterPackStreamInit = false,
                 tarotStreamInit = false,

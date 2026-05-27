@@ -21,9 +21,7 @@ public struct ErraticCardFilterDesc(ErraticCardClause clause)
     {
         private readonly ErraticCardClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;

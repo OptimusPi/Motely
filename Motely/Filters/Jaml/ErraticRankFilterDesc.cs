@@ -10,7 +10,9 @@ public sealed class ErraticRankClause : JamlClause
     public required MotelyStandardcardRank Rank { get; init; }
 
     public override int EstimatedCost => 4 + MaxAnte;
+
     public override string Describe() => $"erraticRank {Rank}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new ErraticRankFilterDesc(this);
 }
 
@@ -29,9 +31,7 @@ public struct ErraticRankFilterDesc(ErraticRankClause clause)
     {
         private readonly ErraticRankClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;

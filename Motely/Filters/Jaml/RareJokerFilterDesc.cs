@@ -74,9 +74,7 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
@@ -211,7 +209,11 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
             {
                 jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
                 var rarityVec = new VectorEnum256<MotelyJokerRarity>(
-                    Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyGlobals.JokerRarityMask)));
+                    Vector256.BitwiseAnd(
+                        item.Value,
+                        Vector256.Create(MotelyGlobals.JokerRarityMask)
+                    )
+                );
                 jokerMatch &= VectorEnum256.Equals(rarityVec, MotelyJokerRarity.Rare);
             }
             else

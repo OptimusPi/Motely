@@ -237,7 +237,9 @@ ref partial struct MotelyVectorSearchContext
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
                     Planet.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(planetType, targetPlanet);
@@ -267,7 +269,9 @@ ref partial struct MotelyVectorSearchContext
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
                     Planet.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
 

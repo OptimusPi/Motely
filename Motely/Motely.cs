@@ -152,7 +152,8 @@ public static partial class MotelyGlobals
         if (string.IsNullOrEmpty(padding))
             return null;
 
-        var chars = padding.ToUpperInvariant()
+        var chars = padding
+            .ToUpperInvariant()
             .Where(c => Array.IndexOf(SeedDigits, c) >= 0)
             .Distinct()
             .ToArray();
@@ -190,8 +191,9 @@ public static partial class MotelyGlobals
     )
     {
         // Single-pass enumerators must be materialized so we validate all keywords before yielding.
-        IEnumerable<string> sequence =
-            keywords is IList<string> or ICollection<string> ? keywords : keywords.ToList();
+        IEnumerable<string> sequence = keywords is IList<string> or ICollection<string>
+            ? keywords
+            : keywords.ToList();
 
         foreach (var keyword in sequence)
         {
@@ -262,7 +264,6 @@ public static partial class MotelyGlobals
 
         if (padLen <= 0)
             return 1;
-
         checked
         {
             ulong combinations = 1;
@@ -306,16 +307,24 @@ public static partial class MotelyGlobals
             int len = keyword.Length + 1;
             foreach (var c in validChars)
             {
-                yield return string.Create(len, (c, keyword), static (span, state) =>
-                {
-                    span[0] = state.c;
-                    state.keyword.AsSpan().CopyTo(span.Slice(1));
-                });
-                yield return string.Create(len, (c, keyword), static (span, state) =>
-                {
-                    state.keyword.AsSpan().CopyTo(span);
-                    span[^1] = state.c;
-                });
+                yield return string.Create(
+                    len,
+                    (c, keyword),
+                    static (span, state) =>
+                    {
+                        span[0] = state.c;
+                        state.keyword.AsSpan().CopyTo(span.Slice(1));
+                    }
+                );
+                yield return string.Create(
+                    len,
+                    (c, keyword),
+                    static (span, state) =>
+                    {
+                        state.keyword.AsSpan().CopyTo(span);
+                        span[^1] = state.c;
+                    }
+                );
             }
         }
         else if (padLen == 2)
@@ -325,24 +334,36 @@ public static partial class MotelyGlobals
             {
                 foreach (var c2 in validChars)
                 {
-                    yield return string.Create(len, (c1, c2, keyword), static (span, state) =>
-                    {
-                        span[0] = state.c1;
-                        span[1] = state.c2;
-                        state.keyword.AsSpan().CopyTo(span.Slice(2));
-                    });
-                    yield return string.Create(len, (c1, c2, keyword), static (span, state) =>
-                    {
-                        state.keyword.AsSpan().CopyTo(span);
-                        span[^2] = state.c1;
-                        span[^1] = state.c2;
-                    });
-                    yield return string.Create(len, (c1, c2, keyword), static (span, state) =>
-                    {
-                        span[0] = state.c1;
-                        state.keyword.AsSpan().CopyTo(span.Slice(1));
-                        span[^1] = state.c2;
-                    });
+                    yield return string.Create(
+                        len,
+                        (c1, c2, keyword),
+                        static (span, state) =>
+                        {
+                            span[0] = state.c1;
+                            span[1] = state.c2;
+                            state.keyword.AsSpan().CopyTo(span.Slice(2));
+                        }
+                    );
+                    yield return string.Create(
+                        len,
+                        (c1, c2, keyword),
+                        static (span, state) =>
+                        {
+                            state.keyword.AsSpan().CopyTo(span);
+                            span[^2] = state.c1;
+                            span[^1] = state.c2;
+                        }
+                    );
+                    yield return string.Create(
+                        len,
+                        (c1, c2, keyword),
+                        static (span, state) =>
+                        {
+                            span[0] = state.c1;
+                            state.keyword.AsSpan().CopyTo(span.Slice(1));
+                            span[^1] = state.c2;
+                        }
+                    );
                 }
             }
         }
@@ -355,34 +376,50 @@ public static partial class MotelyGlobals
                 {
                     foreach (var c3 in validChars)
                     {
-                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
-                        {
-                            span[0] = state.c1;
-                            span[1] = state.c2;
-                            span[2] = state.c3;
-                            state.keyword.AsSpan().CopyTo(span.Slice(3));
-                        });
-                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
-                        {
-                            state.keyword.AsSpan().CopyTo(span);
-                            span[^3] = state.c1;
-                            span[^2] = state.c2;
-                            span[^1] = state.c3;
-                        });
-                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
-                        {
-                            span[0] = state.c1;
-                            state.keyword.AsSpan().CopyTo(span.Slice(1));
-                            span[^2] = state.c2;
-                            span[^1] = state.c3;
-                        });
-                        yield return string.Create(len, (c1, c2, c3, keyword), static (span, state) =>
-                        {
-                            span[0] = state.c1;
-                            span[1] = state.c2;
-                            state.keyword.AsSpan().CopyTo(span.Slice(2));
-                            span[^1] = state.c3;
-                        });
+                        yield return string.Create(
+                            len,
+                            (c1, c2, c3, keyword),
+                            static (span, state) =>
+                            {
+                                span[0] = state.c1;
+                                span[1] = state.c2;
+                                span[2] = state.c3;
+                                state.keyword.AsSpan().CopyTo(span.Slice(3));
+                            }
+                        );
+                        yield return string.Create(
+                            len,
+                            (c1, c2, c3, keyword),
+                            static (span, state) =>
+                            {
+                                state.keyword.AsSpan().CopyTo(span);
+                                span[^3] = state.c1;
+                                span[^2] = state.c2;
+                                span[^1] = state.c3;
+                            }
+                        );
+                        yield return string.Create(
+                            len,
+                            (c1, c2, c3, keyword),
+                            static (span, state) =>
+                            {
+                                span[0] = state.c1;
+                                state.keyword.AsSpan().CopyTo(span.Slice(1));
+                                span[^2] = state.c2;
+                                span[^1] = state.c3;
+                            }
+                        );
+                        yield return string.Create(
+                            len,
+                            (c1, c2, c3, keyword),
+                            static (span, state) =>
+                            {
+                                span[0] = state.c1;
+                                span[1] = state.c2;
+                                state.keyword.AsSpan().CopyTo(span.Slice(2));
+                                span[^1] = state.c3;
+                            }
+                        );
                     }
                 }
             }
@@ -409,7 +446,9 @@ public static partial class MotelyGlobals
             // rolled cases and keeps the keyword contiguous for every emitted seed.
             for (int keywordStart = 0; keywordStart <= padLen; keywordStart++)
             {
-                yield return current.Substring(0, keywordStart) + keyword + current.Substring(keywordStart);
+                yield return current.Substring(0, keywordStart)
+                    + keyword
+                    + current.Substring(keywordStart);
             }
             yield break;
         }

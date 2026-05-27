@@ -68,8 +68,14 @@ internal static class CliSearchMode
             input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
         if (hasSeedIndexOptions)
         {
-            if (hasSource || hasSeedsArg || hasDrownMode || input.KeywordInputs.Count > 0 || input.RandomCount.HasValue
-                || explicitAesthetic.HasValue)
+            if (
+                hasSource
+                || hasSeedsArg
+                || hasDrownMode
+                || input.KeywordInputs.Count > 0
+                || input.RandomCount.HasValue
+                || explicitAesthetic.HasValue
+            )
             {
                 error = "Error: --startSeed/--stopSeed apply only to default sequential search.";
                 return false;
@@ -77,7 +83,8 @@ internal static class CliSearchMode
 
             if (input.JamlAestheticFallback is { Count: > 0 })
             {
-                error = "Error: --startSeed/--stopSeed cannot be used when JAML declares aesthetics.";
+                error =
+                    "Error: --startSeed/--stopSeed cannot be used when JAML declares aesthetics.";
                 return false;
             }
         }
@@ -150,7 +157,9 @@ internal static class CliSearchMode
                         return false;
                     }
 
-                    writeWarning?.Invoke("Warning: --seeds <path> is deprecated; use --source <path>.");
+                    writeWarning?.Invoke(
+                        "Warning: --seeds <path> is deprecated; use --source <path>."
+                    );
                     explicitSeeds = sourceSeeds.ToArray();
                 }
                 catch (Exception ex)
@@ -182,20 +191,24 @@ internal static class CliSearchMode
         }
         else if (hasKeywordMode)
         {
-            char[]? paddingChars =
-                !string.IsNullOrWhiteSpace(input.PaddingCharsOption)
-                    ? input
-                        .PaddingCharsOption!.ToUpperInvariant()
-                        .Where(static c => MotelyGlobals.SeedDigits.Contains(c))
-                        .Distinct()
-                        .ToArray()
-                    : null;
-            var prov = MotelyGlobals.GeneratePaddedSeedsForKeywords(input.KeywordInputs, paddingChars);
+            char[]? paddingChars = !string.IsNullOrWhiteSpace(input.PaddingCharsOption)
+                ? input
+                    .PaddingCharsOption!.ToUpperInvariant()
+                    .Where(static c => MotelyGlobals.SeedDigits.Contains(c))
+                    .Distinct()
+                    .ToArray()
+                : null;
+            var prov = MotelyGlobals.GeneratePaddedSeedsForKeywords(
+                input.KeywordInputs,
+                paddingChars
+            );
             long keywordSeedCount = MotelyGlobals.GetPaddedSeedCountForKeywordsLong(
                 input.KeywordInputs,
                 paddingChars
             );
-            updated = updated.WithProviderSearch(new MotelySeedListProvider(prov, keywordSeedCount));
+            updated = updated.WithProviderSearch(
+                new MotelySeedListProvider(prov, keywordSeedCount)
+            );
         }
         else if (input.RandomCount.HasValue)
         {
@@ -224,7 +237,11 @@ internal static class CliSearchMode
                 input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
             if (hasSeedRange)
             {
-                if (input.StartBatch.HasValue || input.EndBatch.HasValue || input.StartPercent.HasValue)
+                if (
+                    input.StartBatch.HasValue
+                    || input.EndBatch.HasValue
+                    || input.StartPercent.HasValue
+                )
                 {
                     error =
                         "Error: do not combine --startSeed/--stopSeed with --startBatch, --endBatch, or --startPercent.";

@@ -31,7 +31,12 @@ public class SearchWindow : Window
     private int _cutoffFixed = int.MinValue;
     private int _currentHigh = int.MinValue;
 
-    public SearchWindow(string configPath, string configFormat, string? source = null, string? sink = null)
+    public SearchWindow(
+        string configPath,
+        string configFormat,
+        string? source = null,
+        string? sink = null
+    )
     {
         _configPath = configPath;
         _configFormat = configFormat;
@@ -85,7 +90,12 @@ public class SearchWindow : Window
         Add(_progressLabel);
 
         // --cutoff row: matches Motely.CLI semantics. "auto" = running max, "<int>" = floor, "" = off.
-        var cutoffLabel = new Label { X = 1, Y = 3, Text = "--cutoff:" };
+        var cutoffLabel = new Label
+        {
+            X = 1,
+            Y = 3,
+            Text = "--cutoff:",
+        };
         Add(cutoffLabel);
 
         _cutoffField = new TextField
@@ -102,7 +112,12 @@ public class SearchWindow : Window
         };
         Add(_cutoffField);
 
-        var cutoffApplyBtn = new CleanButton { X = Pos.Right(_cutoffField) + 1, Y = 3, Text = " Apply " };
+        var cutoffApplyBtn = new CleanButton
+        {
+            X = Pos.Right(_cutoffField) + 1,
+            Y = 3,
+            Text = " Apply ",
+        };
         cutoffApplyBtn.ColorScheme = BalatroTheme.GreenButton;
         cutoffApplyBtn.Accept += (_, _) => ApplyCutoffInput();
         Add(cutoffApplyBtn);
@@ -155,8 +170,13 @@ public class SearchWindow : Window
         };
         _resultsTable.Style.RowColorGetter = args =>
         {
-            if (args.Table is not DataTableSource src) return null;
-            if (src.DataTable.Columns.Count < 3 || args.RowIndex < 0 || args.RowIndex >= src.DataTable.Rows.Count)
+            if (args.Table is not DataTableSource src)
+                return null;
+            if (
+                src.DataTable.Columns.Count < 3
+                || args.RowIndex < 0
+                || args.RowIndex >= src.DataTable.Rows.Count
+            )
                 return null;
             var v = src.DataTable.Rows[args.RowIndex][2];
             if (v is int score && score == _highestScoreSeen && _highestScoreSeen > int.MinValue)
@@ -211,7 +231,8 @@ public class SearchWindow : Window
 
     private void EnsureTallyColumns(int count)
     {
-        if (_tallyColumnCount >= count) return;
+        if (_tallyColumnCount >= count)
+            return;
         for (int i = _tallyColumnCount; i < count; i++)
             _dataTable.Columns.Add($"t{i}", typeof(int));
         _tallyColumnCount = count;
@@ -225,8 +246,10 @@ public class SearchWindow : Window
             _cts = new CancellationTokenSource();
             _searchRunning = true;
 
-            if (!TryLoadConfig(_configPath, _configFormat, out var config, out var configError)
-                || config == null)
+            if (
+                !TryLoadConfig(_configPath, _configFormat, out var config, out var configError)
+                || config == null
+            )
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
 
             // Push fixed cutoff into the engine (matches Motely.CLI behaviour): the scorer
@@ -234,7 +257,8 @@ public class SearchWindow : Window
             // via PassesCutoff() because the engine threshold is fixed per-plan.
             int engineCutoff = (!_cutoffAuto && _cutoffFixed > int.MinValue) ? _cutoffFixed : 0;
             var plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
-            var settings = JamlSearchBuilder.CreateSettings(config, engineCutoff)
+            var settings = JamlSearchBuilder
+                .CreateSettings(config, engineCutoff)
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(TuiSettings.ThreadCount)
@@ -248,17 +272,23 @@ public class SearchWindow : Window
                     {
                         var sourceSeeds = SeedTextReader.ReadSeeds(_source);
                         if (sourceSeeds.Count == 0)
-                            throw new InvalidOperationException("Resolved source contained no seeds.");
+                            throw new InvalidOperationException(
+                                "Resolved source contained no seeds."
+                            );
                         settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
                     }
                     else
                     {
-                        throw new InvalidOperationException("FileSource mode requires a source file.");
+                        throw new InvalidOperationException(
+                            "FileSource mode requires a source file."
+                        );
                     }
                     break;
 
                 case SearchMode.Random:
-                    settings.WithProviderSearch(new MotelyRandomSeedProvider(TuiSettings.RandomSeedCount));
+                    settings.WithProviderSearch(
+                        new MotelyRandomSeedProvider(TuiSettings.RandomSeedCount)
+                    );
                     break;
 
                 case SearchMode.Palindrome:
@@ -271,28 +301,42 @@ public class SearchWindow : Window
 
                 case SearchMode.Keyword:
                     if (string.IsNullOrWhiteSpace(TuiSettings.Keywords))
-                        throw new InvalidOperationException("Keyword mode requires keywords to be set in settings.");
+                        throw new InvalidOperationException(
+                            "Keyword mode requires keywords to be set in settings."
+                        );
 
-                    var keywords = TuiSettings.Keywords.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    var keywords = TuiSettings.Keywords.Split(
+                        ',',
+                        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                    );
                     char[]? paddingChars = string.IsNullOrWhiteSpace(TuiSettings.PaddingChars)
                         ? null
                         : TuiSettings.PaddingChars.ToCharArray();
 
-                    settings.WithProviderSearch(new MotelyKeywordSeedProvider(keywords, paddingChars));
+                    settings.WithProviderSearch(
+                        new MotelyKeywordSeedProvider(keywords, paddingChars)
+                    );
                     break;
 
                 case SearchMode.Sequential:
                 default:
-                    settings.WithSequentialSearch().WithBatchCharacterCount(TuiSettings.BatchCharacterCount);
-                    if (TuiSettings.SequentialStartSeedSearchIndex.HasValue
-                        || TuiSettings.SequentialStopSeedSearchIndex.HasValue)
+                    settings
+                        .WithSequentialSearch()
+                        .WithBatchCharacterCount(TuiSettings.BatchCharacterCount);
+                    if (
+                        TuiSettings.SequentialStartSeedSearchIndex.HasValue
+                        || TuiSettings.SequentialStopSeedSearchIndex.HasValue
+                    )
                     {
                         long startIdx = TuiSettings.SequentialStartSeedSearchIndex ?? 0;
                         long stopIdx =
                             TuiSettings.SequentialStopSeedSearchIndex
                             ?? SeedMath.MaxSearchIndexInclusive(MotelyGlobals.MaxSeedLength);
                         var (sb, ebExclusive) = SeedMath.SearchIndexRangeToBatchRange(
-                            startIdx, stopIdx, TuiSettings.BatchCharacterCount);
+                            startIdx,
+                            stopIdx,
+                            TuiSettings.BatchCharacterCount
+                        );
                         settings.WithStartBatchIndex(sb).WithEndBatchIndex(ebExclusive);
                     }
                     break;
@@ -425,7 +469,8 @@ public class SearchWindow : Window
             row[3 + i] = tallies[i];
         _dataTable.Rows.Add(row);
 
-        if (score > _highestScoreSeen) _highestScoreSeen = score;
+        if (score > _highestScoreSeen)
+            _highestScoreSeen = score;
 
         // Scroll to show the newest row.
         _resultsTable.SelectedRow = _dataTable.Rows.Count - 1;
@@ -447,7 +492,10 @@ public class SearchWindow : Window
 
         if (_search != null)
         {
-            try { _search.Dispose(); }
+            try
+            {
+                _search.Dispose();
+            }
             catch { }
 
             var searched = _search.TotalSeedsSearched;
@@ -479,7 +527,11 @@ public class SearchWindow : Window
         _stopBtn.Enabled = false;
         _stopBtn.Text = "Stopping...";
 
-        try { _cts?.Cancel(); } catch { }
+        try
+        {
+            _cts?.Cancel();
+        }
+        catch { }
 
         OnSearchStopped();
     }
@@ -506,7 +558,10 @@ public class SearchWindow : Window
         }
         catch { }
 
-        try { _cts?.Dispose(); }
+        try
+        {
+            _cts?.Dispose();
+        }
         catch { }
 
         base.Dispose(disposing);
@@ -516,7 +571,8 @@ public class SearchWindow : Window
         string path,
         string configFormat,
         out JamlConfig? config,
-        out string? error)
+        out string? error
+    )
     {
         config = null;
         error = null;

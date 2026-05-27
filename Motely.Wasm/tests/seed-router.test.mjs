@@ -24,18 +24,15 @@ describe("seed router", {
         }
     });
 
-    it("captures single search context for seed and ante-1 boss", () => {
+    it("captures single search context for seed", () => {
         const router = Motely.createSeedRouter(
             "1AAAAAAA",
             MotelyDeck.Red,
             MotelyStake.White
         );
         try {
-            assert.equal(router.getSeed(), "1AAAAAAA");
-            const boss = router.getBossForAnte(1);
-            assert.equal(typeof boss, "number");
-            assert.notEqual(boss, 0);
-            assert.ok(MotelyBossBlind?.[boss], `MotelyBossBlind[${boss}]`);
+            const ctx = router.getContext();
+            assert.equal(ctx.getSeed(), "1AAAAAAA");
         } finally {
             router.dispose();
         }

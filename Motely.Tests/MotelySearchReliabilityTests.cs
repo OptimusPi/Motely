@@ -26,7 +26,8 @@ public sealed class MotelySearchReliabilityTests
     }
 
     /// <summary>Base filter that throws inside the SIMD loop.</summary>
-    private readonly struct ThrowingFilterDesc : IMotelySeedFilterDesc<ThrowingFilterDesc.ThrowingFilter>
+    private readonly struct ThrowingFilterDesc
+        : IMotelySeedFilterDesc<ThrowingFilterDesc.ThrowingFilter>
     {
         public ThrowingFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new();
 
@@ -62,7 +63,9 @@ public sealed class MotelySearchReliabilityTests
     [Fact]
     public async Task RunSearchAsync_SingleThread_SurfacesWorkerException()
     {
-        var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(new ThrowingFilterDesc())
+        var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(
+            new ThrowingFilterDesc()
+        )
             .WithListSearch(["AAAAAAAA"], 1)
             .WithThreadCount(1)
             .WithQuietMode(true);
@@ -79,7 +82,9 @@ public sealed class MotelySearchReliabilityTests
         // not the caller. Previously this would set _completionSource to nothing
         // and the await would hang forever.
         var seeds = ValidSeeds(1024);
-        var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(new ThrowingFilterDesc())
+        var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(
+            new ThrowingFilterDesc()
+        )
             .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(Math.Max(2, Environment.ProcessorCount))
             .WithQuietMode(true);
@@ -96,7 +101,9 @@ public sealed class MotelySearchReliabilityTests
     public void RunSearchUntilCompletion_MultiThread_SurfacesWorkerException()
     {
         var seeds = ValidSeeds(1024);
-        var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(new ThrowingFilterDesc())
+        var settings = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(
+            new ThrowingFilterDesc()
+        )
             .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(Math.Max(2, Environment.ProcessorCount))
             .WithQuietMode(true);

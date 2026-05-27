@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+
 namespace Motely.Filters.Jaml;
 
 public sealed class StartingDrawClause : JamlClause
@@ -9,13 +10,17 @@ public sealed class StartingDrawClause : JamlClause
     public MotelyStandardcardSuit? Suit { get; init; }
 
     public override int EstimatedCost => 7 + MaxAnte;
+
     public override string Describe()
     {
         var parts = new System.Collections.Generic.List<string>(2);
-        if (Rank.HasValue) parts.Add(Rank.Value.ToString());
-        if (Suit.HasValue) parts.Add(Suit.Value.ToString());
+        if (Rank.HasValue)
+            parts.Add(Rank.Value.ToString());
+        if (Suit.HasValue)
+            parts.Add(Suit.Value.ToString());
         return $"startingDraw {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
     }
+
     public override IMotelySeedFilterDesc CreateDesc() => new StartingDrawFilterDesc(this);
 }
 
@@ -33,9 +38,7 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
     {
         private readonly StartingDrawClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause; // Capture in local for lambda

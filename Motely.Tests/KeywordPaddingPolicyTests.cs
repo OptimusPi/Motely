@@ -66,7 +66,9 @@ public class KeywordPaddingPolicyTests
     [Fact]
     public void MotelyKeywordSeedProvider_Throws_ForShortKeywordWithoutPadding()
     {
-        Assert.Throws<ArgumentException>(() => _ = new MotelyKeywordSeedProvider(new[] { "NO" }, null));
+        Assert.Throws<ArgumentException>(() =>
+            _ = new MotelyKeywordSeedProvider(new[] { "NO" }, null)
+        );
     }
 
     [Fact]
@@ -96,8 +98,17 @@ public class KeywordPaddingPolicyTests
     [Fact]
     public void JamlAesthetics_GetSeedCount_Uses_BakedKeywordTotals()
     {
-        Assert.Equal(MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount, JamlAesthetics.GetSeedCount(JamlAesthetic.Gross));
-        Assert.Equal(MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount, JamlAesthetics.GetSeedCount(JamlAesthetic.Funny));
-        Assert.Equal(MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount, JamlAesthetics.GetSeedCount(JamlAesthetic.Balatro));
+        Assert.Equal(
+            MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount,
+            JamlAesthetics.GetSeedCount(JamlAesthetic.Gross)
+        );
+        Assert.Equal(
+            MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount,
+            JamlAesthetics.GetSeedCount(JamlAesthetic.Funny)
+        );
+        Assert.Equal(
+            MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount,
+            JamlAesthetics.GetSeedCount(JamlAesthetic.Balatro)
+        );
     }
 }

@@ -48,8 +48,12 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     private static MotelyJokerRarity GetJokerRarity(MotelyItem item) =>
         (MotelyJokerRarity)((int)item.Type & (int)MotelyJokerRarity.Legendary);
 
-    private static (string Seed, int Ante, string JokerName, int ShopSlotIndex)?
-        FindAnalyzedUncommonShopItem()
+    private static (
+        string Seed,
+        int Ante,
+        string JokerName,
+        int ShopSlotIndex
+    )? FindAnalyzedUncommonShopItem()
     {
         foreach (var seed in AnalyzerSeedCandidates)
         {
@@ -77,8 +81,12 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         return null;
     }
 
-    private static (string Seed, int Ante, string SmallBlindTag, string BigBlindTag)?
-        FindAnalyzedAnteWithDistinctTags()
+    private static (
+        string Seed,
+        int Ante,
+        string SmallBlindTag,
+        string BigBlindTag
+    )? FindAnalyzedAnteWithDistinctTags()
     {
         foreach (var seed in AnalyzerSeedCandidates)
         {
@@ -104,8 +112,12 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         return null;
     }
 
-    private static (string Seed, string TagName, int[] Antes, int Occurrences)?
-        FindAnalyzedRepeatedAnyTag(int minOccurrences)
+    private static (
+        string Seed,
+        string TagName,
+        int[] Antes,
+        int Occurrences
+    )? FindAnalyzedRepeatedAnyTag(int minOccurrences)
     {
         foreach (var seed in AnalyzerSeedCandidates)
         {
@@ -128,7 +140,12 @@ public class SearchConsistencyTests(ITestOutputHelper output)
             foreach (var pair in counts)
             {
                 if (pair.Value >= minOccurrences)
-                    return (seed, pair.Key.ToString(), antesByTag[pair.Key].Order().ToArray(), pair.Value);
+                    return (
+                        seed,
+                        pair.Key.ToString(),
+                        antesByTag[pair.Key].Order().ToArray(),
+                        pair.Value
+                    );
             }
 
             void Record(MotelyTag tag, int ante)
@@ -146,8 +163,11 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         return null;
     }
 
-    private static (string Seed, string VoucherName, int Ante)?
-        FindAnalyzedSingleVoucherOccurrence()
+    private static (
+        string Seed,
+        string VoucherName,
+        int Ante
+    )? FindAnalyzedSingleVoucherOccurrence()
     {
         foreach (var seed in AnalyzerSeedCandidates)
         {
@@ -168,8 +188,7 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         return null;
     }
 
-    private static (string Seed, string TagName, int Ante)?
-        FindAnalyzedSingleTagOccurrence()
+    private static (string Seed, string TagName, int Ante)? FindAnalyzedSingleTagOccurrence()
     {
         foreach (var seed in AnalyzerSeedCandidates)
         {
@@ -182,9 +201,8 @@ public class SearchConsistencyTests(ITestOutputHelper output)
 
             foreach (var ante in analysis.Antes)
             {
-                var targetTag = ante.BigBlindTag != ante.SmallBlindTag
-                    ? ante.BigBlindTag
-                    : ante.SmallBlindTag;
+                var targetTag =
+                    ante.BigBlindTag != ante.SmallBlindTag ? ante.BigBlindTag : ante.SmallBlindTag;
 
                 return (seed, targetTag.ToString(), ante.Ante);
             }
@@ -193,8 +211,12 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         return null;
     }
 
-    private static (string Seed, int Ante, string TarotName, int ShopSlotIndex)?
-        FindAnalyzedTarotShopItem()
+    private static (
+        string Seed,
+        int Ante,
+        string TarotName,
+        int ShopSlotIndex
+    )? FindAnalyzedTarotShopItem()
     {
         foreach (var seed in AnalyzerSeedCandidates)
         {
@@ -267,9 +289,7 @@ public class SearchConsistencyTests(ITestOutputHelper output)
 
         long baselineMatches = search1.MatchingSeeds;
         long baselineSearched = search1.TotalSeedsSearched;
-        output.WriteLine(
-            $"Baseline: searched={baselineSearched}, matched={baselineMatches}"
-        );
+        output.WriteLine($"Baseline: searched={baselineSearched}, matched={baselineMatches}");
 
         // Now verify 2-thread and 4-thread produce the same match count
         foreach (int threadCount in new[] { 2, 4 })
@@ -475,7 +495,10 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedTagShorthand_MatchesEitherBlind()
     {
         var match = FindAnalyzedAnteWithDistinctTags();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed ante with distinct blind tags"
+        );
 
         var derived = match!.Value;
         var jaml = $$"""
@@ -509,7 +532,10 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedLogicalAndFilter_MatchesSameSeed()
     {
         var match = FindAnalyzedAnteWithDistinctTags();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed ante with distinct blind tags"
+        );
 
         var derived = match!.Value;
         var jaml = $$"""
@@ -546,11 +572,13 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedLogicalOrFilter_MatchesSameSeed()
     {
         var match = FindAnalyzedAnteWithDistinctTags();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed ante with distinct blind tags"
+        );
 
         var derived = match!.Value;
-        var alternateTag = Enum
-            .GetValues<MotelyTag>()
+        var alternateTag = Enum.GetValues<MotelyTag>()
             .First(tag =>
                 !string.Equals(tag.ToString(), derived.SmallBlindTag, StringComparison.Ordinal)
                 && !string.Equals(tag.ToString(), derived.BigBlindTag, StringComparison.Ordinal)
@@ -591,7 +619,10 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedNestedAndFilter_MatchesSameSeed()
     {
         var match = FindAnalyzedAnteWithDistinctTags();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed ante with distinct blind tags"
+        );
 
         var derived = match!.Value;
         var jaml = $$"""
@@ -631,7 +662,10 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedTagMinFilter_MatchesSameSeed()
     {
         var match = FindAnalyzedRepeatedAnyTag(2);
-        Assert.True(match.HasValue, "Expected to find at least one analyzed seed with repeated tag occurrences");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed seed with repeated tag occurrences"
+        );
 
         var derived = match!.Value;
         var antes = string.Join(", ", derived.Antes);
@@ -667,7 +701,10 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedTagMinFilter_RejectsSingleOccurrence()
     {
         var match = FindAnalyzedSingleTagOccurrence();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed seed with a tag occurrence");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed seed with a tag occurrence"
+        );
 
         var derived = match!.Value;
         var jaml = $$"""
@@ -702,7 +739,10 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     public async Task AnalyzerDerivedVoucherMinFilter_RejectsSingleOccurrence()
     {
         var match = FindAnalyzedSingleVoucherOccurrence();
-        Assert.True(match.HasValue, "Expected to find at least one analyzed seed with a voucher occurrence");
+        Assert.True(
+            match.HasValue,
+            "Expected to find at least one analyzed seed with a voucher occurrence"
+        );
 
         var derived = match!.Value;
         var jaml = $$"""
@@ -742,7 +782,10 @@ public class SearchConsistencyTests(ITestOutputHelper output)
                 new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
             );
 
-            Assert.True(string.IsNullOrEmpty(analysis.Error), $"Analyzer failed for {seed}: {analysis.Error}");
+            Assert.True(
+                string.IsNullOrEmpty(analysis.Error),
+                $"Analyzer failed for {seed}: {analysis.Error}"
+            );
             Assert.NotEmpty(analysis.Antes);
 
             var ante = analysis.Antes[0];
@@ -757,4 +800,3 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         }
     }
 }
-

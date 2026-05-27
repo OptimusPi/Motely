@@ -51,7 +51,8 @@ internal static class LegendarySoulMatcher
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
 
-            bool isTarget = IsBoosterSlotTargetForLegendary(src, p, pack)
+            bool isTarget =
+                IsBoosterSlotTargetForLegendary(src, p, pack)
                 && (!src.RequireMegaPack || pack.GetPackSize() == MotelyBoosterPackSize.Mega);
 
             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
@@ -95,10 +96,16 @@ internal static class LegendarySoulMatcher
                 {
                     spectralInit = true;
                     // PerkeoObservatory: ante 1 Spectral uses soulOnly false; ante 2+ uses true.
-                    spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: ante != 1);
+                    spectralStream = ctx.CreateSpectralPackSpectralStream(
+                        ante,
+                        soulOnly: ante != 1
+                    );
                 }
 
-                bool hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+                bool hasSoul = ctx.GetNextSpectralPackHasTheSoul(
+                    ref spectralStream,
+                    pack.GetPackSize()
+                );
 
                 if (!isTarget || !hasSoul)
                     continue;
@@ -151,7 +158,8 @@ internal static class LegendarySoulMatcher
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
 
-            bool isTarget = IsBoosterSlotTargetForLegendary(src, p, pack)
+            bool isTarget =
+                IsBoosterSlotTargetForLegendary(src, p, pack)
                 && (!src.RequireMegaPack || pack.GetPackSize() == MotelyBoosterPackSize.Mega);
 
             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
@@ -171,10 +179,16 @@ internal static class LegendarySoulMatcher
                 if (!spectralInit)
                 {
                     spectralInit = true;
-                    spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: ante != 1);
+                    spectralStream = ctx.CreateSpectralPackSpectralStream(
+                        ante,
+                        soulOnly: ante != 1
+                    );
                 }
 
-                bool hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+                bool hasSoul = ctx.GetNextSpectralPackHasTheSoul(
+                    ref spectralStream,
+                    pack.GetPackSize()
+                );
                 if (hasSoul && isTarget)
                     return true;
             }
@@ -195,8 +209,7 @@ internal static class LegendarySoulMatcher
         MotelyBoosterPack pack
     )
     {
-        bool split =
-            src.ArcanaPacks.Length > 0 || src.SpectralPacks.Length > 0;
+        bool split = src.ArcanaPacks.Length > 0 || src.SpectralPacks.Length > 0;
         if (!split)
         {
             for (int i = 0; i < src.BoosterPacks.Length; i++)

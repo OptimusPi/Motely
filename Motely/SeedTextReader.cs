@@ -22,7 +22,12 @@ public static class SeedTextReader
     public static List<string> ParseInlineSeeds(string value)
     {
         var seeds = new List<string>();
-        foreach (var part in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (
+            var part in value.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            )
+        )
         {
             if (!string.IsNullOrWhiteSpace(part))
                 seeds.Add(part);

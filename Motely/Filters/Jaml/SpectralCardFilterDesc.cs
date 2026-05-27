@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+
 namespace Motely.Filters.Jaml;
 
 public sealed class SpectralCardClause : JamlClause
@@ -9,7 +10,10 @@ public sealed class SpectralCardClause : JamlClause
     public SpectralCardSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
-    public override string Describe() => $"Spectral {string.Join(", ", System.Array.ConvertAll(Spectrals, static s => s.ToString()))}";
+
+    public override string Describe() =>
+        $"Spectral {string.Join(", ", System.Array.ConvertAll(Spectrals, static s => s.ToString()))}";
+
     public override IMotelySeedFilterDesc CreateDesc() => new SpectralCardFilterDesc(this);
 }
 
@@ -77,9 +81,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         private readonly int _maxSixthSense = maxSixthSense;
         private readonly int _maxSeance = maxSeance;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Spectrals.Length > 0);

@@ -5,11 +5,11 @@ namespace Motely.CLI;
 internal sealed class ConsoleResultSink : IMotelyResultSink
 {
     // ANSI color codes
-    private const string Reset   = "\x1b[0m";
-    private const string Dim     = "\x1b[2m";
-    private const string Cyan    = "\x1b[96m";
-    private const string Yellow  = "\x1b[93m";
-    private const string Green   = "\x1b[92m";
+    private const string Reset = "\x1b[0m";
+    private const string Dim = "\x1b[2m";
+    private const string Cyan = "\x1b[96m";
+    private const string Yellow = "\x1b[93m";
+    private const string Green = "\x1b[92m";
     private const string BrGreen = "\x1b[32;1m";
 
     private static readonly bool _color = !Console.IsOutputRedirected;
@@ -36,7 +36,11 @@ internal sealed class ConsoleResultSink : IMotelyResultSink
         csb.Append(Cyan).Append(tally.Seed).Append(Reset);
         csb.Append(',');
 
-        string scoreColor = score >= 30 ? BrGreen : score >= 20 ? Green : score >= 10 ? Yellow : Dim;
+        string scoreColor =
+            score >= 30 ? BrGreen
+            : score >= 20 ? Green
+            : score >= 10 ? Yellow
+            : Dim;
         csb.Append(scoreColor).Append(score.ToString().PadLeft(3)).Append(Reset);
 
         for (int i = 0; i < span.Length; i++)

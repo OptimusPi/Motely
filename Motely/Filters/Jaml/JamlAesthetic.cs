@@ -31,7 +31,8 @@ public static class JamlAestheticParser
     public static string[] KnownJamlStringsForSchema() => [.. Known.Select(static e => e.Jaml)];
 
     /// <summary>Comma-separated list for load errors (e.g. “Known: palindrome, foo.”).</summary>
-    public static string KnownJamlStringsDescription() => string.Join(", ", Known.Select(static e => e.Jaml));
+    public static string KnownJamlStringsDescription() =>
+        string.Join(", ", Known.Select(static e => e.Jaml));
 
     public static bool TryParse(string raw, out JamlAesthetic value)
     {

@@ -61,7 +61,9 @@ public sealed class MotelyItemTests
     [Fact]
     public void Parse_round_trips_FormatItem_enhancement_only_playing_card()
     {
-        var item = new MotelyItem(MotelyItemType.AceOfHearts).WithEnhancement(MotelyItemEnhancement.Steel);
+        var item = new MotelyItem(MotelyItemType.AceOfHearts).WithEnhancement(
+            MotelyItemEnhancement.Steel
+        );
         Assert.Equal(item, MotelyItem.Parse(FormatUtils.FormatItem(item)));
     }
 

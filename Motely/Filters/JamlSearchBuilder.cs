@@ -1,18 +1,12 @@
 using System;
-
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Text;
 using Motely;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
-
-using System.Collections.Generic;
-
-using System.Diagnostics;
-
-using System.Diagnostics.CodeAnalysis;
-
-using System.Linq;
-
-using System.Text;
 
 namespace Motely.Filters;
 
@@ -39,26 +33,27 @@ public sealed record JamlSearchPlan(
 }
 
 /// <summary>
-
 /// Builds MotelySearchSettings from a JamlConfig by adding one filter per clause
-
 /// via WithAdditionalFilter. Iterates typed lists and dispatches to specific descriptors.
-
 /// </summary>
-
 public static class JamlSearchBuilder
-
 {
     public static string ExplainPlan(JamlConfig config)
     {
-        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
+        if (
+            !config.Must.HasAnyClauses
+            && !config.Should.HasAnyClauses
+            && !config.MustNot.HasAnyClauses
+        )
             throw new InvalidOperationException("JamlConfig has no clauses.");
         ValidateLegendaryJokerClausesForMustAndShould(config.Must);
         ValidateLegendaryJokerClausesForMustAndShould(config.Should);
         var sb = new StringBuilder();
         sb.AppendLine("# JAML filter eval plan");
         sb.AppendLine();
-        sb.AppendLine("Contract: must clauses evaluate top-to-bottom and short-circuit on first fail. mustNot clauses reject on match. should clauses contribute score but the current scorer evaluates all should clauses.");
+        sb.AppendLine(
+            "Contract: must clauses evaluate top-to-bottom and short-circuit on first fail. mustNot clauses reject on match. should clauses contribute score but the current scorer evaluates all should clauses."
+        );
         AppendClauseSection(sb, "must", config.Must.OrderedClauses);
         AppendClauseSection(sb, "mustNot", config.MustNot.OrderedClauses);
         AppendClauseSection(sb, "should", config.Should.OrderedClauses);
@@ -79,7 +74,11 @@ public static class JamlSearchBuilder
 
     public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal)
     {
-        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
+        if (
+            !config.Must.HasAnyClauses
+            && !config.Should.HasAnyClauses
+            && !config.MustNot.HasAnyClauses
+        )
             throw new InvalidOperationException("JamlConfig has no clauses.");
         ValidateLegendaryJokerClausesForMustAndShould(config.Must);
         ValidateLegendaryJokerClausesForMustAndShould(config.Should);
@@ -91,7 +90,11 @@ public static class JamlSearchBuilder
         // ── MUST: required filters (AND logic) ──
 
         var mustDescs = new List<IMotelySeedFilterDesc>();
-        AddDescsFromSet(mustDescs, orderedMustClauses, LegendaryClauseExpansion.SplitLegendaryEdition);
+        AddDescsFromSet(
+            mustDescs,
+            orderedMustClauses,
+            LegendaryClauseExpansion.SplitLegendaryEdition
+        );
         allMustDescs.AddRange(mustDescs);
         var mustNotDescs = new List<IMotelySeedFilterDesc>();
         AddDescsFromSet(mustNotDescs, orderedMustNotClauses, LegendaryClauseExpansion.None);
@@ -102,10 +105,10 @@ public static class JamlSearchBuilder
 
         // Build settings: first must desc = base filter, rest = additional required filters
 
-        var settings = allMustDescs.Count == 0
-
-            ? CreateSettingsFromDesc(new PassthroughFilterDesc())
-            : CreateSettingsFromDesc(allMustDescs[0]);
+        var settings =
+            allMustDescs.Count == 0
+                ? CreateSettingsFromDesc(new PassthroughFilterDesc())
+                : CreateSettingsFromDesc(allMustDescs[0]);
 
         // Propagate deck and stake from JamlConfig into the search settings
 
@@ -133,12 +136,11 @@ public static class JamlSearchBuilder
         }
 
         int shouldCount = shouldClauses.Count;
-        string headerQuoted = shouldCount > 0
-            ? BuildScoredCsvHeaderQuoted(shouldClauses)
-            : "";
-        var tallyLabels = shouldCount > 0
-            ? shouldClauses.Select(static c => c.Label ?? c.Describe()).ToArray()
-            : [];
+        string headerQuoted = shouldCount > 0 ? BuildScoredCsvHeaderQuoted(shouldClauses) : "";
+        var tallyLabels =
+            shouldCount > 0
+                ? shouldClauses.Select(static c => c.Label ?? c.Describe()).ToArray()
+                : [];
         return new JamlSearchPlan(shouldCount, headerQuoted, tallyLabels) { Settings = settings };
     }
 
@@ -149,7 +151,11 @@ public static class JamlSearchBuilder
     /// </summary>
     public static void EnsureRunnablePlan(JamlConfig config)
     {
-        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
+        if (
+            !config.Must.HasAnyClauses
+            && !config.Should.HasAnyClauses
+            && !config.MustNot.HasAnyClauses
+        )
             return;
         _ = CreatePlan(config);
     }
@@ -201,6 +207,7 @@ public static class JamlSearchBuilder
 
     private static string CsvQuoteField(string? value) =>
         $"\"{(value ?? "").Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+
     private static void AppendClauseSection(
         StringBuilder sb,
         string sectionName,
@@ -232,7 +239,9 @@ public static class JamlSearchBuilder
         var orderedClauses = OrderClausesByEstimatedCost(originalClauses);
         bool changed = !originalClauses.SequenceEqual(orderedClauses);
         sb.AppendLine();
-        sb.AppendLine(changed ? "Runtime order (estimated cheapest-first):" : "Already in runtime order:");
+        sb.AppendLine(
+            changed ? "Runtime order (estimated cheapest-first):" : "Already in runtime order:"
+        );
         for (int i = 0; i < orderedClauses.Count; i++)
         {
             sb.Append(i + 1);
@@ -243,7 +252,9 @@ public static class JamlSearchBuilder
 
     private static string DescribeClausePlanEntry(IJamlClause clause)
     {
-        var label = string.IsNullOrWhiteSpace(clause.Label) ? string.Empty : $" \u2014 label: {clause.Label}";
+        var label = string.IsNullOrWhiteSpace(clause.Label)
+            ? string.Empty
+            : $" \u2014 label: {clause.Label}";
         return $"[cost {clause.EstimatedCost}] {clause.Describe()}{label}";
     }
 
@@ -291,9 +302,8 @@ public static class JamlSearchBuilder
         // Merge consecutive voucher clauses into a single MultiVoucherFilterDesc so the
         // voucher PRNG state is built only once instead of once per clause.
         var voucherClauses = clauses.OfType<VoucherClause>().ToArray();
-        IMotelySeedFilterDesc? mergedVoucher = voucherClauses.Length > 1
-            ? new MultiVoucherFilterDesc(voucherClauses)
-            : null;
+        IMotelySeedFilterDesc? mergedVoucher =
+            voucherClauses.Length > 1 ? new MultiVoucherFilterDesc(voucherClauses) : null;
         bool mergedVoucherEmitted = false;
         for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
         {
@@ -318,7 +328,14 @@ public static class JamlSearchBuilder
 
             if (
                 legendaryExpansion == LegendaryClauseExpansion.SplitLegendaryEdition
-                && TryExpandLegendaryEditionPipeline(c, out List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>? expanded)
+                && TryExpandLegendaryEditionPipeline(
+                    c,
+                    out List<(
+                        IMotelySeedFilterDesc desc,
+                        IJamlClause clause,
+                        string label
+                    )>? expanded
+                )
             )
             {
                 for (int i = 0; i < expanded.Count; i++)
@@ -340,8 +357,10 @@ public static class JamlSearchBuilder
             MixedJokerClause j => j.Sources,
             _ => null,
         };
-        if (sources == null) return false;
-        if (sources.ShopItems.Length > 0 || sources.BoosterPacks.Length > 0) return false;
+        if (sources == null)
+            return false;
+        if (sources.ShopItems.Length > 0 || sources.BoosterPacks.Length > 0)
+            return false;
         return sources.Judgement.Length > 0
             || sources.Wraith.Length > 0
             || sources.RiffRaff.Length > 0
@@ -359,7 +378,8 @@ public static class JamlSearchBuilder
     /// </summary>
     private static bool TryExpandLegendaryEditionPipeline(
         IJamlClause c,
-        [NotNullWhen(true)] out List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>? expanded
+        [NotNullWhen(true)]
+            out List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>? expanded
     )
     {
         expanded = null;
@@ -383,7 +403,11 @@ public static class JamlSearchBuilder
         expanded =
         [
             (new LegendarySoulEditionFilterDesc(lj), c, labelEdition),
-            (new LegendaryJokerFilterDesc(lj, LegendaryJokerPipelineKind.FullPathOnly), c, labelPath),
+            (
+                new LegendaryJokerFilterDesc(lj, LegendaryJokerPipelineKind.FullPathOnly),
+                c,
+                labelPath
+            ),
         ];
         return true;
     }
@@ -400,11 +424,14 @@ public static class JamlSearchBuilder
         for (int i = 0; i < n; i++)
             pairs[i] = (clauses[i].EstimatedCost, i, clauses[i]);
 
-        Array.Sort(pairs, static (a, b) =>
-        {
-            int c = a.cost.CompareTo(b.cost);
-            return c != 0 ? c : a.index.CompareTo(b.index);
-        });
+        Array.Sort(
+            pairs,
+            static (a, b) =>
+            {
+                int c = a.cost.CompareTo(b.cost);
+                return c != 0 ? c : a.index.CompareTo(b.index);
+            }
+        );
 
         var ordered = new IJamlClause[n];
         for (int i = 0; i < n; i++)
@@ -415,7 +442,6 @@ public static class JamlSearchBuilder
     private static IMotelySearchSettings CreateSettingsFromDesc(IMotelySeedFilterDesc desc)
     {
         return desc switch
-
         {
             JokerFilterDesc d => new MotelySearchSettings<JokerFilterDesc.JokerFilter>(d),
             CommonJokerFilterDesc d =>
@@ -423,22 +449,21 @@ public static class JamlSearchBuilder
             UncommonJokerFilterDesc d =>
                 new MotelySearchSettings<UncommonJokerFilterDesc.UncommonJokerFilter>(d),
             RareJokerFilterDesc d => new MotelySearchSettings<RareJokerFilterDesc.RareJokerFilter>(
-
                 d
-
             ),
             MixedJokerFilterDesc d =>
                 new MotelySearchSettings<MixedJokerFilterDesc.MixedJokerFilter>(d),
             LegendaryJokerFilterDesc d =>
                 new MotelySearchSettings<LegendaryJokerFilterDesc.LegendaryJokerFilter>(d),
             LegendarySoulEditionFilterDesc d =>
-                new MotelySearchSettings<LegendarySoulEditionFilterDesc.LegendarySoulEditionFilter>(d),
+                new MotelySearchSettings<LegendarySoulEditionFilterDesc.LegendarySoulEditionFilter>(
+                    d
+                ),
             VoucherFilterDesc d => new MotelySearchSettings<VoucherFilterDesc.VoucherFilter>(d),
-            MultiVoucherFilterDesc d => new MotelySearchSettings<MultiVoucherFilterDesc.MultiVoucherFilter>(d),
+            MultiVoucherFilterDesc d =>
+                new MotelySearchSettings<MultiVoucherFilterDesc.MultiVoucherFilter>(d),
             TarotCardFilterDesc d => new MotelySearchSettings<TarotCardFilterDesc.TarotCardFilter>(
-
                 d
-
             ),
             SpectralCardFilterDesc d =>
                 new MotelySearchSettings<SpectralCardFilterDesc.SpectralCardFilter>(d),
@@ -457,9 +482,7 @@ public static class JamlSearchBuilder
             LuckyMoneyFilterDesc d =>
                 new MotelySearchSettings<LuckyMoneyFilterDesc.LuckyMoneyFilter>(d),
             LuckyMultFilterDesc d => new MotelySearchSettings<LuckyMultFilterDesc.LuckyMultFilter>(
-
                 d
-
             ),
             MisprintMultFilterDesc d =>
                 new MotelySearchSettings<MisprintMultFilterDesc.MisprintMultFilter>(d),
@@ -493,12 +516,8 @@ public static class JamlSearchBuilder
             LegendaryJokerShopSoulFilterDesc d =>
                 new MotelySearchSettings<LegendaryJokerShopSoulFilterDesc.FilterStruct>(d),
             _ => throw new NotSupportedException(
-
                 $"Unknown filter desc type: {desc.GetType().Name}"
-
             ),
         };
     }
-
 }
-

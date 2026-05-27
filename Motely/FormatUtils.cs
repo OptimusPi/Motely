@@ -316,7 +316,8 @@ public static class FormatUtils
         }
 
         // Pure type (no edition/enhancement prefix) — e.g. "2 of Clubs", "The World"
-        if (TryResolveMotelyTypeTail(
+        if (
+            TryResolveMotelyTypeTail(
                 str,
                 MotelyItemEdition.None,
                 MotelyItemEnhancement.None,
@@ -324,7 +325,9 @@ public static class FormatUtils
                 eternal,
                 perishable,
                 rental,
-                out item))
+                out item
+            )
+        )
             return true;
 
         var words = str.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -334,17 +337,21 @@ public static class FormatUtils
         var edition = MotelyItemEdition.None;
         var enhancement = MotelyItemEnhancement.None;
 
-        if (words.Count > 0
+        if (
+            words.Count > 0
             && TryParseEnumMemberName(words[0], out MotelyItemEdition ed)
-            && ed != MotelyItemEdition.None)
+            && ed != MotelyItemEdition.None
+        )
         {
             edition = ed;
             words.RemoveAt(0);
         }
 
-        if (words.Count > 0
+        if (
+            words.Count > 0
             && TryParseEnumMemberName(words[0], out MotelyItemEnhancement eh)
-            && eh != MotelyItemEnhancement.None)
+            && eh != MotelyItemEnhancement.None
+        )
         {
             enhancement = eh;
             words.RemoveAt(0);
@@ -404,7 +411,13 @@ public static class FormatUtils
 
         foreach (MotelyStandardCard card in Enum.GetValues<MotelyStandardCard>())
         {
-            if (string.Equals(FormatStandardcard(card), typeTail, StringComparison.OrdinalIgnoreCase))
+            if (
+                string.Equals(
+                    FormatStandardcard(card),
+                    typeTail,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 item = new MotelyItem(card);
                 ApplyMotelyItemModifiers(
@@ -422,7 +435,13 @@ public static class FormatUtils
 
         foreach (MotelyItemType t in Enum.GetValues<MotelyItemType>())
         {
-            if (string.Equals(FormatDisplayName(t.ToString()), typeTail, StringComparison.OrdinalIgnoreCase))
+            if (
+                string.Equals(
+                    FormatDisplayName(t.ToString()),
+                    typeTail,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 item = new MotelyItem(t);
                 ApplyMotelyItemModifiers(

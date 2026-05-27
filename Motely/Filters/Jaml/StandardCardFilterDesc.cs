@@ -13,16 +13,23 @@ public sealed class StandardCardClause : JamlClause
     public StandardCardSourceConfig Sources { get; init; } = new();
 
     public override int EstimatedCost => 8 + MaxAnte;
+
     public override string Describe()
     {
         var parts = new System.Collections.Generic.List<string>(5);
-        if (Rank.HasValue) parts.Add(Rank.Value.ToString());
-        if (Suit.HasValue) parts.Add(Suit.Value.ToString());
-        if (Enhancement.HasValue) parts.Add(Enhancement.Value.ToString());
-        if (Seal.HasValue) parts.Add(Seal.Value.ToString());
-        if (Edition.HasValue) parts.Add(Edition.Value.ToString());
+        if (Rank.HasValue)
+            parts.Add(Rank.Value.ToString());
+        if (Suit.HasValue)
+            parts.Add(Suit.Value.ToString());
+        if (Enhancement.HasValue)
+            parts.Add(Enhancement.Value.ToString());
+        if (Seal.HasValue)
+            parts.Add(Seal.Value.ToString());
+        if (Edition.HasValue)
+            parts.Add(Edition.Value.ToString());
         return $"standardCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
     }
+
     public override IMotelySeedFilterDesc CreateDesc() => new StandardCardFilterDesc(this);
 }
 
@@ -63,9 +70,7 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;
@@ -170,11 +175,16 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool MatchesStandardCard(MotelyItem item, StandardCardClause clause)
         {
-            if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value) return false;
-            if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value) return false;
-            if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value) return false;
-            if (clause.Seal.HasValue && item.Seal != clause.Seal.Value) return false;
-            if (clause.Edition.HasValue && item.Edition != clause.Edition.Value) return false;
+            if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value)
+                return false;
+            if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value)
+                return false;
+            if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value)
+                return false;
+            if (clause.Seal.HasValue && item.Seal != clause.Seal.Value)
+                return false;
+            if (clause.Edition.HasValue && item.Edition != clause.Edition.Value)
+                return false;
             return true;
         }
     }

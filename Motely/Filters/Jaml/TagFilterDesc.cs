@@ -15,8 +15,10 @@ public sealed class TagClause : JamlClause
     public required int[] Rolls { get; init; }
 
     public override int EstimatedCost => 3 + MaxAnte;
+
     public override string Describe() =>
         $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
+
     public override IMotelySeedFilterDesc CreateDesc() => new TagFilterDesc(this);
 }
 
@@ -38,16 +40,13 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
     {
         private readonly TagClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Tags.Length > 0);
             var clause = _clause;
             int maxDraw = MapFeatureRolls.MaxRollIndex(clause.Rolls);
-            Span<VectorEnum256<MotelyTag>> draws =
-                stackalloc VectorEnum256<MotelyTag>[maxDraw + 1];
+            Span<VectorEnum256<MotelyTag>> draws = stackalloc VectorEnum256<MotelyTag>[maxDraw + 1];
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
 

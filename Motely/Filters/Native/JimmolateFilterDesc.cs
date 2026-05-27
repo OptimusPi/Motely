@@ -16,7 +16,8 @@ public readonly struct JimmolateFilterDesc(MotelyIndividualSeedSearcher searcher
     public readonly JimmolateFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
         new(_searcher);
 
-    public readonly struct JimmolateFilter(MotelyIndividualSeedSearcher searcher) : IMotelySeedFilter
+    public readonly struct JimmolateFilter(MotelyIndividualSeedSearcher searcher)
+        : IMotelySeedFilter
     {
         private readonly MotelyIndividualSeedSearcher _searcher = searcher;
 

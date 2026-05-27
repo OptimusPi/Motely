@@ -87,7 +87,13 @@ public sealed class MotelyLakeSeedSink : IDisposable
 
             _disposed = true;
 
-            try { _appender.Close(); } catch { /* swallow on dispose */ }
+            try
+            {
+                _appender.Close();
+            }
+            catch
+            { /* swallow on dispose */
+            }
             _appender.Dispose();
             _connection.Dispose();
         }
@@ -103,11 +109,7 @@ public sealed class MotelyLakeSeedSink : IDisposable
     internal static string[] BuildUniqueColumnNames(IReadOnlyList<string> tallyLabels)
     {
         var result = new string[tallyLabels.Count];
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "seed",
-            "score",
-        };
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "seed", "score" };
 
         for (int i = 0; i < tallyLabels.Count; i++)
         {

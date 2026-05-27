@@ -202,7 +202,9 @@ public sealed class MotelyKeywordSeedProvider : IMotelySeedProvider
     public MotelyKeywordSeedProvider(IEnumerable<string> keywords, char[]? paddingChars = null)
     {
         SeedCount = MotelyGlobals.GetPaddedSeedCountForKeywordsLong(keywords, paddingChars);
-        _enumerator = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, paddingChars).GetEnumerator();
+        _enumerator = MotelyGlobals
+            .GeneratePaddedSeedsForKeywords(keywords, paddingChars)
+            .GetEnumerator();
     }
 
     public ReadOnlySpan<char> NextSeed()

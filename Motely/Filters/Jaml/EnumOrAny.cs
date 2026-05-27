@@ -11,8 +11,10 @@ namespace Motely.Filters.Jaml;
 /// over <c>{ "const": "any" }</c> and the typed enum's <c>$ref</c> by the file-based generator
 /// at the repo root (<c>dotnet run jaml-schema.cs</c>).
 /// </remarks>
-public readonly record struct EnumOrAny<T>(bool IsAny, T Value) where T : struct, Enum
+public readonly record struct EnumOrAny<T>(bool IsAny, T Value)
+    where T : struct, Enum
 {
     public static EnumOrAny<T> Any => new(true, default);
+
     public static EnumOrAny<T> Of(T value) => new(false, value);
 }

@@ -28,10 +28,9 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
         return new ContextCapturingRouter(this);
     }
 
-
     private readonly struct ContextCapturingRouter(MotelySeedRouterDesc desc) : IMotelySeedRouter
     {
-        // During the SIMD pipeline setup, this is injected from MotelySearch :) 
+        // During the SIMD pipeline setup, this is injected from MotelySearch :)
         public void InjectSingleSeedContext(in MotelySingleSearchContext ctx)
         {
             // These stay alive as long as the router isn't disposed.

@@ -16,8 +16,10 @@ public sealed class VoucherClause : JamlClause
     public required int[] Rolls { get; init; }
 
     public override int EstimatedCost => 4 + MaxAnte;
+
     public override string Describe() =>
         $"voucher {string.Join(", ", System.Array.ConvertAll(Vouchers, static v => v.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
+
     public override IMotelySeedFilterDesc CreateDesc() => new VoucherFilterDesc(this);
 }
 
@@ -47,9 +49,7 @@ public struct VoucherFilterDesc(VoucherClause clause)
         private readonly VoucherClause _clause = clause;
         private readonly int _maxAnte = maxAnte;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Vouchers.Length > 0);
@@ -143,7 +143,6 @@ public struct VoucherFilterDesc(VoucherClause clause)
             {
                 matchMask = VectorEnum256.Equals(vouchers, clause.Vouchers[0]);
             }
-
             else
             {
                 foreach (var v in clause.Vouchers)
@@ -181,7 +180,8 @@ public struct MultiVoucherFilterDesc(VoucherClause[] clauses)
         int maxAnte = 0;
         foreach (var c in _clauses)
             for (int i = 0; i < c.Antes.Length; i++)
-                if (c.Antes[i] > maxAnte) maxAnte = c.Antes[i];
+                if (c.Antes[i] > maxAnte)
+                    maxAnte = c.Antes[i];
 
         for (int ante = 1; ante <= maxAnte; ante++)
             ctx.CacheAnteFirstVoucher(ante);
@@ -215,11 +215,16 @@ public struct MultiVoucherFilterDesc(VoucherClause[] clauses)
                     var anteList = clauses[ci].Antes;
                     for (int ai = 0; ai < anteList.Length; ai++)
                     {
-                        if (anteList[ai] == ante) { anyTarget = true; break; }
+                        if (anteList[ai] == ante)
+                        {
+                            anyTarget = true;
+                            break;
+                        }
                     }
                 }
 
-                if (!anyTarget) continue;
+                if (!anyTarget)
+                    continue;
 
                 // Accumulate matches for each targeting clause
                 for (int ci = 0; ci < clauses.Length; ci++)
@@ -227,8 +232,13 @@ public struct MultiVoucherFilterDesc(VoucherClause[] clauses)
                     var clause = clauses[ci];
                     bool isTarget = false;
                     for (int ai = 0; ai < clause.Antes.Length; ai++)
-                        if (clause.Antes[ai] == ante) { isTarget = true; break; }
-                    if (!isTarget) continue;
+                        if (clause.Antes[ai] == ante)
+                        {
+                            isTarget = true;
+                            break;
+                        }
+                    if (!isTarget)
+                        continue;
 
                     matchCounts[ci] = VoucherFilterDesc.VoucherFilter.AccumulateVoucherRolls(
                         ref ctx,

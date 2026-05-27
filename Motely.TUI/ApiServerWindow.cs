@@ -38,8 +38,10 @@ public class ApiServerWindow : Window
             Y = 1,
             Text = "Starting...",
         };
-        _statusLabel.ColorScheme =
-            new ColorScheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) };
+        _statusLabel.ColorScheme = new ColorScheme()
+        {
+            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey),
+        };
         Add(_statusLabel);
 
         // URL (clickable hint) - full width to show complete URL
@@ -47,11 +49,13 @@ public class ApiServerWindow : Window
         {
             X = 1,
             Y = 2,
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             Text = _serverUrl,
         };
-        _urlLabel.ColorScheme =
-            new ColorScheme() { Normal = new Attribute(BalatroTheme.Blue, BalatroTheme.ModalGrey) };
+        _urlLabel.ColorScheme = new ColorScheme()
+        {
+            Normal = new Attribute(BalatroTheme.Blue, BalatroTheme.ModalGrey),
+        };
         _urlLabel.MouseEvent += (s, e) =>
         {
             if (e.Flags.HasFlag(MouseFlags.Button1Clicked))
@@ -82,8 +86,8 @@ public class ApiServerWindow : Window
         {
             X = 1,
             Y = 5,
-            Width = Dim.Fill()! -2,
-            Height = Dim.Fill()! -4, // Leave room for buttons at bottom
+            Width = Dim.Fill()! - 2,
+            Height = Dim.Fill()! - 4, // Leave room for buttons at bottom
             Title = "Request Log",
         };
         logFrame.ColorScheme = BalatroTheme.InnerPanel;
@@ -124,12 +128,11 @@ public class ApiServerWindow : Window
             WordWrap = true,
             CanFocus = true,
         };
-        _logView.ColorScheme =
-            new ColorScheme()
-            {
-                Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
-                Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
-            };
+        _logView.ColorScheme = new ColorScheme()
+        {
+            Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+        };
         logFrame.Add(_logView);
 
         // Stop Server button - red, above Back
@@ -138,7 +141,7 @@ public class ApiServerWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(3),
             Text = "Stop Server Host",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         _stopButton.ColorScheme = BalatroTheme.RedButton;
@@ -151,7 +154,7 @@ public class ApiServerWindow : Window
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         backButton.ColorScheme = BalatroTheme.BackButton;
@@ -203,14 +206,14 @@ public class ApiServerWindow : Window
             Application.Invoke(() =>
             {
                 _statusLabel.Text = "Running";
-                _statusLabel.ColorScheme =
-                    new ColorScheme()
-                    {
-                        Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-                    };
+                _statusLabel.ColorScheme = new ColorScheme()
+                {
+                    Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
+                };
             });
 
-            var version = typeof(global::Motely.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
+            var version =
+                typeof(global::Motely.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
             LogMessage($"Hosting Motely API v{version}");
             LogMessage($"Listening on {_serverUrl}");
             LogMessage("Web UI available at same URL");
@@ -226,11 +229,10 @@ public class ApiServerWindow : Window
             Application.Invoke(() =>
             {
                 _statusLabel.Text = "Failed";
-                _statusLabel.ColorScheme =
-                    new ColorScheme()
-                    {
-                        Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-                    };
+                _statusLabel.ColorScheme = new ColorScheme()
+                {
+                    Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+                };
             });
         }
         finally
@@ -265,11 +267,10 @@ public class ApiServerWindow : Window
             Application.Invoke(() =>
             {
                 _statusLabel.Text = "Stopped";
-                _statusLabel.ColorScheme =
-                    new ColorScheme()
-                    {
-                        Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
-                    };
+                _statusLabel.ColorScheme = new ColorScheme()
+                {
+                    Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
+                };
                 _stopButton.Visible = false; // Hide when server stops (back button remains)
             });
 
@@ -548,5 +549,4 @@ public class ApiServerWindow : Window
                 _window.LogMessage(value);
         }
     }
-
 }

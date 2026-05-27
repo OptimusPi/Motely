@@ -50,7 +50,11 @@ public static class JamlScoring
             var bossStream = ctx.CreateBossStream();
             var bossState = new MotelyRunState();
             for (int ante = 1; ante <= maxBossAnte; ante++)
-                runState.CachedBosses[ante] = ctx.GetBossForAnte(ref bossStream, ante, ref bossState);
+                runState.CachedBosses[ante] = ctx.GetBossForAnte(
+                    ref bossStream,
+                    ante,
+                    ref bossState
+                );
         }
     }
 
@@ -110,7 +114,8 @@ public static class JamlScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static int CapScoreCountForTesting(int count, IJamlClause clause) => CapScoreCount(count, clause);
+    internal static int CapScoreCountForTesting(int count, IJamlClause clause) =>
+        CapScoreCount(count, clause);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CapScoreCount(int count, IJamlClause clause)
@@ -128,7 +133,11 @@ public static class JamlScoring
         return 0;
     }
 
-    private static int CountAndOccurrences(ref MotelySingleSearchContext ctx, AndClause clause, ref MotelyRunState runState)
+    private static int CountAndOccurrences(
+        ref MotelySingleSearchContext ctx,
+        AndClause clause,
+        ref MotelyRunState runState
+    )
     {
         Debug.Assert(
             clause.Clauses.Length > 0,
@@ -150,13 +159,20 @@ public static class JamlScoring
         return clause.Score != 0 ? total : 1;
     }
 
-    private static int CountOrOccurrences(ref MotelySingleSearchContext ctx, OrClause clause, ref MotelyRunState runState)
+    private static int CountOrOccurrences(
+        ref MotelySingleSearchContext ctx,
+        OrClause clause,
+        ref MotelyRunState runState
+    )
     {
         Debug.Assert(
             clause.Clauses.Length > 0,
             "OrClause should not be empty after JAML load (validator / loader bug)."
         );
-        Debug.Assert(clause.Min >= 1, "OrClause.Min must be >= 1 after JAML load (validator / loader bug).");
+        Debug.Assert(
+            clause.Min >= 1,
+            "OrClause.Min must be >= 1 after JAML load (validator / loader bug)."
+        );
 
         int matched = 0;
         int total = 0;
@@ -200,7 +216,11 @@ public static class JamlScoring
         };
     }
 
-    private static int CountRawAndOccurrences(ref MotelySingleSearchContext ctx, AndClause clause, ref MotelyRunState runState)
+    private static int CountRawAndOccurrences(
+        ref MotelySingleSearchContext ctx,
+        AndClause clause,
+        ref MotelyRunState runState
+    )
     {
         Debug.Assert(
             clause.Clauses.Length > 0,
@@ -219,13 +239,20 @@ public static class JamlScoring
         return clause.Score != 0 ? total : 1;
     }
 
-    private static int CountRawOrOccurrences(ref MotelySingleSearchContext ctx, OrClause clause, ref MotelyRunState runState)
+    private static int CountRawOrOccurrences(
+        ref MotelySingleSearchContext ctx,
+        OrClause clause,
+        ref MotelyRunState runState
+    )
     {
         Debug.Assert(
             clause.Clauses.Length > 0,
             "OrClause should not be empty after JAML load (validator / loader bug)."
         );
-        Debug.Assert(clause.Min >= 1, "OrClause.Min must be >= 1 after JAML load (validator / loader bug).");
+        Debug.Assert(
+            clause.Min >= 1,
+            "OrClause.Min must be >= 1 after JAML load (validator / loader bug)."
+        );
 
         int matched = 0;
         int total = 0;
@@ -275,7 +302,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountStandardCardOccurrences(ref MotelySingleSearchContext ctx, StandardCardClause clause)
+    private static int CountStandardCardOccurrences(
+        ref MotelySingleSearchContext ctx,
+        StandardCardClause clause
+    )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
@@ -286,9 +316,14 @@ public static class JamlScoring
         {
             // Per-ante reachability: ante 1 normally caps at slot 3 (4 packs). Raise
             // earlyAntesMaxPack to 5 on the clause to include Hieroglyph scenarios.
-            int maxPack = ante == 1
-                ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                : (userMaxPack < MotelyGlobals.LateAntesMaxPackSlot ? userMaxPack : MotelyGlobals.LateAntesMaxPackSlot);
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -309,7 +344,10 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Standard)
                         continue;
-                    var contents = ctx.GetNextStandardPackContents(ref cardStream, pack.GetPackSize());
+                    var contents = ctx.GetNextStandardPackContents(
+                        ref cardStream,
+                        pack.GetPackSize()
+                    );
                     if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
@@ -321,7 +359,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountTarotCardOccurrences(ref MotelySingleSearchContext ctx, TarotCardClause clause)
+    private static int CountTarotCardOccurrences(
+        ref MotelySingleSearchContext ctx,
+        TarotCardClause clause
+    )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
@@ -333,9 +374,14 @@ public static class JamlScoring
         foreach (int ante in clause.Antes)
         {
             // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack = ante == 1
-                ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                : (userMaxPack < MotelyGlobals.LateAntesMaxPackSlot ? userMaxPack : MotelyGlobals.LateAntesMaxPackSlot);
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -373,7 +419,10 @@ public static class JamlScoring
                     if (packType == MotelyBoosterPackType.Arcana)
                     {
                         hadNaturalArcanaPack = true;
-                        var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                        var contents = ctx.GetNextArcanaPackContents(
+                            ref tarotStream,
+                            pack.GetPackSize()
+                        );
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
@@ -385,7 +434,10 @@ public static class JamlScoring
                     // weighted rolls had no Arcana — uses pack stream order, not ante-scaled indices.
                     if (charmWant && !hadNaturalArcanaPack && weightedShopDrawNumber == 2)
                     {
-                        var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                        var contents = ctx.GetNextArcanaPackContents(
+                            ref tarotStream,
+                            pack.GetPackSize()
+                        );
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
@@ -422,7 +474,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountSpectralCardOccurrences(ref MotelySingleSearchContext ctx, SpectralCardClause clause)
+    private static int CountSpectralCardOccurrences(
+        ref MotelySingleSearchContext ctx,
+        SpectralCardClause clause
+    )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
@@ -434,9 +489,14 @@ public static class JamlScoring
         foreach (int ante in clause.Antes)
         {
             // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack = ante == 1
-                ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                : (userMaxPack < MotelyGlobals.LateAntesMaxPackSlot ? userMaxPack : MotelyGlobals.LateAntesMaxPackSlot);
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -474,7 +534,10 @@ public static class JamlScoring
                     if (packType == MotelyBoosterPackType.Spectral)
                     {
                         hadNaturalSpectralPack = true;
-                        var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                        var contents = ctx.GetNextSpectralPackContents(
+                            ref spectralStream,
+                            pack.GetPackSize()
+                        );
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
@@ -484,7 +547,10 @@ public static class JamlScoring
 
                     if (etherealWant && !hadNaturalSpectralPack && weightedShopDrawNumber == 2)
                     {
-                        var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                        var contents = ctx.GetNextSpectralPackContents(
+                            ref spectralStream,
+                            pack.GetPackSize()
+                        );
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
@@ -519,7 +585,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountPlanetCardOccurrences(ref MotelySingleSearchContext ctx, PlanetCardClause clause)
+    private static int CountPlanetCardOccurrences(
+        ref MotelySingleSearchContext ctx,
+        PlanetCardClause clause
+    )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
@@ -529,9 +598,14 @@ public static class JamlScoring
         foreach (int ante in clause.Antes)
         {
             // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack = ante == 1
-                ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                : (userMaxPack < MotelyGlobals.LateAntesMaxPackSlot ? userMaxPack : MotelyGlobals.LateAntesMaxPackSlot);
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -552,7 +626,10 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Celestial)
                         continue;
-                    var contents = ctx.GetNextCelestialPackContents(ref planetStream, pack.GetPackSize());
+                    var contents = ctx.GetNextCelestialPackContents(
+                        ref planetStream,
+                        pack.GetPackSize()
+                    );
                     if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
@@ -564,7 +641,11 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, VoucherClause clause, ref MotelyRunState runState)
+    private static int CountVoucherOccurrences(
+        ref MotelySingleSearchContext ctx,
+        VoucherClause clause,
+        ref MotelyRunState runState
+    )
     {
         // Start from a fresh state — PrepareRunState already activated vouchers into runState,
         // which would cause GetAnteFirstVoucher to skip them and return wrong results.
@@ -629,7 +710,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountStartingDrawOccurrences(ref MotelySingleSearchContext ctx, StartingDrawClause clause)
+    private static int CountStartingDrawOccurrences(
+        ref MotelySingleSearchContext ctx,
+        StartingDrawClause clause
+    )
     {
         int count = 0;
         foreach (int ante in clause.Antes)
@@ -643,8 +727,10 @@ public static class JamlScoring
             for (int i = 0; i < handSize; i++)
             {
                 var card = deck[deck.Length - handSize + i];
-                bool matchRank = !clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value;
-                bool matchSuit = !clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value;
+                bool matchRank =
+                    !clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value;
+                bool matchSuit =
+                    !clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value;
                 if (matchRank && matchSuit)
                     count++;
             }
@@ -652,7 +738,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountErraticRankOccurrences(ref MotelySingleSearchContext ctx, ErraticRankClause clause)
+    private static int CountErraticRankOccurrences(
+        ref MotelySingleSearchContext ctx,
+        ErraticRankClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateErraticDeckPrngStream();
@@ -662,7 +751,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountErraticSuitOccurrences(ref MotelySingleSearchContext ctx, ErraticSuitClause clause)
+    private static int CountErraticSuitOccurrences(
+        ref MotelySingleSearchContext ctx,
+        ErraticSuitClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateErraticDeckPrngStream();
@@ -672,21 +764,29 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountErraticCardOccurrences(ref MotelySingleSearchContext ctx, ErraticCardClause clause)
+    private static int CountErraticCardOccurrences(
+        ref MotelySingleSearchContext ctx,
+        ErraticCardClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateErraticDeckPrngStream();
         for (int i = 0; i < 52; i++)
         {
             var card = ctx.GetNextErraticDeckCard(ref stream);
-            if ((!clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value)
-                && (!clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value))
+            if (
+                (!clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value)
+                && (!clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value)
+            )
                 count++;
         }
         return count;
     }
 
-    private static int CountLuckyMoneyOccurrences(ref MotelySingleSearchContext ctx, LuckyMoneyClause clause)
+    private static int CountLuckyMoneyOccurrences(
+        ref MotelySingleSearchContext ctx,
+        LuckyMoneyClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateLuckyCardMoneyStream(isCached: false);
@@ -711,7 +811,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountLuckyMultOccurrences(ref MotelySingleSearchContext ctx, LuckyMultClause clause)
+    private static int CountLuckyMultOccurrences(
+        ref MotelySingleSearchContext ctx,
+        LuckyMultClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateLuckyCardMultStream(isCached: false);
@@ -736,7 +839,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountMisprintMultOccurrences(ref MotelySingleSearchContext ctx, MisprintMultClause clause)
+    private static int CountMisprintMultOccurrences(
+        ref MotelySingleSearchContext ctx,
+        MisprintMultClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateMisprintPrngStream();
@@ -761,7 +867,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountWheelOfFortuneOccurrences(ref MotelySingleSearchContext ctx, WheelOfFortuneClause clause)
+    private static int CountWheelOfFortuneOccurrences(
+        ref MotelySingleSearchContext ctx,
+        WheelOfFortuneClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateWheelOfFortuneStream();
@@ -786,7 +895,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountCavendishExtinctOccurrences(ref MotelySingleSearchContext ctx, CavendishExtinctClause clause)
+    private static int CountCavendishExtinctOccurrences(
+        ref MotelySingleSearchContext ctx,
+        CavendishExtinctClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateCavendishPrngStream(false);
@@ -811,7 +923,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountGrosMichelExtinctOccurrences(ref MotelySingleSearchContext ctx, GrosMichelExtinctClause clause)
+    private static int CountGrosMichelExtinctOccurrences(
+        ref MotelySingleSearchContext ctx,
+        GrosMichelExtinctClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateGrosMichelPrngStream(false);
@@ -836,7 +951,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountSpaceLevelupOccurrences(ref MotelySingleSearchContext ctx, SpaceLevelupClause clause)
+    private static int CountSpaceLevelupOccurrences(
+        ref MotelySingleSearchContext ctx,
+        SpaceLevelupClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateSpacePrngStream();
@@ -861,7 +979,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountBusinessPayoutOccurrences(ref MotelySingleSearchContext ctx, BusinessPayoutClause clause)
+    private static int CountBusinessPayoutOccurrences(
+        ref MotelySingleSearchContext ctx,
+        BusinessPayoutClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateBusinessPrngStream();
@@ -886,7 +1007,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountBloodstoneTriggerOccurrences(ref MotelySingleSearchContext ctx, BloodstoneTriggerClause clause)
+    private static int CountBloodstoneTriggerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        BloodstoneTriggerClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateBloodstonePrngStream();
@@ -906,7 +1030,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountParkingPayoutOccurrences(ref MotelySingleSearchContext ctx, ParkingPayoutClause clause)
+    private static int CountParkingPayoutOccurrences(
+        ref MotelySingleSearchContext ctx,
+        ParkingPayoutClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateParkingPrngStream();
@@ -926,7 +1053,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountGlassDestroyOccurrences(ref MotelySingleSearchContext ctx, GlassDestroyClause clause)
+    private static int CountGlassDestroyOccurrences(
+        ref MotelySingleSearchContext ctx,
+        GlassDestroyClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateGlassPrngStream();
@@ -946,7 +1076,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountWheelStaysFlippedOccurrences(ref MotelySingleSearchContext ctx, WheelStaysFlippedClause clause)
+    private static int CountWheelStaysFlippedOccurrences(
+        ref MotelySingleSearchContext ctx,
+        WheelStaysFlippedClause clause
+    )
     {
         int count = 0;
         var stream = ctx.CreateTheWheelPrngStream();
@@ -966,7 +1099,10 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountLegendaryJokerOccurrences(ref MotelySingleSearchContext ctx, LegendaryJokerClause clause)
+    private static int CountLegendaryJokerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        LegendaryJokerClause clause
+    )
     {
         int count = 0;
         var sources = clause.Sources;
@@ -976,46 +1112,135 @@ public static class JamlScoring
         foreach (int ante in clause.Antes)
         {
             // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack = ante == 1
-                ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                : (userMaxPack < MotelyGlobals.LateAntesMaxPackSlot ? userMaxPack : MotelyGlobals.LateAntesMaxPackSlot);
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
             count += LegendarySoulMatcher.CountAnte(ref ctx, ante, clause, maxPack);
         }
 
         return count;
     }
 
-    private static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, JokerClause clause, ref MotelyRunState runState)
+    private static int CountJokerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        JokerClause clause,
+        ref MotelyRunState runState
+    )
     {
         return CountJokerClauseOccurrences(ref ctx, clause, ref runState);
     }
 
-    private static int CountCommonJokerOccurrences(ref MotelySingleSearchContext ctx, CommonJokerClause clause, ref MotelyRunState runState)
+    private static int CountCommonJokerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        CommonJokerClause clause,
+        ref MotelyRunState runState
+    )
     {
         if (clause.IsWildcard)
-            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, MotelyJokerRarity.Common, clause.Edition, clause.Stickers, ref runState);
-        return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
+            return CountJokerOccurrencesWildcard(
+                ref ctx,
+                clause.Antes,
+                clause.Sources,
+                MotelyJokerRarity.Common,
+                clause.Edition,
+                clause.Stickers,
+                ref runState
+            );
+        return CountJokerOccurrencesGeneric(
+            ref ctx,
+            clause.Antes,
+            clause.Sources,
+            clause.Jokers,
+            clause.Edition,
+            clause.Stickers,
+            ref runState
+        );
     }
 
-    private static int CountUncommonJokerOccurrences(ref MotelySingleSearchContext ctx, UncommonJokerClause clause, ref MotelyRunState runState)
+    private static int CountUncommonJokerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        UncommonJokerClause clause,
+        ref MotelyRunState runState
+    )
     {
         if (clause.IsWildcard)
-            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, MotelyJokerRarity.Uncommon, clause.Edition, clause.Stickers, ref runState);
-        return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
+            return CountJokerOccurrencesWildcard(
+                ref ctx,
+                clause.Antes,
+                clause.Sources,
+                MotelyJokerRarity.Uncommon,
+                clause.Edition,
+                clause.Stickers,
+                ref runState
+            );
+        return CountJokerOccurrencesGeneric(
+            ref ctx,
+            clause.Antes,
+            clause.Sources,
+            clause.Jokers,
+            clause.Edition,
+            clause.Stickers,
+            ref runState
+        );
     }
 
-    private static int CountRareJokerOccurrences(ref MotelySingleSearchContext ctx, RareJokerClause clause, ref MotelyRunState runState)
+    private static int CountRareJokerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        RareJokerClause clause,
+        ref MotelyRunState runState
+    )
     {
         if (clause.IsWildcard)
-            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, MotelyJokerRarity.Rare, clause.Edition, clause.Stickers, ref runState);
-        return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
+            return CountJokerOccurrencesWildcard(
+                ref ctx,
+                clause.Antes,
+                clause.Sources,
+                MotelyJokerRarity.Rare,
+                clause.Edition,
+                clause.Stickers,
+                ref runState
+            );
+        return CountJokerOccurrencesGeneric(
+            ref ctx,
+            clause.Antes,
+            clause.Sources,
+            clause.Jokers,
+            clause.Edition,
+            clause.Stickers,
+            ref runState
+        );
     }
 
-    private static int CountMixedJokerOccurrences(ref MotelySingleSearchContext ctx, MixedJokerClause clause, ref MotelyRunState runState)
+    private static int CountMixedJokerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        MixedJokerClause clause,
+        ref MotelyRunState runState
+    )
     {
         if (clause.IsWildcard)
-            return CountJokerOccurrencesWildcard(ref ctx, clause.Antes, clause.Sources, wildcardRarity: null, clause.Edition, clause.Stickers, ref runState);
-        return CountJokerOccurrencesGeneric(ref ctx, clause.Antes, clause.Sources, clause.Jokers, clause.Edition, clause.Stickers, ref runState);
+            return CountJokerOccurrencesWildcard(
+                ref ctx,
+                clause.Antes,
+                clause.Sources,
+                wildcardRarity: null,
+                clause.Edition,
+                clause.Stickers,
+                ref runState
+            );
+        return CountJokerOccurrencesGeneric(
+            ref ctx,
+            clause.Antes,
+            clause.Sources,
+            clause.Jokers,
+            clause.Edition,
+            clause.Stickers,
+            ref runState
+        );
     }
 
     internal static int CountJokerClauseOccurrencesForFilter(
@@ -1061,13 +1286,19 @@ public static class JamlScoring
             return normalWildcard + CountLegendaryJokerOccurrences(ref ctx, legendaryWildcard);
         }
 
-        var nonLegendary = clause.Jokers.Where(static j =>
-            ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask)) != MotelyJokerRarity.Legendary
-        ).ToArray();
+        var nonLegendary = clause
+            .Jokers.Where(static j =>
+                ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask))
+                != MotelyJokerRarity.Legendary
+            )
+            .ToArray();
 
-        var legendary = clause.Jokers.Where(static j =>
-            ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask)) == MotelyJokerRarity.Legendary
-        ).ToArray();
+        var legendary = clause
+            .Jokers.Where(static j =>
+                ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask))
+                == MotelyJokerRarity.Legendary
+            )
+            .ToArray();
 
         int count = 0;
 
@@ -1113,7 +1344,8 @@ public static class JamlScoring
         MotelyItemEdition? edition,
         MotelyJokerSticker[] stickers,
         ref MotelyRunState runState
-    ) where TJoker : struct, Enum
+    )
+        where TJoker : struct, Enum
     {
         int count = 0;
         var shopItems = sources.ShopItems;
@@ -1129,9 +1361,14 @@ public static class JamlScoring
         foreach (int ante in antes)
         {
             // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack = ante == 1
-                ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                : (userMaxPack < MotelyGlobals.LateAntesMaxPackSlot ? userMaxPack : MotelyGlobals.LateAntesMaxPackSlot);
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
 
             if (shopItems.Length > 0)
             {
@@ -1154,7 +1391,10 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Buffoon)
                         continue;
-                    var contents = ctx.GetNextBuffoonPackContents(ref jokerStream, pack.GetPackSize());
+                    var contents = ctx.GetNextBuffoonPackContents(
+                        ref jokerStream,
+                        pack.GetPackSize()
+                    );
                     if (!ArrayContains(boosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
@@ -1164,7 +1404,15 @@ public static class JamlScoring
                 }
             }
 
-            count += CountSpecialtyJokerSources(ref ctx, ante, sources, targetTypes, edition, stickers, ref runState);
+            count += CountSpecialtyJokerSources(
+                ref ctx,
+                ante,
+                sources,
+                targetTypes,
+                edition,
+                stickers,
+                ref runState
+            );
         }
 
         return count;
@@ -1281,9 +1529,14 @@ public static class JamlScoring
         foreach (int ante in antes)
         {
             // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack = ante == 1
-                ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                : (userMaxPack < MotelyGlobals.LateAntesMaxPackSlot ? userMaxPack : MotelyGlobals.LateAntesMaxPackSlot);
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
 
             if (shopItems.Length > 0)
             {
@@ -1306,7 +1559,10 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Buffoon)
                         continue;
-                    var contents = ctx.GetNextBuffoonPackContents(ref jokerStream, pack.GetPackSize());
+                    var contents = ctx.GetNextBuffoonPackContents(
+                        ref jokerStream,
+                        pack.GetPackSize()
+                    );
                     if (!ArrayContains(boosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
@@ -1316,7 +1572,15 @@ public static class JamlScoring
                 }
             }
 
-            count += CountSpecialtyJokerSourcesWildcard(ref ctx, ante, sources, wildcardRarity, edition, stickers, ref runState);
+            count += CountSpecialtyJokerSourcesWildcard(
+                ref ctx,
+                ante,
+                sources,
+                wildcardRarity,
+                edition,
+                stickers,
+                ref runState
+            );
         }
 
         return count;
@@ -1452,8 +1716,11 @@ public static class JamlScoring
     {
         if (item.TypeCategory != MotelyItemTypeCategory.Joker)
             return 0;
-        if (wildcardRarity.HasValue &&
-            (MotelyJokerRarity)(item.Value & MotelyGlobals.JokerRarityMask) != wildcardRarity.Value)
+        if (
+            wildcardRarity.HasValue
+            && (MotelyJokerRarity)(item.Value & MotelyGlobals.JokerRarityMask)
+                != wildcardRarity.Value
+        )
             return 0;
         if (edition.HasValue && item.Edition != edition.Value)
             return 0;
@@ -1474,19 +1741,28 @@ public static class JamlScoring
 
     private static int MatchStandardCard(MotelyItem item, StandardCardClause clause)
     {
-        if (item.TypeCategory != MotelyItemTypeCategory.Standardcard) return 0;
-        if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value) return 0;
-        if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value) return 0;
-        if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value) return 0;
-        if (clause.Seal.HasValue && item.Seal != clause.Seal.Value) return 0;
-        if (clause.Edition.HasValue && item.Edition != clause.Edition.Value) return 0;
+        if (item.TypeCategory != MotelyItemTypeCategory.Standardcard)
+            return 0;
+        if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value)
+            return 0;
+        if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value)
+            return 0;
+        if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value)
+            return 0;
+        if (clause.Seal.HasValue && item.Seal != clause.Seal.Value)
+            return 0;
+        if (clause.Edition.HasValue && item.Edition != clause.Edition.Value)
+            return 0;
         return 1;
     }
 
     private static int MatchTarot(MotelyItem item, TarotCardClause clause)
     {
         for (int i = 0; i < clause.Tarots.Length; i++)
-            if (item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.Tarots[i]))
+            if (
+                item.Type
+                == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.Tarots[i])
+            )
                 return 1;
         return 0;
     }
@@ -1496,7 +1772,10 @@ public static class JamlScoring
         for (int i = 0; i < clause.Spectrals.Length; i++)
         {
             var Spectral = clause.Spectrals[i];
-            if (item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)Spectral))
+            if (
+                item.Type
+                == (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)Spectral)
+            )
                 return 1;
             if (Spectral == MotelySpectralCard.TheSoul && item.Type == MotelyItemType.TheSoul)
                 return 1;
@@ -1509,7 +1788,10 @@ public static class JamlScoring
     private static int MatchPlanet(MotelyItem item, PlanetCardClause clause)
     {
         for (int i = 0; i < clause.Planets.Length; i++)
-            if (item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.Planets[i]))
+            if (
+                item.Type
+                == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.Planets[i])
+            )
                 return 1;
         return 0;
     }

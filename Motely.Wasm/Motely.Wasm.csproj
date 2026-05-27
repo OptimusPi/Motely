@@ -34,10 +34,11 @@
       <_VersionLines Include="}" />
     </ItemGroup>
     <WriteLinesToFile
-        File="$(IntermediateOutputPath)MotelyVersion.g.cs"
-        Lines="@(_VersionLines)"
-        Overwrite="true"
-        WriteOnlyWhenDifferent="true" />
+      File="$(IntermediateOutputPath)MotelyVersion.g.cs"
+      Lines="@(_VersionLines)"
+      Overwrite="true"
+      WriteOnlyWhenDifferent="true"
+    />
     <ItemGroup>
       <Compile Include="$(IntermediateOutputPath)MotelyVersion.g.cs" />
     </ItemGroup>
@@ -54,6 +55,9 @@
     <Copy SourceFiles="node-boot.mjs" DestinationFolder="$(_NpmRoot)\dist" />
     <Copy SourceFiles="node-boot.d.mts" DestinationFolder="$(_NpmRoot)\dist" />
     <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
-    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
+    <Message
+      Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))"
+      Importance="high"
+    />
   </Target>
 </Project>
