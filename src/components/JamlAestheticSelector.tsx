@@ -8,7 +8,6 @@ const AESTHETICS: { id: JamlAesthetic; label: string; desc: string }[] = [
   { id: JamlAesthetic.Palindrome, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
   { id: JamlAesthetic.Psychosis, label: "Psychosis", desc: "Unsettling or eerie seed patterns" },
   { id: JamlAesthetic.Gross, label: "Gross", desc: "Seeds with crude or disgusting words" },
-  { id: JamlAesthetic.Nsfw, label: "Nsfw", desc: "Seeds with adult content" },
   { id: JamlAesthetic.Funny, label: "Funny", desc: "Seeds that spell funny words" },
   { id: JamlAesthetic.Balatro, label: "Balatro", desc: "Seeds referencing the game itself" },
 ];

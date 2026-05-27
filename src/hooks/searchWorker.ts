@@ -7,7 +7,7 @@
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { WasmSearchSettings } from "motely-wasm";
+import type { SearchSettings } from "motely-wasm";
 import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
@@ -62,7 +62,7 @@ function attachListeners(): void {
     unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
-function configureSettings(message: StartMessage): WasmSearchSettings {
+function configureSettings(message: StartMessage): SearchSettings {
     const settings = Motely.fromJaml(message.jaml).withThreadCount(1);
     if (message.mode === "aesthetic") {
         return settings.withAestheticSearch((message.aesthetic ?? 0) as JamlAesthetic);
