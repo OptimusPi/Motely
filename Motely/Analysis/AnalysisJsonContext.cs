@@ -10,4 +10,6 @@ namespace Motely.Analysis;
 [JsonSerializable(typeof(MotelyAnteAnalysis))]
 [JsonSerializable(typeof(MotelyAnalyzedItem))]
 [JsonSerializable(typeof(MotelyBoosterPackAnalysis))]
+[JsonSerializable(typeof(MotelyJamlyzerResult))]
+[JsonSerializable(typeof(MotelyJamlyzerSeedResult))]
 public partial class AnalysisJsonContext : JsonSerializerContext { }
