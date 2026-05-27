@@ -9,7 +9,8 @@ using Motely.Filters.Native;
 using System.Text;
 
 [assembly: Preferences(
-    Space = [@"^Motely\.Wasm\.Program$", "Motely", @"^Motely\.Wasm\.WasmSearchSettings$", "SearchSettings", "Motely"]
+    Space = [@"^Motely\.Wasm$", "index"],
+    Name = [@"^Program$", "Motely", @"^WasmSearchSettings$", "SearchSettings", @"^WasmSeedRouter$", "SeedRouter"]
 )]
 
 namespace Motely.Wasm;
@@ -103,7 +104,7 @@ public static partial class Program
     }
 
     [Export]
-    public static MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[] seeds) =>
+    public static MotelyJamlyzerResult AnalyzeJamlSeeds(string jaml, string[]? seeds = null) =>
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
 
     // ── Packed-int decoders ──────────────────────────────────────────────────
@@ -183,7 +184,11 @@ public static partial class Program
     /// One-seed passthrough search. Use <see cref="CreateStreamCursor"/> for PRNG streams (shop, joker, …).
     /// Keep the router alive until you dispose it or finish stream reads.
     /// </summary>
-
+    [Export]
+    public static WasmSeedRouter CreateSeedRouter(string seed, MotelyDeck deck, MotelyStake stake)
+    {
+        return new WasmSeedRouter(seed, deck, stake);
+    }
 
     [Export]
     public static async Task<string?> PickRoot(PickOptions? options = null) =>

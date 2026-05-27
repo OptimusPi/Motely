@@ -4,7 +4,8 @@
     "type": "module",
     "exports": {
         ".": "./dist/index.mjs",
-        "./*": "./dist/generated/*.g.mjs"
+        "./node-boot": "./dist/node-boot.mjs",
+        "./*": "./dist/generated/modules/*.g.mjs"
     },
     "browser": {
         "node:fs": false,

@@ -91,8 +91,8 @@ const status = Motely.validateJaml(jaml);
 Requires Node ≥ 20.6 (`import.meta.resolve`). Node 22 LTS is the recommended floor.
 
 **Publish gate (repo):** after `dotnet publish Motely.Wasm -c Release`, run
-`node Motely.Wasm/motely.test.mjs` (installed-layout harness) and
-`node Motely.Wasm/pack-consumer-smoke.mjs` (`npm pack` → fresh `npm install` → same boot path).
+`node Motely.Wasm/motely.test.mjs` and `node Motely.Wasm/pack-consumer-smoke.mjs`
+(`npm pack` → fresh `npm install` → same boot path).
 
 ## JAML API
 

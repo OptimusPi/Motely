@@ -53,16 +53,21 @@ describe("individual seed search", () => {
         ];
         visited.length = 0;
         const matches = [];
-        const unsub = Motely.onSeedMatch.subscribe((seed) => matches.push(seed));
+        const onSeedMatch = (seed) => matches.push(seed);
+        Motely.onSeedMatch.subscribe(onSeedMatch);
 
-        const search = Motely.createSearchSettings()
-            .withJimmolate()
-            .withListSearch(seeds, seeds.length)
-            .withThreadCount(1)
-            .withQuietMode(true)
-            .start();
-        await search.waitForCompletionAsync();
-        unsub();
+        let search;
+        try {
+            search = Motely.createSearchSettings()
+                .withJimmolate()
+                .withListSearch(seeds, seeds.length)
+                .withThreadCount(1)
+                .withQuietMode(true)
+                .start();
+            await search.waitForCompletionAsync();
+        } finally {
+            Motely.onSeedMatch.unsubscribe(onSeedMatch);
+        }
 
         assert.equal(search.isCompleted, true);
         assert.equal(Number(search.matchingSeeds), 3);
@@ -70,7 +75,7 @@ describe("individual seed search", () => {
             matches.sort(),
             ["MAAAAAAA", "MADDDDDD", "MAFFFFFF"].sort()
         );
-        assert.equal(visited.length, 3);
+        assert.equal(visited.length, 4);
         assert.deepEqual(
             visited.sort(),
             ["MAAAAAAA", "MBBBBBBB", "MADDDDDD", "MAFFFFFF"].sort()

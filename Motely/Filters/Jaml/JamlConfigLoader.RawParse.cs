@@ -27,6 +27,7 @@ public static partial class JamlConfigLoader
             "mustNot",
             "aesthetics",
             "seeds",
+            "hashtags",
         }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     // Strict mode (default for DeserializerBuilder): unknown YAML keys throw with line+col so a
