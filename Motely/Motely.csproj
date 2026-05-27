@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPublishable>false</IsPublishable>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Version>$(MotelyVersion)</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- Packages (versions from Directory.Packages.props) -->
+  <ItemGroup>
+    <PackageReference Include="Bootsharp.Common" />
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <!-- Native AOT / WASM: source-generated YAML accessors (replaces reflection in DeserializerBuilder) -->
+    <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
+  </ItemGroup>
+</Project>
