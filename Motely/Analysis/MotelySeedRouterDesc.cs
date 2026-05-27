@@ -43,5 +43,13 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
 
     public string GetSeed() => Instance().GetSeed();
 
+    public MotelyBossBlind GetBossForAnte(int ante)
+    {
+        var ctx = Instance();
+        var bossStream = ctx.CreateBossStream();
+        var runState = new MotelyRunState();
+        return ctx.GetBossForAnte(ref bossStream, ante, ref runState);
+    }
+
     public void Dispose() => _ownedSearch?.Dispose();
 }
