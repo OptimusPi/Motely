@@ -3,7 +3,6 @@ author: jammy
 description: TheHierophant tarotCard for Bonus enhancement chip scaling
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "stone", "legendary-synergy"]
 must:
   - tarotCard: TheHierophant
     antes:

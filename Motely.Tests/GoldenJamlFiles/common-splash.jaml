@@ -3,7 +3,6 @@ author: jammy
 description: Splash common with Painted Deck for all played cards scoring
 deck: Painted
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "stone", "dark-suits", "legendary-synergy"]
 must:
   - commonJoker: Splash
     antes:

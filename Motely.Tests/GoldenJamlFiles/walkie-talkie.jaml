@@ -3,7 +3,6 @@ author: pi
 description: get cool shit from walkie talkie lol
 deck: Erratic
 stake: White
-hashtags: ["curated", "copy", "negative", "planetCard-scaling", "erratic", "legendary-synergy"]
 
 must:
   - commonJoker: WalkieTalkie

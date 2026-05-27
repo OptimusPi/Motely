@@ -3,7 +3,6 @@ author: jammy
 description: Blue Deck with Banner joker to maximize unused discard value
 deck: Blue
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "planetCard-scaling", "discard", "legendary-synergy"]
 must:
   - commonJoker: Banner
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: Base Joker common for simple +4 Mult
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: Joker
     antes:

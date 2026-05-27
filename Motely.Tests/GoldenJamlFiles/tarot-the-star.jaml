@@ -3,7 +3,6 @@ author: jammy
 description: TheStar tarotCard with Greedy Joker for Diamond suit conversion
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "flush", "planetCard-scaling", "deck-fix", "legendary-synergy"]
 must:
   - tarotCard: TheStar
     antes:

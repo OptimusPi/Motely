@@ -3,7 +3,6 @@ author: jammy
 description: TheHangedMan tarotCard with Erosion for deck thinning synergy
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "deck-thinning", "face-cards", "legendary-synergy"]
 must:
   - tarotCard: TheHangedMan
     antes:

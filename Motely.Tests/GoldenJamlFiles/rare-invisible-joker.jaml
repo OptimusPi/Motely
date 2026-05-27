@@ -3,7 +3,6 @@ author: jammy
 description: Invisible Joker rare duplicates a random joker after 4 rounds
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - rareJoker: InvisibleJoker
     antes:

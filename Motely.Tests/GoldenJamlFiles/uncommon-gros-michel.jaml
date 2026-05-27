@@ -3,7 +3,6 @@ author: jammy
 description: Gros Michel uncommon for +15 Mult with extinction risk
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "probability", "legendary-synergy"]
 must:
   - commonJoker: GrosMichel
     antes:

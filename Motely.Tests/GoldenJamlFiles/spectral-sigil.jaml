@@ -3,7 +3,6 @@ author: jammy
 description: Sigil spectralCard with Blackboard for suit conversion to Flush
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "flush", "planetCard-scaling", "probability", "dark-suits", "legendary-synergy"]
 must:
   - spectralCard: Sigil
     antes:

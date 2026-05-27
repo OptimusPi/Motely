@@ -3,7 +3,6 @@ author: jammy
 description: Temperance tarotCard with Egg for high sell value economy
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - tarotCard: Temperance
     antes:

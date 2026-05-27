@@ -3,7 +3,6 @@ author: jammy
 description: Hex spectralCard to add Polychrome to Baron joker
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - spectralCard: Hex
     antes:

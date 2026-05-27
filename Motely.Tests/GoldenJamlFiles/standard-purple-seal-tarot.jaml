@@ -3,7 +3,6 @@ author: jammy
 description: Standard card with Purple Seal for tarotCard card generation on discard
 deck: Blue
 stake: White
-hashtags: ["standard-card", "enhancement", "copy", "negative", "planetCard-scaling", "discard", "tarotCard-engine", "legendary-synergy"]
 must:
   - standardCard: PurpleSeal
     seal: Purple

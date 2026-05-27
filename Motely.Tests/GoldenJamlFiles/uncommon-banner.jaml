@@ -3,7 +3,6 @@ author: jammy
 description: Banner uncommon with Blue Deck for unused discard chip scaling
 deck: Blue
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "discard", "legendary-synergy"]
 must:
   - commonJoker: Banner
     antes:

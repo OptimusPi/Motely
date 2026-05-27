@@ -344,22 +344,6 @@ public class SettingsWindow : Window
         };
         dialog.Add(jimboLabel);
 
-        var crudeBtn = new CleanButton()
-        {
-            X = Pos.Center(),
-            Y = 8,
-            Text = TuiSettings.CrudeSeedsEnabled ? " [X] Crude Seeds " : " [ ] Crude Seeds ",
-        };
-        crudeBtn.ColorScheme = BalatroTheme.GrayButton;
-        crudeBtn.Accept += (s, e) =>
-        {
-            TuiSettings.CrudeSeedsEnabled = !TuiSettings.CrudeSeedsEnabled;
-            crudeBtn.Text = TuiSettings.CrudeSeedsEnabled
-                ? " [X] Crude Seeds "
-                : " [ ] Crude Seeds ";
-        };
-        dialog.Add(crudeBtn);
-
         var closeBtn = new CleanButton()
         {
             X = Pos.Center(),

@@ -3,7 +3,6 @@ author: jammy
 description: Small Blind Tag appears after skipping Small Blind
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "economy", "planetCard-scaling", "legendary-synergy"]
 must:
   - smallBlindTag: InvestmentTag
     antes:

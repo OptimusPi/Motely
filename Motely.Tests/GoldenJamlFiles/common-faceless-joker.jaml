@@ -3,7 +3,6 @@ author: jammy
 description: Faceless Joker common for $1 if 3+ face cards discarded simultaneously
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "discard", "face-cards", "legendary-synergy"]
 must:
   - commonJoker: FacelessJoker
     antes:

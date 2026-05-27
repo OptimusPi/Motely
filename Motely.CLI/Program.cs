@@ -7,7 +7,6 @@ using Motely.Analysis;
 using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
-using Motely.WasmTools;
 using YamlDotNet.RepresentationModel;
 
 partial class Program
@@ -108,13 +107,6 @@ partial class Program
 
     static int Main(string[] args)
     {
-        if (args.Length > 0
-            && (string.Equals(args[0], "schema", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(args[0], "jaml-schema", StringComparison.OrdinalIgnoreCase)))
-        {
-            return MotelyJamlSchemaGenerator.WriteDefault();
-        }
-
         // .NET 10: runtime no longer provides default SIGTERM/SIGINT handlers (see
         // https://learn.microsoft.com/en-us/dotnet/core/compatibility/core-libraries/10.0/sigterm-signal-handler).
         // Register handlers so Ctrl+C and termination signals cancel the search gracefully.

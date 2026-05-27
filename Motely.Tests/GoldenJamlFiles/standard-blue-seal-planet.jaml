@@ -3,7 +3,6 @@ author: jammy
 description: Standard card with Blue Seal for planetCard card generation
 deck: Nebula
 stake: White
-hashtags: ["standard-card", "enhancement", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - standardCard: BlueSeal
     seal: Blue

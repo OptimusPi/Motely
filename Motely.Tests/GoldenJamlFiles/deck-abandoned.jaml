@@ -3,7 +3,6 @@ author: jammy
 description: Abandoned Deck with Ride the Bus for infinite scaling without face cards
 deck: Abandoned
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "planetCard-scaling", "retrigger", "deck-thinning", "face-cards", "legendary-synergy"]
 must:
   - commonJoker: RideTheBus
     antes:

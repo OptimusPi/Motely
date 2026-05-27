@@ -3,7 +3,6 @@ author: jammy
 description: Triboulet legendary joker with Sock and Buskin for King/Queen retrigger
 deck: Red
 stake: White
-hashtags: ["legendary", "soul", "rare-find", "scaling", "retrigger", "deck-fix", "face-cards", "legendary-synergy"]
 must:
   - legendaryJoker: Triboulet
     antes:

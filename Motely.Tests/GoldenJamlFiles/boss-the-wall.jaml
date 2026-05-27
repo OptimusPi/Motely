@@ -3,7 +3,6 @@ author: jammy
 description: TheWall boss blind has extra large chip requirement
 deck: Plasma
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "stone", "legendary-synergy"]
 must:
   - boss: TheWall
     antes:

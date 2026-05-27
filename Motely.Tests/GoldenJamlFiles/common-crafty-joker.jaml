@@ -3,7 +3,6 @@ author: jammy
 description: Crafty Joker common for +80 Chips if played hand contains a Flush
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "planetCard-scaling", "probability", "legendary-synergy"]
 must:
   - commonJoker: CraftyJoker
     antes:
