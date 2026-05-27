@@ -9,11 +9,11 @@ Package manager is `pnpm` (lockfile is `pnpm-lock.yaml`).
 - `pnpm build` — Vite library build, emits `dist/` with five entry bundles + `dist/ui/jimbo.css` + `.d.ts` via `vite-plugin-dts`.
 - `pnpm dev` — `vite build --watch` (this is a library, not an app — there is no dev server for the library itself).
 - `pnpm typecheck` — `tsc --noEmit --pretty false`.
-- `pnpm lint` — ESLint over the repo. Custom design-rule plugin lives in `eslint-rules/jaml-design.js` (rules: `no-raw-button`, `no-emoji-jsx`, `no-uppercase-text`, `no-bold-style`) — these enforce the design rules below at lint time.
-- `pnpm storybook` — Storybook dev server on `:6006`. Stories are the primary visual dev surface.
+- `pnpm lint` — ESLint over the repo. Custom design-rule plugin lives in `eslint-rules/jaml-design.js`. Global rules (`no-raw-button`, `no-emoji-jsx`, `no-uppercase-text`, `no-bold-style`) apply everywhere. `src/components/**` gets three additional rules: `no-inline-style`, `no-token-in-jsx-style`, `no-inline-component` (excludes stories and the four sprite-sheet renderers). `src/ui/**` turns off `no-raw-button` since those ARE the primitives.
+- `pnpm storybook` — Storybook dev server on `:3141`. Stories are the primary visual dev surface.
 - `pnpm build-storybook` / `pnpm serve:storybook` — build static Storybook, then serve on `:3141` with CORS (used by MCP/iframe consumers).
 - Tests run via `vitest` driven by `@storybook/addon-vitest`: stories double as tests, executed in headless Chromium through `@vitest/browser-playwright` (see `vitest.config.ts`). To run a single story-as-test, use `pnpm vitest run -t "<Story Title>"` or filter by file path. There are no separate `*.test.*` files.
-- `examples/mcp-seed-finder/` is the canonical end-to-end consumer (MCP App; boots motely-wasm, renders `SeedFinderApp`, runs real searches): `cd examples/mcp-seed-finder && pnpm install && pnpm dev`. The older `examples/seed-finder/` was removed in `ff64157` — CLAUDE.md used to point there. There is no top-level `pnpm demo`.
+- `examples/mcp-seed-finder/` is the canonical end-to-end consumer (MCP App; boots motely-wasm, renders `SeedFinderApp`, runs real searches): `cd examples/mcp-seed-finder && pnpm install && pnpm dev`. The older `examples/seed-finder/` was removed in `ff64157` — CLAUDE.md used to point there. A `pnpm demo` script exists in `package.json` but the `demo/` directory has not been created; running it will fail.
 
 ## Architecture
 
@@ -63,7 +63,7 @@ createRoot(document.getElementById("root")!).render(<App />);
 
 By the time any component mounts, the runtime is up. Consumers are responsible for making `bin/` reachable at that URL (Storybook does this via `staticDirs`; consuming apps must do the equivalent).
 
-Hooks like `useSearch`, `useAnalyzer`, and `useJamlLibrary` also inline a Standby-guard internally (see `src/hooks/useSearch.ts`: `bootsharp.getStatus() === bootsharp.BootStatus.Standby` → boot) so they work whether or not the consumer did the top-level await. **Don't add JS wrappers around motely-wasm** — import and call it directly (per `AGENTS.md`). There is no `MotelyProvider` / `useMotelyRuntime` indirection layer; do not reintroduce one.
+Hooks like `useSearch`, `useAnalyzer`, and `useJamlLibrary` also inline a Standby-guard internally (see `src/hooks/useSearch.ts`: `bootsharp.getStatus() === bootsharp.BootStatus.Standby` → boot) so they work whether or not the consumer did the top-level await. **Don't add JS wrappers around motely-wasm** — import and call it directly. There is no `MotelyProvider` / `useMotelyRuntime` indirection layer; do not reintroduce one.
 
 ### Updating motely-wasm
 
@@ -88,7 +88,7 @@ Never hardcode a `font-family`; reference one of these two tokens. `m6x11`/`m6x1
 
 ## Design rules
 
-Source of truth is `AGENTS.md`. Summary of the hard constraints for any UI work in this repo:
+Hard constraints for any UI work in this repo:
 
 - Never use ALL CAPS.
 - Never use bold / heavy font-weight.
@@ -151,12 +151,12 @@ This is the rule because the same component has been re-invented 11+ times acros
 
 **Two sharp edges that have bitten this codebase repeatedly:**
 
-- **`JimboButton` is R3F (Three.js), not a DOM `<button>`.** It renders inside a `<Canvas>` and won't work in normal DOM trees. For DOM-only contexts (icon buttons in cards/rows, remove-x, toolbar actions) use **`JimboIconButton`** (props: `tone="default" | "destructive"`, `size="xs" | "sm" | "md"`, plus `onMouseDown`/`onTouchStart` passthrough for drag-stop semantics). The R3F nature isn't obvious from the name. Don't reach for `JimboButton` when you mean an icon-only DOM button.
+- **`JimboButton` vs `JimboIconButton` — two different intents.** `JimboButton` (`src/ui/panel.tsx`) is a full-width/labelled DOM button that renders `JimboText` inside a `.j-btn` slab — for primary actions and CTA buttons. `JimboIconButton` (`src/ui/JimboIconButton.tsx`) is a compact square icon-only button with inline-style hover state — for row actions, remove-x, toolbar slots. Props differ: `JimboButton` takes `tone` from the Balatro palette (`orange`, `red`, `blue`, etc.) and `fullWidth`; `JimboIconButton` takes `tone="default" | "destructive"`, `size="xs" | "sm" | "md"`, and `onMouseDown`/`onTouchStart` passthrough for drag-stop semantics.
 - **`size` prop collision when extending `<input>`.** `React.InputHTMLAttributes<HTMLInputElement>` already declares `size?: number` (native HTML attr). If your new primitive uses `size` for its own scale (`'xs' | 'sm' | 'md'`), you must `Omit<..., 'size'>` or typecheck fails with `Type 'string' is not assignable to type 'number'`. `JimboInlineEdit` does this; `JimboTextInput` doesn't define `size` so doesn't need to.
 
 **Which barrel?** See "Which barrel? — the motely-wasm test" above. Pure design = `src/ui.ts`. Touches motely-wasm = `src/index.ts`.
 
-Source of truth: `AGENTS.md`. This rule applies to *this* repo and every consumer repo. When you open a consumer repo (seed-finder, etc.), its CLAUDE.md should restate this rule and link back here.
+This rule applies to *this* repo and every consumer repo. When you open a consumer repo (seed-finder, etc.), its CLAUDE.md should restate this rule and link back here.
 
 ### Which barrel? — the motely-wasm test
 
