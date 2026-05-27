@@ -508,7 +508,18 @@ export function JamlIde({
         ) : null}
       </div>
 
-      <JimboModal open={addZone !== null} onClose={handlePickerClose}>
+      <JimboModal
+        open={addZone !== null}
+        onClose={handlePickerClose}
+        title={
+          pickerFlow === "category"
+            ? "Select Category"
+            : pickerFlow === "joker"
+            ? "Select Joker"
+            : CATEGORY_CONFIG_MAP[pickerFlow as keyof typeof CATEGORY_CONFIG_MAP]?.title ?? "Select Item"
+        }
+        className="j-picker-modal"
+      >
         {addZone !== null && (
           pickerFlow === "category" ? (
             <CategoryMenu onSelect={(cat) => setPickerFlow(cat)} />
