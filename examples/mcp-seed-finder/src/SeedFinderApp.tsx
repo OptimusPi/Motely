@@ -29,7 +29,7 @@ export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppPro
     }
 
     void onRunRequest?.(jaml);
-    search.startAesthetic(jaml, 0);
+    search.startRandom(jaml, 1_000_000);
   };
 
   const subtitle =
