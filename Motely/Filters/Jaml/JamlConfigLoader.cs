@@ -36,8 +36,7 @@ public static partial class JamlConfigLoader
             if (!TryParseRootFromYaml(normalizedJaml, out var load, out error) || load is null)
             {
                 config = null;
-                if (error == null)
-                    error = "JAML document could not be parsed.";
+                error ??= "JAML document could not be parsed.";
                 return false;
             }
 
