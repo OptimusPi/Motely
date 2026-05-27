@@ -1,5 +1,4 @@
 using System.Linq;
-using Bootsharp;
 using Motely;
 using Motely.Filters.Jaml;
 
@@ -24,5 +23,5 @@ public sealed class WasmJamlConfig
     public MotelyDeck Deck => Config.Deck;
     public MotelyStake Stake => Config.Stake;
     public string[] Seeds => Config.Seeds.ToArray();
-    public bool HasAnyClauses => Config.HasAnyClauses;
+    public bool HasAnyClauses => Config.HasAnyClauses();
 }

@@ -4,14 +4,11 @@ namespace Motely.Filters.Native;
 
 /// <summary>
 /// Additional filter that runs a <see cref="MotelyIndividualSeedSearcher"/> on each lane
-/// (same hook as PerkeoObservatory's <c>SearchIndividualSeeds</c> block). Pair with JAML/SIMD
-/// filters upstream when you need narrowing first.
 /// </summary>
 public readonly struct JimmolateFilterDesc(MotelyIndividualSeedSearcher searcher)
     : IMotelySeedFilterDesc<JimmolateFilterDesc.JimmolateFilter>
 {
-    private readonly MotelyIndividualSeedSearcher _searcher =
-        searcher ?? throw new ArgumentNullException(nameof(searcher));
+    private readonly MotelyIndividualSeedSearcher _searcher = searcher;
 
     public readonly JimmolateFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
         new(_searcher);
