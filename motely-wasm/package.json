@@ -1,18 +1,29 @@
 {
-    "name": "motely-wasm",
-    "version": "18.2.4",
-    "type": "module",
-    "exports": {
-        ".": "./dist/index.mjs",
-        "./node-boot": "./dist/node-boot.mjs",
-        "./*": "./dist/generated/modules/*.g.mjs"
-    },
-    "browser": {
-        "node:fs": false,
-        "node:url": false,
-        "node:path": false,
-        "node:module": false,
-        "node:crypto": false,
-        "node:process": false
-    }
+    "name":  "motely-wasm",
+    "type":  "module",
+    "exports":  {
+                    ".":  {
+                              "types":  "./dist/index.d.mts",
+                              "import":  "./dist/index.mjs"
+                          },
+                    "./node-boot":  {
+                                        "types":  "./dist/node-boot.d.mts",
+                                        "import":  "./dist/node-boot.mjs"
+                                    },
+                    "./*":  {
+                                "types":  "./dist/generated/modules/*.g.d.mts",
+                                "import":  "./dist/generated/modules/*.g.mjs"
+                            }
+                },
+    "browser":  {
+                    "node:fs":  false,
+                    "node:url":  false,
+                    "node:path":  false,
+                    "node:module":  false,
+                    "node:crypto":  false,
+                    "node:process":  false
+                },
+    "version":  "18.2.4",
+    "main":  "./dist/index.mjs",
+    "types":  "./dist/index.d.mts"
 }

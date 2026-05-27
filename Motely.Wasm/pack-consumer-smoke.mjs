@@ -25,7 +25,8 @@ const packDir = join(wasmProjectDir, ".pack-consumer");
 const motelyWasmDir = join(repoRoot, "motely-wasm");
 
 function run(cmd, args, opts = {}) {
-    const r = spawnSync(cmd, args, {
+    const cmdToRun = (process.platform === "win32" && cmd.includes(" ")) ? `"${cmd}"` : cmd;
+    const r = spawnSync(cmdToRun, args, {
         stdio: "inherit",
         cwd: opts.cwd ?? repoRoot,
         shell: process.platform === "win32",
