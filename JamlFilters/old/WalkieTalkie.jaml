@@ -1,0 +1,34 @@
+name: WalkieTalkie
+author: pi
+description: get cool shit from walkie talkie lol
+deck: Erratic
+stake: White
+
+must:
+  - smallBlindTag: DoubleTag
+    antes: [1]
+  - bigBlindTag: DoubleTag
+    antes: [1]
+  - tarotCard: Judgement
+    antes: [2]
+    shopItems: [0,1]
+  - legendaryJoker: Perkeo
+    antes: [2]
+    sources:
+      boosterPacks: [0]
+should:
+  - ErraticRank: Ten
+    score: 1
+  - ErraticRank: Four
+    score: 1
+  - joker: Blueprint
+    antes: [2]
+    sources:
+      judgement: [0]
+    score: 10
+
+  - jokers: [Blueprint, Brainstorm, InvisibleJoker]
+    antes: [8]
+    sources:
+      shopItems: [2,3,4,5]
+    score: 10

@@ -1,0 +1,28 @@
+name: JudgementTest
+deck: Anaglyph
+stake: White
+must:
+  - joker: Blueprint
+  - joker: Showman
+    antes: [1,2]
+    boosterPacks: [0,1]
+  - LegendaryJoker: Perkeo
+    antes: [1,2,3,4]
+    score: 95
+should:
+  - smallBlindTag: NegativeTag
+    antes: [2]
+  - joker: OopsAll6s
+    antes: [2]
+    sources:
+      shopItems: [2,3,4]
+    score: 100
+
+  - jokers: [OopsAll6s, Blueprint, InvisibleJoker]
+    antes: [3]
+    sources:
+      shopItems: [0,1]
+    score: 89
+
+
+    
