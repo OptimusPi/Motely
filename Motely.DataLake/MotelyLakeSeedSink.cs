@@ -51,7 +51,7 @@ public sealed class MotelyLakeSeedSink : IDisposable
         );
         Exec(BuildCreateTableSql(filterId, tallyColumns));
 
-        _appender = _connection.CreateAppender("lake", $"seeds_{filterId}");
+        _appender = _connection.CreateAppender("lake", "main", $"seeds_{filterId}");
     }
 
     /// <summary>Append one scored seed. Thread-safe (serialized via internal lock).</summary>
