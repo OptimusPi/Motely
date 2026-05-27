@@ -21,10 +21,10 @@ async function createHarness() {
     const { default: bootsharp, Motely } = await import(pathToFileURL(entryPath).href);
 
     const enums = await import(
-        pathToFileURL(resolve(pkgRoot, "dist", "generated", "motely", "enums.g.mjs")).href
+        pathToFileURL(resolve(pkgRoot, "dist", "generated", "modules", "motely", "enums.g.mjs")).href
     );
     const { MotelyStreamKind } = await import(
-        pathToFileURL(resolve(pkgRoot, "dist", "generated", "motely.g.mjs")).href
+        pathToFileURL(resolve(pkgRoot, "dist", "generated", "modules", "motely.g.mjs")).href
     );
 
     const pkgVersion = JSON.parse(

@@ -5,7 +5,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import manifest from "./generated/resources.g.mjs";
+import { manifest } from "./generated/resources.g.mjs";
 
 async function readResource(binDir, name) {
     const bytes = await readFile(join(binDir, name));

@@ -64,6 +64,16 @@ public sealed class WasmSearchSettings
 
     public IMotelySearch CreateSearch() => _inner.CreateSearch();
 
-    public IMotelySearch Start(CancellationToken cancellationToken = default) =>
-        _inner.Start(cancellationToken);
+    public IMotelySearch Start(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return _inner.Start(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WASM C# EXCEPTION] {ex}");
+            throw;
+        }
+    }
 }
