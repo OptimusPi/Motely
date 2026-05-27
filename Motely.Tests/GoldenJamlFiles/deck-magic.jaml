@@ -3,7 +3,6 @@ author: jammy
 description: Magic Deck starts with Death tarotCard - use it to clone your best card immediately
 deck: Magic
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "planetCard-scaling", "deck-fix", "tarotCard-engine", "legendary-synergy"]
 must:
   - uncommonJoker: TheIdol
     antes:

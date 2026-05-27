@@ -3,7 +3,6 @@ author: jammy
 description: Foil Tag for free Foil edition joker
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "scaling", "planetCard-scaling", "legendary-synergy"]
 must:
   - tag: FoilTag
     antes:

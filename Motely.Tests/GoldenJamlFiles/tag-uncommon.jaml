@@ -3,7 +3,6 @@ author: jammy
 description: Uncommon Tag for free uncommon joker in next shop
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "negative", "scaling", "economy", "planetCard-scaling", "probability", "deck-fix", "face-cards", "tarotCard-engine", "dark-suits"]
 must:
   - tag: UncommonTag
     antes:

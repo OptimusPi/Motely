@@ -3,7 +3,6 @@ author: jammy
 description: TheHighPriestess creates 2 Planets for Constellation scaling
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - tarotCard: TheHighPriestess
     antes:

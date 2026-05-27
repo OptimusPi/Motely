@@ -3,7 +3,6 @@ author: jammy
 description: Strength tarotCard to convert Queens to Kings for Baron
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - tarotCard: Strength
     antes:

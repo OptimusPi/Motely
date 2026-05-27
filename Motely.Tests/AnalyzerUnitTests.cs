@@ -40,6 +40,34 @@ public sealed class AnalyzerUnitTests
         Assert.NotEqual(default, boss);
     }
 
+    // The decisive test: does the MotelySingleSearchContext returned by Instance()
+    // actually drive a real PRNG stream and produce valid shop items? It must agree
+    // with the golden analyzer, which is verified against Balatro itself.
+    [Fact]
+    public void TestReturnedContext_DrivesShopStreamMatchingAnalyzer()
+    {
+        const string seed = "UNITTEST";
+
+        using var router = new MotelySeedRouterDesc(seed, MotelyDeck.Red, MotelyStake.White);
+        var ctx = router.Instance();
+
+        var shopStream = ctx.CreateShopItemStream(1, MotelyDeck.Red.GetDefaultRunState());
+        var fromContext = new List<int>();
+        for (int i = 0; i < 5; i++)
+        {
+            fromContext.Add(ctx.GetNextShopItem(ref shopStream).Value);
+        }
+
+        var analysis = MotelySeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
+        var fromAnalyzer = new List<int>();
+        for (int i = 0; i < 5; i++)
+        {
+            fromAnalyzer.Add(analysis.Antes[0].ShopQueue[i].Value);
+        }
+
+        Assert.Equal(fromAnalyzer, fromContext);
+    }
+
     // Smoke test: analyzer runs end-to-end on a range of seeds/decks/stakes without
     // throwing and produces non-empty output. (Snapshot verification via Verify was
     // dropped from the project; keeping the input matrix here is still valuable

@@ -3,7 +3,6 @@ author: jammy
 description: Standard Tag for free Standard Pack in next shop
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "scaling", "planetCard-scaling", "probability", "deck-fix", "stone", "glass", "steel", "legendary-synergy"]
 must:
   - tag: StandardTag
     antes:

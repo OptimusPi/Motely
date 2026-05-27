@@ -3,7 +3,6 @@ author: jammy
 description: Coupon Tag for first card/pack free in next shop
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - tag: CouponTag
     antes:

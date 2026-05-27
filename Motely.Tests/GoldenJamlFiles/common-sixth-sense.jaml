@@ -3,7 +3,6 @@ author: jammy
 description: Sixth Sense common with Ghost Deck for spectralCard card generation on single 6
 deck: Ghost
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "probability", "deck-fix", "face-cards", "tarotCard-engine", "legendary-synergy"]
 must:
   - uncommonJoker: SixthSense
     antes:

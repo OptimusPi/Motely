@@ -3,7 +3,6 @@ author: jammy
 description: The World tarotCard with Vampire for random enhancement consumption
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "probability", "glass", "steel", "legendary-synergy"]
 must:
   - tarotCard: TheWorld
     antes:

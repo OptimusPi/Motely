@@ -3,7 +3,6 @@ author: jammy
 description: TheSoul spectralCard to obtain a Legendary joker
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "planetCard-scaling", "discard", "face-cards", "legendary-synergy"]
 must:
   - spectralCard: TheSoul
     antes:

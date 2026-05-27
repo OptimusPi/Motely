@@ -3,7 +3,6 @@ author: jammy
 description: Baron rare joker with Steel enhancement for X1.5 Mult per King held
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "scaling", "deck-fix", "face-cards", "steel", "legendary-synergy"]
 must:
   - rareJoker: Baron
     antes:

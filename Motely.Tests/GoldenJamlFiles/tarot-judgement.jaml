@@ -3,7 +3,6 @@ author: jammy
 description: Judgement tarotCard creates a random joker for free
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - tarotCard: Judgement
     antes:

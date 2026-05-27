@@ -3,7 +3,6 @@ author: jammy
 description: Ethereal Tag for free spectralCard Pack in next shop
 deck: Ghost
 stake: White
-hashtags: ["tag", "skip-reward", "negative", "planetCard-scaling", "discard", "deck-fix", "face-cards", "legendary-synergy"]
 must:
   - tag: EtherealTag
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: Nebula Deck with Telescope voucher and Constellation joker for planetCard scaling
 deck: Nebula
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - uncommonJoker: Constellation
     antes:

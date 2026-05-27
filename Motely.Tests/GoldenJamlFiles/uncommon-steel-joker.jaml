@@ -3,7 +3,6 @@ author: jammy
 description: Steel Joker uncommon for X0.2 Mult per Steel card in deck
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "scaling", "planetCard-scaling", "steel", "legendary-synergy"]
 must:
   - uncommonJoker: SteelJoker
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: Four Fingers uncommon for easy Flush Five and Straight Flush
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "flush", "straight", "planetCard-scaling", "legendary-synergy"]
 must:
   - uncommonJoker: FourFingers
     antes:

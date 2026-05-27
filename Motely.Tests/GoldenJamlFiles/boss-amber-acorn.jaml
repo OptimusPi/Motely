@@ -3,7 +3,6 @@ author: jammy
 description: AmberAcorn boss blind flips and debuffs 3 random jokers
 deck: Red
 stake: White
-hashtags: ["boss", "boss-blind", "copy", "negative", "scaling", "planetCard-scaling", "face-cards", "legendary-synergy"]
 must:
   - boss: AmberAcorn
     antes:

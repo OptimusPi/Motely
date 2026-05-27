@@ -3,7 +3,6 @@ author: jammy
 description: Early TheFool tarotCard to duplicate powerful consumables
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "deck-fix", "tarotCard-engine", "legendary-synergy"]
 must:
   - tarotCard: TheFool
     antes:

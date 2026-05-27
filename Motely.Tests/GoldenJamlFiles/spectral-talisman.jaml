@@ -3,7 +3,6 @@ author: jammy
 description: Talisman spectralCard with Certificate for Gold Seal economy
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "economy", "planetCard-scaling", "legendary-synergy"]
 must:
   - spectralCard: Talisman
     antes:

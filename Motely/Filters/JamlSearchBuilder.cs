@@ -1,6 +1,7 @@
 using System;
 
 using Motely;
+using Motely.Filters.Jaml;
 using Motely.Filters.Native;
 
 using System.Collections.Generic;
@@ -136,7 +137,7 @@ public static class JamlSearchBuilder
             ? BuildScoredCsvHeaderQuoted(shouldClauses)
             : "";
         var tallyLabels = shouldCount > 0
-            ? shouldClauses.Select(static c => c.Label).ToArray()
+            ? shouldClauses.Select(static c => c.Label ?? c.Describe()).ToArray()
             : [];
         return new JamlSearchPlan(shouldCount, headerQuoted, tallyLabels) { Settings = settings };
     }
@@ -198,8 +199,8 @@ public static class JamlSearchBuilder
         return string.Join(",", parts);
     }
 
-    private static string CsvQuoteField(string value) =>
-        $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+    private static string CsvQuoteField(string? value) =>
+        $"\"{(value ?? "").Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
     private static void AppendClauseSection(
         StringBuilder sb,
         string sectionName,
@@ -304,13 +305,13 @@ public static class JamlSearchBuilder
                     if (!mergedVoucherEmitted)
                     {
                         mergedVoucherEmitted = true;
-                        list.Add((mergedVoucher, vc, vc.Label));
+                        list.Add((mergedVoucher, vc, vc.Label ?? ""));
                     }
                     // else: absorbed into merged filter, skip
                 }
                 else
                 {
-                    list.Add((new VoucherFilterDesc(vc), vc, vc.Label));
+                    list.Add((new VoucherFilterDesc(vc), vc, vc.Label ?? ""));
                 }
                 continue;
             }
@@ -324,7 +325,7 @@ public static class JamlSearchBuilder
                     list.Add(expanded[i]);
             }
             else if (!IsSpecialtySourceOnly(c))
-                list.Add((c.CreateDesc(), c, c.Label));
+                list.Add((c.CreateDesc(), c, c.Label ?? ""));
         }
     }
 

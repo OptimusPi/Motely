@@ -3,7 +3,6 @@ author: jammy
 description: DNA common with The Idol for first hand card cloning
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "scaling", "pairs", "planetCard-scaling", "deck-fix", "face-cards", "glass", "steel", "legendary-synergy"]
 must:
   - rareJoker: DNA
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: Devious Joker common for +100 Chips if played hand contains a Straight
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "straight", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: DeviousJoker
     antes:

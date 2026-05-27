@@ -3,7 +3,6 @@ author: jammy
 description: Driver's License rare joker with The World for 16+ enhanced cards
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "scaling", "planetCard-scaling", "stone", "glass", "steel", "legendary-synergy"]
 must:
   - rareJoker: DriversLicense
     antes:

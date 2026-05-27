@@ -3,7 +3,6 @@ author: jammy
 description: Justice tarotCard with Glass Joker for Glass enhancement synergy
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "probability", "retrigger", "glass", "legendary-synergy"]
 must:
   - tarotCard: Justice
     antes:

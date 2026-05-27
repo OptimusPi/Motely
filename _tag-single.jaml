@@ -1,6 +1,0 @@
-name: t
-deck: Red
-stake: White
-must:
-  - smallBlindTag: EtherealTag
-    antes: [1]

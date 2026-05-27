@@ -3,7 +3,6 @@ author: jammy
 description: Erratic Deck with many 2s for Wee Joker scaling
 deck: Erratic
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "planetCard-scaling", "deck-thinning", "erratic", "legendary-synergy"]
 must:
   - rareJoker: WeeJoker
     antes:

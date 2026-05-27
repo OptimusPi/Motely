@@ -3,7 +3,6 @@ author: jammy
 description: Constellation common with Nebula Deck for X0.1 Mult per planetCard used
 deck: Nebula
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - uncommonJoker: Constellation
     antes:

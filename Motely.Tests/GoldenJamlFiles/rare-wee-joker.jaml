@@ -3,7 +3,6 @@ author: jammy
 description: Wee Joker rare with Erratic deck for many 2s
 deck: Erratic
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "retrigger", "deck-fix", "erratic"]
 must:
   - rareJoker: WeeJoker
     antes:

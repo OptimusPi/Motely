@@ -3,7 +3,6 @@ author: jammy
 description: Green Deck with Burglar and Merry Andy for active play income
 deck: Green
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "economy", "planetCard-scaling", "discard", "legendary-synergy"]
 must:
   - uncommonJoker: Burglar
     antes:

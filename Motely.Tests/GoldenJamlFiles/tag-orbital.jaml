@@ -3,7 +3,6 @@ author: jammy
 description: Orbital Tag upgrades most played poker hand by 3 levels
 deck: Nebula
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - tag: OrbitalTag
     antes:

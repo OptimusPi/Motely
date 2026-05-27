@@ -3,7 +3,6 @@ author: jammy
 description: Painted Deck with 8-card hand for easy Flush construction
 deck: Painted
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "scaling", "flush", "planetCard-scaling", "face-cards", "dark-suits", "legendary-synergy"]
 must:
   - commonJoker: Splash
     antes:

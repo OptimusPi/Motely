@@ -3,7 +3,6 @@ author: jammy
 description: Negative Tag for free Negative edition joker
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "scaling", "planetCard-scaling", "probability", "face-cards", "legendary-synergy"]
 must:
   - tag: NegativeTag
     antes:
