@@ -3,7 +3,6 @@ author: jammy
 description: Garbage Tag for $1 per unused tag this run
 deck: Red
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "economy", "planetCard-scaling", "discard", "legendary-synergy"]
 must:
   - tag: GarbageTag
     antes:

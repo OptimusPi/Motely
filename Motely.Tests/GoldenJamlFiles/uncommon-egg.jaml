@@ -3,7 +3,6 @@ author: jammy
 description: Egg uncommon gains $3 sell value at end of round
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: Egg
     antes:

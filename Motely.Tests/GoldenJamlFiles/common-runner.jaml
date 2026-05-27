@@ -3,7 +3,6 @@ author: jammy
 description: Runner common for +15 Chips per Straight scored during run
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "straight", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: Runner
     antes:

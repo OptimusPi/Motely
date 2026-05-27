@@ -3,7 +3,6 @@ author: jammy
 description: Wrathful Joker common for +3 Mult per Spade scored
 deck: Checkered
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "planetCard-scaling", "dark-suits", "legendary-synergy"]
 must:
   - commonJoker: WrathfulJoker
     antes:

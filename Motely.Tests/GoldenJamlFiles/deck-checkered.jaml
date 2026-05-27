@@ -3,7 +3,6 @@ author: jammy
 description: Checkered Deck with Blackboard for guaranteed X3 Mult every hand
 deck: Checkered
 stake: White
-hashtags: ["deck", "starting-deck", "copy", "negative", "flush", "planetCard-scaling", "dark-suits", "legendary-synergy"]
 must:
   - uncommonJoker: Blackboard
     antes:

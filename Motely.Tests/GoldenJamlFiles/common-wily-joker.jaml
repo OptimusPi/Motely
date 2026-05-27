@@ -3,7 +3,6 @@ author: jammy
 description: Wily Joker common for +100 Chips if played hand contains Three of a Kind
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "pairs", "planetCard-scaling", "deck-fix", "legendary-synergy"]
 must:
   - commonJoker: WilyJoker
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: Joker Stencil common with Black Deck for X1 Mult per empty joker slot
 deck: Black
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - uncommonJoker: JokerStencil
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: Green Joker common with Red Deck for +1 Mult per hand played, -1 per discard
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: GreenJoker
     antes:

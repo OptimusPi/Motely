@@ -3,7 +3,6 @@ author: jammy
 description: TheTower tarotCard with Stone Joker for Stone enhancement scaling
 deck: Red
 stake: White
-hashtags: ["tarotCard", "consumable", "copy", "negative", "planetCard-scaling", "stone", "legendary-synergy"]
 must:
   - tarotCard: TheTower
     antes:

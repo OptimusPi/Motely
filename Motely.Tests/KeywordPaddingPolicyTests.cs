@@ -84,10 +84,6 @@ public class KeywordPaddingPolicyTests
             GetPaddedSeedCountForKeywordsLong(MotelySeedKeywordSequences.GrossKeywords)
         );
         Assert.Equal(
-            MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount,
-            GetPaddedSeedCountForKeywordsLong(MotelySeedKeywordSequences.NsfwKeywords)
-        );
-        Assert.Equal(
             MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount,
             GetPaddedSeedCountForKeywordsLong(MotelySeedKeywordSequences.FunnyKeywords)
         );
@@ -101,7 +97,6 @@ public class KeywordPaddingPolicyTests
     public void JamlAesthetics_GetSeedCount_Uses_BakedKeywordTotals()
     {
         Assert.Equal(MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount, JamlAesthetics.GetSeedCount(JamlAesthetic.Gross));
-        Assert.Equal(MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount, JamlAesthetics.GetSeedCount(JamlAesthetic.Nsfw));
         Assert.Equal(MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount, JamlAesthetics.GetSeedCount(JamlAesthetic.Funny));
         Assert.Equal(MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount, JamlAesthetics.GetSeedCount(JamlAesthetic.Balatro));
     }

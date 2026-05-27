@@ -3,7 +3,6 @@ author: jammy
 description: EightBall uncommon with Fortune Teller for tarotCard card generation on 8s
 deck: Red
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "probability", "tarotCard-engine", "legendary-synergy"]
 must:
   - commonJoker: EightBall
     antes:

@@ -3,7 +3,6 @@ author: jammy
 description: Ouija spectralCard with Wee Joker for rank homogenization
 deck: Red
 stake: White
-hashtags: ["spectralCard", "consumable", "copy", "negative", "scaling", "planetCard-scaling", "deck-fix", "face-cards", "legendary-synergy"]
 must:
   - spectralCard: Ouija
     antes:

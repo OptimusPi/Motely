@@ -3,7 +3,6 @@ author: jammy
 description: Hit the Road rare joker with Merry Andy for Jack discard scaling
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "discard", "face-cards", "legendary-synergy"]
 must:
   - rareJoker: HitTheRoad
     antes:

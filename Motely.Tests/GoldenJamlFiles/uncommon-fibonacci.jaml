@@ -3,7 +3,6 @@ author: jammy
 description: Fibonacci uncommon with Erratic deck for Fibonacci sequence cards
 deck: Erratic
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "erratic", "legendary-synergy"]
 must:
   - uncommonJoker: Fibonacci
     antes:

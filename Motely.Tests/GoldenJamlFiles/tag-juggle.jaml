@@ -3,7 +3,6 @@ author: jammy
 description: Juggle Tag for +1 hand size for next round
 deck: Painted
 stake: White
-hashtags: ["tag", "skip-reward", "copy", "negative", "scaling", "planetCard-scaling", "stone", "dark-suits", "legendary-synergy"]
 must:
   - tag: JuggleTag
     antes:

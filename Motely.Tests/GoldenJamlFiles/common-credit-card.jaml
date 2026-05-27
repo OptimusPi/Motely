@@ -3,7 +3,6 @@ author: jammy
 description: Credit Card common for going into debt up to -$20
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "economy", "planetCard-scaling", "legendary-synergy"]
 must:
   - commonJoker: CreditCard
     antes:

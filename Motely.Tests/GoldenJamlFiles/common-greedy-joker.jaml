@@ -3,7 +3,6 @@ author: jammy
 description: Greedy Joker common for +3 Mult per Diamond scored
 deck: Red
 stake: White
-hashtags: ["joker", "common-joker", "copy", "negative", "flush", "planetCard-scaling", "tarotCard-engine", "legendary-synergy"]
 must:
   - commonJoker: GreedyJoker
     antes:

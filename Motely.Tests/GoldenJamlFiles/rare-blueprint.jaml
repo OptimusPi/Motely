@@ -3,7 +3,6 @@ author: jammy
 description: Blueprint rare joker with Brainstorm for joker copying synergy
 deck: Red
 stake: White
-hashtags: ["joker", "rare-joker", "copy", "negative", "scaling", "planetCard-scaling", "probability", "face-cards", "legendary-synergy"]
 must:
   - rareJoker: Blueprint
     antes:

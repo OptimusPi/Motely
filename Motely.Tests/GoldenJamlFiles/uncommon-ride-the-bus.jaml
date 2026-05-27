@@ -3,7 +3,6 @@ author: jammy
 description: Ride the Bus uncommon with Abandoned Deck for infinite +1 Mult scaling
 deck: Abandoned
 stake: White
-hashtags: ["joker", "uncommon-joker", "copy", "negative", "planetCard-scaling", "deck-thinning", "face-cards", "legendary-synergy"]
 must:
   - commonJoker: RideTheBus
     antes:
