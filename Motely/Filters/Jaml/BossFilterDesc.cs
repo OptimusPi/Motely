@@ -5,15 +5,13 @@ namespace Motely.Filters.Jaml;
 
 public sealed class BossClause : JamlClause
 {
-    public required MotelyBossBlind[] Bosses { get; init; }
-    public int[] Rolls { get; init; } = [];
+    public required MotelyBossBlind[] Bosses { get; set; }
+    public int[] Rolls { get; set; } = [];
 
     public override int EstimatedCost => 2 + MaxAnte;
 
     public override string Describe() =>
         $"boss {string.Join(", ", System.Array.ConvertAll(Bosses, static b => b.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new BossFilterDesc(this);
 }
 
 public readonly struct BossFilterDesc(BossClause clause)

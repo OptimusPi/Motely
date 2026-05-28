@@ -6,23 +6,23 @@ namespace Motely.Filters.Jaml;
 
 public sealed class LegendaryJokerClause : JamlClause
 {
-    public MotelyJoker[] Jokers { get; init; } = [];
-    public bool IsWildcard { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public LegendaryJokerSourceConfig Sources { get; init; } = new();
+    public MotelyJoker[] Jokers { get; set; } = [];
+    public bool IsWildcard { get; set; }
+    public MotelyItemEdition? Edition { get; set; }
+    public LegendaryJokerSourceConfig Sources { get; set; } = new();
 
     /// <summary>
     /// When true, match as soon as The Soul appears in a targeted arcana/Spectral pack (Tarot/Spectral
     /// card), without rolling the legendary joker. Use for "any" + soul-card-only searches.
     /// </summary>
-    public bool SoulCardOnly { get; init; }
+    public bool SoulCardOnly { get; set; }
 
     /// <summary>
     /// Extra soul-stream edition reads per ante for the fast edition vector prefilter (0 = use
     /// <see cref="LegendaryJokerSourceConfig.BoosterPacks"/> length). Raise when rare multi-soul antes
     /// could otherwise false-negative the prefilter.
     /// </summary>
-    public int SoulEditionRolls { get; init; }
+    public int SoulEditionRolls { get; set; }
 
     public override int EstimatedCost => 5 + MaxAnte;
 
@@ -30,8 +30,6 @@ public sealed class LegendaryJokerClause : JamlClause
         IsWildcard
             ? "legendaryJoker Any"
             : $"legendaryJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new LegendaryJokerFilterDesc(this);
 }
 
 /// <summary>

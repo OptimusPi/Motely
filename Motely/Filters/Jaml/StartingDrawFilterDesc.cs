@@ -6,8 +6,8 @@ namespace Motely.Filters.Jaml;
 
 public sealed class StartingDrawClause : JamlClause
 {
-    public MotelyStandardcardRank? Rank { get; init; }
-    public MotelyStandardcardSuit? Suit { get; init; }
+    public MotelyStandardcardRank? Rank { get; set; }
+    public MotelyStandardcardSuit? Suit { get; set; }
 
     public override int EstimatedCost => 7 + MaxAnte;
 
@@ -20,8 +20,6 @@ public sealed class StartingDrawClause : JamlClause
             parts.Add(Suit.Value.ToString());
         return $"startingDraw {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
     }
-
-    public override IMotelySeedFilterDesc CreateDesc() => new StartingDrawFilterDesc(this);
 }
 
 public struct StartingDrawFilterDesc(StartingDrawClause clause)

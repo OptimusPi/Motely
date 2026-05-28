@@ -12,14 +12,13 @@ using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
 using Motely.SeedProviders;
+using System.Text.Json;
 
 [assembly: Preferences(
     Space = [@"^Motely\.Wasm$", "index"],
     Name = [
         @"^Program$",
         "Motely",
-        @"^WasmSearchSettings$",
-        "SearchSettings",
     ]
 )]
 
@@ -164,26 +163,43 @@ public static partial class Program
         MotelyJamlyzer.AnalyzeSeeds(new(jaml, seeds));
 
     [Export]
-    public static WasmJamlConfig ParseJaml(string jaml)
+    public static string JamlToJson(string jaml)
     {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error) || config is null)
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return new WasmJamlConfig(config);
+        if (!JamlConfigLoader.TryParseRoot(jaml, out var doc, out var error) || doc is null)
+            throw new InvalidOperationException(error ?? "Failed to parse JAML.");
+        return JsonSerializer.Serialize(doc, JamlJsonContext.Default.JamlRootDocument);
     }
 
     [Export]
-    public static string ExplainJamlConfig(WasmJamlConfig config) =>
-        config.Config.HasAnyClauses() ? JamlSearchBuilder.ExplainPlan(config.Config) : "";
+    public static string JsonToJaml(string json)
+    {
+        var doc = JsonSerializer.Deserialize<JamlRootDocument>(json, JamlJsonContext.Default.JamlRootDocument);
+        if (doc is null)
+            throw new InvalidOperationException("Failed to deserialize JamlRootDocument from JSON.");
+        return JamlConfigLoader.SerializeRoot(doc);
+    }
 
     [Export]
-    public static JamlSearchPlan CreatePlanFromConfig(WasmJamlConfig config) =>
-        JamlSearchBuilder.CreatePlan(config.Config);
+    public static JamlConfig ParseJaml(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error) || config is null)
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return config;
+    }
+
+    [Export]
+    public static string ExplainJamlConfig(JamlConfig config) =>
+        config.HasAnyClauses() ? JamlSearchBuilder.ExplainPlan(config) : "";
+
+    [Export]
+    public static JamlSearchPlan CreatePlanFromConfig(JamlConfig config) =>
+        JamlSearchBuilder.CreatePlan(config);
 
     [Export]
     public static MotelyJamlyzerResult AnalyzeJamlSeedsFromConfig(
-        WasmJamlConfig config,
+        JamlConfig config,
         string[]? seeds = null
-    ) => MotelyJamlyzer.AnalyzeSeeds(config.Config, seeds);
+    ) => MotelyJamlyzer.AnalyzeSeeds(config, seeds);
 
     // ── Packed-int decoders ──────────────────────────────────────────────────
     // Return typed enums so Bootsharp emits MotelyItemType, MotelyItemTypeCategory,
@@ -231,53 +247,83 @@ public static partial class Program
     [Export]
     public static bool IsRental(int v) => (v & (1 << MotelyGlobals.RentalStickerOffset)) != 0;
 
-    /// <summary>
-    /// Passthrough search settings (no JAML clauses).
-    /// </summary>
-    [Export]
-    public static WasmSearchSettings CreateSearchSettings() =>
-        new(
-            AttachWasmCallbacks(
-                new global::Motely.MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
-                    new PassthroughFilterDesc()
-                )
-            )
-        );
-
-    /// <summary>Built-in native C# filters (CLI <c>--native</c> set).</summary>
-    [Export]
-    public static WasmSearchSettings CreateNativeSearchSettings(string name)
+    private static IMotelySearch CreateWasmSearch(IMotelySearchSettings settings)
     {
-        if (!MotelyNativeFilterNames.TryParse(name, out var filter))
+        settings = AttachWasmCallbacks(settings)
+            .WithThreadCount(1);
+        
+        // Auto-attach Jimmolate if JS registered the import probe
+        if (MotelyWasmInterop.JimmolateSearcher is not null)
+        {
+            settings = settings.WithJimmolate();
+        }
+
+        return settings.CreateSearch();
+    }
+
+    [Export]
+    public static IMotelySearch StartRandomSearch(string jaml, int count)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        var settings = JamlSearchBuilder.CreateSettings(config)
+            .WithRandomSearch(count);
+        return CreateWasmSearch(settings);
+    }
+
+    [Export]
+    public static IMotelySearch StartSequentialSearch(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        var settings = JamlSearchBuilder.CreateSettings(config)
+            .WithSequentialSearch();
+        return CreateWasmSearch(settings);
+    }
+
+    [Export]
+    public static IMotelySearch StartSeedListSearch(string jaml, string[] seeds)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        var settings = JamlSearchBuilder.CreateSettings(config)
+            .WithListSearch(seeds, seeds.Length);
+        return CreateWasmSearch(settings);
+    }
+
+    [Export]
+    public static IMotelySearch StartAestheticSearch(string jaml, JamlAesthetic aesthetic)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        var settings = JamlSearchBuilder.CreateSettings(config)
+            .WithAestheticSearch(aesthetic);
+        return CreateWasmSearch(settings);
+    }
+
+    [Export]
+    public static IMotelySearch StartNativeListSearch(string filterName, string[] seeds)
+    {
+        if (!MotelyNativeFilterNames.TryParse(filterName, out var filter))
             throw new ArgumentException(
-                $"Unknown native filter '{name}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}"
+                $"Unknown native filter '{filterName}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}"
             );
-        return new WasmSearchSettings(
-            AttachWasmCallbacks(MotelyNativeFilterFactory.CreateSettings(filter))
-        );
+        var settings = MotelyNativeFilterFactory.CreateSettings(filter)
+            .WithListSearch(seeds, seeds.Length);
+        return CreateWasmSearch(settings);
+    }
+
+    [Export]
+    public static IMotelySearch StartPassthroughListSearch(string[] seeds)
+    {
+        var settings = new global::Motely.MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+            new PassthroughFilterDesc()
+        ).WithListSearch(seeds, seeds.Length);
+        return CreateWasmSearch(settings);
     }
 
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
-
-    /// <summary>Apply a JAML document to search settings (validate with <see cref="ValidateJaml"/> first).</summary>
-    [Export]
-    public static WasmSearchSettings FromJaml(string jaml)
-    {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        return new WasmSearchSettings(
-            AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config))
-        );
-    }
-
-    [Export]
-    public static WasmSearchSettings FromJamlConfig(WasmJamlConfig config)
-    {
-        return new WasmSearchSettings(
-            AttachWasmCallbacks(JamlSearchBuilder.CreateSettings(config.Config))
-        );
-    }
 
     private static IMotelySearchSettings AttachWasmCallbacks(IMotelySearchSettings settings)
     {

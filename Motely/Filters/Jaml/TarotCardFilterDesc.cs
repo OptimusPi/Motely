@@ -6,15 +6,13 @@ namespace Motely.Filters.Jaml;
 
 public sealed class TarotCardClause : JamlClause
 {
-    public required MotelyTarotCard[] Tarots { get; init; }
-    public TarotCardSourceConfig Sources { get; init; } = new();
+    public required MotelyTarotCard[] Tarots { get; set; }
+    public TarotCardSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
 
     public override string Describe() =>
         $"Tarot {string.Join(", ", System.Array.ConvertAll(Tarots, static t => t.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new TarotCardFilterDesc(this);
 }
 
 public struct TarotCardFilterDesc(TarotCardClause clause)

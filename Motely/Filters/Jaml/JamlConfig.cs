@@ -6,7 +6,7 @@ namespace Motely.Filters.Jaml;
 /// Typed clause lists for one JAML section (must / should / mustNot).
 /// Each element = one filter in the chain.
 /// </summary>
-public sealed class JamlClauseSet : IEnumerable<IJamlClause>
+public sealed class JamlClauseSet
 {
     public List<IJamlClause> OrderedClauses { get; } = [];
     public List<JokerClause> Jokers { get; set; } = [];
@@ -49,16 +49,6 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
     public bool HasAnyClauses
     {
         get { return OrderedClauses.Count > 0; }
-    }
-
-    public IEnumerator<IJamlClause> GetEnumerator()
-    {
-        return OrderedClauses.GetEnumerator();
-    }
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
     }
 }
 

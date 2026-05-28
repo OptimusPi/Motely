@@ -46,6 +46,29 @@ public static partial class JamlConfigLoader
         .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
         .Build();
 
+    private static readonly ISerializer JamlStaticSerializer = new StaticSerializerBuilder(
+        new JamlYamlContext()
+    )
+        .ConfigureDefaultValuesHandling(
+            DefaultValuesHandling.OmitNull
+                | DefaultValuesHandling.OmitEmptyCollections
+                | DefaultValuesHandling.OmitDefaults
+        )
+        .WithTypeConverter(new StandardCardValueConverter())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
+        .Build();
+
+    public static string SerializeRoot(JamlRootDocument doc)
+    {
+        using var writer = new System.IO.StringWriter();
+        JamlStaticSerializer.Serialize(writer, doc);
+        return writer.ToString();
+    }
+
     /// <summary>
     /// Returns canonical JAML text by applying loader normalizations and stable YAML emission.
     /// </summary>

@@ -15,6 +15,31 @@ public static partial class JamlConfigLoader
 {
     private static readonly int[] DefaultAntes = [1, 2, 3, 4, 5, 6, 7, 8];
 
+    public static bool TryParseRoot(
+        string jaml,
+        [NotNullWhen(true)] out JamlRootDocument? doc,
+        out string? error
+    )
+    {
+        doc = null;
+        error = null;
+        if (string.IsNullOrWhiteSpace(jaml))
+        {
+            error = "JAML content is required.";
+            return false;
+        }
+        try
+        {
+            var normalizedJaml = NormalizeNestedLogicSyntax(jaml);
+            return TryParseRootFromYaml(normalizedJaml, out doc, out error);
+        }
+        catch (Exception ex)
+        {
+            error = FormatLoadError(ex);
+            return false;
+        }
+    }
+
     public static bool TryLoad(
         string jaml,
         [NotNullWhen(true)] out JamlConfig? config,
