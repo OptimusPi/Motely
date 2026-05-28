@@ -86,7 +86,14 @@ describe("JAML API", () => {
     });
 
     it("JamlToJson and JsonToJaml round-trips correctly", () => {
-        const json = Motely.jamlToJson(jaml.must);
+        const roundtripJaml = `id: perkeo_observatory
+deck: Ghost
+stake: Gold
+must:
+  - joker: WeeJoker
+    antes: [1]
+`;
+        const json = Motely.jamlToJson(roundtripJaml);
         assert.equal(typeof json, "string");
         
         const doc = JSON.parse(json);

@@ -37,7 +37,7 @@ public abstract class JamlClause : IJamlClause
     public abstract string Describe();
 }
 
-public abstract class RollClause : IRollClause
+public abstract class RollClause : IJamlClause
 {
     public string? Label { get; set; }
     public int[] Rolls { get; set; } = [];

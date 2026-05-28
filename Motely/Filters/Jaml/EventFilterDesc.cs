@@ -27,12 +27,6 @@ public sealed class ErraticCardClause : JamlClause
 
 // ── Event clause definitions ──
 
-/// <summary>Marker interface: clauses driven by a roll-index array (event probes), not antes.</summary>
-public interface IRollClause : IJamlClause
-{
-    int[] Rolls { get; }
-}
-
 public sealed class LuckyMoneyClause : RollClause
 {
     public override string Describe() => "event LuckyMoney";
@@ -574,7 +568,7 @@ internal static class EventFilterUtils
         RollChecker checker,
         ref MotelyVectorPrngStream stream
     )
-        where TClause : IRollClause
+        where TClause : RollClause
     {
         Debug.Assert(
             clause.Rolls.Length > 0,
@@ -644,7 +638,7 @@ internal static class EventFilterUtils
         ref MotelyVectorPrngStream stream,
         Vector256<int> value
     )
-        where TClause : IRollClause
+        where TClause : RollClause
     {
         Debug.Assert(
             clause.Rolls.Length > 0,
