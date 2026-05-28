@@ -7,10 +7,6 @@ const PEER_EXTERNALS = [
   "react-dom",
   "react/jsx-runtime",
   "react/jsx-dev-runtime",
-  "three",
-  "@react-three/fiber",
-  "@react-three/drei",
-  "@react-spring/three",
   "react-icons",
   /^react-icons\//,
   // motely-wasm: externalize so consumers control resolution. Next.js apps
@@ -47,7 +43,6 @@ export default defineConfig({
         ui: resolve(__dirname, "src/ui.ts"),
         core: resolve(__dirname, "src/core.ts"),
         motely: resolve(__dirname, "src/motely.ts"),
-        r3f: resolve(__dirname, "src/r3f.ts"),
       },
       formats: ["es"],
     },

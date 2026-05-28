@@ -22,10 +22,6 @@
       "types": "./dist/motely.d.ts",
       "default": "./dist/motely.js"
     },
-    "./r3f": {
-      "types": "./dist/r3f.d.ts",
-      "default": "./dist/r3f.js"
-    },
     "./jimbo.css": "./dist/ui/jimbo.css",
     "./fonts.css": "./fonts.css",
     "./assets/*": "./assets/*"
@@ -84,41 +80,22 @@
   "author": "pifreak",
   "license": "MIT",
   "peerDependencies": {
-    "@react-spring/three": ">=9.0.0",
-    "@react-three/drei": ">=9.0.0",
-    "@react-three/fiber": ">=8.0.0",
     "motely-wasm": ">=19.0.2",
     "react": "^18.2.0 || ^19.0.0",
     "react-dom": "^18.2.0 || ^19.0.0",
-    "react-icons": ">=5.0.0",
-    "three": ">=0.150.0"
+    "react-icons": ">=5.0.0"
   },
   "peerDependenciesMeta": {
-    "@react-spring/three": {
-      "optional": true
-    },
-    "@react-three/fiber": {
-      "optional": true
-    },
     "@rewaffle/bootsharp-file-system": {
       "optional": true
     },
     "react-icons": {
-      "optional": true
-    },
-    "three": {
-      "optional": true
-    },
-    "@react-three/drei": {
       "optional": true
     }
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.2.1",
     "@eslint/js": "^10.0.1",
-    "@react-spring/three": "^10.0.3",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
     "@storybook/addon-a11y": "^10.4.0",
     "@storybook/addon-docs": "^10.4.0",
     "@storybook/addon-mcp": "^0.6.0",
@@ -127,7 +104,6 @@
     "@types/node": "^25.8.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/browser-playwright": "^4.1.6",
     "@vitest/coverage-v8": "^4.1.6",
@@ -135,13 +111,12 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-    "motely-wasm": "file:./motely-wasm-19.0.2.tgz",
+    "motely-wasm": "^19.0.2",
     "playwright": "^1.60.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-icons": "^5.6.0",
     "storybook": "^10.4.0",
-    "three": "^0.184.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.3",
     "vite": "^8.0.13",

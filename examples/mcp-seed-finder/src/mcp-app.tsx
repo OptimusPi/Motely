@@ -3,6 +3,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
 import bootsharp from "motely-wasm";
+import "jaml-ui/jimbo.css";
 import { SeedFinderApp } from "./SeedFinderApp";
 import { STARTER_JAML } from "./constants";
 
@@ -72,5 +73,5 @@ function McpSeedFinder() {
   return <SeedFinderApp jaml={jaml} onChange={setJaml} onRunRequest={handleRunRequest} />;
 }
 
-await bootsharp.boot("/motely-wasm/bin");
+await bootsharp.boot("https://cdn.jsdelivr.net/npm/motely-wasm@19.0.2/bin");
 createRoot(document.getElementById("root")!).render(<McpSeedFinder />);

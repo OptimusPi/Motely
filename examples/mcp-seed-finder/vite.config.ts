@@ -15,7 +15,13 @@ export default defineConfig(({ mode }) => {
       sourcemap: isDevelopment ? "inline" : undefined,
       cssMinify: !isDevelopment,
       minify: !isDevelopment,
-      rollupOptions: { input },
+      rollupOptions: {
+        input,
+        external: [
+          "motely-wasm",
+          /^motely-wasm\//,
+        ],
+      },
       outDir: isMcp ? "dist" : "dist-web",
       emptyOutDir: true,
     },

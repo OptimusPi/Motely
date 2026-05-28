@@ -213,7 +213,6 @@ self.onmessage = async (event: MessageEvent) => {
 
         if (data.predicateStr) {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-implied-eval
                 const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
                 Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
                 Motely.enableJimmolate();
