@@ -6,20 +6,18 @@ namespace Motely.Filters.Jaml;
 
 public sealed class TagClause : JamlClause
 {
-    public required MotelyTag[] Tags { get; init; }
+    public required MotelyTag[] Tags { get; set; }
 
     /// <summary>
     /// Tag-stream draw indices per ante: 0 = small-blind offer, 1 = big-blind offer,
     /// 2+ = further draws on the same ante stream (replay / double-tag extras).
     /// </summary>
-    public required int[] Rolls { get; init; }
+    public required int[] Rolls { get; set; }
 
     public override int EstimatedCost => 3 + MaxAnte;
 
     public override string Describe() =>
         $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new TagFilterDesc(this);
 }
 
 public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>

@@ -6,15 +6,13 @@ namespace Motely.Filters.Jaml;
 
 public sealed class PlanetCardClause : JamlClause
 {
-    public required MotelyPlanetCard[] Planets { get; init; }
-    public PlanetSourceConfig Sources { get; init; } = new();
+    public required MotelyPlanetCard[] Planets { get; set; }
+    public PlanetSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
 
     public override string Describe() =>
         $"Planet {string.Join(", ", System.Array.ConvertAll(Planets, static p => p.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new PlanetCardFilterDesc(this);
 }
 
 public struct PlanetCardFilterDesc(PlanetCardClause clause)

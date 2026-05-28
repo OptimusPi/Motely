@@ -33,10 +33,7 @@ const Motely = await bootOnce();
 describe("individual seed search", () => {
     it("PerkeoObservatory native filter runs list search (SearchIndividualSeeds in C#)", async () => {
         const seeds = ["MAAAAAAA", "MBBBBBBB"];
-        const search = Motely.createNativeSearchSettings("PerkeoObservatory")
-            .withListSearch(seeds, seeds.length)
-            .withThreadCount(1)
-            .start();
+        const search = Motely.startNativeListSearch("PerkeoObservatory", seeds);
         await search.waitForCompletionAsync();
         assert.equal(search.isCompleted, true);
         assert.equal(Number(search.totalSeedsSearched), seeds.length);
@@ -58,12 +55,7 @@ describe("individual seed search", () => {
 
         let search;
         try {
-            search = Motely.createSearchSettings()
-                .withJimmolate()
-                .withListSearch(seeds, seeds.length)
-                .withThreadCount(1)
-                .withQuietMode(true)
-                .start();
+            search = Motely.startPassthroughListSearch(seeds);
             await search.waitForCompletionAsync();
         } finally {
             Motely.onSeedMatch.unsubscribe(onSeedMatch);
@@ -80,9 +72,5 @@ describe("individual seed search", () => {
             visited.sort(),
             ["MAAAAAAA", "MBBBBBBB", "MADDDDDD", "MAFFFFFF"].sort()
         );
-    });
-
-    it("withJimmolate forwards on WasmSearchSettings", () => {
-        assert.equal(typeof Motely.createSearchSettings().withJimmolate, "function");
     });
 });

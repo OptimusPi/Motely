@@ -7,20 +7,18 @@ namespace Motely.Filters.Jaml;
 
 public sealed class VoucherClause : JamlClause
 {
-    public required MotelyVoucher[] Vouchers { get; init; }
+    public required MotelyVoucher[] Vouchers { get; set; }
 
     /// <summary>
     /// Voucher-stream indices per ante: 0 = ante award, 1+ = further draws on that ante's
     /// voucher stream (Hieroglyph bonus, voucher-tag shop extras, etc.).
     /// </summary>
-    public required int[] Rolls { get; init; }
+    public required int[] Rolls { get; set; }
 
     public override int EstimatedCost => 4 + MaxAnte;
 
     public override string Describe() =>
         $"voucher {string.Join(", ", System.Array.ConvertAll(Vouchers, static v => v.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new VoucherFilterDesc(this);
 }
 
 public struct VoucherFilterDesc(VoucherClause clause)

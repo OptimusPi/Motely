@@ -5,12 +5,12 @@ namespace Motely.Filters.Jaml;
 
 public sealed class StandardCardClause : JamlClause
 {
-    public MotelyStandardcardRank? Rank { get; init; }
-    public MotelyStandardcardSuit? Suit { get; init; }
-    public MotelyItemEnhancement? Enhancement { get; init; }
-    public MotelyItemSeal? Seal { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public StandardCardSourceConfig Sources { get; init; } = new();
+    public MotelyStandardcardRank? Rank { get; set; }
+    public MotelyStandardcardSuit? Suit { get; set; }
+    public MotelyItemEnhancement? Enhancement { get; set; }
+    public MotelyItemSeal? Seal { get; set; }
+    public MotelyItemEdition? Edition { get; set; }
+    public StandardCardSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 8 + MaxAnte;
 
@@ -29,8 +29,6 @@ public sealed class StandardCardClause : JamlClause
             parts.Add(Edition.Value.ToString());
         return $"standardCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
     }
-
-    public override IMotelySeedFilterDesc CreateDesc() => new StandardCardFilterDesc(this);
 }
 
 public struct StandardCardFilterDesc(StandardCardClause clause)
