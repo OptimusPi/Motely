@@ -7,13 +7,11 @@ namespace Motely.Filters.Jaml;
 
 public sealed class ErraticSuitClause : JamlClause
 {
-    public required MotelyStandardcardSuit Suit { get; init; }
+    public required MotelyStandardcardSuit Suit { get; set; }
 
     public override int EstimatedCost => 4 + MaxAnte;
 
     public override string Describe() => $"erraticSuit {Suit}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new ErraticSuitFilterDesc(this);
 }
 
 public struct ErraticSuitFilterDesc(ErraticSuitClause clause)

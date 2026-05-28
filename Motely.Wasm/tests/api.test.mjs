@@ -85,6 +85,21 @@ describe("JAML API", () => {
         assert.ok(errResult.startsWith("# ERROR:"));
     });
 
+    it("JamlToJson and JsonToJaml round-trips correctly", () => {
+        const json = Motely.jamlToJson(jaml.must);
+        assert.equal(typeof json, "string");
+        
+        const doc = JSON.parse(json);
+        assert.equal(doc.id, "perkeo_observatory");
+        assert.equal(doc.deck, "Ghost");
+        assert.equal(doc.stake, "Gold");
+        
+        // Modify a value
+        doc.deck = "Red";
+        const modifiedJaml = Motely.jsonToJaml(JSON.stringify(doc));
+        assert.ok(modifiedJaml.includes("deck: Red"));
+    });
+
     it("createPlan exposes scoring structure", () => {
         const plan = Motely.createPlan(jaml.scoring);
         assert.equal(typeof plan?.scoredCsvHeaderQuoted, "string");

@@ -334,7 +334,7 @@ public static class JamlSearchBuilder
                         IMotelySeedFilterDesc desc,
                         IJamlClause clause,
                         string label
-                    )>? expanded
+                     )>? expanded
                 )
             )
             {
