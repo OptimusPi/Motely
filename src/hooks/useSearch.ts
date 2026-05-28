@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Motely } from "motely-wasm";
+import {
+    Motely,
+    type IMotelySearch,
+    type MotelyProgress,
+    type MotelyScoredSeedResult,
+    type IMotelyWasmSearchSettings,
+    type JamlAesthetic
+} from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { SearchSettings } from "motely-wasm";
-import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 export interface SearchResult {
     seed: string;
@@ -37,9 +41,9 @@ const INITIAL_STATE: UseSearchState = {
 };
 
 
-function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): SearchSettings {
+function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): IMotelyWasmSearchSettings {
     const settings = Motely.fromJaml(jaml);
-    let configured: SearchSettings;
+    let configured: IMotelyWasmSearchSettings;
     if (mode === "seedlist" && opts.seeds && opts.seeds.length > 0) {
         configured = settings.withListSearch(opts.seeds, opts.seeds.length);
     } else if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
@@ -65,7 +69,7 @@ export function useSearch() {
     useEffect(() => () => teardown(), [teardown]);
 
     const startSearch = useCallback(
-        async (jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number; predicate?: (seed: string) => boolean } = {}) => {
+        async (jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number; predicate?: (seed: string, deck?: number, stake?: number) => boolean } = {}) => {
             try {
                 await ensureMotelyReady();
 
@@ -110,13 +114,14 @@ export function useSearch() {
 
                 if (opts.predicate) {
                     const pred = opts.predicate;
-                    Motely.jimmolateProbe = (seed) => pred(seed);
+                    Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
+                    Motely.enableJimmolate();
                 }
-                const search = configure(jaml, mode, opts, !!opts.predicate).start(undefined);
+                const search = configure(jaml, mode, opts, !!opts.predicate).start();
                 searchRef.current = search;
 
                 try {
-                    await search.waitForCompletionAsync(undefined);
+                    await search.waitForCompletionAsync();
                     setState((s) => ({
                         ...s,
                         status: search.isCompleted ? "completed" : "cancelled",
@@ -141,19 +146,19 @@ export function useSearch() {
     );
 
     const startAesthetic = useCallback(
-        (jaml: string, aesthetic: number, predicate?: (seed: string) => boolean) =>
+        (jaml: string, aesthetic: number, predicate?: (seed: string, deck?: number, stake?: number) => boolean) =>
             startSearch(jaml, "aesthetic", { aesthetic, predicate }),
         [startSearch],
     );
 
     const startSeedList = useCallback(
-        (jaml: string, seeds: string[], predicate?: (seed: string) => boolean) =>
+        (jaml: string, seeds: string[], predicate?: (seed: string, deck?: number, stake?: number) => boolean) =>
             startSearch(jaml, "seedlist", { seeds, predicate }),
         [startSearch],
     );
 
     const startRandom = useCallback(
-        (jaml: string, count: number, predicate?: (seed: string) => boolean) =>
+        (jaml: string, count: number, predicate?: (seed: string, deck?: number, stake?: number) => boolean) =>
             startSearch(jaml, "random", { count, predicate }),
         [startSearch],
     );

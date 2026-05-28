@@ -5,12 +5,17 @@
 // hook is responsible for partitioning the input space and assigning each worker
 // a disjoint slice via the fields on PoolStartMessage. This worker just runs
 // what it is told.
-import { Motely } from "motely-wasm";
+import {
+    Motely,
+    type IMotelySearch,
+    type MotelyProgress,
+    type MotelyScoredSeedResult,
+    type IMotelyWasmSearchSettings,
+    type MotelyDeck,
+    type MotelyStake,
+    type JamlAesthetic
+} from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { SearchSettings } from "motely-wasm";
-import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
-import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 
@@ -30,6 +35,7 @@ export interface PoolStartMessage {
     aesthetic?: number;
     deck?: number;
     stake?: number;
+    predicateStr?: string;
 }
 
 export interface PoolStopMessage {
@@ -142,9 +148,9 @@ function attachListeners(): void {
 }
 
 function applyCommonOverrides(
-    settings: SearchSettings,
+    settings: IMotelyWasmSearchSettings,
     message: PoolStartMessage,
-): SearchSettings {
+): IMotelyWasmSearchSettings {
     let s = settings.withThreadCount(1);
     if (typeof message.deck === "number") {
         s = s.withDeck(message.deck as MotelyDeck);
@@ -155,7 +161,7 @@ function applyCommonOverrides(
     return s;
 }
 
-function configureSettings(message: PoolStartMessage): SearchSettings {
+function configureSettings(message: PoolStartMessage): IMotelyWasmSearchSettings {
     const base = Motely.fromJaml(message.jaml);
     const s = applyCommonOverrides(base, message);
 
@@ -205,15 +211,26 @@ self.onmessage = async (event: MessageEvent) => {
     try {
         await ensureMotelyReady();
 
+        if (data.predicateStr) {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-implied-eval
+                const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
+                Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
+                Motely.enableJimmolate();
+            } catch (err) {
+                console.error("Failed to compile worker Jimmolate predicate:", err);
+            }
+        }
+
         attachListeners();
 
         currentSearch?.cancel();
         const settings = configureSettings(data);
-        const search = settings.start(undefined);
+        const search = settings.start();
         currentSearch = search;
 
         try {
-            await search.waitForCompletionAsync(undefined);
+            await search.waitForCompletionAsync();
             self.postMessage({
                 type: "complete",
                 workerIndex,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { type Motely as MotelyNamespace } from "motely-wasm";
-import type { MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
+import type { MotelyJamlyzerSeedResult } from "motely-wasm";
 
 type MotelyApi = typeof MotelyNamespace;
 

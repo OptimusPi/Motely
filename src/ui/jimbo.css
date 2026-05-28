@@ -1956,6 +1956,16 @@
   width: var(--j-card-width, 71px);
 }
 
+.j-game-card--unknown {
+  aspect-ratio: 0.75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
 .j-card-renderer {
   --j-card-aspect: 0.75;
   --j-card-glare-x: 50%;

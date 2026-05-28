@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Motely } from "motely-wasm";
+import { Motely, type JamlAesthetic } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import type {
     PoolInboundMessage,
     PoolOutboundMessage,
@@ -38,6 +37,7 @@ export interface StartPoolOptions {
     batchCharacterCount?: number;
     deck?: number;
     stake?: number;
+    predicateStr?: string;
 }
 
 interface WorkerProgress {
@@ -317,6 +317,7 @@ export function useSearchPool(options: UseSearchPoolOptions = {}) {
                         aesthetic: opts.aesthetic ?? 0,
                         deck: opts.deck,
                         stake: opts.stake,
+                        predicateStr: opts.predicateStr,
                     }];
                     setState({ ...makeInitialState(1), status: "running", workerCount: 1 });
                     await spawn(1, builders);
@@ -338,6 +339,7 @@ export function useSearchPool(options: UseSearchPoolOptions = {}) {
                         count,
                         deck: opts.deck,
                         stake: opts.stake,
+                        predicateStr: opts.predicateStr,
                     }));
                 } else if (mode === "seedlist") {
                     const slices = partitionList(opts.seeds ?? [], workerCount);
@@ -350,6 +352,7 @@ export function useSearchPool(options: UseSearchPoolOptions = {}) {
                         seeds,
                         deck: opts.deck,
                         stake: opts.stake,
+                        predicateStr: opts.predicateStr,
                     }));
                 } else if (mode === "sequential") {
                     const batchCharacterCount = opts.batchCharacterCount ?? 4;
@@ -365,6 +368,7 @@ export function useSearchPool(options: UseSearchPoolOptions = {}) {
                         endBatchIndex: range.end.toString(),
                         deck: opts.deck,
                         stake: opts.stake,
+                        predicateStr: opts.predicateStr,
                     }));
                 }
 

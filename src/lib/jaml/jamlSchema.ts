@@ -4,7 +4,7 @@ import {
   MotelyItemEdition,
   MotelyItemSeal,
   MotelyItemEnhancement,
-} from 'motely-wasm/motely/enums';
+} from 'motely-wasm';
 
 const enumNames = (e: Record<string, string | number>): readonly string[] =>
   Object.keys(e).filter(k => isNaN(Number(k)));

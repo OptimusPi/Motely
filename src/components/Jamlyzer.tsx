@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Motely } from "motely-wasm";
-import type { MotelyJamlyzerResult, MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
 import {
+  Motely,
+  type MotelyJamlyzerResult,
+  type MotelyJamlyzerSeedResult,
   MotelyBossBlind,
   MotelyVoucher,
   MotelyTag,
   MotelyBoosterPack
-} from "motely-wasm/motely/enums";
+} from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { JimboInnerPanel, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
@@ -321,7 +322,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                                   <JamlGameCard card={resolved.card} type={resolved.type} />
                                 )}
                                 {resolved.kind === "unknown" && (
-                                  <div className="j-game-card j-game-card--unknown" style={{ width: 71 * 0.45, height: 95 * 0.45, display: "flex", alignItems: "center", justifyContent: "center", background: "#1a1a1a", border: "1px solid #333", borderRadius: 4 }}>
+                                  <div className="j-game-card j-game-card--unknown" style={{ "--j-card-width": `${71 * 0.45}px` } as React.CSSProperties}>
                                     <JimboText size="micro" tone="grey" className="j-text-center">?</JimboText>
                                   </div>
                                 )}
@@ -364,7 +365,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                                         <JamlGameCard card={resolved.card} type={resolved.type} />
                                       )}
                                       {resolved.kind === "unknown" && (
-                                        <div className="j-game-card j-game-card--unknown" style={{ width: 71 * 0.45, height: 95 * 0.45, display: "flex", alignItems: "center", justifyContent: "center", background: "#1a1a1a", border: "1px solid #333", borderRadius: 4 }}>
+                                        <div className="j-game-card j-game-card--unknown" style={{ "--j-card-width": `${71 * 0.45}px` } as React.CSSProperties}>
                                           <JimboText size="micro" tone="grey" className="j-text-center">?</JimboText>
                                         </div>
                                       )}

@@ -18,7 +18,7 @@ import {
   SPECTRAL_PICKER_CONFIG,
   PACK_PICKER_CONFIG,
 } from "./CategoryPicker.js";
-import { JimboButton, JimboInnerPanel, JimboModal, type JimboTone } from "../../ui/panel.js";
+import { JimboInnerPanel, JimboModal, type JimboTone } from "../../ui/panel.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboSprite } from "../../ui/sprites.js";
@@ -73,17 +73,7 @@ const CATEGORIES: CategoryOption[] = [
   { key: "pack",     label: "Booster Pack",  sprite: "Arcana Pack",  sheet: "Boosters", tone: "orange",   hint: "Arcana, Celestial, etc." },
 ];
 
-const ZONE_TONE: Record<JamlZone, JimboTone> = {
-  must: "blue",
-  should: "red",
-  mustnot: "orange",
-};
 
-const ZONE_LABEL: Record<JamlZone, string> = {
-  must: "Must",
-  should: "Should",
-  mustnot: "Must Not",
-};
 
 const CATEGORY_CONFIG_MAP: Record<SlotCategory, typeof VOUCHER_PICKER_CONFIG> = {
   joker:    VOUCHER_PICKER_CONFIG,

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
-import { MotelyJokerRarity } from "motely-wasm/motely/enums";
+import { MotelyJokerRarity } from "motely-wasm";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboTextInput } from "../../ui/JimboTextInput.js";
@@ -65,6 +65,7 @@ function rarityToClauseKey(rarity: MotelyJokerRarity): string {
     case MotelyJokerRarity.Rare:      return "rareJoker";
     case MotelyJokerRarity.Uncommon:  return "uncommonJoker";
     case MotelyJokerRarity.Common:    return "commonJoker";
+    default:                          return "commonJoker";
   }
 }
 
