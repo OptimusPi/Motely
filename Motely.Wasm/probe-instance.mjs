@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
 const require = createRequire(import.meta.url);
@@ -8,16 +8,16 @@ const pkgDir = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../motely-wasm"
 );
-const wasmPath = path.join(pkgDir, "bin/dotnet.native.wasm");
+const wasmPath = path.join(pkgDir, "bin/motely-wasm.wasm");
 const wasmBytes = await readFile(wasmPath);
 
-const bootsharp = (await import(path.join(pkgDir, "dist/index.mjs"))).default;
-const { Motely } = await import(path.join(pkgDir, "dist/generated/index.g.mjs"));
+const bootsharp = (await import(pathToFileURL(path.join(pkgDir, "dist/index.mjs")).href)).default;
+const { Motely } = await import(pathToFileURL(path.join(pkgDir, "dist/generated/index.g.mjs")).href);
 const { MotelyDeck, MotelyStake } = await import(
-    path.join(pkgDir, "dist/generated/motely/enums.g.mjs")
+    pathToFileURL(path.join(pkgDir, "dist/generated/motely/enums.g.mjs")).href
 );
 const { MotelyStreamKind } = await import(
-    path.join(pkgDir, "dist/generated/motely.g.mjs")
+    pathToFileURL(path.join(pkgDir, "dist/generated/motely.g.mjs")).href
 );
 
 await bootsharp.boot({

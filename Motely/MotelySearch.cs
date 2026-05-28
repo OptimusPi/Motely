@@ -878,6 +878,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[WORKER EXCEPTION] {ex}");
                 Interlocked.CompareExchange(ref _firstError, ex, null);
             }
             finally
