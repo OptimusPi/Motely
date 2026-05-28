@@ -9,8 +9,8 @@ namespace Motely.Filters.Jaml;
 
 public sealed class ErraticCardClause : JamlClause
 {
-    public MotelyStandardcardRank? Rank { get; init; }
-    public MotelyStandardcardSuit? Suit { get; init; }
+    public MotelyStandardcardRank? Rank { get; set; }
+    public MotelyStandardcardSuit? Suit { get; set; }
 
     public override int EstimatedCost => 5 + MaxAnte;
 
@@ -23,8 +23,6 @@ public sealed class ErraticCardClause : JamlClause
             parts.Add(Suit.Value.ToString());
         return $"erraticCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
     }
-
-    public override IMotelySeedFilterDesc CreateDesc() => new ErraticCardFilterDesc(this);
 }
 
 // ── Event clause definitions ──
@@ -38,15 +36,11 @@ public interface IRollClause : IJamlClause
 public sealed class LuckyMoneyClause : RollClause
 {
     public override string Describe() => "event LuckyMoney";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new LuckyMoneyFilterDesc(this);
 }
 
 public sealed class LuckyMultClause : RollClause
 {
     public override string Describe() => "event LuckyMult";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new LuckyMultFilterDesc(this);
 }
 
 public sealed class MisprintMultClause : RollClause
@@ -54,74 +48,54 @@ public sealed class MisprintMultClause : RollClause
     /// <summary>
     /// Specific mult value to match (0-23). If null, matches any value (always succeeds).
     /// </summary>
-    public int? Value { get; init; }
+    public int? Value { get; set; }
 
     public override string Describe() => "event MisprintMult";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new MisprintMultFilterDesc(this);
 }
 
 public sealed class WheelOfFortuneClause : RollClause
 {
     public override string Describe() => "event WheelOfFortune";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new WheelOfFortuneFilterDesc(this);
 }
 
 public sealed class CavendishExtinctClause : RollClause
 {
     public override string Describe() => "event CavendishExtinct";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new CavendishExtinctFilterDesc(this);
 }
 
 public sealed class GrosMichelExtinctClause : RollClause
 {
     public override string Describe() => "event GrosMichelExtinct";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new GrosMichelExtinctFilterDesc(this);
 }
 
 public sealed class SpaceLevelupClause : RollClause
 {
     public override string Describe() => "event SpaceLevelup";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new SpaceLevelupFilterDesc(this);
 }
 
 public sealed class BusinessPayoutClause : RollClause
 {
     public override string Describe() => "event BusinessPayout";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new BusinessPayoutFilterDesc(this);
 }
 
 public sealed class BloodstoneTriggerClause : RollClause
 {
     public override string Describe() => "event BloodstoneTrigger";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new BloodstoneTriggerFilterDesc(this);
 }
 
 public sealed class ParkingPayoutClause : RollClause
 {
     public override string Describe() => "event ParkingPayout";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new ParkingPayoutFilterDesc(this);
 }
 
 public sealed class GlassDestroyClause : RollClause
 {
     public override string Describe() => "event GlassDestroy";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new GlassDestroyFilterDesc(this);
 }
 
 public sealed class WheelStaysFlippedClause : RollClause
 {
     public override string Describe() => "event WheelStaysFlipped";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new WheelStaysFlippedFilterDesc(this);
 }
 
 // ── 6 individual event filter descs (one per PRNG stream) ──

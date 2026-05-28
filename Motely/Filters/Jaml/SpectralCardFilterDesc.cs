@@ -6,15 +6,13 @@ namespace Motely.Filters.Jaml;
 
 public sealed class SpectralCardClause : JamlClause
 {
-    public required MotelySpectralCard[] Spectrals { get; init; }
-    public SpectralCardSourceConfig Sources { get; init; } = new();
+    public required MotelySpectralCard[] Spectrals { get; set; }
+    public SpectralCardSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 7 + MaxAnte;
 
     public override string Describe() =>
         $"Spectral {string.Join(", ", System.Array.ConvertAll(Spectrals, static s => s.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new SpectralCardFilterDesc(this);
 }
 
 public struct SpectralCardFilterDesc(SpectralCardClause clause)

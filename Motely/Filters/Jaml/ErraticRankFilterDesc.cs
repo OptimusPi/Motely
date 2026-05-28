@@ -7,13 +7,11 @@ namespace Motely.Filters.Jaml;
 
 public sealed class ErraticRankClause : JamlClause
 {
-    public required MotelyStandardcardRank Rank { get; init; }
+    public required MotelyStandardcardRank Rank { get; set; }
 
     public override int EstimatedCost => 4 + MaxAnte;
 
     public override string Describe() => $"erraticRank {Rank}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new ErraticRankFilterDesc(this);
 }
 
 public struct ErraticRankFilterDesc(ErraticRankClause clause)

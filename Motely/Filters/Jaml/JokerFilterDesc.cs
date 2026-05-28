@@ -9,12 +9,12 @@ namespace Motely.Filters.Jaml;
 
 public sealed class JokerClause : JamlClause
 {
-    public MotelyJoker[] Jokers { get; init; } = [];
-    public bool IsWildcard { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
-    public LegendaryJokerSourceConfig LegendarySources { get; init; } = new();
+    public MotelyJoker[] Jokers { get; set; } = [];
+    public bool IsWildcard { get; set; }
+    public MotelyItemEdition? Edition { get; set; }
+    public MotelyJokerSticker[] Stickers { get; set; } = [];
+    public JokerSourceConfig Sources { get; set; } = new();
+    public LegendaryJokerSourceConfig LegendarySources { get; set; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
 
@@ -22,8 +22,6 @@ public sealed class JokerClause : JamlClause
         IsWildcard
             ? "joker Any"
             : $"joker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new JokerFilterDesc(this);
 }
 
 public struct JokerFilterDesc(JokerClause clause)
@@ -327,11 +325,11 @@ public struct JokerFilterDesc(JokerClause clause)
 
 public sealed class CommonJokerClause : JamlClause
 {
-    public MotelyJokerCommon[] Jokers { get; init; } = [];
-    public bool IsWildcard { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
+    public MotelyJokerCommon[] Jokers { get; set; } = [];
+    public bool IsWildcard { get; set; }
+    public MotelyItemEdition? Edition { get; set; }
+    public MotelyJokerSticker[] Stickers { get; set; } = [];
+    public JokerSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
 
@@ -339,17 +337,15 @@ public sealed class CommonJokerClause : JamlClause
         IsWildcard
             ? "commonJoker Any"
             : $"commonJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new CommonJokerFilterDesc(this);
 }
 
 public sealed class UncommonJokerClause : JamlClause
 {
-    public MotelyJokerUncommon[] Jokers { get; init; } = [];
-    public bool IsWildcard { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
+    public MotelyJokerUncommon[] Jokers { get; set; } = [];
+    public bool IsWildcard { get; set; }
+    public MotelyItemEdition? Edition { get; set; }
+    public MotelyJokerSticker[] Stickers { get; set; } = [];
+    public JokerSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
 
@@ -357,17 +353,15 @@ public sealed class UncommonJokerClause : JamlClause
         IsWildcard
             ? "uncommonJoker Any"
             : $"uncommonJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new UncommonJokerFilterDesc(this);
 }
 
 public sealed class RareJokerClause : JamlClause
 {
-    public MotelyJokerRare[] Jokers { get; init; } = [];
-    public bool IsWildcard { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
+    public MotelyJokerRare[] Jokers { get; set; } = [];
+    public bool IsWildcard { get; set; }
+    public MotelyItemEdition? Edition { get; set; }
+    public MotelyJokerSticker[] Stickers { get; set; } = [];
+    public JokerSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 5 + MaxAnte;
 
@@ -375,17 +369,15 @@ public sealed class RareJokerClause : JamlClause
         IsWildcard
             ? "rareJoker Any"
             : $"rareJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new RareJokerFilterDesc(this);
 }
 
 public sealed class MixedJokerClause : JamlClause
 {
-    public MotelyJoker[] Jokers { get; init; } = [];
-    public bool IsWildcard { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
+    public MotelyJoker[] Jokers { get; set; } = [];
+    public bool IsWildcard { get; set; }
+    public MotelyItemEdition? Edition { get; set; }
+    public MotelyJokerSticker[] Stickers { get; set; } = [];
+    public JokerSourceConfig Sources { get; set; } = new();
 
     public override int EstimatedCost => 6 + MaxAnte;
 
@@ -393,6 +385,4 @@ public sealed class MixedJokerClause : JamlClause
         IsWildcard
             ? "jokers Any"
             : $"jokers {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
-
-    public override IMotelySeedFilterDesc CreateDesc() => new MixedJokerFilterDesc(this);
 }
