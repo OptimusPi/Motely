@@ -23,7 +23,7 @@
                     "node:crypto":  false,
                     "node:process":  false
                 },
-    "version":  "18.2.5",
+    "version":  "19.0.2",
     "main":  "./dist/index.mjs",
     "types":  "./dist/index.d.mts"
 }

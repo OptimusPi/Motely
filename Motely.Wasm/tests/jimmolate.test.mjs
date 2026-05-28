@@ -15,6 +15,7 @@ const visited = [];
 
 async function bootOnce() {
     const { default: bootsharp, Motely } = await import(pathToFileURL(entryPath).href);
+    Motely.reportWasmError = (message) => console.error("[WASM ERROR]", message);
     Motely.jimmolateProbe = (seed, _deck, _stake) => {
         if (seed.length > 0 && seed[0] === "M") {
             visited.push(seed);
@@ -25,6 +26,7 @@ async function bootOnce() {
     if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted) {
         throw new Error("boot: expected BootStatus.Booted");
     }
+    Motely.enableJimmolate();
     return Motely;
 }
 

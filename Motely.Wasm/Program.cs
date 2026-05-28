@@ -15,7 +15,10 @@ using Motely.SeedProviders;
 using System.Text.Json;
 
 [assembly: Preferences(
-    Space = [@"^Motely\.Wasm$", "index"],
+    Space = [
+        @"^Motely\.Wasm$", "index",
+        @"^Motely(\..*)?$", "index"
+    ],
     Name = [
         @"^Program$",
         "Motely",
@@ -60,6 +63,11 @@ public static partial class Program
         services = new ServiceCollection()
             .AddBootsharp()
             .BuildServiceProvider();
+    }
+
+    [Export]
+    public static void EnableJimmolate()
+    {
         MotelyWasmInterop.JimmolateSearcher = RunJimmolateImport;
     }
 
@@ -258,7 +266,51 @@ public static partial class Program
             settings = settings.WithJimmolate();
         }
 
-        return settings.CreateSearch();
+        return settings.Start();
+    }
+
+    [Export]
+    public static IMotelyWasmSearchSettings FromJaml(string jaml)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        var settings = JamlSearchBuilder.CreateSettings(config);
+        var s = settings.WithThreadCount(1);
+        if (MotelyWasmInterop.JimmolateSearcher is not null)
+        {
+            s = s.WithJimmolate();
+        }
+        return new MotelyWasmSearchSettings(s);
+    }
+
+    [Export]
+    public static IMotelyWasmSearchSettings CreateSearchSettings()
+    {
+        var settings = new global::Motely.MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+            new PassthroughFilterDesc()
+        );
+        var s = settings.WithThreadCount(1);
+        if (MotelyWasmInterop.JimmolateSearcher is not null)
+        {
+            s = s.WithJimmolate();
+        }
+        return new MotelyWasmSearchSettings(s);
+    }
+
+    [Export]
+    public static IMotelyWasmSearchSettings CreateNativeSearchSettings(string filterName)
+    {
+        if (!MotelyNativeFilterNames.TryParse(filterName, out var filter))
+            throw new ArgumentException(
+                $"Unknown native filter '{filterName}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}"
+            );
+        var settings = MotelyNativeFilterFactory.CreateSettings(filter);
+        var s = settings.WithThreadCount(1);
+        if (MotelyWasmInterop.JimmolateSearcher is not null)
+        {
+            s = s.WithJimmolate();
+        }
+        return new MotelyWasmSearchSettings(s);
     }
 
     [Export]
@@ -325,7 +377,7 @@ public static partial class Program
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
 
-    private static IMotelySearchSettings AttachWasmCallbacks(IMotelySearchSettings settings)
+    internal static IMotelySearchSettings AttachWasmCallbacks(IMotelySearchSettings settings)
     {
         if (OnProgress is not null)
             settings = settings.WithProgressCallback(p => OnProgress(p));
@@ -338,9 +390,211 @@ public static partial class Program
         return settings;
     }
 
+    [Export]
+    public static IMotelyStreamCursor CreateStreamCursor(string seed, MotelyDeck deck, MotelyStake stake, int ante, MotelyStreamKind kind)
+    {
+        return new MotelyStreamCursor(seed, deck, stake, ante, kind);
+    }
+
     /// <summary>
     /// Placeholder for required API tests.
     /// </summary>
     [Export]
     public static string Seed() => "";
+}
+
+public enum MotelyStreamKind
+{
+    Shop = 0,
+    Joker = 1,
+    Tarot = 2,
+    Planet = 3,
+    Spectral = 4,
+    LegendaryJoker = 5,
+    RareTagJoker = 6
+}
+
+public class MotelyStreamCursor : IMotelyStreamCursor
+{
+    private readonly MotelySeedRouterDesc _routerDesc;
+    private readonly MotelySingleSearchContext _context;
+    private readonly MotelyStreamKind _kind;
+
+    private MotelySingleShopItemStream _shopStream;
+    private MotelySingleJokerStream _jokerStream;
+    private MotelySingleTarotStream _tarotStream;
+    private MotelySinglePlanetStream _planetStream;
+    private MotelySingleSpectralStream _spectralStream;
+    private MotelySingleJokerFixedRarityStream _fixedRarityStream;
+
+    public MotelyStreamCursor(string seed, MotelyDeck deck, MotelyStake stake, int ante, MotelyStreamKind kind)
+    {
+        _kind = kind;
+        _routerDesc = new MotelySeedRouterDesc(seed, deck, stake);
+        _context = _routerDesc.Instance();
+
+        switch (kind)
+        {
+            case MotelyStreamKind.Shop:
+                _shopStream = _context.CreateShopItemStream(ante);
+                break;
+            case MotelyStreamKind.Joker:
+                _jokerStream = _context.CreateShopJokerStream(ante);
+                break;
+            case MotelyStreamKind.Tarot:
+                _tarotStream = _context.CreateShopTarotStream(ante);
+                break;
+            case MotelyStreamKind.Planet:
+                _planetStream = _context.CreateShopPlanetStream(ante);
+                break;
+            case MotelyStreamKind.Spectral:
+                _spectralStream = _context.CreateShopSpectralStream(ante);
+                break;
+            case MotelyStreamKind.LegendaryJoker:
+                _fixedRarityStream = _context.CreateLegendaryJokerStream(ante);
+                break;
+            case MotelyStreamKind.RareTagJoker:
+                _fixedRarityStream = _context.CreateRareTagJokerStream(ante);
+                break;
+        }
+    }
+
+    public int GetNext()
+    {
+        switch (_kind)
+        {
+            case MotelyStreamKind.Shop:
+                return _context.GetNextShopItem(ref _shopStream).Value;
+            case MotelyStreamKind.Joker:
+                return _context.GetNextJoker(ref _jokerStream).Value;
+            case MotelyStreamKind.Tarot:
+                return _context.GetNextTarot(ref _tarotStream).Value;
+            case MotelyStreamKind.Planet:
+                return _context.GetNextPlanet(ref _planetStream).Value;
+            case MotelyStreamKind.Spectral:
+                return _context.GetNextSpectral(ref _spectralStream).Value;
+            case MotelyStreamKind.LegendaryJoker:
+            case MotelyStreamKind.RareTagJoker:
+                return _context.GetNextJoker(ref _fixedRarityStream).Value;
+            default:
+                throw new NotSupportedException();
+        }
+    }
+
+    public int[] GetNextChunk(int count)
+    {
+        var chunk = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            chunk[i] = GetNext();
+        }
+        return chunk;
+    }
+
+    public void Dispose() => _routerDesc.Dispose();
+}
+
+public interface IMotelyWasmSearchSettings
+{
+    IMotelyWasmSearchSettings WithSequentialSearch();
+    IMotelyWasmSearchSettings WithRandomSearch(int count);
+    IMotelyWasmSearchSettings WithListSearch(string[] seeds, int count);
+    IMotelyWasmSearchSettings WithAestheticSearch(JamlAesthetic aesthetic);
+    IMotelyWasmSearchSettings WithDeck(MotelyDeck deck);
+    IMotelyWasmSearchSettings WithStake(MotelyStake stake);
+    IMotelyWasmSearchSettings WithJimmolate();
+    IMotelyWasmSearchSettings WithThreadCount(int count);
+    IMotelyWasmSearchSettings WithProgressReportIntervalMs(long intervalMs);
+    IMotelyWasmSearchSettings WithBatchCharacterCount(int count);
+    IMotelyWasmSearchSettings WithStartBatchIndex(long startIndex);
+    IMotelyWasmSearchSettings WithEndBatchIndex(long endIndex);
+    IMotelySearch Start();
+}
+
+public class MotelyWasmSearchSettings : IMotelyWasmSearchSettings
+{
+    private readonly IMotelySearchSettings _settings;
+
+    public MotelyWasmSearchSettings(IMotelySearchSettings settings)
+    {
+        _settings = settings;
+    }
+
+    public IMotelyWasmSearchSettings WithSequentialSearch()
+    {
+        _settings.WithSequentialSearch();
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithRandomSearch(int count)
+    {
+        _settings.WithRandomSearch(count);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithListSearch(string[] seeds, int count)
+    {
+        _settings.WithListSearch(seeds, count);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithAestheticSearch(JamlAesthetic aesthetic)
+    {
+        _settings.WithAestheticSearch(aesthetic);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithDeck(MotelyDeck deck)
+    {
+        _settings.WithDeck(deck);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithStake(MotelyStake stake)
+    {
+        _settings.WithStake(stake);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithJimmolate()
+    {
+        _settings.WithJimmolate();
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithThreadCount(int count)
+    {
+        _settings.WithThreadCount(count);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithProgressReportIntervalMs(long intervalMs)
+    {
+        _settings.WithProgressReportIntervalMs(intervalMs);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithBatchCharacterCount(int count)
+    {
+        _settings.WithBatchCharacterCount(count);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithStartBatchIndex(long startIndex)
+    {
+        _settings.WithStartBatchIndex(startIndex);
+        return this;
+    }
+
+    public IMotelyWasmSearchSettings WithEndBatchIndex(long endIndex)
+    {
+        _settings.WithEndBatchIndex(endIndex);
+        return this;
+    }
+
+    public IMotelySearch Start()
+    {
+        var s = Program.AttachWasmCallbacks(_settings);
+        return s.Start();
+    }
 }
