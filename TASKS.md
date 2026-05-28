@@ -145,3 +145,10 @@ Captured from a component-by-component Storybook walkthrough with pifreak. Every
 8. #38 Jimmolate, #61 settings, #73 preview.
 
 **Reference repos:** `x:/Immolate` (legacy OpenCL filters/analyzer), `x:/JammySeedFinder/src/MotelyJAML` (real JAML + native SIMD filter descs), `x:/Blueprint` (card rendering origin), `x:/Jammy` (junk; background params ref). `examples/screenshots2/` = real Balatro reference.
+
+---
+
+## 🔮 FUTURE IDEAS (LSP / VS Code Extension / MCP)
+
+- **#99 VS Code Extension & LSP (`@jimbo`)** — Build a VS Code Extension (VSX) with a Language Server Protocol (LSP) for JAML auto-completion and validation. Integrate a chat interface with a specialized AI agent named `@jimbo` that understands the JAML schema, Balatro game design, and seed generation rules (e.g. so you can @jimbo and ask: *"how do I write a JAML rule for a cool mechanic with negative tags?"*).
+

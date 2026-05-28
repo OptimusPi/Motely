@@ -5,7 +5,7 @@ import {
   MotelyItemEnhancement,
   MotelyStandardcardRank,
   MotelyStandardcardSuit,
-} from "motely-wasm/motely/enums";
+} from "motely-wasm";
 
 type MotelyItemCategoryName = "Standardcard" | "SpectralCard" | "TarotCard" | "PlanetCard" | "Joker" | "Invalid";
 
@@ -69,8 +69,6 @@ const SUITS: Record<MotelyStandardcardSuit, "Clubs" | "Diamonds" | "Hearts" | "S
   [MotelyStandardcardSuit.Spades]: "Spades",
 };
 
-type RankName = string;
-type SuitName = "Clubs" | "Diamonds" | "Hearts" | "Spades";
 
 export type CardCategory = "joker" | "consumable" | "playing" | "spectral" | "tarot" | "planet";
 export type MotelyRenderableCategory = CardCategory | "unknown";

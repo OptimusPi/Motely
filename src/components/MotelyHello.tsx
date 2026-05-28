@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Motely } from "motely-wasm";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import { Motely, type IMotelySearch, type MotelyProgress, type MotelyScoredSeedResult } from "motely-wasm";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboStack, JimboRow } from "../ui/jimboLayout.js";
@@ -54,7 +53,7 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     Motely.onProgress.subscribe(onProg);
 
     try {
-      const search = Motely.fromJaml(jaml).withRandomSearch(searchCount).start(undefined);
+      const search = Motely.fromJaml(jaml).withRandomSearch(searchCount).start();
       setSearchRef(search);
       await search.waitForCompletionAsync(undefined);
       setStatus(search.isCompleted ? "done" : "idle");

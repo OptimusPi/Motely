@@ -4,11 +4,15 @@
 // so no SharedArrayBuffer / COOP+COEP headers are required to deploy this.
 // If a future change reintroduces SAB, switch the deployment to the Cloudflare
 // permanent named tunnel so COOP/COEP can be enforced at the edge.
-import { Motely } from "motely-wasm";
+import {
+    Motely,
+    type IMotelySearch,
+    type MotelyProgress,
+    type MotelyScoredSeedResult,
+    type IMotelyWasmSearchSettings,
+    type JamlAesthetic
+} from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { SearchSettings } from "motely-wasm";
-import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 
@@ -19,6 +23,7 @@ type StartMessage = {
     aesthetic?: JamlAesthetic | number;
     seeds?: string[];
     count?: number;
+    predicateStr?: string;
 };
 
 let currentSearch: IMotelySearch | null = null;
@@ -62,7 +67,7 @@ function attachListeners(): void {
     unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
-function configureSettings(message: StartMessage): SearchSettings {
+function configureSettings(message: StartMessage): IMotelyWasmSearchSettings {
     const settings = Motely.fromJaml(message.jaml).withThreadCount(1);
     if (message.mode === "aesthetic") {
         return settings.withAestheticSearch((message.aesthetic ?? 0) as JamlAesthetic);
@@ -91,15 +96,26 @@ self.onmessage = async (event: MessageEvent) => {
     try {
         await ensureMotelyReady();
 
+        if (data.predicateStr) {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-implied-eval
+                const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
+                Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
+                Motely.enableJimmolate();
+            } catch (err) {
+                console.error("Failed to compile worker Jimmolate predicate:", err);
+            }
+        }
+
         attachListeners();
 
         currentSearch?.cancel();
         const settings = configureSettings(data);
-        const search = settings.start(undefined);
+        const search = settings.start();
         currentSearch = search;
 
         try {
-            await search.waitForCompletionAsync(undefined);
+            await search.waitForCompletionAsync();
             self.postMessage({
                 type: "complete",
                 status: search.isCompleted ? "Completed" : "Cancelled",

@@ -109,8 +109,8 @@ importers:
         specifier: ^17.6.0
         version: 17.6.0
       motely-wasm:
-        specifier: ^18.2.5
-        version: 18.2.5
+        specifier: file:./motely-wasm-19.0.2.tgz
+        version: file:motely-wasm-19.0.2.tgz
       playwright:
         specifier: ^1.60.0
         version: 1.60.0
@@ -2579,8 +2579,9 @@ packages:
   motely-wasm@18.2.2:
     resolution: {integrity: sha512-JpfVHU4q1S50+aiTKiL/piUXMpZPTL21QjLEKuizJWsK6lyFU8PsbF2PNRhLjTKJrjNTfozD57K1eizMdypqpg==}
 
-  motely-wasm@18.2.5:
-    resolution: {integrity: sha512-N9MfJZWnFqE3QmuOoAw19hpItwS36LMaYEIlBxBJ58DAsiWyanw88zXgCP30xLaN46joDIGiPi7BhyW5nrAh5g==}
+  motely-wasm@file:motely-wasm-19.0.2.tgz:
+    resolution: {integrity: sha512-xGWGw0MIRofbBw/2SD65x3m/5bL/9OiyAJt0Wa46KPg9s2Hus+qkajmgPIRbBsJT0AG4H37CEtXP2JbmmXme2A==, tarball: file:motely-wasm-19.0.2.tgz}
+    version: 19.0.2
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -5653,7 +5654,7 @@ snapshots:
 
   motely-wasm@18.2.2: {}
 
-  motely-wasm@18.2.5: {}
+  motely-wasm@file:motely-wasm-19.0.2.tgz: {}
 
   mrmime@2.0.1: {}
 

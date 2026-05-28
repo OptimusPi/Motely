@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Motely } from "motely-wasm";
+import { Motely, type MotelyJamlyzerResult, type MotelySeedAnalysis } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import type { MotelyJamlyzerResult, MotelySeedAnalysis } from "motely-wasm/motely/analysis";
 
 export type AnalyzerStatus = "idle" | "running" | "done" | "error";
 

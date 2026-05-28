@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Motely } from "motely-wasm";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+import { Motely, type IMotelySearch, type MotelyProgress, type MotelyScoredSeedResult, MotelyDeck, MotelyStake } from "motely-wasm";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboStack, JimboRow } from "../ui/jimboLayout.js";
@@ -67,9 +65,9 @@ export function SeedFinderApp({
         .withDeck(MotelyDeck[deck as keyof typeof MotelyDeck])
         .withStake(MotelyStake[stake as keyof typeof MotelyStake])
         .withSequentialSearch()
-        .start(undefined);
+        .start();
       setSearchRef(search);
-      await search.waitForCompletionAsync(undefined);
+      await search.waitForCompletionAsync();
       setStatus(search.isCompleted ? "done" : "idle");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
