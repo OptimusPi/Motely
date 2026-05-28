@@ -65,13 +65,6 @@ export {
     type JamlSpeedometerProps,
     type JamlSpeedometerStatus,
 } from "./components/JamlSpeedometer.js";
-export {
-    Showcase,
-    type ShowcaseFilter,
-    type ShowcaseLiveStats,
-    type ShowcaseProps,
-    type ShowcaseRecentFind,
-} from "./ui/showcase.js";
 
 export {
     extractVisualJamlItems,
