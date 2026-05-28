@@ -18,17 +18,14 @@ const pkgRoot = resolve(dirname(entryPath), "..");
 const binDir = resolve(pkgRoot, "bin");
 
 async function createHarness() {
-    const { default: bootsharp, Motely } = await import(pathToFileURL(entryPath).href);
-
-    const enums = await import(
-        pathToFileURL(resolve(pkgRoot, "dist", "generated", "modules", "motely", "enums.g.mjs")).href
-    );
+    const { default: bootsharp, Motely, ...enums } = await import(pathToFileURL(entryPath).href);
 
     const pkgVersion = JSON.parse(
         await readFile(resolve(pkgRoot, "package.json"), "utf8")
     ).version;
 
     Motely.reportWasmError = (message) => console.error("[WASM ERROR]", message);
+    Motely.jimmolateProbe = () => false;
 
     await bootsharp.boot(await loadBootResourcesFromDir(binDir));
 

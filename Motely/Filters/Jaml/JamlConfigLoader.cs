@@ -964,7 +964,7 @@ public static partial class JamlConfigLoader
         throw new NotSupportedException("ErraticCard clause requires both Rank and Suit.");
     }
 
-    private static IRollClause CreateEventClause(
+    private static RollClause CreateEventClause(
         MotelyEventType? eventType,
         int[]? rolls,
         int min,
