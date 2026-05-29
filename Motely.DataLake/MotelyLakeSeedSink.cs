@@ -51,7 +51,52 @@ public sealed class MotelyLakeSeedSink : IDisposable
         );
         Exec(BuildCreateTableSql(filterId, tallyColumns));
 
+        // Schema-mismatch self-heal: if the JAML's scored-clause shape changed since the
+        // table was created (e.g. a `should:` clause added/removed/renamed), the IF NOT EXISTS
+        // above silently keeps the stale schema — the appender then crashes on the first row.
+        // Drop and recreate when the schema drifts. The previous seeds aren't lost: the JAML's
+        // `seeds:` array is the resume mechanism (re-runs replay them).
+        if (!ExistingSchemaMatches(filterId, tallyColumns))
+        {
+            Exec($"DROP TABLE IF EXISTS lake.\"seeds_{EscapeIdent(filterId)}\"");
+            Exec(BuildCreateTableSql(filterId, tallyColumns));
+        }
+
         _appender = _connection.CreateAppender("lake", "main", $"seeds_{filterId}");
+    }
+
+    /// <summary>Returns true when the existing table's column names (in order) match
+    /// <c>[seed, score, ...tallyColumns]</c>; false when the schema drifted or the
+    /// schema query itself failed (defensive — caller drops+recreates either way).</summary>
+    private bool ExistingSchemaMatches(string filterId, IReadOnlyList<string> tallyColumns)
+    {
+        var expected = new List<string>(2 + tallyColumns.Count) { "seed", "score" };
+        expected.AddRange(tallyColumns);
+
+        var actual = new List<string>(expected.Count);
+        try
+        {
+            using DbCommand cmd = _connection.CreateCommand();
+            cmd.CommandText =
+                "SELECT column_name FROM information_schema.columns "
+                + "WHERE table_catalog = 'lake' AND table_schema = 'main' "
+                + $"AND table_name = 'seeds_{filterId.Replace("'", "''", StringComparison.Ordinal)}' "
+                + "ORDER BY ordinal_position";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                actual.Add(reader.GetString(0));
+        }
+        catch
+        {
+            return false; // can't read schema → treat as drift, recreate
+        }
+
+        if (actual.Count != expected.Count)
+            return false;
+        for (int i = 0; i < expected.Count; i++)
+            if (!string.Equals(actual[i], expected[i], StringComparison.OrdinalIgnoreCase))
+                return false;
+        return true;
     }
 
     /// <summary>Append one scored seed. Thread-safe (serialized via internal lock).</summary>
