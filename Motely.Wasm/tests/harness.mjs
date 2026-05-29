@@ -1,6 +1,5 @@
 /**
  * Boots motely-wasm once per process (ESM module cache).
- * Node: load bin/ via fs (file:// fetch fails). Browser consumers use HTTP bin/ URL.
  */
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";

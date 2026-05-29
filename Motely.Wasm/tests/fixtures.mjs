@@ -30,8 +30,13 @@ should:
     invalid: "not yaml !@#",
 };
 
-/** Shop/pack/tag variety in analyzer output. */
+/** Shop/pack/tag variety in analyzer output. ALEEB is pinned in the C# JamlyzerUnitTests
+ *  (`AnalyzeSeed_MarksJamlMatchedItemsForPreviewCards`) — its ante 1 has known matchable
+ *  jokers in shop + Buffoon pack. Leading with it gives the analyzer tests a deterministic
+ *  joker to find. */
 export const probeSeeds = [
+    "ALEEB",
+    "ALEEBOOO",
     "AAAAAAAA",
     "BBBBBBBB",
     "CCCCCCCC",

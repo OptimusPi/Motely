@@ -80,9 +80,9 @@ async function main() {
 
         const runner = `
 import bootsharp, { Motely } from "motely-wasm";
-import { loadBootResourcesFromDir, resolvePackageBinDir } from "motely-wasm/node-boot";
+import { readFile } from "node:fs/promises";
 
-await bootsharp.boot(await loadBootResourcesFromDir(resolvePackageBinDir()));
+await bootsharp.boot();
 
 const jaml = \`
 name: smoke
@@ -93,9 +93,12 @@ must:
     antes: [1]
 \`;
 
-const status = Motely.validateJaml(jaml);
-if (status !== "valid") throw new Error(status);
-console.log("CONSUMER_SMOKE: PASS", Motely.version());
+const cfg = Motely.parseJaml(jaml);
+cfg.seeds = ["AAAAAAAA"];
+const result = Motely.runSeedListSearch(cfg);
+if (!result.isCompleted) throw new Error("search did not complete");
+const pkg = JSON.parse(await readFile(new URL("package.json", import.meta.resolve("motely-wasm/package.json")), "utf8"));
+console.log("CONSUMER_SMOKE: PASS", pkg.version);
 `;
         const runPath = join(consumerDir, "run.mjs");
         await writeFile(runPath, runner.trimStart());

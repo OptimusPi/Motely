@@ -5,9 +5,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <BootsharpName>motely-wasm</BootsharpName>
-    <!-- Bootsharp build-config (https://github.com/elringus/bootsharp/blob/main/docs/guide/build-config.md):
-         separate sinks so %MODULE_DIR% → dist/ and package.json exports stay "./dist/index.mjs".
-         Same pattern as samples/react (Backend.WASM): PackageDirectory + BinariesDirectory + PublishDirectory. -->
+    <!-- Sideloaded binaries: bin/ lives next to dist/ so the JS module stays small and the
+         WASM/assemblies can be CDN-cached, deduped across consumers, and updated independently
+         of the JS bundle. (Sideloading per Bootsharp docs/sideloading.md.) -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\bin</BootsharpBinariesDirectory>
@@ -24,40 +24,15 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <Target Name="GenerateVersionConstant" BeforeTargets="CoreCompile">
-    <ItemGroup>
-      <_VersionLines Include="// &lt;auto-generated/&gt;" />
-      <_VersionLines Include="namespace Motely.Wasm%3B" />
-      <_VersionLines Include="internal static class MotelyVersionConstant" />
-      <_VersionLines Include="{" />
-      <_VersionLines Include="    public const string Value = &quot;$(MotelyVersion)&quot;%3B" />
-      <_VersionLines Include="}" />
-    </ItemGroup>
-    <WriteLinesToFile
-      File="$(IntermediateOutputPath)MotelyVersion.g.cs"
-      Lines="@(_VersionLines)"
-      Overwrite="true"
-      WriteOnlyWhenDifferent="true"
-    />
-    <ItemGroup>
-      <Compile Include="$(IntermediateOutputPath)MotelyVersion.g.cs" />
-    </ItemGroup>
-  </Target>
-
-  <!-- Bootsharp PackageTemplate.json has no version field; npm publish requires one from MotelyVersion. -->
+  <!-- Bootsharp writes a minimal package.json; we inject version + TS-aware exports. -->
   <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpJS">
     <PropertyGroup>
       <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
-      <_NpmPackageJson>$(_NpmRoot)\package.json</_NpmPackageJson>
     </PropertyGroup>
-    <Exec Command="powershell -NoProfile -Command &quot;$json = Get-Content '$(_NpmPackageJson)' -Raw | ConvertFrom-Json; $json | Add-Member -MemberType NoteProperty -Name 'version' -Value '$(MotelyVersion)' -Force; $json | Add-Member -MemberType NoteProperty -Name 'main' -Value './dist/index.mjs' -Force; $json | Add-Member -MemberType NoteProperty -Name 'types' -Value './dist/index.d.mts' -Force; $exports = [ordered]@{ '.' = [ordered]@{ types = './dist/index.d.mts'; import = './dist/index.mjs' }; './node-boot' = [ordered]@{ types = './dist/node-boot.d.mts'; import = './dist/node-boot.mjs' }; './*' = [ordered]@{ types = './dist/generated/modules/*.g.d.mts'; import = './dist/generated/modules/*.g.mjs' } }; $json.exports = $exports; $json | ConvertTo-Json -Depth 10 | Set-Content '$(_NpmPackageJson)' -NoNewline&quot;" />
+    <Exec Command="node finalize-package.mjs $(MotelyVersion) $(_NpmRoot)\package.json" WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
     <Copy SourceFiles="node-boot.mjs" DestinationFolder="$(_NpmRoot)\dist" />
     <Copy SourceFiles="node-boot.d.mts" DestinationFolder="$(_NpmRoot)\dist" />
-    <Copy SourceFiles="..\jaml.schema.json" DestinationFolder="$(_NpmRoot)" />
-    <Message
-      Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))"
-      Importance="high"
-    />
+    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
   </Target>
 </Project>
