@@ -14,7 +14,6 @@
 
   <!-- Packages (versions from Directory.Packages.props) -->
   <ItemGroup>
-    <PackageReference Include="Bootsharp.Common" />
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="SixLabors.ImageSharp" />
