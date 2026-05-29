@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "JAML",
+  "scopeName": "source.jaml",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#section" },
+    { "include": "#key" },
+    { "include": "#listDash" },
+    { "include": "#flowArray" },
+    { "include": "#number" },
+    { "include": "#boolean" },
+    { "include": "#string" },
+    { "include": "#enumValue" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "#.*$",
+      "name": "comment.line.number-sign.jaml"
+    },
+    "section": {
+      "match": "^\\s*(must|should|mustNot|defaults|sources|and|or|clauses)\\s*(:)",
+      "captures": {
+        "1": { "name": "keyword.control.section.jaml" },
+        "2": { "name": "punctuation.separator.key-value.jaml" }
+      }
+    },
+    "key": {
+      "match": "^\\s*(?:-\\s*)?([A-Za-z][A-Za-z0-9]*)\\s*(:)",
+      "captures": {
+        "1": { "name": "entity.name.tag.jaml" },
+        "2": { "name": "punctuation.separator.key-value.jaml" }
+      }
+    },
+    "listDash": {
+      "match": "^\\s*(-)\\s",
+      "captures": {
+        "1": { "name": "punctuation.definition.block.sequence.item.jaml" }
+      }
+    },
+    "flowArray": {
+      "begin": "\\[",
+      "end": "\\]",
+      "beginCaptures": { "0": { "name": "punctuation.definition.array.begin.jaml" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.array.end.jaml" } },
+      "patterns": [
+        { "include": "#number" },
+        { "include": "#boolean" },
+        { "include": "#string" },
+        { "include": "#enumValue" }
+      ]
+    },
+    "number": {
+      "match": "\\b-?\\d+\\b",
+      "name": "constant.numeric.jaml"
+    },
+    "boolean": {
+      "match": "\\b(true|false|null)\\b",
+      "name": "constant.language.jaml"
+    },
+    "string": {
+      "match": "\"[^\"]*\"|'[^']*'",
+      "name": "string.quoted.jaml"
+    },
+    "enumValue": {
+      "match": "\\b([A-Z][A-Za-z0-9]+)\\b",
+      "name": "constant.other.enum.jaml"
+    }
+  }
+}

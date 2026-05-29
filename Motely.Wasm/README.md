@@ -193,74 +193,6 @@ console.log(search.isCompleted, search.totalSeedsSearched, search.matchingSeeds)
 search.cancel(); // stop early
 ```
 
-## Stream cursor
-
-`Motely.createStreamCursor(seed, deck, stake, ante, kind)` returns a stateful cursor over
-one of Balatro's per-ante PRNG streams — one packed int per item, no JAML filter needed.
-The `kind` argument selects which stream; one factory + one enum arg covers every stream
-type:
-
-```js
-import { Motely } from "motely-wasm";
-import { MotelyStreamKind } from "motely-wasm/motely";
-import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
-
-const cursor = Motely.createStreamCursor("AAAAAAAA", MotelyDeck.Red, MotelyStake.White, 1, MotelyStreamKind.Shop);
-const items = cursor.getNextChunk(6); // 6 packed ints, one WASM crossing
-```
-
-**Always prefer `getNextChunk(n)` over repeated `getNext()` calls** — each call is a WASM
-interop crossing, so batching is the right default.
-
-| `MotelyStreamKind` value | Stream | Returned int |
-|---|---|---|
-| `Shop` | Mixed shop (jokers, tarots, planets, spectrals on Ghost, standard cards with MagicTrick) | Packed item (`decodeItemType`, `decodeItemCategory`, …) |
-| `Joker` | Shop jokers — includes edition + sticker bits | Packed item |
-| `Tarot` | Shop tarots | Packed item |
-| `Planet` | Shop planets | Packed item |
-| `Spectral` | Shop spectrals (non-Ghost returns `SpectralExcludedByStream`) | Packed item |
-| `LegendaryJoker` | Legendary fixed-rarity joker stream | Packed item |
-| `RareTagJoker` | Rare Tag hand-out joker stream | Packed item |
-| `Tag` | Tags — raw `MotelyTag` enum cast to int. Decoders do not apply; use `MotelyTag[value]`. | `(int)MotelyTag` |
-| `Voucher` | Vouchers — raw `MotelyVoucher` enum cast to int. Uses an empty run state, so odd-indexed (prerequisite-required) vouchers are skipped by the engine. Use `MotelyVoucher[value]`. | `(int)MotelyVoucher` |
-
-## Packed-int decoders
-
-Stream cursors return packed integers. Bit fields are extracted with the decode helpers
-on `Motely`:
-
-```js
-import { Motely } from "motely-wasm";
-import { MotelyStreamKind } from "motely-wasm/motely";
-import {
-    MotelyItemType, MotelyItemTypeCategory, MotelyJokerRarity,
-    MotelyItemEdition, MotelyItemSeal, MotelyItemEnhancement,
-} from "motely-wasm/motely/enums";
-
-const cursor = Motely.createStreamCursor("AAAAAAAA", 0, 0, 1, MotelyStreamKind.Joker);
-const v = cursor.getNext();
-
-const type      = Motely.decodeItemType(v);        // → MotelyItemType value
-const category  = Motely.decodeItemCategory(v);    // → MotelyItemTypeCategory value
-const rarity    = Motely.decodeJokerRarity(v);     // → MotelyJokerRarity (Common/Uncommon/Rare/Legendary)
-const edition   = Motely.decodeItemEdition(v);     // → MotelyItemEdition (None/Foil/Holo/Poly/Negative)
-const seal      = Motely.decodeItemSeal(v);        // → MotelyItemSeal
-const enh       = Motely.decodeItemEnhancement(v); // → MotelyItemEnhancement
-
-const perishable = Motely.isPerishable(v);  // → boolean
-const eternal    = Motely.isEternal(v);     // → boolean
-const rental     = Motely.isRental(v);      // → boolean
-
-console.log(MotelyItemType[type]);      // e.g. "WeeJoker"
-console.log(MotelyJokerRarity[rarity]); // e.g. "Common"
-```
-
-All enum tables (`MotelyItemType`, `MotelyItemTypeCategory`, `MotelyJokerRarity`,
-`MotelyItemEdition`, `MotelyItemSeal`, `MotelyItemEnhancement`, `MotelyTag`,
-`MotelyVoucher`, `MotelyBoosterPack`, `MotelyDeck`, `MotelyStake`) live at
-`motely-wasm/motely/enums` and can be used for reverse-lookup by numeric value or
-forward-lookup by name. `MotelyStreamKind` lives at `motely-wasm/motely`.
-
 ## Events
 
 Callbacks are registered on `Motely` once per `bootsharp.boot()` — not on each settings
@@ -287,7 +219,7 @@ Motely.onScoredResult.unsubscribe(handler);
 | Import path | Contents |
 |---|---|
 | `motely-wasm` | Default export: `boot`, `getStatus`, `BootStatus`. Named export: `Motely` (main API) |
-| `motely-wasm/motely` | `IMotelySearch`, `SearchSettings`, `IMotelyStreamCursor`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyStreamKind` |
+| `motely-wasm/motely` | `IMotelySearch`, `SearchSettings`, `MotelyProgress`, `MotelyScoredSeedResult`, `MotelyStreamKind` |
 | `motely-wasm/motely/enums` | All Balatro enums — `MotelyItemType`, `MotelyItemTypeCategory`, `MotelyJokerRarity`, `MotelyItemEdition`, `MotelyItemSeal`, `MotelyItemEnhancement`, `MotelyTag`, `MotelyVoucher`, `MotelyBoosterPack`, `MotelyDeck`, `MotelyStake`, `MotelyBossBlind`, etc. |
 | `motely-wasm/motely/filters` | `JamlAesthetic`, `JamlSearchPlan` |
 | `motely-wasm/motely/analysis` | `MotelyJamlyzerResult`, `MotelySeedAnalysis` |
