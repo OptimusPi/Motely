@@ -1,35 +1,57 @@
 # MotelyJAML
 
-Balatro seed search engine. Filters are written in JAML (a YAML dialect, schema at `jaml.schema.json`). The engine is C# (`Motely/`), packaged as a NuGet plus a WASM JS package (`motely-wasm`, currently `19.0.2`, see `Directory.Packages.props` → `MotelyVersion`).
-
-**This directory is its own repo**, vendored at `X:\BalatroSeedOracle\src\MotelyJAML` only as a working location. Do **not** read or modify anything under `X:\BalatroSeedOracle\` (the Oracle app) when working here unless the user explicitly asks — they are separate codebases with separate concerns.
+Balatro seed search engine. Filters are written in JAML (a YAML dialect). The engine is C# (`Motely/`); the consumer surface is the `motely-wasm` npm package built by `Motely.Wasm/` via Bootsharp + NativeAOT-LLVM. Engine version lives in `Directory.Packages.props` → `MotelyVersion`. The JAML contract is the TypeScript types in `motely-wasm/dist/`.
 
 ## Layout
 
-- `Motely/` — core search engine (C# library). `Motely.csproj`.
-- `Motely.CLI/` — command-line entry point.
-- `Motely.TUI/` — Terminal.Gui frontend.
+- `Motely/` — core search engine (C# library).
+- `Motely.CLI/`, `Motely.TUI/` — command-line + Terminal.Gui frontends.
 - `Motely.Wasm/` — Bootsharp/NativeAOT-LLVM WASM build that produces the JS package. `dotnet publish Motely.Wasm -c Release` is the publish gate.
-- `motely-wasm/` — published npm package output (`dist/`, `bin/`, `package.json` with the v19.x version). `Motely.Wasm/README.md` is the canonical consumer-facing API doc.
+- `motely-wasm/` — published npm package output. `Motely.Wasm/README.md` is the consumer-facing API doc.
 - `Motely.DataLake/` — DuckDB-backed result store.
 - `Motely.Tests/` — xunit suite.
-- `JamlFilters/`, `Seeds/` — sample filters and seed inputs.
-- `jaml.schema.json` — legacy JSON Schema (still on disk and still shipped in the `motely-wasm` package for editor autocomplete, but the source of truth is now the TypeScript types in `motely-wasm/dist`). `jaml.schema.jaml` is the running joke; if it shows up, that's why.
 
-## Build / verify
+## Working with Bootsharp
 
-- C# build: `dotnet build` (sln is `Motely.slnx`, .NET SDK floor is whatever the slnx + Directory.Build.props pin).
-- Tests: `dotnet test Motely.Tests`.
-- WASM publish gate (after touching anything WASM-facing):
-  1. `dotnet publish Motely.Wasm -c Release`
-  2. `node Motely.Wasm/motely.test.mjs` — expect `RESULT: PASS`
-  3. `node Motely.Wasm/pack-consumer-smoke.mjs` — `npm pack` + fresh install + same boot path
-- TreatWarningsAsErrors is on. Don't suppress; fix.
+**Trust Bootsharp. Do not fight it.** Use the documented APIs and MSBuild properties. Do not spelunk Bootsharp source looking for undocumented knobs. The docs below cover every supported configuration point — if it's not in the docs, it's not a feature.
 
-## Bootsharp / WASM specifics
+@D:/bootsharp/docs/guide/index.md
+@D:/bootsharp/docs/guide/getting-started.md
+@D:/bootsharp/docs/guide/build-config.md
+@D:/bootsharp/docs/guide/sideloading.md
+@D:/bootsharp/docs/guide/serialization.md
+@D:/bootsharp/docs/guide/interop-modules.md
+@D:/bootsharp/docs/guide/interop-instances.md
+@D:/bootsharp/docs/guide/llvm.md
+@D:/bootsharp/docs/guide/declarations.md
+@D:/bootsharp/docs/guide/preferences.md
+@D:/bootsharp/docs/guide/extensions/dependency-injection.md
+@D:/bootsharp/docs/guide/extensions/file-system.md
 
-`AGENTS.md` (same directory) is the canonical reference for the Bootsharp build — local source at `D:\bootsharp`, `feat/delegates` is force-pushed (use `git reset --hard origin/feat/delegates`, never `git pull`), and `Bootsharp.FileSystem` versioning is a separate timestamp pin. **Read `AGENTS.md` before touching anything Bootsharp-related** — do not rely on public Bootsharp docs.
+**Local repack chain** (when Elringus pushes new commits to Bootsharp):
+```
+cd D:/bootsharp && git fetch --all --prune && git reset --hard origin/feat/spec
+cd src/js && npm run build
+cd ../cs && bash .scripts/pack.sh
+dotnet pack D:/extra/bootsharp/cs/Bootsharp.FileSystem/Bootsharp.FileSystem.csproj -c Release -o D:/extra/bootsharp/cs/.nuget
+```
+- Branch is **`feat/spec`** (was `feat/delegates` before May 28). Force-pushed, so `git pull` would create merge commits — always use `git reset --hard`.
+- `Bootsharp.FileSystem` is a sponsor-only extension. Its version is a build-time `yyyy.MM.dd.HHmm` timestamp; read the emitted value from the pack log and bump `Directory.Packages.props` to match.
+- Bump all three `Bootsharp.*` pins together + the separate `Bootsharp.FileSystem` timestamp pin.
 
-## API surface (WASM consumers)
+**Publish gate** (after WASM-facing changes):
+```
+dotnet publish Motely.Wasm -c Release
+node Motely.Wasm/motely.test.mjs     # expect RESULT: PASS
+node Motely.Wasm/pack-consumer-smoke.mjs
+```
 
-`Motely.Wasm/README.md` documents the public JS API: `bootsharp.boot(...)`, `Motely.validateJaml`, `Motely.fromJaml`, `Motely.createStreamCursor`, packed-int decoders, event subscriptions, and the Web Worker pattern. When changing exports or behavior, update that README — it is the file npm consumers see.
+`TreatWarningsAsErrors` is on. Don't suppress; fix.
+
+## How npm package.json is finalized
+
+Bootsharp writes a minimal `package.json` (name, type, exports, browser — see `D:/bootsharp/src/cs/Bootsharp/Build/PackageTemplate.json`). It does not set `version` or `types`. `Motely.Wasm/finalize-package.mjs` is a 20-line Node script invoked from the `FinalizeNpmPackage` MSBuild target that adds those fields plus TS-aware exports. This is load-bearing; don't delete it without replacing it.
+
+## API surface
+
+`Motely.Wasm/Program.cs` is the JS-facing API. JAML enters through `ParseJaml(string yaml) → JamlConfig`. All search/explain/plan/analyze methods take `JamlConfig`, not raw YAML — no double-parsing. Packed-int item decoding is JS-side (jaml-ui owns it); Motely returns raw ints and stops there.
