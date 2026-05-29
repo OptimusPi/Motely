@@ -11,9 +11,10 @@ export interface JimboSpriteProps {
   width?: number
   height?: number
   style?: React.CSSProperties
+  className?: string
 }
 
-export function JimboSprite({ name, sheet, width = 40, height, style }: JimboSpriteProps) {
+export function JimboSprite({ name, sheet, width = 40, height, style, className }: JimboSpriteProps) {
   const sprite = getSpriteData(name)
   const resolvedSheet: SpriteSheetType = sheet ?? sprite?.type ?? 'Jokers'
   const meta = SHEET_META[resolvedSheet]
@@ -34,7 +35,7 @@ export function JimboSprite({ name, sheet, width = 40, height, style }: JimboSpr
   const bgY = -(pos.y * h)
 
   return (
-    <div style={{
+    <div className={className} style={{
       width, height: h, flexShrink: 0,
       backgroundImage: `url(${resolveJamlAssetUrl(meta.assetKey)})`,
       backgroundSize: `${bgW}px ${bgH}px`,

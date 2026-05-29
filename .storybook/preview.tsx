@@ -29,13 +29,7 @@ const preview: Preview = {
       return (
         <>
           {showBackground ? <JimboBackground /> : null}
-          {useHarness ? (
-            <JimboApp fluid={jimboHarness === 'fluid'}>
-              {content}
-            </JimboApp>
-          ) : (
-            content
-          )}
+          {useHarness ? <JimboApp>{content}</JimboApp> : content}
         </>
       );
     },

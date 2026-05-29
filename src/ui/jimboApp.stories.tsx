@@ -29,23 +29,6 @@ export const Default: Story = {
 };
 
 /**
- * Fluid variant — unlocks for MCP / desktop contexts where the host doesn't
- * impose a fixed widget size. Container queries in jimbo.css activate "cozy"
- * overrides at 401px+.
- */
-export const Fluid: Story = {
-  args: { fluid: true },
-  render: (args) => (
-    <JimboApp {...args}>
-      <JimboPanel>
-        <JimboText size="lg" tone="white">Fluid shell</JimboText>
-        <JimboText size="sm" tone="grey">Stretches up to ~750px max.</JimboText>
-      </JimboPanel>
-    </JimboApp>
-  ),
-};
-
-/**
  * With JimboAppScroll inside — the scrollable content area, hidden scrollbar,
  * magnetic snap.
  */

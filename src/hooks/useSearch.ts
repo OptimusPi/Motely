@@ -9,7 +9,7 @@ import {
     type IMotelyWasmSearchSettings,
     type JamlAesthetic
 } from "motely-wasm";
-import { ensureMotelyReady } from "../lib/motely/runtime.js";
+import { ensureMotelyReady, setJimmolateProbe, clearJimmolateProbe } from "../lib/motely/runtime.js";
 
 export interface SearchResult {
     seed: string;
@@ -114,7 +114,7 @@ export function useSearch() {
 
                 if (opts.predicate) {
                     const pred = opts.predicate;
-                    Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
+                    setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
                     Motely.enableJimmolate();
                 }
                 const search = configure(jaml, mode, opts, !!opts.predicate).start();
@@ -130,13 +130,13 @@ export function useSearch() {
                         seedsPerSecond: 0,
                     }));
                 } finally {
-                    if (opts.predicate) Motely.jimmolateProbe = () => true;
+                    if (opts.predicate) clearJimmolateProbe();
                     cleanupRef.current?.();
                     cleanupRef.current = null;
                     searchRef.current = null;
                 }
             } catch (error) {
-                Motely.jimmolateProbe = () => true;
+                clearJimmolateProbe();
                 teardown();
                 const message = error instanceof Error ? error.message : String(error);
                 setState((s) => ({ ...s, status: "error", error: message, seedsPerSecond: 0 }));

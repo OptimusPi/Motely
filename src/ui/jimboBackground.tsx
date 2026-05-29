@@ -1,19 +1,14 @@
 import React from 'react'
 import { useBalatroBackground, type JimboBackgroundConfig } from './hooks.js'
-import { JimboBalatroFooter } from './JimboBalatroFooter.js'
 
 export type { JimboBackgroundConfig } from './hooks.js'
 
-export interface JimboBackgroundProps extends JimboBackgroundConfig {
-  /** Hide the persistent BalatroFooter attribution. Default: false. */
-  hideFooter?: boolean
-}
+export type JimboBackgroundProps = JimboBackgroundConfig
 
 /**
  * Fullscreen WebGL CRT/spin background — the authentic Balatro hypnotic
- * swirl, pixelated and animated. Also renders the attribution footer at the
- * bottom of the viewport (position: fixed) so it is always present and no
- * consumer can accidentally omit it.
+ * swirl, pixelated and animated. Aesthetic only; the legally-required
+ * attribution footer lives in JimboApp.
  *
  * All shader parameters are exposed as props (`primary`, `secondary`,
  * `dark`, `speed`, `spinRotation`, `spinAmount`, `pixelFilter`, `contrast`,
@@ -23,24 +18,14 @@ export interface JimboBackgroundProps extends JimboBackgroundConfig {
  *     <JimboBackground primary="#ff3344" secondary="#0088ff" speed={1.2} />
  *     <YourAppContent />
  */
-export function JimboBackground({ hideFooter = false, ...config }: JimboBackgroundProps) {
+export function JimboBackground(config: JimboBackgroundProps) {
   const canvasRef = useBalatroBackground(config)
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        aria-hidden
-        style={{
-          position: 'fixed',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: -10,
-          pointerEvents: 'none',
-        }}
-      />
-      {!hideFooter && <JimboBalatroFooter />}
-    </>
+    <canvas
+      ref={canvasRef}
+      aria-hidden
+      className="j-background-canvas"
+    />
   )
 }

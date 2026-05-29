@@ -12,7 +12,7 @@ import {
     type IMotelyWasmSearchSettings,
     type JamlAesthetic
 } from "motely-wasm";
-import { ensureMotelyReady } from "../lib/motely/runtime.js";
+import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 
@@ -99,7 +99,7 @@ self.onmessage = async (event: MessageEvent) => {
         if (data.predicateStr) {
             try {
                 const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
-                Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
+                setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
                 Motely.enableJimmolate();
             } catch (err) {
                 console.error("Failed to compile worker Jimmolate predicate:", err);

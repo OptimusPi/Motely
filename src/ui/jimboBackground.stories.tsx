@@ -13,7 +13,6 @@ const DEFAULT_ARGS = {
   contrast: 4.5,
   lighting: 0.5,
   transitionMs: 800,
-  hideFooter: false,
 } as const;
 
 const meta = {
@@ -58,7 +57,6 @@ const meta = {
       control: { type: 'range', min: 0, max: 3000, step: 50 },
       description: 'Ease duration for all prop changes (0 = snap)',
     },
-    hideFooter: { control: 'boolean' },
   },
 } satisfies Meta<typeof JimboBackground>;
 
@@ -67,10 +65,6 @@ type Story = StoryObj<typeof meta>;
 
 /** Full shader playground — use Controls to scrub pixelFilter, palette, spin, etc. */
 export const Playground: Story = {};
-
-export const WithoutFooter: Story = {
-  args: { hideFooter: true },
-};
 
 export const Palette: Story = {
   args: {

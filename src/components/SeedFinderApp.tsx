@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Motely, type IMotelySearch, type MotelyProgress, type MotelyScoredSeedResult, MotelyDeck, MotelyStake } from "motely-wasm";
+import { JimboApp } from "../ui/jimboApp.js";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboStack, JimboRow } from "../ui/jimboLayout.js";

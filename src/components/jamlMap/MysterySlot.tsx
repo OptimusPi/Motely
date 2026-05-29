@@ -1,10 +1,5 @@
 "use client";
 
-// TODO(jimbo-primitives): pre-dates no-inline-style / no-token-in-jsx-style /
-// no-inline-component rules. Refactor to compose from Jimbo* primitives once
-// screenshot-driven primitive design lands. `git grep TODO(jimbo-primitives)`.
-/* eslint-disable jaml-design/no-inline-style */
-
 import React, { useState } from "react";
 import type { MotelyJokerRarity } from "motely-wasm";
 import { JimboSprite } from "../../ui/sprites.js";
@@ -62,10 +57,6 @@ const ZONE_BORDER: Record<JamlZone, string> = {
   should: C.RED,
   mustnot: C.ORANGE,
 };
-
-// ─── Sheet → "Any" wildcard mapping ─────────────────────────────────────────
-
-
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -130,37 +121,32 @@ export function MysterySlot({
       onMouseMove={handleMouseMove}
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
+      className="j-mystery-slot"
       style={{
-        position: "relative",
-        width: width + 8,
-        height: cardH + 8,
-        cursor: onTap ? "pointer" : "default",
+        "--j-mystery-slot-w": `${width + 8}px`,
+        "--j-mystery-slot-h": `${cardH + 8}px`,
+        "--j-mystery-slot-cursor": onTap ? "pointer" : "default",
         ...style,
-      }}
+      } as React.CSSProperties}
     >
       <div
+        className="j-mystery-slot__card"
         style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 6,
-          border: isEmpty
+          "--j-mystery-slot-border": isEmpty
             ? `2px dashed ${withAlpha(borderColor, 0.4)}`
             : `3px solid ${borderColor}`,
-          background: isEmpty
+          "--j-mystery-slot-bg": isEmpty
             ? withAlpha(borderColor, 0.06)
             : withAlpha(C.DARKEST, 0.8),
-          transform: `perspective(600px) scale(${scale}) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translate(${tilt.tx}px, ${tilt.ty}px)`,
-          transformStyle: "preserve-3d",
-          transition: hover
+          "--j-mystery-slot-transform": `perspective(600px) scale(${scale}) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translate(${tilt.tx}px, ${tilt.ty}px)`,
+          "--j-mystery-slot-transition": hover
             ? `border-color 200ms`
             : `transform 400ms ${JIMBO_ANIMATIONS.JUICE_EASING}, border-color 200ms`,
-          boxShadow: hover ? `0 8px 16px ${withAlpha(C.BLACK, 0.4)}` : `0 2px 4px ${withAlpha(C.BLACK, 0.2)}`,
-          zIndex: hover ? 10 : 1,
-          pointerEvents: "none",
-        }}
+          "--j-mystery-slot-shadow": hover
+            ? `0 8px 16px ${withAlpha(C.BLACK, 0.4)}`
+            : `0 2px 4px ${withAlpha(C.BLACK, 0.2)}`,
+          "--j-mystery-slot-z-index": hover ? 10 : 1,
+        } as React.CSSProperties}
       >
         {/* The sprite */}
         <JimboSprite
@@ -168,35 +154,16 @@ export function MysterySlot({
           sheet={spriteSheet}
           width={width}
           style={{
-            opacity: isEmpty ? 0.5 : 1,
-            filter: isEmpty ? "saturate(0.3)" : "none",
-            transition: "opacity 200ms, filter 200ms",
-          }}
+            "--j-mystery-slot-sprite-opacity": isEmpty ? 0.5 : 1,
+          } as React.CSSProperties}
+          className={isEmpty ? "j-mystery-slot__sprite--empty" : undefined}
         />
 
         {/* Clear button (×) when selected */}
         {selection && onClear && (
           <div
             onClick={(e) => { e.stopPropagation(); onClear(); }}
-            style={{
-              position: "absolute",
-              top: -6,
-              right: -6,
-              width: 18,
-              height: 18,
-              borderRadius: "50%",
-              background: C.RED,
-              color: C.WHITE,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontFamily: "m6x11plus, ui-monospace, monospace",
-              cursor: "pointer",
-              lineHeight: 1,
-              boxShadow: `0 1px 4px ${withAlpha(C.BLACK, 0.5)}`,
-              transform: "translateZ(10px)", // Pop out in 3D
-            }}
+            className="j-mystery-slot__clear"
           >
             ×
           </div>
@@ -205,17 +172,10 @@ export function MysterySlot({
         {/* Zone label on hover for empty slots */}
         {isEmpty && hover && (
           <div
+            className="j-mystery-slot__label"
             style={{
-              position: "absolute",
-              bottom: -16,
-              left: "50%",
-              transform: "translateX(-50%) translateZ(10px)",
-              fontFamily: "m6x11plus, ui-monospace, monospace",
-              fontSize: 10,
-              color: borderColor,
-              whiteSpace: "nowrap",
-              letterSpacing: 1,
-            }}
+              "--j-mystery-slot-label-color": borderColor,
+            } as React.CSSProperties}
           >
             + tap
           </div>
