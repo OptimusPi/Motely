@@ -89,7 +89,8 @@ export function SeedFinderApp({
     status === "running" ? "blue" : status === "done" ? "green" : status === "error" ? "red" : "dark";
 
   return (
-    <JimboPanel>
+    <JimboApp>
+      <JimboPanel>
       <JimboStack gap="md">
         <JimboRow gap="sm" align="center">
           <JimboText size="xs" tone="grey">motely v</JimboText>
@@ -144,6 +145,7 @@ export function SeedFinderApp({
           setStake(s as keyof typeof MotelyStake);
         }}
       />
-    </JimboPanel>
+      </JimboPanel>
+    </JimboApp>
   );
 }
