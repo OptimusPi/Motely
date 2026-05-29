@@ -13,7 +13,7 @@ import {
     mkdir,
     writeFile,
     rm,
-    readFile,
+    copyFile,
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -78,30 +78,10 @@ async function main() {
         console.log(`npm install ${tgzPath} in ${consumerDir} …`);
         run("npm", ["install", tgzPath], { cwd: consumerDir });
 
-        const runner = `
-import bootsharp, { Motely } from "motely-wasm";
-import { readFile } from "node:fs/promises";
-
-await bootsharp.boot();
-
-const jaml = \`
-name: smoke
-deck: Red
-stake: White
-must:
-  - joker: WeeJoker
-    antes: [1]
-\`;
-
-const cfg = Motely.parseJaml(jaml);
-cfg.seeds = ["AAAAAAAA"];
-const result = Motely.runSeedListSearch(cfg);
-if (!result.isCompleted) throw new Error("search did not complete");
-const pkg = JSON.parse(await readFile(new URL("package.json", import.meta.resolve("motely-wasm/package.json")), "utf8"));
-console.log("CONSUMER_SMOKE: PASS", pkg.version);
-`;
+        // Copy the real fixture into the consumer dir so its bare `motely-wasm`
+        // import resolves to the installed tarball. Real code, not a string blob.
         const runPath = join(consumerDir, "run.mjs");
-        await writeFile(runPath, runner.trimStart());
+        await copyFile(join(wasmProjectDir, "consumer-smoke-runner.mjs"), runPath);
 
         console.log("node run.mjs (installed package) …");
         run(process.execPath, [runPath], { cwd: consumerDir });
