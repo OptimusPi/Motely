@@ -259,6 +259,3 @@ export function decodeMotelyItemToJamlCard(input: MotelyItemInput, scale?: numbe
     },
   };
 }
-
-export function warmMotelyItemCache(): void { /* no-op */ }
-export function motelyItemCacheSize(): number { return 0; }

@@ -16,8 +16,6 @@ export {
   motelyStandardcardSuitName,
   decodeMotelyItemName,
   resolveMotelyItemType,
-  warmMotelyItemCache,
-  motelyItemCacheSize,
   type DecodedMotelyItem,
   type MotelyItemInput,
   type MotelyJamlCard,

@@ -19,6 +19,7 @@ import {
     ENHANCER_MAP,
     SEAL_MAP,
 } from "../sprites/spriteData.js";
+import { decodeMotelyItem } from "../decode/motelyItemDecoder.js";
 
 export interface JamlGameCardProps {
     card: {
@@ -163,58 +164,61 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
         return null;
     }
 
-    const displayName = String(item.name || "").trim();
-    const { baseName, edition, isEternal, isPerishable, isRental } = stripModifiers(displayName);
+    // Decode the packed int through the typed Motely decoder — the single source
+    // of truth for the bit layout. The previous version hand-rolled nibble
+    // constants (catNibble === 5 /* Joker */ etc.) that did NOT match the real
+    // Motely enum, so categories decoded as bogus 1..5 values. decodeMotelyItem
+    // reads MOTELY_ITEM_FORMATS_BY_VALUE + Motely.decode*, so the category,
+    // edition, seal, enhancement, rank, suit, and stickers are all correct.
+    const decoded = decodeMotelyItem(item.value);
+    if (!decoded) return null;
 
-    // Use motely-wasm enum to determine category — no hand-rolled bitmasks
-    const itemType = item.value & 0xffff;
-    const catNibble = (itemType >> 12) & 0xf;
+    const edition = decoded.edition ?? undefined;
+    const { isEternal, isPerishable, isRental } = decoded;
 
-    if (catNibble === 5 /* Joker */) {
-        const jokerName = JOKERS.some((joker) => joker.name === baseName) ? baseName : displayName;
-        if (JOKERS.some((joker) => joker.name === jokerName)) {
-            return { kind: "joker", type: "joker", card: { name: jokerName, edition, isEternal, isPerishable, isRental, scale } };
-        }
+    switch (decoded.category) {
+        case "joker":
+            return {
+                kind: "joker",
+                type: "joker",
+                card: { name: decoded.displayName, edition, isEternal, isPerishable, isRental, scale },
+            };
+        case "tarot":
+        case "planet":
+        case "spectral":
+            return {
+                kind: "consumable",
+                type: "consumable",
+                card: {
+                    name: decoded.displayName,
+                    edition,
+                    enhancements: decoded.enhancement ? [decoded.enhancement] : undefined,
+                    seal: decoded.seal ?? undefined,
+                    scale,
+                },
+            };
+        case "playing":
+            return {
+                kind: "playing",
+                type: "playing",
+                card: {
+                    name: decoded.displayName,
+                    rank: decoded.rank ?? undefined,
+                    suit: decoded.suit ?? undefined,
+                    enhancements: decoded.enhancement ? [decoded.enhancement] : undefined,
+                    seal: decoded.seal ?? undefined,
+                    edition,
+                    isEternal,
+                    isPerishable,
+                    isRental,
+                    scale,
+                },
+            };
+        default:
+            // Unknown category (incl. vouchers): fall back to the name-based
+            // matching in resolveAnalyzerShopItem (vouchers resolve by name).
+            return null;
     }
-
-    if (
-        catNibble === 3 /* Tarot */ ||
-        catNibble === 4 /* Planet */ ||
-        catNibble === 2 /* Spectral */
-    ) {
-        const consumableName = TAROTS_AND_PLANETS.some((consumable) => consumable.name === baseName) ? baseName : displayName;
-        if (TAROTS_AND_PLANETS.some((consumable) => consumable.name === consumableName)) {
-            return { kind: "consumable", type: "consumable", card: { name: consumableName, edition, scale } };
-        }
-    }
-
-    if (baseName !== displayName) {
-        if (JOKERS.some((joker) => joker.name === baseName)) {
-            return { kind: "joker", type: "joker", card: { name: baseName, edition, isEternal, isPerishable, isRental, scale } };
-        }
-        if (TAROTS_AND_PLANETS.some((consumable) => consumable.name === baseName)) {
-            return { kind: "consumable", type: "consumable", card: { name: baseName, edition, scale } };
-        }
-        if (VOUCHERS.some((voucher) => voucher.name === baseName)) {
-            return { kind: "voucher", voucherName: baseName };
-        }
-    }
-
-    const standardcard = parseStandardcardName(displayName) ?? parseStandardcardName(baseName);
-    if (standardcard) {
-        return {
-            kind: "playing",
-            type: "playing",
-            card: {
-                name: displayName,
-                rank: standardcard.rank,
-                suit: standardcard.suit,
-                scale,
-            },
-        };
-    }
-
-    return { kind: "unknown", label: displayName };
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
