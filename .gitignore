@@ -65,3 +65,4 @@ nuget.config.local
 /.claude
 *.lscache
 /motely-wasm/dist
+/Motely.Wasm/.pack-consumer
