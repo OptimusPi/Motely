@@ -1,12 +1,16 @@
 {
-  "name": "motely-wasm-tests",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": ">=20.6.0"
-  },
-  "scripts": {
-    "test": "node motely.test.mjs",
-    "test:watch": "node --test --watch --test-concurrency=1 tests"
-  }
+    "name": "bootsharp",
+    "type": "module",
+    "exports": {
+        ".": "./bin/bootsharp/index.mjs",
+        "./*": "./bin/bootsharp/generated/modules/*.g.mjs"
+    },
+    "browser": {
+        "node:fs": false,
+        "node:url": false,
+        "node:path": false,
+        "node:module": false,
+        "node:crypto": false,
+        "node:process": false
+    }
 }

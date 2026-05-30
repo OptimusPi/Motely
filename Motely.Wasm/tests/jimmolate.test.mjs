@@ -2,14 +2,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { loadBootResourcesFromDir } from "../../motely-wasm/dist/node-boot.mjs";
 
 const testsDir = dirname(fileURLToPath(import.meta.url));
 const entryPath = process.env.MOTELY_WASM_ENTRY
     ? resolve(process.env.MOTELY_WASM_ENTRY)
     : resolve(testsDir, "..", "..", "motely-wasm", "dist", "index.mjs");
-const pkgRoot = resolve(dirname(entryPath), "..");
-const binDir = resolve(pkgRoot, "bin");
 
 const visited = [];
 
@@ -22,7 +19,7 @@ async function bootOnce() {
         }
         return seed.length >= 2 && seed[1] === "A";
     };
-    await bootsharp.boot(await loadBootResourcesFromDir(binDir));
+    await bootsharp.boot();
     if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted) {
         throw new Error("boot: expected BootStatus.Booted");
     }
