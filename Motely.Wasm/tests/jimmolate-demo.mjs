@@ -3,11 +3,9 @@
 // search so the base filter passes everything and the scalar probe does the culling.
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { loadBootResourcesFromDir } from "../../motely-wasm/dist/node-boot.mjs";
 
 const testsDir = dirname(fileURLToPath(import.meta.url));
 const entryPath = resolve(testsDir, "..", "..", "motely-wasm", "dist", "index.mjs");
-const binDir = resolve(dirname(entryPath), "..", "bin");
 
 const { default: bootsharp, Motely } = await import(pathToFileURL(entryPath).href);
 Motely.reportWasmError = (m) => console.error("[WASM ERROR]", m);
@@ -20,7 +18,7 @@ Motely.jimmolateProbe = (seed, _deck, _stake) => {
     return seed.startsWith("PI");
 };
 
-await bootsharp.boot(await loadBootResourcesFromDir(binDir));
+await bootsharp.boot();
 Motely.enableJimmolate();
 
 const seeds = ["PIFREAK1", "PIAAAAAA", "XYZABCDE", "PILOVESU", "MMMMMMMM"];

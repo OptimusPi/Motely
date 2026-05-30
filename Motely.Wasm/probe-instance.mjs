@@ -2,7 +2,6 @@
 // createStreamCursor / MotelyStreamKind are gone; they only ever imitated what
 // Motely already is). Uses the proven API: parseJaml → jamlyzer (analyze what
 // the seed contains) + runSeedListSearch (search it against a filter).
-import { readFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
@@ -10,19 +9,13 @@ const pkgDir = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../motely-wasm",
 );
-const wasmBytes = await readFile(path.join(pkgDir, "bin/motely-wasm.wasm"));
 
 const bootsharp = (await import(pathToFileURL(path.join(pkgDir, "dist/index.mjs")).href)).default;
 const { Motely } = await import(pathToFileURL(path.join(pkgDir, "dist/generated/index.g.mjs")).href);
 
 Motely.reportWasmError = (m) => console.error("[WASM ERROR]", m);
 
-await bootsharp.boot({
-    wasm: wasmBytes.buffer.slice(
-        wasmBytes.byteOffset,
-        wasmBytes.byteOffset + wasmBytes.byteLength,
-    ),
-});
+await bootsharp.boot();
 
 const SEED = "ALEEB";
 
