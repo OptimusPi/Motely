@@ -15,7 +15,6 @@ pkg.main = "./dist/index.mjs";
 pkg.types = "./dist/index.d.mts";
 pkg.exports = {
     ".": { types: "./dist/index.d.mts", import: "./dist/index.mjs" },
-    "./node-boot": { types: "./dist/node-boot.d.mts", import: "./dist/node-boot.mjs" },
     "./*": {
         types: "./dist/generated/modules/*.g.d.mts",
         import: "./dist/generated/modules/*.g.mjs",
