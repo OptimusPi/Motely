@@ -15,10 +15,9 @@ npm install motely-wasm
 ```js
 import bootsharp, { Motely } from "motely-wasm";
 
-// Boot the .NET WASM runtime. In a browser, pass the URL path under which your
-// host serves the package's `bin/` directory (where dotnet.native.wasm lives).
-// In Node, pass the `.wasm` bytes directly — see the "Booting" section below.
-await bootsharp.boot("/motely-wasm/bin");
+// Boot the .NET WASM runtime — no arguments needed.
+// The WASM binary is embedded in the package as base64 (single self-contained ESM).
+await bootsharp.boot();
 
 // A JAML filter — see https://github.com/OptimusPi/MotelyJAML for the language.
 const jaml = `
@@ -46,53 +45,22 @@ console.log("done:", search.totalSeedsSearched, "searched,", search.matchingSeed
 
 ## Booting
 
-`bootsharp.boot(...)` initializes the .NET WASM runtime. Call it once before any
-`Motely.*` API. The argument shape depends on the host.
+`bootsharp.boot()` initializes the .NET WASM runtime. Call it once before any `Motely.*` API.
 
-### Browser
-
-Pass the URL path your host serves the package's `bin/` directory at (where
-`dotnet.native.wasm` lives). It's host-chosen — typical mountings:
-
-| Host | Mount `bin/` at | Boot call |
-| --- | --- | --- |
-| Vite / Storybook `staticDirs` | `/motely-wasm/bin` | `boot("/motely-wasm/bin")` |
-| Next.js route handler | `/motely-wasm/bin/[...path]` | `boot("/motely-wasm/bin")` |
-| Public CDN (pinned version) | `https://unpkg.com/motely-wasm@<version>/bin` | `boot("https://unpkg.com/motely-wasm@18.2.2/bin")` |
-
-Web Workers must boot from the **same** URL as the main thread — absolute paths
-in a worker resolve against the page origin, so whichever URL serves the WASM
-to the main thread is the same one the worker must pass.
+The WASM binary is **embedded** in the package as base64 — no separate files to serve, no CDN config, no `bin/` directory. One import, one `boot()`, done. Works in browser, Node, Web Workers, v0 previews, MCP apps, GitHub Pages — anywhere.
 
 ```js
 import bootsharp from "motely-wasm";
 
 if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-  await bootsharp.boot("/motely-wasm/bin");
+  await bootsharp.boot();
 }
 
 console.log(bootsharp.getStatus()); // BootStatus.Booted
 ```
 
-### Node / Bun / Deno
-
-Same ESM import as the browser. Point `boot()` at the published `bin/` directory
-(Node `fetch` accepts `file://` URLs):
-
-```js
-import bootsharp, { Motely } from "motely-wasm";
-
-const binRoot = new URL("bin/", import.meta.resolve("motely-wasm/package.json")).href;
-await bootsharp.boot(binRoot);
-
-const status = Motely.validateJaml(jaml);
-```
-
-Requires Node ≥ 20.6 (`import.meta.resolve`). Node 22 LTS is the recommended floor.
-
 **Publish gate (repo):** after `dotnet publish Motely.Wasm -c Release`, run
-`node Motely.Wasm/motely.test.mjs` and `node Motely.Wasm/pack-consumer-smoke.mjs`
-(`npm pack` → fresh `npm install` → same boot path).
+`node Motely.Wasm/motely.test.mjs` and `node Motely.Wasm/pack-consumer-smoke.mjs`.
 
 ## JAML API
 
@@ -247,7 +215,7 @@ self.onmessage = async ({ data }) => {
 
   try {
     if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-      await bootsharp.boot("/motely-wasm/bin");
+      await bootsharp.boot();
     }
 
     const onResult = r =>
