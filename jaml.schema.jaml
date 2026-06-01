@@ -134,6 +134,18 @@ mustNot: []                       # nothing vetoed here
 #       familiar: []  grim: []  deckDraw: []
 #       uncommonShopJokers: []  rareShopJokers: []  commonShopJokers: []  allShopJokers: []
 #
+# ── PACK / SHOP DEPTH (do NOT assume 0-5 is the ceiling) ─────────────────────
+#   The booster-pack PRNG stream emits SIX packs at EVERY ante (slots 0-5), but
+#   normal early-ante gameplay only *reaches* slot 3. By default the engine
+#   clamps early antes to slot 3 so normal-gameplay filters don't get phantom
+#   hits. To search the deeper slots 4-5 (reachable via a Hieroglyph / Petroglyph
+#   ante rewind), opt in per clause:
+#       sources:
+#         boosterPacks: [0, 1, 2, 3, 4, 5]
+#         earlyAntesMaxPack: 5      # lift the early-ante clamp up to slot 5
+#   Proof: seed KHTW99TC hides a Negative Perkeo at ante-1 pack slot 5 — matched
+#   only with this opt-in. See examples/hieroglyph-deep-perkeo.jaml.
+#
 # ── CONTROLLED VOCABULARIES (exact spellings; matching is case-insensitive) ──
 #
 #   DECKS (15):
