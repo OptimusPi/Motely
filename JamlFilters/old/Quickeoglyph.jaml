@@ -1,0 +1,136 @@
+name: Quickeoglyph (Trickeoglyph Variant)
+author: qcom, adapted by pifreak
+description: Negative perkeo ante 1, canio ante 8, both hieroglyph vouchers and magic trick before ante 8
+deck: Ghost
+stake: White
+
+must:
+  - legendaryJoker: Perkeo
+    antes: [1]
+    edition: Negative
+  - legendaryJoker: Any
+    antes: [2,3,4,5,6,7]
+    edition: Negative
+  
+  - spectralCard: Immolate
+    antes: [1,2,3,4]
+    shopItems: [0, 1, 2, 3]
+    score: 1
+
+  - spectralCard: Ouija
+    antes: [1,2,3,4]
+    shopItems: [0, 1, 2, 3]
+    score: 1
+
+  - joker: Certificate
+    antes: [1,2,3,4,5]
+  - voucher: Hieroglyph
+    antes: [1, 2,3]
+    score: 1
+
+  - voucher: MagicTrick
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 1
+
+  - voucher: Petroglyph 
+    antes: [1, 2, 3,4,5,6,7]
+    score: 1
+
+  - legendaryJoker: Canio
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+
+should:
+  - legendaryJoker: Perkeo
+    antes: [1]
+    edition: Negative
+
+  - voucher: MagicTrick
+    antes: [1, 2, 3, 4]
+    score: 1
+  - voucher: Hieroglyph
+    antes: [1, 2, 3, 4, 5, 6]
+    score: 1
+  - voucher: Petroglyph
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 1
+
+  - legendaryJoker: Any
+    edition: Negative
+    score: 2
+
+  - legendaryJoker: Canio
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 1
+
+  - legendaryJoker: Perkeo
+    antes: [1]
+    boosterPacks: [0,1,2,3]
+    edition: Negative
+    score: 1
+  - legendaryJoker: Any
+    edition: Negative
+    antes: [7,8]
+    score: 1
+    boosterPacks: [0,1,2,3,4]
+  - legendaryJoker: Canio
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    sources:
+      boosterPacks: [0, 1, 2, 3, 4]
+    score: 1
+
+  - voucher: MagicTrick
+    antes: [1, 2, 3, 4]
+    score: 2
+  - voucher: Hieroglyph
+    antes: [1, 2, 3, 4, 5, 6]
+    score: 3
+  - voucher: Petroglyph
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 3
+
+  - spectralCard: Immolate
+    antes: [7, 8, 9]
+    shopItems: [0, 1, 2, 3, 4, 5]
+    score: 1
+
+  - joker: Blueprint
+    score: 2
+  - joker: Brainstorm
+    score: 2
+
+  - jokers: [Blueprint, Brainstorm]
+    edition: Negative
+    score: 3
+
+  - vouchers: [Hieroglyph, Petroglyph, MagicTrick]
+    antes: [1,2,3,4]
+    score: 3
+
+  - tarotCard: Judgement
+    antes: [1,2]
+    shopItems: [0, 1, 2, 3]
+    score: 2
+  - joker: Any
+    edition: Negative
+    sources:
+      judgement: [0,1]
+    antes: [2]
+    score: 4
+  - joker: Any
+    edition: Negative
+    sources:
+      judgement: [0,1]
+    antes: [3]
+    score: 4
+  - joker: Any
+    edition: Negative
+    sources:
+      judgement: [0,1]
+    antes: [4]
+    score: 4
+  - joker: Any
+    edition: Negative
+    sources:
+      judgement: [0,1]
+    antes: [5]
+    score: 4

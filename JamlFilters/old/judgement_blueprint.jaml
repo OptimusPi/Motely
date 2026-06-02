@@ -1,0 +1,17 @@
+name: Judgement Blueprint
+deck: Ghost
+stake: White
+must:
+  - legendaryJoker: Perkeo
+    antes: [1]
+    boosterPacks: [0,1,2,3]
+    requireMega: true
+  - tarotCards: [Judgement, TheFool]
+    antes: [1]
+    shopItems: [0,1,2,3]
+  - joker: Blueprint
+    antes: [1]
+    sources:
+      judgement: [0]
+should: 
+  - legendaryJoker: Perkeo

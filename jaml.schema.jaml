@@ -1,0 +1,240 @@
+# =============================================================================
+#  jaml.schema.jaml — Jimbo's Ante Markup Language, the whole language on one page
+# =============================================================================
+#  JAML is a YAML dialect for describing Balatro seed-search filters. The Motely
+#  engine reads a filter and, for every candidate seed, checks three buckets:
+#
+#     must:     EVERY clause must match      -> otherwise the seed is REJECTED
+#     should:   each matching clause adds `score`, ranked against a cutoff
+#     mustNot:  if ANY clause matches        -> the seed is REJECTED
+#
+#  Authoritative grammar : jaml-lang/src/authoring.ts      (the Zod contract)
+#  Enum source of truth  : jaml-lang/src/vocab.generated.ts (generated from C#)
+#  Final authority       : the engine — Motely.validateJaml() / ParseJaml()
+#  Machine-readable twin : jaml.schema.json                 (JSON Schema draft-07)
+#
+#  Values are CASE-INSENSITIVE. Unknown ROOT keys are an ERROR (strict loader).
+#  `id` is the only "structural" field, and even that the engine will derive
+#  from `name`/filename if you leave it out.
+#
+#  The block immediately below is a COMPLETE, VALID filter — proof this file
+#  parses. Everything under "LANGUAGE REFERENCE" is annotation; copy what you
+#  need. (Comments are ignored by the parser.)
+# =============================================================================
+
+id: jaml-reference
+name: JAML Reference
+author: pifreak
+description: The entire JAML language, annotated, on one page. Copy what you need.
+deck: Red                         # see DECKS below (default: Red)
+stake: White                      # see STAKES below (default: White)
+
+defaults:                         # applied to any clause that doesn't override
+  antes: [1, 2, 3, 4, 5, 6, 7, 8] # int[] 1..8  — antes to search
+  shopItems: [0, 1, 2, 3, 4, 5]   # int[]       — shop slot indices
+  boosterPacks: [0, 1, 2, 3, 4, 5] # int[]      — pack slot indices
+  score: 1                        # int         — default score for a should-match
+
+must:
+  - joker: Blueprint              # a clause = SELECTOR (joker:) + MODIFIERS (antes:)
+    antes: [1, 2, 3]
+
+should:
+  - joker: Any                    # `Any` wildcard — matches any joker at all
+    score: 1
+
+mustNot: []                       # nothing vetoed here
+
+# =============================================================================
+#  LANGUAGE REFERENCE   (annotation only — none of the below is parsed)
+# =============================================================================
+#
+# ── ROOT KEYS ────────────────────────────────────────────────────────────────
+#   These are ALL the root keys there are. Anything else is rejected.
+#
+#   id           string     stable identifier (engine derives one if omitted)
+#   name         string     human-readable display name
+#   author       string     who made it
+#   dateCreated  string     ISO-8601 date or datetime
+#   description  string     what the filter looks for
+#   deck         enum Deck  starting deck            (default Red)
+#   stake        enum Stake difficulty stake         (default White)
+#   defaults     object     { antes, shopItems, boosterPacks, score }
+#   seeds        string[]   pin specific seeds (seed-list mode)
+#   hashtags     string[]   free-form discovery tags
+#   must         clause[]   ALL must match            (the gate)
+#   should       clause[]   each adds `score`         (the ranking)
+#   mustNot      clause[]   ANY match rejects         (the veto)
+#
+# ── ANATOMY OF A CLAUSE ──────────────────────────────────────────────────────
+#   A clause does ONE of:
+#     (a) SELECTS something to match  (joker:, voucher:, tag:, ...)   -- or --
+#     (b) COMPOSES other clauses      (and:, or:, clauses:)
+#   ...then refines it with any number of MODIFIERS. A clause with neither a
+#   selector nor a composition is an error.
+#
+#   SELECTORS — pick exactly WHAT to look for (one per clause, typically):
+#     joker:           <Joker> | Any        jokers:          [<Joker>, ...]
+#     commonJoker:     <Common> | Any       commonJokers:    [<Common>, ...]
+#     uncommonJoker:   <Uncommon> | Any     uncommonJokers:  [<Uncommon>, ...]
+#     rareJoker:       <Rare> | Any         rareJokers:      [<Rare>, ...]
+#     legendaryJoker:  <Legendary> | Any    legendaryJokers: [<Legendary>, ...]
+#     voucher:         <Voucher>            vouchers:        [<Voucher>, ...]
+#     tarotCard:       <Tarot>              tarotCards:      [<Tarot>, ...]
+#     spectralCard:    <Spectral>           spectralCards:   [<Spectral>, ...]
+#     planetCard:      <Planet>
+#     boss:            <Boss>
+#     tag:             <Tag>                tags:            [<Tag>, ...]
+#     smallBlindTag:   <Tag>                smallBlindTags:  [<Tag>, ...]
+#     bigBlindTag:     <Tag>                bigBlindTags:    [<Tag>, ...]
+#     standardCard:    <StandardCard> | { rank, suit, seal, enhancement, edition }
+#     standardCards:   [ <StandardCard> | {...}, ... ]
+#     erraticRank:     <Rank>               (Erratic deck)
+#     erraticSuit:     <Suit>               (Erratic deck)
+#     erraticCard:     string               (Erratic deck, e.g. "Ace of Hearts")
+#     startingDraw:    string
+#     event:           <Event>
+#     # numeric "roll-budget" event selectors — each takes int[] of roll indices:
+#     luckyMoney  luckyMult  misprintMult  wheelOfFortune  cavendishExtinct
+#     grosMichelExtinct  spaceLevelup  businessPayout  bloodstoneTrigger
+#     parkingPayout  glassDestroy  wheelStaysFlipped
+#
+#   MODIFIERS — refine ANY clause:
+#     antes:        int[] 1..8   which antes to search       (else uses defaults)
+#     score:        int          points for a should-match    (else defaults.score)
+#     min:          int          minimum count required        (default 1)
+#     max:          int          maximum count allowed
+#     label:        string       label shown in output
+#     edition:      enum Edition       Foil / Holographic / Polychrome / Negative
+#     stickers:     [enum Sticker]     Eternal / Perishable / Rental
+#     seal:         enum Seal          Gold / Red / Blue / Purple
+#     enhancement:  enum Enhancement   Bonus / Mult / Wild / Glass / Steel / ...
+#     rank:         enum Rank          playing-card rank
+#     suit:         enum Suit          playing-card suit
+#     rolls:        int[]              pack/shop roll indices
+#     soulEditionRolls: int            extra soul-stream edition reads per ante
+#     soulCardOnly: bool               match The Soul card without rolling the joker
+#     # flat source shortcuts (or nest the full set under `sources:`):
+#     shopItems  boosterPacks  minShopItem  maxShopItem
+#     judgement  wraith  rareTag  uncommonTag
+#
+#   COMPOSITION — nest clauses:
+#     and:     [ {clause}, {clause}, ... ]   every nested clause must match
+#     or:      [ {clause}, {clause}, ... ]   at least one nested clause must match
+#     clauses: [ {clause}, ... ]   +  mode: <string>   grouped clauses
+#
+#   SOURCES — restrict WHERE an item may come from (all optional):
+#     sources:
+#       shopItems: []  boosterPacks: []  minShopItem: 0  maxShopItem: 0
+#       earlyAntesMaxPack: 0  tags: true  requireMega: true
+#       charmTag: true  etherealTag: true
+#       judgement: []  wraith: []  rareTag: []  uncommonTag: []  soulCard: []
+#       arcanaPacks: []  spectralPacks: []  riffRaff: []  purpleSealOrEightBall: []
+#       emperor: []  sixthSense: []  seance: []  certificate: []  incantation: []
+#       familiar: []  grim: []  deckDraw: []
+#       uncommonShopJokers: []  rareShopJokers: []  commonShopJokers: []  allShopJokers: []
+#
+# ── PACK / SHOP DEPTH (do NOT assume 0-5 is the ceiling) ─────────────────────
+#   The booster-pack PRNG stream emits SIX packs at EVERY ante (slots 0-5), but
+#   normal early-ante gameplay only *reaches* slot 3. By default the engine
+#   clamps early antes to slot 3 so normal-gameplay filters don't get phantom
+#   hits. To search the deeper slots 4-5 (reachable via a Hieroglyph / Petroglyph
+#   ante rewind), opt in per clause:
+#       sources:
+#         boosterPacks: [0, 1, 2, 3, 4, 5]
+#         earlyAntesMaxPack: 5      # lift the early-ante clamp up to slot 5
+#   Proof: seed KHTW99TC hides a Negative Perkeo at ante-1 pack slot 5 — matched
+#   only with this opt-in. See examples/hieroglyph-deep-perkeo.jaml.
+#
+# ── CONTROLLED VOCABULARIES (exact spellings; matching is case-insensitive) ──
+#
+#   DECKS (15):
+#     Red  Blue  Yellow  Green  Black  Magic  Nebula  Ghost  Abandoned
+#     Checkered  Zodiac  Painted  Anaglyph  Plasma  Erratic
+#
+#   STAKES (8):
+#     White  Red  Green  Black  Blue  Purple  Orange  Gold
+#
+#   EDITIONS (5):     None  Foil  Holographic  Polychrome  Negative
+#   ENHANCEMENTS (9): None  Bonus  Mult  Wild  Glass  Steel  Stone  Gold  Lucky
+#   SEALS (5):        None  Gold  Red  Blue  Purple
+#   STICKERS (4):     None  Eternal  Perishable  Rental
+#
+#   RANKS (13): Two Three Four Five Six Seven Eight Nine Ten Jack Queen King Ace
+#   SUITS (4):  Clubs  Diamonds  Hearts  Spades
+#   STANDARD CARDS (52): <Rank>Of<Suit>, e.g. AceOfSpades, TwoOfClubs, KingOfHearts
+#
+#   JOKERS (150) — `joker:` takes any of these (or `Any`); rarity selectors take
+#   only their own group (or `Any`).
+#
+#     COMMON (61):
+#       Joker GreedyJoker LustyJoker WrathfulJoker GluttonousJoker JollyJoker
+#       ZanyJoker MadJoker CrazyJoker DrollJoker SlyJoker WilyJoker CleverJoker
+#       DeviousJoker CraftyJoker HalfJoker CreditCard Banner MysticSummit
+#       EightBall Misprint RaisedFist ChaostheClown ScaryFace AbstractJoker
+#       DelayedGratification GrosMichel EvenSteven OddTodd Scholar BusinessCard
+#       Supernova RideTheBus Egg Runner IceCream Splash BlueJoker FacelessJoker
+#       GreenJoker Superposition ToDoList Cavendish RedCard SquareJoker RiffRaff
+#       Photograph ReservedParking MailInRebate Hallucination FortuneTeller
+#       Juggler Drunkard GoldenJoker Popcorn WalkieTalkie SmileyFace GoldenTicket
+#       Swashbuckler HangingChad ShootTheMoon
+#
+#     UNCOMMON (64):
+#       JokerStencil FourFingers Mime CeremonialDagger MarbleJoker LoyaltyCard
+#       Dusk Fibonacci SteelJoker Hack Pareidolia SpaceJoker Burglar Blackboard
+#       SixthSense Constellation Hiker CardSharp Madness Seance Vampire Shortcut
+#       Hologram Cloud9 Rocket MidasMask Luchador GiftCard TurtleBean Erosion
+#       ToTheMoon StoneJoker LuckyCat Bull DietCola TradingCard FlashCard
+#       SpareTrousers Ramen Seltzer Castle MrBones Acrobat SockAndBuskin
+#       Troubadour Certificate SmearedJoker Throwback RoughGem Bloodstone
+#       Arrowhead OnyxAgate GlassJoker Showman FlowerPot MerryAndy OopsAll6s
+#       TheIdol SeeingDouble Matador Satellite Cartomancer Astronomer Bootstraps
+#
+#     RARE (20):
+#       DNA Vagabond Baron Obelisk BaseballCard AncientJoker Campfire Blueprint
+#       WeeJoker HitTheRoad TheDuo TheTrio TheFamily TheOrder TheTribe Stuntman
+#       InvisibleJoker Brainstorm DriversLicense BurntJoker
+#
+#     LEGENDARY (5):  Canio  Triboulet  Yorick  Chicot  Perkeo
+#
+#   VOUCHERS (32):
+#     Overstock OverstockPlus ClearanceSale Liquidation Hone GlowUp RerollSurplus
+#     RerollGlut CrystalBall OmenGlobe Telescope Observatory Grabber NachoTong
+#     Wasteful Recyclomancy TarotMerchant TarotTycoon PlanetMerchant PlanetTycoon
+#     SeedMoney MoneyTree Blank Antimatter MagicTrick Illusion Hieroglyph
+#     Petroglyph DirectorsCut Retcon PaintBrush Palette
+#
+#   TAROT CARDS (22):
+#     TheFool TheMagician TheHighPriestess TheEmpress TheEmperor TheHierophant
+#     TheLovers TheChariot Justice TheHermit TheWheelOfFortune Strength
+#     TheHangedMan Death Temperance TheDevil TheTower TheStar TheMoon TheSun
+#     Judgement TheWorld
+#
+#   SPECTRAL CARDS (18):
+#     Familiar Grim Incantation Talisman Aura Wraith Sigil Ouija Ectoplasm
+#     Immolate Ankh DejaVu Hex Trance Medium Cryptid TheSoul BlackHole
+#
+#   PLANET CARDS (12):
+#     Mercury Venus Earth Mars Jupiter Saturn Uranus Neptune Pluto PlanetX
+#     Ceres Eris
+#
+#   BOSS BLINDS (28):
+#     AmberAcorn CeruleanBell CrimsonHeart VerdantLeaf VioletVessel TheArm
+#     TheClub TheEye TheFish TheFlint TheGoad TheHead TheHook TheHouse TheManacle
+#     TheMark TheMouth TheNeedle TheOx ThePillar ThePlant ThePsychic TheSerpent
+#     TheTooth TheWall TheWater TheWheel TheWindow
+#
+#   TAGS (24):
+#     UncommonTag RareTag NegativeTag FoilTag HolographicTag PolychromeTag
+#     InvestmentTag VoucherTag BossTag StandardTag CharmTag MeteorTag BuffoonTag
+#     HandyTag GarbageTag EtherealTag CouponTag DoubleTag JuggleTag D6Tag
+#     TopupTag SpeedTag OrbitalTag EconomyTag
+#
+#   EVENTS (12):
+#     LuckyMoney LuckyMult MisprintMult WheelOfFortune CavendishExtinct
+#     GrosMichelExtinct SpaceLevelup BusinessPayout BloodstoneTrigger
+#     ParkingPayout GlassDestroy WheelStaysFlipped
+#
+# =============================================================================
+#  end jaml.schema.jaml
+# =============================================================================
