@@ -1,3 +1,7 @@
+# MotelyJAML — Bootsharp build & repack
+
+Project overview, repo layout, the publish gate, and the JS API surface are in [CLAUDE.md](CLAUDE.md). This file is the deep reference for building/repacking the **Bootsharp** dependency locally — a sponsor-gated workflow on pifreak's own machine, so the `D:/...` / `X:/...` paths and `@`-imports below are local to that box.
+
 ## Bootsharp source and docs
 
 motely-wasm builds against Bootsharp pinned in `Directory.Packages.props` (`Bootsharp`, `Bootsharp.Common`, `Bootsharp.Inject` — all the same version; sponsor `Bootsharp.FileSystem` is versioned separately). Read these files directly — do not rely on public Bootsharp docs:
@@ -6,10 +10,10 @@ motely-wasm builds against Bootsharp pinned in `Directory.Packages.props` (`Boot
 
 Source: `D:\bootsharp`. Branch sets the interop ABI: `feat/raw-interop` = NativeAOT-LLVM raw C-ABI (alpha.31x); older alphas use `[JSImport]`/`[JSExport]`.
 
-**Updating to the latest push — it is NOT `git pull`.** Elringus force-pushes / rebases `feat/delegates`, so the remote history is rewritten under the same commit message (e.g. "implement delegates support" gets a new hash each push). A `git pull` sees "diverged" and would make a merge commit. Instead:
+**Updating to the latest push — it is NOT `git pull`.** Elringus force-pushes / rebases the active branch (currently **`feat/spec`**; was `feat/delegates` before ~May 28 — confirm the current name in CLAUDE.md), so the remote history is rewritten under the same commit message (e.g. "implement delegates support" gets a new hash each push). A `git pull` sees "diverged" and would make a merge commit. Instead:
 
 ```
-cd D:/bootsharp && git fetch --all --prune && git reset --hard origin/feat/delegates
+cd D:/bootsharp && git fetch --all --prune && git reset --hard origin/feat/spec
 ```
 
 This discards the local pointer and lands directly on his rewritten commit — linear, no merge commit. (Working tree is normally clean here, so nothing is lost.)
