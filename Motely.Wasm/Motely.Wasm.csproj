@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <BootsharpName>motely-wasm</BootsharpName>
+    <!-- Embedded mode (Bootsharp default): the NativeAOT wasm is inlined into the ESM module as
+         base64, so bootsharp.boot() works with no args and no sideloaded files to serve. One
+         self-contained ESM module — ideal for esm.sh/CDN consumption. (Bootsharp docs/sideloading.md:
+         leave BootsharpBinariesDirectory unset to embed.) -->
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Bootsharp.FileSystem" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+
+  <!-- Bootsharp writes a minimal package.json; we inject version + TS-aware exports. -->
+  <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpJS">
+    <PropertyGroup>
+      <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
+    </PropertyGroup>
+    <Exec Command="node finalize-package.mjs $(MotelyVersion) $(_NpmRoot)\package.json" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
+    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
+  </Target>
+</Project>

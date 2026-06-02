@@ -1,0 +1,45 @@
+name: j
+deck: Ghost
+stake: White
+defaults:
+  antes: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+must:
+  - smallBlindTag: CharmTag
+    antes: [1]
+  - legendaryJoker: Perkeo
+    antes: [1]
+    boosterPacks: [1]
+  - tarotCard: Judgement
+    antes: [1]
+    boosterPacks: [1]
+  - tarotCard: Judgement
+    antes: [1]
+    boosterPacks: [2]
+  - tarotCard: TheFool
+    antes: [1]
+    boosterPacks: [1]
+  - joker: Blueprint
+    sources:
+      judgement: [0,1]
+    antes: [1]
+  - joker: Brainstorm
+    sources:
+      judgement: [0,1]
+    antes: [1]
+should:
+  - joker: InvisibleJoker
+    score: 90
+    sources:
+      judgement: [0]
+
+  - joker: Brainstorm
+    sources:
+      judgement: [0]
+    score: 98
+
+  - joker: Blueprint
+    sources:
+      judgement: [0]
+    score: 100
+
+  
