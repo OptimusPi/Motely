@@ -145,7 +145,7 @@ public class SettingsWindow : Window
                 "Sequential",
                 "Random",
                 "Palindrome",
-                "Psychosis",
+                "Echo",
                 "Keyword",
                 "FileSource",
             },
