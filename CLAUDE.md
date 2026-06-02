@@ -41,7 +41,7 @@ node Motely.Wasm/pack-consumer-smoke.mjs
 
 ## How npm package.json is finalized
 
-Bootsharp writes a minimal `package.json` (name, type, exports, browser — see `D:/bootsharp/src/cs/Bootsharp/Build/PackageTemplate.json`). It does not set `version` or `types`. `Motely.Wasm/finalize-package.mjs` is a 20-line Node script invoked from the `FinalizeNpmPackage` MSBuild target that adds those fields plus TS-aware exports. This is load-bearing; don't delete it without replacing it.
+Bootsharp writes a minimal `package.json` (name, type, exports, browser — see `D:/bootsharp/src/cs/Bootsharp/Build/PackageTemplate.json`). It does not set `version` or `types`. The old `Motely.Wasm/finalize-package.mjs` post-processor that stamped those was **removed** on request. If the published package needs `version` / `types` / TS-aware exports, handle it inside the build — do **not** re-add a standalone node script.
 
 ## API surface
 
