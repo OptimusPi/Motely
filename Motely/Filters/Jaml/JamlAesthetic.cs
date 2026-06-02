@@ -7,7 +7,7 @@ namespace Motely.Filters.Jaml;
 public enum JamlAesthetic
 {
     Palindrome,
-    Psychosis,
+    Echo,
     Gross,
     Funny,
     Balatro,
@@ -21,7 +21,7 @@ public static class JamlAestheticParser
     private static readonly (string Jaml, JamlAesthetic Value)[] Known =
     [
         ("palindrome", JamlAesthetic.Palindrome),
-        ("psychosis", JamlAesthetic.Psychosis),
+        ("echo", JamlAesthetic.Echo),
         ("gross", JamlAesthetic.Gross),
         ("funny", JamlAesthetic.Funny),
         ("balatro", JamlAesthetic.Balatro),
