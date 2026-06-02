@@ -13,20 +13,26 @@ using Motely.Filters.Native;
 using Motely.SeedProviders;
 using System.Text.Json;
 
-[assembly: Preferences(
-    Space = [
-        @"^Motely\.Wasm$", "index",
-        @"^Motely(\..*)?$", "index"
-    ],
-    Name = [
-        @"^Program$",
-        "Motely",
-    ]
-)]
-
-
-
 namespace Motely.Wasm;
+
+// Bootsharp 0.8.0 replaced [assembly: Preferences(Space=…, Name=…)] with the renaming API
+// (docs/guide/renaming.md). Space → RenameModule (fold every Motely namespace into the single
+// `index` module); Name → RenameNode (project the `Program` node as `Motely`).
+internal static class BootsharpRenamers
+{
+    [RenameModule]
+    public static string RenameModule(Type type, string @default)
+    {
+        var ns = type.Namespace ?? "";
+        return ns == "Motely" || ns == "Motely.Wasm" || ns.StartsWith("Motely.", StringComparison.Ordinal)
+            ? "index"
+            : @default;
+    }
+
+    [RenameNode]
+    public static string RenameNode(Type type, string @default) =>
+        @default == "Program" ? "Motely" : @default;
+}
 
 public static partial class Program
 {

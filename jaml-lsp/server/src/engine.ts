@@ -23,12 +23,7 @@ async function loadEngine(): Promise<EngineApi | null> {
 
     const booted = bootsharp.BootStatus?.Booted;
     if (bootsharp.getStatus?.() !== booted) {
-      const { createRequire } = await import("node:module");
-      const { pathToFileURL } = await import("node:url");
-      const require = createRequire(import.meta.url);
-      const pkgPath = require.resolve("motely-wasm/package.json");
-      const binRoot = new URL("bin/", pathToFileURL(pkgPath)).href;
-      await bootsharp.boot(binRoot);
+      await bootsharp.boot();
     }
     return { parseJaml: (y: string) => Motely.parseJaml(y) };
   } catch {

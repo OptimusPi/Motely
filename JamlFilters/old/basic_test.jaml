@@ -1,6 +1,0 @@
-name: basic_test
-author: pifreak
-description: Basic test
-deck: Red
-Must:
-  - Joker: Blueprint
