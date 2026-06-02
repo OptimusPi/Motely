@@ -62,7 +62,9 @@ public static class JamlClauseExtensions
             LegendaryJokerClause c => new LegendaryJokerFilterDesc(c),
             VoucherClause c => new VoucherFilterDesc(c),
             TarotCardClause c => new TarotCardFilterDesc(c),
-            SpectralCardClause c => new SpectralCardFilterDesc(c),
+            SpectralCardClause c => SpecialSpectralCardFilterDesc.Handles(c)
+                ? new SpecialSpectralCardFilterDesc(c)
+                : new SpectralCardFilterDesc(c),
             PlanetCardClause c => new PlanetCardFilterDesc(c),
             StandardCardClause c => new StandardCardFilterDesc(c),
             BossClause c => new BossFilterDesc(c),

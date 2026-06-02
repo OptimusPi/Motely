@@ -467,6 +467,8 @@ public static class JamlSearchBuilder
             ),
             SpectralCardFilterDesc d =>
                 new MotelySearchSettings<SpectralCardFilterDesc.SpectralCardFilter>(d),
+            SpecialSpectralCardFilterDesc d =>
+                new MotelySearchSettings<SpecialSpectralCardFilterDesc.SpecialSpectralCardFilter>(d),
             PlanetCardFilterDesc d =>
                 new MotelySearchSettings<PlanetCardFilterDesc.PlanetCardFilter>(d),
             BossFilterDesc d => new MotelySearchSettings<BossFilterDesc.BossFilter>(d),

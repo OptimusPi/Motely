@@ -582,6 +582,133 @@ public static class JamlScoring
             }
         }
 
+        // The two "special" spectral cards spawn from a dedicated soul/black-hole roll in pack types
+        // the loop above never reads: TheSoul also appears in Arcana packs (tarot stream), BlackHole
+        // also in Celestial packs (planet stream). The spectral-pack walk above already counts both
+        // when they land in a SPECTRAL pack; this adds the missing Arcana/Celestial sources so
+        // `spectralCard: TheSoul` / `spectralCard: BlackHole` see everywhere the card can actually
+        // spawn — the same blind spot that made the spectralCard path wrong for these two.
+        if (clause.Sources.BoosterPacks.Length > 0)
+        {
+            if (SpectralClauseTargets(clause, MotelySpectralCard.TheSoul))
+                count += CountTheSoulInArcanaPacks(ref ctx, clause);
+            if (SpectralClauseTargets(clause, MotelySpectralCard.BlackHole))
+                count += CountBlackHoleInCelestialPacks(ref ctx, clause);
+        }
+
+        return count;
+    }
+
+    /// <summary>Whether a spectral clause names <paramref name="card"/> as a target.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool SpectralClauseTargets(SpectralCardClause clause, MotelySpectralCard card)
+    {
+        for (int i = 0; i < clause.Spectrals.Length; i++)
+            if (clause.Spectrals[i] == card)
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// True when the clause names TheSoul and/or BlackHole — the "special" spectrals that need the
+    /// Arcana/Celestial pack sources. Used to route <c>spectralCard:</c> to <see cref="SpecialSpectralCardFilterDesc"/>.
+    /// </summary>
+    public static bool TargetsSpecialSpectral(SpectralCardClause clause) =>
+        SpectralClauseTargets(clause, MotelySpectralCard.TheSoul)
+        || SpectralClauseTargets(clause, MotelySpectralCard.BlackHole);
+
+    /// <summary>Scalar spectral count for the SIMD filter's per-seed confirmation pass (mirrors the should-scoring count).</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int CountSpectralCardOccurrencesForFilter(
+        ref MotelySingleSearchContext ctx,
+        SpectralCardClause clause
+    ) => CountSpectralCardOccurrences(ref ctx, clause);
+
+    /// <summary>
+    /// TheSoul appearing in Arcana packs (tarot stream soul roll). Same booster-pack indexing as the
+    /// spectral-pack walk in <see cref="CountSpectralCardOccurrences"/> so source slot numbers line up;
+    /// reads each Arcana pack's contents to keep the tarot stream aligned, counts only targeted slots.
+    /// </summary>
+    private static int CountTheSoulInArcanaPacks(
+        ref MotelySingleSearchContext ctx,
+        SpectralCardClause clause
+    )
+    {
+        int count = 0;
+        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
+        int earlyCap = clause.Sources.EarlyAntesMaxPack;
+
+        foreach (int ante in clause.Antes)
+        {
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
+
+            var packStream = ctx.CreateBoosterPackStream(ante);
+            var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
+            for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
+                    continue;
+                var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                    continue;
+                for (int i = 0; i < contents.Length; i++)
+                    count += MatchSpectral(contents[i], clause);
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// BlackHole appearing in Celestial packs (planet stream black-hole roll). Mirror of
+    /// <see cref="CountPlanetCardOccurrences"/>'s celestial walk; counts only the BlackHole item.
+    /// </summary>
+    private static int CountBlackHoleInCelestialPacks(
+        ref MotelySingleSearchContext ctx,
+        SpectralCardClause clause
+    )
+    {
+        int count = 0;
+        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
+        int earlyCap = clause.Sources.EarlyAntesMaxPack;
+
+        foreach (int ante in clause.Antes)
+        {
+            int maxPack =
+                ante == 1
+                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
+                    : (
+                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
+                            ? userMaxPack
+                            : MotelyGlobals.LateAntesMaxPackSlot
+                    );
+
+            var packStream = ctx.CreateBoosterPackStream(ante);
+            var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
+            for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                if (pack.GetPackType() != MotelyBoosterPackType.Celestial)
+                    continue;
+                var contents = ctx.GetNextCelestialPackContents(
+                    ref planetStream,
+                    pack.GetPackSize()
+                );
+                if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                    continue;
+                for (int i = 0; i < contents.Length; i++)
+                    count += MatchSpectral(contents[i], clause);
+            }
+        }
+
         return count;
     }
 
