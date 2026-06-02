@@ -1,0 +1,5 @@
+name: test
+Must:
+  - type: SmallBlindTag
+    value: NegativeTag
+    antes: [2,3,4]
