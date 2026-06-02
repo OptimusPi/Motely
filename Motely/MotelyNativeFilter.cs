@@ -20,6 +20,7 @@ public enum MotelyNativeFilter
     LuckyCard,
     NanSeed,
     NegativeTag,
+    TwoBlackHole,
 }
 
 public static class MotelyNativeFilterNames
@@ -42,6 +43,7 @@ public static class MotelyNativeFilterNames
         nameof(MotelyNativeFilter.LuckyCard),
         nameof(MotelyNativeFilter.NanSeed),
         nameof(MotelyNativeFilter.NegativeTag),
+        nameof(MotelyNativeFilter.TwoBlackHole),
     ];
 
     /// <summary>
@@ -86,6 +88,9 @@ public static class MotelyNativeFilterNames
                 return true;
             case "negativetag":
                 filter = MotelyNativeFilter.NegativeTag;
+                return true;
+            case "twoblackhole":
+                filter = MotelyNativeFilter.TwoBlackHole;
                 return true;
             default:
                 filter = default;
@@ -141,6 +146,10 @@ public static class MotelyNativeFilterFactory
             MotelyNativeFilter.NegativeTag =>
                 new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(
                     new NegativeTagFilterDesc()
+                ),
+            MotelyNativeFilter.TwoBlackHole =>
+                new MotelySearchSettings<TwoBlackHoleFilterDesc.TwoBlackHoleFilter>(
+                    new TwoBlackHoleFilterDesc()
                 ),
             _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, null),
         };
