@@ -24,13 +24,14 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <!-- Bootsharp writes a minimal package.json; we inject version + TS-aware exports. -->
+  <!-- finalize-package.mjs (package.json post-processor) removed by request.
+       Bootsharp writes a minimal package.json with no `version`/`types`. If the published
+       package needs those, set them in the build before publishing — not via a standalone script. -->
   <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpJS">
     <PropertyGroup>
       <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
     </PropertyGroup>
-    <Exec Command="node finalize-package.mjs $(MotelyVersion) $(_NpmRoot)\package.json" WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
-    <Message Text="motely-wasm npm package finalized at $(_NpmRoot) (version $(MotelyVersion))" Importance="high" />
+    <Message Text="motely-wasm npm package assembled at $(_NpmRoot)" Importance="high" />
   </Target>
 </Project>
