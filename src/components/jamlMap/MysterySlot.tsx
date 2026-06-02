@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { MotelyJokerRarity } from "motely-wasm";
+import type { MotelyJokerRarity } from "./jokerRarity.js";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboColorOption, withAlpha, JIMBO_ANIMATIONS } from "../../ui/tokens.js";
 import type { SpriteSheetType } from "../../sprites/spriteMapper.js";

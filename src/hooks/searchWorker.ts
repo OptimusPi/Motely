@@ -9,7 +9,6 @@ import {
     type IMotelySearch,
     type MotelyProgress,
     type MotelyScoredSeedResult,
-    type IMotelyWasmSearchSettings,
     type JamlAesthetic
 } from "motely-wasm";
 import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
@@ -67,18 +66,19 @@ function attachListeners(): void {
     unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
-function configureSettings(message: StartMessage): IMotelyWasmSearchSettings {
-    const settings = Motely.fromJaml(message.jaml).withThreadCount(1);
+function configureSettings(message: StartMessage): IMotelySearch {
+    const config = Motely.parseJaml(message.jaml);
     if (message.mode === "aesthetic") {
-        return settings.withAestheticSearch((message.aesthetic ?? 0) as JamlAesthetic);
+        return Motely.runAestheticSearch(config, (message.aesthetic ?? 0) as JamlAesthetic);
     }
     if (message.mode === "seedlist" && message.seeds && message.seeds.length > 0) {
-        return settings.withListSearch(message.seeds, message.seeds.length);
+        config.seeds = message.seeds;
+        return Motely.runSeedListSearch(config);
     }
     if (message.mode === "random" && typeof message.count === "number" && message.count > 0) {
-        return settings.withRandomSearch(message.count);
+        return Motely.runRandomSearch(config, message.count);
     }
-    return settings.withAestheticSearch(0 as JamlAesthetic);
+    return Motely.runAestheticSearch(config, 0 as JamlAesthetic);
 }
 
 self.onmessage = async (event: MessageEvent) => {
@@ -109,8 +109,8 @@ self.onmessage = async (event: MessageEvent) => {
         attachListeners();
 
         currentSearch?.cancel();
-        const settings = configureSettings(data);
-        const search = settings.start();
+        const search = configureSettings(data);
+        search.start();
         currentSearch = search;
 
         try {

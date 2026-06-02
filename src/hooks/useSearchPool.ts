@@ -297,7 +297,8 @@ export function useSearchPool(options: UseSearchPoolOptions = {}) {
         async (jaml: string, mode: SearchMode | "sequential", opts: StartPoolOptions = {}) => {
             try {
                 await ensureMotelyReady();
-                const validation = Motely.validateJaml(jaml);
+                let validation = "valid";
+                try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
                 if (validation !== "valid") {
                     setState((s) => ({ ...s, status: "error", error: validation }));
                     return;

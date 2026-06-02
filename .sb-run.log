@@ -1,0 +1,13 @@
+
+> jaml-ui@1.0.3 storybook
+> storybook dev -p 3141
+
+
+[90m┌[39m  storybook v10.4.0
+(node:3696) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[?25l[90m│[39m
+[36m◆[39m  Port 3141 is not available.
+[0m[36m│[39m[0m  [2mWould you like to run Storybook on port 3142 instead?[22m
+[36m│[39m  [32m●[39m Yes [2m/[22m [2m○[22m [2mNo[22m
+[36m└[39m

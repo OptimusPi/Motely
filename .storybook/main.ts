@@ -71,9 +71,11 @@ const config: StorybookConfig = {
     "@storybook/addon-mcp",
   ],
   framework: "@storybook/react-vite",
+  // motely-wasm is an embedded build (runtime inlined into the JS), so there is
+  // no bin/ directory to serve — the old motely-wasm/bin staticDir pointed at a
+  // non-existent path and crashed startup ("Failed to load static files").
   staticDirs: [
     "../public",
-    { from: "../node_modules/motely-wasm/bin", to: "/motely-wasm/bin" },
   ],
   viteFinal: async (cfg) =>
     mergeConfig(stripLibraryDtsPlugins(cfg), {

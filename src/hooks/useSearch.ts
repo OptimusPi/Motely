@@ -6,7 +6,6 @@ import {
     type IMotelySearch,
     type MotelyProgress,
     type MotelyScoredSeedResult,
-    type IMotelyWasmSearchSettings,
     type JamlAesthetic
 } from "motely-wasm";
 import { ensureMotelyReady, setJimmolateProbe, clearJimmolateProbe } from "../lib/motely/runtime.js";
@@ -41,17 +40,18 @@ const INITIAL_STATE: UseSearchState = {
 };
 
 
-function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }, withJimmolate: boolean): IMotelyWasmSearchSettings {
-    const settings = Motely.fromJaml(jaml);
-    let configured: IMotelyWasmSearchSettings;
+// Jimmolate is enabled by the caller (setJimmolateProbe + Motely.enableJimmolate),
+// so this just selects the search mode against the parsed config.
+function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }): IMotelySearch {
+    const config = Motely.parseJaml(jaml);
     if (mode === "seedlist" && opts.seeds && opts.seeds.length > 0) {
-        configured = settings.withListSearch(opts.seeds, opts.seeds.length);
-    } else if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
-        configured = settings.withRandomSearch(opts.count);
-    } else {
-        configured = settings.withAestheticSearch((opts.aesthetic ?? 0) as JamlAesthetic);
+        config.seeds = opts.seeds;
+        return Motely.runSeedListSearch(config);
     }
-    return withJimmolate ? configured.withJimmolate() : configured;
+    if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
+        return Motely.runRandomSearch(config, opts.count);
+    }
+    return Motely.runAestheticSearch(config, (opts.aesthetic ?? 0) as JamlAesthetic);
 }
 
 export function useSearch() {
@@ -73,7 +73,8 @@ export function useSearch() {
             try {
                 await ensureMotelyReady();
 
-                const validation = Motely.validateJaml(jaml);
+                let validation = "valid";
+                try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
                 if (validation !== "valid") {
                     setState((s) => ({ ...s, status: "error", error: validation }));
                     return;
@@ -117,7 +118,7 @@ export function useSearch() {
                     setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
                     Motely.enableJimmolate();
                 }
-                const search = configure(jaml, mode, opts, !!opts.predicate).start();
+                const search = configure(jaml, mode, opts).start();
                 searchRef.current = search;
 
                 try {

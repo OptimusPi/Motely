@@ -618,7 +618,6 @@
 }
 
 .j-tab__btn[data-active="false"]:hover {
-  background: var(--j-red);
   background: var(--j-dark-red);
 }
 
@@ -2098,6 +2097,10 @@
 .j-ide {
   display: flex;
   flex-direction: column;
+  /* Grow to fill a fixed-height flex parent (e.g. the 320x540 .j-app shell)
+     so the IDE never leaves dead space below it; min-height stays as the
+     floor for standalone (non-flex-parent) usage so it can't collapse. */
+  flex: 1 1 auto;
   min-height: 420px;
   max-width: 100%;
   overflow: hidden;

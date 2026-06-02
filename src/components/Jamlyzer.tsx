@@ -112,12 +112,13 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
         if (!trimmed) {
           throw new Error("Write a JAML filter first.");
         }
-        const validation = Motely.validateJaml(trimmed);
+        let validation = "valid";
+        try { Motely.parseJaml(trimmed); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
         if (validation !== "valid") {
           throw new Error(String(validation ?? "Invalid JAML"));
         }
         const t0 = performance.now();
-        const result = Motely.analyzeJamlSeeds(trimmed, []);
+        const result = Motely.jamlyzer(Motely.parseJaml(trimmed));
         const elapsedMs = performance.now() - t0;
         if (cancelled) return;
         if (result.error) {

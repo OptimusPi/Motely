@@ -25,13 +25,16 @@ export function useSeedAnalyzer(motely: MotelyApi | null, seed: string | null, j
             setError(null);
             try {
                 const config = jaml ?? `version: 1\nconfig:\n  deck: Erratic\n  stake: White\n`;
-                const validation = motely.validateJaml(config);
+                let validation = "valid";
+                try { motely.parseJaml(config); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML."; }
                 if (abortController.signal.aborted) return;
                 if (validation !== "valid") {
                     throw new Error(validation || "Invalid JAML.");
                 }
 
-                const result = motely.analyzeJamlSeeds(config, [seed]);
+                const analyzeConfig = motely.parseJaml(config);
+                analyzeConfig.seeds = [seed];
+                const result = motely.jamlyzer(analyzeConfig);
                 if (abortController.signal.aborted) return;
                 if (result.error) {
                     throw new Error(result.error);

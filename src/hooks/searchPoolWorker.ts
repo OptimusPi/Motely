@@ -10,10 +10,10 @@ import {
     type IMotelySearch,
     type MotelyProgress,
     type MotelyScoredSeedResult,
-    type IMotelyWasmSearchSettings,
     type MotelyDeck,
     type MotelyStake,
-    type JamlAesthetic
+    type JamlAesthetic,
+    type JamlConfig
 } from "motely-wasm";
 import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
 
@@ -147,50 +147,40 @@ function attachListeners(): void {
     unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
-function applyCommonOverrides(
-    settings: IMotelyWasmSearchSettings,
-    message: PoolStartMessage,
-): IMotelyWasmSearchSettings {
-    let s = settings.withThreadCount(1);
+// deck/stake are config fields now; the worker is single-threaded, so the old
+// withThreadCount(1) is dropped (it was a no-op here).
+function applyCommonOverrides(config: JamlConfig, message: PoolStartMessage): JamlConfig {
     if (typeof message.deck === "number") {
-        s = s.withDeck(message.deck as MotelyDeck);
+        config.deck = message.deck as MotelyDeck;
     }
     if (typeof message.stake === "number") {
-        s = s.withStake(message.stake as MotelyStake);
+        config.stake = message.stake as MotelyStake;
     }
-    return s;
+    return config;
 }
 
-function configureSettings(message: PoolStartMessage): IMotelyWasmSearchSettings {
-    const base = Motely.fromJaml(message.jaml);
-    const s = applyCommonOverrides(base, message);
+function configureSettings(message: PoolStartMessage): IMotelySearch {
+    const config = applyCommonOverrides(Motely.parseJaml(message.jaml), message);
 
     switch (message.mode) {
         case "aesthetic":
-            return s.withAestheticSearch((message.aesthetic ?? 0) as JamlAesthetic);
+            return Motely.runAestheticSearch(config, (message.aesthetic ?? 0) as JamlAesthetic);
         case "seedlist": {
-            const seeds = message.seeds ?? [];
-            return s.withListSearch(seeds, seeds.length);
+            config.seeds = message.seeds ?? [];
+            return Motely.runSeedListSearch(config);
         }
         case "random": {
             const count = typeof message.count === "number" && message.count > 0 ? message.count : 0;
-            return s.withRandomSearch(count);
+            return Motely.runRandomSearch(config, count);
         }
         case "sequential": {
-            let seq = s.withSequentialSearch();
-            if (typeof message.batchCharacterCount === "number") {
-                seq = seq.withBatchCharacterCount(message.batchCharacterCount);
-            }
-            if (typeof message.startBatchIndex === "string") {
-                seq = seq.withStartBatchIndex(BigInt(message.startBatchIndex));
-            }
-            if (typeof message.endBatchIndex === "string") {
-                seq = seq.withEndBatchIndex(BigInt(message.endBatchIndex));
-            }
-            return seq;
+            const start = typeof message.startBatchIndex === "string" ? BigInt(message.startBatchIndex) : undefined;
+            const end = typeof message.endBatchIndex === "string" ? BigInt(message.endBatchIndex) : undefined;
+            const batchChars = typeof message.batchCharacterCount === "number" ? message.batchCharacterCount : undefined;
+            return Motely.runSequentialSearch(config, start, end, batchChars);
         }
         default:
-            return s.withAestheticSearch(0 as JamlAesthetic);
+            return Motely.runAestheticSearch(config, 0 as JamlAesthetic);
     }
 }
 
@@ -224,8 +214,8 @@ self.onmessage = async (event: MessageEvent) => {
         attachListeners();
 
         currentSearch?.cancel();
-        const settings = configureSettings(data);
-        const search = settings.start();
+        const search = configureSettings(data);
+        search.start();
         currentSearch = search;
 
         try {

@@ -1,13 +1,13 @@
 "use client";
 import React, { useState, useMemo } from "react";
-import { MotelyJokerRarity } from "motely-wasm";
+import { MotelyJokerRarity } from "./jokerRarity.js";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboTextInput } from "../../ui/JimboTextInput.js";
 import { JOKERS, type SpriteEntry } from "../../sprites/spriteData.js";
 import type { SlotSelection } from "./MysterySlot.js";
 
-// JokerRarity is the motely-wasm enum — re-aliased for public-API stability.
+// JokerRarity re-aliases the local rarity enum — kept for public-API stability.
 export type JokerRarity = MotelyJokerRarity;
 
 const LEGENDARY_JOKERS = new Set([

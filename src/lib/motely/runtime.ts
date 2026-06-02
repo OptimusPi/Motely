@@ -37,6 +37,10 @@ export const MOTELY_BIN_PATH = "/motely-wasm/bin";
 
 export async function ensureMotelyReady(): Promise<void> {
     if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-        await bootsharp.boot(MOTELY_BIN_PATH);
+        // motely-wasm is an EMBEDDED build (the runtime is inlined into the JS as
+        // base64 — see dist/generated/resources.g.mjs), so boot() takes no args and
+        // needs no served binaries. The old boot("/motely-wasm/bin") was leftover
+        // sideloaded config and 404'd in every context.
+        await bootsharp.boot();
     }
 }

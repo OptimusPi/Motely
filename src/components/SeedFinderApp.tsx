@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { Motely, type IMotelySearch, type MotelyProgress, type MotelyScoredSeedResult, MotelyDeck, MotelyStake } from "motely-wasm";
-import { JimboApp } from "../ui/jimboApp.js";
+import { ensureMotelyReady } from "../lib/motely/runtime.js";
+import { JimboApp, JimboAppScroll } from "../ui/jimboApp.js";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboStack, JimboRow } from "../ui/jimboLayout.js";
@@ -43,13 +44,6 @@ export function SeedFinderApp({
     setMatched(0n);
     setStatus("running");
 
-    const validation = Motely.validateJaml(jaml);
-    if (validation !== "valid") {
-      setError(validation);
-      setStatus("error");
-      return;
-    }
-
     const onScored = (r: MotelyScoredSeedResult) => {
       setSeeds((prev) => [r.seed, ...prev].slice(0, 8));
     };
@@ -62,12 +56,17 @@ export function SeedFinderApp({
     Motely.onProgress.subscribe(onProg);
 
     try {
-      const search = Motely.fromJaml(jaml)
-        .withDeck(MotelyDeck[deck as keyof typeof MotelyDeck])
-        .withStake(MotelyStake[stake as keyof typeof MotelyStake])
-        .withSequentialSearch()
-        .start();
+      // Boot the WASM runtime via the project's idempotent helper (knows the served asset URL).
+      await ensureMotelyReady();
+
+      // parseJaml throws on malformed input — this replaces the old validateJaml check.
+      const config = Motely.parseJaml(jaml);
+      config.deck = MotelyDeck[deck as keyof typeof MotelyDeck];
+      config.stake = MotelyStake[stake as keyof typeof MotelyStake];
+
+      const search = Motely.runSequentialSearch(config);
       setSearchRef(search);
+      search.start();
       await search.waitForCompletionAsync();
       setStatus(search.isCompleted ? "done" : "idle");
     } catch (e) {
@@ -90,11 +89,11 @@ export function SeedFinderApp({
 
   return (
     <JimboApp>
+      <JimboAppScroll>
       <JimboPanel>
       <JimboStack gap="md">
         <JimboRow gap="sm" align="center">
-          <JimboText size="xs" tone="grey">motely v</JimboText>
-          <JimboText size="md" tone="gold">{Motely.version()}</JimboText>
+          <JimboText size="xs" tone="grey">motely-wasm</JimboText>
           <JimboBadge size="sm" tone={statusTone}>{status}</JimboBadge>
         </JimboRow>
 
@@ -146,6 +145,7 @@ export function SeedFinderApp({
         }}
       />
       </JimboPanel>
+      </JimboAppScroll>
     </JimboApp>
   );
 }

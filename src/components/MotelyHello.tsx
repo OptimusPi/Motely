@@ -34,7 +34,8 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     setMatched(0n);
     setStatus("running");
 
-    const validation = Motely.validateJaml(jaml);
+    let validation = "valid";
+    try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
     if (validation !== "valid") {
       setError(validation);
       setStatus("error");
@@ -53,7 +54,8 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     Motely.onProgress.subscribe(onProg);
 
     try {
-      const search = Motely.fromJaml(jaml).withRandomSearch(searchCount).start();
+      const search = Motely.runRandomSearch(Motely.parseJaml(jaml), searchCount);
+      search.start();
       setSearchRef(search);
       await search.waitForCompletionAsync(undefined);
       setStatus(search.isCompleted ? "done" : "idle");
@@ -78,8 +80,7 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     <JimboPanel>
       <JimboStack gap="md">
         <JimboRow gap="sm" align="center">
-          <JimboText size="xs" tone="grey">motely v</JimboText>
-          <JimboText size="md" tone="gold">{Motely.version()}</JimboText>
+          <JimboText size="xs" tone="grey">motely-wasm</JimboText>
           <JimboBadge size="sm" tone={statusTone}>{status}</JimboBadge>
         </JimboRow>
 

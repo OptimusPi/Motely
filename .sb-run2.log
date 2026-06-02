@@ -1,0 +1,34 @@
+
+[90m┌[39m  storybook v10.4.0
+(node:2520) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[90m│[39m
+[31m■[39m  [38;2;241;97;97mError: Failed to load static files, no such directory:[39m
+[90m│[39m  [36m[36m.\node_modules\motely-wasm\bin[39m
+[90m│[39m  Make sure this directory exists.[39m
+[90m│[39m  at parseStaticDir
+[90m│[39m  (file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/_node-chunks/chunk-OQIYQ5CW.js:129:11)
+[90m│[39m  at
+[90m│[39m  file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/core-server/presets/common-preset.js:1567:48
+[90m│[39m  at Array.map (<anonymous>)
+[90m│[39m  at Object.favicon
+[90m│[39m  (file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/core-server/presets/common-preset.js:1562:193)
+[90m│[39m  at async useStatics
+[90m│[39m  (file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/_node-chunks/chunk-OQIYQ5CW.js:85:83)
+[90m│[39m  at async Promise.all (index 2)
+[90m│[39m  at async storybookDevServer
+[90m│[39m  (file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/core-server/index.js:18904:141)
+[90m│[39m  at async buildOrThrow
+[90m│[39m  (file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/core-server/index.js:8205:12)
+[90m│[39m  at async buildDevStandalone
+[90m│[39m  (file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/core-server/index.js:19478:41)
+[90m│[39m  at async withTelemetry
+[90m│[39m  (file:///X:/jaml-ui/node_modules/.pnpm/storybook@10.4.0_@emnapi+co_1e025d5c6f65faf48c7217061b947b4f/node_modules/storybook/dist/_node-chunks/chunk-OQIYQ5CW.js:655:12)
+[90m│[39m
+[33m▲[39m  Broken build, fix the error above.
+[90m│[39m  You may need to refresh the browser.
+[90m│[39m
+[90m│[39m  Debug logs are written to: X:\jaml-ui\debug-storybook.log
+[90m│[39m
+[90m└[39m  Storybook exited with an error
+

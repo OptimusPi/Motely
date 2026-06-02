@@ -24,11 +24,14 @@ export function useAnalyzer() {
         void (async () => {
             try {
                 await ensureMotelyReady();
-                const validation = Motely.validateJaml(jaml);
+                let validation = "valid";
+                try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
                 if (validation !== "valid") {
                     throw new Error(validation || "Invalid JAML.");
                 }
-                const result: MotelyJamlyzerResult = Motely.analyzeJamlSeeds(jaml, [seed]);
+                const analyzeConfig = Motely.parseJaml(jaml);
+                analyzeConfig.seeds = [seed];
+                const result: MotelyJamlyzerResult = Motely.jamlyzer(analyzeConfig);
                 if (result.error) {
                     throw new Error(result.error);
                 }
