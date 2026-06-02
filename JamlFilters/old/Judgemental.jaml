@@ -1,0 +1,43 @@
+name: Judgemental
+author: pi
+description: get cool shit from judgement lol
+deck: Yellow
+stake: White
+
+must:
+  - tarotCard: Judgement
+    antes: [1]
+    sources:
+      shopItems: [0,1]
+    
+  - legendaryJoker: Chicot
+    antes: [1]
+    boosterPacks: [1]
+
+  - jokers: [MerryAndy, Drunkard]
+    sources:
+      judgement: [0] # the first judgement use
+    antes: [1]
+should:
+  - joker: MerryAndy
+    sources:
+      judgement: [0,1,2,3]
+    antes: [1]
+  - joker: Drunkard
+    sources:
+      judgement: [0,1,2,3]
+    antes: [1]
+  - tarotCard: TheFool
+    antes: [1]
+    sources:
+      shopItems: [0,1]  
+  - legendaryJoker: Perkeo
+    antes: [1]
+    boosterPacks: [1,2,3]
+  - smallBlindTag: EconomyTag
+    antes: [1]
+  - SpectralCard: Ankh
+    antes: [1]
+    sources:
+      boosterPacks: [1]
+      requireMega: true
