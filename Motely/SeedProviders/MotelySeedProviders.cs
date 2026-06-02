@@ -101,19 +101,19 @@ public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
 }
 
 /// <summary>
-/// Generates psychosis seeds lazily via <see cref="JamlAesthetics.EnumerateSeeds"/> (echo pattern: ABAxBxxx, ~1 billion seeds).
+/// Generates echo seeds lazily via <see cref="JamlAesthetics.EnumerateSeeds"/> (echo pattern: ABAxBxxx, ~1 billion seeds).
 /// </summary>
-public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
+public sealed class MotelyEchoSeedProvider : IMotelySeedProvider
 {
-    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis);
+    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Echo);
 
-    private readonly IEnumerator<string> _psychosisEnumerator;
+    private readonly IEnumerator<string> _echoEnumerator;
     private readonly object _enumeratorLock = new();
 
-    public MotelyPsychosisSeedProvider()
+    public MotelyEchoSeedProvider()
     {
-        _psychosisEnumerator = JamlAesthetics
-            .EnumerateSeeds(JamlAesthetic.Psychosis)
+        _echoEnumerator = JamlAesthetics
+            .EnumerateSeeds(JamlAesthetic.Echo)
             .GetEnumerator();
     }
 
@@ -121,9 +121,9 @@ public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
     {
         lock (_enumeratorLock)
         {
-            if (_psychosisEnumerator.MoveNext())
+            if (_echoEnumerator.MoveNext())
             {
-                return _psychosisEnumerator.Current.AsSpan();
+                return _echoEnumerator.Current.AsSpan();
             }
             return ReadOnlySpan<char>.Empty;
         }
@@ -139,9 +139,9 @@ public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
             int count = 0;
             for (int i = 0; i < seeds.Length; i++)
             {
-                if (!_psychosisEnumerator.MoveNext())
+                if (!_echoEnumerator.MoveNext())
                     break;
-                seeds[i] = _psychosisEnumerator.Current;
+                seeds[i] = _echoEnumerator.Current;
                 count++;
             }
             return count;
