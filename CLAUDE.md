@@ -28,16 +28,7 @@ Balatro seed search engine. Filters are written in JAML (a YAML dialect). The en
 @D:/bootsharp/docs/guide/extensions/dependency-injection.md
 @D:/bootsharp/docs/guide/extensions/file-system.md
 
-**Local repack chain** (when Elringus pushes new commits to Bootsharp):
-```
-cd D:/bootsharp && git fetch --all --prune && git reset --hard origin/feat/spec
-cd src/js && npm run build
-cd ../cs && bash .scripts/pack.sh
-dotnet pack D:/extra/bootsharp/cs/Bootsharp.FileSystem/Bootsharp.FileSystem.csproj -c Release -o D:/extra/bootsharp/cs/.nuget
-```
-- Branch is **`feat/spec`** (was `feat/delegates` before May 28). Force-pushed, so `git pull` would create merge commits — always use `git reset --hard`.
-- `Bootsharp.FileSystem` is a sponsor-only extension. Its version is a build-time `yyyy.MM.dd.HHmm` timestamp; read the emitted value from the pack log and bump `Directory.Packages.props` to match.
-- Bump all three `Bootsharp.*` pins together + the separate `Bootsharp.FileSystem` timestamp pin.
+**Local Bootsharp build/repack chain, branch tracking, and version pinning live in [AGENTS.md](AGENTS.md).** Bootsharp's branch is force-pushed, so updating is always `git reset --hard` (never `git pull`); AGENTS.md has the full repack steps and the sponsor-only `Bootsharp.FileSystem` timestamp-pin workflow.
 
 **Publish gate** (after WASM-facing changes):
 ```
