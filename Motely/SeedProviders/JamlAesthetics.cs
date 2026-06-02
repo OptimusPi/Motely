@@ -2,7 +2,7 @@ namespace Motely.SeedProviders;
 
 /// <summary>
 /// Generation and counting of JAML <see cref="JamlAesthetic"/> seed spaces over Motely’s alphabet
-/// and length rules. Palindrome/Psychosis live here; keyword-backed aesthetics
+/// and length rules. Palindrome/Echo live here; keyword-backed aesthetics
 /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,
 /// <see cref="JamlAesthetic.Balatro"/>) delegate to <see cref="MotelySeedKeywordSequences"/>.
 /// </summary>
@@ -13,7 +13,7 @@ public static class JamlAesthetics
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.SeedCount,
-            JamlAesthetic.Psychosis => PsychosisAestheticSeeds.SeedCount,
+            JamlAesthetic.Echo => EchoAestheticSeeds.SeedCount,
             JamlAesthetic.Gross or JamlAesthetic.Funny or JamlAesthetic.Balatro =>
                 MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
@@ -24,7 +24,7 @@ public static class JamlAesthetics
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Enumerate(),
-            JamlAesthetic.Psychosis => PsychosisAestheticSeeds.Enumerate(),
+            JamlAesthetic.Echo => EchoAestheticSeeds.Enumerate(),
             JamlAesthetic.Gross or JamlAesthetic.Funny or JamlAesthetic.Balatro =>
                 MotelySeedKeywordSequences.EnumerateAestheticSeeds(aesthetic),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
@@ -105,8 +105,8 @@ file static class PalindromeAestheticSeeds
     }
 }
 
-/// <summary>Psychosis seeds: echo pattern ABAxBxxx where A,B are A-Z and x are 1-9,A-Z (always 8 chars).</summary>
-file static class PsychosisAestheticSeeds
+/// <summary>Echo seeds: echo pattern ABAxBxxx where A,B are A-Z and x are 1-9,A-Z (always 8 chars).</summary>
+file static class EchoAestheticSeeds
 {
     private const string Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
