@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import clsx from "clsx";
-import { twMerge } from "tailwind-merge";
 import { JimboColorOption } from "../tokens.js";
 import "./radial-navigation.css";
 
@@ -35,20 +33,9 @@ const BUTTON_THEMES: Record<RadialButtonColor, ButtonTheme> = {
     "seed-top": { bg: JimboColorOption.DARKEST, shadow: JimboColorOption.BLACK, text: JimboColorOption.GOLD },
 };
 
-// ── Shared base classes ───────────────────────────────────────────────────────
+// ── Shared constants ──────────────────────────────────────────────────────────
 
 const BUTTON_SHADOW = "0 4px 0 0 rgba(0,0,0,0.8)";
-
-const BASE_CLASSES = clsx(
-    "group flex items-center justify-center gap-1.5 rounded-[10px] border-none px-[10px] py-[3px] outline-none select-none",
-    "font-normal",
-    "transition-[transform,box-shadow] duration-[80ms] ease-out",
-);
-
-const INTERACTIVE_CLASSES = "cursor-pointer";
-const DISABLED_CLASSES = "cursor-not-allowed opacity-67";
-const WIDE_CLASSES = "w-[130px] sm:w-[160px]";
-const NORMAL_WIDTH = "min-w-[54px] sm:min-w-[64px]";
 
 // ── Variant: action (default button) ──────────────────────────────────────────
 
@@ -156,14 +143,12 @@ export function RadialButton(props: RadialButtonProps) {
             aria-label={altText}
             title={tooltip ?? altText}
             disabled={isDisabled}
-            className={twMerge(
-                clsx(
-                    BASE_CLASSES,
-                    isWide ? WIDE_CLASSES : NORMAL_WIDTH,
-                    isDisabled ? DISABLED_CLASSES : INTERACTIVE_CLASSES,
-                    className,
-                ),
-            )}
+            className={[
+                "jimbo-radial-btn",
+                isWide ? "jimbo-radial-btn--wide" : "jimbo-radial-btn--normal",
+                isDisabled ? "jimbo-radial-btn--disabled" : "jimbo-radial-btn--interactive",
+                className,
+            ].filter(Boolean).join(" ")}
             style={{
                 backgroundColor: theme.bg,
                 boxShadow: isPressed && !isDisabled ? "none" : BUTTON_SHADOW,
@@ -192,7 +177,7 @@ function ToggleDot({ active }: { active: boolean; disabled: boolean }) {
 
     return (
         <div
-            className={twMerge("h-[9px] w-[9px] shrink-0 rounded-full border")}
+            className="jimbo-radial-dot"
             style={{ borderWidth: 1, ...dotStyle }}
         />
     );
@@ -201,22 +186,17 @@ function ToggleDot({ active }: { active: boolean; disabled: boolean }) {
 function CountBadge({ count, icon }: { count: number; icon?: string }) {
     if (icon) {
         return (
-            <span className="inline-flex items-center justify-center text-[10px] leading-none" style={{ marginLeft: 2 }} aria-hidden="true">
+            <span className="jimbo-radial-count-icon" aria-hidden="true">
                 {icon}
             </span>
         );
     }
     return (
         <span
-            className="inline-flex items-center justify-center rounded-full font-mono leading-none"
+            className="jimbo-radial-count"
             style={{
-                fontSize: "10px",
                 backgroundColor: JimboColorOption.DARKEST,
                 color: count > 0 ? JimboColorOption.GOLD : JimboColorOption.GREY,
-                minWidth: 16,
-                height: 16,
-                padding: "2px 4px",
-                marginLeft: 2,
             }}
         >
             {count}

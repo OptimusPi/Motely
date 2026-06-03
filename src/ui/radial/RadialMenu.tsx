@@ -6,6 +6,7 @@ import type { MenuItem } from "../mascot/menuConfig.js";
 import { RadialPill } from "./RadialPill.js";
 import { RadialButton } from "./RadialButton.js";
 import { RadialBadge } from "./RadialBadge.js";
+import "./radial-navigation.css";
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 
@@ -202,14 +203,14 @@ export function RadialMenu({
     return (
         <div
             ref={rootRef}
-            className="pointer-events-none absolute inset-0 z-30 flex min-w-0 items-center justify-center"
+            className="jimbo-radial-root"
             style={{ transform: `translateY(${mascotTranslateY}px)` }}
         >
-            <div className="relative h-0 w-0">
+            <div className="jimbo-radial-anchor">
                 {/* Breadcrumb pill */}
                 {breadcrumb ? (
                     <div
-                        className="pointer-events-auto absolute"
+                        className="jimbo-radial-breadcrumb-slot"
                         style={{
                             left: 0,
                             top: breadcrumbCenterY,
@@ -233,7 +234,7 @@ export function RadialMenu({
                     );
                     return solved.map(({ item, x, y }, i) => {
                         const isDim = hasDim(item) && item._dim === true;
-                        const extraClass = isDim ? "opacity-40" : "";
+                        const extraClass = isDim ? "jimbo-radial-dim" : "";
 
                         return (
                             <RadialPill
