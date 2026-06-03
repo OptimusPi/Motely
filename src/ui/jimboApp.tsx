@@ -4,8 +4,9 @@ import React from 'react'
 import { JimboBalatroFooter } from './JimboBalatroFooter'
 
 // ─── App Shell ──────────────────────────────────────────────────────────────
-// 320×568 hard-locked, minus JimboBalatroFooter height. The MCP Apps inline
-// embed target. No fluid, no responsive, no reflow.
+// 320×540 hard-locked (iPhone SE portrait 568, minus the 28px JimboBalatroFooter
+// that sits below it). The MCP Apps inline embed target. One size — no fluid,
+// no responsive, no reflow, ever.
 //
 // JimboApp owns the JimboBalatroFooter render — Balatro attribution is
 // legally required wherever the app appears, so it's bound to the app shell,

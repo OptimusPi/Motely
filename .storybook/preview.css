@@ -8,12 +8,12 @@ body {
   padding: 0;
 }
 
+/* Deterministic, non-flex harness. The shell is hard-locked 320×540 and centers
+   itself horizontally via its own `margin: 0 auto`. NO flex + 100dvh centering
+   here — that fought the fixed size and jittered up/down on every reflow. */
 #storybook-root {
-  min-height: 100dvh;
   background: transparent !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 24px 0;
 }
 
 .sb-show-main,

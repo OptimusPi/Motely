@@ -85,13 +85,12 @@
   --j-space-lg: 12px;
   --j-space-xl: 16px;
 
-  /* App shell dimensions — iPhone SE 5 portrait, MCP App embed target.
-     Total embed rectangle is 320×568; the JimboBalatroFooter sits at the
-     bottom and consumes --j-footer-h, leaving --j-app-h for j-app itself.
-     Tune --j-footer-h if attribution wraps to more lines. */
+  /* App shell — HARD-LOCKED 320×540. One size, ALWAYS — never fluid, never
+     resizes. iPhone SE portrait height (568) minus the 28px JimboBalatroFooter
+     that sits below .j-app (total embed rectangle stays 320×568). */
   --j-footer-h: 28px;
   --j-app-w: 320px;
-  --j-app-h: calc(568px - var(--j-footer-h));
+  --j-app-h: 540px;
 
   /* Radii — Balatro is chunky, not bubbly. Never > 10px. */
   --j-radius-sm: 4px;
