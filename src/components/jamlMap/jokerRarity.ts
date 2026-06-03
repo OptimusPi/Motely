@@ -1,12 +1,12 @@
-// Joker rarity classification.
+// Joker rarity *tier* — a UI presentation concept.
 //
-// motely-wasm 19.x no longer exports a `MotelyJokerRarity` enum — it ships
-// per-rarity joker-NAME enums (MotelyJokerCommon / MotelyJokerUncommon /
-// MotelyJokerRare) instead, which are a different concept entirely. The rarity
-// *tier* is a UI concern, so it's defined here. Values are opaque tags (used
-// only for switch/equality and clause-key mapping), never compared against an
-// engine value.
-export enum MotelyJokerRarity {
+// motely-wasm ships per-rarity joker-NAME enums (MotelyJokerCommon /
+// MotelyJokerUncommon / MotelyJokerRare) but no rarity-tier enum, so the tier
+// itself is defined here. These are opaque UI tags (used for switch/equality and
+// clause-key mapping), never compared against an engine value. The membership
+// that decides which tier a joker belongs to is read straight from those engine
+// enums — see `getJokerRarity` in JokerPicker.
+export enum JokerRarityTier {
   Common,
   Uncommon,
   Rare,
