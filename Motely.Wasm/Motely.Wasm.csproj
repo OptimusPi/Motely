@@ -21,32 +21,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
-
-  <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpJS">
-    <PropertyGroup>
-      <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
-      <_PackageJson>{
-  "name": "motely-wasm",
-  "type": "module",
-  "version": "$(MotelyVersion)",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
-  "exports": {
-    ".": { "types": "./dist/index.d.mts", "import": "./dist/index.mjs" },
-    "./*": { "types": "./dist/generated/modules/*.g.d.mts", "import": "./dist/generated/modules/*.g.mjs" }
-  },
-  "browser": {
-    "node:fs": false,
-    "node:url": false,
-    "node:path": false,
-    "node:module": false,
-    "node:crypto": false,
-    "node:process": false
-  }
-}</_PackageJson>
-    </PropertyGroup>
-    <WriteLinesToFile File="$(_NpmRoot)\package.json" Overwrite="true" Lines="$(_PackageJson)" />
-    <Message Text="motely-wasm v$(MotelyVersion) assembled at $(_NpmRoot)" Importance="high" />
-  </Target>
-
 </Project>

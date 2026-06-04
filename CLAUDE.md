@@ -17,11 +17,18 @@ dotnet test Motely.Tests/Motely.Tests.csproj --filter "FullyQualifiedName~Jamlyz
 # Publish CLI (AOT native binary)
 dotnet publish Motely.CLI/Motely.CLI.csproj -c Release
 
-# Publish WASM (outputs to motely-wasm/dist/)
+# Publish WASM (outputs to motely-wasm/dist/) — MUST be Release for NativeAOT/LLVM; debug = Mono = broken tests
 dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release
 
+# Clean WASM publish (nuke ALL stale artifacts first — bin/obj/dist hold garbage that breaks the build)
+Remove-Item -Recurse -Force motely-wasm/dist, Motely.Wasm/bin, Motely.Wasm/obj, Motely/bin, Motely/obj
+dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release
+
+# Publish motely-wasm to npm (run after WASM publish)
+cd motely-wasm && npm publish
+
 # WASM Node tests (requires WASM publish first)
-cd Motely.Wasm && node --test tests/motely.test.mjs
+node Motely.Wasm/motely.test.mjs
 ```
 
 **Never kick off a live seed search to verify changes.** Build and run tests. `JamlyzerUnitTests` has known-seed ground-truth assertions.
@@ -69,16 +76,20 @@ Scalar `seed => bool` predicate that runs only on seeds that passed the base vec
 
 Analyzes one seed against a JAML doc, returning what it generates per ante. Entry: `MotelyJamlyzer.AnalyzeSeed()` / `MotelyJamlyzer.Analyze()`.
 
+### Bootsharp docs
+
+Local clone at `D:\bootsharp`. Docs pages in `D:\bootsharp\docs\guide\`. Fetch from there instead of GitHub.
+
 ### WASM (`Motely.Wasm/` → `motely-wasm/`)
 
 Compiled to `browser-wasm` via Bootsharp (version `0.8.1-motely.0`). Release publishes automatically use NativeAOT-LLVM; debug builds use Mono (faster compile, larger output).
 
-**Module layout** — `BootsharpRenamers` in `Program.cs` folds every `Motely.*` namespace into the `index` module and renames the `Program` node to `Motely`. The root barrel (`index.g.mjs`) is empty — import from the generated submodule paths directly:
+**Module layout** — `BootsharpRenamers` in `Program.cs` folds every `Motely.*` namespace into the `index` module and renames the `Program` node to `Motely`. The root barrel (`index.g.mjs`) is empty — use the package's subpath exports (`./*` → `./dist/generated/modules/*.g.mjs`):
 
 ```ts
 import bootsharp from "motely-wasm";
-import { Program as Motely } from "motely-wasm/dist/generated/modules/motely/wasm.g.mjs";
-import * as enums from "motely-wasm/dist/generated/modules/motely/enums.g.mjs";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import * as enums from "motely-wasm/motely/enums";
 ```
 
 **Sideloading** — `BootsharpBinariesDirectory` is set, so binaries are published as separate files to `dist/bin/` instead of being base64-inlined (~30% smaller bundle). Boot by passing the bytes directly (Node can't `fetch` `file://` URLs):
