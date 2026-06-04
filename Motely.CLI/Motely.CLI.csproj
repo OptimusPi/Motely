@@ -21,6 +21,8 @@
     <NoWarn>$(NoWarn)</NoWarn>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- AOT publish is ON by default. Pass -p:EnableCliAot=false to opt out. -->
+    <EnableCliAot Condition="'$(EnableCliAot)' == ''">true</EnableCliAot>
     <PublishAot
       Condition="'$(EnableCliAot)' == 'true' and '$(RuntimeIdentifier)' != 'browser-wasm' and '$(DesignTimeBuild)' != 'true'"
       >true</PublishAot
