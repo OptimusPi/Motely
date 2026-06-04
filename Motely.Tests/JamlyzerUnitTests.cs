@@ -23,10 +23,16 @@ public sealed class JamlyzerUnitTests
             antes: [1]
         """;
 
+    private static JamlConfig LoadJaml(string jaml)
+    {
+        Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
+        return config!;
+    }
+
     [Fact]
     public void AnalyzeSeed_AppliesJamlBeforeAttachingAnalysis()
     {
-        var result = MotelyJamlyzer.AnalyzeSeed(new("JAMMY", AnyAnteOneJokerJaml));
+        var result = MotelyJamlyzer.AnalyzeSeed(LoadJaml(AnyAnteOneJokerJaml), "JAMMY");
 
         Assert.Null(result.Error);
         Assert.Equal(MotelyDeck.Red, result.Deck);
@@ -71,7 +77,7 @@ public sealed class JamlyzerUnitTests
     [Fact]
     public void AnalyzeSeed_MarksJamlMatchedItemsForPreviewCards()
     {
-        var result = MotelyJamlyzer.AnalyzeSeed(new("ALEEB", AnyAnteOneJokerJaml));
+        var result = MotelyJamlyzer.AnalyzeSeed(LoadJaml(AnyAnteOneJokerJaml), "ALEEB");
 
         Assert.Null(result.Error);
         var seed = Assert.Single(result.Seeds);
@@ -84,5 +90,36 @@ public sealed class JamlyzerUnitTests
                 || anteOne.Packs.Any(pack => pack.Items.Any(item => item.Matched)),
             "Jamlyzer should mark at least one inspected ante-1 joker source item as matched."
         );
+    }
+
+    [Fact]
+    public void DefaultAnalyzerJaml_AnalyzesEveryExplicitSeed()
+    {
+        var result = MotelyDefaultAnalyzerJaml.AnalyzeSeeds(
+            ["JAMMY", "GPT55YA"],
+            MotelyDeck.Red,
+            MotelyStake.White
+        );
+
+        Assert.Null(result.Error);
+        Assert.Equal(2, result.TotalSeedsSearched);
+        Assert.Equal(2, result.MatchingSeeds);
+        Assert.Equal(2, result.Seeds.Count);
+        Assert.All(result.Seeds, seed => Assert.NotNull(seed.Analysis));
+    }
+
+    [Fact]
+    public void DefaultAnalyzerJaml_UsesRequestedDeckAndStake()
+    {
+        var result = MotelyDefaultAnalyzerJaml.AnalyzeSeed(
+            "JAMMY",
+            MotelyDeck.Erratic,
+            MotelyStake.White
+        );
+
+        Assert.Null(result.Error);
+        var seed = Assert.Single(result.Seeds);
+        Assert.NotNull(seed.Analysis);
+        Assert.Equal(MotelyDeck.Erratic, seed.Analysis!.Deck);
     }
 }

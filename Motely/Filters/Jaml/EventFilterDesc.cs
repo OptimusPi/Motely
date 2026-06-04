@@ -109,18 +109,19 @@ public struct LuckyMoneyFilterDesc(LuckyMoneyClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateLuckyCardMoneyStream(isCached: false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextLuckyMoney(ref stream);
-                    return sctx.GetNextLuckyMoney(ref stream);
+                        sctx.GetNextLuckyMoney(ref stream, luck);
+                    return sctx.GetNextLuckyMoney(ref stream, luck);
                 },
                 ref stream
             );
@@ -143,18 +144,19 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateLuckyCardMultStream(isCached: false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextLuckyMult(ref stream);
-                    return sctx.GetNextLuckyMult(ref stream);
+                        sctx.GetNextLuckyMult(ref stream, luck);
+                    return sctx.GetNextLuckyMult(ref stream, luck);
                 },
                 ref stream
             );
