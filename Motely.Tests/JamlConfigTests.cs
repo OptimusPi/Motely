@@ -26,8 +26,8 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.True(config!.Must.HasAnyClauses);
-        Assert.Single(config.Must.Jokers);
+        Assert.True(config!.Must.Count != 0);
+        Assert.Single(config.Must.OfType<JokerClause>());
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public class JamlConfigTests
 
         Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
         Assert.NotNull(config);
-        Assert.Single(config!.Must.Jokers);
-        Assert.Equal([0, 1], config.Must.Jokers[0].Sources.ShopItems);
+        var clause = Assert.Single(config!.Must.OfType<JokerClause>());
+        Assert.Equal([0, 1], clause.Sources.ShopItems);
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public class JamlConfigTests
 
         Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
         Assert.NotNull(config);
-        Assert.Single(config!.Must.Jokers);
-        Assert.Equal([0, 1], config.Must.Jokers[0].Sources.BoosterPacks);
+        var clause = Assert.Single(config!.Must.OfType<JokerClause>());
+        Assert.Equal([0, 1], clause.Sources.BoosterPacks);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.Jokers);
+        var clause = Assert.Single(config!.Must.OfType<JokerClause>());
         Assert.Equal([0, 1, 2, 3], clause.Sources.ShopItems);
         Assert.Equal([0, 1, 2, 3, 4, 5], clause.Sources.BoosterPacks);
     }
@@ -105,7 +105,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.Jokers);
+        var clause = Assert.Single(config!.Must.OfType<JokerClause>());
         Assert.Empty(clause.Sources.ShopItems);
         Assert.Empty(clause.Sources.BoosterPacks);
         Assert.Equal([0], clause.Sources.Wraith);
@@ -127,7 +127,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.LegendaryJokers);
+        var clause = Assert.Single(config!.Must.OfType<LegendaryJokerClause>());
         Assert.Empty(clause.Sources.BoosterPacks);
         Assert.Equal([0], clause.Sources.SoulCard);
     }
@@ -176,7 +176,7 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void JokerRarityClauses_ParseIntoTypedLists()
+    public void JokerRarityClauses_ParseIntoOrderedClauses()
     {
         // mixedJokers: removed in v14.0.2 — `jokers:` IS the mixed-rarity union list.
         var jaml = """
@@ -195,15 +195,15 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.Single(config!.Must.CommonJokers);
-        Assert.Single(config.Must.UncommonJokers);
-        Assert.Single(config.Must.RareJokers);
-        Assert.Single(config.Must.Jokers);
-        Assert.Single(config.Must.LegendaryJokers);
+        Assert.Single(config!.Must.OfType<CommonJokerClause>());
+        Assert.Single(config.Must.OfType<UncommonJokerClause>());
+        Assert.Single(config.Must.OfType<RareJokerClause>());
+        Assert.Single(config.Must.OfType<JokerClause>());
+        Assert.Single(config.Must.OfType<LegendaryJokerClause>());
     }
 
     [Fact]
-    public void JokerUnion_ShorthandAndTypedPluralKeys_ParseIntoExpectedBuckets()
+    public void JokerUnion_ShorthandAndTypedPluralKeys_ParseIntoExpectedClauses()
     {
         var jaml = """
             name: UnionCoverage
@@ -220,13 +220,14 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.Equal(2, config!.Must.Jokers.Count);
-        Assert.True(config.Must.Jokers[0].IsWildcard);
-        Assert.Equal(2, config.Must.Jokers[1].Jokers.Length);
-        Assert.Single(config.Must.CommonJokers);
-        Assert.Single(config.Must.UncommonJokers);
-        Assert.Single(config.Must.RareJokers);
-        Assert.Single(config.Must.LegendaryJokers);
+        var jokerClauses = config!.Must.OfType<JokerClause>().ToArray();
+        Assert.Equal(2, jokerClauses.Length);
+        Assert.True(jokerClauses[0].IsWildcard);
+        Assert.Equal(2, jokerClauses[1].Jokers.Length);
+        Assert.Single(config.Must.OfType<CommonJokerClause>());
+        Assert.Single(config.Must.OfType<UncommonJokerClause>());
+        Assert.Single(config.Must.OfType<RareJokerClause>());
+        Assert.Single(config.Must.OfType<LegendaryJokerClause>());
     }
 
     [Fact]
@@ -243,9 +244,9 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.Single(config!.Must.Jokers);
-        Assert.Equal(2, config.Must.Jokers[0].Jokers.Length);
-        Assert.Empty(config.Must.LegendaryJokers);
+        var clause = Assert.Single(config!.Must.OfType<JokerClause>());
+        Assert.Equal(2, clause.Jokers.Length);
+        Assert.Empty(config.Must.OfType<LegendaryJokerClause>());
     }
 
     [Fact]
@@ -274,7 +275,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = config!.Must.UncommonJokers[0];
+        var clause = Assert.Single(config!.Must.OfType<UncommonJokerClause>());
         Assert.Equal([0, 1], clause.Sources.ShopItems);
         Assert.Equal([0, 1], clause.Sources.BoosterPacks);
         Assert.Equal([0], clause.Sources.Judgement);
@@ -304,7 +305,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.Single(config!.Must.LegendaryJokers);
+        Assert.Single(config!.Must.OfType<LegendaryJokerClause>());
     }
 
     [Fact]
@@ -323,8 +324,8 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.Single(config!.Must.LegendaryJokers);
-        Assert.Equal(2, config.Must.LegendaryJokers[0].Jokers.Length);
+        var clause = Assert.Single(config!.Must.OfType<LegendaryJokerClause>());
+        Assert.Equal(2, clause.Jokers.Length);
     }
 
     [Fact]
@@ -347,11 +348,11 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.Single(config!.Must.TarotCards);
-        Assert.Equal(2, config.Must.TarotCards[0].Tarots.Length);
-        Assert.Single(config.Must.SpectralCards);
-        Assert.Equal(2, config.Must.SpectralCards[0].Spectrals.Length);
-        Assert.Equal(2, config.Must.StandardCards.Count);
+        var tarot = Assert.Single(config!.Must.OfType<TarotCardClause>());
+        Assert.Equal(2, tarot.Tarots.Length);
+        var spectral = Assert.Single(config.Must.OfType<SpectralCardClause>());
+        Assert.Equal(2, spectral.Spectrals.Length);
+        Assert.Equal(2, config.Must.OfType<StandardCardClause>().Count());
     }
 
     [Fact]
@@ -384,9 +385,10 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.True(config!.Must.HasAnyClauses);
-        Assert.Equal(2, config.Should.Jokers.Count);
-        Assert.Equal(2, config.Should.Jokers[0].Max);
+        Assert.True(config!.Must.Count != 0);
+        var jokerClauses = config.Should.OfType<JokerClause>().ToArray();
+        Assert.Equal(2, jokerClauses.Length);
+        Assert.Equal(2, jokerClauses[0].Max);
     }
 
     [Fact]
@@ -478,13 +480,13 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.UncommonJokers);
+        var clause = Assert.Single(config!.Must.OfType<UncommonJokerClause>());
         Assert.Empty(clause.Sources.ShopItems);
         Assert.Empty(clause.Sources.BoosterPacks);
     }
 
     [Fact]
-    public void EventClause_WithSources_IsRejected()
+    public void EventClause_WithUnsupportedSources_IsRejected()
     {
         var jaml = """
             name: EventBadSources
@@ -500,7 +502,7 @@ public class JamlConfigTests
         Assert.False(success);
         Assert.Null(config);
         Assert.NotNull(error);
-        Assert.Contains("Event clauses do not support 'sources'", error);
+        Assert.Contains("Lucky event sources only support 'luck'", error);
     }
 
     [Fact]
@@ -628,7 +630,7 @@ public class JamlConfigTests
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
 
-        var mustClauses = config!.Must.OrderedClauses;
+        var mustClauses = config!.Must;
         Assert.Equal(2, mustClauses.Count);
         Assert.Equal("First must", mustClauses[0].Label);
         Assert.Equal("Second must", mustClauses[1].Label);
@@ -660,7 +662,7 @@ public class JamlConfigTests
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
 
-        var mustClauses = config!.Must.OrderedClauses;
+        var mustClauses = config!.Must;
         Assert.Equal(2, mustClauses.Count);
         Assert.Equal("Expensive joker", mustClauses[0].Label);
         Assert.Equal("Cheap boss", mustClauses[1].Label);
@@ -756,13 +758,13 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        Assert.Equal(2, config!.Must.Tags.Count);
+        Assert.Equal(2, config!.Must.OfType<TagClause>().Count());
 
-        var small = Assert.IsType<TagClause>(config.Must.Tags[0]);
+        var small = Assert.IsType<TagClause>(config.Must[0]);
         Assert.Equal([MotelyTag.NegativeTag, MotelyTag.DoubleTag], small.Tags);
         Assert.Equal([0], small.Rolls);
 
-        var big = Assert.IsType<TagClause>(config.Must.Tags[1]);
+        var big = Assert.IsType<TagClause>(config.Must[1]);
         Assert.Equal([MotelyTag.CharmTag], big.Tags);
         Assert.Equal([1], big.Rolls);
     }
@@ -778,7 +780,7 @@ public class JamlConfigTests
             """;
 
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
-        var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
+        var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must));
         Assert.Equal([0, 1], clause.Rolls);
     }
 
@@ -793,7 +795,7 @@ public class JamlConfigTests
             """;
 
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
-        var clause = Assert.IsType<VoucherClause>(Assert.Single(config!.Must.Vouchers));
+        var clause = Assert.IsType<VoucherClause>(Assert.Single(config!.Must));
         Assert.Equal([0], clause.Rolls);
     }
 
@@ -834,7 +836,7 @@ public class JamlConfigTests
             """;
 
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
-        var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
+        var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must));
         Assert.Equal([1], clause.Rolls);
     }
 
@@ -850,7 +852,7 @@ public class JamlConfigTests
             """;
 
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
-        var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must.Tags));
+        var clause = Assert.IsType<TagClause>(Assert.Single(config!.Must));
         Assert.Equal([5], clause.Rolls);
     }
 
@@ -866,7 +868,7 @@ public class JamlConfigTests
             """;
 
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var error), error);
-        var clause = Assert.IsType<VoucherClause>(Assert.Single(config!.Must.Vouchers));
+        var clause = Assert.IsType<VoucherClause>(Assert.Single(config!.Must));
         Assert.Equal([0, 1, 2], clause.Rolls);
     }
 
@@ -921,7 +923,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Should.OrderedClauses);
+        var clause = Assert.Single(config!.Should);
         var andClause = Assert.IsType<AndClause>(clause);
         Assert.Equal("Ante Pair", andClause.Label);
         Assert.Equal(2, andClause.Clauses.Length);
@@ -948,7 +950,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.OrderedClauses);
+        var clause = Assert.Single(config!.Must);
         var andClause = Assert.IsType<AndClause>(clause);
         Assert.Equal(2, andClause.Clauses.Length);
         var tag = Assert.IsType<TagClause>(andClause.Clauses[0]);
@@ -971,8 +973,70 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.LuckyMoney);
+        var clause = Assert.Single(config!.Must.OfType<LuckyMoneyClause>());
         Assert.Equal([0, 1], clause.Rolls);
+        Assert.Equal(1, clause.Luck);
+    }
+
+    [Fact]
+    public void LuckyEvent_WithLuckSource_ParsesSuccessfully()
+    {
+        var jaml = """
+            name: LuckyEventLuck
+            must:
+              - event: LuckyMoney
+                rolls: [0, 1]
+                sources:
+                  luck: 4
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        var clause = Assert.Single(config!.Must.OfType<LuckyMoneyClause>());
+        Assert.Equal([0, 1], clause.Rolls);
+        Assert.Equal(4, clause.Luck);
+    }
+
+    [Fact]
+    public void LuckyEvent_WithNonPositiveLuck_IsRejected()
+    {
+        var jaml = """
+            name: LuckyEventBadLuck
+            must:
+              - event: LuckyMult
+                rolls: [0]
+                sources:
+                  luck: 0
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("sources.luck", error);
+    }
+
+    [Fact]
+    public void NonLuckyEvent_WithLuckSource_IsRejected()
+    {
+        var jaml = """
+            name: NonLuckyEventLuck
+            must:
+              - event: WheelOfFortune
+                rolls: [0]
+                sources:
+                  luck: 4
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("Event clauses do not support 'sources'", error);
     }
 
     [Fact]
@@ -988,7 +1052,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.LuckyMoney);
+        var clause = Assert.Single(config!.Must.OfType<LuckyMoneyClause>());
         Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 8], clause.Rolls);
     }
 
@@ -1007,7 +1071,7 @@ public class JamlConfigTests
 
         Assert.True(success, $"Failed to parse: {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.LuckyMoney);
+        var clause = Assert.Single(config!.Must.OfType<LuckyMoneyClause>());
         Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 8], clause.Rolls);
         Assert.Equal(8, clause.Min);
     }

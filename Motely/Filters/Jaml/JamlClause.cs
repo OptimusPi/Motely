@@ -41,6 +41,7 @@ public abstract class RollClause : IJamlClause
 {
     public string? Label { get; set; }
     public int[] Rolls { get; set; } = [];
+    public int Luck { get; set; } = 1;
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
     public int Score { get; set; }

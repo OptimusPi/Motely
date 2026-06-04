@@ -337,10 +337,8 @@ public static partial class JamlConfigLoader
         };
     }
 
-    // ── Clause list population — adds directly to typed lists or logic clauses ──
-
     private static void PopulateClauses(
-        JamlClauseSet set,
+        List<IJamlClause> clausesOut,
         List<JamlClauseUnion>? clauses,
         int[] defaultAntes,
         JamlDefaults? defaults
@@ -357,110 +355,7 @@ public static partial class JamlConfigLoader
                 defaults,
                 inheritedAntesSpecifiedByUser
             );
-            AddClauseToSet(set, clause);
-        }
-    }
-
-    private static void AddClauseToSet(JamlClauseSet set, IJamlClause clause)
-    {
-        set.OrderedClauses.Add(clause);
-
-        switch (clause)
-        {
-            case JokerClause c:
-                set.Jokers.Add(c);
-                break;
-            case CommonJokerClause c:
-                set.CommonJokers.Add(c);
-                break;
-            case UncommonJokerClause c:
-                set.UncommonJokers.Add(c);
-                break;
-            case RareJokerClause c:
-                set.RareJokers.Add(c);
-                break;
-            case LegendaryJokerClause c:
-                set.LegendaryJokers.Add(c);
-                break;
-            case VoucherClause c:
-                set.Vouchers.Add(c);
-                break;
-            case TarotCardClause c:
-                set.TarotCards.Add(c);
-                break;
-            case SpectralCardClause c:
-                set.SpectralCards.Add(c);
-                break;
-            case PlanetCardClause c:
-                set.PlanetCards.Add(c);
-                break;
-            case BossClause c:
-                set.Bosses.Add(c);
-                break;
-            case TagClause c:
-                set.Tags.Add(c);
-                break;
-            case StandardCardClause c:
-                set.StandardCards.Add(c);
-                break;
-            case ErraticRankClause c:
-                set.ErraticRanks.Add(c);
-                break;
-            case ErraticSuitClause c:
-                set.ErraticSuits.Add(c);
-                break;
-            case ErraticCardClause c:
-                set.ErraticCards.Add(c);
-                break;
-            case LuckyMoneyClause c:
-                set.LuckyMoney.Add(c);
-                break;
-            case LuckyMultClause c:
-                set.LuckyMult.Add(c);
-                break;
-            case MisprintMultClause c:
-                set.MisprintMult.Add(c);
-                break;
-            case WheelOfFortuneClause c:
-                set.WheelOfFortune.Add(c);
-                break;
-            case CavendishExtinctClause c:
-                set.CavendishExtinct.Add(c);
-                break;
-            case GrosMichelExtinctClause c:
-                set.GrosMichelExtinct.Add(c);
-                break;
-            case SpaceLevelupClause c:
-                set.SpaceLevelup.Add(c);
-                break;
-            case BusinessPayoutClause c:
-                set.BusinessPayout.Add(c);
-                break;
-            case BloodstoneTriggerClause c:
-                set.BloodstoneTrigger.Add(c);
-                break;
-            case ParkingPayoutClause c:
-                set.ParkingPayout.Add(c);
-                break;
-            case GlassDestroyClause c:
-                set.GlassDestroy.Add(c);
-                break;
-            case WheelStaysFlippedClause c:
-                set.WheelStaysFlipped.Add(c);
-                break;
-            case StartingDrawClause c:
-                set.StartingDraw.Add(c);
-                break;
-            case AndClause c:
-                set.And.Add(c);
-                break;
-            case OrClause c:
-                set.Or.Add(c);
-                break;
-            default:
-                throw new NotSupportedException(
-                    $"Unsupported clause type: {clause.GetType().Name}"
-                );
+            clausesOut.Add(clause);
         }
     }
 
@@ -572,8 +467,6 @@ public static partial class JamlConfigLoader
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
                 LegendarySources = CreateLegendaryJokerSources(
                     shopItems,
@@ -582,7 +475,6 @@ public static partial class JamlConfigLoader
                     c.Sources?.SpectralPacks,
                     c.Sources?.SoulCard,
                     c.Sources?.RequireMega ?? false,
-                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                     hasExplicitSources
                 ),
             },
@@ -612,8 +504,6 @@ public static partial class JamlConfigLoader
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.UncommonJoker => new UncommonJokerClause
@@ -642,8 +532,6 @@ public static partial class JamlConfigLoader
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.RareJoker => new RareJokerClause
@@ -672,8 +560,6 @@ public static partial class JamlConfigLoader
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.MixedJoker => new MixedJokerClause
@@ -702,8 +588,6 @@ public static partial class JamlConfigLoader
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.LegendaryJoker => new LegendaryJokerClause
@@ -727,7 +611,6 @@ public static partial class JamlConfigLoader
                     c.Sources?.SpectralPacks,
                     c.Sources?.SoulCard,
                     c.Sources?.RequireMega ?? false,
-                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                     hasExplicitSources
                 ),
             },
@@ -761,8 +644,6 @@ public static partial class JamlConfigLoader
                     Emperor = c.Sources?.Emperor ?? [],
                     PurpleSealOrEightBall = c.Sources?.PurpleSealOrEightBall ?? [],
                     CharmTag = c.Sources?.CharmTag ?? false,
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.SpectralCard => new SpectralCardClause
@@ -780,8 +661,6 @@ public static partial class JamlConfigLoader
                     SixthSense = c.Sources?.SixthSense ?? [],
                     Seance = c.Sources?.Seance ?? [],
                     EtherealTag = c.Sources?.EtherealTag ?? false,
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.PlanetCard => new PlanetCardClause
@@ -796,8 +675,6 @@ public static partial class JamlConfigLoader
                 {
                     ShopItems = shopItems ?? [],
                     BoosterPacks = boosterPacks ?? [],
-                    EarlyAntesMaxPack =
-                        c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.Boss => new BossClause
@@ -917,6 +794,7 @@ public static partial class JamlConfigLoader
             MotelyFilterItemType.Event => CreateEventClause(
                 ResolveEventType(c),
                 ResolveEventRolls(c),
+                c.Sources?.Luck,
                 min,
                 score,
                 max,
@@ -967,6 +845,7 @@ public static partial class JamlConfigLoader
     private static RollClause CreateEventClause(
         MotelyEventType? eventType,
         int[]? rolls,
+        int? luck,
         int min,
         int score,
         int? max,
@@ -977,14 +856,23 @@ public static partial class JamlConfigLoader
     {
         if (eventType is null)
             throw new NotSupportedException("Event clause is missing event type name.");
+        bool isLuckyEvent = eventType is MotelyEventType.LuckyMoney or MotelyEventType.LuckyMult;
         if (hasUserSpecifiedAntes)
             throw new NotSupportedException(
                 "Event clauses do not support 'antes'. Remove 'antes' from the event clause, enclosing logic block, or defaults section."
             );
-        if (hasExplicitSources)
+        if (hasExplicitSources && !isLuckyEvent)
             throw new NotSupportedException(
                 "Event clauses do not support 'sources'. Remove the sources block from the event clause."
             );
+        if (hasExplicitSources && isLuckyEvent && luck is null)
+            throw new NotSupportedException(
+                "Lucky event sources only support 'luck'. Remove other keys from the sources block."
+            );
+
+        int resolvedLuck = luck ?? 1;
+        if (resolvedLuck < 1)
+            throw new NotSupportedException("sources.luck must be a positive integer.");
 
         var r = (rolls == null || rolls.Length == 0) ? new int[] { 0 } : rolls;
         return eventType.Value switch
@@ -995,6 +883,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.LuckyMult => new LuckyMultClause
@@ -1003,6 +892,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.MisprintMult => new MisprintMultClause
@@ -1129,7 +1019,6 @@ public static partial class JamlConfigLoader
         int[]? spectralPacks,
         int[]? soulCard,
         bool requireMegaPack,
-        int earlyAntesMaxPack,
         bool hasExplicitSources
     )
     {
@@ -1137,9 +1026,6 @@ public static partial class JamlConfigLoader
         var Spectral = spectralPacks ?? [];
         bool split = arcana.Length > 0 || Spectral.Length > 0;
 
-        // If the user specified neither a plain boosterPacks list nor split arcana/Spectral lists,
-        // default to the full per-ante PRNG slot range (0..5). Scoring clamps ante 1 using
-        // EarlyAntesMaxPack (default 3 = normal gameplay, raise to 5 for Hieroglyph scans).
         var resolvedBooster =
             split ? System.Array.Empty<int>()
             : boosterPacks is { } bp ? bp
@@ -1150,7 +1036,6 @@ public static partial class JamlConfigLoader
         {
             ShopItems = shopItems ?? [],
             BoosterPacks = resolvedBooster,
-            EarlyAntesMaxPack = earlyAntesMaxPack,
             ArcanaPacks = arcana,
             SpectralPacks = Spectral,
             SoulCard = soulCard ?? [],
@@ -1530,7 +1415,14 @@ public static partial class JamlConfigLoader
             if (string.IsNullOrWhiteSpace(entry))
                 continue;
 
-            var seed = entry.Trim().ToUpperInvariant().Replace('0', 'O');
+            // Tolerate "SEED,SCORE" lines (as written by --save-seeds): keep only the
+            // seed field before the first comma, otherwise the comma/score would survive
+            // normalization and fail seed validation on reload.
+            var seedField = entry.Split(',', 2)[0];
+            if (string.IsNullOrWhiteSpace(seedField))
+                continue;
+
+            var seed = seedField.Trim().ToUpperInvariant().Replace('0', 'O');
             if (seen.Add(seed))
                 normalized.Add(seed);
         }
