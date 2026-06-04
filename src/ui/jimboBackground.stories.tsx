@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { JimboBackground } from './jimboBackground';
 
 /** Canonical Balatro-ish defaults — mirrors hook BALATRO_DEFAULTS for control baselines. */

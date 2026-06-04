@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { SeedMascot } from './SeedMascot';
 import { MenuColors } from './menuConfig';
 import { RadialBreadcrumb } from '../radial';

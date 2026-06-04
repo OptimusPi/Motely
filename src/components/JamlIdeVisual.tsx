@@ -50,9 +50,9 @@ export interface JamlIdeVisualProps {
 const C = JimboColorOption;
 
 const ZONE_META: Record<JamlZone, { label: string; hint: string; color: string; accent: string }> = {
-    must: { label: "Must", hint: "Seed must contain all of these.", color: C.BLUE, accent: "#4db5ff" },
-    should: { label: "Should", hint: "Bonus points per match.", color: C.RED, accent: "#ff8076" },
-    mustnot: { label: "Must Not", hint: "Rejected if any appear.", color: C.ORANGE, accent: "#ffb84d" },
+    must: { label: "Must", hint: "Seed must contain all of these.", color: "#429f79", accent: "#35bd86" },
+    should: { label: "Should", hint: "Bonus points per match.", color: "#ff9800", accent: "#ffb84d" },
+    mustnot: { label: "Must Not", hint: "Rejected if any appear.", color: "#fe5148", accent: "#ff8076" },
 };
 
 function clauseSpriteSheet(type: string): SpriteSheetType | undefined {
@@ -261,7 +261,6 @@ function ZoneRail({
     onRemove,
     onEdit,
     onDragStart,
-    highlight,
 }: {
     zone: JamlZone;
     clauses: JamlVisualClause[];
@@ -269,17 +268,17 @@ function ZoneRail({
     onRemove: (id: string) => void;
     onEdit: (clause: JamlVisualClause) => void;
     onDragStart: (e: React.MouseEvent | React.TouchEvent, clause: JamlVisualClause, zone: JamlZone) => void;
-    highlight: boolean;
 }) {
     const z = ZONE_META[zone];
     return (
         <div
             data-zone={zone}
             style={{
-                border: `2px dashed ${highlight ? z.color : "transparent"}`,
-                borderRadius: 6,
-                padding: 6,
-                background: highlight ? `${z.color}11` : "transparent",
+                border: `3px solid ${z.color}`,
+                borderRadius: 8,
+                padding: 12,
+                background: `${z.color}15`,
+                boxShadow: `0 3px 0 rgba(0, 0, 0, 0.4)`,
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
@@ -362,7 +361,7 @@ function TopMatter({
 
 export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: JamlIdeVisualProps) {
     const rootRef = useRef<HTMLDivElement>(null);
-    const { drag, hoverZone, onDragStart } = useJamlIdeDrag(filter, onChange, rootRef);
+    const { drag, onDragStart } = useJamlIdeDrag(filter, onChange, rootRef);
 
     const removeClause = (zone: JamlZone, id: string) => {
         onChange({ ...filter, [zone]: filter[zone].filter((c) => c.id !== id) });
@@ -391,7 +390,6 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                         onRemove={(id) => removeClause("must", id)}
                         onEdit={(c) => onEditClause?.("must", c)}
                         onDragStart={onDragStart}
-                        highlight={hoverZone === "must"}
                     />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -402,7 +400,6 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                         onRemove={(id) => removeClause("mustnot", id)}
                         onEdit={(c) => onEditClause?.("mustnot", c)}
                         onDragStart={onDragStart}
-                        highlight={hoverZone === "mustnot"}
                     />
                 </div>
             </div>
@@ -413,7 +410,6 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                 onRemove={(id) => removeClause("should", id)}
                 onEdit={(c) => onEditClause?.("should", c)}
                 onDragStart={onDragStart}
-                highlight={hoverZone === "should"}
             />
 
             {drag && (

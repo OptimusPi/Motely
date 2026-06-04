@@ -24,7 +24,6 @@ export {
     type JamlVisualClause,
     type JamlZone,
 } from "./components/JamlIde.js";
-export { JamlCurator } from "./components/JamlCurator.js";
 export {
     JamlIdeVisual,
     type JamlIdeVisualProps,

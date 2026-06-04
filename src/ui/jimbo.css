@@ -85,13 +85,12 @@
   --j-space-lg: 12px;
   --j-space-xl: 16px;
 
-  /* App shell dimensions — iPhone SE 5 portrait, MCP App embed target.
-     Total embed rectangle is 320×568; the JimboBalatroFooter sits at the
-     bottom and consumes --j-footer-h, leaving --j-app-h for j-app itself.
-     Tune --j-footer-h if attribution wraps to more lines. */
+  /* App shell — HARD-LOCKED 320×540. One size, ALWAYS — never fluid, never
+     resizes. iPhone SE portrait height (568) minus the 28px JimboBalatroFooter
+     that sits below .j-app (total embed rectangle stays 320×568). */
   --j-footer-h: 28px;
   --j-app-w: 320px;
-  --j-app-h: calc(568px - var(--j-footer-h));
+  --j-app-h: 540px;
 
   /* Radii — Balatro is chunky, not bubbly. Never > 10px. */
   --j-radius-sm: 4px;
@@ -159,9 +158,9 @@
   }
 }
 
-/* Sizes (from DESIGN.md typography scale) */
+/* Sizes (snapped to m6x11 [16,32,48] and m6x11plus [18,36,54] pixel grids) */
 .j-text--display {
-  font-size: 26px;
+  font-size: 32px;
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
@@ -177,37 +176,37 @@
 }
 
 .j-text--heading {
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.08em;
   line-height: 1.2;
 }
 
 .j-text--md {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .j-text--sm {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .j-text--body {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.05em;
   line-height: 1.3;
 }
 
 .j-text--xs {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .j-text--label {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
 
 .j-text--micro {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
@@ -407,17 +406,17 @@
 }
 
 .j-btn--md .j-btn__face {
-  padding-top: 6px;
+  padding-top: 9px;
   padding-right: 18px;
-  padding-bottom: 9px;
+  padding-bottom: 6px;
   padding-left: 18px;
   font-size: 16px;
 }
 
 .j-btn--lg .j-btn__face {
-  padding-top: 6px;
+  padding-top: 11px;
   padding-right: 18px;
-  padding-bottom: 11px;
+  padding-bottom: 6px;
   padding-left: 18px;
   font-size: 20px;
 }

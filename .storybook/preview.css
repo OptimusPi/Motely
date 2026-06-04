@@ -9,11 +9,8 @@ body {
 }
 
 #storybook-root {
-  min-height: 100dvh;
   background: transparent !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 24px 0;
 }
 
 .sb-show-main,

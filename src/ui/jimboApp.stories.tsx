@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { JimboApp, JimboAppScroll, JimboAppFooter } from './jimboApp';
 import { JimboPanel, JimboButton } from './panel';
 import { JimboText } from './jimboText';
