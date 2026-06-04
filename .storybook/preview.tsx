@@ -4,9 +4,6 @@ import '../src/ui/jimbo.css'
 import './preview.css'
 import { JimboBackground } from '../src/ui/jimboBackground'
 import { JimboApp } from '../src/ui/jimboApp'
-import { ensureMotelyReady } from '../src/lib/motely/runtime'
-
-await ensureMotelyReady();
 
 const preview: Preview = {
   parameters: {
