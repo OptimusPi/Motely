@@ -328,20 +328,8 @@ public sealed class JamlSources
     [YamlMember(Alias = "maxShopItem")]
     public int? MaxShopItem { get; set; }
 
-    /// <summary>
-    /// Opt-in knob for ante-1 pack-slot reachability. Balatro gameplay gives ante 1 only 4 booster
-    /// packs (slots 0..3) by default, but vouchers like Hieroglyph / Petroglyph rewind progression
-    /// and expose slots 4 and 5. The underlying PRNG stream emits 6 packs at every ante regardless,
-    /// so iterating past slot 3 in ante 1 produces matches that a normal player would never see.
-    ///
-    /// Default = 3 (match only normal-gameplay reachable packs). Set to 5 to include Hieroglyph /
-    /// Petroglyph scenarios (e.g. seed KHTW99TC Negative Perkeo at ante 1 slot 5). Scoring clamps
-    /// per-ante using this value; the SIMD prefilter is deliberately over-permissive and leaves
-    /// final rejection to scoring.
-    /// </summary>
-    [YamlMember(Alias = "earlyAntesMaxPack")]
-    [JsonIgnore]
-    public int? EarlyAntesMaxPack { get; set; }
+    [YamlMember(Alias = "luck")]
+    public int? Luck { get; set; }
 
     [YamlMember(Alias = "tags")]
     public bool Tags { get; set; }

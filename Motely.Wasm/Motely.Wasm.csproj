@@ -5,12 +5,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <BootsharpName>motely-wasm</BootsharpName>
-    <!-- Embedded mode (Bootsharp default): the NativeAOT wasm is inlined into the ESM module as
-         base64, so bootsharp.boot() works with no args and no sideloaded files to serve. One
-         self-contained ESM module — ideal for esm.sh/CDN consumption. (Bootsharp docs/sideloading.md:
-         leave BootsharpBinariesDirectory unset to embed.) -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
+    <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist\bin</BootsharpBinariesDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,14 +21,35 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <!-- finalize-package.mjs (package.json post-processor) removed by request.
-       Bootsharp writes a minimal package.json with no `version`/`types`. If the published
-       package needs those, set them in the build before publishing — not via a standalone script. -->
+  <!-- Bootsharp (Bootsharp.targets:167) overwrites package.json on every publish with a minimal
+       manifest: no version, no types, exports as bare strings. We rewrite the full publishable
+       manifest here, in-build (no standalone post-processor script) — version single-sourced from
+       MotelyVersion, types/exports wired to the generated .d.mts declarations. -->
   <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpJS">
     <PropertyGroup>
       <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
+      <_PackageJson>{
+  "name": "motely-wasm",
+  "type": "module",
+  "version": "$(MotelyVersion)",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": { "types": "./dist/index.d.mts", "import": "./dist/index.mjs" },
+    "./*": { "types": "./dist/generated/modules/*.g.d.mts", "import": "./dist/generated/modules/*.g.mjs" }
+  },
+  "browser": {
+    "node:fs": false,
+    "node:url": false,
+    "node:path": false,
+    "node:module": false,
+    "node:crypto": false,
+    "node:process": false
+  }
+}</_PackageJson>
     </PropertyGroup>
+    <WriteLinesToFile File="$(_NpmRoot)\package.json" Overwrite="true" Lines="$(_PackageJson)" />
     <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
-    <Message Text="motely-wasm npm package assembled at $(_NpmRoot)" Importance="high" />
+    <Message Text="motely-wasm v$(MotelyVersion) assembled at $(_NpmRoot)" Importance="high" />
   </Target>
 </Project>

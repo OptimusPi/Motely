@@ -27,7 +27,7 @@ public class JamlEnumCaseInsensitivityTests
 
         Assert.True(ok, $"Failed to parse '{casing}': {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.Jokers);
+        var clause = Assert.Single(config!.Must.OfType<JokerClause>());
         Assert.False(clause.IsWildcard);
         Assert.Equal([MotelyJoker.Blueprint], clause.Jokers);
     }
@@ -49,7 +49,7 @@ public class JamlEnumCaseInsensitivityTests
 
         Assert.True(ok, $"Failed to parse '{casing}': {error}");
         Assert.NotNull(config);
-        var clause = Assert.Single(config!.Must.Jokers);
+        var clause = Assert.Single(config!.Must.OfType<JokerClause>());
         Assert.True(clause.IsWildcard);
         Assert.Empty(clause.Jokers);
     }
@@ -85,6 +85,7 @@ public class JamlEnumCaseInsensitivityTests
 
         Assert.True(ok, $"Failed: {error}");
         Assert.NotNull(config);
-        Assert.Equal([MotelyBossBlind.TheArm], config!.Must.Bosses[0].Bosses);
+        var clause = Assert.Single(config!.Must.OfType<BossClause>());
+        Assert.Equal([MotelyBossBlind.TheArm], clause.Bosses);
     }
 }

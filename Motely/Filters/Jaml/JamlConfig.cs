@@ -3,56 +3,6 @@ using System.Collections.Generic;
 namespace Motely.Filters.Jaml;
 
 /// <summary>
-/// Typed clause lists for one JAML section (must / should / mustNot).
-/// Each element = one filter in the chain.
-/// </summary>
-public sealed class JamlClauseSet
-{
-    public List<IJamlClause> OrderedClauses { get; } = [];
-    public List<JokerClause> Jokers { get; set; } = [];
-    public List<CommonJokerClause> CommonJokers { get; set; } = [];
-    public List<UncommonJokerClause> UncommonJokers { get; set; } = [];
-    public List<RareJokerClause> RareJokers { get; set; } = [];
-    public List<LegendaryJokerClause> LegendaryJokers { get; set; } = [];
-    public List<VoucherClause> Vouchers { get; set; } = [];
-    public List<TarotCardClause> TarotCards { get; set; } = [];
-    public List<SpectralCardClause> SpectralCards { get; set; } = [];
-    public List<PlanetCardClause> PlanetCards { get; set; } = [];
-    public List<StandardCardClause> StandardCards { get; set; } = [];
-    public List<BossClause> Bosses { get; set; } = [];
-    public List<TagClause> Tags { get; set; } = [];
-    public List<ErraticRankClause> ErraticRanks { get; set; } = [];
-    public List<ErraticSuitClause> ErraticSuits { get; set; } = [];
-    public List<ErraticCardClause> ErraticCards { get; set; } = [];
-    public List<LuckyMoneyClause> LuckyMoney { get; set; } = [];
-    public List<LuckyMultClause> LuckyMult { get; set; } = [];
-    public List<MisprintMultClause> MisprintMult { get; set; } = [];
-    public List<WheelOfFortuneClause> WheelOfFortune { get; set; } = [];
-    public List<CavendishExtinctClause> CavendishExtinct { get; set; } = [];
-    public List<GrosMichelExtinctClause> GrosMichelExtinct { get; set; } = [];
-    public List<SpaceLevelupClause> SpaceLevelup { get; set; } = [];
-    public List<BusinessPayoutClause> BusinessPayout { get; set; } = [];
-    public List<BloodstoneTriggerClause> BloodstoneTrigger { get; set; } = [];
-    public List<ParkingPayoutClause> ParkingPayout { get; set; } = [];
-    public List<GlassDestroyClause> GlassDestroy { get; set; } = [];
-    public List<WheelStaysFlippedClause> WheelStaysFlipped { get; set; } = [];
-    public List<StartingDrawClause> StartingDraw { get; set; } = [];
-    public List<AndClause> And { get; set; } = [];
-    public List<OrClause> Or { get; set; } = [];
-
-    /// <summary>Number of clauses in <see cref="OrderedClauses"/> (evaluation order).</summary>
-    public int Count
-    {
-        get { return OrderedClauses.Count; }
-    }
-
-    public bool HasAnyClauses
-    {
-        get { return OrderedClauses.Count > 0; }
-    }
-}
-
-/// <summary>
 /// JAML config consumed by JamlSearchBuilder.
 /// </summary>
 public sealed class JamlConfig
@@ -65,15 +15,15 @@ public sealed class JamlConfig
     public MotelyStake Stake { get; set; } = MotelyStake.White;
     public List<string> Seeds { get; set; } = [];
 
-    public JamlClauseSet Must { get; set; } = new();
-    public JamlClauseSet Should { get; set; } = new();
-    public JamlClauseSet MustNot { get; set; } = new();
+    public List<IJamlClause> Must { get; set; } = [];
+    public List<IJamlClause> Should { get; set; } = [];
+    public List<IJamlClause> MustNot { get; set; } = [];
 }
 
 public static class JamlConfigExtensions
 {
     public static bool HasAnyClauses(this JamlConfig config) =>
-        config.Must.HasAnyClauses || config.Should.HasAnyClauses || config.MustNot.HasAnyClauses;
+        config.Must.Count != 0 || config.Should.Count != 0 || config.MustNot.Count != 0;
 }
 
 public sealed class JokerSourceConfig
@@ -83,7 +33,7 @@ public sealed class JokerSourceConfig
     public int[] BoosterPacks { get; set; } = [];
 
     /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
-    public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
+
     public int[] Judgement { get; set; } = [];
     public int[] Wraith { get; set; } = [];
     public int[] RiffRaff { get; set; } = [];
@@ -112,9 +62,6 @@ public sealed class LegendaryJokerSourceConfig
     /// Ignored for slot matching when <see cref="ArcanaPacks"/> or <see cref="SpectralPacks"/> is non-empty.
     /// </summary>
     public int[] BoosterPacks { get; set; } = [];
-
-    /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
-    public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
 
     /// <summary>
     /// If non-empty (or <see cref="SpectralPacks"/> non-empty), only listed slots are checked on the arcana/Tarot path.
@@ -153,9 +100,6 @@ public sealed class TarotCardSourceConfig
     public int[] Emperor { get; set; } = [];
     public int[] PurpleSealOrEightBall { get; set; } = [];
 
-    /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
-    public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
-
     /// <summary>
     /// When true, booster arcana scoring may consume the Charm-tag bonus pack (second weighted slot, no natural Arcana).
     /// </summary>
@@ -169,9 +113,6 @@ public sealed class SpectralCardSourceConfig
     public int[] SixthSense { get; set; } = [];
     public int[] Seance { get; set; } = [];
 
-    /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
-    public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
-
     /// <summary>
     /// When true, booster Spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).
     /// </summary>
@@ -182,18 +123,12 @@ public sealed class PlanetSourceConfig
 {
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
-
-    /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
-    public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
 }
 
 public sealed class StandardCardSourceConfig
 {
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
-
-    /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
-    public int EarlyAntesMaxPack { get; set; } = MotelyGlobals.DefaultEarlyAntesMaxPack;
 
     public int[] Certificate { get; set; } = [];
     public int[] Incantation { get; set; } = [];

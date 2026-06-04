@@ -34,16 +34,16 @@ public sealed record JamlSearchPlan(
 
 /// <summary>
 /// Builds MotelySearchSettings from a JamlConfig by adding one filter per clause
-/// via WithAdditionalFilter. Iterates typed lists and dispatches to specific descriptors.
+/// via WithAdditionalFilter.
 /// </summary>
 public static class JamlSearchBuilder
 {
     public static string ExplainPlan(JamlConfig config)
     {
         if (
-            !config.Must.HasAnyClauses
-            && !config.Should.HasAnyClauses
-            && !config.MustNot.HasAnyClauses
+            config.Must.Count == 0
+            && config.Should.Count == 0
+            && config.MustNot.Count == 0
         )
             throw new InvalidOperationException("JamlConfig has no clauses.");
         ValidateLegendaryJokerClausesForMustAndShould(config.Must);
@@ -54,9 +54,9 @@ public static class JamlSearchBuilder
         sb.AppendLine(
             "Contract: must clauses evaluate top-to-bottom and short-circuit on first fail. mustNot clauses reject on match. should clauses contribute score but the current scorer evaluates all should clauses."
         );
-        AppendClauseSection(sb, "must", config.Must.OrderedClauses);
-        AppendClauseSection(sb, "mustNot", config.MustNot.OrderedClauses);
-        AppendClauseSection(sb, "should", config.Should.OrderedClauses);
+        AppendClauseSection(sb, "must", config.Must);
+        AppendClauseSection(sb, "mustNot", config.MustNot);
+        AppendClauseSection(sb, "should", config.Should);
         return sb.ToString().TrimEnd();
     }
 
@@ -75,16 +75,16 @@ public static class JamlSearchBuilder
     public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal)
     {
         if (
-            !config.Must.HasAnyClauses
-            && !config.Should.HasAnyClauses
-            && !config.MustNot.HasAnyClauses
+            config.Must.Count == 0
+            && config.Should.Count == 0
+            && config.MustNot.Count == 0
         )
             throw new InvalidOperationException("JamlConfig has no clauses.");
         ValidateLegendaryJokerClausesForMustAndShould(config.Must);
         ValidateLegendaryJokerClausesForMustAndShould(config.Should);
-        var orderedMustClauses = OrderClausesByEstimatedCost(config.Must.OrderedClauses);
-        var orderedShouldClauses = config.Should.OrderedClauses;
-        var orderedMustNotClauses = OrderClausesByEstimatedCost(config.MustNot.OrderedClauses);
+        var orderedMustClauses = OrderClausesByEstimatedCost(config.Must);
+        var orderedShouldClauses = config.Should;
+        var orderedMustNotClauses = OrderClausesByEstimatedCost(config.MustNot);
         var allMustDescs = new List<IMotelySeedFilterDesc>();
 
         // ── MUST: required filters (AND logic) ──
@@ -147,14 +147,14 @@ public static class JamlSearchBuilder
     /// <summary>
     /// Runs the same structural checks as <see cref="CreatePlan"/> (impossible soul-joker booster slots, empty config, etc.)
     /// without retaining the plan. Call after <see cref="JamlConfigLoader.TryLoad"/> so WASM/CLI validation matches what search uses.
-    /// No-op when <see cref="JamlConfig.HasAnyClauses"/> is false.
+    /// No-op when the config has no clauses.
     /// </summary>
     public static void EnsureRunnablePlan(JamlConfig config)
     {
         if (
-            !config.Must.HasAnyClauses
-            && !config.Should.HasAnyClauses
-            && !config.MustNot.HasAnyClauses
+            config.Must.Count == 0
+            && config.Should.Count == 0
+            && config.MustNot.Count == 0
         )
             return;
         _ = CreatePlan(config);
@@ -164,9 +164,9 @@ public static class JamlSearchBuilder
     /// Fails fast on soul joker clauses whose booster sources can never hit arcana/Spectral at slot ≥1
     /// (<see cref="JamlLegendaryJokerStructuralValidation"/>). Skips <c>mustNot</c>: negated dead clauses are vacuously true.
     /// </summary>
-    private static void ValidateLegendaryJokerClausesForMustAndShould(JamlClauseSet set)
+    private static void ValidateLegendaryJokerClausesForMustAndShould(IEnumerable<IJamlClause> clauses)
     {
-        foreach (IJamlClause c in set.OrderedClauses)
+        foreach (IJamlClause c in clauses)
             ValidateClauseTreeForLegendaryJoker(c);
     }
 

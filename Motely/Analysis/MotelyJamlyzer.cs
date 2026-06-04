@@ -11,12 +11,6 @@ public sealed record class MotelyJamlyzerConfig(
     bool IncludeSeedAnalysis = true
 );
 
-public sealed record class MotelyJamlyzerSeedAnalysisConfig(
-    string Seed,
-    string Jaml,
-    bool IncludeSeedAnalysis = true
-);
-
 public sealed record class MotelyJamlyzerSeedListConfig(
     string Jaml,
     IReadOnlyList<string>? Seeds = null,
@@ -39,12 +33,6 @@ public sealed record class MotelyJamlyzerSeedResult(
     int Score,
     int[] Tallies,
     MotelySeedAnalysis? Analysis = null
-);
-
-internal sealed record class MotelyJamlyzerResolvedConfig(
-    JamlConfig Config,
-    JamlSearchPlan Plan,
-    IReadOnlyList<string>? Seeds = null
 );
 
 /// <summary>
@@ -116,13 +104,6 @@ public static class MotelyJamlyzer
         {
             return new(ex.ToString(), []);
         }
-    }
-
-    public static MotelyJamlyzerResult AnalyzeSeed(MotelyJamlyzerSeedAnalysisConfig cfg)
-    {
-        if (!JamlConfigLoader.TryLoad(cfg.Jaml, out var config, out var error) || config is null)
-            return new(error ?? "Invalid JAML.", []);
-        return AnalyzeSeed(config, cfg.Seed, cfg.IncludeSeedAnalysis);
     }
 
     public static MotelyJamlyzerResult AnalyzeSeed(
@@ -270,64 +251,12 @@ public static class MotelyJamlyzer
         return analyzed;
     }
 
-    private static MotelyJamlyzerResolvedConfig? TryResolveSeedListConfig(
-        MotelyJamlyzerSeedListConfig cfg,
-        out MotelyJamlyzerResult? errorResult
-    )
-    {
-        errorResult = null;
-
-        var resolved = TryResolveConfig(cfg.Jaml, out errorResult);
-        if (resolved is null)
-            return null;
-
-        var seeds = cfg.Seeds is { Count: > 0 } ? cfg.Seeds : resolved.Config.Seeds;
-        if (seeds.Count == 0)
-        {
-            errorResult = new(
-                "No seeds were provided. Pass seeds explicitly or add a top-level JAML seeds array.",
-                [],
-                resolved.Config.Deck,
-                resolved.Config.Stake
-            );
-            return null;
-        }
-
-        return resolved with
-        {
-            Seeds = seeds,
-        };
-    }
-
-    private static MotelyJamlyzerResolvedConfig? TryResolveConfig(
-        string jaml,
-        out MotelyJamlyzerResult? errorResult
-    )
-    {
-        errorResult = null;
-
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error) || config is null)
-        {
-            errorResult = new(error ?? "Invalid JAML.", []);
-            return null;
-        }
-
-        if (
-            !config.Must.HasAnyClauses
-            && !config.Should.HasAnyClauses
-            && !config.MustNot.HasAnyClauses
-        )
-        {
-            errorResult = new("JAML has no clauses.", [], config.Deck, config.Stake);
-            return null;
-        }
-
-        return new(config, JamlSearchBuilder.CreatePlan(config));
-    }
-
     private static MotelySeedAnalysis BuildSeedAnalysis(string seed, JamlConfig config)
     {
         var analysis = MotelySeedAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
+        if (MotelyDefaultAnalyzerJaml.IsDefaultAnalyzerConfig(config))
+            return analysis;
+
         return MotelyJamlyzerHighlights.Apply(config, analysis);
     }
 

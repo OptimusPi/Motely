@@ -149,7 +149,11 @@ public static partial class Program
 
     [Export]
     public static string ExplainJaml(JamlConfig config) =>
-        config.HasAnyClauses() ? JamlSearchBuilder.ExplainPlan(config) : "";
+        config.Must.Count != 0
+        || config.Should.Count != 0
+        || config.MustNot.Count != 0
+            ? JamlSearchBuilder.ExplainPlan(config)
+            : "";
 
     [Export]
     public static JamlSearchPlan CreatePlan(JamlConfig config) =>

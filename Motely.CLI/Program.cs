@@ -487,9 +487,9 @@ partial class Program
             }
 
             if (
-                !config.Must.HasAnyClauses
-                && !config.Should.HasAnyClauses
-                && !config.MustNot.HasAnyClauses
+                config.Must.Count == 0
+                && config.Should.Count == 0
+                && config.MustNot.Count == 0
             )
             {
                 Console.Error.WriteLine("Error: no clauses in JAML.");
@@ -1028,41 +1028,40 @@ partial class Program
             return 1;
         }
 
-        int errors = 0;
-        foreach (var seed in seeds)
+        var normalizedSeeds = seeds.Select(static seed =>
+            seed.Trim().ToUpperInvariant().Replace('0', 'O')
+        );
+        var result = MotelyDefaultAnalyzerJaml.AnalyzeSeeds(normalizedSeeds, d, s);
+        if (!string.IsNullOrEmpty(result.Error))
         {
-            try
-            {
-                var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
-                var analysis = MotelySeedAnalyzer.Analyze(
-                    new MotelySeedAnalysisConfig(normalizedSeed, d, s)
-                );
+            Console.Error.WriteLine($"Error: {result.Error}");
+            return 1;
+        }
 
-                if (json)
-                {
-                    // NDJSON: one JSON object per line, no extra whitespace
-                    Console.WriteLine(
-                        JsonSerializer.Serialize(
-                            analysis,
-                            AnalysisJsonContext.Default.MotelySeedAnalysis
-                        )
-                    );
-                }
-                else
-                {
-                    Console.WriteLine($"=== {normalizedSeed} | {d} {s} ===");
-                    Console.Write(analysis);
-                    Console.WriteLine();
-                }
-            }
-            catch (Exception ex)
+        foreach (var seed in result.Seeds)
+        {
+            var analysis = seed.Analysis;
+            if (analysis is null)
             {
-                Console.Error.WriteLine($"[ERROR] {seed}: {ex.Message}");
-                errors++;
+                Console.Error.WriteLine($"[ERROR] {seed.Seed}: analyzer returned no analysis.");
+                return 1;
+            }
+
+            if (json)
+            {
+                Console.WriteLine(
+                    JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
+                );
+            }
+            else
+            {
+                Console.WriteLine($"=== {seed.Seed} | {d} {s} ===");
+                Console.Write(analysis);
+                Console.WriteLine();
             }
         }
 
-        return errors == 0 ? 0 : 1;
+        return 0;
     }
 
     // ── Analyze (single) ──
@@ -1081,9 +1080,21 @@ partial class Program
         }
 
         var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
-        var analysis = MotelySeedAnalyzer.Analyze(
-            new MotelySeedAnalysisConfig(normalizedSeed, d, s)
-        );
+        var result = MotelyDefaultAnalyzerJaml.AnalyzeSeed(normalizedSeed, d, s);
+        if (!string.IsNullOrEmpty(result.Error))
+        {
+            Console.Error.WriteLine($"Error: {result.Error}");
+            return 1;
+        }
+
+        var row = result.Seeds.SingleOrDefault();
+        if (row?.Analysis is null)
+        {
+            Console.Error.WriteLine($"Error: analyzer returned no analysis for '{normalizedSeed}'.");
+            return 1;
+        }
+
+        var analysis = row.Analysis;
 
         if (json)
         {

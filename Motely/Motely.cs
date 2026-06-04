@@ -59,12 +59,8 @@ public static partial class MotelyGlobals
     // are inlined at each hot-path site via `ante == 1 ? ... : ...` — no helper function here
     // to avoid any temptation of call overhead in per-seed SIMD loops.
 
-    /// <summary>
-    /// Default maximum pack-slot INDEX reachable in ante 1 through normal gameplay (4 packs, 0..3).
-    /// Clauses can raise their <c>EarlyAntesMaxPack</c> to 5 to opt into Hieroglyph / Petroglyph
-    /// scenarios. Scoring uses this cap; SIMD prefilter is over-permissive by design.
-    /// </summary>
-    public const int DefaultEarlyAntesMaxPack = 3;
+    /// <summary>Maximum pack-slot INDEX reachable in ante 1 through normal gameplay (4 packs, 0..3).</summary>
+    public const int EarlyAnteMaxPackSlot = 3;
 
     /// <summary>Maximum pack-slot INDEX at antes 2+ (6 packs, 0..5). Not user-configurable.</summary>
     public const int LateAntesMaxPackSlot = 5;

@@ -14,8 +14,7 @@ namespace Motely.Tests;
 /// to ante 1.
 ///
 /// These tests pin the filter's ability to match that seed so future per-ante clamping work
-/// does not silently remove Hieroglyph-accessible matches. If a clamp is added, it must either
-/// leave explicit <c>boosterPacks</c> lists alone, or gate itself behind an opt-in field.
+/// does not silently remove Hieroglyph-accessible matches.
 /// </summary>
 public class HieroglyphPackSlotTests
 {
@@ -44,11 +43,11 @@ public class HieroglyphPackSlotTests
 
     /// <summary>
     /// KHTW99TC: ante-1 pack slot 5 contains a Negative Perkeo (Hieroglyph-reachable only).
-    /// Opt into Hieroglyph scanning with <c>earlyAntesMaxPack: 5</c>. Without the opt-in, ante 1
-    /// scoring clamps to slot 3 (normal gameplay) and the Perkeo is invisible.
+    /// Scoring extends ante-1 reachability only because the seed's actual voucher path rewinds
+    /// back to ante 1.
     /// </summary>
     [Fact]
-    public void KHTW99TC_HasNegativePerkeo_InAnte1_Slot5_WhenEarlyAntesMaxPackIs5()
+    public void KHTW99TC_HasNegativePerkeo_InAnte1_Slot5_WhenRunStateRewindsAnte()
     {
         var jaml = """
             name: HieroglyphPerkeo
@@ -60,7 +59,6 @@ public class HieroglyphPackSlotTests
                 antes: [1]
                 sources:
                   boosterPacks: [5]
-                  earlyAntesMaxPack: 5
             """;
 
         var result = RunSingleSeedJaml(jaml, HieroglyphPerkeoSeed);
@@ -69,10 +67,10 @@ public class HieroglyphPackSlotTests
     }
 
     /// <summary>
-    /// Full slot range [0..5] on ante 1 with explicit Hieroglyph opt-in — must match.
+    /// Full slot range [0..5] on ante 1 with actual voucher rewind — must match.
     /// </summary>
     [Fact]
-    public void KHTW99TC_HasNegativePerkeo_InAnte1_FullSlotRange_WithHieroglyphOptIn()
+    public void KHTW99TC_HasNegativePerkeo_InAnte1_FullSlotRange_WithRunStateRewind()
     {
         var jaml = """
             name: HieroglyphPerkeoFullRange
@@ -84,7 +82,6 @@ public class HieroglyphPackSlotTests
                 antes: [1]
                 sources:
                   boosterPacks: [0, 1, 2, 3, 4, 5]
-                  earlyAntesMaxPack: 5
             """;
 
         var result = RunSingleSeedJaml(jaml, HieroglyphPerkeoSeed);
@@ -118,15 +115,13 @@ public class HieroglyphPackSlotTests
     }
 
     /// <summary>
-    /// Default behaviour (no <c>earlyAntesMaxPack</c>): ante 1 scoring caps at slot 3 even if the
-    /// user asks for slot 5. The Hieroglyph-only Perkeo must NOT match — this protects filters
-    /// written for normal gameplay from phantom false positives.
+    /// The old user-facing early-ante cap knob is no longer valid JAML syntax.
     /// </summary>
     [Fact]
-    public void KHTW99TC_DoesNotMatch_OnAnte1Slot5_WithDefaultEarlyAntesMaxPack()
+    public void EarlyAntesMaxPackSourceProperty_IsRejected()
     {
         var jaml = """
-            name: HieroglyphPerkeoDefault
+            name: RemovedEarlyAntesMaxPack
             deck: Red
             stake: White
             must:
@@ -135,21 +130,21 @@ public class HieroglyphPackSlotTests
                 antes: [1]
                 sources:
                   boosterPacks: [5]
+                  earlyAntesMaxPack: 5
             """;
 
-        var result = RunSingleSeedJaml(jaml, HieroglyphPerkeoSeed);
-        Assert.Equal(1, result.SeedsSearched);
-        Assert.Equal(0, result.MatchingSeeds);
+        Assert.False(JamlConfigLoader.TryLoad(jaml, out _, out var error));
+        Assert.Contains("earlyAntesMaxPack", error);
     }
 
     /// <summary>
     /// Bare clause with no antes/sources gets the loader defaults stamped: antes [1..8] and
-    /// boosterPacks [0..5] with earlyAntesMaxPack = 3. Ante 1 slot 5 is blocked, but the seed
+    /// boosterPacks [0..5]. Ante 1 slot 5 is decided by run-state reachability, but the seed
     /// might still match via another ante — this test only confirms the clause compiles cleanly
     /// and does not produce a parse error with the new field.
     /// </summary>
     [Fact]
-    public void BareLegendaryJokerClause_CompilesAndRuns_WithDefaultEarlyAntesMaxPack()
+    public void BareLegendaryJokerClause_CompilesAndRuns()
     {
         var jaml = """
             name: HieroglyphPerkeoBare

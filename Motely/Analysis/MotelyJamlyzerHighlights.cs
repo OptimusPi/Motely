@@ -123,9 +123,9 @@ public static class MotelyJamlyzerHighlights
             yield return clause;
     }
 
-    private static IEnumerable<IJamlClause> EnumerateClauseSet(JamlClauseSet set)
+    private static IEnumerable<IJamlClause> EnumerateClauseSet(IEnumerable<IJamlClause> clauses)
     {
-        foreach (var clause in set.OrderedClauses)
+        foreach (var clause in clauses)
         {
             foreach (var flattened in FlattenClause(clause))
                 yield return flattened;
