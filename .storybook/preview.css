@@ -10,6 +10,7 @@ body {
 
 #storybook-root {
   background: transparent !important;
+  padding: 24px 0;
 }
 
 .sb-show-main,
