@@ -50,9 +50,9 @@ export interface JamlIdeVisualProps {
 const C = JimboColorOption;
 
 const ZONE_META: Record<JamlZone, { label: string; hint: string; color: string; accent: string }> = {
-    must: { label: "Must", hint: "Seed must contain all of these.", color: C.BLUE, accent: "#4db5ff" },
-    should: { label: "Should", hint: "Bonus points per match.", color: C.RED, accent: "#ff8076" },
-    mustnot: { label: "Must Not", hint: "Rejected if any appear.", color: C.ORANGE, accent: "#ffb84d" },
+    must: { label: "Must", hint: "Seed must contain all of these.", color: "#429f79", accent: "#35bd86" },
+    should: { label: "Should", hint: "Bonus points per match.", color: "#ff9800", accent: "#ffb84d" },
+    mustnot: { label: "Must Not", hint: "Rejected if any appear.", color: "#fe5148", accent: "#ff8076" },
 };
 
 function clauseSpriteSheet(type: string): SpriteSheetType | undefined {
@@ -276,10 +276,11 @@ function ZoneRail({
         <div
             data-zone={zone}
             style={{
-                border: `2px dashed ${highlight ? z.color : "transparent"}`,
-                borderRadius: 6,
-                padding: 6,
-                background: highlight ? `${z.color}11` : "transparent",
+                border: `3px solid ${z.color}`,
+                borderRadius: 8,
+                padding: 12,
+                background: `${z.color}15`,
+                boxShadow: `0 3px 0 rgba(0, 0, 0, 0.4)`,
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
