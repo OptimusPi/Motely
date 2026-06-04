@@ -261,7 +261,6 @@ function ZoneRail({
     onRemove,
     onEdit,
     onDragStart,
-    highlight,
 }: {
     zone: JamlZone;
     clauses: JamlVisualClause[];
@@ -269,7 +268,6 @@ function ZoneRail({
     onRemove: (id: string) => void;
     onEdit: (clause: JamlVisualClause) => void;
     onDragStart: (e: React.MouseEvent | React.TouchEvent, clause: JamlVisualClause, zone: JamlZone) => void;
-    highlight: boolean;
 }) {
     const z = ZONE_META[zone];
     return (
@@ -363,7 +361,7 @@ function TopMatter({
 
 export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: JamlIdeVisualProps) {
     const rootRef = useRef<HTMLDivElement>(null);
-    const { drag, hoverZone, onDragStart } = useJamlIdeDrag(filter, onChange, rootRef);
+    const { drag, onDragStart } = useJamlIdeDrag(filter, onChange, rootRef);
 
     const removeClause = (zone: JamlZone, id: string) => {
         onChange({ ...filter, [zone]: filter[zone].filter((c) => c.id !== id) });
@@ -392,7 +390,6 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                         onRemove={(id) => removeClause("must", id)}
                         onEdit={(c) => onEditClause?.("must", c)}
                         onDragStart={onDragStart}
-                        highlight={hoverZone === "must"}
                     />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -403,7 +400,6 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                         onRemove={(id) => removeClause("mustnot", id)}
                         onEdit={(c) => onEditClause?.("mustnot", c)}
                         onDragStart={onDragStart}
-                        highlight={hoverZone === "mustnot"}
                     />
                 </div>
             </div>
@@ -414,7 +410,6 @@ export function JamlIdeVisual({ filter, onChange, onEditClause, onAddClause }: J
                 onRemove={(id) => removeClause("should", id)}
                 onEdit={(c) => onEditClause?.("should", c)}
                 onDragStart={onDragStart}
-                highlight={hoverZone === "should"}
             />
 
             {drag && (
