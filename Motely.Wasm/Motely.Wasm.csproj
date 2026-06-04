@@ -4,6 +4,7 @@
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
+    <Version>$(MotelyVersion)</Version>
     <BootsharpName>motely-wasm</BootsharpName>
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
@@ -21,10 +22,6 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <!-- Bootsharp (Bootsharp.targets:167) overwrites package.json on every publish with a minimal
-       manifest: no version, no types, exports as bare strings. We rewrite the full publishable
-       manifest here, in-build (no standalone post-processor script) — version single-sourced from
-       MotelyVersion, types/exports wired to the generated .d.mts declarations. -->
   <Target Name="FinalizeNpmPackage" AfterTargets="BootsharpJS">
     <PropertyGroup>
       <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
@@ -49,7 +46,7 @@
 }</_PackageJson>
     </PropertyGroup>
     <WriteLinesToFile File="$(_NpmRoot)\package.json" Overwrite="true" Lines="$(_PackageJson)" />
-    <Copy SourceFiles="README.md" DestinationFolder="$(_NpmRoot)" />
     <Message Text="motely-wasm v$(MotelyVersion) assembled at $(_NpmRoot)" Importance="high" />
   </Target>
+
 </Project>

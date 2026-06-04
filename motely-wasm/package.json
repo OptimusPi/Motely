@@ -1,25 +1,16 @@
 {
-  "name": "motely-wasm",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
+    "name": "motely-wasm",
+    "type": "module",
+    "exports": {
+        ".": "./dist/index.mjs",
+        "./*": "./dist/generated/modules/*.g.mjs"
     },
-    "./*": {
-      "types": "./dist/generated/modules/*.g.d.mts",
-      "import": "./dist/generated/modules/*.g.mjs"
+    "browser": {
+        "node:fs": false,
+        "node:url": false,
+        "node:path": false,
+        "node:module": false,
+        "node:crypto": false,
+        "node:process": false
     }
-  },
-  "browser": {
-    "node:fs": false,
-    "node:url": false,
-    "node:path": false,
-    "node:module": false,
-    "node:crypto": false,
-    "node:process": false
-  },
-  "version": "19.1.1",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.mts"
 }
