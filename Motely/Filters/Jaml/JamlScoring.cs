@@ -31,13 +31,15 @@ public static class JamlScoring
                 maxBossAnte = clauseMaxAnte;
         }
 
-        for (int ante = 1; ante <= maxAnte; ante++)
+        int maxVoucherAnte = maxAnte < 8 ? maxAnte + 1 : maxAnte;
+        for (int ante = 1; ante <= maxVoucherAnte; ante++)
         {
             var voucher = ctx.GetAnteFirstVoucher(ante, runState);
             runState.ActivateVoucher(voucher);
 
-            if (voucher == MotelyVoucher.Hieroglyph)
+            if (voucher is MotelyVoucher.Hieroglyph or MotelyVoucher.Petroglyph)
             {
+                runState.ActivateExtendedPackAnte(ante - 1);
                 var voucherStream = ctx.CreateVoucherStream(ante);
                 var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, runState);
                 runState.ActivateVoucher(bonusVoucher);
@@ -83,19 +85,19 @@ public static class JamlScoring
             UncommonJokerClause c => CountUncommonJokerOccurrences(ref ctx, c, ref runState),
             RareJokerClause c => CountRareJokerOccurrences(ref ctx, c, ref runState),
             MixedJokerClause c => CountMixedJokerOccurrences(ref ctx, c, ref runState),
-            LegendaryJokerClause c => CountLegendaryJokerOccurrences(ref ctx, c),
+            LegendaryJokerClause c => CountLegendaryJokerOccurrences(ref ctx, c, ref runState),
             VoucherClause c => CountVoucherOccurrences(ref ctx, c, ref runState),
-            TarotCardClause c => CountTarotCardOccurrences(ref ctx, c),
-            SpectralCardClause c => CountSpectralCardOccurrences(ref ctx, c),
-            PlanetCardClause c => CountPlanetCardOccurrences(ref ctx, c),
+            TarotCardClause c => CountTarotCardOccurrences(ref ctx, c, ref runState),
+            SpectralCardClause c => CountSpectralCardOccurrences(ref ctx, c, ref runState),
+            PlanetCardClause c => CountPlanetCardOccurrences(ref ctx, c, ref runState),
             BossClause c => CountBossOccurrences(c, ref runState),
             TagClause c => CountTagOccurrences(ref ctx, c),
-            StandardCardClause c => CountStandardCardOccurrences(ref ctx, c),
+            StandardCardClause c => CountStandardCardOccurrences(ref ctx, c, ref runState),
             ErraticRankClause c => CountErraticRankOccurrences(ref ctx, c),
             ErraticSuitClause c => CountErraticSuitOccurrences(ref ctx, c),
             ErraticCardClause c => CountErraticCardOccurrences(ref ctx, c),
-            LuckyMoneyClause c => CountLuckyMoneyOccurrences(ref ctx, c),
-            LuckyMultClause c => CountLuckyMultOccurrences(ref ctx, c),
+            LuckyMoneyClause c => CountLuckyMoneyOccurrences(ref ctx, c, ref runState),
+            LuckyMultClause c => CountLuckyMultOccurrences(ref ctx, c, ref runState),
             MisprintMultClause c => CountMisprintMultOccurrences(ref ctx, c),
             WheelOfFortuneClause c => CountWheelOfFortuneOccurrences(ref ctx, c),
             CavendishExtinctClause c => CountCavendishExtinctOccurrences(ref ctx, c),
@@ -304,26 +306,17 @@ public static class JamlScoring
 
     private static int CountStandardCardOccurrences(
         ref MotelySingleSearchContext ctx,
-        StandardCardClause clause
+        StandardCardClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
 
         foreach (int ante in clause.Antes)
         {
-            // Per-ante reachability: ante 1 normally caps at slot 3 (4 packs). Raise
-            // earlyAntesMaxPack to 5 on the clause to include Hieroglyph scenarios.
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -361,27 +354,19 @@ public static class JamlScoring
 
     private static int CountTarotCardOccurrences(
         ref MotelySingleSearchContext ctx,
-        TarotCardClause clause
+        TarotCardClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
         int maxEmperor = ArrayMax(clause.Sources.Emperor);
         int maxSeal = ArrayMax(clause.Sources.PurpleSealOrEightBall);
 
         foreach (int ante in clause.Antes)
         {
-            // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -476,27 +461,19 @@ public static class JamlScoring
 
     private static int CountSpectralCardOccurrences(
         ref MotelySingleSearchContext ctx,
-        SpectralCardClause clause
+        SpectralCardClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
         int maxSixthSense = ArrayMax(clause.Sources.SixthSense);
         int maxSeance = ArrayMax(clause.Sources.Seance);
 
         foreach (int ante in clause.Antes)
         {
-            // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -591,9 +568,9 @@ public static class JamlScoring
         if (clause.Sources.BoosterPacks.Length > 0)
         {
             if (SpectralClauseTargets(clause, MotelySpectralCard.TheSoul))
-                count += CountTheSoulInArcanaPacks(ref ctx, clause);
+                count += CountTheSoulInArcanaPacks(ref ctx, clause, ref runState);
             if (SpectralClauseTargets(clause, MotelySpectralCard.BlackHole))
-                count += CountBlackHoleInCelestialPacks(ref ctx, clause);
+                count += CountBlackHoleInCelestialPacks(ref ctx, clause, ref runState);
         }
 
         return count;
@@ -622,7 +599,11 @@ public static class JamlScoring
     internal static int CountSpectralCardOccurrencesForFilter(
         ref MotelySingleSearchContext ctx,
         SpectralCardClause clause
-    ) => CountSpectralCardOccurrences(ref ctx, clause);
+    )
+    {
+        var runState = CreatePermissivePackRunState(clause.Antes);
+        return CountSpectralCardOccurrences(ref ctx, clause, ref runState);
+    }
 
     /// <summary>
     /// TheSoul appearing in Arcana packs (tarot stream soul roll). Same booster-pack indexing as the
@@ -631,23 +612,16 @@ public static class JamlScoring
     /// </summary>
     private static int CountTheSoulInArcanaPacks(
         ref MotelySingleSearchContext ctx,
-        SpectralCardClause clause
+        SpectralCardClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
 
         foreach (int ante in clause.Antes)
         {
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
 
             var packStream = ctx.CreateBoosterPackStream(ante);
             var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
@@ -673,23 +647,16 @@ public static class JamlScoring
     /// </summary>
     private static int CountBlackHoleInCelestialPacks(
         ref MotelySingleSearchContext ctx,
-        SpectralCardClause clause
+        SpectralCardClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
 
         foreach (int ante in clause.Antes)
         {
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
 
             var packStream = ctx.CreateBoosterPackStream(ante);
             var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
@@ -714,25 +681,17 @@ public static class JamlScoring
 
     private static int CountPlanetCardOccurrences(
         ref MotelySingleSearchContext ctx,
-        PlanetCardClause clause
+        PlanetCardClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         int maxShop = ArrayMax(clause.Sources.ShopItems);
         int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int earlyCap = clause.Sources.EarlyAntesMaxPack;
 
         foreach (int ante in clause.Antes)
         {
-            // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
             if (clause.Sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
@@ -912,19 +871,22 @@ public static class JamlScoring
 
     private static int CountLuckyMoneyOccurrences(
         ref MotelySingleSearchContext ctx,
-        LuckyMoneyClause clause
+        LuckyMoneyClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         var stream = ctx.CreateLuckyCardMoneyStream(isCached: false);
         var min = clause.Min;
         var max = clause.Max;
+        runState.Luck = clause.Luck;
+        double luck = runState.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextLuckyMoney(ref stream);
-            if (ctx.GetNextLuckyMoney(ref stream))
+                ctx.GetNextLuckyMoney(ref stream, luck);
+            if (ctx.GetNextLuckyMoney(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -940,19 +902,22 @@ public static class JamlScoring
 
     private static int CountLuckyMultOccurrences(
         ref MotelySingleSearchContext ctx,
-        LuckyMultClause clause
+        LuckyMultClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         var stream = ctx.CreateLuckyCardMultStream(isCached: false);
         var min = clause.Min;
         var max = clause.Max;
+        runState.Luck = clause.Luck;
+        double luck = runState.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextLuckyMult(ref stream);
-            if (ctx.GetNextLuckyMult(ref stream))
+                ctx.GetNextLuckyMult(ref stream, luck);
+            if (ctx.GetNextLuckyMult(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1228,25 +1193,17 @@ public static class JamlScoring
 
     private static int CountLegendaryJokerOccurrences(
         ref MotelySingleSearchContext ctx,
-        LegendaryJokerClause clause
+        LegendaryJokerClause clause,
+        ref MotelyRunState runState
     )
     {
         int count = 0;
         var sources = clause.Sources;
         int userMaxPack = sources.MaxReferencedBoosterSlot();
-        int earlyCap = sources.EarlyAntesMaxPack;
 
         foreach (int ante in clause.Antes)
         {
-            // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
             count += LegendarySoulMatcher.CountAnte(ref ctx, ante, clause, maxPack);
         }
 
@@ -1375,7 +1332,7 @@ public static class JamlScoring
         JokerClause clause
     )
     {
-        var runState = new MotelyRunState();
+        var runState = CreatePermissivePackRunState(clause.Antes);
         return CountJokerClauseOccurrences(ref ctx, clause, ref runState);
     }
 
@@ -1410,7 +1367,8 @@ public static class JamlScoring
                 Max = clause.Max,
             };
 
-            return normalWildcard + CountLegendaryJokerOccurrences(ref ctx, legendaryWildcard);
+            return normalWildcard
+                + CountLegendaryJokerOccurrences(ref ctx, legendaryWildcard, ref runState);
         }
 
         var nonLegendary = clause
@@ -1457,7 +1415,7 @@ public static class JamlScoring
                 Max = clause.Max,
             };
 
-            count += CountLegendaryJokerOccurrences(ref ctx, legendaryClause);
+            count += CountLegendaryJokerOccurrences(ref ctx, legendaryClause, ref runState);
         }
 
         return count;
@@ -1480,22 +1438,13 @@ public static class JamlScoring
 
         int maxShop = ArrayMax(shopItems);
         int userMaxPack = ArrayMax(boosterPacks);
-        int earlyCap = sources.EarlyAntesMaxPack;
         var targetTypes = new MotelyItemType[jokers.Length];
         for (int i = 0; i < jokers.Length; i++)
             targetTypes[i] = Enum.Parse<MotelyItemType>(jokers[i].ToString(), true);
 
         foreach (int ante in antes)
         {
-            // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
 
             if (shopItems.Length > 0)
             {
@@ -1651,19 +1600,10 @@ public static class JamlScoring
 
         int maxShop = ArrayMax(shopItems);
         int userMaxPack = ArrayMax(boosterPacks);
-        int earlyCap = sources.EarlyAntesMaxPack;
 
         foreach (int ante in antes)
         {
-            // Per-ante reachability clamp (Hieroglyph opt-in via earlyAntesMaxPack).
-            int maxPack =
-                ante == 1
-                    ? (userMaxPack < earlyCap ? userMaxPack : earlyCap)
-                    : (
-                        userMaxPack < MotelyGlobals.LateAntesMaxPackSlot
-                            ? userMaxPack
-                            : MotelyGlobals.LateAntesMaxPackSlot
-                    );
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
 
             if (shopItems.Length > 0)
             {
@@ -1960,6 +1900,29 @@ public static class JamlScoring
                 max = nestedMax;
         }
         return max;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static MotelyRunState CreatePermissivePackRunState(int[] antes)
+    {
+        var runState = new MotelyRunState();
+        for (int i = 0; i < antes.Length; i++)
+            runState.ActivateExtendedPackAnte(antes[i]);
+        return runState;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ClampBoosterPackSlotForAnte(
+        int ante,
+        int requestedMaxPack,
+        ref MotelyRunState runState
+    )
+    {
+        int anteMaxPack =
+            ante == 1 && !runState.IsExtendedPackAnteActive(ante)
+                ? MotelyGlobals.EarlyAnteMaxPackSlot
+                : MotelyGlobals.LateAntesMaxPackSlot;
+        return requestedMaxPack < anteMaxPack ? requestedMaxPack : anteMaxPack;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

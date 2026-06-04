@@ -5,11 +5,11 @@
 #  normal ante-1 gameplay only reaches slot 3. Buying Hieroglyph (or Petroglyph)
 #  rewinds an ante and re-opens the shop, making the deeper slots 4-5 reachable.
 #
-#  `earlyAntesMaxPack: 5` is the opt-in that tells the engine to scan that full
-#  depth in early antes instead of clamping to slot 3.
+#  Scoring allows that full depth only when the generated run state actually
+#  contains the Hieroglyph/Petroglyph rewind that makes it reachable.
 #
 #  Canonical seed: KHTW99TC — a Negative Perkeo sits in the ante-1 Arcana at
-#  pack slot 5, invisible without this opt-in. (See Motely.Tests/
+#  pack slot 5, invisible without that run-state rewind. (See Motely.Tests/
 #  HieroglyphPackSlotTests.cs and the seedfinder research doc.)
 # =============================================================================
 
@@ -27,5 +27,4 @@ must:
     edition: Negative
     antes: [1]
     sources:
-      boosterPacks: [0, 1, 2, 3, 4, 5]  # the full six-pack stream...
-      earlyAntesMaxPack: 5              # ...and DON'T clamp ante 1 to slot 3
+      boosterPacks: [0, 1, 2, 3, 4, 5]  # scalar scoring rejects unreachable deep slots

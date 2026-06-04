@@ -177,7 +177,7 @@ public class V0FilterRegressionTests
                 $"[{filter.FileName}] Missing 'name' field"
             );
             Assert.True(
-                config.Must.HasAnyClauses,
+                config.Must.Count != 0,
                 $"[{filter.FileName}] 'must' section is empty — every filter needs at least one must clause"
             );
         }
@@ -209,7 +209,7 @@ public class V0FilterRegressionTests
         {
             var config = ParseFilterOrFail(filter);
             Assert.True(
-                config.Must.HasAnyClauses,
+                config.Must.Count != 0,
                 $"[{filter.FileName}] Expected at least one must clause"
             );
 

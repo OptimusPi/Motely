@@ -53,6 +53,8 @@ public ref struct MotelyRunState
 
     public int VoucherBitfield;
     public int BossBitfield;
+    public int ExtendedPackAnteBitfield;
+    public int Luck;
 
     private bool _showmanActive;
 
@@ -69,6 +71,17 @@ public ref struct MotelyRunState
     public readonly bool IsVoucherActive(MotelyVoucher voucher)
     {
         return (VoucherBitfield & (1 << (int)voucher)) != 0;
+    }
+
+    public void ActivateExtendedPackAnte(int ante)
+    {
+        if (ante > 0)
+            ExtendedPackAnteBitfield |= 1 << ante;
+    }
+
+    public readonly bool IsExtendedPackAnteActive(int ante)
+    {
+        return ante > 0 && (ExtendedPackAnteBitfield & (1 << ante)) != 0;
     }
 
     public void SeeBoss(MotelyBossBlind boss)
