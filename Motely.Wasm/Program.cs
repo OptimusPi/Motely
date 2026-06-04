@@ -42,13 +42,13 @@ public static partial class Program
     private static MotelySeedRouterDesc? _seedRouter;
 
     [Import]
-    public static partial bool JimmolateProbe(string seed, MotelyDeck deck, MotelyStake stake);
+    public static partial bool JimmolateProbe(MotelySingleSearchContext ctx);
 
     [Import]
     public static partial void ReportWasmError(string message);
 
     internal static bool RunJimmolateImport(ref global::Motely.MotelySingleSearchContext ctx) =>
-        JimmolateProbe(ctx.GetSeed(), ctx.Deck, ctx.Stake);
+        JimmolateProbe(ctx);
 
     [Export]
     public static event Action<MotelyProgress>? OnProgress;
