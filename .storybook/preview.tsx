@@ -26,12 +26,16 @@ const preview: Preview = {
       const useHarness = jimboHarness !== false;
       const showBackground = jimboBackground !== false;
 
-      return (
-        <>
-          {showBackground ? <JimboBackground /> : null}
-          {useHarness ? <JimboApp>{content}</JimboApp> : content}
-        </>
-      );
+      if (showBackground) {
+        return (
+          <>
+            <JimboBackground />
+            {useHarness ? <JimboApp>{content}</JimboApp> : content}
+          </>
+        );
+      }
+
+      return useHarness ? <JimboApp>{content}</JimboApp> : content;
     },
   ],
 };
