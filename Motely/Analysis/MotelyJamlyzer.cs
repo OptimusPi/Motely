@@ -32,7 +32,7 @@ public sealed record class MotelyJamlyzerSeedResult(
     string Seed,
     int Score,
     int[] Tallies,
-    MotelySeedAnalysis? Analysis = null
+    MotelyLegacyTextAnalysis? Analysis = null
 );
 
 /// <summary>
@@ -251,9 +251,9 @@ public static class MotelyJamlyzer
         return analyzed;
     }
 
-    private static MotelySeedAnalysis BuildSeedAnalysis(string seed, JamlConfig config)
+    private static MotelyLegacyTextAnalysis BuildSeedAnalysis(string seed, JamlConfig config)
     {
-        var analysis = MotelySeedAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
+        var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
         if (MotelyDefaultAnalyzerJaml.IsDefaultAnalyzerConfig(config))
             return analysis;
 

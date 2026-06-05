@@ -34,7 +34,6 @@ async function createHarness() {
     ).version;
 
     Motely.reportWasmError = (message) => console.error("[WASM ERROR]", message);
-    Motely.jimmolateProbe = () => false;
 
     // NativeAOT-LLVM is single-file, so only `wasm` is needed (the other manifest arrays
     // are empty). resolveBinary() in config.mjs takes the bytes as-is when not a string.

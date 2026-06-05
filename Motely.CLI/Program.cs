@@ -1050,7 +1050,7 @@ partial class Program
             if (json)
             {
                 Console.WriteLine(
-                    JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
+                    JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelyLegacyTextAnalysis)
                 );
             }
             else
@@ -1099,7 +1099,7 @@ partial class Program
         if (json)
         {
             Console.WriteLine(
-                JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelySeedAnalysis)
+                JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelyLegacyTextAnalysis)
             );
         }
         else

@@ -335,8 +335,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
 
-    IMotelySearchSettings IMotelySearchSettings.WithJimmolate() =>
-        WithJimmolate();
+    IMotelySearchSettings IMotelySearchSettings.WithJimmolate() => WithJimmolate();
 
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
@@ -400,11 +399,13 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
-    public MotelySearchSettings<TBaseFilter> WithJimmolate()
+    public MotelySearchSettings<TBaseFilter> WithJimmolate(
+        MotelyIndividualSeedSearcher? searcher = null
+    )
     {
-        if (MotelyWasmInterop.JimmolateSearcher is null)
+        if (searcher is null)
             throw new InvalidOperationException("Jimmolate searcher is not registered.");
-        return WithAdditionalFilter(new Filters.Native.JimmolateFilterDesc(MotelyWasmInterop.JimmolateSearcher));
+        return WithAdditionalFilter(new JimmolateFilterDesc(searcher));
     }
 
     public IMotelySearch Start(CancellationToken cancellationToken = default)
@@ -413,11 +414,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
         return search.Start(cancellationToken);
     }
-}
-
-public static class MotelyWasmInterop
-{
-    public static MotelyIndividualSeedSearcher? JimmolateSearcher { get; set; }
 }
 
 public interface IMotelySearch : IDisposable
