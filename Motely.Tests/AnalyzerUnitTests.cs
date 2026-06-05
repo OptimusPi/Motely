@@ -58,7 +58,7 @@ public sealed class AnalyzerUnitTests
             fromContext.Add(ctx.GetNextShopItem(ref shopStream).Value);
         }
 
-        var analysis = MotelySeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
+        var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
         var fromAnalyzer = new List<int>();
         for (int i = 0; i < 5; i++)
         {
@@ -101,7 +101,7 @@ public sealed class AnalyzerUnitTests
         MotelyStake stake = MotelyStake.White
     )
     {
-        return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
+        return MotelyLegacyTextAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
 
     [Fact]

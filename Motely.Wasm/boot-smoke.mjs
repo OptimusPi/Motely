@@ -2,7 +2,6 @@
 import bootsharp, { Motely } from "./bin/bootsharp/index.mjs";
 
 Motely.reportWasmError = (m) => console.error("[WASM ERROR]", m);
-Motely.jimmolateProbe = () => false;
 
 await bootsharp.boot();
 
