@@ -6,7 +6,7 @@ namespace Motely.Analysis;
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     UseStringEnumConverter = true
 )]
-[JsonSerializable(typeof(MotelySeedAnalysis))]
+[JsonSerializable(typeof(MotelyLegacyTextAnalysis))]
 [JsonSerializable(typeof(MotelyAnteAnalysis))]
 [JsonSerializable(typeof(MotelyAnalyzedItem))]
 [JsonSerializable(typeof(MotelyBoosterPackAnalysis))]

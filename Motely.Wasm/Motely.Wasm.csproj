@@ -6,7 +6,18 @@
     <IsPackable>false</IsPackable>
     <Version>$(MotelyVersion)</Version>
     <BootsharpName>motely-wasm</BootsharpName>
-    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\..\motely-wasm</BootsharpPackageDirectory>
+    <!--
+      DO NOT point BootsharpPackageDirectory at ..\motely-wasm.
+      Bootsharp OVERWRITES <dir>/package.json on EVERY build with its own bare
+      template (no version, no types, no author) — see Bootsharp.targets, the
+      "Publish package file" WriteLinesToFile step. Aiming it at the real npm
+      root clobbers our hand-maintained motely-wasm/package.json every build,
+      which then fails `npm publish` (no version -> "reading 'prerelease'").
+      We park that throwaway template in obj/ (gitignored) and never use it.
+      motely-wasm/package.json is hand-maintained and static. Edit it directly.
+      DO NOT re-add a FinalizeNpmPackage MSBuild target to "fix" this.
+    -->
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist\bin</BootsharpBinariesDirectory>
   </PropertyGroup>
@@ -21,35 +32,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
-
-  <Target Name="FinalizeNpmPackage" AfterTargets="Publish">
-    <PropertyGroup>
-      <_NpmRoot>$(MSBuildProjectDirectory)\..\motely-wasm</_NpmRoot>
-      <_PackageJson>{
-  "name": "motely-wasm",
-  "type": "module",
-  "version": "$(MotelyVersion)",
-  "description": "Balatro seed finder and per-seed analyzer, compiled to WebAssembly.",
-  "author": "Nathanial P. Howard",
-  "license": "MIT",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
-  "exports": {
-    ".": { "types": "./dist/index.d.mts", "import": "./dist/index.mjs" },
-    "./*": { "types": "./dist/generated/modules/*.g.d.mts", "import": "./dist/generated/modules/*.g.mjs" }
-  },
-  "browser": {
-    "node:fs": false,
-    "node:url": false,
-    "node:path": false,
-    "node:module": false,
-    "node:crypto": false,
-    "node:process": false
-  }
-}</_PackageJson>
-    </PropertyGroup>
-    <WriteLinesToFile File="$(_NpmRoot)\package.json" Overwrite="true" Lines="$(_PackageJson)" />
-    <Message Text="motely-wasm v$(MotelyVersion) assembled at $(_NpmRoot)" Importance="high" />
-  </Target>
 
 </Project>
