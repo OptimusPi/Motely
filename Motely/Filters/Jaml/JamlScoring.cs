@@ -968,12 +968,13 @@ public static class JamlScoring
         var stream = ctx.CreateWheelOfFortuneStream();
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextWheelOfFortune(ref stream);
-            if (ctx.GetNextWheelOfFortune(ref stream) != MotelyItemEdition.None)
+                ctx.GetNextWheelOfFortune(ref stream, luck);
+            if (ctx.GetNextWheelOfFortune(ref stream, luck) != MotelyItemEdition.None)
             {
                 count++;
                 if (max is null && count >= min)
@@ -996,12 +997,13 @@ public static class JamlScoring
         var stream = ctx.CreateCavendishPrngStream(false);
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextCavendishExtinct(ref stream);
-            if (ctx.GetNextCavendishExtinct(ref stream))
+                ctx.GetNextCavendishExtinct(ref stream, luck);
+            if (ctx.GetNextCavendishExtinct(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1024,12 +1026,13 @@ public static class JamlScoring
         var stream = ctx.CreateGrosMichelPrngStream(false);
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextGrosMichelExtinct(ref stream);
-            if (ctx.GetNextGrosMichelExtinct(ref stream))
+                ctx.GetNextGrosMichelExtinct(ref stream, luck);
+            if (ctx.GetNextGrosMichelExtinct(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1052,12 +1055,13 @@ public static class JamlScoring
         var stream = ctx.CreateSpacePrngStream();
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextSpaceLevelup(ref stream);
-            if (ctx.GetNextSpaceLevelup(ref stream))
+                ctx.GetNextSpaceLevelup(ref stream, luck);
+            if (ctx.GetNextSpaceLevelup(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1080,12 +1084,13 @@ public static class JamlScoring
         var stream = ctx.CreateBusinessPrngStream();
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextBusinessPayout(ref stream);
-            if (ctx.GetNextBusinessPayout(ref stream))
+                ctx.GetNextBusinessPayout(ref stream, luck);
+            if (ctx.GetNextBusinessPayout(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1108,11 +1113,12 @@ public static class JamlScoring
         var stream = ctx.CreateBloodstonePrngStream();
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
-                ctx.GetNextBloodstoneTrigger(ref stream);
-            if (ctx.GetNextBloodstoneTrigger(ref stream))
+                ctx.GetNextBloodstoneTrigger(ref stream, luck);
+            if (ctx.GetNextBloodstoneTrigger(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1131,11 +1137,12 @@ public static class JamlScoring
         var stream = ctx.CreateParkingPrngStream();
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
-                ctx.GetNextParkingPayout(ref stream);
-            if (ctx.GetNextParkingPayout(ref stream))
+                ctx.GetNextParkingPayout(ref stream, luck);
+            if (ctx.GetNextParkingPayout(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1154,11 +1161,12 @@ public static class JamlScoring
         var stream = ctx.CreateGlassPrngStream();
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
-                ctx.GetNextGlassDestroy(ref stream);
-            if (ctx.GetNextGlassDestroy(ref stream))
+                ctx.GetNextGlassDestroy(ref stream, luck);
+            if (ctx.GetNextGlassDestroy(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1177,11 +1185,12 @@ public static class JamlScoring
         var stream = ctx.CreateTheWheelPrngStream();
         var min = clause.Min;
         var max = clause.Max;
+        double luck = clause.Luck;
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
-                ctx.GetNextWheelStaysFlipped(ref stream);
-            if (ctx.GetNextWheelStaysFlipped(ref stream))
+                ctx.GetNextWheelStaysFlipped(ref stream, luck);
+            if (ctx.GetNextWheelStaysFlipped(ref stream, luck))
             {
                 count++;
                 if (max is null && count >= min)

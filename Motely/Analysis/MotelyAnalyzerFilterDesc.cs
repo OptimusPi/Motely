@@ -6,16 +6,16 @@ namespace Motely.Analysis;
 /// Filter descriptor for seed analysis
 /// </summary>
 public sealed class MotelyLegacyTextAnalyzerFilterDesc()
-    : IMotelySeedFilterDesc<MotelyLegacyTextAnalyzerFilterDesc.AnalyzerFilter>
+    : IMotelySeedFilterDesc<MotelyLegacyTextAnalyzerFilterDesc.LegacyTextAnalyzerFilter>
 {
     public MotelyLegacyTextAnalysis? LastAnalysis { get; private set; } = null;
 
-    public AnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public LegacyTextAnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        return new AnalyzerFilter(this);
+        return new LegacyTextAnalyzerFilter(this);
     }
 
-    public readonly struct AnalyzerFilter(MotelyLegacyTextAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
+    public readonly struct LegacyTextAnalyzerFilter(MotelyLegacyTextAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
     {
         public MotelyLegacyTextAnalyzerFilterDesc FilterDesc { get; } = filterDesc;
 
