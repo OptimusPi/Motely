@@ -10,9 +10,7 @@ dotnet build Motely.slnx
 dotnet build Motely.slnx -c Release
 
 # Test
-dotnet test Motely.Tests/Motely.Tests.csproj
-dotnet test Motely.Tests/Motely.Tests.csproj --filter "FullyQualifiedName~JamlyzerUnitTests"
-dotnet test Motely.Tests/Motely.Tests.csproj --filter "FullyQualifiedName~JamlyzerUnitTests.AnalyzeSeed_AppliesJamlBeforeAttachingAnalysis"
+dotnet test Motely.Tests/Motely.Tests.csproj"
 
 # Publish CLI (AOT native binary)
 dotnet publish Motely.CLI/Motely.CLI.csproj -c Release
@@ -79,19 +77,19 @@ Analyzes one seed against a JAML doc, returning what it generates per ante. Entr
 
 Local clone at `D:\bootsharp`. **Read these from disk (not GitHub) before touching `Motely.Wasm/Program.cs` or the interop surface.** Every page is `@`-linked — click it.
 
-- @D:\bootsharp\docs\guide\serialization.md — what crosses by value. **Only immutable types (structs, records, read-only collections) are serialized**; everything else is treated as mutable and passed by reference. Scalar marshalling table (`long`→`BigInt`, etc.).
-- @D:\bootsharp\docs\guide\interop-instances.md — the flip side, and the **root cause of the Jimmolate `ref`-surface break**: a **class or interface** on the boundary gets an instance binding, and Bootsharp emits bindings for its **whole public surface**. Putting `MotelySingleSearchContext` on the wire drags in its `GetNext*(ref …Stream)` walkers → `Resolve<…Stream&>` → CS1525 `&`-as-generic-arg (~46×). Cross a serializable result (`MotelySeedAnalysis`), never the live `ctx`.
-- @D:\bootsharp\docs\guide\interop-modules.md — module layout / subpath exports.
-- @D:\bootsharp\docs\guide\renaming.md — the `RenameModule`/`RenameNode` API (`Program.cs:BootsharpRenamers` folds `Motely.*` into `index`, renames `Program`→`Motely`).
-- @D:\bootsharp\docs\guide\declarations.md — `[Export]`/`[Import]`, `partial` import methods, event exports.
-- @D:\bootsharp\docs\guide\sideloading.md — `BootsharpBinariesDirectory` → separate `dist/bin/` files instead of base64 inlining; boot by passing bytes (Node can't `fetch` `file://`).
-@D:\bootsharp\docs\guide\llvm.md — Release = NativeAOT-LLVM, Debug = Mono.
-@D:\bootsharp\docs\guide\specialization.md — generic specialization for AOT.
-@D:\bootsharp\docs\guide\build-config.md — MSBuild knobs / publish properties.
-@D:\bootsharp\docs\guide\getting-started.md — boot lifecycle basics.
-@D:\bootsharp\docs\guide\index.md — overview / entry point.
-@D:\bootsharp\docs\guide\extensions\dependency-injection.md — `AddBootsharp()` DI wiring.
-@D:\bootsharp\docs\guide\extensions\file-system.md — `IFileMounter`/`IFileSystem`/`IFileWatcher` (sponsors-only; wired in `Program.cs`).
+@D:\bootsharp\docs\guide\serialization.md
+@D:\bootsharp\docs\guide\interop-instances.md
+@D:\bootsharp\docs\guide\interop-modules.md
+@D:\bootsharp\docs\guide\renaming.md
+@D:\bootsharp\docs\guide\declarations.md
+@D:\bootsharp\docs\guide\sideloading.md
+@D:\bootsharp\docs\guide\llvm.md
+@D:\bootsharp\docs\guide\specialization.md
+@D:\bootsharp\docs\guide\build-config.md
+@D:\bootsharp\docs\guide\getting-started.md
+@D:\bootsharp\docs\guide\index.md
+@D:\bootsharp\docs\guide\extensions\dependency-injection.md
+@D:\bootsharp\docs\guide\extensions\file-system.md
 
 ### WASM (`Motely.Wasm/` → `motely-wasm/`)
 

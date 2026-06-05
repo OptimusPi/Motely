@@ -39,16 +39,16 @@ public static partial class Program
     private static IServiceProvider services = null!;
     private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(StringComparer.Ordinal);
     private static readonly MotelyFileWatcher FileWatcher = new();
-    private static MotelySeedRouterDesc? _seedRouter;
-
-    [Import]
-    public static partial bool JimmolateProbe(MotelySingleSearchContext ctx);
 
     [Import]
     public static partial void ReportWasmError(string message);
 
-    internal static bool RunJimmolateImport(ref global::Motely.MotelySingleSearchContext ctx) =>
-        JimmolateProbe(ctx);
+    // NOTE: JS-side Jimmolate (the [Import] probe) is intentionally NOT exposed across the WASM
+    // boundary. A serializable `seed => bool` probe can only string-check the raw seed (the
+    // "[0]=='A'" dead end), and crossing the live `ref MotelySingleSearchContext` drags the whole
+    // ref-stream surface into Bootsharp (the CS1525 `&`-as-generic-arg break). Jimmolate stays a
+    // first-class C# feature: set `MotelyWasmInterop.JimmolateSearcher` from C# and `WithJimmolate()`
+    // (below) picks it up. A real JS probe waits on the analyze-from-in-flight-ctx surgery.
 
     [Export]
     public static event Action<MotelyProgress>? OnProgress;
@@ -67,12 +67,6 @@ public static partial class Program
         services = new ServiceCollection()
             .AddBootsharp()
             .BuildServiceProvider();
-    }
-
-    [Export]
-    public static void EnableJimmolate()
-    {
-        MotelyWasmInterop.JimmolateSearcher = RunJimmolateImport;
     }
 
     [Export]
@@ -165,16 +159,6 @@ public static partial class Program
 
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
-
-    // Returns the real MotelySingleSearchContext for (seed, deck, stake) — the same context
-    // C# unit tests use directly. It's a `public partial class`, projected to JS as an instance proxy.
-    [Export]
-    public static MotelySingleSearchContext SeedContext(string seed, MotelyDeck deck, MotelyStake stake)
-    {
-        _seedRouter?.Dispose();
-        _seedRouter = new MotelySeedRouterDesc(seed, deck, stake);
-        return _seedRouter.Instance();
-    }
 
     // ── Search entry points ──
     // WASM has no pthreads, so every Run* call BLOCKS the calling thread until the search completes.
