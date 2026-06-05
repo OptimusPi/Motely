@@ -253,11 +253,10 @@ public static class MotelyJamlyzer
 
     private static MotelyLegacyTextAnalysis BuildSeedAnalysis(string seed, JamlConfig config)
     {
-        var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
-        if (MotelyDefaultAnalyzerJaml.IsDefaultAnalyzerConfig(config))
-            return analysis;
-
-        return MotelyJamlyzerHighlights.Apply(config, analysis);
+        // The JAMLyzer highlight layer was removed in commit b3bc5477 ("Cleanup") — it
+        // operated on the old MotelySeedAnalysis type, which the legacy-analyzer refactor
+        // replaced with MotelyLegacyTextAnalysis. Analyze and return directly.
+        return MotelyLegacyTextAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
     }
 
     private static void RunSearchSynchronously(IMotelySearch search)
