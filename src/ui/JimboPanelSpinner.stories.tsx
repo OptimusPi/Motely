@@ -39,9 +39,9 @@ export const DeckSelector: Story = {
  */
 export const DeckAndStakeSelector: StoryObj = {
   render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+     
     const [deckIdx, setDeckIdx] = useState(0);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+     
     const [stakeIdx, setStakeIdx] = useState(0);
     const deck = DECKS[deckIdx];
     const stake = STAKES[stakeIdx];
