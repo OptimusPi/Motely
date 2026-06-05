@@ -51,8 +51,8 @@ const C = JimboColorOption;
 
 const ZONE_META: Record<JamlZone, { label: string; hint: string; color: string; accent: string }> = {
     must: { label: "Must", hint: "Seed must contain all of these.", color: "#429f79", accent: "#35bd86" },
-    should: { label: "Should", hint: "Bonus points per match.", color: "#ff9800", accent: "#ffb84d" },
-    mustnot: { label: "Must Not", hint: "Rejected if any appear.", color: "#fe5148", accent: "#ff8076" },
+    should: { label: "Should", hint: "Bonus points per match.", color: "#ff9800", accent: "#ff8f00" },
+    mustnot: { label: "Must Not", hint: "Rejected if any appear.", color: "#fe5148", accent: "#fe5148" },
 };
 
 function clauseSpriteSheet(type: string): SpriteSheetType | undefined {

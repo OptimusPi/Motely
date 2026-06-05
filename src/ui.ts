@@ -27,6 +27,7 @@ export * from './ui/jimboStatGrid.js'
 export * from './ui/jimboLayout.js'
 export * from './ui/jimboInset.js'
 export * from './ui/JimboDeckAndStakeSelectorModal.js'
+export * from './ui/JimboPicker.js'
 // Old IDE prototypes — orphaned, statically import motely-wasm + use Vite-only
 // `?worker` syntax. Removed from the public surface so webpack consumers don't
 // transitively bundle motely-wasm. Files left on disk for triage.

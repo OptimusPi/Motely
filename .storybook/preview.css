@@ -10,7 +10,17 @@ body {
 
 #storybook-root {
   background: transparent !important;
-  padding: 24px 0;
+  padding: 0;
+}
+
+/* Center the fixed 320×568 shell in the canvas. No flex: a fixed-size box
+   with inset:0 + margin:auto is centered on both axes. Never fluid. */
+.sb-stage {
+  position: fixed;
+  inset: 0;
+  width: 320px;
+  height: 568px;
+  margin: auto;
 }
 
 .sb-show-main,

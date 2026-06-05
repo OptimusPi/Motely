@@ -5,6 +5,14 @@ import { JokerRarityTier } from "./jokerRarity.js";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboTextInput } from "../../ui/JimboTextInput.js";
+import {
+  JimboPicker,
+  JimboPickerSection,
+  JimboPickerGrid,
+  JimboPickerItem,
+  JimboPickerSearch,
+  JimboPickerEmpty,
+} from "../../ui/JimboPicker.js";
 import { JOKERS, type SpriteEntry } from "../../sprites/spriteData.js";
 import type { SlotSelection } from "./MysterySlot.js";
 
@@ -89,9 +97,8 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
 
   const renderJoker = (joker: SpriteEntry) => {
     return (
-      <div
+      <JimboPickerItem
         key={joker.name}
-        className="j-picker__item j-juice-hover"
         onClick={() => handleSelect(joker)}
         title={joker.name}
       >
@@ -99,20 +106,20 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
         <JimboText size="micro" tone="white" className="j-picker__item-label">
           {joker.name}
         </JimboText>
-      </div>
+      </JimboPickerItem>
     );
   };
 
   return (
-    <div className="j-picker">
-      <div className="j-picker__section">
+    <JimboPicker>
+      <JimboPickerSection>
         <JimboText size="micro" tone="white" className="j-picker__section-title">Legendary</JimboText>
-        <div className="j-picker__grid j-picker__grid--legendary">
+        <JimboPickerGrid legendary>
           {LEGENDARY_LIST.map(renderJoker)}
-        </div>
-      </div>
+        </JimboPickerGrid>
+      </JimboPickerSection>
 
-      <div className="j-picker__search">
+      <JimboPickerSearch>
         <JimboTextInput
           className="j-picker__search-field"
           type="text"
@@ -120,16 +127,16 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-      </div>
+      </JimboPickerSearch>
 
-      <div className="j-picker__grid hide-scrollbar">
+      <JimboPickerGrid scroll>
         {filtered.map(renderJoker)}
         {filtered.length === 0 && (
-          <div className="j-picker__empty">
+          <JimboPickerEmpty>
             <JimboText size="sm" tone="grey">No jokers match "{search}"</JimboText>
-          </div>
+          </JimboPickerEmpty>
         )}
-      </div>
-    </div>
+      </JimboPickerGrid>
+    </JimboPicker>
   );
 }

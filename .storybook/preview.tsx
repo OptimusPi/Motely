@@ -26,19 +26,20 @@ const preview: Preview = {
     }
   },
   decorators: [
-    (Story, { parameters }) => {
-      const { jimboHarness, jimboBackground } = parameters;
-      const content = <Story />;
-      const useHarness = jimboHarness !== false;
-      const showBackground = jimboBackground !== false;
-
-      return (
-        <>
-          {showBackground ? <JimboBackground /> : null}
-          {useHarness ? <JimboApp>{content}</JimboApp> : content}
-        </>
-      );
-    },
+    // One shell, always. The hard-locked 320×568 JimboApp is THE container —
+    // no opt-out, no harness toggle. Centered in the canvas with no flex via
+    // the position:fixed + inset:0 + margin:auto trick (see .sb-stage); the
+    // .j-app (540) and footer (28) stack by normal block flow inside it.
+    (Story) => (
+      <>
+        <JimboBackground />
+        <div className="sb-stage">
+          <JimboApp>
+            <Story />
+          </JimboApp>
+        </div>
+      </>
+    ),
   ],
 };
 
