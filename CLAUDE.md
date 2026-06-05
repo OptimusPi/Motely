@@ -51,7 +51,7 @@ Version is centrally managed via `MotelyVersion` in `Directory.Packages.props`. 
 ### Engine: two parallel simulation paths
 
 - **Vector path** (`MotelyVectorSearchContext.*.cs`) — processes 8 seeds at once using AVX-512. Hot search path.
-- **Scalar path** (`MotelySingleSearchContext.*.cs`) — one seed at a time. Used by JAMLyzer and Jimmolate predicates.
+- **Scalar path** (`MotelySingleSearchContext.*.cs`) — one seed at a time.
 
 Both are split into partial classes per game domain: `.Jokers`, `.Shop`, `.Tarot`, `.Vouchers`, `.Tags`, `.Packs`, `.Planets`, `.Boss`, `.Spectral`, `.StandardCards`, `.Shuffle`, `.Misc`.
 
@@ -60,8 +60,7 @@ PRNG/seed math: `SeedMath.cs`, `LuaRandom.cs` / `VectorLuaRandom.cs`, `MotelyPrn
 A filter is an `IMotelySeedFilterDesc` → `IMotelySeedFilter`; `Filter(ref MotelyVectorSearchContext)` returns a `VectorMask` of which of the 8 lanes passed. `MotelySearch.cs` drives the outer loop.
 
 ### JAML (`Motely/Filters/Jaml/`)
-
-YAML dialect for declarative seed filters. Three clause buckets: `must` (all must match), `should` (scoring), `mustNot` (any match rejects). Values are case-insensitive; unknown root keys are an error.
+`must`/`mustNot` (filters), `should` (scoring)
 
 - Grammar reference: `jaml.schema.jaml`
 - Worked example: `index.jaml`
@@ -70,7 +69,7 @@ YAML dialect for declarative seed filters. Three clause buckets: `must` (all mus
 
 ### Jimmolate (`Motely/Filters/Native/JimmolateFilterDesc.cs`)
 
-Scalar `seed => bool` predicate that runs only on seeds that passed the base vector filter. Exposed to JS via the WASM `jimmolateProbe` callback.
+Scalar `MotelyIndividualSeedSearcher => bool` predicate that runs only on seeds that passed the base vector filter.
 
 ### JAMLyzer (`Motely/Analysis/`)
 
@@ -78,11 +77,25 @@ Analyzes one seed against a JAML doc, returning what it generates per ante. Entr
 
 ### Bootsharp docs
 
-Local clone at `D:\bootsharp`. Docs pages in `D:\bootsharp\docs\guide\`. Fetch from there instead of GitHub.
+Local clone at `D:\bootsharp`. **Read these from disk (not GitHub) before touching `Motely.Wasm/Program.cs` or the interop surface.** Every page is `@`-linked — click it.
+
+- @D:\bootsharp\docs\guide\serialization.md — what crosses by value. **Only immutable types (structs, records, read-only collections) are serialized**; everything else is treated as mutable and passed by reference. Scalar marshalling table (`long`→`BigInt`, etc.).
+- @D:\bootsharp\docs\guide\interop-instances.md — the flip side, and the **root cause of the Jimmolate `ref`-surface break**: a **class or interface** on the boundary gets an instance binding, and Bootsharp emits bindings for its **whole public surface**. Putting `MotelySingleSearchContext` on the wire drags in its `GetNext*(ref …Stream)` walkers → `Resolve<…Stream&>` → CS1525 `&`-as-generic-arg (~46×). Cross a serializable result (`MotelySeedAnalysis`), never the live `ctx`.
+- @D:\bootsharp\docs\guide\interop-modules.md — module layout / subpath exports.
+- @D:\bootsharp\docs\guide\renaming.md — the `RenameModule`/`RenameNode` API (`Program.cs:BootsharpRenamers` folds `Motely.*` into `index`, renames `Program`→`Motely`).
+- @D:\bootsharp\docs\guide\declarations.md — `[Export]`/`[Import]`, `partial` import methods, event exports.
+- @D:\bootsharp\docs\guide\sideloading.md — `BootsharpBinariesDirectory` → separate `dist/bin/` files instead of base64 inlining; boot by passing bytes (Node can't `fetch` `file://`).
+@D:\bootsharp\docs\guide\llvm.md — Release = NativeAOT-LLVM, Debug = Mono.
+@D:\bootsharp\docs\guide\specialization.md — generic specialization for AOT.
+@D:\bootsharp\docs\guide\build-config.md — MSBuild knobs / publish properties.
+@D:\bootsharp\docs\guide\getting-started.md — boot lifecycle basics.
+@D:\bootsharp\docs\guide\index.md — overview / entry point.
+@D:\bootsharp\docs\guide\extensions\dependency-injection.md — `AddBootsharp()` DI wiring.
+@D:\bootsharp\docs\guide\extensions\file-system.md — `IFileMounter`/`IFileSystem`/`IFileWatcher` (sponsors-only; wired in `Program.cs`).
 
 ### WASM (`Motely.Wasm/` → `motely-wasm/`)
 
-Compiled to `browser-wasm` via Bootsharp (version `0.8.1-motely.0`). Release publishes automatically use NativeAOT-LLVM; debug builds use Mono (faster compile, larger output).
+Compiled to `browser-wasm` via Bootsharp (version `0.8.0`, the public release — released 2026-06-01). Release publishes automatically use NativeAOT-LLVM; debug builds use Mono (faster compile, larger output).
 
 **Module layout** — `BootsharpRenamers` in `Program.cs` folds every `Motely.*` namespace into the `index` module and renames the `Program` node to `Motely`. The root barrel (`index.g.mjs`) is empty — use the package's subpath exports (`./*` → `./dist/generated/modules/*.g.mjs`):
 
