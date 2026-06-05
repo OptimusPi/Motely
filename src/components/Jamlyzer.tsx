@@ -1,15 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Motely,
-  type MotelyJamlyzerResult,
-  type MotelyJamlyzerSeedResult,
-  MotelyBossBlind,
-  MotelyVoucher,
-  MotelyTag,
-  MotelyBoosterPack
-} from "motely-wasm";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { MotelyJamlyzerResult, MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
+import { MotelyBossBlind, MotelyVoucher, MotelyTag, MotelyBoosterPack } from "motely-wasm/motely/enums";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { JimboInnerPanel, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";

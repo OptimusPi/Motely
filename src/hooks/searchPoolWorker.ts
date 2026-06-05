@@ -5,16 +5,10 @@
 // hook is responsible for partitioning the input space and assigning each worker
 // a disjoint slice via the fields on PoolStartMessage. This worker just runs
 // what it is told.
-import {
-    Motely,
-    type IMotelySearch,
-    type MotelyProgress,
-    type MotelyScoredSeedResult,
-    type MotelyDeck,
-    type MotelyStake,
-    type JamlAesthetic,
-    type JamlConfig
-} from "motely-wasm";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+import type { JamlAesthetic, JamlConfig } from "motely-wasm/motely/filters/jaml";
 import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;

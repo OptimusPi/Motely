@@ -1,13 +1,9 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import {
-    Motely,
-    type IMotelySearch,
-    type MotelyProgress,
-    type MotelyScoredSeedResult,
-    type JamlAesthetic
-} from "motely-wasm";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import { ensureMotelyReady, setJimmolateProbe, clearJimmolateProbe } from "../lib/motely/runtime.js";
 
 export interface SearchResult {

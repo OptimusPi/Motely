@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Motely, type IMotelySearch, type MotelyProgress, type MotelyScoredSeedResult, MotelyDeck, MotelyStake } from "motely-wasm";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { JimboApp, JimboAppScroll } from "../ui/jimboApp.js";
 import { JimboPanel, JimboButton } from "../ui/panel.js";

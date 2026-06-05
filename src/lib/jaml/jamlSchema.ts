@@ -1,10 +1,9 @@
+import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
 import {
-  MotelyDeck,
-  MotelyStake,
   MotelyItemEdition,
   MotelyItemSeal,
   MotelyItemEnhancement,
-} from 'motely-wasm';
+} from "../motely/motelyCompatEnums.js";
 
 const enumNames = (e: Record<string, string | number>): readonly string[] =>
   Object.keys(e).filter(k => isNaN(Number(k)));

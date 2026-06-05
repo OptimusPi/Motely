@@ -27,11 +27,16 @@ Subpath exports:
 
 ## Integration facts
 
-- **`motely-wasm` is a peer dependency** (`>=19.0.2`) — the AOT/SIMD seed engine.
-  The consuming app boots it once; jaml-ui uses the booted `Motely`.
+- **`motely-wasm` is a peer dependency** (`>=19.4.0`) — the AOT/SIMD seed engine.
+  The consuming app boots it once; jaml-ui uses the booted engine. As of 19.4.0
+  the engine API is split across subpath exports: the old `Motely` namespace is
+  now `Program` (imported from `motely-wasm/motely/wasm`), enums live under
+  `motely-wasm/motely/enums`, types under `motely-wasm/motely`, and JAML/aesthetic
+  types under `motely-wasm/motely/filters/jaml`.
 - **Validation is delegated to the engine, not done here:** call
-  `Motely.validateJaml(jaml)` (returns `"valid"` or an error string). jaml-ui
-  ships no JSON-schema validator of its own.
+  `Motely.parseJaml(jaml)` (the `Program` namespace) — it throws on invalid JAML,
+  otherwise returns the parsed config. jaml-ui ships no JSON-schema validator of
+  its own. (19.4.0 removed the old `validateJaml` string API.)
 - **YAML parsing:** `js-yaml` for full parses; CodeMirror `@codemirror/lang-yaml`
   for editor highlighting; lightweight line parsers in `src/utils/` for the
   visual preview (kept dependency-free on purpose).
@@ -54,3 +59,8 @@ values here — pull them from `motely-wasm`.
   schema or drop it from `files`.
 - Don't hand-roll Balatro item names or sprites — use the `core` exports
   (`JOKERS`, `VOUCHERS`, `TAGS`, sprite maps) so names stay in sync with the engine.
+- **`src/lib/motely/motelyCompatEnums.ts`** vendors the item/joker enums
+  (`MotelyItemEdition`/`Seal`/`Enhancement`, `MotelyStandardcardRank`/`Suit`,
+  `MotelyJoker*`) verbatim from motely-wasm 19.1.1, because 19.4.0 *removed* them.
+  The decoder relies on their exact numeric values for the packed-item bit layout.
+  Delete the shim and re-import from the engine if motely-wasm re-exposes them.

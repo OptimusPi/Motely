@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Motely } from "motely-wasm";
+import { Program as Motely } from "motely-wasm/motely/wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { IFileMounter, PermissionMode } from "motely-wasm/bootsharp/file-system";
 

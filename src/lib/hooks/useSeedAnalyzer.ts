@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Motely as MotelyNamespace } from "motely-wasm";
-import type { MotelyJamlyzerSeedResult } from "motely-wasm";
+import { type Program as MotelyNamespace } from "motely-wasm/motely/wasm";
+import type { MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
 
 type MotelyApi = typeof MotelyNamespace;
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
-import { MotelyJoker, MotelyJokerCommon, MotelyJokerUncommon, MotelyJokerRare } from "motely-wasm";
+import { MotelyJoker, MotelyJokerCommon, MotelyJokerUncommon, MotelyJokerRare } from "../../lib/motely/motelyCompatEnums.js";
 import { JokerRarityTier } from "./jokerRarity.js";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
