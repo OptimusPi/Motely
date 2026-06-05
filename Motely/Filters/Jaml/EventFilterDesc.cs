@@ -251,18 +251,19 @@ public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateWheelOfFortuneStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextWheelOfFortune(ref stream);
-                    var edition = sctx.GetNextWheelOfFortune(ref stream);
+                        sctx.GetNextWheelOfFortune(ref stream, luck);
+                    var edition = sctx.GetNextWheelOfFortune(ref stream, luck);
                     return ~VectorEnum256.Equals(edition, MotelyItemEdition.None);
                 },
                 ref stream
@@ -286,18 +287,19 @@ public struct CavendishExtinctFilterDesc(CavendishExtinctClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateCavendishPrngStream(false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextCavendishExtinct(ref stream);
-                    return sctx.GetNextCavendishExtinct(ref stream);
+                        sctx.GetNextCavendishExtinct(ref stream, luck);
+                    return sctx.GetNextCavendishExtinct(ref stream, luck);
                 },
                 ref stream
             );
@@ -321,18 +323,19 @@ public struct GrosMichelExtinctFilterDesc(GrosMichelExtinctClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateGrosMichelPrngStream(false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextGrosMichelExtinct(ref stream);
-                    return sctx.GetNextGrosMichelExtinct(ref stream);
+                        sctx.GetNextGrosMichelExtinct(ref stream, luck);
+                    return sctx.GetNextGrosMichelExtinct(ref stream, luck);
                 },
                 ref stream
             );
@@ -355,18 +358,19 @@ public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateSpacePrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextSpaceLevelup(ref stream);
-                    return sctx.GetNextSpaceLevelup(ref stream);
+                        sctx.GetNextSpaceLevelup(ref stream, luck);
+                    return sctx.GetNextSpaceLevelup(ref stream, luck);
                 },
                 ref stream
             );
@@ -389,18 +393,19 @@ public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateBusinessPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBusinessPayout(ref stream);
-                    return sctx.GetNextBusinessPayout(ref stream);
+                        sctx.GetNextBusinessPayout(ref stream, luck);
+                    return sctx.GetNextBusinessPayout(ref stream, luck);
                 },
                 ref stream
             );
@@ -424,18 +429,19 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateBloodstonePrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBloodstoneTrigger(ref stream);
-                    return sctx.GetNextBloodstoneTrigger(ref stream);
+                        sctx.GetNextBloodstoneTrigger(ref stream, luck);
+                    return sctx.GetNextBloodstoneTrigger(ref stream, luck);
                 },
                 ref stream
             );
@@ -458,18 +464,19 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateParkingPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextParkingPayout(ref stream);
-                    return sctx.GetNextParkingPayout(ref stream);
+                        sctx.GetNextParkingPayout(ref stream, luck);
+                    return sctx.GetNextParkingPayout(ref stream, luck);
                 },
                 ref stream
             );
@@ -492,18 +499,19 @@ public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateGlassPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextGlassDestroy(ref stream);
-                    return sctx.GetNextGlassDestroy(ref stream);
+                        sctx.GetNextGlassDestroy(ref stream, luck);
+                    return sctx.GetNextGlassDestroy(ref stream, luck);
                 },
                 ref stream
             );
@@ -527,18 +535,19 @@ public struct WheelStaysFlippedFilterDesc(WheelStaysFlippedClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateTheWheelPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
+                (
                     ref MotelyVectorSearchContext sctx,
                     ref MotelyVectorPrngStream stream,
                     int rollIndex
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextWheelStaysFlipped(ref stream);
-                    return sctx.GetNextWheelStaysFlipped(ref stream);
+                        sctx.GetNextWheelStaysFlipped(ref stream, luck);
+                    return sctx.GetNextWheelStaysFlipped(ref stream, luck);
                 },
                 ref stream
             );

@@ -856,18 +856,21 @@ public static partial class JamlConfigLoader
     {
         if (eventType is null)
             throw new NotSupportedException("Event clause is missing event type name.");
-        bool isLuckyEvent = eventType is MotelyEventType.LuckyMoney or MotelyEventType.LuckyMult;
+        // Oops! All 6s doubles every "listed probability" in Balatro, so `luck` modifies
+        // any probabilistic event. MisprintMult is the lone exception: it rolls a value
+        // range, not a probability, so there is nothing for luck to scale.
+        bool supportsLuck = eventType is not MotelyEventType.MisprintMult;
         if (hasUserSpecifiedAntes)
             throw new NotSupportedException(
                 "Event clauses do not support 'antes'. Remove 'antes' from the event clause, enclosing logic block, or defaults section."
             );
-        if (hasExplicitSources && !isLuckyEvent)
+        if (hasExplicitSources && !supportsLuck)
             throw new NotSupportedException(
-                "Event clauses do not support 'sources'. Remove the sources block from the event clause."
+                "This event clause does not support 'sources'. Remove the sources block from the event clause."
             );
-        if (hasExplicitSources && isLuckyEvent && luck is null)
+        if (hasExplicitSources && supportsLuck && luck is null)
             throw new NotSupportedException(
-                "Lucky event sources only support 'luck'. Remove other keys from the sources block."
+                "Event sources only support 'luck'. Remove other keys from the sources block."
             );
 
         int resolvedLuck = luck ?? 1;
@@ -909,6 +912,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.CavendishExtinct => new CavendishExtinctClause
@@ -917,6 +921,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.GrosMichelExtinct => new GrosMichelExtinctClause
@@ -925,6 +930,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.SpaceLevelup => new SpaceLevelupClause
@@ -933,6 +939,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.BusinessPayout => new BusinessPayoutClause
@@ -941,6 +948,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.BloodstoneTrigger => new BloodstoneTriggerClause
@@ -949,6 +957,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.ParkingPayout => new ParkingPayoutClause
@@ -957,6 +966,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.GlassDestroy => new GlassDestroyClause
@@ -965,6 +975,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.WheelStaysFlipped => new WheelStaysFlippedClause
@@ -973,6 +984,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             _ => throw new NotSupportedException($"Unsupported event type: {eventType}"),
