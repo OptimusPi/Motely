@@ -1,4 +1,8 @@
+using System.Collections.Generic;
+using Motely;
 using Motely.Analysis;
+using Motely.Enums;
+using Xunit;
 
 namespace Motely.Tests;
 

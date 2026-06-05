@@ -121,6 +121,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
     IMotelySearchSettings WithJimmolate();
+    IMotelySearchSettings WithJimmolate(MotelyIndividualSeedSearcher searcher);
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -336,6 +337,10 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         WithAutoScoreCutoff(enabled);
 
     IMotelySearchSettings IMotelySearchSettings.WithJimmolate() => WithJimmolate();
+
+    IMotelySearchSettings IMotelySearchSettings.WithJimmolate(
+        MotelyIndividualSeedSearcher searcher
+    ) => WithJimmolate(searcher);
 
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
@@ -1010,6 +1015,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     {
         public const int MAX_SEED_WAIT_MS = 314;
 
+        // Auto-cutoff rate gate (see AutoCutoffState). Evaluated once per batch.
+        // Engage the monotonic-max clamp only when raw matches arrive faster than this;
+        // below it there's no interop pressure, so report everything. Conservative defaults,
+        // tunable. The window keeps the rate estimate stable across a single batch's jitter.
+        private const long AUTO_CUTOFF_GATE_WINDOW_MS = 250;
+        private const long AUTO_CUTOFF_ENGAGE_RATE_PER_SEC = 2000;
+
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
 
@@ -1147,6 +1159,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
 
+                // Re-evaluate the per-thread auto-cutoff rate gate for the next batch.
+                if (Search._autoScoreCutoff)
+                    UpdateAutoCutoffGate();
+
                 // Report progress
                 Search.PrintReport();
             }
@@ -1163,6 +1179,29 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
             }
+        }
+
+        // Per-thread auto-cutoff rate gate. Measures the RAW match rate (candidates seen
+        // before the clamp) over a short window and engages the monotonic-max clamp only
+        // while that rate would pressure the scored-result callback (costly across the WASM
+        // interop boundary). Rare searches never engage and report every match. No locking:
+        // each plan owns its own AutoCutoffState. A single threshold is safe because the raw
+        // rate is independent of whether the clamp is engaged, so it cannot oscillate.
+        private void UpdateAutoCutoffGate()
+        {
+            long nowMs = Search._elapsedTime.ElapsedMilliseconds;
+            long windowMs = nowMs - _autoCutoffState.LastGateMs;
+            if (windowMs < AUTO_CUTOFF_GATE_WINDOW_MS)
+                return;
+
+            long windowMatches =
+                _autoCutoffState.RawMatches - _autoCutoffState.LastGateRawMatches;
+            long ratePerSec = windowMatches * 1000 / windowMs;
+
+            _autoCutoffState.Engaged = ratePerSec >= AUTO_CUTOFF_ENGAGE_RATE_PER_SEC;
+
+            _autoCutoffState.LastGateMs = nowMs;
+            _autoCutoffState.LastGateRawMatches = _autoCutoffState.RawMatches;
         }
 
         internal abstract void SearchProviderBatch();
@@ -1279,13 +1318,22 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     if (Search._autoScoreCutoff)
                     {
                         int score = _resultBuffer[lane].Score;
-                        if (score < _autoCutoffState.LearnedCutoff)
+
+                        // Count every scored candidate BEFORE the clamp — this is the raw
+                        // match rate that drives the gate (see UpdateAutoCutoffGate).
+                        _autoCutoffState.RawMatches++;
+
+                        // Clamp only while engaged: drop anything below the running max.
+                        if (_autoCutoffState.Engaged && score < _autoCutoffState.LearnedCutoff)
                         {
                             _autoCutoffState.SeedsFiltered++;
                             continue;
                         }
 
-                        _autoCutoffState.LearnedCutoff = score;
+                        // Only ever raise the bar. (While disengaged we report low scores
+                        // too, so a plain assign here would wrongly lower the running max.)
+                        if (score > _autoCutoffState.LearnedCutoff)
+                            _autoCutoffState.LearnedCutoff = score;
                     }
 
                     Search._scoredResultCallback?.Invoke(_resultBuffer[lane]);
