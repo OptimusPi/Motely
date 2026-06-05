@@ -1,4 +1,6 @@
-import bootsharp, { Motely } from "motely-wasm";
+import bootsharp from "motely-wasm";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { MotelySingleSearchContext } from "motely-wasm/motely";
 
 export type MotelyRuntimeStatus = "idle" | "booting" | "ready" | "error";
 
@@ -14,9 +16,13 @@ export type MotelyRuntimeStatus = "idle" | "booting" | "ready" | "error";
 // before any ensureMotelyReady()/boot() call) and swap the inner predicate per
 // search via setJimmolateProbe(). enableJimmolate() is a C# [Export], so calling it
 // after boot is fine — only this [Import] must be pre-bound.
-type JimmolateProbe = typeof Motely.jimmolateProbe;
+// motely-wasm 19.4.0 changed the probe to receive a search context instead of
+// (seed, deck, stake). We keep the inner predicate contract identical for all
+// callers and bridge to the new ctx shape in this one place.
+type JimmolateProbe = (seed: string, deck: number, stake: number) => boolean;
 let currentProbe: JimmolateProbe = () => true;
-Motely.jimmolateProbe = (seed, deck, stake) => currentProbe(seed, deck, stake);
+Motely.jimmolateProbe = (ctx: MotelySingleSearchContext) =>
+    currentProbe(ctx.getSeed(), ctx.deck, ctx.stake);
 
 /** Swap the active Jimmolate predicate. Safe before or after boot. */
 export function setJimmolateProbe(pred: JimmolateProbe): void {

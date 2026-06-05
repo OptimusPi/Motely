@@ -5,7 +5,7 @@ import {
   MotelyItemEnhancement,
   MotelyStandardcardRank,
   MotelyStandardcardSuit,
-} from "motely-wasm";
+} from "../lib/motely/motelyCompatEnums.js";
 
 type MotelyItemCategoryName = "Standardcard" | "SpectralCard" | "TarotCard" | "PlanetCard" | "Joker" | "Invalid";
 
@@ -171,21 +171,21 @@ function isStickerSet(input: MotelyItemInput, bitOffset: number): boolean {
 
 export function motelyItemEditionName(input: MotelyItemInput): "Foil" | "Holographic" | "Polychrome" | "Negative" | null {
   if (input == null) return null;
-  const val = typeof input === "number" ? (((input >>> 23) & 0x7) as MotelyItemEdition) : input.edition;
+  const val = typeof input === "number" ? (((input >>> 23) & 0x7) as MotelyItemEdition) : (input.edition as MotelyItemEdition);
   if (val == null || val === MotelyItemEdition.None) return null;
   return EDITIONS[val] as "Foil" | "Holographic" | "Polychrome" | "Negative";
 }
 
 export function motelyItemSealName(input: MotelyItemInput): "Gold" | "Red" | "Blue" | "Purple" | null {
   if (input == null) return null;
-  const val = typeof input === "number" ? (((input >>> 16) & 0x7) as MotelyItemSeal) : input.seal;
+  const val = typeof input === "number" ? (((input >>> 16) & 0x7) as MotelyItemSeal) : (input.seal as MotelyItemSeal);
   if (val == null || val === MotelyItemSeal.None) return null;
   return SEALS[val] as "Gold" | "Red" | "Blue" | "Purple";
 }
 
 export function motelyItemEnhancementName(input: MotelyItemInput): string | null {
   if (input == null) return null;
-  const val = typeof input === "number" ? (((input >>> 19) & 0xF) as MotelyItemEnhancement) : input.enhancement;
+  const val = typeof input === "number" ? (((input >>> 19) & 0xF) as MotelyItemEnhancement) : (input.enhancement as MotelyItemEnhancement);
   if (val == null || val === MotelyItemEnhancement.None) return null;
   return ENHANCEMENTS[val] ?? null;
 }
@@ -194,7 +194,7 @@ export function motelyItemEnhancementName(input: MotelyItemInput): string | null
 export function motelyStandardcardRankName(input: MotelyItemInput): string | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
-  const val = typeof input === "number" ? ((input & 0xF) as MotelyStandardcardRank) : input.rank;
+  const val = typeof input === "number" ? ((input & 0xF) as MotelyStandardcardRank) : (input.rank as MotelyStandardcardRank);
   if (val == null) return null;
   return RANKS[val] ?? null;
 }
@@ -202,7 +202,7 @@ export function motelyStandardcardRankName(input: MotelyItemInput): string | nul
 export function motelyStandardcardSuitName(input: MotelyItemInput): "Clubs" | "Diamonds" | "Hearts" | "Spades" | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
-  const val = typeof input === "number" ? (((input >>> 4) & 0x3) as MotelyStandardcardSuit) : input.suit;
+  const val = typeof input === "number" ? (((input >>> 4) & 0x3) as MotelyStandardcardSuit) : (input.suit as MotelyStandardcardSuit);
   if (val == null) return null;
   return SUITS[val] ?? null;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Motely, type JamlAesthetic } from "motely-wasm";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import type {
     PoolInboundMessage,

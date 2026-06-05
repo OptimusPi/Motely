@@ -1,6 +1,6 @@
 "use client";
 
-import { JamlAesthetic } from "motely-wasm";
+import { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import { JimboBadge } from "../ui/JimboBadge.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
 
@@ -10,7 +10,7 @@ import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
 // defines — always an engine value, never a hardcoded index. This adopts native
 // `Echo` automatically once it lands, with no further change needed here.
 const ENGINE_AESTHETIC = JamlAesthetic as unknown as Record<string, JamlAesthetic | undefined>;
-const ECHO_AESTHETIC: JamlAesthetic = ENGINE_AESTHETIC.Echo ?? JamlAesthetic.Psychosis;
+const ECHO_AESTHETIC: JamlAesthetic = ENGINE_AESTHETIC.Echo ?? JamlAesthetic.Echo;
 
 const AESTHETICS: { id: JamlAesthetic; label: string; desc: string }[] = [
   { id: JamlAesthetic.Palindrome, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
