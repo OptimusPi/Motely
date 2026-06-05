@@ -5,6 +5,15 @@ import { JimboSprite } from "../../ui/sprites.js";
 import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboTextInput } from "../../ui/JimboTextInput.js";
+import {
+  JimboPicker,
+  JimboPickerGrid,
+  JimboPickerItem,
+  JimboPickerSearch,
+  JimboPickerEmpty,
+  JimboPickerHint,
+  JimboPickerPair,
+} from "../../ui/JimboPicker.js";
 import type { SpriteEntry } from "../../sprites/spriteData.js";
 import type { SpriteSheetType } from "../../sprites/spriteMapper.js";
 import type { SlotSelection, SlotCategory } from "./MysterySlot.js";
@@ -71,23 +80,22 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
   );
 
   const renderItem = (item: SpriteEntry, isMuted = false) => (
-    <div
+    <JimboPickerItem
       key={item.name}
-      className="j-picker__item j-juice-hover"
       onClick={() => handleSelect(item)}
       title={item.name}
-      data-muted={isMuted}
+      muted={isMuted}
     >
       <JimboSprite name={item.name} sheet={config.sheet} width={48} />
       <JimboText size="micro" tone="white" className="j-picker__item-label">
         {item.name}
       </JimboText>
-    </div>
+    </JimboPickerItem>
   );
 
   return (
-    <div className="j-picker">
-      <div className="j-picker__search">
+    <JimboPicker>
+      <JimboPickerSearch>
         <JimboTextInput
           className="j-picker__search-field"
           type="text"
@@ -95,23 +103,23 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-      </div>
+      </JimboPickerSearch>
 
       {config.hint && (
-        <div className="j-inner-panel j-picker__hint">
+        <JimboPickerHint>
           <JimboText size="xs" tone="grey">
             {config.hint}
           </JimboText>
-        </div>
+        </JimboPickerHint>
       )}
 
-      <div className="j-picker__grid hide-scrollbar">
+      <JimboPickerGrid scroll>
         {config.category === "voucher" && pairedVouchers ? (
           pairedVouchers.map((pair) => (
-            <div key={pair.base.name} className="j-picker__pair">
+            <JimboPickerPair key={pair.base.name}>
               {renderItem(pair.base, search ? !pair.base.name.toLowerCase().includes(search.toLowerCase()) : false)}
               {pair.upgrade && renderItem(pair.upgrade, search ? !pair.upgrade.name.toLowerCase().includes(search.toLowerCase()) : false)}
-            </div>
+            </JimboPickerPair>
           ))
         ) : (
           filtered.map((item) => renderItem(item))
@@ -119,12 +127,12 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
 
         {((config.category === "voucher" && pairedVouchers?.length === 0) ||
           (config.category !== "voucher" && filtered.length === 0)) && (
-            <div className="j-picker__empty">
+            <JimboPickerEmpty>
               <JimboText size="sm" tone="grey">No matches for "{search}"</JimboText>
-            </div>
+            </JimboPickerEmpty>
           )}
-      </div>
-    </div>
+      </JimboPickerGrid>
+    </JimboPicker>
   );
 }
 

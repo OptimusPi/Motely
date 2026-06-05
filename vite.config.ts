@@ -39,6 +39,15 @@ export default defineConfig({
       tsconfigPath: "./tsconfig.json",
     }),
   ],
+  // Worker bundles do NOT inherit the top-level `external` list, so the WASM
+  // engine (statically imported by searchPoolWorker) would otherwise get
+  // inlined — ~30 MB. Externalize the peers here too to keep the contract.
+  worker: {
+    format: "es",
+    rollupOptions: {
+      external: PEER_EXTERNALS,
+    },
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,
