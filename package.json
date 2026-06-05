@@ -43,7 +43,6 @@
     "fonts.css",
     "dist/ui/jimbo.css",
     "README.md",
-    "DESIGN.md",
     "LICENSE"
   ],
   "scripts": {
