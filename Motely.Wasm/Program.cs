@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bootsharp;
 using Bootsharp.FileSystem;
@@ -11,7 +12,6 @@ using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
 using Motely.SeedProviders;
-using System.Text.Json;
 
 namespace Motely.Wasm;
 
@@ -24,7 +24,10 @@ internal static class BootsharpRenamers
     public static string RenameModule(Type type, string @default)
     {
         var ns = type.Namespace ?? "";
-        return ns == "Motely" || ns == "Motely.Wasm" || ns.StartsWith("Motely.", StringComparison.Ordinal)
+        return
+            ns == "Motely"
+            || ns == "Motely.Wasm"
+            || ns.StartsWith("Motely.", StringComparison.Ordinal)
             ? "index"
             : @default;
     }
@@ -37,18 +40,29 @@ internal static class BootsharpRenamers
 public static partial class Program
 {
     private static IServiceProvider services = null!;
-    private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, IFileSystem> MountedFileSystems = new(
+        StringComparer.Ordinal
+    );
     private static readonly MotelyFileWatcher FileWatcher = new();
 
     [Import]
-    public static partial void ReportWasmError(string message);
+    public static partial void ReportWasmError(string message); // TODO this doesnt seem right
 
-    // NOTE: JS-side Jimmolate (the [Import] probe) is intentionally NOT exposed across the WASM
-    // boundary. A serializable `seed => bool` probe can only string-check the raw seed (the
-    // "[0]=='A'" dead end), and crossing the live `ref MotelySingleSearchContext` drags the whole
-    // ref-stream surface into Bootsharp (the CS1525 `&`-as-generic-arg break). Jimmolate stays a
-    // first-class C# feature: set `MotelyWasmInterop.JimmolateSearcher` from C# and `WithJimmolate()`
-    // (below) picks it up. A real JS probe waits on the analyze-from-in-flight-ctx surgery.
+    // JS → C# scalar predicate. Assigned in JS as `Motely.jimmolateProbe = (ctx) => bool`
+    // before boot. Runs per surviving lane after the SIMD pass; return true to keep the seed.
+    // `MotelySingleSearchContext` is a class, so it crosses as a Bootsharp interop instance.
+    [Import]
+    public static partial bool JimmolateProbe(MotelySingleSearchContext ctx);
+
+    // Gate for the probe: a bare unassigned [Import] throws when invoked, so consumers set
+    // this true after wiring `jimmolateProbe`. When false, the Jimmolate filter is not attached.
+    [Export]
+    public static bool JimmolateEnabled { get; set; }
+
+    // Adapts the JS probe to the per-lane delegate. The context is a class; forward the
+    // reference straight through — no `ref` needed at the JS seam.
+    private static readonly MotelyIndividualSeedSearcher JimmolateSearcher =
+        (ref MotelySingleSearchContext ctx) => JimmolateProbe(ctx);
 
     [Export]
     public static event Action<MotelyProgress>? OnProgress;
@@ -64,9 +78,7 @@ public static partial class Program
 
     public static void Main()
     {
-        services = new ServiceCollection()
-            .AddBootsharp()
-            .BuildServiceProvider();
+        services = new ServiceCollection().AddBootsharp().BuildServiceProvider();
     }
 
     [Export]
@@ -126,9 +138,14 @@ public static partial class Program
     [Export]
     public static string JsonToJaml(string json)
     {
-        var doc = JsonSerializer.Deserialize<JamlRootDocument>(json, JamlJsonContext.Default.JamlRootDocument);
+        var doc = JsonSerializer.Deserialize<JamlRootDocument>(
+            json,
+            JamlJsonContext.Default.JamlRootDocument
+        );
         if (doc is null)
-            throw new InvalidOperationException("Failed to deserialize JamlRootDocument from JSON.");
+            throw new InvalidOperationException(
+                "Failed to deserialize JamlRootDocument from JSON."
+            );
         return JamlConfigLoader.SerializeRoot(doc);
     }
 
@@ -143,9 +160,7 @@ public static partial class Program
 
     [Export]
     public static string ExplainJaml(JamlConfig config) =>
-        config.Must.Count != 0
-        || config.Should.Count != 0
-        || config.MustNot.Count != 0
+        config.Must.Count != 0 || config.Should.Count != 0 || config.MustNot.Count != 0
             ? JamlSearchBuilder.ExplainPlan(config)
             : "";
 
@@ -171,9 +186,11 @@ public static partial class Program
         long startBatchIndex = 0,
         long endBatchIndex = long.MaxValue,
         int batchCharacterCount = 4,
-        long progressReportIntervalMs = 500)
+        long progressReportIntervalMs = 500
+    )
     {
-        var settings = JamlSearchBuilder.CreateSettings(config)
+        var settings = JamlSearchBuilder
+            .CreateSettings(config)
             .WithSequentialSearch()
             .WithStartBatchIndex(startBatchIndex)
             .WithEndBatchIndex(endBatchIndex)
@@ -190,9 +207,13 @@ public static partial class Program
     public static IMotelySearch RunSeedListSearch(JamlConfig config)
     {
         if (config.Seeds.Count == 0)
-            throw new InvalidOperationException("JamlConfig.Seeds is empty; populate it before calling RunSeedListSearch.");
+            throw new InvalidOperationException(
+                "JamlConfig.Seeds is empty; populate it before calling RunSeedListSearch."
+            );
         var seeds = config.Seeds.ToArray();
-        return RunSearch(JamlSearchBuilder.CreateSettings(config).WithListSearch(seeds, seeds.Length));
+        return RunSearch(
+            JamlSearchBuilder.CreateSettings(config).WithListSearch(seeds, seeds.Length)
+        );
     }
 
     [Export]
@@ -206,20 +227,24 @@ public static partial class Program
             throw new ArgumentException(
                 $"Unknown native filter '{filterName}'. Known: {string.Join(", ", MotelyNativeFilterNames.DisplayNames)}"
             );
-        return RunSearch(MotelyNativeFilterFactory.CreateSettings(filter).WithListSearch(seeds, seeds.Length));
+        return RunSearch(
+            MotelyNativeFilterFactory.CreateSettings(filter).WithListSearch(seeds, seeds.Length)
+        );
     }
 
     [Export]
     public static IMotelySearch RunPassthroughListSearch(string[] seeds) =>
-        RunSearch(new global::Motely.MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
-            new PassthroughFilterDesc()
-        ).WithListSearch(seeds, seeds.Length));
+        RunSearch(
+            new global::Motely.MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+                new PassthroughFilterDesc()
+            ).WithListSearch(seeds, seeds.Length)
+        );
 
     private static IMotelySearch RunSearch(IMotelySearchSettings settings)
     {
         settings = AttachWasmCallbacks(settings).WithThreadCount(1);
-        if (MotelyWasmInterop.JimmolateSearcher is not null)
-            settings = settings.WithJimmolate();
+        if (JimmolateEnabled)
+            settings = settings.WithJimmolate(JimmolateSearcher);
 
         // WASM + threadCount=1: Start() pokes through the pthread path and runs the search
         // synchronously on the calling thread. By the time it returns, the search is done —
@@ -239,5 +264,4 @@ public static partial class Program
             );
         return settings;
     }
-
 }

@@ -156,7 +156,7 @@ public static partial class MotelyLegacyTextAnalyzer
         {
             MotelyLegacyTextAnalyzerFilterDesc filterDesc = new();
 
-            var searchSettings = new MotelySearchSettings<MotelyLegacyTextAnalyzerFilterDesc.AnalyzerFilter>(
+            var searchSettings = new MotelySearchSettings<MotelyLegacyTextAnalyzerFilterDesc.LegacyTextAnalyzerFilter>(
                 filterDesc
             )
                 .WithDeck(cfg.Deck)

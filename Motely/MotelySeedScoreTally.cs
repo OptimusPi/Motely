@@ -96,18 +96,24 @@ public struct MotelySeedScoreTally : IMotelySeedScores
 }
 
 // Per-plan (= per-thread) box for auto-cutoff state. Heap allocation so the scorer's
-// inner lambda can capture by reference and update plain int fields without Interlocked.
+// inner lambda can capture by reference and update plain fields without Interlocked.
 // Each thread owns its own instance — no sharing, no contention. Multi-threaded CLI
 // tolerates per-thread divergence in LearnedCutoff (eventually converges as threads
 // see high scores) in exchange for zero locking on the hot path.
+//
+// The cutoff is RATE-GATED: the monotonic-max clamp only engages while the raw match
+// rate is high enough to pressure the (expensive, in WASM) scored-result callback. When
+// matches are rare there is no interop pressure, so the clamp stays off and every match
+// is reported. Engaged is driven off RawMatches (counted BEFORE the clamp), so engaging
+// the clamp never lowers the signal that drives it — no oscillation, single threshold.
 public sealed class AutoCutoffState
 {
     public int LearnedCutoff;
     public long SeedsFiltered;
-    public long StartTime;
 
-    public AutoCutoffState()
-    {
-        StartTime = DateTime.UtcNow.Ticks;
-    }
+    // Rate gate (per-thread, no locking).
+    public bool Engaged;
+    public long RawMatches; // scored candidates seen, counted before the clamp
+    public long LastGateRawMatches; // RawMatches at the last gate evaluation
+    public long LastGateMs; // elapsed ms at the last gate evaluation
 }
