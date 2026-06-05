@@ -21,11 +21,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+     
     const [open, setOpen] = useState(true);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+     
     const [deck, setDeck] = useState('Erratic');
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+     
     const [stake, setStake] = useState('Gold');
     return (
       <JimboApp>
