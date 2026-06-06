@@ -15,7 +15,7 @@ public struct MotelySinglePlanetStream(
     public readonly bool IsBlackHoleable => !BlackHolePrngStream.IsInvalid;
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySinglePlanetStream CreatePlanetStream(
@@ -93,7 +93,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
             }
         }
 
-        MotelyItemType planet =
+        MotelyItemType Planet =
             (MotelyItemType)MotelyItemTypeCategory.PlanetCard
             | (MotelyItemType)GetNextRandomInt(
                 ref planetStream.ResampleStream.InitialPrngStream,
@@ -105,12 +105,12 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
         while (true)
         {
-            if (!itemSet.Contains(planet))
+            if (!itemSet.Contains(Planet))
             {
-                return planet;
+                return Planet;
             }
 
-            planet =
+            Planet =
                 (MotelyItemType)MotelyItemTypeCategory.PlanetCard
                 | (MotelyItemType)GetNextRandomInt(
                     ref GetResamplePrngStream(

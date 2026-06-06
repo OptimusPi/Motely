@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Enums;
 
 /// <summary>
 /// Types of items that can be filtered in searches

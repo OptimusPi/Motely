@@ -17,10 +17,7 @@ public struct VectorMask(uint mask)
     public bool this[int i]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        readonly get
-        {
-            return (Value & (1 << i)) != 0;
-        }
+        readonly get { return (Value & (1 << i)) != 0; }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set
         {

@@ -3,16 +3,15 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
-public sealed class ErraticSuitClause : IJamlClause
+public sealed class ErraticSuitClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyStandardcardSuit Suit { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public required MotelyStandardcardSuit Suit { get; set; }
+
+    public override int EstimatedCost => 4 + MaxAnte;
+
+    public override string Describe() => $"erraticSuit {Suit}";
 }
 
 public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
@@ -30,9 +29,7 @@ public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
     {
         private readonly ErraticSuitClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;

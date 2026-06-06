@@ -76,7 +76,7 @@ ref partial struct MotelyVectorSearchContext
         Debug.Assert(tarotStream.IsSoulable, "Tarot pack does not have the soul.");
         Debug.Assert(
             tarotStream.ResampleStream.IsInvalid,
-            "This method is only valid for tarot streams created with soul only."
+            "This method is only valid for Tarot streams created with soul only."
         );
 
         int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
@@ -111,7 +111,7 @@ ref partial struct MotelyVectorSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyVectorItemSet GetNextEmperorTarots(ref MotelyVectorTarotStream tarotStream)
     {
-        Debug.Assert(!tarotStream.IsSoulable, "Emperor tarot stream should not have the soul.");
+        Debug.Assert(!tarotStream.IsSoulable, "Emperor Tarot stream should not have the soul.");
 
         MotelyVectorItemSet items = new();
 
@@ -140,15 +140,15 @@ ref partial struct MotelyVectorSearchContext
         itemTypePoll -= Vector512.Create(20.0); // Skip joker range
         var isTarotSlot = Vector512.LessThan(itemTypePoll, tarotRate);
 
-        // Only advance tarot stream for tarot slots
-        var tarot = GetNextTarot(ref tarotStream, isTarotSlot);
+        // Only advance Tarot stream for Tarot slots
+        var Tarot = GetNextTarot(ref tarotStream, isTarotSlot);
 
-        // Return tarot or None for non-tarot slots
+        // Return Tarot or None for non-Tarot slots
         var tarotIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isTarotSlot);
         var noneItem = Vector256<int>.Zero;
 
         return new MotelyItemVector(
-            Vector256.ConditionalSelect(tarotIntMask, tarot.Value, noneItem)
+            Vector256.ConditionalSelect(tarotIntMask, Tarot.Value, noneItem)
         );
     }
 
@@ -303,12 +303,14 @@ ref partial struct MotelyVectorSearchContext
 
         for (int i = 0; i < cardCount; i++)
         {
-            var tarot = GetNextTarot(ref tarotStream);
-            // Extract tarot card type using bit masking (similar to StandardcardSuit pattern)
+            var Tarot = GetNextTarot(ref tarotStream);
+            // Extract Tarot card type using bit masking (similar to StandardcardSuit pattern)
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
-                    tarot.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Tarot.Value,
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(tarotType, targetTarot);
@@ -333,12 +335,14 @@ ref partial struct MotelyVectorSearchContext
 
         for (int i = 0; i < cardCount; i++)
         {
-            var tarot = GetNextTarot(ref tarotStream);
-            // Extract tarot card type using bit masking (similar to StandardcardSuit pattern)
+            var Tarot = GetNextTarot(ref tarotStream);
+            // Extract Tarot card type using bit masking (similar to StandardcardSuit pattern)
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
-                    tarot.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Tarot.Value,
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
 

@@ -1,17 +1,18 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-namespace Motely.Filters;
 
-public sealed class TarotCardClause : IJamlClause
+namespace Motely.Filters.Jaml;
+
+public sealed class TarotCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyTarotCard[] Tarots { get; init; }
-    public TarotCardSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public required MotelyTarotCard[] Tarots { get; set; }
+    public TarotCardSourceConfig Sources { get; set; } = new();
+
+    public override int EstimatedCost => 7 + MaxAnte;
+
+    public override string Describe() =>
+        $"Tarot {string.Join(", ", System.Array.ConvertAll(Tarots, static t => t.ToString()))}";
 }
 
 public struct TarotCardFilterDesc(TarotCardClause clause)
@@ -72,9 +73,7 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         private readonly int _maxEmperor = maxEmperor;
         private readonly int _maxPurpleSeal = maxPurpleSeal;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Tarots.Length > 0);

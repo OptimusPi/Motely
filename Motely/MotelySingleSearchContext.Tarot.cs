@@ -16,7 +16,7 @@ public struct MotelySingleTarotStream(
     public readonly bool IsSoulable => !SoulPrngStream.IsInvalid;
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySingleTarotStream CreateTarotStream(
@@ -66,7 +66,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
         Debug.Assert(tarotStream.IsSoulable, "Tarot pack does not have the soul.");
         Debug.Assert(
             tarotStream.ResampleStream.IsInvalid,
-            "This method is only valid for tarot streams created with soul only."
+            "This method is only valid for Tarot streams created with soul only."
         );
 
         int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
@@ -99,7 +99,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public (MotelyItem, MotelyItem) GetNextEmperorTarots(ref MotelySingleTarotStream tarotStream)
     {
-        Debug.Assert(!tarotStream.IsSoulable, "Emperor tarot stream should not have the soul.");
+        Debug.Assert(!tarotStream.IsSoulable, "Emperor Tarot stream should not have the soul.");
 
         MotelyItem firstTarot = GetNextTarot(ref tarotStream);
         MotelyItem secondTarot = GetNextTarot(ref tarotStream, new(firstTarot));
@@ -149,7 +149,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
             return new(MotelyItemType.TarotExcludedByStream);
         }
 
-        MotelyItemType tarot =
+        MotelyItemType Tarot =
             (MotelyItemType)MotelyItemTypeCategory.TarotCard
             | (MotelyItemType)GetNextRandomInt(
                 ref tarotStream.ResampleStream.InitialPrngStream,
@@ -160,12 +160,12 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
         while (true)
         {
-            if (!itemSet.Contains(tarot))
+            if (!itemSet.Contains(Tarot))
             {
-                return tarot;
+                return Tarot;
             }
 
-            tarot =
+            Tarot =
                 (MotelyItemType)MotelyItemTypeCategory.TarotCard
                 | (MotelyItemType)GetNextRandomInt(
                     ref GetResamplePrngStream(

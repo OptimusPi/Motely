@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely;
+namespace Motely.Filters.Native;
 
 public struct NegativeTagFilterDesc()
     : IMotelySeedFilterDesc<NegativeTagFilterDesc.NegativeTagFilter>

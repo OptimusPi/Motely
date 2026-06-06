@@ -20,12 +20,4 @@
     <!-- Native AOT / WASM: source-generated YAML accessors (replaces reflection in DeserializerBuilder) -->
     <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
   </ItemGroup>
-
-  <!-- MotelyWasmHost uses Bootsharp.FileSystem types and is compiled in Motely.Wasm instead. -->
-  <ItemGroup>
-    <Compile Remove="MotelyWasmHost.cs" />
-  </ItemGroup>
-
-
-
 </Project>

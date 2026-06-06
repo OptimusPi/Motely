@@ -25,7 +25,7 @@ public enum MotelyStandardCardStreamFlags
     Default = 0,
 }
 
-public partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     public MotelySingleStandardCardStream CreateStandardPackCardStream(
         int ante,

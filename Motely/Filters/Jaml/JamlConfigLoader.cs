@@ -7,13 +7,38 @@ using System.Text.RegularExpressions;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 // ────────────────────────────── Loader ──────────────────────────────
 
 public static partial class JamlConfigLoader
 {
     private static readonly int[] DefaultAntes = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    public static bool TryParseRoot(
+        string jaml,
+        [NotNullWhen(true)] out JamlRootDocument? doc,
+        out string? error
+    )
+    {
+        doc = null;
+        error = null;
+        if (string.IsNullOrWhiteSpace(jaml))
+        {
+            error = "JAML content is required.";
+            return false;
+        }
+        try
+        {
+            var normalizedJaml = NormalizeNestedLogicSyntax(jaml);
+            return TryParseRootFromYaml(normalizedJaml, out doc, out error);
+        }
+        catch (Exception ex)
+        {
+            error = FormatLoadError(ex);
+            return false;
+        }
+    }
 
     public static bool TryLoad(
         string jaml,
@@ -36,8 +61,7 @@ public static partial class JamlConfigLoader
             if (!TryParseRootFromYaml(normalizedJaml, out var load, out error) || load is null)
             {
                 config = null;
-                if (error == null)
-                    error = "JAML document could not be parsed.";
+                error ??= "JAML document could not be parsed.";
                 return false;
             }
 
@@ -60,7 +84,6 @@ public static partial class JamlConfigLoader
                 Stake = stake,
             };
 
-            config.Hashtags = NormalizeHashtags(load.Hashtags);
             config.Seeds = NormalizeSeeds(load.Seeds);
 
             // MUST → required filters
@@ -90,7 +113,8 @@ public static partial class JamlConfigLoader
         string jaml,
         [NotNullWhen(true)] out JamlConfig? config,
         out string? error,
-        out Exception? exception)
+        out Exception? exception
+    )
     {
         exception = null;
         config = null;
@@ -107,13 +131,18 @@ public static partial class JamlConfigLoader
             var normalizedJaml = NormalizeNestedLogicSyntax(jaml);
             if (!TryParseRootFromYaml(normalizedJaml, out var load, out error) || load is null)
             {
-                if (error == null) error = "JAML document could not be parsed.";
+                if (error == null)
+                    error = "JAML document could not be parsed.";
                 return false;
             }
 
             var defaultAntes = load.Defaults?.Antes ?? DefaultAntes;
-            var deck = Enum.TryParse<MotelyDeck>(load.Deck, true, out var deckEnum) ? deckEnum : MotelyDeck.Red;
-            var stake = Enum.TryParse<MotelyStake>(load.Stake, true, out var stakeEnum) ? stakeEnum : MotelyStake.White;
+            var deck = Enum.TryParse<MotelyDeck>(load.Deck, true, out var deckEnum)
+                ? deckEnum
+                : MotelyDeck.Red;
+            var stake = Enum.TryParse<MotelyStake>(load.Stake, true, out var stakeEnum)
+                ? stakeEnum
+                : MotelyStake.White;
 
             config = new JamlConfig
             {
@@ -140,7 +169,7 @@ public static partial class JamlConfigLoader
 
     /// <summary>
     /// Rewrites nested <c>and:</c> / <c>or:</c> blocks that use <c>clauses:</c> plus shared keys
-    /// (<c>antes</c>, <c>label</c>, <c>mode</c>, <c>score</c>, …) into the flat shape <see cref="JamlClauseDto"/> expects.
+    /// (<c>antes</c>, <c>label</c>, <c>mode</c>, <c>score</c>, …) into the flat shape <see cref="JamlClauseUnion"/> expects.
     /// Hoisted keys become siblings of <c>and</c>/<c>or</c> so <see cref="CreateClauseFromDto"/> passes shared <c>antes</c> into each child.
     /// </summary>
     private static string NormalizeNestedLogicSyntax(string jaml)
@@ -175,7 +204,10 @@ public static partial class JamlConfigLoader
                 foreach (var child in sequence.Children)
                     ApplyPrimitiveSequenceFlowStyle(child);
 
-                if (sequence.Children.Count > 0 && sequence.Children.All(static c => c is YamlScalarNode))
+                if (
+                    sequence.Children.Count > 0
+                    && sequence.Children.All(static c => c is YamlScalarNode)
+                )
                     sequence.Style = YamlDotNet.Core.Events.SequenceStyle.Flow;
                 break;
         }
@@ -227,9 +259,9 @@ public static partial class JamlConfigLoader
     }
 
     private static bool ContainsYamlKey(YamlMappingNode mapping, string key) =>
-        mapping.Children.Keys.OfType<YamlScalarNode>().Any(node =>
-            string.Equals(node.Value, key, StringComparison.OrdinalIgnoreCase)
-        );
+        mapping
+            .Children.Keys.OfType<YamlScalarNode>()
+            .Any(node => string.Equals(node.Value, key, StringComparison.OrdinalIgnoreCase));
 
     private static bool TryGetYamlChild(
         YamlMappingNode mapping,
@@ -240,8 +272,10 @@ public static partial class JamlConfigLoader
     {
         foreach (var child in mapping.Children)
         {
-            if (child.Key is YamlScalarNode scalarNode
-                && string.Equals(scalarNode.Value, key, StringComparison.OrdinalIgnoreCase))
+            if (
+                child.Key is YamlScalarNode scalarNode
+                && string.Equals(scalarNode.Value, key, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 keyNode = scalarNode;
                 valueNode = child.Value;
@@ -261,9 +295,10 @@ public static partial class JamlConfigLoader
         if (ex is YamlException yamlEx)
         {
             var mark = yamlEx.Start;
-            var location = mark.Line > 0 && mark.Column > 0
-                ? $"on line {mark.Line}, col {mark.Column}: "
-                : string.Empty;
+            var location =
+                mark.Line > 0 && mark.Column > 0
+                    ? $"on line {mark.Line}, col {mark.Column}: "
+                    : string.Empty;
 
             var unknownPropertyMatch = Regex.Match(
                 message,
@@ -284,23 +319,29 @@ public static partial class JamlConfigLoader
         return message;
     }
 
-    private static string DescribeYamlTarget(string targetType) =>
-        targetType switch
-        {
-            "Motely.Filters.JamlRootDocument" => "the top-level JAML document",
-            "Motely.Filters.JamlClauseDto" => "a clause",
-            "Motely.Filters.JamlSourcesDto" => "a clause's sources block",
-            "Motely.Filters.JamlDefaultsDto" => "the defaults block",
-            _ => $"{targetType}",
-        };
+    private static string DescribeYamlTarget(string targetType)
+    {
+        var shortName = targetType.Contains('.')
+            ? targetType[(targetType.LastIndexOf('.') + 1)..]
+            : targetType;
 
-    // ── Clause list population — adds directly to typed lists or logic clauses ──
+        return shortName switch
+        {
+            "JamlRootDocument" => "the top-level JAML document",
+            "JamlClauseUnion" => "a clause",
+            "JamlSources" => "a clause's sources block",
+            "JamlDefaults" => "the defaults block",
+            "StandardCardValue" => "a standardCard value",
+            "StandardCardConfig" => "a standardCard mapping",
+            _ => targetType,
+        };
+    }
 
     private static void PopulateClauses(
-        JamlClauseSet set,
-        List<JamlClauseDto>? clauses,
+        List<IJamlClause> clausesOut,
+        List<JamlClauseUnion>? clauses,
         int[] defaultAntes,
-        JamlDefaultsDto? defaults
+        JamlDefaults? defaults
     )
     {
         if (clauses == null || clauses.Count == 0)
@@ -314,117 +355,14 @@ public static partial class JamlConfigLoader
                 defaults,
                 inheritedAntesSpecifiedByUser
             );
-            AddClauseToSet(set, clause);
-        }
-    }
-
-    private static void AddClauseToSet(JamlClauseSet set, IJamlClause clause)
-    {
-        set.OrderedClauses.Add(clause);
-
-        switch (clause)
-        {
-            case JokerClause c:
-                set.Jokers.Add(c);
-                break;
-            case CommonJokerClause c:
-                set.CommonJokers.Add(c);
-                break;
-            case UncommonJokerClause c:
-                set.UncommonJokers.Add(c);
-                break;
-            case RareJokerClause c:
-                set.RareJokers.Add(c);
-                break;
-            case LegendaryJokerClause c:
-                set.LegendaryJokers.Add(c);
-                break;
-            case VoucherClause c:
-                set.Vouchers.Add(c);
-                break;
-            case TarotCardClause c:
-                set.TarotCards.Add(c);
-                break;
-            case SpectralCardClause c:
-                set.SpectralCards.Add(c);
-                break;
-            case PlanetCardClause c:
-                set.PlanetCards.Add(c);
-                break;
-            case BossClause c:
-                set.Bosses.Add(c);
-                break;
-            case TagClause c:
-                set.Tags.Add(c);
-                break;
-            case StandardCardClause c:
-                set.StandardCards.Add(c);
-                break;
-            case ErraticRankClause c:
-                set.ErraticRanks.Add(c);
-                break;
-            case ErraticSuitClause c:
-                set.ErraticSuits.Add(c);
-                break;
-            case ErraticCardClause c:
-                set.ErraticCards.Add(c);
-                break;
-            case LuckyMoneyClause c:
-                set.LuckyMoney.Add(c);
-                break;
-            case LuckyMultClause c:
-                set.LuckyMult.Add(c);
-                break;
-            case MisprintMultClause c:
-                set.MisprintMult.Add(c);
-                break;
-            case WheelOfFortuneClause c:
-                set.WheelOfFortune.Add(c);
-                break;
-            case CavendishExtinctClause c:
-                set.CavendishExtinct.Add(c);
-                break;
-            case GrosMichelExtinctClause c:
-                set.GrosMichelExtinct.Add(c);
-                break;
-            case SpaceLevelupClause c:
-                set.SpaceLevelup.Add(c);
-                break;
-            case BusinessPayoutClause c:
-                set.BusinessPayout.Add(c);
-                break;
-            case BloodstoneTriggerClause c:
-                set.BloodstoneTrigger.Add(c);
-                break;
-            case ParkingPayoutClause c:
-                set.ParkingPayout.Add(c);
-                break;
-            case GlassDestroyClause c:
-                set.GlassDestroy.Add(c);
-                break;
-            case WheelStaysFlippedClause c:
-                set.WheelStaysFlipped.Add(c);
-                break;
-            case StartingDrawClause c:
-                set.StartingDraw.Add(c);
-                break;
-            case AndClause c:
-                set.And.Add(c);
-                break;
-            case OrClause c:
-                set.Or.Add(c);
-                break;
-            default:
-                throw new NotSupportedException(
-                    $"Unsupported clause type: {clause.GetType().Name}"
-                );
+            clausesOut.Add(clause);
         }
     }
 
     private static IJamlClause CreateClauseFromDto(
-        JamlClauseDto c,
+        JamlClauseUnion c,
         int[] defaultAntes,
-        JamlDefaultsDto? defaults,
+        JamlDefaults? defaults,
         bool inheritedAntesSpecifiedByUser
     )
     {
@@ -474,8 +412,10 @@ public static partial class JamlConfigLoader
                 Label = label,
                 Score = score,
                 Max = max,
-                Clauses = c.Clauses
-                    .Select(sub => CreateClauseFromDto(sub, antes, defaults, hasUserSpecifiedAntes))
+                Clauses = c
+                    .Clauses.Select(sub =>
+                        CreateClauseFromDto(sub, antes, defaults, hasUserSpecifiedAntes)
+                    )
                     .ToArray(),
             };
         }
@@ -494,7 +434,8 @@ public static partial class JamlConfigLoader
                 .Range(minShop.Value, maxShop.Value - minShop.Value + 1)
                 .ToArray();
 
-        NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, c.Sources);
+        bool hasExplicitSources = c.Sources != null;
+        NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, hasExplicitSources);
 
         var (shRank, shSuit) = ParseCardShorthand(value ?? "");
 
@@ -508,26 +449,24 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 IsWildcard = c.Joker?.IsAny ?? false,
-                Jokers =
-                    c.Joker is { IsAny: false, Value: var jv }
-                        ? [jv]
-                        : c.Jokers?.ToArray() ?? [],
+                Jokers = c.Joker is { IsAny: false, Value: var jv }
+                    ? [jv]
+                    : c.Jokers?.ToArray() ?? [],
                 Edition = edition,
                 Stickers = c.Stickers ?? [],
                 Sources = new JokerSourceConfig
                 {
                     ShopItems = shopItems ?? [],
                     BoosterPacks = boosterPacks ?? [],
-                    Judgement = c.Sources?.Judgement ?? [],
-                    Wraith = c.Sources?.Wraith ?? [],
+                    Judgement = c.Judgement ?? c.Sources?.Judgement ?? [],
+                    Wraith = c.Wraith ?? c.Sources?.Wraith ?? [],
                     RiffRaff = c.Sources?.RiffRaff ?? [],
-                    RareTag = c.Sources?.RareTag ?? [],
-                    UncommonTag = c.Sources?.UncommonTag ?? [],
+                    RareTag = c.RareTag ?? c.Sources?.RareTag ?? [],
+                    UncommonTag = c.UncommonTag ?? c.Sources?.UncommonTag ?? [],
                     CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
                 LegendarySources = CreateLegendaryJokerSources(
                     shopItems,
@@ -536,7 +475,7 @@ public static partial class JamlConfigLoader
                     c.Sources?.SpectralPacks,
                     c.Sources?.SoulCard,
                     c.Sources?.RequireMega ?? false,
-                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack
+                    hasExplicitSources
                 ),
             },
             MotelyFilterItemType.CommonJoker => new CommonJokerClause
@@ -547,26 +486,24 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 IsWildcard = c.CommonJoker?.IsAny ?? false,
-                Jokers =
-                    c.CommonJoker is { IsAny: false, Value: var cjv }
-                        ? [cjv]
-                        : c.CommonJokers?.ToArray() ?? [],
+                Jokers = c.CommonJoker is { IsAny: false, Value: var cjv }
+                    ? [cjv]
+                    : c.CommonJokers?.ToArray() ?? [],
                 Edition = edition,
                 Stickers = c.Stickers ?? [],
                 Sources = new JokerSourceConfig
                 {
                     ShopItems = shopItems ?? [],
                     BoosterPacks = boosterPacks ?? [],
-                    Judgement = c.Sources?.Judgement ?? [],
-                    Wraith = c.Sources?.Wraith ?? [],
+                    Judgement = c.Judgement ?? c.Sources?.Judgement ?? [],
+                    Wraith = c.Wraith ?? c.Sources?.Wraith ?? [],
                     RiffRaff = c.Sources?.RiffRaff ?? [],
-                    RareTag = c.Sources?.RareTag ?? [],
-                    UncommonTag = c.Sources?.UncommonTag ?? [],
+                    RareTag = c.RareTag ?? c.Sources?.RareTag ?? [],
+                    UncommonTag = c.UncommonTag ?? c.Sources?.UncommonTag ?? [],
                     CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.UncommonJoker => new UncommonJokerClause
@@ -577,26 +514,24 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 IsWildcard = c.UncommonJoker?.IsAny ?? false,
-                Jokers =
-                    c.UncommonJoker is { IsAny: false, Value: var ujv }
-                        ? [ujv]
-                        : c.UncommonJokers?.ToArray() ?? [],
+                Jokers = c.UncommonJoker is { IsAny: false, Value: var ujv }
+                    ? [ujv]
+                    : c.UncommonJokers?.ToArray() ?? [],
                 Edition = edition,
                 Stickers = c.Stickers ?? [],
                 Sources = new JokerSourceConfig
                 {
                     ShopItems = shopItems ?? [],
                     BoosterPacks = boosterPacks ?? [],
-                    Judgement = c.Sources?.Judgement ?? [],
-                    Wraith = c.Sources?.Wraith ?? [],
+                    Judgement = c.Judgement ?? c.Sources?.Judgement ?? [],
+                    Wraith = c.Wraith ?? c.Sources?.Wraith ?? [],
                     RiffRaff = c.Sources?.RiffRaff ?? [],
-                    RareTag = c.Sources?.RareTag ?? [],
-                    UncommonTag = c.Sources?.UncommonTag ?? [],
+                    RareTag = c.RareTag ?? c.Sources?.RareTag ?? [],
+                    UncommonTag = c.UncommonTag ?? c.Sources?.UncommonTag ?? [],
                     CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.RareJoker => new RareJokerClause
@@ -607,26 +542,24 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 IsWildcard = c.RareJoker?.IsAny ?? false,
-                Jokers =
-                    c.RareJoker is { IsAny: false, Value: var rjv }
-                        ? [rjv]
-                        : c.RareJokers?.ToArray() ?? [],
+                Jokers = c.RareJoker is { IsAny: false, Value: var rjv }
+                    ? [rjv]
+                    : c.RareJokers?.ToArray() ?? [],
                 Edition = edition,
                 Stickers = c.Stickers ?? [],
                 Sources = new JokerSourceConfig
                 {
                     ShopItems = shopItems ?? [],
                     BoosterPacks = boosterPacks ?? [],
-                    Judgement = c.Sources?.Judgement ?? [],
-                    Wraith = c.Sources?.Wraith ?? [],
+                    Judgement = c.Judgement ?? c.Sources?.Judgement ?? [],
+                    Wraith = c.Wraith ?? c.Sources?.Wraith ?? [],
                     RiffRaff = c.Sources?.RiffRaff ?? [],
-                    RareTag = c.Sources?.RareTag ?? [],
-                    UncommonTag = c.Sources?.UncommonTag ?? [],
+                    RareTag = c.RareTag ?? c.Sources?.RareTag ?? [],
+                    UncommonTag = c.UncommonTag ?? c.Sources?.UncommonTag ?? [],
                     CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.MixedJoker => new MixedJokerClause
@@ -637,26 +570,24 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 IsWildcard = c.Joker?.IsAny ?? false,
-                Jokers =
-                    c.Joker is { IsAny: false, Value: var mjv }
-                        ? [mjv]
-                        : c.Jokers?.ToArray() ?? [],
+                Jokers = c.Joker is { IsAny: false, Value: var mjv }
+                    ? [mjv]
+                    : c.Jokers?.ToArray() ?? [],
                 Edition = edition,
                 Stickers = c.Stickers ?? [],
                 Sources = new JokerSourceConfig
                 {
                     ShopItems = shopItems ?? [],
                     BoosterPacks = boosterPacks ?? [],
-                    Judgement = c.Sources?.Judgement ?? [],
-                    Wraith = c.Sources?.Wraith ?? [],
+                    Judgement = c.Judgement ?? c.Sources?.Judgement ?? [],
+                    Wraith = c.Wraith ?? c.Sources?.Wraith ?? [],
                     RiffRaff = c.Sources?.RiffRaff ?? [],
-                    RareTag = c.Sources?.RareTag ?? [],
-                    UncommonTag = c.Sources?.UncommonTag ?? [],
+                    RareTag = c.RareTag ?? c.Sources?.RareTag ?? [],
+                    UncommonTag = c.UncommonTag ?? c.Sources?.UncommonTag ?? [],
                     CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
                     UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
                     RareShopJokers = c.Sources?.RareShopJokers ?? [],
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.LegendaryJoker => new LegendaryJokerClause
@@ -667,10 +598,9 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 IsWildcard = c.LegendaryJoker?.IsAny ?? false,
-                Jokers =
-                    c.LegendaryJoker is { IsAny: false, Value: var lgv }
-                        ? [ToMotelyJoker(lgv)]
-                        : c.LegendaryJokers?.Select(ToMotelyJoker).ToArray() ?? [],
+                Jokers = c.LegendaryJoker is { IsAny: false, Value: var lgv }
+                    ? [ToMotelyJoker(lgv)]
+                    : c.LegendaryJokers?.Select(ToMotelyJoker).ToArray() ?? [],
                 Edition = edition,
                 SoulCardOnly = c.SoulCardOnly ?? false,
                 SoulEditionRolls = c.SoulEditionRolls ?? 0,
@@ -681,7 +611,7 @@ public static partial class JamlConfigLoader
                     c.Sources?.SpectralPacks,
                     c.Sources?.SoulCard,
                     c.Sources?.RequireMega ?? false,
-                    c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack
+                    hasExplicitSources
                 ),
             },
             MotelyFilterItemType.Voucher => new VoucherClause
@@ -691,10 +621,13 @@ public static partial class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Max = max,
-                Vouchers =
-                    c.Voucher is { } v
-                        ? [v]
-                        : c.Vouchers?.ToArray() ?? [],
+                Vouchers = c.Voucher is { } v ? [v] : c.Vouchers?.ToArray() ?? [],
+                Rolls = ResolveMapRolls(
+                    c.Rolls,
+                    [0],
+                    maxRoll: MotelyGlobals.MaxMapVoucherRollIndex,
+                    "voucher"
+                ),
             },
             MotelyFilterItemType.TarotCard => new TarotCardClause
             {
@@ -703,10 +636,7 @@ public static partial class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Max = max,
-                Tarots =
-                    c.TarotCard is { } t
-                        ? [t]
-                        : c.TarotCards?.ToArray() ?? [],
+                Tarots = c.TarotCard is { } t ? [t] : c.TarotCards?.ToArray() ?? [],
                 Sources = new TarotCardSourceConfig
                 {
                     ShopItems = shopItems ?? [],
@@ -714,7 +644,6 @@ public static partial class JamlConfigLoader
                     Emperor = c.Sources?.Emperor ?? [],
                     PurpleSealOrEightBall = c.Sources?.PurpleSealOrEightBall ?? [],
                     CharmTag = c.Sources?.CharmTag ?? false,
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.SpectralCard => new SpectralCardClause
@@ -724,10 +653,7 @@ public static partial class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Max = max,
-                Spectrals =
-                    c.SpectralCard is { } sp
-                        ? [sp]
-                        : c.SpectralCards?.ToArray() ?? [],
+                Spectrals = c.SpectralCard is { } sp ? [sp] : c.SpectralCards?.ToArray() ?? [],
                 Sources = new SpectralCardSourceConfig
                 {
                     ShopItems = shopItems ?? [],
@@ -735,7 +661,6 @@ public static partial class JamlConfigLoader
                     SixthSense = c.Sources?.SixthSense ?? [],
                     Seance = c.Sources?.Seance ?? [],
                     EtherealTag = c.Sources?.EtherealTag ?? false,
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.PlanetCard => new PlanetCardClause
@@ -750,7 +675,6 @@ public static partial class JamlConfigLoader
                 {
                     ShopItems = shopItems ?? [],
                     BoosterPacks = boosterPacks ?? [],
-                    EarlyAntesMaxPack = c.Sources?.EarlyAntesMaxPack ?? MotelyGlobals.DefaultEarlyAntesMaxPack,
                 },
             },
             MotelyFilterItemType.Boss => new BossClause
@@ -761,29 +685,40 @@ public static partial class JamlConfigLoader
                 Min = min,
                 Max = max,
                 Bosses = c.Boss is { } b ? [b] : [],
+                Rolls = ResolveMapRolls(
+                    c.Rolls,
+                    [0],
+                    maxRoll: MotelyGlobals.MaxMapBossRollIndex,
+                    "boss"
+                ),
             },
-            MotelyFilterItemType.SmallBlindTag => new TagClause
-            {
-                Label = label,
-                Score = score,
-                Antes = antes,
-                Min = min,
-                Max = max,
-                Tags = (c.Tag ?? c.SmallBlindTag) is { } sbt ? [sbt] : [],
-                Position = c.Tag != null
-                    ? TagPosition.Any
-                    : TagPosition.SmallBlind,
-            },
-            MotelyFilterItemType.BigBlindTag => new TagClause
-            {
-                Label = label,
-                Score = score,
-                Antes = antes,
-                Min = min,
-                Max = max,
-                Tags = c.BigBlindTag is { } bbt ? [bbt] : [],
-                Position = TagPosition.BigBlind,
-            },
+            MotelyFilterItemType.SmallBlindTag => CreateTagClause(
+                label,
+                score,
+                antes,
+                min,
+                max,
+                ResolveMapRolls(
+                    c.Rolls,
+                    c.Tag != null || c.Tags != null ? [0, 1] : [0],
+                    maxRoll: MotelyGlobals.MaxMapTagRollIndex,
+                    "tag"
+                ),
+                c.SmallBlindTags,
+                c.Tags,
+                c.SmallBlindTag,
+                c.Tag
+            ),
+            MotelyFilterItemType.BigBlindTag => CreateTagClause(
+                label,
+                score,
+                antes,
+                min,
+                max,
+                ResolveMapRolls(c.Rolls, [1], maxRoll: MotelyGlobals.MaxMapTagRollIndex, "tag"),
+                c.BigBlindTags,
+                singlePrimary: c.BigBlindTag
+            ),
             MotelyFilterItemType.Standardcard => new StandardCardClause
             {
                 Label = label,
@@ -799,12 +734,21 @@ public static partial class JamlConfigLoader
                 Sources = new StandardCardSourceConfig
                 {
                     ShopItems = c.StandardCard?.ObjectValue?.Sources?.ShopItems ?? shopItems ?? [],
-                    BoosterPacks = c.StandardCard?.ObjectValue?.Sources?.BoosterPacks ?? boosterPacks ?? [],
-                    Certificate = c.StandardCard?.ObjectValue?.Sources?.Certificate ?? c.Sources?.Certificate ?? [],
-                    Incantation = c.StandardCard?.ObjectValue?.Sources?.Incantation ?? c.Sources?.Incantation ?? [],
-                    Familiar = c.StandardCard?.ObjectValue?.Sources?.Familiar ?? c.Sources?.Familiar ?? [],
+                    BoosterPacks =
+                        c.StandardCard?.ObjectValue?.Sources?.BoosterPacks ?? boosterPacks ?? [],
+                    Certificate =
+                        c.StandardCard?.ObjectValue?.Sources?.Certificate
+                        ?? c.Sources?.Certificate
+                        ?? [],
+                    Incantation =
+                        c.StandardCard?.ObjectValue?.Sources?.Incantation
+                        ?? c.Sources?.Incantation
+                        ?? [],
+                    Familiar =
+                        c.StandardCard?.ObjectValue?.Sources?.Familiar ?? c.Sources?.Familiar ?? [],
                     Grim = c.StandardCard?.ObjectValue?.Sources?.Grim ?? c.Sources?.Grim ?? [],
-                    DeckDraw = c.StandardCard?.ObjectValue?.Sources?.DeckDraw ?? c.Sources?.DeckDraw ?? [],
+                    DeckDraw =
+                        c.StandardCard?.ObjectValue?.Sources?.DeckDraw ?? c.Sources?.DeckDraw ?? [],
                 },
             },
             MotelyFilterItemType.ErraticRank => new ErraticRankClause
@@ -850,18 +794,20 @@ public static partial class JamlConfigLoader
             MotelyFilterItemType.Event => CreateEventClause(
                 ResolveEventType(c),
                 ResolveEventRolls(c),
+                c.Sources?.Luck,
                 min,
                 score,
                 max,
                 label,
-                hasUserSpecifiedAntes
+                hasUserSpecifiedAntes,
+                hasExplicitSources
             ),
             _ => throw new NotSupportedException($"Unsupported clause type: {itemType}"),
         };
     }
 
     private static ErraticCardClause CreateErraticCardClause(
-        JamlClauseDto c,
+        JamlClauseUnion c,
         string? value,
         int[] antes,
         int min,
@@ -896,23 +842,40 @@ public static partial class JamlConfigLoader
         throw new NotSupportedException("ErraticCard clause requires both Rank and Suit.");
     }
 
-
-    private static IRollClause CreateEventClause(
+    private static RollClause CreateEventClause(
         MotelyEventType? eventType,
         int[]? rolls,
+        int? luck,
         int min,
         int score,
         int? max,
         string label,
-        bool hasUserSpecifiedAntes
+        bool hasUserSpecifiedAntes,
+        bool hasExplicitSources
     )
     {
         if (eventType is null)
             throw new NotSupportedException("Event clause is missing event type name.");
+        // Oops! All 6s doubles every "listed probability" in Balatro, so `luck` modifies
+        // any probabilistic event. MisprintMult is the lone exception: it rolls a value
+        // range, not a probability, so there is nothing for luck to scale.
+        bool supportsLuck = eventType is not MotelyEventType.MisprintMult;
         if (hasUserSpecifiedAntes)
             throw new NotSupportedException(
                 "Event clauses do not support 'antes'. Remove 'antes' from the event clause, enclosing logic block, or defaults section."
             );
+        if (hasExplicitSources && !supportsLuck)
+            throw new NotSupportedException(
+                "This event clause does not support 'sources'. Remove the sources block from the event clause."
+            );
+        if (hasExplicitSources && supportsLuck && luck is null)
+            throw new NotSupportedException(
+                "Event sources only support 'luck'. Remove other keys from the sources block."
+            );
+
+        int resolvedLuck = luck ?? 1;
+        if (resolvedLuck < 1)
+            throw new NotSupportedException("sources.luck must be a positive integer.");
 
         var r = (rolls == null || rolls.Length == 0) ? new int[] { 0 } : rolls;
         return eventType.Value switch
@@ -923,6 +886,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.LuckyMult => new LuckyMultClause
@@ -931,6 +895,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.MisprintMult => new MisprintMultClause
@@ -947,6 +912,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.CavendishExtinct => new CavendishExtinctClause
@@ -955,6 +921,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.GrosMichelExtinct => new GrosMichelExtinctClause
@@ -963,6 +930,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.SpaceLevelup => new SpaceLevelupClause
@@ -971,6 +939,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.BusinessPayout => new BusinessPayoutClause
@@ -979,6 +948,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.BloodstoneTrigger => new BloodstoneTriggerClause
@@ -987,6 +957,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.ParkingPayout => new ParkingPayoutClause
@@ -995,6 +966,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.GlassDestroy => new GlassDestroyClause
@@ -1003,6 +975,7 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             MotelyEventType.WheelStaysFlipped => new WheelStaysFlippedClause
@@ -1011,15 +984,17 @@ public static partial class JamlConfigLoader
                 Score = score,
                 Min = min,
                 Max = max,
+                Luck = resolvedLuck,
                 Rolls = r,
             },
             _ => throw new NotSupportedException($"Unsupported event type: {eventType}"),
         };
     }
 
-    private static MotelyEventType? ResolveEventType(JamlClauseDto c) =>
+    private static MotelyEventType? ResolveEventType(JamlClauseUnion c) =>
         c.Event
-        ?? (c.LuckyMoney != null ? MotelyEventType.LuckyMoney
+        ?? (
+            c.LuckyMoney != null ? MotelyEventType.LuckyMoney
             : c.LuckyMult != null ? MotelyEventType.LuckyMult
             : c.MisprintMult != null ? MotelyEventType.MisprintMult
             : c.WheelOfFortune != null ? MotelyEventType.WheelOfFortune
@@ -1031,9 +1006,10 @@ public static partial class JamlConfigLoader
             : c.ParkingPayout != null ? MotelyEventType.ParkingPayout
             : c.GlassDestroy != null ? MotelyEventType.GlassDestroy
             : c.WheelStaysFlipped != null ? MotelyEventType.WheelStaysFlipped
-            : (MotelyEventType?)null);
+            : (MotelyEventType?)null
+        );
 
-    private static int[]? ResolveEventRolls(JamlClauseDto c) =>
+    private static int[]? ResolveEventRolls(JamlClauseUnion c) =>
         c.Rolls
         ?? c.LuckyMoney
         ?? c.LuckyMult
@@ -1055,27 +1031,25 @@ public static partial class JamlConfigLoader
         int[]? spectralPacks,
         int[]? soulCard,
         bool requireMegaPack,
-        int earlyAntesMaxPack
+        bool hasExplicitSources
     )
     {
         var arcana = arcanaPacks ?? [];
-        var spectral = spectralPacks ?? [];
-        bool split = arcana.Length > 0 || spectral.Length > 0;
+        var Spectral = spectralPacks ?? [];
+        bool split = arcana.Length > 0 || Spectral.Length > 0;
 
-        // If the user specified neither a plain boosterPacks list nor split arcana/spectral lists,
-        // default to the full per-ante PRNG slot range (0..5). Scoring clamps ante 1 using
-        // EarlyAntesMaxPack (default 3 = normal gameplay, raise to 5 for Hieroglyph scans).
-        var resolvedBooster = split
-            ? System.Array.Empty<int>()
-            : (boosterPacks is { Length: > 0 } bp ? bp : new[] { 0, 1, 2, 3, 4, 5 });
+        var resolvedBooster =
+            split ? System.Array.Empty<int>()
+            : boosterPacks is { } bp ? bp
+            : hasExplicitSources ? System.Array.Empty<int>()
+            : new[] { 0, 1, 2, 3, 4, 5 };
 
         return new LegendaryJokerSourceConfig
         {
             ShopItems = shopItems ?? [],
             BoosterPacks = resolvedBooster,
-            EarlyAntesMaxPack = earlyAntesMaxPack,
             ArcanaPacks = arcana,
-            SpectralPacks = spectral,
+            SpectralPacks = Spectral,
             SoulCard = soulCard ?? [],
             RequireMegaPack = requireMegaPack,
         };
@@ -1085,13 +1059,14 @@ public static partial class JamlConfigLoader
         ref int[]? shopItems,
         ref int[]? boosterPacks,
         MotelyFilterItemType itemType,
-        JamlSourcesDto? sources
+        bool hasExplicitSources
     )
     {
         if (shopItems != null || boosterPacks != null)
             return;
 
-        if (HasSpecialtySources(sources))
+        // Global rule: if any sources object is present on the clause, do not inject defaults.
+        if (hasExplicitSources)
             return;
 
         switch (itemType)
@@ -1118,75 +1093,112 @@ public static partial class JamlConfigLoader
         }
     }
 
-    private static bool HasSpecialtySources(JamlSourcesDto? sources)
-    {
-        if (sources == null) return false;
-        return (sources.Judgement?.Length ?? 0) > 0
-            || (sources.Wraith?.Length ?? 0) > 0
-            || (sources.RiffRaff?.Length ?? 0) > 0
-            || (sources.RareTag?.Length ?? 0) > 0
-            || (sources.UncommonTag?.Length ?? 0) > 0
-            || (sources.CommonShopJokers?.Length ?? 0) > 0
-            || (sources.UncommonShopJokers?.Length ?? 0) > 0
-            || (sources.RareShopJokers?.Length ?? 0) > 0
-            || (sources.AllShopJokers?.Length ?? 0) > 0;
-    }
-
-    private static string LabelEnumOrAny<T>(EnumOrAny<T> v) where T : struct, Enum =>
+    private static string LabelEnumOrAny<T>(EnumOrAny<T> v)
+        where T : struct, Enum =>
         v.IsAny ? "Any" : FormatUtils.FormatDisplayName(v.Value.ToString());
 
-    private static string LabelEnums<T>(IEnumerable<T> values) where T : struct, Enum =>
-        string.Join(", ", values.Select(static value => FormatUtils.FormatDisplayName(value.ToString())));
+    private static string LabelEnums<T>(IEnumerable<T> values)
+        where T : struct, Enum =>
+        string.Join(
+            ", ",
+            values.Select(static value => FormatUtils.FormatDisplayName(value.ToString()))
+        );
 
     private static MotelyJoker ToMotelyJoker(MotelyJokerLegendary joker) =>
         (MotelyJoker)((int)MotelyJokerRarity.Legendary | (int)joker);
 
-    private static string GenerateLabel(JamlClauseDto c)
+    private static string GenerateLabel(JamlClauseUnion c)
     {
-        if (c.Joker is { } jokerValue) return LabelEnumOrAny(jokerValue);
-        if (c.Jokers is { Count: > 0 } jj) return LabelEnums(jj);
-        if (c.CommonJoker is { } commonJokerValue) return LabelEnumOrAny(commonJokerValue);
-        if (c.CommonJokers is { Count: > 0 } cj) return LabelEnums(cj);
-        if (c.UncommonJoker is { } uncommonJokerValue) return LabelEnumOrAny(uncommonJokerValue);
-        if (c.UncommonJokers is { Count: > 0 } uj) return LabelEnums(uj);
-        if (c.RareJoker is { } rareJokerValue) return LabelEnumOrAny(rareJokerValue);
-        if (c.RareJokers is { Count: > 0 } rj) return LabelEnums(rj);
-        if (c.LegendaryJoker is { } legendaryJokerValue) return LabelEnumOrAny(legendaryJokerValue);
-        if (c.LegendaryJokers is { Count: > 0 } lj) return LabelEnums(lj);
-        if (c.Voucher is { } voucherValue) return FormatUtils.FormatVoucher(voucherValue);
-        if (c.Vouchers is { Count: > 0 } vv) return string.Join(", ", vv.Select(FormatUtils.FormatVoucher));
-        if (c.TarotCard is { } tarotCardValue) return FormatUtils.FormatDisplayName(tarotCardValue.ToString());
-        if (c.TarotCards is { Count: > 0 } tt) return LabelEnums(tt);
-        if (c.SpectralCard is { } spectralCardValue) return FormatUtils.FormatDisplayName(spectralCardValue.ToString());
-        if (c.SpectralCards is { Count: > 0 } ss) return LabelEnums(ss);
-        if (c.PlanetCard is { } planetCardValue) return FormatUtils.FormatDisplayName(planetCardValue.ToString());
-        if (c.Boss is { } bossValue) return FormatUtils.FormatBoss(bossValue);
-        if (c.Tag is { } tagValue) return FormatUtils.FormatTag(tagValue);
-        if (c.SmallBlindTag is { } smallBlindTagValue) return FormatUtils.FormatTag(smallBlindTagValue);
-        if (c.BigBlindTag is { } bigBlindTagValue) return FormatUtils.FormatTag(bigBlindTagValue);
-        if (c.StandardCard != null) return LabelStandardCard(c);
-        if (c.StandardCards is { Count: > 0 }) return "Standard Cards";
-        if (c.ErraticRank != null) return $"Erratic {LabelRank(c.ErraticRank)}";
-        if (c.ErraticSuit != null) return $"Erratic {LabelSuit(c.ErraticSuit)}";
-        if (c.ErraticCard != null) return FormatUtils.FormatDisplayName(c.ErraticCard);
-        if (c.StartingDraw != null) return FormatUtils.FormatDisplayName(c.StartingDraw);
-        if (c.Event is { } eventValue) return FormatUtils.FormatDisplayName(eventValue.ToString());
-        if (c.LuckyMoney != null) return "Lucky Money";
-        if (c.LuckyMult != null) return "Lucky Mult";
-        if (c.MisprintMult != null) return "Misprint Mult";
-        if (c.WheelOfFortune != null) return "Wheel of Fortune";
-        if (c.CavendishExtinct != null) return "Cavendish Extinct";
-        if (c.GrosMichelExtinct != null) return "Gros Michel Extinct";
-        if (c.SpaceLevelup != null) return "Space Level Up";
-        if (c.BusinessPayout != null) return "Business Card";
-        if (c.BloodstoneTrigger != null) return "Bloodstone";
-        if (c.ParkingPayout != null) return "Parking Lot";
-        if (c.GlassDestroy != null) return "Glass Destroy";
-        if (c.WheelStaysFlipped != null) return "Wheel Stays Flipped";
+        if (c.Joker is { } jokerValue)
+            return LabelEnumOrAny(jokerValue);
+        if (c.Jokers is { Count: > 0 } jj)
+            return LabelEnums(jj);
+        if (c.CommonJoker is { } commonJokerValue)
+            return LabelEnumOrAny(commonJokerValue);
+        if (c.CommonJokers is { Count: > 0 } cj)
+            return LabelEnums(cj);
+        if (c.UncommonJoker is { } uncommonJokerValue)
+            return LabelEnumOrAny(uncommonJokerValue);
+        if (c.UncommonJokers is { Count: > 0 } uj)
+            return LabelEnums(uj);
+        if (c.RareJoker is { } rareJokerValue)
+            return LabelEnumOrAny(rareJokerValue);
+        if (c.RareJokers is { Count: > 0 } rj)
+            return LabelEnums(rj);
+        if (c.LegendaryJoker is { } legendaryJokerValue)
+            return LabelEnumOrAny(legendaryJokerValue);
+        if (c.LegendaryJokers is { Count: > 0 } lj)
+            return LabelEnums(lj);
+        if (c.Voucher is { } voucherValue)
+            return FormatUtils.FormatVoucher(voucherValue);
+        if (c.Vouchers is { Count: > 0 } vv)
+            return string.Join(", ", vv.Select(FormatUtils.FormatVoucher));
+        if (c.TarotCard is { } tarotCardValue)
+            return FormatUtils.FormatDisplayName(tarotCardValue.ToString());
+        if (c.TarotCards is { Count: > 0 } tt)
+            return LabelEnums(tt);
+        if (c.SpectralCard is { } spectralCardValue)
+            return FormatUtils.FormatDisplayName(spectralCardValue.ToString());
+        if (c.SpectralCards is { Count: > 0 } ss)
+            return LabelEnums(ss);
+        if (c.PlanetCard is { } planetCardValue)
+            return FormatUtils.FormatDisplayName(planetCardValue.ToString());
+        if (c.Boss is { } bossValue)
+            return FormatUtils.FormatBoss(bossValue);
+        if (c.Tag is { } tagValue)
+            return FormatUtils.FormatTag(tagValue);
+        if (c.Tags is { Count: > 0 } tagList)
+            return string.Join(", ", tagList.Select(FormatUtils.FormatTag));
+        if (c.SmallBlindTag is { } smallBlindTagValue)
+            return FormatUtils.FormatTag(smallBlindTagValue);
+        if (c.SmallBlindTags is { Count: > 0 } smallBlindTagList)
+            return string.Join(", ", smallBlindTagList.Select(FormatUtils.FormatTag));
+        if (c.BigBlindTag is { } bigBlindTagValue)
+            return FormatUtils.FormatTag(bigBlindTagValue);
+        if (c.BigBlindTags is { Count: > 0 } bigBlindTagList)
+            return string.Join(", ", bigBlindTagList.Select(FormatUtils.FormatTag));
+        if (c.StandardCard != null)
+            return LabelStandardCard(c);
+        if (c.StandardCards is { Count: > 0 })
+            return "Standard Cards";
+        if (c.ErraticRank != null)
+            return $"Erratic {LabelRank(c.ErraticRank)}";
+        if (c.ErraticSuit != null)
+            return $"Erratic {LabelSuit(c.ErraticSuit)}";
+        if (c.ErraticCard != null)
+            return FormatUtils.FormatDisplayName(c.ErraticCard);
+        if (c.StartingDraw != null)
+            return FormatUtils.FormatDisplayName(c.StartingDraw);
+        if (c.Event is { } eventValue)
+            return FormatUtils.FormatDisplayName(eventValue.ToString());
+        if (c.LuckyMoney != null)
+            return "Lucky Money";
+        if (c.LuckyMult != null)
+            return "Lucky Mult";
+        if (c.MisprintMult != null)
+            return "Misprint Mult";
+        if (c.WheelOfFortune != null)
+            return "Wheel of Fortune";
+        if (c.CavendishExtinct != null)
+            return "Cavendish Extinct";
+        if (c.GrosMichelExtinct != null)
+            return "Gros Michel Extinct";
+        if (c.SpaceLevelup != null)
+            return "Space Level Up";
+        if (c.BusinessPayout != null)
+            return "Business Card";
+        if (c.BloodstoneTrigger != null)
+            return "Bloodstone";
+        if (c.ParkingPayout != null)
+            return "Parking Lot";
+        if (c.GlassDestroy != null)
+            return "Glass Destroy";
+        if (c.WheelStaysFlipped != null)
+            return "Wheel Stays Flipped";
         return "Clause";
     }
 
-    private static string LabelStandardCard(JamlClauseDto c)
+    private static string LabelStandardCard(JamlClauseUnion c)
     {
         if (!string.IsNullOrWhiteSpace(c.StandardCard?.StringValue))
             return FormatUtils.FormatDisplayName(c.StandardCard.Value.StringValue);
@@ -1224,7 +1236,7 @@ public static partial class JamlConfigLoader
 
     // ── Resolve type from shorthand keys or explicit type field ──
 
-    private static (MotelyFilterItemType itemType, string? value) ResolveType(JamlClauseDto c)
+    private static (MotelyFilterItemType itemType, string? value) ResolveType(JamlClauseUnion c)
     {
         // Shorthand keys (type-as-key) — check each one
         if (c.Joker != null)
@@ -1265,9 +1277,15 @@ public static partial class JamlConfigLoader
             return (MotelyFilterItemType.Boss, null);
         if (c.Tag != null)
             return (MotelyFilterItemType.SmallBlindTag, null);
+        if (c.Tags != null)
+            return (MotelyFilterItemType.SmallBlindTag, null);
         if (c.SmallBlindTag != null)
             return (MotelyFilterItemType.SmallBlindTag, null);
+        if (c.SmallBlindTags != null)
+            return (MotelyFilterItemType.SmallBlindTag, null);
         if (c.BigBlindTag != null)
+            return (MotelyFilterItemType.BigBlindTag, null);
+        if (c.BigBlindTags != null)
             return (MotelyFilterItemType.BigBlindTag, null);
         if (c.StandardCard != null)
             return (MotelyFilterItemType.Standardcard, c.StandardCard.Value.StringValue);
@@ -1283,7 +1301,8 @@ public static partial class JamlConfigLoader
             return (MotelyFilterItemType.StartingDraw, c.StartingDraw);
         if (c.Event != null)
             return (MotelyFilterItemType.Event, null);
-        if (c.LuckyMoney != null
+        if (
+            c.LuckyMoney != null
             || c.LuckyMult != null
             || c.MisprintMult != null
             || c.WheelOfFortune != null
@@ -1294,14 +1313,94 @@ public static partial class JamlConfigLoader
             || c.BloodstoneTrigger != null
             || c.ParkingPayout != null
             || c.GlassDestroy != null
-            || c.WheelStaysFlipped != null)
+            || c.WheelStaysFlipped != null
+        )
             return (MotelyFilterItemType.Event, null);
-
 
         throw new InvalidOperationException("Clause is missing a recognized clause key or type.");
     }
 
     // ── Helpers ──
+
+    private static TagClause CreateTagClause(
+        string label,
+        int score,
+        int[] antes,
+        int min,
+        int? max,
+        int[] rolls,
+        List<MotelyTag>? primary,
+        List<MotelyTag>? secondary = null,
+        MotelyTag? singlePrimary = null,
+        MotelyTag? singleSecondary = null
+    )
+    {
+        var tags = CoalesceTagList(primary, secondary, singlePrimary, singleSecondary);
+        if (tags.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "Tag clause must name at least one tag (e.g. tag: EtherealTag or smallBlindTags: [NegativeTag, DoubleTag]). "
+                    + "An empty list is invalid. Generic tag / tags check stream draws 0 and 1 (small- or big-blind offer); "
+                    + "smallBlindTag(s) pins draw 0, bigBlindTag(s) pins draw 1. Use rolls: [0] or rolls: [1] to pick a slot explicitly."
+            );
+        }
+
+        return new TagClause
+        {
+            Label = label,
+            Score = score,
+            Antes = antes,
+            Min = min,
+            Max = max,
+            Tags = tags,
+            Rolls = rolls,
+        };
+    }
+
+    /// <summary>Map-feature stream indices (tag / voucher / boss). Not used for shop-item or event clauses.</summary>
+    private static int[] ResolveMapRolls(
+        int[]? rolls,
+        int[] defaults,
+        int maxRoll,
+        string featureName
+    )
+    {
+        if (rolls is not { Length: > 0 })
+            return defaults;
+
+        foreach (var roll in rolls)
+        {
+            if (roll < 0 || roll > maxRoll)
+            {
+                throw new InvalidOperationException(
+                    $"{featureName} clause rolls index {roll} is not supported (valid 0..{maxRoll} for current engine)."
+                );
+            }
+        }
+
+        return rolls;
+    }
+
+    private static MotelyTag[] CoalesceTagList(
+        List<MotelyTag>? primary,
+        List<MotelyTag>? secondary = null,
+        params MotelyTag?[] singles
+    )
+    {
+        if (primary is not null)
+            return primary.ToArray();
+        if (secondary is not null)
+            return secondary.ToArray();
+
+        var list = new List<MotelyTag>(singles.Length);
+        foreach (var tag in singles)
+        {
+            if (tag is { } value)
+                list.Add(value);
+        }
+
+        return list.ToArray();
+    }
 
     private static string NormalizeFilterId(string? explicitId, string? name)
     {
@@ -1313,34 +1412,6 @@ public static partial class JamlConfigLoader
         normalized = Regex.Replace(normalized, "-+", "-").Trim('-', '_');
 
         return string.IsNullOrWhiteSpace(normalized) ? "unnamed" : normalized.ToLowerInvariant();
-    }
-
-    private static List<string> NormalizeHashtags(List<string>? hashtags)
-    {
-        if (hashtags is not { Count: > 0 })
-            return [];
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var normalized = new List<string>();
-
-        foreach (var entry in hashtags)
-        {
-            if (string.IsNullOrWhiteSpace(entry))
-                continue;
-
-            var tag = entry.Trim();
-            if (tag.StartsWith('#'))
-                tag = tag[1..];
-
-            if (string.IsNullOrWhiteSpace(tag))
-                continue;
-
-            tag = tag.ToLowerInvariant();
-            if (seen.Add(tag))
-                normalized.Add(tag);
-        }
-
-        return normalized;
     }
 
     private static List<string> NormalizeSeeds(List<string>? seeds)
@@ -1356,7 +1427,14 @@ public static partial class JamlConfigLoader
             if (string.IsNullOrWhiteSpace(entry))
                 continue;
 
-            var seed = entry.Trim().ToUpperInvariant().Replace('0', 'O');
+            // Tolerate "SEED,SCORE" lines (as written by --save-seeds): keep only the
+            // seed field before the first comma, otherwise the comma/score would survive
+            // normalization and fail seed validation on reload.
+            var seedField = entry.Split(',', 2)[0];
+            if (string.IsNullOrWhiteSpace(seedField))
+                continue;
+
+            var seed = seedField.Trim().ToUpperInvariant().Replace('0', 'O');
             if (seen.Add(seed))
                 normalized.Add(seed);
         }
@@ -1365,8 +1443,7 @@ public static partial class JamlConfigLoader
     }
 
     private static T RequireEnum<T>(string value)
-        where T : struct, Enum =>
-        Enum.Parse<T>(value, ignoreCase: true);
+        where T : struct, Enum => Enum.Parse<T>(value, ignoreCase: true);
 
     private static T? ParseEnum<T>(string? value)
         where T : struct, Enum =>
@@ -1425,11 +1502,13 @@ public static partial class JamlConfigLoader
         {
             var suit1 = ParseSuit(value.Substring(0, 1));
             var rank1 = ParseRank(value.Substring(1));
-            if (suit1 != null && rank1 != null) return (rank1, suit1);
+            if (suit1 != null && rank1 != null)
+                return (rank1, suit1);
 
             var rank2 = ParseRank(value.Substring(0, value.Length - 1));
             var suit2 = ParseSuit(value.Substring(value.Length - 1));
-            if (suit2 != null && rank2 != null) return (rank2, suit2);
+            if (suit2 != null && rank2 != null)
+                return (rank2, suit2);
         }
 
         return (null, null);

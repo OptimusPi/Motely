@@ -60,9 +60,6 @@ public struct SimdIntResult
     public readonly int this[int index]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get
-        {
-            return Value.GetElement(index);
-        }
+        get { return Value.GetElement(index); }
     }
 }

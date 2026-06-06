@@ -8,7 +8,7 @@ public struct MotelySingleBossStream(MotelySinglePrngStream prngStream)
     public MotelySinglePrngStream PrngStream = prngStream;
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public unsafe partial class MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelySingleBossStream CreateBossStream()

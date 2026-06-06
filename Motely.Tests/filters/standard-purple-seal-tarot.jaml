@@ -1,6 +1,6 @@
-name: Purple Seal Tarot Generation
+name: Purple Seal tarotCard Generation
 author: jammy
-description: Standard card with Purple Seal for Tarot card generation on discard
+description: Standard card with Purple Seal for tarotCard card generation on discard
 deck: Blue
 stake: White
 must:

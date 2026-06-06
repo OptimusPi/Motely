@@ -36,7 +36,10 @@ public readonly struct MotelyItemVector(Vector256<int> value)
 
     public readonly VectorMask IsPerishable =>
         ~Vector256.IsZero(
-            Vector256.BitwiseAnd(Value, Vector256.Create(1 << MotelyGlobals.PerishableStickerOffset))
+            Vector256.BitwiseAnd(
+                Value,
+                Vector256.Create(1 << MotelyGlobals.PerishableStickerOffset)
+            )
         );
     public readonly VectorMask IsEternal =>
         ~Vector256.IsZero(

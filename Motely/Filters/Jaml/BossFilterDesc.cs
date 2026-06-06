@@ -1,16 +1,17 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
-public sealed class BossClause : IJamlClause
+public sealed class BossClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyBossBlind[] Bosses { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public required MotelyBossBlind[] Bosses { get; set; }
+    public int[] Rolls { get; set; } = [];
+
+    public override int EstimatedCost => 2 + MaxAnte;
+
+    public override string Describe() =>
+        $"boss {string.Join(", ", System.Array.ConvertAll(Bosses, static b => b.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
 }
 
 public readonly struct BossFilterDesc(BossClause clause)
@@ -34,9 +35,7 @@ public readonly struct BossFilterDesc(BossClause clause)
         private readonly BossClause _clause = clause;
         private readonly int _maxAnte = maxAnte;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Bosses.Length > 0);

@@ -105,7 +105,10 @@ ref partial struct MotelyVectorSearchContext
 
         var isStandardcard = Vector512.AndNot(
             Vector512.AndNot(
-                Vector512.AndNot(Vector512.LessThan(itemTypePoll, stream.StandardcardRate), isJoker),
+                Vector512.AndNot(
+                    Vector512.LessThan(itemTypePoll, stream.StandardcardRate),
+                    isJoker
+                ),
                 isTarot
             ),
             isPlanet
@@ -131,15 +134,15 @@ ref partial struct MotelyVectorSearchContext
             ? GetNextJoker(ref stream.JokerStream, isJoker)
             : new MotelyItemVector(new MotelyItem(MotelyItemType.JokerExcludedByStream));
 
-        var tarot = stream.DoesProvideTarots
+        var Tarot = stream.DoesProvideTarots
             ? GetNextTarot(ref stream.TarotStream, in isTarot)
             : new MotelyItemVector(new MotelyItem(MotelyItemType.TarotExcludedByStream));
 
-        var planet = stream.DoesProvidePlanets
+        var Planet = stream.DoesProvidePlanets
             ? GetNextPlanet(ref stream.PlanetStream, in isPlanet)
             : new MotelyItemVector(new MotelyItem(MotelyItemType.PlanetExcludedByStream));
 
-        var spectral = stream.DoesProvideSpectrals
+        var Spectral = stream.DoesProvideSpectrals
             ? GetNextSpectral(ref stream.SpectralStream, in isSpectral)
             : new MotelyItemVector(new MotelyItem(MotelyItemType.SpectralExcludedByStream));
 
@@ -155,13 +158,13 @@ ref partial struct MotelyVectorSearchContext
             joker.Value,
             Vector256.ConditionalSelect(
                 tarotMask,
-                tarot.Value,
+                Tarot.Value,
                 Vector256.ConditionalSelect(
                     planetMask,
-                    planet.Value,
+                    Planet.Value,
                     Vector256.ConditionalSelect(
                         spectralMask,
-                        spectral.Value,
+                        Spectral.Value,
                         Vector256.Create((int)MotelyItemType.NotImplemented)
                     )
                 )

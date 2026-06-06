@@ -89,20 +89,20 @@ ref partial struct MotelyVectorSearchContext
         // Check what type this slot is
         var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
         itemTypePoll -= Vector512.Create(20.0); // Skip joker range
-        itemTypePoll -= tarotRate; // Skip tarot range
-        itemTypePoll -= planetRate; // Skip planet range
+        itemTypePoll -= tarotRate; // Skip Tarot range
+        itemTypePoll -= planetRate; // Skip Planet range
         itemTypePoll -= standardcardRate; // Skip standard card range
         var isSpectralSlot = Vector512.LessThan(itemTypePoll, spectralRate);
 
-        // Only advance spectral stream for spectral slots
-        var spectral = GetNextSpectral(ref spectralStream, isSpectralSlot);
+        // Only advance Spectral stream for Spectral slots
+        var Spectral = GetNextSpectral(ref spectralStream, isSpectralSlot);
 
-        // Return spectral or None for non-spectral slots
+        // Return Spectral or None for non-Spectral slots
         var spectralIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isSpectralSlot);
         var noneItem = Vector256<int>.Zero;
 
         return new MotelyItemVector(
-            Vector256.ConditionalSelect(spectralIntMask, spectral.Value, noneItem)
+            Vector256.ConditionalSelect(spectralIntMask, Spectral.Value, noneItem)
         );
     }
 
@@ -253,15 +253,15 @@ ref partial struct MotelyVectorSearchContext
             // Determine which lanes should have this card position
             VectorMask shouldIncludeCard = cardIndex switch
             {
-                0 or 1 => VectorMask.AllBitsSet, // All spectral pack sizes have cards 0 and 1
+                0 or 1 => VectorMask.AllBitsSet, // All Spectral pack sizes have cards 0 and 1
                 2 or 3 => VectorMask.AllBitsSet ^ isNormalSize, // Only Jumbo and Mega have cards 2 and 3
-                _ => VectorMask.NoBitsSet, // No spectral pack has more than 4 cards
+                _ => VectorMask.NoBitsSet, // No Spectral pack has more than 4 cards
             };
 
-            // Generate spectral card for all lanes (maintain stream sync)
-            var spectralCard = GetNextSpectral(ref spectralStream);
+            // Generate Spectral card for all lanes (maintain stream sync)
+            var Spectral = GetNextSpectral(ref spectralStream);
 
-            // Use ConditionalSelect: valid lanes get spectral, invalid lanes get excluded marker
+            // Use ConditionalSelect: valid lanes get Spectral, invalid lanes get excluded marker
             // Proper SIMD conversion from VectorMask to ConditionalSelect mask
             var selectionMask = MotelyVectorUtils.VectorMaskToConditionalSelectMask(
                 shouldIncludeCard
@@ -271,7 +271,7 @@ ref partial struct MotelyVectorSearchContext
             var maskedSpectral = new MotelyItemVector(
                 Vector256.ConditionalSelect(
                     selectionMask,
-                    spectralCard.Type.HardwareVector,
+                    Spectral.Type.HardwareVector,
                     excludedType
                 )
             );
@@ -351,12 +351,14 @@ ref partial struct MotelyVectorSearchContext
 
         for (int i = 0; i < cardCount; i++)
         {
-            var spectral = GetNextSpectral(ref spectralStream);
-            // Extract spectral card type using bit masking (similar to StandardcardSuit pattern)
+            var Spectral = GetNextSpectral(ref spectralStream);
+            // Extract Spectral card type using bit masking (similar to StandardcardSuit pattern)
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
-                    spectral.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Spectral.Value,
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(spectralType, targetSpectral);
@@ -381,12 +383,14 @@ ref partial struct MotelyVectorSearchContext
 
         for (int i = 0; i < cardCount; i++)
         {
-            var spectral = GetNextSpectral(ref spectralStream);
-            // Extract spectral card type using bit masking (similar to StandardcardSuit pattern)
+            var Spectral = GetNextSpectral(ref spectralStream);
+            // Extract Spectral card type using bit masking (similar to StandardcardSuit pattern)
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
-                    spectral.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Spectral.Value,
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
 

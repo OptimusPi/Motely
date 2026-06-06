@@ -251,18 +251,17 @@ public class MainMenuWindow : View
         {
             X = 1,
             Y = 3,
-            Width = Dim.Fill()! -2,
-            Height = Dim.Fill()! -7,
+            Width = Dim.Fill()! - 2,
+            Height = Dim.Fill()! - 7,
             CanFocus = true,
         };
-        filterList.ColorScheme =
-            new ColorScheme()
-            {
-                Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
-                Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-                HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
-                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-            };
+        filterList.ColorScheme = new ColorScheme()
+        {
+            Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+            HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+            HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+        };
         filterList.SetSource(new ObservableCollection<string>(filterStrings));
         filterList.SelectedItem = 0; // Select first item by default
 
@@ -306,7 +305,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(3),
             Text = "Start Search",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         searchBtn.ColorScheme = BalatroTheme.GreenButton;
@@ -318,7 +317,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         cancelBtn.ColorScheme = BalatroTheme.BackButton;
@@ -380,7 +379,7 @@ public class MainMenuWindow : View
             X = 1,
             Y = Pos.AnchorEnd(1),
             Text = "Back",
-            Width = Dim.Fill()! -2,
+            Width = Dim.Fill()! - 2,
             TextAlignment = Alignment.Center,
         };
         backBtn.ColorScheme = BalatroTheme.BackButton;
@@ -479,14 +478,13 @@ public class MainMenuWindow : View
             Text = "       ",
             Width = 9,
         };
-        secretBtn.ColorScheme =
-            new ColorScheme()
-            {
-                Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
-                Focus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
-                HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
-                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
-            };
+        secretBtn.ColorScheme = new ColorScheme()
+        {
+            Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
+            HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
+            HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
+        };
         secretBtn.Accept += (s, e) => ShowSecretDialog();
         dialog.Add(secretBtn);
 
@@ -677,27 +675,6 @@ public class MainMenuWindow : View
         };
         dialog.Add(messageLabel);
 
-        // Crude Seeds toggle - starts hidden until animation completes
-        var crudeBtn = new CleanButton()
-        {
-            X = Pos.Center(),
-            Y = 7,
-            Text = TuiSettings.CrudeSeedsEnabled
-                ? " [X] Crude Seeds (NSFW) "
-                : " [ ] Crude Seeds (NSFW) ",
-            Width = 28,
-            Visible = false,
-        };
-        crudeBtn.ColorScheme = BalatroTheme.GrayButton;
-        crudeBtn.Accept += (s, e) =>
-        {
-            TuiSettings.CrudeSeedsEnabled = !TuiSettings.CrudeSeedsEnabled;
-            crudeBtn.Text = TuiSettings.CrudeSeedsEnabled
-                ? " [X] Crude Seeds (NSFW) "
-                : " [ ] Crude Seeds (NSFW) ";
-        };
-        dialog.Add(crudeBtn);
-
         var backBtn = new CleanButton()
         {
             X = 1,
@@ -749,10 +726,7 @@ public class MainMenuWindow : View
                     // Final snap to complete message
                     messageLabel.Text = reveal;
                     dialog.Title = "pifreak loves you!";
-                    crudeBtn.Visible = true;
-                    crudeBtn.SetNeedsDraw();
                     dialog.SetNeedsDraw();
-                    crudeBtn.SetFocus();
                     return false; // Stop timer
                 }
             }
