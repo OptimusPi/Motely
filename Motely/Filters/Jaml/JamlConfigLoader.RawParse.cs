@@ -1,50 +1,73 @@
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
-using Motely.Filters.Converters;
+using Motely.Filters.Jaml.Converters;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Raw YAML document walk for the JAML root: fills <see cref="JamlRootDocument"/> (no full-document YamlDotNet deserialize).
-/// Clause fragments are still materialized into <see cref="JamlClauseDto"/> for <see cref="JamlConfigLoader.CreateClauseFromDto"/>.
+/// Clause fragments are still materialized into <see cref="JamlClauseUnion"/> for <see cref="JamlConfigLoader.CreateClauseFromDto"/>.
 /// </summary>
 public static partial class JamlConfigLoader
 {
-    private static readonly FrozenSet<string> AllowedRootKeys =
-        new[]
-        {
-            "id",
-            "name",
-            "author",
-            "dateCreated",
-            "description",
-            "deck",
-            "stake",
-            "defaults",
-            "must",
-            "should",
-            "mustNot",
-            "aesthetics",
-            "hashtags",
-            "seeds",
-        }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+    private static readonly FrozenSet<string> AllowedRootKeys = new[]
+    {
+        "id",
+        "name",
+        "author",
+        "dateCreated",
+        "description",
+        "deck",
+        "stake",
+        "defaults",
+        "must",
+        "should",
+        "mustNot",
+        "aesthetics",
+        "seeds",
+        "hashtags",
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     // Strict mode (default for DeserializerBuilder): unknown YAML keys throw with line+col so a
     // typo like `boses:` or `boosterPakcz:` is rejected up front instead of silently dropped.
     // Silent drops were the root cause of the v13/v14 false-positive class — a missing constraint
     // means the SIMD prefilter accepts seeds it shouldn't. The 3 `Unknown*Key_IsRejected` tests
     // in JamlConfigTests pin this behaviour. Do NOT add .IgnoreUnmatchedProperties() here.
-    private static readonly IDeserializer JamlFragmentDeserializer =
-        new StaticDeserializerBuilder(new JamlYamlContext())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
-            .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
-            .WithTypeConverter(new StandardCardValueConverter())
-            .Build();
+    private static readonly IDeserializer JamlFragmentDeserializer = new StaticDeserializerBuilder(
+        new JamlYamlContext()
+    )
+        .WithTypeConverter(new StandardCardValueConverter())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
+        .Build();
+
+    private static readonly ISerializer JamlStaticSerializer = new StaticSerializerBuilder(
+        new JamlYamlContext()
+    )
+        .ConfigureDefaultValuesHandling(
+            DefaultValuesHandling.OmitNull
+                | DefaultValuesHandling.OmitEmptyCollections
+                | DefaultValuesHandling.OmitDefaults
+        )
+        .WithTypeConverter(new StandardCardValueConverter())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJoker>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerCommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerUncommon>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerRare>())
+        .WithTypeConverter(new EnumOrAnyConverter<MotelyJokerLegendary>())
+        .Build();
+
+    public static string SerializeRoot(JamlRootDocument doc)
+    {
+        using var writer = new System.IO.StringWriter();
+        JamlStaticSerializer.Serialize(writer, doc);
+        return writer.ToString();
+    }
 
     /// <summary>
     /// Returns canonical JAML text by applying loader normalizations and stable YAML emission.
@@ -67,14 +90,14 @@ public static partial class JamlConfigLoader
             YamlScalarNode s => new YamlScalarNode(s.Value ?? "") { Style = s.Style },
             YamlSequenceNode seq => new YamlSequenceNode(seq.Select(CloneYamlSubtree)),
             YamlMappingNode map => new YamlMappingNode(
-                map.Children.Select(kvp =>
-                    new KeyValuePair<YamlNode, YamlNode>(
-                        CloneYamlSubtree(kvp.Key),
-                        CloneYamlSubtree(kvp.Value)
-                    )
-                )
+                map.Children.Select(kvp => new KeyValuePair<YamlNode, YamlNode>(
+                    CloneYamlSubtree(kvp.Key),
+                    CloneYamlSubtree(kvp.Value)
+                ))
             ),
-            _ => throw new InvalidOperationException($"Unsupported YAML node in JAML: {node.GetType().Name}"),
+            _ => throw new InvalidOperationException(
+                $"Unsupported YAML node in JAML: {node.GetType().Name}"
+            ),
         };
 
     private static string YamlFragmentToString(YamlNode root)
@@ -90,12 +113,12 @@ public static partial class JamlConfigLoader
     private static T DeserializeFragment<T>(YamlMappingNode mapping) =>
         JamlFragmentDeserializer.Deserialize<T>(YamlFragmentToString(mapping));
 
-    private static List<JamlClauseDto>? ParseClauseSequence(YamlMappingNode root, string key)
+    private static List<JamlClauseUnion>? ParseClauseSequence(YamlMappingNode root, string key)
     {
         if (!TryGetYamlChild(root, key, out _, out var node) || node is not YamlSequenceNode seq)
             return null;
 
-        var list = new List<JamlClauseDto>(seq.Children.Count);
+        var list = new List<JamlClauseUnion>(seq.Children.Count);
         var i = 0;
         foreach (var child in seq.Children)
         {
@@ -109,7 +132,7 @@ public static partial class JamlConfigLoader
 
             try
             {
-                list.Add(DeserializeFragment<JamlClauseDto>(map));
+                list.Add(DeserializeFragment<JamlClauseUnion>(map));
             }
             catch (Exception ex)
             {
@@ -173,20 +196,20 @@ public static partial class JamlConfigLoader
 
             var mark = kn.Start;
             var location =
-                mark.Line > 0 && mark.Column > 0
-                    ? $"on line {mark.Line}, col {mark.Column}: "
-                    : "";
-            error =
-                $"{location}Unknown property '{kn.Value}' in the top-level JAML document.";
+                mark.Line > 0 && mark.Column > 0 ? $"on line {mark.Line}, col {mark.Column}: " : "";
+            error = $"{location}Unknown property '{kn.Value}' in the top-level JAML document.";
             return false;
         }
 
-        JamlDefaultsDto? defaults = null;
-        if (TryGetYamlChild(root, "defaults", out _, out var defNode) && defNode is YamlMappingNode defMap)
+        JamlDefaults? defaults = null;
+        if (
+            TryGetYamlChild(root, "defaults", out _, out var defNode)
+            && defNode is YamlMappingNode defMap
+        )
         {
             try
             {
-                defaults = DeserializeFragment<JamlDefaultsDto>(defMap);
+                defaults = DeserializeFragment<JamlDefaults>(defMap);
             }
             catch (Exception ex)
             {
@@ -202,7 +225,6 @@ public static partial class JamlConfigLoader
                 Id = ParseOptionalScalar(root, "id"),
                 Name = ParseOptionalScalar(root, "name"),
                 Author = ParseOptionalScalar(root, "author"),
-                DateCreated = ParseOptionalScalar(root, "dateCreated"),
                 Description = ParseOptionalScalar(root, "description"),
                 Deck = ParseOptionalScalar(root, "deck"),
                 Stake = ParseOptionalScalar(root, "stake"),
@@ -210,8 +232,6 @@ public static partial class JamlConfigLoader
                 Must = ParseClauseSequence(root, "must"),
                 Should = ParseClauseSequence(root, "should"),
                 MustNot = ParseClauseSequence(root, "mustNot"),
-                Aesthetics = ParseStringSequence(root, "aesthetics"),
-                Hashtags = ParseStringSequence(root, "hashtags"),
                 Seeds = ParseStringSequence(root, "seeds"),
             };
         }

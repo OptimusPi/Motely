@@ -166,12 +166,16 @@ public static class SeedMath
             throw new ArgumentOutOfRangeException(nameof(batchCharCount));
 
         long maxIdx = MaxSearchIndexInclusive(8);
-        if (startSearchIndexInclusive < 0 || stopSearchIndexInclusive < startSearchIndexInclusive
-            || stopSearchIndexInclusive > maxIdx)
+        if (
+            startSearchIndexInclusive < 0
+            || stopSearchIndexInclusive < startSearchIndexInclusive
+            || stopSearchIndexInclusive > maxIdx
+        )
         {
             throw new ArgumentOutOfRangeException(
                 $"{nameof(startSearchIndexInclusive)}..{nameof(stopSearchIndexInclusive)}",
-                $"Must satisfy 0 <= start <= stop <= {maxIdx}.");
+                $"Must satisfy 0 <= start <= stop <= {maxIdx}."
+            );
         }
 
         string startSeed = SearchIndexToSeed(startSearchIndexInclusive, 8);

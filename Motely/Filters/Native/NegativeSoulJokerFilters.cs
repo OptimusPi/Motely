@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Filters.Native;
 
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -89,7 +89,7 @@ public readonly struct NegativeLegendaryJokerSimdFilterDesc(MotelyItemType? targ
 
 /// <summary>
 /// Additional filter after <see cref="NegativeLegendaryJokerSimdFilterDesc"/>:
-/// vectorized The Soul check on arcana/spectral shop packs, with scalar fallback
+/// vectorized The Soul check on arcana/Spectral shop packs, with scalar fallback
 /// when pack sizes diverge across lanes. Respects <see cref="LegendaryJokerSourceConfig"/>
 /// slot targeting and <see cref="LegendarySoulMatcher"/> stream rules.
 /// </summary>
@@ -98,7 +98,11 @@ public readonly struct LegendaryJokerShopSoulFilterDesc(
     int[]? searchAntes = null
 ) : IMotelySeedFilterDesc<LegendaryJokerShopSoulFilterDesc.FilterStruct>
 {
-    private static readonly int[] DefaultAntes = [NegativeLegendaryJokerSimdFilterDesc.MinAnte, NegativeLegendaryJokerSimdFilterDesc.MaxAnte];
+    private static readonly int[] DefaultAntes =
+    [
+        NegativeLegendaryJokerSimdFilterDesc.MinAnte,
+        NegativeLegendaryJokerSimdFilterDesc.MaxAnte,
+    ];
 
     private static readonly LegendaryJokerSourceConfig DefaultAllBoosterSources = new()
     {
@@ -148,7 +152,14 @@ public readonly struct LegendaryJokerShopSoulFilterDesc(
                 {
                     for (int i = 0; i < antes.Length; i++)
                     {
-                        if (LegendarySoulMatcher.MatchAnteShopPackHasSoulOnly(ref sctx, antes[i], src, maxP))
+                        if (
+                            LegendarySoulMatcher.MatchAnteShopPackHasSoulOnly(
+                                ref sctx,
+                                antes[i],
+                                src,
+                                maxP
+                            )
+                        )
                             return true;
                     }
                     return false;
@@ -203,12 +214,21 @@ public readonly struct LegendaryJokerShopSoulFilterDesc(
                     if (!slotTargeted)
                         continue;
 
-                    VectorMask isArcana = VectorEnum256.Equals(packType, MotelyBoosterPackType.Arcana);
-                    VectorMask isSpectral = VectorEnum256.Equals(packType, MotelyBoosterPackType.Spectral);
+                    VectorMask isArcana = VectorEnum256.Equals(
+                        packType,
+                        MotelyBoosterPackType.Arcana
+                    );
+                    VectorMask isSpectral = VectorEnum256.Equals(
+                        packType,
+                        MotelyBoosterPackType.Spectral
+                    );
 
                     if (src.RequireMegaPack)
                     {
-                        VectorMask isMega = VectorEnum256.Equals(packSize, MotelyBoosterPackSize.Mega);
+                        VectorMask isMega = VectorEnum256.Equals(
+                            packSize,
+                            MotelyBoosterPackSize.Mega
+                        );
                         isArcana &= isMega;
                         isSpectral &= isMega;
                     }
@@ -232,7 +252,8 @@ public readonly struct LegendaryJokerShopSoulFilterDesc(
                             tarotStream = ctx.CreateArcanaPackTarotStream(ante, true);
                         }
 
-                        hasSoulMask |= ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, size) & isArcana;
+                        hasSoulMask |=
+                            ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, size) & isArcana;
                     }
 
                     if (isSpectral.IsPartiallyTrue())
@@ -243,10 +264,15 @@ public readonly struct LegendaryJokerShopSoulFilterDesc(
                         if (!spectralInit)
                         {
                             spectralInit = true;
-                            spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: ante != 1);
+                            spectralStream = ctx.CreateSpectralPackSpectralStream(
+                                ante,
+                                soulOnly: ante != 1
+                            );
                         }
 
-                        hasSoulMask |= ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, size) & isSpectral;
+                        hasSoulMask |=
+                            ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, size)
+                            & isSpectral;
                     }
                 }
             }

@@ -77,7 +77,7 @@ public enum MotelyJokerFixedRarityStreamFlags
     Default = 0,
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public unsafe partial class MotelySingleSearchContext
 {
     public MotelySingleJokerStream CreateShopJokerStream(
         int ante,

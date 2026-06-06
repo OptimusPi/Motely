@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Wraps an inner filter and inverts its result (mustNot semantics).
@@ -20,9 +20,7 @@ public struct NegationFilterDesc(IMotelySeedFilterDesc inner)
     {
         private readonly IMotelySeedFilter _inner = inner;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             // Invert: seeds that match the inner filter should be REJECTED

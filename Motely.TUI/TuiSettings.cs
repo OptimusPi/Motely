@@ -8,9 +8,9 @@ public enum SearchMode
     Sequential,
     Random,
     Palindrome,
-    Psychosis,
+    Echo,
     Keyword,
-    FileSource
+    FileSource,
 }
 
 /// <summary>
@@ -49,9 +49,6 @@ public static class TuiSettings
 
     // DuckLake (results data lake) root directory — resolved relative to current directory.
     public static string DataLakePath { get; set; } = "seeds";
-
-    // Secret settings (in-memory only, not persisted)
-    public static bool CrudeSeedsEnabled { get; set; } = false;
 
     /// <summary>
     /// Load settings from tui.json (if exists)
@@ -115,7 +112,8 @@ public class SettingsService
                 TuiSettings.Keywords = settings.Keywords ?? string.Empty;
                 TuiSettings.PaddingChars = settings.PaddingChars ?? string.Empty;
                 TuiSettings.RandomSeedCount = settings.RandomSeedCount ?? 1000000;
-                TuiSettings.SequentialStartSeedSearchIndex = settings.SequentialStartSeedSearchIndex;
+                TuiSettings.SequentialStartSeedSearchIndex =
+                    settings.SequentialStartSeedSearchIndex;
                 TuiSettings.SequentialStopSeedSearchIndex = settings.SequentialStopSeedSearchIndex;
                 TuiSettings.WorkerPoolUrl = settings.WorkerPoolUrl ?? "https://www.seedfinder.app";
                 TuiSettings.WorkerThreads = settings.WorkerThreads ?? Environment.ProcessorCount;

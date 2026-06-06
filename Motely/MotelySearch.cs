@@ -81,14 +81,11 @@ public interface IMotelySeedRouterDesc<TProvider> : IMotelySeedRouterDesc
 {
     public new TProvider CreateSeedRouter(ref MotelyFilterCreationContext ctx);
 
-    IMotelySeedRouter IMotelySeedRouterDesc.CreateSeedRouter(
-        ref MotelyFilterCreationContext ctx
-    )
+    IMotelySeedRouter IMotelySeedRouterDesc.CreateSeedRouter(ref MotelyFilterCreationContext ctx)
     {
         return CreateSeedRouter(ref ctx);
     }
 }
-
 
 public enum MotelySearchMode
 {
@@ -96,431 +93,7 @@ public enum MotelySearchMode
     Provider,
 }
 
-public interface IMotelySeedProvider
-{
-    public long SeedCount { get; }
-    public ReadOnlySpan<char> NextSeed();
-
-    /// <summary>
-    /// Batch retrieve multiple seeds in one lock operation - much faster for multi-threaded access.
-    /// Fills the provided array with seed strings, returns the number of seeds actually retrieved.
-    /// </summary>
-    public int NextSeeds(string[] seeds);
-}
-
-public sealed class MotelyRandomSeedProvider(int seedCount) : IMotelySeedProvider
-{
-    public long SeedCount { get; } = seedCount;
-    private int _seedsGenerated;
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        if (Interlocked.Increment(ref _seedsGenerated) > SeedCount)
-            return [];
-
-        return string.Create(
-            MotelyGlobals.MaxSeedLength,
-            (object?)null,
-            static (buf, _) => Random.Shared.GetItems(MotelyGlobals.SeedDigits, buf)
-        );
-    }
-
-    public int NextSeeds(string[] seeds)
-    {
-        if (seeds is not { Length: > 0 })
-            return 0;
-
-        int filled = 0;
-        for (int i = 0; i < seeds.Length; i++)
-        {
-            if (Interlocked.Increment(ref _seedsGenerated) > SeedCount)
-                break;
-
-            seeds[i] = string.Create(
-                MotelyGlobals.MaxSeedLength,
-                (object?)null,
-                static (buf, _) => Random.Shared.GetItems(MotelyGlobals.SeedDigits, buf)
-            );
-            filled++;
-        }
-        return filled;
-    }
-}
-
-/// <summary>
-/// Generates palindrome seeds lazily via <see cref="JamlAesthetics.EnumerateSeeds"/>.
-/// </summary>
-public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
-{
-    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Palindrome);
-
-    private readonly IEnumerator<string> _palindromeEnumerator;
-    private readonly object _enumeratorLock = new();
-
-    public MotelyPalindromeSeedProvider()
-    {
-        _palindromeEnumerator = JamlAesthetics
-            .EnumerateSeeds(JamlAesthetic.Palindrome)
-            .GetEnumerator();
-    }
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        lock (_enumeratorLock)
-        {
-            if (_palindromeEnumerator.MoveNext())
-            {
-                return _palindromeEnumerator.Current.AsSpan();
-            }
-            return ReadOnlySpan<char>.Empty;
-        }
-    }
-
-    public int NextSeeds(string[] seeds)
-    {
-        if (seeds == null || seeds.Length == 0)
-            return 0;
-
-        lock (_enumeratorLock)
-        {
-            int count = 0;
-            for (int i = 0; i < seeds.Length; i++)
-            {
-                if (!_palindromeEnumerator.MoveNext())
-                    break;
-                seeds[i] = _palindromeEnumerator.Current;
-                count++;
-            }
-            return count;
-        }
-    }
-}
-
-/// <summary>
-/// Generates psychosis seeds lazily via <see cref="JamlAesthetics.EnumerateSeeds"/> (echo pattern: ABAxBxxx, ~1 billion seeds).
-/// </summary>
-public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
-{
-    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis);
-
-    private readonly IEnumerator<string> _psychosisEnumerator;
-    private readonly object _enumeratorLock = new();
-
-    public MotelyPsychosisSeedProvider()
-    {
-        _psychosisEnumerator = JamlAesthetics
-            .EnumerateSeeds(JamlAesthetic.Psychosis)
-            .GetEnumerator();
-    }
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        lock (_enumeratorLock)
-        {
-            if (_psychosisEnumerator.MoveNext())
-            {
-                return _psychosisEnumerator.Current.AsSpan();
-            }
-            return ReadOnlySpan<char>.Empty;
-        }
-    }
-
-    public int NextSeeds(string[] seeds)
-    {
-        if (seeds == null || seeds.Length == 0)
-            return 0;
-
-        lock (_enumeratorLock)
-        {
-            int count = 0;
-            for (int i = 0; i < seeds.Length; i++)
-            {
-                if (!_psychosisEnumerator.MoveNext())
-                    break;
-                seeds[i] = _psychosisEnumerator.Current;
-                count++;
-            }
-            return count;
-        }
-    }
-}
-
-public sealed class MotelyAestheticSeedProvider : IMotelySeedProvider
-{
-    public long SeedCount { get; }
-
-    private readonly IEnumerator<string> _enumerator;
-    private readonly object _enumeratorLock = new();
-
-    public MotelyAestheticSeedProvider(JamlAesthetic aesthetic)
-    {
-        SeedCount = JamlAesthetics.GetSeedCount(aesthetic);
-        _enumerator = JamlAesthetics.EnumerateSeeds(aesthetic).GetEnumerator();
-    }
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        lock (_enumeratorLock)
-        {
-            if (_enumerator.MoveNext())
-                return _enumerator.Current.AsSpan();
-            return ReadOnlySpan<char>.Empty;
-        }
-    }
-
-    public int NextSeeds(string[] seeds)
-    {
-        if (seeds == null || seeds.Length == 0)
-            return 0;
-
-        lock (_enumeratorLock)
-        {
-            int count = 0;
-            for (int i = 0; i < seeds.Length; i++)
-            {
-                if (!_enumerator.MoveNext())
-                    break;
-                seeds[i] = _enumerator.Current;
-                count++;
-            }
-            return count;
-        }
-    }
-}
-
-public sealed class MotelyKeywordSeedProvider : IMotelySeedProvider
-{
-    public long SeedCount { get; }
-
-    private readonly IEnumerator<string> _enumerator;
-    private readonly object _enumeratorLock = new();
-
-    public MotelyKeywordSeedProvider(IEnumerable<string> keywords, char[]? paddingChars = null)
-    {
-        SeedCount = MotelyGlobals.GetPaddedSeedCountForKeywordsLong(keywords, paddingChars);
-        _enumerator = MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, paddingChars).GetEnumerator();
-    }
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        lock (_enumeratorLock)
-        {
-            if (_enumerator.MoveNext())
-            {
-                return _enumerator.Current.AsSpan();
-            }
-            return ReadOnlySpan<char>.Empty;
-        }
-    }
-
-    public int NextSeeds(string[] seeds)
-    {
-        if (seeds == null || seeds.Length == 0)
-            return 0;
-
-        lock (_enumeratorLock)
-        {
-            int count = 0;
-            for (int i = 0; i < seeds.Length; i++)
-            {
-                if (!_enumerator.MoveNext())
-                    break;
-                seeds[i] = _enumerator.Current;
-                count++;
-            }
-            return count;
-        }
-    }
-}
-
-public sealed class MotelySeedListProvider : IMotelySeedProvider
-{
-    // Keep seeds as enumerable - don't materialize! Seeds are used in the order provided.
-    // For keyword generation, enumerable is lazy and avoids massive allocations.
-    private readonly IEnumerator<string> _seedEnumerator;
-    private string? _currentSeed;
-    private long _seedIndex = -1;
-
-    // Thread-safety: IEnumerator<T> is NOT thread-safe, so we need a lock
-    // This is a lightweight lock for the hot path - contention should be minimal
-    private readonly object _enumeratorLock = new();
-
-    public long SeedCount { get; private set; } = -1; // Unknown for enumerables
-
-    public MotelySeedListProvider(IEnumerable<string> seeds, long seedCount = -1)
-    {
-        // Don't materialize! Seeds are used in the order provided from generator/enumerator
-        _seedEnumerator = seeds.GetEnumerator();
-        SeedCount = ResolveSeedCount(seeds, seedCount);
-    }
-
-    private static long ResolveSeedCount(IEnumerable<string> seeds, long seedCount)
-    {
-        if (seedCount >= 0)
-            return seedCount;
-
-        if (seeds is ICollection<string> collection)
-            return collection.Count;
-
-        if (seeds is IReadOnlyCollection<string> readOnlyCollection)
-            return readOnlyCollection.Count;
-
-        if (seeds is System.Collections.ICollection nonGenericCollection)
-            return nonGenericCollection.Count;
-
-        return -1;
-    }
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        // Thread-safe access to enumerator - multiple threads may call this concurrently
-        lock (_enumeratorLock)
-        {
-            _seedIndex++;
-            if (_seedEnumerator.MoveNext())
-            {
-                _currentSeed = _seedEnumerator.Current;
-                // Create a copy of the string to avoid issues if Current is modified
-                // (though it shouldn't be, this is defensive)
-                return _currentSeed.AsSpan();
-            }
-            return ReadOnlySpan<char>.Empty;
-        }
-    }
-
-    public int NextSeeds(string[] seeds)
-    {
-        if (seeds == null || seeds.Length == 0)
-            return 0;
-
-        lock (_enumeratorLock)
-        {
-            int count = 0;
-            for (int i = 0; i < seeds.Length; i++)
-            {
-                _seedIndex++;
-                if (!_seedEnumerator.MoveNext())
-                    break;
-
-                _currentSeed = _seedEnumerator.Current;
-                seeds[i] = _currentSeed; // Store string directly
-                count++;
-            }
-            return count;
-        }
-    }
-
-    public void Dispose()
-    {
-        lock (_enumeratorLock)
-        {
-            _seedEnumerator?.Dispose();
-        }
-    }
-}
-
-/// <summary>
-/// Optional <see cref="IMotelySeedProvider"/> for <see cref="IAsyncEnumerable{T}"/> sources.
-/// Pass to <see cref="MotelySearchSettings{TBaseFilter}.WithProviderSearch"/>; do not use unless you
-/// truly need async streaming — prefer <see cref="MotelySeedListProvider"/> / <see cref="MotelySearchSettings{TBaseFilter}.WithListSearch"/>.
-/// </summary>
-public sealed class MotelyAsyncSeedListProvider : IMotelySeedProvider, IDisposable, IAsyncDisposable
-{
-    private readonly IAsyncEnumerable<string> _seeds;
-    private readonly CancellationToken _cancellationToken;
-
-    private IAsyncEnumerator<string>? _enumerator;
-    private string? _currentSeed;
-    private readonly object _enumeratorLock = new();
-    private bool _disposed;
-
-    public long SeedCount { get; }
-
-    public MotelyAsyncSeedListProvider(
-        IAsyncEnumerable<string> seeds,
-        long seedCount = -1,
-        CancellationToken cancellationToken = default
-    )
-    {
-        _seeds = seeds ?? throw new ArgumentNullException(nameof(seeds));
-        SeedCount = seedCount;
-        _cancellationToken = cancellationToken;
-    }
-
-    private IAsyncEnumerator<string> EnsureEnumerator()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return _enumerator ??= _seeds.GetAsyncEnumerator(_cancellationToken);
-    }
-
-    private static bool MoveNextSync(IAsyncEnumerator<string> enumerator)
-    {
-        return enumerator.MoveNextAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
-    }
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        lock (_enumeratorLock)
-        {
-            if (_disposed)
-                return ReadOnlySpan<char>.Empty;
-
-            var enumerator = EnsureEnumerator();
-            if (!MoveNextSync(enumerator))
-                return ReadOnlySpan<char>.Empty;
-
-            _currentSeed = enumerator.Current;
-            return _currentSeed.AsSpan();
-        }
-    }
-
-    public int NextSeeds(string[] seeds)
-    {
-        if (seeds is not { Length: > 0 })
-            return 0;
-
-        lock (_enumeratorLock)
-        {
-            if (_disposed)
-                return 0;
-
-            var enumerator = EnsureEnumerator();
-            int count = 0;
-            for (int i = 0; i < seeds.Length; i++)
-            {
-                if (!MoveNextSync(enumerator))
-                    break;
-                seeds[i] = enumerator.Current;
-                count++;
-            }
-
-            return count;
-        }
-    }
-
-    public void Dispose()
-    {
-        DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
-        GC.SuppressFinalize(this);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        IAsyncEnumerator<string>? enumerator;
-        lock (_enumeratorLock)
-        {
-            if (_disposed)
-                return;
-
-            _disposed = true;
-            enumerator = _enumerator;
-            _enumerator = null;
-        }
-
-        if (enumerator != null)
-            await enumerator.DisposeAsync().ConfigureAwait(false);
-    }
-}
+// IMotelySeedProvider and its implementations live in Motely.SeedProviders (Motely/SeedProviders/MotelySeedProviders.cs).
 
 public interface IMotelySearchSettings
 {
@@ -547,6 +120,8 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
+    IMotelySearchSettings WithJimmolate();
+    IMotelySearchSettings WithJimmolate(MotelyIndividualSeedSearcher searcher);
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -761,6 +336,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
 
+    IMotelySearchSettings IMotelySearchSettings.WithJimmolate() => WithJimmolate();
+
+    IMotelySearchSettings IMotelySearchSettings.WithJimmolate(
+        MotelyIndividualSeedSearcher searcher
+    ) => WithJimmolate(searcher);
+
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
@@ -821,6 +402,15 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     {
         AutoScoreCutoff = enabled;
         return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithJimmolate(
+        MotelyIndividualSeedSearcher? searcher = null
+    )
+    {
+        if (searcher is null)
+            throw new InvalidOperationException("Jimmolate searcher is not registered.");
+        return WithAdditionalFilter(new JimmolateFilterDesc(searcher));
     }
 
     public IMotelySearch Start(CancellationToken cancellationToken = default)
@@ -952,6 +542,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return totalSeeds;
         }
     }
+
     /// <summary>
     /// Seeds searched that did not match (base filter rejected, additional filter rejected,
     /// or below score cutoff). Equal to <see cref="TotalSeedsSearched"/> minus
@@ -1095,10 +686,28 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             throw new InvalidOperationException("Search has already been started.");
         _elapsedTime.Start();
 
+        Exception? firstError = null;
+
+        void RunWorkerSafe(int idx)
+        {
+            try
+            {
+                RunWorkerBody(_plans[idx]);
+            }
+            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+            {
+                // cooperative cancellation
+            }
+            catch (Exception ex)
+            {
+                Interlocked.CompareExchange(ref firstError, ex, null);
+            }
+        }
+
         if (_threadCount == 1)
         {
             // Single-threaded: run directly on this thread
-            RunWorkerBody(_plans[0]);
+            RunWorkerSafe(0);
         }
         else
         {
@@ -1107,10 +716,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             for (int i = 0; i < _threadCount; i++)
             {
                 int threadIdx = i;
-                threads[i] = new Thread(() => RunWorkerBody(_plans[threadIdx]))
+                threads[i] = new Thread(() => RunWorkerSafe(threadIdx))
                 {
                     Name = $"Motely Search Thread {threadIdx}",
-                    IsBackground = true
+                    IsBackground = true,
                 };
                 threads[i].Start();
             }
@@ -1119,6 +728,15 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 threads[i].Join();
             }
+        }
+
+        if (firstError is not null)
+        {
+            // Tell awaiters about the failure, then rethrow on the caller for the
+            // sync surface. Without this, a failed worker used to look like a clean
+            // completion to anyone waiting on _completionSource.
+            _completionSource.TrySetException(firstError);
+            throw firstError;
         }
 
         SignalSearchCompleted();
@@ -1195,50 +813,93 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     /// Starts search threads without blocking the caller.
     /// Completion is signaled via <see cref="_completionSource"/>.
     /// </summary>
+    /// <remarks>
+    /// Both paths off-thread the worker bodies. The single-thread case used to run
+    /// synchronously on the caller, which broke <see cref="RunSearchAsync"/>: the Task
+    /// only returned after the search had already completed, so any code that did
+    /// <c>await search.RunSearchAsync()</c> on the same thread deadlocked. The
+    /// multi-thread case used to swallow worker exceptions silently — if a worker
+    /// threw, <see cref="_completionSource"/> never moved and the caller hung forever.
+    /// Every worker is now wrapped so the first exception is captured and surfaced
+    /// through <see cref="_completionSource"/> once the last worker drops out.
+    /// </remarks>
     private void StartSearchThreads()
     {
-        // what the fuck - pifreak
-        // //ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-
         _elapsedTime.Start();
 
-        if (_threadCount == 1)
+        int totalWorkers = _threadCount;
+        WorkerCoordinator coordinator = new(this, totalWorkers);
+
+        if (totalWorkers == 1)
         {
-            _ = Task.Run(() =>
-            {
-                try
-                {
-                    RunWorkerBody(_plans[0]);
-                    SignalSearchCompleted();
-                }
-                catch (Exception ex)
-                {
-                    _completionSource.TrySetException(ex);
-                }
-            });
+            // Single-thread: run inline on the caller — no pthread, no deadlock risk,
+            // and exceptions propagate cleanly without corrupting unsafe SIMD state.
+            coordinator.RunWorker(0);
+            return;
         }
-        else
+
+        for (int i = 0; i < totalWorkers; i++)
         {
-            int remaining = _threadCount;
-            for (int i = 0; i < _threadCount; i++)
+            int threadIdx = i;
+            var thread = new Thread(() => coordinator.RunWorker(threadIdx))
             {
-                int threadIdx = i;
-                var thread = new Thread(() =>
+                Name = $"Motely Search Thread {threadIdx}",
+                IsBackground = true,
+            };
+            thread.Start();
+        }
+    }
+
+    /// <summary>
+    /// Tracks the running worker count and routes the first thrown exception back
+    /// through <see cref="_completionSource"/>. One instance per search.
+    /// </summary>
+    private sealed class WorkerCoordinator
+    {
+        private readonly MotelySearch<TBaseFilter> _owner;
+        private int _remaining;
+        private Exception? _firstError;
+
+        public WorkerCoordinator(MotelySearch<TBaseFilter> owner, int totalWorkers)
+        {
+            _owner = owner;
+            _remaining = totalWorkers;
+        }
+
+        public void RunWorker(int idx)
+        {
+            try
+            {
+                _owner.RunWorkerBody(_owner._plans[idx]);
+            }
+            catch (OperationCanceledException)
+                when (_owner._cancellationToken.IsCancellationRequested)
+            {
+                // honour cooperative cancellation — no error
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WORKER EXCEPTION] {ex}");
+                Interlocked.CompareExchange(ref _firstError, ex, null);
+            }
+            finally
+            {
+                if (Interlocked.Decrement(ref _remaining) == 0)
                 {
-                    RunWorkerBody(_plans[threadIdx]);
-                    if (Interlocked.Decrement(ref remaining) == 0)
+                    Thread.MemoryBarrier();
+                    var err = Volatile.Read(ref _firstError);
+                    if (err is not null)
                     {
-                        Thread.MemoryBarrier();
-                        bool completed =
-                            Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
-                        _completionSource.TrySetResult(completed);
+                        _owner._completionSource.TrySetException(err);
                     }
-                })
-                {
-                    Name = $"Motely Search Thread {threadIdx}",
-                    IsBackground = true
-                };
-                thread.Start();
+                    else
+                    {
+                        bool completed =
+                            Volatile.Read(ref _owner._isDisposed) == 0
+                            && !_owner._cancellationToken.IsCancellationRequested;
+                        _owner._completionSource.TrySetResult(completed);
+                    }
+                }
             }
         }
     }
@@ -1266,9 +927,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return;
 
         long elapsedMS = _elapsedTime.ElapsedMilliseconds;
-        if (_progressReportIntervalMs > 0
+        if (
+            _progressReportIntervalMs > 0
             && _lastProgressReportElapsedMs >= 0
-            && elapsedMS - _lastProgressReportElapsedMs < _progressReportIntervalMs)
+            && elapsedMS - _lastProgressReportElapsedMs < _progressReportIntervalMs
+        )
             return;
         _lastProgressReportElapsedMs = elapsedMS;
 
@@ -1351,6 +1014,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private abstract class MotelySearchPlan : IDisposable
     {
         public const int MAX_SEED_WAIT_MS = 314;
+
+        // Auto-cutoff rate gate (see AutoCutoffState). Evaluated once per batch.
+        // Engage the monotonic-max clamp only when raw matches arrive faster than this;
+        // below it there's no interop pressure, so report everything. Conservative defaults,
+        // tunable. The window keeps the rate estimate stable across a single batch's jitter.
+        private const long AUTO_CUTOFF_GATE_WINDOW_MS = 250;
+        private const long AUTO_CUTOFF_ENGAGE_RATE_PER_SEC = 2000;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
@@ -1474,8 +1144,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                         if (batch->SeedCount != 0)
                         {
-
-                            if (Search._elapsedTime.ElapsedMilliseconds - batch->WaitStartMS >= MAX_SEED_WAIT_MS)
+                            if (
+                                Search._elapsedTime.ElapsedMilliseconds - batch->WaitStartMS
+                                >= MAX_SEED_WAIT_MS
+                            )
                             {
                                 SearchFilterBatch(i, batch);
                                 Debug.Assert(
@@ -1486,6 +1158,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         }
                     }
                 }
+
+                // Re-evaluate the per-thread auto-cutoff rate gate for the next batch.
+                if (Search._autoScoreCutoff)
+                    UpdateAutoCutoffGate();
 
                 // Report progress
                 Search.PrintReport();
@@ -1503,7 +1179,29 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
             }
+        }
 
+        // Per-thread auto-cutoff rate gate. Measures the RAW match rate (candidates seen
+        // before the clamp) over a short window and engages the monotonic-max clamp only
+        // while that rate would pressure the scored-result callback (costly across the WASM
+        // interop boundary). Rare searches never engage and report every match. No locking:
+        // each plan owns its own AutoCutoffState. A single threshold is safe because the raw
+        // rate is independent of whether the clamp is engaged, so it cannot oscillate.
+        private void UpdateAutoCutoffGate()
+        {
+            long nowMs = Search._elapsedTime.ElapsedMilliseconds;
+            long windowMs = nowMs - _autoCutoffState.LastGateMs;
+            if (windowMs < AUTO_CUTOFF_GATE_WINDOW_MS)
+                return;
+
+            long windowMatches =
+                _autoCutoffState.RawMatches - _autoCutoffState.LastGateRawMatches;
+            long ratePerSec = windowMatches * 1000 / windowMs;
+
+            _autoCutoffState.Engaged = ratePerSec >= AUTO_CUTOFF_ENGAGE_RATE_PER_SEC;
+
+            _autoCutoffState.LastGateMs = nowMs;
+            _autoCutoffState.LastGateRawMatches = _autoCutoffState.RawMatches;
         }
 
         internal abstract void SearchProviderBatch();
@@ -1620,13 +1318,22 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     if (Search._autoScoreCutoff)
                     {
                         int score = _resultBuffer[lane].Score;
-                        if (score < _autoCutoffState.LearnedCutoff)
+
+                        // Count every scored candidate BEFORE the clamp — this is the raw
+                        // match rate that drives the gate (see UpdateAutoCutoffGate).
+                        _autoCutoffState.RawMatches++;
+
+                        // Clamp only while engaged: drop anything below the running max.
+                        if (_autoCutoffState.Engaged && score < _autoCutoffState.LearnedCutoff)
                         {
                             _autoCutoffState.SeedsFiltered++;
                             continue;
                         }
 
-                        _autoCutoffState.LearnedCutoff = score;
+                        // Only ever raise the bar. (While disengaged we report low scores
+                        // too, so a plain assign here would wrongly lower the running max.)
+                        if (score > _autoCutoffState.LearnedCutoff)
+                            _autoCutoffState.LearnedCutoff = score;
                     }
 
                     Search._scoredResultCallback?.Invoke(_resultBuffer[lane]);
@@ -1763,7 +1470,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             continue;
 
                         if (partialHashLength >= MotelyGlobals.MaxCachedPseudoHashKeyLength)
-                            Console.WriteLine($"partialHashLength {partialHashLength} >= MotelyGlobals.MaxCachedPseudoHashKeyLength {MotelyGlobals.MaxCachedPseudoHashKeyLength}");
+                            Console.WriteLine(
+                                $"partialHashLength {partialHashLength} >= MotelyGlobals.MaxCachedPseudoHashKeyLength {MotelyGlobals.MaxCachedPseudoHashKeyLength}"
+                            );
 
                         if (searchParams.SeedHashCache->Cache[partialHashLength] == null)
                             continue;
@@ -1809,7 +1518,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // We also zero the cached partial-hash vectors for those padding lanes: BatchSeeds
             // writes only to lane = seedBatchIndex, so any lane >= SeedCount retains a stale
             // hash from the last partial batch that touched this slot. Filter code that reads
-            // the hash cache across all 8 SIMD lanes (voucher / tarot / planet / tag / spectral
+            // the hash cache across all 8 SIMD lanes (voucher / Tarot / Planet / tag / Spectral
             // resample loops) will otherwise produce garbage PRNG output for padding lanes and
             // can spin forever trying to reroll them into a legal value. See Tacodiva/Motely#5
             // for the source-side handoff bug; this is the destination-side hygiene pass.
@@ -1921,10 +1630,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // Calculate MaxBatch - handle unknown seed count (-1) by using a large estimate
             // This is only used for progress reporting, not actual batch termination
             long seedCount = SeedProvider.SeedCount;
-            MaxBatch = seedCount >= 0
-                ? (seedCount + (long)(MotelyGlobals.MaxVectorWidth - 1))
-                    / (long)MotelyGlobals.MaxVectorWidth
-                : long.MaxValue / MotelyGlobals.MaxVectorWidth; // Large estimate for unknown count
+            MaxBatch =
+                seedCount >= 0
+                    ? (seedCount + (long)(MotelyGlobals.MaxVectorWidth - 1))
+                        / (long)MotelyGlobals.MaxVectorWidth
+                    : long.MaxValue / MotelyGlobals.MaxVectorWidth; // Large estimate for unknown count
             SeedsPerBatch = (long)MotelyGlobals.MaxVectorWidth;
 
             _hashes = (Vector512<double>*)
@@ -2013,7 +1723,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 {
                     for (int i = 0; i < MotelyGlobals.MaxSeedLength; i++)
                     {
-                        ((double*)_seedCharacterMatrix)[i * MotelyGlobals.MaxVectorWidth + lane] = 0;
+                        ((double*)_seedCharacterMatrix)[i * MotelyGlobals.MaxVectorWidth + lane] =
+                            0;
                     }
                 }
             }

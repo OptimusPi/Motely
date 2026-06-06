@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Native;
 
 public struct ObservatoryDesc : IMotelySeedFilterDesc<ObservatoryDesc.ObservatoryFilter>
 {

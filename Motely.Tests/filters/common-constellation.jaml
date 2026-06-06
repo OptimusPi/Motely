@@ -1,6 +1,6 @@
-name: Constellation Planet Engine
+name: Constellation planetCard Engine
 author: jammy
-description: Constellation common with Nebula Deck for X0.1 Mult per Planet used
+description: Constellation common with Nebula Deck for X0.1 Mult per planetCard used
 deck: Nebula
 stake: White
 must:
