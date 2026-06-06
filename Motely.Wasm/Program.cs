@@ -80,21 +80,18 @@ public static partial class Program
     [Import]
     public static partial void ReportWasmError(string message); // TODO this doesnt seem right
 
-    // JS → C# scalar predicate. Assigned in JS as `Motely.jimmolateProbe = (ctx) => bool`
-    // before boot. Runs per surviving lane after the SIMD pass; return true to keep the seed.
-    // `MotelySingleSearchContext` is a class, so it crosses as a Bootsharp interop instance.
+    // Jimmolate = the OG Immolate `filter(seed) => keep?` model, in the browser. JS assigns
+    // `Motely.jimmolatePredicate = (result) => bool` before boot; it runs per SCORED seed on
+    // JAMLyzer's marshallable result (Seed/Score/Tallies). No engine driving, no ref-struct
+    // streams across the boundary (that was the 65-wrapper trap) — C# does the work, the
+    // predicate decides. A seed reaches JS only if the predicate keeps it.
     [Import]
-    public static partial bool JimmolateProbe(MotelySingleSearchContext ctx);
+    public static partial bool JimmolatePredicate(MotelyScoredSeedResult result);
 
-    // Gate for the probe: a bare unassigned [Import] throws when invoked, so consumers set
-    // this true after wiring `jimmolateProbe`. When false, the Jimmolate filter is not attached.
+    // Gate: a bare unassigned [Import] throws when invoked, so consumers set this true after
+    // wiring `jimmolatePredicate`. When false, every scored seed is reported (no filtering).
     [Export]
     public static bool JimmolateEnabled { get; set; }
-
-    // Adapts the JS probe to the per-lane delegate. The context is a class; forward the
-    // reference straight through — no `ref` needed at the JS seam.
-    private static readonly MotelyIndividualSeedSearcher JimmolateSearcher =
-        (ref MotelySingleSearchContext ctx) => JimmolateProbe(ctx);
 
     [Export]
     public static event Action<MotelyProgress>? OnProgress;
@@ -275,8 +272,6 @@ public static partial class Program
     private static IMotelySearch RunSearch(IMotelySearchSettings settings)
     {
         settings = AttachWasmCallbacks(settings).WithThreadCount(1);
-        if (JimmolateEnabled)
-            settings = settings.WithJimmolate(JimmolateSearcher);
 
         // WASM + threadCount=1: Start() pokes through the pthread path and runs the search
         // synchronously on the calling thread. By the time it returns, the search is done —
@@ -292,8 +287,13 @@ public static partial class Program
             settings = settings.WithSeedMatchCallback(seed => OnSeedMatch(seed));
         if (OnScoredResult is not null)
             settings = settings.WithScoredResultCallback(tally =>
-                OnScoredResult(MotelyScoredSeedResult.FromTally(in tally))
-            );
+            {
+                var result = MotelyScoredSeedResult.FromTally(in tally);
+                // Jimmolate: the JS `filter(result) => keep?` predicate. Drop what it rejects.
+                if (JimmolateEnabled && !JimmolatePredicate(result))
+                    return;
+                OnScoredResult(result);
+            });
         return settings;
     }
 }
