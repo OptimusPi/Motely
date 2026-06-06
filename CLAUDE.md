@@ -19,8 +19,36 @@ compare to it, or assume its conventions apply.)
 ## What this is
 
 Motely is a vectorized (SIMD) search engine for **Balatro** game seeds, with
-filters authored in **JAML** (Jimbo's Ante Markup Language, a YAML dialect). The
+filters authored in **JAML** (Jimbo's Ante Markup Language). The
 app ships several heads on top of the core engine.
+
+## Bootsharp (Motely.Wasm)
+
+`Motely.Wasm/` is a Bootsharp project. Read these docs before changing it — they
+auto-load via the `@` imports below.
+
+Quick reference:
+- Bootsharp generates the ES module and `package.json`; `motely-wasm/` is output.
+- `BootsharpPublishDirectory` = module, `BootsharpPackageDirectory` = `package.json`,
+  `BootsharpBinariesDirectory` = binaries. Binaries dir set → sideloaded (separate
+  `.wasm`; `boot()` takes a root URL or `{ wasm }` bytes). Empty → embedded
+  (`boot()` takes no args).
+- `[RenameNode]` / `[RenameMember]` returning null/empty erases that node/member
+  from the generated JS surface.
+
+@d:/bootsharp/docs/guide/index.md
+@d:/bootsharp/docs/guide/getting-started.md
+@d:/bootsharp/docs/guide/build-config.md
+@d:/bootsharp/docs/guide/sideloading.md
+@d:/bootsharp/docs/guide/interop-modules.md
+@d:/bootsharp/docs/guide/interop-instances.md
+@d:/bootsharp/docs/guide/declarations.md
+@d:/bootsharp/docs/guide/serialization.md
+@d:/bootsharp/docs/guide/specialization.md
+@d:/bootsharp/docs/guide/renaming.md
+@d:/bootsharp/docs/guide/llvm.md
+@d:/bootsharp/docs/guide/extensions/dependency-injection.md
+@d:/bootsharp/docs/guide/extensions/file-system.md
 
 ## Layout
 
