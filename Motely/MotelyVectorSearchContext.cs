@@ -123,7 +123,8 @@ internal readonly unsafe struct MotelySearchContextParams(
 
         for (; i < SeedLastCharactersLength; i++)
         {
-            output[i] = (char)((double*)SeedLastCharacters)[i * MotelyGlobals.MaxVectorWidth + lane];
+            output[i] = (char)
+                ((double*)SeedLastCharacters)[i * MotelyGlobals.MaxVectorWidth + lane];
         }
 
         for (; i < SeedLength; i++)

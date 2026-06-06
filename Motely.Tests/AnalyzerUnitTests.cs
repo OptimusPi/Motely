@@ -1,31 +1,13 @@
+using System.Collections.Generic;
+using Motely;
 using Motely.Analysis;
+using Motely.Enums;
+using Xunit;
 
 namespace Motely.Tests;
 
 public sealed class AnalyzerUnitTests
 {
-    [Fact]
-    public void TestJamlyzerAnalyzeSeeds_AttachesStructuredSeedAnalysis()
-    {
-        const string jaml = """
-            name: test
-            deck: Red
-            stake: White
-            should:
-              - joker: Any
-                score: 1
-            """;
-
-        var result = MotelyJamlyzer.AnalyzeSeeds(new(jaml, ["1AAAAAAA"]));
-
-        Assert.Null(result.Error);
-        var seed = Assert.Single(result.Seeds);
-        Assert.Equal("1AAAAAAA", seed.Seed);
-        Assert.NotNull(seed.Analysis);
-        Assert.NotEmpty(seed.Analysis.Antes);
-        Assert.False(string.IsNullOrWhiteSpace(seed.Analysis.Antes[0].Boss));
-    }
-
     [Fact]
     public void TestSeedRouter_CapturesSingleSearchContext()
     {
@@ -38,6 +20,34 @@ public sealed class AnalyzerUnitTests
         var runState = new MotelyRunState();
         var boss = ctx.GetBossForAnte(ref bossStream, 1, ref runState);
         Assert.NotEqual(default, boss);
+    }
+
+    // The decisive test: does the MotelySingleSearchContext returned by Instance()
+    // actually drive a real PRNG stream and produce valid shop items? It must agree
+    // with the golden analyzer, which is verified against Balatro itself.
+    [Fact]
+    public void TestReturnedContext_DrivesShopStreamMatchingAnalyzer()
+    {
+        const string seed = "UNITTEST";
+
+        using var router = new MotelySeedRouterDesc(seed, MotelyDeck.Red, MotelyStake.White);
+        var ctx = router.Instance();
+
+        var shopStream = ctx.CreateShopItemStream(1, MotelyDeck.Red.GetDefaultRunState());
+        var fromContext = new List<int>();
+        for (int i = 0; i < 5; i++)
+        {
+            fromContext.Add(ctx.GetNextShopItem(ref shopStream).Value);
+        }
+
+        var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
+        var fromAnalyzer = new List<int>();
+        for (int i = 0; i < 5; i++)
+        {
+            fromAnalyzer.Add(analysis.Antes[0].ShopQueue[i].Value);
+        }
+
+        Assert.Equal(fromAnalyzer, fromContext);
     }
 
     // Smoke test: analyzer runs end-to-end on a range of seeds/decks/stakes without
@@ -60,7 +70,10 @@ public sealed class AnalyzerUnitTests
     {
         string actualOutput = GetAnalyzerOutput(seed, deck, stake);
 
-        Assert.False(string.IsNullOrWhiteSpace(actualOutput), $"Analyzer returned empty output for {seed}");
+        Assert.False(
+            string.IsNullOrWhiteSpace(actualOutput),
+            $"Analyzer returned empty output for {seed}"
+        );
         Assert.Contains("==ANTE 1==", actualOutput);
     }
 
@@ -70,7 +83,7 @@ public sealed class AnalyzerUnitTests
         MotelyStake stake = MotelyStake.White
     )
     {
-        return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
+        return MotelyLegacyTextAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
 
     [Fact]

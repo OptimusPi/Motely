@@ -1,17 +1,25 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-namespace Motely.Filters;
 
-public sealed class StartingDrawClause : IJamlClause
+namespace Motely.Filters.Jaml;
+
+public sealed class StartingDrawClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public MotelyStandardcardRank? Rank { get; init; }
-    public MotelyStandardcardSuit? Suit { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public MotelyStandardcardRank? Rank { get; set; }
+    public MotelyStandardcardSuit? Suit { get; set; }
+
+    public override int EstimatedCost => 7 + MaxAnte;
+
+    public override string Describe()
+    {
+        var parts = new System.Collections.Generic.List<string>(2);
+        if (Rank.HasValue)
+            parts.Add(Rank.Value.ToString());
+        if (Suit.HasValue)
+            parts.Add(Suit.Value.ToString());
+        return $"startingDraw {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
+    }
 }
 
 public struct StartingDrawFilterDesc(StartingDrawClause clause)
@@ -28,9 +36,7 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
     {
         private readonly StartingDrawClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause; // Capture in local for lambda

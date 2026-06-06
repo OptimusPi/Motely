@@ -11,12 +11,6 @@ public sealed record class MotelyJamlyzerConfig(
     bool IncludeSeedAnalysis = true
 );
 
-public sealed record class MotelyJamlyzerSeedAnalysisConfig(
-    string Seed,
-    string Jaml,
-    bool IncludeSeedAnalysis = true
-);
-
 public sealed record class MotelyJamlyzerSeedListConfig(
     string Jaml,
     IReadOnlyList<string>? Seeds = null,
@@ -38,13 +32,7 @@ public sealed record class MotelyJamlyzerSeedResult(
     string Seed,
     int Score,
     int[] Tallies,
-    SeedAnalysisDto? Analysis = null
-);
-
-internal sealed record class MotelyJamlyzerResolvedConfig(
-    JamlConfig Config,
-    JamlSearchPlan Plan,
-    IReadOnlyList<string>? Seeds = null
+    MotelyLegacyTextAnalysis? Analysis = null
 );
 
 /// <summary>
@@ -55,22 +43,37 @@ public static class MotelyJamlyzer
 {
     public static MotelyJamlyzerResult AnalyzeSeeds(MotelyJamlyzerSeedListConfig cfg)
     {
+        if (!JamlConfigLoader.TryLoad(cfg.Jaml, out var config, out var error) || config is null)
+            return new(error ?? "Invalid JAML.", []);
+        return AnalyzeSeeds(config, cfg.Seeds, cfg.IncludeSeedAnalysis);
+    }
+
+    public static MotelyJamlyzerResult AnalyzeSeeds(
+        JamlConfig config,
+        IReadOnlyList<string>? seeds = null,
+        bool includeSeedAnalysis = true
+    )
+    {
         try
         {
-            var resolved = TryResolveSeedListConfig(cfg, out var errorResult);
-            if (resolved is null)
-                return errorResult!;
+            var plan = JamlSearchBuilder.CreatePlan(config);
+            var finalSeeds = seeds is { Count: > 0 } ? seeds : config.Seeds;
+            if (finalSeeds.Count == 0)
+            {
+                return new(
+                    "No seeds were provided. Pass seeds explicitly or add a top-level JAML seeds array.",
+                    [],
+                    config.Deck,
+                    config.Stake
+                );
+            }
 
-            var config = resolved.Config;
-            var plan = resolved.Plan;
-            var seeds = resolved.Seeds!;
             var rows = new List<MotelyJamlyzerSeedResult>();
-
-            var settings = plan.Settings
-                .WithDeck(config.Deck)
+            var settings = plan
+                .Settings.WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(1)
-                .WithListSearch(seeds.Select(NormalizeSeed), seeds.Count)
+                .WithListSearch(finalSeeds.Select(NormalizeSeed), finalSeeds.Count)
                 .WithScoredResultCallback(tally =>
                 {
                     rows.Add(
@@ -78,9 +81,7 @@ public static class MotelyJamlyzer
                             tally.Seed,
                             tally.Score,
                             tally.TallyValuesSpan.ToArray(),
-                            cfg.IncludeSeedAnalysis
-                                ? BuildSeedAnalysisDto(tally.Seed, config)
-                                : null
+                            includeSeedAnalysis ? BuildSeedAnalysis(tally.Seed, config) : null
                         )
                     );
                 });
@@ -105,21 +106,20 @@ public static class MotelyJamlyzer
         }
     }
 
-    public static MotelyJamlyzerResult AnalyzeSeed(MotelyJamlyzerSeedAnalysisConfig cfg)
+    public static MotelyJamlyzerResult AnalyzeSeed(
+        JamlConfig config,
+        string seed,
+        bool includeSeedAnalysis = true
+    )
     {
         try
         {
-            var resolved = TryResolveConfig(cfg.Jaml, out var errorResult);
-            if (resolved is null)
-                return errorResult!;
-
-            var normalizedSeed = NormalizeSeed(cfg.Seed);
-            var config = resolved.Config;
-            var plan = resolved.Plan;
+            var plan = JamlSearchBuilder.CreatePlan(config);
+            var normalizedSeed = NormalizeSeed(seed);
             MotelyJamlyzerSeedResult? result = null;
 
-            var settings = plan.Settings
-                .WithDeck(config.Deck)
+            var settings = plan
+                .Settings.WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(1)
                 .WithListSearch([normalizedSeed])
@@ -129,9 +129,7 @@ public static class MotelyJamlyzer
                         tally.Seed,
                         tally.Score,
                         tally.TallyValuesSpan.ToArray(),
-                        cfg.IncludeSeedAnalysis
-                            ? BuildSeedAnalysisDto(tally.Seed, config)
-                            : null
+                        includeSeedAnalysis ? BuildSeedAnalysis(tally.Seed, config) : null
                     );
                 });
 
@@ -157,26 +155,41 @@ public static class MotelyJamlyzer
 
     public static MotelyJamlyzerResult Analyze(MotelyJamlyzerConfig cfg)
     {
+        ValidatePage(cfg);
+        if (!JamlConfigLoader.TryLoad(cfg.Jaml, out var config, out var error) || config is null)
+            return new(error ?? "Invalid JAML.", []);
+        return Analyze(
+            config,
+            cfg.StartBatch,
+            cfg.EndBatch,
+            cfg.BatchCharacterCount,
+            cfg.ThreadCount,
+            cfg.IncludeSeedAnalysis
+        );
+    }
+
+    public static MotelyJamlyzerResult Analyze(
+        JamlConfig config,
+        long startBatch,
+        long endBatch,
+        int batchCharacterCount,
+        int threadCount,
+        bool includeSeedAnalysis
+    )
+    {
         try
         {
-            ValidatePage(cfg);
-
-            var resolved = TryResolveConfig(cfg.Jaml, out var errorResult);
-            if (resolved is null)
-                return errorResult!;
-
-            var config = resolved.Config;
-            var plan = resolved.Plan;
+            var plan = JamlSearchBuilder.CreatePlan(config);
             var rows = new List<MotelyJamlyzerSeedResult>();
             var rowsLock = new object();
 
-            var settings = plan.Settings
-                .WithDeck(config.Deck)
+            var settings = plan
+                .Settings.WithDeck(config.Deck)
                 .WithStake(config.Stake)
-                .WithThreadCount(cfg.ThreadCount)
-                .WithBatchCharacterCount(cfg.BatchCharacterCount)
-                .WithStartBatchIndex(cfg.StartBatch)
-                .WithEndBatchIndex(cfg.EndBatch)
+                .WithThreadCount(threadCount)
+                .WithBatchCharacterCount(batchCharacterCount)
+                .WithStartBatchIndex(startBatch)
+                .WithEndBatchIndex(endBatch)
                 .WithSequentialSearch()
                 .WithScoredResultCallback(tally =>
                 {
@@ -193,7 +206,7 @@ public static class MotelyJamlyzer
             using var search = settings.CreateSearch();
             RunSearchSynchronously(search);
 
-            IReadOnlyList<MotelyJamlyzerSeedResult> results = cfg.IncludeSeedAnalysis
+            IReadOnlyList<MotelyJamlyzerSeedResult> results = includeSeedAnalysis
                 ? AttachSeedAnalysis(rows, config)
                 : rows;
 
@@ -232,68 +245,18 @@ public static class MotelyJamlyzer
         for (int i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
-            analyzed[i] = row with
-            {
-                Analysis = BuildSeedAnalysisDto(row.Seed, config),
-            };
+            analyzed[i] = row with { Analysis = BuildSeedAnalysis(row.Seed, config) };
         }
 
         return analyzed;
     }
 
-    private static MotelyJamlyzerResolvedConfig? TryResolveSeedListConfig(
-        MotelyJamlyzerSeedListConfig cfg,
-        out MotelyJamlyzerResult? errorResult
-    )
+    private static MotelyLegacyTextAnalysis BuildSeedAnalysis(string seed, JamlConfig config)
     {
-        errorResult = null;
-
-        var resolved = TryResolveConfig(cfg.Jaml, out errorResult);
-        if (resolved is null)
-            return null;
-
-        var seeds = cfg.Seeds is { Count: > 0 } ? cfg.Seeds : resolved.Config.Seeds;
-        if (seeds.Count == 0)
-        {
-            errorResult = new(
-                "No seeds were provided. Pass seeds explicitly or add a top-level JAML seeds array.",
-                [],
-                resolved.Config.Deck,
-                resolved.Config.Stake
-            );
-            return null;
-        }
-
-        return resolved with { Seeds = seeds };
-    }
-
-    private static MotelyJamlyzerResolvedConfig? TryResolveConfig(
-        string jaml,
-        out MotelyJamlyzerResult? errorResult
-    )
-    {
-        errorResult = null;
-
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error) || config is null)
-        {
-            errorResult = new(error ?? "Invalid JAML.", []);
-            return null;
-        }
-
-        if (!config.Must.HasAnyClauses && !config.Should.HasAnyClauses && !config.MustNot.HasAnyClauses)
-        {
-            errorResult = new("JAML has no clauses.", [], config.Deck, config.Stake);
-            return null;
-        }
-
-        return new(config, JamlSearchBuilder.CreatePlan(config));
-    }
-
-    private static SeedAnalysisDto BuildSeedAnalysisDto(string seed, JamlConfig config)
-    {
-        var analysis = MotelySeedAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
-        var dto = SeedAnalysisDtoMapper.FromSeedAnalysis(seed, config.Deck, config.Stake, analysis);
-        return MotelyJamlyzerHighlights.Apply(config, dto);
+        // The JAMLyzer highlight layer was removed in commit b3bc5477 ("Cleanup") — it
+        // operated on the old MotelySeedAnalysis type, which the legacy-analyzer refactor
+        // replaced with MotelyLegacyTextAnalysis. Analyze and return directly.
+        return MotelyLegacyTextAnalyzer.Analyze(new(seed, config.Deck, config.Stake));
     }
 
     private static void RunSearchSynchronously(IMotelySearch search)

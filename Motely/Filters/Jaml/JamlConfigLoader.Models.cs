@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Motely.Enums;
 using YamlDotNet.Serialization;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Top-level JAML document: the loader fills this from YAML; <see cref="JamlSerializer"/> and the TUI emit the same shape. Keys are camelCase (JAML convention).
@@ -31,29 +32,22 @@ public sealed class JamlRootDocument
     public string? Stake { get; set; }
 
     [YamlMember(Alias = "defaults")]
-    public JamlDefaultsDto? Defaults { get; set; }
+    public JamlDefaults? Defaults { get; set; }
 
     [YamlMember(Alias = "must")]
-    public List<JamlClauseDto>? Must { get; set; }
+    public List<JamlClauseUnion>? Must { get; set; }
 
     [YamlMember(Alias = "should")]
-    public List<JamlClauseDto>? Should { get; set; }
+    public List<JamlClauseUnion>? Should { get; set; }
 
     [YamlMember(Alias = "mustNot")]
-    public List<JamlClauseDto>? MustNot { get; set; }
-
-    [YamlMember(Alias = "aesthetics")]
-    [JsonIgnore]
-    public List<string>? Aesthetics { get; set; }
-
-    [YamlMember(Alias = "hashtags")]
-    public List<string>? Hashtags { get; set; }
+    public List<JamlClauseUnion>? MustNot { get; set; }
 
     [YamlMember(Alias = "seeds")]
     public List<string>? Seeds { get; set; }
 }
 
-public sealed class JamlDefaultsDto
+public sealed class JamlDefaults
 {
     [YamlMember(Alias = "antes")]
     public int[]? Antes { get; set; }
@@ -68,7 +62,7 @@ public sealed class JamlDefaultsDto
     public int? Score { get; set; }
 }
 
-public sealed class JamlClauseDto
+public sealed class JamlClauseUnion
 {
     [YamlMember(Alias = "joker")]
     public EnumOrAny<MotelyJoker>? Joker { get; set; }
@@ -127,11 +121,20 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "tag")]
     public MotelyTag? Tag { get; set; }
 
+    [YamlMember(Alias = "tags")]
+    public List<MotelyTag>? Tags { get; set; }
+
     [YamlMember(Alias = "smallBlindTag")]
     public MotelyTag? SmallBlindTag { get; set; }
 
+    [YamlMember(Alias = "smallBlindTags")]
+    public List<MotelyTag>? SmallBlindTags { get; set; }
+
     [YamlMember(Alias = "bigBlindTag")]
     public MotelyTag? BigBlindTag { get; set; }
+
+    [YamlMember(Alias = "bigBlindTags")]
+    public List<MotelyTag>? BigBlindTags { get; set; }
 
     [YamlMember(Alias = "standardCard")]
     public StandardCardValue? StandardCard { get; set; }
@@ -243,16 +246,28 @@ public sealed class JamlClauseDto
 
     // Compound clauses (YAML keys are lowercase; matches jaml.schema / hand-written JAML)
     [YamlMember(Alias = "and")]
-    public List<JamlClauseDto>? And { get; set; }
+    public List<JamlClauseUnion>? And { get; set; }
 
     [YamlMember(Alias = "or")]
-    public List<JamlClauseDto>? Or { get; set; }
+    public List<JamlClauseUnion>? Or { get; set; }
 
     [YamlMember(Alias = "clauses")]
-    public List<JamlClauseDto>? Clauses { get; set; }
+    public List<JamlClauseUnion>? Clauses { get; set; }
 
     [YamlMember(Alias = "mode")]
     public string? Mode { get; set; }
+
+    [YamlMember(Alias = "judgement")]
+    public int[]? Judgement { get; set; }
+
+    [YamlMember(Alias = "wraith")]
+    public int[]? Wraith { get; set; }
+
+    [YamlMember(Alias = "rareTag")]
+    public int[]? RareTag { get; set; }
+
+    [YamlMember(Alias = "uncommonTag")]
+    public int[]? UncommonTag { get; set; }
 
     // Flat source shortcuts (top-level on clause)
     [YamlMember(Alias = "shopItems")]
@@ -269,16 +284,16 @@ public sealed class JamlClauseDto
 
     // Nested sources object
     [YamlMember(Alias = "sources")]
-    public JamlSourcesDto? Sources { get; set; }
+    public JamlSources? Sources { get; set; }
 }
 
 public struct StandardCardValue
 {
     public string? StringValue;
-    public StandardCardConfigDto? ObjectValue;
+    public StandardCardConfig? ObjectValue;
 }
 
-public sealed class StandardCardConfigDto
+public sealed class StandardCardConfig
 {
     [YamlMember(Alias = "rank")]
     public string? Rank { get; set; }
@@ -296,10 +311,10 @@ public sealed class StandardCardConfigDto
     public MotelyItemEdition? Edition { get; set; }
 
     [YamlMember(Alias = "sources")]
-    public JamlSourcesDto? Sources { get; set; }
+    public JamlSources? Sources { get; set; }
 }
 
-public sealed class JamlSourcesDto
+public sealed class JamlSources
 {
     [YamlMember(Alias = "shopItems")]
     public int[]? ShopItems { get; set; }
@@ -313,20 +328,8 @@ public sealed class JamlSourcesDto
     [YamlMember(Alias = "maxShopItem")]
     public int? MaxShopItem { get; set; }
 
-    /// <summary>
-    /// Opt-in knob for ante-1 pack-slot reachability. Balatro gameplay gives ante 1 only 4 booster
-    /// packs (slots 0..3) by default, but vouchers like Hieroglyph / Petroglyph rewind progression
-    /// and expose slots 4 and 5. The underlying PRNG stream emits 6 packs at every ante regardless,
-    /// so iterating past slot 3 in ante 1 produces matches that a normal player would never see.
-    ///
-    /// Default = 3 (match only normal-gameplay reachable packs). Set to 5 to include Hieroglyph /
-    /// Petroglyph scenarios (e.g. seed KHTW99TC Negative Perkeo at ante 1 slot 5). Scoring clamps
-    /// per-ante using this value; the SIMD prefilter is deliberately over-permissive and leaves
-    /// final rejection to scoring.
-    /// </summary>
-    [YamlMember(Alias = "earlyAntesMaxPack")]
-    [JsonIgnore]
-    public int? EarlyAntesMaxPack { get; set; }
+    [YamlMember(Alias = "luck")]
+    public int? Luck { get; set; }
 
     [YamlMember(Alias = "tags")]
     public bool Tags { get; set; }

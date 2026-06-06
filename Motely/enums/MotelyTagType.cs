@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Enums;
 
 /// <summary>
 /// Specifies the type of tag to filter on

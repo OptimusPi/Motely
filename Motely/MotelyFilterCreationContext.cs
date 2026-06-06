@@ -9,9 +9,11 @@ public ref struct MotelyFilterCreationContext
     public bool IsAdditionalFilter;
 
     // Default parameters for unit tests
-    private static readonly MotelySearchParameters _defaultSearchParameters =
-        new()
-        { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
+    private static readonly MotelySearchParameters _defaultSearchParameters = new()
+    {
+        Deck = MotelyDeck.Red,
+        Stake = MotelyStake.White,
+    };
 
     public readonly MotelyStake Stake => _searchParameters.Stake;
     public readonly MotelyDeck Deck => _searchParameters.Deck;

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely;
+namespace Motely.Enums;
 
 public enum MotelyBoosterPackType
 {
@@ -145,25 +145,4 @@ public static class MotelyBoosterPackExt
             _ => throw new InvalidEnumArgumentException(),
         };
     }
-}
-
-static partial class MotelyWeightedPools
-{
-    public static readonly MotelyWeightedPool<MotelyBoosterPack> BoosterPacks = new([
-        new(MotelyBoosterPack.Arcana, 4),
-        new(MotelyBoosterPack.JumboArcana, 2),
-        new(MotelyBoosterPack.MegaArcana, 0.5),
-        new(MotelyBoosterPack.Celestial, 4),
-        new(MotelyBoosterPack.JumboCelestial, 2),
-        new(MotelyBoosterPack.MegaCelestial, 0.5),
-        new(MotelyBoosterPack.Standard, 4),
-        new(MotelyBoosterPack.JumboStandard, 2),
-        new(MotelyBoosterPack.MegaStandard, 0.5),
-        new(MotelyBoosterPack.Buffoon, 1.2),
-        new(MotelyBoosterPack.JumboBuffoon, 0.6),
-        new(MotelyBoosterPack.MegaBuffoon, 0.15),
-        new(MotelyBoosterPack.Spectral, 0.6),
-        new(MotelyBoosterPack.JumboSpectral, 0.3),
-        new(MotelyBoosterPack.MegaSpectral, 0.07),
-    ]);
 }

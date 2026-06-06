@@ -8,7 +8,9 @@ namespace Motely.Filters;
 /// </summary>
 [YamlStaticContext]
 [YamlSerializable(typeof(JamlRootDocument))]
-[YamlSerializable(typeof(JamlDefaultsDto))]
-[YamlSerializable(typeof(JamlClauseDto))]
-[YamlSerializable(typeof(JamlSourcesDto))]
+[YamlSerializable(typeof(JamlDefaults))]
+[YamlSerializable(typeof(JamlClauseUnion))]
+[YamlSerializable(typeof(JamlSources))]
+[YamlSerializable(typeof(StandardCardValue))]
+[YamlSerializable(typeof(StandardCardConfig))]
 public sealed partial class JamlYamlContext : StaticContext;

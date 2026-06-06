@@ -28,25 +28,51 @@ public class JamlEditorWindow : Window
         ColorScheme = BalatroTheme.Window;
 
         // ── toolbar ─────────────────────────────────────────────────────────
-        var toolbar = new View { X = 1, Y = 1, Width = Dim.Fill()! - 2, Height = 1 };
+        var toolbar = new View
+        {
+            X = 1,
+            Y = 1,
+            Width = Dim.Fill()! - 2,
+            Height = 1,
+        };
         Add(toolbar);
 
-        var saveButton = new CleanButton { X = 0, Y = 0, Text = " Save " };
+        var saveButton = new CleanButton
+        {
+            X = 0,
+            Y = 0,
+            Text = " Save ",
+        };
         saveButton.ColorScheme = BalatroTheme.GreenButton;
         saveButton.Accept += (_, _) => SaveEditorContent();
         toolbar.Add(saveButton);
 
-        var runButton = new CleanButton { X = Pos.Right(saveButton) + 1, Y = 0, Text = " Save + Search " };
+        var runButton = new CleanButton
+        {
+            X = Pos.Right(saveButton) + 1,
+            Y = 0,
+            Text = " Save + Search ",
+        };
         runButton.ColorScheme = BalatroTheme.BlueButton;
         runButton.Accept += (_, _) => SaveAndSearch();
         toolbar.Add(runButton);
 
-        var compileButton = new CleanButton { X = Pos.Right(runButton) + 1, Y = 0, Text = " Compile " };
+        var compileButton = new CleanButton
+        {
+            X = Pos.Right(runButton) + 1,
+            Y = 0,
+            Text = " Compile ",
+        };
         compileButton.ColorScheme = BalatroTheme.OrangeButton;
         compileButton.Accept += (_, _) => CompileAndValidate();
         toolbar.Add(compileButton);
 
-        var refreshButton = new CleanButton { X = Pos.Right(compileButton) + 1, Y = 0, Text = " Refresh List " };
+        var refreshButton = new CleanButton
+        {
+            X = Pos.Right(compileButton) + 1,
+            Y = 0,
+            Text = " Refresh List ",
+        };
         refreshButton.ColorScheme = BalatroTheme.PurpleButton;
         refreshButton.Accept += (_, _) => ReloadFilters();
         toolbar.Add(refreshButton);
@@ -146,10 +172,29 @@ public class JamlEditorWindow : Window
 
         KeyDown += (_, e) =>
         {
-            if (e.IsCtrl && e.KeyCode == KeyCode.S) { SaveEditorContent(); e.Handled = true; return; }
-            if (e.KeyCode == KeyCode.F5) { SaveAndSearch(); e.Handled = true; return; }
-            if (e.KeyCode == KeyCode.F7) { CompileAndValidate(); e.Handled = true; return; }
-            if (e.KeyCode == KeyCode.Esc) { MotelyTUI.CloseWindow(this); e.Handled = true; }
+            if (e.IsCtrl && e.KeyCode == KeyCode.S)
+            {
+                SaveEditorContent();
+                e.Handled = true;
+                return;
+            }
+            if (e.KeyCode == KeyCode.F5)
+            {
+                SaveAndSearch();
+                e.Handled = true;
+                return;
+            }
+            if (e.KeyCode == KeyCode.F7)
+            {
+                CompileAndValidate();
+                e.Handled = true;
+                return;
+            }
+            if (e.KeyCode == KeyCode.Esc)
+            {
+                MotelyTUI.CloseWindow(this);
+                e.Handled = true;
+            }
         };
 
         ReloadFilters();
@@ -162,15 +207,16 @@ public class JamlEditorWindow : Window
     {
         _localFilters = FilterLibrary.DiscoverLocalFilters();
         _filterList.SetSource(
-            new ObservableCollection<string>(
-                _localFilters.Select(f => f.DisplayName).ToList()));
+            new ObservableCollection<string>(_localFilters.Select(f => f.DisplayName).ToList())
+        );
         SetNeedsDraw();
     }
 
     private void LoadSelectedFilter()
     {
         var idx = _filterList.SelectedItem;
-        if (idx < 0 || idx >= _localFilters.Count) return;
+        if (idx < 0 || idx >= _localFilters.Count)
+            return;
 
         var selected = _localFilters[idx];
         try
@@ -272,7 +318,12 @@ public class JamlEditorWindow : Window
         if (string.IsNullOrWhiteSpace(_filePath) || !File.Exists(_filePath))
             return;
 
-        var searchWindow = new SearchWindow(_filePath, "jaml", TuiSettings.DefaultSource, TuiSettings.DefaultSink);
+        var searchWindow = new SearchWindow(
+            _filePath,
+            "jaml",
+            TuiSettings.DefaultSource,
+            TuiSettings.DefaultSink
+        );
         MotelyTUI.ShowWindow(searchWindow);
     }
 
@@ -290,7 +341,12 @@ public class JamlEditorWindow : Window
         };
         dialog.ColorScheme = BalatroTheme.Window;
 
-        var nameLabel = new Label { X = 1, Y = 1, Text = "Filter name:" };
+        var nameLabel = new Label
+        {
+            X = 1,
+            Y = 1,
+            Text = "Filter name:",
+        };
         dialog.Add(nameLabel);
 
         var nameField = new TextField
@@ -302,7 +358,12 @@ public class JamlEditorWindow : Window
         };
         dialog.Add(nameField);
 
-        var saveButton = new CleanButton { X = 1, Y = Pos.AnchorEnd(1), Text = "Save" };
+        var saveButton = new CleanButton
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(1),
+            Text = "Save",
+        };
         saveButton.ColorScheme = BalatroTheme.GreenButton;
         saveButton.Accept += (_, _) =>
         {
@@ -311,7 +372,12 @@ public class JamlEditorWindow : Window
         };
         dialog.Add(saveButton);
 
-        var backButton = new CleanButton { X = Pos.Right(saveButton) + 1, Y = Pos.AnchorEnd(1), Text = "Back" };
+        var backButton = new CleanButton
+        {
+            X = Pos.Right(saveButton) + 1,
+            Y = Pos.AnchorEnd(1),
+            Text = "Back",
+        };
         backButton.ColorScheme = BalatroTheme.BackButton;
         backButton.Accept += (_, _) => Application.RequestStop(dialog);
         dialog.Add(backButton);
@@ -327,7 +393,8 @@ public class JamlEditorWindow : Window
         {
             Normal = new Attribute(
                 isError ? BalatroTheme.Red : BalatroTheme.Green,
-                BalatroTheme.DarkGrey),
+                BalatroTheme.DarkGrey
+            ),
         };
     }
 
@@ -335,29 +402,70 @@ public class JamlEditorWindow : Window
     {
         var set = new SortedSet<string>(StringComparer.Ordinal);
 
-        foreach (var k in new[]
-        {
-            "name", "description", "author", "deck", "stake", "antes",
-            "must", "should", "mustNot",
-            "type", "value", "edition",
-            "enhancement", "sticker", "seal", "suit", "rank",
-            "shopItems", "boosterPacks", "shop", "booster", "packs",
-            "tarotCard", "planetCard", "spectralCard", "joker", "tag",
-            "first", "second", "third", "fourth", "fifth",
-            "score", "sources", "tallyConfig", "cutoff",
-        }) set.Add(k);
+        foreach (
+            var k in new[]
+            {
+                "name",
+                "description",
+                "author",
+                "deck",
+                "stake",
+                "antes",
+                "must",
+                "should",
+                "mustNot",
+                "type",
+                "value",
+                "edition",
+                "enhancement",
+                "sticker",
+                "seal",
+                "suit",
+                "rank",
+                "shopItems",
+                "boosterPacks",
+                "shop",
+                "booster",
+                "packs",
+                "Tarot",
+                "Planet",
+                "Spectral",
+                "joker",
+                "tag",
+                "first",
+                "second",
+                "third",
+                "fourth",
+                "fifth",
+                "score",
+                "sources",
+                "tallyConfig",
+                "cutoff",
+            }
+        )
+            set.Add(k);
 
-        foreach (var name in typeof(MotelyDeck).GetEnumNames()) set.Add(name);
-        foreach (var name in typeof(MotelyStake).GetEnumNames()) set.Add(name);
-        foreach (var name in typeof(MotelyJoker).GetEnumNames()) set.Add(name);
-        foreach (var name in typeof(MotelyTarotCard).GetEnumNames()) set.Add(name);
-        foreach (var name in typeof(MotelyPlanetCard).GetEnumNames()) set.Add(name);
-        foreach (var name in typeof(MotelySpectralCard).GetEnumNames()) set.Add(name);
-        foreach (var name in typeof(MotelyTag).GetEnumNames()) set.Add(name);
+        foreach (var name in typeof(MotelyDeck).GetEnumNames())
+            set.Add(name);
+        foreach (var name in typeof(MotelyStake).GetEnumNames())
+            set.Add(name);
+        foreach (var name in typeof(MotelyJoker).GetEnumNames())
+            set.Add(name);
+        foreach (var name in typeof(MotelyTarotCard).GetEnumNames())
+            set.Add(name);
+        foreach (var name in typeof(MotelyPlanetCard).GetEnumNames())
+            set.Add(name);
+        foreach (var name in typeof(MotelySpectralCard).GetEnumNames())
+            set.Add(name);
+        foreach (var name in typeof(MotelyTag).GetEnumNames())
+            set.Add(name);
 
-        foreach (var w in new[] { "Eternal", "Perishable", "Rental", "Pinned" }) set.Add(w);
-        foreach (var w in new[] { "foil", "holographic", "polychrome", "negative" }) set.Add(w);
-        foreach (var w in new[] { "in Ante", "by Ante", "Ante" }) set.Add(w);
+        foreach (var w in new[] { "Eternal", "Perishable", "Rental", "Pinned" })
+            set.Add(w);
+        foreach (var w in new[] { "foil", "holographic", "polychrome", "negative" })
+            set.Add(w);
+        foreach (var w in new[] { "in Ante", "by Ante", "Ante" })
+            set.Add(w);
 
         return set.ToList();
     }

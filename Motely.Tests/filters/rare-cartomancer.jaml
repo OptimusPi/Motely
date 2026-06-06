@@ -1,6 +1,6 @@
-name: Cartomancer Tarot Engine
+name: Cartomancer tarotCard Engine
 author: jammy
-description: Cartomancer rare joker with Fortune Teller for free Tarot every Blind
+description: Cartomancer rare joker with Fortune Teller for free tarotCard every Blind
 deck: Zodiac
 stake: White
 must:
