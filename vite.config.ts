@@ -16,13 +16,6 @@ const PEER_EXTERNALS = [
   "motely-wasm",
   /^motely-wasm\//,
   "@rewaffle/bootsharp-file-system",
-  // r3f stack: optional peers for the jaml-ui/r3f entry. Externalize so the
-  // 3D deps never land in the main bundles and consumers control versions.
-  "three",
-  /^three\//,
-  "@react-three/fiber",
-  "@react-three/drei",
-  "@react-spring/three",
 ];
 
 export default defineConfig({
@@ -59,7 +52,6 @@ export default defineConfig({
         ui: resolve(__dirname, "src/ui.ts"),
         core: resolve(__dirname, "src/core.ts"),
         motely: resolve(__dirname, "src/motely.ts"),
-        r3f: resolve(__dirname, "src/r3f.ts"),
       },
       formats: ["es"],
     },

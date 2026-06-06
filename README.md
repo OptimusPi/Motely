@@ -68,7 +68,7 @@ That's the whole integration. `useSearch` handles boot guarding, search lifecycl
 
 ## Package exports
 
-Five subpath entries, each a barrel. The public API is exactly what they re-export.
+Four subpath entries, each a barrel. The public API is exactly what they re-export.
 
 | Entry | What's in it | When you import it |
 | ----- | ------------ | ------------------ |
@@ -76,7 +76,6 @@ Five subpath entries, each a barrel. The public API is exactly what they re-expo
 | `jaml-ui/ui` | Jimbo design system (JimboPanel, JimboButton, JimboModal, tokens) | Building custom Balatro-styled UI |
 | `jaml-ui/core` | Sprite metadata, asset URLs, canvas `Layer` — pure, **no React, no motely-wasm** | Next.js server components, server-side rendering |
 | `jaml-ui/motely` | Re-exports `bootsharp` + `Motely` from motely-wasm, plus item-decode helpers and `useJamlLibrary` | Direct motely-wasm access, file-system mount |
-| `jaml-ui/r3f` | 3D card via React Three Fiber | Optional, has its own peer deps |
 
 ```tsx
 import { JamlGameCard, useSearch } from "jaml-ui";
@@ -223,18 +222,6 @@ import {
 } from "jaml-ui/motely";
 ```
 
-## 3D card (optional)
-
-```bash
-npm install three @react-three/fiber @react-three/drei @react-spring/three
-```
-
-```tsx
-import { Card3D } from "jaml-ui/r3f";
-
-<Card3D itemName="Blueprint" />
-```
-
 ## Next.js
 
 - Use `jaml-ui/core` from server components — it has no React and no motely-wasm imports.
@@ -255,7 +242,6 @@ import { Card3D } from "jaml-ui/r3f";
 | `motely-wasm` | All search/analyzer/decode functionality | No (direct dep) |
 | `react-icons` | Components that render icons | Yes |
 | `@rewaffle/bootsharp-file-system` | `useJamlLibrary` folder mount | Yes |
-| `three`, `@react-three/fiber`, `@react-three/drei`, `@react-spring/three` | `jaml-ui/r3f` only | Yes |
 
 ## Troubleshooting
 

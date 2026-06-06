@@ -1220,7 +1220,7 @@
 }
 
 /* Jimmolate: JS predicate editor for post-SIMD seed filtering. */
-.j-jimmolate { gap: var(--j-gap-sm); }
+.j-jimmolate { gap: var(--j-space-sm); }
 .j-jimmolate__sig { opacity: 0.6; }
 .j-jimmolate__input { width: 100%; font-family: var(--j-font-code); font-size: 11px; }
 

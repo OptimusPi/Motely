@@ -47,7 +47,6 @@ Subpath exports:
 - `jaml-ui/ui` — Jimbo design system (buttons, panels, tokens).
 - `jaml-ui/core` — sprite metadata + assets; pure (no React, no motely-wasm).
 - `jaml-ui/motely` — re-exports from `motely-wasm` + packed-item decoders.
-- `jaml-ui/r3f` — 3D card via React Three Fiber.
 
 `jimbo.css` is the stylesheet (side-effect import); `fonts.css` ships the fonts.
 
@@ -80,9 +79,6 @@ values here — pull them from `motely-wasm`.
 
 ## Known gaps / gotchas
 
-- **`package.json` `files` lists `jaml.schema.json`, but that file isn't in the
-  repo** — referenced and never shipped. Either generate it from the MotelyJAML
-  schema or drop it from `files`.
 - Don't hand-roll Balatro item names or sprites — use the `core` exports
   (`JOKERS`, `VOUCHERS`, `TAGS`, sprite maps) so names stay in sync with the engine.
 - **`src/lib/motely/motelyCompatEnums.ts`** vendors the item/joker enums
