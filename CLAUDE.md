@@ -19,8 +19,10 @@ compare to it, or assume its conventions apply.)
 ## What this is
 
 Motely is a vectorized (SIMD) search engine for **Balatro** game seeds, with
-filters authored in **JAML** (Jimbo's Ante Markup Language, a YAML dialect). The
-app ships several heads on top of the core engine.
+filters authored in **JAML** (Jimbo's Ante Markup Language) — its own language
+with its own vocabulary, grammar, parser/validator, schema, and language server.
+It uses YAML *surface* syntax the way GitHub Actions and Kubernetes do; it is not
+"a YAML dialect." The app ships several heads on top of the core engine.
 
 ## Layout
 
