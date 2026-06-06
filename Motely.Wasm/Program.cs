@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bootsharp;
@@ -18,7 +20,7 @@ namespace Motely.Wasm;
 // Bootsharp 0.8.0 replaced [assembly: Preferences(Space=…, Name=…)] with the renaming API
 // (docs/guide/renaming.md). Space → RenameModule (fold every Motely namespace into the single
 // `index` module); Name → RenameNode (project the `Program` node as `Motely`).
-internal static class BootsharpRenamers
+public static class BootsharpRenamers
 {
     [RenameModule]
     public static string RenameModule(Type type, string @default)
@@ -33,8 +35,38 @@ internal static class BootsharpRenamers
     }
 
     [RenameNode]
-    public static string RenameNode(Type type, string @default) =>
-        @default == "Program" ? "Motely" : @default;
+    public static string? RenameNode(Type type, string @default) =>
+        // Ref-struct types (MotelyRunState, Span<T>) can never marshal; erase them from the
+        // surface. They linger as serialized types because they were registered while inspecting
+        // members that RenameMember later erased.
+        type.IsByRefLike ? null
+        : @default == "Program" ? "Motely"
+        : @default;
+
+    // MotelySingleSearchContext crosses to JS (the JimmolateProbe import), so Bootsharp tries to
+    // instance-bind its whole surface. Most of that surface is SIMD value/ref-struct types
+    // (per-seed streams, MotelyRunState, MotelySingleItemSet, Span) that cannot marshal — they
+    // generate Resolve<T&> / un-serializable / non-instance errors. Returning null erases the
+    // member from the generated JS, so Bootsharp never emits interop for it. Marshallable members
+    // (e.g. GetSeed) survive; deep per-seed inspection is done JS-side via JAMLyzer instead.
+    [RenameMember]
+    public static string? RenameMember(MemberInfo info, string @default) =>
+        info is MethodInfo m
+        && m.DeclaringType == typeof(MotelySingleSearchContext)
+        && (m.GetParameters().Any(p => Unmarshallable(p.ParameterType)) || Unmarshallable(m.ReturnType))
+            ? null
+            : @default;
+
+    private static bool Unmarshallable(Type t)
+    {
+        if (t.IsByRef)
+            return true; // ref/in/out — Bootsharp would emit Instances.Resolve<T&>
+        if (t.IsByRefLike)
+            return true; // ref structs: MotelyRunState, Span<T>
+        var n = t.Name;
+        return n.StartsWith("MotelySingle", StringComparison.Ordinal)
+            && (n.EndsWith("Stream", StringComparison.Ordinal) || n == "MotelySingleItemSet");
+    }
 }
 
 public static partial class Program
