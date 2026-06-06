@@ -11,7 +11,6 @@ describe("public API surface", () => {
             "parseJaml",
             "explainJaml",
             "createPlan",
-            "jamlyzer",
             "jamlToJson",
             "jsonToJaml",
             "nativeFilterNames",
@@ -94,23 +93,6 @@ must:
         assert.equal(typeof plan?.scoredCsvHeaderQuoted, "string");
         assert.equal(plan.scoreTallyColumnCount, 2);
         assert.equal(plan.tallyLabels?.length, 2);
-    });
-
-    it("jamlyzer returns populated analysis shape", () => {
-        const cfg = Motely.parseJaml(jaml.anyMust);
-        cfg.seeds = ["1AAAAAAA", "2BBBBBBB"];
-        const result = Motely.jamlyzer(cfg);
-        assert.ok(result.error == null);
-        assert.equal(result.seeds?.length, 2);
-        for (let i = 0; i < cfg.seeds.length; i++) {
-            assert.equal(result.seeds[i].seed, cfg.seeds[i]);
-        }
-        const ante = result.seeds[0].analysis?.antes?.[0];
-        assert.ok(ante && "boss" in ante);
-        assert.ok(Array.isArray(ante.shopQueue));
-        assert.ok(Array.isArray(ante.packs));
-        assert.equal(result.deck, 0);
-        assert.equal(result.stake, 0);
     });
 
     it("runSeedListSearch returns MotelySearchResult", () => {

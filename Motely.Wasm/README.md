@@ -76,7 +76,6 @@ Motely.explainJaml(config)                // human-readable plan summary
 Motely.createPlan(config)                 // JamlSearchPlan (tally columns, CSV header)
 Motely.jamlToJson(jaml)                   // JAML string → JSON string
 Motely.jsonToJaml(json)                   // JSON string → JAML string
-Motely.jamlyzer(config)                   // analyze seeds in config.seeds per-ante
 Motely.seedContext(seed, deck, stake)     // MotelySingleSearchContext for one seed
 Motely.nativeFilterNames()                // built-in native filter names
 

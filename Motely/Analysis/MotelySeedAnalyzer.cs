@@ -17,7 +17,6 @@ public sealed record class MotelyLegacyTextAnalysisConfig(
 /// This is the LEGACY TEXT analyzer: its <see cref="ToString"/> is a flat, human-readable
 /// block intended for unit-test ground-truth (Verify()) and cross-tool comparison against
 /// external Balatro seed tools (miaklwalker, mathisfun_), NOT for UI rendering.
-/// For structured / UI-facing per-seed data use <see cref="MotelyJamlyzer"/> instead.
 /// </summary>
 public sealed record class MotelyLegacyTextAnalysis(
     string? Error,
@@ -141,8 +140,7 @@ public sealed record class MotelyBoosterPackAnalysis(
 /// <summary>
 /// Legacy text-block seed analyzer. Produces the classic "The Soul" string layout via
 /// <see cref="MotelyLegacyTextAnalysis.ToString"/>, intended for unit-test ground-truth and
-/// cross-tool comparison (miaklwalker, mathisfun_) — NOT for UI. Use <see cref="MotelyJamlyzer"/>
-/// for structured / UI-facing analysis.
+/// cross-tool comparison (miaklwalker, mathisfun_) — NOT for UI.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static partial class MotelyLegacyTextAnalyzer

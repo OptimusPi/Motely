@@ -1,4 +1,4 @@
-/** Shared JAML strings and probe seeds for motely-wasm interop tests. */
+/** Shared JAML strings for motely-wasm interop tests. */
 
 /** `voucher: Any` / `joker: Any` in must/should are rejected; scoring fixtures name specific ids. */
 export const jaml = {
@@ -29,20 +29,3 @@ should:
 `,
     invalid: "not yaml !@#",
 };
-
-/** Shop/pack/tag variety in analyzer output. ALEEB is pinned in the C# JamlyzerUnitTests
- *  (`AnalyzeSeed_MarksJamlMatchedItemsForPreviewCards`) — its ante 1 has known matchable
- *  jokers in shop + Buffoon pack. Leading with it gives the analyzer tests a deterministic
- *  joker to find. */
-export const probeSeeds = [
-    "ALEEB",
-    "ALEEBOOO",
-    "AAAAAAAA",
-    "BBBBBBBB",
-    "CCCCCCCC",
-    "DDDDDDDD",
-    "EEEEEEEE",
-    "FFFFFFFF",
-    "GGGGGGGG",
-    "HHHHHHHH",
-];
