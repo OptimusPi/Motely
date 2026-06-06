@@ -48,7 +48,7 @@ public static class BootsharpRenamers
     // (per-seed streams, MotelyRunState, MotelySingleItemSet, Span) that cannot marshal — they
     // generate Resolve<T&> / un-serializable / non-instance errors. Returning null erases the
     // member from the generated JS, so Bootsharp never emits interop for it. Marshallable members
-    // (e.g. GetSeed) survive; deep per-seed inspection is done JS-side via JAMLyzer instead.
+    // (e.g. GetSeed) survive; the unmarshallable per-seed stream surface is dropped.
     [RenameMember]
     public static string? RenameMember(MemberInfo info, string @default) =>
         info is MethodInfo m
@@ -82,7 +82,7 @@ public static partial class Program
 
     // Jimmolate = the OG Immolate `filter(seed) => keep?` model, in the browser. JS assigns
     // `Motely.jimmolatePredicate = (result) => bool` before boot; it runs per SCORED seed on
-    // JAMLyzer's marshallable result (Seed/Score/Tallies). No engine driving, no ref-struct
+    // the marshallable scored result (Seed/Score/Tallies). No engine driving, no ref-struct
     // streams across the boundary (that was the 65-wrapper trap) — C# does the work, the
     // predicate decides. A seed reaches JS only if the predicate keeps it.
     [Import]
@@ -196,10 +196,6 @@ public static partial class Program
     [Export]
     public static JamlSearchPlan CreatePlan(JamlConfig config) =>
         JamlSearchBuilder.CreatePlan(config);
-
-    [Export]
-    public static MotelyJamlyzerResult Jamlyzer(JamlConfig config) =>
-        MotelyJamlyzer.AnalyzeSeeds(config);
 
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
