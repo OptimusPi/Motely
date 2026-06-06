@@ -1,0 +1,9 @@
+name: Canio hunt
+deck: Red
+stake: White
+must:
+  - legendaryJoker: Canio
+should:
+  - legendaryJoker: Canio
+    antes: [1, 2]
+    score: 100
