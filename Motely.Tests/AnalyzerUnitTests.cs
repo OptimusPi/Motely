@@ -9,28 +9,6 @@ namespace Motely.Tests;
 public sealed class AnalyzerUnitTests
 {
     [Fact]
-    public void TestJamlyzerAnalyzeSeeds_AttachesStructuredSeedAnalysis()
-    {
-        const string jaml = """
-            name: test
-            deck: Red
-            stake: White
-            should:
-              - joker: Any
-                score: 1
-            """;
-
-        var result = MotelyJamlyzer.AnalyzeSeeds(new(jaml, ["1AAAAAAA"]));
-
-        Assert.Null(result.Error);
-        var seed = Assert.Single(result.Seeds);
-        Assert.Equal("1AAAAAAA", seed.Seed);
-        Assert.NotNull(seed.Analysis);
-        Assert.NotEmpty(seed.Analysis.Antes);
-        Assert.NotEqual(default, seed.Analysis.Antes[0].Boss);
-    }
-
-    [Fact]
     public void TestSeedRouter_CapturesSingleSearchContext()
     {
         using var router = new MotelySeedRouterDesc("1AAAAAAA", MotelyDeck.Red, MotelyStake.White);

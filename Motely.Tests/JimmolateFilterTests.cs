@@ -3,7 +3,7 @@ namespace Motely.Tests;
 // Jimmolate is a per-seed PREDICATE, chained on like a normal filter (the OG Immolate
 // `filter(inst) => keep?` mental model, in C#). These tests prove the predicate's bool
 // actually drives filtering and that it receives a live, drivable search context —
-// independent of any WASM/JS exposure (JS uses JAMLyzer's marshallable result instead).
+// independent of any WASM/JS exposure (JS receives the marshallable scored result instead).
 public sealed class JimmolateFilterTests
 {
     private static readonly string[] Seeds = ["12345678", "UNITTEST", "1AAAAAAA", "ALEEBOOO"];
