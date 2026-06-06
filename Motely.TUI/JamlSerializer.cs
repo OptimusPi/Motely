@@ -41,13 +41,19 @@ file sealed class PrimitiveSequenceFlowEmitter(IEventEmitter next) : ChainedEven
 
     private static bool IsPrimitiveSequence(Type type)
     {
-        var elem = type.IsArray
-            ? type.GetElementType()
-            : type.IsGenericType ? type.GetGenericArguments().FirstOrDefault() : null;
+        var elem =
+            type.IsArray ? type.GetElementType()
+            : type.IsGenericType ? type.GetGenericArguments().FirstOrDefault()
+            : null;
 
-        return elem is not null && (
-            elem == typeof(int) || elem == typeof(long) ||
-            elem == typeof(double) || elem == typeof(float) ||
-            elem == typeof(bool) || elem == typeof(string));
+        return elem is not null
+            && (
+                elem == typeof(int)
+                || elem == typeof(long)
+                || elem == typeof(double)
+                || elem == typeof(float)
+                || elem == typeof(bool)
+                || elem == typeof(string)
+            );
     }
 }

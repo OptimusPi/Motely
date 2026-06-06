@@ -1,6 +1,6 @@
 namespace Motely;
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     #region Misprint
 
@@ -83,10 +83,8 @@ public readonly unsafe partial struct MotelySingleSearchContext
     public MotelySinglePrngStream CreateSpacePrngStream(bool isCached = false) =>
         CreatePrngStream(MotelyPrngKeys.JokerSpace, isCached);
 
-    public bool GetNextSpaceLevelup(
-        ref MotelySinglePrngStream spaceStream,
-        double baseLuck = 1
-    ) => GetNextRandom(ref spaceStream) < baseLuck / MotelyGlobals.JokerSpaceChance;
+    public bool GetNextSpaceLevelup(ref MotelySinglePrngStream spaceStream, double baseLuck = 1) =>
+        GetNextRandom(ref spaceStream) < baseLuck / MotelyGlobals.JokerSpaceChance;
 
     #endregion
 
@@ -143,10 +141,8 @@ public readonly unsafe partial struct MotelySingleSearchContext
     public MotelySinglePrngStream CreateGlassPrngStream(bool isCached = false) =>
         CreatePrngStream(MotelyPrngKeys.CardGlass, isCached);
 
-    public bool GetNextGlassDestroy(
-        ref MotelySinglePrngStream glassStream,
-        double baseLuck = 1
-    ) => GetNextRandom(ref glassStream) < baseLuck / MotelyGlobals.CardGlassChance;
+    public bool GetNextGlassDestroy(ref MotelySinglePrngStream glassStream, double baseLuck = 1) =>
+        GetNextRandom(ref glassStream) < baseLuck / MotelyGlobals.CardGlassChance;
 
     #endregion
 

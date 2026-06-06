@@ -19,23 +19,29 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
             .WithListSearch([seed])
             .WithThreadCount(1)
             .WithSeedRouter(this);
-        _ownedSearch = settings.Start();
-        _ownedSearch.AwaitCompletion();
+        _ownedSearch = settings.CreateSearch();
+        _ownedSearch.RunSearchUntilCompletion();
     }
 
-    public IMotelySeedRouter CreateSeedRouter(ref MotelyFilterCreationContext ctx)
-        => new ContextCapturingRouter(this);
+    IMotelySeedRouter IMotelySeedRouterDesc.CreateSeedRouter(ref MotelyFilterCreationContext ctx)
+    {
+        return new ContextCapturingRouter(this);
+    }
 
     private readonly struct ContextCapturingRouter(MotelySeedRouterDesc desc) : IMotelySeedRouter
     {
+        // During the SIMD pipeline setup, this is injected from MotelySearch :)
         public void InjectSingleSeedContext(in MotelySingleSearchContext ctx)
         {
+            // These stay alive as long as the router isn't disposed.
             desc._searchParams = ctx.SearchParameters;
             desc._contextParams = ctx.SearchContextParams;
             desc._lane = ctx.VectorLane;
         }
     }
 
+    // Creates a new search context with the captured parameters.
+    // Should only be called after the search has started and the context has been injected.
     public MotelySingleSearchContext Instance()
     {
         return new MotelySingleSearchContext(in _searchParams, in _contextParams, _lane);

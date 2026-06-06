@@ -1,4 +1,4 @@
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// Seed-space constraints declared under top-level <c>aesthetics</c> in a JAML document.
@@ -7,9 +7,8 @@ namespace Motely.Filters;
 public enum JamlAesthetic
 {
     Palindrome,
-    Psychosis,
+    Echo,
     Gross,
-    Nsfw,
     Funny,
     Balatro,
 }
@@ -22,9 +21,8 @@ public static class JamlAestheticParser
     private static readonly (string Jaml, JamlAesthetic Value)[] Known =
     [
         ("palindrome", JamlAesthetic.Palindrome),
-        ("psychosis", JamlAesthetic.Psychosis),
+        ("echo", JamlAesthetic.Echo),
         ("gross", JamlAesthetic.Gross),
-        ("nsfw", JamlAesthetic.Nsfw),
         ("funny", JamlAesthetic.Funny),
         ("balatro", JamlAesthetic.Balatro),
     ];
@@ -33,7 +31,8 @@ public static class JamlAestheticParser
     public static string[] KnownJamlStringsForSchema() => [.. Known.Select(static e => e.Jaml)];
 
     /// <summary>Comma-separated list for load errors (e.g. “Known: palindrome, foo.”).</summary>
-    public static string KnownJamlStringsDescription() => string.Join(", ", Known.Select(static e => e.Jaml));
+    public static string KnownJamlStringsDescription() =>
+        string.Join(", ", Known.Select(static e => e.Jaml));
 
     public static bool TryParse(string raw, out JamlAesthetic value)
     {

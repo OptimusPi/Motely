@@ -79,18 +79,18 @@ ref partial struct MotelyVectorSearchContext
         // Check what type this slot is
         var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
         itemTypePoll -= Vector512.Create(20.0); // Skip joker range
-        itemTypePoll -= tarotRate; // Skip tarot range
+        itemTypePoll -= tarotRate; // Skip Tarot range
         var isPlanetSlot = Vector512.LessThan(itemTypePoll, planetRate);
 
-        // Only advance planet stream for planet slots
-        var planet = GetNextPlanet(ref planetStream, isPlanetSlot);
+        // Only advance Planet stream for Planet slots
+        var Planet = GetNextPlanet(ref planetStream, isPlanetSlot);
 
-        // Return planet or None for non-planet slots
+        // Return Planet or None for non-Planet slots
         var planetIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isPlanetSlot);
         var noneItem = Vector256<int>.Zero;
 
         return new MotelyItemVector(
-            Vector256.ConditionalSelect(planetIntMask, planet.Value, noneItem)
+            Vector256.ConditionalSelect(planetIntMask, Planet.Value, noneItem)
         );
     }
 
@@ -232,12 +232,14 @@ ref partial struct MotelyVectorSearchContext
 
         for (int i = 0; i < cardCount; i++)
         {
-            var planet = GetNextPlanet(ref planetStream);
-            // Extract planet card type using bit masking (similar to StandardcardSuit pattern)
+            var Planet = GetNextPlanet(ref planetStream);
+            // Extract Planet card type using bit masking (similar to StandardcardSuit pattern)
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
-                    planet.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Planet.Value,
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(planetType, targetPlanet);
@@ -262,12 +264,14 @@ ref partial struct MotelyVectorSearchContext
 
         for (int i = 0; i < cardCount; i++)
         {
-            var planet = GetNextPlanet(ref planetStream);
-            // Extract planet card type using bit masking (similar to StandardcardSuit pattern)
+            var Planet = GetNextPlanet(ref planetStream);
+            // Extract Planet card type using bit masking (similar to StandardcardSuit pattern)
             var planetType = new VectorEnum256<MotelyPlanetCard>(
                 Vector256.BitwiseAnd(
-                    planet.Value,
-                    Vector256.Create(MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask)
+                    Planet.Value,
+                    Vector256.Create(
+                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
+                    )
                 )
             );
 

@@ -3,138 +3,93 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 // ── ErraticCard clause definition ──
 
-public sealed class ErraticCardClause : IJamlClause
+public sealed class ErraticCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public MotelyStandardcardRank? Rank { get; init; }
-    public MotelyStandardcardSuit? Suit { get; init; }
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public MotelyStandardcardRank? Rank { get; set; }
+    public MotelyStandardcardSuit? Suit { get; set; }
+
+    public override int EstimatedCost => 5 + MaxAnte;
+
+    public override string Describe()
+    {
+        var parts = new System.Collections.Generic.List<string>(2);
+        if (Rank.HasValue)
+            parts.Add(Rank.Value.ToString());
+        if (Suit.HasValue)
+            parts.Add(Suit.Value.ToString());
+        return $"erraticCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
+    }
 }
 
 // ── Event clause definitions ──
 
-public interface IRollClause : IJamlClause
+public sealed class LuckyMoneyClause : RollClause
 {
-    int[] Rolls { get; }
+    public override string Describe() => "event LuckyMoney";
 }
 
-public sealed class LuckyMoneyClause : IRollClause
+public sealed class LuckyMultClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event LuckyMult";
 }
 
-public sealed class LuckyMultClause : IRollClause
+public sealed class MisprintMultClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
-}
-
-public sealed class MisprintMultClause : IRollClause
-{
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
     /// <summary>
     /// Specific mult value to match (0-23). If null, matches any value (always succeeds).
     /// </summary>
-    public int? Value { get; init; }
+    public int? Value { get; set; }
+
+    public override string Describe() => "event MisprintMult";
 }
 
-public sealed class WheelOfFortuneClause : IRollClause
+public sealed class WheelOfFortuneClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event WheelOfFortune";
 }
 
-public sealed class CavendishExtinctClause : IRollClause
+public sealed class CavendishExtinctClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event CavendishExtinct";
 }
 
-public sealed class GrosMichelExtinctClause : IRollClause
+public sealed class GrosMichelExtinctClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event GrosMichelExtinct";
 }
 
-public sealed class SpaceLevelupClause : IRollClause
+public sealed class SpaceLevelupClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event SpaceLevelup";
 }
 
-public sealed class BusinessPayoutClause : IRollClause
+public sealed class BusinessPayoutClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event BusinessPayout";
 }
 
-public sealed class BloodstoneTriggerClause : IRollClause
+public sealed class BloodstoneTriggerClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event BloodstoneTrigger";
 }
 
-public sealed class ParkingPayoutClause : IRollClause
+public sealed class ParkingPayoutClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event ParkingPayout";
 }
 
-public sealed class GlassDestroyClause : IRollClause
+public sealed class GlassDestroyClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event GlassDestroy";
 }
 
-public sealed class WheelStaysFlippedClause : IRollClause
+public sealed class WheelStaysFlippedClause : RollClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required int[] Rolls { get; init; }
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public override string Describe() => "event WheelStaysFlipped";
 }
 
 // ── 6 individual event filter descs (one per PRNG stream) ──
@@ -150,20 +105,23 @@ public struct LuckyMoneyFilterDesc(LuckyMoneyClause clause)
     {
         private readonly LuckyMoneyClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateLuckyCardMoneyStream(isCached: false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextLuckyMoney(ref stream);
-                    return sctx.GetNextLuckyMoney(ref stream);
+                        sctx.GetNextLuckyMoney(ref stream, luck);
+                    return sctx.GetNextLuckyMoney(ref stream, luck);
                 },
                 ref stream
             );
@@ -182,20 +140,23 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
     {
         private readonly LuckyMultClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateLuckyCardMultStream(isCached: false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextLuckyMult(ref stream);
-                    return sctx.GetNextLuckyMult(ref stream);
+                        sctx.GetNextLuckyMult(ref stream, luck);
+                    return sctx.GetNextLuckyMult(ref stream, luck);
                 },
                 ref stream
             );
@@ -227,9 +188,7 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
         private readonly bool _hasValue = hasValue;
         private readonly Vector256<int> _targetValue = targetValue;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateMisprintPrngStream();
@@ -239,7 +198,12 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
                 return EventFilterUtils.ProcessRollClause(
                     ref ctx,
                     _clause,
-                    static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex, Vector256<int> target) =>
+                    static (
+                        ref MotelyVectorSearchContext sctx,
+                        ref MotelyVectorPrngStream stream,
+                        int rollIndex,
+                        Vector256<int> target
+                    ) =>
                     {
                         for (int i = 0; i < rollIndex; i++)
                             sctx.GetNextMisprintMult(ref stream);
@@ -255,7 +219,11 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                static (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextMisprintMult(ref stream);
@@ -279,20 +247,23 @@ public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
     {
         private readonly WheelOfFortuneClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateWheelOfFortuneStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextWheelOfFortune(ref stream);
-                    var edition = sctx.GetNextWheelOfFortune(ref stream);
+                        sctx.GetNextWheelOfFortune(ref stream, luck);
+                    var edition = sctx.GetNextWheelOfFortune(ref stream, luck);
                     return ~VectorEnum256.Equals(edition, MotelyItemEdition.None);
                 },
                 ref stream
@@ -312,20 +283,23 @@ public struct CavendishExtinctFilterDesc(CavendishExtinctClause clause)
     {
         private readonly CavendishExtinctClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateCavendishPrngStream(false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextCavendishExtinct(ref stream);
-                    return sctx.GetNextCavendishExtinct(ref stream);
+                        sctx.GetNextCavendishExtinct(ref stream, luck);
+                    return sctx.GetNextCavendishExtinct(ref stream, luck);
                 },
                 ref stream
             );
@@ -345,20 +319,23 @@ public struct GrosMichelExtinctFilterDesc(GrosMichelExtinctClause clause)
     {
         private readonly GrosMichelExtinctClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateGrosMichelPrngStream(false);
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextGrosMichelExtinct(ref stream);
-                    return sctx.GetNextGrosMichelExtinct(ref stream);
+                        sctx.GetNextGrosMichelExtinct(ref stream, luck);
+                    return sctx.GetNextGrosMichelExtinct(ref stream, luck);
                 },
                 ref stream
             );
@@ -381,14 +358,19 @@ public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateSpacePrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextSpaceLevelup(ref stream);
-                    return sctx.GetNextSpaceLevelup(ref stream);
+                        sctx.GetNextSpaceLevelup(ref stream, luck);
+                    return sctx.GetNextSpaceLevelup(ref stream, luck);
                 },
                 ref stream
             );
@@ -411,14 +393,19 @@ public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateBusinessPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBusinessPayout(ref stream);
-                    return sctx.GetNextBusinessPayout(ref stream);
+                        sctx.GetNextBusinessPayout(ref stream, luck);
+                    return sctx.GetNextBusinessPayout(ref stream, luck);
                 },
                 ref stream
             );
@@ -431,7 +418,8 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
 {
     private readonly BloodstoneTriggerClause _clause = clause;
 
-    public BloodstoneTriggerFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+    public BloodstoneTriggerFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
+        new(_clause);
 
     public struct BloodstoneTriggerFilter(BloodstoneTriggerClause clause) : IMotelySeedFilter
     {
@@ -441,14 +429,19 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateBloodstonePrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBloodstoneTrigger(ref stream);
-                    return sctx.GetNextBloodstoneTrigger(ref stream);
+                        sctx.GetNextBloodstoneTrigger(ref stream, luck);
+                    return sctx.GetNextBloodstoneTrigger(ref stream, luck);
                 },
                 ref stream
             );
@@ -471,14 +464,19 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateParkingPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextParkingPayout(ref stream);
-                    return sctx.GetNextParkingPayout(ref stream);
+                        sctx.GetNextParkingPayout(ref stream, luck);
+                    return sctx.GetNextParkingPayout(ref stream, luck);
                 },
                 ref stream
             );
@@ -501,14 +499,19 @@ public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateGlassPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextGlassDestroy(ref stream);
-                    return sctx.GetNextGlassDestroy(ref stream);
+                        sctx.GetNextGlassDestroy(ref stream, luck);
+                    return sctx.GetNextGlassDestroy(ref stream, luck);
                 },
                 ref stream
             );
@@ -521,7 +524,8 @@ public struct WheelStaysFlippedFilterDesc(WheelStaysFlippedClause clause)
 {
     private readonly WheelStaysFlippedClause _clause = clause;
 
-    public WheelStaysFlippedFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new(_clause);
+    public WheelStaysFlippedFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
+        new(_clause);
 
     public struct WheelStaysFlippedFilter(WheelStaysFlippedClause clause) : IMotelySeedFilter
     {
@@ -531,14 +535,19 @@ public struct WheelStaysFlippedFilterDesc(WheelStaysFlippedClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateTheWheelPrngStream();
+            double luck = _clause.Luck;
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream, int rollIndex) =>
+                (
+                    ref MotelyVectorSearchContext sctx,
+                    ref MotelyVectorPrngStream stream,
+                    int rollIndex
+                ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextWheelStaysFlipped(ref stream);
-                    return sctx.GetNextWheelStaysFlipped(ref stream);
+                        sctx.GetNextWheelStaysFlipped(ref stream, luck);
+                    return sctx.GetNextWheelStaysFlipped(ref stream, luck);
                 },
                 ref stream
             );
@@ -550,9 +559,18 @@ public struct WheelStaysFlippedFilterDesc(WheelStaysFlippedClause clause)
 
 internal static class EventFilterUtils
 {
-    internal delegate VectorMask RollChecker(ref MotelyVectorSearchContext ctx, ref MotelyVectorPrngStream stream, int rollIndex);
+    internal delegate VectorMask RollChecker(
+        ref MotelyVectorSearchContext ctx,
+        ref MotelyVectorPrngStream stream,
+        int rollIndex
+    );
 
-    internal delegate VectorMask RollCheckerWithValue(ref MotelyVectorSearchContext ctx, ref MotelyVectorPrngStream stream, int rollIndex, Vector256<int> value);
+    internal delegate VectorMask RollCheckerWithValue(
+        ref MotelyVectorSearchContext ctx,
+        ref MotelyVectorPrngStream stream,
+        int rollIndex,
+        Vector256<int> value
+    );
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static VectorMask ProcessRollClause<TClause>(
@@ -561,7 +579,7 @@ internal static class EventFilterUtils
         RollChecker checker,
         ref MotelyVectorPrngStream stream
     )
-        where TClause : IRollClause
+        where TClause : RollClause
     {
         Debug.Assert(
             clause.Rolls.Length > 0,
@@ -569,8 +587,11 @@ internal static class EventFilterUtils
         );
 
         var matchCounts = Vector256<int>.Zero;
-        foreach (var rollIndex in clause.Rolls)
+        var minVector = Vector256.Create(clause.Min);
+        var rolls = clause.Rolls;
+        for (int i = 0; i < rolls.Length; i++)
         {
+            var rollIndex = rolls[i];
             var rollMask = checker(ref ctx, ref stream, rollIndex);
             matchCounts = Vector256.Add(
                 matchCounts,
@@ -585,6 +606,29 @@ internal static class EventFilterUtils
                     rollMask[7] ? 1 : 0
                 )
             );
+
+            // SIMD Optimization: We can stop only if EVERY lane is decided.
+            // A lane is decided if it already hit 'min' (and max is null)
+            // OR if it's impossible to reach 'min'.
+            // Checking this every iteration in SIMD is often slower than just finishing the loop
+            // UNLESS the loop is long. For events, indices are usually small, but
+            // if rolls.Length is large (like your 0-99 example), it's worth it.
+
+            if (rolls.Length > 8)
+            {
+                int rollsRemaining = rolls.Length - 1 - i;
+                var possibleMax = Vector256.Add(matchCounts, Vector256.Create(rollsRemaining));
+
+                // maskHit: matchCounts >= min
+                var maskHit = Vector256.GreaterThanOrEqual(matchCounts, minVector);
+                // maskFail: current + remaining < min
+                var maskFail = Vector256.LessThan(possibleMax, minVector);
+
+                // Combined: lane is finished
+                var combined = Vector256.BitwiseOr(maskHit, maskFail);
+                if (combined.ExtractMostSignificantBits() == 0xFF)
+                    break;
+            }
         }
 
         return new VectorMask(
@@ -605,7 +649,7 @@ internal static class EventFilterUtils
         ref MotelyVectorPrngStream stream,
         Vector256<int> value
     )
-        where TClause : IRollClause
+        where TClause : RollClause
     {
         Debug.Assert(
             clause.Rolls.Length > 0,
@@ -613,8 +657,11 @@ internal static class EventFilterUtils
         );
 
         var matchCounts = Vector256<int>.Zero;
-        foreach (var rollIndex in clause.Rolls)
+        var minVector = Vector256.Create(clause.Min);
+        var rolls = clause.Rolls;
+        for (int i = 0; i < rolls.Length; i++)
         {
+            var rollIndex = rolls[i];
             var rollMask = checker(ref ctx, ref stream, rollIndex, value);
             matchCounts = Vector256.Add(
                 matchCounts,
@@ -629,6 +676,17 @@ internal static class EventFilterUtils
                     rollMask[7] ? 1 : 0
                 )
             );
+
+            if (rolls.Length > 8)
+            {
+                int rollsRemaining = rolls.Length - 1 - i;
+                var possibleMax = Vector256.Add(matchCounts, Vector256.Create(rollsRemaining));
+                var maskHit = Vector256.GreaterThanOrEqual(matchCounts, minVector);
+                var maskFail = Vector256.LessThan(possibleMax, minVector);
+                var combined = Vector256.BitwiseOr(maskHit, maskFail);
+                if (combined.ExtractMostSignificantBits() == 0xFF)
+                    break;
+            }
         }
 
         return new VectorMask(

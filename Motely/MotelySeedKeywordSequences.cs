@@ -55,19 +55,57 @@ public static class MotelySeedKeywordSequences
     // All keywords must be ≤8 chars, using only 1-9A-Z (no zero).
 
     /// <summary>
-    /// Baked padded-seed totals for JAML keyword aesthetics (<see cref="Motely.Filters.JamlAesthetics.GetSeedCount"/>).
+    /// Baked padded-seed totals for JAML keyword aesthetics (<see cref="JamlAesthetics.GetSeedCount"/>).
     /// Must match <see cref="MotelyGlobals.GetPaddedSeedCountForKeywordsLong"/> for the paired <c>*Keywords</c> array;
     /// recompute with a one-off console if those tables change (see <c>Motely.Tests</c> guard test).
     /// </summary>
     // Counts regenerated after the GenerateNPadVariations fix (keyword-contiguous,
     // padLen + 1 slots). Gross keywords all have padLen ≤ 3 so they were never
-    // affected by the old bug; nsfw/funny/balatro contain longer keywords and
-    // went up.
+    // affected by the old bug; funny/balatro contain longer keywords and went up.
     public const long GrossKeywordAestheticSeedCount = 183_030_995L;
+    public const long FunnyKeywordAestheticSeedCount = 312_463_270L;
+    public const long BalatroKeywordAestheticSeedCount = 290_680_670L;
 
-    public const long NsfwKeywordAestheticSeedCount = 489_790_595L;
-    public const long FunnyKeywordAestheticSeedCount = 942_725_770L;
-    public const long BalatroKeywordAestheticSeedCount = 920_943_170L;
+    /// <summary>
+    /// Lazy generator that yields every padded seed for the keyword-backed JAML aesthetics
+    /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,
+    /// <see cref="JamlAesthetic.Balatro"/>). Palindrome and Echo aren't keyword
+    /// sequences — they live next to their own generators.
+    /// </summary>
+    public static IEnumerable<string> EnumerateAestheticSeeds(JamlAesthetic aesthetic)
+    {
+        foreach (
+            var seed in MotelyGlobals.GeneratePaddedSeedsForKeywords(KeywordsFor(aesthetic), null)
+        )
+            yield return seed;
+    }
+
+    /// <summary>Baked seed count for the keyword-backed JAML aesthetics. See <see cref="EnumerateAestheticSeeds"/>.</summary>
+    public static long GetAestheticSeedCount(JamlAesthetic aesthetic) =>
+        aesthetic switch
+        {
+            JamlAesthetic.Gross => GrossKeywordAestheticSeedCount,
+            JamlAesthetic.Funny => FunnyKeywordAestheticSeedCount,
+            JamlAesthetic.Balatro => BalatroKeywordAestheticSeedCount,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(aesthetic),
+                aesthetic,
+                "Not a keyword aesthetic."
+            ),
+        };
+
+    private static string[] KeywordsFor(JamlAesthetic aesthetic) =>
+        aesthetic switch
+        {
+            JamlAesthetic.Gross => GrossKeywords,
+            JamlAesthetic.Funny => FunnyKeywords,
+            JamlAesthetic.Balatro => BalatroKeywords,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(aesthetic),
+                aesthetic,
+                "Not a keyword aesthetic."
+            ),
+        };
 
     public static readonly string[] GrossKeywords =
     [
@@ -126,58 +164,8 @@ public static class MotelySeedKeywordSequences
         "SQUISHY",
     ];
 
-    public static readonly string[] NsfwKeywords =
-    [
-        "FUCK",
-        "SHIT",
-        "DAMN",
-        "HELL",
-        "CRAP",
-        "ASSES",
-        "ASSHAT",
-        "DICK",
-        "COCK",
-        "PUSSY",
-        "WHORE",
-        "SLUT",
-        "BITCH",
-        "PISS",
-        "CUNT",
-        "TWAT",
-        "ARSE",
-        "BUGGER",
-        "SOD",
-        "TITS",
-        "WANKER",
-        "BASTARD",
-        "FAGS",
-        "FAGGOT",
-        "KIKE",
-        "DYKE",
-        "SPIC",
-        "GOOK",
-        "CHINK",
-        "TRANNY",
-        "HOMO",
-        "LESBO",
-        "RETARD",
-        "NIGGA",
-        "NIGGER",
-        "SMUT",
-        "FILTH",
-        "LEWD",
-        "PERV",
-        "KINKY",
-        "NASTY",
-        "RUDE",
-        "CRUDE",
-        "CRASS",
-        "VULGAR",
-    ];
-
     public static readonly string[] FunnyKeywords =
     [
-        "LOL",
         "HAHA",
         "HEHE",
         "LMAO",
@@ -227,7 +215,6 @@ public static class MotelySeedKeywordSequences
         "SASS",
         "SMIRK",
         "CHAOS",
-        "SUS",
         "RIZZ",
         "SIGMA",
         "CHAD",
@@ -313,8 +300,8 @@ public static class MotelySeedKeywordSequences
         "JACK",
         "FULL",
         "HIGH",
-        "TAROT",
-        "PLANET",
+        "Tarot",
+        "Planet",
         "VOUCHER",
         "FOIL",
         "HOLO",

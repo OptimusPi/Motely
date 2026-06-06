@@ -1,4 +1,4 @@
-namespace Motely;
+namespace Motely.Enums;
 
 public enum MotelyVoucher
 {

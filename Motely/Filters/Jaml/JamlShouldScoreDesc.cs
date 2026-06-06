@@ -2,69 +2,71 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
+/// <summary>
+/// Per-seed scoring pass: <c>must</c> clauses are re-evaluated precisely (SIMD is coarse),
+/// then <c>should</c> clauses contribute score and CSV tallies.
+/// </summary>
 public struct JamlShouldScoreDesc
     : IMotelySeedScoreDesc<JamlShouldScoreDesc.JamlShouldScoreProvider>
 {
+    private readonly IJamlClause[] _mustClauses;
     private readonly IJamlClause[] _shouldClauses;
     private readonly Action<string>? _seedMatchCallback;
     private readonly int _minimumTotalScore;
-    private readonly int _mustClauseCount;
 
     public JamlShouldScoreDesc(
+        IJamlClause[] mustClauses,
         IJamlClause[] shouldClauses,
         Action<string>? seedMatchCallback = null,
-        int minimumTotalScore = 0,
-        int mustClauseCount = 0
+        int minimumTotalScore = 0
     )
     {
+        _mustClauses = mustClauses;
         _shouldClauses = shouldClauses;
         _seedMatchCallback = seedMatchCallback;
         _minimumTotalScore = minimumTotalScore;
-        _mustClauseCount = mustClauseCount;
     }
 
-    public JamlShouldScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
-        => new(
+    public JamlShouldScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx) =>
+        new(
+            _mustClauses,
             _shouldClauses,
             _seedMatchCallback ?? ctx.SeedMatchCallback,
-            _minimumTotalScore,
-            _mustClauseCount
+            _minimumTotalScore
         );
 
     public struct JamlShouldScoreProvider : IMotelySeedScoreProvider
     {
+        private readonly IJamlClause[] _mustClauses;
         private readonly IJamlClause[] _shouldClauses;
         private readonly Action<string>? _seedMatchCallback;
         private readonly int _minimumTotalScore;
-        private readonly int _mustClauseCount;
 
         public JamlShouldScoreProvider(
+            IJamlClause[] mustClauses,
             IJamlClause[] shouldClauses,
             Action<string>? seedMatchCallback,
-            int minimumTotalScore = 0,
-            int mustClauseCount = 0
+            int minimumTotalScore = 0
         )
         {
+            Debug.Assert(
+                mustClauses.Length + shouldClauses.Length > 0,
+                "Scoring pass requires at least one must or should clause."
+            );
             Debug.Assert(
                 shouldClauses.Length <= MotelySeedScoreTally.MAX_TALLY_COUNT,
                 $"Should clause count {shouldClauses.Length} exceeds MotelySeedScoreTally.MAX_TALLY_COUNT ({MotelySeedScoreTally.MAX_TALLY_COUNT}); fix JAML / builder before search."
             );
-            Debug.Assert(
-                mustClauseCount <= shouldClauses.Length,
-                $"mustClauseCount ({mustClauseCount}) exceeds shouldClauses.Length ({shouldClauses.Length}); CreatePlan wiring bug."
-            );
 
+            _mustClauses = mustClauses;
             _shouldClauses = shouldClauses;
             _seedMatchCallback = seedMatchCallback;
             _minimumTotalScore = minimumTotalScore;
-            _mustClauseCount = mustClauseCount;
         }
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe VectorMask Score(
             ref MotelyVectorSearchContext searchContext,
             MotelySeedScoreTally[] buffer,
@@ -75,39 +77,50 @@ public struct JamlShouldScoreDesc
             if (baseFilterMask.IsAllFalse())
                 return VectorMask.NoBitsSet;
 
+            var mustClauses = _mustClauses;
             var shouldClauses = _shouldClauses;
             var seedMatchCallback = _seedMatchCallback;
             int cutoff = Math.Max(_minimumTotalScore, scoreThreshold);
-            int mustCount = _mustClauseCount;
 
             return searchContext.SearchIndividualSeeds(
                 baseFilterMask,
                 (ref MotelySingleSearchContext singleCtx) =>
                 {
                     var runState = new MotelyRunState();
-                    JamlScoring.PrepareRunState(ref singleCtx, shouldClauses, ref runState);
+                    JamlScoring.PrepareRunState(
+                        ref singleCtx,
+                        CombineForPrepareRunState(mustClauses, shouldClauses),
+                        ref runState
+                    );
 
                     int totalScore = 0;
                     ref var tally = ref buffer[singleCtx.VectorLane];
                     tally.Reset(string.Empty);
 
-                    // Must clauses first — early-exit if any fails. Must tallies are NOT
-                    // added to the emitted tally buffer (was debug-only, now "regular"):
-                    // output includes only should-clause tallies so the CSV matches the
-                    // shouldClauses header.
-                    for (int i = 0; i < mustCount; i++)
+                    for (int i = 0; i < mustClauses.Length; i++)
                     {
-                        int raw = JamlScoring.CountRawOccurrences(ref singleCtx, shouldClauses[i], ref runState);
+                        int raw = JamlScoring.CountRawOccurrences(
+                            ref singleCtx,
+                            mustClauses[i],
+                            ref runState
+                        );
 
-                        if (raw < shouldClauses[i].Min)
+                        if (raw < mustClauses[i].Min)
                             return false;
                     }
 
-                    // Should clauses — score, append tally, never reject.
-                    for (int i = mustCount; i < shouldClauses.Length; i++)
+                    for (int i = 0; i < shouldClauses.Length; i++)
                     {
-                        int raw = JamlScoring.CountRawOccurrences(ref singleCtx, shouldClauses[i], ref runState);
-                        int weighted = JamlScoring.CountOccurrences(ref singleCtx, shouldClauses[i], ref runState);
+                        int raw = JamlScoring.CountRawOccurrences(
+                            ref singleCtx,
+                            shouldClauses[i],
+                            ref runState
+                        );
+                        int weighted = JamlScoring.CountOccurrences(
+                            ref singleCtx,
+                            shouldClauses[i],
+                            ref runState
+                        );
                         tally.AddTally(raw);
                         totalScore += weighted * shouldClauses[i].Score;
                     }
@@ -131,6 +144,7 @@ public struct JamlShouldScoreDesc
                             sb.Append(',');
                             sb.Append(tally.GetTally(i));
                         }
+
                         seedMatchCallback(sb.ToString());
                     }
                     else if (passedCutoff)
@@ -143,6 +157,22 @@ public struct JamlShouldScoreDesc
                     return passedCutoff;
                 }
             );
+        }
+
+        private static IJamlClause[] CombineForPrepareRunState(
+            IJamlClause[] mustClauses,
+            IJamlClause[] shouldClauses
+        )
+        {
+            if (mustClauses.Length == 0)
+                return shouldClauses;
+            if (shouldClauses.Length == 0)
+                return mustClauses;
+
+            var combined = new IJamlClause[mustClauses.Length + shouldClauses.Length];
+            mustClauses.CopyTo(combined, 0);
+            shouldClauses.CopyTo(combined, mustClauses.Length);
+            return combined;
         }
     }
 }

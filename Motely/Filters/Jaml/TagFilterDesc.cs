@@ -2,24 +2,22 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
-public enum TagPosition
+public sealed class TagClause : JamlClause
 {
-    Any,
-    SmallBlind,
-    BigBlind,
-}
+    public required MotelyTag[] Tags { get; set; }
 
-public sealed class TagClause : IJamlClause
-{
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyTag[] Tags { get; init; }
-    public TagPosition Position { get; init; } = TagPosition.Any;
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    /// <summary>
+    /// Tag-stream draw indices per ante: 0 = small-blind offer, 1 = big-blind offer,
+    /// 2+ = further draws on the same ante stream (replay / double-tag extras).
+    /// </summary>
+    public required int[] Rolls { get; set; }
+
+    public override int EstimatedCost => 3 + MaxAnte;
+
+    public override string Describe() =>
+        $"tag {string.Join(", ", System.Array.ConvertAll(Tags, static t => t.ToString()))} @ rolls [{string.Join(", ", Rolls)}]";
 }
 
 public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>
@@ -40,40 +38,28 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
     {
         private readonly TagClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Tags.Length > 0);
             var clause = _clause;
+            int maxDraw = MapFeatureRolls.MaxRollIndex(clause.Rolls);
+            Span<VectorEnum256<MotelyTag>> draws = stackalloc VectorEnum256<MotelyTag>[maxDraw + 1];
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
 
             foreach (var ante in clause.Antes)
             {
                 var tagStream = ctx.CreateTagStream(ante);
-                var smallTag = ctx.GetNextTag(ref tagStream);
-                var bigTag = ctx.GetNextTag(ref tagStream);
+                for (int i = 0; i <= maxDraw; i++)
+                    draws[i] = ctx.GetNextTag(ref tagStream);
 
-                foreach (var t in clause.Tags)
+                foreach (var drawIndex in clause.Rolls)
                 {
-                    if (clause.Position == TagPosition.SmallBlind || clause.Position == TagPosition.Any)
+                    var rolled = draws[drawIndex];
+                    foreach (var t in clause.Tags)
                     {
-                        var match = VectorEnum256.Equals(smallTag, t);
-                        matchCounts = Vector256.Add(
-                            matchCounts,
-                            Vector256.ConditionalSelect(
-                                match,
-                                Vector256.Create(1),
-                                Vector256<int>.Zero
-                            )
-                        );
-                    }
-
-                    if (clause.Position == TagPosition.BigBlind || clause.Position == TagPosition.Any)
-                    {
-                        var match = VectorEnum256.Equals(bigTag, t);
+                        var match = VectorEnum256.Equals(rolled, t);
                         matchCounts = Vector256.Add(
                             matchCounts,
                             Vector256.ConditionalSelect(

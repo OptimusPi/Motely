@@ -4,7 +4,8 @@ internal static partial class ConsoleKeyMonitor
 {
     public static void Run(Action onEsc, Action onProgress, CancellationToken stopToken)
     {
-        if (Console.IsInputRedirected) return;
+        if (Console.IsInputRedirected)
+            return;
         try
         {
             if (OperatingSystem.IsWindows())
@@ -30,13 +31,20 @@ internal static partial class ConsoleKeyMonitor
         while (!stopToken.IsCancellationRequested)
         {
             uint wait = WaitForSingleObject(hInput, 200);
-            if (wait == WAIT_TIMEOUT) continue;
-            if (wait != WAIT_OBJECT_0) break;
-
-            if (ReadConsoleInput(hInput, out var record, 1, out var eventsRead) == 0 || eventsRead == 0)
+            if (wait == WAIT_TIMEOUT)
                 continue;
-            if (record.EventType != KEY_EVENT) continue;
-            if (record.KeyEvent.bKeyDown == 0) continue;
+            if (wait != WAIT_OBJECT_0)
+                break;
+
+            if (
+                ReadConsoleInput(hInput, out var record, 1, out var eventsRead) == 0
+                || eventsRead == 0
+            )
+                continue;
+            if (record.EventType != KEY_EVENT)
+                continue;
+            if (record.KeyEvent.bKeyDown == 0)
+                continue;
 
             if (record.KeyEvent.wVirtualKeyCode == VK_ESCAPE)
             {
@@ -53,11 +61,13 @@ internal static partial class ConsoleKeyMonitor
     // Managed fallback for non-Windows (Console lock contention is less of an issue on Unix).
     private static void RunFallback(Action onEsc, Action onProgress, CancellationToken stopToken)
     {
-        if (Console.IsInputRedirected) return;
+        if (Console.IsInputRedirected)
+            return;
         while (!stopToken.IsCancellationRequested)
         {
             Thread.Sleep(100);
-            if (!Console.KeyAvailable) continue;
+            if (!Console.KeyAvailable)
+                continue;
             var key = Console.ReadKey(true);
             if (key.Key == ConsoleKey.Escape)
             {
@@ -85,13 +95,20 @@ internal static partial class ConsoleKeyMonitor
 
     [LibraryImport("kernel32", EntryPoint = "ReadConsoleInputW", SetLastError = true)]
     private static partial int ReadConsoleInput(
-        nint hConsoleInput, out INPUT_RECORD lpBuffer, uint nLength, out uint lpNumberOfEventsRead);
+        nint hConsoleInput,
+        out INPUT_RECORD lpBuffer,
+        uint nLength,
+        out uint lpNumberOfEventsRead
+    );
 
     [StructLayout(LayoutKind.Explicit, Size = 20)]
     private struct INPUT_RECORD
     {
-        [FieldOffset(0)] public ushort EventType;
-        [FieldOffset(4)] public KEY_EVENT_RECORD KeyEvent;
+        [FieldOffset(0)]
+        public ushort EventType;
+
+        [FieldOffset(4)]
+        public KEY_EVENT_RECORD KeyEvent;
     }
 
     [StructLayout(LayoutKind.Sequential)]
