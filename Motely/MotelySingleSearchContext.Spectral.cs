@@ -16,7 +16,7 @@ public struct MotelySingleSpectralStream(
     public readonly bool IsSoulBlackHoleable => !SoulBlackHolePrngStream.IsInvalid;
 }
 
-public readonly unsafe partial struct MotelySingleSearchContext
+public partial class MotelySingleSearchContext
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySingleSpectralStream CreateSpectralStream(
@@ -145,7 +145,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
             }
         }
 
-        MotelyItemType spectral =
+        MotelyItemType Spectral =
             (MotelyItemType)MotelyItemTypeCategory.SpectralCard
             | (MotelyItemType)GetNextRandomInt(
                 ref spectralStream.ResampleStream.InitialPrngStream,
@@ -157,12 +157,12 @@ public readonly unsafe partial struct MotelySingleSearchContext
 
         while (true)
         {
-            if (spectral != MotelyItemType.TheSoul && spectral != MotelyItemType.BlackHole)
+            if (Spectral != MotelyItemType.TheSoul && Spectral != MotelyItemType.BlackHole)
             {
-                return spectral;
+                return Spectral;
             }
 
-            spectral =
+            Spectral =
                 (MotelyItemType)MotelyItemTypeCategory.SpectralCard
                 | (MotelyItemType)GetNextRandomInt(
                     ref GetResamplePrngStream(
@@ -202,7 +202,7 @@ public readonly unsafe partial struct MotelySingleSearchContext
             }
         }
 
-        MotelyItemType spectral =
+        MotelyItemType Spectral =
             (MotelyItemType)MotelyItemTypeCategory.SpectralCard
             | (MotelyItemType)GetNextRandomInt(
                 ref spectralStream.ResampleStream.InitialPrngStream,
@@ -215,15 +215,15 @@ public readonly unsafe partial struct MotelySingleSearchContext
         while (true)
         {
             if (
-                !itemSet.Contains(spectral)
-                && spectral != MotelyItemType.TheSoul
-                && spectral != MotelyItemType.BlackHole
+                !itemSet.Contains(Spectral)
+                && Spectral != MotelyItemType.TheSoul
+                && Spectral != MotelyItemType.BlackHole
             )
             {
-                return spectral;
+                return Spectral;
             }
 
-            spectral =
+            Spectral =
                 (MotelyItemType)MotelyItemTypeCategory.SpectralCard
                 | (MotelyItemType)GetNextRandomInt(
                     ref GetResamplePrngStream(

@@ -19,11 +19,19 @@ public static class FilterLibrary
 
         var filters = new List<FilterLibraryEntry>();
 
-        foreach (var file in Directory.GetFiles(JamlDirectory, "*.jaml", SearchOption.TopDirectoryOnly))
-            filters.Add(new FilterLibraryEntry(Path.GetFileNameWithoutExtension(file), "jaml", file));
+        foreach (
+            var file in Directory.GetFiles(JamlDirectory, "*.jaml", SearchOption.TopDirectoryOnly)
+        )
+            filters.Add(
+                new FilterLibraryEntry(Path.GetFileNameWithoutExtension(file), "jaml", file)
+            );
 
-        foreach (var file in Directory.GetFiles(JsonDirectory, "*.json", SearchOption.TopDirectoryOnly))
-            filters.Add(new FilterLibraryEntry(Path.GetFileNameWithoutExtension(file), "json", file));
+        foreach (
+            var file in Directory.GetFiles(JsonDirectory, "*.json", SearchOption.TopDirectoryOnly)
+        )
+            filters.Add(
+                new FilterLibraryEntry(Path.GetFileNameWithoutExtension(file), "json", file)
+            );
 
         return filters
             .OrderBy(static filter => filter.Format, StringComparer.OrdinalIgnoreCase)
@@ -31,13 +39,21 @@ public static class FilterLibrary
             .ToArray();
     }
 
-    public static string SaveJamlFilter(string fileNameWithoutExtension, string content)
-        => SaveFilterInternal(fileNameWithoutExtension, content, JamlDirectory, "jaml");
+    public static string SaveJamlFilter(string fileNameWithoutExtension, string content) =>
+        SaveFilterInternal(fileNameWithoutExtension, content, JamlDirectory, "jaml");
 
-    private static string SaveFilterInternal(string fileNameWithoutExtension, string content, string directory, string extension)
+    private static string SaveFilterInternal(
+        string fileNameWithoutExtension,
+        string content,
+        string directory,
+        string extension
+    )
     {
         if (string.IsNullOrWhiteSpace(fileNameWithoutExtension))
-            throw new ArgumentException("Filter name is required.", nameof(fileNameWithoutExtension));
+            throw new ArgumentException(
+                "Filter name is required.",
+                nameof(fileNameWithoutExtension)
+            );
 
         EnsureDirectories();
 

@@ -1,17 +1,18 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-namespace Motely.Filters;
 
-public sealed class PlanetCardClause : IJamlClause
+namespace Motely.Filters.Jaml;
+
+public sealed class PlanetCardClause : JamlClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyPlanetCard[] Planets { get; init; }
-    public PlanetSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-    public int? Max { get; init; }
+    public required MotelyPlanetCard[] Planets { get; set; }
+    public PlanetSourceConfig Sources { get; set; } = new();
+
+    public override int EstimatedCost => 7 + MaxAnte;
+
+    public override string Describe() =>
+        $"Planet {string.Join(", ", System.Array.ConvertAll(Planets, static p => p.ToString()))}";
 }
 
 public struct PlanetCardFilterDesc(PlanetCardClause clause)
@@ -51,9 +52,7 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Planets.Length > 0);

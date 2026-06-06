@@ -18,7 +18,6 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     public readonly Vector512<double>* DynamicCacheMemory;
     public int DynamicCacheEntryCount;
 
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public PartialSeedHashCache(IInternalMotelySearch search, Vector512<double>* partialSeedHashes)
     {

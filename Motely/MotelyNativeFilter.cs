@@ -20,6 +20,7 @@ public enum MotelyNativeFilter
     LuckyCard,
     NanSeed,
     NegativeTag,
+    TwoBlackHole,
 }
 
 public static class MotelyNativeFilterNames
@@ -42,6 +43,7 @@ public static class MotelyNativeFilterNames
         nameof(MotelyNativeFilter.LuckyCard),
         nameof(MotelyNativeFilter.NanSeed),
         nameof(MotelyNativeFilter.NegativeTag),
+        nameof(MotelyNativeFilter.TwoBlackHole),
     ];
 
     /// <summary>
@@ -87,6 +89,9 @@ public static class MotelyNativeFilterNames
             case "negativetag":
                 filter = MotelyNativeFilter.NegativeTag;
                 return true;
+            case "twoblackhole":
+                filter = MotelyNativeFilter.TwoBlackHole;
+                return true;
             default:
                 filter = default;
                 return false;
@@ -99,18 +104,53 @@ public static class MotelyNativeFilterFactory
     public static IMotelySearchSettings CreateSettings(MotelyNativeFilter filter) =>
         filter switch
         {
-            MotelyNativeFilter.PerkeoObservatory => new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc()),
-            MotelyNativeFilter.Observatory => new MotelySearchSettings<ObservatoryDesc.ObservatoryFilter>(new ObservatoryDesc()),
-            MotelyNativeFilter.Trickeoglyph => new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(new TrickeoglyphFilterDesc()),
-            MotelyNativeFilter.NaturalNegatives => new MotelySearchSettings<NaturalNegativesFilterDesc.NaturalNegativesFilter>(new NaturalNegativesFilterDesc()),
-            MotelyNativeFilter.NegativePerkeo => new MotelySearchSettings<NegativePerkeoFilterDescOld.FilterStruct>(new NegativePerkeoFilterDescOld()),
-            MotelyNativeFilter.NegativeCopy => new MotelySearchSettings<NegativeCopyFilterDesc.NegativeCopyFilter>(new NegativeCopyFilterDesc()),
-            MotelyNativeFilter.ShuffleFinder => new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc()),
-            MotelyNativeFilter.ErraticFinder => new MotelySearchSettings<ErraticFinderDesc.FilterStruct>(new ErraticFinderDesc()),
-            MotelyNativeFilter.FilledSoul => new MotelySearchSettings<FilledSoulFilterDesc.FilterStruct>(new FilledSoulFilterDesc()),
-            MotelyNativeFilter.LuckyCard => new MotelySearchSettings<LuckCardFilterDesc.LuckyCardFilter>(new LuckCardFilterDesc()),
-            MotelyNativeFilter.NanSeed => new MotelySearchSettings<NaNSeedFilterDesc.NaNSeedFilter>(new NaNSeedFilterDesc()),
-            MotelyNativeFilter.NegativeTag => new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc()),
+            MotelyNativeFilter.PerkeoObservatory =>
+                new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(
+                    new PerkeoObservatoryFilterDesc()
+                ),
+            MotelyNativeFilter.Observatory =>
+                new MotelySearchSettings<ObservatoryDesc.ObservatoryFilter>(new ObservatoryDesc()),
+            MotelyNativeFilter.Trickeoglyph =>
+                new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(
+                    new TrickeoglyphFilterDesc()
+                ),
+            MotelyNativeFilter.NaturalNegatives =>
+                new MotelySearchSettings<NaturalNegativesFilterDesc.NaturalNegativesFilter>(
+                    new NaturalNegativesFilterDesc()
+                ),
+            MotelyNativeFilter.NegativePerkeo =>
+                new MotelySearchSettings<NegativePerkeoFilterDescOld.FilterStruct>(
+                    new NegativePerkeoFilterDescOld()
+                ),
+            MotelyNativeFilter.NegativeCopy =>
+                new MotelySearchSettings<NegativeCopyFilterDesc.NegativeCopyFilter>(
+                    new NegativeCopyFilterDesc()
+                ),
+            MotelyNativeFilter.ShuffleFinder =>
+                new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(
+                    new ShuffleFinderFilterDesc()
+                ),
+            MotelyNativeFilter.ErraticFinder =>
+                new MotelySearchSettings<ErraticFinderDesc.FilterStruct>(new ErraticFinderDesc()),
+            MotelyNativeFilter.FilledSoul =>
+                new MotelySearchSettings<FilledSoulFilterDesc.FilterStruct>(
+                    new FilledSoulFilterDesc()
+                ),
+            MotelyNativeFilter.LuckyCard =>
+                new MotelySearchSettings<LuckCardFilterDesc.LuckyCardFilter>(
+                    new LuckCardFilterDesc()
+                ),
+            MotelyNativeFilter.NanSeed => new MotelySearchSettings<NaNSeedFilterDesc.NaNSeedFilter>(
+                new NaNSeedFilterDesc()
+            ),
+            MotelyNativeFilter.NegativeTag =>
+                new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(
+                    new NegativeTagFilterDesc()
+                ),
+            MotelyNativeFilter.TwoBlackHole =>
+                new MotelySearchSettings<TwoBlackHoleFilterDesc.TwoBlackHoleFilter>(
+                    new TwoBlackHoleFilterDesc()
+                ),
             _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, null),
         };
 }

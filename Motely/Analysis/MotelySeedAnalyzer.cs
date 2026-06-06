@@ -1,19 +1,24 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Motely.Analysis;
 
-public sealed record class MotelySeedAnalysisConfig(
+public sealed record class MotelyLegacyTextAnalysisConfig(
     string Seed,
     MotelyDeck Deck,
     MotelyStake Stake
 );
 
 /// <summary>
-/// Classic String Block Format Analysis
-/// Matches "The Soul" and is also a great thing for Verify() unit tests.
+/// Classic String Block Format Analysis ("The Soul" layout).
+///
+/// This is the LEGACY TEXT analyzer: its <see cref="ToString"/> is a flat, human-readable
+/// block intended for unit-test ground-truth (Verify()) and cross-tool comparison against
+/// external Balatro seed tools (miaklwalker, mathisfun_), NOT for UI rendering.
 /// </summary>
-public sealed record class MotelySeedAnalysis(
+public sealed record class MotelyLegacyTextAnalysis(
     string? Error,
     IReadOnlyList<MotelyAnteAnalysis> Antes,
     MotelyDeck? Deck = null,
@@ -98,11 +103,15 @@ public sealed record class MotelyAnteAnalysis(
     MotelyTag BigBlindTag,
     IReadOnlyList<MotelyAnalyzedItem> ShopQueue,
     IReadOnlyList<MotelyBoosterPackAnalysis> Packs,
-    string? DrawOrder = null
+    string? DrawOrder = null,
+    bool BossMatched = false,
+    bool VoucherMatched = false,
+    bool SmallBlindTagMatched = false,
+    bool BigBlindTagMatched = false
 );
 
 public sealed record class MotelyAnalyzedItem(
-    MotelyItem Item,
+    [property: JsonIgnore] MotelyItem Item,
     bool Matched = false
 )
 {
@@ -129,20 +138,23 @@ public sealed record class MotelyBoosterPackAnalysis(
 );
 
 /// <summary>
-/// Consolidated seed analyzer that captures seed data and provides various output formats
+/// Legacy text-block seed analyzer. Produces the classic "The Soul" string layout via
+/// <see cref="MotelyLegacyTextAnalysis.ToString"/>, intended for unit-test ground-truth and
+/// cross-tool comparison (miaklwalker, mathisfun_) — NOT for UI.
 /// </summary>
-public static partial class MotelySeedAnalyzer
+[EditorBrowsable(EditorBrowsableState.Never)]
+public static partial class MotelyLegacyTextAnalyzer
 {
     /// <summary>
     /// Analyzes a seed and returns structured data
     /// </summary>
-    public static MotelySeedAnalysis Analyze(MotelySeedAnalysisConfig cfg)
+    public static MotelyLegacyTextAnalysis Analyze(MotelyLegacyTextAnalysisConfig cfg)
     {
         try
         {
-            MotelyAnalyzerFilterDesc filterDesc = new();
+            MotelyLegacyTextAnalyzerFilterDesc filterDesc = new();
 
-            var searchSettings = new MotelySearchSettings<MotelyAnalyzerFilterDesc.AnalyzerFilter>(
+            var searchSettings = new MotelySearchSettings<MotelyLegacyTextAnalyzerFilterDesc.LegacyTextAnalyzerFilter>(
                 filterDesc
             )
                 .WithDeck(cfg.Deck)
@@ -150,8 +162,8 @@ public static partial class MotelySeedAnalyzer
                 .WithListSearch([cfg.Seed]) // Single seed analysis
                 .WithThreadCount(1);
 
-            using var search = searchSettings.Start();
-            search.AwaitCompletion();
+            using var search = searchSettings.CreateSearch();
+            search.RunSearchUntilCompletion();
 
             Debug.Assert(filterDesc.LastAnalysis != null);
 
@@ -162,8 +174,7 @@ public static partial class MotelySeedAnalyzer
         }
         catch (Exception ex)
         {
-            return new MotelySeedAnalysis(ex.ToString(), []);
+            return new MotelyLegacyTextAnalysis(ex.ToString(), []);
         }
     }
-
 }

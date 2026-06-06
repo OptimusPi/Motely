@@ -5,19 +5,19 @@ namespace Motely.Analysis;
 /// <summary>
 /// Filter descriptor for seed analysis
 /// </summary>
-public sealed class MotelyAnalyzerFilterDesc()
-    : IMotelySeedFilterDesc<MotelyAnalyzerFilterDesc.AnalyzerFilter>
+public sealed class MotelyLegacyTextAnalyzerFilterDesc()
+    : IMotelySeedFilterDesc<MotelyLegacyTextAnalyzerFilterDesc.LegacyTextAnalyzerFilter>
 {
-    public MotelySeedAnalysis? LastAnalysis { get; private set; } = null;
+    public MotelyLegacyTextAnalysis? LastAnalysis { get; private set; } = null;
 
-    public AnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public LegacyTextAnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        return new AnalyzerFilter(this);
+        return new LegacyTextAnalyzerFilter(this);
     }
 
-    public readonly struct AnalyzerFilter(MotelyAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
+    public readonly struct LegacyTextAnalyzerFilter(MotelyLegacyTextAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
     {
-        public MotelyAnalyzerFilterDesc FilterDesc { get; } = filterDesc;
+        public MotelyLegacyTextAnalyzerFilterDesc FilterDesc { get; } = filterDesc;
 
         public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -110,7 +110,13 @@ public sealed class MotelyAnalyzerFilterDesc()
                         ref state
                     );
 
-                    packs[i] = new(pack, packContent.AsArray().Select(static item => new MotelyAnalyzedItem(item)).ToArray());
+                    packs[i] = new(
+                        pack,
+                        packContent
+                            .AsArray()
+                            .Select(static item => new MotelyAnalyzedItem(item))
+                            .ToArray()
+                    );
                 }
 
                 // NOTE: Per-round hand draw not yet implemented - requires shuffle PRNG per round
@@ -275,7 +281,7 @@ public sealed class MotelyAnalyzerFilterDesc()
             {
                 int count = rankCounts.GetValueOrDefault(rank, 0);
                 string marker = count == maxRankCount && count > 0 ? "*" : "";
-                sb.AppendLine($"  {rank,2}: {count}{marker}");
+                sb.AppendLine($"  {rank, 2}: {count}{marker}");
             }
 
             // Suits breakdown with ASCII symbols

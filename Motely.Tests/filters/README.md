@@ -1,51 +1,23 @@
-# JAML Discord Filters
+# JAML regression fixtures
 
-This folder contains JAML filter examples collected from Discord users. These filters will be embedded and used for RAG (Retrieval-Augmented Generation) to help JAMMY learn from successful user queries.
+Every `*.jaml` file in this directory is auto-discovered by `V0FilterRegressionTests` and asserted to:
 
-## Structure
+1. Parse without errors (`JamlConfigLoader.TryLoad`).
+2. Compile into a search plan (`JamlSearchBuilder.CreatePlan`).
+3. Successfully list-search a small probe set without throwing.
 
-Each filter should be a `.jaml` file with the following format:
+Drop a new `.jaml` here and it's covered — no test code change needed. The runner enumerates the directory at test time and surfaces each file as a separate xUnit case keyed by filename.
 
-```yaml
-name: Filter Name
-author: Discord Username
-description: Short description of what this filter finds
+## Naming
 
-must:
-    - joker: Blueprint
-      antes: [1, 2]
-      sources:
-          shopItems: [0, 1, 2]
+Filenames are descriptive but not load-bearing. Existing prefixes (`boss-`, `common-`, `deck-`, `legendary-`, `voucher-`, …) just group related cases when reading the test output; the runner doesn't parse them. Keep new fixtures lowercase-kebab so the test names stay grep-friendly.
 
-should:
-    - joker: Brainstorm
-      score: 2
-```
+## When to add one
 
-## How to Add Filters
+- A bug reproduces on a specific filter shape — capture it here so a future refactor catches the regression.
+- A new JAML construct lands — at least one fixture exercising it belongs in this folder.
 
-1. Create a new `.jaml` file in this directory
-2. Name it descriptively (e.g., `blueprint-brainstorm-ante1.jaml`)
-3. Run the embedding script to populate the database:
-    ```bash
-    npm run embed-filters
-    ```
+## When **not** to add one
 
-## Embedding Process
-
-The `scripts/embed-filters.ts` script will:
-
-1. Read all `.jaml` files from this directory
-2. Generate embeddings using Vercel AI SDK 6
-3. Store them in the `jaml_filters` Postgres table
-4. JAMMY will use these for semantic search when users ask similar questions
-
-## Example Filters to Add
-
-Place your collected Discord filters here. Good examples include:
-
-- Early game legendary joker builds
-- Specific deck strategies (Erratic, Plasma, etc.)
-- Popular synergy combos (Blueprint + Brainstorm, Baron + Kings, etc.)
-- High-scoring builds
-- Challenge run setups
+- For parse-compatibility regression. Canonical fixtures live in `Motely.Tests/GoldenJamlFiles/` and are asserted by `JamlCorpusRegressionTests` to keep parsing clean as the schema evolves.
+- For language-tooling examples or docs. Those belong with the JAML language packages under `packages/`.

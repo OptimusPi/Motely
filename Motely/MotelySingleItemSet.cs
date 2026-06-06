@@ -99,14 +99,8 @@ public struct MotelySingleItemSet
 
     public MotelyItem this[int i]
     {
-        get
-        {
-            return GetItem(i);
-        }
-        set
-        {
-            GetItemRef(ref this, i) = value;
-        }
+        get { return GetItem(i); }
+        set { GetItemRef(ref this, i) = value; }
     }
 
     public MotelyItem[] AsArray()

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 public struct ErraticCardFilterDesc(ErraticCardClause clause)
     : IMotelySeedFilterDesc<ErraticCardFilterDesc.ErraticCardFilter>
@@ -21,9 +21,7 @@ public struct ErraticCardFilterDesc(ErraticCardClause clause)
     {
         private readonly ErraticCardClause _clause = clause;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;

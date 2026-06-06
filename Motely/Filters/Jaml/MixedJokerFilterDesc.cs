@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
 
-namespace Motely.Filters;
+namespace Motely.Filters.Jaml;
 
 public struct MixedJokerFilterDesc(MixedJokerClause clause)
     : IMotelySeedFilterDesc<MixedJokerFilterDesc.MixedJokerFilter>
@@ -74,9 +74,7 @@ public struct MixedJokerFilterDesc(MixedJokerClause clause)
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(
-            MethodImplOptions.AggressiveInlining
-        )]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
