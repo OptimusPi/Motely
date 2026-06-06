@@ -1214,6 +1214,16 @@
   border-color: var(--j-red);
 }
 
+.j-text-input--code {
+  font-family: var(--j-font-code);
+  font-size: 11px;
+}
+
+/* Jimmolate: JS predicate editor for post-SIMD seed filtering. */
+.j-jimmolate { gap: var(--j-gap-sm); }
+.j-jimmolate__sig { opacity: 0.6; }
+.j-jimmolate__input { width: 100%; font-family: var(--j-font-code); font-size: 11px; }
+
 /* Inline-edit: borderless transparent input that reads as text. */
 .j-inline-edit {
   width: 100%;
