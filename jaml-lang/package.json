@@ -1,19 +1,33 @@
 {
-  "name": "@motely/jaml-lang",
-  "version": "0.0.0",
-  "description": "The JAML authoring contract: typed POCO + Zod schema + completion vocab, generated from the Motely C# enums.",
+  "name": "jaml-lang",
+  "version": "0.1.2",
+  "description": "JAML (Jimbo's Ante Markup Language) authoring contract: typed POCO + Zod schema + completion vocab, generated from the Motely C# enums.",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
-  "exports": {
-    ".": "./src/index.ts",
-    "./service": "./src/service.ts",
-    "./vocab": "./src/vocab.generated.ts"
+  "license": "MIT",
+  "author": "pifreak",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "jaml-lang"
   },
+  "keywords": ["balatro", "jaml", "motely", "language-service", "lsp", "zod"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./service": { "types": "./dist/service.d.ts", "import": "./dist/service.js" },
+    "./vocab": { "types": "./dist/vocab.generated.d.ts", "import": "./dist/vocab.generated.js" }
+  },
+  "files": ["dist"],
   "scripts": {
     "gen": "node codegen/gen-vocab.mjs",
+    "build": "tsc -p tsconfig.json",
     "smoke": "tsx smoke.ts",
-    "check": "npm run gen && tsc --noEmit"
+    "check": "npm run gen && tsc --noEmit",
+    "prepublishOnly": "npm run gen && npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "yaml": "^2.5.0",
