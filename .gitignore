@@ -67,3 +67,4 @@ nuget.config.local
 *.lscache
 /motely-wasm/dist
 /Motely.Wasm/.pack-consumer
+/jaml-lang/dist

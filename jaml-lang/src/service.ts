@@ -705,8 +705,8 @@ export function getDocumentSymbols(text: string): DocumentSymbol[] {
     const key = String(pair.key.value);
     const keyRange = rangeOfNode(pair.key as Node, starts);
     if (!keyRange) continue;
-    const valueRange =
-      (pair.value && rangeOfNode(pair.value as Node, starts)) ?? keyRange;
+    const valueRange: Range =
+      (pair.value ? rangeOfNode(pair.value as Node, starts) : null) ?? keyRange;
     const full: Range = { start: keyRange.start, end: valueRange.end };
 
     if (CLAUSE_LIST_KEYS.has(key) && pair.value && isSeq(pair.value)) {
