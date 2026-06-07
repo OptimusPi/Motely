@@ -9,7 +9,7 @@ namespace Motely.Analysis;
 public sealed class JamlyzerFilterDesc()
     : IMotelySeedFilterDesc<JamlyzerFilterDesc.JamlyzerFilter>
 {
-    public JamlyzerAnalysis? LastAnalysis { get; private set; } = null;
+    public JamlyzerSnapshot? LastAnalysis { get; private set; } = null;
 
     /// <summary>
     /// Optional JAML lens. Items matching its <c>should</c> clauses get IsHighlighted/MatchedBy
@@ -56,6 +56,10 @@ public sealed class JamlyzerFilterDesc()
         {
             JamlConfig? lens = FilterDesc.Lens;
 
+            // Glow comes from the real scorer: run it once with a scoop attached and index every
+            // shop/pack match by board location. No lens = a plain dark board.
+            Dictionary<long, string>? scoopLookup = lens is null ? null : RunScoop(ref ctx, lens);
+
             // Create voucher state to track activated vouchers across antes
             MotelyRunState voucherState = new();
             MotelySingleBossStream bossStream = ctx.CreateBossStream();
@@ -72,7 +76,7 @@ public sealed class JamlyzerFilterDesc()
 
             string startingDeck = string.Join(",", deckCards);
 
-            List<JamlyzerAnteAnalysis> antes = [];
+            List<AnteSnapshot> antes = [];
 
             // Analyze each ante
             for (int ante = 1; ante <= 8; ante++)
@@ -100,8 +104,8 @@ public sealed class JamlyzerFilterDesc()
                 MotelyTag bigTag = ctx.GetNextTag(ref tagStream);
 
                 // Materialize jokers granted by rare/uncommon tags
-                JamlyzerAnalyzedItem? smallTagGrantedJoker = null;
-                JamlyzerAnalyzedItem? bigTagGrantedJoker = null;
+                SnapshotItem? smallTagGrantedJoker = null;
+                SnapshotItem? bigTagGrantedJoker = null;
 
                 // Check if tags grant jokers (tags can grant jokers at certain rarities)
                 if (IsRareTag(smallTag))
@@ -112,7 +116,7 @@ public sealed class JamlyzerFilterDesc()
                         state.RareTagJokerStreamInitialized = true;
                     }
                     var jokerItem = ctx.GetNextJoker(ref state.RareTagJokerStream);
-                    smallTagGrantedJoker = Glow(jokerItem, lens);
+                    smallTagGrantedJoker = new SnapshotItem(jokerItem);
                 }
                 else if (IsUncommonTag(smallTag))
                 {
@@ -122,7 +126,7 @@ public sealed class JamlyzerFilterDesc()
                         state.UncommonTagJokerStreamInitialized = true;
                     }
                     var jokerItem = ctx.GetNextJoker(ref state.UncommonTagJokerStream);
-                    smallTagGrantedJoker = Glow(jokerItem, lens);
+                    smallTagGrantedJoker = new SnapshotItem(jokerItem);
                 }
 
                 if (IsRareTag(bigTag))
@@ -133,7 +137,7 @@ public sealed class JamlyzerFilterDesc()
                         state.RareTagJokerStreamInitialized = true;
                     }
                     var jokerItem = ctx.GetNextJoker(ref state.RareTagJokerStream);
-                    bigTagGrantedJoker = Glow(jokerItem, lens);
+                    bigTagGrantedJoker = new SnapshotItem(jokerItem);
                 }
                 else if (IsUncommonTag(bigTag))
                 {
@@ -143,24 +147,31 @@ public sealed class JamlyzerFilterDesc()
                         state.UncommonTagJokerStreamInitialized = true;
                     }
                     var jokerItem = ctx.GetNextJoker(ref state.UncommonTagJokerStream);
-                    bigTagGrantedJoker = Glow(jokerItem, lens);
+                    bigTagGrantedJoker = new SnapshotItem(jokerItem);
                 }
 
                 // Shop Queue
                 MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante);
 
                 int maxSlots = ante == 1 ? 15 : 50;
-                JamlyzerAnalyzedItem[] shopItems = new JamlyzerAnalyzedItem[maxSlots];
+                SnapshotItem[] shopItems = new SnapshotItem[maxSlots];
 
                 for (int i = 0; i < maxSlots; i++)
                 {
-                    shopItems[i] = Glow(ctx.GetNextShopItem(ref shopStream), lens);
+                    shopItems[i] = Glow(
+                        ctx.GetNextShopItem(ref shopStream),
+                        ante,
+                        MotelyMatchSource.Shop,
+                        i,
+                        -1,
+                        scoopLookup
+                    );
                 }
 
                 // Packs - Get the actual shop packs (not tag-generated ones)
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 int maxPacks = ante == 1 ? 4 : 6;
-                JamlyzerBoosterPackAnalysis[] packs = new JamlyzerBoosterPackAnalysis[maxPacks];
+                PackSnapshot[] packs = new PackSnapshot[maxPacks];
 
                 // Get all packs up to the maximum
                 for (int i = 0; i < maxPacks; i++)
@@ -171,14 +182,20 @@ public sealed class JamlyzerFilterDesc()
                         ante,
                         pack,
                         ref state,
-                        out var grantedLegendaryJoker,
-                        lens
+                        out var grantedLegendaryJoker
                     );
 
                     var packCards = packContent.AsArray();
-                    var glowedCards = new JamlyzerAnalyzedItem[packCards.Length];
+                    var glowedCards = new SnapshotItem[packCards.Length];
                     for (int c = 0; c < packCards.Length; c++)
-                        glowedCards[c] = Glow(packCards[c], lens);
+                        glowedCards[c] = Glow(
+                            packCards[c],
+                            ante,
+                            MotelyMatchSource.BoosterPack,
+                            i,
+                            c,
+                            scoopLookup
+                        );
 
                     packs[i] = new(pack, glowedCards, grantedLegendaryJoker);
                 }
@@ -220,22 +237,82 @@ public sealed class JamlyzerFilterDesc()
 
         /// <summary>
         /// Wraps a materialized board <paramref name="item"/> as a snapshot item, lighting it up
-        /// (IsHighlighted + MatchedBy) if it satisfies any of the lens's <c>should</c> clauses.
-        /// Per-item identity match via <see cref="JamlScoring.ItemMatchesClause"/> — one source of
-        /// truth with the scorer. No lens = a plain dark item.
+        /// (IsHighlighted + MatchedBy) when the real scorer matched a clause at this exact board
+        /// location (<paramref name="ante"/>/<paramref name="source"/>/<paramref name="slot"/>/
+        /// <paramref name="cardIndex"/>). The glow comes from the scoring path itself
+        /// (<see cref="RunScoop"/>) — one source of truth, no parallel matcher. No scoop = dark.
         /// </summary>
-        private static JamlyzerAnalyzedItem Glow(MotelyItem item, JamlConfig? lens)
+        private static SnapshotItem Glow(
+            MotelyItem item,
+            int ante,
+            MotelyMatchSource source,
+            int slot,
+            int cardIndex,
+            Dictionary<long, string>? scoop
+        )
         {
-            if (lens is not null)
-                foreach (IJamlClause clause in lens.Should)
-                    if (JamlScoring.ItemMatchesClause(item, clause))
-                        return new JamlyzerAnalyzedItem(
-                            item,
-                            true,
-                            clause.Label ?? clause.Describe()
-                        );
+            if (
+                scoop is not null
+                && scoop.TryGetValue(ScoopKey(ante, source, slot, cardIndex), out string? label)
+            )
+                return new SnapshotItem(item, true, label);
 
-            return new JamlyzerAnalyzedItem(item);
+            return new SnapshotItem(item);
+        }
+
+        /// <summary>Packs a board location into a dictionary key: ante | source | slot | cardIndex+1.</summary>
+        private static long ScoopKey(int ante, MotelyMatchSource source, int slot, int cardIndex) =>
+            ((long)ante << 40)
+            | ((long)(int)source << 32)
+            | ((long)(ushort)slot << 16)
+            | (ushort)(cardIndex + 1);
+
+        /// <summary>
+        /// Runs the JAML scorer once over the seed with a <see cref="JamlScoop"/> attached, then
+        /// indexes every shop/pack match by board location → clause label. The glow is produced by
+        /// the exact code that filters seeds, so coverage and ante/source scoping match the search
+        /// (not a re-implementation). Non-shop/pack matches (consumables, soul, tags) are collected
+        /// by the scorer too but are not yet overlaid onto the board.
+        /// </summary>
+        private static Dictionary<long, string> RunScoop(
+            ref MotelySingleSearchContext ctx,
+            JamlConfig lens
+        )
+        {
+            var map = new Dictionary<long, string>();
+            if (lens.Should.Count == 0)
+                return map;
+
+            IJamlClause[] should = lens.Should.ToArray();
+            var scoop = new JamlScoop();
+            var runState = new MotelyRunState { ScoopSink = scoop };
+            JamlScoring.PrepareRunState(ref ctx, should, ref runState);
+
+            for (int i = 0; i < should.Length; i++)
+            {
+                scoop.CurrentClauseIndex = i;
+                JamlScoring.CountRawOccurrences(ref ctx, should[i], ref runState);
+            }
+
+            IReadOnlyList<ScoopedMatch> matches = scoop.Matches;
+            for (int m = 0; m < matches.Count; m++)
+            {
+                ScoopedMatch sm = matches[m];
+                if (
+                    sm.Source != MotelyMatchSource.Shop
+                    && sm.Source != MotelyMatchSource.BoosterPack
+                )
+                    continue;
+
+                long key = ScoopKey(sm.Ante, sm.Source, sm.Slot, sm.CardIndex);
+                if (!map.ContainsKey(key))
+                {
+                    IJamlClause clause = should[sm.ClauseIndex];
+                    map[key] = clause.Label ?? clause.Describe();
+                }
+            }
+
+            return map;
         }
 
         /// <summary>
@@ -409,8 +486,7 @@ public sealed class JamlyzerFilterDesc()
             int ante,
             MotelyBoosterPack pack,
             ref AnteAnalysisState state,
-            out JamlyzerAnalyzedItem? grantedLegendaryJoker,
-            JamlConfig? lens = null
+            out SnapshotItem? grantedLegendaryJoker
         )
         {
             grantedLegendaryJoker = null;
@@ -436,7 +512,7 @@ public sealed class JamlyzerFilterDesc()
                         }
 
                         var legendaryJoker = ctx.GetNextJoker(ref state.LegendaryJokerStream);
-                        grantedLegendaryJoker = Glow(legendaryJoker, lens);
+                        grantedLegendaryJoker = new SnapshotItem(legendaryJoker);
                     }
 
                     return arcanaContents;
@@ -465,7 +541,7 @@ public sealed class JamlyzerFilterDesc()
                         }
 
                         var legendaryJoker = ctx.GetNextJoker(ref state.LegendaryJokerStream);
-                        grantedLegendaryJoker = Glow(legendaryJoker, lens);
+                        grantedLegendaryJoker = new SnapshotItem(legendaryJoker);
                     }
 
                     return spectralContents;

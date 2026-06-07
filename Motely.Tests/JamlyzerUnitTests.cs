@@ -42,7 +42,7 @@ public sealed class JamlyzerUnitTests
             fromContext.Add(ctx.GetNextShopItem(ref shopStream).Value);
         }
 
-        var analysis = JamlyzerAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
+        var analysis = Jamlyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
         var fromAnalyzer = new List<int>();
         for (int i = 0; i < 5; i++)
         {
@@ -85,7 +85,7 @@ public sealed class JamlyzerUnitTests
         MotelyStake stake = MotelyStake.White
     )
     {
-        return JamlyzerAnalyzer.Analyze(new(seed, deck, stake)).ToString();
+        return Jamlyzer.Analyze(new(seed, deck, stake)).ToString();
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class JamlyzerUnitTests
         Assert.Equal(4, packCount);
     }
 
-    // The lens (a JamlConfig) lights up Matched on items it matches and leaves the rest dark.
+    // The lens (a JamlConfig) lights up items the REAL scorer matched, leaving the rest dark.
     // Uses an "any joker" wildcard lens. Ante 1's first booster is always a 2-joker Buffoon pack,
     // so there are always joker items to glow AND non-joker shop items to stay dark — the test
     // can never pass vacuously in either direction.
@@ -158,7 +158,7 @@ public sealed class JamlyzerUnitTests
 
         Assert.True(JamlConfigLoader.TryLoad(lensJaml, out var lens, out var error), error);
 
-        var analysis = JamlyzerAnalyzer.Analyze(seed, lens!);
+        var analysis = Jamlyzer.Analyze(seed, lens!);
 
         var allItems = analysis
             .Antes.SelectMany(a => a.ShopQueue.Concat(a.Packs.SelectMany(p => p.Items)))
@@ -167,10 +167,19 @@ public sealed class JamlyzerUnitTests
         Assert.Contains(allItems, i => i.IsHighlighted); // the lens lit something up
         Assert.Contains(allItems, i => !i.IsHighlighted); // and not everything
 
-        // For an "any joker" lens, Matched must be exactly "is this item a joker".
+        // Glow is produced by the REAL scorer (JamlScoop), so it respects each clause's source/ante
+        // SCOPE — not every joker on the board glows, only those the scorer actually scanned. The
+        // invariant that must hold for an "any joker" lens: it never lights a non-joker (no false
+        // glow), and every glow carries the matched clause's label.
         Assert.All(
             allItems,
-            i => Assert.Equal(i.TypeCategory == MotelyItemTypeCategory.Joker, i.IsHighlighted)
+            i =>
+            {
+                if (!i.IsHighlighted)
+                    return;
+                Assert.Equal(MotelyItemTypeCategory.Joker, i.TypeCategory);
+                Assert.False(string.IsNullOrEmpty(i.MatchedBy), $"Glow without label: {i.Name}");
+            }
         );
     }
 }

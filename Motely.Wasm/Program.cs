@@ -18,30 +18,18 @@ using Motely.SeedProviders;
 namespace Motely.Wasm;
 
 // Bootsharp 0.8.0 replaced [assembly: Preferences(Space=…, Name=…)] with the renaming API
-// (docs/guide/renaming.md). Space → RenameModule (fold every Motely namespace into the single
-// `index` module); Name → RenameNode (project the `Program` node as `Motely`).
+// (docs/guide/renaming.md). We keep Bootsharp's DEFAULT module/node mapping so the published
+// surface stays stable for consumers (jaml-ui imports `motely-wasm/motely/wasm`,
+// `motely/analysis`, `motely/enums`, `motely/filters/jaml`, and the `Program` node). Folding
+// everything into `index` or renaming `Program` → `Motely` is a breaking API change; don't.
 public static class BootsharpRenamers
 {
-    [RenameModule]
-    public static string RenameModule(Type type, string @default)
-    {
-        var ns = type.Namespace ?? "";
-        return
-            ns == "Motely"
-            || ns == "Motely.Wasm"
-            || ns.StartsWith("Motely.", StringComparison.Ordinal)
-            ? "index"
-            : @default;
-    }
-
     [RenameNode]
     public static string? RenameNode(Type type, string @default) =>
         // Ref-struct types (MotelyRunState, Span<T>) can never marshal; erase them from the
         // surface. They linger as serialized types because they were registered while inspecting
-        // members that RenameMember later erased.
-        type.IsByRefLike ? null
-        : @default == "Program" ? "Motely"
-        : @default;
+        // members that RenameMember later erased. Everything else keeps its default node name.
+        type.IsByRefLike ? null : @default;
 
     // MotelySingleSearchContext crosses to JS (the JimmolateProbe import), so Bootsharp tries to
     // instance-bind its whole surface. Most of that surface is SIMD value/ref-struct types
@@ -196,6 +184,14 @@ public static partial class Program
     [Export]
     public static JamlSearchPlan CreatePlan(JamlConfig config) =>
         JamlSearchBuilder.CreatePlan(config);
+
+    // Single-seed snapshot through a JAML lens: items matching the lens's `should` clauses glow
+    // (IsHighlighted/MatchedBy). This [Export] is what pulls the Motely.Analysis types onto the
+    // interop surface, regenerating the `motely/analysis` module that jaml-ui consumes.
+    [Export]
+    public static JamlyzerSnapshot Jamlyzer(string seed, JamlConfig lens) =>
+        // Fully qualified: this export method and the analyzer class are both named "Jamlyzer".
+        Motely.Analysis.Jamlyzer.Analyze(seed, lens);
 
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;

@@ -26,6 +26,13 @@ must:
     antes: [1,2]
     sources:
       boosterPacks: [0,1,2]
+  # The Magician turns cards Lucky -> without a Lucky-card source the whole
+  # lucky-money payoff below is theoretical. Require one early.
+  - tarotCard: TheMagician
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1, 2, 3]
 should:
     # With 4x luck, demand the first three Lucky cards all hit $20
   - luckyMoney: [0, 1, 2]
