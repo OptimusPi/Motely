@@ -2,13 +2,16 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Serialization;
+using Motely.Filters.Jaml;
 
 namespace Motely.Analysis;
 
 public sealed record class JamlyzerAnalysisConfig(
     string Seed,
     MotelyDeck Deck,
-    MotelyStake Stake
+    MotelyStake Stake,
+    // Optional JAML lens: items matching its should clauses get IsHighlighted/MatchedBy (glow).
+    JamlConfig? Lens = null
 );
 
 /// <summary>
@@ -107,12 +110,18 @@ public sealed record class JamlyzerAnteAnalysis(
     bool BossMatched = false,
     bool VoucherMatched = false,
     bool SmallBlindTagMatched = false,
-    bool BigBlindTagMatched = false
+    bool BigBlindTagMatched = false,
+    // Optional: jokers granted by tag effects (not rendered in ToString)
+    JamlyzerAnalyzedItem? SmallBlindTagGrantedJoker = null,
+    JamlyzerAnalyzedItem? BigBlindTagGrantedJoker = null
 );
 
 public sealed record class JamlyzerAnalyzedItem(
     [property: JsonIgnore] MotelyItem Item,
-    bool Matched = false
+    // Snapshot model (JAMLyzer): JAML is the lens, not the filter.
+    // IsHighlighted = glow; MatchedBy = why it glows (tooltip + tally index label).
+    bool IsHighlighted = false,
+    string? MatchedBy = null
 )
 {
     public string Name => FormatUtils.FormatItem(Item);
@@ -134,7 +143,9 @@ public sealed record class JamlyzerAnalyzedItem(
 
 public sealed record class JamlyzerBoosterPackAnalysis(
     MotelyBoosterPack Type,
-    IReadOnlyList<JamlyzerAnalyzedItem> Items
+    IReadOnlyList<JamlyzerAnalyzedItem> Items,
+    // Optional: legendary joker granted by The Soul in this pack (not rendered in ToString)
+    JamlyzerAnalyzedItem? GrantedLegendaryJoker = null
 );
 
 /// <summary>
@@ -152,7 +163,7 @@ public static partial class JamlyzerAnalyzer
     {
         try
         {
-            JamlyzerFilterDesc filterDesc = new();
+            JamlyzerFilterDesc filterDesc = new() { Lens = cfg.Lens };
 
             var searchSettings = new MotelySearchSettings<JamlyzerFilterDesc.JamlyzerFilter>(
                 filterDesc
@@ -177,4 +188,11 @@ public static partial class JamlyzerAnalyzer
             return new JamlyzerAnalysis(ex.ToString(), []);
         }
     }
+
+    /// <summary>
+    /// Lens overload: analyze <paramref name="seed"/> and glow items matched by the JAML
+    /// <paramref name="lens"/>'s should clauses (deck/stake are taken from the lens config).
+    /// </summary>
+    public static JamlyzerAnalysis Analyze(string seed, JamlConfig lens) =>
+        Analyze(new JamlyzerAnalysisConfig(seed, lens.Deck, lens.Stake, lens));
 }
