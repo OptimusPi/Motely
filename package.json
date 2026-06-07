@@ -1,0 +1,139 @@
+{
+  "name": "jaml-ui",
+  "version": "2.0.0",
+  "description": "Balatro rendering components, sprite metadata, and optional Motely helpers for React apps.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui.d.ts",
+      "default": "./dist/ui.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "default": "./dist/core.js"
+    },
+    "./motely": {
+      "types": "./dist/motely.d.ts",
+      "default": "./dist/motely.js"
+    },
+    "./jimbo.css": "./dist/ui/jimbo.css",
+    "./fonts.css": "./fonts.css",
+    "./assets/*": "./assets/*"
+  },
+  "sideEffects": [
+    "./fonts.css",
+    "./dist/ui.js",
+    "./dist/ui/jimbo.css",
+    "./dist/index.js"
+  ],
+  "files": [
+    "dist",
+    "assets/*.png",
+    "assets/fonts",
+    "fonts.css",
+    "dist/ui/jimbo.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "demo": "vite --config demo/vite.config.ts",
+    "typecheck": "tsc --noEmit --pretty false",
+    "prepack": "npm run build",
+    "storybook": "storybook dev -p 3141",
+    "build-storybook": "storybook build",
+    "serve:storybook": "npx --yes serve storybook-static -l tcp://0.0.0.0:3141 --cors",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OptimusPi/jaml-ui"
+  },
+  "homepage": "https://github.com/OptimusPi/jaml-ui#readme",
+  "bugs": {
+    "url": "https://github.com/OptimusPi/jaml-ui/issues"
+  },
+  "keywords": [
+    "balatro",
+    "jaml",
+    "motely",
+    "seed",
+    "card",
+    "sprite",
+    "ui"
+  ],
+  "author": "pifreak",
+  "license": "MIT",
+  "peerDependencies": {
+    "motely-wasm": ">=19.4.0",
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0",
+    "react-icons": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@rewaffle/bootsharp-file-system": {
+      "optional": true
+    },
+    "react-icons": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "^5.2.1",
+    "@eslint/js": "^10.0.1",
+    "@rewaffle/bootsharp-file-system": "link:D:/extra/bootsharp/dist/packages/file-system",
+    "@storybook/addon-a11y": "^10.4.0",
+    "@storybook/addon-docs": "^10.4.0",
+    "@storybook/addon-mcp": "^0.6.0",
+    "@storybook/addon-vitest": "^10.4.0",
+    "@storybook/react-vite": "^10.4.0",
+    "@types/node": "^25.8.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "@vitest/browser-playwright": "^4.1.6",
+    "@vitest/coverage-v8": "^4.1.6",
+    "eslint": "^10.4.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-storybook": "^10.4.2",
+    "globals": "^17.6.0",
+    "motely-wasm": "^19.4.0",
+    "playwright": "^1.60.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-icons": "^5.6.0",
+    "storybook": "^10.4.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.3",
+    "vite": "^8.0.13",
+    "vite-plugin-dts": "^5.0.0",
+    "vitest": "^4.1.6"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-yaml": "^6.1.3",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.0",
+    "@lezer/highlight": "^1.2.3",
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.1",
+    "lucide-react": "^1.16.0",
+    "zustand": "^5.0.13"
+  }
+}
