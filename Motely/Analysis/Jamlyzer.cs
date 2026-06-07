@@ -6,7 +6,7 @@ using Motely.Filters.Jaml;
 
 namespace Motely.Analysis;
 
-public sealed record class JamlyzerAnalysisConfig(
+public sealed record class JamlyzerOptions(
     string Seed,
     MotelyDeck Deck,
     MotelyStake Stake,
@@ -21,9 +21,9 @@ public sealed record class JamlyzerAnalysisConfig(
 /// block intended for unit-test ground-truth (Verify()) and cross-tool comparison against
 /// external Balatro seed tools (miaklwalker, mathisfun_), NOT for UI rendering.
 /// </summary>
-public sealed record class JamlyzerAnalysis(
+public sealed record class JamlyzerSnapshot(
     string? Error,
-    IReadOnlyList<JamlyzerAnteAnalysis> Antes,
+    IReadOnlyList<AnteSnapshot> Antes,
     MotelyDeck? Deck = null,
     string? ErraticDeckComposition = null,
     string? ErraticDeckBreakdown = null
@@ -70,7 +70,7 @@ public sealed record class JamlyzerAnalysis(
 
             // Shop Queue - match TheSoul format exactly: "Shop Queue: " on its own line, then numbered items
             sb.AppendLine("Shop Queue: ");
-            foreach ((int i, JamlyzerAnalyzedItem item) in ante.ShopQueue.Index())
+            foreach ((int i, SnapshotItem item) in ante.ShopQueue.Index())
             {
                 sb.AppendLine($"{i + 1}) {FormatUtils.FormatItem(item.Item)}");
             }
@@ -98,25 +98,25 @@ public sealed record class JamlyzerAnalysis(
     }
 }
 
-public sealed record class JamlyzerAnteAnalysis(
+public sealed record class AnteSnapshot(
     int Ante,
     MotelyBossBlind Boss,
     MotelyVoucher Voucher,
     MotelyTag SmallBlindTag,
     MotelyTag BigBlindTag,
-    IReadOnlyList<JamlyzerAnalyzedItem> ShopQueue,
-    IReadOnlyList<JamlyzerBoosterPackAnalysis> Packs,
+    IReadOnlyList<SnapshotItem> ShopQueue,
+    IReadOnlyList<PackSnapshot> Packs,
     string? DrawOrder = null,
     bool BossMatched = false,
     bool VoucherMatched = false,
     bool SmallBlindTagMatched = false,
     bool BigBlindTagMatched = false,
     // Optional: jokers granted by tag effects (not rendered in ToString)
-    JamlyzerAnalyzedItem? SmallBlindTagGrantedJoker = null,
-    JamlyzerAnalyzedItem? BigBlindTagGrantedJoker = null
+    SnapshotItem? SmallBlindTagGrantedJoker = null,
+    SnapshotItem? BigBlindTagGrantedJoker = null
 );
 
-public sealed record class JamlyzerAnalyzedItem(
+public sealed record class SnapshotItem(
     [property: JsonIgnore] MotelyItem Item,
     // Snapshot model (JAMLyzer): JAML is the lens, not the filter.
     // IsHighlighted = glow; MatchedBy = why it glows (tooltip + tally index label).
@@ -138,28 +138,28 @@ public sealed record class JamlyzerAnalyzedItem(
     public bool IsRental => Item.IsRental;
     public bool IsInvalid => Item.IsInvalid;
 
-    public static implicit operator MotelyItem(JamlyzerAnalyzedItem item) => item.Item;
+    public static implicit operator MotelyItem(SnapshotItem item) => item.Item;
 }
 
-public sealed record class JamlyzerBoosterPackAnalysis(
+public sealed record class PackSnapshot(
     MotelyBoosterPack Type,
-    IReadOnlyList<JamlyzerAnalyzedItem> Items,
+    IReadOnlyList<SnapshotItem> Items,
     // Optional: legendary joker granted by The Soul in this pack (not rendered in ToString)
-    JamlyzerAnalyzedItem? GrantedLegendaryJoker = null
+    SnapshotItem? GrantedLegendaryJoker = null
 );
 
 /// <summary>
 /// Legacy text-block seed analyzer. Produces the classic "The Soul" string layout via
-/// <see cref="JamlyzerAnalysis.ToString"/>, intended for unit-test ground-truth and
+/// <see cref="JamlyzerSnapshot.ToString"/>, intended for unit-test ground-truth and
 /// cross-tool comparison (miaklwalker, mathisfun_) — NOT for UI.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public static partial class JamlyzerAnalyzer
+public static partial class Jamlyzer
 {
     /// <summary>
     /// Analyzes a seed and returns structured data
     /// </summary>
-    public static JamlyzerAnalysis Analyze(JamlyzerAnalysisConfig cfg)
+    public static JamlyzerSnapshot Analyze(JamlyzerOptions cfg)
     {
         try
         {
@@ -185,7 +185,7 @@ public static partial class JamlyzerAnalyzer
         }
         catch (Exception ex)
         {
-            return new JamlyzerAnalysis(ex.ToString(), []);
+            return new JamlyzerSnapshot(ex.ToString(), []);
         }
     }
 
@@ -193,6 +193,6 @@ public static partial class JamlyzerAnalyzer
     /// Lens overload: analyze <paramref name="seed"/> and glow items matched by the JAML
     /// <paramref name="lens"/>'s should clauses (deck/stake are taken from the lens config).
     /// </summary>
-    public static JamlyzerAnalysis Analyze(string seed, JamlConfig lens) =>
-        Analyze(new JamlyzerAnalysisConfig(seed, lens.Deck, lens.Stake, lens));
+    public static JamlyzerSnapshot Analyze(string seed, JamlConfig lens) =>
+        Analyze(new JamlyzerOptions(seed, lens.Deck, lens.Stake, lens));
 }
