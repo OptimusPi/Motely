@@ -23,8 +23,11 @@ override convenience. Do not relitigate them.
    structural element; raw DOM tags live **only inside leaf primitives**.
 3. **No inline styles, no raw hex.** Style through `j-*` token classes and the
    `--j-*` CSS variables only. (Legacy files carry `TODO(jimbo-primitives)`.)
-4. **No flex for centering.** The canvas is fixed — center with `margin:auto` /
-   grid, not flexbox guesswork.
+4. **NO FLEX. Not anywhere, not for anything.** Not centering, not layout, not
+   "just this once," not "but it's not for centering." The canvas is fixed — use
+   `margin:auto` and grid. If you typed `display:flex` (or `flex`, `inline-flex`,
+   `flex-direction`, …) you broke the rule. There is no centering exception
+   because there is no exception. NO FLEX.
 5. **Single thread.** Default to one worker/thread unless explicitly told otherwise.
 6. **RULE #1 — never add anything the author didn't ask for.** No invented tools,
    primitives, abstractions, dependencies, or "helpful" extras without explicit
