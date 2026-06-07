@@ -1031,7 +1031,7 @@ partial class Program
 
     static int RunJamlyze(string seed, MotelyDeck d, MotelyStake s, JamlConfig lens)
     {
-        var analysis = JamlyzerAnalyzer.Analyze(new JamlyzerAnalysisConfig(seed, d, s, lens));
+        var analysis = Jamlyzer.Analyze(new JamlyzerOptions(seed, d, s, lens));
         if (!string.IsNullOrEmpty(analysis.Error))
         {
             Console.Error.WriteLine($"Error: {analysis.Error}");

@@ -61,6 +61,10 @@ public ref struct MotelyRunState
     // Boss caching for scoring - generated once per seed to maintain state
     public MotelyBossBlind[]? CachedBosses;
 
+    // Optional analyzer hook: when set, the scorer reports each concrete match here so the board can
+    // glow from the real scoring path. Null on the hot search path (one null-check per match).
+    public IMotelyScoopSink? ScoopSink;
+
     public readonly bool ShowmanActive => _showmanActive;
 
     public void ActivateVoucher(MotelyVoucher voucher)

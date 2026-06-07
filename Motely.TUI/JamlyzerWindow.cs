@@ -6,8 +6,8 @@ namespace Motely.TUI;
 /// clauses match GLOW (orange) with their match reason shown inline.
 ///
 /// This is the FACE for the analyzer engine in Motely.Analysis
-/// (<see cref="JamlyzerAnalyzer"/> / <see cref="JamlyzerFilterDesc"/>) — it renders the
-/// already-computed <see cref="JamlyzerAnalysis"/>, it does not re-implement the walk.
+/// (<see cref="Jamlyzer"/> / <see cref="JamlyzerFilterDesc"/>) — it renders the
+/// already-computed <see cref="JamlyzerSnapshot"/>, it does not re-implement the walk.
 /// </summary>
 public sealed class JamlyzerWindow : Window
 {
@@ -21,7 +21,7 @@ public sealed class JamlyzerWindow : Window
     private readonly FrameView _board;
     private readonly List<View> _boardItems = new();
 
-    private JamlyzerAnalysis? _analysis;
+    private JamlyzerSnapshot? _analysis;
     private int _ante; // 0-based index into _analysis.Antes
 
     public JamlyzerWindow()
@@ -182,7 +182,7 @@ public sealed class JamlyzerWindow : Window
             return;
         }
 
-        _analysis = JamlyzerAnalyzer.Analyze(seed, lens!);
+        _analysis = Jamlyzer.Analyze(seed, lens!);
 
         _ante = 0;
 
@@ -275,7 +275,7 @@ public sealed class JamlyzerWindow : Window
         _board.SetNeedsDraw();
     }
 
-    private void AddItem(int y, string prefix, JamlyzerAnalyzedItem item)
+    private void AddItem(int y, string prefix, SnapshotItem item)
     {
         bool glow = item.IsHighlighted;
         string text = glow ? $"{prefix}{item.Name}   ◄ {item.MatchedBy}" : $"{prefix}{item.Name}";
