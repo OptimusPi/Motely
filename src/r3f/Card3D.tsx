@@ -10,15 +10,15 @@ import { resolveJamlAssetUrl } from "../assets.js";
 import { getSpriteDataOrMystery, SHEET_META, type SpriteSheetType } from "../sprites/spriteMapper.js";
 
 // Balatro cards are 71x95px cells on every sheet — keep the plane at that ratio.
-const CARD_W = 1;
-const CARD_H = CARD_W * (95 / 71);
+export const CARD_W = 1;
+export const CARD_H = CARD_W * (95 / 71);
 
 /**
  * Load a spritesheet PNG and crop it to a single item's cell via UV repeat/offset.
  * Reuses jaml-ui/core's sprite metadata so the 3D card shows the *real* art,
  * pixel-perfect (NearestFilter), not a placeholder.
  */
-function useSpriteTexture(itemName: string, fallbackSheet: SpriteSheetType): THREE.Texture {
+export function useSpriteTexture(itemName: string, fallbackSheet: SpriteSheetType): THREE.Texture {
   const { pos, type } = getSpriteDataOrMystery(itemName, fallbackSheet);
   const meta = SHEET_META[type];
   const url = resolveJamlAssetUrl(meta.assetKey);
@@ -45,7 +45,7 @@ interface CardMeshProps {
 }
 
 // Max tilt away from facing the camera, in radians (~17°).
-const MAX_TILT = 0.3;
+export const MAX_TILT = 0.3;
 
 function CardMesh({ itemName, fallbackSheet }: CardMeshProps) {
   const texture = useSpriteTexture(itemName, fallbackSheet);
