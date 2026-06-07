@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Linq;
 using Motely;
 using Motely.Analysis;
 using Motely.Enums;
+using Motely.Filters.Jaml;
 using Xunit;
 
 namespace Motely.Tests;
@@ -142,5 +144,33 @@ public sealed class JamlyzerUnitTests
 
         // Ante 1 should have exactly 4 packs
         Assert.Equal(4, packCount);
+    }
+
+    // The lens (a JamlConfig) lights up Matched on items it matches and leaves the rest dark.
+    // Uses an "any joker" wildcard lens. Ante 1's first booster is always a 2-joker Buffoon pack,
+    // so there are always joker items to glow AND non-joker shop items to stay dark — the test
+    // can never pass vacuously in either direction.
+    [Fact]
+    public void TestAnalyzer_LensGlowsMatchingItems()
+    {
+        const string seed = "UNITTEST";
+        const string lensJaml = "deck: Red\nstake: White\nshould:\n  - joker: any\n";
+
+        Assert.True(JamlConfigLoader.TryLoad(lensJaml, out var lens, out var error), error);
+
+        var analysis = JamlyzerAnalyzer.Analyze(seed, lens!);
+
+        var allItems = analysis
+            .Antes.SelectMany(a => a.ShopQueue.Concat(a.Packs.SelectMany(p => p.Items)))
+            .ToList();
+
+        Assert.Contains(allItems, i => i.IsHighlighted); // the lens lit something up
+        Assert.Contains(allItems, i => !i.IsHighlighted); // and not everything
+
+        // For an "any joker" lens, Matched must be exactly "is this item a joker".
+        Assert.All(
+            allItems,
+            i => Assert.Equal(i.TypeCategory == MotelyItemTypeCategory.Joker, i.IsHighlighted)
+        );
     }
 }

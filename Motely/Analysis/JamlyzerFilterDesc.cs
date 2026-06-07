@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Motely.Filters.Jaml;
 
 namespace Motely.Analysis;
 
@@ -9,6 +10,12 @@ public sealed class JamlyzerFilterDesc()
     : IMotelySeedFilterDesc<JamlyzerFilterDesc.JamlyzerFilter>
 {
     public JamlyzerAnalysis? LastAnalysis { get; private set; } = null;
+
+    /// <summary>
+    /// Optional JAML lens. Items matching its <c>should</c> clauses get IsHighlighted/MatchedBy
+    /// (the glow); null = a plain, dark board dump.
+    /// </summary>
+    public JamlConfig? Lens { get; init; }
 
     public JamlyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
@@ -36,10 +43,19 @@ public sealed class JamlyzerFilterDesc()
             public readonly bool HasStandardStream => !StandardStream.IsInvalid;
             public MotelySingleJokerStream BuffoonStream;
             public readonly bool HasBuffoonStream => !BuffoonStream.IsNull;
+            // Streams for tag-granted and soul-granted jokers
+            public MotelySingleJokerFixedRarityStream RareTagJokerStream;
+            public bool RareTagJokerStreamInitialized;
+            public MotelySingleJokerFixedRarityStream UncommonTagJokerStream;
+            public bool UncommonTagJokerStreamInitialized;
+            public MotelySingleJokerFixedRarityStream LegendaryJokerStream;
+            public bool LegendaryJokerStreamInitialized;
         }
 
         public readonly bool CheckSeed(ref MotelySingleSearchContext ctx)
         {
+            JamlConfig? lens = FilterDesc.Lens;
+
             // Create voucher state to track activated vouchers across antes
             MotelyRunState voucherState = new();
             MotelySingleBossStream bossStream = ctx.CreateBossStream();
@@ -83,6 +99,53 @@ public sealed class JamlyzerFilterDesc()
                 MotelyTag smallTag = ctx.GetNextTag(ref tagStream);
                 MotelyTag bigTag = ctx.GetNextTag(ref tagStream);
 
+                // Materialize jokers granted by rare/uncommon tags
+                JamlyzerAnalyzedItem? smallTagGrantedJoker = null;
+                JamlyzerAnalyzedItem? bigTagGrantedJoker = null;
+
+                // Check if tags grant jokers (tags can grant jokers at certain rarities)
+                if (IsRareTag(smallTag))
+                {
+                    if (!state.RareTagJokerStreamInitialized)
+                    {
+                        state.RareTagJokerStream = ctx.CreateRareTagJokerStream(ante);
+                        state.RareTagJokerStreamInitialized = true;
+                    }
+                    var jokerItem = ctx.GetNextJoker(ref state.RareTagJokerStream);
+                    smallTagGrantedJoker = Glow(jokerItem, lens);
+                }
+                else if (IsUncommonTag(smallTag))
+                {
+                    if (!state.UncommonTagJokerStreamInitialized)
+                    {
+                        state.UncommonTagJokerStream = ctx.CreateUncommonTagJokerStream(ante);
+                        state.UncommonTagJokerStreamInitialized = true;
+                    }
+                    var jokerItem = ctx.GetNextJoker(ref state.UncommonTagJokerStream);
+                    smallTagGrantedJoker = Glow(jokerItem, lens);
+                }
+
+                if (IsRareTag(bigTag))
+                {
+                    if (!state.RareTagJokerStreamInitialized)
+                    {
+                        state.RareTagJokerStream = ctx.CreateRareTagJokerStream(ante);
+                        state.RareTagJokerStreamInitialized = true;
+                    }
+                    var jokerItem = ctx.GetNextJoker(ref state.RareTagJokerStream);
+                    bigTagGrantedJoker = Glow(jokerItem, lens);
+                }
+                else if (IsUncommonTag(bigTag))
+                {
+                    if (!state.UncommonTagJokerStreamInitialized)
+                    {
+                        state.UncommonTagJokerStream = ctx.CreateUncommonTagJokerStream(ante);
+                        state.UncommonTagJokerStreamInitialized = true;
+                    }
+                    var jokerItem = ctx.GetNextJoker(ref state.UncommonTagJokerStream);
+                    bigTagGrantedJoker = Glow(jokerItem, lens);
+                }
+
                 // Shop Queue
                 MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante);
 
@@ -91,7 +154,7 @@ public sealed class JamlyzerFilterDesc()
 
                 for (int i = 0; i < maxSlots; i++)
                 {
-                    shopItems[i] = new(ctx.GetNextShopItem(ref shopStream));
+                    shopItems[i] = Glow(ctx.GetNextShopItem(ref shopStream), lens);
                 }
 
                 // Packs - Get the actual shop packs (not tag-generated ones)
@@ -107,23 +170,41 @@ public sealed class JamlyzerFilterDesc()
                         ref ctx,
                         ante,
                         pack,
-                        ref state
+                        ref state,
+                        out var grantedLegendaryJoker,
+                        lens
                     );
 
-                    packs[i] = new(
-                        pack,
-                        packContent
-                            .AsArray()
-                            .Select(static item => new JamlyzerAnalyzedItem(item))
-                            .ToArray()
-                    );
+                    var packCards = packContent.AsArray();
+                    var glowedCards = new JamlyzerAnalyzedItem[packCards.Length];
+                    for (int c = 0; c < packCards.Length; c++)
+                        glowedCards[c] = Glow(packCards[c], lens);
+
+                    packs[i] = new(pack, glowedCards, grantedLegendaryJoker);
                 }
 
                 // NOTE: Per-round hand draw not yet implemented - requires shuffle PRNG per round
                 // For now, omitting DrawOrder as the previous implementation was incorrect
                 // (it showed standard pack cards, not the actual hand draw)
 
-                antes.Add(new(ante, boss, voucher, smallTag, bigTag, shopItems, packs, null));
+                antes.Add(
+                    new(
+                        ante,
+                        boss,
+                        voucher,
+                        smallTag,
+                        bigTag,
+                        shopItems,
+                        packs,
+                        null,
+                        BossMatched: false,
+                        VoucherMatched: false,
+                        SmallBlindTagMatched: false,
+                        BigBlindTagMatched: false,
+                        SmallBlindTagGrantedJoker: smallTagGrantedJoker,
+                        BigBlindTagGrantedJoker: bigTagGrantedJoker
+                    )
+                );
             }
 
             // For Erratic deck, include the full deck composition with breakdown
@@ -135,6 +216,26 @@ public sealed class JamlyzerFilterDesc()
             FilterDesc.LastAnalysis = new(null, antes, ctx.Deck, deckComposition, deckBreakdown);
 
             return false; // Always return false since we're just analyzing
+        }
+
+        /// <summary>
+        /// Wraps a materialized board <paramref name="item"/> as a snapshot item, lighting it up
+        /// (IsHighlighted + MatchedBy) if it satisfies any of the lens's <c>should</c> clauses.
+        /// Per-item identity match via <see cref="JamlScoring.ItemMatchesClause"/> — one source of
+        /// truth with the scorer. No lens = a plain dark item.
+        /// </summary>
+        private static JamlyzerAnalyzedItem Glow(MotelyItem item, JamlConfig? lens)
+        {
+            if (lens is not null)
+                foreach (IJamlClause clause in lens.Should)
+                    if (JamlScoring.ItemMatchesClause(item, clause))
+                        return new JamlyzerAnalyzedItem(
+                            item,
+                            true,
+                            clause.Label ?? clause.Describe()
+                        );
+
+            return new JamlyzerAnalyzedItem(item);
         }
 
         /// <summary>
@@ -307,9 +408,12 @@ public sealed class JamlyzerFilterDesc()
             ref MotelySingleSearchContext ctx,
             int ante,
             MotelyBoosterPack pack,
-            ref AnteAnalysisState state
+            ref AnteAnalysisState state,
+            out JamlyzerAnalyzedItem? grantedLegendaryJoker,
+            JamlConfig? lens = null
         )
         {
+            grantedLegendaryJoker = null;
             var packType = pack.GetPackType();
             var packSize = pack.GetPackSize();
 
@@ -320,7 +424,22 @@ public sealed class JamlyzerFilterDesc()
                     if (!state.HasArcanaStream)
                         state.ArcanaStream = ctx.CreateArcanaPackTarotStream(ante);
 
-                    return ctx.GetNextArcanaPackContents(ref state.ArcanaStream, packSize);
+                    var arcanaContents = ctx.GetNextArcanaPackContents(ref state.ArcanaStream, packSize);
+
+                    // Check if this pack has The Soul
+                    if (arcanaContents.Contains(MotelyItemType.TheSoul))
+                    {
+                        if (!state.LegendaryJokerStreamInitialized)
+                        {
+                            state.LegendaryJokerStream = ctx.CreateLegendaryJokerStream(ante);
+                            state.LegendaryJokerStreamInitialized = true;
+                        }
+
+                        var legendaryJoker = ctx.GetNextJoker(ref state.LegendaryJokerStream);
+                        grantedLegendaryJoker = Glow(legendaryJoker, lens);
+                    }
+
+                    return arcanaContents;
 
                 case MotelyBoosterPackType.Celestial:
 
@@ -334,7 +453,22 @@ public sealed class JamlyzerFilterDesc()
                     if (!state.HasSpectralStream)
                         state.SpectralStream = ctx.CreateSpectralPackSpectralStream(ante);
 
-                    return ctx.GetNextSpectralPackContents(ref state.SpectralStream, packSize);
+                    var spectralContents = ctx.GetNextSpectralPackContents(ref state.SpectralStream, packSize);
+
+                    // Check if this pack has The Soul
+                    if (spectralContents.Contains(MotelyItemType.TheSoul))
+                    {
+                        if (!state.LegendaryJokerStreamInitialized)
+                        {
+                            state.LegendaryJokerStream = ctx.CreateLegendaryJokerStream(ante);
+                            state.LegendaryJokerStreamInitialized = true;
+                        }
+
+                        var legendaryJoker = ctx.GetNextJoker(ref state.LegendaryJokerStream);
+                        grantedLegendaryJoker = Glow(legendaryJoker, lens);
+                    }
+
+                    return spectralContents;
 
                 case MotelyBoosterPackType.Buffoon:
 
@@ -353,6 +487,24 @@ public sealed class JamlyzerFilterDesc()
                 default:
                     throw new InvalidEnumArgumentException();
             }
+        }
+
+        /// <summary>
+        /// Determines if a tag is a rare tag that grants rare jokers
+        /// </summary>
+        private static bool IsRareTag(MotelyTag tag)
+        {
+            // Rare tags in Balatro: Rare Tag
+            return tag == MotelyTag.RareTag;
+        }
+
+        /// <summary>
+        /// Determines if a tag is an uncommon tag that grants uncommon jokers
+        /// </summary>
+        private static bool IsUncommonTag(MotelyTag tag)
+        {
+            // Uncommon tags in Balatro: Uncommon Tag
+            return tag == MotelyTag.UncommonTag;
         }
     }
 }
