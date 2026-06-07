@@ -8,6 +8,7 @@ import * as THREE from "three";
 
 import { resolveJamlAssetUrl } from "../assets.js";
 import { getSpriteDataOrMystery, SHEET_META, type SpriteSheetType } from "../sprites/spriteMapper.js";
+import { SPRITE_SHEETS, JOKER_FACES, type SpritePos } from "../sprites/spriteData.js";
 
 // Balatro cards are 71x95px cells on every sheet — keep the plane at that ratio.
 export const CARD_W = 1;
@@ -83,6 +84,41 @@ export function updateEditionEmissive(
   material.emissive.setHSL(hue, 0.85, 0.5);
 }
 
+/** Crop the jokers sheet to an explicit grid cell (used for legendary soul faces). */
+function useJokersCellTexture(pos: SpritePos): THREE.Texture {
+  const sheet = SPRITE_SHEETS.jokers;
+  const base = useLoader(THREE.TextureLoader, sheet.src);
+  return React.useMemo(() => {
+    const t = base.clone();
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.repeat.set(1 / sheet.columns, 1 / sheet.rows);
+    t.offset.set(pos.x / sheet.columns, 1 - (pos.y + 1) / sheet.rows);
+    t.needsUpdate = true;
+    return t;
+  }, [base, sheet, pos.x, pos.y]);
+}
+
+/**
+ * The legendary's soul — its glowing face — hovering on its own depth plane just
+ * in front of the card. Bobs independently, so under tilt it parallaxes off the
+ * base: the thing DOM compositing can never do, only real depth.
+ */
+function SoulMesh({ pos }: { pos: SpritePos }) {
+  const texture = useJokersCellTexture(pos);
+  const ref = React.useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (ref.current) ref.current.position.y = 0.04 * Math.sin(state.clock.elapsedTime * 2);
+  });
+  return (
+    <mesh ref={ref} position={[0, 0, 0.06]}>
+      <planeGeometry args={[CARD_W, CARD_H]} />
+      <meshBasicMaterial map={texture} transparent alphaTest={0.1} side={THREE.DoubleSide} toneMapped={false} />
+    </mesh>
+  );
+}
+
 interface CardMeshProps {
   itemName: string;
   fallbackSheet: SpriteSheetType;
@@ -94,6 +130,7 @@ export const MAX_TILT = 0.3;
 
 function CardMesh({ itemName, fallbackSheet, edition }: CardMeshProps) {
   const texture = useSpriteTexture(itemName, fallbackSheet);
+  const soul = React.useMemo(() => JOKER_FACES.find((j) => j.name === itemName), [itemName]);
   const meshRef = React.useRef<THREE.Mesh>(null);
   const matRef = React.useRef<THREE.MeshStandardMaterial>(null);
   const [hovered, setHovered] = React.useState(false);
@@ -136,6 +173,7 @@ function CardMesh({ itemName, fallbackSheet, edition }: CardMeshProps) {
         emissive="#000000"
         emissiveIntensity={em.emissiveIntensity}
       />
+      {soul && <SoulMesh pos={soul.pos} />}
     </animated.mesh>
   );
 }

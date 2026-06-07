@@ -35,6 +35,13 @@ export const Holo: Story = { args: { itemName: 'Brainstorm', edition: 'holo' } }
 /** Holo, but faster and louder. */
 export const Polychrome: Story = { args: { itemName: 'Blueprint', edition: 'polychrome' } };
 
+/**
+ * Legendary jokers carry a soul — a separate face sprite that floats on its own
+ * depth plane and parallaxes off the base as the card tilts. Tilt it and watch
+ * Perkeo's face drift. Try Canio / Triboulet / Yorick / Chicot too.
+ */
+export const Legendary: Story = { args: { itemName: 'Perkeo', edition: 'holo' } };
+
 /** Unknown names fall back to the sheet's mystery card instead of crashing. */
 export const UnknownFallsBackToMystery: Story = {
   args: { itemName: 'Definitely Not A Real Joker' },

@@ -39,3 +39,15 @@ export const TwoJokers: Story = {
     items: [{ itemName: 'Blueprint' }, { itemName: 'Brainstorm' }],
   },
 };
+
+/** A row of legendaries — grab one and drag it; its soul floats along, parallaxing. */
+export const Legendaries: Story = {
+  args: {
+    items: [
+      { itemName: 'Canio', edition: 'holo' },
+      { itemName: 'Triboulet', edition: 'foil' },
+      { itemName: 'Yorick' },
+      { itemName: 'Perkeo', edition: 'polychrome' },
+    ],
+  },
+};
