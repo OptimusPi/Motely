@@ -434,7 +434,21 @@ public static partial class JamlConfigLoader
                 .Range(minShop.Value, maxShop.Value - minShop.Value + 1)
                 .ToArray();
 
-        bool hasExplicitSources = c.Sources != null;
+        // "Any source specified" must include sources set DIRECTLY on the clause (e.g. a bare
+        // `wraith:`/`judgement:`/`rareTag:` or `shopItems:`), not just a `sources:` block —
+        // otherwise a clause like `joker: Blueprint` + `wraith: [0]` ("Blueprint from the Wraith
+        // consumable") would ALSO get the default shop/pack scan injected and falsely match a
+        // Blueprint sitting in the shop. If the author named a source, honor exactly that.
+        bool hasExplicitSources =
+            c.Sources != null
+            || c.ShopItems != null
+            || c.BoosterPacks != null
+            || c.MinShopItem != null
+            || c.MaxShopItem != null
+            || c.Judgement != null
+            || c.Wraith != null
+            || c.RareTag != null
+            || c.UncommonTag != null;
         NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType, hasExplicitSources);
 
         var (shRank, shSuit) = ParseCardShorthand(value ?? "");
@@ -1088,6 +1102,17 @@ public static partial class JamlConfigLoader
                 // packs in the shop pack stream — same default range as joker types so a bare
                 // `standardCard: { rank: King }` matches every shop pack slot at the targeted
                 // antes instead of zero.
+                boosterPacks = [0, 1, 2, 3, 4, 5];
+                break;
+
+            case MotelyFilterItemType.TarotCard:
+            case MotelyFilterItemType.SpectralCard:
+            case MotelyFilterItemType.PlanetCard:
+                // Consumables show up both in the shop's consumable slots and in their booster
+                // packs (Arcana / Spectral / Celestial). Without this case a bare
+                // `tarotCard: TheFool` defaulted to NO sources and matched nothing — the same
+                // reach as jokers makes the obvious clause do the obvious thing.
+                shopItems = [0, 1, 2, 3];
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
         }
