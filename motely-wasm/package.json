@@ -2,7 +2,7 @@
   "name": "motely-wasm",
   "type": "module",
   "version": "20.0.0",
-  "description": "Balatro seed finder and per-seed analyzer, compiled to WebAssembly.",
+  "description": "Balatro seed search + per-seed analysis, powered by JAML (Jimbo's Ante Markup Language). Vectorized SIMD engine, compiled to WebAssembly.",
   "author": "Nathanial P. Howard",
   "license": "MIT",
   "main": "./dist/index.mjs",
