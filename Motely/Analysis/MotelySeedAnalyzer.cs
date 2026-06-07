@@ -111,8 +111,7 @@ public sealed record class MotelyAnteAnalysis(
 );
 
 public sealed record class MotelyAnalyzedItem(
-    [property: JsonIgnore] MotelyItem Item,
-    bool Matched = false
+    [property: JsonIgnore] MotelyItem Item
 )
 {
     public string Name => FormatUtils.FormatItem(Item);

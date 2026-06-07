@@ -1872,6 +1872,40 @@ public static class JamlScoring
         return 0;
     }
 
+    /// <summary>
+    /// Analyzer "glow" test: does an already-materialized shop/pack <paramref name="item"/> satisfy
+    /// <paramref name="clause"/>? Pure item-identity match (ignores ante/source scoping) reusing the
+    /// same private Match* helpers the scorer uses, so there is one source of truth. Clause types
+    /// without a per-item identity (events, boss/voucher/tag, compound) return false for now.
+    /// </summary>
+    public static bool ItemMatchesClause(MotelyItem item, IJamlClause clause) =>
+        clause switch
+        {
+            JokerClause c => MatchJokerClause(item, c),
+            StandardCardClause c => MatchStandardCard(item, c) > 0,
+            TarotCardClause c => MatchTarot(item, c) > 0,
+            SpectralCardClause c => MatchSpectral(item, c) > 0,
+            PlanetCardClause c => MatchPlanet(item, c) > 0,
+            _ => false,
+        };
+
+    private static bool MatchJokerClause(MotelyItem item, JokerClause clause)
+    {
+        if (clause.IsWildcard)
+            return MatchJokerWildcard(item, null, clause.Edition, clause.Stickers) > 0;
+
+        var targetTypes = new MotelyItemType[clause.Jokers.Length];
+        for (int i = 0; i < clause.Jokers.Length; i++)
+            // MotelyItemType.<Joker> ≡ Category.Joker | <MotelyJoker value> (rarity already
+            // baked into the joker value), so this is bit-identical to the old
+            // Enum.Parse(joker.ToString()) — minus the runtime typo-bomb. Same idiom as MatchTarot/Spectral/Planet.
+            targetTypes[i] = (MotelyItemType)(
+                (int)MotelyItemTypeCategory.Joker | (int)clause.Jokers[i]
+            );
+
+        return MatchJoker(item, targetTypes, clause.Edition, clause.Stickers) > 0;
+    }
+
     private static int GetMaxAnte(IJamlClause clause)
     {
         return clause switch
