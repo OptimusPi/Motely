@@ -26,10 +26,10 @@ type Story = StoryObj<typeof meta>;
 export const ShopRow: Story = {
   args: {
     items: [
-      { itemName: 'Blueprint' },
-      { itemName: 'Brainstorm' },
+      { itemName: 'Blueprint', edition: 'foil' },
+      { itemName: 'Brainstorm', edition: 'holo' },
       { itemName: 'The Fool', fallbackSheet: 'Tarots' },
-      { itemName: 'Overstock', fallbackSheet: 'Vouchers' },
+      { itemName: 'Overstock', fallbackSheet: 'Vouchers', edition: 'polychrome' },
     ],
   },
 };

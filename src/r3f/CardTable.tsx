@@ -4,7 +4,16 @@ import * as React from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 
-import { useSpriteTexture, CARD_W, CARD_H, MAX_TILT } from "./Card3D.js";
+import {
+  useSpriteTexture,
+  editionMaterial,
+  updateEditionEmissive,
+  CardLighting,
+  CARD_W,
+  CARD_H,
+  MAX_TILT,
+  type CardEdition,
+} from "./Card3D.js";
 import { type SpriteSheetType } from "../sprites/spriteMapper.js";
 
 // Frame-rate independent ease: how fast a value chases its target each frame.
@@ -15,6 +24,7 @@ const LIFT_Z = 0.6;
 interface DraggableCardProps {
   itemName: string;
   fallbackSheet: SpriteSheetType;
+  edition: CardEdition;
   homeX: number;
   dragging: boolean;
   onPick: () => void;
@@ -24,12 +34,13 @@ interface DraggableCardProps {
 /**
  * One Balatro card on the felt. At rest it sits in its slot and leans toward the
  * pointer on hover; picked up, it lifts toward the camera and chases the pointer
- * in world space, dropping back to its slot on release. All the motion is on the
- * GPU per-frame — the thing the DOM can't do smoothly, the reason for r3f.
+ * in world space, dropping back to its slot on release. Catches the light per
+ * edition. All the motion is on the GPU per-frame — the reason for r3f.
  */
 function DraggableCard({
   itemName,
   fallbackSheet,
+  edition,
   homeX,
   dragging,
   onPick,
@@ -37,8 +48,10 @@ function DraggableCard({
 }: DraggableCardProps) {
   const texture = useSpriteTexture(itemName, fallbackSheet);
   const meshRef = React.useRef<THREE.Mesh>(null);
+  const matRef = React.useRef<THREE.MeshStandardMaterial>(null);
   const [hovered, setHovered] = React.useState(false);
   const { camera } = useThree();
+  const em = React.useMemo(() => editionMaterial(edition), [edition]);
 
   // Scratch vector reused every frame so the drag loop allocates nothing.
   const scratch = React.useMemo(() => new THREE.Vector3(), []);
@@ -70,6 +83,7 @@ function DraggableCard({
       tiltTo(mesh, ty, tx, k);
       scaleTo(mesh, hovered ? 1.12 : 1, k);
     }
+    updateEditionEmissive(matRef.current, edition, state.clock.elapsedTime, mesh.rotation.y);
   });
 
   return (
@@ -88,12 +102,17 @@ function DraggableCard({
       onPointerUp={() => onRelease()}
     >
       <planeGeometry args={[CARD_W, CARD_H]} />
-      <meshBasicMaterial
+      <meshStandardMaterial
+        ref={matRef}
         map={texture}
         transparent
         alphaTest={0.5}
         side={THREE.DoubleSide}
         toneMapped={false}
+        roughness={em.roughness}
+        metalness={em.metalness}
+        emissive="#000000"
+        emissiveIntensity={em.emissiveIntensity}
       />
     </mesh>
   );
@@ -115,6 +134,8 @@ export interface CardTableItem {
   itemName: string;
   /** Sheet to fall back to when the name doesn't resolve. Default "Jokers". */
   fallbackSheet?: SpriteSheetType;
+  /** Finish — "base" | "foil" | "holo" | "polychrome". Default "base". */
+  edition?: CardEdition;
 }
 
 export interface CardTableProps {
@@ -131,11 +152,12 @@ export interface CardTableProps {
 /**
  * A row of floating, grabbable 3D Balatro cards in a single Canvas — the shop,
  * not a swatch. Hover to lean a card toward the pointer; press to lift it off
- * the felt and drag it; release to drop it back into its slot.
+ * the felt and drag it; release to drop it back into its slot. Foil/holo cards
+ * catch and throw the light as they move.
  *
  * ```tsx
  * import { CardTable } from "jaml-ui/r3f";
- * <CardTable items={[{ itemName: "Blueprint" }, { itemName: "The Fool", fallbackSheet: "Tarots" }]} />
+ * <CardTable items={[{ itemName: "Blueprint", edition: "holo" }]} />
  * ```
  *
  * Peer deps: `three`, `@react-three/fiber`, `@react-three/drei`.
@@ -159,13 +181,14 @@ export function CardTable({
         dpr={[1, 2]}
         onPointerMissed={release}
       >
-        <ambientLight intensity={1} />
+        <CardLighting />
         <React.Suspense fallback={null}>
           {items.map((item, i) => (
             <DraggableCard
               key={`${item.itemName}-${i}`}
               itemName={item.itemName}
               fallbackSheet={item.fallbackSheet ?? "Jokers"}
+              edition={item.edition ?? "base"}
               homeX={(i - (n - 1) / 2) * gap}
               dragging={dragging === i}
               onPick={() => setDragging(i)}

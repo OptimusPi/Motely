@@ -28,6 +28,13 @@ export const Joker: Story = { args: { itemName: 'Blueprint' } };
 export const Tarot: Story = { args: { itemName: 'The Fool', fallbackSheet: 'Tarots' } };
 export const Voucher: Story = { args: { itemName: 'Overstock', fallbackSheet: 'Vouchers' } };
 
+/** Glossy specular that rakes across the face as the card tilts under the light. */
+export const Foil: Story = { args: { itemName: 'Blueprint', edition: 'foil' } };
+/** Rainbow emissive shimmer keyed to time + tilt angle. */
+export const Holo: Story = { args: { itemName: 'Brainstorm', edition: 'holo' } };
+/** Holo, but faster and louder. */
+export const Polychrome: Story = { args: { itemName: 'Blueprint', edition: 'polychrome' } };
+
 /** Unknown names fall back to the sheet's mystery card instead of crashing. */
 export const UnknownFallsBackToMystery: Story = {
   args: { itemName: 'Definitely Not A Real Joker' },

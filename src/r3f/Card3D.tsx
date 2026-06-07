@@ -39,18 +39,65 @@ export function useSpriteTexture(itemName: string, fallbackSheet: SpriteSheetTyp
   }, [base, meta, pos.x, pos.y]);
 }
 
+/** Balatro-style finishes. The card catches light differently per edition. */
+export type CardEdition = "base" | "foil" | "holo" | "polychrome";
+
+export interface EditionMaterial {
+  roughness: number;
+  metalness: number;
+  emissiveIntensity: number;
+  /** Whether the emissive hue cycles per-frame (the holographic shimmer). */
+  animated: boolean;
+}
+
+/**
+ * Material tuning per edition. Metalness stays 0 — without an env map, metal goes
+ * black — so "shine" comes from a low-roughness specular highlight that rakes
+ * across as the card tilts under the light. Holo/polychrome add a cycling
+ * emissive hue on top for the rainbow shimmer.
+ */
+export function editionMaterial(edition: CardEdition): EditionMaterial {
+  switch (edition) {
+    case "foil":
+      return { roughness: 0.18, metalness: 0, emissiveIntensity: 0, animated: false };
+    case "holo":
+      return { roughness: 0.26, metalness: 0, emissiveIntensity: 0.35, animated: true };
+    case "polychrome":
+      return { roughness: 0.16, metalness: 0, emissiveIntensity: 0.55, animated: true };
+    case "base":
+    default:
+      return { roughness: 1, metalness: 0, emissiveIntensity: 0, animated: false };
+  }
+}
+
+/** Drive the holographic emissive hue from time + tilt angle. No-op for base/foil. */
+export function updateEditionEmissive(
+  material: THREE.MeshStandardMaterial | null,
+  edition: CardEdition,
+  t: number,
+  tiltY: number,
+) {
+  if (!material || (edition !== "holo" && edition !== "polychrome")) return;
+  const speed = edition === "polychrome" ? 0.5 : 0.22;
+  const hue = (((t * speed + tiltY * 0.6) % 1) + 1) % 1;
+  material.emissive.setHSL(hue, 0.85, 0.5);
+}
+
 interface CardMeshProps {
   itemName: string;
   fallbackSheet: SpriteSheetType;
+  edition: CardEdition;
 }
 
 // Max tilt away from facing the camera, in radians (~17°).
 export const MAX_TILT = 0.3;
 
-function CardMesh({ itemName, fallbackSheet }: CardMeshProps) {
+function CardMesh({ itemName, fallbackSheet, edition }: CardMeshProps) {
   const texture = useSpriteTexture(itemName, fallbackSheet);
   const meshRef = React.useRef<THREE.Mesh>(null);
+  const matRef = React.useRef<THREE.MeshStandardMaterial>(null);
   const [hovered, setHovered] = React.useState(false);
+  const em = React.useMemo(() => editionMaterial(edition), [edition]);
   const spring = useSpring({
     scale: hovered ? 1.12 : 1,
     config: { tension: 260, friction: 18 },
@@ -66,6 +113,7 @@ function CardMesh({ itemName, fallbackSheet }: CardMeshProps) {
     const lerp = 1 - Math.exp(-8 * delta); // frame-rate independent easing
     mesh.rotation.y += (targetY - mesh.rotation.y) * lerp;
     mesh.rotation.x += (targetX - mesh.rotation.x) * lerp;
+    updateEditionEmissive(matRef.current, edition, state.clock.elapsedTime, mesh.rotation.y);
   });
 
   return (
@@ -76,14 +124,29 @@ function CardMesh({ itemName, fallbackSheet }: CardMeshProps) {
       onPointerOut={() => setHovered(false)}
     >
       <planeGeometry args={[CARD_W, CARD_H]} />
-      <meshBasicMaterial
+      <meshStandardMaterial
+        ref={matRef}
         map={texture}
         transparent
         alphaTest={0.5}
         side={THREE.DoubleSide}
         toneMapped={false}
+        roughness={em.roughness}
+        metalness={em.metalness}
+        emissive="#000000"
+        emissiveIntensity={em.emissiveIntensity}
       />
     </animated.mesh>
+  );
+}
+
+/** Off-axis key light + soft ambient: the specular that makes foil "catch." */
+export function CardLighting() {
+  return (
+    <>
+      <ambientLight intensity={0.85} />
+      <pointLight position={[2.5, 3, 4]} intensity={1.6} />
+    </>
   );
 }
 
@@ -92,6 +155,8 @@ export interface Card3DProps {
   itemName: string;
   /** Which sheet to fall back to when the name doesn't resolve. Default "Jokers". */
   fallbackSheet?: SpriteSheetType;
+  /** Finish — "base" | "foil" | "holo" | "polychrome". Default "base". */
+  edition?: CardEdition;
   /** Pixel height of the canvas. Default 320. */
   height?: number | string;
   className?: string;
@@ -99,11 +164,11 @@ export interface Card3DProps {
 }
 
 /**
- * A floating, hover-reactive 3D Balatro card.
+ * A floating, hover-reactive 3D Balatro card that catches the light.
  *
  * ```tsx
  * import { Card3D } from "jaml-ui/r3f";
- * <Card3D itemName="Blueprint" />
+ * <Card3D itemName="Blueprint" edition="holo" />
  * ```
  *
  * Peer deps: `three`, `@react-three/fiber`, `@react-three/drei`, `@react-spring/three`.
@@ -111,6 +176,7 @@ export interface Card3DProps {
 export function Card3D({
   itemName,
   fallbackSheet = "Jokers",
+  edition = "base",
   height = 320,
   className,
   style,
@@ -118,10 +184,10 @@ export function Card3D({
   return (
     <div className={className} style={{ width: "100%", height, ...style }}>
       <Canvas camera={{ position: [0, 0, 3], fov: 40 }} gl={{ alpha: true }} dpr={[1, 2]}>
-        <ambientLight intensity={1} />
+        <CardLighting />
         <React.Suspense fallback={null}>
           <Float speed={2} rotationIntensity={0.6} floatIntensity={0.8}>
-            <CardMesh itemName={itemName} fallbackSheet={fallbackSheet} />
+            <CardMesh itemName={itemName} fallbackSheet={fallbackSheet} edition={edition} />
           </Float>
         </React.Suspense>
       </Canvas>
