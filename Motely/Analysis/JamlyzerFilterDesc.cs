@@ -56,9 +56,13 @@ public sealed class JamlyzerFilterDesc()
         {
             JamlConfig? lens = FilterDesc.Lens;
 
-            // Glow comes from the real scorer: run it once with a scoop attached and index every
-            // shop/pack match by board location. No lens = a plain dark board.
-            Dictionary<long, string>? scoopLookup = lens is null ? null : RunScoop(ref ctx, lens);
+            // Glow + the focused match list both come from the real scorer: run it once with a scoop
+            // attached. scoopMatches = the flat "what the JAML matched" card; scoopLookup = the
+            // shop/pack glow index for the ante-map. No lens = a plain dark board, no matches.
+            IReadOnlyList<ScoopedMatch> scoopMatches = [];
+            Dictionary<long, string>? scoopLookup = null;
+            if (lens is not null)
+                scoopMatches = RunScoop(ref ctx, lens, out scoopLookup);
 
             // Create voucher state to track activated vouchers across antes
             MotelyRunState voucherState = new();
@@ -230,7 +234,14 @@ public sealed class JamlyzerFilterDesc()
             string? deckBreakdown =
                 ctx.Deck == MotelyDeck.Erratic ? GetErraticDeckBreakdown(deckCards) : null;
 
-            FilterDesc.LastAnalysis = new(null, antes, ctx.Deck, deckComposition, deckBreakdown);
+            FilterDesc.LastAnalysis = new(
+                null,
+                antes,
+                ctx.Deck,
+                deckComposition,
+                deckBreakdown,
+                scoopMatches
+            );
 
             return false; // Always return false since we're just analyzing
         }
@@ -268,30 +279,42 @@ public sealed class JamlyzerFilterDesc()
             | (ushort)(cardIndex + 1);
 
         /// <summary>
-        /// Runs the JAML scorer once over the seed with a <see cref="JamlScoop"/> attached, then
-        /// indexes every shop/pack match by board location → clause label. The glow is produced by
-        /// the exact code that filters seeds, so coverage and ante/source scoping match the search
-        /// (not a re-implementation). Non-shop/pack matches (consumables, soul, tags) are collected
-        /// by the scorer too but are not yet overlaid onto the board.
+        /// Runs the JAML scorer once over the seed with a <see cref="JamlScoop"/> attached and
+        /// returns the flat match list (the focused "swipe card" payload) — every concrete thing the
+        /// JAML's <c>must</c> + <c>should</c> clauses matched, scoped exactly as written, straight
+        /// from the code that filters seeds. Also fills <paramref name="overlay"/>: shop/pack matches
+        /// indexed by board location → clause label, for the ante-map glow. One source of truth.
         /// </summary>
-        private static Dictionary<long, string> RunScoop(
+        private static IReadOnlyList<ScoopedMatch> RunScoop(
             ref MotelySingleSearchContext ctx,
-            JamlConfig lens
+            JamlConfig lens,
+            out Dictionary<long, string> overlay
         )
         {
-            var map = new Dictionary<long, string>();
-            if (lens.Should.Count == 0)
-                return map;
+            overlay = new Dictionary<long, string>();
 
-            IJamlClause[] should = lens.Should.ToArray();
+            int mustCount = lens.Must.Count;
+            int total = mustCount + lens.Should.Count;
+            if (total == 0)
+                return [];
+
+            // Scoop must + should: the card shows every condition the JAML names (e.g. the must
+            // `smallBlindTag: Negative Tag`), not only the scored shoulds. Index 0..mustCount-1 are
+            // must clauses, the rest are should — the frontend maps the index back to its clause.
+            var clauses = new IJamlClause[total];
+            for (int i = 0; i < mustCount; i++)
+                clauses[i] = lens.Must[i];
+            for (int i = 0; i < lens.Should.Count; i++)
+                clauses[mustCount + i] = lens.Should[i];
+
             var scoop = new JamlScoop();
             var runState = new MotelyRunState { ScoopSink = scoop };
-            JamlScoring.PrepareRunState(ref ctx, should, ref runState);
+            JamlScoring.PrepareRunState(ref ctx, clauses, ref runState);
 
-            for (int i = 0; i < should.Length; i++)
+            for (int i = 0; i < clauses.Length; i++)
             {
                 scoop.CurrentClauseIndex = i;
-                JamlScoring.CountRawOccurrences(ref ctx, should[i], ref runState);
+                JamlScoring.CountRawOccurrences(ref ctx, clauses[i], ref runState);
             }
 
             IReadOnlyList<ScoopedMatch> matches = scoop.Matches;
@@ -305,14 +328,14 @@ public sealed class JamlyzerFilterDesc()
                     continue;
 
                 long key = ScoopKey(sm.Ante, sm.Source, sm.Slot, sm.CardIndex);
-                if (!map.ContainsKey(key))
+                if (!overlay.ContainsKey(key))
                 {
-                    IJamlClause clause = should[sm.ClauseIndex];
-                    map[key] = clause.Label ?? clause.Describe();
+                    IJamlClause clause = clauses[sm.ClauseIndex];
+                    overlay[key] = clause.Label ?? clause.Describe();
                 }
             }
 
-            return map;
+            return matches;
         }
 
         /// <summary>

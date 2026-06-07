@@ -26,7 +26,12 @@ public sealed record class JamlyzerSnapshot(
     IReadOnlyList<AnteSnapshot> Antes,
     MotelyDeck? Deck = null,
     string? ErraticDeckComposition = null,
-    string? ErraticDeckBreakdown = null
+    string? ErraticDeckBreakdown = null,
+    // The focused view: a flat list of EXACTLY what the JAML (must + should) matched on this seed,
+    // scoped exactly as written — straight from the scorer. This is the "swipe card": render this,
+    // not the whole board. Lean by design — packed MotelyItem + clause index + location ints; the
+    // frontend decodes the item and maps the index to its own clause label. Null when no lens.
+    IReadOnlyList<ScoopedMatch>? Matches = null
 )
 {
     public override string ToString()
