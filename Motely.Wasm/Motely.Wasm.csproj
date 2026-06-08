@@ -19,7 +19,6 @@
     -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
-    <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist\bin</BootsharpBinariesDirectory>
   </PropertyGroup>
 
   <ItemGroup>
