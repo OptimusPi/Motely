@@ -8,7 +8,6 @@
 //   node cli.mjs sequential <filter.jaml> [--start N] [--end M]    ORDERED sweep (bounded!)
 //   node cli.mjs aesthetic  <filter.jaml> <aestheticIndex>    aesthetic-lens search of --seeds/--random
 //   node cli.mjs native     [<name> --seeds A,B,C]            list or run built-in native filters
-//   node cli.mjs analyze    <SEED> <lens.jaml>                single-seed JAMLyzer snapshot
 //   node cli.mjs explain    <filter.jaml>                     print the search plan in English
 //   node cli.mjs convert    <file.jaml>                       JAML -> JSON -> JAML roundtrip
 //
@@ -26,7 +25,7 @@ const flag = (name, def) => { const i = rest.indexOf(name); return i >= 0 ? rest
 const arg0 = () => (rest[0] && !rest[0].startsWith("--") ? rest[0] : null);
 
 if (!cmd || cmd === "--help" || cmd === "-h") {
-  console.log(readFileSync(new URL(import.meta.url)).toString().split("\n").slice(1, 17).join("\n").replace(/^\/\/ ?/gm, ""));
+  console.log(readFileSync(new URL(import.meta.url)).toString().split("\n").slice(1, 16).join("\n").replace(/^\/\/ ?/gm, ""));
   process.exit(0);
 }
 
@@ -64,23 +63,6 @@ if (cmd === "convert") {
   console.log(`JAML -> JSON (${json.length} chars):\n${json}\n\nJSON -> JAML (${back.length} chars):\n${back}`);
   process.exit(0);
 }
-if (cmd === "analyze") {
-  const seed = rest[0], lensFile = rest[1];
-  if (!seed || !lensFile) die("usage: analyze <SEED> <lens.jaml>");
-  const snap = Program.jamlyzer(seed, Program.parseJaml(readJaml(lensFile)));
-  if (snap.error) die(`jamlyzer error: ${snap.error}`);
-  console.log(`\nJAMLyzer — seed ${seed}  (deck ${snap.deck})`);
-  let highlights = 0;
-  for (const a of snap.antes) {
-    const hot = a.shopQueue.filter((s) => s.isHighlighted);
-    highlights += hot.length;
-    console.log(`  Ante ${a.ante}: boss=${a.boss} voucher=${a.voucher} tags=[${a.smallBlindTag},${a.bigBlindTag}] shop=${a.shopQueue.length} packs=${a.packs.length} hot=${hot.length}`);
-    for (const h of hot) console.log(`      ✦ "${h.matchedBy}"  ${JSON.stringify(h.item)}`);
-  }
-  console.log(`\n[+${secs()}s] ${snap.antes.length} antes, ${highlights} highlighted, ${snap.matches?.length ?? 0} scooped matches.`);
-  process.exit(0);
-}
-
 // ── search-family commands ──
 const wireStreams = () => {
   let shown = 0;

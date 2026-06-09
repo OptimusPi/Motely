@@ -103,17 +103,6 @@ Program.runRandomSearch(Program.parseJaml(jaml), 1_000_000);
 
 Leave `jimmolateEnabled` false to receive **every** scored seed (no filtering).
 
-## Single-seed analysis
-
-```ts
-import { Program } from "motely-wasm/motely/wasm";
-import type { JamlyzerSnapshot } from "motely-wasm/motely/analysis";
-
-// Snapshot one seed through a JAML lens; items matching the lens's `should`
-// clauses come back highlighted (IsHighlighted / MatchedBy).
-const snapshot: JamlyzerSnapshot = Program.jamlyzer("ALEEB", Program.parseJaml(lensJaml));
-```
-
 JAML ⇄ JSON conversion is available too: `Program.jamlToJson(jaml)` and `Program.jsonToJaml(json)`.
 
 ## Subpath exports — where the types live
@@ -123,12 +112,11 @@ Bootsharp emits one declaration file **per C# namespace** ([Bootsharp · Type De
 | Import | Contents |
 |--------|----------|
 | `motely-wasm` | Default export: `boot()`, `exit()`, `getStatus()`, `BootStatus`, `manifest` |
-| `motely-wasm/motely/wasm` | `Program` — the engine API (search, JAML parse, analysis, file I/O) |
+| `motely-wasm/motely/wasm` | `Program` — the engine API (search, JAML parse, file I/O) |
 | `motely-wasm/motely` | Core types: `MotelyScoredSeedResult`, `MotelyProgress`, `IMotelySearch`, `MotelyItem`, `MotelyMatchSource` |
 | `motely-wasm/motely/enums` | Engine enums: `MotelyDeck`, `MotelyStake`, `MotelyVoucher`, `MotelyTag`, `MotelyBossBlind`, `MotelyBoosterPack`, joker enums, … |
 | `motely-wasm/motely/filters/jaml` | `JamlConfig`, `JamlAesthetic` |
 | `motely-wasm/motely/filters` | `JamlSearchPlan` |
-| `motely-wasm/motely/analysis` | `JamlyzerSnapshot` and analysis types |
 | `motely-wasm/bootsharp/file-system` | `IFileSystem`, `IFileMounter`, `Change`, `MountOptions`, `PickOptions` |
 
 ```ts
@@ -181,7 +169,7 @@ The search / JAML / analysis APIs don't route through this — they run whether 
 
 ### Mobile browsers / single file
 
-The directory mount relies on `showDirectoryPicker`, which iOS Safari and most mobile browsers **do not support** — and `Program` exposes only directory-*root* mounting (`pickRoot` / `mountRoot`), no single-file pick. So don't mount on mobile. You don't need to: `parseJaml`, `runRandomSearch`, `jamlyzer`, etc. all take a JAML **string**. Read one file with a plain `<input type="file">` and feed its text straight in — works on every browser, no FS package required:
+The directory mount relies on `showDirectoryPicker`, which iOS Safari and most mobile browsers **do not support** — and `Program` exposes only directory-*root* mounting (`pickRoot` / `mountRoot`), no single-file pick. So don't mount on mobile. You don't need to: `parseJaml`, `runRandomSearch`, etc. all take a JAML **string**. Read one file with a plain `<input type="file">` and feed its text straight in — works on every browser, no FS package required:
 
 ```ts
 const file = input.files[0];                 // <input type="file" accept=".jaml,.yaml">
