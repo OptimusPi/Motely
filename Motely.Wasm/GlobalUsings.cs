@@ -1,5 +1,4 @@
 global using Motely;
-global using Motely.Analysis;
 global using Motely.Enums;
 global using Motely.Filters;
 global using Motely.Filters.Jaml;

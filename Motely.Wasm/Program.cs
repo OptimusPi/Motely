@@ -9,7 +9,6 @@ using Bootsharp.FileSystem;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
 using Motely;
-using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
