@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
+using Motely.Analysis;
 using Motely.CLI;
 using Motely.DataLake;
 using Motely.Filters;
@@ -148,6 +149,11 @@ partial class Program
             "JAML config file",
             CommandOptionType.SingleValue
         );
+        var analyzeOption = app.Option<string>(
+            "--analyze <SEED[,SEED...]>",
+            "Analyze one or more seeds (comma-separated) as human-readable text.",
+            CommandOptionType.SingleValue
+        );
         var saveSeedsOption = app.Option(
             "--save-seeds",
             "Write the top 1000 matched seeds back into the JAML file's top-level seeds: block.",
@@ -160,7 +166,7 @@ partial class Program
         );
         var stakeOption = app.Option<string>(
             "--stake <STAKE>",
-            "Stake name for search (default: White)",
+            "Stake name for analysis/search (default: White)",
             CommandOptionType.SingleValue
         );
         var threadsOption = app.Option<int>(
@@ -272,6 +278,22 @@ partial class Program
             {
                 app.ShowHelp();
                 return 0;
+            }
+
+            // --analyze mode — supports single seed or comma-separated batch
+            if (analyzeOption.HasValue())
+            {
+                var analyzeDeck = deckOption.HasValue() ? deckOption.ParsedValue : "Erratic";
+                var analyzeStake = stakeOption.HasValue() ? stakeOption.ParsedValue : "White";
+                var seedTokens = analyzeOption.ParsedValue.Split(
+                    ',',
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                );
+
+                if (seedTokens.Length == 1)
+                    return ExecuteAnalyze(seedTokens[0], analyzeDeck, analyzeStake);
+
+                return ExecuteAnalyzeBatch(seedTokens, analyzeDeck, analyzeStake);
             }
 
             // --native mode — run a hardcoded C# filter by name
@@ -857,6 +879,70 @@ partial class Program
                 }
             }
         }
+    }
+
+    // ── Analyze (batch) ──
+
+    static int ExecuteAnalyzeBatch(string[] seeds, string deckName, string stakeName)
+    {
+        if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
+        {
+            Console.Error.WriteLine($"Error: invalid deck '{deckName}'.");
+            return 1;
+        }
+        if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s))
+        {
+            Console.Error.WriteLine($"Error: invalid stake '{stakeName}'.");
+            return 1;
+        }
+
+        foreach (var rawSeed in seeds)
+        {
+            var seed = rawSeed.Trim().ToUpperInvariant().Replace('0', 'O');
+
+            var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, d, s));
+            if (!string.IsNullOrEmpty(analysis.Error))
+            {
+                Console.Error.WriteLine($"[ERROR] {seed}: {analysis.Error}");
+                return 1;
+            }
+
+            Console.WriteLine($"=== {seed} | {d} {s} ===");
+            Console.Write(analysis);
+            Console.WriteLine();
+        }
+
+        return 0;
+    }
+
+    // ── Analyze (single) ──
+
+    static int ExecuteAnalyze(string seed, string deckName, string stakeName)
+    {
+        if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
+        {
+            Console.Error.WriteLine($"Error: invalid deck '{deckName}'.");
+            return 1;
+        }
+        if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s))
+        {
+            Console.Error.WriteLine($"Error: invalid stake '{stakeName}'.");
+            return 1;
+        }
+
+        var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
+
+        var analysis = MotelyLegacyTextAnalyzer.Analyze(new(normalizedSeed, d, s));
+        if (!string.IsNullOrEmpty(analysis.Error))
+        {
+            Console.Error.WriteLine($"Error: {analysis.Error}");
+            return 1;
+        }
+
+        Console.WriteLine($"=== {normalizedSeed} | {d} {s} ===");
+        Console.Write(analysis);
+        Console.WriteLine();
+        return 0;
     }
 
     // Cached latest progress so 'p' key can print on demand even under --quiet.
