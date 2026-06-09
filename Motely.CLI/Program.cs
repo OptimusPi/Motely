@@ -151,8 +151,13 @@ partial class Program
         );
         var analyzeOption = app.Option<string>(
             "--analyze <SEED[,SEED...]>",
-            "Analyze one or more seeds (comma-separated) as human-readable text.",
+            "Analyze one or more seeds (comma-separated). With --output-json emits NDJSON.",
             CommandOptionType.SingleValue
+        );
+        var outputJsonOption = app.Option(
+            "--output-json",
+            "Emit JSON/NDJSON for analyzer commands instead of human-readable text.",
+            CommandOptionType.NoValue
         );
         var saveSeedsOption = app.Option(
             "--save-seeds",
@@ -290,10 +295,45 @@ partial class Program
                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
                 );
 
-                if (seedTokens.Length == 1)
-                    return ExecuteAnalyze(seedTokens[0], analyzeDeck, analyzeStake);
+                // Optional JAML lens: --jaml turns plain analyze into JAMLyze (glow the matches).
+                JamlConfig? analyzeLens = null;
+                if (jamlOption.HasValue())
+                {
+                    string lensContent;
+                    try
+                    {
+                        lensContent = File.ReadAllText(jamlOption.ParsedValue);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Error reading JAML lens: {ex.Message}");
+                        return 1;
+                    }
+                    if (!JamlConfigLoader.TryLoad(lensContent, out var lensCfg, out var lensErr))
+                    {
+                        Console.Error.WriteLine($"Error: {lensErr}");
+                        return 1;
+                    }
+                    analyzeLens = lensCfg;
+                }
 
-                return ExecuteAnalyzeBatch(seedTokens, analyzeDeck, analyzeStake);
+                if (seedTokens.Length == 1)
+                    return ExecuteAnalyze(
+                        seedTokens[0],
+                        analyzeDeck,
+                        analyzeStake,
+                        outputJsonOption.HasValue(),
+                        analyzeLens
+                    );
+
+                // Batch mode — emit NDJSON for each seed (one JSON object per line)
+                return ExecuteAnalyzeBatch(
+                    seedTokens,
+                    analyzeDeck,
+                    analyzeStake,
+                    outputJsonOption.HasValue(),
+                    analyzeLens
+                );
             }
 
             // --native mode — run a hardcoded C# filter by name
@@ -883,7 +923,13 @@ partial class Program
 
     // ── Analyze (batch) ──
 
-    static int ExecuteAnalyzeBatch(string[] seeds, string deckName, string stakeName)
+    static int ExecuteAnalyzeBatch(
+        string[] seeds,
+        string deckName,
+        string stakeName,
+        bool json,
+        JamlConfig? lens = null
+    )
     {
         if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
         {
@@ -900,6 +946,14 @@ partial class Program
         {
             var seed = rawSeed.Trim().ToUpperInvariant().Replace('0', 'O');
 
+            if (lens is not null)
+            {
+                int rc = RunJamlyze(seed, d, s, lens);
+                if (rc != 0)
+                    return rc;
+                continue;
+            }
+
             var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, d, s));
             if (!string.IsNullOrEmpty(analysis.Error))
             {
@@ -907,9 +961,18 @@ partial class Program
                 return 1;
             }
 
-            Console.WriteLine($"=== {seed} | {d} {s} ===");
-            Console.Write(analysis);
-            Console.WriteLine();
+            if (json)
+            {
+                Console.WriteLine(
+                    JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelyLegacyTextAnalysis)
+                );
+            }
+            else
+            {
+                Console.WriteLine($"=== {seed} | {d} {s} ===");
+                Console.Write(analysis);
+                Console.WriteLine();
+            }
         }
 
         return 0;
@@ -917,7 +980,13 @@ partial class Program
 
     // ── Analyze (single) ──
 
-    static int ExecuteAnalyze(string seed, string deckName, string stakeName)
+    static int ExecuteAnalyze(
+        string seed,
+        string deckName,
+        string stakeName,
+        bool json,
+        JamlConfig? lens = null
+    )
     {
         if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
         {
@@ -932,6 +1001,10 @@ partial class Program
 
         var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
 
+        // JAMLyze: a lens means glow the matched items instead of the plain ground-truth dump.
+        if (lens is not null)
+            return RunJamlyze(normalizedSeed, d, s, lens);
+
         var analysis = MotelyLegacyTextAnalyzer.Analyze(new(normalizedSeed, d, s));
         if (!string.IsNullOrEmpty(analysis.Error))
         {
@@ -939,9 +1012,94 @@ partial class Program
             return 1;
         }
 
-        Console.WriteLine($"=== {normalizedSeed} | {d} {s} ===");
-        Console.Write(analysis);
-        Console.WriteLine();
+        if (json)
+        {
+            Console.WriteLine(
+                JsonSerializer.Serialize(analysis, AnalysisJsonContext.Default.MotelyLegacyTextAnalysis)
+            );
+        }
+        else
+        {
+            Console.WriteLine($"=== {normalizedSeed} | {d} {s} ===");
+            Console.Write(analysis);
+            Console.WriteLine();
+        }
+        return 0;
+    }
+
+    // ── JAMLyze (seed through a JAML lens — glow the matched items, show the WHERE) ──
+
+    static int RunJamlyze(string seed, MotelyDeck d, MotelyStake s, JamlConfig lens)
+    {
+        var analysis = Jamlyzer.Analyze(new JamlyzerOptions(seed, d, s, lens));
+        if (!string.IsNullOrEmpty(analysis.Error))
+        {
+            Console.Error.WriteLine($"Error: {analysis.Error}");
+            return 1;
+        }
+
+        Console.WriteLine($"=== {seed} | {d} {s} | lens: {lens.Name ?? lens.Id} ===");
+
+        int hits = 0;
+        foreach (var ante in analysis.Antes)
+        {
+            for (int i = 0; i < ante.ShopQueue.Count; i++)
+            {
+                var it = ante.ShopQueue[i];
+                if (it.IsHighlighted)
+                {
+                    Console.WriteLine(
+                        $"  ★ ante {ante.Ante} shop[{i}]: {it.Name}  ({it.MatchedBy})"
+                    );
+                    hits++;
+                }
+            }
+
+            // Jokers handed out by Rare/Uncommon tags (hidden board state, glow if matched).
+            if (ante.SmallBlindTagGrantedJoker is { IsHighlighted: true } stj)
+            {
+                Console.WriteLine(
+                    $"  ★ ante {ante.Ante} small-tag joker: {stj.Name}  ({stj.MatchedBy})"
+                );
+                hits++;
+            }
+            if (ante.BigBlindTagGrantedJoker is { IsHighlighted: true } btj)
+            {
+                Console.WriteLine(
+                    $"  ★ ante {ante.Ante} big-tag joker: {btj.Name}  ({btj.MatchedBy})"
+                );
+                hits++;
+            }
+
+            for (int p = 0; p < ante.Packs.Count; p++)
+            {
+                var pack = ante.Packs[p];
+                for (int c = 0; c < pack.Items.Count; c++)
+                {
+                    var it = pack.Items[c];
+                    if (it.IsHighlighted)
+                    {
+                        Console.WriteLine(
+                            $"  ★ ante {ante.Ante} {pack.Type}[{c}]: {it.Name}  ({it.MatchedBy})"
+                        );
+                        hits++;
+                    }
+                }
+
+                // The Soul → legendary joker spawned by this pack (glow if matched).
+                if (pack.GrantedLegendaryJoker is { IsHighlighted: true } lj)
+                {
+                    Console.WriteLine(
+                        $"  ★ ante {ante.Ante} {pack.Type} Soul joker: {lj.Name}  ({lj.MatchedBy})"
+                    );
+                    hits++;
+                }
+            }
+        }
+
+        if (hits == 0)
+            Console.WriteLine("  (no matches — lens found nothing on this seed's natural board)");
+
         return 0;
     }
 
