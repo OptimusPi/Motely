@@ -22,7 +22,7 @@ Shop Queue:
 Packs: 
 Buffoon Pack - Wrathful Joker, Greedy Joker
 Celestial Pack - Earth, Jupiter, Ceres
-Standard Pack - King of Spades, King of Diamonds, Stone Queen of Hearts
+Standard Pack - Queen of Spades, Queen of Diamonds, Stone King of Hearts
 Jumbo Arcana Pack - The World, The Tower, The Fool, The Emperor, The Sun
 
 ==ANTE 2==
@@ -86,8 +86,8 @@ Jumbo Celestial Pack - Saturn, Mars, Venus, Pluto, Uranus
 Buffoon Pack - Superposition, Holographic Rough Gem
 Standard Pack - Lucky 4 of Spades, 2 of Clubs, Purple Seal 7 of Diamonds
 Spectral Pack - Incantation, Cryptid
-Jumbo Standard Pack - Stone 5 of Spades, 4 of Clubs, Purple Seal Polychrome 5 of Hearts, Gold 10 of Hearts, Queen of Spades
-Jumbo Standard Pack - King of Clubs, Foil 6 of Clubs, 4 of Hearts, Stone 3 of Spades, Gold Seal Steel 4 of Diamonds
+Jumbo Standard Pack - Stone 5 of Spades, 4 of Clubs, Purple Seal Polychrome 5 of Hearts, Gold Ace of Hearts, King of Spades
+Jumbo Standard Pack - Queen of Clubs, Foil 6 of Clubs, 4 of Hearts, Stone 3 of Spades, Gold Seal Steel 4 of Diamonds
 
 ==ANTE 3==
 Boss: The Wheel
@@ -210,8 +210,8 @@ Shop Queue:
 50) Ride the Bus
 
 Packs: 
-Jumbo Standard Pack - Gold 4 of Hearts, 3 of Diamonds, Foil Wild 10 of Spades, Blue Seal 4 of Diamonds, 6 of Clubs
-Standard Pack - Queen of Hearts, Red Seal 10 of Clubs, 9 of Diamonds
+Jumbo Standard Pack - Gold 4 of Hearts, 3 of Diamonds, Foil Wild Ace of Spades, Blue Seal 4 of Diamonds, 6 of Clubs
+Standard Pack - King of Hearts, Red Seal Ace of Clubs, 9 of Diamonds
 Mega Celestial Pack - Mercury, Neptune, Venus, Saturn, Eris
 Arcana Pack - The Hermit, The Chariot, Justice
 Spectral Pack - Ankh, Ectoplasm
@@ -405,7 +405,7 @@ Packs:
 Jumbo Arcana Pack - The Moon, The Sun, The Star, The Lovers, The Empress
 Jumbo Standard Pack - Foil Mult 8 of Clubs, Jack of Spades, Jack of Spades, Stone 2 of Spades, Purple Seal Stone 7 of Spades
 Celestial Pack - Planet X, Earth, Pluto
-Standard Pack - 8 of Clubs, Queen of Hearts, Glass Queen of Diamonds
+Standard Pack - 8 of Clubs, King of Hearts, Glass King of Diamonds
 Jumbo Buffoon Pack - Red Card, Reserved Parking, Bloodstone, Cavendish
 Celestial Pack - Pluto, Neptune, Planet X
 
@@ -470,6 +470,6 @@ Jumbo Arcana Pack - Temperance, The Magician, The Wheel of Fortune, The Hermit, 
 Arcana Pack - Strength, The Chariot, The Magician
 Jumbo Celestial Pack - Uranus, Neptune, Pluto, Venus, Saturn
 Standard Pack - Red Seal Lucky 5 of Diamonds, Mult 3 of Spades, 7 of Spades
-Standard Pack - Purple Seal Lucky 6 of Hearts, Purple Seal Steel Queen of Diamonds, Steel 4 of Clubs
+Standard Pack - Purple Seal Lucky 6 of Hearts, Purple Seal Steel King of Diamonds, Steel 4 of Clubs
 Jumbo Celestial Pack - Neptune, Pluto, Uranus, Earth, Venus
 
