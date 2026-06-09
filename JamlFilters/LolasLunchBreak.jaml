@@ -1,0 +1,27 @@
+name: Lola's Lunch Break
+author: pifreak
+description: A quick juicy Perkeo run for Lola — early legendary snowball, win before lunch's over.
+deck: Red
+stake: White
+
+must:
+  - legendaryJoker: Perkeo
+    antes: [1, 2]
+
+should:
+  - legendaryJoker: Perkeo
+    antes: [1]
+    edition: Negative
+    score: 25
+  - legendaryJoker: Perkeo
+    antes: [1]
+    score: 10
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 10
+  - joker: Brainstorm
+    antes: [1, 2, 3]
+    score: 8
+  - voucher: Telescope
+    antes: [1, 2]
+    score: 5
