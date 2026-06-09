@@ -161,18 +161,6 @@ public class MainMenuWindow : View
         btnResults.Accept += (s, e) => MotelyTUI.ShowWindow(new ResultsBrowserWindow());
         dockBar.Add(btnResults);
 
-        // JAMLYZER - single-seed snapshot viewer (glow what a JAML lens matches)
-        var btnJamlyzer = new MenuButton("_JAMLYZER", BalatroTheme.PurpleButton)
-        {
-            X = 84,
-            Y = 1,
-            Width = 13,
-            Height = 3,
-            DynamicFocusHeight = true,
-        };
-        btnJamlyzer.Accept += (s, e) => MotelyTUI.ShowWindow(new JamlyzerWindow());
-        dockBar.Add(btnJamlyzer);
-
         // Set focus to SEARCH
         btnSearch.SetFocus();
 
@@ -218,11 +206,6 @@ public class MainMenuWindow : View
                 case KeyCode.R:
                     btnResults.SetFocus();
                     MotelyTUI.ShowWindow(new ResultsBrowserWindow());
-                    e.Handled = true;
-                    break;
-                case KeyCode.J:
-                    btnJamlyzer.SetFocus();
-                    MotelyTUI.ShowWindow(new JamlyzerWindow());
                     e.Handled = true;
                     break;
                 case KeyCode.Esc:
