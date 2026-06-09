@@ -1,0 +1,30 @@
+# =============================================================================
+#  hieroglyph-deep-perkeo.jaml — DEEP pack-slot search (the depth proof)
+# =============================================================================
+#  The booster-pack PRNG stream emits SIX packs at every ante (slots 0-5), but
+#  normal ante-1 gameplay only reaches slot 3. Buying Hieroglyph (or Petroglyph)
+#  rewinds an ante and re-opens the shop, making the deeper slots 4-5 reachable.
+#
+#  Scoring allows that full depth only when the generated run state actually
+#  contains the Hieroglyph/Petroglyph rewind that makes it reachable.
+#
+#  Canonical seed: KHTW99TC — a Negative Perkeo sits in the ante-1 Arcana at
+#  pack slot 5, invisible without that run-state rewind. (See Motely.Tests/
+#  HieroglyphPackSlotTests.cs and the seedfinder research doc.)
+# =============================================================================
+
+id: hieroglyph-deep-perkeo
+name: Hieroglyph Deep Perkeo
+author: pifreak
+description: >-
+  Negative Perkeo at ante-1 booster pack slot 5 — only reachable with the
+  Hieroglyph/Petroglyph ante rewind. Proves JAML can search the full pack depth.
+deck: Red
+stake: White
+
+must:
+  - legendaryJoker: Perkeo
+    edition: Negative
+    antes: [1]
+    sources:
+      boosterPacks: [0, 1, 2, 3, 4, 5]  # scalar scoring rejects unreachable deep slots
