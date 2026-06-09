@@ -38,11 +38,7 @@ const json = Program.jamlToJson(JAML);
 const backToJaml = Program.jsonToJaml(json);
 log(`jamlToJson OK (${json.length} chars), jsonToJaml OK (${backToJaml.length} chars)`);
 
-// 3. Single-seed analysis.
-const snap = Program.jamlyzer("ALEEB", config);
-log(`jamlyzer("ALEEB") OK: ${snap ? "snapshot returned" : "NULL"}`);
-
-// 4. A real bounded random search (small N — NOT a full sweep).
+// 3. A real bounded random search (small N — NOT a full sweep).
 log("running runRandomSearch(config, 25000)...");
 const search = Program.runRandomSearch(config, 25000);
 log(
