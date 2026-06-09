@@ -18,9 +18,23 @@
       DO NOT re-add a FinalizeNpmPackage MSBuild target to "fix" this.
     -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
+    <!-- BinariesDirectory EMPTY = embedded base64 single-file (for the CDN <script> tag). -->
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
   </PropertyGroup>
 
+  <!--
+    === NativeAOT-LLVM is AUTOMATIC in Release — verified against installed Bootsharp source ===
+    Bootsharp.props sets `BsLlvm = !$(BsDebug)` → TRUE for any `-c Release` build, and
+    Bootsharp.targets then imports the ILCompiler.LLVM toolchain it BUNDLES at
+    `$(BsLlvmDir) = $(BsRoot)/llvm` (confirmed present in the nuget package). Props also
+    sets DotNetJsApi / EmccFlags -O3 / UsingBrowserRuntimeWorkload=false / PublishTrimmed /
+    DebugType=none under $(BsLlvm) for us. So: NOTHING to add here.
+    The earlier "PR #175 recipe" was WRONG — `BootsharpLLVM` is not a real property (the
+    internal switch is `BsLlvm`), and pulling a second ILC from the dnceng-experimental
+    feed COLLIDES with the bundled one. A Mono dist (the `addRunDependency` boot crash)
+    means the failing build was Debug (BsLlvm false), NOT that LLVM needs hand-wiring.
+    Build with `dotnet publish -c Release` and the LLVM path turns on by itself.
+  -->
   <ItemGroup>
     <PackageReference Include="Bootsharp" />
     <PackageReference Include="Bootsharp.Inject" />
