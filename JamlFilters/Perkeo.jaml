@@ -1,0 +1,9 @@
+name: Perkeo hunt
+deck: Red
+stake: White
+must:
+  - legendaryJoker: Perkeo
+should:
+  - legendaryJoker: Perkeo
+    antes: [1, 2]
+    score: 100
