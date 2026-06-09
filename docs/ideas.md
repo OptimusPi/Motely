@@ -57,6 +57,26 @@ Idle/zen vibe — "the ante never ends." Build on top of the per-seed analysis
 > Status: concept. Needs design — what drives the loop, what the UI shows,
 > whether it's a real Motely analysis surface or a JS animation over snapshots.
 
+#### ⚠️ The JAMLyzer ante nav is the vehicle — and it's currently wired WRONG
+This is the idea pifreak keeps saying out loud and that keeps evaporating, so
+it's written down here verbatim: **the JAMLyzer should INFINITE-SCROLL the
+antes — the "ladder" metaphor — you climb down rung after rung forever.** That
+*is* The Long Blind: the analyzer IS the endless-shop surface, not a separate toy.
+- **What's there today (the "legacy"/wrong version):** `jaml-ui`
+  `src/components/Jamlyzer.tsx` navigates antes with a bounded `JimboSpinner` —
+  `onNext={() => setSelectedAnte(a => Math.min(8, a + 1))}`, `canNext={selectedAnte < 8}`.
+  A prev/next stepper **hard-capped at ante 8**. You cannot infinite-scroll a
+  ladder that stops at rung 8 — the clamp is the bug, structurally.
+- **What pifreak wants:** an infinite descending scroll of antes (rungs), built on
+  the structured per-ante `Matches` payload (`JamlyzerSnapshot.Matches` →
+  `result.analysis.antes`), NOT the legacy flat `JamlyzerSnapshot.ToString()` text
+  block. The flat text has nothing to scroll; the structured data is the ladder.
+- **Open design Qs before building:** does `Program.jamlyzer` emit antes past 8
+  today, or does the descent need the engine to keep walking antes on demand
+  (lazy/streamed) as you scroll? Decide loop driver + how far the engine walks.
+> Status: captured, NOT started. pifreak — confirm scope and I'll rip out the
+> 1–8 clamp and build the infinite ladder.
+
 ### Single-file mount for mobile browsers
 The directory mount (`pickRoot`/`mountRoot`) needs `showDirectoryPicker`, which
 iOS Safari / mobile browsers don't support. Today the only workaround is reading
