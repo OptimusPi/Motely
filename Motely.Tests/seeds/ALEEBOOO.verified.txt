@@ -21,7 +21,7 @@ Shop Queue:
 
 Packs: 
 Buffoon Pack - Burglar, Madness
-Jumbo Standard Pack - 10 of Spades, King of Clubs, Gold Seal 7 of Hearts, 4 of Diamonds, 5 of Spades
+Jumbo Standard Pack - Ace of Spades, Queen of Clubs, Gold Seal 7 of Hearts, 4 of Diamonds, 5 of Spades
 Standard Pack - Jack of Spades, Foil Stone Jack of Hearts, Bonus 7 of Clubs
 Arcana Pack - The Wheel of Fortune, The Fool, Justice
 
@@ -86,7 +86,7 @@ Buffoon Pack - Juggler, Greedy Joker
 Jumbo Arcana Pack - The Lovers, The Fool, The Sun, The World, The Magician
 Standard Pack - Lucky 6 of Hearts, 2 of Diamonds, Purple Seal Foil Glass 4 of Spades
 Jumbo Celestial Pack - Venus, Eris, Earth, Saturn, Ceres
-Standard Pack - 5 of Spades, Jack of Clubs, Wild Ace of Diamonds
+Standard Pack - 5 of Spades, Jack of Clubs, Wild 10 of Diamonds
 Arcana Pack - The Sun, The Chariot, The Wheel of Fortune
 
 ==ANTE 3==
@@ -213,8 +213,8 @@ Packs:
 Mega Arcana Pack - The Sun, Death, The Lovers, The Wheel of Fortune, The Magician
 Celestial Pack - Planet X, Saturn, Uranus
 Jumbo Arcana Pack - The Star, The Chariot, The Wheel of Fortune, The Hierophant, The Empress
-Standard Pack - Red Seal Jack of Clubs, Wild King of Hearts, Blue Seal 5 of Spades
-Standard Pack - Steel 2 of Diamonds, Purple Seal Bonus King of Clubs, Ace of Clubs
+Standard Pack - Red Seal Jack of Clubs, Wild Queen of Hearts, Blue Seal 5 of Spades
+Standard Pack - Steel 2 of Diamonds, Purple Seal Bonus Queen of Clubs, 10 of Clubs
 Arcana Pack - The Sun, The Empress, Strength
 
 ==ANTE 5==
@@ -276,10 +276,10 @@ Shop Queue:
 Packs: 
 Celestial Pack - Saturn, Mars, Planet X
 Jumbo Spectral Pack - Ankh, Wraith, Immolate, Ectoplasm
-Mega Standard Pack - Ace of Diamonds, Gold Seal 8 of Clubs, Gold Jack of Spades, Gold Seal Glass 7 of Clubs, 4 of Diamonds
-Standard Pack - Steel 3 of Hearts, 10 of Spades, 4 of Hearts
+Mega Standard Pack - 10 of Diamonds, Gold Seal 8 of Clubs, Gold Jack of Spades, Gold Seal Glass 7 of Clubs, 4 of Diamonds
+Standard Pack - Steel 3 of Hearts, Ace of Spades, 4 of Hearts
 Jumbo Celestial Pack - Pluto, Neptune, Mercury, Venus, Eris
-Jumbo Standard Pack - Lucky Jack of Clubs, Wild Queen of Hearts, Ace of Diamonds, Wild 4 of Spades, Lucky 8 of Clubs
+Jumbo Standard Pack - Lucky Jack of Clubs, Wild King of Hearts, 10 of Diamonds, Wild 4 of Spades, Lucky 8 of Clubs
 
 ==ANTE 6==
 Boss: The Window
@@ -471,5 +471,5 @@ Arcana Pack - Justice, The Wheel of Fortune, The Hermit
 Standard Pack - 6 of Diamonds, Blue Seal 5 of Clubs, Jack of Diamonds
 Arcana Pack - The Wheel of Fortune, The Hierophant, The Magician
 Jumbo Celestial Pack - Earth, Mars, Uranus, Saturn, Pluto
-Standard Pack - 6 of Hearts, 5 of Spades, Steel Ace of Clubs
+Standard Pack - 6 of Hearts, 5 of Spades, Steel 10 of Clubs
 

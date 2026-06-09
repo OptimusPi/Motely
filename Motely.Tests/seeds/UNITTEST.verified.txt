@@ -1,4 +1,4 @@
-==ANTE 1==
+﻿==ANTE 1==
 Boss: The Window
 Voucher: Tarot Merchant
 Tags: Speed Tag, Speed Tag
@@ -83,7 +83,7 @@ Shop Queue:
 
 Packs: 
 Arcana Pack - Judgement, The Empress, The Devil
-Standard Pack - Red Seal Stone Ace of Clubs, 6 of Hearts, Red Seal Lucky Jack of Diamonds
+Standard Pack - Red Seal Stone 10 of Clubs, 6 of Hearts, Red Seal Lucky Jack of Diamonds
 Standard Pack - Purple Seal Bonus 2 of Clubs, 4 of Clubs, Mult 5 of Hearts
 Celestial Pack - Mars, Mercury, Eris
 Celestial Pack - Jupiter, Neptune, Eris
@@ -146,7 +146,7 @@ Shop Queue:
 50) Death
 
 Packs: 
-Mega Standard Pack - 3 of Diamonds, 5 of Clubs, Ace of Diamonds, 2 of Diamonds, Steel 5 of Diamonds
+Mega Standard Pack - 3 of Diamonds, 5 of Clubs, 10 of Diamonds, 2 of Diamonds, Steel 5 of Diamonds
 Mega Arcana Pack - The Devil, The High Priestess, The Wheel of Fortune, The Lovers, Temperance
 Standard Pack - 4 of Clubs, 5 of Spades, 8 of Clubs
 Buffoon Pack - Erosion, Crafty Joker
@@ -275,11 +275,11 @@ Shop Queue:
 
 Packs: 
 Spectral Pack - Medium, Cryptid
-Standard Pack - Bonus King of Hearts, 6 of Clubs, Wild 5 of Spades
+Standard Pack - Bonus Queen of Hearts, 6 of Clubs, Wild 5 of Spades
 Jumbo Celestial Pack - Planet X, Neptune, Mars, Earth, Ceres
 Standard Pack - 7 of Hearts, 6 of Diamonds, Purple Seal Bonus 4 of Diamonds
 Celestial Pack - Venus, Planet X, Saturn
-Jumbo Standard Pack - 7 of Hearts, Holographic 10 of Spades, 6 of Spades, Gold 4 of Spades, Red Seal Jack of Spades
+Jumbo Standard Pack - 7 of Hearts, Holographic Ace of Spades, 6 of Spades, Gold 4 of Spades, Red Seal Jack of Spades
 
 ==ANTE 6==
 Boss: The Pillar
@@ -340,10 +340,10 @@ Shop Queue:
 Packs: 
 Spectral Pack - Wraith, Ectoplasm
 Standard Pack - Red Seal Foil 5 of Hearts, 9 of Hearts, Glass 8 of Hearts
-Jumbo Standard Pack - 3 of Spades, Bonus 6 of Spades, Gold Queen of Clubs, Stone 7 of Clubs, 10 of Hearts
-Standard Pack - Ace of Diamonds, Blue Seal Wild 9 of Spades, Purple Seal 10 of Diamonds
+Jumbo Standard Pack - 3 of Spades, Bonus 6 of Spades, Gold King of Clubs, Stone 7 of Clubs, Ace of Hearts
+Standard Pack - 10 of Diamonds, Blue Seal Wild 9 of Spades, Purple Seal Ace of Diamonds
 Arcana Pack - The World, The Hermit, The Hanged Man
-Jumbo Standard Pack - Mult 2 of Hearts, Stone Ace of Spades, Red Seal Stone Jack of Diamonds, 10 of Spades, 3 of Clubs
+Jumbo Standard Pack - Mult 2 of Hearts, Stone 10 of Spades, Red Seal Stone Jack of Diamonds, Ace of Spades, 3 of Clubs
 
 ==ANTE 7==
 Boss: The Water
@@ -406,7 +406,7 @@ Arcana Pack - The Devil, The Wheel of Fortune, The Lovers
 Celestial Pack - Eris, Mercury, Pluto
 Mega Celestial Pack - Mars, Earth, Pluto, Jupiter, Saturn
 Mega Arcana Pack - The Star, The Lovers, The Hanged Man, Justice, The Magician
-Mega Standard Pack - Bonus 6 of Hearts, Blue Seal King of Diamonds, Queen of Hearts, Gold Seal 9 of Hearts, Bonus 5 of Hearts
+Mega Standard Pack - Bonus 6 of Hearts, Blue Seal Queen of Diamonds, King of Hearts, Gold Seal 9 of Hearts, Bonus 5 of Hearts
 Buffoon Pack - Red Card, Mr. Bones
 
 ==ANTE 8==
