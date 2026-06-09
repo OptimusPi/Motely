@@ -46,8 +46,6 @@ public static class JamlSearchBuilder
             && config.MustNot.Count == 0
         )
             throw new InvalidOperationException("JamlConfig has no clauses.");
-        ValidateLegendaryJokerClausesForMustAndShould(config.Must);
-        ValidateLegendaryJokerClausesForMustAndShould(config.Should);
         var sb = new StringBuilder();
         sb.AppendLine("# JAML filter eval plan");
         sb.AppendLine();
@@ -80,8 +78,6 @@ public static class JamlSearchBuilder
             && config.MustNot.Count == 0
         )
             throw new InvalidOperationException("JamlConfig has no clauses.");
-        ValidateLegendaryJokerClausesForMustAndShould(config.Must);
-        ValidateLegendaryJokerClausesForMustAndShould(config.Should);
         var orderedMustClauses = OrderClausesByEstimatedCost(config.Must);
         var orderedShouldClauses = config.Should;
         var orderedMustNotClauses = OrderClausesByEstimatedCost(config.MustNot);
@@ -158,36 +154,6 @@ public static class JamlSearchBuilder
         )
             return;
         _ = CreatePlan(config);
-    }
-
-    /// <summary>
-    /// Fails fast on soul joker clauses whose booster sources can never hit arcana/Spectral at slot ≥1
-    /// (<see cref="JamlLegendaryJokerStructuralValidation"/>). Skips <c>mustNot</c>: negated dead clauses are vacuously true.
-    /// </summary>
-    private static void ValidateLegendaryJokerClausesForMustAndShould(IEnumerable<IJamlClause> clauses)
-    {
-        foreach (IJamlClause c in clauses)
-            ValidateClauseTreeForLegendaryJoker(c);
-    }
-
-    private static void ValidateClauseTreeForLegendaryJoker(IJamlClause c)
-    {
-        switch (c)
-        {
-            case LegendaryJokerClause lj:
-                JamlLegendaryJokerStructuralValidation.ValidateLegendaryJokerClauseOrThrow(lj);
-                return;
-            case AndClause and:
-                for (int i = 0; i < and.Clauses.Length; i++)
-                    ValidateClauseTreeForLegendaryJoker(and.Clauses[i]);
-                return;
-            case OrClause or:
-                for (int i = 0; i < or.Clauses.Length; i++)
-                    ValidateClauseTreeForLegendaryJoker(or.Clauses[i]);
-                return;
-            default:
-                return;
-        }
     }
 
     /// <summary>Quoted CSV header for stdout sinks: <c>seed</c>, <c>score</c>, then each should-scoring clause label. Built once per plan.</summary>
