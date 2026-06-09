@@ -1,8 +1,7 @@
 # Motely (MotelyJAML)
 
-Motely is a self-contained, vectorized (SIMD) seed-search engine for **Balatro**.
-Filters are authored in **JAML** (Jimbo's Ante Markup Language). Everything you
-need to build, test, and run it is in this repo.
+Motely is a vectorized (SIMD) seed-search engine for **Balatro**. Filters are
+authored in **JAML** (Jimbo's Ante Markup Language).
 
 ## Build
 
