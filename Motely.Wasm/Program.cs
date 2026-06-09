@@ -185,6 +185,14 @@ public static partial class Program
     public static JamlSearchPlan CreatePlan(JamlConfig config) =>
         JamlSearchBuilder.CreatePlan(config);
 
+    // Single-seed snapshot through a JAML lens: items matching the lens's `should` clauses glow
+    // (IsHighlighted/MatchedBy). This [Export] is what pulls the Motely.Analysis types onto the
+    // interop surface, regenerating the `motely/analysis` module that jaml-ui consumes.
+    [Export]
+    public static JamlyzerSnapshot Jamlyzer(string seed, JamlConfig lens) =>
+        // Fully qualified: this export method and the analyzer class are both named "Jamlyzer".
+        Motely.Analysis.Jamlyzer.Analyze(seed, lens);
+
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
 
