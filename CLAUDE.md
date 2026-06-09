@@ -55,13 +55,12 @@ ignored), `max_count`/`maxcount`. Each clause type has its own `*FilterDesc.cs`
 `JamlScoop` do the counting; `JamlConfigLoader.NormalizeDefaultSources` decides where a
 bare clause (no source) looks — shop slots `[0,1,2,3]` + packs `[0..5]`.
 
-**The analyzer** (`Motely/Analysis/`) introspects ONE seed. `Jamlyzer.Analyze(seed, lens)`
-runs a single-seed walk and returns a `JamlyzerSnapshot` (boss/voucher/tags/shop/packs
-per ante). The JAML `lens` is a lens, not a gate: items its `should` clauses match get
-`IsHighlighted` + `MatchedBy` (glow + reason). `JamlyzerSnapshot.ToString()` is the
-**legacy flat text block** — for test ground-truth (Verify()) and cross-tool comparison,
-not UI. `JamlyzerSnapshot.Matches` is the lean per-seed match payload meant for a UI to
-render. `Motely.TUI/JamlyzerWindow.cs` is the existing terminal face.
+**The analyzer** (`Motely/Analysis/`) introspects ONE seed. `MotelyLegacyTextAnalyzer.Analyze`
+takes a `MotelyLegacyTextAnalysisConfig` (seed/deck/stake), runs a single-seed walk, and
+returns a `MotelyLegacyTextAnalysis` (boss/voucher/tags/shop/packs per ante via
+`MotelyAnteAnalysis` / `MotelyAnalyzedItem`). Its `ToString()` is the **legacy flat text
+block** — for test ground-truth (Verify()) and cross-tool comparison (miaklwalker,
+mathisfun_), not UI.
 
 ## Heads (`Motely.slnx`)
 
