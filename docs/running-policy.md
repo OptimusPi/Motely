@@ -12,7 +12,7 @@ verified seed first" dodge). Don't-drunk-drive-into-pedestrians ≠ never-drive.
 Specifically, go ahead and:
 
 - **Run a single seed.** ~100ms. Not a search. Use it to *actually verify behavior*
-  (e.g. `JamlyzerAnalyzer.Analyze(seed, lens)`) instead of claiming "I can't run it."
+  (e.g. `MotelyLegacyTextAnalyzer.Analyze(config)`) instead of claiming "I can't run it."
 - **Run `Motely.CLI` with explicit params** (filter, deck, stake, ante, count). It has
   clear params — use them.
 - **Write and run a C# single-file app** for a quick check or repro.
