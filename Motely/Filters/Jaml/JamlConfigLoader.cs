@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
@@ -14,6 +16,112 @@ namespace Motely.Filters.Jaml;
 public static partial class JamlConfigLoader
 {
     private static readonly int[] DefaultAntes = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    public static JamlConfig FromYaml(string jaml)
+    {
+        if (!TryLoad(jaml, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
+        return config;
+    }
+
+    public static JamlConfig FromJson(string json)
+    {
+        if (!TryLoadFromJson(json, out var config, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML JSON.");
+        return config;
+    }
+
+    public static bool TryLoadFromJson(
+        string json,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error
+    )
+    {
+        config = null;
+        return TryParseRootJson(json, out var doc, out error)
+            && TryLoadFromDoc(doc, out config, out error);
+    }
+
+    /// <summary>
+    /// JSON counterpart of <see cref="TryParseRoot"/>: same nested and/or normalization,
+    /// same strict unknown-key rejection (via <see cref="JamlJsonContext"/>).
+    /// </summary>
+    public static bool TryParseRootJson(
+        string json,
+        [NotNullWhen(true)] out JamlRootDocument? doc,
+        out string? error
+    )
+    {
+        doc = null;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            error = "JSON content is required.";
+            return false;
+        }
+
+        try
+        {
+            if (JsonNode.Parse(json) is not JsonObject root)
+            {
+                error = "JAML JSON document must be an object at the root.";
+                return false;
+            }
+            NormalizeNestedLogicSyntax(root);
+            doc = root.Deserialize(JamlJsonContext.Default.JamlRootDocument);
+            if (doc is null)
+            {
+                error = "JSON deserialized to null.";
+                return false;
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = FormatLoadError(ex);
+            return false;
+        }
+    }
+
+    /// <summary>JSON twin of the YAML <see cref="NormalizeNestedLogicSyntax(YamlNode)"/> walk:
+    /// rewrites <c>"and"/"or": { "clauses": [...], shared keys... }</c> into the flat shape,
+    /// hoisting shared keys to the parent clause.</summary>
+    private static void NormalizeNestedLogicSyntax(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                NormalizeNestedLogicBlock(obj, "and");
+                NormalizeNestedLogicBlock(obj, "or");
+                foreach (var child in obj.Select(static p => p.Value).ToArray())
+                    NormalizeNestedLogicSyntax(child);
+                break;
+            case JsonArray array:
+                foreach (var child in array.ToArray())
+                    NormalizeNestedLogicSyntax(child);
+                break;
+        }
+    }
+
+    private static void NormalizeNestedLogicBlock(JsonObject parent, string key)
+    {
+        if (parent[key] is not JsonObject legacyLogicBlock)
+            return;
+        if (!legacyLogicBlock.TryGetPropertyValue("clauses", out var clausesNode))
+            return;
+
+        foreach (var (childKey, childValue) in legacyLogicBlock.ToArray())
+        {
+            if (childKey == "clauses" || parent.ContainsKey(childKey))
+                continue;
+            legacyLogicBlock.Remove(childKey);
+            parent[childKey] = childValue;
+        }
+
+        legacyLogicBlock.Remove("clauses");
+        parent[key] = clausesNode;
+    }
 
     public static bool TryParseRoot(
         string jaml,
@@ -64,37 +172,26 @@ public static partial class JamlConfigLoader
                 error ??= "JAML document could not be parsed.";
                 return false;
             }
+            return TryLoadFromDoc(load, out config, out error);
+        }
+        catch (Exception ex)
+        {
+            config = null;
+            error = FormatLoadError(ex);
+            return false;
+        }
+    }
 
-            var defaultAntes = load.Defaults?.Antes ?? DefaultAntes;
-
-            var deck = Enum.TryParse<MotelyDeck>(load.Deck, true, out var deckEnum)
-                ? deckEnum
-                : MotelyDeck.Red;
-            var stake = Enum.TryParse<MotelyStake>(load.Stake, true, out var stakeEnum)
-                ? stakeEnum
-                : MotelyStake.White;
-
-            config = new JamlConfig
-            {
-                Id = NormalizeFilterId(load.Id, load.Name),
-                Name = load.Name,
-                Description = load.Description,
-                Author = load.Author,
-                Deck = deck,
-                Stake = stake,
-            };
-
-            config.Seeds = NormalizeSeeds(load.Seeds);
-
-            // MUST → required filters
-            PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
-
-            // SHOULD → scoring clauses
-            PopulateClauses(config.Should, load.Should, defaultAntes, load.Defaults);
-
-            // MUSTNOT → negation filters
-            PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
-
+    private static bool TryLoadFromDoc(
+        JamlRootDocument load,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error
+    )
+    {
+        error = null;
+        try
+        {
+            config = LoadFromDoc(load);
             return true;
         }
         catch (Exception ex)
@@ -103,6 +200,38 @@ public static partial class JamlConfigLoader
             error = FormatLoadError(ex);
             return false;
         }
+    }
+
+    /// <summary>The one doc→config mapping. Throws on invalid clauses.</summary>
+    private static JamlConfig LoadFromDoc(JamlRootDocument load)
+    {
+        var defaultAntes = load.Defaults?.Antes ?? DefaultAntes;
+
+        var deck = Enum.TryParse<MotelyDeck>(load.Deck, true, out var deckEnum)
+            ? deckEnum
+            : MotelyDeck.Red;
+        var stake = Enum.TryParse<MotelyStake>(load.Stake, true, out var stakeEnum)
+            ? stakeEnum
+            : MotelyStake.White;
+
+        var config = new JamlConfig
+        {
+            Id = NormalizeFilterId(load.Id, load.Name),
+            Name = load.Name,
+            Description = load.Description,
+            Author = load.Author,
+            Deck = deck,
+            Stake = stake,
+        };
+
+        config.Seeds = NormalizeSeeds(load.Seeds);
+
+        // MUST gates, SHOULD scores, MUSTNOT negates (see CLAUDE.md "JAML is the filter authoring layer").
+        PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
+        PopulateClauses(config.Should, load.Should, defaultAntes, load.Defaults);
+        PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
+
+        return config;
     }
 
     /// <summary>
@@ -136,26 +265,7 @@ public static partial class JamlConfigLoader
                 return false;
             }
 
-            var defaultAntes = load.Defaults?.Antes ?? DefaultAntes;
-            var deck = Enum.TryParse<MotelyDeck>(load.Deck, true, out var deckEnum)
-                ? deckEnum
-                : MotelyDeck.Red;
-            var stake = Enum.TryParse<MotelyStake>(load.Stake, true, out var stakeEnum)
-                ? stakeEnum
-                : MotelyStake.White;
-
-            config = new JamlConfig
-            {
-                Id = NormalizeFilterId(load.Id, load.Name),
-                Deck = deck,
-                Stake = stake,
-            };
-            config.Seeds = NormalizeSeeds(load.Seeds);
-
-            PopulateClauses(config.Must, load.Must, defaultAntes, load.Defaults);
-            PopulateClauses(config.Should, load.Should, defaultAntes, load.Defaults);
-            PopulateClauses(config.MustNot, load.MustNot, defaultAntes, load.Defaults);
-
+            config = LoadFromDoc(load);
             return true;
         }
         catch (Exception ex)
@@ -291,6 +401,23 @@ public static partial class JamlConfigLoader
     private static string FormatLoadError(Exception ex)
     {
         var message = ex.Message;
+
+        if (ex is JsonException)
+        {
+            // STJ's UnmappedMemberHandling.Disallow message → the same shape the YAML path emits.
+            var unmappedMatch = Regex.Match(
+                message,
+                "The JSON property '([^']+)' could not be mapped to any .NET member of type '([^']+)'",
+                RegexOptions.CultureInvariant
+            );
+            if (unmappedMatch.Success)
+            {
+                var propertyName = unmappedMatch.Groups[1].Value;
+                var targetType = unmappedMatch.Groups[2].Value;
+                return $"Unknown property '{propertyName}' in {DescribeYamlTarget(targetType)}.";
+            }
+            return message;
+        }
 
         if (ex is YamlException yamlEx)
         {
