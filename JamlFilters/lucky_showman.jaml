@@ -8,10 +8,14 @@ deck: Anaglyph
 stake: White
 must:
   - uncommonJoker: Showman
-    antes: [1, 2, 3]
-  - uncommonJoker: LuckyCat
-    antes: [1, 2, 3]
+    antes: [1, 2, 3, 4]
+  - joker: LuckyCat
+    antes: [1, 2, 3, 4]
 should:
+  - uncommonJoker: Showman
+    antes: [1, 2, 3]
+  - joker: LuckyCat
+    antes: [1, 2, 3]
   - and:
     - smallBlindTag: NegativeTag
       antes: [2]
