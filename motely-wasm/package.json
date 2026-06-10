@@ -1,0 +1,32 @@
+{
+  "name": "motely-wasm",
+  "type": "module",
+  "scripts": {
+    "build": "dotnet publish ../Motely.Wasm/Motely.Wasm.csproj -c Release",
+    "prepublishOnly": "npm run build"
+  },
+  "version": "20.2.0",
+  "description": "Balatro seed search + per-seed analysis, powered by JAML (Jimbo's Ante Markup Language). Vectorized SIMD engine, compiled to WebAssembly.",
+  "author": "Nathanial P. Howard",
+  "license": "MIT",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./*": {
+      "types": "./dist/generated/modules/*.g.d.mts",
+      "import": "./dist/generated/modules/*.g.mjs"
+    }
+  },
+  "browser": {
+    "node:fs": false,
+    "node:url": false,
+    "node:path": false,
+    "node:module": false,
+    "node:crypto": false,
+    "node:process": false
+  }
+}
