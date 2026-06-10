@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!-- Real-browser boot gate for motely-wasm. Driven by browser-boot-test.mjs (Playwright).
+     Sets window.__RESULT = { ok, version, checks } or { ok: false, error }. -->
+<script type="module">
+    try {
+        const { default: bootsharp } = await import("./dist/index.mjs");
+        const { Program: Motely } = await import(
+            "./dist/generated/modules/motely/wasm.g.mjs"
+        );
+
+        Motely.reportWasmError = (m) => console.error("[WASM ERROR]", m);
+
+        await bootsharp.boot();
+
+        const checks = {};
+        checks.booted = bootsharp.getStatus() === bootsharp.BootStatus.Booted;
+
+        const cfg = Motely.fromJaml("must:\n  - joker: Blueprint\n");
+        checks.fromJaml = !!cfg && typeof cfg === "object";
+
+        const jsonCfg = Motely.fromJson('{ "must": [{ "joker": "Blueprint" }] }');
+        checks.fromJson = !!jsonCfg && typeof jsonCfg === "object";
+
+        const json = Motely.jamlToJson("deck: Ghost\nmust:\n  - joker: Perkeo\n");
+        checks.jamlToJson = JSON.parse(json).deck === "Ghost";
+
+        cfg.seeds = ["MOTELY77"];
+        const r = Motely.runSeedListSearch(cfg);
+        checks.search = r.isCompleted === true && Number(r.totalSeedsSearched) === 1;
+
+        window.__RESULT = {
+            ok: Object.values(checks).every(Boolean),
+            checks,
+        };
+    } catch (error) {
+        window.__RESULT = { ok: false, error: String(error?.stack ?? error) };
+    }
+</script>
