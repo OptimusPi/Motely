@@ -146,19 +146,19 @@ public static class JamlScoring
             "AndClause should not be empty after JAML load (validator / loader bug)."
         );
 
-        int total = 0;
+        // An AND counts COMPLETE conjunctions: min over children, not their sum.
+        // Summing double-paid the clause score (tag=1 + joker=1 → tally 2 → 2×score).
+        int combos = int.MaxValue;
         for (int i = 0; i < clause.Clauses.Length; i++)
         {
             int count = CountOccurrences(ref ctx, clause.Clauses[i], ref runState);
             if (count <= 0)
                 return 0;
-            int w = clause.Clauses[i].Score;
-            if (w == 0)
-                w = 1;
-            total += count * w;
+            if (count < combos)
+                combos = count;
         }
 
-        return clause.Score != 0 ? total : 1;
+        return clause.Score != 0 ? combos : 1;
     }
 
     private static int CountOrOccurrences(
@@ -249,16 +249,18 @@ public static class JamlScoring
             "AndClause should not be empty after JAML load (validator / loader bug)."
         );
 
-        int total = 0;
+        // Same min-of-children semantics as CountAndOccurrences: complete conjunctions only.
+        int combos = int.MaxValue;
         for (int i = 0; i < clause.Clauses.Length; i++)
         {
             int count = CountRawOccurrences(ref ctx, clause.Clauses[i], ref runState);
             if (count <= 0)
                 return 0;
-            total += count;
+            if (count < combos)
+                combos = count;
         }
 
-        return clause.Score != 0 ? total : 1;
+        return clause.Score != 0 ? combos : 1;
     }
 
     private static int CountRawOrOccurrences(
