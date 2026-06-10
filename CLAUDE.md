@@ -46,7 +46,7 @@ single = analysis and anything not worth vectorizing.
 `.WithBatchCharacterCount`). `.CreateSearch()` → `RunSearchUntilCompletion()`.
 
 **JAML is the filter authoring layer** (`Motely/Filters/Jaml/`). `JamlConfigLoader.TryLoad`
-parses JAML (YAML via YamlDotNet — **no JSON load path**) into a `JamlFilter`: `deck`,
+parses JAML (YAML via YamlDotNet — **no JSON load path**) into a `JamlConfig`: `deck`,
 `stake`, and `must` / `should` / `mustNot` clauses (`JamlClause`, plus `RollClause` for
 gameplay rolls). `must`/`mustNot` gate; `should` clauses score. Scoring `mode`: `sum`
 (default — `count * score` per should), `max` (max raw `count`, per-clause score
@@ -65,11 +65,27 @@ mathisfun_), not UI.
 ## Heads (`Motely.slnx`)
 
 - `Motely/` — the engine. `Motely.CLI/` — command line. `Motely.TUI/` — Terminal.Gui UI.
-- `Motely.Wasm/` — Bootsharp WASM build. `package.json` lives here (npm publish runs
-  from this dir). `BootsharpPublishDirectory` = `./dist` (gitignored, embedded single-file).
-  `BootsharpBinariesDirectory` empty → embedded base64, `boot()` takes no args.
-  `[RenameNode]`/`[RenameMember]` returning null erases that node from the JS surface.
-  Bootsharp source is at `d:/bootsharp/` if you need the guide; don't pin it here.
+- `Motely.Wasm/` — Bootsharp WASM build. Bootsharp generates the ES module +
+  `package.json`; output is `motely-wasm/`. `BootsharpPublishDirectory` = module,
+  `BootsharpPackageDirectory` = `package.json`, `BootsharpBinariesDirectory` = binaries
+  (set → sideloaded separate `.wasm`, `boot()` takes a root URL or `{ wasm }` bytes;
+  empty → embedded, `boot()` takes no args). `[RenameNode]`/`[RenameMember]` returning
+  null/empty erases that node/member from the generated JS surface. The full Bootsharp
+  guide auto-loads via the `@` imports below — read it before changing this project.
+
+@d:/bootsharp/docs/guide/index.md
+@d:/bootsharp/docs/guide/getting-started.md
+@d:/bootsharp/docs/guide/build-config.md
+@d:/bootsharp/docs/guide/sideloading.md
+@d:/bootsharp/docs/guide/interop-modules.md
+@d:/bootsharp/docs/guide/interop-instances.md
+@d:/bootsharp/docs/guide/declarations.md
+@d:/bootsharp/docs/guide/serialization.md
+@d:/bootsharp/docs/guide/specialization.md
+@d:/bootsharp/docs/guide/renaming.md
+@d:/bootsharp/docs/guide/llvm.md
+@d:/bootsharp/docs/guide/extensions/dependency-injection.md
+@d:/bootsharp/docs/guide/extensions/file-system.md
 - `Motely.DataLake/` — results/data tooling. `Motely.Tests/` — the test project.
 
 Filters live in `JamlFilters/` (ready-made `.jaml`), the language in `jaml-lang/`,
