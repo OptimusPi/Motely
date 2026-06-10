@@ -46,7 +46,7 @@ single = analysis and anything not worth vectorizing.
 `.WithBatchCharacterCount`). `.CreateSearch()` → `RunSearchUntilCompletion()`.
 
 **JAML is the filter authoring layer** (`Motely/Filters/Jaml/`). `JamlConfigLoader.TryLoad`
-parses JAML (YAML via YamlDotNet — **no JSON load path**) into a `JamlConfig`: `deck`,
+parses JAML (YAML via YamlDotNet — **no JSON load path**) into a `JamlFilter`: `deck`,
 `stake`, and `must` / `should` / `mustNot` clauses (`JamlClause`, plus `RollClause` for
 gameplay rolls). `must`/`mustNot` gate; `should` clauses score. Scoring `mode`: `sum`
 (default — `count * score` per should), `max` (max raw `count`, per-clause score
