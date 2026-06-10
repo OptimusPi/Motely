@@ -5,7 +5,7 @@
     "build": "dotnet publish Motely.Wasm.csproj -c Release",
     "prepublishOnly": "npm run build"
   },
-  "version": "20.3.0",
+  "version": "20.4.0",
   "description": "Balatro seed search + per-seed analysis, powered by JAML (Jimbo's Ante Markup Language). Vectorized SIMD engine, compiled to WebAssembly.",
   "author": "Nathanial P. Howard",
   "license": "MIT",
