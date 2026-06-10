@@ -7,7 +7,7 @@ const { Motely } = harness;
 
 describe("search", () => {
     it("list search completes and matches joker:Any", () => {
-        const cfg = Motely.parseJaml(jaml.anyMust);
+        const cfg = Motely.fromJaml(jaml.anyMust);
         cfg.seeds = ["AAAAAAAA", "BBBBBBBB"];
         const r = Motely.runSeedListSearch(cfg);
         assert.equal(r.isCompleted, true);
@@ -16,7 +16,7 @@ describe("search", () => {
     });
 
     it("sequential search runs a bounded batch range", () => {
-        const cfg = Motely.parseJaml(jaml.anyMust);
+        const cfg = Motely.fromJaml(jaml.anyMust);
         const r = Motely.runSequentialSearch(cfg, 0n, 1n, 2, 0n);
         assert.equal(r.isCompleted, true);
         assert.ok(r.matchingSeeds >= 1n);

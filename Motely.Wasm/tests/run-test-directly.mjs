@@ -5,7 +5,7 @@ const { Motely } = harness;
 
 try {
     console.log("Running seed-list search...");
-    const cfg = Motely.parseJaml(jaml.anyMust);
+    const cfg = Motely.fromJaml(jaml.anyMust);
     cfg.seeds = ["AAAAAAAA", "BBBBBBBB"];
     const r = Motely.runSeedListSearch(cfg);
     console.log("Result:", {

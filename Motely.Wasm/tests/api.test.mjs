@@ -8,7 +8,8 @@ const { Motely } = harness;
 describe("public API surface", () => {
     it("exports documented Motely methods", () => {
         const required = [
-            "parseJaml",
+            "fromJaml",
+            "fromJson",
             "explainJaml",
             "createPlan",
             "jamlToJson",
@@ -52,15 +53,15 @@ describe("public API surface", () => {
 });
 
 describe("JAML API", () => {
-    it("parseJaml returns a JamlConfig; throws on garbage", () => {
-        const cfg = Motely.parseJaml(jaml.must);
+    it("fromJaml returns a JamlConfig; throws on garbage", () => {
+        const cfg = Motely.fromJaml(jaml.must);
         assert.equal(typeof cfg, "object");
         assert.ok(cfg !== null);
-        assert.throws(() => Motely.parseJaml(jaml.invalid));
+        assert.throws(() => Motely.fromJaml(jaml.invalid));
     });
 
     it("explainJaml returns a plan for a valid config", () => {
-        const cfg = Motely.parseJaml(jaml.must);
+        const cfg = Motely.fromJaml(jaml.must);
         const r = Motely.explainJaml(cfg);
         assert.ok(r.startsWith("# JAML filter eval plan"));
         assert.ok(r.includes("WeeJoker"));
@@ -88,7 +89,7 @@ must:
     });
 
     it("createPlan exposes scoring structure", () => {
-        const cfg = Motely.parseJaml(jaml.scoring);
+        const cfg = Motely.fromJaml(jaml.scoring);
         const plan = Motely.createPlan(cfg);
         assert.equal(typeof plan?.scoredCsvHeaderQuoted, "string");
         assert.equal(plan.scoreTallyColumnCount, 2);
@@ -96,7 +97,7 @@ must:
     });
 
     it("runSeedListSearch returns MotelySearchResult", () => {
-        const cfg = Motely.parseJaml(jaml.scoring);
+        const cfg = Motely.fromJaml(jaml.scoring);
         cfg.seeds = ["AAAAAAAA", "BBBBBBBB"];
         const r = Motely.runSeedListSearch(cfg);
         assert.equal(r.isCompleted, true);

@@ -18,7 +18,7 @@ must:
     antes: [1]
 `;
 
-const cfg = Motely.parseJaml(jaml);
+const cfg = Motely.fromJaml(jaml);
 cfg.seeds = ["AAAAAAAA"];
 const result = Motely.runSeedListSearch(cfg);
 if (!result.isCompleted) throw new Error("search did not complete");

@@ -46,7 +46,8 @@ single = analysis and anything not worth vectorizing.
 `.WithBatchCharacterCount`). `.CreateSearch()` → `RunSearchUntilCompletion()`.
 
 **JAML is the filter authoring layer** (`Motely/Filters/Jaml/`). `JamlConfigLoader.TryLoad`
-parses JAML (YAML via YamlDotNet — **no JSON load path**) into a `JamlFilter`: `deck`,
+parses JAML (YAML via YamlDotNet; JSON via `TryLoadFromJson`/`FromJson` — both formats
+normalize nested and/or and strictly reject unknown keys) into a `JamlFilter`: `deck`,
 `stake`, and `must` / `should` / `mustNot` clauses (`JamlClause`, plus `RollClause` for
 gameplay rolls). `must`/`mustNot` gate; `should` clauses score. Scoring `mode`: `sum`
 (default — `count * score` per should), `max` (max raw `count`, per-clause score
@@ -90,6 +91,16 @@ mathisfun_), not UI.
 
 Filters live in `JamlFilters/` (ready-made `.jaml`), the language in `jaml-lang/`,
 game mechanics in `docs/balatro-mechanics.md`.
+
+## Tooling
+
+**Use Roslyn MCP tools (`mcp__roslyn-lens__*`) for all code exploration** — finding symbols,
+checking signatures, tracing callers, understanding types. Do NOT read `.cs` files manually
+to discover what already exists; Roslyn gives you the live compiled view. `find_symbol`,
+`get_symbol_detail`, `find_references`, `find_callers` are your first move, not `Read`.
+
+`JamlConfigLoader` loads both YAML and JSON (`FromYaml`/`FromJson` + Try* variants);
+the WASM `Program.ParseJaml`/`ParseJson` exports add `EnsureRunnablePlan` on top.
 
 ## Working agreement
 
