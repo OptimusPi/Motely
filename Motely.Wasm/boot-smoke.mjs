@@ -6,4 +6,4 @@ Motely.reportWasmError = (m) => console.error("[WASM ERROR]", m);
 await bootsharp.boot();
 
 console.log("BOOT OK — status:", bootsharp.getStatus());
-console.log("parseJaml smoke:", !!Motely.parseJaml("must:\n  - joker: Blueprint\n"));
+console.log("fromJaml smoke:", !!Motely.fromJaml("must:\n  - joker: Blueprint\n"));

@@ -154,25 +154,18 @@ public static partial class Program
     [Export]
     public static string JsonToJaml(string json)
     {
-        var doc = JsonSerializer.Deserialize<JamlRootDocument>(
-            json,
-            JamlJsonContext.Default.JamlRootDocument
-        );
-        if (doc is null)
-            throw new InvalidOperationException(
-                "Failed to deserialize JamlRootDocument from JSON."
-            );
+        if (!JamlConfigLoader.TryParseRootJson(json, out var doc, out var error))
+            throw new InvalidOperationException(error ?? "Invalid JAML JSON.");
         return JamlConfigLoader.SerializeRoot(doc);
     }
 
+    // Pure forwards: Bootsharp [Export] must live in this assembly (the engine never
+    // references Bootsharp), but the logic is the loader's.
     [Export]
-    public static JamlConfig ParseJaml(string jaml)
-    {
-        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error) || config is null)
-            throw new InvalidOperationException(error ?? "Invalid JAML.");
-        JamlSearchBuilder.EnsureRunnablePlan(config);
-        return config;
-    }
+    public static JamlConfig FromJaml(string jaml) => JamlConfigLoader.FromYaml(jaml);
+
+    [Export]
+    public static JamlConfig FromJson(string json) => JamlConfigLoader.FromJson(json);
 
     [Export]
     public static string ExplainJaml(JamlConfig config) =>
