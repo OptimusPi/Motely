@@ -64,6 +64,9 @@ nuget.config.local
 /Motely.HelperAPI/wwwroot
 /.claude/*
 !/.claude/skills/
+!/.claude/settings.json
+!/.claude/hooks/
+.claude/settings.local.json
 *.lscache
 /Motely.Wasm/dist
 /Motely.Wasm/.pack-consumer
