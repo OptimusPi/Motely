@@ -130,7 +130,11 @@ button:disabled { opacity: 0.3; cursor: default; }
 <div class="workspace">
   <aside class="sidebar">
     <div>
-      <label>JAML Filter</label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <label style="margin:0">JAML Filter</label>
+        <label style="margin:0;cursor:pointer;color:var(--accent);font-size:11px;text-transform:none;letter-spacing:0" for="file-pick">Open file…</label>
+      </div>
+      <input type="file" id="file-pick" accept=".jaml,.yaml,.yml" style="display:none">
       <textarea id="jaml" spellcheck="false" placeholder="name: Example&#10;must:&#10;  - joker: Perkeo&#10;    antes: [1]"></textarea>
       <div class="parse-error" id="parse-error"></div>
     </div>
@@ -191,6 +195,13 @@ button:disabled { opacity: 0.3; cursor: default; }
 
 <script type="module">
 const $ = id => document.getElementById(id);
+
+$('file-pick').onchange = e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  file.text().then(t => { jamlEl.value = t; jamlEl.classList.remove('err'); parseErr.classList.remove('show'); });
+  e.target.value = '';
+};
 const jamlEl = $('jaml'), parseErr = $('parse-error');
 const modeEl = $('mode'), randomOpts = $('random-opts'), seqOpts = $('seq-opts');
 const btnSearch = $('btn-search'), btnStop = $('btn-stop');
