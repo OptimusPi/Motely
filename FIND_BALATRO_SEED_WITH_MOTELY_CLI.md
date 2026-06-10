@@ -296,10 +296,12 @@ Over Zerkeo: **`HAXMZU5D` (score 220)** — Lucky Cat build on a negative-Perkeo
 
 - **`sources: shopItems: [...]`** pins a card to shop slots (the nested-`sources` key is
   `shopItems`, not the old Immolate `shopSlots`/`shopLots`). `boosterPacks: [...]` for packs.
+<<<<<<< HEAD
 - **Same-ante conjunction ("X *and* Y in THE SAME ante")** isn't a single clause — JAML clauses
   match each independently across their `antes` list. To force same-ante, **pin both clauses to a
   single ante and run once per ante** (loop 1→8), then aggregate. A combined filter with both at
   `antes: [2..8]` over-matches (different antes). Proven with Oops!+`smallBlindTag: NegativeTag`.
+- **Same-ante conjunction ("X *and* Y in THE SAME ante")** — use `and:` flow syntax to combine clauses that must co-occur in the same ante. Example: Oops! All 6s in `shopItems: [2+]` AND `smallBlindTag: NegativeTag` both in ante 2 = the Anaglyph/Double-Tag skipper dream. Without `and:`, separate clauses match independently (different antes = over-matches). The `and:` block scores as one unit. Shop slots 2+ on Oops means slot 0/1 were already skipped/bought — you're finding Oops that's still purchasable on a skip-first run. NegativeTag only appears ante 2+ (not ante 0 or 1 — it unlocks once you touch ante 2). This mechanic was taught by pi, live, 2026-06-10.
 - **`smallBlindTag:` / `bigBlindTag:`** are real per-ante clause discriminators (the blind's skip
   tag), distinct from the generic `tag:`.
 - **Must-only filters score 0** (no `should` = nothing to add). Use **`--cutoff 0`** to print every
@@ -368,6 +370,14 @@ fine — the same-pack collision is the exception, but it's real.
   pick-count can't cover both. Until then: a "both from one pack" result is fine *if* it's a Mega
   (or they're sequenced across packs); only a single-pick same-pack collision actually loses one.
   (Flagged + solved by pi — common Motely edge case, easy to forget.)
+
+### ⚠️ Known engine bug — reads physically unreachable packs (false positives)
+
+The engine over-counts available sources — it will match a card as "present in ante N" even if the pack containing it isn't physically reachable in normal gameplay. **Verified live:** `lola_lucky_negative` (MUST Perkeo `antes: [1]`) matched `LTR77RTL` on the palindrome aesthetic, but miaklwalker simulation confirmed Perkeo is NOT obtainable in ante 1 on Red deck — the engine was reading a pack that can't be purchased. `LTR77RTL` is a false positive for that filter.
+
+**Impact:** filters with tight `antes` + `sources` constraints on legendaries (Perkeo, Triboulet, etc.) are most exposed — the engine may report matches that aren't achievable in-game. Always verify top results on miaklwalker before treating them as real.
+
+**Workaround:** use miaklwalker to cross-check any seed where the match feels too good. The engine is correct about what the seed *contains*; it is wrong about what is *reachable*.
 
 ### Tooling / environment notes
 
