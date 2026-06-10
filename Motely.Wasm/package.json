@@ -28,5 +28,8 @@
     "node:module": false,
     "node:crypto": false,
     "node:process": false
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
   }
 }
