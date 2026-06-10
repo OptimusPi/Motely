@@ -7,19 +7,13 @@
     <Version>$(MotelyVersion)</Version>
     <BootsharpName>motely-wasm</BootsharpName>
     <!--
-      DO NOT point BootsharpPackageDirectory at ..\motely-wasm.
       Bootsharp OVERWRITES <dir>/package.json on EVERY build with its own bare
-      template (no version, no types, no author) — see Bootsharp.targets, the
-      "Publish package file" WriteLinesToFile step. Aiming it at the real npm
-      root clobbers our hand-maintained motely-wasm/package.json every build,
-      which then fails `npm publish` (no version -> "reading 'prerelease'").
-      We park that throwaway template in obj/ (gitignored) and never use it.
-      motely-wasm/package.json is hand-maintained and static. Edit it directly.
-      DO NOT re-add a FinalizeNpmPackage MSBuild target to "fix" this.
+      template — park the throwaway in obj/ (gitignored) so it never clobbers
+      our hand-maintained package.json here in the project root.
     -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
     <!-- BinariesDirectory EMPTY = embedded base64 single-file (for the CDN <script> tag). -->
-    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\..\motely-wasm\dist</BootsharpPublishDirectory>
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\dist</BootsharpPublishDirectory>
   </PropertyGroup>
 
   <!--

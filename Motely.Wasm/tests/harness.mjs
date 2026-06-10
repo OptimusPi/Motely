@@ -13,7 +13,7 @@ const wasmProjectDir = resolve(testsDir, "..");
 
 const entryPath = process.env.MOTELY_WASM_ENTRY
     ? resolve(process.env.MOTELY_WASM_ENTRY)
-    : resolve(wasmProjectDir, "..", "motely-wasm", "dist", "index.mjs");
+    : resolve(wasmProjectDir, "dist", "index.mjs");
 
 const pkgRoot = resolve(dirname(entryPath), "..");
 

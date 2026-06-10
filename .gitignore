@@ -65,6 +65,6 @@ nuget.config.local
 /.claude/*
 !/.claude/skills/
 *.lscache
-/motely-wasm/dist
+/Motely.Wasm/dist
 /Motely.Wasm/.pack-consumer
 /jaml-lang/dist

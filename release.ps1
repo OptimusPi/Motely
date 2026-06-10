@@ -40,8 +40,8 @@ Set-Content $propsPath $props -NoNewline
 Write-Host ""
 Write-Host "=== [3/7] Clear stale output ===" -ForegroundColor Cyan
 Remove-Item "$root\Motely.Wasm\obj" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item "$root\motely-wasm\dist" -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host "==> Cleared Motely.Wasm/obj and motely-wasm/dist"
+Remove-Item "$root\Motely.Wasm\dist" -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "==> Cleared Motely.Wasm/obj and Motely.Wasm/dist"
 
 # ── 4. Restore (bypass http cache so 0.9.0 is fetched fresh) ─────────────────
 Write-Host ""
@@ -63,7 +63,7 @@ if ($LASTEXITCODE -ne 0) { throw "JS tests FAILED — aborting publish" }
 # ── 7. npm publish ────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "=== [7/7] npm publish ===" -ForegroundColor Cyan
-Push-Location "$root\motely-wasm"
+Push-Location "$root\Motely.Wasm"
 try { npm publish } finally { Pop-Location }
 
 Write-Host ""
