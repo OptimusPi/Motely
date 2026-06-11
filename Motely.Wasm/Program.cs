@@ -195,13 +195,23 @@ public static partial class Program
     // Consumers wanting a non-blocking UI should call from a Web Worker. Progress/match/scored events
     // fire on Motely.onProgress / onSeedMatch / onScoredResult during the run.
 
+    // `autoScoreCutoff` (default OFF) lives ONLY on the grind entry points
+    // (Sequential + Random). When true the engine auto-raises the minimum score
+    // as better seeds surface, so weak hits stop firing onScoredResult — on a
+    // hit-heavy filter that slashes the per-hit JS interop cost, the single
+    // biggest browser cost. It is deliberately NOT on RunSeedListSearch /
+    // RunAestheticSearch: the analyzer scores a known seed list and must see
+    // EVERY seed (cutoff would silently drop sub-best ones), so those two stay
+    // byte-identical to stock to keep the analyzer + jimmolate semantics exact.
+
     [Export]
     public static IMotelySearch RunSequentialSearch(
         JamlConfig config,
         long startBatchIndex = 0,
         long endBatchIndex = long.MaxValue,
         int batchCharacterCount = 4,
-        long progressReportIntervalMs = 500
+        long progressReportIntervalMs = 500,
+        bool autoScoreCutoff = false
     )
     {
         var settings = JamlSearchBuilder
@@ -210,13 +220,14 @@ public static partial class Program
             .WithStartBatchIndex(startBatchIndex)
             .WithEndBatchIndex(endBatchIndex)
             .WithBatchCharacterCount(batchCharacterCount)
-            .WithProgressReportIntervalMs(progressReportIntervalMs);
+            .WithProgressReportIntervalMs(progressReportIntervalMs)
+            .WithAutoScoreCutoff(autoScoreCutoff);
         return RunSearch(settings);
     }
 
     [Export]
-    public static IMotelySearch RunRandomSearch(JamlConfig config, int count) =>
-        RunSearch(JamlSearchBuilder.CreateSettings(config).WithRandomSearch(count));
+    public static IMotelySearch RunRandomSearch(JamlConfig config, int count, bool autoScoreCutoff = false) =>
+        RunSearch(JamlSearchBuilder.CreateSettings(config).WithRandomSearch(count).WithAutoScoreCutoff(autoScoreCutoff));
 
     [Export]
     public static IMotelySearch RunSeedListSearch(JamlConfig config)
