@@ -72,22 +72,21 @@ mathisfun_), not UI.
   (set → sideloaded separate `.wasm`, `boot()` takes a root URL or `{ wasm }` bytes;
   empty → embedded, `boot()` takes no args). `[RenameNode]`/`[RenameMember]` returning
   null/empty erases that node/member from the generated JS surface. The full Bootsharp
-  guide lives at the paths below (hyphen-disarmed so they don't auto-load; Read the
-  relevant ones before changing this project).
+  guide is pinned below (auto-loaded every session).
 
--@d:/bootsharp/docs/guide/index.md
--@d:/bootsharp/docs/guide/getting-started.md
--@d:/bootsharp/docs/guide/build-config.md
--@d:/bootsharp/docs/guide/sideloading.md
--@d:/bootsharp/docs/guide/interop-modules.md
--@d:/bootsharp/docs/guide/interop-instances.md
--@d:/bootsharp/docs/guide/declarations.md
--@d:/bootsharp/docs/guide/serialization.md
--@d:/bootsharp/docs/guide/specialization.md
--@d:/bootsharp/docs/guide/renaming.md
--@d:/bootsharp/docs/guide/llvm.md
--@d:/bootsharp/docs/guide/extensions/dependency-injection.md
--@d:/bootsharp/docs/guide/extensions/file-system.md
+@d:/bootsharp/docs/guide/index.md
+@d:/bootsharp/docs/guide/getting-started.md
+@d:/bootsharp/docs/guide/build-config.md
+@d:/bootsharp/docs/guide/sideloading.md
+@d:/bootsharp/docs/guide/interop-modules.md
+@d:/bootsharp/docs/guide/interop-instances.md
+@d:/bootsharp/docs/guide/declarations.md
+@d:/bootsharp/docs/guide/serialization.md
+@d:/bootsharp/docs/guide/specialization.md
+@d:/bootsharp/docs/guide/renaming.md
+@d:/bootsharp/docs/guide/llvm.md
+@d:/bootsharp/docs/guide/extensions/dependency-injection.md
+@d:/bootsharp/docs/guide/extensions/file-system.md
 - `Motely.DataLake/` — results/data tooling. `Motely.Tests/` — the test project.
 
 Filters live in `JamlFilters/` (ready-made `.jaml`), the language in `jaml-lang/`,
@@ -101,7 +100,9 @@ to discover what already exists; Roslyn gives you the live compiled view. `find_
 `get_symbol_detail`, `find_references`, `find_callers` are your first move, not `Read`.
 
 `JamlConfigLoader` loads both YAML and JSON (`FromYaml`/`FromJson` + Try* variants);
-the WASM `Program.ParseJaml`/`ParseJson` exports add `EnsureRunnablePlan` on top.
+the WASM `Program.FromJaml`/`FromJson` exports are pure forwards to those (no extra
+logic). If a roslyn-lens symbol search comes back empty, the symbol does not exist —
+check spelling against `get_public_api` before falling back to file reads.
 
 ## Working agreement
 

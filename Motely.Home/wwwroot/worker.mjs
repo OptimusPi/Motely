@@ -1,4 +1,5 @@
-import bootsharp, { Program } from '/wasm/index.mjs';
+import bootsharp from '/wasm/index.mjs';
+import { Program } from '/wasm/generated/modules/motely/wasm.g.mjs';
 
 await bootsharp.boot();
 postMessage({ type: 'ready' });
@@ -10,7 +11,7 @@ Program.onScoredResult.subscribe(r => postMessage({ type: 'result', data: r }));
 onmessage = ({ data: { type, jaml, count, startBatch, batchChars } }) => {
     let config;
     try {
-        config = Program.parseJaml(jaml);
+        config = Program.fromJaml(jaml);
     } catch (e) {
         postMessage({ type: 'parseError', message: e.message });
         return;
