@@ -4,10 +4,37 @@
 
 export const Enums: Record<string, readonly string[]> = {
     InternalInvalid: ["Invalid", "NotImplemented", "JokerExcludedByStream", "PlanetExcludedByStream", "TarotExcludedByStream", "SpectralExcludedByStream"],
+    MotelyBoosterPack: ["Arcana", "JumboArcana", "MegaArcana", "Celestial", "JumboCelestial", "MegaCelestial", "Standard", "JumboStandard", "MegaStandard", "Buffoon", "JumboBuffoon", "MegaBuffoon", "Spectral", "JumboSpectral", "MegaSpectral"],
+    MotelyBoosterPackSize: ["Normal", "Jumbo", "Mega"],
+    MotelyBoosterPackType: ["Arcana", "Celestial", "Standard", "Buffoon", "Spectral"],
+    MotelyBossBlind: ["AmberAcorn", "CeruleanBell", "CrimsonHeart", "VerdantLeaf", "VioletVessel", "TheArm", "TheClub", "TheEye", "TheFish", "TheFlint", "TheGoad", "TheHead", "TheHook", "TheHouse", "TheManacle", "TheMark", "TheMouth", "TheNeedle", "TheOx", "ThePillar", "ThePlant", "ThePsychic", "TheSerpent", "TheTooth", "TheWall", "TheWater", "TheWheel", "TheWindow"],
+    MotelyBossBlindType: ["Normal", "Finisher"],
+    MotelyBossBlindWithoutData: ["AmberAcorn", "CeruleanBell", "CrimsonHeart", "VerdantLeaf", "VioletVessel", "TheArm", "TheClub", "TheEye", "TheFish", "TheFlint", "TheGoad", "TheHead", "TheHook", "TheHouse", "TheManacle", "TheMark", "TheMouth", "TheNeedle", "TheOx", "ThePillar", "ThePlant", "ThePsychic", "TheSerpent", "TheTooth", "TheWall", "TheWater", "TheWheel", "TheWindow"],
+    MotelyDeck: ["Red", "Blue", "Yellow", "Green", "Black", "Magic", "Nebula", "Ghost", "Abandoned", "Checkered", "Zodiac", "Painted", "Anaglyph", "Plasma", "Erratic"],
+    MotelyEventType: ["LuckyMoney", "LuckyMult", "MisprintMult", "WheelOfFortune", "CavendishExtinct", "GrosMichelExtinct", "SpaceLevelup", "BusinessPayout", "BloodstoneTrigger", "ParkingPayout", "GlassDestroy", "WheelStaysFlipped"],
+    MotelyFilterItemType: ["Joker", "CommonJoker", "UncommonJoker", "RareJoker", "MixedJoker", "LegendaryJoker", "TarotCard", "PlanetCard", "SpectralCard", "SmallBlindTag", "BigBlindTag", "Voucher", "Standardcard", "Boss", "Event", "ErraticRank", "ErraticSuit", "ErraticCard", "CavendishExtinct", "GrosMichelExtinct", "StartingDraw", "And", "Or"],
+    MotelyItemEdition: ["None", "Foil", "Holographic", "Polychrome", "Negative"],
+    MotelyItemEnhancement: ["None", "Bonus", "Mult", "Wild", "Glass", "Steel", "Stone", "Gold", "Lucky"],
+    MotelyItemSeal: ["None", "Gold", "Red", "Blue", "Purple"],
     MotelyItemType: ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "PlanetX", "Ceres", "Eris", "Familiar", "Grim", "Incantation", "Talisman", "Aura", "Wraith", "Sigil", "Ouija", "Ectoplasm", "Immolate", "Ankh", "DejaVu", "Hex", "Trance", "Medium", "Cryptid", "TheSoul", "BlackHole", "TheFool", "TheMagician", "TheHighPriestess", "TheEmpress", "TheEmperor", "TheHierophant", "TheLovers", "TheChariot", "Justice", "TheHermit", "TheWheelOfFortune", "Strength", "TheHangedMan", "Death", "Temperance", "TheDevil", "TheTower", "TheStar", "TheMoon", "TheSun", "Judgement", "TheWorld", "TwoOfClubs", "ThreeOfClubs", "FourOfClubs", "FiveOfClubs", "SixOfClubs", "SevenOfClubs", "EightOfClubs", "NineOfClubs", "TenOfClubs", "JackOfClubs", "QueenOfClubs", "KingOfClubs", "AceOfClubs", "TwoOfDiamonds", "ThreeOfDiamonds", "FourOfDiamonds", "FiveOfDiamonds", "SixOfDiamonds", "SevenOfDiamonds", "EightOfDiamonds", "NineOfDiamonds", "TenOfDiamonds", "JackOfDiamonds", "QueenOfDiamonds", "KingOfDiamonds", "AceOfDiamonds", "TwoOfHearts", "ThreeOfHearts", "FourOfHearts", "FiveOfHearts", "SixOfHearts", "SevenOfHearts", "EightOfHearts", "NineOfHearts", "TenOfHearts", "JackOfHearts", "QueenOfHearts", "KingOfHearts", "AceOfHearts", "TwoOfSpades", "ThreeOfSpades", "FourOfSpades", "FiveOfSpades", "SixOfSpades", "SevenOfSpades", "EightOfSpades", "NineOfSpades", "TenOfSpades", "JackOfSpades", "QueenOfSpades", "KingOfSpades", "AceOfSpades", "Joker", "GreedyJoker", "LustyJoker", "WrathfulJoker", "GluttonousJoker", "JollyJoker", "ZanyJoker", "MadJoker", "CrazyJoker", "DrollJoker", "SlyJoker", "WilyJoker", "CleverJoker", "DeviousJoker", "CraftyJoker", "HalfJoker", "CreditCard", "Banner", "MysticSummit", "EightBall", "Misprint", "RaisedFist", "ChaostheClown", "ScaryFace", "AbstractJoker", "DelayedGratification", "GrosMichel", "EvenSteven", "OddTodd", "Scholar", "BusinessCard", "Supernova", "RideTheBus", "Egg", "Runner", "IceCream", "Splash", "BlueJoker", "FacelessJoker", "GreenJoker", "Superposition", "ToDoList", "Cavendish", "RedCard", "SquareJoker", "RiffRaff", "Photograph", "ReservedParking", "MailInRebate", "Hallucination", "FortuneTeller", "Juggler", "Drunkard", "GoldenJoker", "Popcorn", "WalkieTalkie", "SmileyFace", "GoldenTicket", "Swashbuckler", "HangingChad", "ShootTheMoon", "JokerStencil", "FourFingers", "Mime", "CeremonialDagger", "MarbleJoker", "LoyaltyCard", "Dusk", "Fibonacci", "SteelJoker", "Hack", "Pareidolia", "SpaceJoker", "Burglar", "Blackboard", "SixthSense", "Constellation", "Hiker", "CardSharp", "Madness", "Seance", "Vampire", "Shortcut", "Hologram", "Cloud9", "Rocket", "MidasMask", "Luchador", "GiftCard", "TurtleBean", "Erosion", "ToTheMoon", "StoneJoker", "LuckyCat", "Bull", "DietCola", "TradingCard", "FlashCard", "SpareTrousers", "Ramen", "Seltzer", "Castle", "MrBones", "Acrobat", "SockAndBuskin", "Troubadour", "Certificate", "SmearedJoker", "Throwback", "RoughGem", "Bloodstone", "Arrowhead", "OnyxAgate", "GlassJoker", "Showman", "FlowerPot", "MerryAndy", "OopsAll6s", "TheIdol", "SeeingDouble", "Matador", "Satellite", "Cartomancer", "Astronomer", "Bootstraps", "DNA", "Vagabond", "Baron", "Obelisk", "BaseballCard", "AncientJoker", "Campfire", "Blueprint", "WeeJoker", "HitTheRoad", "TheDuo", "TheTrio", "TheFamily", "TheOrder", "TheTribe", "Stuntman", "InvisibleJoker", "Brainstorm", "DriversLicense", "BurntJoker", "Canio", "Triboulet", "Yorick", "Chicot", "Perkeo", "Invalid", "NotImplemented", "JokerExcludedByStream", "PlanetExcludedByStream", "TarotExcludedByStream", "SpectralExcludedByStream"],
+    MotelyItemTypeCategory: ["Standardcard", "SpectralCard", "TarotCard", "PlanetCard", "Joker", "Invalid"],
+    MotelyJoker: ["Joker", "GreedyJoker", "LustyJoker", "WrathfulJoker", "GluttonousJoker", "JollyJoker", "ZanyJoker", "MadJoker", "CrazyJoker", "DrollJoker", "SlyJoker", "WilyJoker", "CleverJoker", "DeviousJoker", "CraftyJoker", "HalfJoker", "CreditCard", "Banner", "MysticSummit", "EightBall", "Misprint", "RaisedFist", "ChaostheClown", "ScaryFace", "AbstractJoker", "DelayedGratification", "GrosMichel", "EvenSteven", "OddTodd", "Scholar", "BusinessCard", "Supernova", "RideTheBus", "Egg", "Runner", "IceCream", "Splash", "BlueJoker", "FacelessJoker", "GreenJoker", "Superposition", "ToDoList", "Cavendish", "RedCard", "SquareJoker", "RiffRaff", "Photograph", "ReservedParking", "MailInRebate", "Hallucination", "FortuneTeller", "Juggler", "Drunkard", "GoldenJoker", "Popcorn", "WalkieTalkie", "SmileyFace", "GoldenTicket", "Swashbuckler", "HangingChad", "ShootTheMoon", "JokerStencil", "FourFingers", "Mime", "CeremonialDagger", "MarbleJoker", "LoyaltyCard", "Dusk", "Fibonacci", "SteelJoker", "Hack", "Pareidolia", "SpaceJoker", "Burglar", "Blackboard", "SixthSense", "Constellation", "Hiker", "CardSharp", "Madness", "Seance", "Vampire", "Shortcut", "Hologram", "Cloud9", "Rocket", "MidasMask", "Luchador", "GiftCard", "TurtleBean", "Erosion", "ToTheMoon", "StoneJoker", "LuckyCat", "Bull", "DietCola", "TradingCard", "FlashCard", "SpareTrousers", "Ramen", "Seltzer", "Castle", "MrBones", "Acrobat", "SockAndBuskin", "Troubadour", "Certificate", "SmearedJoker", "Throwback", "RoughGem", "Bloodstone", "Arrowhead", "OnyxAgate", "GlassJoker", "Showman", "FlowerPot", "MerryAndy", "OopsAll6s", "TheIdol", "SeeingDouble", "Matador", "Satellite", "Cartomancer", "Astronomer", "Bootstraps", "DNA", "Vagabond", "Baron", "Obelisk", "BaseballCard", "AncientJoker", "Campfire", "Blueprint", "WeeJoker", "HitTheRoad", "TheDuo", "TheTrio", "TheFamily", "TheOrder", "TheTribe", "Stuntman", "InvisibleJoker", "Brainstorm", "DriversLicense", "BurntJoker", "Canio", "Triboulet", "Yorick", "Chicot", "Perkeo"],
+    MotelyJokerCommon: ["Joker", "GreedyJoker", "LustyJoker", "WrathfulJoker", "GluttonousJoker", "JollyJoker", "ZanyJoker", "MadJoker", "CrazyJoker", "DrollJoker", "SlyJoker", "WilyJoker", "CleverJoker", "DeviousJoker", "CraftyJoker", "HalfJoker", "CreditCard", "Banner", "MysticSummit", "EightBall", "Misprint", "RaisedFist", "ChaostheClown", "ScaryFace", "AbstractJoker", "DelayedGratification", "GrosMichel", "EvenSteven", "OddTodd", "Scholar", "BusinessCard", "Supernova", "RideTheBus", "Egg", "Runner", "IceCream", "Splash", "BlueJoker", "FacelessJoker", "GreenJoker", "Superposition", "ToDoList", "Cavendish", "RedCard", "SquareJoker", "RiffRaff", "Photograph", "ReservedParking", "MailInRebate", "Hallucination", "FortuneTeller", "Juggler", "Drunkard", "GoldenJoker", "Popcorn", "WalkieTalkie", "SmileyFace", "GoldenTicket", "Swashbuckler", "HangingChad", "ShootTheMoon"],
+    MotelyJokerLegendary: ["Canio", "Triboulet", "Yorick", "Chicot", "Perkeo"],
+    MotelyJokerRare: ["DNA", "Vagabond", "Baron", "Obelisk", "BaseballCard", "AncientJoker", "Campfire", "Blueprint", "WeeJoker", "HitTheRoad", "TheDuo", "TheTrio", "TheFamily", "TheOrder", "TheTribe", "Stuntman", "InvisibleJoker", "Brainstorm", "DriversLicense", "BurntJoker"],
+    MotelyJokerRarity: ["Common", "Uncommon", "Rare", "Legendary"],
+    MotelyJokerSticker: ["None", "Eternal", "Perishable", "Rental"],
+    MotelyJokerUncommon: ["JokerStencil", "FourFingers", "Mime", "CeremonialDagger", "MarbleJoker", "LoyaltyCard", "Dusk", "Fibonacci", "SteelJoker", "Hack", "Pareidolia", "SpaceJoker", "Burglar", "Blackboard", "SixthSense", "Constellation", "Hiker", "CardSharp", "Madness", "Seance", "Vampire", "Shortcut", "Hologram", "Cloud9", "Rocket", "MidasMask", "Luchador", "GiftCard", "TurtleBean", "Erosion", "ToTheMoon", "StoneJoker", "LuckyCat", "Bull", "DietCola", "TradingCard", "FlashCard", "SpareTrousers", "Ramen", "Seltzer", "Castle", "MrBones", "Acrobat", "SockAndBuskin", "Troubadour", "Certificate", "SmearedJoker", "Throwback", "RoughGem", "Bloodstone", "Arrowhead", "OnyxAgate", "GlassJoker", "Showman", "FlowerPot", "MerryAndy", "OopsAll6s", "TheIdol", "SeeingDouble", "Matador", "Satellite", "Cartomancer", "Astronomer", "Bootstraps"],
+    MotelyPlanetCard: ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "PlanetX", "Ceres", "Eris"],
+    MotelySpectralCard: ["Familiar", "Grim", "Incantation", "Talisman", "Aura", "Wraith", "Sigil", "Ouija", "Ectoplasm", "Immolate", "Ankh", "DejaVu", "Hex", "Trance", "Medium", "Cryptid", "TheSoul", "BlackHole"],
+    MotelyStake: ["White", "Red", "Green", "Black", "Blue", "Purple", "Orange", "Gold"],
     MotelyStandardCard: ["TwoOfClubs", "ThreeOfClubs", "FourOfClubs", "FiveOfClubs", "SixOfClubs", "SevenOfClubs", "EightOfClubs", "NineOfClubs", "TenOfClubs", "JackOfClubs", "QueenOfClubs", "KingOfClubs", "AceOfClubs", "TwoOfDiamonds", "ThreeOfDiamonds", "FourOfDiamonds", "FiveOfDiamonds", "SixOfDiamonds", "SevenOfDiamonds", "EightOfDiamonds", "NineOfDiamonds", "TenOfDiamonds", "JackOfDiamonds", "QueenOfDiamonds", "KingOfDiamonds", "AceOfDiamonds", "TwoOfHearts", "ThreeOfHearts", "FourOfHearts", "FiveOfHearts", "SixOfHearts", "SevenOfHearts", "EightOfHearts", "NineOfHearts", "TenOfHearts", "JackOfHearts", "QueenOfHearts", "KingOfHearts", "AceOfHearts", "TwoOfSpades", "ThreeOfSpades", "FourOfSpades", "FiveOfSpades", "SixOfSpades", "SevenOfSpades", "EightOfSpades", "NineOfSpades", "TenOfSpades", "JackOfSpades", "QueenOfSpades", "KingOfSpades", "AceOfSpades"],
     MotelyStandardcardRank: ["Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King", "Ace"],
     MotelyStandardcardSuit: ["Clubs", "Diamonds", "Hearts", "Spades"],
+    MotelyTag: ["UncommonTag", "RareTag", "NegativeTag", "FoilTag", "HolographicTag", "PolychromeTag", "InvestmentTag", "VoucherTag", "BossTag", "StandardTag", "CharmTag", "MeteorTag", "BuffoonTag", "HandyTag", "GarbageTag", "EtherealTag", "CouponTag", "DoubleTag", "JuggleTag", "D6Tag", "TopupTag", "SpeedTag", "OrbitalTag", "EconomyTag"],
+    MotelyTagType: ["Any", "SmallBlind", "BigBlind"],
+    MotelyTarotCard: ["TheFool", "TheMagician", "TheHighPriestess", "TheEmpress", "TheEmperor", "TheHierophant", "TheLovers", "TheChariot", "Justice", "TheHermit", "TheWheelOfFortune", "Strength", "TheHangedMan", "Death", "Temperance", "TheDevil", "TheTower", "TheStar", "TheMoon", "TheSun", "Judgement", "TheWorld"],
+    MotelyVoucher: ["Overstock", "OverstockPlus", "ClearanceSale", "Liquidation", "Hone", "GlowUp", "RerollSurplus", "RerollGlut", "CrystalBall", "OmenGlobe", "Telescope", "Observatory", "Grabber", "NachoTong", "Wasteful", "Recyclomancy", "TarotMerchant", "TarotTycoon", "PlanetMerchant", "PlanetTycoon", "SeedMoney", "MoneyTree", "Blank", "Antimatter", "MagicTrick", "Illusion", "Hieroglyph", "Petroglyph", "DirectorsCut", "Retcon", "PaintBrush", "Palette"],
 };
 
 export interface KeyInfo {
@@ -29,7 +56,8 @@ export const ClauseKeys: readonly KeyInfo[] = [
         "key": "jokers",
         "csType": "List<MotelyJoker>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyJoker",
+            "list": true
         }
     },
     {
@@ -44,7 +72,8 @@ export const ClauseKeys: readonly KeyInfo[] = [
         "key": "commonJokers",
         "csType": "List<MotelyJokerCommon>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyJokerCommon",
+            "list": true
         }
     },
     {
@@ -59,7 +88,8 @@ export const ClauseKeys: readonly KeyInfo[] = [
         "key": "uncommonJokers",
         "csType": "List<MotelyJokerUncommon>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyJokerUncommon",
+            "list": true
         }
     },
     {
@@ -74,7 +104,8 @@ export const ClauseKeys: readonly KeyInfo[] = [
         "key": "rareJokers",
         "csType": "List<MotelyJokerRare>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyJokerRare",
+            "list": true
         }
     },
     {
@@ -89,105 +120,112 @@ export const ClauseKeys: readonly KeyInfo[] = [
         "key": "legendaryJokers",
         "csType": "List<MotelyJokerLegendary>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyJokerLegendary",
+            "list": true
         }
     },
     {
         "key": "voucher",
         "csType": "MotelyVoucher?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyVoucher"
         }
     },
     {
         "key": "vouchers",
         "csType": "List<MotelyVoucher>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyVoucher",
+            "list": true
         }
     },
     {
         "key": "tarotCard",
         "csType": "MotelyTarotCard?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTarotCard"
         }
     },
     {
         "key": "tarotCards",
         "csType": "List<MotelyTarotCard>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTarotCard",
+            "list": true
         }
     },
     {
         "key": "spectralCard",
         "csType": "MotelySpectralCard?",
         "shape": {
-            "type": "object"
+            "enum": "MotelySpectralCard"
         }
     },
     {
         "key": "spectralCards",
         "csType": "List<MotelySpectralCard>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelySpectralCard",
+            "list": true
         }
     },
     {
         "key": "planetCard",
         "csType": "MotelyPlanetCard?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyPlanetCard"
         }
     },
     {
         "key": "boss",
         "csType": "MotelyBossBlind?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyBossBlind"
         }
     },
     {
         "key": "tag",
         "csType": "MotelyTag?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTag"
         }
     },
     {
         "key": "tags",
         "csType": "List<MotelyTag>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTag",
+            "list": true
         }
     },
     {
         "key": "smallBlindTag",
         "csType": "MotelyTag?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTag"
         }
     },
     {
         "key": "smallBlindTags",
         "csType": "List<MotelyTag>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTag",
+            "list": true
         }
     },
     {
         "key": "bigBlindTag",
         "csType": "MotelyTag?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTag"
         }
     },
     {
         "key": "bigBlindTags",
         "csType": "List<MotelyTag>?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyTag",
+            "list": true
         }
     },
     {
@@ -236,7 +274,7 @@ export const ClauseKeys: readonly KeyInfo[] = [
         "key": "event",
         "csType": "MotelyEventType?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyEventType"
         }
     },
     {
@@ -362,28 +400,29 @@ export const ClauseKeys: readonly KeyInfo[] = [
         "key": "edition",
         "csType": "MotelyItemEdition?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyItemEdition"
         }
     },
     {
         "key": "stickers",
         "csType": "MotelyJokerSticker[]?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyJokerSticker",
+            "list": true
         }
     },
     {
         "key": "seal",
         "csType": "MotelyItemSeal?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyItemSeal"
         }
     },
     {
         "key": "enhancement",
         "csType": "MotelyItemEnhancement?",
         "shape": {
-            "type": "object"
+            "enum": "MotelyItemEnhancement"
         }
     },
     {
