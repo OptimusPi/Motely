@@ -9,6 +9,7 @@ using Bootsharp.FileSystem;
 using Bootsharp.Inject;
 using Microsoft.Extensions.DependencyInjection;
 using Motely;
+using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
@@ -179,6 +180,15 @@ public static partial class Program
 
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
+
+    // JAMLyzer — every-stream single-seed snapshot. Pure forward to Motely.Analysis.Jamlyzer
+    // (Bootsharp [Export] must live in this assembly). Returning JamlyzerSnapshot, whose type is
+    // declared in the Motely.Analysis namespace, is what re-materializes the `motely/analysis`
+    // module + its enums (Boss/Voucher/Tag/BoosterPack) in the generated JS surface — the contract
+    // the BootsharpRenamers header promises consumers.
+    [Export]
+    public static JamlyzerSnapshot Jamlyze(string seed, MotelyDeck deck, MotelyStake stake) =>
+        Jamlyzer.Analyze(seed, deck, stake);
 
     // ── Search entry points ──
     // WASM has no pthreads, so every Run* call BLOCKS the calling thread until the search completes.
