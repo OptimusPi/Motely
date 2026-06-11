@@ -3,9 +3,9 @@
      Sets window.__RESULT = { ok, version, checks } or { ok: false, error }. -->
 <script type="module">
     try {
-        const { default: bootsharp } = await import("./dist/index.mjs");
+        const { default: bootsharp } = await import("../dist/index.mjs");
         const { Program: Motely } = await import(
-            "./dist/generated/modules/motely/wasm.g.mjs"
+            "../dist/generated/modules/motely/wasm.g.mjs"
         );
 
         Motely.reportWasmError = (m) => console.error("[WASM ERROR]", m);

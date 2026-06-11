@@ -4,7 +4,7 @@
  * http, drives a real browser (Edge, falling back to Chrome) via Playwright,
  * loads browser-boot-test.html, and asserts window.__RESULT.ok.
  *
- *   node Motely.Wasm/browser-boot-test.mjs
+ *   node Motely.Wasm/tests/browser-boot-test.mjs
  *
  * Exits 0 + "BROWSER BOOT: PASS" on success.
  */
@@ -13,7 +13,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = dirname(fileURLToPath(import.meta.url));
+const root = normalize(join(dirname(fileURLToPath(import.meta.url)), ".."));
 
 const MIME = {
     ".html": "text/html",
@@ -63,7 +63,7 @@ page.on("console", (msg) => {
     if (msg.type() === "error") console.error("[page]", msg.text());
 });
 
-await page.goto(`http://127.0.0.1:${port}/browser-boot-test.html`);
+await page.goto(`http://127.0.0.1:${port}/tests/browser-boot-test.html`);
 const result = await page.waitForFunction(() => window.__RESULT, null, {
     timeout: 120_000,
 });

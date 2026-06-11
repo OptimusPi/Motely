@@ -55,34 +55,67 @@ ship-without-the-boot-test.
   resolved `...Runtime.Mono.browser-wasm` → still Mono (wrong loader, do not boot/ship,
   investigate emscripten env / workload). Ran ILC + emcc → NativeAOT-LLVM (right path).
 
+## Paths (do not confuse the npm name with the directory)
+
+The npm **package name** is `motely-wasm`. The **directory** it lives in is
+`Motely.Wasm/` — there is NO `motely-wasm/` folder. So: `Motely.Wasm/package.json`
+is the manifest, `npm publish` runs from `Motely.Wasm/`, the build module lands in
+`Motely.Wasm/dist/`, the test suite is `Motely.Wasm/tests/`. Earlier versions of
+this skill said `motely-wasm/...` everywhere — that path does not exist; don't chase it.
+
 ## Steps
 
-1. **Version.** Bump `motely-wasm/package.json` (hand-maintained, NOT
+1. **Version.** Bump `Motely.Wasm/package.json` (hand-maintained, NOT
    `obj/package.json` — Bootsharp clobbers that one) and `MotelyVersion` in
    `Directory.Packages.props` if releasing the engine too.
-2. **Build.** `dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release`
-   (Release auto-enables NativeAOT-LLVM). Module lands in `motely-wasm/dist`.
-   Confirm embed mode: `resources.g.mjs` ~12MB = embedded, ~254B = sideloaded.
-3. **REAL boot test (the gate).** Serve `motely-wasm/` over http and drive a real
-   browser (Playwright `chromium` channel `msedge`/`chrome`). Harness: import
+2. **Build.** Clean stale outputs: delete `Motely.Wasm/dist`, `Motely.Wasm/obj`,
+   `Motely/bin/Release/net10.0/browser-wasm`. Then: `dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release`
+   (Release auto-enables NativeAOT-LLVM). Module lands in `Motely.Wasm/dist`.
+   Confirm embed mode: `dist/generated/resources.g.mjs` ~12MB = embedded base64, ~254B = sideloaded manifest.
+3. **Packaging gate (what npm actually ships).** `package.json` MUST have
+   `"files": ["dist"]`. Without it (no `.npmignore` either) npm ships the WHOLE
+   project — `bin/Debug`, `bin/Release`, `*.cs`, PDBs, a redundant sideloaded
+   `dotnet.native.wasm` — ~31MB / 276 files of garbage (this bloat shipped through
+   20.5.0). Verify before publishing: `npm pack --dry-run` should report ~3.9MB /
+   ~70 files, and `npm pack --dry-run 2>&1 | grep notice | grep -v 'dist/'` should
+   show only `package.json`. The embedded wasm rides inside `dist/generated/resources.g.mjs`,
+   so dropping `bin/`'s separate `.wasm` is correct, not lossy.
+4. **REAL boot test (the gate).** `npm run test:browser` from `Motely.Wasm/` — it
+   serves the dir over http and drives a real browser (Playwright `chromium`
+   channel `msedge`/`chrome`) against `tests/browser-boot-test.html`: imports
    `dist/index.mjs` + `dist/generated/modules/motely/wasm.g.mjs`, `await
-   bootsharp.boot()` (embedded) or `boot("/dist/bin")` (sideloaded), then call
-   `Program.jamlToJson(...)` / `Program.parseJaml(...)`. Assert success via
-   `window.__RESULT`. (See the harness used in the 2026-06-09 handoff.)
-4. **Branch on the artifact.**
-   - **Boots + JAML round-trips** → bump done, `npm publish` from `motely-wasm/`,
-     then **verify on the registry** (`npm view motely-wasm@<ver> version`). Ship.
+   bootsharp.boot()` (embedded) or `boot("/dist/bin")` (sideloaded), calls
+   `Program.fromJaml` / `Program.fromJson` / `Program.jamlToJson` / `Program.runSeedListSearch`
+   (verified exports in `Program.cs`; `parseJaml` does NOT exist). Pass = `BROWSER
+   BOOT: PASS` + `window.__RESULT.ok`. `npm test` runs the node suite (54 tests)
+   over the same dist; both must be green.
+5. **Branch on the artifact.**
+   - **Boots + JAML round-trips** → `npm publish` from `Motely.Wasm/` (its
+     `prepublishOnly` rebuilds dist from source first), then run **post-publish
+     verification** (below). Ship.
    - **Boot fails** → STOP. Report the exact error + which modes you tried. Do
-     NOT publish. Pursue the fix (step 5), do not fake or soften.
-5. **If boot is red — fix path (do NOT just flip embed/sideload; both fail the
+     NOT publish. Pursue the fix (step 6), do not fake or soften.
+6. **If boot is red — fix path (do NOT just flip embed/sideload; both fail the
    same).** Confirm Release is actually on NativeAOT-LLVM vs silently Mono;
    pin runtime / emscripten / ILC versions to match a working Bootsharp
    browser-wasm sample (`d:/bootsharp/samples/minimal` or `samples/bench`).
-   Re-run step 3. Repeat until it boots, then step 4.
+   Re-run step 4. Repeat until it boots, then step 5.
 
-## Verification
+## Verification (post-publish — the real backstop)
 
-A release is only "done" when `npm view motely-wasm@<version> version` returns the
-new version AND a real browser booted the published module and round-tripped a
-JAML string. Nothing less counts. Say "I published X and verified it boots" only
-when both are true; otherwise say exactly what's red.
+`prepublishOnly` rebuilds dist during publish, so the registry artifact is NOT
+byte-identical to whatever you boot-tested in-tree. Verify the **published bytes**:
+
+1. `npm view motely-wasm@<version> version` returns the new version.
+2. Boot the published module. Install it clean and run the existing node suite
+   against it — `harness.mjs` honors `MOTELY_WASM_ENTRY`, so no throwaway code:
+   ```
+   cd $TMP && npm init -y && npm install motely-wasm@<version>
+   MOTELY_WASM_ENTRY=$TMP/node_modules/motely-wasm/dist/index.mjs \
+     node --test "Motely.Wasm/tests/*.test.mjs"
+   ```
+   A real-browser boot of the rebuilt in-tree dist (`npm run test:browser` after
+   publish) covers the browser path, since publish regenerated dist in place.
+
+A release is only "done" when both are true. Say "I published X and verified it
+boots" only then; otherwise say exactly what's red.
