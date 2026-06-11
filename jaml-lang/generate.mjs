@@ -15,11 +15,16 @@
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..");
-const enumsDir = join(repoRoot, "Motely", "Enums");
+// Both "Enums" and "enums" exist in-tree (Windows merges them; Linux does not).
+// Scan every directory whose name case-folds to "enums" so the vocab is
+// complete on case-sensitive filesystems too.
+const enumsDirs = readdirSync(join(repoRoot, "Motely"), { withFileTypes: true })
+    .filter((d) => d.isDirectory() && d.name.toLowerCase() === "enums")
+    .map((d) => join(repoRoot, "Motely", d.name));
 const modelsFile = join(repoRoot, "Motely", "Filters", "Jaml", "JamlConfigLoader.Models.cs");
 const rawParseFile = join(repoRoot, "Motely", "Filters", "Jaml", "JamlConfigLoader.RawParse.cs");
 
@@ -47,8 +52,17 @@ function extractEnums(src) {
 }
 
 const enums = {};
-for (const f of readdirSync(enumsDir).filter((f) => f.endsWith(".cs")).sort()) {
-    Object.assign(enums, extractEnums(stripCs(readFileSync(join(enumsDir, f), "utf8"))));
+const enumFiles = enumsDirs
+    .flatMap((dir) => readdirSync(dir).filter((f) => f.endsWith(".cs")).map((f) => join(dir, f)))
+    .sort((a, b) => {
+        // Ordinal compare on the file name (dir-independent), matching the
+        // NTFS directory order the vocab was originally generated with.
+        const an = basename(a);
+        const bn = basename(b);
+        return an < bn ? -1 : an > bn ? 1 : 0;
+    });
+for (const f of enumFiles) {
+    Object.assign(enums, extractEnums(stripCs(readFileSync(f, "utf8"))));
 }
 
 // ── Keys (JamlClauseUnion / JamlSources / JamlDefaults / StandardCardConfig) ─
