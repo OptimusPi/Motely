@@ -113,3 +113,10 @@ check spelling against `get_public_api` before falling back to file reads.
   pad admissions with praise, don't flatter bad work to blend in.
 - **Read before assuming.** This is Motely, not its parent. Verify the boundary instead
   of inheriting an assumption from the checkout path.
+
+**Enforcement (not advisory):** a `Stop` hook (`.claude/hooks/no-soft-code.sh`)
+refuses to end a turn while the current change contains soft code — LLM
+placeholders/stubs, `NotImplementedException`, or untagged `TODO`/`FIXME`. It is
+diff-scoped to added lines + untracked files (pure git+grep, no `dotnet`, never
+runs a search), so pre-existing markers pass and deferrals must be tagged
+`TODO(#issue)`. "No softening" is gated, not just asked.
