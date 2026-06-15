@@ -32,29 +32,26 @@ Motely C# enums  ──gen──▶  jaml-lang (Zod + vocab + service)  ──�
 ## Build & verify
 
 ```sh
-cd ../jaml-lang && npm install && npm run gen && npm run build   # foundation
-cd ../jaml-lsp  && npm install && npm run build                  # server + client
-npm run smoke                                                    # drives the server over real LSP JSON-RPC
+cd ../jaml-lang && npm install && npm run build   # foundation
+cd ../jaml-lsp  && npm install && npm run build   # server + client
+npm run smoke                                      # drives the server over real LSP JSON-RPC
 ```
 
 `npm run smoke` spawns the built server and exercises initialize / didOpen /
 completion / hover / documentSymbol / publishDiagnostics over the wire.
 
-## Use it in an editor
+## Install the server globally
 
-**VS Code** — this package *is* an extension (`main` → `dist/extension.js`).
-Package it with `vsce package` and install the `.vsix`, or run the Extension
-Development Host (F5) from this folder.
-
-**Anything else (Neovim / Helix / Zed / Claude Code)** — point the editor's LSP
-client at the standalone server binary:
+For most editors, the server needs to be callable as `jaml-language-server`:
 
 ```sh
-node /abs/path/to/jaml-lsp/dist/server.js --stdio
+cd /path/to/jaml-lsp
+npm install -g .
+# Verify:
+jaml-language-server --stdio
 ```
 
-The server is editor-agnostic; the VS Code extension is just one client wrapper
-around that same binary.
+This creates the `jaml-language-server` command in your PATH.
 
 ## License
 
