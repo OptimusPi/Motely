@@ -12,7 +12,6 @@ using YamlDotNet.RepresentationModel;
 partial class Program
 {
     private static readonly CancellationTokenSource _cts = new();
-    private const int SavedSeedLimit = 1000;
 
     private static List<string> BuildKeywordInputs(
         CommandOption<string> keywordOption,
@@ -264,6 +263,11 @@ partial class Program
             "Random seed count for --native mode",
             CommandOptionType.SingleValue
         );
+        var vocabOption = app.Option(
+            "--vocab",
+            "Print the JAML vocabulary (all valid names) as JSON and exit. Pipe to jaml-lang/vocabulary.json to regenerate the language-service brain.",
+            CommandOptionType.NoValue
+        );
         var quietOption = app.Option(
             "-q|--quiet|--no-progress",
             "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
@@ -277,6 +281,13 @@ partial class Program
             if (args.Length == 0)
             {
                 app.ShowHelp();
+                return 0;
+            }
+
+            // --vocab — dump engine-derived vocabulary JSON and exit
+            if (vocabOption.HasValue())
+            {
+                Console.WriteLine(JamlVocabulary.Build().ToJson());
                 return 0;
             }
 
