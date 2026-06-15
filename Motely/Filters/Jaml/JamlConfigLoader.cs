@@ -493,6 +493,8 @@ public static partial class JamlConfigLoader
         bool inheritedAntesSpecifiedByUser
     )
     {
+        ValidateSingleDiscriminator(c);
+
         bool clauseHasExplicitAntes = c.Antes != null;
         var antes = c.Antes ?? defaultAntes;
         bool hasUserSpecifiedAntes = clauseHasExplicitAntes || inheritedAntesSpecifiedByUser;
@@ -1385,6 +1387,78 @@ public static partial class JamlConfigLoader
         ParseSuit(suit) is { } parsed
             ? FormatUtils.FormatDisplayName(parsed.ToString())
             : FormatUtils.FormatStandardcardSuit(suit);
+
+    /// <summary>
+    /// A clause must name exactly ONE thing. <see cref="JamlClauseUnion"/> is a flat bag of
+    /// optional keys, so the deserializer happily accepts a clause carrying two discriminators
+    /// (a stray <c>joker:</c> AND <c>voucher:</c>, or a bad indent that fused two clauses into
+    /// one). Unchecked, <see cref="ResolveType"/> keeps the FIRST by priority and silently drops
+    /// the rest — the filter loads green and searches for the wrong thing. Reject the ambiguity
+    /// loudly instead of shrugging. <c>and</c>/<c>or</c>/<c>clauses</c> are logic discriminators
+    /// and are mutually exclusive with item keys too.
+    /// </summary>
+    private static void ValidateSingleDiscriminator(JamlClauseUnion c)
+    {
+        var present = new List<string>();
+        void Mark(string name, bool isSet)
+        {
+            if (isSet)
+                present.Add(name);
+        }
+
+        Mark("joker", c.Joker != null);
+        Mark("jokers", c.Jokers != null);
+        Mark("commonJoker", c.CommonJoker != null);
+        Mark("commonJokers", c.CommonJokers != null);
+        Mark("uncommonJoker", c.UncommonJoker != null);
+        Mark("uncommonJokers", c.UncommonJokers != null);
+        Mark("rareJoker", c.RareJoker != null);
+        Mark("rareJokers", c.RareJokers != null);
+        Mark("legendaryJoker", c.LegendaryJoker != null);
+        Mark("legendaryJokers", c.LegendaryJokers != null);
+        Mark("voucher", c.Voucher != null);
+        Mark("vouchers", c.Vouchers != null);
+        Mark("tarotCard", c.TarotCard != null);
+        Mark("tarotCards", c.TarotCards != null);
+        Mark("spectralCard", c.SpectralCard != null);
+        Mark("spectralCards", c.SpectralCards != null);
+        Mark("planetCard", c.PlanetCard != null);
+        Mark("boss", c.Boss != null);
+        Mark("tag", c.Tag != null);
+        Mark("tags", c.Tags != null);
+        Mark("smallBlindTag", c.SmallBlindTag != null);
+        Mark("smallBlindTags", c.SmallBlindTags != null);
+        Mark("bigBlindTag", c.BigBlindTag != null);
+        Mark("bigBlindTags", c.BigBlindTags != null);
+        Mark("standardCard", c.StandardCard != null);
+        Mark("standardCards", c.StandardCards != null);
+        Mark("erraticRank", c.ErraticRank != null);
+        Mark("erraticSuit", c.ErraticSuit != null);
+        Mark("erraticCard", c.ErraticCard != null);
+        Mark("startingDraw", c.StartingDraw != null);
+        Mark("event", c.Event != null);
+        Mark("luckyMoney", c.LuckyMoney != null);
+        Mark("luckyMult", c.LuckyMult != null);
+        Mark("misprintMult", c.MisprintMult != null);
+        Mark("wheelOfFortune", c.WheelOfFortune != null);
+        Mark("cavendishExtinct", c.CavendishExtinct != null);
+        Mark("grosMichelExtinct", c.GrosMichelExtinct != null);
+        Mark("spaceLevelup", c.SpaceLevelup != null);
+        Mark("businessPayout", c.BusinessPayout != null);
+        Mark("bloodstoneTrigger", c.BloodstoneTrigger != null);
+        Mark("parkingPayout", c.ParkingPayout != null);
+        Mark("glassDestroy", c.GlassDestroy != null);
+        Mark("wheelStaysFlipped", c.WheelStaysFlipped != null);
+        Mark("and", c.And != null);
+        Mark("or", c.Or != null);
+        Mark("clauses", c.Clauses != null);
+
+        if (present.Count > 1)
+            throw new InvalidOperationException(
+                $"Clause names {present.Count} discriminators ({string.Join(", ", present)}) but must name exactly one. "
+                    + "Split them into separate clauses, or check the indentation — two clauses may have merged into one."
+            );
+    }
 
     // ── Resolve type from shorthand keys or explicit type field ──
 
