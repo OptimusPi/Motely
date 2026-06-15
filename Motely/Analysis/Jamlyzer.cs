@@ -42,22 +42,25 @@ public sealed record class JamlyzerPack(
     MotelyAnalyzedItem? GrantedLegendaryJoker
 );
 
-// Per-seed gameplay rolls (bool/int outcomes; one PRNG stream each, not board items).
+// Per-seed gameplay rolls — the first JamlyzerRollCount sequential draws from each PRNG stream.
+// Index i = the (i+1)-th trigger of that event. Filters use roll indices as skip-based PRNG
+// positions; this snapshot captures sequential positions 0..N-1 so the UI can show the full
+// probability landscape without knowing which indices a given filter will query.
 public sealed record class JamlyzerRolls(
-    int MisprintMult,
-    bool LuckyMoney,
-    bool LuckyMult,
-    MotelyItemEdition WheelOfFortune,
-    bool CavendishExtinct,
-    bool GrosMichelExtinct,
-    bool SpaceLevelup,
-    bool BusinessPayout,
-    bool BloodstoneTrigger,
-    bool ParkingPayout,
-    bool EightBallTarot,
-    bool GlassDestroy,
-    bool OmenGlobeSpectral,
-    bool WheelStaysFlipped
+    int[] MisprintMult,
+    bool[] LuckyMoney,
+    bool[] LuckyMult,
+    MotelyItemEdition[] WheelOfFortune,
+    bool[] CavendishExtinct,
+    bool[] GrosMichelExtinct,
+    bool[] SpaceLevelup,
+    bool[] BusinessPayout,
+    bool[] BloodstoneTrigger,
+    bool[] ParkingPayout,
+    bool[] EightBallTarot,
+    bool[] GlassDestroy,
+    bool[] OmenGlobeSpectral,
+    bool[] WheelStaysFlipped
 );
 
 /// <summary>
@@ -65,6 +68,7 @@ public sealed record class JamlyzerRolls(
 /// </summary>
 public static class Jamlyzer
 {
+    public const int RollCount = 10;
     public static JamlyzerSnapshot Analyze(string seed, MotelyDeck deck, MotelyStake stake)
     {
         try
@@ -89,8 +93,8 @@ public static class Jamlyzer
     }
 
     private static readonly JamlyzerRolls EmptyRolls = new(
-        0, false, false, MotelyItemEdition.None,
-        false, false, false, false, false, false, false, false, false, false
+        [], [], [], [],
+        [], [], [], [], [], [], [], [], [], []
     );
 }
 
@@ -240,7 +244,7 @@ public sealed class JamlyzerFilterDesc() : IMotelySeedFilterDesc<JamlyzerFilterD
                 );
             }
 
-            // ── Per-seed gameplay rolls (one PRNG stream each) ──
+            // ── Per-seed gameplay rolls — first RollCount sequential draws from each PRNG stream ──
             var misprint = ctx.CreateMisprintPrngStream();
             var luckyMoney = ctx.CreateLuckyCardMoneyStream();
             var luckyMult = ctx.CreateLuckyCardMultStream();
@@ -256,21 +260,55 @@ public sealed class JamlyzerFilterDesc() : IMotelySeedFilterDesc<JamlyzerFilterD
             var omenGlobe = ctx.CreateOmenGlobePrngStream();
             var theWheel = ctx.CreateTheWheelPrngStream();
 
+            int n = Jamlyzer.RollCount;
+            int[] misprintMults = new int[n];
+            bool[] luckyMoneyHits = new bool[n];
+            bool[] luckyMultHits = new bool[n];
+            MotelyItemEdition[] wheelEditions = new MotelyItemEdition[n];
+            bool[] cavendishHits = new bool[n];
+            bool[] grosMichelHits = new bool[n];
+            bool[] spaceHits = new bool[n];
+            bool[] businessHits = new bool[n];
+            bool[] bloodstoneHits = new bool[n];
+            bool[] parkingHits = new bool[n];
+            bool[] eightBallHits = new bool[n];
+            bool[] glassHits = new bool[n];
+            bool[] omenGlobeHits = new bool[n];
+            bool[] theWheelHits = new bool[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                misprintMults[i] = ctx.GetNextMisprintMult(ref misprint);
+                luckyMoneyHits[i] = ctx.GetNextLuckyMoney(ref luckyMoney);
+                luckyMultHits[i] = ctx.GetNextLuckyMult(ref luckyMult);
+                wheelEditions[i] = ctx.GetNextWheelOfFortune(ref wheel);
+                cavendishHits[i] = ctx.GetNextCavendishExtinct(ref cavendish);
+                grosMichelHits[i] = ctx.GetNextGrosMichelExtinct(ref grosMichel);
+                spaceHits[i] = ctx.GetNextSpaceLevelup(ref space);
+                businessHits[i] = ctx.GetNextBusinessPayout(ref business);
+                bloodstoneHits[i] = ctx.GetNextBloodstoneTrigger(ref bloodstone);
+                parkingHits[i] = ctx.GetNextParkingPayout(ref parking);
+                eightBallHits[i] = ctx.GetNextEightBallTarot(ref eightBall);
+                glassHits[i] = ctx.GetNextGlassDestroy(ref glass);
+                omenGlobeHits[i] = ctx.GetNextOmenGlobeSpectral(ref omenGlobe);
+                theWheelHits[i] = ctx.GetNextWheelStaysFlipped(ref theWheel);
+            }
+
             JamlyzerRolls rolls = new(
-                ctx.GetNextMisprintMult(ref misprint),
-                ctx.GetNextLuckyMoney(ref luckyMoney),
-                ctx.GetNextLuckyMult(ref luckyMult),
-                ctx.GetNextWheelOfFortune(ref wheel),
-                ctx.GetNextCavendishExtinct(ref cavendish),
-                ctx.GetNextGrosMichelExtinct(ref grosMichel),
-                ctx.GetNextSpaceLevelup(ref space),
-                ctx.GetNextBusinessPayout(ref business),
-                ctx.GetNextBloodstoneTrigger(ref bloodstone),
-                ctx.GetNextParkingPayout(ref parking),
-                ctx.GetNextEightBallTarot(ref eightBall),
-                ctx.GetNextGlassDestroy(ref glass),
-                ctx.GetNextOmenGlobeSpectral(ref omenGlobe),
-                ctx.GetNextWheelStaysFlipped(ref theWheel)
+                misprintMults,
+                luckyMoneyHits,
+                luckyMultHits,
+                wheelEditions,
+                cavendishHits,
+                grosMichelHits,
+                spaceHits,
+                businessHits,
+                bloodstoneHits,
+                parkingHits,
+                eightBallHits,
+                glassHits,
+                omenGlobeHits,
+                theWheelHits
             );
 
             FilterDesc.LastSnapshot = new(null, ctx.Deck, antes, rolls);

@@ -1,19 +1,51 @@
-name: Lucky Cat + Showman
-author: for pi — Lucky Cat with Showman locked in early
+name: Lucky Cat + Showman (Negative Oops Engine)
+author: for pi — Lucky Cat with Showman + free Negative Oops from Anaglyph
 description: >-
-  MUST have both Showman and Lucky Cat in antes 1-3 (Showman lets the Cat's
-  duplicates and luck stack persist), riding a curated negative-Perkeo (Zerkeo)
-  seed. Oops! All 6s is the bonus — it doubles every lucky roll so the Cat eats
-  twice as fast.
-deck: Red
+  Anaglyph deck doubles every Negative Tag from small blind skips. Showman lets
+  Lucky Cat and Oops All 6s stack through duplicates. Only score Oops in
+  shopItems 2+ — 0 and 1 are locked on landing, can't be skipped to.
+deck: Anaglyph
 stake: White
 must:
   - uncommonJoker: Showman
-    antes: [1, 2, 3]
-    max: 1
-  - uncommonJoker: LuckyCat
-    antes: [1, 2, 3]
+    antes: [1, 2, 3, 4]
+  - joker: LuckyCat
+    antes: [1, 2, 3, 4]
 should:
-  - uncommonJoker: OopsAll6s
-    antes: [1, 2, 3, 4, 5, 6]
+  - uncommonJoker: Showman
+    antes: [1, 2, 3]
+  - joker: LuckyCat
+    antes: [1, 2, 3]
+  - and:
+    - smallBlindTag: NegativeTag
+      antes: [2]
+    - joker: OopsAll6s
+      sources:
+        shopItems: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+      antes: [2]
+    score: 70
+  - and:
+    - smallBlindTag: NegativeTag
+      antes: [3]
+    - joker: OopsAll6s
+      sources:
+        shopItems: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+      antes: [3]
+    score: 70
+  - and:
+    - smallBlindTag: NegativeTag
+      antes: [4]
+    - joker: OopsAll6s
+      sources:
+        shopItems: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      antes: [4]
+    score: 70
+
+  - and:
+    - smallBlindTag: NegativeTag
+      antes: [5]
+    - joker: OopsAll6s
+      sources:
+        shopItems: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,13,14]
+      antes: [5]
     score: 70

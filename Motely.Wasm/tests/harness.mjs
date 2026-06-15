@@ -1,8 +1,8 @@
 /**
  * Boots motely-wasm once per process (ESM module cache).
- * Sideloaded build (BootsharpBinariesDirectory → dist/bin): the .wasm is a separate
- * file, not inlined. node's fetch can't read file:// URLs, so we hand boot() the bytes
- * directly as a BootResources object instead of letting it fetch a root URL.
+ * Embedded build (BootsharpBinariesDirectory empty): wasm + assemblies are
+ * base64-inlined in resources.g.mjs. boot() with no args uses the embedded
+ * resources automatically.
  */
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -13,7 +13,7 @@ const wasmProjectDir = resolve(testsDir, "..");
 
 const entryPath = process.env.MOTELY_WASM_ENTRY
     ? resolve(process.env.MOTELY_WASM_ENTRY)
-    : resolve(wasmProjectDir, "..", "motely-wasm", "dist", "index.mjs");
+    : resolve(wasmProjectDir, "dist", "index.mjs");
 
 const pkgRoot = resolve(dirname(entryPath), "..");
 
@@ -35,10 +35,9 @@ async function createHarness() {
 
     Motely.reportWasmError = (message) => console.error("[WASM ERROR]", message);
 
-    // NativeAOT-LLVM is single-file, so only `wasm` is needed (the other manifest arrays
-    // are empty). resolveBinary() in config.mjs takes the bytes as-is when not a string.
-    const wasm = await readFile(resolve(dirname(entryPath), "bin", bootsharp.manifest.wasm));
-    await bootsharp.boot({ wasm });
+    // Embedded build: wasm is inlined in resources.g.mjs. boot() with no args
+    // picks it up via fetchResources() → embedded branch.
+    await bootsharp.boot();
 
     if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted) {
         throw new Error("boot: expected BootStatus.Booted");
