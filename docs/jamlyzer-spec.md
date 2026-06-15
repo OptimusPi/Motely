@@ -36,12 +36,8 @@ Decoded, nothing added:
    seeds, the user reviews exactly what their own clauses target — the filter IS the
    lens. Full walk available on demand; the peek is the default because the JAML
    already said what matters.
-10. **Don't double-convert.** No DTO layer whose only job is to be ToString'd later.
-   Strings at the boundary, once.
-
-Shape: a fourteenth partial — `MotelySingleSearchContext.Jamlyzer.cs` — alongside the
-thirteen existing domain partials (Boss/Jokers/Packs/Shop/Tags/Tarot/Spectral/Vouchers/
-StandardCards/Planet/Misc/Shuffle). The streams and the scorer are already in scope there.
+Shape: alongside the existing domain partials (Boss/Jokers/Packs/Shop/Tags/Tarot/Spectral/
+Vouchers/StandardCards/Planet/Misc/Shuffle). The streams and the scorer are already in scope there.
 The deleted rich build's trinity maps to this: **lens** = clause-scoped peek view,
 **glow** = IsHighlighted/MatchedBy within it, **scoop** = the match payload.
 
