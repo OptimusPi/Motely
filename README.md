@@ -42,9 +42,10 @@ Other top-level items: `JamlFilters/` (pre-made `.jaml` filter configs),
 
 Filters are written in JAML — a YAML-based config describing what to look for in a
 seed. See `JamlFilters/` for ready-made filters to copy and adapt, `jaml-lang/`
-for the language itself, and `docs/balatro-mechanics.md` for the game mechanics
+for the language service, and `docs/balatro-mechanics.md` for the game mechanics
 filters target.
 
+<<<<<<< Updated upstream
 ## JAML language tooling (LSP, grammar, editor support)
 
 JAML is a real language with real tooling, all generated from the engine:
@@ -80,6 +81,21 @@ dotnet run --project Motely.CLI -- --jaml yourfilter --keyword YOURNAME --cutoff
 ```
 
 The filter lives in `JamlFilters/yourfilter.jaml`. Run from the repo root so `--jaml` resolves correctly.
+=======
+### JAML Language Server (LSP)
+
+A **real** Language Server Protocol implementation lives in `jaml-lsp/`. It
+provides:
+
+- **Diagnostics** — instant validation of syntax, unknown keys, and invalid enum values
+- **Completion** — context-aware suggestions for jokers, cards, decks, stakes, etc.
+- **Hover** — documentation on every JAML key and value
+- **Document symbols** — outline of `must` / `should` / `mustNot` clauses
+
+The vocabulary is **generated from the Motely C# engine enums** — one source of
+truth, no drift. See `docs/EDITOR_INTEGRATION.md` for setup in VS Code, Neovim,
+Helix, Zed, and Claude Code.
+>>>>>>> Stashed changes
 
 ## Working with agents
 
