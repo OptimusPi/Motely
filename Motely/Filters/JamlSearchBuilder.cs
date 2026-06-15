@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Motely;
+using Motely.Analysis;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
 
@@ -68,9 +69,27 @@ public static class JamlSearchBuilder
         int shouldScoreMinimumTotal
     ) => CreatePlan(config, shouldScoreMinimumTotal).Settings;
 
-    public static JamlSearchPlan CreatePlan(JamlConfig config) => CreatePlan(config, 0);
+    /// <summary>
+    /// Same as <see cref="CreateSettings(JamlConfig)"/> but wires a <see cref="JamlyzerScoreDesc"/>
+    /// instead of <see cref="JamlShouldScoreDesc"/> so that every matched seed fires
+    /// <paramref name="onJamlyzerResult"/> inline — no nested search, no extra interop round-trip.
+    /// Pass <c>null</c> for <paramref name="onJamlyzerResult"/> to get plain JAML scoring with no snapshot.
+    /// </summary>
+    public static IMotelySearchSettings CreateJamlyzerSettings(
+        JamlConfig config,
+        Action<JamlyzerSnapshot>? onJamlyzerResult
+    ) => CreatePlanCore(config, 0, onJamlyzerResult).Settings;
 
-    public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal)
+    public static JamlSearchPlan CreatePlan(JamlConfig config) => CreatePlanCore(config, 0, null);
+
+    public static JamlSearchPlan CreatePlan(JamlConfig config, int shouldScoreMinimumTotal) =>
+        CreatePlanCore(config, shouldScoreMinimumTotal, null);
+
+    private static JamlSearchPlan CreatePlanCore(
+        JamlConfig config,
+        int shouldScoreMinimumTotal,
+        Action<JamlyzerSnapshot>? onJamlyzerResult
+    )
     {
         if (
             config.Must.Count == 0
@@ -122,13 +141,19 @@ public static class JamlSearchBuilder
 
         if (mustClausesForScoring.Count > 0 || shouldClauses.Count > 0)
         {
-            settings.WithSeedScoreProvider(
-                new JamlShouldScoreDesc(
+            IMotelySeedScoreDesc scoreDesc = onJamlyzerResult != null
+                ? new JamlyzerScoreDesc(
+                    mustClausesForScoring.ToArray(),
+                    shouldClauses.ToArray(),
+                    minimumTotalScore: shouldScoreMinimumTotal,
+                    onJamlyzerResult: onJamlyzerResult
+                )
+                : (IMotelySeedScoreDesc)new JamlShouldScoreDesc(
                     mustClausesForScoring.ToArray(),
                     shouldClauses.ToArray(),
                     minimumTotalScore: shouldScoreMinimumTotal
-                )
-            );
+                );
+            settings.WithSeedScoreProvider(scoreDesc);
         }
 
         int shouldCount = shouldClauses.Count;
