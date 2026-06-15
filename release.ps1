@@ -15,6 +15,11 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
 
+# Single source of truth for the published version: <MotelyVersion> in Directory.Packages.props (CPM).
+$motelyVersion = ([regex]::Match((Get-Content "$root\Directory.Packages.props" -Raw), '<MotelyVersion>([^<]+)</MotelyVersion>')).Groups[1].Value
+if (-not $motelyVersion) { throw "MotelyVersion not found in Directory.Packages.props" }
+Write-Host "==> MotelyVersion: $motelyVersion" -ForegroundColor Yellow
+
 # ── 1. Pack Bootsharp.FileSystem ──────────────────────────────────────────────
 Write-Host ""
 Write-Host "=== [1/7] Pack Bootsharp.FileSystem ===" -ForegroundColor Cyan
@@ -67,4 +72,4 @@ Push-Location "$root\Motely.Wasm"
 try { npm publish } finally { Pop-Location }
 
 Write-Host ""
-Write-Host "=== DONE — motely-wasm 20.2.0 published ===" -ForegroundColor Green
+Write-Host "=== DONE — motely-wasm $motelyVersion published ===" -ForegroundColor Green

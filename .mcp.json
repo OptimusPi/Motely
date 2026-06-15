@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "roslyn-lens": {
-      "type": "stdio",
-      "command": "roslyn-lens",
-      "args": ["--solution", "Motely.slnx"]
-    }
-  }
-}
