@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motely — Seed Finder</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0d14;
+  --panel: #13131f;
+  --border: #2a2a3d;
+  --text: #c8c8e0;
+  --muted: #55557a;
+  --accent: #7c6aff;
+  --accent-dim: #3d3578;
+  --green: #4ade80;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 13px; }
+body { display: grid; grid-template-rows: 38px 1fr; height: 100vh; overflow: hidden; }
+
+header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+header h1 { font-size: 15px; font-weight: 700; color: var(--accent); }
+.badge { font-size: 11px; color: var(--muted); background: var(--border); padding: 1px 6px; border-radius: 3px; }
+#wasm-badge { margin-left: auto; }
+#wasm-badge.ok { color: var(--green); }
+#wasm-badge.err { color: var(--red); }
+
+.workspace { display: grid; grid-template-columns: 360px 1fr; overflow: hidden; }
+
+.sidebar {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 10px; overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-bottom: 3px; }
+
+textarea#jaml {
+  width: 100%; height: 220px; resize: vertical;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 8px; font-family: var(--mono); font-size: 12px; line-height: 1.55;
+  outline: none; transition: border-color 0.12s;
+}
+textarea#jaml:focus { border-color: var(--accent-dim); }
+textarea#jaml.err { border-color: var(--red); }
+
+.parse-error { font-size: 11px; color: var(--red); margin-top: 3px; display: none; white-space: pre-wrap; }
+.parse-error.show { display: block; }
+
+select, input[type=number] {
+  width: 100%; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 5px 8px; font-size: 12px; outline: none; appearance: none;
+}
+select:focus, input[type=number]:focus { border-color: var(--accent-dim); }
+
+.row { display: flex; gap: 8px; }
+.field { flex: 1; }
+
+hr { border: none; border-top: 1px solid var(--border); }
+
+.progress-track { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: var(--accent); border-radius: 1px; transition: width 0.25s ease; }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
+.stat { color: var(--muted); font-size: 11px; }
+.stat b { color: var(--text); font-weight: 600; }
+
+.btns { display: flex; gap: 6px; }
+button {
+  flex: 1; padding: 8px; border: none; border-radius: 5px;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.12s;
+}
+button:disabled { opacity: 0.3; cursor: default; }
+#btn-search { background: var(--accent); color: #fff; }
+#btn-stop { background: var(--border); color: var(--text); }
+
+.results-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+.results-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.results-header h2 { font-size: 12px; font-weight: 600; }
+#results-count { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.dot.searching { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+.dot.done { background: var(--green); }
+.dot.error { background: var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+#results { flex: 1; overflow-y: auto; padding: 4px; font-family: var(--mono); }
+
+.seed-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 4px 8px; border-radius: 4px; cursor: default;
+}
+.seed-row:hover { background: var(--panel); }
+.seed { color: var(--green); font-weight: 700; letter-spacing: 1.5px; font-size: 13px; }
+.score { color: var(--yellow); font-weight: 600; min-width: 36px; text-align: right; font-size: 12px; }
+.tallies { color: var(--muted); font-size: 11px; }
+
+.empty { color: var(--muted); font-style: italic; padding: 20px 8px; }
+
+#seq-opts { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Motely</h1>
+  <span class="badge">Seed Finder</span>
+  <span class="badge" id="wasm-badge">wasm…</span>
+</header>
+
+<div class="workspace">
+  <aside class="sidebar">
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <label style="margin:0">JAML Filter</label>
+        <label style="margin:0;cursor:pointer;color:var(--accent);font-size:11px;text-transform:none;letter-spacing:0" for="file-pick">Open file…</label>
+      </div>
+      <input type="file" id="file-pick" accept=".jaml,.yaml,.yml" style="display:none">
+      <textarea id="jaml" spellcheck="false" placeholder="name: Example&#10;must:&#10;  - joker: Perkeo&#10;    antes: [1]"></textarea>
+      <div class="parse-error" id="parse-error"></div>
+    </div>
+
+    <div>
+      <label>Mode</label>
+      <select id="mode">
+        <option value="random">Random</option>
+        <option value="sequential">Sequential</option>
+      </select>
+    </div>
+
+    <div id="random-opts">
+      <label>Seed Count</label>
+      <input type="number" id="random-count" value="1000000" min="1">
+    </div>
+
+    <div id="seq-opts">
+      <div class="row">
+        <div class="field">
+          <label>Start Batch</label>
+          <input type="number" id="seq-start" value="0" min="0">
+        </div>
+        <div class="field">
+          <label>Batch Chars</label>
+          <input type="number" id="seq-chars" value="4" min="1" max="7">
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+    <div class="stats">
+      <div class="stat">Searched <b id="s-searched">—</b></div>
+      <div class="stat">Matches <b id="s-matches">—</b></div>
+      <div class="stat">Speed <b id="s-speed">—</b></div>
+      <div class="stat">Progress <b id="s-pct">—</b></div>
+    </div>
+
+    <div class="btns">
+      <button id="btn-search">Search</button>
+      <button id="btn-stop" disabled>Stop</button>
+    </div>
+  </aside>
+
+  <main class="results-panel">
+    <div class="results-header">
+      <div class="dot" id="dot"></div>
+      <h2>Results</h2>
+      <span id="results-count"></span>
+    </div>
+    <div id="results">
+      <div class="empty" id="empty">Run a search to find seeds.</div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+
+$('file-pick').onchange = e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  file.text().then(t => { jamlEl.value = t; jamlEl.classList.remove('err'); parseErr.classList.remove('show'); });
+  e.target.value = '';
+};
+const jamlEl = $('jaml'), parseErr = $('parse-error');
+const modeEl = $('mode'), randomOpts = $('random-opts'), seqOpts = $('seq-opts');
+const btnSearch = $('btn-search'), btnStop = $('btn-stop');
+const resultsEl = $('results'), emptyEl = $('empty');
+const resultsCount = $('results-count'), dot = $('dot'), wasmBadge = $('wasm-badge');
+const progFill = $('prog-fill');
+
+let worker = null, matchCount = 0;
+
+modeEl.onchange = () => {
+  randomOpts.style.display = modeEl.value === 'random' ? '' : 'none';
+  seqOpts.style.display = modeEl.value === 'sequential' ? '' : 'none';
+};
+
+const fmt = n => n >= 1e6 ? `${(n/1e6).toFixed(2)}M` : n >= 1e3 ? `${(n/1e3).toFixed(1)}K` : String(n ?? 0);
+
+function setDot(state) { dot.className = 'dot' + (state ? ` ${state}` : ''); }
+
+function onProgress(p) {
+  const pct = p.percentComplete ?? 0;
+  progFill.style.width = `${Math.min(pct, 100)}%`;
+  $('s-searched').textContent = fmt(p.seedsSearched);
+  $('s-matches').textContent = fmt(p.matchingSeeds);
+  $('s-pct').textContent = pct > 0 ? `${pct.toFixed(1)}%` : '—';
+  const spm = (p.seedsPerMillisecond ?? 0) * 1000;
+  $('s-speed').textContent = spm >= 1e6 ? `${(spm/1e6).toFixed(2)}M/s` : `${(spm/1000).toFixed(0)}K/s`;
+}
+
+function addResult(seed, score, tallies) {
+  if (emptyEl.parentNode) emptyEl.remove();
+  matchCount++;
+  resultsCount.textContent = `${matchCount} found`;
+  const row = document.createElement('div');
+  row.className = 'seed-row';
+  row.innerHTML = `<span class="seed">${seed}</span>`
+    + (score != null ? `<span class="score">${score}</span>` : '')
+    + (tallies?.length ? `<span class="tallies">[${tallies.join(', ')}]</span>` : '');
+  resultsEl.append(row);
+}
+
+function clearResults() {
+  matchCount = 0;
+  resultsCount.textContent = '';
+  resultsEl.replaceChildren(emptyEl);
+  progFill.style.width = '0';
+  ['s-searched','s-matches','s-speed','s-pct'].forEach(id => $(id).textContent = '—');
+}
+
+function done(errored) {
+  setDot(errored ? 'error' : 'done');
+  btnSearch.disabled = false;
+  btnStop.disabled = true;
+}
+
+function startSearch() {
+  const jaml = jamlEl.value.trim();
+  if (!jaml) { jamlEl.classList.add('err'); return; }
+  jamlEl.classList.remove('err');
+  parseErr.classList.remove('show');
+
+  clearResults();
+  setDot('searching');
+  btnSearch.disabled = true;
+  btnStop.disabled = false;
+
+  if (worker) { worker.terminate(); worker = null; }
+  worker = new Worker('/worker.mjs', { type: 'module' });
+
+  worker.onmessage = ({ data }) => {
+    switch (data.type) {
+      case 'ready': break;
+      case 'parseError':
+        jamlEl.classList.add('err');
+        parseErr.textContent = data.message;
+        parseErr.classList.add('show');
+        done(true);
+        break;
+      case 'progress': onProgress(data.data); break;
+      case 'seed': addResult(data.data, null, null); break;
+      case 'result': addResult(data.data.seed, data.data.score, data.data.tallies); break;
+      case 'done': done(false); break;
+      case 'error': done(true); break;
+    }
+  };
+  worker.onerror = () => done(true);
+
+  const msg = { type: modeEl.value, jaml };
+  if (modeEl.value === 'random') msg.count = parseInt($('random-count').value) || 1_000_000;
+  if (modeEl.value === 'sequential') {
+    msg.startBatch = parseInt($('seq-start').value) || 0;
+    msg.batchChars = parseInt($('seq-chars').value) || 4;
+  }
+  worker.postMessage(msg);
+}
+
+btnSearch.onclick = startSearch;
+btnStop.onclick = () => { if (worker) { worker.terminate(); worker = null; } done(false); };
+
+// WASM availability check
+fetch('/wasm/index.mjs', { method: 'HEAD' })
+  .then(r => {
+    wasmBadge.textContent = r.ok ? 'wasm ready' : 'wasm missing';
+    wasmBadge.className = 'badge ' + (r.ok ? 'ok' : 'err');
+  })
+  .catch(() => { wasmBadge.textContent = 'wasm missing'; wasmBadge.className = 'badge err'; });
+</script>
+</body>
+</html>

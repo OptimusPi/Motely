@@ -8,7 +8,7 @@ const { Motely } = harness;
 //
 // The C# tests prove every JAML filter clause shape "compiles and runs": parse
 // the JAML, build a search, run a tiny batch, assert it searched seeds and
-// completed. We mirror that through the WASM API — parseJaml (compiles) +
+// completed. We mirror that through the WASM API — fromYaml (compiles) +
 // runSeedListSearch over a fixed seed list (runs) — asserting the search
 // completes and actually evaluated the filter against the listed seeds.
 //
@@ -18,7 +18,7 @@ const { Motely } = harness;
 const SEEDS = ["AAAAAAAA", "BBBBBBBB", "CCCCCCCC", "12345678", "ALEEB"];
 
 function compilesAndRuns(yaml) {
-    const cfg = Motely.parseJaml(yaml);
+    const cfg = Motely.fromYaml(yaml);
     cfg.seeds = SEEDS;
     const r = Motely.runSeedListSearch(cfg);
     assert.equal(r.isCompleted, true, "search should complete");

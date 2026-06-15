@@ -68,6 +68,9 @@ public sealed class JsonStandardCardValueConverter : JsonConverter<StandardCardV
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     UseStringEnumConverter = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    // Strict like the YAML path (see JamlConfigLoader.RawParse.cs): a typo'd key silently
+    // dropped means a missing constraint and false-positive seeds. Reject unknown members.
+    UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     Converters = [
         typeof(JsonStandardCardValueConverter),
         typeof(JsonEnumOrAnyConverter<MotelyJoker>),
