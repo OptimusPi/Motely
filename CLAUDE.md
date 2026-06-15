@@ -20,8 +20,6 @@ Motely is, first, a clean C# filter API. A filter is a two-phase contract:
   `.WithStake().WithDeck().WithThreadCount().WithBatchCharacterCount().WithListSearch(…)`
   `.WithProviderSearch(…).WithAdditionalFilter(…).Start()` → returns `IMotelySearch`.
 
-CLAU
-
 ## Build / test / run
 
 - Solution: **`Motely.slnx`** (XML format). .NET 10 SDK, pinned in `global.json`.
@@ -88,9 +86,10 @@ A cancelled sequential search prints a `--startBatch` / `--startSeed` resume hin
   `--analyze <seed>` (human-readable seed dump) and `--native <name>` (run a hardcoded C#
   filter instead of JAML).
 - `Motely.TUI/` — terminal UI.
-- `Motely.Wasm/` — WebAssembly build via **Bootsharp**. Exports `Program.fromJaml`,
-  `runRandomSearch`, `runSequentialSearch`, and `onProgress`/`onSeedMatch`/`onScoredResult`
-  event streams. NativeAOT-LLVM auto-enables under `dotnet publish -c Release`; no hand-wiring.
+- `Motely.Wasm/` — WebAssembly build via **Bootsharp**. Exports `Program.FromYaml` /
+  `Program.FromJson` (config parsers), `RunSequentialSearch`/`RunRandomSearch`, and
+  `OnProgress`/`OnSeedMatch`/`OnScoredResult` event streams. NativeAOT-LLVM auto-enables
+  under `dotnet publish -c Release`; no hand-wiring.
 - `Motely.Home/` — an ASP.NET Core minimal-API **static-file host** (not Blazor). Serves
   `wwwroot/app.html`, a vanilla-JS SPA whose search runs in `wwwroot/worker.mjs` loading the
   motely-wasm dist from `/wasm`.
