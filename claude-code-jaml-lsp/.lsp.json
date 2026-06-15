@@ -1,0 +1,10 @@
+{
+  "jaml": {
+    "command": "jaml-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".jaml": "jaml"
+    },
+    "transport": "stdio"
+  }
+}

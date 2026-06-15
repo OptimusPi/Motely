@@ -1,0 +1,94 @@
+diff --git a/README.md b/README.md
+index 96c2e739..27c588bb 100644
+--- a/README.md
++++ b/README.md
+@@ -39,9 +39,23 @@ Other top-level items: `JamlFilters/` (pre-made `.jaml` filter configs),
+ 
+ Filters are written in JAML — a YAML-based config describing what to look for in a
+ seed. See `JamlFilters/` for ready-made filters to copy and adapt, `jaml-lang/`
+-for the language itself, and `docs/balatro-mechanics.md` for the game mechanics
++for the language service, and `docs/balatro-mechanics.md` for the game mechanics
+ filters target.
+ 
++### JAML Language Server (LSP)
++
++A **real** Language Server Protocol implementation lives in `jaml-lsp/`. It
++provides:
++
++- **Diagnostics** — instant validation of syntax, unknown keys, and invalid enum values
++- **Completion** — context-aware suggestions for jokers, cards, decks, stakes, etc.
++- **Hover** — documentation on every JAML key and value
++- **Document symbols** — outline of `must` / `should` / `mustNot` clauses
++
++The vocabulary is **generated from the Motely C# engine enums** — one source of
++truth, no drift. See `docs/EDITOR_INTEGRATION.md` for setup in VS Code, Neovim,
++Helix, Zed, and Claude Code.
++
+ ## Working with agents
+ 
+ `CLAUDE.md` covers how AI agents should work in this repo (consent, running
+diff --git a/jaml-lsp/README.md b/jaml-lsp/README.md
+index e678613d..d0d6c6c4 100644
+--- a/jaml-lsp/README.md
++++ b/jaml-lsp/README.md
+@@ -32,29 +32,26 @@ Motely C# enums  ──gen──▶  jaml-lang (Zod + vocab + service)  ──
+ ## Build & verify
+ 
+ ```sh
+-cd ../jaml-lang && npm install && npm run gen && npm run build   # foundation
+-cd ../jaml-lsp  && npm install && npm run build                  # server + client
+-npm run smoke                                                    # drives the server over real LSP JSON-RPC
++cd ../jaml-lang && npm install && npm run build   # foundation
++cd ../jaml-lsp  && npm install && npm run build   # server + client
++npm run smoke                                      # drives the server over real LSP JSON-RPC
+ ```
+ 
+ `npm run smoke` spawns the built server and exercises initialize / didOpen /
+ completion / hover / documentSymbol / publishDiagnostics over the wire.
+ 
+-## Use it in an editor
++## Install the server globally
+ 
+-**VS Code** — this package *is* an extension (`main` → `dist/extension.js`).
+-Package it with `vsce package` and install the `.vsix`, or run the Extension
+-Development Host (F5) from this folder.
+-
+-**Anything else (Neovim / Helix / Zed / Claude Code)** — point the editor's LSP
+-client at the standalone server binary:
++For most editors, the server needs to be callable as `jaml-language-server`:
+ 
+ ```sh
+-node /abs/path/to/jaml-lsp/dist/server.js --stdio
++cd /path/to/jaml-lsp
++npm install -g .
++# Verify:
++jaml-language-server --stdio
+ ```
+ 
+-The server is editor-agnostic; the VS Code extension is just one client wrapper
+-around that same binary.
++This creates the `jaml-language-server` command in your PATH.
+ 
+ ## License
+ 
+diff --git a/jaml-lsp/package-lock.json b/jaml-lsp/package-lock.json
+index 58a6f67c..996f32fa 100644
+--- a/jaml-lsp/package-lock.json
++++ b/jaml-lsp/package-lock.json
+@@ -29,14 +29,9 @@
+       }
+     },
+     "../jaml-lang": {
+-      "version": "0.1.2",
+-      "license": "MIT",
+-      "dependencies": {
+-        "yaml": "^2.5.0",
+-        "zod": "^3.25.0"
+-      },
++      "version": "0.1.0",
+       "devDependencies": {
+-        "tsx": "^4.19.0",
++        "@types/node": "^22.0.0",
+         "typescript": "^5.6.0"
+       }
+     },
