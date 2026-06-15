@@ -71,3 +71,7 @@ nuget.config.local
 /Motely.Wasm/dist
 /Motely.Wasm/.pack-consumer
 /jaml-lang/dist
+
+# Personal MCP server config (roslyn-lens etc.) — not a shared dep
+.mcp.json
+.mcp.local.json

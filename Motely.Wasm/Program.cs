@@ -181,6 +181,9 @@ public static partial class Program
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
 
+    [Export]
+    public static string GetVocabulary() => JamlVocabulary.Build().ToJson();
+
     // JAMLyzer — every-stream single-seed snapshot. Pure forward to Motely.Analysis.Jamlyzer
     // (Bootsharp [Export] must live in this assembly). Returning JamlyzerSnapshot, whose type is
     // declared in the Motely.Analysis namespace, is what re-materializes the `motely/analysis`
@@ -189,6 +192,64 @@ public static partial class Program
     [Export]
     public static JamlyzerSnapshot Jamlyze(string seed, MotelyDeck deck, MotelyStake stake) =>
         Jamlyzer.Analyze(seed, deck, stake);
+
+    // OnJamlyzerResult fires once per matched seed during RunJamlyzeSearch — the snapshot is
+    // computed inline C#, so JS gets N calls (one per hit) instead of the old 2N pattern
+    // (OnScoredResult + a separate Jamlyze() round-trip per hit).
+    [Export]
+    public static event Action<JamlyzerSnapshot>? OnJamlyzerResult;
+
+    // Gate: set true after wiring OnJamlyzerResult. When false RunJamlyzeSearch still runs
+    // the search but skips the per-seed Jamlyzer.Analyze call (free dry-run).
+    [Export]
+    public static bool JamlyzeEnabled { get; set; }
+
+    // RunJamlyzeSearch: unified entry point for the JAMLyzer-powered search.
+    // — When config.Seeds is non-empty: front-loaded list search (instant return for community
+    //   filters that already know their seeds; no sequential grind needed).
+    // — Otherwise: sequential grind from startBatchIndex to endBatchIndex.
+    // Each matched seed fires OnJamlyzerResult with its full JamlyzerSnapshot inline (via
+    // JamlyzerScoreDesc — one WASM interop call per hit, no nested search spawned).
+    // autoScoreCutoff is intentionally absent on the list path (same rule as RunSeedListSearch).
+    [Export]
+    public static IMotelySearch RunJamlyzeSearch(
+        JamlConfig config,
+        long startBatchIndex = 0,
+        long endBatchIndex = long.MaxValue,
+        int batchCharacterCount = 4,
+        long progressReportIntervalMs = 500,
+        bool autoScoreCutoff = false
+    )
+    {
+        Action<JamlyzerSnapshot>? jamlyzeCallback = JamlyzeEnabled ? OnJamlyzerResult : null;
+        IMotelySearchSettings settings;
+        if (config.Seeds.Count > 0)
+        {
+            var seeds = config.Seeds.ToArray();
+            settings = JamlSearchBuilder
+                .CreateJamlyzerSettings(config, jamlyzeCallback)
+                .WithListSearch(seeds, seeds.Length);
+        }
+        else
+        {
+            settings = JamlSearchBuilder
+                .CreateJamlyzerSettings(config, jamlyzeCallback)
+                .WithSequentialSearch()
+                .WithStartBatchIndex(startBatchIndex)
+                .WithEndBatchIndex(endBatchIndex)
+                .WithBatchCharacterCount(batchCharacterCount)
+                .WithProgressReportIntervalMs(progressReportIntervalMs)
+                .WithAutoScoreCutoff(autoScoreCutoff);
+        }
+        return RunJamlyzeInternal(settings);
+    }
+
+    private static IMotelySearch RunJamlyzeInternal(IMotelySearchSettings settings)
+    {
+        if (OnProgress is not null)
+            settings = settings.WithProgressCallback(p => OnProgress(p));
+        return settings.WithThreadCount(1).Start();
+    }
 
     // ── Search entry points ──
     // WASM has no pthreads, so every Run* call BLOCKS the calling thread until the search completes.
