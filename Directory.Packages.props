@@ -1,15 +1,15 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>20.1.0</MotelyVersion>
+    <MotelyVersion>21.1.0</MotelyVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors>$(WarningsAsErrors);NU1603</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Bootsharp" Version="0.9.0-alpha.30" />
-    <PackageVersion Include="Bootsharp.Common" Version="0.9.0-alpha.30" />
-    <PackageVersion Include="Bootsharp.Inject" Version="0.9.0-alpha.30" />
-    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.6.9.1134" />
+    <PackageVersion Include="Bootsharp" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.Common" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.6.11.4" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.2" />
