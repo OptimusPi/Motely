@@ -40,14 +40,4 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <!--
-    JAML language tooling is GENERATED from the engine on every WASM build:
-    jaml-lang/generate.mjs reads Motely/Enums + JamlConfigLoader.Models.cs and
-    emits jaml-lang/src/generated.ts + jaml-lsp/syntaxes/jaml.tmLanguage.json.
-    The engine is the only source of truth — nobody hand-lists jokers again.
-  -->
-  <Target Name="GenerateJamlLang" AfterTargets="Build">
-    <Exec Command="node &quot;$(MSBuildProjectDirectory)\..\jaml-lang\generate.mjs&quot;" />
-  </Target>
-
 </Project>
