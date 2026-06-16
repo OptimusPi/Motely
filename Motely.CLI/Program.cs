@@ -4,7 +4,6 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Analysis;
 using Motely.CLI;
-using Motely.DataLake;
 using Motely.Filters;
 using Motely.Filters.Native;
 using YamlDotNet.RepresentationModel;
@@ -75,24 +74,21 @@ partial class Program
         index = 0;
         error = null;
         var seed = input.Trim().ToUpperInvariant().Replace('0', 'O');
-        if (seed.Length == 0 || seed.Length > MotelyGlobals.MaxSeedLength)
+        // Motely's sequential search ranges over full 8-char seeds (11111111 → ZZZZZZZZ),
+        // so --startSeed/--stopSeed must be exactly 8 chars. No padding: a short seed
+        // would silently map to a different point than the user typed.
+        if (seed.Length != MotelyGlobals.MaxSeedLength)
         {
-            error = $"'{input}' must be 1–{MotelyGlobals.MaxSeedLength} characters (1-9, A-Z).";
+            error = $"'{input}' must be exactly {MotelyGlobals.MaxSeedLength} characters (1-9, A-Z).";
             return false;
         }
-        // Pad to 8 chars — short seeds like "A" mean "A1111111" (leftmost significant)
-        if (seed.Length < MotelyGlobals.MaxSeedLength)
-            seed =
-                seed
-                + new string(
-                    MotelyGlobals.SeedDigits[0],
-                    MotelyGlobals.MaxSeedLength - seed.Length
-                );
         foreach (char c in seed)
         {
             if (!MotelyGlobals.SeedDigits.Contains(c))
             {
-                error = $"'{input}' contains invalid character '{c}'. Valid: 1-9, A-Z (no 0).";
+                // '0' was already normalized to 'O' above, so it can never reach here —
+                // don't tell the user "no 0" for a char that can't be 0.
+                error = $"'{input}' contains invalid character '{c}'. Valid: 1-9, A-Z.";
                 return false;
             }
         }
@@ -263,11 +259,6 @@ partial class Program
             "Random seed count for --native mode",
             CommandOptionType.SingleValue
         );
-        var vocabOption = app.Option(
-            "--vocab",
-            "Print the JAML vocabulary (all valid names) as JSON and exit. Pipe to jaml-lang/vocabulary.json to regenerate the language-service brain.",
-            CommandOptionType.NoValue
-        );
         var quietOption = app.Option(
             "-q|--quiet|--no-progress",
             "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
@@ -281,13 +272,6 @@ partial class Program
             if (args.Length == 0)
             {
                 app.ShowHelp();
-                return 0;
-            }
-
-            // --vocab — dump engine-derived vocabulary JSON and exit
-            if (vocabOption.HasValue())
-            {
-                Console.WriteLine(JamlVocabulary.Build().ToJson());
                 return 0;
             }
 
@@ -310,6 +294,7 @@ partial class Program
             // --native mode — run a hardcoded C# filter by name
             if (nativeOption.HasValue())
             {
+                // WRONG i -- this is so fucked upo claude.
                 if (drownOption.HasValue())
                 {
                     Console.Error.WriteLine(
@@ -477,7 +462,9 @@ partial class Program
                     "Warning: --drown forces --threads 1 for safe provider reads."
                 );
 
-            bool cutoffAuto = false;
+            // Default is auto: without --cutoff we self-tune the score gate instead of
+            // emitting every seed. An explicit integer turns auto off and pins the gate.
+            bool cutoffAuto = true;
             int cutoffFixed = int.MinValue;
             if (cutoffOption.HasValue())
             {
@@ -486,7 +473,11 @@ partial class Program
                 {
                     cutoffAuto = true;
                 }
-                else if (!int.TryParse(cutoffValue, out cutoffFixed))
+                else if (int.TryParse(cutoffValue, out cutoffFixed))
+                {
+                    cutoffAuto = false;
+                }
+                else
                 {
                     Console.Error.WriteLine("Error: --cutoff must be an integer or 'auto'.");
                     return 1;
@@ -580,10 +571,10 @@ partial class Program
             );
             int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
             var saveSeedsCollector = saveSeedsOption.HasValue()
-                ? new TopSeedCollector(SavedSeedLimit)
+                ? new TopSeedCollector(MotelyGlobals.SavedSeedLimit)
                 : null;
             var saveSeedMatches = saveSeedsOption.HasValue()
-                ? new List<string>(SavedSeedLimit)
+                ? new List<string>(MotelyGlobals.SavedSeedLimit)
                 : null;
             var saveSeedMatchSet = saveSeedsOption.HasValue()
                 ? new HashSet<string>(StringComparer.Ordinal)
@@ -618,7 +609,7 @@ partial class Program
                     if (
                         saveSeedMatches != null
                         && saveSeedMatchSet != null
-                        && saveSeedMatches.Count < SavedSeedLimit
+                        && saveSeedMatches.Count < MotelyGlobals.SavedSeedLimit
                         && saveSeedMatchSet.Add(seed)
                     )
                     {
@@ -741,7 +732,7 @@ partial class Program
             .Select(static seed => seed.Trim().ToUpperInvariant().Replace('0', 'O'))
             .Where(static seed => !string.IsNullOrWhiteSpace(seed))
             .Distinct(StringComparer.Ordinal)
-            .Take(SavedSeedLimit)
+            .Take(MotelyGlobals.SavedSeedLimit)
             .ToArray();
 
         var originalHasTrailingNewline = original.EndsWith("\n", StringComparison.Ordinal);
@@ -1047,34 +1038,12 @@ partial class Program
         }
     }
 
-    static string ResolveDataLakeRootPath()
-    {
-        var configured = Environment.GetEnvironmentVariable("MOTELY_DATALAKE_PATH");
-        return string.IsNullOrWhiteSpace(configured) ? "seeds" : configured;
-    }
-
     static IMotelyResultSink CreateResultSink(
         bool hasStructuredScores,
         string filterId,
         IReadOnlyList<string> tallyLabels
     )
     {
-        var sinks = new List<IMotelyResultSink> { new ConsoleResultSink() };
-
-        if (hasStructuredScores)
-        {
-            try
-            {
-                sinks.Add(
-                    new MotelyLakeResultSink(ResolveDataLakeRootPath(), filterId, tallyLabels)
-                );
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Warning: DuckLake autosave unavailable: {ex.Message}");
-            }
-        }
-
-        return new CompositeMotelyResultSink(sinks);
+        return new CompositeMotelyResultSink(new IMotelyResultSink[] { new ConsoleResultSink() });
     }
 }
