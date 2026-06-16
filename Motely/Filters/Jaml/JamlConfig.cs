@@ -117,6 +117,11 @@ public sealed class SpectralCardSourceConfig
     /// When true, booster Spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).
     /// </summary>
     public bool EtherealTag { get; set; }
+
+    // TODO: OmenGlobe — voucher that allows Spectral cards to appear in Arcana packs.
+    // This is voucher-state-gated AND changes the Arcana pack PRNG path (not a simple slot array).
+    // Much more complex than other sources — needs voucher state tracking + pack stream branching.
+    // Likely Jimmolate territory. Do not implement naively.
 }
 
 public sealed class PlanetSourceConfig
