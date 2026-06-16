@@ -121,7 +121,8 @@ the sorted top-1000 into the filter's `seeds:` block.
 ## Hard-won lessons (the gotchas)
 
 1. **Verify every name against the engine.** A typo'd joker/voucher name passes structural
-   validation but matches **zero** seeds (silent-zero). Check `Motely/Enums/*.cs` or the
+   validation but is **rejected loudly at parse time** (strict mode throws line+col; the old
+   silent-zero bug is fixed). Check `Motely/Enums/*.cs` or the
    golden filters in `Motely.Tests/GoldenJamlFiles/`.
 2. **`max: 1` for binary enablers.** Showman lets duplicate jokers exist — a *second*
    Showman does nothing in-game, so don't reward a count of them. `max: 1` caps it.

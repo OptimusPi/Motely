@@ -31,7 +31,7 @@ Modes: `--keyword NAME` (+`--padding`), `--aesthetic palindrome|echo|gross|funny
 `--source file.txt`, `--random N`, or sequential. `--cutoff auto` = best-so-far; `--cutoff N` = all ≥ N.
 
 ## Hard rules (don't relearn these the hard way)
-1. **Verify names** — a typo silent-zeros the whole filter.
+1. **Verify names** — a typo is rejected loudly at parse time (strict mode throws line+col).
 2. **`max:1` for binary enablers** (Showman: a 2nd does nothing in-game).
 3. **Be bold with `must`** — 2.3 trillion seeds, it WILL find one.
 4. **`sources` pins the acquisition path** (e.g. a Soul from early `boosterPacks:[0,1,2]`).
