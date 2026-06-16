@@ -13,14 +13,24 @@ $root = $PSScriptRoot
 $targets = @('bin', 'obj', 'dist', 'publish', 'node_modules')
 
 $removed = 0
+$failed = 0
 Get-ChildItem -Path $root -Directory -Recurse -Force |
     Where-Object { $targets -contains $_.Name -and $_.FullName -notmatch '\\node_modules\\' } |
     Sort-Object { $_.FullName.Length } -Descending |
     ForEach-Object {
         Write-Host "rm $($_.FullName)" -ForegroundColor DarkGray
-        Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
-        $removed++
+        try {
+            Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
+            $removed++
+        } catch {
+            Write-Host "  FAILED: $($_.Exception.Message)" -ForegroundColor Red
+            $failed++
+        }
     }
 
 Write-Host ""
+if ($failed -gt 0) {
+    Write-Host "=== clean done — removed $removed dirs, $failed FAILED (likely locked by a running build/IDE) ===" -ForegroundColor Yellow
+    exit 1
+}
 Write-Host "=== clean done — removed $removed build-output dirs ===" -ForegroundColor Green
