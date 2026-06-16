@@ -365,6 +365,19 @@ function validateClause(clause: JamlNode, diagnostics: JamlDiagnostic[]) {
   }
 }
 
+/**
+ * Validate item/clause names in a JAML document.
+ *
+ * This is the documented entrypoint (see CLAUDE.md / SEED_GENIE docs): it wraps
+ * {@link getDiagnostics} in the `{ diagnostics }` shape the docs promise, so the
+ * documented one-liner actually runs. Zero diagnostics = the engine will accept
+ * the filter; any diagnostic = it would silently find zero seeds.
+ */
+export function validateNames(text: string): { ok: boolean; diagnostics: JamlDiagnostic[] } {
+  const diagnostics = getDiagnostics(text);
+  return { ok: diagnostics.length === 0, diagnostics };
+}
+
 // ── Completions ─────────────────────────────────────────────────────────────
 
 export function getCompletions(text: string, offset: number): JamlCompletion[] {
