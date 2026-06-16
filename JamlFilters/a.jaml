@@ -12,9 +12,11 @@ must:
   - smallBlindTag: NegativeTag
     antes: [4]
   - joker: Perkeo
-    antes: [1,2,3]
+    antes: [1,2]
   - joker: Showman
     antes: [1,2,3]
+  - joker: LuckyCat
+    antes: [1,2,3,4,5,6,7]
 should:
   - jokers: [OopsAll6s, Blueprint, Brainstorm, InvisibleJoker, SockAndBuskin, HangingChad]
     antes: [1,2,3,4]
@@ -23,16 +25,23 @@ should:
       boosterPacks: [0,1]
     score: 29
     max: 1
-  - joker: OopsAll6s
-    antes: [4]
-    sources:
-      shopItems: [2, 3, 4, 5, 6, 7]
-    score: 100
-  - joker: OopsAll6s
-    antes: [5]
-    sources:
-      shopItems: [0]
-    score: 100
+  - or:
+      - joker: OopsAll6s
+        antes: [3]
+      - joker: OopsAll6s
+        antes: [4]
+        sources:
+          shopItems: [2,3,4,5,6,7]
+      - joker: OopsAll6s
+        antes: [5]
+        sources:
+          shopItems: [0,1]
+      - joker: OopsAll6s
+        antes: [6]
+        sources:
+          shopItems: [0,1]
+    min: 3
+    score: 300
   - jokers: [LuckyCat, Blueprint, Brainstorm, InvisibleJoker, SockAndBuskin, HangingChad]
     antes: [4]
     sources:

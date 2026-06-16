@@ -276,14 +276,32 @@ partial class Program
             }
 
             // --analyze mode — supports single seed or comma-separated batch
+            // When --jaml is also present, output is filtered to only the referenced antes/streams.
             if (analyzeOption.HasValue())
             {
-                var analyzeDeck = deckOption.HasValue() ? deckOption.ParsedValue : "Erratic";
-                var analyzeStake = stakeOption.HasValue() ? stakeOption.ParsedValue : "White";
                 var seedTokens = analyzeOption.ParsedValue.Split(
                     ',',
                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
                 );
+
+                if (jamlOption.HasValue())
+                {
+                    if (!JamlConfigLoader.TryLoadFromPath(jamlOption.ParsedValue, out var lensConfig, out var lensErr))
+                    {
+                        Console.Error.WriteLine($"Error: {lensErr}");
+                        return 1;
+                    }
+                    foreach (var s in seedTokens)
+                    {
+                        var seed = s.Trim().ToUpperInvariant().Replace('0', 'O');
+                        Console.WriteLine($"=== {seed} | {lensConfig.Deck} {lensConfig.Stake} | {lensConfig.Name ?? jamlOption.ParsedValue} ===");
+                        Console.Write(JamlSeedAnalyzer.Analyze(seed, lensConfig));
+                    }
+                    return 0;
+                }
+
+                var analyzeDeck = deckOption.HasValue() ? deckOption.ParsedValue : "Erratic";
+                var analyzeStake = stakeOption.HasValue() ? stakeOption.ParsedValue : "White";
 
                 if (seedTokens.Length == 1)
                     return ExecuteAnalyze(seedTokens[0], analyzeDeck, analyzeStake);
@@ -397,8 +415,8 @@ partial class Program
                     .WithSeedMatchCallback(seed => Console.WriteLine(seed))
                     .WithProgressCallback(
                         quietOption.HasValue()
-                            ? CaptureNativeProgress
-                            : WriteNativeProgressLineToStderr
+                            ? CaptureProgress
+                            : WriteProgressLineToStderr
                     );
 
                 if (!quietOption.HasValue())
@@ -564,11 +582,7 @@ partial class Program
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;
-            using var resultSink = CreateResultSink(
-                hasStructuredScores,
-                config.Id,
-                plan.TallyLabels
-            );
+            using var resultSink = new ConsoleResultSink();
             int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
             var saveSeedsCollector = saveSeedsOption.HasValue()
                 ? new TopSeedCollector(MotelyGlobals.SavedSeedLimit)
@@ -584,7 +598,7 @@ partial class Program
             // quiet mode swaps in the silent capture variant.
             settings = settings
                 .WithProgressCallback(
-                    quietOption.HasValue() ? CaptureJamlProgress : WriteJamlProgressLineToStderr
+                    quietOption.HasValue() ? CaptureProgress : WriteProgressLineToStderr
                 )
                 .WithAutoScoreCutoff(cutoffAuto);
 
@@ -883,7 +897,10 @@ partial class Program
         }
     }
 
-    // ── Analyze (batch) ──
+    // ── Analyze ──
+
+    static int ExecuteAnalyze(string seed, string deckName, string stakeName) =>
+        ExecuteAnalyzeBatch([seed], deckName, stakeName);
 
     static int ExecuteAnalyzeBatch(string[] seeds, string deckName, string stakeName)
     {
@@ -917,68 +934,21 @@ partial class Program
         return 0;
     }
 
-    // ── Analyze (single) ──
-
-    static int ExecuteAnalyze(string seed, string deckName, string stakeName)
-    {
-        if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
-        {
-            Console.Error.WriteLine($"Error: invalid deck '{deckName}'.");
-            return 1;
-        }
-        if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s))
-        {
-            Console.Error.WriteLine($"Error: invalid stake '{stakeName}'.");
-            return 1;
-        }
-
-        var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
-
-        var analysis = MotelyLegacyTextAnalyzer.Analyze(new(normalizedSeed, d, s));
-        if (!string.IsNullOrEmpty(analysis.Error))
-        {
-            Console.Error.WriteLine($"Error: {analysis.Error}");
-            return 1;
-        }
-
-        Console.WriteLine($"=== {normalizedSeed} | {d} {s} ===");
-        Console.Write(analysis);
-        Console.WriteLine();
-        return 0;
-    }
-
     // Cached latest progress so 'p' key can print on demand even under --quiet.
     static MotelyProgress? _latestProgress;
+    static int _lastProgressPercent = -1;
 
-    static int _lastNativePercent = -1;
-
-    static void WriteNativeProgressLineToStderr(MotelyProgress p)
+    static void WriteProgressLineToStderr(MotelyProgress p)
     {
         _latestProgress = p;
         int pct = (int)p.PercentComplete;
-        if (pct <= _lastNativePercent)
+        if (pct <= _lastProgressPercent)
             return;
-        _lastNativePercent = pct;
+        _lastProgressPercent = pct;
         FormatProgressToStderr(p);
     }
 
-    static int _lastJamlPercent = -1;
-
-    static void WriteJamlProgressLineToStderr(MotelyProgress p)
-    {
-        _latestProgress = p;
-        int pct = (int)p.PercentComplete;
-        if (pct <= _lastJamlPercent)
-            return;
-        _lastJamlPercent = pct;
-        FormatProgressToStderr(p);
-    }
-
-    // Quiet-mode callbacks: capture latest progress silently so the 'p' hotkey
-    // still has something to print.
-    static void CaptureNativeProgress(MotelyProgress p) => _latestProgress = p;
-
-    static void CaptureJamlProgress(MotelyProgress p) => _latestProgress = p;
+    static void CaptureProgress(MotelyProgress p) => _latestProgress = p;
 
     static void PrintLatestProgressOnDemand()
     {
@@ -1038,12 +1008,4 @@ partial class Program
         }
     }
 
-    static IMotelyResultSink CreateResultSink(
-        bool hasStructuredScores,
-        string filterId,
-        IReadOnlyList<string> tallyLabels
-    )
-    {
-        return new CompositeMotelyResultSink(new IMotelyResultSink[] { new ConsoleResultSink() });
-    }
 }
