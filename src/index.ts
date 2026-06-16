@@ -65,6 +65,7 @@ export {
     type JamlSpeedometerProps,
     type JamlSpeedometerStatus,
 } from "./components/JamlSpeedometer.js";
+<<<<<<< HEAD
 export {
     Showcase,
     type ShowcaseFilter,
@@ -72,6 +73,8 @@ export {
     type ShowcaseProps,
     type ShowcaseRecentFind,
 } from "./ui/showcase.js";
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export {
     extractVisualJamlItems,
@@ -110,7 +113,11 @@ export {
     JamlAestheticSelector,
     type JamlAestheticSelectorProps,
 } from "./components/JamlAestheticSelector.js";
+<<<<<<< HEAD
 export { JamlAesthetic } from "motely-wasm";
+=======
+export { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 export {
     JamlSeedInput,
     type JamlSeedInputProps,

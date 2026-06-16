@@ -68,7 +68,11 @@ That's the whole integration. `useSearch` handles boot guarding, search lifecycl
 
 ## Package exports
 
+<<<<<<< HEAD
 Five subpath entries, each a barrel. The public API is exactly what they re-export.
+=======
+Four subpath entries, each a barrel. The public API is exactly what they re-export.
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 | Entry | What's in it | When you import it |
 | ----- | ------------ | ------------------ |
@@ -76,7 +80,10 @@ Five subpath entries, each a barrel. The public API is exactly what they re-expo
 | `jaml-ui/ui` | Jimbo design system (JimboPanel, JimboButton, JimboModal, tokens) | Building custom Balatro-styled UI |
 | `jaml-ui/core` | Sprite metadata, asset URLs, canvas `Layer` — pure, **no React, no motely-wasm** | Next.js server components, server-side rendering |
 | `jaml-ui/motely` | Re-exports `bootsharp` + `Motely` from motely-wasm, plus item-decode helpers and `useJamlLibrary` | Direct motely-wasm access, file-system mount |
+<<<<<<< HEAD
 | `jaml-ui/r3f` | 3D card via React Three Fiber | Optional, has its own peer deps |
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 ```tsx
 import { JamlGameCard, useSearch } from "jaml-ui";
@@ -221,6 +228,7 @@ import {
   motelyItemDisplayName,
   motelyItemTypeName,
 } from "jaml-ui/motely";
+<<<<<<< HEAD
 ```
 
 ## 3D card (optional)
@@ -233,6 +241,8 @@ npm install three @react-three/fiber @react-three/drei @react-spring/three
 import { Card3D } from "jaml-ui/r3f";
 
 <Card3D itemName="Blueprint" />
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 ```
 
 ## Next.js
@@ -255,7 +265,10 @@ import { Card3D } from "jaml-ui/r3f";
 | `motely-wasm` | All search/analyzer/decode functionality | No (direct dep) |
 | `react-icons` | Components that render icons | Yes |
 | `@rewaffle/bootsharp-file-system` | `useJamlLibrary` folder mount | Yes |
+<<<<<<< HEAD
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-spring/three` | `jaml-ui/r3f` only | Yes |
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 ## Troubleshooting
 

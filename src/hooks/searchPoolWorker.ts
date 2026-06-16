@@ -5,6 +5,7 @@
 // hook is responsible for partitioning the input space and assigning each worker
 // a disjoint slice via the fields on PoolStartMessage. This worker just runs
 // what it is told.
+<<<<<<< HEAD
 import {
     Motely,
     type IMotelySearch,
@@ -16,6 +17,13 @@ import {
     type JamlAesthetic
 } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
+=======
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+import type { JamlAesthetic, JamlConfig } from "motely-wasm/motely/filters/jaml";
+import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 
@@ -147,6 +155,7 @@ function attachListeners(): void {
     unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
+<<<<<<< HEAD
 function applyCommonOverrides(
     settings: IMotelyWasmSearchSettings,
     message: PoolStartMessage,
@@ -191,6 +200,42 @@ function configureSettings(message: PoolStartMessage): IMotelyWasmSearchSettings
         }
         default:
             return s.withAestheticSearch(0 as JamlAesthetic);
+=======
+// deck/stake are config fields now; the worker is single-threaded, so the old
+// withThreadCount(1) is dropped (it was a no-op here).
+function applyCommonOverrides(config: JamlConfig, message: PoolStartMessage): JamlConfig {
+    if (typeof message.deck === "number") {
+        config.deck = message.deck as MotelyDeck;
+    }
+    if (typeof message.stake === "number") {
+        config.stake = message.stake as MotelyStake;
+    }
+    return config;
+}
+
+function configureSettings(message: PoolStartMessage): IMotelySearch {
+    const config = applyCommonOverrides(Motely.parseJaml(message.jaml), message);
+
+    switch (message.mode) {
+        case "aesthetic":
+            return Motely.runAestheticSearch(config, (message.aesthetic ?? 0) as JamlAesthetic);
+        case "seedlist": {
+            config.seeds = message.seeds ?? [];
+            return Motely.runSeedListSearch(config);
+        }
+        case "random": {
+            const count = typeof message.count === "number" && message.count > 0 ? message.count : 0;
+            return Motely.runRandomSearch(config, count);
+        }
+        case "sequential": {
+            const start = typeof message.startBatchIndex === "string" ? BigInt(message.startBatchIndex) : undefined;
+            const end = typeof message.endBatchIndex === "string" ? BigInt(message.endBatchIndex) : undefined;
+            const batchChars = typeof message.batchCharacterCount === "number" ? message.batchCharacterCount : undefined;
+            return Motely.runSequentialSearch(config, start, end, batchChars);
+        }
+        default:
+            return Motely.runAestheticSearch(config, 0 as JamlAesthetic);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     }
 }
 
@@ -213,9 +258,14 @@ self.onmessage = async (event: MessageEvent) => {
 
         if (data.predicateStr) {
             try {
+<<<<<<< HEAD
                 // eslint-disable-next-line @typescript-eslint/no-implied-eval
                 const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
                 Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
+=======
+                const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
+                setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 Motely.enableJimmolate();
             } catch (err) {
                 console.error("Failed to compile worker Jimmolate predicate:", err);
@@ -225,8 +275,13 @@ self.onmessage = async (event: MessageEvent) => {
         attachListeners();
 
         currentSearch?.cancel();
+<<<<<<< HEAD
         const settings = configureSettings(data);
         const search = settings.start();
+=======
+        const search = configureSettings(data);
+        search.start();
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         currentSearch = search;
 
         try {

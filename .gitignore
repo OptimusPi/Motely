@@ -39,3 +39,7 @@ sb-screenshot*.png
 /examples/mcp-seed-finder/dist
 /examples/mcp-seed-finder/dist-web
 /examples/mcp-seed-finder/public/motely-wasm
+<<<<<<< HEAD
+=======
+*.log
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45

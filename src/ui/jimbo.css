@@ -85,6 +85,16 @@
   --j-space-lg: 12px;
   --j-space-xl: 16px;
 
+<<<<<<< HEAD
+=======
+  /* App shell — HARD-LOCKED 320×540. One size, ALWAYS — never fluid, never
+     resizes. iPhone SE portrait height (568) minus the 28px JimboBalatroFooter
+     that sits below .j-app (total embed rectangle stays 320×568). */
+  --j-footer-h: 28px;
+  --j-app-w: 320px;
+  --j-app-h: 540px;
+
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   /* Radii — Balatro is chunky, not bubbly. Never > 10px. */
   --j-radius-sm: 4px;
   --j-radius-md: 6px;
@@ -151,9 +161,15 @@
   }
 }
 
+<<<<<<< HEAD
 /* Sizes (from DESIGN.md typography scale) */
 .j-text--display {
   font-size: 26px;
+=======
+/* Sizes (snapped to m6x11 [16,32,48] and m6x11plus [18,36,54] pixel grids) */
+.j-text--display {
+  font-size: 32px;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
@@ -169,12 +185,17 @@
 }
 
 .j-text--heading {
+<<<<<<< HEAD
   font-size: 14px;
+=======
+  font-size: 16px;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.08em;
   line-height: 1.2;
 }
 
 .j-text--md {
+<<<<<<< HEAD
   font-size: 14px;
 }
 
@@ -184,22 +205,45 @@
 
 .j-text--body {
   font-size: 11px;
+=======
+  font-size: 16px;
+}
+
+.j-text--sm {
+  font-size: 14px;
+}
+
+.j-text--body {
+  font-size: 13px;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.05em;
   line-height: 1.3;
 }
 
 .j-text--xs {
+<<<<<<< HEAD
   font-size: 10px;
 }
 
 .j-text--label {
   font-size: 9px;
+=======
+  font-size: 12px;
+}
+
+.j-text--label {
+  font-size: 10px;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
 
 .j-text--micro {
+<<<<<<< HEAD
   font-size: 8px;
+=======
+  font-size: 10px;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
@@ -353,7 +397,11 @@
   background: var(--j-btn-face-color, var(--j-orange));
   text-align: center;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+<<<<<<< HEAD
   /* Drop-lip at 30% opacity per design. Stacked solid offset, no blur. */
+=======
+  /* Drop shadow at 30% opacity per design. Stacked solid offset, no blur. */
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   box-shadow: 0 calc(var(--j-press-y) + 2px) 0 0 rgba(0, 0, 0, 0.3);
   transform: translate(0, 0);
   transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear, background-color var(--j-press-speed) linear;
@@ -399,17 +447,29 @@
 }
 
 .j-btn--md .j-btn__face {
+<<<<<<< HEAD
   padding-top: 6px;
   padding-right: 18px;
   padding-bottom: 9px;
+=======
+  padding-top: 9px;
+  padding-right: 18px;
+  padding-bottom: 6px;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   padding-left: 18px;
   font-size: 16px;
 }
 
 .j-btn--lg .j-btn__face {
+<<<<<<< HEAD
   padding-top: 6px;
   padding-right: 18px;
   padding-bottom: 11px;
+=======
+  padding-top: 11px;
+  padding-right: 18px;
+  padding-bottom: 6px;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   padding-left: 18px;
   font-size: 20px;
 }
@@ -610,7 +670,10 @@
 }
 
 .j-tab__btn[data-active="false"]:hover {
+<<<<<<< HEAD
   background: var(--j-red);
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   background: var(--j-dark-red);
 }
 
@@ -1208,6 +1271,19 @@
   border-color: var(--j-red);
 }
 
+<<<<<<< HEAD
+=======
+.j-text-input--code {
+  font-family: var(--j-font-code);
+  font-size: 11px;
+}
+
+/* Jimmolate: JS predicate editor for post-SIMD seed filtering. */
+.j-jimmolate { gap: var(--j-space-sm); }
+.j-jimmolate__sig { opacity: 0.6; }
+.j-jimmolate__input { width: 100%; font-family: var(--j-font-code); font-size: 11px; }
+
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 /* Inline-edit: borderless transparent input that reads as text. */
 .j-inline-edit {
   width: 100%;
@@ -1461,6 +1537,7 @@
 }
 
 /* ── App Shell ────────────────────────────────────────────────────────── */
+<<<<<<< HEAD
 /* Mobile-first 320px layout container for ALL Jimbo UI screens.
  * Supports container queries for responsive breakpoints:
  *   compact  ≤400px  — iPhone SE, fixed 568px height, NO scroll
@@ -1486,6 +1563,29 @@
   height: 568px;
   max-height: 568px;
   min-height: 568px;
+=======
+/* The MCP App embed target. 320×(568 − footer) hard-locked. No fluid, no
+   responsive, no reflow. The swirl behind shows in the surrounding viewport;
+   the JimboBalatroFooter sits below this rectangle (fixed, viewport-pinned)
+   and is excluded from j-app's height so the two never overlap. */
+
+.j-background-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -10;
+  pointer-events: none;
+}
+
+.j-app {
+  width: var(--j-app-w);
+  max-width: var(--j-app-w);
+  min-width: var(--j-app-w);
+  height: var(--j-app-h);
+  max-height: var(--j-app-h);
+  min-height: var(--j-app-h);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -1499,6 +1599,7 @@
   position: relative;
 }
 
+<<<<<<< HEAD
 /* Fluid modifier — unlocks the container for MCP / desktop contexts. */
 .j-app--fluid {
   width: 100%;
@@ -1508,6 +1609,8 @@
   min-height: 400px;
 }
 
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 .j-app__content {
   flex: 1;
   min-height: 0;
@@ -1554,6 +1657,7 @@
   gap: var(--j-space-sm);
 }
 
+<<<<<<< HEAD
 /* ── Cozy Breakpoint (401px+) ──────────────────────────────────────── */
 /* Only activates when j-app--fluid is used AND container is wide enough. */
 
@@ -1590,6 +1694,8 @@
 }
 
 
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 /* ── Section Header ──────────────────────────────────────────────────── */
 /* Colored tag + horizontal rule — reusable section divider. */
 
@@ -2139,6 +2245,13 @@
 .j-ide {
   display: flex;
   flex-direction: column;
+<<<<<<< HEAD
+=======
+  /* Grow to fill a fixed-height flex parent (e.g. the 320x540 .j-app shell)
+     so the IDE never leaves dead space below it; min-height stays as the
+     floor for standalone (non-flex-parent) usage so it can't collapse. */
+  flex: 1 1 auto;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   min-height: 420px;
   max-width: 100%;
   overflow: hidden;
@@ -3052,6 +3165,7 @@
   justify-items: center;
 }
 
+<<<<<<< HEAD
 /* ── Panel Splitter ──────────────────────────────────────────────────── */
 
 .j-panel-splitter {
@@ -3124,6 +3238,8 @@
   align-items: flex-start;
 }
 
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 /* ── Font Dance Animation ─────────────────────────────────────────────── */
 
 @keyframes j-font-dance {
@@ -3200,4 +3316,635 @@
 .j-stack--justify-between, .j-row--justify-between { justify-content: space-between; }
 
 /* Row-only: opt-in soft wrap. Stack is column-flow so wrap is meaningless. */
+<<<<<<< HEAD
 .j-row--wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, max-content); }
+=======
+.j-row--wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, max-content); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   jimbo-addons.css — additions to the canonical jimbo.css
+   New primitives: StatCallout, SectionHeader, SidewaysLabel, PriceTag,
+   Toggle, Tooltip, Marquee, Toast, ProgressBar, ConfirmPrompt, ErrorBlock,
+   Stack/Row/Divider layout helpers.
+
+   All flat fills, m6x11plus font, design-token colors. No gradients,
+   no glass, no neumorphism. Balatro is chunky and pixel.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Spinner — `< value >` cycler. Value is a display badge, NOT a button. ── */
+.j-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.j-spinner__label {
+  text-align: center;
+  font-family: var(--j-font);
+  font-size: 12px;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+/* Value badge — flat red fill with dark-red south edge. No hover, no click. */
+.j-spinner__value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 4px 14px 6px;
+  background: var(--j-red);
+  border: none;
+  border-bottom: 3px solid var(--j-dark-red);
+  border-radius: var(--j-radius-md);
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 14px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  user-select: none;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Layout helpers ───────────────────────────────────────────────────── */
+.j-stack--xs { gap: 2px; }
+.j-stack--sm { gap: 4px; }
+.j-stack--md { gap: 8px; }
+.j-stack--lg { gap: 12px; }
+.j-stack--xl { gap: 16px; }
+
+.j-row { display: flex; flex-direction: row; align-items: center; }
+.j-row--xs { gap: 2px; }
+.j-row--sm { gap: 4px; }
+.j-row--md { gap: 8px; }
+.j-row--lg { gap: 12px; }
+.j-row--xl { gap: 16px; }
+.j-row--center { justify-content: center; }
+.j-row--end { justify-content: flex-end; }
+.j-row--between { justify-content: space-between; }
+
+.j-divider {
+  border: none;
+  height: 1px;
+  background: var(--j-border-south);
+  opacity: 0.4;
+  margin: 4px 0;
+}
+.j-divider--vert {
+  width: 1px;
+  height: auto;
+  align-self: stretch;
+  margin: 0 4px;
+}
+
+/* ── Stat Callout — label strip + big pixel number ────────────────────── */
+.j-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--j-darkest);
+  border-radius: var(--j-radius-md);
+  overflow: hidden;
+  min-width: 56px;
+}
+.j-stat__label {
+  padding: 2px 6px;
+  font-family: var(--j-font);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-stat__label--red    { background: var(--j-red); }
+.j-stat__label--blue   { background: var(--j-blue); }
+.j-stat__label--green  { background: var(--j-green); }
+.j-stat__label--orange { background: var(--j-orange); }
+.j-stat__label--gold   { background: var(--j-gold); color: #1e1e1e; text-shadow: none; }
+.j-stat__label--purple { background: var(--j-purple); }
+.j-stat__label--grey   { background: var(--j-teal-grey); }
+.j-stat__value {
+  padding: 4px 8px 6px;
+  font-family: var(--j-font);
+  font-size: 22px;
+  line-height: 1;
+  text-align: center;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+}
+.j-stat__value--gold { color: var(--j-gold-text); }
+.j-stat__value--red  { color: var(--j-red); }
+.j-stat__value--blue { color: var(--j-blue); }
+
+/* ── Section Header — red strip + title + downward triangle ──────────── */
+.j-section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.j-section-header__bar {
+  width: 100%;
+  background: var(--j-red);
+  padding: 6px 12px;
+  text-align: center;
+  border-radius: var(--j-radius-md) var(--j-radius-md) 0 0;
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+}
+.j-section-header__bar--orange  { background: var(--j-orange); }
+.j-section-header__bar--blue    { background: var(--j-blue); }
+.j-section-header__bar--green   { background: var(--j-green); }
+.j-section-header__bar--purple  { background: var(--j-purple); }
+.j-section-header__bar--gold    { background: var(--j-gold); color: #1e1e1e; text-shadow: none; }
+.j-section-header__triangle {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--j-red);
+}
+.j-section-header__triangle--orange { border-top-color: var(--j-orange); }
+.j-section-header__triangle--blue   { border-top-color: var(--j-blue); }
+.j-section-header__triangle--green  { border-top-color: var(--j-green); }
+.j-section-header__triangle--purple { border-top-color: var(--j-purple); }
+.j-section-header__triangle--gold   { border-top-color: var(--j-gold); }
+
+/* ── Sideways Label — vertical ALL-CAPS edge label ───────────────────── */
+.j-sideways-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--j-font);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--j-grey);
+  white-space: nowrap;
+  padding: 4px 2px;
+  user-select: none;
+}
+
+/* ── Price Tag — yellow $X badge ─────────────────────────────────────── */
+.j-price-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--j-gold);
+  color: #1e1e1e;
+  font-family: var(--j-font);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: var(--j-radius-sm);
+  text-shadow: none;
+  white-space: nowrap;
+}
+.j-price-tag--float {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* ── Toggle / Checkbox ───────────────────────────────────────────────── */
+.j-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--j-darkest);
+  border: 2px solid var(--j-border-south);
+  border-radius: var(--j-radius-sm);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: background 60ms linear;
+}
+.j-toggle[data-on="true"] {
+  background: var(--j-blue);
+  border-color: var(--j-dark-blue);
+}
+.j-toggle[data-on="true"]::after {
+  content: '✓';
+  font-family: var(--j-font);
+  font-size: 14px;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  line-height: 1;
+}
+.j-toggle--green[data-on="true"]  { background: var(--j-green); border-color: var(--j-dark-green); }
+.j-toggle--red[data-on="true"]    { background: var(--j-red); border-color: var(--j-dark-red); }
+.j-toggle--orange[data-on="true"] { background: var(--j-orange); border-color: var(--j-dark-orange); }
+
+.j-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+/* ── Tooltip ─────────────────────────────────────────────────────────── */
+.j-tooltip {
+  position: relative;
+  display: inline-block;
+}
+.j-tooltip__bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--j-darkest);
+  border: 2px solid var(--j-border-silver);
+  border-radius: var(--j-radius-md);
+  padding: 6px 10px;
+  min-width: 80px;
+  max-width: 200px;
+  font-family: var(--j-font);
+  font-size: 11px;
+  color: var(--j-white);
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 100;
+}
+.j-tooltip__pointer {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--j-border-silver);
+}
+.j-tooltip__pointer::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--j-darkest);
+}
+
+/* ── Marquee — SHOP sign with bulbs ──────────────────────────────────── */
+.j-marquee {
+  position: relative;
+  background: var(--j-red);
+  border-radius: var(--j-radius-md);
+  padding: 14px 24px 10px;
+  text-align: center;
+}
+.j-marquee__bulbs {
+  position: absolute;
+  inset: 4px;
+  border: 2px dotted var(--j-white);
+  border-radius: var(--j-radius-sm);
+  pointer-events: none;
+}
+.j-marquee__title {
+  font-family: var(--j-font);
+  font-size: 26px;
+  color: var(--j-gold-text);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+  letter-spacing: 0.06em;
+  position: relative;
+  z-index: 1;
+}
+.j-marquee__sub {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-white);
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+.j-toast-host {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+.j-toast {
+  background: var(--j-darkest);
+  border: 2px solid var(--j-border-silver);
+  border-radius: var(--j-radius-md);
+  padding: 6px 12px;
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 12px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  white-space: nowrap;
+  animation: j-toast-in 200ms ease-out;
+}
+.j-toast--green  { border-color: var(--j-green);  background: var(--j-dark-green); }
+.j-toast--red    { border-color: var(--j-red);    background: var(--j-dark-red); }
+.j-toast--blue   { border-color: var(--j-blue);   background: var(--j-dark-blue); }
+.j-toast--orange { border-color: var(--j-orange); background: var(--j-dark-orange); }
+@keyframes j-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Progress Bar ────────────────────────────────────────────────────── */
+.j-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+.j-progress__track {
+  width: 100%;
+  height: 12px;
+  background: var(--j-darkest);
+  border-radius: var(--j-radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+.j-progress__fill {
+  height: 100%;
+  background: var(--j-blue);
+  transition: width 200ms ease;
+}
+.j-progress__fill--red    { background: var(--j-red); }
+.j-progress__fill--green  { background: var(--j-green); }
+.j-progress__fill--orange { background: var(--j-orange); }
+.j-progress__fill--gold   { background: var(--j-gold); }
+.j-progress__caption {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-grey);
+  text-align: right;
+}
+
+/* ── Error Block ─────────────────────────────────────────────────────── */
+.j-error-block {
+  background: var(--j-dark-red);
+  border: var(--j-panel-border-width) solid var(--j-red);
+  border-radius: var(--j-radius-md);
+  padding: 12px;
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 12px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-error-block__title {
+  font-size: 14px;
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Status Pill (specialization of badge — short single-word state) ── */
+.j-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--j-radius-pill);
+  font-family: var(--j-font);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.j-status-pill--idle    { background: var(--j-teal-grey); }
+.j-status-pill--running { background: var(--j-blue); }
+.j-status-pill--ok      { background: var(--j-green); }
+.j-status-pill--error   { background: var(--j-red); }
+.j-status-pill--paused  { background: var(--j-grey); }
+
+/* ── Seed Row and Results Scroll (Curator V3) ────────────────────────── */
+.j-seed-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #1e2b2d;
+  border: 2px solid #334461;
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+  animation: j-row-in 200ms ease-out;
+  transition: background 100ms ease, border-color 100ms ease;
+  text-decoration: none;
+}
+.j-seed-row:hover {
+  background: #3a5055;
+  border-color: #b9c2d2;
+}
+@keyframes j-row-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.j-seed-row__code {
+  font-family: 'm6x11', monospace;
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: 1.5px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  flex: 1;
+}
+.j-seed-row__score {
+  font-family: 'm6x11', monospace;
+  font-size: 16px;
+  color: #e4b643;
+}
+.j-results-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.j-results-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Jamlyzer Stream Layout (Curator V3) ─────────────────────────────── */
+.j-ante-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  scroll-snap-type: y mandatory;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.j-ante-scroll::-webkit-scrollbar {
+  display: none;
+}
+.j-ante-section {
+  scroll-snap-align: start;
+  background: #1e2b2d;
+  border: 2px solid #334461;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.j-ante-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.j-ante-section__title {
+  font-family: 'm6x11', monospace;
+  font-size: 16px;
+  color: #e4b643;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-stream {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  background: #0b1416;
+}
+.j-stream--hit {
+  background: rgba(228, 182, 67, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(228, 182, 67, 0.4);
+}
+.j-stream__label {
+  font-family: 'm6x11', monospace;
+  font-size: 8px;
+  color: #708386;
+  width: 56px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.j-stream__items {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.j-stream-item {
+  background: #0b1416;
+  border: 1px solid #334461;
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-family: 'm6x11', monospace;
+  font-size: 8px;
+  color: #b9c2d2;
+  white-space: nowrap;
+}
+.j-stream-item--hit {
+  background: rgba(228, 182, 67, 0.25);
+  color: #fff;
+  border-color: #e4b643;
+  box-shadow: 0 0 4px rgba(228, 182, 67, 0.5);
+}
+.j-stream-item--must-hit {
+  background: rgba(0, 147, 255, 0.3);
+  border-color: #0093ff;
+}
+.j-stream-item--should-hit {
+  background: rgba(255, 76, 64, 0.3);
+  border-color: #ff4c40;
+}
+
+/* Mystery Slot Component */
+.j-mystery-slot {
+  position: relative;
+  width: var(--j-mystery-slot-w);
+  height: var(--j-mystery-slot-h);
+  cursor: var(--j-mystery-slot-cursor, default);
+}
+
+.j-mystery-slot__card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: var(--j-mystery-slot-border);
+  background: var(--j-mystery-slot-bg);
+  transform: var(--j-mystery-slot-transform);
+  transform-style: preserve-3d;
+  transition: var(--j-mystery-slot-transition);
+  box-shadow: var(--j-mystery-slot-shadow);
+  z-index: var(--j-mystery-slot-z-index, 1);
+  pointer-events: none;
+}
+
+.j-mystery-slot__clear {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ff4c40; /* C.RED */
+  color: #fff; /* C.WHITE */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-family: 'm6x11plus', ui-monospace, monospace;
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: translateZ(10px);
+  pointer-events: auto; /* let it be clickable */
+}
+
+.j-mystery-slot__label {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(10px);
+  font-family: 'm6x11plus', ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--j-mystery-slot-label-color);
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+
+.j-mystery-slot img,
+.j-mystery-slot canvas {
+  transition: opacity 200ms, filter 200ms;
+}
+
+.j-mystery-slot__sprite--empty {
+  opacity: 0.5 !important;
+  filter: saturate(0.3) !important;
+}
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45

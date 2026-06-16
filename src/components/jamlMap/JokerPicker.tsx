@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
+<<<<<<< HEAD
 import { MotelyJokerRarity } from "motely-wasm";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
@@ -71,6 +72,78 @@ function rarityToClauseKey(rarity: MotelyJokerRarity): string {
 
 const LEGENDARY_LIST = JOKERS.filter((j) => LEGENDARY_JOKERS.has(j.name));
 const NON_LEGENDARY = JOKERS.filter((j) => !LEGENDARY_JOKERS.has(j.name));
+=======
+import { MotelyJoker, MotelyJokerCommon, MotelyJokerUncommon, MotelyJokerRare } from "../../lib/motely/motelyCompatEnums.js";
+import { JokerRarityTier } from "./jokerRarity.js";
+import { JimboSprite } from "../../ui/sprites.js";
+import { JimboText } from "../../ui/jimboText.js";
+import { JimboTextInput } from "../../ui/JimboTextInput.js";
+import {
+  JimboPicker,
+  JimboPickerSection,
+  JimboPickerGrid,
+  JimboPickerItem,
+  JimboPickerSearch,
+  JimboPickerEmpty,
+} from "../../ui/JimboPicker.js";
+import { JOKERS, type SpriteEntry } from "../../sprites/spriteData.js";
+import type { SlotSelection } from "./MysterySlot.js";
+
+// JokerRarity re-aliases the local rarity tier — kept for public-API stability.
+export type JokerRarity = JokerRarityTier;
+
+// Rarity membership comes straight from motely-wasm's per-rarity joker enums, so
+// it can never drift from the engine. Engine keys are PascalCase ids (e.g.
+// "GreedyJoker"); our sprite names are spaced (e.g. "Greedy Joker"), so both are
+// normalized to lowercase-alphanumeric before matching. One spelling the engine
+// doesn't share: it writes "8 Ball" as "EightBall" — bridged explicitly below.
+const normalizeJokerName = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const DISPLAY_NAME_ALIASES: Record<string, string> = {
+  "8 Ball": "EightBall",
+};
+
+const enumNameKeys = (enumObj: object): string[] =>
+  Object.keys(enumObj).filter((key) => Number.isNaN(Number(key)));
+
+const normalizedKeySet = (enumObj: object): Set<string> =>
+  new Set(enumNameKeys(enumObj).map(normalizeJokerName));
+
+const UNCOMMON_KEYS = normalizedKeySet(MotelyJokerUncommon);
+const RARE_KEYS = normalizedKeySet(MotelyJokerRare);
+const COMMON_KEYS = normalizedKeySet(MotelyJokerCommon);
+// Legendary jokers are the engine's full joker set minus the three named tiers.
+const LEGENDARY_KEYS = new Set(
+  enumNameKeys(MotelyJoker)
+    .map(normalizeJokerName)
+    .filter((key) => !COMMON_KEYS.has(key) && !UNCOMMON_KEYS.has(key) && !RARE_KEYS.has(key)),
+);
+
+const engineKey = (name: string): string =>
+  normalizeJokerName(DISPLAY_NAME_ALIASES[name] ?? name);
+
+function getJokerRarity(name: string): JokerRarityTier {
+  const key = engineKey(name);
+  if (LEGENDARY_KEYS.has(key)) return JokerRarityTier.Legendary;
+  if (RARE_KEYS.has(key)) return JokerRarityTier.Rare;
+  if (UNCOMMON_KEYS.has(key)) return JokerRarityTier.Uncommon;
+  return JokerRarityTier.Common;
+}
+
+function rarityToClauseKey(rarity: JokerRarityTier): string {
+  switch (rarity) {
+    case JokerRarityTier.Legendary: return "legendaryJoker";
+    case JokerRarityTier.Rare:      return "rareJoker";
+    case JokerRarityTier.Uncommon:  return "uncommonJoker";
+    case JokerRarityTier.Common:    return "commonJoker";
+    default:                        return "commonJoker";
+  }
+}
+
+const isLegendaryJoker = (joker: SpriteEntry): boolean => LEGENDARY_KEYS.has(engineKey(joker.name));
+const LEGENDARY_LIST = JOKERS.filter(isLegendaryJoker);
+const NON_LEGENDARY = JOKERS.filter((joker) => !isLegendaryJoker(joker));
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export interface JokerPickerProps {
   onSelect: (selection: SlotSelection) => void;
@@ -98,9 +171,14 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
 
   const renderJoker = (joker: SpriteEntry) => {
     return (
+<<<<<<< HEAD
       <div
         key={joker.name}
         className="j-picker__item j-juice-hover"
+=======
+      <JimboPickerItem
+        key={joker.name}
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         onClick={() => handleSelect(joker)}
         title={joker.name}
       >
@@ -108,11 +186,16 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
         <JimboText size="micro" tone="white" className="j-picker__item-label">
           {joker.name}
         </JimboText>
+<<<<<<< HEAD
       </div>
+=======
+      </JimboPickerItem>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     );
   };
 
   return (
+<<<<<<< HEAD
     <div className="j-picker">
       <div className="j-picker__section">
         <JimboText size="micro" tone="white" className="j-picker__section-title">Legendary</JimboText>
@@ -122,6 +205,17 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
       </div>
 
       <div className="j-picker__search">
+=======
+    <JimboPicker>
+      <JimboPickerSection>
+        <JimboText size="micro" tone="white" className="j-picker__section-title">Legendary</JimboText>
+        <JimboPickerGrid legendary>
+          {LEGENDARY_LIST.map(renderJoker)}
+        </JimboPickerGrid>
+      </JimboPickerSection>
+
+      <JimboPickerSearch>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         <JimboTextInput
           className="j-picker__search-field"
           type="text"
@@ -129,6 +223,7 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+<<<<<<< HEAD
       </div>
 
       <div className="j-picker__grid hide-scrollbar">
@@ -140,5 +235,18 @@ export function JokerPicker({ onSelect }: JokerPickerProps) {
         )}
       </div>
     </div>
+=======
+      </JimboPickerSearch>
+
+      <JimboPickerGrid scroll>
+        {filtered.map(renderJoker)}
+        {filtered.length === 0 && (
+          <JimboPickerEmpty>
+            <JimboText size="sm" tone="grey">No jokers match "{search}"</JimboText>
+          </JimboPickerEmpty>
+        )}
+      </JimboPickerGrid>
+    </JimboPicker>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   );
 }

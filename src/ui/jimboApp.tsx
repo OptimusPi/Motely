@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+<<<<<<< HEAD
 
 // ─── App Shell ──────────────────────────────────────────────────────────────
 // iPhone SE 5 portrait — 320×568 LOCKED. Content inside is designed to fit
@@ -23,11 +24,40 @@ export function JimboApp({ children, fluid, className = '', ...props }: JimboApp
     <div className={classes} {...props}>
       {children}
     </div>
+=======
+import { JimboBalatroFooter } from './JimboBalatroFooter'
+
+// ─── App Shell ──────────────────────────────────────────────────────────────
+// 320×540 hard-locked (iPhone SE portrait 568, minus the 28px JimboBalatroFooter
+// that sits below it). The MCP Apps inline embed target. One size — no fluid,
+// no responsive, no reflow, ever.
+//
+// JimboApp owns the JimboBalatroFooter render — Balatro attribution is
+// legally required wherever the app appears, so it's bound to the app shell,
+// not to the (aesthetic, optional) swirl background.
+
+export interface JimboAppProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
+}
+
+export function JimboApp({ children, className = '', ...props }: JimboAppProps) {
+  return (
+    <>
+      <div className={`j-app ${className}`.trim()} {...props}>
+        {children}
+      </div>
+      <JimboBalatroFooter />
+    </>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   )
 }
 
 /** Scrollable content area inside JimboApp. Hidden scrollbar, snap-friendly. */
+<<<<<<< HEAD
 export function JimboAppScroll({ children, className = '', ...props }: Omit<JimboAppProps, 'fluid'>) {
+=======
+export function JimboAppScroll({ children, className = '', ...props }: JimboAppProps) {
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   return (
     <div className={`j-app__scroll ${className}`} {...props}>
       {children}
@@ -36,7 +66,11 @@ export function JimboAppScroll({ children, className = '', ...props }: Omit<Jimb
 }
 
 /** Sticky bottom action area inside JimboApp. Thumb zone. */
+<<<<<<< HEAD
 export function JimboAppFooter({ children, className = '', ...props }: Omit<JimboAppProps, 'fluid'>) {
+=======
+export function JimboAppFooter({ children, className = '', ...props }: JimboAppProps) {
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   return (
     <div className={`j-app__footer ${className}`} {...props}>
       {children}

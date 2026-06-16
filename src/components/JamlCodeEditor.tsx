@@ -11,7 +11,13 @@ import { EditorState } from "@codemirror/state";
 import { yaml } from "@codemirror/lang-yaml";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+<<<<<<< HEAD
 import { tags } from "@lezer/highlight";
+=======
+import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
+import { tags } from "@lezer/highlight";
+import { jamlCompletionSource, jamlLinter } from "../lib/jaml/jamlLangCodemirror.js";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { JimboColorOption } from "../ui/tokens.js";
 
 const balatroHighlight = HighlightStyle.define([
@@ -113,7 +119,13 @@ export function JamlCodeEditor({
           syntaxHighlighting(balatroHighlight),
           balatroTheme,
           EditorView.lineWrapping,
+<<<<<<< HEAD
           keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+=======
+          autocompletion({ override: [jamlCompletionSource], activateOnTyping: true }),
+          jamlLinter,
+          keymap.of([...completionKeymap, indentWithTab, ...defaultKeymap, ...historyKeymap]),
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
           ...(placeholder ? [cmPlaceholder(placeholder)] : []),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !suppressEmitRef.current) {

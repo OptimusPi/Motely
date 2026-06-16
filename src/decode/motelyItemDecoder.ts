@@ -5,7 +5,11 @@ import {
   MotelyItemEnhancement,
   MotelyStandardcardRank,
   MotelyStandardcardSuit,
+<<<<<<< HEAD
 } from "motely-wasm";
+=======
+} from "../lib/motely/motelyCompatEnums.js";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 type MotelyItemCategoryName = "Standardcard" | "SpectralCard" | "TarotCard" | "PlanetCard" | "Joker" | "Invalid";
 
@@ -159,8 +163,15 @@ export function motelyItemDisplayName(input: MotelyItemInput): string {
   return itemFormat(itemType)?.displayName ?? spaceSplit(motelyItemTypeName(input));
 }
 
+<<<<<<< HEAD
 import { Motely } from "motely-wasm";
 
+=======
+// Packed MotelyItem.value bit layout (mirrors MotelyGlobals in the engine's Motely.cs):
+// seal @bit16 (3b), enhancement @bit19 (4b), edition @bit23 (3b);
+// stickers rental@29 / eternal@30 / perishable@31. Decoding is JS-side because
+// motely-wasm 19.x returns raw ints — the decodeItem*/isX helpers were removed.
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 function isStickerSet(input: MotelyItemInput, bitOffset: number): boolean {
   const val = resolvePackedValue(input);
   if (val === null) return false;
@@ -169,21 +180,33 @@ function isStickerSet(input: MotelyItemInput, bitOffset: number): boolean {
 
 export function motelyItemEditionName(input: MotelyItemInput): "Foil" | "Holographic" | "Polychrome" | "Negative" | null {
   if (input == null) return null;
+<<<<<<< HEAD
   const val = typeof input === "number" ? Motely.decodeItemEdition(input) : input.edition;
+=======
+  const val = typeof input === "number" ? (((input >>> 23) & 0x7) as MotelyItemEdition) : (input.edition as MotelyItemEdition);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   if (val == null || val === MotelyItemEdition.None) return null;
   return EDITIONS[val] as "Foil" | "Holographic" | "Polychrome" | "Negative";
 }
 
 export function motelyItemSealName(input: MotelyItemInput): "Gold" | "Red" | "Blue" | "Purple" | null {
   if (input == null) return null;
+<<<<<<< HEAD
   const val = typeof input === "number" ? Motely.decodeItemSeal(input) : input.seal;
+=======
+  const val = typeof input === "number" ? (((input >>> 16) & 0x7) as MotelyItemSeal) : (input.seal as MotelyItemSeal);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   if (val == null || val === MotelyItemSeal.None) return null;
   return SEALS[val] as "Gold" | "Red" | "Blue" | "Purple";
 }
 
 export function motelyItemEnhancementName(input: MotelyItemInput): string | null {
   if (input == null) return null;
+<<<<<<< HEAD
   const val = typeof input === "number" ? Motely.decodeItemEnhancement(input) : input.enhancement;
+=======
+  const val = typeof input === "number" ? (((input >>> 19) & 0xF) as MotelyItemEnhancement) : (input.enhancement as MotelyItemEnhancement);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   if (val == null || val === MotelyItemEnhancement.None) return null;
   return ENHANCEMENTS[val] ?? null;
 }
@@ -192,7 +215,11 @@ export function motelyItemEnhancementName(input: MotelyItemInput): string | null
 export function motelyStandardcardRankName(input: MotelyItemInput): string | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
+<<<<<<< HEAD
   const val = typeof input === "number" ? Motely.decodeStandardcardRank(input) : input.rank;
+=======
+  const val = typeof input === "number" ? ((input & 0xF) as MotelyStandardcardRank) : (input.rank as MotelyStandardcardRank);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   if (val == null) return null;
   return RANKS[val] ?? null;
 }
@@ -200,7 +227,11 @@ export function motelyStandardcardRankName(input: MotelyItemInput): string | nul
 export function motelyStandardcardSuitName(input: MotelyItemInput): "Clubs" | "Diamonds" | "Hearts" | "Spades" | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
+<<<<<<< HEAD
   const val = typeof input === "number" ? Motely.decodeStandardcardSuit(input) : input.suit;
+=======
+  const val = typeof input === "number" ? (((input >>> 4) & 0x3) as MotelyStandardcardSuit) : (input.suit as MotelyStandardcardSuit);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   if (val == null) return null;
   return SUITS[val] ?? null;
 }
@@ -228,9 +259,15 @@ export function decodeMotelyItem(input: MotelyItemInput): DecodedMotelyItem | nu
     enhancement: motelyItemEnhancementName(input),
     rank: motelyStandardcardRankName(input),
     suit: motelyStandardcardSuitName(input),
+<<<<<<< HEAD
     isEternal: typeof input === "number" ? Motely.isEternal(input) : isStickerSet(input, 30),
     isPerishable: typeof input === "number" ? Motely.isPerishable(input) : isStickerSet(input, 31),
     isRental: typeof input === "number" ? Motely.isRental(input) : isStickerSet(input, 29),
+=======
+    isEternal: typeof input === "number" ? ((input >>> 30) & 1) !== 0 : isStickerSet(input, 30),
+    isPerishable: typeof input === "number" ? ((input >>> 31) & 1) !== 0 : isStickerSet(input, 31),
+    isRental: typeof input === "number" ? ((input >>> 29) & 1) !== 0 : isStickerSet(input, 29),
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   };
 }
 
@@ -259,6 +296,9 @@ export function decodeMotelyItemToJamlCard(input: MotelyItemInput, scale?: numbe
     },
   };
 }
+<<<<<<< HEAD
 
 export function warmMotelyItemCache(): void { /* no-op */ }
 export function motelyItemCacheSize(): number { return 0; }
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45

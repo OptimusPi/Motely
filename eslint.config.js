@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -87,4 +93,8 @@ export default tseslint.config(
       'react-refresh/only-export-components': 'off',
     },
   },
+<<<<<<< HEAD
+=======
+  storybook.configs["flat/recommended"]
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 );

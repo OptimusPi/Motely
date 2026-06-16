@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { StorybookConfig } from "@storybook/react-vite";
@@ -64,10 +65,21 @@ function stripLibraryDtsPlugins(config: UserConfig): UserConfig {
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
   addons: [
+=======
+import type { StorybookConfig } from '@storybook/react-vite';
+
+const config: StorybookConfig = {
+  "stories": [
+    "../src/**/*.mdx",
+    "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"
+  ],
+  "addons": [
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "@chromatic-com/storybook",
     "@storybook/addon-vitest",
     "@storybook/addon-a11y",
     "@storybook/addon-docs",
+<<<<<<< HEAD
     "@storybook/addon-mcp",
   ],
   framework: "@storybook/react-vite",
@@ -97,3 +109,19 @@ const config: StorybookConfig = {
 };
 
 export default config;
+=======
+    "@storybook/addon-mcp"
+  ],
+  "framework": "@storybook/react-vite",
+  // Let the Vite dev server answer to any Host header — required when reaching
+  // Storybook through a Cloudflare tunnel / custom domain (e.g. *.8pi.me).
+  // Without this, Vite rejects the tunnel host and the browser downloads the
+  // "Invalid Host" response as document.txt instead of rendering.
+  viteFinal: async (viteConfig) => {
+    viteConfig.server ??= {};
+    viteConfig.server.allowedHosts = true;
+    return viteConfig;
+  }
+};
+export default config;
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45

@@ -42,6 +42,7 @@ function topLevelScalar(lines: string[], key: string): string | undefined {
   return undefined;
 }
 
+<<<<<<< HEAD
 const CLAUSE_ZONE_KEYS: Set<string> = new Set([
   "joker", "jokers", "commonJoker", "commonJokers", "uncommonJoker", "uncommonJokers",
   "rareJoker", "rareJokers", "legendaryJoker",
@@ -53,6 +54,41 @@ const CLAUSE_ZONE_KEYS: Set<string> = new Set([
 
 // JAML uses "mustnot" as zone key in some contexts; the visual filter uses "mustnot".
 // The text format may use "mustnot" or "must_not" — handle both, normalise to "mustnot".
+=======
+// Aligned with the engine grammar's selector keys (MotelyJAML authoring.ts
+// `selectorProps`). Anything not in here is silently dropped on parse, so a
+// missing key = a clause the Visual tab eats.
+const CLAUSE_ZONE_KEYS: Set<string> = new Set([
+  // Jokers — generic + rarity-pinned, singular + plural.
+  "joker", "jokers",
+  "commonJoker", "commonJokers",
+  "uncommonJoker", "uncommonJokers",
+  "rareJoker", "rareJokers",
+  "legendaryJoker", "legendaryJokers",
+  // Consumables.
+  "voucher", "vouchers",
+  "tarotCard", "tarotCards",
+  "spectralCard", "spectralCards",
+  "planetCard",
+  // Blinds & tags.
+  "boss",
+  "tag", "tags",
+  "smallBlindTag", "smallBlindTags",
+  "bigBlindTag", "bigBlindTags",
+  // Standard / erratic cards.
+  "standardCard", "standardCards",
+  "erraticRank", "erraticSuit", "erraticCard",
+  "startingDraw",
+  "event",
+  // Tolerant aliases the visual UI may still emit (not in the strict grammar).
+  "tarot", "spectral", "planet", "smallblindtag", "bigblindtag",
+]);
+
+// Serialized JAML uses camelCase "mustNot" (the engine's JamlConfigSchema is
+// .strict(), so a lowercase "mustnot:" root key is REJECTED). The internal
+// visual-filter zone is lowercase "mustnot"; we accept any casing on parse and
+// always emit "mustNot" on serialize.
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 function sectionToZone(raw: string): JamlZone | null {
   if (raw === "must") return "must";
   if (raw === "should") return "should";
@@ -206,7 +242,11 @@ export function visualFilterToJamlText(filter: JamlVisualFilter): string {
   const zones: Array<{ key: string; label: string; clauses: JamlVisualClause[] }> = [
     { key: "must", label: "must", clauses: filter.must },
     { key: "should", label: "should", clauses: filter.should },
+<<<<<<< HEAD
     { key: "mustnot", label: "mustnot", clauses: filter.mustnot },
+=======
+    { key: "mustnot", label: "mustNot", clauses: filter.mustnot },
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   ];
 
   for (const { label, clauses } of zones) {

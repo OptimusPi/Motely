@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import type { Meta, StoryObj } from '@storybook/react';
+=======
+import type { Meta, StoryObj } from '@storybook/react-vite';
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { useState } from 'react';
 import { DeckSprite } from '../components/DeckSprite';
 import { JimboPanelSpinner } from './JimboPanelSpinner';
@@ -39,9 +43,15 @@ export const DeckSelector: Story = {
  */
 export const DeckAndStakeSelector: StoryObj = {
   render: () => {
+<<<<<<< HEAD
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const [deckIdx, setDeckIdx] = useState(0);
     // eslint-disable-next-line react-hooks/rules-of-hooks
+=======
+     
+    const [deckIdx, setDeckIdx] = useState(0);
+     
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [stakeIdx, setStakeIdx] = useState(0);
     const deck = DECKS[deckIdx];
     const stake = STAKES[stakeIdx];

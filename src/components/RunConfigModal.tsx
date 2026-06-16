@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // TODO(jimbo-primitives): pre-dates no-inline-style / no-token-in-jsx-style /
 // no-inline-component rules. Refactor to compose from Jimbo* primitives once
 // screenshot-driven primitive design lands. `git grep TODO(jimbo-primitives)`.
@@ -7,6 +8,12 @@ import { useState } from "react";
 import { JimboModal, JimboButton } from "../ui/panel.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
 import { MotelyDeck, MotelyStake } from "motely-wasm";
+=======
+import { useState } from "react";
+import { JimboModal, JimboButton } from "../ui/panel.js";
+import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
+import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 const DECK_OPTIONS = Object.keys(MotelyDeck).filter(k => isNaN(Number(k)));
 const STAKE_OPTIONS = Object.keys(MotelyStake).filter(k => isNaN(Number(k)));
 import { DeckSprite } from "./DeckSprite.js";
@@ -56,6 +63,7 @@ export function RunConfigModal({
   stake,
   onChange,
 }: RunConfigModalProps) {
+<<<<<<< HEAD
   return (
     <JimboModal open={open} onClose={onClose} title="Run Config">
       {open ? (
@@ -81,6 +89,21 @@ function RunConfigModalBody({ deck, stake, onChange, onClose }: RunConfigModalBo
   const [activeDeck, setActiveDeck] = useState(deck);
   const [activeStake, setActiveStake] = useState(stake);
 
+=======
+  const [activeDeck, setActiveDeck] = useState(deck);
+  const [activeStake, setActiveStake] = useState(stake);
+
+  // Sync state when modal opens
+  const [lastOpen, setLastOpen] = useState(open);
+  if (open !== lastOpen) {
+    setLastOpen(open);
+    if (open) {
+      setActiveDeck(deck);
+      setActiveStake(stake);
+    }
+  }
+
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   const deckIdx = DECK_OPTIONS.indexOf(activeDeck) >= 0 ? DECK_OPTIONS.indexOf(activeDeck) : 0;
   const stakeIdx = STAKE_OPTIONS.indexOf(activeStake) >= 0 ? STAKE_OPTIONS.indexOf(activeStake) : 0;
 
@@ -96,6 +119,7 @@ function RunConfigModalBody({ deck, stake, onChange, onClose }: RunConfigModalBo
   };
 
   return (
+<<<<<<< HEAD
     <>
       <JimboPanelSpinner
         label="Deck"
@@ -122,5 +146,35 @@ function RunConfigModalBody({ deck, stake, onChange, onClose }: RunConfigModalBo
         <JimboButton tone="blue" size="lg" fullWidth onClick={handleApply}>Apply</JimboButton>
       </div>
     </>
+=======
+    <JimboModal open={open} onClose={onClose} title="Run Config">
+      {open ? (
+        <>
+          <JimboPanelSpinner
+            label="Deck"
+            title={`${activeDeck} Deck`}
+            description={DECK_DESCRIPTIONS[activeDeck] || "Standard 52 card deck"}
+            media={<DeckSprite deck={activeDeck} size={64} />}
+            onPrev={prevDeck}
+            onNext={nextDeck}
+          />
+
+          <JimboPanelSpinner
+            label="Stake"
+            title={`${activeStake} Stake`}
+            description={STAKE_DESCRIPTIONS[activeStake] || "Base Difficulty"}
+            media={<StakeSprite stake={activeStake} width={48} />}
+            onPrev={prevStake}
+            onNext={nextStake}
+            className="j-mt-sm"
+          />
+
+          <div className="j-flex-col j-gap-sm j-mt-sm">
+            <JimboButton tone="blue" size="lg" fullWidth onClick={handleApply}>Apply</JimboButton>
+          </div>
+        </>
+      ) : null}
+    </JimboModal>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   );
 }

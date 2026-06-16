@@ -1,3 +1,4 @@
+'use client'
 export * from './ui/tokens.js'
 // Side-effect: design system CSS custom properties + component classes
 import './ui/jimbo.css'
@@ -14,7 +15,10 @@ export * from './ui/codeBlock.js'
 export * from './ui/JimboBalatroFooter.js'
 export * from './ui/jimboLink.js'
 export * from './ui/sprites.js'
+<<<<<<< HEAD
 export * from './ui/showcase.js'
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 export * from './ui/jimboCopyRow.js'
 export * from './ui/JimboSeedCopyChip.js'
 export * from './ui/JimboCopyButton.js'
@@ -27,6 +31,10 @@ export * from './ui/jimboStatGrid.js'
 export * from './ui/jimboLayout.js'
 export * from './ui/jimboInset.js'
 export * from './ui/JimboDeckAndStakeSelectorModal.js'
+<<<<<<< HEAD
+=======
+export * from './ui/JimboPicker.js'
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 // Old IDE prototypes — orphaned, statically import motely-wasm + use Vite-only
 // `?worker` syntax. Removed from the public surface so webpack consumers don't
 // transitively bundle motely-wasm. Files left on disk for triage.
@@ -48,5 +56,9 @@ export * from './ui/JimboStepper.js'
 export * from './ui/JimboSpinner.js'
 export * from './ui/JimboSlider.js'
 export * from './ui/JimboValueBadge.js'
+<<<<<<< HEAD
 export * from './ui/JimboDualChip.js'
 export * from './ui/JimboPanelSplitter.js'
+=======
+export * from './ui/JimboDualChip.js'
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45

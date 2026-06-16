@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< HEAD
 import { JamlAesthetic } from "motely-wasm";
 import { JimboBadge } from "../ui/JimboBadge.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
@@ -7,6 +8,23 @@ import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
 const AESTHETICS: { id: JamlAesthetic; label: string; desc: string }[] = [
   { id: JamlAesthetic.Palindrome, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
   { id: JamlAesthetic.Psychosis, label: "Psychosis", desc: "Unsettling or eerie seed patterns" },
+=======
+import { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
+import { JimboBadge } from "../ui/JimboBadge.js";
+import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
+
+// "Echo" is the engine's forthcoming native name for this aesthetic. Until the
+// upstream MotelyJAML rename ships, the installed engine exposes it under its
+// index-1 identifier, so resolve to whichever member the engine actually
+// defines — always an engine value, never a hardcoded index. This adopts native
+// `Echo` automatically once it lands, with no further change needed here.
+const ENGINE_AESTHETIC = JamlAesthetic as unknown as Record<string, JamlAesthetic | undefined>;
+const ECHO_AESTHETIC: JamlAesthetic = ENGINE_AESTHETIC.Echo ?? JamlAesthetic.Echo;
+
+const AESTHETICS: { id: JamlAesthetic; label: string; desc: string }[] = [
+  { id: JamlAesthetic.Palindrome, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
+  { id: ECHO_AESTHETIC, label: "Echo", desc: "Seeds with an echoing pattern (ABAxBxxx)" },
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   { id: JamlAesthetic.Gross, label: "Gross", desc: "Seeds with crude or disgusting words" },
   { id: JamlAesthetic.Funny, label: "Funny", desc: "Seeds that spell funny words" },
   { id: JamlAesthetic.Balatro, label: "Balatro", desc: "Seeds referencing the game itself" },

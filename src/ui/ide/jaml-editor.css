@@ -1,0 +1,269 @@
+/* Jimbo UI — JAML visual editor
+ * This component was harvested into the library without its stylesheet (the
+ * `.jaml-block` family + `--balatro-gold` lived only in the consuming app), so
+ * it shipped unstyled. This file makes it self-contained: the structural CSS
+ * lives here; per-cell colours are passed in via the `--jaml-*` custom props the
+ * component already sets inline. Also replaces the old dead Tailwind classes. */
+
+:root {
+    --balatro-gold: #efb82d;
+}
+
+/* ── Editor shell ─────────────────────────────────────────────────────────── */
+.jaml-editor {
+    display: flex;
+    flex-direction: column;
+    background: #0f1416;
+    color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    outline: none;
+    border-radius: 6px;
+    padding: 1rem;
+    overflow: auto;
+    min-height: 500px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.jaml-editor-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* ── Legend footer ────────────────────────────────────────────────────────── */
+.jaml-legend {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.jaml-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.jaml-legend-hint {
+    margin-left: auto;
+    opacity: 0.4;
+}
+.jaml-legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+.jaml-legend-dot--red { background: #ff5e5e; }
+.jaml-legend-dot--blue { background: #4bb1ff; }
+.jaml-legend-dot--green { background: #46bc77; }
+.jaml-legend-dot--purple { background: #9074ff; }
+
+/* ── Lines ────────────────────────────────────────────────────────────────── */
+.jaml-line {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+.jaml-line-comment {
+    padding-left: 2rem;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    color: #a8a29e;
+    font-style: italic;
+    font-size: 12px;
+}
+.jaml-line-empty {
+    height: 1.25rem;
+}
+.jaml-line-indent {
+    white-space: pre;
+    color: #a8a29e;
+}
+.jaml-colon {
+    color: #a8a29e;
+    margin-right: 4px;
+}
+
+/* Delete affordance — revealed on row hover (replaces Tailwind `group-hover`). */
+.jaml-line-delete {
+    width: 1.5rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+.jaml-line:hover .jaml-line-delete {
+    opacity: 1;
+}
+.jaml-line-delete-icon {
+    color: #f97316;
+    border-radius: 4px;
+}
+.jaml-line-delete-icon:hover {
+    background: #ffedd5;
+}
+
+/* ── Clause header (must / should / mustNot) ──────────────────────────────── */
+.jaml-clause-header {
+    padding-left: 2rem;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--jaml-color, #fff);
+}
+
+/* ── jaml-block: the core editable pill (keys, values, array items, antes) ──
+   Colours/size are supplied per-cell via inline `--jaml-*` custom properties. */
+.jaml-block {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--jaml-min-w, auto);
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--jaml-bg, transparent);
+    border: var(--jaml-border, 1px solid transparent);
+    color: var(--jaml-color, inherit);
+    box-shadow: var(--jaml-shadow, none);
+    text-decoration: var(--jaml-text-decoration, none);
+    cursor: pointer;
+    font: inherit;
+    line-height: 1.4;
+    white-space: nowrap;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.jaml-block--start {
+    justify-content: flex-start;
+}
+
+.jaml-key-wrap,
+.jaml-value-wrap {
+    position: relative;
+}
+
+/* Array value row + the small +/− cells. */
+.jaml-array-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.jaml-array-input {
+    width: 3ch;
+    background: transparent;
+    border: none;
+    outline: none;
+    text-align: center;
+    color: inherit;
+    font: inherit;
+}
+
+/* Antes toggle — a connected button group. */
+.jaml-antes-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.jaml-ante-btn {
+    border-radius: 0;
+}
+.jaml-ante-btn--first {
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.jaml-ante-btn--last {
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+.jaml-antes-confirm {
+    min-width: 28px;
+    margin-left: 4px;
+    background: rgba(70, 188, 119, 0.15);
+    border: 1px solid rgba(70, 188, 119, 0.5);
+    color: #46bc77;
+}
+
+/* Inline edit input — transparent, inherits the cell's colour. */
+.jaml-inline-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--jaml-color, inherit);
+    font: inherit;
+    padding: 0;
+    margin: 0;
+}
+.jaml-inline-input--sized {
+    width: var(--jaml-input-w, 4ch);
+}
+
+/* ── Autocomplete popover (rendered through a portal; positioned via vars) ── */
+.jaml-suggestion-popover {
+    position: fixed;
+    top: var(--popover-top, 0);
+    left: var(--popover-left, 0);
+    transform: var(--popover-transform, none);
+    z-index: 1000;
+    min-width: 180px;
+    max-width: 320px;
+    background: #1c2629;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+.jaml-suggestion-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.jaml-suggestion-empty {
+    padding: 0.5rem;
+    font-size: 12px;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.4);
+}
+.jaml-suggestion-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: #fff;
+    transition: background 120ms ease, color 120ms ease;
+}
+.jaml-suggestion-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.jaml-suggestion-item--selected,
+.jaml-suggestion-item--selected:hover {
+    background: var(--balatro-gold, #efb82d);
+    color: #000;
+}
+.jaml-suggestion-enter {
+    margin-left: 8px;
+    font-size: 11px;
+    opacity: 0.5;
+}

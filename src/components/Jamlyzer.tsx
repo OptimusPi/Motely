@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+<<<<<<< HEAD
 import {
   Motely,
   type MotelyJamlyzerResult,
@@ -10,6 +11,11 @@ import {
   MotelyTag,
   MotelyBoosterPack
 } from "motely-wasm";
+=======
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import type { MotelyJamlyzerResult, MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
+import { MotelyBossBlind, MotelyVoucher, MotelyTag, MotelyBoosterPack } from "motely-wasm/motely/enums";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { JimboInnerPanel, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
@@ -112,12 +118,21 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
         if (!trimmed) {
           throw new Error("Write a JAML filter first.");
         }
+<<<<<<< HEAD
         const validation = Motely.validateJaml(trimmed);
+=======
+        let validation = "valid";
+        try { Motely.parseJaml(trimmed); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         if (validation !== "valid") {
           throw new Error(String(validation ?? "Invalid JAML"));
         }
         const t0 = performance.now();
+<<<<<<< HEAD
         const result = Motely.analyzeJamlSeeds(trimmed, []);
+=======
+        const result = Motely.jamlyzer(Motely.parseJaml(trimmed));
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         const elapsedMs = performance.now() - t0;
         if (cancelled) return;
         if (result.error) {

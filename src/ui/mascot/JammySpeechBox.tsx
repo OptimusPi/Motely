@@ -1,6 +1,7 @@
 'use client'
 
 import { splitTtsDisplay } from '../../lib/tts/splitTtsDisplay.js'
+<<<<<<< HEAD
 
 /** Fixed chrome so the home announcement always occupies one predictable size (ai-elements, same family as chat). */
 const speechBoxFrame =
@@ -13,6 +14,9 @@ const speechText =
 function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ')
 }
+=======
+import './mascot.css'
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export function JammySpeechBox({
   text,
@@ -43,6 +47,7 @@ export function JammySpeechBox({
   return (
     <div
       data-testid="jammy-announcement"
+<<<<<<< HEAD
       className={cn(
         // Anchor to the scene center so Jammy stays centered inside the orbital menu,
         // with the announcement floating just above the mascot's head.
@@ -62,6 +67,19 @@ export function JammySpeechBox({
             <span className="text-[#f6f0d5]">{spoken}</span>
             <span className="text-[#f6f0d5]/35">{pending}</span>
             <span className="text-[#f6f0d5]/35">{suffix}</span>
+=======
+      // Anchored to the scene center so Jammy stays centered inside the orbital
+      // menu, with the announcement floating just above the mascot's head.
+      className={['jimbo-jammy', className].filter(Boolean).join(' ')}
+    >
+      <div className="jimbo-jammy__inner">
+        <div className="jimbo-jammy__box">
+          <p className="jimbo-jammy__text">
+            <span className="jimbo-jammy__seg">{prefix}</span>
+            <span className="jimbo-jammy__seg">{spoken}</span>
+            <span className="jimbo-jammy__seg--muted">{pending}</span>
+            <span className="jimbo-jammy__seg--muted">{suffix}</span>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
           </p>
         </div>
       </div>

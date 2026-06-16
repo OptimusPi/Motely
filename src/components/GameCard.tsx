@@ -19,6 +19,10 @@ import {
     ENHANCER_MAP,
     SEAL_MAP,
 } from "../sprites/spriteData.js";
+<<<<<<< HEAD
+=======
+import { decodeMotelyItem } from "../decode/motelyItemDecoder.js";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export interface JamlGameCardProps {
     card: {
@@ -163,6 +167,7 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
         return null;
     }
 
+<<<<<<< HEAD
     const displayName = String(item.name || "").trim();
     const { baseName, edition, isEternal, isPerishable, isRental } = stripModifiers(displayName);
 
@@ -215,6 +220,63 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
     }
 
     return { kind: "unknown", label: displayName };
+=======
+    // Decode the packed int through the typed Motely decoder — the single source
+    // of truth for the bit layout. The previous version hand-rolled nibble
+    // constants (catNibble === 5 /* Joker */ etc.) that did NOT match the real
+    // Motely enum, so categories decoded as bogus 1..5 values. decodeMotelyItem
+    // reads MOTELY_ITEM_FORMATS_BY_VALUE + Motely.decode*, so the category,
+    // edition, seal, enhancement, rank, suit, and stickers are all correct.
+    const decoded = decodeMotelyItem(item.value);
+    if (!decoded) return null;
+
+    const edition = decoded.edition ?? undefined;
+    const { isEternal, isPerishable, isRental } = decoded;
+
+    switch (decoded.category) {
+        case "joker":
+            return {
+                kind: "joker",
+                type: "joker",
+                card: { name: decoded.displayName, edition, isEternal, isPerishable, isRental, scale },
+            };
+        case "tarot":
+        case "planet":
+        case "spectral":
+            return {
+                kind: "consumable",
+                type: "consumable",
+                card: {
+                    name: decoded.displayName,
+                    edition,
+                    enhancements: decoded.enhancement ? [decoded.enhancement] : undefined,
+                    seal: decoded.seal ?? undefined,
+                    scale,
+                },
+            };
+        case "playing":
+            return {
+                kind: "playing",
+                type: "playing",
+                card: {
+                    name: decoded.displayName,
+                    rank: decoded.rank ?? undefined,
+                    suit: decoded.suit ?? undefined,
+                    enhancements: decoded.enhancement ? [decoded.enhancement] : undefined,
+                    seal: decoded.seal ?? undefined,
+                    edition,
+                    isEternal,
+                    isPerishable,
+                    isRental,
+                    scale,
+                },
+            };
+        default:
+            // Unknown category (incl. vouchers): fall back to the name-based
+            // matching in resolveAnalyzerShopItem (vouchers resolve by name).
+            return null;
+    }
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

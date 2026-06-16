@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< HEAD
 import { useCallback, useEffect, useState } from "react";
 import { Motely } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
@@ -23,6 +24,16 @@ function initFileSystem(): Promise<void> {
   })();
   return fileSystemInitPromise;
 }
+=======
+import { useCallback, useState } from "react";
+import { Program as Motely } from "motely-wasm/motely/wasm";
+import { ensureMotelyReady, isFileSystemReady, getFileSystemError } from "../lib/motely/runtime.js";
+import { PermissionMode } from "motely-wasm/bootsharp/file-system";
+
+// The optional File System extension is bound pre-boot inside ensureMotelyReady()
+// (see runtime.ts) — that's the only place the init can win the boot race. Here we
+// just boot and read back whether the mounter actually bound.
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export type JamlLibraryStatus = "idle" | "unsupported" | "mounting" | "ready" | "error";
 
@@ -49,6 +60,7 @@ export function useJamlLibrary(): UseJamlLibraryState {
   const [files, setFiles] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+<<<<<<< HEAD
   useEffect(() => {
     let cancelled = false;
     initFileSystem().then(() => {
@@ -63,12 +75,15 @@ export function useJamlLibrary(): UseJamlLibraryState {
 
   const isFileSystemReady = fileSystemPackage !== null;
 
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   const refresh = useCallback(() => {
     if (!rootId) return;
     setFiles((prev) => [...prev]);
   }, [rootId]);
 
   const mount = useCallback(async () => {
+<<<<<<< HEAD
     await initFileSystem();
     if (fileSystemPackage === null) {
       setStatus("unsupported");
@@ -76,11 +91,21 @@ export function useJamlLibrary(): UseJamlLibraryState {
       return;
     }
 
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     setStatus("mounting");
     setError(null);
 
     try {
       await ensureMotelyReady();
+<<<<<<< HEAD
+=======
+      if (!isFileSystemReady()) {
+        setStatus("unsupported");
+        setError(errorMessage(getFileSystemError() ?? "Bootsharp FileSystem package is not available."));
+        return;
+      }
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
       const pickedRoot = await Motely.pickRoot({ mode: PermissionMode.ReadWrite, id: "jaml-library" });
       if (!pickedRoot) {
         setStatus("idle");
@@ -103,8 +128,13 @@ export function useJamlLibrary(): UseJamlLibraryState {
     await Motely.unmountRoot(rootId);
     setRootId(null);
     setFiles([]);
+<<<<<<< HEAD
     setStatus(isFileSystemReady ? "idle" : "unsupported");
   }, [isFileSystemReady, rootId]);
+=======
+    setStatus(isFileSystemReady() ? "idle" : "unsupported");
+  }, [rootId]);
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
   const loadFile = useCallback(async (uri: string) => {
     if (!rootId) throw new Error("JAML library is not mounted.");

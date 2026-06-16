@@ -1,12 +1,24 @@
 "use client";
 
 import { useCallback, useState } from "react";
+<<<<<<< HEAD
 import { Motely, type IMotelySearch, type MotelyProgress, type MotelyScoredSeedResult, MotelyDeck, MotelyStake } from "motely-wasm";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboStack, JimboRow } from "../ui/jimboLayout.js";
 import { JimboBadge } from "../ui/JimboBadge.js";
 import { RunConfigModal } from "./RunConfigModal.js";
+=======
+import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+import { JimboApp, JimboAppScroll } from "../ui/jimboApp.js";
+import { JimboButton } from "../ui/panel.js";
+import { JimboText } from "../ui/jimboText.js";
+import { JimboStack, JimboRow } from "../ui/jimboLayout.js";
+import { JimboBadge } from "../ui/JimboBadge.js";
+import { JamlIde } from "./JamlIde.js";
+import { RunConfigModal } from "./RunConfigModal.js";
+import { useSearch } from "../hooks/useSearch.js";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 const DEFAULT_JAML = `must:
   - joker: Blueprint
@@ -24,6 +36,7 @@ export function SeedFinderApp({
   initialDeck = "Red",
   initialStake = "White",
 }: SeedFinderAppProps) {
+<<<<<<< HEAD
   const [jaml] = useState(initialJaml);
   const [deck, setDeck] = useState<keyof typeof MotelyDeck>(initialDeck);
   const [stake, setStake] = useState<keyof typeof MotelyStake>(initialStake);
@@ -112,10 +125,76 @@ export function SeedFinderApp({
           </JimboButton>
         ) : (
           <JimboButton tone="blue" size="lg" fullWidth onClick={handleStart}>
+=======
+  const [jaml, setJaml] = useState(initialJaml);
+  const [deck, setDeck] = useState<keyof typeof MotelyDeck>(initialDeck);
+  const [stake, setStake] = useState<keyof typeof MotelyStake>(initialStake);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const { results, totalSearched, matchingSeeds, status, error, seedsPerSecond, startAesthetic, cancel } = useSearch();
+
+  const isRunning = status === "running";
+
+  const handleStart = useCallback(() => {
+    const jamlWithConfig = `deck: ${deck}\nstake: ${stake}\n${jaml}`;
+    startAesthetic(jamlWithConfig, 0);
+  }, [jaml, deck, stake, startAesthetic]);
+
+  const statusTone: "dark" | "blue" | "green" | "red" =
+    status === "running" ? "blue" : status === "completed" ? "green" : status === "error" ? "red" : "dark";
+
+  const searchResults = results.map((r) => ({ seed: r.seed, score: r.score, tallyColumns: r.tallyColumns }));
+
+  return (
+    <JimboApp>
+      <JimboAppScroll>
+        <JamlIde
+          jaml={jaml}
+          onChange={setJaml}
+          defaultMode="visual"
+          searchResults={searchResults}
+          isSearching={isRunning}
+          onSearch={handleStart}
+          title="Seed Finder"
+          actions={
+            <JimboButton
+              tone="grey"
+              size="sm"
+              disabled={isRunning}
+              onClick={() => setModalOpen(true)}
+            >
+              {deck} · {stake}
+            </JimboButton>
+          }
+          subtitle={
+            <JimboRow gap="sm" align="center">
+              <JimboBadge size="sm" tone={statusTone}>{status}</JimboBadge>
+              {isRunning && seedsPerSecond > 0 ? (
+                <JimboText size="xs" tone="grey">{Math.round(seedsPerSecond).toLocaleString()}/s</JimboText>
+              ) : null}
+              {totalSearched > 0n ? (
+                <JimboText size="xs" tone="grey">{totalSearched.toLocaleString()} · {matchingSeeds.toString()} hits</JimboText>
+              ) : null}
+            </JimboRow>
+          }
+        />
+
+        {error ? (
+          <JimboStack gap="xs">
+            <JimboText size="sm" tone="red">{error}</JimboText>
+          </JimboStack>
+        ) : null}
+
+        {isRunning ? (
+          <JimboButton tone="red" size="lg" fullWidth onClick={cancel}>Stop</JimboButton>
+        ) : (
+          <JimboButton tone="orange" size="lg" fullWidth onClick={handleStart}>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             Let Jimbo COOK!
           </JimboButton>
         )}
 
+<<<<<<< HEAD
         {searched > 0n ? (
           <JimboText size="xs" tone="grey">
             {searched.toString()} searched · {matched.toString()} hits
@@ -144,5 +223,19 @@ export function SeedFinderApp({
         }}
       />
     </JimboPanel>
+=======
+        <RunConfigModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          deck={deck}
+          stake={stake}
+          onChange={(d, s) => {
+            setDeck(d as keyof typeof MotelyDeck);
+            setStake(s as keyof typeof MotelyStake);
+          }}
+        />
+      </JimboAppScroll>
+    </JimboApp>
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   );
 }

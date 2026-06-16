@@ -1,6 +1,11 @@
 "use client";
 
+<<<<<<< HEAD
 export { default as bootsharp, Motely } from "motely-wasm";
+=======
+export { default as bootsharp } from "motely-wasm";
+export { Program as Motely } from "motely-wasm/motely/wasm";
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export {
   decodeMotelyItem,
@@ -16,8 +21,6 @@ export {
   motelyStandardcardSuitName,
   decodeMotelyItemName,
   resolveMotelyItemType,
-  warmMotelyItemCache,
-  motelyItemCacheSize,
   type DecodedMotelyItem,
   type MotelyItemInput,
   type MotelyJamlCard,

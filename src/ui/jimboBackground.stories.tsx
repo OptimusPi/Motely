@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import type { Meta, StoryObj } from '@storybook/react';
+=======
+import type { Meta, StoryObj } from '@storybook/react-vite';
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { JimboBackground } from './jimboBackground';
 
 /** Canonical Balatro-ish defaults — mirrors hook BALATRO_DEFAULTS for control baselines. */
@@ -13,7 +17,10 @@ const DEFAULT_ARGS = {
   contrast: 4.5,
   lighting: 0.5,
   transitionMs: 800,
+<<<<<<< HEAD
   hideFooter: false,
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 } as const;
 
 const meta = {
@@ -58,7 +65,10 @@ const meta = {
       control: { type: 'range', min: 0, max: 3000, step: 50 },
       description: 'Ease duration for all prop changes (0 = snap)',
     },
+<<<<<<< HEAD
     hideFooter: { control: 'boolean' },
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   },
 } satisfies Meta<typeof JimboBackground>;
 
@@ -68,10 +78,13 @@ type Story = StoryObj<typeof meta>;
 /** Full shader playground — use Controls to scrub pixelFilter, palette, spin, etc. */
 export const Playground: Story = {};
 
+<<<<<<< HEAD
 export const WithoutFooter: Story = {
   args: { hideFooter: true },
 };
 
+=======
+>>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 export const Palette: Story = {
   args: {
     primary: '#ff3344',
