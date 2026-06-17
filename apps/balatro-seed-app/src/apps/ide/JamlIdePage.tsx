@@ -22,10 +22,13 @@ deck: Red
 stake: White
 `;
 
+import { McpPanel } from "@/src/mcp/panel";
+
 const TAB_LABELS = {
   editor: "📝 Code",
   visual: "👁 Visual",
   lsp: "🔍 LSP",
+  mcp: "🤖 MCP",
   export: "📤 Export",
 };
 
@@ -303,6 +306,18 @@ export function JamlIdePage() {
                     Features: Syntax validation, basic lint, autocomplete stub
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === "mcp" && (
+              <div
+                className="rounded-lg border p-4"
+                style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)" }}
+              >
+                <div className="mb-3 font-bold" style={{ color: "var(--j-foreground)" }}>
+                  MCP Server
+                </div>
+                <McpPanel jaml={jaml} />
               </div>
             )}
 

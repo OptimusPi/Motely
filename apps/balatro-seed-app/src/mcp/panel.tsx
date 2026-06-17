@@ -254,16 +254,3 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
     </div>
   );
 }
-
-// Simple useMemo since we don't have React imported here
-function useMemo<T>(factory: () => T, deps: unknown[]): T {
-  const [state, setState] = useState<T>(factory);
-  const depsRef = useRef(deps);
-  if (!depsRef.current || !deps.every((d, i) => d === depsRef.current[i])) {
-    depsRef.current = deps;
-    setState(factory);
-  }
-  return state;
-}
-
-import { useRef } from "react";

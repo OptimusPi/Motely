@@ -17,9 +17,12 @@
   - [2. Home + Filters Browser](#2-home--filters-browser)
   - [3. Seed Finder](#3-seed-finder)
   - [4. Seed Analyzer (JAMLYZER)](#4-seed-analyzer-jamlyzer)
+- [MCP Integration](#mcp-integration)
+  - [CodeMirror 6 MCP Extension](#codemirror-6-mcp-extension)
+  - [MCP Panel](#mcp-panel)
+  - [MCP App (Iframe)](#mcp-app-iframe)
 - [CLI](#cli)
 - [API Routes](#api-routes)
-- [MCP Integration](#mcp-integration)
 - [Architecture](#architecture)
 - [Publishing](#publishing)
 - [License](#license)
@@ -73,7 +76,37 @@ import { JamlSeedAnalyzerPage } from "jaml-seed-lab/apps/analyzer";
 export default JamlSeedAnalyzerPage;
 ```
 
-### 3. Use the catalog + registry in your own json-render app
+### 3. Use the MCP client in your own app
+
+```tsx
+import { useMcpClient, McpPanel } from "jaml-seed-lab/mcp";
+
+function MyApp() {
+  const { state, tools, connect } = useMcpClient({
+    serverUrl: "http://localhost:3000/api/mcp",
+  });
+  return <McpPanel jaml={myJaml} />;
+}
+```
+
+### 4. Use the CodeMirror 6 MCP extension
+
+```tsx
+import { EditorView } from "@codemirror/view";
+import { mcpExtension } from "jaml-seed-lab/codemirror";
+import { McpBrowserClient } from "jaml-seed-lab/mcp";
+
+const client = new McpBrowserClient({
+  serverUrl: "http://localhost:3000/api/mcp",
+});
+
+const view = new EditorView({
+  extensions: [mcpExtension(client)],
+  parent: document.body,
+});
+```
+
+### 5. Use the catalog + registry in your own json-render app
 
 ```tsx
 import { balatroCatalog } from "jaml-seed-lab/catalog";
@@ -96,6 +129,7 @@ The JAML language editor with full IDE support:
 - **Code Editor** — Powered by `@codemirror` with JAML syntax highlighting, autocomplete, and lint
 - **Visual Tab** — Live preview of JAML filters as visual card diagrams (jokers, cards, conditions)
 - **LSP Panel** — Real-time diagnostics from `jaml-lang` (errors, warnings, completions)
+- **MCP Panel** — Connect to the MCP server, execute tools, see results inline
 - **Export/Save** — Copy JAML to clipboard, save to localStorage, export as JSON
 
 ```tsx
@@ -219,6 +253,73 @@ Available tools:
 
 ---
 
+## MCP Integration
+
+### CodeMirror 6 MCP Extension
+
+A full CodeMirror 6 extension that adds MCP capabilities to the editor:
+
+```tsx
+import { mcpExtension } from "jaml-seed-lab/codemirror";
+
+// Add to your CodeMirror 6 editor
+const view = new EditorView({
+  extensions: [
+    mcpExtension(client), // Connects to MCP server
+    // ... other extensions
+  ],
+});
+```
+
+**Features:**
+- **State Field** — Tracks MCP connection state, tools, and results in the editor
+- **Decorations** — Inline result widgets showing tool execution output
+- **Status Panel** — Bottom panel showing connection status and available tools
+- **Keybindings** — `Ctrl+Shift+M` to connect, `Ctrl+Shift+R` to clear results
+- **Tool Execution** — Click a tool in the status panel to execute it with current JAML context
+
+### MCP Panel
+
+React component for MCP interaction outside of CodeMirror:
+
+```tsx
+import { McpPanel } from "jaml-seed-lab/mcp";
+
+<McpPanel
+  serverUrl="/api/mcp"     // MCP server endpoint
+  apiKey="your-key"        // Optional auth
+  jaml={currentJaml}       // Current JAML for tool context
+/>
+```
+
+**Features:**
+- Connect/disconnect to MCP server
+- List available tools with descriptions
+- Execute tools with auto-generated arguments from JAML context
+- View results rendered via json-render
+- Chat-style interaction log
+
+### MCP App (Iframe)
+
+The IDE can be embedded as an MCP App in any MCP client (Claude Desktop, etc.):
+
+```tsx
+import { McpAppWrapper } from "jaml-seed-lab/mcp";
+
+// In your iframe route:
+export default function McpAppPage() {
+  return <McpAppWrapper />;
+}
+```
+
+**Protocol:**
+- Parent sends `{ type: "set-content", content: "..." }` to load JAML
+- Parent sends `{ type: "tool-call", tool: "search_seeds", arguments: {...} }` to execute
+- Child sends `{ type: "content-change", content: "..." }` when user edits
+- Child sends `{ type: "tool-result", tool: "...", result: ... }` when tool completes
+
+---
+
 ## Architecture
 
 ```
@@ -228,20 +329,30 @@ jaml-seed-lab/
 │   ├── ide/page.tsx        # JAML IDE
 │   ├── finder/page.tsx     # Seed Finder
 │   ├── analyzer/page.tsx   # JAMLYZER
+│   ├── layout.tsx          # Root layout
 │   └── api/                # API routes (search, analyze, mcp)
-├── src/
-│   ├── apps/               # Exportable app components
+├── src/                    # Exportable library code
+│   ├── index.ts            # Package entry point
+│   ├── apps/               # 4 composable apps
 │   │   ├── ide/            # JamlIdePage + JamlIde component
 │   │   ├── home/           # HomePage + FilterBrowser + Layout
 │   │   ├── finder/         # SeedFinderPage + SearchPanel
 │   │   └── analyzer/       # JamlSeedAnalyzerPage + RouteViewer
+│   ├── mcp/                # MCP integration
+│   │   ├── client.ts       # Browser MCP client (HTTP transport)
+│   │   ├── panel.tsx       # React MCP panel (tools + results)
+│   │   ├── app.tsx         # MCP App wrapper (iframe postMessage)
+│   │   └── index.ts        # Exports
+│   ├── codemirror/         # CodeMirror 6 extensions
+│   │   ├── mcp-extension.ts # Full MCP extension (state, decorations, panel, keymap)
+│   │   └── index.ts        # Exports
 │   ├── components/          # Shared UI components
-│   ├── hooks/               # useSeedSearch, useSeedAnalyzer, useJamlLsp
-│   ├── lib/
-│   │   ├── catalog.ts       # json-render catalog (Zod schemas)
-│   │   ├── registry.tsx     # Component registry
-│   │   └── spec-builder.ts  # Spec builders for results
-│   └── index.ts             # Package entry point
+│   ├── hooks/               # Custom hooks
+│   └── lib/                 # (alias to ../lib)
+├── lib/                     # Core library
+│   ├── catalog.ts           # json-render catalog (Zod schemas)
+│   ├── registry.tsx         # Component registry
+│   └── spec-builder.ts      # Spec builders for results
 ├── bin/
 │   └── cli.mjs              # jaml-seed CLI
 ├── package.json
@@ -268,6 +379,24 @@ User clicks seed → ActionProvider → analyzeSeed
 AI generates new Spec for the full route
 ```
 
+### MCP Flow
+
+```
+CodeMirror 6 Editor
+    ↓ (user clicks tool or presses Ctrl+Shift+M)
+McpBrowserClient.connect()
+    ↓ HTTP Streamable transport
+/api/mcp (Next.js route handler)
+    ↓ MCP protocol
+McpServer (tools registered)
+    ↓
+Tool execution result
+    ↓
+addMcpResult.of() dispatched to CodeMirror state
+    ↓
+McpResultWidget rendered inline in editor
+```
+
 ### Tech Stack
 
 | Layer | Technology |
@@ -279,6 +408,7 @@ AI generates new Spec for the full route
 | Generative UI | json-render (Catalog → Spec → Renderer) |
 | Search Engine | motely-wasm (WebAssembly, SIMD) |
 | JAML Language | jaml-lang (LSP, diagnostics, completions) |
+| Editor | CodeMirror 6 + custom MCP extension |
 | MCP | @modelcontextprotocol/sdk (Streamable HTTP) |
 | CLI | Node.js ESM |
 
