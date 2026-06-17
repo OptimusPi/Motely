@@ -34,9 +34,11 @@ public interface IMotelyScoopSink
 
     /// <summary>
     /// Record a match whose subject is not a <see cref="MotelyItem"/> — vouchers, bosses, and tags
-    /// are engine enums, not pool items, so they ride a pre-formatted display <paramref name="name"/>
-    /// (e.g. "Telescope", "TheHook", "NegativeTag") instead. <paramref name="slot"/> carries the roll
-    /// index (voucher) or tag draw index (0 = small blind, 1 = big blind); -1 when not applicable.
+    /// are engine enums, not pool items. The engine passes the enum's raw underlying value in
+    /// <paramref name="code"/> (a plain cast, no string work on the hot path); the analyzer casts it
+    /// back to the right enum and formats the display name at the boundary. Use -1 for a coded match
+    /// with no enum (e.g. a bare "The Soul"). <paramref name="slot"/> carries the roll index (voucher)
+    /// or tag draw index (0 = small blind, 1 = big blind); -1 when not applicable.
     /// </summary>
-    void RecordNamed(MotelyMatchSource source, int ante, int slot, string name, int score);
+    void RecordValue(MotelyMatchSource source, int ante, int slot, int code, int score);
 }

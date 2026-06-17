@@ -296,11 +296,22 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
                 _ => "unknown",
             };
 
+            // Format at the boundary: vouchers/bosses/tags arrive as raw enum codes from the engine;
+            // turn them into display text here, not in the scorer. int.MinValue → format the MotelyItem.
+            string itemName = m.Code != int.MinValue
+                ? m.Source switch
+                {
+                    MotelyMatchSource.Voucher => ((MotelyVoucher)m.Code).ToString(),
+                    MotelyMatchSource.Boss => ((MotelyBossBlind)m.Code).ToString(),
+                    MotelyMatchSource.Tag => ((MotelyTag)m.Code).ToString(),
+                    _ => "The Soul",
+                }
+                : FormatUtils.FormatItem(m.Item);
+
             return new JamlMatch(
                 m.ClauseIndex,
                 label,
-                // Vouchers / bosses / tags ride a pre-formatted name (not MotelyItem-encodable).
-                m.Name ?? FormatUtils.FormatItem(m.Item),
+                itemName,
                 sourceStr,
                 m.Ante,
                 m.Slot,

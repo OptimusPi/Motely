@@ -72,7 +72,7 @@ internal static class LegendarySoulMatcher
                 if (clause.SoulCardOnly)
                 {
                     count++;
-                    scoop?.RecordNamed(MotelyMatchSource.SoulJoker, ante, p, "The Soul", 1);
+                    scoop?.RecordValue(MotelyMatchSource.SoulJoker, ante, p, -1, 1);
                     if (stopAfterFirstMatch)
                         return count;
                     continue;
@@ -116,7 +116,7 @@ internal static class LegendarySoulMatcher
                 if (clause.SoulCardOnly)
                 {
                     count++;
-                    scoop?.RecordNamed(MotelyMatchSource.SoulJoker, ante, p, "The Soul", 1);
+                    scoop?.RecordValue(MotelyMatchSource.SoulJoker, ante, p, -1, 1);
                     if (stopAfterFirstMatch)
                         return count;
                     continue;

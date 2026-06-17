@@ -14,7 +14,9 @@ public readonly record struct ScoopedMatch(
     int CardIndex,
     MotelyItem Item,
     int Score,
-    string? Name = null
+    // Raw enum value for non-MotelyItem matches (voucher/boss/tag), or -1 for a bare "The Soul".
+    // int.MinValue means "no code — format the MotelyItem instead". The analyzer turns this into text.
+    int Code = int.MinValue
 );
 
 /// <summary>
@@ -41,6 +43,6 @@ public sealed class JamlScoop : IMotelyScoopSink
         int score
     ) => _matches.Add(new ScoopedMatch(CurrentClauseIndex, source, ante, slot, cardIndex, item, score));
 
-    public void RecordNamed(MotelyMatchSource source, int ante, int slot, string name, int score) =>
-        _matches.Add(new ScoopedMatch(CurrentClauseIndex, source, ante, slot, -1, default, score, name));
+    public void RecordValue(MotelyMatchSource source, int ante, int slot, int code, int score) =>
+        _matches.Add(new ScoopedMatch(CurrentClauseIndex, source, ante, slot, -1, default, score, code));
 }

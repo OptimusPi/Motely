@@ -323,9 +323,9 @@ public static class JamlScoring
                 if (clause.Bosses[i] == runState.CachedBosses[ante])
                 {
                     count++;
-                    // ?. short-circuits arg evaluation — no ToString() alloc on the null-sink hot path.
-                    runState.ScoopSink?.RecordNamed(
-                        MotelyMatchSource.Boss, ante, -1, runState.CachedBosses[ante].ToString(), 1);
+                    // Engine records the raw enum value only — the analyzer formats it to text.
+                    runState.ScoopSink?.RecordValue(
+                        MotelyMatchSource.Boss, ante, -1, (int)runState.CachedBosses[ante], 1);
                 }
         }
         return count;
@@ -869,8 +869,8 @@ public static class JamlScoring
                         if (rolled == clause.Vouchers[i])
                         {
                             count++;
-                            runState.ScoopSink?.RecordNamed(
-                                MotelyMatchSource.Voucher, ante, roll, rolled.ToString(), 1);
+                            runState.ScoopSink?.RecordValue(
+                                MotelyMatchSource.Voucher, ante, roll, (int)rolled, 1);
                         }
                     }
                 }
@@ -907,8 +907,8 @@ public static class JamlScoring
                     {
                         count++;
                         // slot = draw index: 0 = small blind tag, 1 = big blind tag.
-                        runState.ScoopSink?.RecordNamed(
-                            MotelyMatchSource.Tag, ante, drawIndex, rolled.ToString(), 1);
+                        runState.ScoopSink?.RecordValue(
+                            MotelyMatchSource.Tag, ante, drawIndex, (int)rolled, 1);
                     }
                 }
             }
