@@ -221,7 +221,7 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
             return true; // Analysis is not a filter — always pass
         }
 
-        private static JamlMatch ConvertMatch(ScoopedMatch m, string? label, string source)
+        private static JamlMatch ConvertMatch(ScoopedMatch m, string? label, string group, int points)
         {
             string sourceStr = m.Source switch
             {
@@ -239,11 +239,13 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
             return new JamlMatch(
                 m.ClauseIndex,
                 label,
+                group,
                 FormatUtils.FormatItem(m.Item),
                 sourceStr,
                 m.Ante,
                 m.Slot,
-                m.Score
+                m.Score,
+                points
             );
         }
 
