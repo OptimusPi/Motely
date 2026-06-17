@@ -1,52 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
-import { useRef, useMemo, useState, memo } from 'react'
-import { useFrame, useLoader, type ThreeEvent } from '@react-three/fiber'
-import { useSpring, animated } from '@react-spring/three'
-import * as THREE from 'three'
-import type { MotelySpriteData } from '../decode/motelySprite.js'
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const CARD_DIMENSIONS = { WIDTH: 0.7, HEIGHT: 0.95, DEPTH: 0.02 } as const
-// eslint-disable-next-line react-refresh/only-export-components
-export const CARD_MAGNET = {
-  MAX_TILT_X: 0.36,
-  MAX_TILT_Y: 0.42,
-  MAX_SHIFT: 0.038,
-  TWIST_Z: 0.11,
-  LERP_IN: 18,
-  LERP_OUT: 10,
-} as const
-
-function useSpriteTexture(sprite: MotelySpriteData) {
-  const texture = useLoader(THREE.TextureLoader, sprite.atlasPath);
-  
-  return useMemo(() => {
-    const t = texture.clone();
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.magFilter = THREE.NearestFilter;
-    t.minFilter = THREE.NearestFilter;
-    t.repeat.set(1 / sprite.gridCols, 1 / sprite.gridRows);
-    t.offset.set(
-      sprite.gridCol / sprite.gridCols,
-      1 - ((sprite.gridRow + 1) / sprite.gridRows)
-    );
-    t.needsUpdate = true;
-    return t;
-  }, [texture, sprite.gridCol, sprite.gridRow, sprite.gridCols, sprite.gridRows]);
-}
-
-export interface Card3DProps {
-  sprite: MotelySpriteData
-  position?: [number, number, number]
-  rotation?: [number, number, number]
-  selected?: boolean
-  highlighted?: boolean
-  onClick?: () => void
-  onPointerEnter?: () => void
-  onPointerLeave?: () => void
-=======
 import * as React from "react";
 import { Canvas, useLoader, useFrame } from "@react-three/fiber";
 import { Float } from "@react-three/drei";
@@ -246,7 +199,6 @@ export interface Card3DProps {
   height?: number | string;
   className?: string;
   style?: React.CSSProperties;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 }
 
 /**
@@ -268,52 +220,6 @@ export function Card3D({
   style,
 }: Card3DProps) {
   return (
-<<<<<<< HEAD
-    <animated.group
-      position-x={position[0]}
-      position-y={posY.to((y) => position[1] + y)}
-      position-z={position[2]}
-      rotation-x={rotation[0]}
-      rotation-y={rotation[1]}
-      rotation-z={rotation[2]}
-      scale={scale}
-    >
-      {/* Invisible hit mesh that does not shift or twist, preventing boop-cancel loops */}
-      <mesh
-        visible={false}
-        onClick={(e) => { e.stopPropagation(); onClick?.() }}
-        onPointerMove={onMove}
-        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); onPointerEnter?.(); document.body.style.cursor = 'pointer' }}
-        onPointerLeave={(e) => { e.stopPropagation(); setHovered(false); reset(); onPointerLeave?.(); document.body.style.cursor = 'auto' }}
-      >
-        <boxGeometry args={[CARD_DIMENSIONS.WIDTH, CARD_DIMENSIONS.HEIGHT, CARD_DIMENSIONS.DEPTH * 2]} />
-        <meshBasicMaterial />
-      </mesh>
-
-      <group ref={tiltRef}>
-        {highlighted && (
-          <pointLight color={glowColor} intensity={1.5} distance={1} position={[0, 0, 0.1]} />
-        )}
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[CARD_DIMENSIONS.WIDTH, CARD_DIMENSIONS.HEIGHT, CARD_DIMENSIONS.DEPTH]} />
-          <meshBasicMaterial attach="material-4" map={texture} toneMapped={false} />
-          <meshStandardMaterial attach="material-5" color="#1a1a2e" metalness={0.2} roughness={0.8} />
-          <meshStandardMaterial attach="material-0" color="#f5f5dc" />
-          <meshStandardMaterial attach="material-1" color="#f5f5dc" />
-          <meshStandardMaterial attach="material-2" color="#f5f5dc" />
-          <meshStandardMaterial attach="material-3" color="#f5f5dc" />
-        </mesh>
-        {selected && (
-          <mesh position={[0, 0, -CARD_DIMENSIONS.DEPTH]}>
-            <ringGeometry args={[0.45, 0.5, 32]} />
-            <meshBasicMaterial color="#e4b643" transparent opacity={0.8} />
-          </mesh>
-        )}
-      </group>
-    </animated.group>
-  )
-})
-=======
     <div className={className} style={{ width: "100%", height, ...style }}>
       <Canvas camera={{ position: [0, 0, 3], fov: 40 }} gl={{ alpha: true }} dpr={[1, 2]}>
         <CardLighting />
@@ -326,4 +232,3 @@ export function Card3D({
     </div>
   );
 }
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45

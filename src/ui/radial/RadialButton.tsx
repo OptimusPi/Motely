@@ -1,11 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-<<<<<<< HEAD
-import clsx from "clsx";
-import { twMerge } from "tailwind-merge";
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { JimboColorOption } from "../tokens.js";
 import "./radial-navigation.css";
 
@@ -38,28 +33,10 @@ const BUTTON_THEMES: Record<RadialButtonColor, ButtonTheme> = {
     "seed-top": { bg: JimboColorOption.DARKEST, shadow: JimboColorOption.BLACK, text: JimboColorOption.GOLD },
 };
 
-<<<<<<< HEAD
-// ── Shared base classes ───────────────────────────────────────────────────────
-
-const BUTTON_SHADOW = "0 4px 0 0 rgba(0,0,0,0.8)";
-
-const BASE_CLASSES = clsx(
-    "group flex items-center justify-center gap-1.5 rounded-[10px] border-none px-[10px] py-[3px] outline-none select-none",
-    "font-normal",
-    "transition-[transform,box-shadow] duration-[80ms] ease-out",
-);
-
-const INTERACTIVE_CLASSES = "cursor-pointer";
-const DISABLED_CLASSES = "cursor-not-allowed opacity-67";
-const WIDE_CLASSES = "w-[130px] sm:w-[160px]";
-const NORMAL_WIDTH = "min-w-[54px] sm:min-w-[64px]";
-
-=======
 // ── Shared constants ──────────────────────────────────────────────────────────
 
 const BUTTON_SHADOW = "0 4px 0 0 rgba(0,0,0,0.8)";
 
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 // ── Variant: action (default button) ──────────────────────────────────────────
 
 export interface RadialButtonActionProps {
@@ -166,23 +143,12 @@ export function RadialButton(props: RadialButtonProps) {
             aria-label={altText}
             title={tooltip ?? altText}
             disabled={isDisabled}
-<<<<<<< HEAD
-            className={twMerge(
-                clsx(
-                    BASE_CLASSES,
-                    isWide ? WIDE_CLASSES : NORMAL_WIDTH,
-                    isDisabled ? DISABLED_CLASSES : INTERACTIVE_CLASSES,
-                    className,
-                ),
-            )}
-=======
             className={[
                 "jimbo-radial-btn",
                 isWide ? "jimbo-radial-btn--wide" : "jimbo-radial-btn--normal",
                 isDisabled ? "jimbo-radial-btn--disabled" : "jimbo-radial-btn--interactive",
                 className,
             ].filter(Boolean).join(" ")}
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             style={{
                 backgroundColor: theme.bg,
                 boxShadow: isPressed && !isDisabled ? "none" : BUTTON_SHADOW,
@@ -211,11 +177,7 @@ function ToggleDot({ active }: { active: boolean; disabled: boolean }) {
 
     return (
         <div
-<<<<<<< HEAD
-            className={twMerge("h-[9px] w-[9px] shrink-0 rounded-full border")}
-=======
             className="jimbo-radial-dot"
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             style={{ borderWidth: 1, ...dotStyle }}
         />
     );
@@ -224,33 +186,17 @@ function ToggleDot({ active }: { active: boolean; disabled: boolean }) {
 function CountBadge({ count, icon }: { count: number; icon?: string }) {
     if (icon) {
         return (
-<<<<<<< HEAD
-            <span className="inline-flex items-center justify-center text-[10px] leading-none" style={{ marginLeft: 2 }} aria-hidden="true">
-=======
             <span className="jimbo-radial-count-icon" aria-hidden="true">
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 {icon}
             </span>
         );
     }
     return (
         <span
-<<<<<<< HEAD
-            className="inline-flex items-center justify-center rounded-full font-mono leading-none"
-            style={{
-                fontSize: "10px",
-                backgroundColor: JimboColorOption.DARKEST,
-                color: count > 0 ? JimboColorOption.GOLD : JimboColorOption.GREY,
-                minWidth: 16,
-                height: 16,
-                padding: "2px 4px",
-                marginLeft: 2,
-=======
             className="jimbo-radial-count"
             style={{
                 backgroundColor: JimboColorOption.DARKEST,
                 color: count > 0 ? JimboColorOption.GOLD : JimboColorOption.GREY,
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             }}
         >
             {count}

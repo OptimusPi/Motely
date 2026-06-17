@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import type { Meta, StoryObj } from '@storybook/react';
-=======
 import type { Meta, StoryObj } from '@storybook/react-vite';
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { useState } from 'react';
 import { JimboAppScroll, JimboAppFooter } from './jimboApp';
 import { JimboButton, JimboPanel, JimboInnerPanel, JimboModal } from './panel';
@@ -121,11 +117,7 @@ export const Panels: StoryObj = {
 
 export const PanelWithBack: StoryObj = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [view, setView] = useState<'home' | 'detail'>('home');
     return (
       <JimboAppScroll>
@@ -148,11 +140,7 @@ export const PanelWithBack: StoryObj = {
 
 export const Modal: StoryObj = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [open, setOpen] = useState(false);
     return (
       <>
@@ -179,11 +167,7 @@ export const Modal: StoryObj = {
 
 export const Tabs: StoryObj = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [tab, setTab] = useState('a');
     return (
       <JimboAppScroll>
@@ -209,11 +193,7 @@ export const Tabs: StoryObj = {
 
 export const ToggleList: StoryObj = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [items, setItems] = useState([
       { id: 'wee', label: 'Wee Joker', on: true },
       { id: 'bp', label: 'Blueprint', on: false },
@@ -235,11 +215,7 @@ export const ToggleList: StoryObj = {
 export const FlankNav: StoryObj = {
   render: () => {
     const seeds = ['ABCD1234', 'WEEJOKER', 'PERKEO99', 'BLUEPRINT'];
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [i, setI] = useState(0);
     return (
       <JimboAppScroll>
@@ -312,11 +288,7 @@ export const StatGridAndInset: StoryObj = {
 
 export const CopyRowAndSelect: StoryObj = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [deck, setDeck] = useState('Erratic');
     return (
       <JimboAppScroll>
@@ -344,11 +316,7 @@ export const CopyRowAndSelect: StoryObj = {
 export const Spinner: StoryObj = {
   render: () => {
     const threadOptions = ['1', '2', '4', '8', '16', '32'];
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [threads, setThreads] = useState(2);
     return (
       <JimboAppScroll>
@@ -377,11 +345,7 @@ export const Spinner: StoryObj = {
 // are dim grey. Used as a carousel position indicator.
 export const Stepper: StoryObj = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [page, setPage] = useState(2);
     return (
       <JimboAppScroll>
@@ -396,15 +360,9 @@ export const Stepper: StoryObj = {
 
 export const Slider: StoryObj = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [maxResults, setMaxResults] = useState(100);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
     const [maxResults, setMaxResults] = useState(100);
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [timeBudget, setTimeBudget] = useState(30);
     return (
       <JimboAppScroll>

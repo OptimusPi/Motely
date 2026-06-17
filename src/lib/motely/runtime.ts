@@ -1,9 +1,4 @@
 import bootsharp from "motely-wasm";
-<<<<<<< HEAD
-
-export type MotelyRuntimeStatus = "idle" | "booting" | "ready" | "error";
-
-=======
 import { Program as Motely } from "motely-wasm/motely/wasm";
 import type { MotelySingleSearchContext } from "motely-wasm/motely";
 import { IFileMounter } from "motely-wasm/bootsharp/file-system";
@@ -40,7 +35,6 @@ export function clearJimmolateProbe(): void {
     currentProbe = () => true;
 }
 
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 // Must match the path the host serves motely-wasm's bin/ at.
 // Used by main-thread hooks, workers, and Storybook staticDir alike.
 // The Storybook staticDir in .storybook/main.ts serves it here.
@@ -48,12 +42,6 @@ export function clearJimmolateProbe(): void {
 // A bare "/bin" would 404 in every deployment context.
 export const MOTELY_BIN_PATH = "/motely-wasm/bin";
 
-<<<<<<< HEAD
-export async function ensureMotelyReady(): Promise<void> {
-    if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) {
-        await bootsharp.boot(MOTELY_BIN_PATH);
-    }
-=======
 // File System extension (optional peer `@rewaffle/bootsharp-file-system`).
 //
 // fs.init() binds the IFileMounter [Import], which — like the Jimmolate probe
@@ -108,5 +96,4 @@ export async function ensureMotelyReady(): Promise<void> {
         await bootsharp.boot();
     })();
     return bootPromise;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 }

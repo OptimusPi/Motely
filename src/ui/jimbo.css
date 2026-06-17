@@ -85,8 +85,6 @@
   --j-space-lg: 12px;
   --j-space-xl: 16px;
 
-<<<<<<< HEAD
-=======
   /* App shell — HARD-LOCKED 320×540. One size, ALWAYS — never fluid, never
      resizes. iPhone SE portrait height (568) minus the 28px JimboBalatroFooter
      that sits below .j-app (total embed rectangle stays 320×568). */
@@ -94,7 +92,6 @@
   --j-app-w: 320px;
   --j-app-h: 540px;
 
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   /* Radii — Balatro is chunky, not bubbly. Never > 10px. */
   --j-radius-sm: 4px;
   --j-radius-md: 6px;
@@ -161,15 +158,9 @@
   }
 }
 
-<<<<<<< HEAD
-/* Sizes (from DESIGN.md typography scale) */
-.j-text--display {
-  font-size: 26px;
-=======
 /* Sizes (snapped to m6x11 [16,32,48] and m6x11plus [18,36,54] pixel grids) */
 .j-text--display {
   font-size: 32px;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
@@ -185,27 +176,12 @@
 }
 
 .j-text--heading {
-<<<<<<< HEAD
-  font-size: 14px;
-=======
   font-size: 16px;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.08em;
   line-height: 1.2;
 }
 
 .j-text--md {
-<<<<<<< HEAD
-  font-size: 14px;
-}
-
-.j-text--sm {
-  font-size: 12px;
-}
-
-.j-text--body {
-  font-size: 11px;
-=======
   font-size: 16px;
 }
 
@@ -215,35 +191,22 @@
 
 .j-text--body {
   font-size: 13px;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.05em;
   line-height: 1.3;
 }
 
 .j-text--xs {
-<<<<<<< HEAD
-  font-size: 10px;
-}
-
-.j-text--label {
-  font-size: 9px;
-=======
   font-size: 12px;
 }
 
 .j-text--label {
   font-size: 10px;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
 
 .j-text--micro {
-<<<<<<< HEAD
-  font-size: 8px;
-=======
   font-size: 10px;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   letter-spacing: 0.04em;
   line-height: 1.15;
 }
@@ -397,11 +360,7 @@
   background: var(--j-btn-face-color, var(--j-orange));
   text-align: center;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
-<<<<<<< HEAD
-  /* Drop-lip at 30% opacity per design. Stacked solid offset, no blur. */
-=======
   /* Drop shadow at 30% opacity per design. Stacked solid offset, no blur. */
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   box-shadow: 0 calc(var(--j-press-y) + 2px) 0 0 rgba(0, 0, 0, 0.3);
   transform: translate(0, 0);
   transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear, background-color var(--j-press-speed) linear;
@@ -447,29 +406,17 @@
 }
 
 .j-btn--md .j-btn__face {
-<<<<<<< HEAD
-  padding-top: 6px;
-  padding-right: 18px;
-  padding-bottom: 9px;
-=======
   padding-top: 9px;
   padding-right: 18px;
   padding-bottom: 6px;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   padding-left: 18px;
   font-size: 16px;
 }
 
 .j-btn--lg .j-btn__face {
-<<<<<<< HEAD
-  padding-top: 6px;
-  padding-right: 18px;
-  padding-bottom: 11px;
-=======
   padding-top: 11px;
   padding-right: 18px;
   padding-bottom: 6px;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   padding-left: 18px;
   font-size: 20px;
 }
@@ -670,10 +617,6 @@
 }
 
 .j-tab__btn[data-active="false"]:hover {
-<<<<<<< HEAD
-  background: var(--j-red);
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   background: var(--j-dark-red);
 }
 
@@ -1271,8 +1214,6 @@
   border-color: var(--j-red);
 }
 
-<<<<<<< HEAD
-=======
 .j-text-input--code {
   font-family: var(--j-font-code);
   font-size: 11px;
@@ -1283,7 +1224,6 @@
 .j-jimmolate__sig { opacity: 0.6; }
 .j-jimmolate__input { width: 100%; font-family: var(--j-font-code); font-size: 11px; }
 
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 /* Inline-edit: borderless transparent input that reads as text. */
 .j-inline-edit {
   width: 100%;
@@ -1537,33 +1477,6 @@
 }
 
 /* ── App Shell ────────────────────────────────────────────────────────── */
-<<<<<<< HEAD
-/* Mobile-first 320px layout container for ALL Jimbo UI screens.
- * Supports container queries for responsive breakpoints:
- *   compact  ≤400px  — iPhone SE, fixed 568px height, NO scroll
- *   cozy     401-750px — MCP inline / wider phones, flexible height, scroll OK
- *   wide     751px+  — tablet/desktop, two-column layouts (future)
- *
- * Default = compact (hard lock). Add .j-app--fluid to unlock for MCP/desktop.
- */
-
-/* iPhone SE 5 portrait — 320×568 LOCKED. Content inside is designed to fit
-   perfectly; the panel itself does not resize, drag, or reflow. The swirl
-   behind it shows in the surrounding viewport. */
-.j-app {
-  /* The device viewport — NOT a panel. In Balatro the game table is the
-     viewport; modals (JimboPanel) sit on top of it. The 320×568 lock is a
-     clipping constraint, not a chunky-bordered frame. The swirl background
-     (JimboBackground) shows through; panels inside provide the only chrome. */
-  container-type: inline-size;
-  container-name: jimbo;
-  width: 320px;
-  max-width: 320px;
-  min-width: 320px;
-  height: 568px;
-  max-height: 568px;
-  min-height: 568px;
-=======
 /* The MCP App embed target. 320×(568 − footer) hard-locked. No fluid, no
    responsive, no reflow. The swirl behind shows in the surrounding viewport;
    the JimboBalatroFooter sits below this rectangle (fixed, viewport-pinned)
@@ -1585,7 +1498,6 @@
   height: var(--j-app-h);
   max-height: var(--j-app-h);
   min-height: var(--j-app-h);
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -1599,18 +1511,6 @@
   position: relative;
 }
 
-<<<<<<< HEAD
-/* Fluid modifier — unlocks the container for MCP / desktop contexts. */
-.j-app--fluid {
-  width: 100%;
-  max-width: 750px;
-  height: auto;
-  max-height: none;
-  min-height: 400px;
-}
-
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 .j-app__content {
   flex: 1;
   min-height: 0;
@@ -1657,45 +1557,6 @@
   gap: var(--j-space-sm);
 }
 
-<<<<<<< HEAD
-/* ── Cozy Breakpoint (401px+) ──────────────────────────────────────── */
-/* Only activates when j-app--fluid is used AND container is wide enough. */
-
-@container jimbo (min-width: 401px) {
-  .j-app__content {
-    padding: var(--j-space-xl) var(--j-space-xl) var(--j-space-lg);
-  }
-
-  .j-app__scroll {
-    padding: var(--j-space-xl) var(--j-space-xl) var(--j-space-lg);
-  }
-
-  .j-app__footer {
-    padding: var(--j-space-md) var(--j-space-xl) var(--j-space-lg);
-  }
-}
-
-@container jimbo (min-width: 401px) {
-  .j-stat-grid__value {
-    font-size: 20px;
-  }
-
-  .j-info-card {
-    padding: var(--j-space-md) var(--j-space-lg);
-  }
-
-  .j-info-card__title {
-    font-size: 14px;
-  }
-
-  .j-section-header__tag {
-    font-size: 12px;
-  }
-}
-
-
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 /* ── Section Header ──────────────────────────────────────────────────── */
 /* Colored tag + horizontal rule — reusable section divider. */
 
@@ -2245,13 +2106,10 @@
 .j-ide {
   display: flex;
   flex-direction: column;
-<<<<<<< HEAD
-=======
   /* Grow to fill a fixed-height flex parent (e.g. the 320x540 .j-app shell)
      so the IDE never leaves dead space below it; min-height stays as the
      floor for standalone (non-flex-parent) usage so it can't collapse. */
   flex: 1 1 auto;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   min-height: 420px;
   max-width: 100%;
   overflow: hidden;
@@ -3165,81 +3023,6 @@
   justify-items: center;
 }
 
-<<<<<<< HEAD
-/* ── Panel Splitter ──────────────────────────────────────────────────── */
-
-.j-panel-splitter {
-  all: unset;
-  position: relative;
-  display: block;
-  flex: 0 0 auto;
-  touch-action: none;
-  user-select: none;
-  background: var(--j-teal-grey);
-}
-
-.j-panel-splitter::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  pointer-events: none;
-}
-
-.j-panel-splitter[data-orientation="vertical"] {
-  width: 8px;
-  cursor: col-resize;
-}
-
-.j-panel-splitter[data-orientation="vertical"]::before {
-  box-shadow: 0 -8px 0 rgba(255, 255, 255, 0.3), 0 8px 0 rgba(255, 255, 255, 0.3);
-}
-
-.j-panel-splitter[data-orientation="horizontal"] {
-  height: 8px;
-  cursor: row-resize;
-}
-
-.j-panel-splitter[data-orientation="horizontal"]::before {
-  box-shadow: -8px 0 0 rgba(255, 255, 255, 0.3), 8px 0 0 rgba(255, 255, 255, 0.3);
-}
-
-.j-panel-splitter:focus-visible {
-  outline: 2px solid var(--j-gold);
-  outline-offset: 2px;
-}
-
-.j-panel-splitter-demo {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.j-panel-splitter-demo__body {
-  min-height: 0;
-  flex: 1 1 auto;
-  height: 420px;
-  display: flex;
-  overflow: hidden;
-  border-radius: var(--j-radius-md);
-  background: var(--j-darkest);
-}
-
-.j-panel-splitter-demo__pane {
-  min-width: 0;
-  flex: 1 1 0;
-  padding: var(--j-space-md);
-  overflow: auto;
-  display: flex;
-  align-items: flex-start;
-}
-
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 /* ── Font Dance Animation ─────────────────────────────────────────────── */
 
 @keyframes j-font-dance {
@@ -3316,9 +3099,6 @@
 .j-stack--justify-between, .j-row--justify-between { justify-content: space-between; }
 
 /* Row-only: opt-in soft wrap. Stack is column-flow so wrap is meaningless. */
-<<<<<<< HEAD
-.j-row--wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, max-content); }
-=======
 .j-row--wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, max-content); }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -3947,4 +3727,3 @@
   opacity: 0.5 !important;
   filter: saturate(0.3) !important;
 }
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45

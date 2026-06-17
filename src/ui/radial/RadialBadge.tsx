@@ -1,11 +1,6 @@
 "use client";
 
 import React from "react";
-<<<<<<< HEAD
-import clsx from "clsx";
-import { twMerge } from "tailwind-merge";
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { JimboColorOption } from "../tokens.js";
 import "./radial-navigation.css";
 import type { RadialButtonColor } from "./RadialButton.js";
@@ -48,39 +43,16 @@ export function RadialBadge({ label, state, color = "red", tooltip, className }:
             role="status"
             aria-label={altText}
             title={altText}
-<<<<<<< HEAD
-            className={twMerge(
-                clsx(
-                    "flex min-w-[60px] items-center justify-center gap-1.5 rounded-[11px] px-[10px] py-[2px] select-none sm:min-w-[64px] sm:px-[14px]",
-                    "text-[11.5px] font-normal",
-                    "shadow-[var(--btn-shadow)]",
-                    className,
-                ),
-            )}
-            style={
-                {
-                    backgroundColor: theme.bg,
-                    border: "none",
-                    height: 24,
-=======
             className={["jimbo-radial-badge", className].filter(Boolean).join(" ")}
             style={
                 {
                     backgroundColor: theme.bg,
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                     "--btn-shadow": `0 4px 0 0 ${theme.shadow}`,
                 } as React.CSSProperties
             }
         >
             <div
-<<<<<<< HEAD
-                className={twMerge(
-                    "h-[9px] w-[9px] shrink-0 rounded-full border",
-                    (state === "error" || state === "loading") && "animate-pulse",
-                )}
-=======
                 className={["jimbo-radial-dot", (state === "error" || state === "loading") ? "jimbo-radial-pulse" : ""].filter(Boolean).join(" ")}
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 style={{
                     backgroundColor: INDICATOR_STYLES[state].bg,
                     borderWidth: 1,

@@ -1,13 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-<<<<<<< HEAD
-import { type Motely as MotelyNamespace } from "motely-wasm";
-import type { MotelyJamlyzerSeedResult } from "motely-wasm";
-=======
 import { type Program as MotelyNamespace } from "motely-wasm/motely/wasm";
 import type { MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 type MotelyApi = typeof MotelyNamespace;
 
@@ -30,24 +25,16 @@ export function useSeedAnalyzer(motely: MotelyApi | null, seed: string | null, j
             setError(null);
             try {
                 const config = jaml ?? `version: 1\nconfig:\n  deck: Erratic\n  stake: White\n`;
-<<<<<<< HEAD
-                const validation = motely.validateJaml(config);
-=======
                 let validation = "valid";
                 try { motely.parseJaml(config); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML."; }
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 if (abortController.signal.aborted) return;
                 if (validation !== "valid") {
                     throw new Error(validation || "Invalid JAML.");
                 }
 
-<<<<<<< HEAD
-                const result = motely.analyzeJamlSeeds(config, [seed]);
-=======
                 const analyzeConfig = motely.parseJaml(config);
                 analyzeConfig.seeds = [seed];
                 const result = motely.jamlyzer(analyzeConfig);
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 if (abortController.signal.aborted) return;
                 if (result.error) {
                     throw new Error(result.error);

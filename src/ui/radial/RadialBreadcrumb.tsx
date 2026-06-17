@@ -1,11 +1,7 @@
 "use client";
 
 import React from "react";
-<<<<<<< HEAD
-import { twMerge } from "tailwind-merge";
-=======
 import "./radial-navigation.css";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export interface RadialBreadcrumbProps {
     label: string;
@@ -32,22 +28,11 @@ export function RadialBreadcrumb({ label, title, className }: RadialBreadcrumbPr
             role="status"
             aria-label={title ?? `In: ${label}`}
             title={title ?? `In: ${label}`}
-<<<<<<< HEAD
-            className={twMerge(
-                "pointer-events-auto flex items-center gap-1 rounded-[11px] px-[10px] py-[2px] font-serif text-[11.5px] font-normal shadow-[0_4px_0_0_rgba(30,30,30,0.9)] select-none sm:px-[14px]",
-                className,
-            )}
-            style={BREADCRUMB_STYLE}
-        >
-            <span className="text-[9.5px] opacity-50">›</span>
-            <span className="whitespace-nowrap">{label}</span>
-=======
             className={["jimbo-radial-breadcrumb", className].filter(Boolean).join(" ")}
             style={BREADCRUMB_STYLE}
         >
             <span className="jimbo-radial-breadcrumb__chevron">›</span>
             <span className="jimbo-radial-breadcrumb__label">{label}</span>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         </div>
     );
 }

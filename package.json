@@ -1,10 +1,6 @@
 {
   "name": "jaml-ui",
-<<<<<<< HEAD
-  "version": "1.0.0",
-=======
   "version": "2.0.0",
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   "description": "Balatro rendering components, sprite metadata, and optional Motely helpers for React apps.",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,7 +13,6 @@
     "./ui": {
       "types": "./dist/ui.d.ts",
       "default": "./dist/ui.js"
-<<<<<<< HEAD
     },
     "./core": {
       "types": "./dist/core.d.ts",
@@ -31,17 +26,6 @@
       "types": "./dist/r3f.d.ts",
       "default": "./dist/r3f.js"
     },
-=======
-    },
-    "./core": {
-      "types": "./dist/core.d.ts",
-      "default": "./dist/core.js"
-    },
-    "./motely": {
-      "types": "./dist/motely.d.ts",
-      "default": "./dist/motely.js"
-    },
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "./jimbo.css": "./dist/ui/jimbo.css",
     "./fonts.css": "./fonts.css",
     "./assets/*": "./assets/*"
@@ -58,10 +42,6 @@
     "assets/fonts",
     "fonts.css",
     "dist/ui/jimbo.css",
-<<<<<<< HEAD
-    "jaml.schema.json",
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "README.md",
     "DESIGN.md",
     "LICENSE"
@@ -103,54 +83,25 @@
   "author": "pifreak",
   "license": "MIT",
   "peerDependencies": {
-<<<<<<< HEAD
-    "@react-spring/three": ">=9.0.0",
-    "@react-three/drei": ">=9.0.0",
-    "@react-three/fiber": ">=8.0.0",
-    "motely-wasm": ">=19.0.2",
-=======
     "motely-wasm": ">=19.4.0",
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "react": "^18.2.0 || ^19.0.0",
     "react-dom": "^18.2.0 || ^19.0.0",
     "react-icons": ">=5.0.0"
   },
   "peerDependenciesMeta": {
-<<<<<<< HEAD
-    "@react-spring/three": {
-      "optional": true
-    },
-    "@react-three/fiber": {
-      "optional": true
-    },
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "@rewaffle/bootsharp-file-system": {
       "optional": true
     },
     "react-icons": {
       "optional": true
-<<<<<<< HEAD
-    },
-    "three": {
-      "optional": true
-    },
-    "@react-three/drei": {
-      "optional": true
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     }
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.2.1",
     "@eslint/js": "^10.0.1",
-<<<<<<< HEAD
-    "@react-spring/three": "^10.0.3",
+    "@react-spring/three": "^10.1.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
-=======
-    "@rewaffle/bootsharp-file-system": "link:D:/extra/bootsharp/dist/packages/file-system",
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "@storybook/addon-a11y": "^10.4.0",
     "@storybook/addon-docs": "^10.4.0",
     "@storybook/addon-mcp": "^0.6.0",
@@ -159,50 +110,22 @@
     "@types/node": "^25.8.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-<<<<<<< HEAD
     "@types/three": "^0.184.1",
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/browser-playwright": "^4.1.6",
     "@vitest/coverage-v8": "^4.1.6",
     "eslint": "^10.4.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-<<<<<<< HEAD
-    "globals": "^17.6.0",
-    "motely-wasm": "^19.0.2",
-=======
     "eslint-plugin-storybook": "^10.4.2",
     "globals": "^17.6.0",
     "motely-wasm": "^20.0.0",
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     "playwright": "^1.60.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-icons": "^5.6.0",
     "storybook": "^10.4.0",
-<<<<<<< HEAD
     "three": "^0.184.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.3",
-    "vite": "^8.0.13",
-    "vite-plugin-dts": "^5.0.0",
-    "vitest": "^4.1.6"
-  },
-  "dependencies": {
-    "@codemirror/commands": "^6.10.3",
-    "@codemirror/lang-yaml": "^6.1.3",
-    "@codemirror/language": "^6.12.3",
-    "@codemirror/state": "^6.6.0",
-    "@codemirror/view": "^6.43.0",
-    "@lezer/highlight": "^1.2.3",
-    "@types/js-yaml": "^4.0.9",
-    "clsx": "^2.1.1",
-    "js-yaml": "^4.1.1",
-    "lucide-react": "^1.16.0",
-    "tailwind-merge": "^2.6.1",
-=======
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.3",
     "vite": "^8.0.13",
@@ -219,15 +142,12 @@
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.43.0",
     "@lezer/highlight": "^1.2.3",
-    "@react-spring/three": "^10.1.0",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
     "@types/js-yaml": "^4.0.9",
+    "clsx": "^2.1.1",
     "jaml-lang": "^0.1.2",
     "js-yaml": "^4.1.1",
     "lucide-react": "^1.16.0",
-    "three": "^0.184.0",
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
+    "tailwind-merge": "^2.6.1",
     "zustand": "^5.0.13"
   }
 }

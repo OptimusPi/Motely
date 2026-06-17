@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--j-surface);
+  --color-foreground: var(--j-foreground);
+  --color-border: var(--j-border);
+  --color-accent: var(--j-accent);
+  --color-muted: var(--j-muted);
+  --color-card: var(--j-surface);
+  --color-card-foreground: var(--j-foreground);
+  --color-primary: var(--j-accent);
+  --color-primary-foreground: #000;
+  --color-secondary: var(--j-surface-muted);
+  --color-secondary-foreground: var(--j-foreground);
+  --color-destructive: #ff6b6b;
+  --color-destructive-foreground: #fff;
+  --radius: 0.5rem;
+
+  --font-sans: var(--j-font-sans), system-ui, sans-serif;
+  --font-mono: var(--j-font-code), ui-monospace, monospace;
+  --font-pixel: var(--j-font-display), ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    background-color: var(--j-surface);
+    color: var(--j-foreground);
+    font-family: var(--j-font-sans), system-ui, sans-serif;
+  }
+}

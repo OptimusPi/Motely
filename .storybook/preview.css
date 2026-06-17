@@ -9,13 +9,6 @@ body {
 }
 
 #storybook-root {
-<<<<<<< HEAD
-  min-height: 100dvh;
-  background: transparent !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-=======
   background: transparent !important;
   padding: 0;
 }
@@ -28,7 +21,6 @@ body {
   width: 320px;
   height: 568px;
   margin: auto;
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 }
 
 .sb-show-main,

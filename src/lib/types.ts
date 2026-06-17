@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import type { MotelyDeck, MotelyStake } from "motely-wasm";
-=======
 import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 // The motely-wasm enums ARE the schema — re-alias rather than fork. See
 // CLAUDE.md "no schema drift". JAML wire format uses the enum names (e.g.

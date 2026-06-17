@@ -4,22 +4,10 @@
 // so no SharedArrayBuffer / COOP+COEP headers are required to deploy this.
 // If a future change reintroduces SAB, switch the deployment to the Cloudflare
 // permanent named tunnel so COOP/COEP can be enforced at the edge.
-<<<<<<< HEAD
-import {
-    Motely,
-    type IMotelySearch,
-    type MotelyProgress,
-    type MotelyScoredSeedResult,
-    type IMotelyWasmSearchSettings,
-    type JamlAesthetic
-} from "motely-wasm";
-import { ensureMotelyReady } from "../lib/motely/runtime.js";
-=======
 import { Program as Motely } from "motely-wasm/motely/wasm";
 import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
 import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 
@@ -74,20 +62,6 @@ function attachListeners(): void {
     unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
-<<<<<<< HEAD
-function configureSettings(message: StartMessage): IMotelyWasmSearchSettings {
-    const settings = Motely.fromJaml(message.jaml).withThreadCount(1);
-    if (message.mode === "aesthetic") {
-        return settings.withAestheticSearch((message.aesthetic ?? 0) as JamlAesthetic);
-    }
-    if (message.mode === "seedlist" && message.seeds && message.seeds.length > 0) {
-        return settings.withListSearch(message.seeds, message.seeds.length);
-    }
-    if (message.mode === "random" && typeof message.count === "number" && message.count > 0) {
-        return settings.withRandomSearch(message.count);
-    }
-    return settings.withAestheticSearch(0 as JamlAesthetic);
-=======
 function configureSettings(message: StartMessage): IMotelySearch {
     const config = Motely.parseJaml(message.jaml);
     if (message.mode === "aesthetic") {
@@ -101,7 +75,6 @@ function configureSettings(message: StartMessage): IMotelySearch {
         return Motely.runRandomSearch(config, message.count);
     }
     return Motely.runAestheticSearch(config, 0 as JamlAesthetic);
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 }
 
 self.onmessage = async (event: MessageEvent) => {
@@ -121,14 +94,8 @@ self.onmessage = async (event: MessageEvent) => {
 
         if (data.predicateStr) {
             try {
-<<<<<<< HEAD
-                // eslint-disable-next-line @typescript-eslint/no-implied-eval
-                const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
-                Motely.jimmolateProbe = (seed, deck, stake) => pred(seed, deck, stake);
-=======
                 const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
                 setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 Motely.enableJimmolate();
             } catch (err) {
                 console.error("Failed to compile worker Jimmolate predicate:", err);
@@ -138,13 +105,8 @@ self.onmessage = async (event: MessageEvent) => {
         attachListeners();
 
         currentSearch?.cancel();
-<<<<<<< HEAD
-        const settings = configureSettings(data);
-        const search = settings.start();
-=======
         const search = configureSettings(data);
         search.start();
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         currentSearch = search;
 
         try {

@@ -19,10 +19,7 @@ import {
     ENHANCER_MAP,
     SEAL_MAP,
 } from "../sprites/spriteData.js";
-<<<<<<< HEAD
-=======
 import { decodeMotelyItem } from "../decode/motelyItemDecoder.js";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export interface JamlGameCardProps {
     card: {
@@ -167,60 +164,6 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
         return null;
     }
 
-<<<<<<< HEAD
-    const displayName = String(item.name || "").trim();
-    const { baseName, edition, isEternal, isPerishable, isRental } = stripModifiers(displayName);
-
-    // Use motely-wasm enum to determine category — no hand-rolled bitmasks
-    const itemType = item.value & 0xffff;
-    const catNibble = (itemType >> 12) & 0xf;
-
-    if (catNibble === 5 /* Joker */) {
-        const jokerName = JOKERS.some((joker) => joker.name === baseName) ? baseName : displayName;
-        if (JOKERS.some((joker) => joker.name === jokerName)) {
-            return { kind: "joker", type: "joker", card: { name: jokerName, edition, isEternal, isPerishable, isRental, scale } };
-        }
-    }
-
-    if (
-        catNibble === 3 /* Tarot */ ||
-        catNibble === 4 /* Planet */ ||
-        catNibble === 2 /* Spectral */
-    ) {
-        const consumableName = TAROTS_AND_PLANETS.some((consumable) => consumable.name === baseName) ? baseName : displayName;
-        if (TAROTS_AND_PLANETS.some((consumable) => consumable.name === consumableName)) {
-            return { kind: "consumable", type: "consumable", card: { name: consumableName, edition, scale } };
-        }
-    }
-
-    if (baseName !== displayName) {
-        if (JOKERS.some((joker) => joker.name === baseName)) {
-            return { kind: "joker", type: "joker", card: { name: baseName, edition, isEternal, isPerishable, isRental, scale } };
-        }
-        if (TAROTS_AND_PLANETS.some((consumable) => consumable.name === baseName)) {
-            return { kind: "consumable", type: "consumable", card: { name: baseName, edition, scale } };
-        }
-        if (VOUCHERS.some((voucher) => voucher.name === baseName)) {
-            return { kind: "voucher", voucherName: baseName };
-        }
-    }
-
-    const standardcard = parseStandardcardName(displayName) ?? parseStandardcardName(baseName);
-    if (standardcard) {
-        return {
-            kind: "playing",
-            type: "playing",
-            card: {
-                name: displayName,
-                rank: standardcard.rank,
-                suit: standardcard.suit,
-                scale,
-            },
-        };
-    }
-
-    return { kind: "unknown", label: displayName };
-=======
     // Decode the packed int through the typed Motely decoder — the single source
     // of truth for the bit layout. The previous version hand-rolled nibble
     // constants (catNibble === 5 /* Joker */ etc.) that did NOT match the real
@@ -276,7 +219,6 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
             // matching in resolveAnalyzerShopItem (vouchers resolve by name).
             return null;
     }
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

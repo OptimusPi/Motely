@@ -14,11 +14,7 @@ export interface JimboSpriteProps {
   className?: string
 }
 
-<<<<<<< HEAD
-export function JimboSprite({ name, sheet, width = 40, height, style }: JimboSpriteProps) {
-=======
 export function JimboSprite({ name, sheet, width = 40, height, style, className }: JimboSpriteProps) {
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   const sprite = getSpriteData(name)
   const resolvedSheet: SpriteSheetType = sheet ?? sprite?.type ?? 'Jokers'
   const meta = SHEET_META[resolvedSheet]

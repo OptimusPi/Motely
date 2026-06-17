@@ -4,12 +4,9 @@ import { SeedFinderApp } from './SeedFinderApp';
 const meta = {
   title: 'APPS / Seed Finder',
   component: SeedFinderApp,
-<<<<<<< HEAD
-=======
   // SeedFinderApp renders its own JimboApp shell, so tell the preview
   // harness not to double-wrap it (which would render two footers).
   parameters: { jimboHarness: false },
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 } satisfies Meta<typeof SeedFinderApp>;
 
 export default meta;

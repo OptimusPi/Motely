@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import type { Meta, StoryObj } from '@storybook/react';
-=======
 import type { Meta, StoryObj } from '@storybook/react-vite';
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { JimboApp, JimboAppScroll, JimboAppFooter } from './jimboApp';
 import { JimboPanel, JimboButton } from './panel';
 import { JimboText } from './jimboText';
@@ -33,26 +29,6 @@ export const Default: Story = {
 };
 
 /**
-<<<<<<< HEAD
- * Fluid variant — unlocks for MCP / desktop contexts where the host doesn't
- * impose a fixed widget size. Container queries in jimbo.css activate "cozy"
- * overrides at 401px+.
- */
-export const Fluid: Story = {
-  args: { fluid: true },
-  render: (args) => (
-    <JimboApp {...args}>
-      <JimboPanel>
-        <JimboText size="lg" tone="white">Fluid shell</JimboText>
-        <JimboText size="sm" tone="grey">Stretches up to ~750px max.</JimboText>
-      </JimboPanel>
-    </JimboApp>
-  ),
-};
-
-/**
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
  * With JimboAppScroll inside — the scrollable content area, hidden scrollbar,
  * magnetic snap.
  */

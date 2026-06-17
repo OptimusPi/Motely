@@ -4,50 +4,17 @@ import '../src/ui/jimbo.css'
 import './preview.css'
 import { JimboBackground } from '../src/ui/jimboBackground'
 import { JimboApp } from '../src/ui/jimboApp'
-<<<<<<< HEAD
-import { ensureMotelyReady } from '../src/lib/motely/runtime'
-
-await ensureMotelyReady();
-=======
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 const preview: Preview = {
   parameters: {
     layout: 'fullscreen',
-<<<<<<< HEAD
-=======
 
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     controls: {
       matchers: {
         color: /(background|color)$/i,
         date: /Date$/i,
       },
     },
-<<<<<<< HEAD
-    backgrounds: { disable: true },
-  },
-  decorators: [
-    (Story, { parameters }) => {
-      const { jimboHarness, jimboBackground } = parameters;
-      const content = <Story />;
-      const useHarness = jimboHarness !== false;
-      const showBackground = jimboBackground !== false;
-
-      return (
-        <>
-          {showBackground ? <JimboBackground /> : null}
-          {useHarness ? (
-            <JimboApp fluid={jimboHarness === 'fluid'}>
-              {content}
-            </JimboApp>
-          ) : (
-            content
-          )}
-        </>
-      );
-    },
-=======
 
     backgrounds: { disable: true },
 
@@ -73,7 +40,6 @@ const preview: Preview = {
         </div>
       </>
     ),
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   ],
 };
 

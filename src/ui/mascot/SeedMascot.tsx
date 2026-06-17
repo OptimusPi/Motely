@@ -2,10 +2,7 @@ import React from "react";
 
 import type { MenuItem } from "./menuConfig.js";
 import { RadialMenu } from "../radial/index.js";
-<<<<<<< HEAD
-=======
 import "./mascot.css";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 export interface SeedMascotProps {
     /** Hit target size for the mascot image (px). Default 160. */
@@ -18,11 +15,7 @@ export interface SeedMascotProps {
     mascotMotionClass?: string;
     /** Callback when the mascot itself is tapped. */
     onTap?: () => void;
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     // -- Radial Menu Props --
     /** Whether to show the radial menu ring. */
     showRadialMenu?: boolean;
@@ -74,11 +67,7 @@ export const SeedMascot = React.memo(function SeedMascot({
     const orbitRadiusY = orbitRadiusX;
 
     return (
-<<<<<<< HEAD
-        <div className="relative flex w-full flex-col items-center justify-center">
-=======
         <div className="jimbo-mascot-root">
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             {/* Orbital menu items */}
             {radialItems.length > 0 && (showRadialMenu || showClosingRadialMenu) ? (
                 <RadialMenu
@@ -100,11 +89,7 @@ export const SeedMascot = React.memo(function SeedMascot({
 
             {/* Jammy - tappable center */}
             <div
-<<<<<<< HEAD
-                className="relative z-20 transition-transform duration-500 ease-[cubic-bezier(0.22,0.92,0.2,1.08)]"
-=======
                 className="jimbo-mascot-lift"
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 style={{
                     transform: `translateY(${mascotTranslateY + welcomeEntranceLift}px)`,
                 }}
@@ -112,11 +97,7 @@ export const SeedMascot = React.memo(function SeedMascot({
                 <button
                     type="button"
                     onClick={onTap}
-<<<<<<< HEAD
-                    className="relative block cursor-pointer rounded-full filter-[drop-shadow(0_4_12_rgba(0,0,0,0.5))] transition-transform duration-300 ease-[cubic-bezier(0.22,0.9,0.3,1.12)] will-change-transform [-webkit-backface-visibility:hidden] backface-hidden hover:scale-105 focus-visible:ring-4 focus-visible:ring-orange-500 active:scale-95"
-=======
                     className="jimbo-mascot-btn"
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                     style={{
                         width: size,
                         height: size,
@@ -124,17 +105,10 @@ export const SeedMascot = React.memo(function SeedMascot({
                     aria-label="Tap Jammy to open chat or the menu"
                 >
                     <span
-<<<<<<< HEAD
-                        className={`pointer-events-none absolute inset-0 block ${mascotMotionClass}`}
-                        style={{ transformOrigin: "50% 80%" }}
-                    >
-                        <img src="/jaml-logo.png" alt="Jammy" className="absolute inset-0 block h-full w-full object-contain" />
-=======
                         className={`jimbo-mascot-img-wrap ${mascotMotionClass}`}
                         style={{ transformOrigin: "50% 80%" }}
                     >
                         <img src="/jaml-logo.png" alt="Jammy" className="jimbo-mascot-img" />
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                     </span>
                 </button>
             </div>

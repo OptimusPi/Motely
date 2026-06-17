@@ -4,10 +4,7 @@ import { createPortal } from 'react-dom';
 import yaml from 'js-yaml';
 import { Plus, Minus, Check } from 'lucide-react';
 import { JamlCompletionService, CompletionData } from '../../lib/jaml/jamlCompletion';
-<<<<<<< HEAD
-=======
 import './jaml-editor.css';
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
 
 
@@ -77,20 +74,12 @@ function SuggestionList({ suggestions, selectedIndex, onSelect, onHover }: {
 }) {
     if (suggestions.length === 0) {
         return (
-<<<<<<< HEAD
-            <div className="p-2 text-xs text-white/40 italic">No suggestions...</div>
-=======
             <div className="jaml-suggestion-empty">No suggestions...</div>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         );
     }
 
     return (
-<<<<<<< HEAD
-        <div className="flex flex-col max-h-[200px] overflow-y-auto" onMouseDown={e => e.preventDefault()}>
-=======
         <div className="jaml-suggestion-list" onMouseDown={e => e.preventDefault()}>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             {suggestions.map((s, idx) => {
                 const isSelected = idx === selectedIndex;
                 return (
@@ -98,20 +87,10 @@ function SuggestionList({ suggestions, selectedIndex, onSelect, onHover }: {
                         key={`${s.text}-${idx}`}
                         onClick={() => onSelect(s.text)}
                         onMouseEnter={() => onHover(idx)}
-<<<<<<< HEAD
-                        className={`
-              flex items-center justify-between px-3 py-1.5 cursor-pointer font-mono text-[13px] transition-colors
-              ${isSelected ? 'bg-[var(--balatro-gold)] text-black' : 'text-white hover:bg-white/10'}
-            `}
-                    >
-                        <span>{s.displayText}</span>
-                        {isSelected && <span className="opacity-50 text-[11px] ml-2">↵</span>}
-=======
                         className={`jaml-suggestion-item${isSelected ? ' jaml-suggestion-item--selected' : ''}`}
                     >
                         <span>{s.displayText}</span>
                         {isSelected && <span className="jaml-suggestion-enter">↵</span>}
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                     </div>
                 );
             })}
@@ -158,11 +137,7 @@ function AntesToggle({ values, onToggle, color }: {
 
 
     return (
-<<<<<<< HEAD
-        <div className="flex flex-row items-center">
-=======
         <div className="jaml-antes-row">
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             {Array.from({ length: maxAnte + 1 }, (_, i) => i).map((ante) => {
                 const isSelected = selectedAntes.has(ante);
                 const borderRadiusClass = ante === 0 ? 'jaml-ante-btn--first' : ante === maxAnte ? 'jaml-ante-btn--last' : 'jaml-ante-btn';
@@ -427,17 +402,10 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
     return (
         <div
             ref={editorRef}
-<<<<<<< HEAD
-            className={`flex flex-col bg-[#0f1416] text-white font-mono text-[13px] leading-[1.8] outline-none rounded-md p-4 overflow-auto min-h-[500px] border border-white/5 ${className}`}
-            tabIndex={0}
-        >
-            <div className="flex flex-col gap-0.5">
-=======
             className={`jaml-editor ${className ?? ''}`.trim()}
             tabIndex={0}
         >
             <div className="jaml-editor-lines">
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                 {lines.map((line) => (
                     <JamlLine
                         key={line.id}
@@ -464,21 +432,12 @@ export default function JamlEditor({ initialJaml, onJamlChange, className }: Int
                     />
                 ))}
             </div>
-<<<<<<< HEAD
-            <div className="mt-4 p-2 bg-black/40 rounded border border-white/5 flex flex-wrap gap-4 text-[12px] text-white/50 font-mono">
-                <span className="flex items-center gap-1.5"><span className="jaml-legend-dot jaml-legend-dot--red"></span> required</span>
-                <span className="flex items-center gap-1.5"><span className="jaml-legend-dot jaml-legend-dot--blue"></span> optional</span>
-                <span className="flex items-center gap-1.5"><span className="jaml-legend-dot jaml-legend-dot--green"></span> complete</span>
-                <span className="flex items-center gap-1.5"><span className="jaml-legend-dot jaml-legend-dot--purple"></span> metadata</span>
-                <span className="ml-auto opacity-40">Click to edit • Tab to navigate</span>
-=======
             <div className="jaml-legend">
                 <span className="jaml-legend-item"><span className="jaml-legend-dot jaml-legend-dot--red"></span> required</span>
                 <span className="jaml-legend-item"><span className="jaml-legend-dot jaml-legend-dot--blue"></span> optional</span>
                 <span className="jaml-legend-item"><span className="jaml-legend-dot jaml-legend-dot--green"></span> complete</span>
                 <span className="jaml-legend-item"><span className="jaml-legend-dot jaml-legend-dot--purple"></span> metadata</span>
                 <span className="jaml-legend-hint">Click to edit • Tab to navigate</span>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
             </div>
         </div>
     );
@@ -620,16 +579,6 @@ function JamlLine({
     };
 
     if (line.isComment) {
-<<<<<<< HEAD
-        return <div className="pl-8 text-stone-400 italic text-xs py-0.5">{line.raw}</div>;
-    }
-    if (!line.key && !line.raw.trim()) {
-        return <div className="h-5" />;
-    }
-    if ((line.key === 'must' || line.key === 'should' || line.key === 'mustNot') && !line.value) {
-        const color = line.key === 'must' ? COLORS.red : COLORS.blue;
-        return <div className="jaml-clause-header pl-8 py-1 text-[16px] border-b border-white/10 mt-4 mb-2 tracking-widest" {...{ style: { '--jaml-color': color } as React.CSSProperties }}>{line.raw}</div>
-=======
         return <div className="jaml-line-comment">{line.raw}</div>;
     }
     if (!line.key && !line.raw.trim()) {
@@ -638,7 +587,6 @@ function JamlLine({
     if ((line.key === 'must' || line.key === 'should' || line.key === 'mustNot') && !line.value) {
         const color = line.key === 'must' ? COLORS.red : COLORS.blue;
         return <div className="jaml-clause-header" {...{ style: { '--jaml-color': color } as React.CSSProperties }}>{line.raw}</div>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     }
 
     const indentSpaces = ' '.repeat(line.indent);
@@ -652,23 +600,6 @@ function JamlLine({
     } as React.CSSProperties : {};
 
     return (
-<<<<<<< HEAD
-        <div className="relative flex items-center py-0.5 group">
-            {/* Delete Zone */}
-            <div
-                className="w-6 h-full flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            >
-                <Minus size={12} className="text-orange-500 hover:bg-orange-100 rounded" />
-            </div>
-
-            {/* Indent & Prefix */}
-            <span className="whitespace-pre text-stone-400">{indentSpaces}{prefix}</span>
-
-            {/* Key */}
-            {line.key && (
-                <div className="relative">
-=======
         <div className="jaml-line">
             {/* Delete Zone */}
             <div
@@ -684,7 +615,6 @@ function JamlLine({
             {/* Key */}
             {line.key && (
                 <div className="jaml-key-wrap">
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                     <div
                         ref={editingPart === 'key' ? targetRef : null}
                         onClick={(e) => { e.stopPropagation(); onStartEdit('key'); }}
@@ -723,11 +653,7 @@ function JamlLine({
                 </div>
             )}
 
-<<<<<<< HEAD
-            {line.key && <span className="text-stone-400 mr-1">:</span>}
-=======
             {line.key && <span className="jaml-colon">:</span>}
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 
             {/* Value */}
             {line.key && (
@@ -743,11 +669,7 @@ function JamlLine({
                             color={getBrightColor()}
                         />
                     ) : (
-<<<<<<< HEAD
-                        <div className="flex gap-0.5 items-center">
-=======
                         <div className="jaml-array-row">
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                             {line.arrayValues.map((val: string, idx: number) => (
                                 <div
                                     key={idx}
@@ -770,11 +692,7 @@ function JamlLine({
                                             onChange={e => setLocalValue(e.target.value)}
                                             onKeyDown={handleKeyDown}
                                             onBlur={() => setTimeout(onEndEdit, 200)}
-<<<<<<< HEAD
-                                            className="bg-transparent w-[3ch] text-center outline-none"
-=======
                                             className="jaml-array-input"
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                                         />
                                     ) : val}
                                 </div>
@@ -796,11 +714,7 @@ function JamlLine({
                         </div>
                     )
                 ) : (
-<<<<<<< HEAD
-                    <div className="relative">
-=======
                     <div className="jaml-value-wrap">
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
                         <div
                             ref={editingPart === 'value' ? targetRef : null}
                             onClick={(e) => { e.stopPropagation(); onStartEdit('value'); }}

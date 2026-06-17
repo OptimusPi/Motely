@@ -1,12 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-<<<<<<< HEAD
-import { Motely, type IMotelySearch, type MotelyProgress, type MotelyScoredSeedResult } from "motely-wasm";
-=======
 import { Program as Motely } from "motely-wasm/motely/wasm";
 import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboStack, JimboRow } from "../ui/jimboLayout.js";
@@ -39,12 +35,8 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     setMatched(0n);
     setStatus("running");
 
-<<<<<<< HEAD
-    const validation = Motely.validateJaml(jaml);
-=======
     let validation = "valid";
     try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     if (validation !== "valid") {
       setError(validation);
       setStatus("error");
@@ -63,12 +55,8 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     Motely.onProgress.subscribe(onProg);
 
     try {
-<<<<<<< HEAD
-      const search = Motely.fromJaml(jaml).withRandomSearch(searchCount).start();
-=======
       const search = Motely.runRandomSearch(Motely.parseJaml(jaml), searchCount);
       search.start();
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
       setSearchRef(search);
       await search.waitForCompletionAsync(undefined);
       setStatus(search.isCompleted ? "done" : "idle");
@@ -93,12 +81,7 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     <JimboPanel>
       <JimboStack gap="md">
         <JimboRow gap="sm" align="center">
-<<<<<<< HEAD
-          <JimboText size="xs" tone="grey">motely v</JimboText>
-          <JimboText size="md" tone="gold">{Motely.version()}</JimboText>
-=======
           <JimboText size="xs" tone="grey">motely-wasm</JimboText>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
           <JimboBadge size="sm" tone={statusTone}>{status}</JimboBadge>
         </JimboRow>
 

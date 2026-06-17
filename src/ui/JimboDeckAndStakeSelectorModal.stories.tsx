@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import type { Meta, StoryObj } from '@storybook/react';
-=======
 import type { Meta, StoryObj } from '@storybook/react-vite';
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import { useState } from 'react';
 import { JimboDeckAndStakeSelectorModal } from './JimboDeckAndStakeSelectorModal';
 import { JimboApp } from './jimboApp';
@@ -25,19 +21,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => {
-<<<<<<< HEAD
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [open, setOpen] = useState(true);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [deck, setDeck] = useState('Erratic');
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-=======
      
     const [open, setOpen] = useState(true);
      
     const [deck, setDeck] = useState('Erratic');
      
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     const [stake, setStake] = useState('Gold');
     return (
       <JimboApp>

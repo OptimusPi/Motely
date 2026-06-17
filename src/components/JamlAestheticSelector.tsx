@@ -1,14 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
-import { JamlAesthetic } from "motely-wasm";
-import { JimboBadge } from "../ui/JimboBadge.js";
-import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
-
-const AESTHETICS: { id: JamlAesthetic; label: string; desc: string }[] = [
-  { id: JamlAesthetic.Palindrome, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
-  { id: JamlAesthetic.Psychosis, label: "Psychosis", desc: "Unsettling or eerie seed patterns" },
-=======
 import { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
 import { JimboBadge } from "../ui/JimboBadge.js";
 import { JimboPanelSpinner } from "../ui/JimboPanelSpinner.js";
@@ -24,7 +15,6 @@ const ECHO_AESTHETIC: JamlAesthetic = ENGINE_AESTHETIC.Echo ?? JamlAesthetic.Ech
 const AESTHETICS: { id: JamlAesthetic; label: string; desc: string }[] = [
   { id: JamlAesthetic.Palindrome, label: "Palindrome", desc: "Seeds that read the same forwards and backwards" },
   { id: ECHO_AESTHETIC, label: "Echo", desc: "Seeds with an echoing pattern (ABAxBxxx)" },
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   { id: JamlAesthetic.Gross, label: "Gross", desc: "Seeds with crude or disgusting words" },
   { id: JamlAesthetic.Funny, label: "Funny", desc: "Seeds that spell funny words" },
   { id: JamlAesthetic.Balatro, label: "Balatro", desc: "Seeds referencing the game itself" },

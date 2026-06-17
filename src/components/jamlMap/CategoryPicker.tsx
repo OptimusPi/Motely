@@ -5,8 +5,6 @@ import { JimboSprite } from "../../ui/sprites.js";
 import { JimboColorOption } from "../../ui/tokens.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboTextInput } from "../../ui/JimboTextInput.js";
-<<<<<<< HEAD
-=======
 import {
   JimboPicker,
   JimboPickerGrid,
@@ -16,7 +14,6 @@ import {
   JimboPickerHint,
   JimboPickerPair,
 } from "../../ui/JimboPicker.js";
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
 import type { SpriteEntry } from "../../sprites/spriteData.js";
 import type { SpriteSheetType } from "../../sprites/spriteMapper.js";
 import type { SlotSelection, SlotCategory } from "./MysterySlot.js";
@@ -83,40 +80,22 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
   );
 
   const renderItem = (item: SpriteEntry, isMuted = false) => (
-<<<<<<< HEAD
-    <div
-      key={item.name}
-      className="j-picker__item j-juice-hover"
-      onClick={() => handleSelect(item)}
-      title={item.name}
-      data-muted={isMuted}
-=======
     <JimboPickerItem
       key={item.name}
       onClick={() => handleSelect(item)}
       title={item.name}
       muted={isMuted}
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
     >
       <JimboSprite name={item.name} sheet={config.sheet} width={48} />
       <JimboText size="micro" tone="white" className="j-picker__item-label">
         {item.name}
       </JimboText>
-<<<<<<< HEAD
-    </div>
-  );
-
-  return (
-    <div className="j-picker">
-      <div className="j-picker__search">
-=======
     </JimboPickerItem>
   );
 
   return (
     <JimboPicker>
       <JimboPickerSearch>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
         <JimboTextInput
           className="j-picker__search-field"
           type="text"
@@ -124,25 +103,6 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-<<<<<<< HEAD
-      </div>
-
-      {config.hint && (
-        <div className="j-inner-panel j-picker__hint">
-          <JimboText size="xs" tone="grey">
-            {config.hint}
-          </JimboText>
-        </div>
-      )}
-
-      <div className="j-picker__grid hide-scrollbar">
-        {config.category === "voucher" && pairedVouchers ? (
-          pairedVouchers.map((pair) => (
-            <div key={pair.base.name} className="j-picker__pair">
-              {renderItem(pair.base, search ? !pair.base.name.toLowerCase().includes(search.toLowerCase()) : false)}
-              {pair.upgrade && renderItem(pair.upgrade, search ? !pair.upgrade.name.toLowerCase().includes(search.toLowerCase()) : false)}
-            </div>
-=======
       </JimboPickerSearch>
 
       {config.hint && (
@@ -160,7 +120,6 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
               {renderItem(pair.base, search ? !pair.base.name.toLowerCase().includes(search.toLowerCase()) : false)}
               {pair.upgrade && renderItem(pair.upgrade, search ? !pair.upgrade.name.toLowerCase().includes(search.toLowerCase()) : false)}
             </JimboPickerPair>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
           ))
         ) : (
           filtered.map((item) => renderItem(item))
@@ -168,21 +127,12 @@ export function CategoryPicker({ config, onSelect }: CategoryPickerProps) {
 
         {((config.category === "voucher" && pairedVouchers?.length === 0) ||
           (config.category !== "voucher" && filtered.length === 0)) && (
-<<<<<<< HEAD
-            <div className="j-picker__empty">
-              <JimboText size="sm" tone="grey">No matches for "{search}"</JimboText>
-            </div>
-          )}
-      </div>
-    </div>
-=======
             <JimboPickerEmpty>
               <JimboText size="sm" tone="grey">No matches for "{search}"</JimboText>
             </JimboPickerEmpty>
           )}
       </JimboPickerGrid>
     </JimboPicker>
->>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
   );
 }
 
