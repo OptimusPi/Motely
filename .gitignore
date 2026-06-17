@@ -75,3 +75,4 @@ nuget.config.local
 # Personal MCP server config (roslyn-lens etc.) — not a shared dep
 .mcp.json
 .mcp.local.json
+/jaml-lsp/dist
