@@ -105,6 +105,27 @@ A cancelled sequential search prints a `--startBatch` / `--startSeed` resume hin
 - The Roslyn-lens MCP caches the solution. After files are added / deleted / moved (any
   architecture change), call `switch_solution` to reload — otherwise it reports deleted files
   as live (it will hand you references into files that no longer exist on disk).
+- **Bootsharp (Motely.Wasm) — these rules decide the C#→JS surface; learn them before touching
+  `Motely.Wasm/Program.cs`.** Pinned docs (local clone): `d:\bootsharp\docs\guide\` —
+  `serialization.md`, `renaming.md`, `declarations.md`, `interop-modules.md`, `llvm.md`; working
+  samples in `d:\bootsharp\samples\` (`react`, `bench/dotnet-llvm`). The rules that matter:
+  - **Names are derived, not chosen.** namespace → module path (dots→`/`, lower-kebab); type →
+    node; members `camelCase`. So `Program` (ns `Motely.Wasm`) → module `motely/wasm`; enums in
+    `Motely.Enums` → `motely/enums`. A `[Export]` method's JS name/module is fixed by this, not
+    by what looks right in C#.
+  - **`[RenameModule]`/`[RenameNode]`/`[RenameMember]`** customize the above; returning null/empty
+    **erases** the node/member from the JS surface (this is how `BootsharpRenamers` strips the
+    ref-struct / `ByRefLike` members that can't marshal — those genuinely cannot cross).
+  - **Marshalling:** records, structs, read-only collections serialize by value (immutable
+    semantics). Mutable types pass **by reference** as interop instances. **`[JsonIgnore]` is
+    ignored** — Bootsharp uses its own binary serializer, not System.Text.Json. To drop a member
+    use `[RenameMember]`→null, NOT `[JsonIgnore]` (e.g. `MotelyAnalyzedItem.Item` is a latent
+    case of this).
+  - **Enums** marshal as numbers with name↔index maps emitted — but an enum only appears in JS if
+    some exported API's serialized types reference it. That is exactly why consumers hit
+    "missing enums": export an API whose types use the enum and it surfaces.
+  - After any change, **read the generated `dist/generated/modules/*.g.d.mts`** to confirm the
+    real shape — don't assume.
 
 ## JAML authoring: hard rules (read every time you write a filter)
 

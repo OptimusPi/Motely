@@ -30,7 +30,9 @@
       "mcp__roslyn-lens__list_solutions",
       "mcp__roslyn-lens__resolve_external_source",
       "mcp__roslyn-lens__switch_solution",
-      "mcp__roslyn-lens__validate_granit_conventions"
+      "mcp__roslyn-lens__validate_granit_conventions",
+      "mcp__claude_ai_Balatro_Seed_Oracle__learn_jaml",
+      "mcp__exa__web_search_exa"
     ]
   }
 }

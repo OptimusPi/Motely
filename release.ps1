@@ -30,10 +30,13 @@ $pkg = Get-ChildItem "$fsCs\.nuget\Bootsharp.FileSystem.*.nupkg" | Sort-Object L
 if (-not $pkg) { throw "No Bootsharp.FileSystem .nupkg found in $fsCs\.nuget" }
 Write-Host "==> Packed: $($pkg.Name)" -ForegroundColor Yellow
 
-# ── 2. Push to local feed + update Directory.Packages.props ──────────────────
+# ── 2. Update Directory.Packages.props ───────────────────────────────────────
+# NOTE: no `dotnet nuget push` here — step 1 packs directly INTO $fsCs\.nuget, which IS the
+# `bootsharp-filesystem` local-folder feed (registered at the user level). Pushing would copy
+# the file onto itself and fail with "used by another process"; the package is already in the
+# feed by virtue of being packed there. We only need to point CPM at the freshly-packed version.
 Write-Host ""
-Write-Host "=== [2/7] Push FileSystem to local feed ===" -ForegroundColor Cyan
-dotnet nuget push $pkg.FullName --source bootsharp-filesystem --skip-duplicate
+Write-Host "=== [2/7] Update FileSystem version in Directory.Packages.props ===" -ForegroundColor Cyan
 $fsVersion = [System.IO.Path]::GetFileNameWithoutExtension($pkg.Name) -replace '^Bootsharp\.FileSystem\.', ''
 Write-Host "==> FileSystem version: $fsVersion" -ForegroundColor Yellow
 $propsPath = "$root\Directory.Packages.props"
@@ -68,6 +71,12 @@ if ($LASTEXITCODE -ne 0) { throw "JS tests FAILED — aborting publish" }
 # ── 7. npm publish ────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "=== [7/7] npm publish ===" -ForegroundColor Cyan
+# Sync package.json "version" to MotelyVersion (the single source of truth) before publishing.
+$pkgJsonPath = "$root\Motely.Wasm\package.json"
+$pkgJson = Get-Content $pkgJsonPath -Raw
+$pkgJson = $pkgJson -replace '("version"\s*:\s*")[^"]*(")', "`${1}$motelyVersion`${2}"
+Set-Content $pkgJsonPath $pkgJson -NoNewline
+Write-Host "==> package.json version set to $motelyVersion" -ForegroundColor Yellow
 Push-Location "$root\Motely.Wasm"
 try { npm publish } finally { Pop-Location }
 
