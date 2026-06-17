@@ -43,3 +43,4 @@ sb-screenshot*.png
 =======
 *.log
 >>>>>>> 4c1c0b639ac307d7366dccd1170ebadffbc2ab45
+.github/.DS_Store
