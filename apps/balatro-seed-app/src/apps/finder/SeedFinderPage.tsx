@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useSearch, JamlIde, type JamlIdeSearchResult } from "jaml-ui";
+import { useSearch } from "jaml-ui";
+import { JamlIde } from "jaml-ui";
 import { JimboApp, JimboBackground } from "jaml-ui/ui";
 import {
   Renderer,
@@ -13,6 +14,20 @@ import {
 import { registry } from "@/lib/registry";
 import { buildSearchSpec, buildLoadingSpec } from "@/lib/spec-builder";
 import type { SpecType } from "@json-render/react";
+import type { JamlIdeSearchResult } from "jaml-ui";
+
+/**
+ * Seed Finder Page — App 3
+ *
+ * Requires a JAML filter to be loaded (from the IDE or direct input).
+ * Runs the Motely WASM engine on your CPU to search 2.3 trillion seeds.
+ *
+ * Features:
+ * - JAML input (inline editor or import from IDE)
+ * - Search controls (mode, count)
+ * - Real-time json-rendered results
+ * - Export to analyzer
+ */
 
 const STARTER_JAML = `must:
   - joker: Blueprint
@@ -21,8 +36,9 @@ deck: Red
 stake: White
 `;
 
-export default function FindPage() {
+export function SeedFinderPage() {
   const [jaml, setJaml] = useState(STARTER_JAML);
+  const [showEditor, setShowEditor] = useState(true);
   const [searchMode, setSearchMode] = useState<"random" | "aesthetic">("random");
   const [seedCount, setSeedCount] = useState(1_000_000);
   const search = useSearch();
@@ -50,10 +66,11 @@ export default function FindPage() {
     }
   }, [search, jaml, searchMode, seedCount]);
 
-  // Build json-render spec from search state
   const spec = useMemo<SpecType>(() => {
     if (search.status === "idle" && search.results.length === 0) {
-      return buildLoadingSpec("Enter a JAML filter and click Search to find seeds.");
+      return buildLoadingSpec(
+        "Load a JAML filter and click Search to find seeds. Use the IDE to write your filter first."
+      );
     }
     return buildSearchSpec({
       status: search.status,
@@ -85,18 +102,58 @@ export default function FindPage() {
       <JimboBackground />
       <JimboApp>
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-8 md:py-12">
-          {/* Header */}
           <header className="flex flex-col gap-2">
             <h1 className="font-pixel text-3xl" style={{ color: "var(--j-accent)" }}>
-              Find Seeds
+              Seed Finder
             </h1>
             <p className="text-sm" style={{ color: "var(--j-muted)" }}>
-              Write a JAML filter and search 2.3 trillion seeds. The Motely engine runs on your CPU.
+              Load a JAML filter and search 2.3 trillion seeds. The Motely engine runs on your CPU.
             </p>
           </header>
 
-          {/* Search Mode + Controls */}
-          <div className="flex flex-wrap items-center gap-4">
+          {/* JAML Section */}
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm" style={{ color: "var(--j-foreground)" }}>
+                  JAML Filter
+                </span>
+                <span className="text-xs" style={{ color: "var(--j-muted)" }}>
+                  {showEditor ? "Editor open" : "Editor hidden"}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="rounded px-2 py-1 text-xs font-semibold"
+                  style={{ border: "1px solid var(--j-border)", color: "var(--j-muted)" }}
+                  onClick={() => setShowEditor(!showEditor)}
+                >
+                  {showEditor ? "Hide" : "Show"} Editor
+                </button>
+                <a
+                  href="/ide"
+                  className="rounded px-2 py-1 text-xs font-semibold"
+                  style={{ backgroundColor: "var(--j-accent-muted)", color: "var(--j-accent)" }}
+                >
+                  Open IDE →
+                </a>
+              </div>
+            </div>
+
+            {showEditor && (
+              <div className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--j-border)" }}>
+                <JamlIde
+                  jaml={jaml}
+                  onChange={setJaml}
+                  title="Seed search"
+                  subtitle={subtitle}
+                />
+              </div>
+            )}
+          </section>
+
+          {/* Search Controls */}
+          <section className="flex flex-wrap items-end gap-4">
             <div className="flex gap-2">
               <button
                 className="rounded px-3 py-1.5 text-sm font-semibold"
@@ -135,24 +192,21 @@ export default function FindPage() {
                 />
               </label>
             )}
-          </div>
 
-          {/* JAML Editor */}
-          <JamlIde
-            jaml={jaml}
-            onChange={setJaml}
-            searchResults={searchResults}
-            isSearching={search.status === "running"}
-            onSearch={handleSearch}
-            title="Seed search"
-            subtitle={subtitle}
-          />
+            <button
+              className="rounded px-5 py-2 text-sm font-semibold"
+              style={{ backgroundColor: "var(--j-accent)", color: "#000" }}
+              onClick={handleSearch}
+            >
+              {search.status === "running" ? "Stop" : "Search"}
+            </button>
+          </section>
 
-          {/* json-render Results */}
+          {/* Results */}
           <section>
             <div className="mb-3 flex items-center gap-2">
               <span className="font-bold text-sm" style={{ color: "var(--j-foreground)" }}>
-                AI-Rendered Results
+                Results
               </span>
               <span className="text-xs" style={{ color: "var(--j-muted)" }}>
                 via json-render
@@ -172,13 +226,11 @@ export default function FindPage() {
                       },
                       analyzeSeed: async (args) => {
                         if (args.seed) {
-                          window.open(`/analyze?seed=${encodeURIComponent(args.seed)}`, "_blank");
+                          window.open(`/analyzer?seed=${encodeURIComponent(args.seed)}`, "_blank");
                         }
                       },
                       copySeed: async (args) => {
-                        if (args.seed) {
-                          await navigator.clipboard.writeText(args.seed);
-                        }
+                        if (args.seed) await navigator.clipboard.writeText(args.seed);
                       },
                       cancelSearch: async () => search.cancel(),
                       rerunSearch: async () => handleSearch(),
