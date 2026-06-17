@@ -1,0 +1,75 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "JAML",
+  "scopeName": "source.jaml",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#section" },
+    { "include": "#clause-key" },
+    { "include": "#root-key" },
+    { "include": "#sequence" },
+    { "include": "#mapping-key" },
+    { "include": "#string" },
+    { "include": "#number" },
+    { "include": "#bool" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "#.*$",
+      "name": "comment.line.number-sign.jaml"
+    },
+    "section": {
+      "match": "^\\s*(must|should|mustNot)\\s*:",
+      "captures": {
+        "1": { "name": "keyword.control.section.jaml" }
+      }
+    },
+    "root-key": {
+      "match": "^\\s*(deck|stake|name|author|description|seeds|mode|score|min|max|label)\\s*:",
+      "captures": {
+        "1": { "name": "keyword.other.root.jaml" }
+      }
+    },
+    "clause-key": {
+      "match": "\\b(joker|jokers|tag|voucher|boss|planet|tarot|spectral|card|rank|suit|edition|enhancement|seal|sticker|rarity|type|source|sources|antes|ante|count|min|max|slot|slots|negate|legendary|soul|event)\\s*:",
+      "captures": {
+        "1": { "name": "entity.name.tag.clause.jaml" }
+      }
+    },
+    "sequence": {
+      "match": "^\\s*(-)\\s",
+      "captures": {
+        "1": { "name": "punctuation.definition.sequence.jaml" }
+      }
+    },
+    "mapping-key": {
+      "match": "^\\s*([A-Za-z_][\\w-]*)\\s*:",
+      "captures": {
+        "1": { "name": "variable.other.key.jaml" }
+      }
+    },
+    "string": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.jaml",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.jaml" }]
+        },
+        {
+          "name": "string.quoted.single.jaml",
+          "begin": "'",
+          "end": "'"
+        }
+      ]
+    },
+    "number": {
+      "match": "(?<![\\w.])-?\\d+(\\.\\d+)?(?![\\w.])",
+      "name": "constant.numeric.jaml"
+    },
+    "bool": {
+      "match": "\\b(true|false|null|yes|no)\\b",
+      "name": "constant.language.jaml"
+    }
+  }
+}
