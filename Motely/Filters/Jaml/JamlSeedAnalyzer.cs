@@ -276,9 +276,9 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
 
             // Collect all unique antes mentioned by any clause
             var allAntes = new HashSet<int>();
-            foreach (var c in config.Must) allAntes.UnionWith(c.Antes);
-            foreach (var c in config.Should) allAntes.UnionWith(c.Antes);
-            foreach (var c in config.MustNot) allAntes.UnionWith(c.Antes);
+            foreach (var c in config.Must) CollectAntes(c, allAntes);
+            foreach (var c in config.Should) CollectAntes(c, allAntes);
+            foreach (var c in config.MustNot) CollectAntes(c, allAntes);
 
             if (allAntes.Count == 0)
                 allAntes.Add(1); // Default to ante 1 if no antes specified
@@ -319,9 +319,9 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
 
             foreach (int ante in sortedAntes)
             {
-                var boss = runState.CachedBosses != null && ante < runState.CachedBosses.Length
-                    ? runState.CachedBosses[ante]
-                    : MotelyBossBlind.None;
+                // CachedBosses is populated above (sized maxAnte+1, ante <= maxAnte), so this
+                // index is always in range — no sentinel needed (MotelyBossBlind has no "None").
+                var boss = runState.CachedBosses![ante];
 
                 var voucher = ctx.GetAnteFirstVoucher(ante, runState);
 
@@ -384,6 +384,25 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
             }
 
             return antes;
+        }
+
+        // Antes a clause targets, type-aware: JamlClause.Antes, RollClause.Rolls, and
+        // recursively a LogicClause's children. IJamlClause itself exposes no Antes.
+        private static void CollectAntes(IJamlClause clause, HashSet<int> into)
+        {
+            switch (clause)
+            {
+                case JamlClause jc:
+                    into.UnionWith(jc.Antes);
+                    break;
+                case RollClause rc:
+                    into.UnionWith(rc.Rolls);
+                    break;
+                case LogicClause lc:
+                    foreach (var inner in lc.Clauses)
+                        CollectAntes(inner, into);
+                    break;
+            }
         }
 
         private static string? GetTagJoker(ref MotelySingleSearchContext ctx, int ante, MotelyTag tag)
