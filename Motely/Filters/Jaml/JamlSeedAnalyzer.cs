@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Text;
 
 namespace Motely.Filters.Jaml;
 
@@ -7,7 +6,7 @@ namespace Motely.Filters.Jaml;
 /// JAML-powered seed analyzer. One parameter (<see cref="JamlConfig"/>), two modes:
 /// <list type="bullet">
 /// <item><see cref="CreateScoreProvider"/> for the SIMD search path</item>
-/// <item><see cref="Analyze(string, MotelyDeck, MotelyStake)"/> for single-seed introspection (glow / peek / scoop)</item>
+/// <item><see cref="Analyze"/> for single-seed introspection (glow / peek / scoop)</item>
 /// </list>
 /// Both use the same clause set — no parallel logic, no drift.
 /// </summary>
@@ -48,105 +47,8 @@ public sealed class JamlSeedAnalyzer
         search.RunSearchUntilCompletion();
 
         return desc.LastResult
-            ?? new JamlAnalysisResult(seed, [], [], [], []);
+            ?? new JamlAnalysisResult(seed, [], [], [], [], null);
     }
-
-    /// <summary>
-    /// Convenience for the CLI <c>--analyze --jaml</c> path: analyze <paramref name="seed"/> against
-    /// <paramref name="config"/> (using its deck/stake) and render a human-readable text block.
-    /// </summary>
-    public static string Analyze(string seed, JamlConfig config)
-    {
-        var result = new JamlSeedAnalyzer(config).Analyze(seed, config.Deck, config.Stake);
-        return Render(result);
-    }
-
-    // ── Text rendering (the * marks a clause-matched item — the glow, in plain text) ──
-
-    public static string Render(JamlAnalysisResult r)
-    {
-        var sb = new StringBuilder();
-
-        RenderMatchGroup(sb, "MUST", r.MustMatches);
-        RenderMatchGroup(sb, "SHOULD", r.ShouldMatches);
-        RenderMatchGroup(sb, "MUST NOT (violations)", r.MustNotMatches);
-
-        if (r.Peek.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine("PEEK (clause-targeted antes — * = matched by a clause):");
-            foreach (var ante in r.Peek)
-            {
-                sb.Append("  Ante ").Append(ante.Ante);
-                if (ante.Boss is { Length: > 0 })
-                    sb.Append("  boss=").Append(Glow(ante.Boss, ante.BossHighlighted));
-                if (ante.Voucher is { Length: > 0 })
-                    sb.Append("  voucher=").Append(Glow(ante.Voucher, ante.VoucherHighlighted));
-                if (ante.SmallBlindTag is { Length: > 0 } || ante.BigBlindTag is { Length: > 0 })
-                    sb.Append("  tags=[")
-                        .Append(Glow(ante.SmallBlindTag, ante.SmallBlindTagHighlighted))
-                        .Append(", ")
-                        .Append(Glow(ante.BigBlindTag, ante.BigBlindTagHighlighted))
-                        .Append(']');
-                sb.AppendLine();
-
-                if (ante.ShopItems.Count > 0)
-                {
-                    sb.Append("    shop: ");
-                    sb.AppendLine(string.Join("  ", ante.ShopItems.Select(FormatPeekItem)));
-                }
-
-                foreach (var pack in ante.Packs)
-                {
-                    sb.Append("    ").Append(pack.Type).Append(": ");
-                    sb.AppendLine(
-                        pack.Cards.Count > 0
-                            ? string.Join(", ", pack.Cards.Select(FormatPeekItem))
-                            : "(empty)"
-                    );
-                }
-            }
-        }
-
-        if (r.MustMatches.Count == 0 && r.ShouldMatches.Count == 0 && r.MustNotMatches.Count == 0)
-            sb.AppendLine("(no clauses matched this seed)");
-
-        return sb.ToString();
-    }
-
-    private static void RenderMatchGroup(StringBuilder sb, string title, IReadOnlyList<JamlMatch> matches)
-    {
-        if (matches.Count == 0)
-            return;
-        sb.Append(title).AppendLine(":");
-        foreach (var m in matches)
-        {
-            sb.Append("  [✓] ");
-            sb.Append(m.ClauseLabel is { Length: > 0 } ? m.ClauseLabel : $"clause #{m.ClauseIndex}");
-            sb.Append(" — ").Append(m.ItemName);
-            // Ante <= 0 marks a non-board, count-only match (events / erratic / starting draw):
-            // show the count, not a board location.
-            if (m.Ante > 0)
-            {
-                sb.Append(" @ ante ").Append(m.Ante).Append(' ').Append(m.Source);
-                if (m.Slot >= 0)
-                    sb.Append(" slot ").Append(m.Slot);
-                if (m.Score != 0)
-                    sb.Append("  (+").Append(m.Score).Append(')');
-            }
-            else if (m.Score != 0)
-            {
-                sb.Append("  (×").Append(m.Score).Append(')');
-            }
-            sb.AppendLine();
-        }
-    }
-
-    private static string FormatPeekItem(JamlPeekItem item) =>
-        item.IsHighlighted ? $"*{item.Name}*" : item.Name;
-
-    private static string Glow(string? text, bool highlighted) =>
-        highlighted ? $"*{text}*" : (text ?? "");
 }
 
 // ── Result types (all strings, no engine enums) ───────────────────────────────
@@ -156,7 +58,8 @@ public sealed record class JamlAnalysisResult(
     IReadOnlyList<JamlMatch> MustMatches,
     IReadOnlyList<JamlMatch> ShouldMatches,
     IReadOnlyList<JamlMatch> MustNotMatches,
-    IReadOnlyList<JamlAntePeek> Peek
+    IReadOnlyList<JamlAntePeek> Peek,
+    IReadOnlyList<string>? ErraticDeckComposition
 );
 
 public sealed record class JamlMatch(
@@ -175,13 +78,12 @@ public sealed record class JamlAntePeek(
     string? Voucher,
     string? SmallBlindTag,
     string? BigBlindTag,
+    string? SmallTagJoker,
+    string? BigTagJoker,
     IReadOnlyList<JamlPeekItem> ShopItems,
     IReadOnlyList<JamlPeekPack> Packs,
-    // Field-level glow: a clause matched this ante's boss / first voucher / blind tags.
-    bool BossHighlighted = false,
-    bool VoucherHighlighted = false,
-    bool SmallBlindTagHighlighted = false,
-    bool BigBlindTagHighlighted = false
+    IReadOnlyList<JamlPeekEvent> Events,
+    IReadOnlyList<string> DrawOrder
 );
 
 public sealed record class JamlPeekItem(
@@ -193,6 +95,13 @@ public sealed record class JamlPeekItem(
 public sealed record class JamlPeekPack(
     string Type,
     IReadOnlyList<JamlPeekItem> Cards
+);
+
+public sealed record class JamlPeekEvent(
+    string Type,
+    int Roll,
+    bool Triggered,
+    string? Value
 );
 
 // ── Filter descriptor ───────────────────────────────────────────────────────
@@ -221,64 +130,88 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
             var mustMatches = new List<JamlMatch>();
             var shouldMatches = new List<JamlMatch>();
             var mustNotMatches = new List<JamlMatch>();
-            // Every raw match across all categories — used to light up the peek view.
-            var allScooped = new List<ScoopedMatch>();
 
             var runState = new MotelyRunState();
             JamlScoring.PrepareRunState(ref singleCtx, CombineForPrepareRunState(config), ref runState);
 
-            CollectMatches(ref singleCtx, config.Must, ref runState, mustMatches, allScooped, "must", requireMin: true);
-            CollectMatches(ref singleCtx, config.Should, ref runState, shouldMatches, allScooped, "should", requireMin: false);
-            CollectMatches(ref singleCtx, config.MustNot, ref runState, mustNotMatches, allScooped, "mustNot", requireMin: false);
+            // ── Must clauses ──
+            for (int i = 0; i < config.Must.Count; i++)
+            {
+                var clause = config.Must[i];
+                var scoop = new JamlScoop();
+                runState.ScoopSink = scoop;
+                scoop.CurrentClauseIndex = i;
 
-            // ── Peek view: only the antes the filter cares about, with matched slots lit ──
-            var peek = BuildPeek(ref singleCtx, config, runState, allScooped);
+                int raw = JamlScoring.CountRawOccurrences(ref singleCtx, clause, ref runState);
+                if (raw >= clause.Min)
+                {
+                    foreach (var m in scoop.Matches)
+                        mustMatches.Add(ConvertMatch(m, clause.Label, "must"));
+                }
+                runState.ScoopSink = null;
+            }
+
+            // ── Should clauses ──
+            for (int i = 0; i < config.Should.Count; i++)
+            {
+                var clause = config.Should[i];
+                var scoop = new JamlScoop();
+                runState.ScoopSink = scoop;
+                scoop.CurrentClauseIndex = i;
+
+                int raw = JamlScoring.CountRawOccurrences(ref singleCtx, clause, ref runState);
+                if (raw > 0)
+                {
+                    foreach (var m in scoop.Matches)
+                        shouldMatches.Add(ConvertMatch(m, clause.Label, "should"));
+                }
+                runState.ScoopSink = null;
+            }
+
+            // ── MustNot clauses ──
+            for (int i = 0; i < config.MustNot.Count; i++)
+            {
+                var clause = config.MustNot[i];
+                var scoop = new JamlScoop();
+                runState.ScoopSink = scoop;
+                scoop.CurrentClauseIndex = i;
+
+                int raw = JamlScoring.CountRawOccurrences(ref singleCtx, clause, ref runState);
+                if (raw > 0)
+                {
+                    foreach (var m in scoop.Matches)
+                        mustNotMatches.Add(ConvertMatch(m, clause.Label, "mustNot"));
+                }
+                runState.ScoopSink = null;
+            }
+
+            // ── Peek view: only the antes the filter cares about ──
+            var peek = BuildPeek(ref singleCtx, config, runState);
+
+            // ── Erratic deck composition (seed-level, not per-ante) ──
+            IReadOnlyList<string>? erraticDeck = null;
+            if (singleCtx.Deck == MotelyDeck.Erratic)
+            {
+                var erraticCards = new List<string>(52);
+                var erraticStream = singleCtx.CreateErraticDeckPrngStream();
+                for (int i = 0; i < 52; i++)
+                {
+                    var card = singleCtx.GetNextErraticDeckCard(ref erraticStream);
+                    erraticCards.Add(FormatCardString(card.StandardcardRank, card.StandardcardSuit));
+                }
+                erraticDeck = erraticCards;
+            }
 
             FilterDesc.LastResult = new JamlAnalysisResult(
                 singleCtx.GetSeed(),
                 mustMatches,
                 shouldMatches,
                 mustNotMatches,
-                peek
+                peek,
+                erraticDeck
             );
 
             return true; // Analysis is not a filter — always pass
-        }
-
-        private static void CollectMatches(
-            ref MotelySingleSearchContext ctx,
-            List<IJamlClause> clauses,
-            ref MotelyRunState runState,
-            List<JamlMatch> into,
-            List<ScoopedMatch> allScooped,
-            string source,
-            bool requireMin
-        )
-        {
-            for (int i = 0; i < clauses.Count; i++)
-            {
-                var clause = clauses[i];
-                var scoop = new JamlScoop { CurrentClauseIndex = i };
-                runState.ScoopSink = scoop;
-
-                int raw = JamlScoring.CountRawOccurrences(ref ctx, clause, ref runState);
-                if (raw > 0 && (!requireMin || raw >= clause.Min))
-                {
-                    foreach (var m in scoop.Matches)
-                    {
-                        allScooped.Add(m);
-                        into.Add(ConvertMatch(m, clause.Label, source));
-                    }
-
-                    // The clause passed (per the real scorer's raw count) but recorded no board
-                    // cell — event/roll counters, erratic deck, starting draw. Surface a count-only
-                    // entry so the analyzer never reports "no match" for a clause the search accepts.
-                    // The match decision is the scorer's, not re-derived here.
-                    if (scoop.Matches.Count == 0)
-                        into.Add(new JamlMatch(i, clause.Label, clause.Describe(), "count", 0, -1, raw));
-                }
-                runState.ScoopSink = null;
-            }
         }
 
         private static JamlMatch ConvertMatch(ScoopedMatch m, string? label, string source)
@@ -299,8 +232,7 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
             return new JamlMatch(
                 m.ClauseIndex,
                 label,
-                // Vouchers / bosses / tags ride a pre-formatted name (not MotelyItem-encodable).
-                m.Name ?? FormatUtils.FormatItem(m.Item),
+                FormatUtils.FormatItem(m.Item),
                 sourceStr,
                 m.Ante,
                 m.Slot,
@@ -324,89 +256,28 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
             return combined.ToArray();
         }
 
-        /// <summary>
-        /// Antes a clause targets, regardless of clause family: <see cref="JamlClause.Antes"/>,
-        /// <see cref="RollClause.Rolls"/> (event ante indices), and recursively the children of a
-        /// <see cref="LogicClause"/> (and / or).
-        /// </summary>
-        private static void CollectAntes(IJamlClause clause, HashSet<int> into)
-        {
-            switch (clause)
-            {
-                case JamlClause jc:
-                    into.UnionWith(jc.Antes);
-                    break;
-                case RollClause rc:
-                    into.UnionWith(rc.Rolls);
-                    break;
-                case LogicClause lc:
-                    foreach (var inner in lc.Clauses)
-                        CollectAntes(inner, into);
-                    break;
-            }
-        }
-
         private static IReadOnlyList<JamlAntePeek> BuildPeek(
             ref MotelySingleSearchContext ctx,
             JamlConfig config,
-            MotelyRunState runState,
-            List<ScoopedMatch> scooped
+            MotelyRunState runState
         )
         {
             var antes = new List<JamlAntePeek>();
 
-            // Glow lookups built from the real scoop: shop matches key on (ante, slot); pack
-            // matches key on (ante, packIndex, cardIndex). These are exactly the coordinates
-            // JamlScoring.Scooped(...) records, so the peek lights up precisely what matched.
-            var shopHits = new HashSet<(int Ante, int Slot)>();
-            var packHits = new HashSet<(int Ante, int Pack, int Card)>();
-            // Field-level glow: bosses, the ante's first voucher (roll 0 = the one we display),
-            // and the small/big blind tags (tag draw 0 / 1).
-            var bossHits = new HashSet<int>();
-            var voucherFieldHits = new HashSet<int>();
-            var smallTagHits = new HashSet<int>();
-            var bigTagHits = new HashSet<int>();
-            foreach (var m in scooped)
-            {
-                switch (m.Source)
-                {
-                    case MotelyMatchSource.Shop:
-                        shopHits.Add((m.Ante, m.Slot));
-                        break;
-                    case MotelyMatchSource.BoosterPack:
-                        packHits.Add((m.Ante, m.Slot, m.CardIndex));
-                        break;
-                    case MotelyMatchSource.Boss:
-                        bossHits.Add(m.Ante);
-                        break;
-                    case MotelyMatchSource.Voucher when m.Slot == 0:
-                        voucherFieldHits.Add(m.Ante);
-                        break;
-                    case MotelyMatchSource.Tag when m.Slot == 0:
-                        smallTagHits.Add(m.Ante);
-                        break;
-                    case MotelyMatchSource.Tag when m.Slot == 1:
-                        bigTagHits.Add(m.Ante);
-                        break;
-                }
-            }
-
             // Collect all unique antes mentioned by any clause
             var allAntes = new HashSet<int>();
-            foreach (var c in config.Must) CollectAntes(c, allAntes);
-            foreach (var c in config.Should) CollectAntes(c, allAntes);
-            foreach (var c in config.MustNot) CollectAntes(c, allAntes);
+            foreach (var c in config.Must) allAntes.UnionWith(c.Antes);
+            foreach (var c in config.Should) allAntes.UnionWith(c.Antes);
+            foreach (var c in config.MustNot) allAntes.UnionWith(c.Antes);
 
             if (allAntes.Count == 0)
                 allAntes.Add(1); // Default to ante 1 if no antes specified
 
-            var sortedAntes = allAntes.Where(a => a >= 1).OrderBy(a => a).ToArray();
-            if (sortedAntes.Length == 0)
-                return antes;
-            var maxAnte = sortedAntes[^1];
+            var sortedAntes = allAntes.OrderBy(a => a).ToArray();
+            var maxAnte = sortedAntes.Length > 0 ? sortedAntes[^1] : 1;
 
             // Pre-cache bosses if needed
-            if (runState.CachedBosses == null)
+            if (maxAnte > 0 && runState.CachedBosses == null)
             {
                 runState.CachedBosses = new MotelyBossBlind[maxAnte + 1];
                 var bossStream = ctx.CreateBossStream();
@@ -415,46 +286,54 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
                     runState.CachedBosses[a] = ctx.GetBossForAnte(ref bossStream, a, ref bossState);
             }
 
-            // The displayed first voucher per ante must be reconstructed with a FRESH state that
-            // activates vouchers ante-by-ante in gameplay order — exactly like CountVoucherOccurrences.
-            // Reusing the scoring runState (already voucher-activated by PrepareRunState) would make
-            // GetAnteFirstVoucher skip activated vouchers and report the wrong one.
-            var firstVouchers = new MotelyVoucher[maxAnte + 1];
+            // Pre-activate vouchers for all relevant antes
+            int maxVoucherAnte = maxAnte < 8 ? maxAnte + 1 : maxAnte;
+            for (int a = 1; a <= maxVoucherAnte; a++)
             {
-                var voucherState = new MotelyRunState();
-                for (int a = 1; a <= maxAnte; a++)
+                var voucher = ctx.GetAnteFirstVoucher(a, runState);
+                runState.ActivateVoucher(voucher);
+                if (voucher is MotelyVoucher.Hieroglyph or MotelyVoucher.Petroglyph)
                 {
-                    var v = ctx.GetAnteFirstVoucher(a, voucherState);
-                    firstVouchers[a] = v;
-                    voucherState.ActivateVoucher(v);
+                    runState.ActivateExtendedPackAnte(a - 1);
+                    var voucherStream = ctx.CreateVoucherStream(a);
+                    var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, runState);
+                    runState.ActivateVoucher(bonusVoucher);
                 }
             }
 
+            // Event streams are seed-global; compute once and attach to every ante peek
+            var events = MaterializeAllEvents(ref ctx, config);
+
+            // Draw order is the deck composition (seed-global for Erratic, static for standard decks)
+            var drawOrder = BuildDrawOrder(ref ctx);
+
             foreach (int ante in sortedAntes)
             {
-                string? boss = runState.CachedBosses != null && ante < runState.CachedBosses.Length
-                    ? runState.CachedBosses[ante].ToString()
-                    : null;
+                var boss = runState.CachedBosses != null && ante < runState.CachedBosses.Length
+                    ? runState.CachedBosses[ante]
+                    : MotelyBossBlind.None;
 
-                var voucher = firstVouchers[ante];
+                var voucher = ctx.GetAnteFirstVoucher(ante, runState);
 
                 var tagStream = ctx.CreateTagStream(ante);
                 var smallTag = ctx.GetNextTag(ref tagStream);
                 var bigTag = ctx.GetNextTag(ref tagStream);
 
+                var smallTagJoker = GetTagJoker(ref ctx, ante, smallTag);
+                var bigTagJoker = GetTagJoker(ref ctx, ante, bigTag);
+
                 var shopItems = new List<JamlPeekItem>();
                 var packs = new List<JamlPeekPack>();
 
-                // Materialize shop (first 10 slots). Default run state — the scorer's shop matchers
-                // all use CreateShopItemStream(ante) (default state), so this keeps slot glow aligned.
-                var shopStream = ctx.CreateShopItemStream(ante);
+                // Materialize shop (first 10 slots)
+                var shopStream = ctx.CreateShopItemStream(ante, runState);
                 for (int slot = 0; slot < 10; slot++)
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
                     shopItems.Add(new JamlPeekItem(
                         slot,
                         FormatUtils.FormatItem(item),
-                        shopHits.Contains((ante, slot))
+                        false // TODO: cross-reference against ScoopedMatches to determine highlight
                     ));
                 }
 
@@ -471,14 +350,9 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     var packContents = GetPackContents(ref ctx, ante, pack, ref state);
-                    int packIndex = p;
                     var cards = packContents
                         .AsArray()
-                        .Select((item, idx) => new JamlPeekItem(
-                            idx,
-                            FormatUtils.FormatItem(item),
-                            packHits.Contains((ante, packIndex, idx))
-                        ))
+                        .Select((item, idx) => new JamlPeekItem(idx, FormatUtils.FormatItem(item), false))
                         .ToArray();
 
                     packs.Add(new JamlPeekPack(pack.ToString(), cards));
@@ -486,20 +360,270 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
 
                 antes.Add(new JamlAntePeek(
                     ante,
-                    boss,
+                    boss.ToString(),
                     voucher.ToString(),
                     smallTag.ToString(),
                     bigTag.ToString(),
+                    smallTagJoker,
+                    bigTagJoker,
                     shopItems,
                     packs,
-                    BossHighlighted: bossHits.Contains(ante),
-                    VoucherHighlighted: voucherFieldHits.Contains(ante),
-                    SmallBlindTagHighlighted: smallTagHits.Contains(ante),
-                    BigBlindTagHighlighted: bigTagHits.Contains(ante)
+                    events,
+                    drawOrder
                 ));
             }
 
             return antes;
+        }
+
+        private static string? GetTagJoker(ref MotelySingleSearchContext ctx, int ante, MotelyTag tag)
+        {
+            if (IsRareTag(tag))
+            {
+                var stream = ctx.CreateRareTagJokerStream(ante);
+                return FormatUtils.FormatItem(ctx.GetNextJoker(ref stream));
+            }
+            if (IsUncommonTag(tag))
+            {
+                var stream = ctx.CreateUncommonTagJokerStream(ante);
+                return FormatUtils.FormatItem(ctx.GetNextJoker(ref stream));
+            }
+            return null;
+        }
+
+        private static bool IsRareTag(MotelyTag tag) => tag == MotelyTag.RareTag;
+        private static bool IsUncommonTag(MotelyTag tag) => tag == MotelyTag.UncommonTag;
+
+        private static string FormatCardString(MotelyStandardcardRank rank, MotelyStandardcardSuit suit)
+        {
+            string rankStr = rank switch
+            {
+                MotelyStandardcardRank.Two => "2",
+                MotelyStandardcardRank.Three => "3",
+                MotelyStandardcardRank.Four => "4",
+                MotelyStandardcardRank.Five => "5",
+                MotelyStandardcardRank.Six => "6",
+                MotelyStandardcardRank.Seven => "7",
+                MotelyStandardcardRank.Eight => "8",
+                MotelyStandardcardRank.Nine => "9",
+                MotelyStandardcardRank.Ten => "10",
+                MotelyStandardcardRank.Jack => "J",
+                MotelyStandardcardRank.Queen => "Q",
+                MotelyStandardcardRank.King => "K",
+                MotelyStandardcardRank.Ace => "A",
+                _ => rank.ToString(),
+            };
+
+            string suitStr = suit switch
+            {
+                MotelyStandardcardSuit.Clubs => "C",
+                MotelyStandardcardSuit.Diamonds => "D",
+                MotelyStandardcardSuit.Hearts => "H",
+                MotelyStandardcardSuit.Spades => "S",
+                _ => suit.ToString(),
+            };
+
+            return $"{rankStr}_{suitStr}";
+        }
+
+        private static IReadOnlyList<JamlPeekEvent> MaterializeAllEvents(
+            ref MotelySingleSearchContext ctx,
+            JamlConfig config
+        )
+        {
+            var events = new List<JamlPeekEvent>();
+
+            foreach (var clause in config.Must.OfType<RollClause>())
+                events.AddRange(MaterializeEvents(ref ctx, clause));
+            foreach (var clause in config.Should.OfType<RollClause>())
+                events.AddRange(MaterializeEvents(ref ctx, clause));
+            foreach (var clause in config.MustNot.OfType<RollClause>())
+                events.AddRange(MaterializeEvents(ref ctx, clause));
+
+            return events;
+        }
+
+        private static IReadOnlyList<JamlPeekEvent> MaterializeEvents(
+            ref MotelySingleSearchContext ctx,
+            RollClause clause
+        )
+        {
+            var results = new List<JamlPeekEvent>();
+            double luck = clause.Luck;
+
+            switch (clause)
+            {
+                case LuckyMoneyClause:
+                {
+                    var stream = ctx.CreateLuckyCardMoneyStream(isCached: false);
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextLuckyMoney(ref stream, luck);
+                        bool triggered = ctx.GetNextLuckyMoney(ref stream, luck);
+                        results.Add(new JamlPeekEvent("luckyMoney", roll, triggered, null));
+                    }
+                    break;
+                }
+                case LuckyMultClause:
+                {
+                    var stream = ctx.CreateLuckyCardMultStream(isCached: false);
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextLuckyMult(ref stream, luck);
+                        bool triggered = ctx.GetNextLuckyMult(ref stream, luck);
+                        results.Add(new JamlPeekEvent("luckyMult", roll, triggered, null));
+                    }
+                    break;
+                }
+                case MisprintMultClause:
+                {
+                    var stream = ctx.CreateMisprintPrngStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextMisprintMult(ref stream);
+                        int value = ctx.GetNextMisprintMult(ref stream);
+                        results.Add(new JamlPeekEvent("misprintMult", roll, true, value.ToString()));
+                    }
+                    break;
+                }
+                case WheelOfFortuneClause:
+                {
+                    var stream = ctx.CreateWheelOfFortuneStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextWheelOfFortune(ref stream, luck);
+                        var edition = ctx.GetNextWheelOfFortune(ref stream, luck);
+                        bool triggered = edition != MotelyItemEdition.None;
+                        results.Add(new JamlPeekEvent("wheelOfFortune", roll, triggered, edition.ToString()));
+                    }
+                    break;
+                }
+                case CavendishExtinctClause:
+                {
+                    var stream = ctx.CreateCavendishPrngStream(false);
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextCavendishExtinct(ref stream, luck);
+                        bool triggered = ctx.GetNextCavendishExtinct(ref stream, luck);
+                        results.Add(new JamlPeekEvent("cavendishExtinct", roll, triggered, null));
+                    }
+                    break;
+                }
+                case GrosMichelExtinctClause:
+                {
+                    var stream = ctx.CreateGrosMichelPrngStream(false);
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextGrosMichelExtinct(ref stream, luck);
+                        bool triggered = ctx.GetNextGrosMichelExtinct(ref stream, luck);
+                        results.Add(new JamlPeekEvent("grosMichelExtinct", roll, triggered, null));
+                    }
+                    break;
+                }
+                case SpaceLevelupClause:
+                {
+                    var stream = ctx.CreateSpacePrngStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextSpaceLevelup(ref stream, luck);
+                        bool triggered = ctx.GetNextSpaceLevelup(ref stream, luck);
+                        results.Add(new JamlPeekEvent("spaceLevelup", roll, triggered, null));
+                    }
+                    break;
+                }
+                case BusinessPayoutClause:
+                {
+                    var stream = ctx.CreateBusinessPrngStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextBusinessPayout(ref stream, luck);
+                        bool triggered = ctx.GetNextBusinessPayout(ref stream, luck);
+                        results.Add(new JamlPeekEvent("businessPayout", roll, triggered, null));
+                    }
+                    break;
+                }
+                case BloodstoneTriggerClause:
+                {
+                    var stream = ctx.CreateBloodstonePrngStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextBloodstoneTrigger(ref stream, luck);
+                        bool triggered = ctx.GetNextBloodstoneTrigger(ref stream, luck);
+                        results.Add(new JamlPeekEvent("bloodstoneTrigger", roll, triggered, null));
+                    }
+                    break;
+                }
+                case ParkingPayoutClause:
+                {
+                    var stream = ctx.CreateParkingPrngStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextParkingPayout(ref stream, luck);
+                        bool triggered = ctx.GetNextParkingPayout(ref stream, luck);
+                        results.Add(new JamlPeekEvent("parkingPayout", roll, triggered, null));
+                    }
+                    break;
+                }
+                case GlassDestroyClause:
+                {
+                    var stream = ctx.CreateGlassPrngStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextGlassDestroy(ref stream, luck);
+                        bool triggered = ctx.GetNextGlassDestroy(ref stream, luck);
+                        results.Add(new JamlPeekEvent("glassDestroy", roll, triggered, null));
+                    }
+                    break;
+                }
+                case WheelStaysFlippedClause:
+                {
+                    var stream = ctx.CreateTheWheelPrngStream();
+                    foreach (var roll in clause.Rolls)
+                    {
+                        for (int i = 0; i < roll; i++)
+                            ctx.GetNextWheelStaysFlipped(ref stream, luck);
+                        bool triggered = ctx.GetNextWheelStaysFlipped(ref stream, luck);
+                        results.Add(new JamlPeekEvent("wheelStaysFlipped", roll, triggered, null));
+                    }
+                    break;
+                }
+            }
+
+            return results;
+        }
+
+        private static IReadOnlyList<string> BuildDrawOrder(ref MotelySingleSearchContext ctx)
+        {
+            if (ctx.Deck == MotelyDeck.Erratic)
+            {
+                var cards = new List<string>(52);
+                var stream = ctx.CreateErraticDeckPrngStream();
+                for (int i = 0; i < 52; i++)
+                {
+                    var card = ctx.GetNextErraticDeckCard(ref stream);
+                    cards.Add(FormatCardString(card.StandardcardRank, card.StandardcardSuit));
+                }
+                return cards;
+            }
+
+            // Standard deck composition — same for all standard decks
+            var standard = new List<string>(52);
+            foreach (var card in MotelyEnum<MotelyStandardCard>.Values)
+            {
+                standard.Add(FormatCardString(card.GetRank(), card.GetSuit()));
+            }
+            return standard;
         }
 
         private static MotelySingleItemSet GetPackContents(
