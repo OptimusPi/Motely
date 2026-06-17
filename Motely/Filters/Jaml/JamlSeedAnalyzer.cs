@@ -22,6 +22,11 @@ public sealed class JamlSeedAnalyzer
     /// <summary>Create a score provider for the vector search path.</summary>
     public IMotelySeedScoreProvider CreateScoreProvider()
     {
+        if (_config.Must.Count == 0 && _config.Should.Count == 0)
+            throw new InvalidOperationException(
+                "JamlSeedAnalyzer.CreateScoreProvider requires at least one must or should clause. " +
+                "Configs with only mustNot clauses cannot produce a score provider.");
+
         return new JamlShouldScoreDesc.JamlShouldScoreProvider(
             _config.Must.ToArray(),
             _config.Should.ToArray(),
@@ -65,11 +70,13 @@ public sealed record class JamlAnalysisResult(
 public sealed record class JamlMatch(
     int ClauseIndex,
     string? ClauseLabel,
+    string Group,
     string ItemName,
     string Source,
     int Ante,
     int Slot,
-    int Score
+    int Count,
+    int Points
 );
 
 public sealed record class JamlAntePeek(
