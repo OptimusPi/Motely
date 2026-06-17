@@ -1,0 +1,15 @@
+{
+  "name": "jaml-lsp",
+  "description": "Claude Code plugin for JAML (Jimbo's Ante Markup Language) — LSP-powered diagnostics, completions, hover, and document symbols for Balatro/Motely seed filters.",
+  "version": "0.1.0",
+  "lspServers": {
+    "jaml": {
+      "command": "jaml-language-server",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".jaml": "jaml"
+      },
+      "transport": "stdio"
+    }
+  }
+}
