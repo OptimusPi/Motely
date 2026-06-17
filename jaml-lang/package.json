@@ -1,6 +1,6 @@
 {
   "name": "jaml-lang",
-  "version": "1.0.0",
+  "version": "3.14.1",
   "description": "JAML (Jimbo's Ante Markup Language) language service — diagnostics, completions, hover, symbols. Vocab and key tables are GENERATED from the Motely engine on every Motely.Wasm build.",
   "type": "module",
   "license": "MIT",
