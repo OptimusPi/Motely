@@ -1,0 +1,23 @@
+{
+  "name": "jaml-lang",
+  "version": "0.1.0",
+  "description": "JAML language service — parser, vocabulary, and diagnostics generated from the Motely C# engine enums.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./service": "./dist/service.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
+  }
+}
