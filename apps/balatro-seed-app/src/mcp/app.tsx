@@ -118,7 +118,7 @@ export function McpAppWrapper() {
   // In iframe mode, we render a simplified IDE
   if (window.parent !== window) {
     return (
-      <div className="h-screen w-screen overflow-hidden" style={{ background: "var(--j-surface)" }}>
+      <div className="h-screen w-screen overflow-hidden" style={{ background: "var(--j-dark-grey)" }}>
         <JamlIdePage />
       </div>
     );

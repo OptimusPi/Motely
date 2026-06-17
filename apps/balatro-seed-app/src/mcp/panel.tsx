@@ -127,14 +127,14 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
       ? "#ff6b6b"
       : state === "connecting"
       ? "#e4b643"
-      : "var(--j-muted)";
+      : "var(--j-grey)";
 
   return (
     <div className="flex flex-col gap-4">
       {/* Connection Bar */}
       <div
         className="flex items-center justify-between rounded-lg border p-3"
-        style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)" }}
+        style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)" }}
       >
         <div className="flex items-center gap-3">
           <span
@@ -147,7 +147,7 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
           >
             {state}
           </span>
-          <span className="text-xs" style={{ color: "var(--j-muted)" }}>
+          <span className="text-xs" style={{ color: "var(--j-grey)" }}>
             {tools.length > 0 ? `${tools.length} tools available` : ""}
           </span>
         </div>
@@ -155,7 +155,7 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
           {state === "idle" || state === "error" ? (
             <button
               className="rounded px-3 py-1.5 text-xs font-semibold"
-              style={{ backgroundColor: "var(--j-accent)", color: "#000" }}
+              style={{ backgroundColor: "var(--j-blue)", color: "#000" }}
               onClick={connect}
             >
               Connect
@@ -164,8 +164,8 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
             <button
               className="rounded px-3 py-1.5 text-xs font-semibold"
               style={{
-                border: "1px solid var(--j-border)",
-                color: "var(--j-muted)",
+                border: "1px solid var(--j-panel-edge)",
+                color: "var(--j-grey)",
               }}
               onClick={disconnect}
             >
@@ -186,17 +186,17 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
             <div
               key={tool.name}
               className="flex items-center justify-between rounded border p-3"
-              style={{ borderColor: "var(--j-border)" }}
+              style={{ borderColor: "var(--j-panel-edge)" }}
             >
               <div className="flex flex-col gap-1">
                 <span
                   className="font-semibold text-sm"
-                  style={{ color: "var(--j-foreground)" }}
+                  style={{ color: "var(--j-white)" }}
                 >
                   {tool.name}
                 </span>
                 {tool.description && (
-                  <span className="text-xs" style={{ color: "var(--j-muted)" }}>
+                  <span className="text-xs" style={{ color: "var(--j-grey)" }}>
                     {tool.description}
                   </span>
                 )}
@@ -206,9 +206,9 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
                 style={{
                   backgroundColor:
                     executing === tool.name
-                      ? "var(--j-surface-muted)"
-                      : "var(--j-accent)",
-                  color: executing === tool.name ? "var(--j-muted)" : "#000",
+                      ? "var(--j-surface-inset)"
+                      : "var(--j-blue)",
+                  color: executing === tool.name ? "var(--j-grey)" : "#000",
                 }}
                 onClick={() => handleExecute(tool)}
                 disabled={executing !== null}
@@ -224,12 +224,12 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
       {results.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold" style={{ color: "var(--j-muted)" }}>
+            <span className="text-xs font-semibold" style={{ color: "var(--j-grey)" }}>
               Results ({results.length})
             </span>
             <button
               className="rounded px-2 py-1 text-xs"
-              style={{ border: "1px solid var(--j-border)", color: "var(--j-muted)" }}
+              style={{ border: "1px solid var(--j-panel-edge)", color: "var(--j-grey)" }}
               onClick={clearResults}
             >
               Clear
@@ -237,7 +237,7 @@ export function McpPanel({ serverUrl = "/api/mcp", apiKey, jaml }: McpPanelProps
           </div>
           <div
             className="rounded-lg border p-4"
-            style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)" }}
+            style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)" }}
           >
             <StateProvider initialState={{}}>
               <VisibilityProvider>

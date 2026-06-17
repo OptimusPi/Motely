@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useAnalyzer } from "jaml-ui";
-import { JimboApp, JimboBackground } from "jaml-ui/ui";
+import { JimboBackground } from "jaml-ui/ui";
+import { JimboBalatroFooter } from "jaml-ui/ui";
 import {
   Renderer,
   StateProvider,
@@ -119,13 +120,13 @@ export function JamlSeedAnalyzerPage() {
   return (
     <>
       <JimboBackground />
-      <JimboApp>
+      
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-8 md:py-12">
           <header className="flex flex-col gap-2">
-            <h1 className="font-pixel text-3xl" style={{ color: "var(--j-accent)" }}>
+            <h1 className="font-pixel text-3xl" style={{ color: "var(--j-blue)" }}>
               JAMLYZER
             </h1>
-            <p className="text-sm" style={{ color: "var(--j-muted)" }}>
+            <p className="text-sm" style={{ color: "var(--j-grey)" }}>
               Deep analyze any Balatro seed. Full route, joker timeline, shop queues, boss blinds, and erratic deck.
             </p>
           </header>
@@ -133,13 +134,13 @@ export function JamlSeedAnalyzerPage() {
           {/* Controls */}
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[200px]">
-              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--j-muted)" }}>
+              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--j-grey)" }}>
                 Seed
               </label>
               <input
                 type="text"
                 className="w-full rounded border px-3 py-2 font-mono text-sm uppercase"
-                style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)", color: "var(--j-foreground)" }}
+                style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)", color: "var(--j-white)" }}
                 placeholder="XEQH7CP9"
                 value={seed}
                 onChange={(e) => setSeed(e.target.value.toUpperCase())}
@@ -147,12 +148,12 @@ export function JamlSeedAnalyzerPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--j-muted)" }}>
+              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--j-grey)" }}>
                 Deck
               </label>
               <select
                 className="rounded border px-3 py-2 text-sm"
-                style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)", color: "var(--j-foreground)" }}
+                style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)", color: "var(--j-white)" }}
                 value={deck}
                 onChange={(e) => setDeck(e.target.value)}
               >
@@ -163,12 +164,12 @@ export function JamlSeedAnalyzerPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--j-muted)" }}>
+              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--j-grey)" }}>
                 Stake
               </label>
               <select
                 className="rounded border px-3 py-2 text-sm"
-                style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)", color: "var(--j-foreground)" }}
+                style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)", color: "var(--j-white)" }}
                 value={stake}
                 onChange={(e) => setStake(e.target.value)}
               >
@@ -178,7 +179,7 @@ export function JamlSeedAnalyzerPage() {
             </div>
             <button
               className="rounded px-5 py-2 text-sm font-semibold"
-              style={{ backgroundColor: "var(--j-accent)", color: "#000" }}
+              style={{ backgroundColor: "var(--j-blue)", color: "#000" }}
               onClick={handleAnalyze}
               disabled={analyzer.status === "running" || !seed.trim()}
             >
@@ -187,14 +188,14 @@ export function JamlSeedAnalyzerPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 border-b" style={{ borderColor: "var(--j-border)" }}>
+          <div className="flex gap-2 border-b" style={{ borderColor: "var(--j-panel-edge)" }}>
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 className="px-3 py-2 text-sm font-semibold transition-colors"
                 style={{
-                  borderBottom: activeTab === tab.key ? "2px solid var(--j-accent)" : "2px solid transparent",
-                  color: activeTab === tab.key ? "var(--j-accent)" : "var(--j-muted)",
+                  borderBottom: activeTab === tab.key ? "2px solid var(--j-blue)" : "2px solid transparent",
+                  color: activeTab === tab.key ? "var(--j-blue)" : "var(--j-grey)",
                 }}
                 onClick={() => setActiveTab(tab.key)}
               >
@@ -208,9 +209,9 @@ export function JamlSeedAnalyzerPage() {
             {(activeTab === "route" || activeTab === "jokers" || activeTab === "shops" || activeTab === "bosses") && (
               <div
                 className="rounded-lg border p-4"
-                style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)" }}
+                style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)" }}
               >
-                <div className="mb-3 text-xs font-semibold" style={{ color: "var(--j-muted)" }}>
+                <div className="mb-3 text-xs font-semibold" style={{ color: "var(--j-grey)" }}>
                   {activeTab === "route" && "Full Route"}
                   {activeTab === "jokers" && "Joker Timeline"}
                   {activeTab === "shops" && "Shop Queues"}
@@ -239,9 +240,9 @@ export function JamlSeedAnalyzerPage() {
             {activeTab === "erratic" && (
               <div
                 className="rounded-lg border p-4"
-                style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)" }}
+                style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)" }}
               >
-                <div className="mb-3 text-xs font-semibold" style={{ color: "var(--j-muted)" }}>
+                <div className="mb-3 text-xs font-semibold" style={{ color: "var(--j-grey)" }}>
                   Erratic Deck Analysis — via json-render
                 </div>
                 <StateProvider initialState={{}}>
@@ -263,9 +264,9 @@ export function JamlSeedAnalyzerPage() {
                 {erraticResult && (
                   <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs">
                     {Object.entries(erraticResult.suits).map(([suit, count]) => (
-                      <div key={suit} className="rounded border p-2" style={{ borderColor: "var(--j-border)" }}>
-                        <div className="font-semibold" style={{ color: "var(--j-foreground)" }}>{suit}</div>
-                        <div className="font-mono" style={{ color: "var(--j-accent)" }}>{count}</div>
+                      <div key={suit} className="rounded border p-2" style={{ borderColor: "var(--j-panel-edge)" }}>
+                        <div className="font-semibold" style={{ color: "var(--j-white)" }}>{suit}</div>
+                        <div className="font-mono" style={{ color: "var(--j-blue)" }}>{count}</div>
                       </div>
                     ))}
                   </div>
@@ -277,19 +278,19 @@ export function JamlSeedAnalyzerPage() {
           {/* Raw Result */}
           {analyzer.result && (
             <section>
-              <div className="mb-2 text-xs font-semibold" style={{ color: "var(--j-muted)" }}>
+              <div className="mb-2 text-xs font-semibold" style={{ color: "var(--j-grey)" }}>
                 Raw Analyzer Result
               </div>
               <pre
                 className="rounded-lg border p-4 text-xs overflow-auto max-h-96"
-                style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface-muted)", color: "var(--j-foreground)" }}
+                style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-surface-inset)", color: "var(--j-white)" }}
               >
                 {JSON.stringify(analyzer.result, null, 2)}
               </pre>
             </section>
           )}
         </main>
-      </JimboApp>
+      <JimboBalatroFooter />
     </>
   );
 }

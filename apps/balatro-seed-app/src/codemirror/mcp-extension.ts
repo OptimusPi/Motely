@@ -1,4 +1,4 @@
-import { StateField, StateEffect, Facet } from "@codemirror/state";
+import { StateField, StateEffect, Facet, RangeSetBuilder } from "@codemirror/state";
 import {
   EditorView,
   ViewPlugin,
@@ -116,12 +116,12 @@ class McpResultWidget extends WidgetType {
       margin: 4px 0;
       padding: 8px 12px;
       border-radius: 6px;
-      border: 1px solid var(--j-border, #333);
-      background: var(--j-surface-muted, #1a1a1a);
+      border: 1px solid var(--j-panel-edge, #333);
+      background: var(--j-surface-inset, #1a1a1a);
       font-family: var(--j-font-code, monospace);
       font-size: 12px;
       line-height: 1.5;
-      color: var(--j-foreground, #fff);
+      color: var(--j-white, #fff);
       white-space: pre-wrap;
       word-break: break-word;
       max-height: 200px;
@@ -151,7 +151,7 @@ class McpResultWidget extends WidgetType {
 
     const toolName = document.createElement("span");
     toolName.textContent = this.result.tool;
-    toolName.style.color = "var(--j-accent, #0093ff)";
+    toolName.style.color = "var(--j-blue, #0093ff)";
 
     header.appendChild(badge);
     header.appendChild(toolName);
@@ -233,9 +233,9 @@ class McpStatusPanel implements Panel {
       padding: 4px 12px;
       font-size: 12px;
       font-family: var(--j-font-code, monospace);
-      border-top: 1px solid var(--j-border, #333);
-      background: var(--j-surface, #111);
-      color: var(--j-muted, #888);
+      border-top: 1px solid var(--j-panel-edge, #333);
+      background: var(--j-dark-grey, #111);
+      color: var(--j-grey, #888);
     `;
     this.update();
   }
@@ -251,10 +251,10 @@ class McpStatusPanel implements Panel {
         ? "#ff6b6b"
         : mcp.connectionState === "connecting"
         ? "#e4b643"
-        : "var(--j-muted, #888)";
+        : "var(--j-grey, #888)";
 
     const toolList = mcp.tools
-      .map((t) => `<span style="color:var(--j-accent,#0093ff);cursor:pointer;" data-tool="${t.name}">${t.name}</span>`)
+      .map((t) => `<span style="color:var(--j-blue,#0093ff);cursor:pointer;" data-tool="${t.name}">${t.name}</span>`)
       .join(", ");
 
     this.dom.innerHTML = `
@@ -264,16 +264,16 @@ class McpStatusPanel implements Panel {
           ${mcp.connectionState}
         </span>
       </span>
-      <span style="color:var(--j-muted);">|</span>
+      <span style="color:var(--j-grey);">|</span>
       <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span style="color:var(--j-muted);">Tools:</span>
-        ${mcp.tools.length > 0 ? toolList : "<span style=\"color:var(--j-muted);\">none</span>"}
+        <span style="color:var(--j-grey);">Tools:</span>
+        ${mcp.tools.length > 0 ? toolList : "<span style=\"color:var(--j-grey);\">none</span>"}
       </span>
       <span style="margin-left:auto;display:flex;gap:8px;">
         ${mcp.connectionState === "idle" || mcp.connectionState === "error"
-          ? `<button class="cm-mcp-connect" style="background:var(--j-accent,#0093ff);color:#000;border:none;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;">Connect</button>`
+          ? `<button class="cm-mcp-connect" style="background:var(--j-blue,#0093ff);color:#000;border:none;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;">Connect</button>`
           : mcp.connectionState === "connected"
-          ? `<button class="cm-mcp-disconnect" style="background:var(--j-surface-muted);color:var(--j-foreground);border:1px solid var(--j-border);border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;">Disconnect</button>`
+          ? `<button class="cm-mcp-disconnect" style="background:var(--j-surface-inset);color:var(--j-white);border:1px solid var(--j-panel-edge);border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;">Disconnect</button>`
           : `<span style="color:#e4b643;font-size:11px;">Connecting…</span>`
         }
       </span>

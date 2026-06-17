@@ -3,7 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useSearch } from "jaml-ui";
 import { JamlIde } from "jaml-ui";
-import { JimboApp, JimboBackground } from "jaml-ui/ui";
+import { JimboBackground } from "jaml-ui/ui";
+import { JimboBalatroFooter } from "jaml-ui/ui";
 import {
   Renderer,
   StateProvider,
@@ -100,13 +101,13 @@ export function SeedFinderPage() {
   return (
     <>
       <JimboBackground />
-      <JimboApp>
+      
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-8 md:py-12">
           <header className="flex flex-col gap-2">
-            <h1 className="font-pixel text-3xl" style={{ color: "var(--j-accent)" }}>
+            <h1 className="font-pixel text-3xl" style={{ color: "var(--j-blue)" }}>
               Seed Finder
             </h1>
-            <p className="text-sm" style={{ color: "var(--j-muted)" }}>
+            <p className="text-sm" style={{ color: "var(--j-grey)" }}>
               Load a JAML filter and search 2.3 trillion seeds. The Motely engine runs on your CPU.
             </p>
           </header>
@@ -115,17 +116,17 @@ export function SeedFinderPage() {
           <section>
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm" style={{ color: "var(--j-foreground)" }}>
+                <span className="font-bold text-sm" style={{ color: "var(--j-white)" }}>
                   JAML Filter
                 </span>
-                <span className="text-xs" style={{ color: "var(--j-muted)" }}>
+                <span className="text-xs" style={{ color: "var(--j-grey)" }}>
                   {showEditor ? "Editor open" : "Editor hidden"}
                 </span>
               </div>
               <div className="flex gap-2">
                 <button
                   className="rounded px-2 py-1 text-xs font-semibold"
-                  style={{ border: "1px solid var(--j-border)", color: "var(--j-muted)" }}
+                  style={{ border: "1px solid var(--j-panel-edge)", color: "var(--j-grey)" }}
                   onClick={() => setShowEditor(!showEditor)}
                 >
                   {showEditor ? "Hide" : "Show"} Editor
@@ -133,7 +134,7 @@ export function SeedFinderPage() {
                 <a
                   href="/ide"
                   className="rounded px-2 py-1 text-xs font-semibold"
-                  style={{ backgroundColor: "var(--j-accent-muted)", color: "var(--j-accent)" }}
+                  style={{ backgroundColor: "var(--j-dark-blue)", color: "var(--j-blue)" }}
                 >
                   Open IDE →
                 </a>
@@ -141,7 +142,7 @@ export function SeedFinderPage() {
             </div>
 
             {showEditor && (
-              <div className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--j-border)" }}>
+              <div className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--j-panel-edge)" }}>
                 <JamlIde
                   jaml={jaml}
                   onChange={setJaml}
@@ -158,8 +159,8 @@ export function SeedFinderPage() {
               <button
                 className="rounded px-3 py-1.5 text-sm font-semibold"
                 style={{
-                  backgroundColor: searchMode === "random" ? "var(--j-accent)" : "var(--j-surface-muted)",
-                  color: searchMode === "random" ? "#000" : "var(--j-foreground)",
+                  backgroundColor: searchMode === "random" ? "var(--j-blue)" : "var(--j-surface-inset)",
+                  color: searchMode === "random" ? "#000" : "var(--j-white)",
                 }}
                 onClick={() => setSearchMode("random")}
               >
@@ -168,8 +169,8 @@ export function SeedFinderPage() {
               <button
                 className="rounded px-3 py-1.5 text-sm font-semibold"
                 style={{
-                  backgroundColor: searchMode === "aesthetic" ? "var(--j-accent)" : "var(--j-surface-muted)",
-                  color: searchMode === "aesthetic" ? "#000" : "var(--j-foreground)",
+                  backgroundColor: searchMode === "aesthetic" ? "var(--j-blue)" : "var(--j-surface-inset)",
+                  color: searchMode === "aesthetic" ? "#000" : "var(--j-white)",
                 }}
                 onClick={() => setSearchMode("aesthetic")}
               >
@@ -178,12 +179,12 @@ export function SeedFinderPage() {
             </div>
 
             {searchMode === "random" && (
-              <label className="flex items-center gap-2 text-sm" style={{ color: "var(--j-muted)" }}>
+              <label className="flex items-center gap-2 text-sm" style={{ color: "var(--j-grey)" }}>
                 Seeds:
                 <input
                   type="number"
                   className="rounded border px-2 py-1 font-mono text-sm"
-                  style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)", color: "var(--j-foreground)", width: 120 }}
+                  style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)", color: "var(--j-white)", width: 120 }}
                   value={seedCount}
                   min={10000}
                   max={100_000_000}
@@ -195,7 +196,7 @@ export function SeedFinderPage() {
 
             <button
               className="rounded px-5 py-2 text-sm font-semibold"
-              style={{ backgroundColor: "var(--j-accent)", color: "#000" }}
+              style={{ backgroundColor: "var(--j-blue)", color: "#000" }}
               onClick={handleSearch}
             >
               {search.status === "running" ? "Stop" : "Search"}
@@ -205,16 +206,16 @@ export function SeedFinderPage() {
           {/* Results */}
           <section>
             <div className="mb-3 flex items-center gap-2">
-              <span className="font-bold text-sm" style={{ color: "var(--j-foreground)" }}>
+              <span className="font-bold text-sm" style={{ color: "var(--j-white)" }}>
                 Results
               </span>
-              <span className="text-xs" style={{ color: "var(--j-muted)" }}>
+              <span className="text-xs" style={{ color: "var(--j-grey)" }}>
                 via json-render
               </span>
             </div>
             <div
               className="rounded-lg border p-4"
-              style={{ borderColor: "var(--j-border)", backgroundColor: "var(--j-surface)" }}
+              style={{ borderColor: "var(--j-panel-edge)", backgroundColor: "var(--j-dark-grey)" }}
             >
               <StateProvider initialState={{}}>
                 <VisibilityProvider>
@@ -245,7 +246,7 @@ export function SeedFinderPage() {
             </div>
           </section>
         </main>
-      </JimboApp>
+      <JimboBalatroFooter />
     </>
   );
 }

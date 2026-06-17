@@ -52,14 +52,6 @@
       "types": "./dist/spec-builder.d.ts",
       "default": "./dist/spec-builder.js"
     },
-    "./hooks": {
-      "types": "./dist/hooks/index.d.ts",
-      "default": "./dist/hooks/index.js"
-    },
-    "./components": {
-      "types": "./dist/components/index.d.ts",
-      "default": "./dist/components/index.js"
-    },
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",
       "default": "./dist/mcp/index.js"
@@ -99,8 +91,8 @@
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "jaml-ui": "^2.4.0",
-    "motely-wasm": "^22.0.0",
+    "jaml-ui": "^2.0.0",
+    "motely-wasm": ">=19.4.0",
     "@json-render/core": "^0.19.0",
     "@json-render/react": "^0.19.0",
     "@codemirror/state": "^6.0.0",
@@ -134,8 +126,8 @@
     "typescript": "^5",
     "vite": "^8.0.13",
     "vite-plugin-dts": "^5.0.0",
-    "jaml-ui": "^2.4.0",
-    "motely-wasm": "^22.0.0",
+    "jaml-ui": "^2.0.0",
+    "motely-wasm": ">=19.4.0",
     "@json-render/core": "^0.19.0",
     "@json-render/react": "^0.19.0"
   },
