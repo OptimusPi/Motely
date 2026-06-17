@@ -13,7 +13,8 @@ public readonly record struct ScoopedMatch(
     int Slot,
     int CardIndex,
     MotelyItem Item,
-    int Score
+    int Score,
+    string? Name = null
 );
 
 /// <summary>
@@ -39,4 +40,7 @@ public sealed class JamlScoop : IMotelyScoopSink
         MotelyItem item,
         int score
     ) => _matches.Add(new ScoopedMatch(CurrentClauseIndex, source, ante, slot, cardIndex, item, score));
+
+    public void RecordNamed(MotelyMatchSource source, int ante, int slot, string name, int score) =>
+        _matches.Add(new ScoopedMatch(CurrentClauseIndex, source, ante, slot, -1, default, score, name));
 }

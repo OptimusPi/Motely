@@ -29,7 +29,8 @@ internal static class LegendarySoulMatcher
         int ante,
         LegendaryJokerClause clause,
         int maxBoosterPack,
-        bool stopAfterFirstMatch = false
+        bool stopAfterFirstMatch = false,
+        IMotelyScoopSink? scoop = null
     )
     {
         var src = clause.Sources;
@@ -71,6 +72,7 @@ internal static class LegendarySoulMatcher
                 if (clause.SoulCardOnly)
                 {
                     count++;
+                    scoop?.RecordNamed(MotelyMatchSource.SoulJoker, ante, p, "The Soul", 1);
                     if (stopAfterFirstMatch)
                         return count;
                     continue;
@@ -86,6 +88,7 @@ internal static class LegendarySoulMatcher
                 if (LegendaryJokerMatchesFull(clause, legendaryJoker))
                 {
                     count++;
+                    scoop?.Record(MotelyMatchSource.SoulJoker, ante, p, -1, legendaryJoker, 1);
                     if (stopAfterFirstMatch)
                         return count;
                 }
@@ -113,6 +116,7 @@ internal static class LegendarySoulMatcher
                 if (clause.SoulCardOnly)
                 {
                     count++;
+                    scoop?.RecordNamed(MotelyMatchSource.SoulJoker, ante, p, "The Soul", 1);
                     if (stopAfterFirstMatch)
                         return count;
                     continue;
@@ -128,6 +132,7 @@ internal static class LegendarySoulMatcher
                 if (LegendaryJokerMatchesFull(clause, legendaryJoker))
                 {
                     count++;
+                    scoop?.Record(MotelyMatchSource.SoulJoker, ante, p, -1, legendaryJoker, 1);
                     if (stopAfterFirstMatch)
                         return count;
                 }
