@@ -1,4 +1,5 @@
 using System.Linq;
+using Motely.Filters;
 
 namespace Motely.Filters.Jaml;
 
@@ -153,7 +154,7 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
                 if (raw >= clause.Min)
                 {
                     foreach (var m in scoop.Matches)
-                        mustMatches.Add(ConvertMatch(m, clause.Label, "must"));
+                        mustMatches.Add(ConvertMatch(m, clause.Label, "must", clause.Score));
                 }
                 runState.ScoopSink = null;
             }
@@ -170,7 +171,7 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
                 if (raw > 0)
                 {
                     foreach (var m in scoop.Matches)
-                        shouldMatches.Add(ConvertMatch(m, clause.Label, "should"));
+                        shouldMatches.Add(ConvertMatch(m, clause.Label, "should", clause.Score));
                 }
                 runState.ScoopSink = null;
             }
@@ -187,7 +188,7 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
                 if (raw > 0)
                 {
                     foreach (var m in scoop.Matches)
-                        mustNotMatches.Add(ConvertMatch(m, clause.Label, "mustNot"));
+                        mustNotMatches.Add(ConvertMatch(m, clause.Label, "mustNot", clause.Score));
                 }
                 runState.ScoopSink = null;
             }
@@ -442,14 +443,35 @@ public sealed class JamlAnalyzerFilterDesc : IMotelySeedFilterDesc<JamlAnalyzerF
         {
             var events = new List<JamlPeekEvent>();
 
-            foreach (var clause in config.Must.OfType<RollClause>())
+            foreach (var clause in CollectRollClauses(config.Must))
                 events.AddRange(MaterializeEvents(ref ctx, clause));
-            foreach (var clause in config.Should.OfType<RollClause>())
+            foreach (var clause in CollectRollClauses(config.Should))
                 events.AddRange(MaterializeEvents(ref ctx, clause));
-            foreach (var clause in config.MustNot.OfType<RollClause>())
+            foreach (var clause in CollectRollClauses(config.MustNot))
                 events.AddRange(MaterializeEvents(ref ctx, clause));
 
             return events;
+        }
+
+        private static IEnumerable<RollClause> CollectRollClauses(IEnumerable<IJamlClause> clauses)
+        {
+            foreach (var clause in clauses)
+            {
+                switch (clause)
+                {
+                    case AndClause and:
+                        foreach (var inner in CollectRollClauses(and.Clauses))
+                            yield return inner;
+                        break;
+                    case OrClause or:
+                        foreach (var inner in CollectRollClauses(or.Clauses))
+                            yield return inner;
+                        break;
+                    case RollClause roll:
+                        yield return roll;
+                        break;
+                }
+            }
         }
 
         private static IReadOnlyList<JamlPeekEvent> MaterializeEvents(
