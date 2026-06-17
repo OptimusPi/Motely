@@ -1,0 +1,76 @@
+name: Release JAML extension (VS Marketplace + Open VSX)
+
+# Publishes jaml-lsp (the "jaml-language-support" extension) to both the VS Code
+# Marketplace and Open VSX when you push a tag like `jaml-ext-v0.1.0`.
+#
+# Requires repo secrets:
+#   VSCE_PAT   - Azure DevOps PAT for publisher `pifreak` (VS Marketplace)
+#   OVSX_TOKEN - Open VSX access token
+#
+# The extension's dist is bundled by esbuild (vscode:prepublish), which inlines
+# jaml-lang — but esbuild reads jaml-lang/dist at bundle time, so we build
+# jaml-lang first.
+on:
+  push:
+    tags: ["jaml-ext-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build jaml-lang (dependency, bundled into the extension)
+        working-directory: jaml-lang
+        run: |
+          npm ci
+          npx tsc -p tsconfig.json
+
+      - name: Install extension deps
+        working-directory: jaml-lsp
+        run: npm ci
+
+      - name: Verify tag matches package.json version
+        working-directory: jaml-lsp
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAG=${GITHUB_REF_NAME#jaml-ext-v}
+          echo "package.json=$PKG  tag=$TAG"
+          test "$PKG" = "$TAG" || { echo "::error::tag $TAG != package.json $PKG"; exit 1; }
+
+      - name: Package .vsix
+        working-directory: jaml-lsp
+        run: npx --yes @vscode/vsce package --no-dependencies -o jaml-language-support.vsix
+
+      - name: Publish to VS Marketplace
+        working-directory: jaml-lsp
+        run: npx --yes @vscode/vsce publish --no-dependencies --packagePath jaml-language-support.vsix -p "$VSCE_PAT"
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Ensure Open VSX namespace exists
+        working-directory: jaml-lsp
+        continue-on-error: true
+        run: npx --yes ovsx create-namespace pifreak -p "$OVSX_TOKEN"
+        env:
+          OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+
+      - name: Publish to Open VSX
+        working-directory: jaml-lsp
+        run: npx --yes ovsx publish jaml-language-support.vsix -p "$OVSX_TOKEN"
+        env:
+          OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+
+      - name: Upload .vsix artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jaml-language-support-vsix
+          path: jaml-lsp/jaml-language-support.vsix
