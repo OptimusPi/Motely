@@ -102,6 +102,9 @@ A cancelled sequential search prints a `--startBatch` / `--startSeed` resume hin
   `Motely/Enums` and the JAML clause model — read them rather than guessing.
 - Platform is Windows / PowerShell (the Bash tool is also available for POSIX scripts; there
   is no `/dev/null`).
+- The Roslyn-lens MCP caches the solution. After files are added / deleted / moved (any
+  architecture change), call `switch_solution` to reload — otherwise it reports deleted files
+  as live (it will hand you references into files that no longer exist on disk).
 
 ## JAML authoring: hard rules (read every time you write a filter)
 
@@ -124,7 +127,7 @@ accidentally nest two keys. Discriminators: `joker`, `jokers`, `voucher`, `vouch
 `erraticSuit`, `erraticCard`, `startingDraw`, `event`, `luckyMoney`, `luckyMult`,
 `misprintMult`, `wheelOfFortune`, `cavendishExtinct`, `grosMichelExtinct`, `spaceLevelup`,
 `businessPayout`, `bloodstoneTrigger`, `parkingPayout`, `glassDestroy`, `wheelStaysFlipped`,
-`and`, `or`, `clauses`. Always use `joker:` (generic) — rarity-specific keys are footguns.
+`and`, `or`, `clauses`. Always use `joker:` (generic) — rarity-specific keys are deprecated.
 
 **Rule #3 — `max: 1` for rare enablers.** When you need exactly one of a rare joker
 (Blueprint, Brainstorm, Perkeo), add `max: 1`. Without it you're demanding the pool produce

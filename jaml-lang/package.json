@@ -1,23 +1,39 @@
 {
   "name": "jaml-lang",
-  "version": "0.1.0",
-  "description": "JAML language service — parser, vocabulary, and diagnostics generated from the Motely C# engine enums.",
+  "version": "1.0.0",
+  "description": "JAML (Jimbo's Ante Markup Language) language service — diagnostics, completions, hover, symbols. Vocab and key tables are GENERATED from the Motely engine on every Motely.Wasm build.",
   "type": "module",
+  "license": "MIT",
+  "author": "pifreak",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "jaml-lang"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./service": "./dist/service.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./service": {
+      "types": "./dist/service.d.ts",
+      "import": "./dist/service.js"
+    }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "check": "tsc --noEmit"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.6.0"
+    "gen": "node generate.mjs",
+    "build": "npm run gen && tsc -p tsconfig.json",
+    "check": "npm run gen && tsc --noEmit"
   },
   "dependencies": {
-    "yaml": "^2.9.0"
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
   }
 }
