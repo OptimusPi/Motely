@@ -31,4 +31,12 @@ public enum MotelyMatchSource
 public interface IMotelyScoopSink
 {
     void Record(MotelyMatchSource source, int ante, int slot, int cardIndex, MotelyItem item, int score);
+
+    /// <summary>
+    /// Record a match whose subject is not a <see cref="MotelyItem"/> — vouchers, bosses, and tags
+    /// are engine enums, not pool items, so they ride a pre-formatted display <paramref name="name"/>
+    /// (e.g. "Telescope", "TheHook", "NegativeTag") instead. <paramref name="slot"/> carries the roll
+    /// index (voucher) or tag draw index (0 = small blind, 1 = big blind); -1 when not applicable.
+    /// </summary>
+    void RecordNamed(MotelyMatchSource source, int ante, int slot, string name, int score);
 }

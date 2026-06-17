@@ -91,7 +91,7 @@ public static class JamlScoring
             SpectralCardClause c => CountSpectralCardOccurrences(ref ctx, c, ref runState),
             PlanetCardClause c => CountPlanetCardOccurrences(ref ctx, c, ref runState),
             BossClause c => CountBossOccurrences(c, ref runState),
-            TagClause c => CountTagOccurrences(ref ctx, c),
+            TagClause c => CountTagOccurrences(ref ctx, c, ref runState),
             StandardCardClause c => CountStandardCardOccurrences(ref ctx, c, ref runState),
             ErraticRankClause c => CountErraticRankOccurrences(ref ctx, c),
             ErraticSuitClause c => CountErraticSuitOccurrences(ref ctx, c),
@@ -321,7 +321,12 @@ public static class JamlScoring
             );
             for (int i = 0; i < clause.Bosses.Length; i++)
                 if (clause.Bosses[i] == runState.CachedBosses[ante])
+                {
                     count++;
+                    // ?. short-circuits arg evaluation — no ToString() alloc on the null-sink hot path.
+                    runState.ScoopSink?.RecordNamed(
+                        MotelyMatchSource.Boss, ante, -1, runState.CachedBosses[ante].ToString(), 1);
+                }
         }
         return count;
     }
@@ -862,7 +867,11 @@ public static class JamlScoring
                     for (int i = 0; i < clause.Vouchers.Length; i++)
                     {
                         if (rolled == clause.Vouchers[i])
+                        {
                             count++;
+                            runState.ScoopSink?.RecordNamed(
+                                MotelyMatchSource.Voucher, ante, roll, rolled.ToString(), 1);
+                        }
                     }
                 }
             }
@@ -873,7 +882,11 @@ public static class JamlScoring
         return count;
     }
 
-    private static int CountTagOccurrences(ref MotelySingleSearchContext ctx, TagClause clause)
+    private static int CountTagOccurrences(
+        ref MotelySingleSearchContext ctx,
+        TagClause clause,
+        ref MotelyRunState runState
+    )
     {
         int count = 0;
         int maxDraw = MapFeatureRolls.MaxRollIndex(clause.Rolls);
@@ -891,7 +904,12 @@ public static class JamlScoring
                 for (int i = 0; i < clause.Tags.Length; i++)
                 {
                     if (rolled == clause.Tags[i])
+                    {
                         count++;
+                        // slot = draw index: 0 = small blind tag, 1 = big blind tag.
+                        runState.ScoopSink?.RecordNamed(
+                            MotelyMatchSource.Tag, ante, drawIndex, rolled.ToString(), 1);
+                    }
                 }
             }
         }
@@ -1315,7 +1333,8 @@ public static class JamlScoring
         foreach (int ante in clause.Antes)
         {
             int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
-            count += LegendarySoulMatcher.CountAnte(ref ctx, ante, clause, maxPack);
+            count += LegendarySoulMatcher.CountAnte(
+                ref ctx, ante, clause, maxPack, stopAfterFirstMatch: false, scoop: runState.ScoopSink);
         }
 
         return count;
@@ -1641,10 +1660,10 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.Judgement, roll))
-                {
-                    int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    count += matches;
-                }
+                    count += Scooped(
+                        ref runState,
+                        MatchJoker(item, targetTypes, edition, stickers),
+                        MotelyMatchSource.Consumable, ante, roll, -1, item);
             }
         }
 
@@ -1656,10 +1675,10 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.Wraith, roll))
-                {
-                    int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    count += matches;
-                }
+                    count += Scooped(
+                        ref runState,
+                        MatchJoker(item, targetTypes, edition, stickers),
+                        MotelyMatchSource.Consumable, ante, roll, -1, item);
             }
         }
 
@@ -1671,10 +1690,10 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.RiffRaff, roll))
-                {
-                    int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    count += matches;
-                }
+                    count += Scooped(
+                        ref runState,
+                        MatchJoker(item, targetTypes, edition, stickers),
+                        MotelyMatchSource.Consumable, ante, roll, -1, item);
             }
         }
 
@@ -1686,10 +1705,10 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.RareTag, roll))
-                {
-                    int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    count += matches;
-                }
+                    count += Scooped(
+                        ref runState,
+                        MatchJoker(item, targetTypes, edition, stickers),
+                        MotelyMatchSource.TagJoker, ante, roll, -1, item);
             }
         }
 
@@ -1701,10 +1720,10 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.UncommonTag, roll))
-                {
-                    int matches = MatchJoker(item, targetTypes, edition, stickers);
-                    count += matches;
-                }
+                    count += Scooped(
+                        ref runState,
+                        MatchJoker(item, targetTypes, edition, stickers),
+                        MotelyMatchSource.TagJoker, ante, roll, -1, item);
             }
         }
 
