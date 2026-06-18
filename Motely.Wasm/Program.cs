@@ -163,7 +163,7 @@ public static partial class Program
     // Pure forwards: Bootsharp [Export] must live in this assembly (the engine never
     // references Bootsharp), but the logic is the loader's.
     [Export]
-    public static JamlConfig FromYaml(string jaml) => JamlConfigLoader.FromYaml(jaml);
+    public static JamlConfig ParseJaml(string jaml) => JamlConfigLoader.FromYaml(jaml);
 
     [Export]
     public static JamlConfig FromJson(string json) => JamlConfigLoader.FromJson(json);

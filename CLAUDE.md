@@ -5,210 +5,95 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **MotelyJAML** is a fork of tacodiva's **Motely** — a vectorized (512-bit SIMD, 8 seeds at
-once per thread) seed-search engine for **Balatro**, faster than the OpenCL/GPU searchers
-(e.g. Immolate) on most CPUs.
+once per thread) seed-search engine for **Balatro**. The core (`Motely/`) is a C# filter API;
+everything else is a head that drives it.
 
-Motely is, first, a clean C# filter API. A filter is a two-phase contract:
+A filter is a two-phase contract:
 
-- `IMotelySeedFilterDesc<TFilter>` — `CreateFilter(ref MotelyFilterCreationContext ctx)` runs
-  once at setup to declare which PRNG streams to cache.
+- `IMotelySeedFilterDesc<TFilter>.CreateFilter(ref MotelyFilterCreationContext ctx)` runs once
+  at setup to declare which PRNG streams to cache.
 - `IMotelySeedFilter` (a `struct`) — `Filter(ref MotelyVectorSearchContext)` is the hot path:
-  it returns a `VectorMask` over **8 seeds at once** (`Vector512`, `VectorEnum256`) as a cheap
-  vectorized gate, then `SearchIndividualSeeds(mask, lambda)` drops to scalar
-  `MotelySingleSearchContext` only for the lanes that survived. Vector gate, scalar confirm.
+  returns a `VectorMask` over **8 seeds at once** as a cheap vectorized gate, then
+  `SearchIndividualSeeds(mask, predicate)` drops to scalar `MotelySingleSearchContext` only for
+  surviving lanes. **Vector gate, scalar confirm.**
 - `MotelySearchSettings<TBaseFilter>` is the fluent driver:
-  `.WithStake().WithDeck().WithThreadCount().WithBatchCharacterCount().WithListSearch(…)`
-  `.WithProviderSearch(…).WithAdditionalFilter(…).Start()` → returns `IMotelySearch`.
+  `.WithStake().WithDeck().WithThreadCount().WithListSearch(…).WithAdditionalFilter(…).Start()`.
 
 ## Build / test / run
 
-- Solution: **`Motely.slnx`** (XML format). .NET 10 SDK, pinned in `global.json`.
-  Package versions are centralized in `Directory.Packages.props` (Central Package Management).
+**C# side.** Solution is `Motely.slnx` (XML format). .NET 10 SDK pinned in `global.json`
+(`10.0.204`). C# package versions are centralized in `Directory.Packages.props` (Central
+Package Management) — including `<MotelyVersion>`, the single source of truth for the published
+wasm version. Read the version from there.
 
 ```powershell
 dotnet build Motely.slnx
 dotnet test Motely.Tests/Motely.Tests.csproj
 dotnet test Motely.Tests/Motely.Tests.csproj --filter "FullyQualifiedName~SomeTestName"   # single test
-```
-
-Run a JAML search (from repo root, so the path resolves):
-
-```powershell
 dotnet run --project Motely.CLI -- --jaml simple_test --keyword YOURNAME --cutoff 0
 ```
 
-A bare `--jaml <name>` resolves to `JamlFilters/<name>.jaml`. Full CLI guide:
-`docs/FIND_BALATRO_SEED_WITH_MOTELY_CLI.md`.
+A bare `--jaml <name>` resolves to `JamlFilters/<name>.jaml`. The CLI also has `--analyze
+<seed>` (human-readable seed dump) and `--native <name>` (run a hardcoded C# filter instead of
+JAML). Full CLI guide: `docs/FIND_BALATRO_SEED_WITH_MOTELY_CLI.md`.
 
-**Repo scripts:**
-- `clean.ps1` — recursively removes every build output (`bin`/`obj`/`dist`/`publish`) plus
-  `node_modules` (regenerable via `npm install`) repo-wide. Source is never touched.
-- `release.ps1` — builds and publishes `motely-wasm`. The published version is read from the
-  single source of truth: `<MotelyVersion>` in `Directory.Packages.props` (CPM) — never hardcode it.
+**WASM / JS side** (versions independently of CPM via its own `package.json`). From
+`Motely.Wasm/`:
+
+```powershell
+npm test          # node --test "tests/*.test.mjs" — JS suite against the built dist
+npm run build     # dotnet publish Motely.Wasm.csproj -c Release  (NativeAOT-LLVM → dist/)
+```
+
+`release.ps1` runs the full publish pipeline (pack Bootsharp.FileSystem → restore → publish
+wasm → JS tests → npm publish). Build plus the test suites are the full quality gate.
 
 ## Architecture
 
-Single engine, multiple heads. **`Motely/`** is the core: the SIMD search runtime plus the
-JAML system. Everything else is a front-end that drives it.
+Single engine, multiple heads. **`Motely/`** is the SIMD runtime plus the JAML system.
 
-**The JAML pipeline** (the part that needs cross-file reading to understand):
+**JAML pipeline** (needs cross-file reading to follow):
 
-1. `Motely/Filters/Jaml/JamlConfigLoader*.cs` parses a `.jaml` (YAML) file into a
-   `JamlConfig` (`JamlConfig.cs`) — top-level `deck`/`stake`/`seeds` plus three clause lists
-   `must` / `should` / `mustNot`, each a list of `IJamlClause`.
-2. Each clause type (e.g. `JokerClause`, `VoucherClause`, `BossClause`) maps to a
-   `…FilterDesc` via the big `switch` in `JamlClause.cs` (`CreateDesc`). The `FilterDesc`
-   classes are the actual vectorized matchers — one per concept, living next to the model in
-   `Motely/Filters/Jaml/` (and hand-written native ones in `Motely/Filters/Native/`).
-3. `JamlSearchBuilder.CreatePlan(config, cutoff)` assembles the descs into an
-   `IMotelySearchSettings` (a `JamlSearchPlan`), pushing a fixed score cutoff into the engine
-   so low-scoring seeds are dropped at the scorer rather than via callback spam.
-4. The head applies a **seed-input mode** to those settings and calls `.Start()`.
+1. `Motely/Filters/Jaml/JamlConfigLoader*.cs` parses a `.jaml` (YAML) into a `JamlConfig` —
+   `deck`/`stake`/`seeds` plus `must` / `should` / `mustNot`, each a list of `IJamlClause`.
+2. Each clause type maps to a `…FilterDesc` (the vectorized matcher) via the `CreateDesc`
+   switch in `JamlClause.cs`. Descs live in `Motely/Filters/Jaml/`; hand-written native ones in
+   `Motely/Filters/Native/`.
+3. `JamlSearchBuilder.CreatePlan(config, cutoff)` assembles the descs into a `JamlSearchPlan`,
+   pushing a score cutoff into the engine so low-scoring seeds drop at the scorer.
+4. The head applies a seed-input mode and calls `.Start()`.
 
-**Search-input modes are orthogonal to the filter.** Any filter (JAML or native) can be fed
-seeds by: keyword (`--keyword`/`--keywords`, padded to 8 chars), random (`--random N`),
-explicit list (`--seeds`), a file/aesthetic source (`--source`/`--aesthetic`), or the default
-**sequential** batch sweep (`--startBatch`/`--endBatch`/`--startPercent` or
-`--startSeed`/`--stopSeed`; `--batchCharCount` 1–7 controls batch granularity). The CLI
-wiring is `Motely.CLI/CliSearchMode.cs`; results fan out through `IMotelyResultSink`
-(`ConsoleResultSink`, plus a DuckLake sink when a filter produces structured scores).
+`must`/`mustNot` are hard gates; `should` carries a `score` and only affects ranking. Seed
+input is orthogonal to the filter: keyword, random, explicit `--seeds`, source/aesthetic, or
+the default sequential batch sweep. CLI wiring is `Motely.CLI/CliSearchMode.cs`; results fan
+out through `IMotelyResultSink`.
 
-**`must` vs `should` vs `mustNot`:** must/mustNot are hard gates; `should` clauses carry a
-`score` and only contribute to ranking. Shared clause props: `antes`, `min`, `max`, `score`,
-`label`. Joker/card names are PascalCase, no spaces (`Blueprint`, `SixthSense`, `Perkeo`).
+**Heads split into two execution worlds:**
 
-**Seeds** use the alphabet `1-9` and `A-Z` — **no `0`** (it normalizes to `O`), max 8 chars.
-A cancelled sequential search prints a `--startBatch` / `--startSeed` resume hint.
+- **Desktop / native C#** (a .NET process, full CPU SIMD): `Motely.CLI/`, `Motely.TUI/`
+  (terminal UI), `Motely.DataLake/` (DuckDB/DuckLake over saved results). They reference
+  `Motely/` directly.
+- **Browser / WASM**: `Motely.Wasm/` compiles `Motely/` to `browser-wasm` via Bootsharp
+  (NativeAOT-LLVM), emitting an ES module to `dist/`. The JS entry points are the
+  Bootsharp-exported members of `Motely.Wasm/Program.cs`, not a C# `Main`. `Motely.Home/` is a
+  static-file host serving a vanilla-JS SPA that loads that wasm in a web worker; the search
+  runs on the user's CPU in the browser, no server.
 
-## Heads (front-ends over `Motely/`)
+## Source of truth for names and values
 
-- `Motely.CLI/` — command-line head (`McMaster.Extensions.CommandLineUtils`). Also does
-  `--analyze <seed>` (human-readable seed dump) and `--native <name>` (run a hardcoded C#
-  filter instead of JAML).
-- `Motely.TUI/` — terminal UI.
-- `Motely.Wasm/` — WebAssembly build via **Bootsharp**. Exports `Program.FromYaml` /
-  `Program.FromJson` (config parsers), `RunSequentialSearch`/`RunRandomSearch`, and
-  `OnProgress`/`OnSeedMatch`/`OnScoredResult` event streams. NativeAOT-LLVM auto-enables
-  under `dotnet publish -c Release`; no hand-wiring.
-- `Motely.Home/` — an ASP.NET Core minimal-API **static-file host** (not Blazor). Serves
-  `wwwroot/app.html`, a vanilla-JS SPA whose search runs in `wwwroot/worker.mjs` loading the
-  motely-wasm dist from `/wasm`.
-- `Motely.DataLake/` — DuckDB / DuckLake tooling over saved results (the `Seeds/` parquet +
-  `.ducklake` files).
+- **Item names are PascalCase, no spaces** (`Blueprint`, `SixthSense`, `Perkeo`). Source them
+  from `Motely/Enums/` or `--analyze <seed>`.
+- **Seeds** use `1-9` and `A-Z`, up to 8 chars — a 35-character alphabet (`0` reads as `O`).
+- Enum values, clause keys, deck/stake names, and CLI flags live in `Motely/Enums` and the JAML
+  clause model. Read them there.
+- After adding/deleting/moving files, call `switch_solution` on the roslyn-lens MCP to reload
+  its view of the solution.
 
-## Conventions
+## Bootsharp (Motely.Wasm)
 
-- Enum values, clause keys, deck/stake names, and CLI flags have a single source of truth in
-  `Motely/Enums` and the JAML clause model — read them rather than guessing.
-- Platform is Windows / PowerShell (the Bash tool is also available for POSIX scripts; there
-  is no `/dev/null`).
-- The Roslyn-lens MCP caches the solution. After files are added / deleted / moved (any
-  architecture change), call `switch_solution` to reload — otherwise it reports deleted files
-  as live (it will hand you references into files that no longer exist on disk).
-- **Bootsharp (Motely.Wasm) — these rules decide the C#→JS surface; learn them before touching
-  `Motely.Wasm/Program.cs`.** Pinned docs (local clone): `d:\bootsharp\docs\guide\` —
-  `serialization.md`, `renaming.md`, `declarations.md`, `interop-modules.md`, `llvm.md`; working
-  samples in `d:\bootsharp\samples\` (`react`, `bench/dotnet-llvm`). The rules that matter:
-  - **Names are derived, not chosen.** namespace → module path (dots→`/`, lower-kebab); type →
-    node; members `camelCase`. So `Program` (ns `Motely.Wasm`) → module `motely/wasm`; enums in
-    `Motely.Enums` → `motely/enums`. A `[Export]` method's JS name/module is fixed by this, not
-    by what looks right in C#.
-  - **`[RenameModule]`/`[RenameNode]`/`[RenameMember]`** customize the above; returning null/empty
-    **erases** the node/member from the JS surface (this is how `BootsharpRenamers` strips the
-    ref-struct / `ByRefLike` members that can't marshal — those genuinely cannot cross).
-  - **Marshalling:** records, structs, read-only collections serialize by value (immutable
-    semantics). Mutable types pass **by reference** as interop instances. **`[JsonIgnore]` is
-    ignored** — Bootsharp uses its own binary serializer, not System.Text.Json. To drop a member
-    use `[RenameMember]`→null, NOT `[JsonIgnore]` (e.g. `MotelyAnalyzedItem.Item` is a latent
-    case of this).
-  - **Enums** marshal as numbers with name↔index maps emitted — but an enum only appears in JS if
-    some exported API's serialized types reference it. That is exactly why consumers hit
-    "missing enums": export an API whose types use the enum and it surfaces.
-  - After any change, **read the generated `dist/generated/modules/*.g.d.mts`** to confirm the
-    real shape — don't assume.
-
-## JAML authoring: hard rules (read every time you write a filter)
-
-**Rule #1 — names are everything.** A wrong PascalCase name (e.g. `SixthSence`, `blue_joker`)
-parses fine, validates green, and finds **zero seeds** with no error. Always verify every item
-name against the engine enums before using it:
-
-```powershell
-# grep the actual enum source — don't guess
-grep -r "BlueJoker\|SixthSense\|Perkeo" Motely/Enums/
-```
-
-Or run `--analyze <any-seed>` to see the real names the engine uses for every entity.
-
-**Rule #2 — discriminator, one per clause.** Each clause names exactly one thing. The
-`ValidateSingleDiscriminator` guard (added 2026-06-15) will throw at parse time if you
-accidentally nest two keys. Discriminators: `joker`, `jokers`, `voucher`, `vouchers`,
-`tarotCard`, `tarotCards`, `spectralCard`, `spectralCards`, `planetCard`, `boss`, `tag`,
-`tags`, `smallBlindTag`, `bigBlindTag`, `standardCard`, `standardCards`, `erraticRank`,
-`erraticSuit`, `erraticCard`, `startingDraw`, `event`, `luckyMoney`, `luckyMult`,
-`misprintMult`, `wheelOfFortune`, `cavendishExtinct`, `grosMichelExtinct`, `spaceLevelup`,
-`businessPayout`, `bloodstoneTrigger`, `parkingPayout`, `glassDestroy`, `wheelStaysFlipped`,
-`and`, `or`, `clauses`. Always use `joker:` (generic) — rarity-specific keys are deprecated.
-
-**Rule #3 — `max: 1` for rare enablers.** When you need exactly one of a rare joker
-(Blueprint, Brainstorm, Perkeo), add `max: 1`. Without it you're demanding the pool produce
-it multiple times and you'll get far fewer hits than expected.
-
-**Rule #4 — `sources:` pins the acquisition path.** Rare jokers not naturally in the shop
-(Legendary jokers, Spectral-only drops) need `sources: [SoulCard]` or the relevant source.
-Without sources pinning, the filter searches the wrong pool and finds nothing or lies.
-
-**Rule #5 — `luckyMult` and `luckyMoney` are event streams, not joker appearances.** They
-represent probabilistic in-run triggers (Lucky Card mult/money hits), counted across all
-occurrences across all antes. Treat them as hit counters, not item presence checks.
-
-**Rule #6 — the Showman dupe-reroll rule.** Showman must appear in acquisition order
-*before* the joker it's allowing duplicates of. The filter must constrain this via `antes:`
-ordering, or you'll find seeds where it shows up too late.
-
-**Rule #7 — search small before searching big.** Always prototype with `--keyword YOURNAME`
-(fast, personal, 8-char) or `--random 1000` before launching a sequential sweep. Confirm the
-filter fires at all and the output looks right. Then widen.
-
-**Rule #8 — verify hits with `--analyze`.** After a seed matches, run
-`dotnet run --project Motely.CLI -- --analyze <SEED>` to get a human-readable dump and
-confirm the filter caught what you think it caught. Don't claim victory before reading the
-analysis.
-
-**Rule #9 — avoid bargain-bin seeds.** A seed can technically pass `must` clauses but be
-unplayable (e.g. target joker appears ante 7 with no scaling). Add `antes: [1,2,3]` to gate
-early if the joker needs to be found early to matter.
-
-**Rule #10 — `--threads 1` for determinism with small pools.** Multi-threaded search is
-non-deterministic in output order. When validating a filter against a small explicit seed list
-(`--seeds`) or debugging, add `--threads 1` for reproducible results.
-
-## jaml-lang (the one brain — Rule #1 enforcer)
-
-`jaml-lang/` is a TypeScript npm package that catches wrong names *before* a search runs.
-Its vocabulary is generated from the engine — never guessed.
-
-```powershell
-# Regenerate vocabulary from engine (run after adding new jokers/vouchers/etc.):
-dotnet run --project Motely.CLI -- --vocab > jaml-lang/vocabulary.json
-
-# Validate a JAML filter (returns diagnostics with fuzzy suggestions):
-node -e "
-  import('./jaml-lang/dist/index.js').then(({ validateNames }) => {
-    const r = validateNames(require('fs').readFileSync('JamlFilters/my.jaml','utf8'));
-    r.diagnostics.forEach(d => console.log(d.message));
-  });
-"
-```
-
-Before writing any JAML — or drafting any for a user — pipe it through `validateNames()`.
-Zero diagnostics = engine will accept it. Any diagnostic = it would silent-zero.
-
-## What to read for deeper context
-
-- `docs/FIND_BALATRO_SEED_WITH_MOTELY_CLI.md` — worked examples, all CLI flags, gotchas
-- `docs/Balatro_Master_Encyclopedia.md` — complete entity taxonomy and mechanical effects
-- `docs/balatro-synergy.md` — archetype table, synergy matrix, anti-synergy traps
-- `docs/SEED_GENIE_PROMPT.md` — how to present seeds to users (make it personal)
-- `docs/HANDOFF.md` — what prior agents overclaimed; read before stating anything as fact
-- `JamlFilters/` — existing working filters as living examples
+The C#→JS surface is **derived, not chosen**: namespace → module path, type → node, members
+camelCase. `[RenameModule]`/`[RenameNode]`/`[RenameMember]` customize it; returning null erases
+a node/member from the JS surface (how `BootsharpRenamers` keeps the surface to the members
+Bootsharp emits cleanly). After any change, read the generated `dist/generated/modules/*.g.d.mts`
+to confirm the real shape. Pinned docs: `d:\bootsharp\docs\guide\`;
+samples: `d:\bootsharp\samples\`.

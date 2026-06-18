@@ -198,31 +198,6 @@ public static class JamlScoring
         return clause.Score != 0 ? total : matched;
     }
 
-    /// <summary>
-    /// Raw occurrence counts per should-clause column (CSV tally columns). For composite clauses this sums
-    /// child raw counts without multiplying by per-clause <see cref="IJamlClause.Score"/>; weighted totals are
-    /// computed separately by <see cref="CountOccurrences"/>.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    /// <summary>
-    /// Reports a positive match to the analyzer's scoop sink (if one is attached) and returns the
-    /// match count unchanged, so a <c>count += Match*(...)</c> site becomes a one-line
-    /// <c>count += Scooped(...)</c>. No-op (one null-check) on the hot search path.
-    /// </summary>
-    private static int Scooped(
-        ref MotelyRunState runState,
-        int match,
-        MotelyMatchSource source,
-        int ante,
-        int slot,
-        int cardIndex,
-        MotelyItem item
-    )
-    {
-        if (match > 0)
-            runState.ScoopSink?.Record(source, ante, slot, cardIndex, item, match);
-        return match;
-    }
 
     public static int CountRawOccurrences(
         ref MotelySingleSearchContext ctx,
@@ -323,9 +298,6 @@ public static class JamlScoring
                 if (clause.Bosses[i] == runState.CachedBosses[ante])
                 {
                     count++;
-                    // Engine records the raw enum value only — the analyzer formats it to text.
-                    runState.ScoopSink?.RecordValue(
-                        MotelyMatchSource.Boss, ante, -1, (int)runState.CachedBosses[ante], 1);
                 }
         }
         return count;
@@ -351,15 +323,7 @@ public static class JamlScoring
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (ArrayContains(clause.Sources.ShopItems, slot))
-                        count += Scooped(
-                            ref runState,
-                            MatchStandardCard(item, clause),
-                            MotelyMatchSource.Shop,
-                            ante,
-                            slot,
-                            -1,
-                            item
-                        );
+                        count += MatchStandardCard(item, clause);
                 }
             }
 
@@ -379,15 +343,7 @@ public static class JamlScoring
                     if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
-                        count += Scooped(
-                            ref runState,
-                            MatchStandardCard(contents[i], clause),
-                            MotelyMatchSource.BoosterPack,
-                            ante,
-                            packIndex,
-                            i,
-                            contents[i]
-                        );
+                        count += MatchStandardCard(contents[i], clause);
                 }
             }
         }
@@ -417,15 +373,7 @@ public static class JamlScoring
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (ArrayContains(clause.Sources.ShopItems, slot))
-                        count += Scooped(
-                            ref runState,
-                            MatchTarot(item, clause),
-                            MotelyMatchSource.Shop,
-                            ante,
-                            slot,
-                            -1,
-                            item
-                        );
+                        count += MatchTarot(item, clause);
                 }
             }
 
@@ -462,15 +410,7 @@ public static class JamlScoring
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
-                            count += Scooped(
-                                ref runState,
-                                MatchTarot(contents[i], clause),
-                                MotelyMatchSource.BoosterPack,
-                                ante,
-                                packIndex,
-                                i,
-                                contents[i]
-                            );
+                            count += MatchTarot(contents[i], clause);
                         continue;
                     }
 
@@ -485,15 +425,7 @@ public static class JamlScoring
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
-                            count += Scooped(
-                                ref runState,
-                                MatchTarot(contents[i], clause),
-                                MotelyMatchSource.BoosterPack,
-                                ante,
-                                packIndex,
-                                i,
-                                contents[i]
-                            );
+                            count += MatchTarot(contents[i], clause);
                     }
                 }
             }
@@ -548,15 +480,7 @@ public static class JamlScoring
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (ArrayContains(clause.Sources.ShopItems, slot))
-                        count += Scooped(
-                            ref runState,
-                            MatchSpectral(item, clause),
-                            MotelyMatchSource.Shop,
-                            ante,
-                            slot,
-                            -1,
-                            item
-                        );
+                        count += MatchSpectral(item, clause);
                 }
             }
 
@@ -593,15 +517,7 @@ public static class JamlScoring
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
-                            count += Scooped(
-                                ref runState,
-                                MatchSpectral(contents[i], clause),
-                                MotelyMatchSource.BoosterPack,
-                                ante,
-                                packIndex,
-                                i,
-                                contents[i]
-                            );
+                            count += MatchSpectral(contents[i], clause);
                         continue;
                     }
 
@@ -614,15 +530,7 @@ public static class JamlScoring
                         if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
-                            count += Scooped(
-                                ref runState,
-                                MatchSpectral(contents[i], clause),
-                                MotelyMatchSource.BoosterPack,
-                                ante,
-                                packIndex,
-                                i,
-                                contents[i]
-                            );
+                            count += MatchSpectral(contents[i], clause);
                     }
                 }
             }
@@ -790,15 +698,7 @@ public static class JamlScoring
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (ArrayContains(clause.Sources.ShopItems, slot))
-                        count += Scooped(
-                            ref runState,
-                            MatchPlanet(item, clause),
-                            MotelyMatchSource.Shop,
-                            ante,
-                            slot,
-                            -1,
-                            item
-                        );
+                        count += MatchPlanet(item, clause);
                 }
             }
 
@@ -818,15 +718,7 @@ public static class JamlScoring
                     if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
-                        count += Scooped(
-                            ref runState,
-                            MatchPlanet(contents[i], clause),
-                            MotelyMatchSource.BoosterPack,
-                            ante,
-                            packIndex,
-                            i,
-                            contents[i]
-                        );
+                        count += MatchPlanet(contents[i], clause);
                 }
             }
         }
@@ -869,8 +761,6 @@ public static class JamlScoring
                         if (rolled == clause.Vouchers[i])
                         {
                             count++;
-                            runState.ScoopSink?.RecordValue(
-                                MotelyMatchSource.Voucher, ante, roll, (int)rolled, 1);
                         }
                     }
                 }
@@ -906,9 +796,6 @@ public static class JamlScoring
                     if (rolled == clause.Tags[i])
                     {
                         count++;
-                        // slot = draw index: 0 = small blind tag, 1 = big blind tag.
-                        runState.ScoopSink?.RecordValue(
-                            MotelyMatchSource.Tag, ante, drawIndex, (int)rolled, 1);
                     }
                 }
             }
@@ -1334,7 +1221,7 @@ public static class JamlScoring
         {
             int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
             count += LegendarySoulMatcher.CountAnte(
-                ref ctx, ante, clause, maxPack, stopAfterFirstMatch: false, scoop: runState.ScoopSink);
+                ref ctx, ante, clause, maxPack, stopAfterFirstMatch: false);
         }
 
         return count;
@@ -1584,15 +1471,7 @@ public static class JamlScoring
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (!ArrayContains(shopItems, slot))
                         continue;
-                    count += Scooped(
-                        ref runState,
-                        MatchJoker(item, targetTypes, edition, stickers),
-                        MotelyMatchSource.Shop,
-                        ante,
-                        slot,
-                        -1,
-                        item
-                    );
+                    count += MatchJoker(item, targetTypes, edition, stickers);
                 }
             }
 
@@ -1613,15 +1492,7 @@ public static class JamlScoring
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                     {
-                        count += Scooped(
-                            ref runState,
-                            MatchJoker(contents[i], targetTypes, edition, stickers),
-                            MotelyMatchSource.BoosterPack,
-                            ante,
-                            packIndex,
-                            i,
-                            contents[i]
-                        );
+                        count += MatchJoker(contents[i], targetTypes, edition, stickers);
                     }
                 }
             }
@@ -1660,10 +1531,7 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.Judgement, roll))
-                    count += Scooped(
-                        ref runState,
-                        MatchJoker(item, targetTypes, edition, stickers),
-                        MotelyMatchSource.Consumable, ante, roll, -1, item);
+                    count += MatchJoker(item, targetTypes, edition, stickers);
             }
         }
 
@@ -1675,10 +1543,7 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.Wraith, roll))
-                    count += Scooped(
-                        ref runState,
-                        MatchJoker(item, targetTypes, edition, stickers),
-                        MotelyMatchSource.Consumable, ante, roll, -1, item);
+                    count += MatchJoker(item, targetTypes, edition, stickers);
             }
         }
 
@@ -1690,10 +1555,7 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.RiffRaff, roll))
-                    count += Scooped(
-                        ref runState,
-                        MatchJoker(item, targetTypes, edition, stickers),
-                        MotelyMatchSource.Consumable, ante, roll, -1, item);
+                    count += MatchJoker(item, targetTypes, edition, stickers);
             }
         }
 
@@ -1705,10 +1567,7 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.RareTag, roll))
-                    count += Scooped(
-                        ref runState,
-                        MatchJoker(item, targetTypes, edition, stickers),
-                        MotelyMatchSource.TagJoker, ante, roll, -1, item);
+                    count += MatchJoker(item, targetTypes, edition, stickers);
             }
         }
 
@@ -1720,10 +1579,7 @@ public static class JamlScoring
             {
                 var item = ctx.GetNextJoker(ref stream);
                 if (ArrayContains(sources.UncommonTag, roll))
-                    count += Scooped(
-                        ref runState,
-                        MatchJoker(item, targetTypes, edition, stickers),
-                        MotelyMatchSource.TagJoker, ante, roll, -1, item);
+                    count += MatchJoker(item, targetTypes, edition, stickers);
             }
         }
 
@@ -1759,15 +1615,7 @@ public static class JamlScoring
                     var item = ctx.GetNextShopItem(ref shopStream);
                     if (!ArrayContains(shopItems, slot))
                         continue;
-                    count += Scooped(
-                        ref runState,
-                        MatchJokerWildcard(item, wildcardRarity, edition, stickers),
-                        MotelyMatchSource.Shop,
-                        ante,
-                        slot,
-                        -1,
-                        item
-                    );
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
                 }
             }
 
@@ -1788,15 +1636,7 @@ public static class JamlScoring
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                     {
-                        count += Scooped(
-                            ref runState,
-                            MatchJokerWildcard(contents[i], wildcardRarity, edition, stickers),
-                            MotelyMatchSource.BoosterPack,
-                            ante,
-                            packIndex,
-                            i,
-                            contents[i]
-                        );
+                        count += MatchJokerWildcard(contents[i], wildcardRarity, edition, stickers);
                     }
                 }
             }

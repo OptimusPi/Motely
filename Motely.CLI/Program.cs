@@ -284,22 +284,6 @@ partial class Program
                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
                 );
 
-                if (jamlOption.HasValue())
-                {
-                    if (!JamlConfigLoader.TryLoadFromPath(jamlOption.ParsedValue, out var lensConfig, out var lensErr))
-                    {
-                        Console.Error.WriteLine($"Error: {lensErr}");
-                        return 1;
-                    }
-                    foreach (var s in seedTokens)
-                    {
-                        var seed = s.Trim().ToUpperInvariant().Replace('0', 'O');
-                        Console.WriteLine($"=== {seed} | {lensConfig.Deck} {lensConfig.Stake} | {lensConfig.Name ?? jamlOption.ParsedValue} ===");
-                        Console.Write(JamlSeedAnalyzer.Analyze(seed, lensConfig));
-                    }
-                    return 0;
-                }
-
                 var analyzeDeck = deckOption.HasValue() ? deckOption.ParsedValue : "Erratic";
                 var analyzeStake = stakeOption.HasValue() ? stakeOption.ParsedValue : "White";
 
@@ -456,15 +440,7 @@ partial class Program
                 return 1;
             }
 
-            if (
-                config.Must.Count == 0
-                && config.Should.Count == 0
-                && config.MustNot.Count == 0
-            )
-            {
-                Console.Error.WriteLine("Error: no clauses in JAML.");
-                return 1;
-            }
+
 
             var deck = config.Deck;
             var stake = config.Stake;
