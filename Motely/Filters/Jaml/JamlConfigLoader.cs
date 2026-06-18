@@ -705,34 +705,6 @@ public static partial class JamlConfigLoader
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
-            MotelyFilterItemType.MixedJoker => new MixedJokerClause
-            {
-                Label = label,
-                Score = score,
-                Antes = antes,
-                Min = min,
-                Max = max,
-                IsWildcard = c.Joker?.IsAny ?? false,
-                Jokers = c.Joker is { IsAny: false, Value: var mjv }
-                    ? [mjv]
-                    : c.Jokers?.ToArray() ?? [],
-                Edition = edition,
-                Stickers = c.Stickers ?? [],
-                Sources = new JokerSourceConfig
-                {
-                    ShopItems = shopItems ?? [],
-                    BoosterPacks = boosterPacks ?? [],
-                    Judgement = c.Judgement ?? c.Sources?.Judgement ?? [],
-                    Wraith = c.Wraith ?? c.Sources?.Wraith ?? [],
-                    RiffRaff = c.Sources?.RiffRaff ?? [],
-                    RareTag = c.RareTag ?? c.Sources?.RareTag ?? [],
-                    UncommonTag = c.UncommonTag ?? c.Sources?.UncommonTag ?? [],
-                    CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
-                    UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
-                    RareShopJokers = c.Sources?.RareShopJokers ?? [],
-                    AllShopJokers = c.Sources?.AllShopJokers ?? [],
-                },
-            },
             MotelyFilterItemType.LegendaryJoker => new LegendaryJokerClause
             {
                 Label = label,

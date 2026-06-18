@@ -370,19 +370,3 @@ public sealed class RareJokerClause : JamlClause
             ? "rareJoker Any"
             : $"rareJoker {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
 }
-
-public sealed class MixedJokerClause : JamlClause
-{
-    public MotelyJoker[] Jokers { get; set; } = [];
-    public bool IsWildcard { get; set; }
-    public MotelyItemEdition? Edition { get; set; }
-    public MotelyJokerSticker[] Stickers { get; set; } = [];
-    public JokerSourceConfig Sources { get; set; } = new();
-
-    public override int EstimatedCost => 6 + MaxAnte;
-
-    public override string Describe() =>
-        IsWildcard
-            ? "jokers Any"
-            : $"jokers {string.Join(", ", System.Array.ConvertAll(Jokers, static j => j.ToString()))}";
-}
