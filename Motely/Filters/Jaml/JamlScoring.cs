@@ -84,6 +84,7 @@ public static class JamlScoring
             CommonJokerClause c => CountCommonJokerOccurrences(ref ctx, c, ref runState),
             UncommonJokerClause c => CountUncommonJokerOccurrences(ref ctx, c, ref runState),
             RareJokerClause c => CountRareJokerOccurrences(ref ctx, c, ref runState),
+            MixedJokerClause c => CountMixedJokerOccurrences(ref ctx, c, ref runState),
             LegendaryJokerClause c => CountLegendaryJokerOccurrences(ref ctx, c, ref runState),
             VoucherClause c => CountVoucherOccurrences(ref ctx, c, ref runState),
             TarotCardClause c => CountTarotCardOccurrences(ref ctx, c, ref runState),
@@ -1316,6 +1317,33 @@ public static class JamlScoring
         );
     }
 
+    private static int CountMixedJokerOccurrences(
+        ref MotelySingleSearchContext ctx,
+        MixedJokerClause clause,
+        ref MotelyRunState runState
+    )
+    {
+        if (clause.IsWildcard)
+            return CountJokerOccurrencesWildcard(
+                ref ctx,
+                clause.Antes,
+                clause.Sources,
+                wildcardRarity: null,
+                clause.Edition,
+                clause.Stickers,
+                ref runState
+            );
+        return CountJokerOccurrencesGeneric(
+            ref ctx,
+            clause.Antes,
+            clause.Sources,
+            clause.Jokers,
+            clause.Edition,
+            clause.Stickers,
+            ref runState
+        );
+    }
+
     internal static int CountJokerClauseOccurrencesForFilter(
         ref MotelySingleSearchContext ctx,
         JokerClause clause
@@ -1845,6 +1873,7 @@ public static class JamlScoring
             CommonJokerClause c => ArrayMax(c.Antes),
             UncommonJokerClause c => ArrayMax(c.Antes),
             RareJokerClause c => ArrayMax(c.Antes),
+            MixedJokerClause c => ArrayMax(c.Antes),
             LegendaryJokerClause c => ArrayMax(c.Antes),
             VoucherClause c => ArrayMax(c.Antes),
             TarotCardClause c => ArrayMax(c.Antes),

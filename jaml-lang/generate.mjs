@@ -1,0 +1,186 @@
+#!/usr/bin/env node
+// THE jaml-lang generator. Hand-written driver; everything it writes is generated.
+//
+// Source of truth = the engine:
+//   Motely/Enums/*.cs                            → every value you can type
+//   Motely/Filters/Jaml/JamlConfigLoader.Models.cs → every key you can type
+//   Motely/Filters/Jaml/JamlConfigLoader.RawParse.cs → allowed root keys
+//
+// Outputs:
+//   jaml-lang/src/generated.ts                   → vocab + key tables for the service
+//   jaml-lsp/syntaxes/jaml.tmLanguage.json       → TextMate grammar
+//
+// Runs on every Motely.Wasm build (see Motely.Wasm.csproj GenerateJamlLang target).
+//   node jaml-lang/generate.mjs
+
+import { readFileSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { basename, dirname, join, relative } from "node:path";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(here, "..");
+// Both "Enums" and "enums" exist in-tree (Windows merges them; Linux does not).
+// Scan every directory whose name case-folds to "enums" so the vocab is
+// complete on case-sensitive filesystems too.
+const enumsDirs = readdirSync(join(repoRoot, "Motely"), { withFileTypes: true })
+    .filter((d) => d.isDirectory() && d.name.toLowerCase() === "enums")
+    .map((d) => join(repoRoot, "Motely", d.name));
+const modelsFile = join(repoRoot, "Motely", "Filters", "Jaml", "JamlConfigLoader.Models.cs");
+const rawParseFile = join(repoRoot, "Motely", "Filters", "Jaml", "JamlConfigLoader.RawParse.cs");
+
+// ── Enums ───────────────────────────────────────────────────────────────────
+
+function stripCs(src) {
+    return src
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/.*$/gm, "")
+        .replace(/\[[^\]]*\]/g, "");
+}
+
+/** @returns {Record<string, string[]>} enum name → member names */
+function extractEnums(src) {
+    const out = {};
+    const re = /\benum\s+([A-Za-z_]\w*)\s*(?::\s*[A-Za-z_][\w.]*\s*)?\{([^}]*)\}/g;
+    for (let m; (m = re.exec(src)) !== null; ) {
+        const members = stripCs(m[2])
+            .split(",")
+            .map((s) => s.split("=")[0].trim())
+            .filter((id) => /^[A-Za-z_]\w*$/.test(id));
+        if (members.length) out[m[1]] = members;
+    }
+    return out;
+}
+
+const enums = {};
+const enumFiles = enumsDirs
+    .flatMap((dir) => readdirSync(dir).filter((f) => f.endsWith(".cs")).map((f) => join(dir, f)))
+    .sort((a, b) => {
+        // Ordinal compare on the file name (dir-independent), matching the
+        // NTFS directory order the vocab was originally generated with.
+        const an = basename(a);
+        const bn = basename(b);
+        return an < bn ? -1 : an > bn ? 1 : 0;
+    });
+for (const f of enumFiles) {
+    Object.assign(enums, extractEnums(stripCs(readFileSync(f, "utf8"))));
+}
+
+// ── Keys (JamlClauseUnion / JamlSources / JamlDefaults / StandardCardConfig) ─
+
+const modelsSrc = readFileSync(modelsFile, "utf8");
+
+/** Split per type so keys are attributed to the right table. */
+function classBody(name) {
+    const start = modelsSrc.search(new RegExp(`(class|struct)\\s+${name}\\b`));
+    if (start < 0) throw new Error(`type ${name} not found in Models.cs`);
+    const rest = modelsSrc.slice(start);
+    const next = rest.slice(10).search(/\b(public\s+sealed\s+class|public\s+struct)\s+\w+/);
+    return next < 0 ? rest : rest.slice(0, next + 10);
+}
+
+/** C# property type → value shape the editor cares about. */
+function shapeOf(csType) {
+    const t = csType.replace(/\?$/, "");
+    let m;
+    if ((m = t.match(/^EnumOrAny<(\w+)>$/))) return { enum: m[1], any: true };
+    if ((m = t.match(/^List<(\w+)>$/)) && enums[m[1]]) return { enum: m[1], list: true };
+    if ((m = t.match(/^(\w+)\[\]$/)) && enums[m[1]]) return { enum: m[1], list: true };
+    if (enums[t]) return { enum: t };
+    if (t === "int[]") return { type: "int[]" };
+    if (t === "int") return { type: "int" };
+    if (t === "bool") return { type: "bool" };
+    if (t === "string") return { type: "string" };
+    return { type: "object" }; // StandardCardValue, JamlSources, List<JamlClauseUnion>, …
+}
+
+/** @returns {Array<{key:string, csType:string, shape:object}>} */
+function extractKeys(typeName) {
+    const body = classBody(typeName);
+    const re = /\[YamlMember\(Alias = "([^"]+)"\)\]\s*public\s+([\w.<>\[\],?]+)\s+\w+/g;
+    const keys = [];
+    for (let m; (m = re.exec(body)) !== null; ) {
+        keys.push({ key: m[1], csType: m[2], shape: shapeOf(m[2]) });
+    }
+    return keys;
+}
+
+const clauseKeys = extractKeys("JamlClauseUnion");
+const sourceKeys = extractKeys("JamlSources");
+const defaultsKeys = extractKeys("JamlDefaults");
+
+// Root keys: the AllowedRootKeys frozen set in RawParse.cs.
+const rawParseSrc = readFileSync(rawParseFile, "utf8");
+const rootMatch = rawParseSrc.match(/AllowedRootKeys = new\[\]\s*\{([^}]*)\}/);
+if (!rootMatch) throw new Error("AllowedRootKeys not found in RawParse.cs");
+const rootKeys = [...rootMatch[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+
+// deck/stake are `string` on the C# DTO but their values are these enums:
+const rootValueEnums = { deck: "MotelyDeck", stake: "MotelyStake" };
+
+// ── Emit src/generated.ts ───────────────────────────────────────────────────
+
+const banner = `// AUTO-GENERATED by jaml-lang/generate.mjs — DO NOT EDIT.
+// Source of truth: the Motely engine (Motely/Enums, JamlConfigLoader.Models.cs).
+// Regenerated on every Motely.Wasm build.
+
+`;
+
+let ts = banner;
+ts += `export const Enums: Record<string, readonly string[]> = {\n`;
+for (const name of Object.keys(enums).sort()) {
+    ts += `    ${name}: [${enums[name].map((v) => JSON.stringify(v)).join(", ")}],\n`;
+}
+ts += `};\n\n`;
+ts += `export interface KeyInfo {\n    key: string;\n    csType: string;\n    shape: { enum?: string; any?: boolean; list?: boolean; type?: string };\n}\n\n`;
+const emitKeys = (name, keys) =>
+    `export const ${name}: readonly KeyInfo[] = ${JSON.stringify(keys, null, 4)};\n\n`;
+ts += emitKeys("ClauseKeys", clauseKeys);
+ts += emitKeys("SourceKeys", sourceKeys);
+ts += emitKeys("DefaultsKeys", defaultsKeys);
+ts += `export const RootKeys: readonly string[] = ${JSON.stringify(rootKeys)};\n\n`;
+ts += `export const RootValueEnums: Record<string, string> = ${JSON.stringify(rootValueEnums)};\n`;
+
+mkdirSync(join(here, "src"), { recursive: true });
+writeFileSync(join(here, "src", "generated.ts"), ts);
+
+// ── Emit the TextMate grammar ───────────────────────────────────────────────
+
+const alt = (words) => `\\b(?:${[...new Set(words)].join("|")})\\b`;
+const allEnumMembers = Object.values(enums).flat();
+const allKeys = [
+    ...rootKeys,
+    ...clauseKeys.map((k) => k.key),
+    ...sourceKeys.map((k) => k.key),
+    "and",
+    "or",
+    "clauses",
+];
+
+const grammar = {
+    $schema:
+        "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    name: "JAML",
+    scopeName: "source.jaml",
+    patterns: [
+        { match: "#.*$", name: "comment.line.number-sign.jaml" },
+        {
+            match: `^\\s*(?:-\\s*)?(${[...new Set(allKeys)].join("|")})(?=\\s*:)`,
+            name: "keyword.control.jaml",
+        },
+        { match: alt(allEnumMembers.concat(["Any"])), name: "support.constant.jaml" },
+        { match: "\\b(?:true|false)\\b", name: "constant.language.boolean.jaml" },
+        { match: "\\b\\d+\\b", name: "constant.numeric.jaml" },
+        { match: '"[^"]*"', name: "string.quoted.double.jaml" },
+        { match: "'[^']*'", name: "string.quoted.single.jaml" },
+    ],
+};
+
+const grammarPath = join(repoRoot, "jaml-lsp", "syntaxes", "jaml.tmLanguage.json");
+mkdirSync(dirname(grammarPath), { recursive: true });
+writeFileSync(grammarPath, JSON.stringify(grammar, null, 2) + "\n");
+
+console.log(`wrote ${relative(repoRoot, join(here, "src", "generated.ts"))}`);
+console.log(`wrote ${relative(repoRoot, grammarPath)}`);
+console.log(
+    `enums=${Object.keys(enums).length} clauseKeys=${clauseKeys.length} sourceKeys=${sourceKeys.length} rootKeys=${rootKeys.length}`
+);
