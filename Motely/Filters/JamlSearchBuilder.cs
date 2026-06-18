@@ -447,8 +447,6 @@ public static class JamlSearchBuilder
                 new MotelySearchSettings<ErraticRankFilterDesc.ErraticRankFilter>(d),
             ErraticSuitFilterDesc d =>
                 new MotelySearchSettings<ErraticSuitFilterDesc.ErraticSuitFilter>(d),
-            ErraticCardFilterDesc d =>
-                new MotelySearchSettings<ErraticCardFilterDesc.ErraticCardFilter>(d),
             LuckyMoneyFilterDesc d =>
                 new MotelySearchSettings<LuckyMoneyFilterDesc.LuckyMoneyFilter>(d),
             LuckyMultFilterDesc d => new MotelySearchSettings<LuckyMultFilterDesc.LuckyMultFilter>(

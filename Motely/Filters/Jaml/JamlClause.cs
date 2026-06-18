@@ -72,7 +72,6 @@ public static class JamlClauseExtensions
             TagClause c => new TagFilterDesc(c),
             ErraticRankClause c => new ErraticRankFilterDesc(c),
             ErraticSuitClause c => new ErraticSuitFilterDesc(c),
-            ErraticCardClause c => new ErraticCardFilterDesc(c),
             LuckyMoneyClause c => new LuckyMoneyFilterDesc(c),
             LuckyMultClause c => new LuckyMultFilterDesc(c),
             MisprintMultClause c => new MisprintMultFilterDesc(c),

@@ -17,6 +17,30 @@ public static partial class JamlConfigLoader
 {
     private static readonly int[] DefaultAntes = [1, 2, 3, 4, 5, 6, 7, 8];
 
+    private enum JamlClauseKind
+    {
+        Joker,
+        CommonJoker,
+        UncommonJoker,
+        RareJoker,
+        LegendaryJoker,
+        Voucher,
+        TarotCard,
+        SpectralCard,
+        PlanetCard,
+        Boss,
+        SmallBlindTag,
+        BigBlindTag,
+        Tag,
+        StandardCard,
+        ErraticRank,
+        ErraticSuit,
+        StartingDraw,
+        Event,
+        And,
+        Or,
+    }
+
     public static JamlConfig FromYaml(string jaml)
     {
         if (!TryLoad(jaml, out var config, out var error))
@@ -584,7 +608,7 @@ public static partial class JamlConfigLoader
 
         return itemType switch
         {
-            MotelyFilterItemType.Joker => new JokerClause
+            JamlClauseKind.Joker => new JokerClause
             {
                 Label = label,
                 Score = score,
@@ -621,7 +645,7 @@ public static partial class JamlConfigLoader
                     hasExplicitSources
                 ),
             },
-            MotelyFilterItemType.CommonJoker => new CommonJokerClause
+            JamlClauseKind.CommonJoker => new CommonJokerClause
             {
                 Label = label,
                 Score = score,
@@ -649,7 +673,7 @@ public static partial class JamlConfigLoader
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
-            MotelyFilterItemType.UncommonJoker => new UncommonJokerClause
+            JamlClauseKind.UncommonJoker => new UncommonJokerClause
             {
                 Label = label,
                 Score = score,
@@ -677,7 +701,7 @@ public static partial class JamlConfigLoader
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
-            MotelyFilterItemType.RareJoker => new RareJokerClause
+            JamlClauseKind.RareJoker => new RareJokerClause
             {
                 Label = label,
                 Score = score,
@@ -705,7 +729,7 @@ public static partial class JamlConfigLoader
                     AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
-            MotelyFilterItemType.LegendaryJoker => new LegendaryJokerClause
+            JamlClauseKind.LegendaryJoker => new LegendaryJokerClause
             {
                 Label = label,
                 Score = score,
@@ -729,7 +753,7 @@ public static partial class JamlConfigLoader
                     hasExplicitSources
                 ),
             },
-            MotelyFilterItemType.Voucher => new VoucherClause
+            JamlClauseKind.Voucher => new VoucherClause
             {
                 Label = label,
                 Score = score,
@@ -744,7 +768,7 @@ public static partial class JamlConfigLoader
                     "voucher"
                 ),
             },
-            MotelyFilterItemType.TarotCard => new TarotCardClause
+            JamlClauseKind.TarotCard => new TarotCardClause
             {
                 Label = label,
                 Score = score,
@@ -761,7 +785,7 @@ public static partial class JamlConfigLoader
                     CharmTag = c.Sources?.CharmTag ?? false,
                 },
             },
-            MotelyFilterItemType.SpectralCard => new SpectralCardClause
+            JamlClauseKind.SpectralCard => new SpectralCardClause
             {
                 Label = label,
                 Score = score,
@@ -778,7 +802,7 @@ public static partial class JamlConfigLoader
                     EtherealTag = c.Sources?.EtherealTag ?? false,
                 },
             },
-            MotelyFilterItemType.PlanetCard => new PlanetCardClause
+            JamlClauseKind.PlanetCard => new PlanetCardClause
             {
                 Label = label,
                 Score = score,
@@ -792,7 +816,7 @@ public static partial class JamlConfigLoader
                     BoosterPacks = boosterPacks ?? [],
                 },
             },
-            MotelyFilterItemType.Boss => new BossClause
+            JamlClauseKind.Boss => new BossClause
             {
                 Label = label,
                 Score = score,
@@ -807,7 +831,7 @@ public static partial class JamlConfigLoader
                     "boss"
                 ),
             },
-            MotelyFilterItemType.SmallBlindTag => CreateTagClause(
+            JamlClauseKind.SmallBlindTag => CreateTagClause(
                 label,
                 score,
                 antes,
@@ -824,7 +848,7 @@ public static partial class JamlConfigLoader
                 c.SmallBlindTag,
                 c.Tag
             ),
-            MotelyFilterItemType.BigBlindTag => CreateTagClause(
+            JamlClauseKind.BigBlindTag => CreateTagClause(
                 label,
                 score,
                 antes,
@@ -834,7 +858,7 @@ public static partial class JamlConfigLoader
                 c.BigBlindTags,
                 singlePrimary: c.BigBlindTag
             ),
-            MotelyFilterItemType.Standardcard => new StandardCardClause
+            JamlClauseKind.StandardCard => new StandardCardClause
             {
                 Label = label,
                 Score = score,
@@ -866,7 +890,7 @@ public static partial class JamlConfigLoader
                         c.StandardCard?.ObjectValue?.Sources?.DeckDraw ?? c.Sources?.DeckDraw ?? [],
                 },
             },
-            MotelyFilterItemType.ErraticRank => new ErraticRankClause
+            JamlClauseKind.ErraticRank => new ErraticRankClause
             {
                 Label = label,
                 Score = score,
@@ -877,7 +901,7 @@ public static partial class JamlConfigLoader
                     ParseRank(c.Rank ?? value)
                     ?? throw new NotSupportedException("ErraticRank clause requires a rank value."),
             },
-            MotelyFilterItemType.ErraticSuit => new ErraticSuitClause
+            JamlClauseKind.ErraticSuit => new ErraticSuitClause
             {
                 Label = label,
                 Score = score,
@@ -888,15 +912,7 @@ public static partial class JamlConfigLoader
                     ParseSuit(c.Suit ?? value)
                     ?? throw new NotSupportedException("ErraticSuit clause requires a suit value."),
             },
-            MotelyFilterItemType.ErraticCard => CreateErraticCardClause(
-                c,
-                value,
-                antes,
-                min,
-                score,
-                max
-            ),
-            MotelyFilterItemType.StartingDraw => new StartingDrawClause
+            JamlClauseKind.StartingDraw => new StartingDrawClause
             {
                 Label = label,
                 Score = score,
@@ -906,7 +922,7 @@ public static partial class JamlConfigLoader
                 Rank = ParseRank(c.Rank) ?? shRank,
                 Suit = ParseSuit(c.Suit) ?? shSuit,
             },
-            MotelyFilterItemType.Event => CreateEventClause(
+            JamlClauseKind.Event => CreateEventClause(
                 ResolveEventType(c),
                 ResolveEventRolls(c),
                 c.Sources?.Luck,
@@ -919,42 +935,6 @@ public static partial class JamlConfigLoader
             ),
             _ => throw new NotSupportedException($"Unsupported clause type: {itemType}"),
         };
-    }
-
-    private static ErraticCardClause CreateErraticCardClause(
-        JamlClauseUnion c,
-        string? value,
-        int[] antes,
-        int min,
-        int score,
-        int? max
-    )
-    {
-        var (shRank, shSuit) = ParseCardShorthand(value ?? "");
-        var rank = ParseRank(c.Rank) ?? shRank;
-        var suit = ParseSuit(c.Suit) ?? shSuit;
-
-        if (rank != null && suit != null)
-        {
-            return new ErraticCardClause
-            {
-                Score = score,
-                Antes = antes,
-                Min = min,
-                Max = max,
-                Rank = rank.Value,
-                Suit = suit.Value,
-            };
-        }
-        // If not both, we can't create ErraticCardClause. But ResolveType logic mapped rank-only to ErraticRank, etc.
-        // If we got here with itemType == ErraticCard, we expect both OR explicit 'ErraticCard' type tag.
-        // But if user provided Rank OR Suit only, ResolveType mapped to ErraticRank/Suit.
-        // So this method ONLY handles the true ErraticCard case (both present).
-        // Wait, ResolveType maps c.ErraticCard != null -> ErraticCard.
-        // What if c.ErraticCard (key) is used but only rank provided?
-        // We should throw or handle.
-        // I will throw if incomplete, because if it was mapped here, user intended ErraticCard.
-        throw new NotSupportedException("ErraticCard clause requires both Rank and Suit.");
     }
 
     private static RollClause CreateEventClause(
@@ -1107,22 +1087,19 @@ public static partial class JamlConfigLoader
     }
 
     private static MotelyEventType? ResolveEventType(JamlClauseUnion c) =>
-        c.Event
-        ?? (
-            c.LuckyMoney != null ? MotelyEventType.LuckyMoney
-            : c.LuckyMult != null ? MotelyEventType.LuckyMult
-            : c.MisprintMult != null ? MotelyEventType.MisprintMult
-            : c.WheelOfFortune != null ? MotelyEventType.WheelOfFortune
-            : c.CavendishExtinct != null ? MotelyEventType.CavendishExtinct
-            : c.GrosMichelExtinct != null ? MotelyEventType.GrosMichelExtinct
-            : c.SpaceLevelup != null ? MotelyEventType.SpaceLevelup
-            : c.BusinessPayout != null ? MotelyEventType.BusinessPayout
-            : c.BloodstoneTrigger != null ? MotelyEventType.BloodstoneTrigger
-            : c.ParkingPayout != null ? MotelyEventType.ParkingPayout
-            : c.GlassDestroy != null ? MotelyEventType.GlassDestroy
-            : c.WheelStaysFlipped != null ? MotelyEventType.WheelStaysFlipped
-            : (MotelyEventType?)null
-        );
+        c.LuckyMoney != null ? MotelyEventType.LuckyMoney
+        : c.LuckyMult != null ? MotelyEventType.LuckyMult
+        : c.MisprintMult != null ? MotelyEventType.MisprintMult
+        : c.WheelOfFortune != null ? MotelyEventType.WheelOfFortune
+        : c.CavendishExtinct != null ? MotelyEventType.CavendishExtinct
+        : c.GrosMichelExtinct != null ? MotelyEventType.GrosMichelExtinct
+        : c.SpaceLevelup != null ? MotelyEventType.SpaceLevelup
+        : c.BusinessPayout != null ? MotelyEventType.BusinessPayout
+        : c.BloodstoneTrigger != null ? MotelyEventType.BloodstoneTrigger
+        : c.ParkingPayout != null ? MotelyEventType.ParkingPayout
+        : c.GlassDestroy != null ? MotelyEventType.GlassDestroy
+        : c.WheelStaysFlipped != null ? MotelyEventType.WheelStaysFlipped
+        : (MotelyEventType?)null;
 
     private static int[]? ResolveEventRolls(JamlClauseUnion c) =>
         c.Rolls
@@ -1173,7 +1150,7 @@ public static partial class JamlConfigLoader
     private static void NormalizeDefaultSources(
         ref int[]? shopItems,
         ref int[]? boosterPacks,
-        MotelyFilterItemType itemType,
+        JamlClauseKind itemType,
         bool hasExplicitSources
     )
     {
@@ -1186,19 +1163,19 @@ public static partial class JamlConfigLoader
 
         switch (itemType)
         {
-            case MotelyFilterItemType.Joker:
-            case MotelyFilterItemType.CommonJoker:
-            case MotelyFilterItemType.UncommonJoker:
-            case MotelyFilterItemType.RareJoker:
+            case JamlClauseKind.Joker:
+            case JamlClauseKind.CommonJoker:
+            case JamlClauseKind.UncommonJoker:
+            case JamlClauseKind.RareJoker:
                 shopItems = [0, 1, 2, 3];
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
 
-            case MotelyFilterItemType.LegendaryJoker:
+            case JamlClauseKind.LegendaryJoker:
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
 
-            case MotelyFilterItemType.Standardcard:
+            case JamlClauseKind.StandardCard:
                 // Standard cards (ranked + suited playing cards) come out of standard booster
                 // packs in the shop pack stream — same default range as joker types so a bare
                 // `standardCard: { rank: King }` matches every shop pack slot at the targeted
@@ -1206,9 +1183,9 @@ public static partial class JamlConfigLoader
                 boosterPacks = [0, 1, 2, 3, 4, 5];
                 break;
 
-            case MotelyFilterItemType.TarotCard:
-            case MotelyFilterItemType.SpectralCard:
-            case MotelyFilterItemType.PlanetCard:
+            case JamlClauseKind.TarotCard:
+            case JamlClauseKind.SpectralCard:
+            case JamlClauseKind.PlanetCard:
                 // Consumables show up both in the shop's consumable slots and in their booster
                 // packs (Arcana / Spectral / Celestial). Without this case a bare
                 // `tarotCard: TheFool` defaulted to NO sources and matched nothing — the same
@@ -1291,12 +1268,8 @@ public static partial class JamlConfigLoader
             return $"Erratic {LabelRank(c.ErraticRank)}";
         if (c.ErraticSuit != null)
             return $"Erratic {LabelSuit(c.ErraticSuit)}";
-        if (c.ErraticCard != null)
-            return FormatUtils.FormatDisplayName(c.ErraticCard);
         if (c.StartingDraw != null)
             return FormatUtils.FormatDisplayName(c.StartingDraw);
-        if (c.Event is { } eventValue)
-            return FormatUtils.FormatDisplayName(eventValue.ToString());
         if (c.LuckyMoney != null)
             return "Lucky Money";
         if (c.LuckyMult != null)
@@ -1406,9 +1379,7 @@ public static partial class JamlConfigLoader
         Mark("standardCards", c.StandardCards != null);
         Mark("erraticRank", c.ErraticRank != null);
         Mark("erraticSuit", c.ErraticSuit != null);
-        Mark("erraticCard", c.ErraticCard != null);
         Mark("startingDraw", c.StartingDraw != null);
-        Mark("event", c.Event != null);
         Mark("luckyMoney", c.LuckyMoney != null);
         Mark("luckyMult", c.LuckyMult != null);
         Mark("misprintMult", c.MisprintMult != null);
@@ -1434,71 +1405,67 @@ public static partial class JamlConfigLoader
 
     // ── Resolve type from shorthand keys or explicit type field ──
 
-    private static (MotelyFilterItemType itemType, string? value) ResolveType(JamlClauseUnion c)
+    private static (JamlClauseKind itemType, string? value) ResolveType(JamlClauseUnion c)
     {
         // Shorthand keys (type-as-key) — check each one
         if (c.Joker != null)
-            return (MotelyFilterItemType.Joker, null);
+            return (JamlClauseKind.Joker, null);
         if (c.Jokers != null)
-            return (MotelyFilterItemType.Joker, null); // plural
+            return (JamlClauseKind.Joker, null); // plural
         if (c.CommonJoker != null)
-            return (MotelyFilterItemType.CommonJoker, null);
+            return (JamlClauseKind.CommonJoker, null);
         if (c.CommonJokers != null)
-            return (MotelyFilterItemType.CommonJoker, null);
+            return (JamlClauseKind.CommonJoker, null);
         if (c.UncommonJoker != null)
-            return (MotelyFilterItemType.UncommonJoker, null);
+            return (JamlClauseKind.UncommonJoker, null);
         if (c.UncommonJokers != null)
-            return (MotelyFilterItemType.UncommonJoker, null);
+            return (JamlClauseKind.UncommonJoker, null);
         if (c.RareJoker != null)
-            return (MotelyFilterItemType.RareJoker, null);
+            return (JamlClauseKind.RareJoker, null);
         if (c.RareJokers != null)
-            return (MotelyFilterItemType.RareJoker, null);
+            return (JamlClauseKind.RareJoker, null);
         if (c.LegendaryJoker != null)
-            return (MotelyFilterItemType.LegendaryJoker, null);
+            return (JamlClauseKind.LegendaryJoker, null);
         if (c.LegendaryJokers != null)
-            return (MotelyFilterItemType.LegendaryJoker, null);
+            return (JamlClauseKind.LegendaryJoker, null);
         if (c.Voucher != null)
-            return (MotelyFilterItemType.Voucher, null);
+            return (JamlClauseKind.Voucher, null);
         if (c.Vouchers != null)
-            return (MotelyFilterItemType.Voucher, null);
+            return (JamlClauseKind.Voucher, null);
         if (c.TarotCard != null)
-            return (MotelyFilterItemType.TarotCard, null);
+            return (JamlClauseKind.TarotCard, null);
         if (c.TarotCards != null)
-            return (MotelyFilterItemType.TarotCard, null);
+            return (JamlClauseKind.TarotCard, null);
         if (c.SpectralCard != null)
-            return (MotelyFilterItemType.SpectralCard, null);
+            return (JamlClauseKind.SpectralCard, null);
         if (c.SpectralCards != null)
-            return (MotelyFilterItemType.SpectralCard, null);
+            return (JamlClauseKind.SpectralCard, null);
         if (c.PlanetCard != null)
-            return (MotelyFilterItemType.PlanetCard, null);
+            return (JamlClauseKind.PlanetCard, null);
         if (c.Boss != null)
-            return (MotelyFilterItemType.Boss, null);
+            return (JamlClauseKind.Boss, null);
         if (c.Tag != null)
-            return (MotelyFilterItemType.SmallBlindTag, null);
+            return (JamlClauseKind.SmallBlindTag, null);
         if (c.Tags != null)
-            return (MotelyFilterItemType.SmallBlindTag, null);
+            return (JamlClauseKind.SmallBlindTag, null);
         if (c.SmallBlindTag != null)
-            return (MotelyFilterItemType.SmallBlindTag, null);
+            return (JamlClauseKind.SmallBlindTag, null);
         if (c.SmallBlindTags != null)
-            return (MotelyFilterItemType.SmallBlindTag, null);
+            return (JamlClauseKind.SmallBlindTag, null);
         if (c.BigBlindTag != null)
-            return (MotelyFilterItemType.BigBlindTag, null);
+            return (JamlClauseKind.BigBlindTag, null);
         if (c.BigBlindTags != null)
-            return (MotelyFilterItemType.BigBlindTag, null);
+            return (JamlClauseKind.BigBlindTag, null);
         if (c.StandardCard != null)
-            return (MotelyFilterItemType.Standardcard, c.StandardCard.Value.StringValue);
+            return (JamlClauseKind.StandardCard, c.StandardCard.Value.StringValue);
         if (c.StandardCards != null)
-            return (MotelyFilterItemType.Standardcard, null);
+            return (JamlClauseKind.StandardCard, null);
         if (c.ErraticRank != null)
-            return (MotelyFilterItemType.ErraticRank, c.ErraticRank);
+            return (JamlClauseKind.ErraticRank, c.ErraticRank);
         if (c.ErraticSuit != null)
-            return (MotelyFilterItemType.ErraticSuit, c.ErraticSuit);
-        if (c.ErraticCard != null)
-            return (MotelyFilterItemType.ErraticCard, c.ErraticCard);
+            return (JamlClauseKind.ErraticSuit, c.ErraticSuit);
         if (c.StartingDraw != null)
-            return (MotelyFilterItemType.StartingDraw, c.StartingDraw);
-        if (c.Event != null)
-            return (MotelyFilterItemType.Event, null);
+            return (JamlClauseKind.StartingDraw, c.StartingDraw);
         if (
             c.LuckyMoney != null
             || c.LuckyMult != null
@@ -1513,7 +1480,7 @@ public static partial class JamlConfigLoader
             || c.GlassDestroy != null
             || c.WheelStaysFlipped != null
         )
-            return (MotelyFilterItemType.Event, null);
+            return (JamlClauseKind.Event, null);
 
         throw new InvalidOperationException("Clause is missing a recognized clause key or type.");
     }

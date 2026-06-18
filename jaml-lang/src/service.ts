@@ -286,7 +286,7 @@ export function getDocumentSymbols(text: string): DocumentSymbol[] {
             if (!isPair(item) || !isScalar(item.key)) continue;
             const key = String((item.key as Scalar).value);
             if (key === "and" || key === "or") return key;
-            if (clauseKeyMap.get(key)?.shape.enum || key === "standardCard" || key === "event") {
+            if (clauseKeyMap.get(key)?.shape.enum || key === "standardCard") {
                 const v = isScalar(item.value) ? String((item.value as Scalar).value) : "";
                 return v ? `${key}: ${v}` : key;
             }

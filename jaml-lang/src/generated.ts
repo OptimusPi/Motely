@@ -12,7 +12,6 @@ export const Enums: Record<string, readonly string[]> = {
     MotelyBossBlindWithoutData: ["AmberAcorn", "CeruleanBell", "CrimsonHeart", "VerdantLeaf", "VioletVessel", "TheArm", "TheClub", "TheEye", "TheFish", "TheFlint", "TheGoad", "TheHead", "TheHook", "TheHouse", "TheManacle", "TheMark", "TheMouth", "TheNeedle", "TheOx", "ThePillar", "ThePlant", "ThePsychic", "TheSerpent", "TheTooth", "TheWall", "TheWater", "TheWheel", "TheWindow"],
     MotelyDeck: ["Red", "Blue", "Yellow", "Green", "Black", "Magic", "Nebula", "Ghost", "Abandoned", "Checkered", "Zodiac", "Painted", "Anaglyph", "Plasma", "Erratic"],
     MotelyEventType: ["LuckyMoney", "LuckyMult", "MisprintMult", "WheelOfFortune", "CavendishExtinct", "GrosMichelExtinct", "SpaceLevelup", "BusinessPayout", "BloodstoneTrigger", "ParkingPayout", "GlassDestroy", "WheelStaysFlipped"],
-    MotelyFilterItemType: ["Joker", "CommonJoker", "UncommonJoker", "RareJoker", "MixedJoker", "LegendaryJoker", "TarotCard", "PlanetCard", "SpectralCard", "SmallBlindTag", "BigBlindTag", "Voucher", "Standardcard", "Boss", "Event", "ErraticRank", "ErraticSuit", "ErraticCard", "CavendishExtinct", "GrosMichelExtinct", "StartingDraw", "And", "Or"],
     MotelyItemEdition: ["None", "Foil", "Holographic", "Polychrome", "Negative"],
     MotelyItemEnhancement: ["None", "Bonus", "Mult", "Wild", "Glass", "Steel", "Stone", "Gold", "Lucky"],
     MotelyItemSeal: ["None", "Gold", "Red", "Blue", "Purple"],
@@ -257,24 +256,10 @@ export const ClauseKeys: readonly KeyInfo[] = [
         }
     },
     {
-        "key": "erraticCard",
-        "csType": "string?",
-        "shape": {
-            "type": "string"
-        }
-    },
-    {
         "key": "startingDraw",
         "csType": "string?",
         "shape": {
             "type": "string"
-        }
-    },
-    {
-        "key": "event",
-        "csType": "MotelyEventType?",
-        "shape": {
-            "enum": "MotelyEventType"
         }
     },
     {

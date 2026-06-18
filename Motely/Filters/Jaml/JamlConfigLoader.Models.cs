@@ -148,14 +148,8 @@ public sealed class JamlClauseUnion
     [YamlMember(Alias = "erraticSuit")]
     public string? ErraticSuit { get; set; }
 
-    [YamlMember(Alias = "erraticCard")]
-    public string? ErraticCard { get; set; }
-
     [YamlMember(Alias = "startingDraw")]
     public string? StartingDraw { get; set; }
-
-    [YamlMember(Alias = "event")]
-    public MotelyEventType? Event { get; set; }
 
     [YamlMember(Alias = "luckyMoney")]
     public int[]? LuckyMoney { get; set; }

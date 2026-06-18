@@ -94,7 +94,6 @@ public static class JamlScoring
             StandardCardClause c => CountStandardCardOccurrences(ref ctx, c, ref runState),
             ErraticRankClause c => CountErraticRankOccurrences(ref ctx, c),
             ErraticSuitClause c => CountErraticSuitOccurrences(ref ctx, c),
-            ErraticCardClause c => CountErraticCardOccurrences(ref ctx, c),
             LuckyMoneyClause c => CountLuckyMoneyOccurrences(ref ctx, c, ref runState),
             LuckyMultClause c => CountLuckyMultOccurrences(ref ctx, c, ref runState),
             MisprintMultClause c => CountMisprintMultOccurrences(ref ctx, c),
@@ -853,25 +852,6 @@ public static class JamlScoring
         for (int i = 0; i < 52; i++)
             if (ctx.GetNextErraticDeckCard(ref stream).StandardcardSuit == clause.Suit)
                 count++;
-        return count;
-    }
-
-    private static int CountErraticCardOccurrences(
-        ref MotelySingleSearchContext ctx,
-        ErraticCardClause clause
-    )
-    {
-        int count = 0;
-        var stream = ctx.CreateErraticDeckPrngStream();
-        for (int i = 0; i < 52; i++)
-        {
-            var card = ctx.GetNextErraticDeckCard(ref stream);
-            if (
-                (!clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value)
-                && (!clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value)
-            )
-                count++;
-        }
         return count;
     }
 
@@ -1855,7 +1835,6 @@ public static class JamlScoring
             StandardCardClause c => ArrayMax(c.Antes),
             ErraticRankClause c => ArrayMax(c.Antes),
             ErraticSuitClause c => ArrayMax(c.Antes),
-            ErraticCardClause c => ArrayMax(c.Antes),
             StartingDrawClause c => ArrayMax(c.Antes),
             AndClause c => MaxNestedAnte(c.Clauses),
             OrClause c => MaxNestedAnte(c.Clauses),

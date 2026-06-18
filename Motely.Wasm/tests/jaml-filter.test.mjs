@@ -95,7 +95,7 @@ runClauseCases("JamlFilterDesc — standard card filters", [
 
 runClauseCases(
     "JamlFilterDesc — erratic deck filters",
-    ["erraticRank: A", "erraticSuit: Spades", "erraticCard: SA"],
+    ["erraticRank: A", "erraticSuit: Spades"],
     (clause) => `deck: Erratic\n${mustClause(clause)}`,
 );
 
@@ -104,12 +104,12 @@ runClauseCases("JamlFilterDesc — starting draw filters", [
 ]);
 
 runClauseCases("JamlFilterDesc — event filters", [
-    "event: LuckyMoney",
-    "event: LuckyMult",
-    "event: MisprintMult",
-    "event: WheelOfFortune",
-    "event: CavendishExtinct",
-    "event: GrosMichelExtinct",
+    "luckyMoney: [0]",
+    "luckyMult: [0]",
+    "misprintMult: [0]",
+    "wheelOfFortune: [0]",
+    "cavendishExtinct: [0]",
+    "grosMichelExtinct: [0]",
 ]);
 
 describe("JamlFilterDesc — sources targeting", () => {
