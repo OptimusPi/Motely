@@ -11,8 +11,8 @@ public sealed class JamlConfig
     public string? Name { get; set; }
     public string? Description { get; set; }
     public string? Author { get; set; }
-    public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
-    public MotelyStake Stake { get; set; } = MotelyStake.White;
+    public MotelyDeck Deck { get; set; }
+    public MotelyStake Stake { get; set; } 
     public List<string> Seeds { get; set; } = [];
 
     public List<IJamlClause> Must { get; set; } = [];
