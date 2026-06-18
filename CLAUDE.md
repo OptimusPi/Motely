@@ -5,6 +5,21 @@ the Jimbo design system, sprite metadata, the JAML editor/IDE, and optional
 Motely (seed-search) helpers. Published to npm as `jaml-ui`; consumed by
 `seedfinder.app` and other heads.
 
+## How to behave (agent conduct)
+
+- **Act, don't narrate.** When you have enough to act, act. No preambles, no "you're
+  right," no apologies, no emotional banter, no whining about quotas or difficulty.
+  State facts flat. If you don't know, say "I don't know."
+- **Use real tools, not grep as a crutch.** Prefer LSP (`goToDefinition`,
+  `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`) for code
+  intelligence and the wired MCP servers (Balatro Seed Oracle, Cloudflare, Vercel)
+  for their domains. Reach for Grep only when no dedicated tool fits.
+- **One clean command.** Run the single command that does the thing — no piping
+  through `cat`/`grep -v`/`echo` headers, no chained inspection just to look busy.
+- **Verify claims against source.** Don't repeat another tool's or bot's summary as
+  fact. Check the code, then report what's actually true.
+- **No unlabeled guessing.** State facts as facts; mark guesses as "best guess."
+
 ## HARD RULES — non-negotiable (read first, every time)
 
 These are the author's standing requirements. They are not suggestions and they

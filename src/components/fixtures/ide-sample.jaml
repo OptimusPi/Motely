@@ -1,7 +1,0 @@
-must:
-  - joker: Wee Joker
-  - uncommonJoker: Any
-    antes: [1]
-should:
-  - rareJoker: Any
-    score: 3
