@@ -1,0 +1,95 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   jimbo-tokens.css — Balatro Design Tokens
+   ~80 lines. Eyedropped from game shader output. No component classes.
+   Components use these via inline style={{ color: 'var(--j-red)' }} or
+   a tiny utility class (e.g. .j-red) if they prefer.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@import '../../fonts.css';
+
+:root {
+  /* ── Palette ── */
+  --j-red:        #fe5148;
+  --j-blue:       #0093ff;
+  --j-green:      #429f79;
+  --j-orange:     #ff9800;
+  --j-gold:       #e4b643;
+  --j-purple:     #9e74ce;
+
+  --j-dark-red:   #a02721;
+  --j-dark-blue:  #0057a1;
+  --j-dark-orange:#a05b00;
+  --j-dark-green: #215f46;
+  --j-dark-purple:#5e437e;
+
+  --j-grey:       #a8bcbf;
+  --j-dark-grey:  #3a5055;
+  --j-darkest:    #1e2b2d;
+
+  /* Surfaces */
+  --j-surface:          #3a5055;
+  --j-surface-inset:    #2a3a3f;
+  --j-surface-inset-alt:#324347;
+  --j-panel-edge:       #4a6a70;
+
+  /* ── Typography ── */
+  --j-font:       'm6x11plus', 'm6x11', 'Courier New', monospace;
+  --j-font-code:  'JetBrains Mono', 'Courier New', monospace;
+  --j-text-xs:    10px;
+  --j-text-sm:    12px;
+  --j-text-md:    14px;
+  --j-text-lg:    16px;
+  --j-text-xl:    20px;
+  --j-text-2xl:   24px;
+
+  /* ── Spacing ── */
+  --j-space-1: 4px;
+  --j-space-2: 8px;
+  --j-space-3: 12px;
+  --j-space-4: 16px;
+  --j-space-5: 24px;
+  --j-space-6: 32px;
+
+  /* ── Shape ── */
+  --j-radius:    8px;
+  --j-radius-lg: 12px;
+  --j-shadow:    0 4px 8px rgba(0,0,0,0.35);
+  --j-shadow-lg: 0 8px 16px rgba(0,0,0,0.45);
+
+  /* ── Motion ── */
+  --j-transition: 0.15s ease-out;
+}
+
+/* Global: hide scrollbars, pixel-font default, dark bg */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; }
+
+body {
+  font-family: var(--j-font);
+  background: var(--j-darkest);
+  color: var(--j-grey);
+}
+
+/* ── Tiny utility classes (optional, ~20 lines) ── */
+.j-red   { color: var(--j-red); }
+.j-blue  { color: var(--j-blue); }
+.j-green { color: var(--j-green); }
+.j-gold  { color: var(--j-gold); }
+.j-grey  { color: var(--j-grey); }
+.j-muted { color: var(--j-dark-grey); }
+
+.j-surface       { background: var(--j-surface); }
+.j-surface-inset { background: var(--j-surface-inset); }
+
+.j-text-xs { font-size: var(--j-text-xs); }
+.j-text-sm { font-size: var(--j-text-sm); }
+.j-text-md { font-size: var(--j-text-md); }
+.j-text-lg { font-size: var(--j-text-lg); }
+
+.j-panel {
+  border: 2px solid var(--j-panel-edge);
+  border-radius: var(--j-radius);
+  background: var(--j-surface);
+  padding: var(--j-space-4);
+  box-shadow: var(--j-shadow);
+}

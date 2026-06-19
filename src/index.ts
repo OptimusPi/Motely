@@ -145,3 +145,6 @@ export {
     SPECTRAL_PICKER_CONFIG,
     PACK_PICKER_CONFIG,
 } from "./components/jamlMap/index.js";
+
+// ── json-render v2 — zero-dep JSON-to-React engine ──
+export * from "./json-render/index.js";
