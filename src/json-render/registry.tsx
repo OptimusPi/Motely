@@ -19,6 +19,14 @@ import {
   EditionBadge,
 } from "./components/domain.js";
 import { JamlGameCard } from "./components/game.js";
+import {
+  JokerCard,
+  SynergyCard,
+  BossBlindCard,
+  DeckCard,
+  StakeCard,
+  StrategyAdvisor,
+} from "./components/reference.js";
 
 /**
  * Balatro Component Registry
@@ -50,6 +58,14 @@ export const balatroRegistry: Registry = {
 
   // ── Game Cards ──
   JamlGameCard,
+
+  // ── Encyclopedia ──
+  JokerCard,
+  SynergyCard,
+  BossBlindCard,
+  DeckCard,
+  StakeCard,
+  StrategyAdvisor,
 };
 
 /**

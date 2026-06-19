@@ -1,5 +1,6 @@
 import React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { buildEncyclopediaSpec } from "./index.js";
 import { render, balatroRegistry } from "./index.js";
 import type { JsonNode } from "./index.js";
 import "../ui/jimbo-tokens.css";
@@ -220,6 +221,20 @@ export const LoadingState: Story = {
           },
         ],
       }}
+    />
+  ),
+};
+
+export const EncyclopediaView: Story = {
+  render: () => (
+    <RenderStory
+      spec={buildEncyclopediaSpec({
+        jokers: ["Baron", "Mime", "Blueprint"],
+        decks: ["Black", "Painted"],
+        stakes: ["Gold"],
+        bosses: ["The Plant", "The Manacle"],
+        showStrategies: true,
+      })}
     />
   ),
 };

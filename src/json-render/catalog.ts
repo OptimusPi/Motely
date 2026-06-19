@@ -47,6 +47,18 @@ export const balatroCatalog = defineCatalog({
     props: {} as { size?: number },
     description: "Vertical spacer. Use instead of empty divs with margin.",
   },
+  Divider: {
+    props: {} as { className?: string },
+    description: "Horizontal divider line.",
+  },
+  Badge: {
+    props: {} as {
+      label: string;
+      tone?: "red" | "blue" | "green" | "orange" | "gold" | "purple" | "grey";
+      className?: string;
+    },
+    description: "Small colored badge / pill.",
+  },
 
   // ── Status & Feedback ──
   SearchStats: {
@@ -126,18 +138,49 @@ export const balatroCatalog = defineCatalog({
     description: "Renders a real Balatro card using jaml-ui's sprite system.",
   },
 
-  // ── Layout helpers ──
-  Divider: {
-    props: {} as { className?: string },
-    description: "Horizontal divider line.",
-  },
-  Badge: {
+  // ── Encyclopedia / Reference ──
+  JokerCard: {
     props: {} as {
-      label: string;
-      tone?: "red" | "blue" | "green" | "orange" | "gold" | "purple" | "grey";
-      className?: string;
+      name: string;
+      showSynergies?: boolean;
     },
-    description: "Small colored badge / pill.",
+    description:
+      "Full joker info card: name, rarity, cost, effect, strategy, synergies. Queries the knowledge base.",
+  },
+  SynergyCard: {
+    props: {} as {
+      name: string;
+    },
+    description:
+      "Synergy guide card: jokers involved, setup steps, math breakdown, boss counters, difficulty rating.",
+  },
+  BossBlindCard: {
+    props: {} as {
+      name: string;
+    },
+    description:
+      "Boss blind info card: effect, category, threat level, counters, JAML filter string.",
+  },
+  DeckCard: {
+    props: {} as {
+      name: string;
+    },
+    description:
+      "Deck info card: effect, strategy, synergies, difficulty rating.",
+  },
+  StakeCard: {
+    props: {} as {
+      name: string;
+    },
+    description:
+      "Stake difficulty card: effect, strategy, difficulty rating.",
+  },
+  StrategyAdvisor: {
+    props: {} as {
+      jokers: string[];
+    },
+    description:
+      "Takes a list of joker names and recommends strategies, warns about boss blinds, and suggests synergies.",
   },
 });
 
