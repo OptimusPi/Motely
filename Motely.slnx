@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Motely.CLI/Motely.CLI.csproj" />
+  <Project Path="Motely.Datalake/Motely.Datalake.csproj" />
   <Project Path="Motely.Tests/Motely.Tests.csproj" />
   <Project Path="Motely.TUI/Motely.TUI.csproj" />
   <Project Path="Motely.Wasm/Motely.Wasm.csproj" />

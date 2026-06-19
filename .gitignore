@@ -76,3 +76,7 @@ nuget.config.local
 .mcp.json
 .mcp.local.json
 /jaml-lsp/dist
+
+# Parquet seed-lake written by searches / read back by --drown.
+# Force-add a curated default lake with `git add -f` if you want one shared.
+.seeds/

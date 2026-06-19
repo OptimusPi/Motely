@@ -4,6 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Analysis;
 using Motely.CLI;
+using Motely.Datalake;
 using Motely.Filters;
 using Motely.Filters.Native;
 using YamlDotNet.RepresentationModel;
@@ -216,12 +217,12 @@ partial class Program
         );
         var drownOption = app.Option(
             "--drown",
-            "Replay all saved seeds for this JAML filter from results/<filterId>/results.csv using DuckDB.",
+            "Replay every saved seed for this JAML filter from the Parquet lake (.seeds/<filterId>/*.parquet) via DuckDB, as a front seed-list search.",
             CommandOptionType.NoValue
         );
         var resultsPathOption = app.Option<string>(
             "--results-path <PATH>",
-            "Root folder containing per-filter results folders with results.csv files (default: ./results).",
+            "Root folder of the per-filter Parquet seed-lake (default: .seeds; env MOTELY_DATALAKE_PATH).",
             CommandOptionType.SingleValue
         );
         var seedsOption = app.Option<string>(
@@ -360,6 +361,7 @@ partial class Program
                                 ? resultsPathOption.ParsedValue
                                 : null,
                             FilterId: null,
+                            JamlSeeds: null,
                             KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
                             PaddingCharsOption: paddingOption.HasValue()
                                 ? paddingOption.ParsedValue
@@ -523,6 +525,7 @@ partial class Program
                             ? resultsPathOption.ParsedValue
                             : null,
                         FilterId: config.Id,
+                        JamlSeeds: config.Seeds,
                         KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
                         PaddingCharsOption: paddingOption.HasValue()
                             ? paddingOption.ParsedValue
@@ -558,7 +561,19 @@ partial class Program
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;
-            using var resultSink = new ConsoleResultSink();
+            var resultSinks = new List<IMotelyResultSink> { new ConsoleResultSink() };
+            if (hasStructuredScores)
+            {
+                // Persist scored seeds to the Parquet lake so --drown can replay them later.
+                resultSinks.Add(
+                    new MotelyParquetSeedSink(
+                        resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
+                        config.Id,
+                        plan.TallyLabels
+                    )
+                );
+            }
+            using var resultSink = new CompositeMotelyResultSink(resultSinks);
             int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
             var saveSeedsCollector = saveSeedsOption.HasValue()
                 ? new TopSeedCollector(MotelyGlobals.SavedSeedLimit)
@@ -611,7 +626,7 @@ partial class Program
             if (!quietOption.HasValue())
             {
                 Console.Error.WriteLine(
-                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| drown=results.csv via DuckDB" : "(sequential only)")}"
+                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| drown=lake.parquet via DuckDB" : "(sequential only)")}"
                 );
             }
 
