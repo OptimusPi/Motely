@@ -1,0 +1,1 @@
+export { SeedFinderPage } from "./SeedFinderPage";
