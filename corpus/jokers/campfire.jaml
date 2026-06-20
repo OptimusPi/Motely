@@ -1,0 +1,24 @@
+name: Campfire — sold-card X-mult
+author: corpus
+description: >-
+  Campfire gains X0.25 Mult for each card sold, resetting when a Boss Blind is defeated.
+  First-shop scaling: sell cheap consumables and jokers early to build X-mult before the
+  first boss.
+deck: Red
+stake: White
+must:
+  - joker: Campfire
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: RiffRaff
+    antes: [1, 2]
+    score: 40
+  - joker: DietCola
+    antes: [1, 2]
+    score: 35
+  - joker: TradingCard
+    antes: [1, 2]
+    score: 30

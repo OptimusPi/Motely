@@ -1,0 +1,22 @@
+name: Standard Tag — mega standard pack
+author: corpus
+description: >-
+  Standard Tag immediately opens a free Mega Standard Pack. Ante 2+ skip reward: pair with
+  Hologram, Blue Joker, and any card-density build.
+deck: Red
+stake: White
+must:
+  - tag: StandardTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: Hologram
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Vampire
+    antes: [1, 2, 3]
+    score: 25

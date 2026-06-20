@@ -1,0 +1,24 @@
+name: Cavendish — X3 mult
+author: corpus
+description: >-
+  Cavendish gives X3 Mult, with a 1 in 1000 chance to be destroyed at end of round.
+  First-shop X3 mult stick: appears once Gros Michel has destroyed itself. Pair with
+  copy engines for the best X3 stacking in the game.
+deck: Red
+stake: White
+must:
+  - joker: Cavendish
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Brainstorm
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Showman
+    antes: [1, 2]
+    score: 25

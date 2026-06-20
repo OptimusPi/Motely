@@ -1,0 +1,23 @@
+name: Queen — face card
+author: corpus
+description: >-
+  Queens are face cards. First-shop card engine: pair with Shoot the Moon, Mime, Pareidolia.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      rank: Q
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: ShootTheMoon
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 35

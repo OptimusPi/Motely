@@ -1,0 +1,23 @@
+name: Nebula Deck — telescope start
+author: corpus
+description: >-
+  Nebula Deck starts with Telescope and -1 consumable slot. First-shop synergy: find a
+  planet-based scaling joker or Constellation.
+deck: Nebula
+stake: White
+must:
+  - joker: Constellation
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Satellite
+    antes: [1, 2, 3]
+    score: 35

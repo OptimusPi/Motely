@@ -1,0 +1,23 @@
+name: Venus — Three of a Kind level
+author: corpus
+description: >-
+  Venus levels up Three of a Kind. First-shop Three of a Kind engine: stack with Zany
+  Joker, Wily Joker, and The Trio.
+deck: Red
+stake: White
+must:
+  - planetCard: Venus
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: ZanyJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: WilyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTrio
+    antes: [1, 2, 3]
+    score: 30

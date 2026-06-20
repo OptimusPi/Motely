@@ -1,0 +1,22 @@
+name: Omen Globe — spectral in arcana packs
+author: corpus
+description: >-
+  Omen Globe gives Spectral cards a chance to appear in Arcana Packs. First-shop spectral
+  engine: pair with The Soul, Black Hole, and Perkeo.
+deck: Red
+stake: White
+must:
+  - voucher: OmenGlobe
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - spectralCard: TheSoul
+    antes: [1, 2, 3]
+    score: 45
+  - spectralCard: BlackHole
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,23 @@
+name: Burnt Joker — discard hand-level
+author: corpus
+description: >-
+  Burnt Joker upgrades the level of the first discarded poker hand each round. First-shop
+  level engine: discard the hand you want to level first, then commit to it for scoring.
+deck: Red
+stake: White
+must:
+  - joker: BurntJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SpaceJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 25

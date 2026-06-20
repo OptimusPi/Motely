@@ -1,0 +1,23 @@
+name: Matador — boss-ability money
+author: corpus
+description: >-
+  Matador earns $8 if the played hand triggers the Boss Blind's ability. First-shop
+  economy: keep the boss alive and intentionally trigger its ability once.
+deck: Red
+stake: White
+must:
+  - joker: Matador
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 35
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 30
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 25

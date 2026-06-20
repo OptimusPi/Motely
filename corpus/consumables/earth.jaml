@@ -1,0 +1,23 @@
+name: Earth — Two Pair level
+author: corpus
+description: >-
+  Earth levels up Two Pair. First-shop Two Pair engine: stack with Mad Joker, Clever
+  Joker, and Spare Trousers.
+deck: Red
+stake: White
+must:
+  - planetCard: Earth
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MadJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: CleverJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SpareTrousers
+    antes: [1, 2, 3]
+    score: 30

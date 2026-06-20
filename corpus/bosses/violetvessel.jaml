@@ -1,0 +1,20 @@
+name: Violet Vessel — massive blind
+author: corpus
+description: >-
+  Violet Vessel is a very large blind (6x base). Ante 8 finisher: need extreme scaling or
+  disable with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: VioletVessel
+    antes: [8]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 25

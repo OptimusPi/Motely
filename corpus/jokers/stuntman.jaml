@@ -1,0 +1,23 @@
+name: Stuntman — big chips, small hand
+author: corpus
+description: >-
+  Stuntman gives +250 Chips and -2 Hand Size. First-shop chip engine: pairs with small
+  hand builds (Blackboard, Half Joker) and held-in-hand strategies (Baron, Mime).
+deck: Red
+stake: White
+must:
+  - joker: Stuntman
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Blackboard
+    antes: [1, 2, 3]
+    score: 45
+  - joker: HalfJoker
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,20 @@
+name: The Ox — hand money reset
+author: corpus
+description: >-
+  The Ox sets money to $0 when you play your most played hand. Ante 6 boss: use a non-most-
+  played hand or disable with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: TheOx
+    antes: [6]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Obelisk
+    antes: [1, 2, 3]
+    score: 30

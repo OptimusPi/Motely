@@ -1,0 +1,23 @@
+name: The Hanged Man — destroy cards
+author: corpus
+description: >-
+  The Hanged Man destroys up to 2 selected cards. First-shop thinning engine: pair with
+  Erosion, Yorick, and any deck that wants fewer cards.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheHangedMan
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Erosion
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Yorick
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Canio
+    antes: [1, 2, 3]
+    score: 25

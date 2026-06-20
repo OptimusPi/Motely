@@ -1,0 +1,22 @@
+name: Paint Brush — hand size
+author: corpus
+description: >-
+  Paint Brush gives +1 Hand Size. First-shop hand-size engine: pair with held-in-hand
+  builds (Baron, Mime, Shoot the Moon), Troubadour, and Juggler.
+deck: Red
+stake: White
+must:
+  - voucher: PaintBrush
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Juggler
+    antes: [1, 2, 3]
+    score: 30

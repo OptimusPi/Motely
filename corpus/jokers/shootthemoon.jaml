@@ -1,0 +1,20 @@
+name: Shoot the Moon — queen held mult
+author: corpus
+description: >-
+  Shoot the Moon gives each Queen held in hand +13 Mult. First-shop held-in-hand mult:
+  Mime doubles each Queen's held effect; pair with Queen-heavy density.
+deck: Red
+stake: White
+must:
+  - joker: ShootTheMoon
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25

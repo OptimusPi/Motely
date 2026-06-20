@@ -1,0 +1,23 @@
+name: Magic Deck — crystal ball + the fool
+author: corpus
+description: >-
+  Magic Deck starts with Crystal Ball and 2 copies of The Fool. First-shop synergy: find a
+  Tarot generator or joker that benefits from Tarot usage.
+deck: Magic
+stake: White
+must:
+  - joker: FortuneTeller
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - tarotCard: TheEmperor
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 30

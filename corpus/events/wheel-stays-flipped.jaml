@@ -1,0 +1,16 @@
+name: The Wheel — boss card stays flipped
+author: corpus
+description: >-
+  Event: The Wheel boss blind keeps a card face-down. Tight Ante 1 event: the boss's face-
+  down effect persists.
+deck: Red
+stake: White
+must:
+  - wheelStaysFlipped: [1]
+should:
+  - boss: TheWheel
+    score: 45
+  - joker: Luchador
+    score: 40
+  - joker: Chicot
+    score: 35

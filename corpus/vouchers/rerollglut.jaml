@@ -1,0 +1,22 @@
+name: Reroll Glut — very cheap rerolls
+author: corpus
+description: >-
+  Reroll Glut reduces reroll cost by a total of $4. First-shop reroll engine: pair with
+  Chaos the Clown, Flash Card, and Overstock Plus.
+deck: Red
+stake: White
+must:
+  - voucher: RerollGlut
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: ChaostheClown
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FlashCard
+    antes: [1, 2, 3]
+    score: 40
+  - voucher: OverstockPlus
+    antes: [1, 2, 3]
+    score: 25

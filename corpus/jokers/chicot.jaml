@@ -1,0 +1,23 @@
+name: Chicot — boss disable
+author: corpus
+description: >-
+  Chicot disables the effect of every Boss Blind. First-shop legendary from The Soul:
+  passively neutralizes all boss abilities; pair with any build that fears a boss blind.
+deck: Red
+stake: White
+must:
+  - legendaryJoker: Chicot
+    antes: [1]
+    sources:
+      arcanaPacks: [0, 1]
+      spectralPacks: [0, 1]
+should:
+  - joker: Matador
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Throwback
+    antes: [1, 2, 3]
+    score: 20

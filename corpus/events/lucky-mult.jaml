@@ -1,0 +1,16 @@
+name: Lucky Card — mult trigger
+author: corpus
+description: >-
+  Event: a Lucky Card triggers its +20 Mult payout. Tight Ante 1 event: find a Lucky Card
+  that successfully adds mult.
+deck: Red
+stake: White
+must:
+  - luckyMult: [1]
+should:
+  - joker: LuckyCat
+    score: 45
+  - joker: OopsAll6s
+    score: 40
+  - joker: Seltzer
+    score: 30

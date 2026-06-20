@@ -1,0 +1,23 @@
+name: Ankh — copy leftmost joker
+author: corpus
+description: >-
+  Ankh creates a copy of the leftmost Joker, then destroys all other Jokers. First-shop
+  spectral copy engine: place a strong payoff in the leftmost slot and use the copy.
+deck: Red
+stake: White
+must:
+  - spectralCard: Ankh
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Cavendish
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 35

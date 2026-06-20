@@ -1,0 +1,20 @@
+name: The Arm — hand level down
+author: corpus
+description: >-
+  The Arm decreases the level of the played poker hand by 1. Ante 2 boss: commit to a
+  high-level hand and use Space Joker or Supernova to counter.
+deck: Red
+stake: White
+must:
+  - boss: TheArm
+    antes: [2]
+should:
+  - joker: SpaceJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 35

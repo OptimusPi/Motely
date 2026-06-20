@@ -1,0 +1,23 @@
+name: Two — low number card
+author: corpus
+description: >-
+  Twos are low number cards. First-shop card engine: pair with Wee Joker, Hack, and DNA.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      rank: "2"
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: WeeJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 40
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 30

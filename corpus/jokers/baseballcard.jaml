@@ -1,0 +1,24 @@
+name: Baseball Card — uncommon X1.5
+author: corpus
+description: >-
+  Baseball Card gives X1.5 Mult for each Uncommon Joker you have. First-shop uncommon
+  density engine: fill slots with uncommons (Mime, Showman, Cartomancer, Smeared Joker,
+  Pareidolia) and duplicate the strongest.
+deck: Red
+stake: White
+must:
+  - joker: BaseballCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 30

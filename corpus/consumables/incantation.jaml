@@ -1,0 +1,23 @@
+name: Incantation — number generator
+author: corpus
+description: >-
+  Incantation destroys 1 random card, then adds 4 random Enhanced numbered cards to the
+  deck. First-shop spectral number engine: pair with Even Steven, Fibonacci, Hack.
+deck: Red
+stake: White
+must:
+  - spectralCard: Incantation
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Fibonacci
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 30

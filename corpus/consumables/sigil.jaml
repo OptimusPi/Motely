@@ -1,0 +1,26 @@
+name: Sigil — suit uniform
+author: corpus
+description: >-
+  Sigil converts all cards in the deck to one random suit. First-shop spectral suit engine:
+  pair with suit-based payoffs (Greedy/Lusty/Wrathful/Gluttonous, Arrowhead/Onyx/Rough/Bloodstone).
+deck: Red
+stake: White
+must:
+  - spectralCard: Sigil
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GreedyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: LustyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: WrathfulJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: GluttonousJoker
+    antes: [1, 2, 3]
+    score: 35

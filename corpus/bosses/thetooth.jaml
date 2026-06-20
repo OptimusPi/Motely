@@ -1,0 +1,20 @@
+name: The Tooth — money per card
+author: corpus
+description: >-
+  The Tooth makes you lose $1 for each card played. Ante 1 boss: play small hands or use
+  money engines (Golden Joker, To the Moon) to offset.
+deck: Red
+stake: White
+must:
+  - boss: TheTooth
+    antes: [1]
+should:
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 35

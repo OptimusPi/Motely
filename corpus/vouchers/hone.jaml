@@ -1,0 +1,22 @@
+name: Hone — editions more common
+author: corpus
+description: >-
+  Hone makes Foil, Holographic, and Polychrome editions appear 2x more often. First-shop
+  edition engine: pair with The Wheel of Fortune, Flash Card, and Showman.
+deck: Red
+stake: White
+must:
+  - voucher: Hone
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - tarotCard: TheWheelOfFortune
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FlashCard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 30

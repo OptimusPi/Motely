@@ -1,0 +1,22 @@
+name: Director's Cut — boss reroll
+author: corpus
+description: >-
+  Director's Cut allows rerolling the Boss Blind once per Ante for $10. First-shop boss
+  control: pair with Matador, Luchador, and Chicot.
+deck: Red
+stake: White
+must:
+  - voucher: DirectorsCut
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Matador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 35

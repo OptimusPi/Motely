@@ -1,0 +1,24 @@
+name: Erosion — thin-deck mult
+author: corpus
+description: >-
+  Erosion gives +4 Mult for each card below the deck's starting size in the full deck.
+  First-shop scaling mult: pair with deck-thinning (Immolate, Death, Hanged Man) and
+  The Hierophant to keep cards enhanced.
+deck: Red
+stake: White
+must:
+  - joker: Erosion
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - tarotCard: TheHangedMan
+    antes: [1, 2, 3]
+    score: 40
+  - tarotCard: Death
+    antes: [1, 2, 3]
+    score: 35
+  - spectralCard: Immolate
+    antes: [1, 2, 3]
+    score: 30

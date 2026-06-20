@@ -1,0 +1,23 @@
+name: Mars — Four of a Kind level
+author: corpus
+description: >-
+  Mars levels up Four of a Kind. First-shop Four of a Kind engine: stack with The Family
+  and DNA for rank duplication.
+deck: Red
+stake: White
+must:
+  - planetCard: Mars
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: TheFamily
+    antes: [1, 2, 3]
+    score: 45
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 40
+  - joker: TheIdol
+    antes: [1, 2, 3]
+    score: 25

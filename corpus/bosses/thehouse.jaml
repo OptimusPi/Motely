@@ -1,0 +1,20 @@
+name: The House — first hand face down
+author: corpus
+description: >-
+  The House draws the first hand face down after each hand. Ante 2 boss: stable big hands
+  and Luchador/Chicot help.
+deck: Red
+stake: White
+must:
+  - boss: TheHouse
+    antes: [2]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Acrobat
+    antes: [1, 2, 3]
+    score: 25

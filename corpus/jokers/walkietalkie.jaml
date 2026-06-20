@@ -1,0 +1,20 @@
+name: Walkie Talkie — 10 and 4 payoff
+author: corpus
+description: >-
+  Walkie Talkie gives each played 10 or 4 +10 Chips and +4 Mult when scored. First-shop
+  number engine: Hack retriggers 4s for double effect.
+deck: Red
+stake: White
+must:
+  - joker: WalkieTalkie
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EvenSteven
+    antes: [1, 2]
+    score: 20

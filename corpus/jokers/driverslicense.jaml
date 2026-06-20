@@ -1,0 +1,24 @@
+name: Driver's License — enhanced deck X3
+author: corpus
+description: >-
+  Driver's License gives X3 Mult if you have at least 16 Enhanced cards in your full deck.
+  First-shop X3 engine: Marble Joker (Stone), Midas Mask (Gold), Vampire (removes but
+  needs many), and Tarot/Spectral enhance spam.
+deck: Red
+stake: White
+must:
+  - joker: DriversLicense
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MarbleJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: MidasMask
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Certificate
+    antes: [1, 2, 3]
+    score: 25

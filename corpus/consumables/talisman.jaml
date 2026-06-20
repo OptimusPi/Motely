@@ -1,0 +1,23 @@
+name: Talisman — gold seal
+author: corpus
+description: >-
+  Talisman adds a Gold Seal to 1 selected card. First-shop spectral seal engine: pair
+  with Golden Ticket, Midas Mask, and Pareidolia.
+deck: Red
+stake: White
+must:
+  - spectralCard: Talisman
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 45
+  - joker: MidasMask
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 25

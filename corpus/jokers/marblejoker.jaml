@@ -1,0 +1,24 @@
+name: Marble Joker — stone factory
+author: corpus
+description: >-
+  Marble Joker adds one Stone card to the deck when a Blind is selected. First-shop
+  stone engine: pair with Stone Joker (+25 chips per stone), Splash (all stones
+  score), and Blackboard/Checkered deck.
+deck: Red
+stake: White
+must:
+  - joker: MarbleJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: StoneJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Blackboard
+    antes: [1, 2, 3]
+    score: 25

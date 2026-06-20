@@ -1,0 +1,16 @@
+name: Wheel of Fortune — edition success
+author: corpus
+description: >-
+  Event: The Wheel of Fortune successfully adds Foil/Holographic/Polychrome to a Joker.
+  Tight Ante 1 event: the tarot succeeds.
+deck: Red
+stake: White
+must:
+  - wheelOfFortune: [1]
+should:
+  - joker: OopsAll6s
+    score: 45
+  - joker: Showman
+    score: 35
+  - joker: FlashCard
+    score: 25

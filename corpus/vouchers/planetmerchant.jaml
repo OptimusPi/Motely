@@ -1,0 +1,22 @@
+name: Planet Merchant — planet shop freq
+author: corpus
+description: >-
+  Planet Merchant makes Planet cards appear 2x more frequently in the shop. First-shop
+  planet engine: pair with Constellation, Astronomer, and Supernova.
+deck: Red
+stake: White
+must:
+  - voucher: PlanetMerchant
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 30

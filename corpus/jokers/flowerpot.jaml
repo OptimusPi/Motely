@@ -1,0 +1,24 @@
+name: Flower Pot — four-suit X3
+author: corpus
+description: >-
+  Flower Pot gives X3 Mult if the played hand contains a Diamond, Club, Heart, and
+  Spade. First-shop X3 engine: Smeared Joker makes it easier; four-card hands with
+  Four Fingers help.
+deck: Red
+stake: White
+must:
+  - joker: FlowerPot
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 30
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 25

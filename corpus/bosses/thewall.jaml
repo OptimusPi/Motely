@@ -1,0 +1,20 @@
+name: The Wall — huge blind
+author: corpus
+description: >-
+  The Wall is an extra large blind (4x base). Ante 2 boss: need massive scaling or disable
+  with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: TheWall
+    antes: [2]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 25

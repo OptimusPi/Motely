@@ -1,0 +1,24 @@
+name: Purple Seal — tarot generation
+author: corpus
+description: >-
+  Purple Seal creates a random Tarot card when discarded. First-shop card engine: pair with
+  Fortune Teller, 8 Ball, and Hallucination.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      seal: Purple
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 45
+  - joker: EightBall
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Hallucination
+    antes: [1, 2, 3]
+    score: 30

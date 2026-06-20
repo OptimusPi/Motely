@@ -1,0 +1,24 @@
+name: Glass Card — X2 mult, fragile
+author: corpus
+description: >-
+  Glass Card gives X2 Mult when scored, but has a 1 in 4 chance to be destroyed. First-shop
+  card engine: pair with Glass Joker, Seltzer, and Dusk for repeated destruction/scaling.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      enhancement: Glass
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: GlassJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 35

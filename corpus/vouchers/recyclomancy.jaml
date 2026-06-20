@@ -1,0 +1,22 @@
+name: Recyclomancy — extra discards
+author: corpus
+description: >-
+  Recyclomancy permanently gives +2 discards each round. First-shop discard engine: pair
+  with discard scaling jokers (Yorick, Castle, Drunkard).
+deck: Red
+stake: White
+must:
+  - voucher: Recyclomancy
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Yorick
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Castle
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 30

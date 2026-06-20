@@ -1,0 +1,16 @@
+name: Glass Card — destruction
+author: corpus
+description: >-
+  Event: a Glass Card is destroyed while scoring. Tight Ante 1 event: a glass card shatters
+  and scales Glass Joker.
+deck: Red
+stake: White
+must:
+  - glassDestroy: [1]
+should:
+  - joker: GlassJoker
+    score: 45
+  - joker: Seltzer
+    score: 35
+  - joker: Dusk
+    score: 30

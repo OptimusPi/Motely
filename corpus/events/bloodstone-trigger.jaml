@@ -1,0 +1,16 @@
+name: Bloodstone — X1.5 trigger
+author: corpus
+description: >-
+  Event: Bloodstone successfully triggers X1.5 Mult on a Heart card. Tight Ante 1 event:
+  the 1 in 2 chance succeeds.
+deck: Red
+stake: White
+must:
+  - bloodstoneTrigger: [1]
+should:
+  - joker: Bloodstone
+    score: 45
+  - joker: OopsAll6s
+    score: 40
+  - joker: LustyJoker
+    score: 30

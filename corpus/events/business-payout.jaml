@@ -1,0 +1,16 @@
+name: Business Card — money payout
+author: corpus
+description: >-
+  Event: Business Card triggers its $2 payout on a face card. Tight Ante 1 event: a face
+  card is scored and pays.
+deck: Red
+stake: White
+must:
+  - businessPayout: [1]
+should:
+  - joker: BusinessCard
+    score: 45
+  - joker: Pareidolia
+    score: 40
+  - joker: SmileyFace
+    score: 30

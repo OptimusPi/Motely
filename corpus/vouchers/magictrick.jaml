@@ -1,0 +1,22 @@
+name: Magic Trick — buy playing cards
+author: corpus
+description: >-
+  Magic Trick allows playing cards to be purchased from the shop. First-shop deck engine:
+  pair with Illusion, Hologram, and Blue Joker.
+deck: Red
+stake: White
+must:
+  - voucher: MagicTrick
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - voucher: Illusion
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Hologram
+    antes: [1, 2, 3]
+    score: 40
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 35

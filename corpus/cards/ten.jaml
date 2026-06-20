@@ -1,0 +1,24 @@
+name: Ten — high number card
+author: corpus
+description: >-
+  Tens are high number cards. First-shop card engine: pair with Walkie Talkie, Pareidolia,
+  and even/face payoffs.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      rank: "10"
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: WalkieTalkie
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 35
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 25

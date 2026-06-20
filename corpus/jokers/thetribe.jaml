@@ -1,0 +1,23 @@
+name: The Tribe — flush X2
+author: corpus
+description: >-
+  The Tribe gives X2 Mult if the played hand contains a Flush. First-shop X2 engine:
+  Smeared Joker halves the suit requirement; Droll Joker and Crafty Joker add base mult/chips.
+deck: Red
+stake: White
+must:
+  - joker: TheTribe
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: DrollJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: CraftyJoker
+    antes: [1, 2, 3]
+    score: 30

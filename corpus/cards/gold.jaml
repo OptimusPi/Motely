@@ -1,0 +1,24 @@
+name: Gold Card — money on score
+author: corpus
+description: >-
+  Gold Card earns $3 when scored. First-shop card engine: pair with Golden Ticket, Midas
+  Mask, and Pareidolia.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      enhancement: Gold
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 45
+  - joker: MidasMask
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 35

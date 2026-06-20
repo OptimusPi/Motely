@@ -1,0 +1,24 @@
+name: Jack — face card
+author: corpus
+description: >-
+  Jacks are face cards. First-shop card engine: pair with Hit the Road, Pareidolia, and
+  face-card payoffs.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      rank: J
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: HitTheRoad
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SmileyFace
+    antes: [1, 2, 3]
+    score: 30

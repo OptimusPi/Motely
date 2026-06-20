@@ -1,0 +1,23 @@
+name: Hiker — permanent chip on cards
+author: corpus
+description: >-
+  Hiker gives every played card +5 permanent Chips when scored. First-shop scaling chip:
+  stack with Splash, retrigger engines (Dusk, Hack, Seltzer), and long-term scaling decks.
+deck: Red
+stake: White
+must:
+  - joker: Hiker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,23 @@
+name: Grim — ace generator
+author: corpus
+description: >-
+  Grim destroys 1 random card, then adds 2 random Enhanced Aces to the deck. First-shop
+  spectral ace engine: pair with Scholar, Baron, and Mime.
+deck: Red
+stake: White
+must:
+  - spectralCard: Grim
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Scholar
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 30

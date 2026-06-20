@@ -1,0 +1,20 @@
+name: The Eye — no repeat hands
+author: corpus
+description: >-
+  The Eye prevents repeating a hand type this round. Ante 3 boss: have multiple viable hand
+  types or use Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: TheEye
+    antes: [3]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

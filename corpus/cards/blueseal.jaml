@@ -1,0 +1,24 @@
+name: Blue Seal — planet generation
+author: corpus
+description: >-
+  Blue Seal creates the Planet for the final played poker hand of the round if held in hand.
+  First-shop card engine: pair with Constellation, Satellite, and Trance.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      seal: Blue
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Satellite
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 30

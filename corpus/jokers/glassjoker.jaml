@@ -1,0 +1,23 @@
+name: Glass Joker — glass-destroy X-mult
+author: corpus
+description: >-
+  Glass Joker gains X0.75 Mult for every Glass card destroyed. First-shop scaling X-mult:
+  create and destroy Glass cards repeatedly (Aura, Magician, The Tower) to stack it.
+deck: Red
+stake: White
+must:
+  - joker: GlassJoker
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 30
+  - joker: MarbleJoker
+    antes: [1, 2, 3]
+    score: 20

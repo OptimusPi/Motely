@@ -1,0 +1,16 @@
+name: Judgement — joker spawn
+author: corpus
+description: >-
+  Event: Judgement Tarot creates a Joker. Tight Ante 1 event: the tarot spawns a useful
+  joker.
+deck: Red
+stake: White
+must:
+  - judgement: [1]
+should:
+  - tarotCard: Judgement
+    score: 45
+  - joker: Showman
+    score: 35
+  - joker: FortuneTeller
+    score: 25

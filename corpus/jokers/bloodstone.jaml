@@ -1,0 +1,24 @@
+name: Bloodstone — heart X1.5
+author: corpus
+description: >-
+  Bloodstone has a 1 in 2 chance for each played Heart card to give X1.5 Mult when scored.
+  First-shop heart X-mult: Oops All 6s makes it guaranteed; Lusty Joker and Heart-heavy
+  decks support it.
+deck: Red
+stake: White
+must:
+  - joker: Bloodstone
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 45
+  - joker: LustyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 25

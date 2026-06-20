@@ -1,0 +1,24 @@
+name: Swashbuckler — sell-value mult
+author: corpus
+description: >-
+  Swashbuckler adds the total sell value of all other owned Jokers to Mult. First-shop
+  scaling mult: grab Egg (sell value +$3/round), Gift Card (+$1 sell value each round),
+  and other high-sell pieces.
+deck: Red
+stake: White
+must:
+  - joker: Swashbuckler
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Egg
+    antes: [1, 2, 3]
+    score: 40
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: RiffRaff
+    antes: [1, 2]
+    score: 20

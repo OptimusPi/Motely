@@ -1,0 +1,20 @@
+name: The Wheel — face-down cards
+author: corpus
+description: >-
+  The Wheel draws 1 in 7 cards face down during the round. Ante 2 boss: stable hands and
+  Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: TheWheel
+    antes: [2]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 25

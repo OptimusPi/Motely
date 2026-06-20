@@ -1,0 +1,22 @@
+name: Crystal Ball — extra consumable slot
+author: corpus
+description: >-
+  Crystal Ball adds +1 consumable slot. First-shop consumable engine: pair with
+  Cartomancer, Vagabond, and any tarot/planet strategy.
+deck: Red
+stake: White
+must:
+  - voucher: CrystalBall
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Vagabond
+    antes: [1, 2, 3]
+    score: 35
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 25

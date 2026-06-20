@@ -1,0 +1,23 @@
+name: The Trio — three-of-a-kind X3
+author: corpus
+description: >-
+  The Trio gives X3 Mult if the played hand contains a Three of a Kind. First-shop X3
+  engine: Zany Joker, Wily Joker, and Oops All 6s? No, just commit to Three of a Kind.
+deck: Red
+stake: White
+must:
+  - joker: TheTrio
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: ZanyJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: WilyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheIdol
+    antes: [1, 2, 3]
+    score: 25

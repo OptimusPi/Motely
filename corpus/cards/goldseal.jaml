@@ -1,0 +1,24 @@
+name: Gold Seal — money on score
+author: corpus
+description: >-
+  Gold Seal earns $3 when the card is scored. First-shop card engine: pair with Golden
+  Ticket, Midas Mask, and Pareidolia.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      seal: Gold
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 45
+  - joker: MidasMask
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 35

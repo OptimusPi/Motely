@@ -1,0 +1,21 @@
+name: 8 Ball — tarot generator
+author: corpus
+description: >-
+  8 Ball has a 1 in 4 chance per played 8 to create a Tarot when scored. First-shop
+  tarot engine: Oops! All 6s doubles the odds to 1 in 2; Hack retriggers 8s for
+  extra rolls per hand.
+deck: Red
+stake: White
+must:
+  - joker: EightBall
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 30

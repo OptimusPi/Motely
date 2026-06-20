@@ -1,0 +1,24 @@
+name: Reserved Parking — held face economy
+author: corpus
+description: >-
+  Reserved Parking gives each face card held in hand a 1 in 2 chance to earn $1 at
+  end of round. First-shop economy: Pareidolia makes every card a face card for the
+  full hand to roll.
+deck: Red
+stake: White
+must:
+  - joker: ReservedParking
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Juggler
+    antes: [1, 2]
+    score: 25
+  - joker: Troubadour
+    antes: [1, 2]
+    score: 25

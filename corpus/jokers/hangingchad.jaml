@@ -1,0 +1,26 @@
+name: Hanging Chad — first card retrigger
+author: corpus
+description: >-
+  Hanging Chad retriggers the first played card used in scoring 2 additional times.
+  First-shop retrigger engine: Photograph first-face X2 becomes X8; Glass in the first
+  slot also triggers 3 times.
+deck: Red
+stake: White
+must:
+  - joker: HangingChad
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Photograph
+    antes: [1, 2, 3]
+    score: 45
+  - standardCard:
+      enhancement: Glass
+    label: "Glass card in first slot"
+    antes: [1, 2]
+    score: 25
+  - joker: Dusk
+    antes: [1, 2]
+    score: 20

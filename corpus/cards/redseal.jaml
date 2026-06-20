@@ -1,0 +1,24 @@
+name: Red Seal — retrigger
+author: corpus
+description: >-
+  Red Seal retriggers the card. First-shop card engine: pair with high-value cards, Glass
+  Joker, Seltzer, and Dusk.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      seal: Red
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: GlassJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 35

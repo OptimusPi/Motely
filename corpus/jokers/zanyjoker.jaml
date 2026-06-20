@@ -1,0 +1,24 @@
+name: Zany Joker — three-of-a-kind mult
+author: corpus
+description: >-
+  Zany Joker gives +12 Mult if the hand contains Three of a Kind. First-shop trips
+  payoff: level Three of a Kind with Venus, stack the chip counterpart Wily Joker,
+  and The Trio (X3 on trips) for the multiplicative jump.
+deck: Red
+stake: White
+must:
+  - joker: ZanyJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: TheTrio
+    antes: [1, 2, 3]
+    score: 45
+  - joker: WilyJoker
+    antes: [1, 2]
+    score: 30
+  - planetCard: Venus
+    antes: [1, 2]
+    score: 20

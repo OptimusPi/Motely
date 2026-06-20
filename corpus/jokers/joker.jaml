@@ -1,0 +1,29 @@
+name: Joker — first-shop flat mult
+author: corpus
+description: >-
+  Joker grants a flat +4 Mult. The baseline mult stick: cheap, common, and the
+  ideal copy target in Ante 1. Find it in the first shop next to a copy engine or
+  an edition that scales the flat mult.
+deck: Red
+stake: White
+must:
+  - joker: Joker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Joker
+    edition: Polychrome
+    label: "Polychrome Joker (x1.5 the +4 stick)"
+    antes: [1]
+    score: 60
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 40
+  - joker: Brainstorm
+    antes: [1, 2]
+    score: 40
+  - joker: Showman
+    antes: [1, 2]
+    score: 25

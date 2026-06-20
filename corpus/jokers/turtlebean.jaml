@@ -1,0 +1,23 @@
+name: Turtle Bean — temporary hand size
+author: corpus
+description: >-
+  Turtle Bean gives +5 hand size but reduces by 1 each round. First-shop temporary hand
+  size: pair with held-in-hand builds (Baron, Mime, Shoot the Moon) and Juggler.
+deck: Red
+stake: White
+must:
+  - joker: TurtleBean
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Juggler
+    antes: [1, 2]
+    score: 25

@@ -1,0 +1,24 @@
+name: Death — card clone
+author: corpus
+description: >-
+  Death selects 2 cards and converts the left card into the right card. First-shop deck
+  shaping: clone strong cards (Kings, Queens, 2s, Lucky, Glass) and scale Hologram/Blue
+  Joker.
+deck: Red
+stake: White
+must:
+  - tarotCard: Death
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hologram
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 30
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 25

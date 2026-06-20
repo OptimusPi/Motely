@@ -1,0 +1,26 @@
+name: Joker Stencil — empty-slot mult
+author: corpus
+description: >-
+  Joker Stencil gives X1 Mult for each empty Joker slot, including itself. First-shop
+  X-mult engine: best on Black Deck (+1 slot) or with Negative Jokers that don't
+  consume slots.
+deck: Black
+stake: White
+must:
+  - joker: JokerStencil
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: JokerStencil
+    edition: Negative
+    label: "Negative Joker Stencil"
+    antes: [1, 2]
+    score: 45
+  - joker: InvisibleJoker
+    antes: [1, 2, 3]
+    score: 30
+  - joker: CeremonialDagger
+    antes: [1, 2, 3]
+    score: 20

@@ -1,0 +1,23 @@
+name: Overstock — extra shop slot
+author: corpus
+description: >-
+  Overstock adds +1 card slot in the shop (to 3). First-shop economy: more shop slots
+  means more chances to find synergistic jokers/consumables; pair with Clearance Sale
+  or Gold economy.
+deck: Red
+stake: White
+must:
+  - voucher: Overstock
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - voucher: ClearanceSale
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 30
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 25

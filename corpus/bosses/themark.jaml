@@ -1,0 +1,20 @@
+name: The Mark — face cards face down
+author: corpus
+description: >-
+  The Mark draws all face cards face down. Ante 2 boss: avoid face-card builds or use
+  Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: TheMark
+    antes: [2]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 25

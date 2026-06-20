@@ -1,0 +1,24 @@
+name: Red Card — skipped-pack mult
+author: corpus
+description: >-
+  Red Card gains +3 Mult when any Booster Pack is skipped. First-shop scaling:
+  skip every pack offered and pair with Chaos the Clown for free rerolls to still
+  dig the shop.
+deck: Red
+stake: White
+must:
+  - joker: RedCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: ChaostheClown
+    antes: [1, 2, 3]
+    score: 35
+  - joker: FlashCard
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

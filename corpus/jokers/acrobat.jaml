@@ -1,0 +1,23 @@
+name: Acrobat — final hand X3
+author: corpus
+description: >-
+  Acrobat gives X3 Mult on the final hand of the round. First-shop X3 burst: pair with
+  Dusk (retrigger final hand), Burglar (more final hands), and high-value cards.
+deck: Red
+stake: White
+must:
+  - joker: Acrobat
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25

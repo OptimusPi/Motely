@@ -1,0 +1,23 @@
+name: Black Hole — all hands level
+author: corpus
+description: >-
+  Black Hole upgrades every poker hand level by 1 (except High Card). First-shop spectral
+  scaling engine: pair with Supernova, Space Joker, and any committed hand-shape build.
+deck: Red
+stake: White
+must:
+  - spectralCard: BlackHole
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SpaceJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 30

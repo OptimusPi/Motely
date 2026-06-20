@@ -1,0 +1,23 @@
+name: The Chariot — steel card
+author: corpus
+description: >-
+  The Chariot enhances 1 selected card into a Steel Card. First-shop steel engine: pair
+  with Steel Joker, Smeared Joker, and held-in-hand builds.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheChariot
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SteelJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 25

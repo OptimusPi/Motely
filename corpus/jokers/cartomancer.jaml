@@ -1,0 +1,23 @@
+name: Cartomancer — tarot per round
+author: corpus
+description: >-
+  Cartomancer creates a Tarot card when a Blind is selected (must have room). First-shop
+  tarot engine: pairs with Fortune Teller, Perkeo, and any tarot-based strategy.
+deck: Red
+stake: White
+must:
+  - joker: Cartomancer
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 20

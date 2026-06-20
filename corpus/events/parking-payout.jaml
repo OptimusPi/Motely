@@ -1,0 +1,16 @@
+name: Reserved Parking — king payout
+author: corpus
+description: >-
+  Event: Reserved Parking triggers its $1 payout on a King held in hand. Tight Ante 1 event:
+  a King is held and pays.
+deck: Red
+stake: White
+must:
+  - parkingPayout: [1]
+should:
+  - joker: ReservedParking
+    score: 45
+  - joker: Baron
+    score: 40
+  - joker: Mime
+    score: 35

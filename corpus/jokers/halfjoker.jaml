@@ -1,0 +1,26 @@
+name: Half Joker — small-hand mult
+author: corpus
+description: >-
+  Half Joker gives +20 Mult if the hand has 3 or fewer cards. First-shop cheap mult:
+  reliable on low-card builds; copy it with Blueprint/Brainstorm and edition it for
+  more from the flat +20.
+deck: Red
+stake: White
+must:
+  - joker: HalfJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: HalfJoker
+    edition: Polychrome
+    label: "Polychrome Half Joker"
+    antes: [1]
+    score: 55
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 30
+  - joker: Brainstorm
+    antes: [1, 2]
+    score: 30

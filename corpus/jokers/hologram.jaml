@@ -1,0 +1,23 @@
+name: Hologram — deck-growth X-mult
+author: corpus
+description: >-
+  Hologram gains X0.25 Mult every time a playing card is added to the deck. First-shop
+  scaling: pair with DNA, Marble Joker, and Certificate to keep adding cards.
+deck: Red
+stake: White
+must:
+  - joker: Hologram
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 45
+  - joker: MarbleJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Certificate
+    antes: [1, 2, 3]
+    score: 35

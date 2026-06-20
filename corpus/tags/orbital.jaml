@@ -1,0 +1,22 @@
+name: Orbital Tag — hand level boost
+author: corpus
+description: >-
+  Orbital Tag upgrades a random poker hand by 3 levels. Ante 2+ skip reward: pair with
+  Supernova, Space Joker, and Observatory for the same hand.
+deck: Red
+stake: White
+must:
+  - tag: OrbitalTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SpaceJoker
+    antes: [1, 2, 3]
+    score: 35
+  - voucher: Observatory
+    antes: [1, 2, 3]
+    score: 30

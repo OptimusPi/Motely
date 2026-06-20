@@ -1,0 +1,24 @@
+name: Burglar — extra hands
+author: corpus
+description: >-
+  When Blind is selected, Burglar gives +3 Hands and removes all discards. First-shop
+  hand engine: powers Green Joker, Ride the Bus, Loyalty Card, and any hand-count-based
+  scaling.
+deck: Red
+stake: White
+must:
+  - joker: Burglar
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GreenJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: LoyaltyCard
+    antes: [1, 2, 3]
+    score: 40
+  - joker: RideTheBus
+    antes: [1, 2, 3]
+    score: 35

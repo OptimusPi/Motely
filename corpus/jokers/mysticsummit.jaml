@@ -1,0 +1,21 @@
+name: Mystic Summit — zero-discard mult
+author: corpus
+description: >-
+  Mystic Summit gives +15 Mult when 0 discards remain. First-shop reliable mult:
+  Burglar removes all discards on Blind select (instant trigger every round); avoid
+  discard-hungry builds.
+deck: Red
+stake: White
+must:
+  - joker: MysticSummit
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

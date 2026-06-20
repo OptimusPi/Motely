@@ -1,0 +1,20 @@
+name: Fibonacci — ace/2/3/5/8 mult
+author: corpus
+description: >-
+  Fibonacci gives each played Ace, 2, 3, 5, or 8 +8 Mult when scored. First-shop number
+  engine: Hack retriggers 2/3/4/5, so Fibonacci's 2/3/5 get doubled.
+deck: Red
+stake: White
+must:
+  - joker: Fibonacci
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 40
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 20

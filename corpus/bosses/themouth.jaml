@@ -1,0 +1,20 @@
+name: The Mouth — one hand type only
+author: corpus
+description: >-
+  The Mouth allows only one hand type to be played this round. Ante 2 boss: commit to a
+  single strong hand type and level it.
+deck: Red
+stake: White
+must:
+  - boss: TheMouth
+    antes: [2]
+should:
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheTribe
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 35

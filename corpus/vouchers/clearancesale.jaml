@@ -1,0 +1,22 @@
+name: Clearance Sale — shop discount
+author: corpus
+description: >-
+  Clearance Sale makes all cards and packs in the shop 25% cheaper. First-shop economy:
+  buy more items early; pair with Overstock and money engines.
+deck: Red
+stake: White
+must:
+  - voucher: ClearanceSale
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - voucher: Overstock
+    antes: [1, 2, 3]
+    score: 45
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 25

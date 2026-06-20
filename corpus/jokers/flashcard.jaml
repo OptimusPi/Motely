@@ -1,0 +1,23 @@
+name: Flash Card — reroll mult
+author: corpus
+description: >-
+  Flash Card gains +2 Mult per reroll in the shop. First-shop scaling: pair with Chaos
+  the Clown (free reroll) and just reroll the shop repeatedly.
+deck: Red
+stake: White
+must:
+  - joker: FlashCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: ChaostheClown
+    antes: [1, 2, 3]
+    score: 45
+  - joker: RedCard
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

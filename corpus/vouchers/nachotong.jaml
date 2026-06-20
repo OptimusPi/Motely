@@ -1,0 +1,22 @@
+name: Nacho Tong — extra hands
+author: corpus
+description: >-
+  Nacho Tong permanently gives +2 hands per round. First-shop hand engine: pair with
+  hand-count scaling jokers and Burglar.
+deck: Red
+stake: White
+must:
+  - voucher: NachoTong
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: GreenJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 35
+  - joker: RideTheBus
+    antes: [1, 2, 3]
+    score: 30

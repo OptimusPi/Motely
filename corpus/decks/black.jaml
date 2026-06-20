@@ -1,0 +1,23 @@
+name: Black Deck — extra joker slot
+author: corpus
+description: >-
+  Black Deck gives +1 Joker slot but -1 hand per round. First-shop synergy: Joker Stencil
+  or Baron/Mime to exploit the slot and offset hand loss.
+deck: Black
+stake: White
+must:
+  - joker: JokerStencil
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - voucher: Grabber
+    antes: [1, 2, 3]
+    score: 30

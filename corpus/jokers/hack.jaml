@@ -1,0 +1,24 @@
+name: Hack — 2/3/4/5 retrigger
+author: corpus
+description: >-
+  Hack retriggers each played 2, 3, 4, or 5. First-shop retrigger engine: powers
+  Fibonacci (2/3/5), Walkie Talkie (4/10), Even Steven, and any per-card chip/mult
+  effects on those ranks.
+deck: Red
+stake: White
+must:
+  - joker: Hack
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Fibonacci
+    antes: [1, 2, 3]
+    score: 40
+  - joker: WalkieTalkie
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 25

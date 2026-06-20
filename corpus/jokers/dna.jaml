@@ -1,0 +1,24 @@
+name: DNA — single-card duplicator
+author: corpus
+description: >-
+  If the first hand of the round has only 1 card, DNA adds a permanent copy of it to the
+  deck and draws it to hand. First-shop duplicator: copy strong cards (Kings, Queens,
+  9s, Lucky, Glass) and scale Hologram/Blue Joker.
+deck: Red
+stake: White
+must:
+  - joker: DNA
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hologram
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Cloud9
+    antes: [1, 2, 3]
+    score: 25

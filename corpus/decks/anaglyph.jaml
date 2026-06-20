@@ -1,0 +1,23 @@
+name: Anaglyph Deck — double tags
+author: corpus
+description: >-
+  Anaglyph Deck gives a Double Tag after each Boss Blind. First-shop synergy: find a tag
+  payoff or boss-control tool.
+deck: Anaglyph
+stake: White
+must:
+  - joker: Matador
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - tag: RareTag
+    antes: [1, 2, 3]
+    score: 45
+  - tag: PolychromeTag
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 25

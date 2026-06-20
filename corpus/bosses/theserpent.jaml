@@ -1,0 +1,20 @@
+name: The Serpent — draw 3 cards
+author: corpus
+description: >-
+  The Serpent always draws 3 cards after play or discard (ignores hand size). Ante 5 boss:
+  need hand-size management or Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: TheSerpent
+    antes: [5]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Juggler
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,24 @@
+name: Mad Joker — two pair mult
+author: corpus
+description: >-
+  Mad Joker gives +10 Mult if the played hand contains a Two Pair.
+  First-shop two-pair payoff: level Two Pair with Uranus and stack the chip
+  counterpart Clever Joker.
+deck: Red
+stake: White
+must:
+  - joker: MadJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: CleverJoker
+    antes: [1, 2]
+    score: 35
+  - planetCard: Uranus
+    antes: [1, 2]
+    score: 25
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25

@@ -1,0 +1,22 @@
+name: Double Tag — tag duplicator
+author: corpus
+description: >-
+  Double Tag gives a copy of the next Tag selected (excluding Double Tags). First-shop skip
+  reward: pair with valuable tags (Rare, Polychrome, Investment, Orbital) and Speed.
+deck: Red
+stake: White
+must:
+  - tag: DoubleTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - tag: RareTag
+    antes: [1, 2, 3]
+    score: 45
+  - tag: PolychromeTag
+    antes: [1, 2, 3]
+    score: 40
+  - tag: OrbitalTag
+    antes: [2, 3]
+    score: 35

@@ -1,0 +1,21 @@
+name: Green Joker — hand/discard mult
+author: corpus
+description: >-
+  Green Joker gives +1 Mult per hand played and -1 Mult per discard used this round.
+  First-shop mult engine: Burglar gives +3 Hands (more hand plays) and removes
+  discards (no discard penalty).
+deck: Red
+stake: White
+must:
+  - joker: GreenJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

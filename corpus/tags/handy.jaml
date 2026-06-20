@@ -1,0 +1,22 @@
+name: Handy Tag — hands played cash
+author: corpus
+description: >-
+  Handy Tag gives $1 for each hand played this run. Ante 2+ skip reward: pair with Burglar,
+  Green Joker, and Rocket.
+deck: Red
+stake: White
+must:
+  - tag: HandyTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GreenJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,24 @@
+name: Séance — straight-flush spectral
+author: corpus
+description: >-
+  If the played poker hand is a Straight Flush, Séance creates a random Spectral card.
+  First-shop spectral engine: Four Fingers + Smeared Joker make 4-card Straight Flushes
+  possible; Seltzer retriggers the scoring.
+deck: Red
+stake: White
+must:
+  - joker: Seance
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 45
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Seltzer
+    antes: [1, 2]
+    score: 25

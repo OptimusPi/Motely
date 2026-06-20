@@ -1,0 +1,21 @@
+name: Even Steven — even-rank mult
+author: corpus
+description: >-
+  Even Steven gives played even-rank cards (10, 8, 6, 4, 2) +4 Mult when scored.
+  First-shop low-rank mult: Hack retriggers played 2s and 4s for double Even Steven
+  triggers on those cards.
+deck: Red
+stake: White
+must:
+  - joker: EvenSteven
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 40
+  - joker: OddTodd
+    antes: [1, 2]
+    score: 20

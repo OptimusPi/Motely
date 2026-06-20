@@ -1,0 +1,16 @@
+name: Cavendish — extinction
+author: corpus
+description: >-
+  Event: Cavendish is destroyed by its 1 in 1000 extinction chance. Tight Ante 1 event:
+  track the rare extinction.
+deck: Red
+stake: White
+must:
+  - cavendishExtinct: [1]
+should:
+  - joker: Cavendish
+    score: 45
+  - joker: Showman
+    score: 30
+  - joker: InvisibleJoker
+    score: 25

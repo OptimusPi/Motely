@@ -1,0 +1,23 @@
+name: Ramen — X2 mult, decays on discard
+author: corpus
+description: >-
+  Ramen gives X2 Mult and loses X0.01 Mult per card discarded. First-shop X2 engine:
+  avoid discards, use Burglar (no discards) or play with minimal discard usage.
+deck: Red
+stake: White
+must:
+  - joker: Ramen
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25
+  - joker: Brainstorm
+    antes: [1, 2]
+    score: 25

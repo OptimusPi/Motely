@@ -1,0 +1,27 @@
+name: Oops! All 6s — probability doubler
+author: corpus
+description: >-
+  Oops! All 6s doubles all listed probabilities (1 in 4 becomes 2 in 4, i.e. guaranteed).
+  First-shop odds engine: Hallucination (1/2 → 1/1), Bloodstone (1/2 → 1/1), Space Joker
+  (1/4 → 1/2), 8 Ball (1/4 → 1/2), Lucky cards.
+deck: Red
+stake: White
+must:
+  - joker: OopsAll6s
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hallucination
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SpaceJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Bloodstone
+    antes: [1, 2, 3]
+    score: 35
+  - joker: EightBall
+    antes: [1, 2, 3]
+    score: 30

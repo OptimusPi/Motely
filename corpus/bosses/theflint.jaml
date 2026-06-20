@@ -1,0 +1,20 @@
+name: The Flint — halved chips/mult
+author: corpus
+description: >-
+  The Flint halves base Chips and Mult for the round. Ante 2 boss: need raw scaling or
+  disable with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: TheFlint
+    antes: [2]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 25

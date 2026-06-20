@@ -1,0 +1,24 @@
+name: Ouija — rank uniform
+author: corpus
+description: >-
+  Ouija converts all cards in the deck to one random rank, then reduces hand size by 1.
+  First-shop spectral rank engine: pair with rank payoffs (Baron, Shoot the Moon, Even
+  Steven, Odd Todd) and Troubadour/Juggler to offset hand size.
+deck: Red
+stake: White
+must:
+  - spectralCard: Ouija
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: ShootTheMoon
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Juggler
+    antes: [1, 2, 3]
+    score: 25

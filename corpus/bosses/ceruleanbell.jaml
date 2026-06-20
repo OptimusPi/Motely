@@ -1,0 +1,20 @@
+name: Cerulean Bell — forced selection
+author: corpus
+description: >-
+  Cerulean Bell forces 1 card to always be selected. Ante 8 finisher: disable with
+  Luchador/Chicot or build around the forced card.
+deck: Red
+stake: White
+must:
+  - boss: CeruleanBell
+    antes: [8]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheIdol
+    antes: [1, 2, 3]
+    score: 25

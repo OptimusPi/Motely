@@ -1,0 +1,20 @@
+name: The Manacle — hand size reduction
+author: corpus
+description: >-
+  The Manacle reduces Hand Size by 1. Ante 1 boss: pair with hand-size offset (Juggler,
+  Troubadour, Paint Brush) and small-hand builds.
+deck: Red
+stake: White
+must:
+  - boss: TheManacle
+    antes: [1]
+should:
+  - joker: Juggler
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Troubadour
+    antes: [1, 2, 3]
+    score: 35
+  - voucher: PaintBrush
+    antes: [1, 2, 3]
+    score: 30

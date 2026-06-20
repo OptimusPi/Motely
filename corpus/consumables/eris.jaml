@@ -1,0 +1,23 @@
+name: Eris — Flush House level
+author: corpus
+description: >-
+  Eris levels up Flush House. First-shop Flush House engine: stack with Smeared Joker,
+  Wild/Flush tools, and Full House payoffs.
+deck: Red
+stake: White
+must:
+  - planetCard: Eris
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: TheLovers
+    antes: [1, 2, 3]
+    score: 35
+  - joker: JollyJoker
+    antes: [1, 2, 3]
+    score: 25

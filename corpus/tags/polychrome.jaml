@@ -1,0 +1,23 @@
+name: Polychrome Tag — free polychrome joker
+author: corpus
+description: >-
+  Polychrome Tag makes the next base-edition Joker in a shop become Polychrome (X1.5 Mult)
+  and free. First-shop skip reward: pair with X-mult jokers (The Order, The Tribe, Baron)
+  and Showman.
+deck: Red
+stake: White
+must:
+  - tag: PolychromeTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheTribe
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 30

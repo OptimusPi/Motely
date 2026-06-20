@@ -1,0 +1,21 @@
+name: Mail-In Rebate — rank discard economy
+author: corpus
+description: >-
+  Mail-In Rebate earns $5 for each discarded card of a target rank that changes each
+  round. First-shop economy: stack discards (Merry Andy, Drunkard) and a target-rank
+  density.
+deck: Red
+stake: White
+must:
+  - joker: MailInRebate
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Drunkard
+    antes: [1, 2]
+    score: 25

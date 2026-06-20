@@ -1,0 +1,20 @@
+name: The Club — club debuff
+author: corpus
+description: >-
+  The Club debuffs all Club cards. Ante 1 boss: avoid Club-dependent builds; use other
+  suits or Smeared Joker to bypass.
+deck: Red
+stake: White
+must:
+  - boss: TheClub
+    antes: [1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 30

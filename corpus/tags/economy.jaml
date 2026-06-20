@@ -1,0 +1,22 @@
+name: Economy Tag — money doubler
+author: corpus
+description: >-
+  Economy Tag doubles your current money (adds a maximum of $40). First-shop skip reward:
+  pair with To the Moon, Bull, and Rocket.
+deck: Red
+stake: White
+must:
+  - tag: EconomyTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Bull
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 30

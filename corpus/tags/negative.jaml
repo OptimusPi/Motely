@@ -1,0 +1,23 @@
+name: Negative Tag — free negative edition
+author: corpus
+description: >-
+  Negative Tag makes the next base-edition Joker in a shop become Negative and free.
+  Ante 2+ skip reward: pair with Uncommon/Rare Tag to get a free Negative slot-expanding
+  joker, or with Joker Stencil.
+deck: Red
+stake: White
+must:
+  - tag: NegativeTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 35
+  - spectralCard: Ectoplasm
+    antes: [1, 2, 3]
+    score: 25

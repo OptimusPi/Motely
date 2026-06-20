@@ -15,8 +15,8 @@
         const checks = {};
         checks.booted = bootsharp.getStatus() === bootsharp.BootStatus.Booted;
 
-        const cfg = Motely.fromYaml("must:\n  - joker: Blueprint\n");
-        checks.fromYaml = !!cfg && typeof cfg === "object";
+        const cfg = Motely.parseJaml("must:\n  - joker: Blueprint\n");
+        checks.parseJaml = !!cfg && typeof cfg === "object";
 
         const jsonCfg = Motely.fromJson('{ "must": [{ "joker": "Blueprint" }] }');
         checks.fromJson = !!jsonCfg && typeof jsonCfg === "object";

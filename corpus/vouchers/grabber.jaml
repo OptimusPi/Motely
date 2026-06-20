@@ -1,0 +1,22 @@
+name: Grabber — extra hand
+author: corpus
+description: >-
+  Grabber permanently gives +1 hand per round. First-shop hand engine: pair with Green
+  Joker, Ride the Bus, and Burglar.
+deck: Red
+stake: White
+must:
+  - voucher: Grabber
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: GreenJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: RideTheBus
+    antes: [1, 2, 3]
+    score: 35
+  - joker: LoyaltyCard
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,23 @@
+name: Abstract Joker — joker-count mult
+author: corpus
+description: >-
+  Abstract Joker gives +3 Mult for each Joker card you own. First-shop scaling mult:
+  fill slots fast (Riff-Raff makes 2 Commons on Blind select) and Negative-edition
+  jokers add slots without crowding.
+deck: Red
+stake: White
+must:
+  - joker: AbstractJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: RiffRaff
+    antes: [1, 2, 3]
+    score: 40
+  - joker: any
+    edition: Negative
+    label: "Any Negative joker (extra slot)"
+    antes: [1, 2, 3]
+    score: 35

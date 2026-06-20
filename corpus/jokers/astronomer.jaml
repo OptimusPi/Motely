@@ -1,0 +1,23 @@
+name: Astronomer — free planets/packs
+author: corpus
+description: >-
+  Astronomer makes all Planet cards and Celestial Packs in the shop free. First-shop
+  planet engine: Constellation, Satellite, and a committed hand shape.
+deck: Red
+stake: White
+must:
+  - joker: Astronomer
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Satellite
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 25

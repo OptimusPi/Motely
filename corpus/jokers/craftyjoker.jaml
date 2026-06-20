@@ -1,0 +1,27 @@
+name: Crafty Joker — flush chips
+author: corpus
+description: >-
+  Crafty Joker gives +80 Chips if the hand contains a Flush. First-shop flush chips:
+  Smeared and Four Fingers make Flushes easy; pair with the mult counterpart Droll
+  Joker and level with Jupiter.
+deck: Red
+stake: White
+must:
+  - joker: CraftyJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: DrollJoker
+    antes: [1, 2]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2]
+    score: 30
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 30
+  - planetCard: Jupiter
+    antes: [1, 2]
+    score: 20

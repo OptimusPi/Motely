@@ -1,0 +1,24 @@
+name: Certificate — sealed card per round
+author: corpus
+description: >-
+  At the start of each round, Certificate adds a random playing card with a random seal
+  to your hand. First-shop deck-growth/seal engine: pair with Hologram, Blue Seal for
+  planets, and Gold Seal economy.
+deck: Red
+stake: White
+must:
+  - joker: Certificate
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hologram
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 30
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 25

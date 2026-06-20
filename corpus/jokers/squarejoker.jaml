@@ -1,0 +1,20 @@
+name: Square Joker — four-card chips
+author: corpus
+description: >-
+  Square Joker gives +4 Chips if the played hand has exactly 4 cards. First-shop
+  chip engine: Four Fingers makes 4-card Flushes and Straights possible.
+deck: Red
+stake: White
+must:
+  - joker: SquareJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 40
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

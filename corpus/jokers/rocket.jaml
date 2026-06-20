@@ -1,0 +1,24 @@
+name: Rocket — boss-bounty economy
+author: corpus
+description: >-
+  Rocket earns $1 at the end of every round; payout increases by $2 when a Boss Blind is
+  defeated. First-shop economy: scales through boss kills, so pair with boss-avoidance
+  or fast-clear tools.
+deck: Red
+stake: White
+must:
+  - joker: Rocket
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 35
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 25

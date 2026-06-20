@@ -1,0 +1,22 @@
+name: Juggle Tag — temporary hand size
+author: corpus
+description: >-
+  Juggle Tag gives +3 Hand Size for the next round only. First-shop skip reward: pair with
+  held-in-hand builds (Baron, Mime, Shoot the Moon) and Juggler.
+deck: Red
+stake: White
+must:
+  - tag: JuggleTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Juggler
+    antes: [1, 2, 3]
+    score: 30

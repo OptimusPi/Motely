@@ -1,0 +1,24 @@
+name: Supernova — hand-count mult
+author: corpus
+description: >-
+  Supernova adds the number of times the current poker hand has been played this run
+  to Mult. First-shop scaling: commit to a single hand type (e.g. Pair/Three of a Kind)
+  and level it with its Planet.
+deck: Red
+stake: White
+must:
+  - joker: Supernova
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SpaceJoker
+    antes: [1, 2, 3]
+    score: 35
+  - planetCard: Mercury
+    antes: [1, 2]
+    score: 20
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

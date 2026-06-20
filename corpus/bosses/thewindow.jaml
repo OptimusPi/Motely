@@ -1,0 +1,20 @@
+name: The Window — diamond debuff
+author: corpus
+description: >-
+  The Window debuffs all Diamond cards. Ante 1 boss: avoid Diamond-dependent builds; use
+  Smeared Joker or other suits.
+deck: Red
+stake: White
+must:
+  - boss: TheWindow
+    antes: [1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 30

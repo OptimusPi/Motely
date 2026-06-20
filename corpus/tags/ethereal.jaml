@@ -1,0 +1,22 @@
+name: Ethereal Tag — free spectral pack
+author: corpus
+description: >-
+  Ethereal Tag immediately opens a free Spectral Pack. Ante 2+ skip reward: pair with The
+  Soul, Black Hole, Perkeo, and Omen Globe.
+deck: Red
+stake: White
+must:
+  - tag: EtherealTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - spectralCard: TheSoul
+    antes: [1, 2, 3]
+    score: 45
+  - spectralCard: BlackHole
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 35

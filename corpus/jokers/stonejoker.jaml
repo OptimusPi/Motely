@@ -1,0 +1,23 @@
+name: Stone Joker — stone-card chips
+author: corpus
+description: >-
+  Stone Joker gives +25 Chips for each Stone card in the full deck. First-shop stone
+  engine: Marble Joker adds stones each round; Splash makes all stones score.
+deck: Red
+stake: White
+must:
+  - joker: StoneJoker
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MarbleJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Blackboard
+    antes: [1, 2, 3]
+    score: 25

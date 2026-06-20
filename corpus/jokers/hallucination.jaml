@@ -1,0 +1,24 @@
+name: Hallucination — tarot from packs
+author: corpus
+description: >-
+  Hallucination has a 1 in 2 chance to create a Tarot card when any Booster Pack is
+  opened. First-shop tarot engine: Oops! All 6s doubles the odds to guaranteed Tarot
+  per pack.
+deck: Red
+stake: White
+must:
+  - joker: Hallucination
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 25

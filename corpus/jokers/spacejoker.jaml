@@ -1,0 +1,24 @@
+name: Space Joker — hand-level upgrade
+author: corpus
+description: >-
+  Space Joker has a 1 in 4 chance to upgrade the level of the played poker hand.
+  First-shop scaling: pair with Supernova (hand-count mult), Oops All 6s (guaranteed
+  upgrade), and the Planet for your committed hand.
+deck: Red
+stake: White
+must:
+  - joker: SpaceJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25

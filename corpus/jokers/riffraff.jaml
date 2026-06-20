@@ -1,0 +1,24 @@
+name: Riff-Raff — common factory
+author: corpus
+description: >-
+  Riff-Raff creates 2 Common Jokers when a Blind is selected. First-shop slot filler:
+  feeds Abstract Joker (+3 Mult per Joker), Swashbuckler (sell value → Mult), and
+  Showman (duplicate common engines).
+deck: Red
+stake: White
+must:
+  - joker: RiffRaff
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: AbstractJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Swashbuckler
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Showman
+    antes: [1, 2]
+    score: 25

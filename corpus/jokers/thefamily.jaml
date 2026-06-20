@@ -1,0 +1,23 @@
+name: The Family — four-of-a-kind X4
+author: corpus
+description: >-
+  The Family gives X4 Mult if the played hand contains a Four of a Kind. First-shop X4
+  engine: commit to Four of a Kind; use DNA to duplicate key ranks and the Planet for it.
+deck: Red
+stake: White
+must:
+  - joker: TheFamily
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheIdol
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,24 @@
+name: Spare Trousers — two-pair scaling
+author: corpus
+description: >-
+  Spare Trousers gains +2 Mult if the played hand contains a Two Pair. First-shop
+  scaling: pair with Clever Joker, Dusk for retrigger, and Oops All 6s? No, it's not a
+  probability. Just commit to Two Pair.
+deck: Red
+stake: White
+must:
+  - joker: SpareTrousers
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: CleverJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 25
+  - joker: TheDuo
+    antes: [1, 2, 3]
+    score: 30

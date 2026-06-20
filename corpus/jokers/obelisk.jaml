@@ -1,0 +1,24 @@
+name: Obelisk — off-hand scaling mult
+author: corpus
+description: >-
+  Obelisk gains X0.2 Mult per consecutive hand played without playing your most played
+  poker hand. First-shop scaling: rotate hand types each round; pair with hand-shape
+  X jokers and Burglar for many off-hand plays.
+deck: Red
+stake: White
+must:
+  - joker: Obelisk
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 40
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 25
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

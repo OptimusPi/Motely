@@ -1,0 +1,24 @@
+name: Wild Card — any suit
+author: corpus
+description: >-
+  Wild Card counts as any suit. First-shop card engine: pair with Smeared Joker, Flower Pot,
+  and suit-based payoffs.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      enhancement: Wild
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FlowerPot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SeeingDouble
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,23 @@
+name: Green Deck — hand/discard cash
+author: corpus
+description: >-
+  Green Deck gives $2 per remaining hand and $1 per remaining discard each round, but no
+  interest. First-shop synergy: Burglar or Merry Andy to maximize unused resources.
+deck: Green
+stake: White
+must:
+  - joker: Burglar
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GreenJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 25

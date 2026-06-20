@@ -8,7 +8,7 @@ const { Motely } = harness;
 //
 // The C# tests prove every JAML filter clause shape "compiles and runs": parse
 // the JAML, build a search, run a tiny batch, assert it searched seeds and
-// completed. We mirror that through the WASM API — fromYaml (compiles) +
+// completed. We mirror that through the WASM API — parseJaml (compiles) +
 // runSeedListSearch over a fixed seed list (runs) — asserting the search
 // completes and actually evaluated the filter against the listed seeds.
 //
@@ -18,7 +18,7 @@ const { Motely } = harness;
 const SEEDS = ["AAAAAAAA", "BBBBBBBB", "CCCCCCCC", "12345678", "ALEEB"];
 
 function compilesAndRuns(yaml) {
-    const cfg = Motely.fromYaml(yaml);
+    const cfg = Motely.parseJaml(yaml);
     cfg.seeds = SEEDS;
     const r = Motely.runSeedListSearch(cfg);
     assert.equal(r.isCompleted, true, "search should complete");
@@ -95,7 +95,7 @@ runClauseCases("JamlFilterDesc — standard card filters", [
 
 runClauseCases(
     "JamlFilterDesc — erratic deck filters",
-    ["erraticRank: A", "erraticSuit: Spades", "erraticCard: SA"],
+    ["erraticRank: A", "erraticSuit: Spades"],
     (clause) => `deck: Erratic\n${mustClause(clause)}`,
 );
 
@@ -104,12 +104,12 @@ runClauseCases("JamlFilterDesc — starting draw filters", [
 ]);
 
 runClauseCases("JamlFilterDesc — event filters", [
-    "event: LuckyMoney",
-    "event: LuckyMult",
-    "event: MisprintMult",
-    "event: WheelOfFortune",
-    "event: CavendishExtinct",
-    "event: GrosMichelExtinct",
+    "luckyMoney: [0]",
+    "luckyMult: [0]",
+    "misprintMult: [0]",
+    "wheelOfFortune: [0]",
+    "cavendishExtinct: [0]",
+    "grosMichelExtinct: [0]",
 ]);
 
 describe("JamlFilterDesc — sources targeting", () => {

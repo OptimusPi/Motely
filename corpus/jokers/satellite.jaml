@@ -1,0 +1,24 @@
+name: Satellite — unique-planet economy
+author: corpus
+description: >-
+  Satellite earns $1 at the end of each round for each unique Planet card used this run.
+  First-shop economy: prioritize buying and using different Planet cards; Astronomer
+  makes them free.
+deck: Red
+stake: White
+must:
+  - joker: Satellite
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,27 @@
+name: Perkeo — negative consumables
+author: corpus
+description: >-
+  Perkeo creates a Negative copy of a random consumable in your possession at the end of
+  each shop. First-shop legendary from The Soul: carry powerful consumables (The Soul,
+  Cryptid, Black Hole, The Emperor) and duplicate them.
+deck: Red
+stake: White
+must:
+  - legendaryJoker: Perkeo
+    antes: [1]
+    sources:
+      arcanaPacks: [0, 1]
+      spectralPacks: [0, 1]
+should:
+  - spectralCard: Cryptid
+    antes: [1, 2, 3]
+    score: 45
+  - spectralCard: BlackHole
+    antes: [1, 2, 3]
+    score: 40
+  - tarotCard: TheEmperor
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 25

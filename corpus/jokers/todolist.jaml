@@ -1,0 +1,27 @@
+name: To Do List — target economy
+author: corpus
+description: >-
+  To Do List earns $4 if the played hand matches a target poker hand that changes at
+  the end of each round. First-shop economy: predict the target and hit it with the
+  matching Planet/hand-shape joker.
+deck: Red
+stake: White
+must:
+  - joker: ToDoList
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: JollyJoker
+    antes: [1, 2]
+    score: 25
+  - joker: ZanyJoker
+    antes: [1, 2]
+    score: 25
+  - joker: CrazyJoker
+    antes: [1, 2]
+    score: 25
+  - joker: DrollJoker
+    antes: [1, 2]
+    score: 25

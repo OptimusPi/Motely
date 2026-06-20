@@ -1,0 +1,23 @@
+name: Deja Vu — red seal
+author: corpus
+description: >-
+  Deja Vu adds a Red Seal to 1 selected card. First-shop spectral retrigger engine: pair
+  with high-value cards, Glass Joker, Seltzer, and Dusk.
+deck: Red
+stake: White
+must:
+  - spectralCard: DejaVu
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GlassJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 25

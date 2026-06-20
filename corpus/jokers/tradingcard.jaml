@@ -1,0 +1,24 @@
+name: Trading Card — discard destruction economy
+author: corpus
+description: >-
+  If the first discard of the round has only 1 card, Trading Card destroys it and earns
+  $3. First-shop economy: pair with Drunkard for more discards and target cards you
+  want to remove.
+deck: Red
+stake: White
+must:
+  - joker: TradingCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 40
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 35
+  - joker: MailInRebate
+    antes: [1, 2, 3]
+    score: 25

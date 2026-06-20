@@ -1,0 +1,22 @@
+name: Rare Tag — free rare joker
+author: corpus
+description: >-
+  Rare Tag makes the next shop contain a free Rare Joker. First-shop skip reward: pair
+  with Showman and Baseball Card to capitalize on rare jokers.
+deck: Red
+stake: White
+must:
+  - tag: RareTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BaseballCard
+    antes: [1, 2, 3]
+    score: 40
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 25

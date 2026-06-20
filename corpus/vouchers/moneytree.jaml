@@ -1,0 +1,22 @@
+name: Money Tree — max interest cap
+author: corpus
+description: >-
+  Money Tree raises the interest cap to $20 per round. First-shop economy: pair with To the
+  Moon, Bootstraps, and Golden Joker.
+deck: Red
+stake: White
+must:
+  - voucher: MoneyTree
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Bootstraps
+    antes: [1, 2, 3]
+    score: 40
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 35

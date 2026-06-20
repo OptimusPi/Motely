@@ -1,0 +1,22 @@
+name: Buffoon Tag — mega buffoon pack
+author: corpus
+description: >-
+  Buffoon Tag immediately opens a free Mega Buffoon Pack. Ante 2+ skip reward: pair with
+  Showman, Gift Card, and any joker-density build.
+deck: Red
+stake: White
+must:
+  - tag: BuffoonTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: BaseballCard
+    antes: [1, 2, 3]
+    score: 25

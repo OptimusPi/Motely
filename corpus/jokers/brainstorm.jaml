@@ -1,0 +1,23 @@
+name: Brainstorm — copy leftmost
+author: corpus
+description: >-
+  Brainstorm copies the ability of the leftmost Joker. First-shop copy engine: place the
+  strongest effect in the leftmost slot (Cavendish, The Order, Baron, Perkeo).
+deck: Red
+stake: White
+must:
+  - joker: Brainstorm
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Cavendish
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 35

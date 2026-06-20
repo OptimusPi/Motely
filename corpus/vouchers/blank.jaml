@@ -1,0 +1,23 @@
+name: Blank — nothing
+author: corpus
+description: >-
+  Blank does nothing directly, but is required to unlock Antimatter. First-shop voucher
+  engine: buy Blank early to set up Antimatter later; pair with any build that wants a
+  +1 Joker slot.
+deck: Red
+stake: White
+must:
+  - voucher: Blank
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - voucher: Antimatter
+    antes: [1, 2, 3]
+    score: 45
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 25

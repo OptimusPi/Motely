@@ -1,0 +1,23 @@
+name: Bull — money chips
+author: corpus
+description: >-
+  Bull gives +2 Chips for each $1 you have. First-shop chip engine: hoard money with
+  Golden Joker, To the Moon, and Cavendish early to fuel a huge chip total.
+deck: Red
+stake: White
+must:
+  - joker: Bull
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Bootstraps
+    antes: [1, 2, 3]
+    score: 25

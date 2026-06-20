@@ -1,0 +1,23 @@
+name: Sock and Buskin — face retrigger
+author: corpus
+description: >-
+  Sock and Buskin retriggers all played face cards. First-shop face retrigger: Pareidolia
+  turns every card into a face card, so all played cards get an extra score.
+deck: Red
+stake: White
+must:
+  - joker: SockAndBuskin
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SmileyFace
+    antes: [1, 2, 3]
+    score: 40
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,23 @@
+name: Vagabond — poor tarot
+author: corpus
+description: >-
+  Vagabond creates a Tarot card if a hand is played while you have $4 or less. First-shop
+  tarot economy: stay poor, play cheap hands, and feed Fortune Teller or Perkeo.
+deck: Red
+stake: White
+must:
+  - joker: Vagabond
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 25

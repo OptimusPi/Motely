@@ -1,0 +1,24 @@
+name: Showman — duplicates allowed
+author: corpus
+description: >-
+  Showman lets Joker, Tarot, Planet, and Spectral cards appear multiple times in the
+  shop. First-shop dupe engine: stack any strong engine joker (Cavendish, The Order,
+  Perkeo) and copy it with Showman.
+deck: Red
+stake: White
+must:
+  - joker: Showman
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Cavendish
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 30

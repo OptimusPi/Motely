@@ -1,0 +1,23 @@
+name: Arrowhead — spade chips
+author: corpus
+description: >-
+  Arrowhead gives each played Spade card +50 Chips when scored. First-shop spade chip:
+  Checkered Deck is half Spades; Smeared Joker makes Clubs count as Spades too.
+deck: Checkered
+stake: White
+must:
+  - joker: Arrowhead
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: WrathfulJoker
+    antes: [1, 2, 3]
+    score: 25
+  - joker: Blackboard
+    antes: [1, 2, 3]
+    score: 20

@@ -1,0 +1,24 @@
+name: The Idol — target rank/suit X2
+author: corpus
+description: >-
+  The Idol gives each played card of a target rank and suit X2 Mult when scored; the
+  target changes each round. First-shop X2 engine: Smeared Joker helps hit the suit;
+  Showman can duplicate The Idol.
+deck: Red
+stake: White
+must:
+  - joker: TheIdol
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 20

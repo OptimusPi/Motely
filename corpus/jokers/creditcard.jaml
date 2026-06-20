@@ -1,0 +1,21 @@
+name: Credit Card — debt enabler
+author: corpus
+description: >-
+  Credit Card lets you go up to -$20 in debt. First-shop economy enabler: pairs with
+  Vagabond (creates a Tarot when a hand is played at $4 or less) and any build that
+  wants to spend below zero to set up early.
+deck: Red
+stake: White
+must:
+  - joker: CreditCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Vagabond
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Bull
+    antes: [1, 2, 3]
+    score: 25

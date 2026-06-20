@@ -1,0 +1,23 @@
+name: The Empress — mult enhancer
+author: corpus
+description: >-
+  The Empress enhances 2 selected cards to Mult Cards. First-shop mult engine: pair with
+  retrigger effects (Seltzer, Hack, Dusk) and jokers that reward per-card mult.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheEmpress
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 25

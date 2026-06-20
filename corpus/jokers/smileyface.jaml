@@ -1,0 +1,21 @@
+name: Smiley Face — face mult
+author: corpus
+description: >-
+  Smiley Face gives played face cards +5 Mult when scored. First-shop face mult:
+  Pareidolia turns every card into a face card so all scored cards get +5. Avoid the
+  Abandoned Deck.
+deck: Red
+stake: White
+must:
+  - joker: SmileyFace
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SockAndBuskin
+    antes: [1, 2, 3]
+    score: 25

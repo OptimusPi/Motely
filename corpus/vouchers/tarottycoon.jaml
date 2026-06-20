@@ -1,0 +1,22 @@
+name: Tarot Tycoon — tarot shop flood
+author: corpus
+description: >-
+  Tarot Tycoon makes Tarot cards appear 4x more frequently in the shop. First-shop tarot
+  engine: pair with Fortune Teller, Cartomancer, and Perkeo.
+deck: Red
+stake: White
+must:
+  - voucher: TarotTycoon
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 30

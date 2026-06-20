@@ -1,0 +1,23 @@
+name: The Moon — club conversion
+author: corpus
+description: >-
+  The Moon converts up to 3 selected cards to Clubs. First-shop club engine: pair with
+  Gluttonous Joker, Onyx Agate, and Smeared Joker.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheMoon
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GluttonousJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: OnyxAgate
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

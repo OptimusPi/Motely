@@ -1,0 +1,22 @@
+name: Observatory — planet mult
+author: corpus
+description: >-
+  Observatory makes Planet cards in your consumable area give X1.5 Mult for their specified
+  poker hand. First-shop planet engine: carry the Planet for your committed hand.
+deck: Red
+stake: White
+must:
+  - voucher: Observatory
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - planetCard: Saturn
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 30

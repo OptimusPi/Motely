@@ -1,0 +1,21 @@
+name: Raised Fist — held-card mult
+author: corpus
+description: >-
+  Raised Fist adds double the rank of the lowest-ranked card held in hand to Mult.
+  First-shop held-in-hand mult: Mime retriggers the held effect for double value;
+  hold a low card and play the rest.
+deck: Red
+stake: White
+must:
+  - joker: RaisedFist
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25

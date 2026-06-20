@@ -1,0 +1,23 @@
+name: Seltzer — 10-hand retrigger
+author: corpus
+description: >-
+  Seltzer retriggers all cards played for the next 10 hands. First-shop retrigger burst:
+  pair with Photograph, Glass, Hack, and any per-card scoring engine.
+deck: Red
+stake: White
+must:
+  - joker: Seltzer
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Photograph
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 35
+  - joker: GlassJoker
+    antes: [1, 2, 3]
+    score: 30

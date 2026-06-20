@@ -1,5 +1,6 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
+using Motely.Datalake;
 using Motely.Filters;
 
 namespace Motely.CLI;
@@ -15,6 +16,7 @@ internal static class CliSearchMode
         bool Drown,
         string? ResultsRootPath,
         string? FilterId,
+        IReadOnlyList<string>? JamlSeeds,
         IReadOnlyList<string> KeywordInputs,
         string? PaddingCharsOption,
         int? RandomCount,
@@ -116,8 +118,22 @@ internal static class CliSearchMode
 
         if (hasDrownMode)
         {
-            error = "Error: --drown mode is not currently available.";
-            return false;
+            if (string.IsNullOrWhiteSpace(input.FilterId))
+            {
+                error = "Error: --drown requires a resolved filterId (use --jaml).";
+                return false;
+            }
+
+            string lakeDir = MotelyLakePaths.LakeDir(input.ResultsRootPath, input.FilterId!);
+            if (!Directory.Exists(lakeDir) || !Directory.EnumerateFiles(lakeDir, "*.parquet").Any())
+            {
+                error =
+                    $"Error: no saved seeds for filter '{input.FilterId}' at '{lakeDir}'. Run a search first.";
+                return false;
+            }
+
+            updated = updated.WithProviderSearch(new DuckLakeDrownProvider(lakeDir));
+            return true;
         }
 
         if (hasSource)
@@ -217,6 +233,11 @@ internal static class CliSearchMode
         else if (explicitAesthetic.HasValue)
         {
             updated = updated.WithAestheticSearch(explicitAesthetic.Value);
+        }
+        else if (input.JamlSeeds is { Count: > 0 })
+        {
+            // A JAML `seeds:` array front-runs the search as a seed list by default.
+            updated = updated.WithListSearch(input.JamlSeeds, input.JamlSeeds.Count);
         }
         else if (input.JamlAestheticFallback is { Count: > 0 })
         {

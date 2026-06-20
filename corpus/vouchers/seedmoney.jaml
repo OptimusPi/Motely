@@ -1,0 +1,22 @@
+name: Seed Money — higher interest cap
+author: corpus
+description: >-
+  Seed Money raises the interest cap to $10 per round. First-shop economy: pair with To the
+  Moon, Bull, and Rocket.
+deck: Red
+stake: White
+must:
+  - voucher: SeedMoney
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Bull
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 30

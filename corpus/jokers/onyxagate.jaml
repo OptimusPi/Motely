@@ -1,0 +1,23 @@
+name: Onyx Agate — club mult
+author: corpus
+description: >-
+  Onyx Agate gives each played Club card +7 Mult when scored. First-shop club mult:
+  Smeared Joker makes Spades count as Clubs; Gluttonous Joker adds +3 more.
+deck: Red
+stake: White
+must:
+  - joker: OnyxAgate
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: GluttonousJoker
+    antes: [1, 2, 3]
+    score: 25
+  - joker: SockAndBuskin
+    antes: [1, 2, 3]
+    score: 20

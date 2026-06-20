@@ -1,0 +1,22 @@
+name: Voucher Tag — extra voucher
+author: corpus
+description: >-
+  Voucher Tag adds a Voucher to the next shop. First-shop skip reward: pair with
+  Director's Cut, Overstock, and any voucher-dependent build.
+deck: Red
+stake: White
+must:
+  - tag: VoucherTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - voucher: DirectorsCut
+    antes: [1, 2, 3]
+    score: 40
+  - voucher: Overstock
+    antes: [1, 2, 3]
+    score: 35
+  - joker: ChaostheClown
+    antes: [1, 2, 3]
+    score: 20

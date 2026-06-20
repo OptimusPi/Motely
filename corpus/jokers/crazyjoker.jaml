@@ -1,0 +1,27 @@
+name: Crazy Joker — straight mult
+author: corpus
+description: >-
+  Crazy Joker gives +12 Mult if the played hand contains a Straight. First-shop straight
+  payoff: Four Fingers and Shortcut make Straights trivial to hit; level them with
+  Saturn and stack The Order (X3 on Straight).
+deck: Red
+stake: White
+must:
+  - joker: CrazyJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Shortcut
+    antes: [1, 2]
+    score: 35
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 30
+  - planetCard: Saturn
+    antes: [1, 2]
+    score: 20

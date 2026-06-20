@@ -1,0 +1,23 @@
+name: Ceres — Flush Five level
+author: corpus
+description: >-
+  Ceres levels up Flush Five. First-shop Flush Five engine: stack with Smeared Joker,
+  Five of a Kind tools, and Flush payoffs.
+deck: Red
+stake: White
+must:
+  - planetCard: Ceres
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: TheLovers
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTribe
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,23 @@
+name: The Lovers — wild card
+author: corpus
+description: >-
+  The Lovers enhances 1 selected card into a Wild Card. First-shop suit engine: pair with
+  Smeared Joker, Flower Pot, and any suit-based payoff joker.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheLovers
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FlowerPot
+    antes: [1, 2, 3]
+    score: 30
+  - joker: SeeingDouble
+    antes: [1, 2, 3]
+    score: 25

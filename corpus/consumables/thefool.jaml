@@ -1,0 +1,24 @@
+name: The Fool — copy last consumable
+author: corpus
+description: >-
+  The Fool creates a copy of the last Tarot or Planet card used this run. First-shop
+  copy engine: pair with a powerful Tarot/Planet generator (The Emperor, High Priestess,
+  Cartomancer) so The Fool immediately copies something strong.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheFool
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - tarotCard: TheEmperor
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: TheHighPriestess
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 30

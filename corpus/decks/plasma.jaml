@@ -1,0 +1,23 @@
+name: Plasma Deck — balance chips/mult
+author: corpus
+description: >-
+  Plasma Deck balances Chips and Mult when scoring, and doubles the base Blind size.
+  First-shop synergy: high raw mult or chip scaling, or boss-control tools.
+deck: Plasma
+stake: White
+must:
+  - joker: TheOrder
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Stuntman
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 30

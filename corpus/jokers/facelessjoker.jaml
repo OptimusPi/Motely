@@ -1,0 +1,21 @@
+name: Faceless Joker — discard economy
+author: corpus
+description: >-
+  Faceless Joker earns $5 if 3 or more face cards are discarded at the same time.
+  First-shop discard economy: Pareidolia turns every card into a face card, so any
+  3-card discard triggers it.
+deck: Red
+stake: White
+must:
+  - joker: FacelessJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 40
+  - joker: MerryAndy
+    antes: [1, 2]
+    score: 25

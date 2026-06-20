@@ -1,0 +1,20 @@
+name: Amber Acorn — joker flip
+author: corpus
+description: >-
+  Amber Acorn flips and shuffles all Joker cards. Ante 8 finisher: avoid position-dependent
+  jokers or disable with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: AmberAcorn
+    antes: [8]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 20

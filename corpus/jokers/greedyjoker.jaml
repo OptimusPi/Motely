@@ -1,0 +1,29 @@
+name: Greedy Joker — diamonds juice
+author: corpus
+description: >-
+  Greedy Joker gives +3 Mult per played Diamond. A first-shop suit engine: want it
+  early alongside Diamond density, suit-fixing (Smeared merges red suits), and The
+  Idol locking a Diamond rank. Avoid The Window boss (debuffs Diamonds).
+deck: Red
+stake: White
+must:
+  - joker: GreedyJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2]
+    score: 50
+  - joker: TheIdol
+    antes: [1, 2, 3]
+    score: 35
+  - standardCard:
+      suit: Diamonds
+    label: "Any Diamond"
+    antes: [1, 2]
+    score: 15
+mustNot:
+  - boss: TheWindow
+    antes: [1]

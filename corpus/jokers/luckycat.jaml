@@ -1,0 +1,24 @@
+name: Lucky Cat — lucky-trigger X-mult
+author: corpus
+description: >-
+  Lucky Cat gains X0.25 Mult every time a Lucky card successfully triggers. First-shop
+  scaling: needs a Lucky card to appear; then use Aura/Deja Vu to create more Lucky cards
+  and Oops All 6s to double trigger chances.
+deck: Red
+stake: White
+must:
+  - joker: LuckyCat
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,20 @@
+name: The Head — only pairs allowed
+author: corpus
+description: >-
+  The Head requires all played hands to be Pair or better. Ante 1 boss: build Pair/Two
+  Pair hands.
+deck: Red
+stake: White
+must:
+  - boss: TheHead
+    antes: [1]
+should:
+  - joker: TheDuo
+    antes: [1, 2, 3]
+    score: 45
+  - joker: JollyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SlyJoker
+    antes: [1, 2, 3]
+    score: 30

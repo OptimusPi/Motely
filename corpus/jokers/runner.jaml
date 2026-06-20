@@ -1,0 +1,24 @@
+name: Runner — straight chips
+author: corpus
+description: >-
+  Runner gains +15 Chips permanently each time a Straight is played. First-shop
+  straight-chip engine: Four Fingers and Shortcut make Straights easy to hit,
+  level with Saturn.
+deck: Red
+stake: White
+must:
+  - joker: Runner
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 35
+  - joker: Shortcut
+    antes: [1, 2]
+    score: 30
+  - planetCard: Saturn
+    antes: [1, 2]
+    score: 20

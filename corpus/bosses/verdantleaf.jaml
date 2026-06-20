@@ -1,0 +1,20 @@
+name: Verdant Leaf — random joker disable
+author: corpus
+description: >-
+  Verdant Leaf disables one random Joker every hand. Ante 8 finisher: use many jokers or
+  disable with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: VerdantLeaf
+    antes: [8]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BaseballCard
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,20 @@
+name: The Plant — face card debuff
+author: corpus
+description: >-
+  The Plant debuffs all face cards. Ante 4 boss: avoid face-card builds or use Pareidolia
+  with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: ThePlant
+    antes: [4]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 25

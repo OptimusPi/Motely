@@ -1,0 +1,23 @@
+name: Fortune Teller — tarot mult
+author: corpus
+description: >-
+  Fortune Teller gives +1 Mult per Tarot card used this run. First-shop scaling mult:
+  feed it with Tarot generators (Hallucination, 8 Ball, Cartomancer) and Arcana packs.
+deck: Red
+stake: White
+must:
+  - joker: FortuneTeller
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hallucination
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EightBall
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 30

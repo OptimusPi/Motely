@@ -1,0 +1,22 @@
+name: Meteor Tag — mega celestial pack
+author: corpus
+description: >-
+  Meteor Tag immediately opens a free Mega Celestial Pack. Ante 2+ skip reward: pair with
+  Constellation, Astronomer, and Supernova.
+deck: Red
+stake: White
+must:
+  - tag: MeteorTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Supernova
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,23 @@
+name: The Hierophant — bonus enhancer
+author: corpus
+description: >-
+  The Hierophant enhances 2 selected cards to Bonus Cards. First-shop chip engine: pair
+  with Hiker (permanent chips on scoring), Splash, and Blue Joker.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheHierophant
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hiker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 30
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 25

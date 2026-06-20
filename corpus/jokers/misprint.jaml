@@ -1,0 +1,23 @@
+name: Misprint — random mult
+author: corpus
+description: >-
+  Misprint gives +0 to +23 Mult at random each scoring. First-shop cheap gamble:
+  best when copied (Blueprint/Brainstorm roll independently) or editioned to raise
+  the floor.
+deck: Red
+stake: White
+must:
+  - joker: Misprint
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Misprint
+    edition: Polychrome
+    label: "Polychrome Misprint"
+    antes: [1]
+    score: 45
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25

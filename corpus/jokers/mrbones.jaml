@@ -1,0 +1,20 @@
+name: Mr. Bones — safety net
+author: corpus
+description: >-
+  Mr. Bones prevents death if you score at least 25% of the required chips, then self-
+  destructs. First-shop safety net: keep in slot 5 as a panic button; not a build-around.
+deck: Red
+stake: White
+must:
+  - joker: MrBones
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 25

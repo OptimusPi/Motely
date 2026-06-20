@@ -1,0 +1,16 @@
+name: Space Joker — hand level up
+author: corpus
+description: >-
+  Event: Space Joker successfully upgrades the played poker hand level. Tight Ante 1 event:
+  the 1 in 4 chance succeeds.
+deck: Red
+stake: White
+must:
+  - spaceLevelup: [1]
+should:
+  - joker: SpaceJoker
+    score: 45
+  - joker: OopsAll6s
+    score: 40
+  - joker: Supernova
+    score: 35

@@ -1,0 +1,23 @@
+name: Drunkard — discard utility
+author: corpus
+description: >-
+  Drunkard gives +1 Discard each round. First-shop discard utility: powers Banner
+  (+30 chips per remaining discard), Delayed Gratification, and Hit the Road setups.
+deck: Red
+stake: White
+must:
+  - joker: Drunkard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Banner
+    antes: [1, 2, 3]
+    score: 40
+  - joker: DelayedGratification
+    antes: [1, 2, 3]
+    score: 35
+  - joker: HitTheRoad
+    antes: [1, 2, 3]
+    score: 25

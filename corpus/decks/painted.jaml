@@ -1,0 +1,23 @@
+name: Painted Deck — hand size
+author: corpus
+description: >-
+  Painted Deck gives +2 Hand Size but -1 Joker slot. First-shop synergy: held-in-hand
+  builds (Baron, Mime) and Juggler.
+deck: Painted
+stake: White
+must:
+  - joker: Baron
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 45
+  - joker: ShootTheMoon
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Juggler
+    antes: [1, 2, 3]
+    score: 30

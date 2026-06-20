@@ -1,0 +1,22 @@
+name: Antimatter — extra joker slot
+author: corpus
+description: >-
+  Antimatter adds +1 Joker slot. First-shop slot engine: pair with Joker Stencil, Baseball
+  Card, and any joker-density build.
+deck: Red
+stake: White
+must:
+  - voucher: Antimatter
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BaseballCard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 25

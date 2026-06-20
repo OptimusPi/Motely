@@ -1,0 +1,26 @@
+name: Jupiter — Flush level
+author: corpus
+description: >-
+  Jupiter levels up Flush. First-shop Flush engine: stack with Droll Joker, Crafty Joker,
+  The Tribe, and Smeared Joker.
+deck: Red
+stake: White
+must:
+  - planetCard: Jupiter
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: DrollJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: CraftyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTribe
+    antes: [1, 2, 3]
+    score: 30
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

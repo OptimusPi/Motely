@@ -1,0 +1,21 @@
+name: Scary Face — face-card chips
+author: corpus
+description: >-
+  Scary Face gives played face cards +30 Chips when scored. First-shop chip engine:
+  Pareidolia makes every card a face card so all scored cards get +30. Avoid the
+  Abandoned Deck (no face cards).
+deck: Red
+stake: White
+must:
+  - joker: ScaryFace
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SockAndBuskin
+    antes: [1, 2, 3]
+    score: 25

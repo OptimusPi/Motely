@@ -1,0 +1,29 @@
+name: Lusty Joker — hearts juice
+author: corpus
+description: >-
+  Lusty Joker gives +3 Mult per scored Heart. First-shop hearts engine: pairs with
+  Bloodstone (both trigger on Hearts) and Smeared (merges red suits to fuel Heart
+  Flushes). Avoid The Head boss (debuffs Hearts).
+deck: Red
+stake: White
+must:
+  - joker: LustyJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Bloodstone
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SmearedJoker
+    antes: [1, 2]
+    score: 40
+  - standardCard:
+      suit: Hearts
+    label: "Any Heart"
+    antes: [1, 2]
+    score: 15
+mustNot:
+  - boss: TheHead
+    antes: [1]

@@ -1,0 +1,23 @@
+name: Rough Gem — diamond economy
+author: corpus
+description: >-
+  Rough Gem earns $1 for each played Diamond card when scored. First-shop diamond
+  economy: Checkered Deck, Smeared Joker, and The Hierophant for more Diamonds.
+deck: Checkered
+stake: White
+must:
+  - joker: RoughGem
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: GreedyJoker
+    antes: [1, 2, 3]
+    score: 25
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 20

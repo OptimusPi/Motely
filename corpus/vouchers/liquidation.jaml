@@ -1,0 +1,22 @@
+name: Liquidation — big shop discount
+author: corpus
+description: >-
+  Liquidation makes all cards and packs in the shop 50% cheaper. First-shop economy: buy
+  everything; pair with Overstock Plus and Golden Joker.
+deck: Red
+stake: White
+must:
+  - voucher: Liquidation
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - voucher: OverstockPlus
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 30

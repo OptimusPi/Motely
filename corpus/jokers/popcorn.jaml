@@ -1,0 +1,22 @@
+name: Popcorn — decaying mult
+author: corpus
+description: >-
+  Popcorn starts at +20 Mult and loses -4 Mult per round played. First-shop burst
+  mult: sell it before it hits zero and use the slot for a scaling engine.
+deck: Red
+stake: White
+must:
+  - joker: Popcorn
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Popcorn
+    edition: Polychrome
+    label: "Polychrome Popcorn"
+    antes: [1]
+    score: 40
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

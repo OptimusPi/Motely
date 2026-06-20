@@ -1,0 +1,24 @@
+name: Canio — face-destroy X-mult
+author: corpus
+description: >-
+  Canio gains X1 Mult when a face card is destroyed. First-shop legendary from The Soul:
+  find it in Ante 1 Arcana/Spectral packs and destroy face cards (Immolate, Death,
+  debuff bosses) to scale it.
+deck: Red
+stake: White
+must:
+  - legendaryJoker: Canio
+    antes: [1]
+    sources:
+      arcanaPacks: [0, 1]
+      spectralPacks: [0, 1]
+should:
+  - spectralCard: Immolate
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: Death
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 25

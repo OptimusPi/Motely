@@ -1,0 +1,24 @@
+name: Superposition — ace straight tarot
+author: corpus
+description: >-
+  Superposition creates a Tarot card if the played hand contains an Ace and a
+  Straight. First-shop tarot engine: Four Fingers and Shortcut make Ace-Straights
+  easier; level with Saturn.
+deck: Red
+stake: White
+must:
+  - joker: Superposition
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 35
+  - joker: Shortcut
+    antes: [1, 2]
+    score: 30
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 20

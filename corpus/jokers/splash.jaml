@@ -1,0 +1,24 @@
+name: Splash — every card scores
+author: corpus
+description: >-
+  Splash makes every played card count in scoring. First-shop utility: turns Stone
+  cards, Smeared Flushes, and multi-card builds into free chip income; pair with
+  Stone Joker for all Stones scoring.
+deck: Red
+stake: White
+must:
+  - joker: Splash
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: StoneJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: MarbleJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2]
+    score: 20

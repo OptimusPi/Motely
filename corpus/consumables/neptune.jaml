@@ -1,0 +1,23 @@
+name: Neptune — Straight Flush level
+author: corpus
+description: >-
+  Neptune levels up Straight Flush. First-shop Straight Flush engine: stack with Séance,
+  Four Fingers, Smeared Joker, and The Order.
+deck: Red
+stake: White
+must:
+  - planetCard: Neptune
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Seance
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 30

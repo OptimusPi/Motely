@@ -1,0 +1,26 @@
+name: Saturn — Straight level
+author: corpus
+description: >-
+  Saturn levels up Straight. First-shop Straight engine: stack with Crazy Joker, Devious
+  Joker, The Order, Four Fingers, and Shortcut.
+deck: Red
+stake: White
+must:
+  - planetCard: Saturn
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: CrazyJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: DeviousJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 30
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 25

@@ -1,0 +1,23 @@
+name: Erratic Deck — random ranks/suits
+author: corpus
+description: >-
+  Erratic Deck randomizes all ranks and suits. First-shop synergy: Smeared Joker or
+  Pareidolia to smooth randomness into a buildable strategy.
+deck: Erratic
+stake: White
+must:
+  - joker: SmearedJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FlowerPot
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 25

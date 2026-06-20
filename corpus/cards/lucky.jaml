@@ -1,0 +1,24 @@
+name: Lucky Card — chance mult/money
+author: corpus
+description: >-
+  Lucky Card has a 1 in 5 chance to give +20 Mult when scored and a 1 in 15 chance to give
+  $20. First-shop card engine: pair with Lucky Cat, Oops All 6s, and 8 Ball.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      enhancement: Lucky
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: LuckyCat
+    antes: [1, 2, 3]
+    score: 45
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EightBall
+    antes: [1, 2, 3]
+    score: 35

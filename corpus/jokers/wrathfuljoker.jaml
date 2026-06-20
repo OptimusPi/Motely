@@ -1,0 +1,29 @@
+name: Wrathful Joker — spades juice
+author: corpus
+description: >-
+  Wrathful Joker gives +3 Mult per scored Spade. First-shop spades engine: pairs
+  with Arrowhead (+50 Chips per Spade) and Blackboard (Spades/Clubs only). Avoid
+  The Goad boss (debuffs Spades).
+deck: Red
+stake: White
+must:
+  - joker: WrathfulJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Arrowhead
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SmearedJoker
+    antes: [1, 2]
+    score: 40
+  - standardCard:
+      suit: Spades
+    label: "Any Spade"
+    antes: [1, 2]
+    score: 15
+mustNot:
+  - boss: TheGoad
+    antes: [1]

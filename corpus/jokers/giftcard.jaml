@@ -1,0 +1,24 @@
+name: Gift Card — sell-value economy
+author: corpus
+description: >-
+  Gift Card adds $1 of sell value to every Joker and Consumable at the end of each
+  round. First-shop engine: pair with Swashbuckler (sell value → Mult), Egg, and any
+  consumable deck.
+deck: Red
+stake: White
+must:
+  - joker: GiftCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Swashbuckler
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Egg
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 25

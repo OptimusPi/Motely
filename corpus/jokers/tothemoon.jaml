@@ -1,0 +1,24 @@
+name: To the Moon — interest scaling
+author: corpus
+description: >-
+  To the Moon earns an extra $1 of interest for every $5 you have at the end of each
+  round. First-shop economy: pair with Golden Joker, Rocket, and Bull to hoard money
+  and maximize interest.
+deck: Red
+stake: White
+must:
+  - joker: ToTheMoon
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Bull
+    antes: [1, 2, 3]
+    score: 35

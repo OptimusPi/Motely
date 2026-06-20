@@ -1,0 +1,24 @@
+name: Invisible Joker — duplicator
+author: corpus
+description: >-
+  After 2 rounds, sell Invisible Joker to duplicate a random Joker (removes Negative from
+  the copy). First-shop copy engine: duplicate a strong rare/legendary payoff or another
+  Invisible Joker.
+deck: Red
+stake: White
+must:
+  - joker: InvisibleJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Brainstorm
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 30

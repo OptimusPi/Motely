@@ -1,0 +1,24 @@
+name: The Wheel of Fortune — joker edition
+author: corpus
+description: >-
+  The Wheel of Fortune has a 1 in 4 chance to add Foil, Holographic, or Polychrome to a
+  random Joker. First-shop edition engine: pair with Oops All 6s (guaranteed edition),
+  many cheap jokers, and Showman.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheWheelOfFortune
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 45
+  - joker: RiffRaff
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 25

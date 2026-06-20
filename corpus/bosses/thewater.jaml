@@ -1,0 +1,20 @@
+name: The Water — zero discards
+author: corpus
+description: >-
+  The Water starts the round with 0 discards. Ante 2 boss: build hands that don't need
+  discards; Burglar is a strong counter.
+deck: Red
+stake: White
+must:
+  - boss: TheWater
+    antes: [2]
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 35

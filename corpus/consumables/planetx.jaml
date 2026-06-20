@@ -1,0 +1,23 @@
+name: Planet X — Five of a Kind level
+author: corpus
+description: >-
+  Planet X levels up Five of a Kind. First-shop Five of a Kind engine: stack with DNA,
+  Death, and wild cards to create five-of-a-kind hands.
+deck: Red
+stake: White
+must:
+  - planetCard: PlanetX
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: Death
+    antes: [1, 2, 3]
+    score: 35
+  - tarotCard: TheLovers
+    antes: [1, 2, 3]
+    score: 25

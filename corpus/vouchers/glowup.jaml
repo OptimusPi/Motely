@@ -1,0 +1,22 @@
+name: Glow Up — editions very common
+author: corpus
+description: >-
+  Glow Up makes Foil, Holographic, and Polychrome editions appear 4x more often (Polychrome
+  7x). First-shop edition engine: pair with The Wheel of Fortune and any edition payoff.
+deck: Red
+stake: White
+must:
+  - voucher: GlowUp
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - tarotCard: TheWheelOfFortune
+    antes: [1, 2, 3]
+    score: 45
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 25

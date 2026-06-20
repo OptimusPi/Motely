@@ -1,0 +1,23 @@
+name: Wraith — rare joker
+author: corpus
+description: >-
+  Wraith creates a random Rare Joker. First-shop spectral rare engine: pair with Showman
+  (duplicate outcome), Gift Card, and any rare-joker synergy.
+deck: Red
+stake: White
+must:
+  - spectralCard: Wraith
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BaseballCard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 25

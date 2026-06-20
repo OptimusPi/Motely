@@ -1,0 +1,24 @@
+name: Judgement — random joker
+author: corpus
+description: >-
+  Judgement creates a random Joker card (without in-run stickers). First-shop joker
+  engine: pair with Showman (duplicate outcome), Fortune Teller, and any joker-density
+  build.
+deck: Red
+stake: White
+must:
+  - tarotCard: Judgement
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 25
+  - joker: AbstractJoker
+    antes: [1, 2, 3]
+    score: 25

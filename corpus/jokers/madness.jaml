@@ -1,0 +1,24 @@
+name: Madness — boss-scaling mult
+author: corpus
+description: >-
+  When Small or Big Blind is selected, Madness gains X0.5 Mult and destroys a random
+  Joker. First-shop scaling: keep cheap/expandable fodder to the right (Egg, Riff-Raff)
+  and protect key jokers with spacing or Eternal stickers.
+deck: Red
+stake: White
+must:
+  - joker: Madness
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: RiffRaff
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Egg
+    antes: [1, 2, 3]
+    score: 35
+  - joker: AbstractJoker
+    antes: [1, 2, 3]
+    score: 25

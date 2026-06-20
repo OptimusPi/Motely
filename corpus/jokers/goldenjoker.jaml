@@ -1,0 +1,23 @@
+name: Golden Joker — passive economy
+author: corpus
+description: >-
+  Golden Joker earns $4 at the end of each round. First-shop economy: feeds Bull
+  (+2 chips per $1), To the Moon (interest scaling), and any money-hoarding engine.
+deck: Red
+stake: White
+must:
+  - joker: GoldenJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Bull
+    antes: [1, 2, 3]
+    score: 40
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Bootstraps
+    antes: [1, 2, 3]
+    score: 25

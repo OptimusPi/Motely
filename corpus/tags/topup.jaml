@@ -1,0 +1,22 @@
+name: Top-up Tag — common joker spawn
+author: corpus
+description: >-
+  Top-up Tag creates up to 2 Common Jokers (if you have space). Ante 2+ skip reward: pair
+  with Baseball Card, Joker Stencil, and Swashbuckler.
+deck: Red
+stake: White
+must:
+  - tag: TopupTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: BaseballCard
+    antes: [1, 2, 3]
+    score: 45
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Swashbuckler
+    antes: [1, 2, 3]
+    score: 30

@@ -325,7 +325,6 @@ public static class JamlSearchBuilder
             CommonJokerClause j => j.Sources,
             UncommonJokerClause j => j.Sources,
             RareJokerClause j => j.Sources,
-            MixedJokerClause j => j.Sources,
             _ => null,
         };
         if (sources == null)
@@ -422,8 +421,6 @@ public static class JamlSearchBuilder
             RareJokerFilterDesc d => new MotelySearchSettings<RareJokerFilterDesc.RareJokerFilter>(
                 d
             ),
-            MixedJokerFilterDesc d =>
-                new MotelySearchSettings<MixedJokerFilterDesc.MixedJokerFilter>(d),
             LegendaryJokerFilterDesc d =>
                 new MotelySearchSettings<LegendaryJokerFilterDesc.LegendaryJokerFilter>(d),
             LegendarySoulEditionFilterDesc d =>
@@ -450,8 +447,6 @@ public static class JamlSearchBuilder
                 new MotelySearchSettings<ErraticRankFilterDesc.ErraticRankFilter>(d),
             ErraticSuitFilterDesc d =>
                 new MotelySearchSettings<ErraticSuitFilterDesc.ErraticSuitFilter>(d),
-            ErraticCardFilterDesc d =>
-                new MotelySearchSettings<ErraticCardFilterDesc.ErraticCardFilter>(d),
             LuckyMoneyFilterDesc d =>
                 new MotelySearchSettings<LuckyMoneyFilterDesc.LuckyMoneyFilter>(d),
             LuckyMultFilterDesc d => new MotelySearchSettings<LuckyMultFilterDesc.LuckyMultFilter>(

@@ -1,0 +1,22 @@
+name: Coupon Tag — free shop
+author: corpus
+description: >-
+  Coupon Tag makes the next shop's initial Jokers, Consumables, and Booster Packs free.
+  First-shop skip reward: pair with Overstock, rare/uncommon tags, and high-cost items.
+deck: Red
+stake: White
+must:
+  - tag: CouponTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - voucher: Overstock
+    antes: [1, 2, 3]
+    score: 45
+  - tag: RareTag
+    antes: [1, 2, 3]
+    score: 35
+  - tag: UncommonTag
+    antes: [1, 2, 3]
+    score: 30

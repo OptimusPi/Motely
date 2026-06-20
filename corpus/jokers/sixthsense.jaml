@@ -1,0 +1,24 @@
+name: Sixth Sense — single 6 spectral
+author: corpus
+description: >-
+  If the first hand of a round is a single 6, Sixth Sense destroys the 6 and creates a
+  Spectral card. First-shop spectral engine: Oops All 6s makes the 6 guaranteed if you
+  can draw it, and then you can chain Spectral effects.
+deck: Red
+stake: White
+must:
+  - joker: SixthSense
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 25
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 20

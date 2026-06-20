@@ -1,0 +1,24 @@
+name: Strength — rank up
+author: corpus
+description: >-
+  Strength increases the rank of up to 2 selected cards by 1 (A→2→...→K→A). First-shop
+  rank engine: pair with rank-based payoffs (Odd Todd, Even Steven, Fibonacci, Baron,
+  Shoot the Moon).
+deck: Red
+stake: White
+must:
+  - tarotCard: Strength
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 40
+  - joker: ShootTheMoon
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Fibonacci
+    antes: [1, 2, 3]
+    score: 30

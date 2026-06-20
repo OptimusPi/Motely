@@ -1,0 +1,23 @@
+name: Cryptid — card duplicator
+author: corpus
+description: >-
+  Cryptid creates 2 copies of a selected card. First-shop spectral duplication engine: pair
+  with Hologram, Blue Joker, Baron, and any card you want to mass-produce.
+deck: Red
+stake: White
+must:
+  - spectralCard: Cryptid
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hologram
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 30

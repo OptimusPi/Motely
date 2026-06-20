@@ -1,0 +1,23 @@
+name: Card Sharp — replayed hand X3
+author: corpus
+description: >-
+  Card Sharp gives X3 Mult if the played poker hand has already been played this round.
+  First-shop X3 engine: Burglar gives extra hands to replay the same hand multiple times.
+deck: Red
+stake: White
+must:
+  - joker: CardSharp
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 25
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 25

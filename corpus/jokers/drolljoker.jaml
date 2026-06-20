@@ -1,0 +1,27 @@
+name: Droll Joker — flush mult
+author: corpus
+description: >-
+  Droll Joker gives +10 Mult if the hand contains a Flush. First-shop flush payoff:
+  Smeared (2 effective suits) and Four Fingers make Flushes easy; level with Jupiter
+  and stack The Tribe (X2 on Flush).
+deck: Red
+stake: White
+must:
+  - joker: DrollJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: TheTribe
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SmearedJoker
+    antes: [1, 2]
+    score: 35
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 30
+  - planetCard: Jupiter
+    antes: [1, 2]
+    score: 20

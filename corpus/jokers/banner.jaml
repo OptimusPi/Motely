@@ -1,0 +1,21 @@
+name: Banner — discard chips
+author: corpus
+description: >-
+  Banner gives +30 Chips for each remaining discard. First-shop chip engine: stack
+  discard generators (Merry Andy +3, Drunkard +1) to bank huge unused-discard chip
+  totals before scoring.
+deck: Red
+stake: White
+must:
+  - joker: Banner
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Drunkard
+    antes: [1, 2]
+    score: 25

@@ -1,0 +1,24 @@
+name: Cloud 9 — nine economy
+author: corpus
+description: >-
+  Cloud 9 earns $1 for each 9 in the full deck at the end of every round. First-shop
+  economy: pair with DNA (copy 9s), The Hierophant (Bonus 9s), and Gold Seal for extra
+  cash per card.
+deck: Red
+stake: White
+must:
+  - joker: Cloud9
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 30
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 25

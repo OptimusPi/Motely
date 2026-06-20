@@ -1,0 +1,22 @@
+name: Petroglyph — lower ante
+author: corpus
+description: >-
+  Petroglyph lowers the current Ante by 1 but reduces discards per round by 1. First-shop
+  scaling tool: pair with discard-heavy builds (Yorick, Castle) and extra-discard vouchers.
+deck: Red
+stake: White
+must:
+  - voucher: Petroglyph
+    antes: [2]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Yorick
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Castle
+    antes: [1, 2, 3]
+    score: 40
+  - voucher: Wasteful
+    antes: [1, 2, 3]
+    score: 25

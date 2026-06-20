@@ -1,0 +1,24 @@
+name: Steel Card — held X1.5 mult
+author: corpus
+description: >-
+  Steel Card gives X1.5 Mult while held in hand. First-shop card engine: pair with Steel
+  Joker, Mime, and held-in-hand builds.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      enhancement: Steel
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: SteelJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 35

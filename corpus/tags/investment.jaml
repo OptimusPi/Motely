@@ -1,0 +1,22 @@
+name: Investment Tag — boss bounty
+author: corpus
+description: >-
+  Investment Tag gives $25 after defeating the next Boss Blind. First-shop skip reward:
+  pair with Rocket, To the Moon, and Matador.
+deck: Red
+stake: White
+must:
+  - tag: InvestmentTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 45
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Matador
+    antes: [1, 2, 3]
+    score: 30

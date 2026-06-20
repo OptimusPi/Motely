@@ -1,0 +1,20 @@
+name: The Goad — spade debuff
+author: corpus
+description: >-
+  The Goad debuffs all Spade cards. Ante 1 boss: avoid Spade-dependent builds; use Smeared
+  Joker or other suits.
+deck: Red
+stake: White
+must:
+  - boss: TheGoad
+    antes: [1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 30

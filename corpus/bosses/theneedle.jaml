@@ -1,0 +1,20 @@
+name: The Needle — single hand
+author: corpus
+description: >-
+  The Needle lets you play only 1 hand (but score requirement is 1x base). Ante 2 boss:
+  build one-shot big-hand power (Acrobat, Dusk, Baron/Mime).
+deck: Red
+stake: White
+must:
+  - boss: TheNeedle
+    antes: [2]
+should:
+  - joker: Acrobat
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 35

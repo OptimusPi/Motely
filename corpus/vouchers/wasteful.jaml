@@ -1,0 +1,22 @@
+name: Wasteful — extra discard
+author: corpus
+description: >-
+  Wasteful permanently gives +1 discard each round. First-shop discard engine: pair with
+  Drunkard, Castle, and Merry Andy.
+deck: Red
+stake: White
+must:
+  - voucher: Wasteful
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Castle
+    antes: [1, 2, 3]
+    score: 40
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 35

@@ -11,7 +11,7 @@ must:
       - 3
       - 4
 should:
-  - event: GrosMichelExtinct
+  - grosMichelExtinct: [0]
     score: 80
   - rareJoker: Blueprint
     score: 75

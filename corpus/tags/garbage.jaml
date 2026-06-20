@@ -1,0 +1,22 @@
+name: Garbage Tag — unused discards cash
+author: corpus
+description: >-
+  Garbage Tag gives $1 for each unused discard this run. Ante 2+ skip reward: pair with
+  Merry Andy, Drunkard, and Burglar.
+deck: Red
+stake: White
+must:
+  - tag: GarbageTag
+    antes: [2, 3]
+    sources:
+      tags: true
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 30

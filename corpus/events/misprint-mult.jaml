@@ -1,0 +1,16 @@
+name: Misprint — high mult roll
+author: corpus
+description: >-
+  Event: Misprint Joker rolls a high Mult value. Tight Ante 1 event: Misprint provides a
+  big multiplier.
+deck: Red
+stake: White
+must:
+  - misprintMult: [1]
+should:
+  - joker: Misprint
+    score: 45
+  - joker: Seltzer
+    score: 30
+  - joker: Dusk
+    score: 25

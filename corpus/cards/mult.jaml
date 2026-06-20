@@ -1,0 +1,24 @@
+name: Mult Card — +4 mult
+author: corpus
+description: >-
+  Mult Card gives +4 Mult when scored. First-shop card engine: pair with retrigger
+  jokers (Dusk, Hack, Seltzer) and per-card mult payoffs.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      enhancement: Mult
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 35

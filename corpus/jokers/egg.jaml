@@ -1,0 +1,24 @@
+name: Egg — sell-value engine
+author: corpus
+description: >-
+  Egg gains +$3 sell value at the end of every round. First-shop investment piece:
+  pairs with Swashbuckler (sell value → Mult), Ceremonial Dagger (destroy for big
+  permanent Mult), and Temperance tarot.
+deck: Red
+stake: White
+must:
+  - joker: Egg
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Swashbuckler
+    antes: [1, 2, 3]
+    score: 40
+  - joker: CeremonialDagger
+    antes: [1, 2, 3]
+    score: 35
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 30

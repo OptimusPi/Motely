@@ -1,0 +1,23 @@
+name: Baron — king held mult
+author: corpus
+description: >-
+  Baron gives each King held in hand X1.5 Mult. First-shop held-in-hand X-mult: pair
+  with Mime (double each King), plenty of King density, and Juggler/Troubadour.
+deck: Red
+stake: White
+must:
+  - joker: Baron
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Troubadour
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Juggler
+    antes: [1, 2]
+    score: 25

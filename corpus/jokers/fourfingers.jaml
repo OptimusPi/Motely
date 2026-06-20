@@ -1,0 +1,27 @@
+name: Four Fingers — 4-card straights/flushes
+author: corpus
+description: >-
+  Four Fingers lets Flushes and Straights be made with 4 cards. First-shop hand-shape
+  enabler: pairs with Shortcut for 4-card gap straights and all the Straight/Flush X
+  jokers (Crazy, Droll, The Order, The Tribe).
+deck: Red
+stake: White
+must:
+  - joker: FourFingers
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Shortcut
+    antes: [1, 2]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 30
+  - joker: TheTribe
+    antes: [1, 2, 3]
+    score: 30
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

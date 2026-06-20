@@ -1,0 +1,24 @@
+name: Blue Joker — deck-size chips
+author: corpus
+description: >-
+  Blue Joker gives +2 Chips for each remaining card in the deck. First-shop chip:
+  anti-synergy with deck thinning, but strong early on Blue Deck or any build that
+  keeps a big deck.
+deck: Blue
+stake: White
+must:
+  - joker: BlueJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Hologram
+    antes: [1, 2, 3]
+    score: 25
+  - joker: MarbleJoker
+    antes: [1, 2]
+    score: 20

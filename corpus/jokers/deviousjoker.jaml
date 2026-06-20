@@ -1,0 +1,27 @@
+name: Devious Joker — straight chips
+author: corpus
+description: >-
+  Devious Joker gives +100 Chips if the hand contains a Straight. First-shop
+  straight chips: Four Fingers and Shortcut make Straights easy; pair with the mult
+  counterpart Crazy Joker and level with Saturn.
+deck: Red
+stake: White
+must:
+  - joker: DeviousJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: CrazyJoker
+    antes: [1, 2]
+    score: 35
+  - joker: Shortcut
+    antes: [1, 2]
+    score: 30
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 30
+  - planetCard: Saturn
+    antes: [1, 2]
+    score: 20

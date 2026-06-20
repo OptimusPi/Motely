@@ -1,0 +1,20 @@
+name: The Pillar — previously played debuff
+author: corpus
+description: >-
+  The Pillar debuffs cards played previously in this Ante. Ante 1 boss: use tarot to modify
+  debuffed cards or play fresh cards each hand.
+deck: Red
+stake: White
+must:
+  - boss: ThePillar
+    antes: [1]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - tarotCard: TheStar
+    antes: [1, 2, 3]
+    score: 25

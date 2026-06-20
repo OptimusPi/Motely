@@ -1,0 +1,23 @@
+name: Uncommon Tag — free uncommon joker
+author: corpus
+description: >-
+  Uncommon Tag makes the next shop contain a free Uncommon Joker. First-shop skip reward:
+  pair with Showman to duplicate the generated joker, or with Baseball Card for uncommon
+  density.
+deck: Red
+stake: White
+must:
+  - tag: UncommonTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BaseballCard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 25

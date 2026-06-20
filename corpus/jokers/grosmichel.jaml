@@ -1,0 +1,21 @@
+name: Gros Michel — mult with a fuse
+author: corpus
+description: >-
+  Gros Michel gives +15 Mult, with a 1 in 6 chance to be destroyed at end of round.
+  First-shop burst mult; once it dies it unlocks Cavendish (X3 Mult). Oops! All 6s
+  doubles the destroy odds to intentionally roll into Cavendish faster.
+deck: Red
+stake: White
+must:
+  - joker: GrosMichel
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Cavendish
+    antes: [2, 3, 4]
+    score: 40
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 30

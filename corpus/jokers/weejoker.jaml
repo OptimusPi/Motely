@@ -1,0 +1,23 @@
+name: Wee Joker — 2-card chip scaling
+author: corpus
+description: >-
+  Wee Joker gains +8 Chips when each played 2 is scored. First-shop 2-chip engine: pair
+  with Hack (retrigger 2s), Seltzer, and a deck full of 2s.
+deck: Red
+stake: White
+must:
+  - joker: WeeJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 35
+  - joker: DNA
+    antes: [1, 2, 3]
+    score: 25

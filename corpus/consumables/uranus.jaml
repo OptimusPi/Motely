@@ -1,0 +1,23 @@
+name: Uranus — Full House level
+author: corpus
+description: >-
+  Uranus levels up Full House. First-shop Full House engine: stack with Joker payoffs
+  for Pair/Three of a Kind and Smeared Joker.
+deck: Red
+stake: White
+must:
+  - planetCard: Uranus
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: JollyJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: ZanyJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

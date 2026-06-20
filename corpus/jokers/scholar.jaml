@@ -1,0 +1,23 @@
+name: Scholar — ace chips & mult
+author: corpus
+description: >-
+  Scholar gives played Aces +20 Chips and +4 Mult when scored. First-shop Ace payoff:
+  Hanging Chad retriggers the first scored card (lead with an Ace for triple Scholar);
+  Red Seal Aces retrigger for double.
+deck: Red
+stake: White
+must:
+  - joker: Scholar
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: HangingChad
+    antes: [1, 2, 3]
+    score: 40
+  - standardCard:
+      seal: Red
+    label: "Red-Seal card (retrigger an Ace)"
+    antes: [1, 2]
+    score: 20

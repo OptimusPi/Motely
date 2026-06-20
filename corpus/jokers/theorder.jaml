@@ -1,0 +1,23 @@
+name: The Order — straight X3
+author: corpus
+description: >-
+  The Order gives X3 Mult if the played hand contains a Straight. First-shop X3 engine:
+  Four Fingers and Shortcut make Straights easy; level with Saturn.
+deck: Red
+stake: White
+must:
+  - joker: TheOrder
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 45
+  - joker: Shortcut
+    antes: [1, 2]
+    score: 40
+  - joker: DeviousJoker
+    antes: [1, 2, 3]
+    score: 25

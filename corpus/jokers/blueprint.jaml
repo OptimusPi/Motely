@@ -1,0 +1,23 @@
+name: Blueprint — copy right neighbor
+author: corpus
+description: >-
+  Blueprint copies the ability of the Joker to its right. First-shop copy engine: place
+  any high-value joker to its right (Cavendish, The Order, The Tribe, Baron, Perkeo).
+deck: Red
+stake: White
+must:
+  - joker: Blueprint
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Cavendish
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 35

@@ -1,0 +1,22 @@
+name: Speed Tag — skip cash
+author: corpus
+description: >-
+  Speed Tag gives $5 for each Blind you've skipped this run. First-shop skip reward: pair
+  with Throwback, Rocket, and To the Moon.
+deck: Red
+stake: White
+must:
+  - tag: SpeedTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: Throwback
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 40
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 30

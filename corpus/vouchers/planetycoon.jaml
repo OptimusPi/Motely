@@ -1,0 +1,22 @@
+name: Planet Tycoon — planet shop flood
+author: corpus
+description: >-
+  Planet Tycoon makes Planet cards appear 4x more frequently in the shop. First-shop planet
+  engine: pair with Constellation, Observatory, and Satellite.
+deck: Red
+stake: White
+must:
+  - voucher: PlanetTycoon
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Satellite
+    antes: [1, 2, 3]
+    score: 35
+  - voucher: Observatory
+    antes: [1, 2, 3]
+    score: 30

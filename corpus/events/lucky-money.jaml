@@ -1,0 +1,16 @@
+name: Lucky Card — money trigger
+author: corpus
+description: >-
+  Event: a Lucky Card triggers its $20 money payout. Tight Ante 1 event: find a Lucky Card
+  that successfully pays out.
+deck: Red
+stake: White
+must:
+  - luckyMoney: [1]
+should:
+  - joker: LuckyCat
+    score: 45
+  - joker: OopsAll6s
+    score: 40
+  - joker: EightBall
+    score: 25

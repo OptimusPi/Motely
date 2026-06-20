@@ -1,0 +1,24 @@
+name: Shortcut — gap straights
+author: corpus
+description: >-
+  Shortcut allows Straights to be made with gaps of 1 rank. First-shop straight engine:
+  pairs with Four Fingers for 4-card gap straights, Superposition for Ace-straights, and
+  the Straight X jokers.
+deck: Red
+stake: White
+must:
+  - joker: Shortcut
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: FourFingers
+    antes: [1, 2]
+    score: 45
+  - joker: TheOrder
+    antes: [1, 2, 3]
+    score: 30
+  - joker: Superposition
+    antes: [1, 2]
+    score: 25

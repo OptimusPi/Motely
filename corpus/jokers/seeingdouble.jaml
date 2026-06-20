@@ -1,0 +1,24 @@
+name: Seeing Double — club + other X2
+author: corpus
+description: >-
+  Seeing Double gives X2 Mult if the played hand has a scoring Club and a scoring card
+  of any other suit. First-shop X2: Smeared Joker makes Clubs/Spades count as the same
+  suit, so any non-red card works.
+deck: Red
+stake: White
+must:
+  - joker: SeeingDouble
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GluttonousJoker
+    antes: [1, 2, 3]
+    score: 25
+  - joker: FlowerPot
+    antes: [1, 2, 3]
+    score: 25

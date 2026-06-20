@@ -1,0 +1,23 @@
+name: Checkered Deck — two-suit
+author: corpus
+description: >-
+  Checkered Deck starts with 26 Spades and 26 Hearts. First-shop synergy: suit payoff
+  jokers (Wrathful, Lusty, Bloodstone, Arrowhead) or Smeared Joker.
+deck: Checkered
+stake: White
+must:
+  - joker: WrathfulJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: LustyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: FlowerPot
+    antes: [1, 2, 3]
+    score: 30

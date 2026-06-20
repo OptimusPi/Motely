@@ -1,0 +1,23 @@
+name: The Magician — lucky enhancer
+author: corpus
+description: >-
+  The Magician enhances 2 selected cards to Lucky Cards. First-shop Lucky engine: pair
+  with Lucky Cat, Oops All 6s, and 8 Ball for trigger-based scaling.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheMagician
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: LuckyCat
+    antes: [1, 2, 3]
+    score: 45
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 35
+  - joker: EightBall
+    antes: [1, 2, 3]
+    score: 25

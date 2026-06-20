@@ -1,0 +1,22 @@
+name: Boss Tag — boss reroll
+author: corpus
+description: >-
+  Boss Tag rerolls the next Boss Blind. First-shop skip reward: pair with Director's Cut,
+  Luchador, and Chicot.
+deck: Red
+stake: White
+must:
+  - tag: BossTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - voucher: DirectorsCut
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 35

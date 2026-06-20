@@ -1,0 +1,24 @@
+name: Bonus Card — +30 chips
+author: corpus
+description: >-
+  Bonus Card gives +30 Chips when scored. First-shop card engine: pair with Hiker, Blue
+  Joker, and Splash.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      enhancement: Bonus
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: Hiker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 30

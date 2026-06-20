@@ -1,0 +1,23 @@
+name: Juggler — hand size
+author: corpus
+description: >-
+  Juggler gives +1 Hand Size. First-shop utility: stack with Troubadour, Paint Brush
+  voucher, and Turtle Bean for larger held-in-hand builds.
+deck: Red
+stake: White
+must:
+  - joker: Juggler
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Troubadour
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TurtleBean
+    antes: [1, 2]
+    score: 25
+  - voucher: PaintBrush
+    antes: [1, 2, 3]
+    score: 20

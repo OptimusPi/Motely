@@ -1,0 +1,29 @@
+name: Gluttonous Joker — clubs juice
+author: corpus
+description: >-
+  Gluttonous Joker gives +3 Mult per scored Club. First-shop clubs engine: pairs
+  with Onyx Agate (+7 Mult per Club) and Seeing Double (Club + one other suit =
+  X2). Avoid The Club boss (debuffs Clubs).
+deck: Red
+stake: White
+must:
+  - joker: GluttonousJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: OnyxAgate
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SeeingDouble
+    antes: [1, 2, 3]
+    score: 40
+  - standardCard:
+      suit: Clubs
+    label: "Any Club"
+    antes: [1, 2]
+    score: 15
+mustNot:
+  - boss: TheClub
+    antes: [1]

@@ -1,0 +1,24 @@
+name: Clever Joker — two pair chips
+author: corpus
+description: >-
+  Clever Joker gives +80 Chips if the hand contains Two Pair (Full House too).
+  First-shop two-pair chips: the chip counterpart to Mad Joker — run both, level
+  Two Pair with Uranus.
+deck: Red
+stake: White
+must:
+  - joker: CleverJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MadJoker
+    antes: [1, 2]
+    score: 35
+  - planetCard: Uranus
+    antes: [1, 2]
+    score: 25
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

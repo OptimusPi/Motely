@@ -1,0 +1,21 @@
+name: Golden Ticket — gold economy
+author: corpus
+description: >-
+  Golden Ticket earns $4 per played Gold card when scored. First-shop gold economy:
+  Midas Mask turns every played face card Gold; Pareidolia turns every card into a face
+  card.
+deck: Red
+stake: White
+must:
+  - joker: GoldenTicket
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MidasMask
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 30

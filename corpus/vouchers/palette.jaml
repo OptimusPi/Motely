@@ -1,0 +1,22 @@
+name: Palette — more hand size
+author: corpus
+description: >-
+  Palette gives +1 Hand Size again (total +2 with Paint Brush). First-shop hand-size
+  engine: pair with held-in-hand builds and Stuntman offset.
+deck: Red
+stake: White
+must:
+  - voucher: Palette
+    antes: [1, 2, 3]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Stuntman
+    antes: [1, 2, 3]
+    score: 25

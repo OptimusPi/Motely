@@ -1,0 +1,23 @@
+name: Trance — blue seal
+author: corpus
+description: >-
+  Trance adds a Blue Seal to 1 selected card. First-shop spectral planet engine: pair with
+  Constellation, Satellite, and a committed hand.
+deck: Red
+stake: White
+must:
+  - spectralCard: Trance
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Satellite
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 25

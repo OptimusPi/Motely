@@ -1,0 +1,23 @@
+name: Ghost Deck — spectral shop
+author: corpus
+description: >-
+  Ghost Deck lets Spectral cards appear in the shop and starts with a Hex card. First-shop
+  synergy: find The Soul or Black Hole in the spectral shop/pack.
+deck: Ghost
+stake: White
+must:
+  - spectralCard: TheSoul
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - spectralCard: BlackHole
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Perkeo
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,23 @@
+name: The World — spade conversion
+author: corpus
+description: >-
+  The World converts up to 3 selected cards to Spades. First-shop spade engine: pair with
+  Wrathful Joker, Arrowhead, and Smeared Joker.
+deck: Red
+stake: White
+must:
+  - tarotCard: TheWorld
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: WrathfulJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Arrowhead
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

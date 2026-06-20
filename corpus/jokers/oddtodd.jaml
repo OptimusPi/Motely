@@ -1,0 +1,21 @@
+name: Odd Todd — odd-rank chips
+author: corpus
+description: >-
+  Odd Todd gives played odd-rank cards (A, 9, 7, 5, 3) +31 Chips when scored.
+  First-shop chip engine: Hack retriggers played 3s and 5s for double Odd Todd
+  chips; pairs with Even Steven to cover both parities.
+deck: Red
+stake: White
+must:
+  - joker: OddTodd
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EvenSteven
+    antes: [1, 2]
+    score: 20

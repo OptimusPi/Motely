@@ -1,0 +1,22 @@
+name: Foil Tag — free foil joker
+author: corpus
+description: >-
+  Foil Tag makes the next base-edition Joker in a shop become Foil (+50 Chips) and free.
+  First-shop skip reward: pair with chip-scaling jokers (Blue Joker, Hiker) and Showman.
+deck: Red
+stake: White
+must:
+  - tag: FoilTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: BlueJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Hiker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Showman
+    antes: [1, 2, 3]
+    score: 25

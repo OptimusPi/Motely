@@ -1,0 +1,23 @@
+name: Medium — purple seal
+author: corpus
+description: >-
+  Medium adds a Purple Seal to 1 selected card. First-shop spectral tarot engine: pair with
+  8 Ball, Hallucination, and Fortune Teller.
+deck: Red
+stake: White
+must:
+  - spectralCard: Medium
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: EightBall
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Hallucination
+    antes: [1, 2, 3]
+    score: 35
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,20 @@
+name: Diet Cola — double-tag generator
+author: corpus
+description: >-
+  Sell Diet Cola to create a free Double Tag. First-shop tag economy: buy cheap, sell
+  when a good tag is needed; pair with Gift Card to boost its sell value.
+deck: Red
+stake: White
+must:
+  - joker: DietCola
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Swashbuckler
+    antes: [1, 2, 3]
+    score: 25

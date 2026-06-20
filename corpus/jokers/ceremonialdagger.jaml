@@ -1,0 +1,24 @@
+name: Ceremonial Dagger — destroy-for-mult
+author: corpus
+description: >-
+  When Blind is selected, Ceremonial Dagger destroys the Joker to its right and
+  permanently adds double its sell value to Mult. First-shop scaling: place cheap
+  fodder (Abstract, Riff-Raff, Egg) to its right and sell them once big enough.
+deck: Red
+stake: White
+must:
+  - joker: CeremonialDagger
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: RiffRaff
+    antes: [1, 2]
+    score: 40
+  - joker: Egg
+    antes: [1, 2, 3]
+    score: 35
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 30

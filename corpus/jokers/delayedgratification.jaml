@@ -1,0 +1,21 @@
+name: Delayed Gratification — discard economy
+author: corpus
+description: >-
+  Delayed Gratification earns $2 per discard if no discards are used by end of round.
+  First-shop economy: stack discard generators (Merry Andy +3, Drunkard +1) then
+  bank them unused for a big payout each round.
+deck: Red
+stake: White
+must:
+  - joker: DelayedGratification
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Drunkard
+    antes: [1, 2]
+    score: 25

@@ -29,35 +29,35 @@ public sealed class AnalyzerUnitTests
         return MotelyLegacyTextAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
 
-    // This method is now only used by other tests that don't use Verify yet
-    private void AssertOutputsMatch(string expected, string actual, string seed)
+    // The decisive test: does the MotelySingleSearchContext returned by Instance()
+    // actually drive a real PRNG stream and produce shop items that match the golden
+    // analyzer? The analyzer output is snapshot-verified against Balatro itself (see
+    // seeds/*.verified.txt), so this cross-checks the live search-engine path against
+    // known-good values — two independent code paths must agree on the shop queue.
+    // Without this, the analyzer is only ever verified against itself.
+    [Fact]
+    public void TestReturnedContext_DrivesShopStreamMatchingAnalyzer()
     {
-        // Normalize line endings
-        expected = expected.Replace("\r\n", "\n").Trim();
-        actual = actual.Replace("\r\n", "\n").Trim();
+        const string seed = "UNITTEST";
 
-        // Split into lines for detailed comparison
-        var expectedLines = expected.Split('\n');
-        var actualLines = actual.Split('\n');
+        using var router = new MotelySeedRouterDesc(seed, MotelyDeck.Red, MotelyStake.White);
+        var ctx = router.Instance();
 
-        // First check line count
-        Assert.Equal(expectedLines.Length, actualLines.Length);
-
-        // Compare line by line for better error messages
-        for (int i = 0; i < expectedLines.Length; i++)
+        var shopStream = ctx.CreateShopItemStream(1, MotelyDeck.Red.GetDefaultRunState());
+        var fromContext = new List<int>();
+        for (int i = 0; i < 5; i++)
         {
-            var expectedLine = expectedLines[i].TrimEnd();
-            var actualLine = actualLines[i].TrimEnd();
-
-            if (expectedLine != actualLine)
-            {
-                // Provide detailed error message showing the difference
-                var message = $"Seed {seed} - Line {i + 1} mismatch:\n" +
-                              $"Expected: {expectedLine}\n" +
-                              $"Actual:   {actualLine}";
-                Assert.Fail(message);
-            }
+            fromContext.Add(ctx.GetNextShopItem(ref shopStream).Value);
         }
+
+        var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
+        var fromAnalyzer = new List<int>();
+        for (int i = 0; i < 5; i++)
+        {
+            fromAnalyzer.Add(analysis.Antes[0].ShopQueue[i].Item.Value);
+        }
+
+        Assert.Equal(fromAnalyzer, fromContext);
     }
 
     [Fact]

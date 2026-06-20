@@ -1,0 +1,23 @@
+name: Ice Cream — early burst chips
+author: corpus
+description: >-
+  Ice Cream starts at +100 Chips and loses -5 Chips each round. First-shop early
+  carry: sell it before it hits zero and look for a scaling engine to replace it.
+  Works with any build needing a big early boost.
+deck: Red
+stake: White
+must:
+  - joker: IceCream
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: IceCream
+    edition: Polychrome
+    label: "Polychrome Ice Cream"
+    antes: [1]
+    score: 35
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 20

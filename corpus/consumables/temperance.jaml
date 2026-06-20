@@ -1,0 +1,24 @@
+name: Temperance — sell-value cash
+author: corpus
+description: >-
+  Temperance gives the total sell value of all current Jokers (max $50). First-shop cash
+  engine: pair with high-sell-value jokers (Egg, Gift Card, Swashbuckler) and buy more
+  jokers to raise the total.
+deck: Red
+stake: White
+must:
+  - tarotCard: Temperance
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Egg
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GiftCard
+    antes: [1, 2, 3]
+    score: 40
+  - joker: RiffRaff
+    antes: [1, 2, 3]
+    score: 25

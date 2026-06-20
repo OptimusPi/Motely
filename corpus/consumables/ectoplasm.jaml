@@ -1,0 +1,23 @@
+name: Ectoplasm — negative joker
+author: corpus
+description: >-
+  Ectoplasm adds Negative to a random Joker, then reduces hand size by 1. First-shop
+  spectral slot engine: pair with Joker Stencil, Blueprint, and any joker-density build.
+deck: Red
+stake: White
+must:
+  - spectralCard: Ectoplasm
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: JokerStencil
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Juggler
+    antes: [1, 2, 3]
+    score: 25

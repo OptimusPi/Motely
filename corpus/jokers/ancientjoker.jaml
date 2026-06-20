@@ -1,0 +1,24 @@
+name: Ancient Joker — rotating suit X1.5
+author: corpus
+description: >-
+  Ancient Joker gives each played card of a target suit X1.5 Mult when scored; the suit
+  changes each round. First-shop X1.5 engine: Smeared Joker makes two suits count as one,
+  doubling the chance of matching the target.
+deck: Red
+stake: White
+must:
+  - joker: AncientJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 25
+  - joker: TheTribe
+    antes: [1, 2, 3]
+    score: 20

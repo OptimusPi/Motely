@@ -1,0 +1,23 @@
+name: The Duo — pair X2
+author: corpus
+description: >-
+  The Duo gives X2 Mult if the played hand contains a Pair. First-shop X2 engine: commit
+  to Pair hands; Jolly Joker, Sly Joker, and Clever Joker provide the base payoff.
+deck: Red
+stake: White
+must:
+  - joker: TheDuo
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: JollyJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SlyJoker
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheIdol
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,20 @@
+name: Crimson Heart — sell to un-debuff
+author: corpus
+description: >-
+  Crimson Heart debuffs all cards until 1 Joker is sold. Ante 8 finisher: keep a cheap
+  sellable joker or disable with Luchador/Chicot.
+deck: Red
+stake: White
+must:
+  - boss: CrimsonHeart
+    antes: [8]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 45
+  - joker: RiffRaff
+    antes: [1, 2, 3]
+    score: 25

@@ -1,0 +1,24 @@
+name: Wily Joker — three-of-a-kind chips
+author: corpus
+description: >-
+  Wily Joker gives +100 Chips if the hand contains Three of a Kind (Full House too).
+  First-shop trips chips: the chip counterpart to Zany Joker — pair them on the same
+  trips, level with Venus.
+deck: Red
+stake: White
+must:
+  - joker: WilyJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: ZanyJoker
+    antes: [1, 2]
+    score: 35
+  - joker: TheTrio
+    antes: [1, 2, 3]
+    score: 30
+  - planetCard: Venus
+    antes: [1, 2]
+    score: 20

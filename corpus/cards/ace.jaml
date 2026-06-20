@@ -1,0 +1,24 @@
+name: Ace — high rank card
+author: corpus
+description: >-
+  Aces are high-rank cards used in high-card hands and Straights. First-shop card engine:
+  pair with Scholar, Baron, and Superposition.
+deck: Red
+stake: White
+must:
+  - standardCard:
+      rank: A
+      antes: [1]
+      sources:
+        shopItems: [0, 1, 2, 3]
+        boosterPacks: [0, 1]
+should:
+  - joker: Scholar
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Superposition
+    antes: [1, 2, 3]
+    score: 30

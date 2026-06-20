@@ -1,0 +1,23 @@
+name: Yorick — discard X-mult
+author: corpus
+description: >-
+  Yorick gains X1 Mult every 23 cards discarded. First-shop legendary from The Soul:
+  pair with discard engines (Drunkard, Merry Andy, Castle) and dump cards every round.
+deck: Red
+stake: White
+must:
+  - legendaryJoker: Yorick
+    antes: [1]
+    sources:
+      arcanaPacks: [0, 1]
+      spectralPacks: [0, 1]
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Castle
+    antes: [1, 2, 3]
+    score: 25

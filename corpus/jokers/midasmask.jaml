@@ -1,0 +1,23 @@
+name: Midas Mask — gold face cards
+author: corpus
+description: >-
+  Midas Mask turns all played face cards into Gold cards when scored. First-shop gold
+  engine: Pareidolia makes every card a face card, Golden Ticket pays on Gold cards.
+deck: Red
+stake: White
+must:
+  - joker: MidasMask
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Bull
+    antes: [1, 2, 3]
+    score: 25

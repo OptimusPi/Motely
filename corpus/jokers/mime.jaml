@@ -1,0 +1,24 @@
+name: Mime — held-in-hand retrigger
+author: corpus
+description: >-
+  Mime retriggers all held-in-hand card abilities. First-shop engine for held-in-hand
+  mult: Baron (Kings), Shoot the Moon (Queens), Raised Fist, and reserved cards with
+  Red Seal.
+deck: Red
+stake: White
+must:
+  - joker: Mime
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: ShootTheMoon
+    antes: [1, 2, 3]
+    score: 45
+  - joker: RaisedFist
+    antes: [1, 2, 3]
+    score: 30

@@ -1,0 +1,22 @@
+name: D6 Tag — free first reroll
+author: corpus
+description: >-
+  D6 Tag makes the next shop's rerolls start at $0. First-shop skip reward: pair with Chaos
+  the Clown, Flash Card, and Reroll Surplus.
+deck: Red
+stake: White
+must:
+  - tag: D6Tag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: ChaostheClown
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FlashCard
+    antes: [1, 2, 3]
+    score: 40
+  - voucher: RerollSurplus
+    antes: [1, 2, 3]
+    score: 30

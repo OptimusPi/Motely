@@ -1,0 +1,16 @@
+name: Wraith — rare joker spawn
+author: corpus
+description: >-
+  Event: Wraith Spectral creates a Rare Joker. Tight Ante 1 event: the spectral spawns a
+  rare joker.
+deck: Red
+stake: White
+must:
+  - wraith: [1]
+should:
+  - spectralCard: Wraith
+    score: 45
+  - joker: Showman
+    score: 35
+  - joker: BaseballCard
+    score: 30

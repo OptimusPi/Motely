@@ -1,0 +1,20 @@
+name: The Hook — discard punishment
+author: corpus
+description: >-
+  The Hook discards 2 random cards from your hand after every played hand. Ante 1 boss:
+  build around small hands or high-value plays; Luchador/Chicot disable it.
+deck: Red
+stake: White
+must:
+  - boss: TheHook
+    antes: [1]
+should:
+  - joker: Luchador
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Chicot
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Acrobat
+    antes: [1, 2, 3]
+    score: 25

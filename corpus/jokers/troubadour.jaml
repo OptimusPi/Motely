@@ -1,0 +1,23 @@
+name: Troubadour — hand size for fewer hands
+author: corpus
+description: >-
+  Troubadour gives +2 hand size and reduces hands per round by 1. First-shop hand-size
+  engine: pair with held-in-hand builds (Baron, Mime, Shoot the Moon) and Juggler.
+deck: Red
+stake: White
+must:
+  - joker: Troubadour
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Juggler
+    antes: [1, 2]
+    score: 25

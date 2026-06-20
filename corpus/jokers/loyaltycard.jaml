@@ -1,0 +1,24 @@
+name: Loyalty Card — every-6th-hand X4
+author: corpus
+description: >-
+  Loyalty Card gives X4 Mult on every 6th hand played (the counter ticks down after
+  each hand). First-shop burst X4: maximize hand count per round with Burglar and
+  avoid discarding.
+deck: Red
+stake: White
+must:
+  - joker: LoyaltyCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Burglar
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25
+  - joker: Brainstorm
+    antes: [1, 2]
+    score: 25

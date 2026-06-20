@@ -1,0 +1,23 @@
+name: Hit the Road — discard jack X-mult
+author: corpus
+description: >-
+  Hit the Road gains X0.5 Mult for every Jack discarded this round. First-shop scaling:
+  discard many Jacks (Drunkard, Merry Andy) and pair with Seltzer for final-hand payoffs.
+deck: Red
+stake: White
+must:
+  - joker: HitTheRoad
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Seltzer
+    antes: [1, 2, 3]
+    score: 25

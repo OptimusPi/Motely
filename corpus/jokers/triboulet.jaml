@@ -1,0 +1,23 @@
+name: Triboulet — king/queen X2
+author: corpus
+description: >-
+  Triboulet gives each played King and Queen X2 Mult when scored. First-shop legendary
+  from The Soul: pair with Baron, Mime, and held-in-hand Queen/King builds.
+deck: Red
+stake: White
+must:
+  - legendaryJoker: Triboulet
+    antes: [1]
+    sources:
+      arcanaPacks: [0, 1]
+      spectralPacks: [0, 1]
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 40
+  - joker: ShootTheMoon
+    antes: [1, 2, 3]
+    score: 30

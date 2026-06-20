@@ -78,4 +78,112 @@ public class LuckyEventLuckTests
         Assert.Equal(100, luck5Result.Score);
         Assert.Equal(1, luck5Result.Tally);
     }
+
+    [Fact]
+    public void LuckyMult_LoadsSourcesLuck()
+    {
+        var jaml = """
+            name: LuckyMultLuck5
+            deck: Red
+            stake: White
+            must:
+              - luckyMult: [0]
+                sources:
+                  luck: 5
+            should:
+              - luckyMult: [0]
+                label: lucky_mult_r0_luck5
+                score: 100
+                sources:
+                  luck: 5
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}\n{jaml}"
+        );
+
+        var must = Assert.IsType<LuckyMultClause>(config!.Must[0]);
+        Assert.Equal(5, must.Luck);
+
+        var should = Assert.IsType<LuckyMultClause>(config.Should[0]);
+        Assert.Equal(5, should.Luck);
+        Assert.Equal(100, should.Score);
+    }
+
+    [Fact]
+    public void GrosMichelExtinct_LoadsSourcesLuck()
+    {
+        var jaml = """
+            name: GrosMichelExtinctLuck5
+            deck: Red
+            stake: White
+            must:
+              - grosMichelExtinct: [0]
+                sources:
+                  luck: 5
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}\n{jaml}"
+        );
+
+        var clause = Assert.IsType<GrosMichelExtinctClause>(config!.Must[0]);
+        Assert.Equal(5, clause.Luck);
+    }
+
+    [Fact]
+    public void LuckyMult_HigherLuck_IncreasesMatchCount()
+    {
+        var defaultLuck = """
+            name: LuckyMultDefaultLuck
+            deck: Red
+            stake: White
+            must:
+              - luckyMult: [0]
+            """;
+
+        var luck5 = """
+            name: LuckyMultLuck5
+            deck: Red
+            stake: White
+            must:
+              - luckyMult: [0]
+                sources:
+                  luck: 5
+            """;
+
+        var defaultMatches = CollectMatchingSeeds(defaultLuck, 5000);
+        var luck5Matches = CollectMatchingSeeds(luck5, 5000);
+
+        Assert.True(
+            luck5Matches.Count > defaultMatches.Count,
+            $"Expected luck 5 to match more seeds than default luck, but got {luck5Matches.Count} <= {defaultMatches.Count}."
+        );
+
+        // Every default-luck match must also be a luck-5 match (higher luck is a superset).
+        Assert.Subset(luck5Matches, defaultMatches);
+    }
+
+    private static HashSet<string> CollectMatchingSeeds(string jaml, int count)
+    {
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}\n{jaml}"
+        );
+
+        var matches = new HashSet<string>(StringComparer.Ordinal);
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithSequentialSearch()
+            .WithEndBatchIndex(count)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .WithSeedMatchCallback(seed => matches.Add(seed));
+
+        using var search = settings.Start();
+        search.AwaitCompletion();
+        return matches;
+    }
 }

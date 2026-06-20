@@ -1,0 +1,23 @@
+name: The Star — diamond conversion
+author: corpus
+description: >-
+  The Star converts up to 3 selected cards to Diamonds. First-shop diamond engine: pair
+  with Greedy Joker, Rough Gem, and Checkered Deck.
+deck: Checkered
+stake: White
+must:
+  - tarotCard: TheStar
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: GreedyJoker
+    antes: [1, 2, 3]
+    score: 45
+  - joker: RoughGem
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

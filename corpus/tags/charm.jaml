@@ -1,0 +1,22 @@
+name: Charm Tag — mega arcana pack
+author: corpus
+description: >-
+  Charm Tag immediately opens a free Mega Arcana Pack. First-shop skip reward: pair with
+  Fortune Teller, Cartomancer, and The Fool.
+deck: Red
+stake: White
+must:
+  - tag: CharmTag
+    antes: [1]
+    sources:
+      tags: true
+should:
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 35
+  - tarotCard: TheFool
+    antes: [1, 2, 3]
+    score: 30

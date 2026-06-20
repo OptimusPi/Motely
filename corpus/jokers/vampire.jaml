@@ -1,0 +1,24 @@
+name: Vampire — enhanced-card X-mult
+author: corpus
+description: >-
+  Vampire gains X0.1 Mult per scoring Enhanced card played and removes the
+  Enhancement. First-shop scaling: feed it with cheap Enhancement cards (Bonus, Mult,
+  Wild) and creation engines (Marble Joker, Tarot, Certificate).
+deck: Red
+stake: White
+must:
+  - joker: Vampire
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MarbleJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Certificate
+    antes: [1, 2, 3]
+    score: 35
+  - joker: Cartomancer
+    antes: [1, 2, 3]
+    score: 25

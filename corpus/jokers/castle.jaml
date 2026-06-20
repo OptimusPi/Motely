@@ -1,0 +1,23 @@
+name: Castle — discard-suit chips
+author: corpus
+description: >-
+  Castle gains +3 Chips per discarded card of a target suit; suit changes each round.
+  First-shop chip scaling: discard heavily (Drunkard, Merry Andy) to dump the target suit.
+deck: Red
+stake: White
+must:
+  - joker: Castle
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: MerryAndy
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Drunkard
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

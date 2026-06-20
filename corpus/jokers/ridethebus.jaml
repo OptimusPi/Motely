@@ -1,0 +1,26 @@
+name: Ride the Bus — no-face scaling
+author: corpus
+description: >-
+  Ride the Bus gains +1 Mult per consecutive hand played without scoring a face card;
+  resets to 0 when a face card is scored. First-shop scaling engine: best on the
+  Abandoned Deck where it never resets.
+deck: Abandoned
+stake: White
+must:
+  - joker: RideTheBus
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: RideTheBus
+    antes: [1]
+    edition: Polychrome
+    label: "Polychrome Ride the Bus"
+    score: 35
+  - joker: Blueprint
+    antes: [1, 2]
+    score: 25
+  - joker: Brainstorm
+    antes: [1, 2]
+    score: 25

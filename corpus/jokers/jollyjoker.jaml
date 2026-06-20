@@ -1,0 +1,24 @@
+name: Jolly Joker — pair mult
+author: corpus
+description: >-
+  Jolly Joker gives +8 Mult if the hand contains a Pair. First-shop pair payoff:
+  level Pairs with Mercury and stack the chip counterpart Sly Joker; The Duo (X2
+  on Pair) turns it exponential.
+deck: Red
+stake: White
+must:
+  - joker: JollyJoker
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: TheDuo
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SlyJoker
+    antes: [1, 2]
+    score: 30
+  - planetCard: Mercury
+    antes: [1, 2]
+    score: 20

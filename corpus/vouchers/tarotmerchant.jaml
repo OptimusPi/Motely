@@ -1,0 +1,22 @@
+name: Tarot Merchant — tarot shop freq
+author: corpus
+description: >-
+  Tarot Merchant makes Tarot cards appear 2x more frequently in the shop. First-shop tarot
+  engine: pair with Fortune Teller, The Emperor, and The Fool.
+deck: Red
+stake: White
+must:
+  - voucher: TarotMerchant
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: FortuneTeller
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: TheEmperor
+    antes: [1, 2, 3]
+    score: 35
+  - tarotCard: TheFool
+    antes: [1, 2, 3]
+    score: 30

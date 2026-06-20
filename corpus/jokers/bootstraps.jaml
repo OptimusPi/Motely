@@ -1,0 +1,23 @@
+name: Bootstraps — money mult
+author: corpus
+description: >-
+  Bootstraps gives +2 Mult for every $5 you have. First-shop scaling mult: pair with
+  Golden Joker, To the Moon, Rocket, and any money-hoarding strategy.
+deck: Red
+stake: White
+must:
+  - joker: Bootstraps
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: ToTheMoon
+    antes: [1, 2, 3]
+    score: 45
+  - joker: GoldenJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 30

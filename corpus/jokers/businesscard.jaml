@@ -1,0 +1,21 @@
+name: Business Card — face-card economy
+author: corpus
+description: >-
+  Business Card gives played face cards a 1 in 2 chance to give $2 when scored.
+  First-shop economy: Pareidolia makes every card a face card so every scored card
+  rolls for $2. Avoid the Abandoned Deck (no face cards).
+deck: Red
+stake: White
+must:
+  - joker: BusinessCard
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SockAndBuskin
+    antes: [1, 2, 3]
+    score: 20

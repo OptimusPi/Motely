@@ -1,0 +1,23 @@
+name: Immolate — destroy for cash
+author: corpus
+description: >-
+  Immolate destroys 5 random cards, then gives $20. First-shop spectral thinning/cash engine:
+  pair with Erosion, Yorick, Canio, and Glass Joker.
+deck: Red
+stake: White
+must:
+  - spectralCard: Immolate
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Erosion
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Yorick
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Canio
+    antes: [1, 2, 3]
+    score: 35

@@ -1,0 +1,27 @@
+name: Pareidolia — all cards face
+author: corpus
+description: >-
+  Pareidolia makes every card count as a face card. First-shop engine: powers every
+  face-card payoff (Scary Face, Smiley Face, Sock and Buskin, Golden Ticket, Midas Mask,
+  Reserved Parking, Faceless Joker).
+deck: Red
+stake: White
+must:
+  - joker: Pareidolia
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: SmileyFace
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SockAndBuskin
+    antes: [1, 2, 3]
+    score: 40
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 35
+  - joker: FacelessJoker
+    antes: [1, 2, 3]
+    score: 30

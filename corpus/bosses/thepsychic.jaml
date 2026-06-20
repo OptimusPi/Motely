@@ -1,0 +1,20 @@
+name: The Psychic — must play 5 cards
+author: corpus
+description: >-
+  The Psychic requires you to play 5 cards (not all must score). Ante 1 boss: build
+  5-card hands with Splash or high board value.
+deck: Red
+stake: White
+must:
+  - boss: ThePsychic
+    antes: [1]
+should:
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 45
+  - joker: FourFingers
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SmearedJoker
+    antes: [1, 2, 3]
+    score: 25

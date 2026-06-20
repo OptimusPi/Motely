@@ -1,0 +1,23 @@
+name: Yellow Deck — money start
+author: corpus
+description: >-
+  Yellow Deck starts with $10 extra. First-shop synergy: find a money-scaling joker or
+  interest voucher.
+deck: Yellow
+stake: White
+must:
+  - joker: ToTheMoon
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Bull
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Rocket
+    antes: [1, 2, 3]
+    score: 40
+  - voucher: SeedMoney
+    antes: [1, 2, 3]
+    score: 30

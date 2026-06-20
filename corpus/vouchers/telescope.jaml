@@ -1,0 +1,22 @@
+name: Telescope — targeted planet packs
+author: corpus
+description: >-
+  Telescope makes Celestial Packs always contain the Planet for your most played poker hand.
+  First-shop planet engine: pair with Constellation, Astronomer, and Satellite.
+deck: Red
+stake: White
+must:
+  - voucher: Telescope
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+should:
+  - joker: Constellation
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Astronomer
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Satellite
+    antes: [1, 2, 3]
+    score: 35

@@ -1,0 +1,24 @@
+name: Photograph — first face X2
+author: corpus
+description: >-
+  Photograph gives the first played face card X2 Mult when scored. First-shop copy of
+  the "Photochad" engine: Hanging Chad retriggers the first card 2 more times for
+  X2×X2×X2 = X8 on that face card.
+deck: Red
+stake: White
+must:
+  - joker: Photograph
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: HangingChad
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Dusk
+    antes: [1, 2, 3]
+    score: 25
+  - joker: Pareidolia
+    antes: [1, 2, 3]
+    score: 20
