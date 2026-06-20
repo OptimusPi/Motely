@@ -21,6 +21,7 @@
   "bin": {
     "jaml-language-server": "./dist/server.js"
   },
+  "activationEvents": ["onLanguage:jaml"],
   "contributes": {
     "languages": [
       {
@@ -50,9 +51,12 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "bundle": "node esbuild.mjs",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
     "check": "tsc --noEmit",
-    "smoke": "tsx test/protocol-smoke.ts"
+    "smoke": "tsx test/protocol-smoke.ts",
+    "vscode:prepublish": "node esbuild.mjs"
   },
   "dependencies": {
     "jaml-lang": "file:../jaml-lang",
@@ -63,6 +67,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.90.0",
+    "esbuild": "^0.24.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }

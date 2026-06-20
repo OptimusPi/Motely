@@ -5,26 +5,6 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-// ── ErraticCard clause definition ──
-
-public sealed class ErraticCardClause : JamlClause
-{
-    public MotelyStandardcardRank? Rank { get; set; }
-    public MotelyStandardcardSuit? Suit { get; set; }
-
-    public override int EstimatedCost => 5 + MaxAnte;
-
-    public override string Describe()
-    {
-        var parts = new System.Collections.Generic.List<string>(2);
-        if (Rank.HasValue)
-            parts.Add(Rank.Value.ToString());
-        if (Suit.HasValue)
-            parts.Add(Suit.Value.ToString());
-        return $"erraticCard {(parts.Count == 0 ? "Any" : string.Join(" ", parts))}";
-    }
-}
-
 // ── Event clause definitions ──
 
 public sealed class LuckyMoneyClause : RollClause

@@ -15,7 +15,7 @@ should:
     score: 75
   - uncommonJoker: OopsAll6s
     score: 50
-  - event: GrosMichelExtinct
+  - grosMichelExtinct: [0]
     score: -60
   - rareJoker: Blueprint
     score: 45

@@ -15,7 +15,7 @@ describe("search events", () => {
         const onS = (r) => scored.push(r);
         const onP = (p) => progress.push(p);
 
-        const scoringCfg = Motely.fromYaml(jaml.scoring);
+        const scoringCfg = Motely.parseJaml(jaml.scoring);
         scoringCfg.seeds = ["AAAAAAAA", "BBBBBBBB"];
 
         Motely.onScoredResult.subscribe(onS);
@@ -27,7 +27,7 @@ describe("search events", () => {
             Motely.onProgress.unsubscribe(onP);
         }
 
-        const mustCfg = Motely.fromYaml(jaml.anyMust);
+        const mustCfg = Motely.parseJaml(jaml.anyMust);
         mustCfg.seeds = ["AAAAAAAA", "BBBBBBBB"];
         Motely.onSeedMatch.subscribe(onM);
         try {

@@ -7,14 +7,16 @@
     "test:browser": "node tests/browser-boot-test.mjs",
     "prepublishOnly": "npm run build"
   },
-  "version": "22.0.0",
+  "version": "22.1.1",
   "description": "Balatro seed search + per-seed analysis, powered by JAML (Jimbo's Ante Markup Language). Vectorized SIMD engine, compiled to WebAssembly.",
   "author": "Nathanial P. Howard",
   "license": "MIT",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "exports": {
     ".": {
