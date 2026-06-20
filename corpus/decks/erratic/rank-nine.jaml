@@ -1,0 +1,26 @@
+name: Erratic Nine Spike — many 9s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Nines, a 25% rank spike for Cloud 9,
+  Odd Todd, and X-of-a-kind hands. RAG aliases: erratic nines, many 9s, Cloud 9 money,
+  nine clump, goofy rank spike.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Nine
+    min: 13
+should:
+  - joker: Cloud9
+    antes: [1, 2, 3]
+    score: 55
+  - joker: OddTodd
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTrio
+    label: "Three of a Kind payoff from Nine density"
+    antes: [1, 2, 3]
+    score: 30
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Nine density"
+    antes: [1, 2, 3]
+    score: 30

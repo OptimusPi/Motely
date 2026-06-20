@@ -1,0 +1,26 @@
+name: Erratic Eight Spike — many 8s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Eights, a 25% rank spike for 8 Ball,
+  Even Steven, and X-of-a-kind hands. RAG aliases: erratic eights, many 8s, 8 Ball
+  tarot farm, funny tarot vending machine, repeated eights.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Eight
+    min: 13
+should:
+  - joker: EightBall
+    antes: [1, 2, 3]
+    score: 55
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 35
+  - joker: OopsAll6s
+    label: "Doubles 8 Ball's listed probability"
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Eight density"
+    antes: [1, 2, 3]
+    score: 30

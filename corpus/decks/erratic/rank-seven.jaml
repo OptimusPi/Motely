@@ -1,0 +1,27 @@
+name: Erratic Seven Spike — many 7s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Sevens, a 25% rank spike for Odd Todd,
+  Seeing Double setup, and X-of-a-kind hands. RAG aliases: erratic sevens, many 7s,
+  lucky sevens, seven clump, weird rank spike.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Seven
+    min: 13
+should:
+  - joker: OddTodd
+    antes: [1, 2, 3]
+    score: 45
+  - joker: SeeingDouble
+    label: "7-heavy decks make club-7 lines easier if Clubs are available"
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTrio
+    label: "Three of a Kind payoff from Seven density"
+    antes: [1, 2, 3]
+    score: 30
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Seven density"
+    antes: [1, 2, 3]
+    score: 30

@@ -1,13 +1,14 @@
 name: Tarot Tycoon — tarot shop flood
 author: corpus
 description: >-
-  Tarot Tycoon makes Tarot cards appear 4x more frequently in the shop. First-shop tarot
-  engine: pair with Fortune Teller, Cartomancer, and Perkeo.
+  Tarot Tycoon makes Tarot cards appear 4x more frequently in the shop. Tier-2 voucher:
+  requires Tarot Merchant bought first, so the earliest practical target is Ante 2.
+  RAG aliases: tarot flood, deck fixing, Fortune Teller scaling, Perkeo tarot copy.
 deck: Red
 stake: White
 must:
   - voucher: TarotTycoon
-    antes: [1, 2, 3]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

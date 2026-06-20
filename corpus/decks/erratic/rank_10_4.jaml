@@ -1,0 +1,35 @@
+name: Erratic 10/4 Walkie Talkie — many Tens and Fours
+author: corpus
+description: >-
+  Erratic Deck starting deck with both Ten and Four density for Walkie Talkie, which gives
+  +10 Chips and +4 Mult when played 10s or 4s score. RAG aliases: rank 10 4, WalkieTalkie,
+  walkie talkie seed, many tens and fours, erratic 10s 4s.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Ten
+    min: 8
+  - erraticRank: Four
+    min: 8
+  - joker: WalkieTalkie
+    antes: [1]
+    sources:
+      shopItems: [0, 1, 2, 3]
+      boosterPacks: [0, 1]
+should:
+  - joker: Hack
+    label: "Retriggers played 4s for extra Walkie Talkie scoring"
+    antes: [1, 2, 3]
+    score: 45
+  - joker: EvenSteven
+    label: "10s and 4s are both even-rank played-card payoffs"
+    antes: [1, 2, 3]
+    score: 40
+  - joker: TheTrio
+    label: "Rank density supports Three of a Kind lines"
+    antes: [1, 2, 3]
+    score: 30
+  - joker: TheFamily
+    label: "Rank density supports Four/Five of a Kind lines"
+    antes: [1, 2, 3]
+    score: 30

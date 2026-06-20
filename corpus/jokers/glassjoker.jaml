@@ -1,8 +1,10 @@
 name: Glass Joker — glass-destroy X-mult
 author: corpus
 description: >-
-  Glass Joker gains X0.75 Mult for every Glass card destroyed. First-shop scaling X-mult:
-  create and destroy Glass cards repeatedly (Aura, Magician, The Tower) to stack it.
+  Glass Joker gains X0.75 Mult for every Glass card destroyed. Lua `enhancement_gate` means
+  real shops require a Glass card in deck before it can appear; Motely can still search the
+  raw first-shop slot. Justice creates Glass cards; Oops All 6s doubles Glass break odds.
+  RAG aliases: fragile glass scaling, glass casino, destroy glass screenshot build.
 deck: Red
 stake: White
 must:
@@ -12,12 +14,17 @@ must:
       shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]
 should:
+  - tarotCard: Justice
+    antes: [1, 2, 3]
+    score: 45
+    label: "Justice (creates 1 Glass card — core enabler)"
+  - joker: OopsAll6s
+    antes: [1, 2, 3]
+    score: 40
+    label: "OopsAll6s (doubles glass break rate to 50%)"
   - joker: Seltzer
     antes: [1, 2, 3]
-    score: 35
+    score: 25
   - joker: Showman
-    antes: [1, 2, 3]
-    score: 30
-  - joker: MarbleJoker
     antes: [1, 2, 3]
     score: 20

@@ -9,7 +9,7 @@ not just jokers. Categories mirror the JAML clause types in `JamlConfigLoader.Mo
 - **tags/** — all skip tags (incl. small/big blind tags)
 - **bosses/** — boss blinds (avoidance + finisher targeting)
 - **cards/** — standard playing cards (rank/suit/seal/enhancement/edition)
-- **decks/** — top filters per deck
+- **decks/** — top filters per deck, including Erratic Deck rank/suit spike filters
 - **events/** — gameplay-event clauses (luckyMoney, spaceLevelup, businessPayout,
   bloodstoneTrigger, glassDestroy, wheelOfFortune, gros-michel/cavendish extinction,
   judgement, wraith, parkingPayout, misprintMult, …) — anything a player would ask to find.
@@ -38,22 +38,25 @@ The generic `joker:` key is used for every joker regardless of rarity (the engin
 rarity from the name). Other items use their own keys: `tarotCard`, `planetCard`,
 `spectralCard`, `voucher`, `tag`, `boss`, `standardCard`, plus the event keys above.
 
-**No faking**: every effect line is grounded in `docs/Balatro_Master_Encyclopedia.md` and the
-`Motely/Enums/*` source. Anything not covered there is researched (EXA) or left as an explicit
-TODO — never invented.
+**No faking**: every effect line is grounded in `d:\Balatro` Lua first (`game.lua`,
+`functions/common_events.lua`, `card.lua`, and `localization/en-us.lua`) plus `Motely/Enums/*`
+for exact JAML spellings. EXA/wiki/community sources are discovery tools for player language
+and fun combos; mechanics still need Lua verification before corpus edits.
 
 Legendaries (Canio/Triboulet/Yorick/Chicot/Perkeo) never appear in the shop — they only spawn
 from **The Soul**, so those files use `sources: { arcanaPacks, spectralPacks, soulCard }`.
 
 ## RAG strategy (subtask c)
 
-- **Embedding key**: `name` + `description` (the description carries the joker's mechanical
-  effect + why the synergy holds). One chunk per file — files are small and self-contained.
-- **Retrieval signal**: filename slug == joker slug, so an NL query naming a joker hits the
-  exact file. Synergy partners named in `should` give cross-retrieval (a query for "King
-  steel held-in-hand" surfaces baron/mime/chariot-adjacent files).
+- **Embedding key**: `name` + `description` (the description carries the item's mechanical
+  effect, availability gates, sloppy-player aliases, and why the synergy holds). One chunk per
+  file — files are small and self-contained.
+- **Retrieval signal**: filename slug == item/build slug, so an NL query naming a joker, deck,
+  event, rank spike, or suit spike hits the exact file. Synergy partners named in `should` give
+  cross-retrieval (a query for "King steel held-in-hand" surfaces baron/mime/chariot-adjacent
+  files; "erratic all hearts flush" surfaces Erratic suit and Heart payoff files).
 
 ## Status
 
-Subtask (a) "stats from doc" is blocked on the parked Gemini/Drive research doc; effect text
-in `description` is the interim ground truth.
+Stats prose is not ground truth. `description` text should be a compact Lua-verified RAG chunk
+with EXA/wiki wording only when it helps match real player queries.

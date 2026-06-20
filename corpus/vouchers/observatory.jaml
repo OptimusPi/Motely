@@ -2,12 +2,13 @@ name: Observatory — planet mult
 author: corpus
 description: >-
   Observatory makes Planet cards in your consumable area give X1.5 Mult for their specified
-  poker hand. First-shop planet engine: carry the Planet for your committed hand.
+  poker hand. Tier-2 voucher: requires Telescope bought first, so the earliest practical
+  target is Ante 2. RAG aliases: planet held Xmult, Perkeo Observatory, naneinf planet stack.
 deck: Red
 stake: White
 must:
   - voucher: Observatory
-    antes: [1]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

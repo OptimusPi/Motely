@@ -1,13 +1,14 @@
 name: Recyclomancy — extra discards
 author: corpus
 description: >-
-  Recyclomancy permanently gives +2 discards each round. First-shop discard engine: pair
-  with discard scaling jokers (Yorick, Castle, Drunkard).
+  Recyclomancy permanently gives +2 discards each round. Tier-2 voucher: requires Wasteful
+  bought first, so the earliest practical target is Ante 2. RAG aliases: extra discards,
+  Yorick fuel, Castle scaling, discard engine.
 deck: Red
 stake: White
 must:
   - voucher: Recyclomancy
-    antes: [1, 2, 3]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

@@ -1,13 +1,14 @@
 name: Nacho Tong — extra hands
 author: corpus
 description: >-
-  Nacho Tong permanently gives +2 hands per round. First-shop hand engine: pair with
-  hand-count scaling jokers and Burglar.
+  Nacho Tong permanently gives +2 hands per round. Tier-2 voucher: requires Grabber bought
+  first, so the earliest practical target is Ante 2. RAG aliases: extra hands, more plays,
+  hand-count scaling, survival voucher.
 deck: Red
 stake: White
 must:
   - voucher: NachoTong
-    antes: [1, 2, 3]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

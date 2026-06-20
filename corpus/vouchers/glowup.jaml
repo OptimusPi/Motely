@@ -1,13 +1,14 @@
 name: Glow Up — editions very common
 author: corpus
 description: >-
-  Glow Up makes Foil, Holographic, and Polychrome editions appear 4x more often (Polychrome
-  7x). First-shop edition engine: pair with The Wheel of Fortune and any edition payoff.
+  Glow Up makes Foil, Holographic, and Polychrome editions appear 4x more often. Tier-2
+  voucher: requires Hone bought first, so the earliest practical target is Ante 2.
+  RAG aliases: edition flood, shiny jokers, polychrome hunt, negative hunt.
 deck: Red
 stake: White
 must:
   - voucher: GlowUp
-    antes: [1, 2, 3]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

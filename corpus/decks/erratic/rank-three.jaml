@@ -1,0 +1,25 @@
+name: Erratic Three Spike — many 3s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Threes, a 25% rank spike for Hack,
+  Fibonacci, Odd Todd, and X-of-a-kind hands. RAG aliases: erratic threes, many 3s,
+  low-card pile, three-of-a-kind start, funny rank clump.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Three
+    min: 13
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 50
+  - joker: Fibonacci
+    antes: [1, 2, 3]
+    score: 40
+  - joker: OddTodd
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTrio
+    label: "Three of a Kind payoff from Three density"
+    antes: [1, 2, 3]
+    score: 30

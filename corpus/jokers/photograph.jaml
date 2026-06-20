@@ -16,6 +16,11 @@ should:
   - joker: HangingChad
     antes: [1, 2, 3]
     score: 45
+  - standardCard:
+      enhancement: Glass
+    label: "Glass face card (HangingChad retriggers X2×X2×X2 = X8, Glass adds another X2 = X64)"
+    antes: [1, 2]
+    score: 35
   - joker: Dusk
     antes: [1, 2, 3]
     score: 25

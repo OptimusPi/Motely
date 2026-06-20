@@ -1,0 +1,26 @@
+name: Erratic Hearts Spike — many Hearts
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 20 Hearts, a suit spike for Flush lines,
+  Lusty Joker, Bloodstone, and Oops casino builds. RAG aliases: erratic hearts,
+  all Hearts, heart flush seed, Bloodstone casino, red suit pile.
+deck: Erratic
+stake: White
+must:
+  - erraticSuit: Hearts
+    min: 20
+should:
+  - joker: Bloodstone
+    antes: [1, 2, 3]
+    score: 60
+  - joker: OopsAll6s
+    label: "Doubles Bloodstone's listed probability"
+    antes: [1, 2, 3]
+    score: 45
+  - joker: LustyJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SmearedJoker
+    label: "Combines Hearts and Diamonds into red-suit support"
+    antes: [1, 2, 3]
+    score: 30

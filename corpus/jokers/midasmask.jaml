@@ -12,12 +12,16 @@ must:
       shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]
 should:
-  - joker: Pareidolia
+  - joker: Vampire
     antes: [1, 2, 3]
     score: 45
-  - joker: GoldenTicket
+    label: "Vampire (strips Gold enhancements for X0.2 per card — infinite scaling)"
+  - joker: Pareidolia
     antes: [1, 2, 3]
     score: 40
+  - joker: GoldenTicket
+    antes: [1, 2, 3]
+    score: 35
   - joker: Bull
     antes: [1, 2, 3]
     score: 25

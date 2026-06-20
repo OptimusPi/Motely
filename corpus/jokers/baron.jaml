@@ -21,6 +21,10 @@ should:
   - joker: Juggler
     antes: [1, 2]
     score: 25
+  - tarotCard: Strength
+    antes: [1, 2, 3]
+    score: 35
+    label: "Strength (converts Queens → Kings, grows King pool)"
   - joker: Showman
     antes: [1, 2]
     score: 30

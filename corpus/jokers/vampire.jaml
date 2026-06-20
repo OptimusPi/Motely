@@ -13,6 +13,10 @@ must:
       shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]
 should:
+  - joker: MidasMask
+    antes: [1, 2, 3]
+    score: 45
+    label: "MidasMask (paints face cards Gold each play — infinite Vampire food)"
   - joker: MarbleJoker
     antes: [1, 2, 3]
     score: 40

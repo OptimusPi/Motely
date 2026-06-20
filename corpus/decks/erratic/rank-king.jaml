@@ -1,0 +1,28 @@
+name: Erratic King Spike — many Kings
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Kings, a 25% face-card rank spike for
+  Baron, Mime, Triboulet, Steel/Red Seal held-in-hand lines, and naneinf attempts.
+  RAG aliases: erratic kings, many Kings, Baron Mime, steel kings, held in hand.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: King
+    min: 13
+should:
+  - joker: Baron
+    antes: [1, 2, 3]
+    score: 60
+  - joker: Mime
+    antes: [1, 2, 3]
+    score: 50
+  - joker: Triboulet
+    antes: [1, 2, 3]
+    score: 45
+  - standardCard:
+      rank: K
+      enhancement: Steel
+      seal: Red
+    label: "Red Seal Steel King target for held-in-hand scaling"
+    antes: [1, 2, 3]
+    score: 40

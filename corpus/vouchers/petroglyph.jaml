@@ -1,8 +1,9 @@
 name: Petroglyph — lower ante
 author: corpus
 description: >-
-  Petroglyph lowers the current Ante by 1 but reduces discards per round by 1. First-shop
-  scaling tool: pair with discard-heavy builds (Yorick, Castle) and extra-discard vouchers.
+  Petroglyph lowers the current Ante by 1 but reduces discards per round by 1. Tier-2 voucher:
+  requires Hieroglyph bought first, so the earliest practical target is Ante 2. RAG aliases:
+  lower ante, more scaling time, extra shops, long run setup.
 deck: Red
 stake: White
 must:

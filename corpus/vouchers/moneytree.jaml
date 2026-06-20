@@ -1,13 +1,14 @@
 name: Money Tree — max interest cap
 author: corpus
 description: >-
-  Money Tree raises the interest cap to $20 per round. First-shop economy: pair with To the
-  Moon, Bootstraps, and Golden Joker.
+  Money Tree raises the interest cap to $20 per round. Tier-2 voucher: requires Seed Money
+  bought first, so the earliest practical target is Ante 2. RAG aliases: interest cap,
+  rich run, Bootstraps money, Bull money pile.
 deck: Red
 stake: White
 must:
   - voucher: MoneyTree
-    antes: [1, 2, 3]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

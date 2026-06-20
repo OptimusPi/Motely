@@ -1,9 +1,10 @@
 name: Golden Ticket — gold economy
 author: corpus
 description: >-
-  Golden Ticket earns $4 per played Gold card when scored. First-shop gold economy:
-  Midas Mask turns every played face card Gold; Pareidolia turns every card into a face
-  card.
+  Golden Ticket earns $4 per played Gold card when scored. Lua has both an unlock condition
+  and `enhancement_gate`: real shops require Gold-card access before it can appear; Motely can
+  still search the raw first-shop slot. Midas Mask creates Gold face cards; Pareidolia turns
+  every card into a face card. RAG aliases: gold economy, Midas money, played Gold card cash.
 deck: Red
 stake: White
 must:

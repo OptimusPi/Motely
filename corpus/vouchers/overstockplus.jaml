@@ -1,13 +1,14 @@
 name: Overstock Plus — max shop slots
 author: corpus
 description: >-
-  Overstock Plus adds +1 more card slot (to 4) and immediately restocks empty slots. First-shop
-  economy: best after Overstock, and pairs with any shop-reroll/shop-spam strategy.
+  Overstock Plus adds another shop card slot and immediately restocks empty slots. Tier-2
+  voucher: requires Overstock bought first, so the earliest practical target is Ante 2.
+  RAG aliases: bigger shop, shop spam, reroll value, more items.
 deck: Red
 stake: White
 must:
   - voucher: OverstockPlus
-    antes: [1, 2, 3]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

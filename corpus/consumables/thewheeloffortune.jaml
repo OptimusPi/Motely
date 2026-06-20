@@ -2,8 +2,8 @@ name: The Wheel of Fortune — joker edition
 author: corpus
 description: >-
   The Wheel of Fortune has a 1 in 4 chance to add Foil, Holographic, or Polychrome to a
-  random Joker. First-shop edition engine: pair with Oops All 6s (guaranteed edition),
-  many cheap jokers, and Showman.
+  random Joker. First-shop edition engine: Oops All 6s doubles chance to 2 in 4 (50%);
+  many cheap jokers give more targets.
 deck: Red
 stake: White
 must:

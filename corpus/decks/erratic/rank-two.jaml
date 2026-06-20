@@ -1,0 +1,25 @@
+name: Erratic Two Spike — many 2s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Twos, a 25% rank spike for Wee Joker,
+  Hack, Fibonacci, and X-of-a-kind hands. RAG aliases: erratic twos, many 2s,
+  low-card pile, Wee Joker seed, funny tiny card build.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Two
+    min: 13
+should:
+  - joker: WeeJoker
+    antes: [1, 2, 3]
+    score: 55
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 45
+  - joker: Fibonacci
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Two density"
+    antes: [1, 2, 3]
+    score: 30

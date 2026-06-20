@@ -1,0 +1,25 @@
+name: Erratic Five Spike — many 5s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Fives, a 25% rank spike for Hack,
+  Fibonacci, Odd Todd, and X-of-a-kind hands. RAG aliases: erratic fives, many 5s,
+  low-card pile, Fibonacci seed, five-of-a-kind start.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Five
+    min: 13
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 50
+  - joker: Fibonacci
+    antes: [1, 2, 3]
+    score: 40
+  - joker: OddTodd
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Five density"
+    antes: [1, 2, 3]
+    score: 30

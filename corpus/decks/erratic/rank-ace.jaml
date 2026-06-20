@@ -1,0 +1,26 @@
+name: Erratic Ace Spike — many Aces
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Aces, a 25% rank spike for Scholar,
+  Superposition, and X-of-a-kind hands. RAG aliases: erratic aces, many Aces,
+  ace pile, high-card ace build, funny rank clump.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Ace
+    min: 13
+should:
+  - joker: Scholar
+    antes: [1, 2, 3]
+    score: 55
+  - joker: Superposition
+    antes: [1, 2, 3]
+    score: 40
+  - joker: TheTrio
+    label: "Three of a Kind payoff from Ace density"
+    antes: [1, 2, 3]
+    score: 30
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Ace density"
+    antes: [1, 2, 3]
+    score: 30

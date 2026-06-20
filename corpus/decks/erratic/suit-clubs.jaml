@@ -1,0 +1,25 @@
+name: Erratic Clubs Spike — many Clubs
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 20 Clubs, a suit spike for Flush lines,
+  Gluttonous Joker, Onyx Agate, Seeing Double, and Smeared Joker pivots. RAG aliases:
+  erratic clubs, all Clubs, club flush seed, black suit pile, weird suit spike.
+deck: Erratic
+stake: White
+must:
+  - erraticSuit: Clubs
+    min: 20
+should:
+  - joker: OnyxAgate
+    antes: [1, 2, 3]
+    score: 55
+  - joker: GluttonousJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SeeingDouble
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SmearedJoker
+    label: "Combines Clubs and Spades into black-suit support"
+    antes: [1, 2, 3]
+    score: 30

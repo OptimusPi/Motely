@@ -1,0 +1,26 @@
+name: Erratic Ten Spike — many 10s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Tens, a 25% rank spike for Walkie Talkie,
+  Even Steven, and X-of-a-kind hands. RAG aliases: erratic tens, many 10s, ten of spades
+  style seed, screenshot rank pile, funny repeated tens.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Ten
+    min: 13
+should:
+  - joker: WalkieTalkie
+    antes: [1, 2, 3]
+    score: 50
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTrio
+    label: "Three of a Kind payoff from Ten density"
+    antes: [1, 2, 3]
+    score: 30
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Ten density"
+    antes: [1, 2, 3]
+    score: 30
