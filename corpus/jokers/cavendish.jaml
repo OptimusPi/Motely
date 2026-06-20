@@ -1,14 +1,15 @@
-name: Cavendish — X3 mult
+name: Cavendish — X3 mult after extinction
 author: corpus
 description: >-
   Cavendish gives X3 Mult, with a 1 in 1000 chance to be destroyed at end of round.
-  First-shop X3 mult stick: appears once Gros Michel has destroyed itself. Pair with
-  copy engines for the best X3 stacking in the game.
+  Only spawns after Gros Michel goes extinct. Find the Ante 1 extinction event then grab
+  Cavendish in the Ante 2 shop.
 deck: Red
 stake: White
 must:
+  - grosMichelExtinct: [1]
   - joker: Cavendish
-    antes: [1, 2, 3]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]

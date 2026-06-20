@@ -9,7 +9,6 @@ must:
   - spectralCard: Ectoplasm
     antes: [1]
     sources:
-      shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]
 should:
   - joker: JokerStencil

@@ -2,23 +2,31 @@ name: Lucky Cat — lucky-trigger X-mult
 author: corpus
 description: >-
   Lucky Cat gains X0.25 Mult every time a Lucky card successfully triggers. First-shop
-  scaling: needs a Lucky card to appear; then use Aura/Deja Vu to create more Lucky cards
-  and Oops All 6s to double trigger chances.
+  scaling: needs Lucky enhanced cards in the deck (The Magician enhances 2 to Lucky, Justice
+  enhances 1). Oops All 6s doubles the trigger chance from 1/5 to 2/5.
 deck: Red
 stake: White
 must:
   - joker: LuckyCat
-    antes: [1, 2, 3]
+    antes: [1]
     sources:
       shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]
 should:
+  - tarotCard: TheMagician
+    antes: [1, 2, 3]
+    score: 50
+    label: "TheMagician (creates 2 Lucky cards — core enabler)"
   - joker: OopsAll6s
     antes: [1, 2, 3]
     score: 45
-  - joker: Showman
+  - tarotCard: Justice
     antes: [1, 2, 3]
     score: 30
-  - joker: Splash
+    label: "Justice (creates 1 Lucky card)"
+  - joker: Showman
     antes: [1, 2, 3]
     score: 25
+  - joker: Splash
+    antes: [1, 2, 3]
+    score: 20

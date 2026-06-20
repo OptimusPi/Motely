@@ -21,3 +21,7 @@ should:
   - joker: Juggler
     antes: [1, 2]
     score: 25
+  - joker: Showman
+    antes: [1, 2]
+    score: 30
+    label: "Showman (2nd Baron = X2.25 per King)"

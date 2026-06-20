@@ -25,3 +25,7 @@ should:
   - joker: EightBall
     antes: [1, 2, 3]
     score: 30
+  - joker: Showman
+    antes: [1, 2]
+    score: 35
+    label: "Showman (2nd Oops = x4 luck)"

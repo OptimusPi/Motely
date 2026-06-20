@@ -8,12 +8,15 @@ deck: Red
 stake: White
 must:
   - joker: SteelJoker
-    antes: [1, 2, 3]
+    antes: [1]
     sources:
       shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]
 should:
-  - joker: MarbleJoker
+  - tarotCard: TheHierophant
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: TheChariot
     antes: [1, 2, 3]
     score: 35
   - joker: Showman

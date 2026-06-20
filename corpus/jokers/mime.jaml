@@ -22,3 +22,7 @@ should:
   - joker: RaisedFist
     antes: [1, 2, 3]
     score: 30
+  - joker: Showman
+    antes: [1, 2]
+    score: 30
+    label: "Showman (2nd Mime = double retrigger stack)"
