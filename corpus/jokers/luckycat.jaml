@@ -20,10 +20,6 @@ should:
   - joker: OopsAll6s
     antes: [1, 2, 3]
     score: 45
-  - tarotCard: Justice
-    antes: [1, 2, 3]
-    score: 30
-    label: "Justice (creates 1 Lucky card)"
   - joker: Showman
     antes: [1, 2, 3]
     score: 25

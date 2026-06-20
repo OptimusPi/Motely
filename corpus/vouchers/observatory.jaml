@@ -7,7 +7,7 @@ deck: Red
 stake: White
 must:
   - voucher: Observatory
-    antes: [1]
+    antes: [2]
     sources:
       shopItems: [0, 1, 2, 3]
 should:

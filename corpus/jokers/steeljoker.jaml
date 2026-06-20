@@ -2,8 +2,8 @@ name: Steel Joker — steel-card mult
 author: corpus
 description: >-
   Steel Joker gives X0.2 Mult for each Steel card in the full deck. First-shop scaling
-  X-mult: needs a Steel card to appear first; then keep every Steel card via DNA or
-  The Hierophant tarot.
+  X-mult: needs a Steel card to appear first; then grow count via The Chariot tarot
+  (enhances 1 card to Steel) or DNA (duplicates an existing Steel card).
 deck: Red
 stake: White
 must:
@@ -13,12 +13,13 @@ must:
       shopItems: [0, 1, 2, 3]
       boosterPacks: [0, 1]
 should:
-  - tarotCard: TheHierophant
-    antes: [1, 2, 3]
-    score: 45
   - tarotCard: TheChariot
     antes: [1, 2, 3]
+    score: 45
+  - joker: DNA
+    antes: [1, 2, 3]
     score: 35
+    label: "DNA (duplicates a Steel card to grow count)"
   - joker: Showman
     antes: [1, 2, 3]
     score: 30

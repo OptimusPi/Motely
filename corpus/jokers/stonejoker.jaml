@@ -18,6 +18,7 @@ should:
   - joker: Splash
     antes: [1, 2, 3]
     score: 40
-  - joker: Blackboard
+  - tarotCard: TheTower
     antes: [1, 2, 3]
-    score: 25
+    score: 30
+    label: "The Tower (enhances 1 card to Stone directly)"
