@@ -1,9 +1,10 @@
 name: Steel Joker — steel-card mult
 author: corpus
 description: >-
-  Steel Joker gives X0.2 Mult for each Steel card in the full deck. First-shop scaling
-  X-mult: needs a Steel card to appear first; then grow count via The Chariot tarot
-  (enhances 1 card to Steel) or DNA (duplicates an existing Steel card).
+  Steel Joker gives X0.2 Mult for each Steel card in the full deck. Lua `enhancement_gate`
+  means real shops require a Steel card in deck before it can appear; Motely can still search
+  the raw first-shop slot. RAG aliases: steel card X-mult, Chariot enabler, DNA steel clone,
+  held-in-hand steel build.
 deck: Red
 stake: White
 must:

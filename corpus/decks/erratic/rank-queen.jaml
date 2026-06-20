@@ -1,0 +1,25 @@
+name: Erratic Queen Spike — many Queens
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Queens, a 25% face-card rank spike for
+  Shoot the Moon, Triboulet, Photograph, and Strength-to-King pivots. RAG aliases: erratic queens,
+  many Queens, face-card pile, Baron prep, PhotoChad setup.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Queen
+    min: 13
+should:
+  - joker: ShootTheMoon
+    antes: [1, 2, 3]
+    score: 55
+  - joker: Triboulet
+    antes: [1, 2, 3]
+    score: 45
+  - tarotCard: Strength
+    label: "Queens can become Kings for Baron lines"
+    antes: [1, 2, 3]
+    score: 40
+  - joker: Photograph
+    antes: [1, 2, 3]
+    score: 35

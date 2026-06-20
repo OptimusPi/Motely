@@ -1,8 +1,9 @@
 name: Planet Tycoon — planet shop flood
 author: corpus
 description: >-
-  Planet Tycoon makes Planet cards appear 4x more frequently in the shop. First-shop planet
-  engine: pair with Constellation, Observatory, and Satellite.
+  Planet Tycoon makes Planet cards appear 4x more frequently in the shop. Tier-2 voucher:
+  requires Planet Merchant bought first, so the earliest practical target is Ante 2.
+  RAG aliases: planet flood, hand-level scaling, Constellation fuel, Satellite money.
 deck: Red
 stake: White
 must:

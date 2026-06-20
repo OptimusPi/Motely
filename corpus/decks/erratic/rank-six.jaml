@@ -1,0 +1,27 @@
+name: Erratic Six Spike — many 6s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Sixes, a 25% rank spike for Even Steven,
+  X-of-a-kind hands, and screenshot-y repeated-rank starts. RAG aliases: erratic sixes,
+  many 6s, all sixes, six-of-kind feeling, funny rank clump.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Six
+    min: 13
+should:
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 45
+  - joker: TheTrio
+    label: "Three of a Kind payoff from Six density"
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Six density"
+    antes: [1, 2, 3]
+    score: 35
+  - joker: SpareTrousers
+    label: "Two Pair/Full House lines from rank clumps"
+    antes: [1, 2, 3]
+    score: 25

@@ -1,8 +1,9 @@
 name: Liquidation — big shop discount
 author: corpus
 description: >-
-  Liquidation makes all cards and packs in the shop 50% cheaper. First-shop economy: buy
-  everything; pair with Overstock Plus and Golden Joker.
+  Liquidation makes all cards and packs in the shop 50% cheaper. Tier-2 voucher: requires
+  Clearance Sale bought first, so the earliest practical target is Ante 2. RAG aliases:
+  huge discount, cheap shop, buy everything, economy flood.
 deck: Red
 stake: White
 must:

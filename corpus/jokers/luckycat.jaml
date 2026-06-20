@@ -1,9 +1,10 @@
 name: Lucky Cat — lucky-trigger X-mult
 author: corpus
 description: >-
-  Lucky Cat gains X0.25 Mult every time a Lucky card successfully triggers. First-shop
-  scaling: needs Lucky enhanced cards in the deck (The Magician enhances 2 to Lucky, Justice
-  enhances 1). Oops All 6s doubles the trigger chance from 1/5 to 2/5.
+  Lucky Cat gains X0.25 Mult every time a Lucky card successfully triggers. Lua
+  `enhancement_gate` means real shops require a Lucky card in deck before it can appear;
+  Motely can still search the raw first-shop slot. The Magician creates Lucky cards;
+  Oops All 6s doubles Lucky trigger odds. RAG aliases: casino cat, lucky money, funny slots.
 deck: Red
 stake: White
 must:

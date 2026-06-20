@@ -1,8 +1,9 @@
 name: Palette — more hand size
 author: corpus
 description: >-
-  Palette gives +1 Hand Size again (total +2 with Paint Brush). First-shop hand-size
-  engine: pair with held-in-hand builds and Stuntman offset.
+  Palette gives +1 Hand Size again, stacking with Paint Brush. Tier-2 voucher: requires Paint
+  Brush bought first, so the earliest practical target is Ante 2. RAG aliases: hand size,
+  Baron Mime, held-in-hand scaling, Stuntman offset.
 deck: Red
 stake: White
 must:

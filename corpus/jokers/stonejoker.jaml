@@ -1,8 +1,10 @@
 name: Stone Joker — stone-card chips
 author: corpus
 description: >-
-  Stone Joker gives +25 Chips for each Stone card in the full deck. First-shop stone
-  engine: Marble Joker adds stones each round; Splash makes all stones score.
+  Stone Joker gives +25 Chips for each Stone card in the full deck. Lua `enhancement_gate`
+  means real shops require a Stone card in deck before it can appear; Motely can still search
+  the raw first-shop slot. RAG aliases: stone card chips, Marble Joker engine, Tower enabler,
+  Splash stone scoring.
 deck: Red
 stake: White
 must:

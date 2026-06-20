@@ -1,0 +1,26 @@
+name: Erratic Spades Spike — many Spades
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 20 Spades, a suit spike for Flush lines,
+  Wrathful Joker, Arrowhead, and Smeared Joker pivots. RAG aliases: erratic spades,
+  all Spades, spade flush seed, black suit pile, screenshot suit spike.
+deck: Erratic
+stake: White
+must:
+  - erraticSuit: Spades
+    min: 20
+should:
+  - joker: Arrowhead
+    antes: [1, 2, 3]
+    score: 55
+  - joker: WrathfulJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SmearedJoker
+    label: "Combines Spades and Clubs into black-suit support"
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTribe
+    label: "Flush payoff from Spade density"
+    antes: [1, 2, 3]
+    score: 30

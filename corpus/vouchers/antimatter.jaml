@@ -1,8 +1,9 @@
 name: Antimatter — extra joker slot
 author: corpus
 description: >-
-  Antimatter adds +1 Joker slot. First-shop slot engine: pair with Joker Stencil, Baseball
-  Card, and any joker-density build.
+  Antimatter adds +1 Joker slot. Tier-2 voucher: requires Blank bought first, so the earliest
+  practical target is Ante 2. RAG aliases: extra joker slot, more jokers, Stencil slot,
+  Baseball Card density, best voucher payoff.
 deck: Red
 stake: White
 must:

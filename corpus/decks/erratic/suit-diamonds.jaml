@@ -1,0 +1,26 @@
+name: Erratic Diamonds Spike — many Diamonds
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 20 Diamonds, a suit spike for Flush lines,
+  Greedy Joker, Rough Gem, and Smeared Joker pivots. RAG aliases: erratic diamonds,
+  all Diamonds, diamond flush seed, money gem build, red suit pile.
+deck: Erratic
+stake: White
+must:
+  - erraticSuit: Diamonds
+    min: 20
+should:
+  - joker: RoughGem
+    antes: [1, 2, 3]
+    score: 55
+  - joker: GreedyJoker
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SmearedJoker
+    label: "Combines Diamonds and Hearts into red-suit support"
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheTribe
+    label: "Flush payoff from Diamond density"
+    antes: [1, 2, 3]
+    score: 30

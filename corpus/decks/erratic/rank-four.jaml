@@ -1,0 +1,25 @@
+name: Erratic Four Spike — many 4s
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Fours, a 25% rank spike for Hack,
+  Walkie Talkie, Even Steven, and X-of-a-kind hands. RAG aliases: erratic fours,
+  many 4s, low-card pile, Walkie Talkie seed, four-of-a-kind start.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Four
+    min: 13
+should:
+  - joker: Hack
+    antes: [1, 2, 3]
+    score: 50
+  - joker: WalkieTalkie
+    antes: [1, 2, 3]
+    score: 40
+  - joker: EvenSteven
+    antes: [1, 2, 3]
+    score: 35
+  - joker: TheFamily
+    label: "Four/Five of a Kind payoff from Four density"
+    antes: [1, 2, 3]
+    score: 30

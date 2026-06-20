@@ -1,8 +1,9 @@
 name: Reroll Glut — very cheap rerolls
 author: corpus
 description: >-
-  Reroll Glut reduces reroll cost by a total of $4. First-shop reroll engine: pair with
-  Chaos the Clown, Flash Card, and Overstock Plus.
+  Reroll Glut reduces reroll cost by a total of $4. Tier-2 voucher: requires Reroll Surplus
+  bought first, so the earliest practical target is Ante 2. RAG aliases: cheap rerolls,
+  dig shop, find combo pieces, Flash Card scaling.
 deck: Red
 stake: White
 must:

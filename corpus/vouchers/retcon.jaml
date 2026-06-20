@@ -1,8 +1,9 @@
 name: Retcon — unlimited boss reroll
 author: corpus
 description: >-
-  Retcon allows unlimited Boss Blind rerolls for $10 each. First-shop boss control: pair
-  with Matador, Luchador, and Chicot.
+  Retcon allows unlimited Boss Blind rerolls for $10 each. Tier-2 voucher: requires Director's
+  Cut bought first, so the earliest practical target is Ante 2. RAG aliases: boss control,
+  avoid Plant, reroll bad boss, safety voucher.
 deck: Red
 stake: White
 must:

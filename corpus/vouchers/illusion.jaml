@@ -1,8 +1,9 @@
 name: Illusion — shop cards with enhancements
 author: corpus
 description: >-
-  Illusion makes playing cards in the shop sometimes have an Enhancement and/or Edition.
-  First-shop deck engine: pair with Magic Trick, Hologram, and Vampire.
+  Illusion makes playing cards bought in the shop sometimes have an Enhancement, Edition,
+  or Seal. Tier-2 voucher: requires Magic Trick bought first, so the earliest practical target
+  is Ante 2. RAG aliases: buy enhanced cards, shop deck fixing, Hologram fuel, Vampire food.
 deck: Red
 stake: White
 must:

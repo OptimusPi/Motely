@@ -1,0 +1,24 @@
+name: Erratic Jack Spike — many Jacks
+author: corpus
+description: >-
+  Erratic Deck starting deck with at least 13 Jacks, a 25% face-card rank spike for
+  Photograph, Sock and Buskin, Smiley Face, and Hit the Road. RAG aliases: erratic jacks,
+  many Jacks, face-card pile, discard Jacks, PhotoChad setup.
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Jack
+    min: 13
+should:
+  - joker: HitTheRoad
+    antes: [1, 2, 3]
+    score: 50
+  - joker: Photograph
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SockAndBuskin
+    antes: [1, 2, 3]
+    score: 40
+  - joker: SmileyFace
+    antes: [1, 2, 3]
+    score: 30
