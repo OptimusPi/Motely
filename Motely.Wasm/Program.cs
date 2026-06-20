@@ -163,7 +163,7 @@ public static partial class Program
     // Pure forwards: Bootsharp [Export] must live in this assembly (the engine never
     // references Bootsharp), but the logic is the loader's.
     [Export]
-    public static JamlConfig FromYaml(string jaml) => JamlConfigLoader.FromYaml(jaml);
+    public static JamlConfig ParseJaml(string jaml) => JamlConfigLoader.FromYaml(jaml);
 
     [Export]
     public static JamlConfig FromJson(string json) => JamlConfigLoader.FromJson(json);
@@ -180,6 +180,18 @@ public static partial class Program
 
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
+
+    // ── Seed router (scrollable context) ──
+    [Export]
+    public static MotelySeedRouterDesc CreateSeedRouter(string seed, MotelyDeck deck, MotelyStake stake) =>
+        new MotelySeedRouterDesc(seed, deck, stake);
+
+    // ── Seed analysis (jamlyzer) ──
+    // Structured per-ante data (boss/voucher/tags/shop/packs) + event rolls for each
+    // seed in config.Seeds. Pure analysis — no JAML filter scoring, no cutoff.
+    [Export]
+    public static IReadOnlyList<MotelyJamlyzerSeedResult> AnalyzeSeeds(JamlConfig config) =>
+        MotelyJamlyzer.Analyze(config);
 
     // ── Search entry points ──
     // WASM has no pthreads, so every Run* call BLOCKS the calling thread until the search completes.

@@ -70,8 +70,7 @@ internal static class LegendarySoulMatcher
 
                 if (clause.SoulCardOnly)
                 {
-                    count++;
-                    if (stopAfterFirstMatch)
+                    count++;                    if (stopAfterFirstMatch)
                         return count;
                     continue;
                 }
@@ -85,8 +84,7 @@ internal static class LegendarySoulMatcher
                 var legendaryJoker = ctx.GetNextJoker(ref soulStream);
                 if (LegendaryJokerMatchesFull(clause, legendaryJoker))
                 {
-                    count++;
-                    if (stopAfterFirstMatch)
+                    count++;                    if (stopAfterFirstMatch)
                         return count;
                 }
             }
@@ -112,8 +110,7 @@ internal static class LegendarySoulMatcher
 
                 if (clause.SoulCardOnly)
                 {
-                    count++;
-                    if (stopAfterFirstMatch)
+                    count++;                    if (stopAfterFirstMatch)
                         return count;
                     continue;
                 }
@@ -127,8 +124,7 @@ internal static class LegendarySoulMatcher
                 var legendaryJoker = ctx.GetNextJoker(ref soulStream);
                 if (LegendaryJokerMatchesFull(clause, legendaryJoker))
                 {
-                    count++;
-                    if (stopAfterFirstMatch)
+                    count++;                    if (stopAfterFirstMatch)
                         return count;
                 }
             }

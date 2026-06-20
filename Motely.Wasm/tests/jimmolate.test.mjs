@@ -27,7 +27,7 @@ describe("jimmolate predicate", () => {
     }
 
     Motely.jimmolateEnabled = false;
-    const baseline = runScored(Motely.fromYaml(jaml.scoring));
+    const baseline = runScored(Motely.parseJaml(jaml.scoring));
 
     it("disabled baseline produces scored seeds to filter", () => {
         assert.ok(baseline.length >= 1, "need at least one scoring seed");
@@ -42,7 +42,7 @@ describe("jimmolate predicate", () => {
         };
         Motely.jimmolateEnabled = true;
         try {
-            const scored = runScored(Motely.fromYaml(jaml.scoring));
+            const scored = runScored(Motely.parseJaml(jaml.scoring));
             assert.equal(offered.length, baseline.length, "predicate sees every scored seed");
             assert.equal(scored.length, 1, "only kept seeds are reported");
             assert.equal(scored[0].seed, keeper);
@@ -56,7 +56,7 @@ describe("jimmolate predicate", () => {
         Motely.jimmolatePredicate = () => false;
         Motely.jimmolateEnabled = true;
         try {
-            const scored = runScored(Motely.fromYaml(jaml.scoring));
+            const scored = runScored(Motely.parseJaml(jaml.scoring));
             assert.equal(scored.length, 0);
         } finally {
             Motely.jimmolateEnabled = false;
