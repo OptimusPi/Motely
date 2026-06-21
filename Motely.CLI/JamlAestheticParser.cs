@@ -1,18 +1,9 @@
-namespace Motely.Filters.Jaml;
+namespace Motely.CLI;
 
 /// <summary>
-/// Seed-space constraints declared under top-level <c>aesthetics</c> in a JAML document.
-/// Enumeration and classification: <see cref="JamlAesthetics"/>.
+/// Parses the CLI <c>--aesthetic</c> string into a <see cref="JamlAesthetic"/>.
+/// CLI-only input concern: the engine consumes the enum, never the spelling.
 /// </summary>
-public enum JamlAesthetic
-{
-    Palindrome,
-    Echo,
-    Gross,
-    Funny,
-    Balatro,
-}
-
 public static class JamlAestheticParser
 {
     /// <summary>
