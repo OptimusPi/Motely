@@ -1,5 +1,6 @@
 using System.Data;
 using Motely;
+using Motely.Data;
 using Motely.Filters;
 
 namespace Motely.TUI;
@@ -270,12 +271,15 @@ public class SearchWindow : Window
                 case SearchMode.FileSource:
                     if (!string.IsNullOrWhiteSpace(_source))
                     {
-                        var sourceSeeds = SeedTextReader.ReadSeeds(_source);
-                        if (sourceSeeds.Count == 0)
+                        var provider = new SeedSourceProvider(_source);
+                        if (provider.SeedCount == 0)
+                        {
+                            provider.Dispose();
                             throw new InvalidOperationException(
                                 "Resolved source contained no seeds."
                             );
-                        settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
+                        }
+                        settings.WithProviderSearch(provider);
                     }
                     else
                     {
