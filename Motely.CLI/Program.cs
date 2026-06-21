@@ -4,7 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Analysis;
 using Motely.CLI;
-using Motely.Datalake;
+using Motely.Data;
 using Motely.Filters;
 using Motely.Filters.Native;
 using YamlDotNet.RepresentationModel;
@@ -74,7 +74,7 @@ partial class Program
     {
         index = 0;
         error = null;
-        var seed = input.Trim().ToUpperInvariant().Replace('0', 'O');
+        var seed = MotelyGlobals.NormalizeSeed(input);
         // Motely's sequential search ranges over full 8-char seeds (11111111 → ZZZZZZZZ),
         // so --startSeed/--stopSeed must be exactly 8 chars. No padding: a short seed
         // would silently map to a different point than the user typed.
@@ -276,8 +276,7 @@ partial class Program
                 return 0;
             }
 
-            // --analyze mode — supports single seed or comma-separated batch
-            // When --jaml is also present, output is filtered to only the referenced antes/streams.
+            // --analyze mode — supports single seed or comma-separated batch.
             if (analyzeOption.HasValue())
             {
                 var seedTokens = analyzeOption.ParsedValue.Split(
@@ -297,11 +296,19 @@ partial class Program
             // --native mode — run a hardcoded C# filter by name
             if (nativeOption.HasValue())
             {
-                // WRONG i -- this is so fucked upo claude.
+                // --drown needs a normalized filterId from a JAML file.
                 if (drownOption.HasValue())
                 {
                     Console.Error.WriteLine(
                         "Error: --drown currently requires --jaml so the CLI can resolve the normalized filterId."
+                    );
+                    return 1;
+                }
+
+                if (saveSeedsOption.HasValue())
+                {
+                    Console.Error.WriteLine(
+                        "Error: --save-seeds requires --jaml to know which file to update."
                     );
                     return 1;
                 }
@@ -366,7 +373,9 @@ partial class Program
                             PaddingCharsOption: paddingOption.HasValue()
                                 ? paddingOption.ParsedValue
                                 : null,
-                            RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
+                            RandomCount: nativeRandomCountOption.HasValue()
+                                ? nativeRandomCountOption.ParsedValue
+                                : null,
                             AestheticName: aestheticOption.HasValue()
                                 ? aestheticOption.ParsedValue
                                 : null,
@@ -398,7 +407,7 @@ partial class Program
                 // Always attach a progress callback so 'p' hotkey has fresh data;
                 // quiet mode just swaps in the silent capture variant.
                 nSettings = nSettings
-                    .WithSeedMatchCallback(seed => Console.WriteLine(seed))
+                    .WithSeedMatchCallback(StickyProgress.WriteResultLine)
                     .WithProgressCallback(
                         quietOption.HasValue()
                             ? CaptureProgress
@@ -422,21 +431,7 @@ partial class Program
                 return 1;
             }
 
-            string jamlPath = jamlOption.ParsedValue;
-            if (!Path.IsPathRooted(jamlPath) && !Path.HasExtension(jamlPath))
-                jamlPath = Path.Combine("JamlFilters", jamlPath + ".jaml");
-            string jamlContent;
-            try
-            {
-                jamlContent = File.ReadAllText(jamlPath);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Error reading JAML file: {ex.Message}");
-                return 1;
-            }
-
-            if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var loadError))
+            if (!JamlFileLoader.TryLoadFromPath(jamlOption.ParsedValue, out var config, out var loadError))
             {
                 Console.Error.WriteLine($"Error: {loadError}");
                 return 1;
@@ -734,7 +729,7 @@ partial class Program
             ? "\r\n"
             : "\n";
         var normalizedSeeds = seeds
-            .Select(static seed => seed.Trim().ToUpperInvariant().Replace('0', 'O'))
+            .Select(static seed => MotelyGlobals.NormalizeSeed(seed))
             .Where(static seed => !string.IsNullOrWhiteSpace(seed))
             .Distinct(StringComparer.Ordinal)
             .Take(MotelyGlobals.SavedSeedLimit)
@@ -908,7 +903,7 @@ partial class Program
 
         foreach (var rawSeed in seeds)
         {
-            var seed = rawSeed.Trim().ToUpperInvariant().Replace('0', 'O');
+            var seed = MotelyGlobals.NormalizeSeed(rawSeed);
 
             var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, d, s));
             if (!string.IsNullOrEmpty(analysis.Error))
