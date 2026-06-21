@@ -11,14 +11,14 @@ namespace Motely.Filters.Jaml;
 public struct JamlShouldScoreDesc
     : IMotelySeedScoreDesc<JamlShouldScoreDesc.JamlShouldScoreProvider>
 {
-    private readonly IJamlClause[] _mustClauses;
-    private readonly IJamlClause[] _shouldClauses;
+    private readonly JamlClauseBase[] _mustClauses;
+    private readonly JamlClauseBase[] _shouldClauses;
     private readonly Action<string>? _seedMatchCallback;
     private readonly int _minimumTotalScore;
 
     public JamlShouldScoreDesc(
-        IJamlClause[] mustClauses,
-        IJamlClause[] shouldClauses,
+        JamlClauseBase[] mustClauses,
+        JamlClauseBase[] shouldClauses,
         Action<string>? seedMatchCallback = null,
         int minimumTotalScore = 0
     )
@@ -39,14 +39,14 @@ public struct JamlShouldScoreDesc
 
     public struct JamlShouldScoreProvider : IMotelySeedScoreProvider
     {
-        private readonly IJamlClause[] _mustClauses;
-        private readonly IJamlClause[] _shouldClauses;
+        private readonly JamlClauseBase[] _mustClauses;
+        private readonly JamlClauseBase[] _shouldClauses;
         private readonly Action<string>? _seedMatchCallback;
         private readonly int _minimumTotalScore;
 
         public JamlShouldScoreProvider(
-            IJamlClause[] mustClauses,
-            IJamlClause[] shouldClauses,
+            JamlClauseBase[] mustClauses,
+            JamlClauseBase[] shouldClauses,
             Action<string>? seedMatchCallback,
             int minimumTotalScore = 0
         )
@@ -159,9 +159,9 @@ public struct JamlShouldScoreDesc
             );
         }
 
-        private static IJamlClause[] CombineForPrepareRunState(
-            IJamlClause[] mustClauses,
-            IJamlClause[] shouldClauses
+        private static JamlClauseBase[] CombineForPrepareRunState(
+            JamlClauseBase[] mustClauses,
+            JamlClauseBase[] shouldClauses
         )
         {
             if (mustClauses.Length == 0)
@@ -169,7 +169,7 @@ public struct JamlShouldScoreDesc
             if (shouldClauses.Length == 0)
                 return mustClauses;
 
-            var combined = new IJamlClause[mustClauses.Length + shouldClauses.Length];
+            var combined = new JamlClauseBase[mustClauses.Length + shouldClauses.Length];
             mustClauses.CopyTo(combined, 0);
             shouldClauses.CopyTo(combined, mustClauses.Length);
             return combined;

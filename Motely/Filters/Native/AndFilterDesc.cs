@@ -3,10 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
 
-public sealed class AndClause : LogicClause
-{
-    public override string Describe() => $"and({Clauses.Length})";
-}
+public sealed class AndClause : LogicClause { }
 
 public struct AndFilterDesc(IMotelySeedFilterDesc[] filters)
     : IMotelySeedFilterDesc<AndFilterDesc.AndFilter>
