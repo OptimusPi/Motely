@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.Data\Motely.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

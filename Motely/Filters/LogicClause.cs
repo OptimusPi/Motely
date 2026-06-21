@@ -10,6 +10,5 @@ public abstract class LogicClause : IJamlClause
     public int? Max { get; set; }
     public int Score { get; set; }
 
-    public virtual int EstimatedCost => 1;
     public abstract string Describe();
 }

@@ -1,6 +1,6 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
-using Motely.Datalake;
+using Motely.Data;
 using Motely.Filters;
 
 namespace Motely.CLI;
@@ -114,7 +114,7 @@ internal static class CliSearchMode
         }
 
         string[]? explicitSeeds = null;
-        IMotelySeedProvider? streamingProvider = null;
+        SeedSourceProvider? streamingProvider = null;
 
         if (hasDrownMode)
         {
@@ -132,7 +132,9 @@ internal static class CliSearchMode
                 return false;
             }
 
-            updated = updated.WithProviderSearch(new DuckLakeDrownProvider(lakeDir));
+            var drownProvider = new DuckLakeDrownProvider(lakeDir);
+            updated = updated.WithProviderSearch(drownProvider);
+            sourceLifetime = drownProvider;
             return true;
         }
 
@@ -140,13 +142,15 @@ internal static class CliSearchMode
         {
             try
             {
-                var sourceSeeds = SeedTextReader.ReadSeeds(input.SourcePath!);
-                if (sourceSeeds.Count == 0)
+                streamingProvider = new SeedSourceProvider(input.SourcePath!);
+                if (streamingProvider.SeedCount == 0)
                 {
+                    streamingProvider.Dispose();
+                    streamingProvider = null;
                     error = "Error: resolved source contained no seeds.";
                     return false;
                 }
-                explicitSeeds = sourceSeeds.ToArray();
+                sourceLifetime = streamingProvider;
             }
             catch (Exception ex)
             {
@@ -166,9 +170,11 @@ internal static class CliSearchMode
             {
                 try
                 {
-                    var sourceSeeds = SeedTextReader.ReadSeeds(seedsValue);
-                    if (sourceSeeds.Count == 0)
+                    streamingProvider = new SeedSourceProvider(seedsValue);
+                    if (streamingProvider.SeedCount == 0)
                     {
+                        streamingProvider.Dispose();
+                        streamingProvider = null;
                         error = "Error: resolved seed source contained no seeds.";
                         return false;
                     }
@@ -176,7 +182,7 @@ internal static class CliSearchMode
                     writeWarning?.Invoke(
                         "Warning: --seeds <path> is deprecated; use --source <path>."
                     );
-                    explicitSeeds = sourceSeeds.ToArray();
+                    sourceLifetime = streamingProvider;
                 }
                 catch (Exception ex)
                 {
@@ -186,7 +192,7 @@ internal static class CliSearchMode
             }
             else
             {
-                var inlineSeeds = SeedTextReader.ParseInlineSeeds(seedsValue);
+                var inlineSeeds = ParseInlineSeeds(seedsValue);
                 if (inlineSeeds.Count == 0)
                 {
                     error = "Error: --seeds requires at least one inline seed.";
@@ -315,5 +321,21 @@ internal static class CliSearchMode
         }
 
         return true;
+    }
+
+    private static List<string> ParseInlineSeeds(string value)
+    {
+        var seeds = new List<string>();
+        foreach (
+            var part in value.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            )
+        )
+        {
+            if (!string.IsNullOrWhiteSpace(part))
+                seeds.Add(MotelyGlobals.NormalizeSeed(part));
+        }
+        return seeds;
     }
 }

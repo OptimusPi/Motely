@@ -11,6 +11,13 @@ public static partial class MotelyGlobals
     public const int MaxSeedLength = 8;
     public const int MaxVectorWidth = 8;
 
+    /// <summary>
+    /// Canonical seed normalization: uppercase and replace '0' with 'O'.
+    /// Call this everywhere user-provided seeds enter the engine.
+    /// </summary>
+    public static string NormalizeSeed(string seed) =>
+        seed.Trim().ToUpperInvariant().Replace('0', 'O');
+
     public const int ItemTypeMask = 0xFFFF;
 
     public const int StandardcardRankMask = 0b1111;
