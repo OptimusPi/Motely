@@ -5,10 +5,7 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters;
 
-public sealed class OrClause : LogicClause
-{
-    public override string Describe() => $"or({Clauses.Length})";
-}
+public sealed class OrClause : LogicClause { }
 
 public static class MotelySeedFilterDescExtensions
 {

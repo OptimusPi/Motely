@@ -1,6 +1,19 @@
 namespace Motely.SeedProviders;
 
 /// <summary>
+/// Seed-space constraints declared under top-level <c>aesthetics</c> in a JAML document.
+/// Enumeration and classification: <see cref="JamlAesthetics"/>.
+/// </summary>
+public enum JamlAesthetic
+{
+    Palindrome,
+    Echo,
+    Gross,
+    Funny,
+    Balatro,
+}
+
+/// <summary>
 /// Generation and counting of JAML <see cref="JamlAesthetic"/> seed spaces over Motely’s alphabet
 /// and length rules. Palindrome/Echo live here; keyword-backed aesthetics
 /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,

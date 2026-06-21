@@ -1,0 +1,84 @@
+{
+  "name": "jaml-language-support",
+  "displayName": "Jimbo's Ante Markup Language",
+  "description": "JAML syntax highlighting, schema validation, completions, and diagnostics for .jaml filter files.",
+  "version": "2.0.0",
+  "publisher": "pifreak",
+  "license": "MIT",
+  "engines": { "vscode": "^1.97.0" },
+  "categories": ["Programming Languages", "Linters"],
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OptimusPi/MotelyJAML"
+  },
+  "extensionDependencies": [],
+  "extensionRecommendations": ["redhat.vscode-yaml"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "jaml",
+        "aliases": ["JAML", "jaml"],
+        "extensions": [".jaml"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "jummy",
+        "aliases": ["Jummy", "jummy"],
+        "extensions": [".jummy"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jaml",
+        "scopeName": "source.jaml",
+        "path": "./syntaxes/jaml.tmLanguage.json"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": ["*.jaml"],
+        "url": "./schemas/jaml.schema.json"
+      }
+    ],
+    "yamlValidation": [
+      {
+        "fileMatch": ["*.jaml"],
+        "url": "./schemas/jaml.schema.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "jaml",
+        "path": "./snippets/jaml.json"
+      }
+    ],
+    "configuration": {
+      "title": "JAML",
+      "properties": {
+        "jaml.validate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time JAML diagnostics."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check-types": "tsc --noEmit",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "jaml-lang": "file:../jaml-lang"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.97.0",
+    "typescript": "^5.6.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
