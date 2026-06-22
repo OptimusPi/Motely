@@ -13,96 +13,38 @@ namespace Motely.Filters.Jaml;
 /// </summary>
 public static class JamlConfigLoader
 {
-    // ── Root-level key allow-lists ────────────────────────────────────────────
+    // ── Allow-lists — DERIVED from JamlVocab, the single source of truth ───────
+    // Do NOT hand-maintain these. JamlVocab feeds BOTH the engine parser (here)
+    // and the generated editor tooling (Motely.Schema → generated.ts /
+    // jaml.schema.json / jaml.tmLanguage.json). Sourcing them from one place is
+    // what makes the editor and the engine physically incapable of disagreeing
+    // about which JAML is legal.
 
-    private static readonly HashSet<string> KnownRootKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "id", "name", "description", "author", "deck", "stake", "seeds",
-        "must", "should", "mustNot",
-    };
+    private static HashSet<string> VocabSet(IEnumerable<string> keys) =>
+        new(keys, StringComparer.OrdinalIgnoreCase);
 
-    // ── Clause discriminator keys ─────────────────────────────────────────────
+    private static readonly HashSet<string> KnownRootKeys = VocabSet(JamlVocab.RootKeys);
 
-    private static readonly HashSet<string> AllDiscriminators = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "boss",
-        "joker", "jokers",
-        "commonJoker", "commonJokers", "uncommonJoker", "uncommonJokers",
-        "rareJoker", "rareJokers", "legendaryJoker", "legendaryJokers",
-        "voucher",
-        "tarotCard", "spectralCard", "planetCard",
-        "tag", "smallBlindTag", "bigBlindTag",
-        "luckyMoney", "luckyMult", "misprintMult",
-        "wheelOfFortune", "grosMichelExtinct", "cavendishExtinct",
-        "spaceLevelup", "businessPayout", "bloodstoneTrigger",
-        "parkingPayout", "glassDestroy", "wheelStaysFlipped",
-        "startingDraw",
-        "erraticRank", "erraticRanks", "erraticSuit",
-        "and", "or",
-    };
+    private static readonly HashSet<string> AllDiscriminators = VocabSet(JamlVocab.Discriminators);
 
+    // Logic blocks (and/or) own a `clauses` list on top of the shared modifiers.
     private static readonly HashSet<string> LogicBlockKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "clauses", "ante", "antes", "min", "max", "score", "label",
     };
 
-    // Non-discriminator keys permitted at the clause mapping level
-    private static readonly HashSet<string> KnownClauseLevelKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "ante", "antes", "min", "max", "score", "label",
-        "edition", "stickers",
-        "shopItems",           // top-level shorthand → sources.ShopItems
-        "sources",
-        "rank", "suit",
-        "enhancement", "seal",
-        "soulCardOnly", "soulEditionRolls",
-        "value",               // misprintMult specific mult value
-    };
+    // Every non-discriminator clause-level key, unioned across all discriminators.
+    private static readonly HashSet<string> KnownClauseLevelKeys =
+        VocabSet(JamlVocab.DiscriminatorClauseKeys.Values.SelectMany(keys => keys));
 
-    // ── Sources allow-lists ───────────────────────────────────────────────────
-
-    private static readonly HashSet<string> JokerSourceKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "shopItems", "boosterPacks",
-        "judgement", "wraith", "riffRaff",
-        "rareTag", "uncommonTag",
-        "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers",
-    };
-
-    private static readonly HashSet<string> LegendarySourceKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "shopItems", "boosterPacks",
-        "arcanaPacks", "spectralPacks", "soulCard",
-        "requireMega",
-    };
-
-    private static readonly HashSet<string> TarotSourceKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "shopItems", "boosterPacks",
-        "emperor", "purpleSealOrEightBall", "charmTag",
-    };
-
-    private static readonly HashSet<string> SpectralSourceKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "shopItems", "boosterPacks",
-        "sixthSense", "seance", "etherealTag",
-    };
-
-    private static readonly HashSet<string> PlanetSourceKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "shopItems", "boosterPacks",
-    };
-
-    private static readonly HashSet<string> StandardSourceKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "shopItems", "boosterPacks",
-        "certificate", "incantation", "familiar", "grim", "deckDraw",
-    };
-
-    private static readonly HashSet<string> EventSourceKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "luck",
-    };
+    // ── Per-discriminator source allow-lists (one canonical entry per shape) ───
+    private static readonly HashSet<string> JokerSourceKeys     = VocabSet(JamlVocab.DiscriminatorSourceKeys["joker"]);
+    private static readonly HashSet<string> LegendarySourceKeys = VocabSet(JamlVocab.DiscriminatorSourceKeys["legendaryJoker"]);
+    private static readonly HashSet<string> TarotSourceKeys     = VocabSet(JamlVocab.DiscriminatorSourceKeys["tarotCard"]);
+    private static readonly HashSet<string> SpectralSourceKeys  = VocabSet(JamlVocab.DiscriminatorSourceKeys["spectralCard"]);
+    private static readonly HashSet<string> PlanetSourceKeys    = VocabSet(JamlVocab.DiscriminatorSourceKeys["planetCard"]);
+    private static readonly HashSet<string> StandardSourceKeys  = VocabSet(JamlVocab.DiscriminatorSourceKeys["standardCard"]);
+    private static readonly HashSet<string> EventSourceKeys     = VocabSet(JamlVocab.DiscriminatorSourceKeys["luckyMoney"]);
 
     // ── Public API ────────────────────────────────────────────────────────────
 

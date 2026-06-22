@@ -7,9 +7,9 @@ namespace Motely.Filters;
 
 public sealed class JamlSearchPlan
 {
-    public required IMotelySearchSettings Settings { get; init; }
-    public int ScoreTallyColumnCount { get; init; }
-    public IReadOnlyList<string> TallyLabels { get; init; } = [];
+    internal IMotelySearchSettings Settings { get; set; } = null!;
+    public int ScoreTallyColumnCount { get; set; }
+    public IReadOnlyList<string> TallyLabels { get; set; } = [];
 }
 
 public static class JamlSearchBuilder
