@@ -1,6 +1,9 @@
-import bootsharp, { Program } from "./Motely.Wasm/bin/motely-wasm/index.mjs";
+import bootsharp, { Jimmolate, Motely } from "./Motely.Wasm/bin/motely-wasm/index.mjs";
+
+// Jimmolate.probe must be bound before boot() — even if it's a no-op stub here.
+Jimmolate.probe = (_seed, _deck, _stake) => true;
 
 await bootsharp.boot();
 
-console.log("Version:", Program.getVersion());
-console.log("Normalized:", Program.normalizeSeed("abc123"));
+console.log("Version:", Motely.getVersion());
+console.log("Normalized:", Motely.normalizeSeed("abc123"));
