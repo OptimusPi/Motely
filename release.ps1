@@ -63,9 +63,13 @@ Write-Host "=== [5/7] dotnet publish Motely.Wasm -c Release ===" -ForegroundColo
 dotnet publish "$root\Motely.Wasm\Motely.Wasm.csproj" -c Release
 
 # ── 6. JS tests ───────────────────────────────────────────────────────────────
+# Run the real suite (Motely.Wasm/tests/*.test.mjs) against the dist/ built in step 5.
+# Invoke node --test directly (not `npm test`, whose pretest would rebuild) so we gate on the
+# artifact we just published-to-disk.
 Write-Host ""
 Write-Host "=== [6/7] JS tests ===" -ForegroundColor Cyan
-node "$root\test.mjs"
+Push-Location "$root\Motely.Wasm"
+try { node --test --test-concurrency=1 "tests/*.test.mjs" } finally { Pop-Location }
 if ($LASTEXITCODE -ne 0) { throw "JS tests FAILED — aborting publish" }
 
 # ── 7. npm publish ────────────────────────────────────────────────────────────
