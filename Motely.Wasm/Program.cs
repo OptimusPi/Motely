@@ -1,8 +1,10 @@
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
+using JamlyzerEngine = Motely.Analysis.MotelyJamlyzer;
 
 namespace Motely.Wasm;
 
@@ -67,19 +69,27 @@ public static class MotelyWasm
 }
 
 // ── JAML ─────────────────────────────────────────────────────────────────────
-// The string is YAML text (JSON is a subset, so the same path takes either); parsing yields the
-// JAML. The parsed JamlConfig never crosses interop.
+// JAML is a real language with a real type. FromYaml/FromJson parse its two concrete syntaxes into
+// the same JamlConfig — that typed object is what JS gets and hands back, not a string to re-parse.
 public static class MotelyJaml
 {
+    /// <summary>Parse a JAML document (YAML syntax) into its JamlConfig.</summary>
+    [Export]
+    public static JamlConfig FromYaml(string jaml) => JamlConfigLoader.FromYaml(jaml);
+
+    /// <summary>Parse a JAML document (JSON syntax) into its JamlConfig.</summary>
+    [Export]
+    public static JamlConfig FromJson(string json) => JamlConfigLoader.FromJson(json);
+
     /// <summary>Validate JAML. Returns null when valid, otherwise the error message.</summary>
     [Export]
-    public static string? Validate(string yaml) =>
-        JamlConfigLoader.TryLoad(yaml, out _, out var error) ? null : (error ?? "Invalid JAML.");
+    public static string? Validate(string jaml) =>
+        JamlConfigLoader.TryLoad(jaml, out _, out var error) ? null : (error ?? "Invalid JAML.");
 
-    /// <summary>Plan a search (keyword candidate counts etc.) for the given JAML.</summary>
+    /// <summary>Plan a search (keyword candidate counts etc.) for the given JamlConfig.</summary>
     [Export]
-    public static JamlSearchPlan CreatePlan(string yaml) =>
-        JamlSearchBuilder.CreatePlan(JamlConfigLoader.FromYaml(yaml));
+    public static JamlSearchPlan CreatePlan(JamlConfig jaml) =>
+        JamlSearchBuilder.CreatePlan(jaml);
 
     /// <summary>Display names of the built-in native (C#) filters.</summary>
     [Export]
@@ -93,22 +103,22 @@ public static class MotelyJamlyzer
 {
     /// <summary>Analyze each seed with the default window (20 rolls) from each stream's natural start.</summary>
     [Export]
-    public static global::Motely.Analysis.MotelyJamlyzerSeedResult[] AnalyzeSeeds(string yaml) =>
-        [.. global::Motely.Analysis.MotelyJamlyzer.Analyze(JamlConfigLoader.FromYaml(yaml))];
+    public static MotelyJamlyzerSeedResult[] AnalyzeSeeds(JamlConfig jaml) =>
+        [.. JamlyzerEngine.Analyze(jaml)];
 
     /// <summary>Analyze each seed with an explicit roll window (the first page of a scroll).</summary>
     [Export]
-    public static global::Motely.Analysis.MotelyJamlyzerSeedResult[] AnalyzeSeedsPaged(string yaml, int eventRolls) =>
-        [.. global::Motely.Analysis.MotelyJamlyzer.Analyze(JamlConfigLoader.FromYaml(yaml), eventRolls)];
+    public static MotelyJamlyzerSeedResult[] AnalyzeSeedsPaged(JamlConfig jaml, int eventRolls) =>
+        [.. JamlyzerEngine.Analyze(jaml, eventRolls)];
 
     /// <summary>
     /// Resume each seed from the <c>streamStates</c> bag handed back by a previous page, continuing
     /// exactly where it stopped. Single-seed only (the bag's PRNG state is seed-specific).
     /// </summary>
     [Export]
-    public static global::Motely.Analysis.MotelyJamlyzerSeedResult[] ResumeSeeds(
-        string yaml, global::Motely.Analysis.MotelyJamlyzerStreamStates resumeFrom, int eventRolls) =>
-        [.. global::Motely.Analysis.MotelyJamlyzer.Analyze(JamlConfigLoader.FromYaml(yaml), resumeFrom, eventRolls)];
+    public static MotelyJamlyzerSeedResult[] ResumeSeeds(
+        JamlConfig jaml, MotelyJamlyzerStreamStates resumeFrom, int eventRolls) =>
+        [.. JamlyzerEngine.Analyze(jaml, resumeFrom, eventRolls)];
 }
 
 // ── Search ───────────────────────────────────────────────────────────────────
@@ -126,9 +136,8 @@ public static class MotelySearch
 
     /// <summary>Search the explicit seed list in the JAML.</summary>
     [Export]
-    public static Task SearchList(string yaml)
+    public static Task SearchList(JamlConfig jaml)
     {
-        var jaml = JamlConfigLoader.FromYaml(yaml);
         if (jaml.Seeds.Count == 0)
             throw new InvalidOperationException("JAML has no seeds to search.");
         return Run(jaml, s => s.WithListSearch(jaml.Seeds, jaml.Seeds.Count));
@@ -137,9 +146,8 @@ public static class MotelySearch
     /// <summary>Sequentially walk the seed space across the given batch range.</summary>
     [Export]
     public static Task SearchSequential(
-        string yaml, long startBatchIndex, long endBatchIndex, int batchCharacterCount)
+        JamlConfig jaml, long startBatchIndex, long endBatchIndex, int batchCharacterCount)
     {
-        var jaml = JamlConfigLoader.FromYaml(yaml);
         return Run(jaml, s => s
             .WithSequentialSearch()
             .WithStartBatchIndex(startBatchIndex)
@@ -149,9 +157,8 @@ public static class MotelySearch
 
     /// <summary>Search a number of random seeds.</summary>
     [Export]
-    public static Task SearchRandom(string yaml, int count)
+    public static Task SearchRandom(JamlConfig jaml, int count)
     {
-        var jaml = JamlConfigLoader.FromYaml(yaml);
         return Run(jaml, s => s.WithRandomSearch(count));
     }
 
