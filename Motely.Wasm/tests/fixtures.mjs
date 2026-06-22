@@ -17,6 +17,12 @@ should:
     antes: [1, 2]
     score: 1
 `,
+    // One named seed — for resume/pagination, whose state bag is seed-specific.
+    oneSeed: `name: t
+deck: Red
+stake: White
+seeds: [UNITTEST]
+`,
     invalid: "not yaml !@#",
 };
 
