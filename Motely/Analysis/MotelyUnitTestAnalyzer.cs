@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace Motely.Analysis;
 
-public sealed record class MotelyLegacyTextAnalysisConfig(
+public sealed record class MotelyUnitTestAnalysisConfig(
     string Seed,
     MotelyDeck Deck,
     MotelyStake Stake
@@ -18,7 +18,7 @@ public sealed record class MotelyLegacyTextAnalysisConfig(
 /// block intended for unit-test ground-truth (Verify()) and cross-tool comparison against
 /// external Balatro seed tools (miaklwalker, mathisfun_), NOT for UI rendering.
 /// </summary>
-public sealed record class MotelyLegacyTextAnalysis(
+public sealed record class MotelyUnitTestAnalysis(
     string? Error,
     IReadOnlyList<MotelyAnteAnalysis> Antes,
     MotelyDeck? Deck = null,
@@ -138,22 +138,22 @@ public sealed record class MotelyBoosterPackAnalysis(
 
 /// <summary>
 /// Legacy text-block seed analyzer. Produces the classic "The Soul" string layout via
-/// <see cref="MotelyLegacyTextAnalysis.ToString"/>, intended for unit-test ground-truth and
+/// <see cref="MotelyUnitTestAnalysis.ToString"/>, intended for unit-test ground-truth and
 /// cross-tool comparison (miaklwalker, mathisfun_) — NOT for UI.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public static partial class MotelyLegacyTextAnalyzer
+public static partial class MotelyUnitTestAnalyzer
 {
     /// <summary>
     /// Analyzes a seed and returns structured data
     /// </summary>
-    public static MotelyLegacyTextAnalysis Analyze(MotelyLegacyTextAnalysisConfig cfg)
+    public static MotelyUnitTestAnalysis Analyze(MotelyUnitTestAnalysisConfig cfg)
     {
         try
         {
-            MotelyLegacyTextAnalyzerFilterDesc filterDesc = new();
+            MotelyUnitTestAnalyzerFilterDesc filterDesc = new();
 
-            var searchSettings = new MotelySearchSettings<MotelyLegacyTextAnalyzerFilterDesc.LegacyTextAnalyzerFilter>(
+            var searchSettings = new MotelySearchSettings<MotelyUnitTestAnalyzerFilterDesc.LegacyTextAnalyzerFilter>(
                 filterDesc
             )
                 .WithDeck(cfg.Deck)
@@ -173,7 +173,7 @@ public static partial class MotelyLegacyTextAnalyzer
         }
         catch (Exception ex)
         {
-            return new MotelyLegacyTextAnalysis(ex.ToString(), []);
+            return new MotelyUnitTestAnalysis(ex.ToString(), []);
         }
     }
 }
