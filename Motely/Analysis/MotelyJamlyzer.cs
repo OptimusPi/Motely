@@ -2,11 +2,37 @@ using Motely.Filters.Jaml;
 
 namespace Motely.Analysis;
 
-public sealed record MotelyJamlyzerSeedResult(
+// ── Internal record (full data, no score) ────────────────────────────────────
+internal sealed record MotelyJamlyzerSeedData(
     string Seed,
     IReadOnlyList<MotelyJamlyzerAnteResult> Antes,
     MotelyJamlyzerEvents Events
 );
+
+// ── WASM-facing / JS-serialisable types ──────────────────────────────────────
+
+/// <summary>Analysis payload for a single seed (antes + event rolls).</summary>
+public sealed class MotelySeedAnalysis
+{
+    public required IReadOnlyList<MotelyJamlyzerAnteResult> Antes { get; set; }
+    public required MotelyJamlyzerEvents Events { get; set; }
+}
+
+/// <summary>Per-seed result returned by <see cref="MotelyJamlyzer.Jamlyzer"/>.</summary>
+public sealed class MotelyJamlyzerSeedResult
+{
+    public required string Seed { get; set; }
+    public int Score { get; set; }
+    public MotelySeedAnalysis? Analysis { get; set; }
+}
+
+/// <summary>Top-level result wrapper returned to JavaScript.</summary>
+public sealed class MotelyJamlyzerResult
+{
+    public string? Error { get; set; }
+    public string[] TallyLabels { get; set; } = [];
+    public MotelyJamlyzerSeedResult[] Seeds { get; set; } = [];
+}
 
 public sealed record MotelyJamlyzerAnteResult(
     int Ante,
@@ -42,10 +68,10 @@ public sealed record MotelyJamlyzerEvents(
 
 public static class MotelyJamlyzer
 {
-    public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(JamlConfig config, int eventRolls = 20)
+    internal static IReadOnlyList<MotelyJamlyzerSeedData> Analyze(JamlConfig config, int eventRolls = 20)
     {
         var antesToAnalyze = ComputeAntes(config);
-        var results = new List<MotelyJamlyzerSeedResult>(config.Seeds.Count);
+        var results = new List<MotelyJamlyzerSeedData>(config.Seeds.Count);
 
         foreach (var seed in config.Seeds)
         {
@@ -63,6 +89,26 @@ public static class MotelyJamlyzer
         }
 
         return results;
+    }
+
+    /// <summary>WASM-facing entry: runs Jamlyzer and returns a JS-serialisable result.</summary>
+    public static MotelyJamlyzerResult Jamlyzer(JamlConfig config, string[] tallyLabels, int eventRolls = 20)
+    {
+        try
+        {
+            var raw = Analyze(config, eventRolls);
+            var seeds = raw.Select(r => new MotelyJamlyzerSeedResult
+            {
+                Seed     = r.Seed,
+                Score    = 0,
+                Analysis = new MotelySeedAnalysis { Antes = r.Antes, Events = r.Events },
+            }).ToArray();
+            return new MotelyJamlyzerResult { TallyLabels = tallyLabels, Seeds = seeds };
+        }
+        catch (Exception ex)
+        {
+            return new MotelyJamlyzerResult { Error = ex.Message };
+        }
     }
 
     internal static int[] ComputeAntes(JamlConfig config)
