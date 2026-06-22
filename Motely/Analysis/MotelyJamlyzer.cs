@@ -124,7 +124,16 @@ public static class MotelyJamlyzer
     /// bag handed back by a previous call — so the rolls continue where the last window stopped.
     /// </summary>
     public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(JamlConfig config, MotelyJamlyzerStreamStates resumeFrom, int eventRolls = 20)
-        => AnalyzeCore(config, resumeFrom, eventRolls);
+    {
+        // The bag's 14 event-stream State doubles are positions in a *specific* seed's PRNG. Replaying
+        // them across a multi-seed config would inject seed[0]'s state into seed[1..], silently
+        // corrupting their event rolls. Resume is inherently a single-seed scroll.
+        if (config.Seeds.Count > 1)
+            throw new InvalidOperationException(
+                $"Resume (resumeFrom) is single-seed only; config has {config.Seeds.Count} seeds. " +
+                "Scroll one seed at a time — the state bag is seed-specific.");
+        return AnalyzeCore(config, resumeFrom, eventRolls);
+    }
 
     private static IReadOnlyList<MotelyJamlyzerSeedResult> AnalyzeCore(JamlConfig config, MotelyJamlyzerStreamStates? resumeFrom, int eventRolls)
     {
