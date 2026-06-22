@@ -91,9 +91,24 @@ public static class MotelyJaml
 // (Each result also carries a `score` when the JAML has should-clauses — score-by-JAMLyzer.)
 public static class MotelyJamlyzer
 {
+    /// <summary>Analyze each seed with the default window (20 rolls) from each stream's natural start.</summary>
     [Export]
     public static global::Motely.Analysis.MotelyJamlyzerSeedResult[] AnalyzeSeeds(string yaml) =>
         [.. global::Motely.Analysis.MotelyJamlyzer.Analyze(JamlConfigLoader.FromYaml(yaml))];
+
+    /// <summary>Analyze each seed with an explicit roll window (the first page of a scroll).</summary>
+    [Export]
+    public static global::Motely.Analysis.MotelyJamlyzerSeedResult[] AnalyzeSeedsPaged(string yaml, int eventRolls) =>
+        [.. global::Motely.Analysis.MotelyJamlyzer.Analyze(JamlConfigLoader.FromYaml(yaml), eventRolls)];
+
+    /// <summary>
+    /// Resume each seed from the <c>streamStates</c> bag handed back by a previous page, continuing
+    /// exactly where it stopped. Single-seed only (the bag's PRNG state is seed-specific).
+    /// </summary>
+    [Export]
+    public static global::Motely.Analysis.MotelyJamlyzerSeedResult[] ResumeSeeds(
+        string yaml, global::Motely.Analysis.MotelyJamlyzerStreamStates resumeFrom, int eventRolls) =>
+        [.. global::Motely.Analysis.MotelyJamlyzer.Analyze(JamlConfigLoader.FromYaml(yaml), resumeFrom, eventRolls)];
 }
 
 // ── Search ───────────────────────────────────────────────────────────────────
