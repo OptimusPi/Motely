@@ -106,6 +106,32 @@ describe("MotelyJamlyzer", () => {
             [...full.antes[7].pulls.emperorTarots], "ante8 emperorTarots across 3 pages");
     });
 
+    it("drives like a scrolling frontend: many small uneven pages reconstruct a big window", () => {
+        const TOTAL = 50, CHUNK = 3; // 50/3 -> 16 pages of 3 + a tail of 2; exercises the uneven tail
+        const full = MotelyJamlyzer.analyzeSeedsPaged(jaml.oneSeed, TOTAL)[0];
+
+        const misprint = [], emperorAnte8 = [];
+        let state = null, rolled = 0, pages = 0;
+        while (rolled < TOTAL) {
+            const take = Math.min(CHUNK, TOTAL - rolled);
+            const page = state === null
+                ? MotelyJamlyzer.analyzeSeedsPaged(jaml.oneSeed, take)[0]
+                : MotelyJamlyzer.resumeSeeds(jaml.oneSeed, state, take)[0];
+            misprint.push(...page.events.misprint);                       // event stream (State double)
+            emperorAnte8.push(...page.antes[7].pulls.emperorTarots);      // composite (offset-replay)
+            rolled += take;
+            assert.equal(page.streamStates.rollOffset, rolled, `page ${pages} offset tracks the scroll`);
+            state = page.streamStates;
+            pages++;
+        }
+
+        assert.ok(pages >= 17, "drove the scroll in many small pages");
+        assert.equal(state.rollOffset, TOTAL, "scrolled exactly the whole window");
+        assert.deepEqual(misprint, [...full.events.misprint], "scrolled misprint == full window");
+        assert.deepEqual(emperorAnte8, [...full.antes[7].pulls.emperorTarots], "scrolled ante8 Emperor == full window");
+        assert.deepEqual(state, full.streamStates, "end-state lands exactly on the full window");
+    });
+
     it("multi-seed resume throws — the state bag is seed-specific", () => {
         const bag = MotelyJamlyzer.analyzeSeedsPaged(jaml.oneSeed, 5)[0].streamStates;
         assert.throws(() => MotelyJamlyzer.resumeSeeds(jaml.seeds, bag, 5));
