@@ -5,19 +5,19 @@ namespace Motely.Analysis;
 /// <summary>
 /// Filter descriptor for seed analysis
 /// </summary>
-public sealed class MotelyLegacyTextAnalyzerFilterDesc()
-    : IMotelySeedFilterDesc<MotelyLegacyTextAnalyzerFilterDesc.LegacyTextAnalyzerFilter>
+public sealed class MotelyUnitTestAnalyzerFilterDesc()
+    : IMotelySeedFilterDesc<MotelyUnitTestAnalyzerFilterDesc.LegacyTextAnalyzerFilter>
 {
-    public MotelyLegacyTextAnalysis? LastAnalysis { get; private set; } = null;
+    public MotelyUnitTestAnalysis? LastAnalysis { get; private set; } = null;
 
     public LegacyTextAnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         return new LegacyTextAnalyzerFilter(this);
     }
 
-    public readonly struct LegacyTextAnalyzerFilter(MotelyLegacyTextAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
+    public readonly struct LegacyTextAnalyzerFilter(MotelyUnitTestAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
     {
-        public MotelyLegacyTextAnalyzerFilterDesc FilterDesc { get; } = filterDesc;
+        public MotelyUnitTestAnalyzerFilterDesc FilterDesc { get; } = filterDesc;
 
         public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
