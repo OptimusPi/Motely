@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <Version>$(MotelyVersion)</Version>
+    <BootsharpName>motely-wasm</BootsharpName>
+    <!-- Bootsharp overwrites <dir>/package.json every build; park the throwaway in obj/. -->
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
+    <!-- test.mjs imports ./Motely.Wasm/bin/motely-wasm/index.mjs -->
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\bin\motely-wasm</BootsharpPublishDirectory>
+    <!-- Empty BinariesDirectory = embedded base64 single-file: boot() needs no served files. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+</Project>
