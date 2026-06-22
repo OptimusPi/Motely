@@ -905,7 +905,7 @@ partial class Program
         {
             var seed = MotelyGlobals.NormalizeSeed(rawSeed);
 
-            var analysis = MotelyLegacyTextAnalyzer.Analyze(new(seed, d, s));
+            var analysis = MotelyUnitTestAnalyzer.Analyze(new(seed, d, s));
             if (!string.IsNullOrEmpty(analysis.Error))
             {
                 Console.Error.WriteLine($"[ERROR] {seed}: {analysis.Error}");
