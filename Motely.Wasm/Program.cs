@@ -33,10 +33,15 @@ public static class Program
 
 // JS -> C#. Bind `Jimmolate.probe = (seed, deck, stake) => bool` BEFORE boot().
 // Bootsharp snapshots [Import] bindings at boot(); assigning after boot is a no-op.
+// Then flip `Jimmolate.enabled = true` to make the probe gate seeds during a search.
 public static partial class Jimmolate
 {
     [Import]
     public static partial bool Probe(string seed, MotelyDeck deck, MotelyStake stake);
+
+    // Opt-in gate. When false (default) searches skip the probe entirely (no per-seed JS call).
+    [Export]
+    public static bool Enabled { get; set; }
 }
 
 // C# -> JS. The Motely node.
@@ -112,6 +117,11 @@ public static partial class Motely
         if (OnProgress is not null) s = s.WithProgressCallback(p => OnProgress.Invoke(p));
         if (OnSeedMatch is not null) s = s.WithSeedMatchCallback(seed => OnSeedMatch.Invoke(seed));
         if (OnScoredResult is not null) s = s.WithScoredResultCallback(t => OnScoredResult.Invoke(t.ToCsvRow()));
+        // OG Immolate model: the JS predicate gates each surviving seed. Only seed/deck/stake
+        // cross interop; the ref-struct context stays C#-side.
+        if (Jimmolate.Enabled)
+            s = s.WithJimmolate((ref MotelySingleSearchContext ctx) =>
+                Jimmolate.Probe(ctx.GetSeed(), config.Deck, config.Stake));
         return s;
     }
 
