@@ -97,12 +97,17 @@ public static class MotelyJamlyzer
         try
         {
             var raw = Analyze(config, eventRolls);
-            var seeds = raw.Select(r => new MotelyJamlyzerSeedResult
+            var seeds = new MotelyJamlyzerSeedResult[raw.Count];
+            for (int i = 0; i < raw.Count; i++)
             {
-                Seed     = r.Seed,
-                Score    = 0,
-                Analysis = new MotelySeedAnalysis { Antes = r.Antes, Events = r.Events },
-            }).ToArray();
+                var r = raw[i];
+                seeds[i] = new MotelyJamlyzerSeedResult
+                {
+                    Seed = r.Seed,
+                    Score = 0,
+                    Analysis = new MotelySeedAnalysis { Antes = r.Antes, Events = r.Events },
+                };
+            }
             return new MotelyJamlyzerResult { TallyLabels = tallyLabels, Seeds = seeds };
         }
         catch (Exception ex)
@@ -114,9 +119,20 @@ public static class MotelyJamlyzer
     internal static int[] ComputeAntes(JamlConfig config)
     {
         var set = new SortedSet<int>();
-        foreach (var clause in config.Must.Concat(config.Should).Concat(config.MustNot).OfType<JamlClause>())
-            foreach (var ante in clause.Antes)
-                set.Add(ante);
+        CollectAntes(set, config.Must);
+        CollectAntes(set, config.Should);
+        CollectAntes(set, config.MustNot);
         return set.Count > 0 ? [.. set] : [1, 2, 3, 4, 5, 6, 7, 8];
+
+        static void CollectAntes(SortedSet<int> set, List<JamlClauseBase> clauses)
+        {
+            foreach (var clause in clauses)
+            {
+                if (clause is not JamlClause anteClause)
+                    continue;
+                foreach (var ante in anteClause.Antes)
+                    set.Add(ante);
+            }
+        }
     }
 }
