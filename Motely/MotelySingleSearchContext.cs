@@ -263,6 +263,16 @@ public unsafe partial class MotelySingleSearchContext
         return new(PseudoHash(key, isCached));
     }
 
+    /// <summary>
+    /// Resume a PRNG stream from a previously-captured <see cref="MotelySinglePrngStream.State"/>.
+    /// Every Motely stream is, at bottom, an infinite PRNG stream whose entire position is one
+    /// <c>double</c> — so this single method re-seats any of them exactly where it left off (the
+    /// key is only ever used to compute the *initial* state in <see cref="CreatePrngStream"/>;
+    /// after that, State carries everything forward).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelySinglePrngStream ResumeStream(double state) => new(state);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double GetNextPrngState(ref MotelySinglePrngStream stream)
     {
