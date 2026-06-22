@@ -183,20 +183,14 @@ public static class JummyLine
         Enum.TryParse(item.Type.ToString(), ignoreCase: false, out value) && Enum.IsDefined(value);
 
     /// <summary>
-    /// Recovers the <see cref="MotelyJoker"/> by re-running the engine's own constructor over every
-    /// joker and matching the packed type — no hand bit-math, the int is the source of truth.
+    /// Recovers the <see cref="MotelyJoker"/> from the packed item via a one-time map keyed by the
+    /// engine's own constructor output. The int is the source of truth; the lookup is O(1).
     /// </summary>
-    private static bool TryExtractJoker(MotelyItem item, out MotelyJoker joker)
-    {
-        foreach (var j in Enum.GetValues<MotelyJoker>())
-            if (new MotelyItem(j).Type == item.Type)
-            {
-                joker = j;
-                return true;
-            }
-        joker = default;
-        return false;
-    }
+    private static readonly Dictionary<MotelyItemType, MotelyJoker> JokerByType =
+        Enum.GetValues<MotelyJoker>().ToDictionary(j => new MotelyItem(j).Type);
+
+    private static bool TryExtractJoker(MotelyItem item, out MotelyJoker joker) =>
+        JokerByType.TryGetValue(item.Type, out joker);
 
     private static MotelyJokerSticker[] StickersOf(MotelyItem item)
     {
