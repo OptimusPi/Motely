@@ -6,9 +6,9 @@ JAML (Jimbo's Ante Markup Language) is the declarative YAML filter language on t
 
 ## Working rules
 
-- Small, reversible diffs. Build on what exists; don't rewrite to make the diff look big.
+- Small, reversible diffs. Build on what exists.
 - No version bumps unless asked.
-- Don't claim done without proof: it builds and the relevant tests pass.
+- Done means it builds and the relevant tests pass.
 - PowerShell on this machine. Prefer the read/edit/grep tools over shelling out.
 
 ## Single source of truth for grammar
@@ -16,13 +16,11 @@ JAML (Jimbo's Ante Markup Language) is the declarative YAML filter language on t
 `Motely/Filters/Jaml/JamlVocab.cs` is the one source of truth for JAML grammar
 (root keys, discriminators, per-discriminator clause keys + source keys, enum tables).
 
-- `JamlConfigLoader.cs` derives its allow-lists from `JamlVocab` — no hand-maintained
-  HashSets. (This closed a drift bug: `standardCard` was in `JamlVocab` but missing from
-  the loader's discriminator list, so the engine threw `Unknown clause key`.)
+- `JamlConfigLoader.cs` derives its allow-lists from `JamlVocab` — no hand-maintained HashSets.
 - `Motely.Schema` projects `JamlVocab` → `jaml-lang/src/generated.ts`,
   `jaml-lsp/schemas/jaml.schema.json`, `jaml-lsp/syntaxes/jaml.tmLanguage.json`.
-- To add/change a clause: edit `JamlVocab` + write the FilterDesc. Never hand-edit the
-  generated files; never add a parallel allow-list.
+- Add or change a clause: edit `JamlVocab` and write the FilterDesc. The generated
+  TS/JSON/grammar are outputs of it, not inputs.
 
 ### Open
 - `jaml-lang/src/context.ts` hardcodes its own discriminator Set (~lines 87-95) instead of
@@ -42,7 +40,7 @@ an ante tail. Example — `Eternal Blueprint in antes 1 or 2` equals:
   antes: [1, 2]
 ```
 
-Why it's sound: a `MotelyItem` is a single packed `int` (`Motely/MotelyItem.cs`);
+A `MotelyItem` is a single packed `int` (`Motely/MotelyItem.cs`);
 type/edition/enhancement/seal/stickers live in its bits. `FormatUtils.FormatItem(int)` and
 `FormatUtils.TryParseMotelyItem(string)` are inverses (pretty name first, enum fallback), so
 the item half round-trips losslessly. JUMMY adds the tail.
@@ -60,9 +58,9 @@ the item half round-trips losslessly. JUMMY adds the tail.
 - `Motely.Tests/JummyLineTests.cs` — the example, modifier round-trips, full sweeps over every
   joker + tarot/spectral/planet, and the packed-int identity law.
 
-### Next (incremental — don't rewrite v0)
+### Next
 - Standard cards: `StandardCardClause` is rank/suit/enh/seal with partial matches, so it
-  doesn't map to one packed item cleanly. Check `MotelyGlobals` standard-card bit offsets first.
+  doesn't map to one packed item cleanly. Standard-card bit offsets live in `MotelyGlobals`.
 - Voucher / tag / boss: separate enums via `FormatVoucher`/`FormatTag`/`FormatBoss`; their
   clauses have a `required Rolls` array needing a sane default.
 - Edition on consumables (e.g. `Negative The Fool`) is dropped — clauses don't store it.
@@ -79,7 +77,8 @@ dotnet test Motely.Tests/Motely.Tests.csproj --filter "FullyQualifiedName~JummyL
 dotnet test Motely.Tests/Motely.Tests.csproj    # full suite
 ```
 
-## Parked: Motely.Wasm
-`Motely.Wasm/` was referenced by `Motely.slnx` but its files were deleted. The working tree's
-`test.mjs` expects a Bootsharp WASM module exposing the Jimmolate JS probe + the JAML/seed/
-search API. Reference implementation: `D:/MotelyJAML2`.
+## Motely.Wasm
+Bootsharp WASM module — the Jimmolate JS probe + the JAML/seed/search API, in `Program.cs`.
+`Motely.Wasm.csproj` publishes the single-file module to `dist/`, where `test.mjs` boots it
+and checks `Motely.getVersion()` / `normalizeSeed()`. Fuller reference build (FileSystem feed,
+package.json, smoke tests): `D:/MotelyJAML2`.

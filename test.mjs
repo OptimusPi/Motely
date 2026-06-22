@@ -1,4 +1,4 @@
-import bootsharp, { Jimmolate, Motely } from "./Motely.Wasm/bin/motely-wasm/index.mjs";
+import bootsharp, { Jimmolate, Motely } from "./Motely.Wasm/dist/index.mjs";
 
 // Jimmolate.probe must be bound before boot() — even if it's a no-op stub here.
 Jimmolate.probe = (_seed, _deck, _stake) => true;

@@ -8,8 +8,9 @@
     <BootsharpName>motely-wasm</BootsharpName>
     <!-- Bootsharp overwrites <dir>/package.json every build; park the throwaway in obj/. -->
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
-    <!-- test.mjs imports ./Motely.Wasm/bin/motely-wasm/index.mjs -->
-    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\bin\motely-wasm</BootsharpPublishDirectory>
+    <!-- test.mjs imports ./Motely.Wasm/dist/index.mjs (npm-publishable layout; matches the
+         reference impl + package.json "main"/"files"). Bootsharp emits the single-file module here. -->
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\dist</BootsharpPublishDirectory>
     <!-- Empty BinariesDirectory = embedded base64 single-file: boot() needs no served files. -->
   </PropertyGroup>
 
