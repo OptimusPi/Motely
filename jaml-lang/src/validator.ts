@@ -1,7 +1,7 @@
 import {
   Discriminators, RootKeys, Enums,
   DiscriminatorValueEnum, DiscriminatorClauseKeys, DiscriminatorSourceKeys,
-  AllClauseLevelKeys,
+  ClauseKeyValueEnum, AllClauseLevelKeys,
 } from "./generated.js";
 
 export interface Diagnostic {
@@ -55,6 +55,10 @@ export function getDiagnostics(text: string): LspDiagnostic[] {
 const ROOT_KEYS = new Set(RootKeys.map((k) => k.toLowerCase()));
 const DISC_SET  = new Set(Discriminators.map((k) => k.toLowerCase()));
 const CLAUSE_KEYS = new Set(AllClauseLevelKeys.map((k) => k.toLowerCase()));
+// Clause-level key -> enum name, case-insensitive. Single source: generated ClauseKeyValueEnum.
+const CLAUSE_VALUE_ENUM = new Map(
+  Object.entries(ClauseKeyValueEnum).map(([k, v]) => [k.toLowerCase(), v]),
+);
 
 function lineOffsets(text: string): number[] {
   const offsets: number[] = [0];
@@ -96,6 +100,27 @@ export function validate(text: string): Diagnostic[] {
   function diag(line: number, col: number, len: number, severity: Diagnostic["severity"], message: string) {
     const from = offsetOf(offsets, line, col);
     diags.push({ from, to: from + len, severity, message });
+  }
+
+  // Validate an enum-constrained clause-level key value (scalar like `seal: Gold` or array
+  // like `stickers: [Eternal, Rental]`). Flags each unknown member. `Any` is always allowed.
+  function checkClauseValueEnum(key: string, rawLine: string, lineIdx: number, ind: number) {
+    const enumName = CLAUSE_VALUE_ENUM.get(key.toLowerCase());
+    if (!enumName) return;
+    const val = extractValue(rawLine);
+    if (!val) return;
+    const members = Enums[enumName] ?? [];
+    const arr = val.match(/^\[(.*)\]$/);
+    const tokens = arr
+      ? arr[1].split(",").map((t) => t.trim()).filter((t) => t.length > 0)
+      : [val];
+    for (const token of tokens) {
+      const norm = token.replace(/\s+/g, "");
+      if (norm.toLowerCase() === "any") continue;
+      if (members.some((m) => m.toLowerCase() === norm.toLowerCase())) continue;
+      const col = rawLine.lastIndexOf(token);
+      diag(lineIdx, col >= 0 ? col : ind, token.length, "warning", `Unknown ${enumName} value '${token}'.`);
+    }
   }
 
   let inClause = false;
@@ -247,6 +272,9 @@ export function validate(text: string): Diagnostic[] {
           diag(i, col, key.length, "warning", `Key '${key}' is not valid for ${clauseDiscriminator}.`);
         }
       }
+
+      // Enum-constrained value check (seal/rank/edition/suit/enhancement/stickers).
+      checkClauseValueEnum(key, raw, i, ind);
     }
   }
 
