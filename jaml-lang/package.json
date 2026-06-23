@@ -15,7 +15,9 @@
   "files": ["dist", "src/generated.ts"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pretest": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.mjs\""
   },
   "devDependencies": {
     "typescript": "^5.6.0"

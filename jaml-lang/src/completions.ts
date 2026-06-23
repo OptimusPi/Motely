@@ -1,6 +1,7 @@
 import {
   Discriminators, RootKeys, RootValueEnums,
   Enums, DiscriminatorValueEnum, DiscriminatorClauseKeys, DiscriminatorSourceKeys,
+  ClauseKeyValueEnum,
 } from "./generated.js";
 import { getContext } from "./context.js";
 
@@ -33,6 +34,11 @@ function enumItems(enumName: string, detail?: string): CompletionItem[] {
   const members = Enums[enumName] ?? [];
   return members.map((m) => ({ label: m, kind: "enum" as const, detail: detail ?? enumName }));
 }
+
+// Clause-level key -> enum name, case-insensitive. Single source: generated ClauseKeyValueEnum.
+const clauseValueEnum = new Map(
+  Object.entries(ClauseKeyValueEnum).map(([k, v]) => [k.toLowerCase(), v]),
+);
 
 /** Normalise discriminator to the canonical casing expected by the vocab tables. */
 function canonDisc(disc: string): string {
@@ -80,19 +86,12 @@ export function getCompletions(text: string, offset: number): CompletionItem[] {
     }
 
     case "clause-value": {
-      const key = ctx.valueKey ?? "";
-      // A few keys have well-known enum values
-      const wellKnown: Record<string, string> = {
-        edition: "MotelyItemEdition",
-        enhancement: "MotelyItemEnhancement",
-        seal: "MotelyItemSeal",
-        suit: "MotelyStandardcardSuit",
-        rank: "MotelyStandardcardRank",
-      };
-      const enumName = wellKnown[key.toLowerCase()];
+      const key = (ctx.valueKey ?? "").toLowerCase();
+      // Enum-valued clause keys (edition/enhancement/seal/suit/rank/stickers) come straight
+      // from the generated ClauseKeyValueEnum — same source the validator uses, no local copy.
+      const enumName = clauseValueEnum.get(key);
       if (enumName) return filterPrefix(enumItems(enumName), ctx.prefix);
-      if (key.toLowerCase() === "stickers") return filterPrefix(enumItems("MotelyJokerSticker"), ctx.prefix);
-      if (key.toLowerCase() === "soulcardonly") return filterPrefix([
+      if (key === "soulcardonly") return filterPrefix([
         { label: "true", kind: "value" }, { label: "false", kind: "value" }
       ], ctx.prefix);
       return [];

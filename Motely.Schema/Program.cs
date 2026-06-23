@@ -91,6 +91,14 @@ foreach (var (disc, enumName) in discValueEnum.Where(kv => kv.Value != null))
 ts.AppendLine("};");
 ts.AppendLine();
 
+// Clause-level keys whose value is an enum (suit, rank, edition, seal, …) — the single
+// source of truth the validator & completions read, so they stop keeping their own copies.
+ts.AppendLine("export const ClauseKeyValueEnum: Record<string, string> = {");
+foreach (var (key, enumName) in JamlVocab.ClauseKeyValueEnum.OrderBy(kv => kv.Key))
+    ts.AppendLine($"    \"{key}\": \"{enumName}\",");
+ts.AppendLine("};");
+ts.AppendLine();
+
 ts.AppendLine("export const DiscriminatorClauseKeys: Record<string, readonly string[]> = {");
 foreach (var (disc, keys) in discClauseKeys)
     ts.AppendLine($"    \"{disc}\": [{string.Join(", ", keys.Select(k => $"\"{k}\""))}],");
@@ -142,24 +150,31 @@ Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, tmGrammarPath)}");
 
 // ── JSON Schema ───────────────────────────────────────────────────────────────
 
-object PropSchema(string key) => key switch
+// Enum-backed keys come straight from JamlVocab.ClauseKeyValueEnum (the single source of
+// truth) — never a hand-kept list here, which is what let `rank` lose its enum while `suit`
+// kept it. `stickers` is the lone array-of-enum key.
+object PropSchema(string key)
 {
-    "ante"            => new { type = "integer", minimum = 1, maximum = 8 },
-    "antes"           => new { type = "array",   items = new { type = "integer", minimum = 1, maximum = 8 } },
-    "min" or "max" or "score" or "soulEditionRolls" or "value"
-                      => new { type = "integer" },
-    "label"           => new { type = "string" },
-    "edition"         => new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyItemEdition", []) },
-    "enhancement"     => new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyItemEnhancement", []) },
-    "seal"            => new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyItemSeal", []) },
-    "suit"            => new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyStandardcardSuit", []) },
-    "stickers"        => new { type = "array", items = new { type = "string" } },
-    "shopItems"       => new { type = "array", items = new { type = "integer" } },
-    "soulCardOnly"    => new { type = "boolean" },
-    "sources"         => new { type = "object" },
-    "rank"            => new { type = "string" },
-    _                 => new { type = "string" }
-};
+    if (JamlVocab.ClauseKeyValueEnum.TryGetValue(key, out var enumName))
+    {
+        var members = enumMap.GetValueOrDefault(enumName, []);
+        return key == "stickers"
+            ? new { type = "array", items = new { type = "string", @enum = members } }
+            : (object)new { type = "string", @enum = members };
+    }
+
+    return key switch
+    {
+        "ante"            => new { type = "integer", minimum = 1, maximum = 8 },
+        "antes"           => new { type = "array",   items = new { type = "integer", minimum = 1, maximum = 8 } },
+        "min" or "max" or "score" or "soulEditionRolls" or "value"
+                          => new { type = "integer" },
+        "shopItems"       => new { type = "array", items = new { type = "integer" } },
+        "soulCardOnly"    => new { type = "boolean" },
+        "sources"         => new { type = "object" },
+        _                 => new { type = "string" }   // label and any free-text key
+    };
+}
 
 object DiscValueSchema(string disc)
 {
@@ -176,25 +191,35 @@ var clauseAnyOf = discriminators.OrderBy(d => d).Select(disc =>
     return (object)new { required = new[] { disc }, properties = props, additionalProperties = false };
 }).ToList();
 
+var rootProps = new Dictionary<string, object>
+{
+    ["id"]          = new { type = "string" },
+    ["name"]        = new { type = "string" },
+    ["description"] = new { type = "string" },
+    ["author"]      = new { type = "string" },
+    ["seeds"]       = new { type = "array", items = new { type = "string" } },
+    ["deck"]        = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyDeck", []) },
+    ["stake"]       = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyStake", []) },
+    ["must"]        = new { type = "array", items = new { anyOf = clauseAnyOf } },
+    ["should"]      = new { type = "array", items = new { anyOf = clauseAnyOf } },
+    ["mustNot"]     = new { type = "array", items = new { anyOf = clauseAnyOf } },
+};
+
+// Drift guard: every JamlVocab.RootKeys entry must be described above, or the schema
+// would silently drop a real key. Fail generation loudly instead.
+var missingRoot = rootKeys.Where(k => !rootProps.ContainsKey(k)).ToArray();
+if (missingRoot.Length > 0)
+    throw new InvalidOperationException(
+        $"RootKeys missing from JSON-schema root properties: {string.Join(", ", missingRoot)}. " +
+        "Add them in Motely.Schema/Program.cs.");
+
 var jsonSchema = new
 {
     title = "JAML Filter",
     description = "Jimbo's Ante Markup Language — Balatro seed filter",
     type = "object",
     additionalProperties = false,
-    properties = new Dictionary<string, object>
-    {
-        ["id"]          = new { type = "string" },
-        ["name"]        = new { type = "string" },
-        ["description"] = new { type = "string" },
-        ["author"]      = new { type = "string" },
-        ["seeds"]       = new { type = "array", items = new { type = "string" } },
-        ["deck"]        = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyDeck", []) },
-        ["stake"]       = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyStake", []) },
-        ["must"]        = new { type = "array", items = new { anyOf = clauseAnyOf } },
-        ["should"]      = new { type = "array", items = new { anyOf = clauseAnyOf } },
-        ["mustNot"]     = new { type = "array", items = new { anyOf = clauseAnyOf } },
-    }
+    properties = rootProps,
 };
 
 File.WriteAllText(jsonSchemaPath,
