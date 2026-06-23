@@ -174,6 +174,25 @@ public static class JamlVocab
             ["glassDestroy"]         = EventSrc,
         };
 
+    // ── Per-clause-key: value enum ────────────────────────────────────────────
+    // Clause-level keys whose value is constrained to an enum. This is the single
+    // source of truth that value-type generators (JSON schema, hover, completion)
+    // must read — so none of them hand-maintains its own copy and drifts. That
+    // drift is exactly how the JSON-schema generator once mapped `suit` to its enum
+    // but left `rank` (right next to it) as a free string. Array-valued keys
+    // (`stickers`) constrain each element to the named enum.
+
+    public static readonly IReadOnlyDictionary<string, string> ClauseKeyValueEnum =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["edition"]     = "MotelyItemEdition",
+            ["enhancement"] = "MotelyItemEnhancement",
+            ["seal"]        = "MotelyItemSeal",
+            ["suit"]        = "MotelyStandardcardSuit",
+            ["rank"]        = "MotelyStandardcardRank",
+            ["stickers"]    = "MotelyJokerSticker",
+        };
+
     // ── Enum member lists (from the actual C# enums via reflection) ───────────
 
     public static IReadOnlyDictionary<string, string[]> GetAllEnums() =>

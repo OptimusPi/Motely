@@ -1,5 +1,10 @@
-import { Enums, DiscriminatorValueEnum, DiscriminatorSourceKeys, DiscriminatorClauseKeys } from "./generated.js";
+import { Enums, DiscriminatorValueEnum, DiscriminatorSourceKeys, DiscriminatorClauseKeys, ClauseKeyValueEnum } from "./generated.js";
 import { getContext } from "./context.js";
+
+// Clause-level key -> enum name, case-insensitive. Single source: generated ClauseKeyValueEnum.
+const clauseValueEnum = new Map(
+  Object.entries(ClauseKeyValueEnum).map(([k, v]) => [k.toLowerCase(), v]),
+);
 
 export interface HoverInfo {
   markdown: string;
@@ -22,14 +27,7 @@ export function getHover(text: string, offset: number): HoverInfo | null {
   }
 
   if (ctx.kind === "clause-value" && ctx.valueKey) {
-    const wellKnown: Record<string, string> = {
-      edition: "MotelyItemEdition",
-      enhancement: "MotelyItemEnhancement",
-      seal: "MotelyItemSeal",
-      suit: "MotelyStandardcardSuit",
-      rank: "MotelyStandardcardRank",
-    };
-    const enumName = wellKnown[ctx.valueKey.toLowerCase()];
+    const enumName = clauseValueEnum.get(ctx.valueKey.toLowerCase());
     if (enumName) {
       const members = Enums[enumName] ?? [];
       return { markdown: `**${ctx.valueKey}** — \`${enumName}\`\n\nValues: ${members.map((m) => `\`${m}\``).join(", ")}` };

@@ -52,6 +52,15 @@ export const DiscriminatorValueEnum: Record<string, string> = {
     "erraticSuit": "MotelyStandardcardSuit",
 };
 
+export const ClauseKeyValueEnum: Record<string, string> = {
+    "edition": "MotelyItemEdition",
+    "enhancement": "MotelyItemEnhancement",
+    "rank": "MotelyStandardcardRank",
+    "seal": "MotelyItemSeal",
+    "stickers": "MotelyJokerSticker",
+    "suit": "MotelyStandardcardSuit",
+};
+
 export const DiscriminatorClauseKeys: Record<string, readonly string[]> = {
     "boss": ["ante", "antes", "min", "max", "score", "label"],
     "joker": ["ante", "antes", "min", "max", "score", "label", "edition", "stickers", "shopItems", "sources"],
