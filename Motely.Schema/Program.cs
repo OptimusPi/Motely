@@ -1,5 +1,4 @@
-// Motely.Schema — emits jaml-lang/src/generated.ts, jaml-lsp/syntaxes/jaml.tmLanguage.json,
-// and jaml-lsp/schemas/jaml.schema.json.
+// Motely.Schema — emits jaml-lang/src/generated.ts and jaml-lsp/syntaxes/jaml.tmLanguage.json.
 //
 // Run:  dotnet run --project Motely.Schema  (from repo root)
 //       dotnet run --project Motely.Schema -- --dry-run  (show paths only)
@@ -49,19 +48,16 @@ Console.WriteLine($"Loaded {enumMap.Count} enums, {discriminators.Count} discrim
 
 var generatedTsPath = Path.Combine(repoRoot, "jaml-lang", "src", "generated.ts");
 var tmGrammarPath   = Path.Combine(repoRoot, "jaml-lsp", "syntaxes", "jaml.tmLanguage.json");
-var jsonSchemaPath  = Path.Combine(repoRoot, "jaml-lsp", "schemas", "jaml.schema.json");
 
 if (dryRun)
 {
     Console.WriteLine($"[dry-run] {generatedTsPath}");
     Console.WriteLine($"[dry-run] {tmGrammarPath}");
-    Console.WriteLine($"[dry-run] {jsonSchemaPath}");
     return 0;
 }
 
 Directory.CreateDirectory(Path.GetDirectoryName(generatedTsPath)!);
 Directory.CreateDirectory(Path.GetDirectoryName(tmGrammarPath)!);
-Directory.CreateDirectory(Path.GetDirectoryName(jsonSchemaPath)!);
 
 // ── generated.ts ──────────────────────────────────────────────────────────────
 
@@ -147,84 +143,5 @@ File.WriteAllText(tmGrammarPath,
     JsonSerializer.Serialize(grammar, new JsonSerializerOptions { WriteIndented = true }),
     Encoding.UTF8);
 Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, tmGrammarPath)}");
-
-// ── JSON Schema ───────────────────────────────────────────────────────────────
-
-// Enum-backed keys come straight from JamlVocab.ClauseKeyValueEnum (the single source of
-// truth) — never a hand-kept list here, which is what let `rank` lose its enum while `suit`
-// kept it. `stickers` is the lone array-of-enum key.
-object PropSchema(string key)
-{
-    if (JamlVocab.ClauseKeyValueEnum.TryGetValue(key, out var enumName))
-    {
-        var members = enumMap.GetValueOrDefault(enumName, []);
-        return key == "stickers"
-            ? new { type = "array", items = new { type = "string", @enum = members } }
-            : (object)new { type = "string", @enum = members };
-    }
-
-    return key switch
-    {
-        "ante"            => new { type = "integer", minimum = 1, maximum = 8 },
-        "antes"           => new { type = "array",   items = new { type = "integer", minimum = 1, maximum = 8 } },
-        "min" or "max" or "score" or "soulEditionRolls" or "value"
-                          => new { type = "integer" },
-        "shopItems"       => new { type = "array", items = new { type = "integer" } },
-        "soulCardOnly"    => new { type = "boolean" },
-        "sources"         => new { type = "object" },
-        _                 => new { type = "string" }   // label and any free-text key
-    };
-}
-
-object DiscValueSchema(string disc)
-{
-    if (discValueEnum.TryGetValue(disc, out var en) && en != null && enumMap.TryGetValue(en, out var members))
-        return new { type = "string", @enum = (object)members.Concat(["Any"]).ToArray() };
-    return new { type = new[] { "string", "array" } };
-}
-
-var clauseAnyOf = discriminators.OrderBy(d => d).Select(disc =>
-{
-    var props = new Dictionary<string, object> { [disc] = DiscValueSchema(disc) };
-    if (discClauseKeys.TryGetValue(disc, out var ck))
-        foreach (var k in ck) props[k] = PropSchema(k);
-    return (object)new { required = new[] { disc }, properties = props, additionalProperties = false };
-}).ToList();
-
-var rootProps = new Dictionary<string, object>
-{
-    ["id"]          = new { type = "string" },
-    ["name"]        = new { type = "string" },
-    ["description"] = new { type = "string" },
-    ["author"]      = new { type = "string" },
-    ["seeds"]       = new { type = "array", items = new { type = "string" } },
-    ["deck"]        = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyDeck", []) },
-    ["stake"]       = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyStake", []) },
-    ["must"]        = new { type = "array", items = new { anyOf = clauseAnyOf } },
-    ["should"]      = new { type = "array", items = new { anyOf = clauseAnyOf } },
-    ["mustNot"]     = new { type = "array", items = new { anyOf = clauseAnyOf } },
-};
-
-// Drift guard: every JamlVocab.RootKeys entry must be described above, or the schema
-// would silently drop a real key. Fail generation loudly instead.
-var missingRoot = rootKeys.Where(k => !rootProps.ContainsKey(k)).ToArray();
-if (missingRoot.Length > 0)
-    throw new InvalidOperationException(
-        $"RootKeys missing from JSON-schema root properties: {string.Join(", ", missingRoot)}. " +
-        "Add them in Motely.Schema/Program.cs.");
-
-var jsonSchema = new
-{
-    title = "JAML Filter",
-    description = "Jimbo's Ante Markup Language — Balatro seed filter",
-    type = "object",
-    additionalProperties = false,
-    properties = rootProps,
-};
-
-File.WriteAllText(jsonSchemaPath,
-    JsonSerializer.Serialize(jsonSchema, new JsonSerializerOptions { WriteIndented = true }),
-    Encoding.UTF8);
-Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, jsonSchemaPath)}");
 
 return 0;
