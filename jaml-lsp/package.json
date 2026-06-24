@@ -38,18 +38,6 @@
         "path": "./syntaxes/jaml.tmLanguage.json"
       }
     ],
-    "jsonValidation": [
-      {
-        "fileMatch": ["*.jaml"],
-        "url": "./schemas/jaml.schema.json"
-      }
-    ],
-    "yamlValidation": [
-      {
-        "fileMatch": ["*.jaml"],
-        "url": "./schemas/jaml.schema.json"
-      }
-    ],
     "snippets": [
       {
         "language": "jaml",
