@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # MotelyJAML
 
 Fork of tacodiva's **Motely** — a 512-bit SIMD Balatro seed-search engine (`Motely/`).
-JAML (Jimbo's Ante Markup Language) is the declarative YAML filter language on top.
+JAML (Jimbo's Ante Markup Language) is the declarative filter language on top — its
+own vocabulary and grammar, written in YAML or JSON syntax.
 .NET 10 (`global.json` pins 10.0.204, `rollForward: latestFeature`). Solution: `Motely.slnx`.
 
 ## Working rules
