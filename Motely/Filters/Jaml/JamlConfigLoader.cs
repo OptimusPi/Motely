@@ -16,7 +16,7 @@ public static class JamlConfigLoader
     // ── Allow-lists — DERIVED from JamlVocab, the single source of truth ───────
     // Do NOT hand-maintain these. JamlVocab feeds BOTH the engine parser (here)
     // and the generated editor tooling (Motely.Schema → generated.ts /
-    // jaml.schema.json / jaml.tmLanguage.json). Sourcing them from one place is
+    // jaml.tmLanguage.json). Sourcing them from one place is
     // what makes the editor and the engine physically incapable of disagreeing
     // about which JAML is legal.
 
