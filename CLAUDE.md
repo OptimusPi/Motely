@@ -30,8 +30,8 @@ Run a search from the CLI (from repo root so `--jaml` resolves):
 dotnet run --project Motely.CLI -- --jaml yourfilter --keyword YOURNAME --cutoff 0
 ```
 
-The filter lives in `JamlFilters/yourfilter.jaml`. Full authoring guide:
-`FIND_BALATRO_SEED_WITH_MOTELY_CLI.md`.
+The filter lives in `JamlFilters/yourfilter.jaml`. Full authoring guide: the
+"Finding a Balatro Seed" section of `README.md`.
 
 ## Projects (`Motely.slnx`)
 
@@ -39,12 +39,12 @@ The filter lives in `JamlFilters/yourfilter.jaml`. Full authoring guide:
 - `Motely.CLI/` — command-line head.
 - `Motely.TUI/` — terminal UI head.
 - `Motely.Wasm/` — Bootsharp WASM head (Jimmolate JS probe + JAML/seed/search API in `Program.cs`); publishes a single-file module to `dist/`.
-- `Motely.Schema/` — projects `JamlVocab` to TS/JSON/grammar artifacts (see below).
+- `Motely.Schema/` — projects `JamlVocab` to TS + TextMate-grammar artifacts (see below).
 - `Motely.Data/` — data/results tooling.
 - `Motely.Tests/` — the test project.
 
 Non-project dirs: `JamlFilters/` (ready-made `.jaml`), `jaml-lang/` (language service),
-`jaml-lsp/` (LSP server + VS Code extension), `Seeds/`, `corpus/`, `docs/balatro-mechanics.md`.
+`jaml-lsp/` (LSP server + VS Code extension), `Seeds/`, `corpus/`.
 
 ## Single source of truth for grammar
 
@@ -52,12 +52,12 @@ Non-project dirs: `JamlFilters/` (ready-made `.jaml`), `jaml-lang/` (language se
 (root keys, discriminators, per-discriminator clause keys + source keys, enum tables).
 
 - `JamlConfigLoader.cs` derives its allow-lists from `JamlVocab` — no hand-maintained HashSets.
-- `Motely.Schema` projects `JamlVocab` → `jaml-lang/src/generated.ts`,
-  `jaml-lsp/schemas/jaml.schema.json`, `jaml-lsp/syntaxes/jaml.tmLanguage.json`.
+- `Motely.Schema` projects `JamlVocab` → `jaml-lang/src/generated.ts` and
+  `jaml-lsp/syntaxes/jaml.tmLanguage.json`.
 - To add or change a clause: edit `JamlVocab` and write the FilterDesc. The generated
-  TS/JSON/grammar are outputs, not inputs — never hand-edit them.
+  TS + grammar are outputs, not inputs — never hand-edit them.
 
-Generation runs on every `Motely.Wasm` build; run by hand with `node jaml-lang/generate.mjs`.
+Regenerate with `dotnet run --project Motely.Schema` (from repo root).
 
 ## Filter architecture
 
