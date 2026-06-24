@@ -35,8 +35,7 @@ The solution is `Motely.slnx`. Projects:
 - `Motely.Tests/` — the test project.
 
 Other top-level items: `JamlFilters/` (pre-made `.jaml` filter configs),
-`jaml-lang/` (the JAML language), `Seeds/`, and `docs/`
-(`balatro-mechanics.md`).
+`jaml-lang/` (the JAML language), and `Seeds/`.
 
 ## JAML
 
