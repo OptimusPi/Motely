@@ -40,62 +40,47 @@ Other top-level items: `JamlFilters/` (pre-made `.jaml` filter configs),
 
 ## JAML
 
-Filters are written in JAML — a YAML-based config describing what to look for in a
-seed. See `JamlFilters/` for ready-made filters to copy and adapt, `jaml-lang/`
-for the language service, and `docs/balatro-mechanics.md` for the game mechanics
-filters target.
+Filters are written in **JAML** — *Jimbo's Ante Markup Language*. JAML is a real
+language: its own vocabulary, grammar, and validator. It has two surface syntaxes
+— YAML and JSON — that both parse to the same `JamlConfig`. YAML is just the most
+comfortable way to write JAML down; it is not what JAML *is*.
 
-<<<<<<< Updated upstream
-## JAML language tooling (LSP, grammar, editor support)
+See `JamlFilters/` for ready-made filters to copy and adapt, and `jaml-lang/` for
+the language service.
 
-JAML is a real language with real tooling, all generated from the engine:
+### Language tooling (LSP, grammar, editor support)
 
-- **`jaml-lang/`** — the language service (diagnostics, completions, hover,
-  document symbols). Its vocab and key tables (`src/generated.ts`) are
-  **generated** by `jaml-lang/generate.mjs` from `Motely/Enums` and the JAML
-  clause model — the C# engine is the only source of truth. Generation runs
-  automatically on every `Motely.Wasm` build; run it by hand with
-  `node jaml-lang/generate.mjs`.
-- **`jaml-lsp/`** — the LSP server (stdio) and VS Code extension. The TextMate
-  grammar (`jaml-lsp/syntaxes/jaml.tmLanguage.json`) is generated alongside the
-  vocab — never edit it by hand.
+JAML has real tooling, all generated from the engine — one source of truth, no
+drift:
+
+- **`jaml-lang/`** — the TypeScript language service: diagnostics (unknown keys,
+  invalid enum *values* like a bad rank or seal, bad deck/stake), context-aware
+  completion, and hover. Its vocab tables (`src/generated.ts`) are generated from
+  `Motely/Filters/Jaml/JamlVocab.cs`.
+- **`jaml-lsp/`** — the LSP server (stdio) and VS Code extension, with a TextMate
+  grammar generated alongside the vocab.
+
+Both the vocab and the grammar are emitted by **`Motely.Schema`** from `JamlVocab`
+and the engine's enums — the C# engine is the only source of truth:
 
 ```powershell
-node jaml-lang/generate.mjs          # regenerate vocab + grammar from the engine
-cd jaml-lang;  npm install; npm run build   # build the language service
-cd ../jaml-lsp; npm install; npm run build  # build the LSP server + extension
-npm run smoke                        # drive the server over real LSP JSON-RPC
+dotnet run --project Motely.Schema          # regenerate vocab + grammar from the engine
+cd jaml-lang; npm install; npm test         # build + test the language service
 ```
 
-A typo'd joker name, an unknown clause key, or a bad deck value squiggles in
-your editor with the same judgement the engine itself would pass — because the
-tables came from the engine.
+A typo'd joker name, an unknown clause key, or a bad rank squiggles in your editor
+with the same judgement the engine itself would pass — because the tables came
+from the engine.
 
 ## Finding a Balatro Seed
-
-See **[`FIND_BALATRO_SEED_WITH_MOTELY_CLI.md`](FIND_BALATRO_SEED_WITH_MOTELY_CLI.md)** for the full guide — JAML authoring, CLI flags, gotchas, worked examples.
 
 Quick start:
 ```powershell
 dotnet run --project Motely.CLI -- --jaml yourfilter --keyword YOURNAME --cutoff 0
 ```
 
-The filter lives in `JamlFilters/yourfilter.jaml`. Run from the repo root so `--jaml` resolves correctly.
-=======
-### JAML Language Server (LSP)
-
-A **real** Language Server Protocol implementation lives in `jaml-lsp/`. It
-provides:
-
-- **Diagnostics** — instant validation of syntax, unknown keys, and invalid enum values
-- **Completion** — context-aware suggestions for jokers, cards, decks, stakes, etc.
-- **Hover** — documentation on every JAML key and value
-- **Document symbols** — outline of `must` / `should` / `mustNot` clauses
-
-The vocabulary is **generated from the Motely C# engine enums** — one source of
-truth, no drift. See `docs/EDITOR_INTEGRATION.md` for setup in VS Code, Neovim,
-Helix, Zed, and Claude Code.
->>>>>>> Stashed changes
+The filter lives in `JamlFilters/yourfilter.jaml`. Run from the repo root so
+`--jaml` resolves correctly.
 
 ## Working with agents
 
