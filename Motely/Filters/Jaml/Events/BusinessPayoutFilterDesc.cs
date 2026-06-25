@@ -22,7 +22,7 @@ public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateBusinessPrngStream();
-            double luck = _clause.Luck;
+            // Business Card is a flat 50/50 (Chance = 2) — no luck/Oops multiplier.
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
@@ -33,8 +33,8 @@ public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBusinessPayout(ref stream, luck);
-                    return sctx.GetNextBusinessPayout(ref stream, luck);
+                        sctx.GetNextBusinessPayout(ref stream);
+                    return sctx.GetNextBusinessPayout(ref stream);
                 },
                 ref stream
             );

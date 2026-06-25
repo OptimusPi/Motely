@@ -1070,13 +1070,13 @@ public static class JamlScoring
         var stream = ctx.CreateBusinessPrngStream();
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        // Flat 50/50 (Chance = 2) — no luck/Oops multiplier.
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
-                ctx.GetNextBusinessPayout(ref stream, luck);
-            if (ctx.GetNextBusinessPayout(ref stream, luck))
+                ctx.GetNextBusinessPayout(ref stream);
+            if (ctx.GetNextBusinessPayout(ref stream))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1099,12 +1099,12 @@ public static class JamlScoring
         var stream = ctx.CreateBloodstonePrngStream();
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        // Flat 50/50 (Chance = 2) — no luck/Oops multiplier.
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
-                ctx.GetNextBloodstoneTrigger(ref stream, luck);
-            if (ctx.GetNextBloodstoneTrigger(ref stream, luck))
+                ctx.GetNextBloodstoneTrigger(ref stream);
+            if (ctx.GetNextBloodstoneTrigger(ref stream))
             {
                 count++;
                 if (max is null && count >= min)
@@ -1123,12 +1123,12 @@ public static class JamlScoring
         var stream = ctx.CreateParkingPrngStream();
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        // Flat 50/50 (Chance = 2) — no luck/Oops multiplier.
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
-                ctx.GetNextParkingPayout(ref stream, luck);
-            if (ctx.GetNextParkingPayout(ref stream, luck))
+                ctx.GetNextParkingPayout(ref stream);
+            if (ctx.GetNextParkingPayout(ref stream))
             {
                 count++;
                 if (max is null && count >= min)
