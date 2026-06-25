@@ -47,11 +47,11 @@ interface WorkerProgress {
     seedsPerMs: number;
 }
 
+// HARD RULE #5: single thread by default. Spinning up one SIMD seed-grinder
+// worker per core pins the user's machine — never do that implicitly. Callers
+// that genuinely want more pass an explicit `workerCount`.
 function defaultWorkerCount(): number {
-    if (typeof navigator !== "undefined" && typeof navigator.hardwareConcurrency === "number") {
-        return Math.max(1, Math.min(navigator.hardwareConcurrency, 8));
-    }
-    return 4;
+    return 1;
 }
 
 function makeInitialState(workerCount: number): UseSearchPoolState {
