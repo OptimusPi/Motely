@@ -22,7 +22,7 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateParkingPrngStream();
-            double luck = _clause.Luck;
+            // Reserved Parking is a flat 50/50 (Chance = 2) — no luck/Oops multiplier.
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
@@ -33,8 +33,8 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextParkingPayout(ref stream, luck);
-                    return sctx.GetNextParkingPayout(ref stream, luck);
+                        sctx.GetNextParkingPayout(ref stream);
+                    return sctx.GetNextParkingPayout(ref stream);
                 },
                 ref stream
             );

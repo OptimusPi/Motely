@@ -23,7 +23,7 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var stream = ctx.CreateBloodstonePrngStream();
-            double luck = _clause.Luck;
+            // Bloodstone is a flat 50/50 (Chance = 2) — no luck/Oops multiplier.
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
@@ -34,8 +34,8 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
                 ) =>
                 {
                     for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBloodstoneTrigger(ref stream, luck);
-                    return sctx.GetNextBloodstoneTrigger(ref stream, luck);
+                        sctx.GetNextBloodstoneTrigger(ref stream);
+                    return sctx.GetNextBloodstoneTrigger(ref stream);
                 },
                 ref stream
             );
