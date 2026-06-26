@@ -11,7 +11,7 @@ public struct MotelyScoredSeedResult : IMotelySeedScores
     private int _tallyCount;
     private int[] _tallyValues = new int[MAX_TALLY_COUNT];
 
-    public MotelyScoredSeedResult() { }
+    public MotelyScoredSeedResult() => Seed = string.Empty;
 
     public readonly byte[] Tally
     {
