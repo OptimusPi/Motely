@@ -10,19 +10,28 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
 {
     private readonly UncommonJokerClause _clause = clause;
 
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — 8 shop slots + 6 packs.
+    /// Specialty/fast-path sources stay off by default. Applied only when <c>Sources</c> is null.</summary>
+    internal static readonly JokerSourceConfig DefaultSources = new()
+    {
+        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public readonly UncommonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        var sources = _clause.Sources ?? DefaultSources;
         foreach (var ante in _clause.Antes)
         {
             ctx.CacheShopStream(ante);
             ctx.CacheBoosterPackStream(ante);
-            if (_clause.Sources.CommonShopJokers.Length > 0)
+            if (sources.CommonShopJokers.Length > 0)
                 ctx.CacheCommonShopJokerStream(ante);
-            if (_clause.Sources.UncommonShopJokers.Length > 0)
+            if (sources.UncommonShopJokers.Length > 0)
                 ctx.CacheUncommonShopJokerStream(ante);
-            if (_clause.Sources.RareShopJokers.Length > 0)
+            if (sources.RareShopJokers.Length > 0)
                 ctx.CacheRareShopJokerStream(ante);
-            if (_clause.Sources.AllShopJokers.Length > 0)
+            if (sources.AllShopJokers.Length > 0)
                 ctx.CacheShopJokerStream(ante);
         }
 
@@ -43,12 +52,12 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
         }
 
         // Extract source indices from config
-        var shopIndices = _clause.Sources.ShopItems;
-        var boosterIndices = _clause.Sources.BoosterPacks;
-        var commonShopJokerIndices = _clause.Sources.CommonShopJokers;
-        var uncommonShopJokerIndices = _clause.Sources.UncommonShopJokers;
-        var rareShopJokerIndices = _clause.Sources.RareShopJokers;
-        var allShopJokerIndices = _clause.Sources.AllShopJokers;
+        var shopIndices = sources.ShopItems;
+        var boosterIndices = sources.BoosterPacks;
+        var commonShopJokerIndices = sources.CommonShopJokers;
+        var uncommonShopJokerIndices = sources.UncommonShopJokers;
+        var rareShopJokerIndices = sources.RareShopJokers;
+        var allShopJokerIndices = sources.AllShopJokers;
 
         int maxShopItem = 0;
         foreach (var idx in shopIndices)

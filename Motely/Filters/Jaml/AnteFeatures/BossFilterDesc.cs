@@ -11,7 +11,9 @@ public sealed class BossClause : IJamlClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public required MotelyBossBlind[] Bosses { get; set; }
-    public int[] Rolls { get; set; } = [];
+    // No Rolls — for now. Boss re-rolls ARE a real source, but the re-roll read isn't
+    // implemented in MotelySearchContext.Boss.cs yet (state-heavy, same blocker as joker
+    // re-rolls). Antes select the WHERE; re-add Rolls here when that source lands.
 }
 
 public readonly struct BossFilterDesc(BossClause clause)

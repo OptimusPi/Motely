@@ -162,7 +162,8 @@ public static partial class MotelyUnitTestAnalyzer
                 .WithThreadCount(1);
 
             using var search = searchSettings.CreateSearch();
-            search.RunSearchUntilCompletion();
+            search.Start();
+            search.AwaitCompletion();
 
             Debug.Assert(filterDesc.LastAnalysis != null);
 

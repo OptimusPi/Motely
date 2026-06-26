@@ -11,7 +11,7 @@ public sealed class SpaceLevelupClause : IJamlClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Rolls { get; set; } = [];
-    public int Luck { get; set; } = 1;
+    public JamlWith With { get; set; } = new();
 }
 
 public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
@@ -24,7 +24,7 @@ public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
         Debug.Assert(_clause.Rolls.Length > 0, "Space clause must provide at least one roll index.");
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
-        return new SpaceLevelupFilter(sortedRolls, _clause.Min, _clause.Luck);
+        return new SpaceLevelupFilter(sortedRolls, _clause.Min, (double)_clause.With.Luck);
     }
 
     public struct SpaceLevelupFilter(int[] sortedRolls, int min, double luck) : IMotelySeedFilter

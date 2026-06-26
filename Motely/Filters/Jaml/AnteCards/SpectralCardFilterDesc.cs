@@ -12,7 +12,9 @@ public sealed class SpectralCardClause : IJamlClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public required MotelySpectralCard[] Spectrals { get; set; }
-    public SpectralCardSourceConfig Sources { get; set; } = new();
+
+    // null = no `sources:` block → SpectralCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    public SpectralCardSourceConfig? Sources { get; set; }
 }
 
 public struct SpectralCardFilterDesc(SpectralCardClause clause)
@@ -20,8 +22,19 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
 {
     private readonly SpectralCardClause _clause = clause;
 
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
+    /// (8 shop slots) plus the 6 booster packs. Specialty sources (Sixth Sense, Seance) stay off
+    /// by default. Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    internal static readonly SpectralCardSourceConfig DefaultSources = new()
+    {
+        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public SpectralCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        var sources = _clause.Sources ?? DefaultSources;
+
         foreach (var ante in _clause.Antes)
         {
             ctx.CacheShopStream(ante);
@@ -29,31 +42,31 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         }
 
         int maxShopItem = 0;
-        for (int i = 0; i < _clause.Sources.ShopItems.Length; i++)
+        for (int i = 0; i < sources.ShopItems.Length; i++)
         {
-            if (_clause.Sources.ShopItems[i] > maxShopItem)
-                maxShopItem = _clause.Sources.ShopItems[i];
+            if (sources.ShopItems[i] > maxShopItem)
+                maxShopItem = sources.ShopItems[i];
         }
 
         int maxBoosterPack = 0;
-        for (int i = 0; i < _clause.Sources.BoosterPacks.Length; i++)
+        for (int i = 0; i < sources.BoosterPacks.Length; i++)
         {
-            if (_clause.Sources.BoosterPacks[i] > maxBoosterPack)
-                maxBoosterPack = _clause.Sources.BoosterPacks[i];
+            if (sources.BoosterPacks[i] > maxBoosterPack)
+                maxBoosterPack = sources.BoosterPacks[i];
         }
 
         int maxSixthSense = 0;
-        for (int i = 0; i < _clause.Sources.SixthSense.Length; i++)
+        for (int i = 0; i < sources.SixthSense.Length; i++)
         {
-            if (_clause.Sources.SixthSense[i] > maxSixthSense)
-                maxSixthSense = _clause.Sources.SixthSense[i];
+            if (sources.SixthSense[i] > maxSixthSense)
+                maxSixthSense = sources.SixthSense[i];
         }
 
         int maxSeance = 0;
-        for (int i = 0; i < _clause.Sources.Seance.Length; i++)
+        for (int i = 0; i < sources.Seance.Length; i++)
         {
-            if (_clause.Sources.Seance[i] > maxSeance)
-                maxSeance = _clause.Sources.Seance[i];
+            if (sources.Seance[i] > maxSeance)
+                maxSeance = sources.Seance[i];
         }
 
         return new SpectralCardFilter(
@@ -92,10 +105,11 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
             Debug.Assert(needed > 0, "SpectralCardClause.Min must be > 0 — loader bug.");
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
-            var shopIndices = clause.Sources.ShopItems;
-            var boosterPacks = clause.Sources.BoosterPacks;
-            var sixthSenseRolls = clause.Sources.SixthSense;
-            var seanceRolls = clause.Sources.Seance;
+            var sources = clause.Sources ?? DefaultSources;
+            var shopIndices = sources.ShopItems;
+            var boosterPacks = sources.BoosterPacks;
+            var sixthSenseRolls = sources.SixthSense;
+            var seanceRolls = sources.Seance;
 
             foreach (var ante in clause.Antes)
             {

@@ -20,7 +20,8 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
             .WithThreadCount(1)
             .WithSeedRouter(this);
         _ownedSearch = settings.CreateSearch();
-        _ownedSearch.RunSearchUntilCompletion();
+        _ownedSearch.Start();
+        _ownedSearch.AwaitCompletion();
     }
 
     IMotelySeedRouter IMotelySeedRouterDesc.CreateSeedRouter(ref MotelyFilterCreationContext ctx)

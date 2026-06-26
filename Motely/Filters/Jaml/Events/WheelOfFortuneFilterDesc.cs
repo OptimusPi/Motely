@@ -11,7 +11,7 @@ public sealed class WheelOfFortuneClause : IJamlClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Rolls { get; set; } = [];
-    public int Luck { get; set; } = 1;
+    public JamlWith With { get; set; } = new();
 }
 
 public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
@@ -24,7 +24,7 @@ public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
         Debug.Assert(_clause.Rolls.Length > 0, "WheelOfFortune clause must provide at least one roll index.");
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
-        return new WheelOfFortuneFilter(sortedRolls, _clause.Min, _clause.Luck);
+        return new WheelOfFortuneFilter(sortedRolls, _clause.Min, (double)_clause.With.Luck);
     }
 
     public struct WheelOfFortuneFilter(int[] sortedRolls, int min, double luck) : IMotelySeedFilter

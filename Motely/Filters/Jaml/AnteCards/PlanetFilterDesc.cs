@@ -12,7 +12,10 @@ public sealed class PlanetCardClause : IJamlClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public required MotelyPlanetCard[] Planets { get; set; }
-    public PlanetSourceConfig Sources { get; set; } = new();
+
+    // null = the author wrote no `sources:` block → PlanetCardFilterDesc.DefaultSources
+    // applies. Any explicit block (even partial) is used verbatim — defaults never merge in.
+    public PlanetSourceConfig? Sources { get; set; }
 }
 
 public struct PlanetCardFilterDesc(PlanetCardClause clause)
@@ -20,8 +23,19 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
 {
     private readonly PlanetCardClause _clause = clause;
 
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
+    /// (8 shop slots) plus the 6 booster packs. Applied only when <c>Sources</c> is null, so a
+    /// terse clause like <c>planet: Pluto</c> just works; any explicit block overrides wholesale.</summary>
+    internal static readonly PlanetSourceConfig DefaultSources = new()
+    {
+        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public PlanetCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        var sources = _clause.Sources ?? DefaultSources;
+
         foreach (var ante in _clause.Antes)
         {
             ctx.CacheShopStream(ante);
@@ -29,17 +43,17 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         }
 
         int maxShopItem = 0;
-        for (int i = 0; i < _clause.Sources.ShopItems.Length; i++)
+        for (int i = 0; i < sources.ShopItems.Length; i++)
         {
-            if (_clause.Sources.ShopItems[i] > maxShopItem)
-                maxShopItem = _clause.Sources.ShopItems[i];
+            if (sources.ShopItems[i] > maxShopItem)
+                maxShopItem = sources.ShopItems[i];
         }
 
         int maxBoosterPack = 0;
-        for (int i = 0; i < _clause.Sources.BoosterPacks.Length; i++)
+        for (int i = 0; i < sources.BoosterPacks.Length; i++)
         {
-            if (_clause.Sources.BoosterPacks[i] > maxBoosterPack)
-                maxBoosterPack = _clause.Sources.BoosterPacks[i];
+            if (sources.BoosterPacks[i] > maxBoosterPack)
+                maxBoosterPack = sources.BoosterPacks[i];
         }
 
         return new PlanetCardFilter(_clause, maxShopItem, maxBoosterPack);
@@ -63,8 +77,9 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
             Debug.Assert(needed > 0, "PlanetCardClause.Min must be > 0 — loader bug.");
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
-            var shopIndices = clause.Sources.ShopItems;
-            var boosterPacks = clause.Sources.BoosterPacks;
+            var sources = clause.Sources ?? DefaultSources;
+            var shopIndices = sources.ShopItems;
+            var boosterPacks = sources.BoosterPacks;
 
             foreach (var ante in clause.Antes)
             {

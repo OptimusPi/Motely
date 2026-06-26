@@ -308,24 +308,25 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        int maxShop = ArrayMax(clause.Sources.ShopItems);
-        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
+        var sources = clause.Sources ?? StandardCardFilterDesc.DefaultSources;
+        int maxShop = ArrayMax(sources.ShopItems);
+        int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
         {
             int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
-            if (clause.Sources.ShopItems.Length > 0)
+            if (sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
                 for (int slot = 0; slot <= maxShop; slot++)
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
-                    if (ArrayContains(clause.Sources.ShopItems, slot))
+                    if (ArrayContains(sources.ShopItems, slot))
                         count += MatchStandardCard(item, clause);
                 }
             }
 
-            if (clause.Sources.BoosterPacks.Length > 0)
+            if (sources.BoosterPacks.Length > 0)
             {
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 var cardStream = ctx.CreateStandardPackCardStream(ante);
@@ -338,7 +339,7 @@ public static class JamlScoring
                         ref cardStream,
                         pack.GetPackSize()
                     );
-                    if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                    if (!ArrayContains(sources.BoosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                         count += MatchStandardCard(contents[i], clause);
@@ -356,28 +357,30 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        int maxShop = ArrayMax(clause.Sources.ShopItems);
-        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int maxEmperor = ArrayMax(clause.Sources.Emperor);
-        int maxSeal = ArrayMax(clause.Sources.PurpleSealOrEightBall);
+        // Scoring is authoritative, so it resolves the same defaults the SIMD desc applies.
+        var sources = clause.Sources ?? TarotCardFilterDesc.DefaultSources;
+        int maxShop = ArrayMax(sources.ShopItems);
+        int userMaxPack = ArrayMax(sources.BoosterPacks);
+        int maxEmperor = ArrayMax(sources.Emperor);
+        int maxSeal = ArrayMax(sources.PurpleSealOrEightBall);
 
         foreach (int ante in clause.Antes)
         {
             int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
-            if (clause.Sources.ShopItems.Length > 0)
+            if (sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
                 for (int slot = 0; slot <= maxShop; slot++)
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
-                    if (ArrayContains(clause.Sources.ShopItems, slot))
+                    if (ArrayContains(sources.ShopItems, slot))
                         count += MatchTarot(item, clause);
                 }
             }
 
-            if (clause.Sources.BoosterPacks.Length > 0)
+            if (sources.BoosterPacks.Length > 0)
             {
-                bool charmWant = clause.Sources.CharmTag;
+                bool charmWant = sources.CharmTag;
 
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
@@ -405,7 +408,7 @@ public static class JamlScoring
                             ref tarotStream,
                             pack.GetPackSize()
                         );
-                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                        if (!ArrayContains(sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchTarot(contents[i], clause);
@@ -420,7 +423,7 @@ public static class JamlScoring
                             ref tarotStream,
                             pack.GetPackSize()
                         );
-                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                        if (!ArrayContains(sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchTarot(contents[i], clause);
@@ -428,26 +431,26 @@ public static class JamlScoring
                 }
             }
 
-            if (clause.Sources.Emperor.Length > 0)
+            if (sources.Emperor.Length > 0)
             {
                 var emperorStream = ctx.CreateEmperorTarotStream(ante);
                 for (int roll = 0; roll <= maxEmperor; roll++)
                 {
                     var (t1, t2) = ctx.GetNextEmperorTarots(ref emperorStream);
-                    if (!ArrayContains(clause.Sources.Emperor, roll))
+                    if (!ArrayContains(sources.Emperor, roll))
                         continue;
                     count += MatchTarot(t1, clause);
                     count += MatchTarot(t2, clause);
                 }
             }
 
-            if (clause.Sources.PurpleSealOrEightBall.Length > 0)
+            if (sources.PurpleSealOrEightBall.Length > 0)
             {
                 var sealStream = ctx.CreatePurpleSealTarotStream(ante);
                 for (int roll = 0; roll <= maxSeal; roll++)
                 {
                     var item = ctx.GetNextTarot(ref sealStream);
-                    if (ArrayContains(clause.Sources.PurpleSealOrEightBall, roll))
+                    if (ArrayContains(sources.PurpleSealOrEightBall, roll))
                         count += MatchTarot(item, clause);
                 }
             }
@@ -463,28 +466,29 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        int maxShop = ArrayMax(clause.Sources.ShopItems);
-        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
-        int maxSixthSense = ArrayMax(clause.Sources.SixthSense);
-        int maxSeance = ArrayMax(clause.Sources.Seance);
+        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        int maxShop = ArrayMax(sources.ShopItems);
+        int userMaxPack = ArrayMax(sources.BoosterPacks);
+        int maxSixthSense = ArrayMax(sources.SixthSense);
+        int maxSeance = ArrayMax(sources.Seance);
 
         foreach (int ante in clause.Antes)
         {
             int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
-            if (clause.Sources.ShopItems.Length > 0)
+            if (sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
                 for (int slot = 0; slot <= maxShop; slot++)
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
-                    if (ArrayContains(clause.Sources.ShopItems, slot))
+                    if (ArrayContains(sources.ShopItems, slot))
                         count += MatchSpectral(item, clause);
                 }
             }
 
-            if (clause.Sources.BoosterPacks.Length > 0)
+            if (sources.BoosterPacks.Length > 0)
             {
-                bool etherealWant = clause.Sources.EtherealTag;
+                bool etherealWant = sources.EtherealTag;
 
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
@@ -512,7 +516,7 @@ public static class JamlScoring
                             ref spectralStream,
                             pack.GetPackSize()
                         );
-                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                        if (!ArrayContains(sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchSpectral(contents[i], clause);
@@ -525,7 +529,7 @@ public static class JamlScoring
                             ref spectralStream,
                             pack.GetPackSize()
                         );
-                        if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                        if (!ArrayContains(sources.BoosterPacks, packIndex))
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchSpectral(contents[i], clause);
@@ -533,24 +537,24 @@ public static class JamlScoring
                 }
             }
 
-            if (clause.Sources.SixthSense.Length > 0)
+            if (sources.SixthSense.Length > 0)
             {
                 var sixthSenseStream = ctx.CreateSixthSenseSpectralStream(ante);
                 for (int roll = 0; roll <= maxSixthSense; roll++)
                 {
                     var item = ctx.GetNextSpectral(ref sixthSenseStream);
-                    if (ArrayContains(clause.Sources.SixthSense, roll))
+                    if (ArrayContains(sources.SixthSense, roll))
                         count += MatchSpectral(item, clause);
                 }
             }
 
-            if (clause.Sources.Seance.Length > 0)
+            if (sources.Seance.Length > 0)
             {
                 var seanceStream = ctx.CreateSeanceSpectralStream(ante);
                 for (int roll = 0; roll <= maxSeance; roll++)
                 {
                     var item = ctx.GetNextSpectral(ref seanceStream);
-                    if (ArrayContains(clause.Sources.Seance, roll))
+                    if (ArrayContains(sources.Seance, roll))
                         count += MatchSpectral(item, clause);
                 }
             }
@@ -562,7 +566,7 @@ public static class JamlScoring
         // when they land in a SPECTRAL pack; this adds the missing Arcana/Celestial sources so
         // `spectralCard: TheSoul` / `spectralCard: BlackHole` see everywhere the card can actually
         // spawn — the same blind spot that made the spectralCard path wrong for these two.
-        if (clause.Sources.BoosterPacks.Length > 0)
+        if (sources.BoosterPacks.Length > 0)
         {
             if (SpectralClauseTargets(clause, MotelySpectralCard.TheSoul))
                 count += CountTheSoulInArcanaPacks(ref ctx, clause, ref runState);
@@ -614,7 +618,8 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
+        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
         {
@@ -628,7 +633,7 @@ public static class JamlScoring
                 if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
                     continue;
                 var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
-                if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                if (!ArrayContains(sources.BoosterPacks, packIndex))
                     continue;
                 for (int i = 0; i < contents.Length; i++)
                     count += MatchSpectral(contents[i], clause);
@@ -649,7 +654,8 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
+        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
         {
@@ -666,7 +672,7 @@ public static class JamlScoring
                     ref planetStream,
                     pack.GetPackSize()
                 );
-                if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                if (!ArrayContains(sources.BoosterPacks, packIndex))
                     continue;
                 for (int i = 0; i < contents.Length; i++)
                     count += MatchSpectral(contents[i], clause);
@@ -683,24 +689,26 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        int maxShop = ArrayMax(clause.Sources.ShopItems);
-        int userMaxPack = ArrayMax(clause.Sources.BoosterPacks);
+        // Scoring is authoritative, so it must see the same defaults the SIMD desc applies.
+        var sources = clause.Sources ?? PlanetCardFilterDesc.DefaultSources;
+        int maxShop = ArrayMax(sources.ShopItems);
+        int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
         {
             int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
-            if (clause.Sources.ShopItems.Length > 0)
+            if (sources.ShopItems.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
                 for (int slot = 0; slot <= maxShop; slot++)
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);
-                    if (ArrayContains(clause.Sources.ShopItems, slot))
+                    if (ArrayContains(sources.ShopItems, slot))
                         count += MatchPlanet(item, clause);
                 }
             }
 
-            if (clause.Sources.BoosterPacks.Length > 0)
+            if (sources.BoosterPacks.Length > 0)
             {
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
@@ -713,7 +721,7 @@ public static class JamlScoring
                         ref planetStream,
                         pack.GetPackSize()
                     );
-                    if (!ArrayContains(clause.Sources.BoosterPacks, packIndex))
+                    if (!ArrayContains(sources.BoosterPacks, packIndex))
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                         count += MatchPlanet(contents[i], clause);
@@ -865,8 +873,7 @@ public static class JamlScoring
         var stream = ctx.CreateLuckyCardMoneyStream(isCached: false);
         var min = clause.Min;
         var max = clause.Max;
-        runState.Luck = clause.Luck;
-        double luck = runState.Luck;
+        double luck = (double)clause.With.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
@@ -896,8 +903,7 @@ public static class JamlScoring
         var stream = ctx.CreateLuckyCardMultStream(isCached: false);
         var min = clause.Min;
         var max = clause.Max;
-        runState.Luck = clause.Luck;
-        double luck = runState.Luck;
+        double luck = (double)clause.With.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
@@ -954,7 +960,7 @@ public static class JamlScoring
         var stream = ctx.CreateWheelOfFortuneStream();
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        double luck = (double)clause.With.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
@@ -983,7 +989,7 @@ public static class JamlScoring
         var stream = ctx.CreateCavendishPrngStream(false);
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        double luck = (double)clause.With.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
@@ -1012,7 +1018,7 @@ public static class JamlScoring
         var stream = ctx.CreateGrosMichelPrngStream(false);
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        double luck = (double)clause.With.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
@@ -1041,7 +1047,7 @@ public static class JamlScoring
         var stream = ctx.CreateSpacePrngStream();
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        double luck = (double)clause.With.Luck;
         for (int i = 0; i < clause.Rolls.Length; i++)
         {
             var rollIndex = clause.Rolls[i];
@@ -1147,7 +1153,7 @@ public static class JamlScoring
         var stream = ctx.CreateGlassPrngStream();
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        double luck = (double)clause.With.Luck;
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
@@ -1171,7 +1177,7 @@ public static class JamlScoring
         var stream = ctx.CreateTheWheelPrngStream();
         var min = clause.Min;
         var max = clause.Max;
-        double luck = clause.Luck;
+        double luck = (double)clause.With.Luck;
         foreach (var rollIndex in clause.Rolls)
         {
             for (int i = 0; i < rollIndex; i++)
@@ -1221,11 +1227,12 @@ public static class JamlScoring
         ref MotelyRunState runState
     )
     {
+        var sources = clause.Sources ?? CommonJokerFilterDesc.DefaultSources;
         if (clause.IsWildcard)
             return CountJokerOccurrencesWildcard(
                 ref ctx,
                 clause.Antes,
-                clause.Sources,
+                sources,
                 MotelyJokerRarity.Common,
                 clause.Edition,
                 clause.Stickers,
@@ -1234,7 +1241,7 @@ public static class JamlScoring
         return CountJokerOccurrencesGeneric(
             ref ctx,
             clause.Antes,
-            clause.Sources,
+            sources,
             clause.Jokers,
             clause.Edition,
             clause.Stickers,
@@ -1248,11 +1255,12 @@ public static class JamlScoring
         ref MotelyRunState runState
     )
     {
+        var sources = clause.Sources ?? UncommonJokerFilterDesc.DefaultSources;
         if (clause.IsWildcard)
             return CountJokerOccurrencesWildcard(
                 ref ctx,
                 clause.Antes,
-                clause.Sources,
+                sources,
                 MotelyJokerRarity.Uncommon,
                 clause.Edition,
                 clause.Stickers,
@@ -1261,7 +1269,7 @@ public static class JamlScoring
         return CountJokerOccurrencesGeneric(
             ref ctx,
             clause.Antes,
-            clause.Sources,
+            sources,
             clause.Jokers,
             clause.Edition,
             clause.Stickers,
@@ -1275,11 +1283,12 @@ public static class JamlScoring
         ref MotelyRunState runState
     )
     {
+        var sources = clause.Sources ?? RareJokerFilterDesc.DefaultSources;
         if (clause.IsWildcard)
             return CountJokerOccurrencesWildcard(
                 ref ctx,
                 clause.Antes,
-                clause.Sources,
+                sources,
                 MotelyJokerRarity.Rare,
                 clause.Edition,
                 clause.Stickers,
@@ -1288,7 +1297,7 @@ public static class JamlScoring
         return CountJokerOccurrencesGeneric(
             ref ctx,
             clause.Antes,
-            clause.Sources,
+            sources,
             clause.Jokers,
             clause.Edition,
             clause.Stickers,
@@ -1311,12 +1320,13 @@ public static class JamlScoring
         ref MotelyRunState runState
     )
     {
+        var sources = clause.Sources ?? JokerFilterDesc.DefaultSources;
         if (clause.IsWildcard)
         {
             int normalWildcard = CountJokerOccurrencesWildcard(
                 ref ctx,
                 clause.Antes,
-                clause.Sources,
+                sources,
                 wildcardRarity: null,
                 clause.Edition,
                 clause.Stickers,
@@ -1361,7 +1371,7 @@ public static class JamlScoring
             count += CountJokerOccurrencesGeneric(
                 ref ctx,
                 clause.Antes,
-                clause.Sources,
+                sources,
                 nonLegendary,
                 clause.Edition,
                 clause.Stickers,
