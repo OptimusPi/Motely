@@ -5,8 +5,13 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class ErraticRankClause : JamlClause
+public sealed class ErraticRankClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public required MotelyStandardcardRank Rank { get; set; }
 }
 

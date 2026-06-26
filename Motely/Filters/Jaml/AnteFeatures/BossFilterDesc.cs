@@ -3,8 +3,13 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class BossClause : JamlClause
+public sealed class BossClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public required MotelyBossBlind[] Bosses { get; set; }
     public int[] Rolls { get; set; } = [];
 }

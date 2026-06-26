@@ -4,8 +4,13 @@ using Motely;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class LegendaryJokerClause : JamlClause
+public sealed class LegendaryJokerClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public MotelyJoker[] Jokers { get; set; } = [];
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }

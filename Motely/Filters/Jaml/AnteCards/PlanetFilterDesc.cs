@@ -4,8 +4,13 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class PlanetCardClause : JamlClause
+public sealed class PlanetCardClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public required MotelyPlanetCard[] Planets { get; set; }
     public PlanetSourceConfig Sources { get; set; } = new();
 }

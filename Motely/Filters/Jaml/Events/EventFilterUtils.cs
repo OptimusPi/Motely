@@ -20,30 +20,6 @@ internal static class EventFilterUtils
         Vector256<int> value
     );
 
-    // Valueless variant forwards to the one real loop with an ignored value, so there is a
-    // single walk body. Generic overloads kept as thin forwarders so RollClause-derived event
-    // clauses keep compiling; the real work takes raw (rolls, min) so a standalone clause with
-    // no base class (Bloodstone) feeds it directly — no polymorphism required.
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static VectorMask ProcessRollClause<TClause>(
-        ref MotelyVectorSearchContext ctx,
-        TClause clause,
-        RollRead read,
-        ref MotelyVectorPrngStream stream
-    )
-        where TClause : RollClause
-            => ProcessRollClause(ref ctx, clause.Rolls, clause.Min, read, ref stream);
-
-    internal static VectorMask ProcessRollClause<TClause>(
-        ref MotelyVectorSearchContext ctx,
-        TClause clause,
-        RollReadWithValue read,
-        ref MotelyVectorPrngStream stream,
-        Vector256<int> value
-    )
-        where TClause : RollClause
-            => ProcessRollClause(ref ctx, clause.Rolls, clause.Min, read, ref stream, value);
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static VectorMask ProcessRollClause(
         ref MotelyVectorSearchContext ctx,
@@ -132,7 +108,7 @@ internal static class EventFilterUtils
             MotelyVectorUtils.VectorizedComparisonToMask(
                 Vector256.GreaterThan(
                     matchCounts,
-                    Vector256.Subtract(Vector256.Create(clause.Min), Vector256.Create(1))
+                    Vector256.Subtract(Vector256.Create(min), Vector256.Create(1))
                 )
             )
         );
