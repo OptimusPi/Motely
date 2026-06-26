@@ -14,7 +14,7 @@ public sealed class CompositeMotelyResultSink : IMotelyResultSink
 
     public CompositeMotelyResultSink(IEnumerable<IMotelyResultSink> sinks)
     {
-        this.sinks = sinks.ToArray();
+        this.sinks = [.. sinks];
     }
 
     public void OnSeed(string seed)

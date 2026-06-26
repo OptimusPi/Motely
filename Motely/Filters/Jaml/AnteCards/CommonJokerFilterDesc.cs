@@ -51,8 +51,8 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         return new CommonJokerFilter(
             _clause,
             targetTypes,
-            shopIndices.ToArray(),
-            boosterIndices.ToArray(),
+            [.. shopIndices],
+            [.. boosterIndices],
             maxShopItem,
             maxBoosterPack
         );

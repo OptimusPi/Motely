@@ -73,8 +73,8 @@ public struct JokerFilterDesc(JokerClause clause)
         return new JokerFilter(
             _clause,
             targetTypes,
-            shopIndices.ToArray(),
-            boosterIndices.ToArray(),
+            [.. shopIndices],
+            [.. boosterIndices],
             maxShopItem,
             maxBoosterPack
         );
