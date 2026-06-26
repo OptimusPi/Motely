@@ -15,9 +15,9 @@ public sealed class JamlConfig
     public MotelyStake Stake { get; set; } = MotelyStake.White;
     public List<string> Seeds { get; set; } = [];
 
-    public List<JamlClauseBase> Must { get; set; } = [];
-    public List<JamlClauseBase> Should { get; set; } = [];
-    public List<JamlClauseBase> MustNot { get; set; } = [];
+    public List<IJamlClause> Must { get; set; } = [];
+    public List<IJamlClause> Should { get; set; } = [];
+    public List<IJamlClause> MustNot { get; set; } = [];
 }
 
 public static class JamlConfigExtensions
