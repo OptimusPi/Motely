@@ -133,7 +133,7 @@ public class JummyLineTests
         Assert.True(failures.Count == 0, $"{failures.Count} consumable(s) did not round-trip:\n{string.Join("\n", failures)}");
     }
 
-    private static void RoundTripAll<T>(List<string> failures, Func<T, JamlClauseBase> make)
+    private static void RoundTripAll<T>(List<string> failures, Func<T, IJamlClause> make)
         where T : struct, Enum
     {
         foreach (var value in Enum.GetValues<T>())

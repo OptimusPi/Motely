@@ -9,7 +9,7 @@ public static class JamlScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void PrepareRunState(
         ref MotelySingleSearchContext ctx,
-        JamlClauseBase[] clauses,
+        IJamlClause[] clauses,
         ref MotelyRunState runState
     )
     {
@@ -63,7 +63,7 @@ public static class JamlScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountOccurrences(
         ref MotelySingleSearchContext ctx,
-        JamlClauseBase clause,
+        IJamlClause clause,
         ref MotelyRunState runState
     )
     {
@@ -74,7 +74,7 @@ public static class JamlScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CountOccurrencesUncapped(
         ref MotelySingleSearchContext ctx,
-        JamlClauseBase clause,
+        IJamlClause clause,
         ref MotelyRunState runState
     )
     {
@@ -114,17 +114,17 @@ public static class JamlScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static int CapScoreCountForTesting(int count, JamlClauseBase clause) =>
+    internal static int CapScoreCountForTesting(int count, IJamlClause clause) =>
         CapScoreCount(count, clause);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CapScoreCount(int count, JamlClauseBase clause)
+    private static int CapScoreCount(int count, IJamlClause clause)
     {
         var max = clause.Max;
         return max is > 0 && count > max.Value ? max.Value : count;
     }
 
-    private static int UnhandledClauseForScoring(JamlClauseBase clause)
+    private static int UnhandledClauseForScoring(IJamlClause clause)
     {
         Debug.Assert(
             false,
@@ -199,7 +199,7 @@ public static class JamlScoring
 
     public static int CountRawOccurrences(
         ref MotelySingleSearchContext ctx,
-        JamlClauseBase clause,
+        IJamlClause clause,
         ref MotelyRunState runState
     )
     {
@@ -1817,7 +1817,7 @@ public static class JamlScoring
         return 0;
     }
 
-    private static int GetMaxAnte(JamlClauseBase clause)
+    private static int GetMaxAnte(IJamlClause clause)
     {
         return clause switch
         {
@@ -1842,7 +1842,7 @@ public static class JamlScoring
         };
     }
 
-    private static int MaxNestedAnte(JamlClauseBase[] clauses)
+    private static int MaxNestedAnte(IJamlClause[] clauses)
     {
         int max = 0;
         for (int i = 0; i < clauses.Length; i++)
