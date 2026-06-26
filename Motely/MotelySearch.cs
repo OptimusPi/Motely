@@ -60,7 +60,7 @@ public interface IMotelySeedScoreProvider
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public VectorMask Score(
         ref MotelyVectorSearchContext searchContext,
-        MotelySeedScoreTally[] buffer,
+        MotelyScoredSeedResult[] buffer,
         VectorMask baseFilterMask,
         int scoreThreshold = 0
     );
@@ -118,9 +118,8 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithCsvOutput(bool csvOutput);
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
-    IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
+    IMotelySearchSettings WithScoredResultCallback(Action<MotelyScoredSeedResult> callback);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
-    IMotelySearchSettings WithJimmolate();
     IMotelySearchSettings WithJimmolate(MotelyIndividualSeedSearcher searcher);
 
     IMotelySearch CreateSearch();
@@ -187,7 +186,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// <summary>
     /// Callback invoked for scored result rows so callers can persist structured results.
     /// </summary>
-    public Action<MotelySeedScoreTally>? ScoredResultCallback { get; set; }
+    public Action<MotelyScoredSeedResult>? ScoredResultCallback { get; set; }
 
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
@@ -330,13 +329,11 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         WithSeedMatchCallback(callback);
 
     IMotelySearchSettings IMotelySearchSettings.WithScoredResultCallback(
-        Action<MotelySeedScoreTally> callback
+        Action<MotelyScoredSeedResult> callback
     ) => WithScoredResultCallback(callback);
 
     IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
-
-    IMotelySearchSettings IMotelySearchSettings.WithJimmolate() => WithJimmolate();
 
     IMotelySearchSettings IMotelySearchSettings.WithJimmolate(
         MotelyIndividualSeedSearcher searcher
@@ -391,7 +388,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     }
 
     public MotelySearchSettings<TBaseFilter> WithScoredResultCallback(
-        Action<MotelySeedScoreTally> callback
+        Action<MotelyScoredSeedResult> callback
     )
     {
         ScoredResultCallback = callback;
@@ -452,7 +449,7 @@ public struct MotelySearchParameters
     public MotelyDeck Deck;
 }
 
-public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
+public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySearch
     where TBaseFilter : struct, IMotelySeedFilter
 {
     /// <summary>Shared lock for console output (replaces removed FancyConsole.ConsoleLock).</summary>
@@ -585,7 +582,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
-    private readonly Action<MotelySeedScoreTally>? _scoredResultCallback;
+    private readonly Action<MotelyScoredSeedResult>? _scoredResultCallback;
     private readonly bool _autoScoreCutoff;
     private readonly long _progressReportIntervalMs;
 
@@ -682,64 +679,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public void RunSearchUntilCompletion()
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-        if (Interlocked.Exchange(ref _hasStarted, 1) != 0)
-            throw new InvalidOperationException("Search has already been started.");
-        _elapsedTime.Start();
-
-        Exception? firstError = null;
-
-        void RunWorkerSafe(int idx)
-        {
-            try
-            {
-                RunWorkerBody(_plans[idx]);
-            }
-            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
-            {
-                // cooperative cancellation
-            }
-            catch (Exception ex)
-            {
-                Interlocked.CompareExchange(ref firstError, ex, null);
-            }
-        }
-
-        if (_threadCount == 1)
-        {
-            // Single-threaded: run directly on this thread
-            RunWorkerSafe(0);
-        }
-        else
-        {
-            // Multi-threaded: launch real threads (maps to pthreads in NativeAOT-LLVM WASM)
-            var threads = new Thread[_threadCount];
-            for (int i = 0; i < _threadCount; i++)
-            {
-                int threadIdx = i;
-                threads[i] = new Thread(() => RunWorkerSafe(threadIdx))
-                {
-                    Name = $"Motely Search Thread {threadIdx}",
-                    IsBackground = true,
-                };
-                threads[i].Start();
-            }
-
-            for (int i = 0; i < _threadCount; i++)
-            {
-                threads[i].Join();
-            }
-        }
-
-        if (firstError is not null)
-        {
-            // Tell awaiters about the failure, then rethrow on the caller for the
-            // sync surface. Without this, a failed worker used to look like a clean
-            // completion to anyone waiting on _completionSource.
-            _completionSource.TrySetException(firstError);
-            throw firstError;
-        }
-
-        SignalSearchCompleted();
+        // Native blocking entry: kick the same launcher the async surface uses, then block
+        // on the one completion signal. (Not for the browser — there's nothing to block on
+        // the single thread without deadlocking; the browser uses RunSearchAsync.)
+        BeginSearch(CancellationToken.None);
+        _completionSource.Task.GetAwaiter().GetResult();
     }
 
     /// <summary>Single place to complete <see cref="_completionSource"/> after worker(s) finish (sync path).</summary>
@@ -826,6 +770,17 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private void StartSearchThreads()
     {
         _elapsedTime.Start();
+
+        // Browser: one thread, no pthreads, nothing to offload to. Pump the batches
+        // cooperatively (await Task.Yield between them) so the single thread surfaces to
+        // the event loop and the UI repaints instead of freezing under the SIMD grind.
+        // Bootsharp marshals the pump's Task to a JS Promise. Provider mode (single-seed
+        // datalake re-derivation) is fast and stays inline below.
+        if (OperatingSystem.IsBrowser() && !_isProviderMode)
+        {
+            _ = RunSequentialBrowserPumpAsync();
+            return;
+        }
 
         int totalWorkers = _threadCount;
         WorkerCoordinator coordinator = new(this, totalWorkers);
@@ -1039,9 +994,27 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         internal long _localSeedsSearched = 0;
         private readonly AutoCutoffState _autoCutoffState = new() { LearnedCutoff = int.MinValue };
 
+        // Per-plan auto-cutoff rate gate state. A class (not struct) on purpose: the field
+        // above is readonly, and the gate mutates these members in place each batch.
+        private sealed class AutoCutoffState
+        {
+            // Highest score seen so far; the monotonic-max clamp floor. Starts at int.MinValue.
+            public int LearnedCutoff;
+            // Raw candidate matches seen before the clamp (drives the rate estimate).
+            public long RawMatches;
+            // RawMatches snapshot at the last gate evaluation.
+            public long LastGateRawMatches;
+            // Elapsed ms at the last gate evaluation.
+            public long LastGateMs;
+            // Candidates dropped by the clamp once engaged.
+            public long SeedsFiltered;
+            // Whether the monotonic-max clamp is currently active.
+            public bool Engaged;
+        }
+
         // Pre-allocated result buffer - ONE allocation per thread, reused forever
         // Old stale data is fine - mask controls which slots are valid
-        protected readonly MotelySeedScoreTally[] _resultBuffer = new MotelySeedScoreTally[
+        protected readonly MotelyScoredSeedResult[] _resultBuffer = new MotelyScoredSeedResult[
             MotelyGlobals.MaxVectorWidth
         ];
 
@@ -1117,57 +1090,71 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         internal void ExecuteSequentialPlan()
         {
-            while (Volatile.Read(ref Search._isDisposed) == 0)
+            // Native driver: spin batches flat-out on this (p)thread, then flush.
+            while (TryExecuteSequentialBatch()) { }
+            FlushFilterBatches();
+        }
+
+        /// <summary>
+        /// Runs one sequential batch. Returns false when the search is finished — disposed,
+        /// cancelled, or every batch consumed — at which point the caller flushes. Pulled
+        /// out of the loop so the browser pump can drive a single batch and await between
+        /// them for a repaint; the native driver just calls it in a tight loop.
+        /// </summary>
+        internal bool TryExecuteSequentialBatch()
+        {
+            if (Volatile.Read(ref Search._isDisposed) != 0)
+                return false;
+
+            if (Search._cancellationToken.IsCancellationRequested)
+                return false;
+
+            long batchIdx = Interlocked.Increment(ref Search._batchIndex);
+
+            if (batchIdx >= Search._endBatchIndex || batchIdx >= MaxBatch)
+                return false;
+
+            SearchSequentialBatch(batchIdx);
+
+            _localBatchesCompleted++;
+
+            // Check for timed-out filter batches
+            if (Search._additionalFilters.Length != 0)
             {
-                if (Search._cancellationToken.IsCancellationRequested)
+                for (int i = 0; i < Search._additionalFilters.Length; i++)
                 {
-                    break;
-                }
+                    FilterSeedBatch* batch = &_filterSeedBatches[i];
 
-                long batchIdx = Interlocked.Increment(ref Search._batchIndex);
-
-                if (batchIdx >= Search._endBatchIndex || batchIdx >= MaxBatch)
-                {
-                    break;
-                }
-
-                SearchSequentialBatch(batchIdx);
-
-                _localBatchesCompleted++;
-
-                // Check for timed-out filter batches
-                if (Search._additionalFilters.Length != 0)
-                {
-                    for (int i = 0; i < Search._additionalFilters.Length; i++)
+                    if (batch->SeedCount != 0)
                     {
-                        FilterSeedBatch* batch = &_filterSeedBatches[i];
-
-                        if (batch->SeedCount != 0)
+                        if (
+                            Search._elapsedTime.ElapsedMilliseconds - batch->WaitStartMS
+                            >= MAX_SEED_WAIT_MS
+                        )
                         {
-                            if (
-                                Search._elapsedTime.ElapsedMilliseconds - batch->WaitStartMS
-                                >= MAX_SEED_WAIT_MS
-                            )
-                            {
-                                SearchFilterBatch(i, batch);
-                                Debug.Assert(
-                                    batch->SeedCount == 0,
-                                    "Batch should be reset after SearchFilterBatch"
-                                );
-                            }
+                            SearchFilterBatch(i, batch);
+                            Debug.Assert(
+                                batch->SeedCount == 0,
+                                "Batch should be reset after SearchFilterBatch"
+                            );
                         }
                     }
                 }
-
-                // Re-evaluate the per-thread auto-cutoff rate gate for the next batch.
-                if (Search._autoScoreCutoff)
-                    UpdateAutoCutoffGate();
-
-                // Report progress
-                Search.PrintReport();
             }
 
-            // Force flush any remaining seeds in filter batches
+            // Re-evaluate the per-thread auto-cutoff rate gate for the next batch.
+            if (Search._autoScoreCutoff)
+                UpdateAutoCutoffGate();
+
+            // Report progress
+            Search.PrintReport();
+
+            return true;
+        }
+
+        /// <summary>Flush any seeds still sitting in filter batches when the search ends.</summary>
+        internal void FlushFilterBatches()
+        {
             if (Search._additionalFilters.Length != 0 && _filterSeedBatches != null)
             {
                 for (int i = 0; i < Search._additionalFilters.Length; i++)

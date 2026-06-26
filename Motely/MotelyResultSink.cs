@@ -5,7 +5,7 @@ namespace Motely;
 public interface IMotelyResultSink : IDisposable
 {
     void OnSeed(string seed);
-    void OnScored(in MotelySeedScoreTally tally);
+    void OnScored(in MotelyScoredSeedResult tally);
 }
 
 public sealed class CompositeMotelyResultSink : IMotelyResultSink
@@ -23,7 +23,7 @@ public sealed class CompositeMotelyResultSink : IMotelyResultSink
             sinks[i].OnSeed(seed);
     }
 
-    public void OnScored(in MotelySeedScoreTally tally)
+    public void OnScored(in MotelyScoredSeedResult tally)
     {
         for (int i = 0; i < sinks.Length; i++)
             sinks[i].OnScored(in tally);

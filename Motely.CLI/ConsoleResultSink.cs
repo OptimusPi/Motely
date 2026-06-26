@@ -16,7 +16,7 @@ internal sealed class ConsoleResultSink : IMotelyResultSink
 
     public void OnSeed(string seed) => StickyProgress.WriteResultLine(seed);
 
-    public void OnScored(in MotelySeedScoreTally tally)
+    public void OnScored(in MotelyScoredSeedResult tally)
     {
         int score = tally.Score;
         var span = tally.TallyValuesSpan;
