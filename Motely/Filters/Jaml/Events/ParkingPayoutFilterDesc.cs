@@ -3,8 +3,16 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class ParkingPayoutClause : RollClause
+public sealed class ParkingPayoutClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Rolls { get; set; } = [];
+    // No Luck. Reserved Parking is flat 50/50 (Chance = 2) — one Oops saturates to
+    // guaranteed, so luck is binary, not a dial. The field is gone by construction,
+    // not inherited-then-forbidden.
 }
 
 public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
@@ -25,9 +33,9 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
             // Reserved Parking is a flat 50/50 (Chance = 2) — no luck/Oops multiplier.
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
-                _clause,
-                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
-                    sctx.GetNextParkingPayout(ref stream),
+                _clause.Rolls,
+                _clause.Min,
+                (ref sctx, ref stream) => sctx.GetNextParkingPayout(ref stream),
                 ref stream
             );
         }

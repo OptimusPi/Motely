@@ -3,8 +3,16 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class BusinessPayoutClause : RollClause
+public sealed class BusinessPayoutClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Rolls { get; set; } = [];
+    // No Luck. Business Card is flat 50/50 (Chance = 2) — one Oops saturates to
+    // guaranteed, so luck is binary, not a dial. The field is gone by construction,
+    // not inherited-then-forbidden.
 }
 
 public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
@@ -25,9 +33,9 @@ public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
             // Business Card is a flat 50/50 (Chance = 2) — no luck/Oops multiplier.
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
-                _clause,
-                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
-                    sctx.GetNextBusinessPayout(ref stream),
+                _clause.Rolls,
+                _clause.Min,
+                (ref sctx, ref stream) => sctx.GetNextBusinessPayout(ref stream),
                 ref stream
             );
         }

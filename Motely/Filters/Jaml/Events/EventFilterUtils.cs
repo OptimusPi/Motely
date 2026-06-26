@@ -21,7 +21,9 @@ internal static class EventFilterUtils
     );
 
     // Valueless variant forwards to the one real loop with an ignored value, so there is a
-    // single walk body.
+    // single walk body. Generic overloads kept as thin forwarders so RollClause-derived event
+    // clauses keep compiling; the real work takes raw (rolls, min) so a standalone clause with
+    // no base class (Bloodstone) feeds it directly — no polymorphism required.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static VectorMask ProcessRollClause<TClause>(
         ref MotelyVectorSearchContext ctx,
@@ -30,14 +32,7 @@ internal static class EventFilterUtils
         ref MotelyVectorPrngStream stream
     )
         where TClause : RollClause
-            => ProcessRollClause(
-                ref ctx,
-                clause,
-                (ref MotelyVectorSearchContext c, ref MotelyVectorPrngStream s, Vector256<int> _)
-                    => read(ref c, ref s),
-                ref stream,
-                default
-            );
+            => ProcessRollClause(ref ctx, clause.Rolls, clause.Min, read, ref stream);
 
     internal static VectorMask ProcessRollClause<TClause>(
         ref MotelyVectorSearchContext ctx,
@@ -47,8 +42,35 @@ internal static class EventFilterUtils
         Vector256<int> value
     )
         where TClause : RollClause
+            => ProcessRollClause(ref ctx, clause.Rolls, clause.Min, read, ref stream, value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static VectorMask ProcessRollClause(
+        ref MotelyVectorSearchContext ctx,
+        int[] rolls,
+        int min,
+        RollRead read,
+        ref MotelyVectorPrngStream stream
+    )
+            => ProcessRollClause(
+                ref ctx,
+                rolls,
+                min,
+                (ref MotelyVectorSearchContext c, ref MotelyVectorPrngStream s, Vector256<int> _)
+                    => read(ref c, ref s),
+                ref stream,
+                default
+            );
+
+    internal static VectorMask ProcessRollClause(
+        ref MotelyVectorSearchContext ctx,
+        int[] rolls,
+        int min,
+        RollReadWithValue read,
+        ref MotelyVectorPrngStream stream,
+        Vector256<int> value
+    )
     {
-        var rolls = clause.Rolls;
         Debug.Assert(
             rolls.Length > 0,
             "Event roll clause must provide at least one roll index."
@@ -63,7 +85,7 @@ internal static class EventFilterUtils
         int maxRoll = sorted[^1];
 
         var matchCounts = Vector256<int>.Zero;
-        var minVector = Vector256.Create(clause.Min);
+        var minVector = Vector256.Create(min);
         int total = rolls.Length;
 
         int p = 0; // pointer into sorted requested rolls
