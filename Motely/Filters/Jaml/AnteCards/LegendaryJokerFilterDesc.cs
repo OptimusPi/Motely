@@ -4,7 +4,7 @@ using Motely;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class LegendaryJokerClause : IJamlClause
+public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

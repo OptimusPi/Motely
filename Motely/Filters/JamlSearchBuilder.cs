@@ -14,6 +14,9 @@ public sealed class JamlSearchPlan
 
 public static class JamlSearchBuilder
 {
+    /// <summary>Default ante scope for an ante-scoped clause that named no antes: all 8.</summary>
+    private static readonly int[] DefaultAntes = [1, 2, 3, 4, 5, 6, 7, 8];
+
     public static JamlSearchPlan CreatePlan(JamlConfig config, int engineCutoff = 0)
     {
         var settings = CreateSettings(config, engineCutoff);
@@ -31,6 +34,14 @@ public static class JamlSearchBuilder
             throw new InvalidOperationException(
                 $"JAML filter '{config.Id}' has no must/should/mustNot clauses."
             );
+
+        // A clause that named no antes defaults to all 8 (sourceless == "anywhere"), the ante
+        // analog of the FilterDesc source defaults. Normalize once here so the SIMD Filter and the
+        // scalar JamlScoring see the same ante set. Event clauses are roll-scoped, not ante-scoped,
+        // so they don't implement IAnteScopedClause and are left untouched.
+        foreach (var clause in config.Must.Concat(config.Should).Concat(config.MustNot))
+            if (clause is IAnteScopedClause { Antes.Length: 0 } anteScoped)
+                anteScoped.Antes = DefaultAntes;
 
         IMotelySearchSettings settings =
             new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(

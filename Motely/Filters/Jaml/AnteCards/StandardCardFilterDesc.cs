@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class StandardCardClause : IJamlClause
+public sealed class StandardCardClause : IJamlClause, IAnteScopedClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

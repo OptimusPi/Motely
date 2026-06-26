@@ -7,7 +7,7 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class JokerClause : IJamlClause
+public sealed class JokerClause : IJamlClause, IAnteScopedClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -332,7 +332,7 @@ public struct JokerFilterDesc(JokerClause clause)
 
 // ── Rarity-specific joker clauses ──
 
-public sealed class CommonJokerClause : IJamlClause
+public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -346,7 +346,7 @@ public sealed class CommonJokerClause : IJamlClause
     public JokerSourceConfig? Sources { get; set; }
 }
 
-public sealed class UncommonJokerClause : IJamlClause
+public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -360,7 +360,7 @@ public sealed class UncommonJokerClause : IJamlClause
     public JokerSourceConfig? Sources { get; set; }
 }
 
-public sealed class RareJokerClause : IJamlClause
+public sealed class RareJokerClause : IJamlClause, IAnteScopedClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
