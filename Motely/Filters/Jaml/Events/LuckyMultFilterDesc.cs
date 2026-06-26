@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -22,6 +21,7 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
 
     public LuckyMultFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        Debug.Assert(_clause.Rolls.Length > 0, "LuckyMult clause must provide at least one roll index.");
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
         return new LuckyMultFilter(sortedRolls, _clause.Min, _clause.Luck);
@@ -37,8 +37,6 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             int[] sorted = _sortedRolls;
-            Debug.Assert(sorted.Length > 0, "LuckyMult clause must provide at least one roll index.");
-
             var stream = ctx.CreateLuckyCardMultStream(isCached: false);
             int maxRoll = sorted[^1];
             int min = _min;

@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -22,6 +21,7 @@ public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
 
     public SpaceLevelupFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        Debug.Assert(_clause.Rolls.Length > 0, "Space clause must provide at least one roll index.");
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
         return new SpaceLevelupFilter(sortedRolls, _clause.Min, _clause.Luck);
@@ -37,8 +37,6 @@ public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             int[] sorted = _sortedRolls;
-            Debug.Assert(sorted.Length > 0, "Space clause must provide at least one roll index.");
-
             var stream = ctx.CreateSpacePrngStream();
             int maxRoll = sorted[^1];
             int min = _min;

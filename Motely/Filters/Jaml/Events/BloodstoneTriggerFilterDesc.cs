@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -25,6 +24,7 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
     public BloodstoneTriggerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // Sort the requested roll indices ONCE here, never in the SIMD hot path below.
+        Debug.Assert(_clause.Rolls.Length > 0, "Bloodstone clause must provide at least one roll index.");
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
         return new BloodstoneTriggerFilter(sortedRolls, _clause.Min);
@@ -39,8 +39,6 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             int[] sorted = _sortedRolls;
-            Debug.Assert(sorted.Length > 0, "Bloodstone clause must provide at least one roll index.");
-
             var stream = ctx.CreateBloodstonePrngStream();
             int maxRoll = sorted[^1];
             int min = _min;

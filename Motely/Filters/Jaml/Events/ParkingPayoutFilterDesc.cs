@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -24,6 +23,7 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
 
     public ParkingPayoutFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        Debug.Assert(_clause.Rolls.Length > 0, "Parking clause must provide at least one roll index.");
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
         return new ParkingPayoutFilter(sortedRolls, _clause.Min);
@@ -38,8 +38,6 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             int[] sorted = _sortedRolls;
-            Debug.Assert(sorted.Length > 0, "Parking clause must provide at least one roll index.");
-
             var stream = ctx.CreateParkingPrngStream();
             int maxRoll = sorted[^1];
             int min = _min;
