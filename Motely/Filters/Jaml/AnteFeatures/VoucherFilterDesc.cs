@@ -5,7 +5,7 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class VoucherClause
+public sealed class VoucherClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class PlanetCardClause
+public sealed class PlanetCardClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
