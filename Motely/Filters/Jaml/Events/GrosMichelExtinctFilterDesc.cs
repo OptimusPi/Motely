@@ -3,7 +3,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class GrosMichelExtinctClause
+public sealed class GrosMichelExtinctClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

@@ -3,7 +3,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class LuckyMoneyClause
+public sealed class LuckyMoneyClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

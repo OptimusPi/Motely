@@ -3,7 +3,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class MisprintMultClause
+public sealed class MisprintMultClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
