@@ -3,9 +3,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class BloodstoneTriggerClause : RollClause
-{
-}
+public sealed class BloodstoneTriggerClause : RollClause { }
 
 public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
     : IMotelySeedFilterDesc<BloodstoneTriggerFilterDesc.BloodstoneTriggerFilter>
@@ -27,16 +25,7 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
-                {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBloodstoneTrigger(ref stream);
-                    return sctx.GetNextBloodstoneTrigger(ref stream);
-                },
+                (ref sctx, ref stream) => sctx.GetNextBloodstoneTrigger(ref stream),
                 ref stream
             );
         }

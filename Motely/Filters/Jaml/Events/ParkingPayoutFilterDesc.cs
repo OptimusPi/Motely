@@ -26,16 +26,8 @@ public struct ParkingPayoutFilterDesc(ParkingPayoutClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
-                {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextParkingPayout(ref stream);
-                    return sctx.GetNextParkingPayout(ref stream);
-                },
+                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
+                    sctx.GetNextParkingPayout(ref stream),
                 ref stream
             );
         }

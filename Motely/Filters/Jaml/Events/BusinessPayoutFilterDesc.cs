@@ -26,16 +26,8 @@ public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
-                {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextBusinessPayout(ref stream);
-                    return sctx.GetNextBusinessPayout(ref stream);
-                },
+                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
+                    sctx.GetNextBusinessPayout(ref stream),
                 ref stream
             );
         }

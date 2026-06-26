@@ -56,8 +56,8 @@ public struct JamlShouldScoreDesc
                 "Scoring pass requires at least one must or should clause."
             );
             Debug.Assert(
-                shouldClauses.Length <= MotelySeedScoreTally.MAX_TALLY_COUNT,
-                $"Should clause count {shouldClauses.Length} exceeds MotelySeedScoreTally.MAX_TALLY_COUNT ({MotelySeedScoreTally.MAX_TALLY_COUNT}); fix JAML / builder before search."
+                shouldClauses.Length <= MotelyScoredSeedResult.MAX_TALLY_COUNT,
+                $"Should clause count {shouldClauses.Length} exceeds MotelyScoredSeedResult.MAX_TALLY_COUNT ({MotelyScoredSeedResult.MAX_TALLY_COUNT}); fix JAML / builder before search."
             );
 
             _mustClauses = mustClauses;
@@ -69,7 +69,7 @@ public struct JamlShouldScoreDesc
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe VectorMask Score(
             ref MotelyVectorSearchContext searchContext,
-            MotelySeedScoreTally[] buffer,
+            MotelyScoredSeedResult[] buffer,
             VectorMask baseFilterMask,
             int scoreThreshold = 0
         )
