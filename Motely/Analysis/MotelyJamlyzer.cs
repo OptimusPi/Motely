@@ -175,7 +175,7 @@ public static class MotelyJamlyzer
     internal static int[] ComputeAntes(JamlConfig config)
     {
         var set = new SortedSet<int>();
-        foreach (var clause in config.Must.Concat(config.Should).Concat(config.MustNot).OfType<JamlClause>())
+        foreach (var clause in config.Must.Concat(config.Should).Concat(config.MustNot).OfType<IAnteScopedClause>())
             foreach (var ante in clause.Antes)
                 set.Add(ante);
         return set.Count > 0 ? [.. set] : [1, 2, 3, 4, 5, 6, 7, 8];
