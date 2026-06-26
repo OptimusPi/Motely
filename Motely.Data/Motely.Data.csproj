@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- DuckDB lives only here: the DuckLake seed store (SQLite catalog + Parquet) and the
+         streaming seed reader (read_parquet/read_csv, local or http via httpfs). -->
+    <PackageReference Include="DuckDB.NET.Data.Full" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Motely/Motely.csproj" />
+  </ItemGroup>
+</Project>

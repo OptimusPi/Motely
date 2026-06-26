@@ -1,0 +1,26 @@
+using System;
+using System.Threading.Tasks;
+
+namespace Motely;
+
+// Browser-only half of MotelySearch. This partial is intentionally NOT marked `unsafe`:
+// the main file's class is `unsafe`, and C# (CS4004) forbids `await` in an unsafe context.
+// Keeping the cooperative pump in a plain partial lets it `await` while the SIMD batch code
+// it calls stays pointer-heavy and unsafe in the main file — same class, no wrapper, no glue.
+public sealed partial class MotelySearch<TBaseFilter>
+{
+    // Single-threaded WASM has no thread to offload the CPU-bound search to. So instead of
+    // blocking the one thread until the grind finishes (frozen UI), we run a batch, hand the
+    // thread back to the browser event loop for a repaint (await Task.Yield), then take it
+    // back for the next batch. Native never gets here — it uses real (p)threads.
+    private async Task RunSequentialBrowserPumpAsync()
+    {
+        MotelySearchPlan plan = _plans[0];
+
+        while (plan.TryExecuteSequentialBatch())
+            await Task.Yield();
+
+        plan.FlushFilterBatches();
+        SignalSearchCompleted();
+    }
+}
