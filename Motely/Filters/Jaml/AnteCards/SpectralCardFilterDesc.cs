@@ -4,8 +4,13 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class SpectralCardClause : JamlClause
+public sealed class SpectralCardClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public required MotelySpectralCard[] Spectrals { get; set; }
     public SpectralCardSourceConfig Sources { get; set; } = new();
 }

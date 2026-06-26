@@ -4,8 +4,13 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class TarotCardClause : JamlClause
+public sealed class TarotCardClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public required MotelyTarotCard[] Tarots { get; set; }
     public TarotCardSourceConfig Sources { get; set; } = new();
 }

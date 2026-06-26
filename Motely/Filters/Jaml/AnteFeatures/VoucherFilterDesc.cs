@@ -5,8 +5,13 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class VoucherClause : JamlClause
+public sealed class VoucherClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public required MotelyVoucher[] Vouchers { get; set; }
 
     /// <summary>

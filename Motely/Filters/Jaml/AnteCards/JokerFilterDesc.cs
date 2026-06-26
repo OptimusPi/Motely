@@ -7,8 +7,13 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class JokerClause : JamlClause
+public sealed class JokerClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public MotelyJoker[] Jokers { get; set; } = [];
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
@@ -316,8 +321,13 @@ public struct JokerFilterDesc(JokerClause clause)
 
 // ── Rarity-specific joker clauses ──
 
-public sealed class CommonJokerClause : JamlClause
+public sealed class CommonJokerClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public MotelyJokerCommon[] Jokers { get; set; } = [];
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
@@ -325,8 +335,13 @@ public sealed class CommonJokerClause : JamlClause
     public JokerSourceConfig Sources { get; set; } = new();
 }
 
-public sealed class UncommonJokerClause : JamlClause
+public sealed class UncommonJokerClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public MotelyJokerUncommon[] Jokers { get; set; } = [];
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
@@ -334,8 +349,13 @@ public sealed class UncommonJokerClause : JamlClause
     public JokerSourceConfig Sources { get; set; } = new();
 }
 
-public sealed class RareJokerClause : JamlClause
+public sealed class RareJokerClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Antes { get; set; } = [];
     public MotelyJokerRare[] Jokers { get; set; } = [];
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }

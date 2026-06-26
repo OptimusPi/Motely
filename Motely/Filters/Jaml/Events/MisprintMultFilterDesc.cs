@@ -3,8 +3,14 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class MisprintMultClause : RollClause
+public sealed class MisprintMultClause
 {
+    public string? Label { get; set; }
+    public int Min { get; set; } = 1;
+    public int? Max { get; set; }
+    public int Score { get; set; }
+    public int[] Rolls { get; set; } = [];
+    public int Luck { get; set; } = 1;
     /// <summary>
     /// Specific mult value to match (0-23). If null, matches any value (always succeeds).
     /// </summary>
@@ -44,7 +50,8 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
             {
                 return EventFilterUtils.ProcessRollClause(
                     ref ctx,
-                    _clause,
+                    _clause.Rolls,
+                    _clause.Min,
                     static (
                         ref MotelyVectorSearchContext sctx,
                         ref MotelyVectorPrngStream stream,
