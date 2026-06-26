@@ -51,8 +51,8 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
         return new RareJokerFilter(
             _clause,
             targetTypes,
-            shopIndices.ToArray(),
-            boosterIndices.ToArray(),
+            [.. shopIndices],
+            [.. boosterIndices],
             maxShopItem,
             maxBoosterPack
         );

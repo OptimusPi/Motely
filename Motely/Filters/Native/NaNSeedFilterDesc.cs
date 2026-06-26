@@ -108,7 +108,7 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
             keys.Add($"frontsho{ante}"); // Shop front
         }
 
-        PseudoHashKeys = keys.ToArray();
+        PseudoHashKeys = [.. keys];
     }
 
     public readonly NaNSeedFilter CreateFilter(ref MotelyFilterCreationContext ctx)
