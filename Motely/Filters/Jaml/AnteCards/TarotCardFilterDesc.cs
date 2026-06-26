@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class TarotCardClause
+public sealed class TarotCardClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

@@ -1,4 +1,10 @@
 namespace Motely.Filters.Jaml;
 
-// JamlClauseBase and JamlClause removed — all clauses are flat concrete types.
-// LogicClause lives in Motely/Filters/LogicClause.cs.
+/// <summary>Common scalar contract shared by all flat clause types.</summary>
+public interface IJamlClause
+{
+    string? Label { get; set; }
+    int Min { get; set; }
+    int? Max { get; set; }
+    int Score { get; set; }
+}

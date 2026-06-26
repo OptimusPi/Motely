@@ -5,7 +5,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class ErraticSuitClause
+public sealed class ErraticSuitClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

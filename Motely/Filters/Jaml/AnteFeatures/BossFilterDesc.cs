@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class BossClause
+public sealed class BossClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
