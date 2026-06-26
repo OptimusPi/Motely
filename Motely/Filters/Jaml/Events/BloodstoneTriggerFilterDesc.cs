@@ -3,7 +3,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class BloodstoneTriggerClause
+public sealed class BloodstoneTriggerClause : IJamlClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
