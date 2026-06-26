@@ -26,14 +26,8 @@ public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
+                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
                 {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextWheelOfFortune(ref stream, luck);
                     var edition = sctx.GetNextWheelOfFortune(ref stream, luck);
                     return ~VectorEnum256.Equals(edition, MotelyItemEdition.None);
                 },

@@ -26,16 +26,8 @@ public struct CavendishExtinctFilterDesc(CavendishExtinctClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
-                {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextCavendishExtinct(ref stream, luck);
-                    return sctx.GetNextCavendishExtinct(ref stream, luck);
-                },
+                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
+                    sctx.GetNextCavendishExtinct(ref stream, luck),
                 ref stream
             );
         }

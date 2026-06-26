@@ -26,16 +26,8 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
-                {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextLuckyMult(ref stream, luck);
-                    return sctx.GetNextLuckyMult(ref stream, luck);
-                },
+                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
+                    sctx.GetNextLuckyMult(ref stream, luck),
                 ref stream
             );
         }

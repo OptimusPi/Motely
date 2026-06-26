@@ -26,16 +26,8 @@ public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
-                {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextGlassDestroy(ref stream, luck);
-                    return sctx.GetNextGlassDestroy(ref stream, luck);
-                },
+                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
+                    sctx.GetNextGlassDestroy(ref stream, luck),
                 ref stream
             );
         }

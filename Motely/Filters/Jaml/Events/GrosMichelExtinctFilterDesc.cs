@@ -27,16 +27,8 @@ public struct GrosMichelExtinctFilterDesc(GrosMichelExtinctClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
-                {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextGrosMichelExtinct(ref stream, luck);
-                    return sctx.GetNextGrosMichelExtinct(ref stream, luck);
-                },
+                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
+                    sctx.GetNextGrosMichelExtinct(ref stream, luck),
                 ref stream
             );
         }

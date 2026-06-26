@@ -48,12 +48,9 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
                     static (
                         ref MotelyVectorSearchContext sctx,
                         ref MotelyVectorPrngStream stream,
-                        int rollIndex,
                         Vector256<int> target
                     ) =>
                     {
-                        for (int i = 0; i < rollIndex; i++)
-                            sctx.GetNextMisprintMult(ref stream);
                         var multValue = sctx.GetNextMisprintMult(ref stream);
                         return Vector256.Equals(multValue, target);
                     },
@@ -66,14 +63,8 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
             return EventFilterUtils.ProcessRollClause(
                 ref ctx,
                 _clause,
-                static (
-                    ref MotelyVectorSearchContext sctx,
-                    ref MotelyVectorPrngStream stream,
-                    int rollIndex
-                ) =>
+                static (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
                 {
-                    for (int i = 0; i < rollIndex; i++)
-                        sctx.GetNextMisprintMult(ref stream);
                     var multValue = sctx.GetNextMisprintMult(ref stream);
                     return Vector256.GreaterThanOrEqual(multValue, Vector256<int>.Zero);
                 },
