@@ -18,7 +18,7 @@ public sealed class JokerClause : IJamlClause
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
-    public JokerSourceConfig Sources { get; set; } = new();
+    public JokerSourceConfig? Sources { get; set; }
     public LegendaryJokerSourceConfig LegendarySources { get; set; } = new();
 }
 
@@ -26,6 +26,15 @@ public struct JokerFilterDesc(JokerClause clause)
     : IMotelySeedFilterDesc<JokerFilterDesc.JokerFilter>
 {
     private readonly JokerClause _clause = clause;
+
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
+    /// (8 shop slots) plus the 6 booster packs. Specialty/legendary sources stay off by default.
+    /// Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    internal static readonly JokerSourceConfig DefaultSources = new()
+    {
+        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
 
     public JokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
@@ -51,13 +60,15 @@ public struct JokerFilterDesc(JokerClause clause)
             }
         }
 
-        // Extract source indices from config
-        var shopIndices = _clause.Sources.ShopItems;
-        var boosterIndices = _clause.Sources.BoosterPacks;
+        // null sources → default shop+packs; resolved here (and in JamlScoring) since the loader
+        // no longer normalizes. Specialty/legendary sources stay off by default.
+        var sources = _clause.Sources ?? DefaultSources;
+        var shopIndices = sources.ShopItems;
+        var boosterIndices = sources.BoosterPacks;
 
         Debug.Assert(
             shopIndices.Length > 0 || boosterIndices.Length > 0,
-            "Joker clause should have normalized default sources at config load time."
+            "Joker clause should have non-empty default sources."
         );
 
         int maxShopItem = 0;
@@ -332,7 +343,7 @@ public sealed class CommonJokerClause : IJamlClause
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
-    public JokerSourceConfig Sources { get; set; } = new();
+    public JokerSourceConfig? Sources { get; set; }
 }
 
 public sealed class UncommonJokerClause : IJamlClause
@@ -346,7 +357,7 @@ public sealed class UncommonJokerClause : IJamlClause
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
-    public JokerSourceConfig Sources { get; set; } = new();
+    public JokerSourceConfig? Sources { get; set; }
 }
 
 public sealed class RareJokerClause : IJamlClause
@@ -360,5 +371,5 @@ public sealed class RareJokerClause : IJamlClause
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
-    public JokerSourceConfig Sources { get; set; } = new();
+    public JokerSourceConfig? Sources { get; set; }
 }

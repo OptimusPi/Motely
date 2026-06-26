@@ -11,7 +11,7 @@ public sealed class GlassDestroyClause : IJamlClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Rolls { get; set; } = [];
-    public int Luck { get; set; } = 1;
+    public JamlWith With { get; set; } = new();
 }
 
 public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
@@ -24,7 +24,7 @@ public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
         Debug.Assert(_clause.Rolls.Length > 0, "Glass clause must provide at least one roll index.");
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
-        return new GlassDestroyFilter(sortedRolls, _clause.Min, _clause.Luck);
+        return new GlassDestroyFilter(sortedRolls, _clause.Min, (double)_clause.With.Luck);
     }
 
     public struct GlassDestroyFilter(int[] sortedRolls, int min, double luck) : IMotelySeedFilter

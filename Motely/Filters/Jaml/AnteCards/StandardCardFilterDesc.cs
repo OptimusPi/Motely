@@ -15,7 +15,9 @@ public sealed class StandardCardClause : IJamlClause
     public MotelyItemEnhancement? Enhancement { get; set; }
     public MotelyItemSeal? Seal { get; set; }
     public MotelyItemEdition? Edition { get; set; }
-    public StandardCardSourceConfig Sources { get; set; } = new();
+
+    // null = no `sources:` block → StandardCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    public StandardCardSourceConfig? Sources { get; set; }
 }
 
 public struct StandardCardFilterDesc(StandardCardClause clause)
@@ -23,8 +25,19 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
 {
     private readonly StandardCardClause _clause = clause;
 
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
+    /// (8 shop slots) plus the 6 booster packs. Deferred specialty sources stay off by default.
+    /// Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    internal static readonly StandardCardSourceConfig DefaultSources = new()
+    {
+        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public StandardCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        var sources = _clause.Sources ?? DefaultSources;
+
         foreach (var ante in _clause.Antes)
         {
             ctx.CacheShopStream(ante);
@@ -32,17 +45,17 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         }
 
         int maxShopItem = 0;
-        for (int i = 0; i < _clause.Sources.ShopItems.Length; i++)
+        for (int i = 0; i < sources.ShopItems.Length; i++)
         {
-            if (_clause.Sources.ShopItems[i] > maxShopItem)
-                maxShopItem = _clause.Sources.ShopItems[i];
+            if (sources.ShopItems[i] > maxShopItem)
+                maxShopItem = sources.ShopItems[i];
         }
 
         int maxBoosterPack = 0;
-        for (int i = 0; i < _clause.Sources.BoosterPacks.Length; i++)
+        for (int i = 0; i < sources.BoosterPacks.Length; i++)
         {
-            if (_clause.Sources.BoosterPacks[i] > maxBoosterPack)
-                maxBoosterPack = _clause.Sources.BoosterPacks[i];
+            if (sources.BoosterPacks[i] > maxBoosterPack)
+                maxBoosterPack = sources.BoosterPacks[i];
         }
 
         return new StandardCardFilter(_clause, maxShopItem, maxBoosterPack);
@@ -69,8 +82,9 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
                     Debug.Assert(needed > 0, "StandardCardClause.Min must be > 0 — loader bug.");
 
                     int count = 0;
-                    var shopItems = clause.Sources.ShopItems;
-                    var boosterPacks = clause.Sources.BoosterPacks;
+                    var sources = clause.Sources ?? DefaultSources;
+                    var shopItems = sources.ShopItems;
+                    var boosterPacks = sources.BoosterPacks;
 
                     foreach (var ante in clause.Antes)
                     {

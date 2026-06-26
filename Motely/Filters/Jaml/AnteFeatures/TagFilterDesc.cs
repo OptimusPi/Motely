@@ -28,6 +28,9 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
     {
         foreach (var ante in _clause.Antes)
         {
+            // NOTE(audit): the tag clause only reads the tag stream below — this
+            // booster-pack-stream cache looks unused/vestigial here. Left intact pending review;
+            // remove if nothing downstream actually consumes a cached pack stream for tags.
             ctx.CacheBoosterPackStream(ante);
             ctx.CacheTagStream(ante);
         }

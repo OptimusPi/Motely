@@ -102,27 +102,26 @@ public struct VoucherFilterDesc(VoucherClause clause)
             Vector256<int> matchCounts
         )
         {
+            // Walk the voucher stream once, index 0..maxRoll, mirroring the scalar
+            // CountVoucherOccurrences. The old code only materialized draws 1 and 2, so any
+            // requested roll index >= 3 (the clause doc says "1+") was silently dropped by SIMD
+            // while scalar scoring still counted it — a SIMD/scalar completeness gap. Index 0 is
+            // the ante award; 1+ are successive stream draws. (stackalloc of VectorEnum256 is the
+            // same pattern TagFilter uses for its tag-stream draws.)
             int maxRoll = MapFeatureRolls.MaxRollIndex(clause.Rolls);
-            VectorEnum256<MotelyVoucher> streamDraw1 = default;
-            VectorEnum256<MotelyVoucher> streamDraw2 = default;
+            Span<VectorEnum256<MotelyVoucher>> draws =
+                stackalloc VectorEnum256<MotelyVoucher>[maxRoll + 1];
+            draws[0] = anteVouchers;
 
             if (maxRoll >= 1)
             {
                 var voucherStream = ctx.CreateVoucherStream(ante);
-                streamDraw1 = ctx.GetNextVoucher(ref voucherStream, voucherState);
-                if (maxRoll >= 2)
-                    streamDraw2 = ctx.GetNextVoucher(ref voucherStream, voucherState);
+                for (int i = 1; i <= maxRoll; i++)
+                    draws[i] = ctx.GetNextVoucher(ref voucherStream, voucherState);
             }
 
             foreach (var roll in clause.Rolls)
-            {
-                if (roll == 0)
-                    matchCounts = AddVoucherMatches(matchCounts, anteVouchers, clause);
-                else if (roll == 1)
-                    matchCounts = AddVoucherMatches(matchCounts, streamDraw1, clause);
-                else if (roll == 2)
-                    matchCounts = AddVoucherMatches(matchCounts, streamDraw2, clause);
-            }
+                matchCounts = AddVoucherMatches(matchCounts, draws[roll], clause);
 
             return matchCounts;
         }

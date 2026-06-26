@@ -12,7 +12,9 @@ public sealed class TarotCardClause : IJamlClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public required MotelyTarotCard[] Tarots { get; set; }
-    public TarotCardSourceConfig Sources { get; set; } = new();
+
+    // null = no `sources:` block → TarotCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    public TarotCardSourceConfig? Sources { get; set; }
 }
 
 public struct TarotCardFilterDesc(TarotCardClause clause)
@@ -20,8 +22,19 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
 {
     private readonly TarotCardClause _clause = clause;
 
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
+    /// (8 shop slots) plus the 6 booster packs. Specialty sources (Emperor, Purple Seal) stay off
+    /// by default. Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    internal static readonly TarotCardSourceConfig DefaultSources = new()
+    {
+        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public TarotCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        var sources = _clause.Sources ?? DefaultSources;
+
         foreach (var ante in _clause.Antes)
         {
             ctx.CacheShopStream(ante);
@@ -29,31 +42,31 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         }
 
         int maxShopItem = 0;
-        for (int i = 0; i < _clause.Sources.ShopItems.Length; i++)
+        for (int i = 0; i < sources.ShopItems.Length; i++)
         {
-            if (_clause.Sources.ShopItems[i] > maxShopItem)
-                maxShopItem = _clause.Sources.ShopItems[i];
+            if (sources.ShopItems[i] > maxShopItem)
+                maxShopItem = sources.ShopItems[i];
         }
 
         int maxBoosterPack = 0;
-        for (int i = 0; i < _clause.Sources.BoosterPacks.Length; i++)
+        for (int i = 0; i < sources.BoosterPacks.Length; i++)
         {
-            if (_clause.Sources.BoosterPacks[i] > maxBoosterPack)
-                maxBoosterPack = _clause.Sources.BoosterPacks[i];
+            if (sources.BoosterPacks[i] > maxBoosterPack)
+                maxBoosterPack = sources.BoosterPacks[i];
         }
 
         int maxEmperor = 0;
-        for (int i = 0; i < _clause.Sources.Emperor.Length; i++)
+        for (int i = 0; i < sources.Emperor.Length; i++)
         {
-            if (_clause.Sources.Emperor[i] > maxEmperor)
-                maxEmperor = _clause.Sources.Emperor[i];
+            if (sources.Emperor[i] > maxEmperor)
+                maxEmperor = sources.Emperor[i];
         }
 
         int maxPurpleSeal = 0;
-        for (int i = 0; i < _clause.Sources.PurpleSealOrEightBall.Length; i++)
+        for (int i = 0; i < sources.PurpleSealOrEightBall.Length; i++)
         {
-            if (_clause.Sources.PurpleSealOrEightBall[i] > maxPurpleSeal)
-                maxPurpleSeal = _clause.Sources.PurpleSealOrEightBall[i];
+            if (sources.PurpleSealOrEightBall[i] > maxPurpleSeal)
+                maxPurpleSeal = sources.PurpleSealOrEightBall[i];
         }
 
         return new TarotCardFilter(_clause, maxShopItem, maxBoosterPack, maxEmperor, maxPurpleSeal);
@@ -86,10 +99,11 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
             Debug.Assert(needed > 0, "TarotCardClause.Min must be > 0 — loader bug.");
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
-            var shopIndices = clause.Sources.ShopItems;
-            var boosterPacks = clause.Sources.BoosterPacks;
-            var emperorRolls = clause.Sources.Emperor;
-            var sealRolls = clause.Sources.PurpleSealOrEightBall;
+            var sources = clause.Sources ?? DefaultSources;
+            var shopIndices = sources.ShopItems;
+            var boosterPacks = sources.BoosterPacks;
+            var emperorRolls = sources.Emperor;
+            var sealRolls = sources.PurpleSealOrEightBall;
 
             foreach (var ante in clause.Antes)
             {

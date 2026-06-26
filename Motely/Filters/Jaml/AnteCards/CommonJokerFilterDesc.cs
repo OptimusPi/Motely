@@ -10,6 +10,14 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
 {
     private readonly CommonJokerClause _clause = clause;
 
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — 8 shop slots + 6 packs.
+    /// Specialty sources stay off by default. Applied only when <c>Sources</c> is null.</summary>
+    internal static readonly JokerSourceConfig DefaultSources = new()
+    {
+        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public CommonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         foreach (var ante in _clause.Antes)
@@ -34,9 +42,10 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
             }
         }
 
-        // Extract source indices from config
-        var shopIndices = _clause.Sources.ShopItems;
-        var boosterIndices = _clause.Sources.BoosterPacks;
+        // null sources → default shop+packs (loader no longer normalizes).
+        var sources = _clause.Sources ?? DefaultSources;
+        var shopIndices = sources.ShopItems;
+        var boosterIndices = sources.BoosterPacks;
 
         int maxShopItem = 0;
         foreach (var idx in shopIndices)
