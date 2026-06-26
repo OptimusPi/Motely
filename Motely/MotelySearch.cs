@@ -431,10 +431,8 @@ public interface IMotelySearch : IDisposable
 
     IMotelySearch Start(CancellationToken cancellationToken = default);
     Task RunSearchAsync(CancellationToken cancellationToken = default);
-    void RunSearchUntilCompletion();
     void AwaitCompletion();
     Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
-    void Cancel();
 }
 
 internal unsafe interface IInternalMotelySearch : IMotelySearch
@@ -482,6 +480,17 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private long _batchIndex;
     private readonly MotelySearchPlan[] _plans;
     private readonly int _threadCount;
+
+    // True when exactly one thread ever advances _batchIndex: the browser pump (single thread,
+    // regardless of how many plans ProcessorCount allocated) or a 1-thread native run. Lets
+    // TryExecuteSequentialBatch use a plain increment instead of an atomic it can't contend on.
+    private readonly bool _singleBatchConsumer;
+
+    // Native worker threads, kept so Dispose can Join them before freeing the native memory
+    // they read — a thread still mid-batch is dereferencing buffers Dispose would otherwise
+    // FreeHGlobal out from under it (use-after-free). Null on the browser path: one cooperative
+    // pump thread that checks _isDisposed itself, nothing to join.
+    private Thread[]? _workerThreads;
 
     public bool IsCompleted => _completionSource.Task.IsCompleted;
     public bool IsSequentialBatchSearch => !_isProviderMode;
@@ -652,6 +661,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
 
         _threadCount = Math.Max(1, settings.ThreadCount);
+        _singleBatchConsumer = OperatingSystem.IsBrowser() || _threadCount == 1;
         _plans = new MotelySearchPlan[_threadCount];
         for (int i = 0; i < _threadCount; i++)
         {
@@ -676,16 +686,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
     }
 
-    public void RunSearchUntilCompletion()
-    {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-        // Native blocking entry: kick the same launcher the async surface uses, then block
-        // on the one completion signal. (Not for the browser — there's nothing to block on
-        // the single thread without deadlocking; the browser uses RunSearchAsync.)
-        BeginSearch(CancellationToken.None);
-        _completionSource.Task.GetAwaiter().GetResult();
-    }
-
     /// <summary>Single place to complete <see cref="_completionSource"/> after worker(s) finish (sync path).</summary>
     private void SignalSearchCompleted()
     {
@@ -705,12 +705,12 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             }
 
             plan.SearchProviderBatch();
+            plan._localBatchesCompleted++;
             if (plan._providerExhausted)
             {
                 break;
             }
 
-            plan._localBatchesCompleted++;
 
             // Report progress
             PrintReport();
@@ -771,38 +771,43 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     {
         _elapsedTime.Start();
 
-        // Browser: one thread, no pthreads, nothing to offload to. Pump the batches
-        // cooperatively (await Task.Yield between them) so the single thread surfaces to
-        // the event loop and the UI repaints instead of freezing under the SIMD grind.
-        // Bootsharp marshals the pump's Task to a JS Promise. Provider mode (single-seed
-        // datalake re-derivation) is fast and stays inline below.
-        if (OperatingSystem.IsBrowser() && !_isProviderMode)
+        // Browser: one thread, no pthreads, nothing to offload to.
+        if (OperatingSystem.IsBrowser())
         {
-            _ = RunSequentialBrowserPumpAsync();
+            if (_isProviderMode)
+            {
+                // Provider mode (single-seed datalake re-derivation) is a fast, bounded job.
+                // Run it inline on the one thread and signal completion ourselves — the native
+                // path leans on WorkerCoordinator's finally for that, which we never reach here.
+                RunProviderPlan(_plans[0]);
+                SignalSearchCompleted();
+            }
+            else
+            {
+                // Batch search: pump cooperatively (await Task.Yield between batches) so the
+                // single thread surfaces to the event loop and the UI repaints instead of
+                // freezing under the SIMD grind. Bootsharp marshals the Task to a JS Promise.
+                _ = RunSequentialBrowserPumpAsync();
+            }
             return;
         }
 
-        int totalWorkers = _threadCount;
-        WorkerCoordinator coordinator = new(this, totalWorkers);
+        WorkerCoordinator coordinator = new(this, _threadCount);
 
-        if (totalWorkers == 1)
-        {
-            // Single-thread: run inline on the caller — no pthread, no deadlock risk,
-            // and exceptions propagate cleanly without corrupting unsafe SIMD state.
-            coordinator.RunWorker(0);
-            return;
-        }
-
-        for (int i = 0; i < totalWorkers; i++)
+        var threads = new Thread[_threadCount];
+        for (int i = 0; i < _threadCount; i++)
         {
             int threadIdx = i;
-            var thread = new Thread(() => coordinator.RunWorker(threadIdx))
+            threads[i] = new Thread(() => coordinator.RunWorker(threadIdx))
             {
                 Name = $"Motely Search Thread {threadIdx}",
                 IsBackground = true,
             };
-            thread.Start();
+            threads[i].Start();
         }
+        // Publish only after all are started; Dispose can't run before Start() returns to the
+        // caller (same thread), so no reader sees a partially-filled array.
+        _workerThreads = threads;
     }
 
     /// <summary>
@@ -857,12 +862,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 }
             }
         }
-    }
-
-    public void Cancel()
-    {
-        Interlocked.Exchange(ref _isDisposed, 1);
-        _completionSource.TrySetResult(false);
     }
 
     public Task WaitForCompletionAsync(CancellationToken cancellationToken = default)
@@ -950,6 +949,18 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
             return;
 
+        // Quiesce native workers before freeing the memory they read. _isDisposed is set above,
+        // so each worker drops out at its next batch boundary; Join then waits for any in-flight
+        // batch to actually finish — otherwise the FreeHGlobal below races a thread mid-read.
+        // Skip self-join (Dispose from a worker/finalizer thread) to avoid deadlocking on self.
+        if (_workerThreads is not null)
+        {
+            int self = Environment.CurrentManagedThreadId;
+            foreach (Thread t in _workerThreads)
+                if (t.ManagedThreadId != self)
+                    t.Join();
+        }
+
         for (int i = 0; i < _plans.Length; i++)
             _plans[i].Dispose();
         Marshal.FreeHGlobal((nint)_pseudoHashKeyLengths);
@@ -968,7 +979,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
     private abstract class MotelySearchPlan : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 314;
+        public const int MAX_SEED_WAIT_MS = 500;
 
         // Auto-cutoff rate gate (see AutoCutoffState). Evaluated once per batch.
         // Engage the monotonic-max clamp only when raw matches arrive faster than this;
@@ -1109,7 +1120,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             if (Search._cancellationToken.IsCancellationRequested)
                 return false;
 
-            long batchIdx = Interlocked.Increment(ref Search._batchIndex);
+            long batchIdx = Search._singleBatchConsumer
+                ? ++Search._batchIndex
+                : Interlocked.Increment(ref Search._batchIndex);
 
             if (batchIdx >= Search._endBatchIndex || batchIdx >= MaxBatch)
                 return false;
