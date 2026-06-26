@@ -163,7 +163,8 @@ public static class MotelyJamlyzer
             }
 
             using var search = settings.CreateSearch();
-            search.RunSearchUntilCompletion();
+            search.Start();
+            search.AwaitCompletion();
 
             results.Add(new(seed, score, filterDesc.Antes, filterDesc.Events!, filterDesc.StreamStates!, filterDesc.ErraticDeck));
         }

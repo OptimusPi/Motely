@@ -20,7 +20,11 @@ public sealed partial class MotelySearch<TBaseFilter>
         while (plan.TryExecuteSequentialBatch())
             await Task.Yield();
 
-        plan.FlushFilterBatches();
+        // Skip the flush if Dispose ran during an await — it already freed the plan's filter
+        // batches, and flushing would dereference them (use-after-free, one event-loop turn
+        // late). No threads here, so this gate is the browser's stand-in for Dispose's Join.
+        if (Volatile.Read(ref _isDisposed) == 0)
+            plan.FlushFilterBatches();
         SignalSearchCompleted();
     }
 }

@@ -931,7 +931,7 @@ public static class JamlScoring
             var rollIndex = clause.Rolls[i];
             for (int j = 0; j < rollIndex; j++)
                 ctx.GetNextMisprintMult(ref stream);
-            if (ctx.GetNextMisprintMult(ref stream) >= 0)
+            if (ctx.GetNextMisprintMult(ref stream) >= clause.Mult)
             {
                 count++;
                 if (max is null && count >= min)

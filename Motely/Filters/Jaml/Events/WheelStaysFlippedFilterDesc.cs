@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -18,25 +20,70 @@ public struct WheelStaysFlippedFilterDesc(WheelStaysFlippedClause clause)
 {
     private readonly WheelStaysFlippedClause _clause = clause;
 
-    public WheelStaysFlippedFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
-        new(_clause);
-
-    public struct WheelStaysFlippedFilter(WheelStaysFlippedClause clause) : IMotelySeedFilter
+    public WheelStaysFlippedFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        private readonly WheelStaysFlippedClause _clause = clause;
+        int[] sortedRolls = [.. _clause.Rolls];
+        Array.Sort(sortedRolls);
+        return new WheelStaysFlippedFilter(sortedRolls, _clause.Min, _clause.Luck);
+    }
+
+    public struct WheelStaysFlippedFilter(int[] sortedRolls, int min, double luck) : IMotelySeedFilter
+    {
+        private readonly int[] _sortedRolls = sortedRolls;
+        private readonly int _min = min;
+        private readonly double _luck = luck;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
+            int[] sorted = _sortedRolls;
+            Debug.Assert(sorted.Length > 0, "WheelStaysFlipped clause must provide at least one roll index.");
+
             var stream = ctx.CreateTheWheelPrngStream();
-            double luck = _clause.Luck;
-            return EventFilterUtils.ProcessRollClause(
-                ref ctx,
-                _clause.Rolls,
-                _clause.Min,
-                (ref MotelyVectorSearchContext sctx, ref MotelyVectorPrngStream stream) =>
-                    sctx.GetNextWheelStaysFlipped(ref stream, luck),
-                ref stream
+            int maxRoll = sorted[^1];
+            int min = _min;
+            double luck = _luck;
+
+            var matchCounts = Vector256<int>.Zero;
+            var minVector = Vector256.Create(min);
+            int total = sorted.Length;
+            int p = 0, seen = 0;
+
+            for (int idx = 0; idx <= maxRoll; idx++)
+            {
+                VectorMask trigger = ctx.GetNextWheelStaysFlipped(ref stream, luck);
+
+                if (p >= sorted.Length || idx != sorted[p])
+                    continue;
+                while (p < sorted.Length && sorted[p] == idx)
+                    p++;
+
+                seen++;
+                matchCounts = Vector256.Add(
+                    matchCounts,
+                    Vector256.Create(
+                        trigger[0] ? 1 : 0, trigger[1] ? 1 : 0,
+                        trigger[2] ? 1 : 0, trigger[3] ? 1 : 0,
+                        trigger[4] ? 1 : 0, trigger[5] ? 1 : 0,
+                        trigger[6] ? 1 : 0, trigger[7] ? 1 : 0
+                    )
+                );
+
+                if (total > 8)
+                {
+                    int rollsRemaining = total - seen;
+                    var possibleMax = Vector256.Add(matchCounts, Vector256.Create(rollsRemaining));
+                    var maskHit = Vector256.GreaterThanOrEqual(matchCounts, minVector);
+                    var maskFail = Vector256.LessThan(possibleMax, minVector);
+                    if (Vector256.BitwiseOr(maskHit, maskFail).ExtractMostSignificantBits() == 0xFF)
+                        break;
+                }
+            }
+
+            return new VectorMask(
+                MotelyVectorUtils.VectorizedComparisonToMask(
+                    Vector256.GreaterThan(matchCounts, Vector256.Create(min - 1))
+                )
             );
         }
     }
