@@ -38,7 +38,7 @@ public static class JummyLine
     // ── Clause → line ─────────────────────────────────────────────────────────
 
     /// <summary>Renders a supported clause as a single JUMMY line, or null if unsupported by v0.</summary>
-    public static string? FromClause(JamlClauseBase clause) =>
+    public static string? FromClause(IJamlClause clause) =>
         clause switch
         {
             JokerClause j => FromJoker(j),
@@ -112,7 +112,7 @@ public static class JummyLine
     /// Parses a single JUMMY line into a clause. Returns false (with a reason) when the
     /// line names no recognizable item or the ante tail is malformed.
     /// </summary>
-    public static bool TryToClause(string line, out JamlClauseBase? clause, out string? error)
+    public static bool TryToClause(string line, out IJamlClause? clause, out string? error)
     {
         clause = null;
         error = null;

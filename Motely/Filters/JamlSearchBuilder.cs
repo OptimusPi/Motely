@@ -75,7 +75,7 @@ public static class JamlSearchBuilder
     private static readonly int[] DefaultShopItems = [0, 1, 2, 3, 4, 5, 6, 7]; // 8 shop slots (reroll headroom)
     private static readonly int[] DefaultBoosterPacks = [0, 1, 2, 3, 4, 5];     // 6 packs every ante
 
-    private static void NormalizeDefaults(JamlClauseBase clause)
+    private static void NormalizeDefaults(IJamlClause clause)
     {
         // Logic clauses (and/or) hold no antes/sources of their own — recurse into the children.
         if (clause is LogicClause logic)
@@ -87,8 +87,25 @@ public static class JamlSearchBuilder
 
         // An ante-targeted clause that named no ante (and inherited none from an enclosing
         // and/or) means "any ante" — fill the full 1..8 span.
-        if (clause is JamlClause jc && jc.Antes.Length == 0)
-            jc.Antes = DefaultAntes;
+        // Set antes default for all ante-targeted clause types.
+        switch (clause)
+        {
+            case JokerClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case CommonJokerClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case UncommonJokerClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case RareJokerClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case LegendaryJokerClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case TarotCardClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case SpectralCardClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case PlanetCardClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case StandardCardClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case BossClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case TagClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case VoucherClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case StartingDrawClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case ErraticRankClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+            case ErraticSuitClause c when c.Antes.Length == 0: c.Antes = DefaultAntes; break;
+        }
 
         // A joker/card clause that named no source at all gets the everyday shop+pack default.
         // If the user named ANY source (even a specialty one), leave their choice untouched.
@@ -149,7 +166,7 @@ public static class JamlSearchBuilder
         s.ShopItems.Length == 0 && s.BoosterPacks.Length == 0
         && s.ArcanaPacks.Length == 0 && s.SpectralPacks.Length == 0 && s.SoulCard.Length == 0;
 
-    private static IMotelySeedFilterDesc ClauseToFilterDesc(JamlClauseBase clause) =>
+    private static IMotelySeedFilterDesc ClauseToFilterDesc(IJamlClause clause) =>
         clause switch
         {
             JokerClause c => new JokerFilterDesc(c),
