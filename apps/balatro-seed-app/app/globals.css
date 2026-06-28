@@ -28,3 +28,32 @@
     font-family: var(--j-font), system-ui, sans-serif;
   }
 }
+
+/* ── SEP POC local primitives ── */
+
+@layer components {
+  .j-connection-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--j-grey);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+  }
+
+  .j-connection-dot--grey {
+    background-color: var(--j-grey);
+  }
+
+  .j-connection-dot--orange {
+    background-color: var(--j-orange);
+  }
+
+  .j-connection-dot--green {
+    background-color: var(--j-green);
+  }
+
+  .j-connection-dot--red {
+    background-color: var(--j-red);
+  }
+}

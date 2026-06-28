@@ -1,0 +1,12 @@
+var R=require("../../chunks/ssr/[turbopack]_runtime.js")("server/app/_not-found/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__210ik0t._.js")
+R.c("server/chunks/ssr/1acy_next_dist_esm_build_templates_app-page_0dv9-s_.js")
+R.c("server/chunks/ssr/[root-of-the-server]__1s415x1._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__021ri48._.js")
+R.c("server/chunks/ssr/apps_balatro-seed-app_app_layout_tsx_0alh-aa._.js")
+R.c("server/chunks/ssr/1acy_next_dist_client_components_0v8ntgp._.js")
+R.c("server/chunks/ssr/1acy_next_dist_client_components_builtin_forbidden_0etbm3b.js")
+R.c("server/chunks/ssr/1acy_next_dist_client_components_builtin_unauthorized_1qpw7jg.js")
+R.c("server/chunks/ssr/apps_balatro-seed-app__next-internal_server_app__not-found_page_actions_0vurlbm.js")
+R.m(90014)
+module.exports=R.m(90014).exports

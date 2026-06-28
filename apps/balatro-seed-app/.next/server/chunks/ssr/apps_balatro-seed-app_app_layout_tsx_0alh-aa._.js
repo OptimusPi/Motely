@@ -1,0 +1,3 @@
+module.exports=[62546,a=>{"use strict";var b=a.i(53211);a.s(["default",0,function({children:a}){return(0,b.jsx)("html",{lang:"en",children:(0,b.jsx)("body",{className:"min-h-screen antialiased",children:a})})},"metadata",0,{title:"Balatro Seed Lab — Find, Analyze & Compare Seeds",description:"AI-powered Balatro seed finder. Search 2.3 trillion seeds with JAML filters, analyze full routes, and discover erratic deck compositions — all in your browser."}])},82973,a=>{a.n(a.i(62546))}];
+
+//# sourceMappingURL=apps_balatro-seed-app_app_layout_tsx_0alh-aa._.js.map

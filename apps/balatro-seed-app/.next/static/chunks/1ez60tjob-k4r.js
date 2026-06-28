@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,8858,80552,o=>{"use strict";var t=o.i(31165);o.s(["JimboBackground",()=>t.j],8858),o.s(["JimboBalatroFooter",()=>t.E],80552)},31547,o=>{o.v(t=>Promise.all(["static/chunks/1v99qr81w6uc6.js"].map(t=>o.l(t))).then(()=>t(21941)))}]);
