@@ -104,10 +104,10 @@ public class LuckyEventLuckTests
         );
 
         var must = Assert.IsType<LuckyMultClause>(config!.Must[0]);
-        Assert.Equal(5, must.Luck);
+        Assert.Equal(MotelyLuck.X5, must.With.Luck);
 
         var should = Assert.IsType<LuckyMultClause>(config.Should[0]);
-        Assert.Equal(5, should.Luck);
+        Assert.Equal(MotelyLuck.X5, should.With.Luck);
         Assert.Equal(100, should.Score);
     }
 
@@ -130,7 +130,7 @@ public class LuckyEventLuckTests
         );
 
         var clause = Assert.IsType<GrosMichelExtinctClause>(config!.Must[0]);
-        Assert.Equal(5, clause.Luck);
+        Assert.Equal(MotelyLuck.X5, clause.With.Luck);
     }
 
     [Fact]

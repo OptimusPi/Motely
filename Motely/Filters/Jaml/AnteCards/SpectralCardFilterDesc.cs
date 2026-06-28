@@ -106,6 +106,12 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
             var sources = clause.Sources ?? DefaultSources;
+            if (sources.RequireMegaPack)
+                return ctx.SearchIndividualSeeds(
+                    (ref MotelySingleSearchContext single) =>
+                        JamlScoring.CountSpectralCardOccurrencesForFilter(ref single, clause) >= needed
+                );
+
             var shopIndices = sources.ShopItems;
             var boosterPacks = sources.BoosterPacks;
             var sixthSenseRolls = sources.SixthSense;

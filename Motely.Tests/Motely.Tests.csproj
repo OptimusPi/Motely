@@ -6,21 +6,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
     <IsPackable>false</IsPackable>
+    <RunSettingsFilePath>../coverage.runsettings</RunSettingsFilePath>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Motely/Motely.csproj" />
-  </ItemGroup>
-
-  <!-- Quarantined: these tests use the deleted JAML string loader (JamlConfigLoader /
-       JamlFileLoader) and stale event-clause `.Luck` (now `.With.Luck`). Restore + port to
-       C# objects when the AOT/source-gen YAML loader lands (see JOKER_SOURCES_SPEC.md / plan). -->
-  <ItemGroup>
-    <Compile Remove="JamlJsonLoaderTests.cs" />
-    <Compile Remove="JamlAndScoringTests.cs" />
-    <Compile Remove="LuckyEventLuckTests.cs" />
-    <Compile Remove="HieroglyphPackSlotTests.cs" />
-    <Compile Remove="AnalyzerUnitTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
