@@ -1,7 +1,4 @@
-import bootsharp from "motely-wasm";
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { MotelySingleSearchContext } from "motely-wasm/motely";
-import { IFileMounter } from "motely-wasm/bootsharp/file-system";
+import bootsharp, { Jimmolate, type MotelyDeck, type MotelyStake } from "motely-wasm";
 
 export type MotelyRuntimeStatus = "idle" | "booting" | "ready" | "error";
 
@@ -20,10 +17,9 @@ export type MotelyRuntimeStatus = "idle" | "booting" | "ready" | "error";
 // motely-wasm 19.4.0 changed the probe to receive a search context instead of
 // (seed, deck, stake). We keep the inner predicate contract identical for all
 // callers and bridge to the new ctx shape in this one place.
-type JimmolateProbe = (seed: string, deck: number, stake: number) => boolean;
+type JimmolateProbe = (seed: string, deck: MotelyDeck, stake: MotelyStake) => boolean;
 let currentProbe: JimmolateProbe = () => true;
-Motely.jimmolateProbe = (ctx: MotelySingleSearchContext) =>
-    currentProbe(ctx.getSeed(), ctx.deck, ctx.stake);
+Jimmolate.findSeed = (seed, deck, stake) => currentProbe(seed, deck, stake);
 
 /** Swap the active Jimmolate predicate. Safe before or after boot. */
 export function setJimmolateProbe(pred: JimmolateProbe): void {
@@ -33,6 +29,7 @@ export function setJimmolateProbe(pred: JimmolateProbe): void {
 /** Reset the probe to pass-through (the engine's default: every survivor matches). */
 export function clearJimmolateProbe(): void {
     currentProbe = () => true;
+    if (bootsharp.getStatus() === bootsharp.BootStatus.Booted) Jimmolate.enabled = false;
 }
 
 // Must match the path the host serves motely-wasm's bin/ at.
@@ -76,19 +73,8 @@ export async function ensureMotelyReady(): Promise<void> {
     if (bootPromise) return bootPromise;
     if (bootsharp.getStatus() !== bootsharp.BootStatus.Standby) return;
     bootPromise = (async () => {
-        // Pre-boot: bind the optional File System mounter if it's installed.
-        try {
-            // @vite-ignore — optional peer; may be absent on disk. Keep it a
-            // runtime import() so Vite's dev import-analysis (Storybook, demo)
-            // doesn't try to resolve it at transform time and hard-fail. When
-            // missing it throws here and is swallowed → status "unsupported".
-            // (The library build externalizes it via PEER_EXTERNALS regardless.)
-            const fs = await import(/* @vite-ignore */ "@rewaffle/bootsharp-file-system");
-            fs.init(IFileMounter);
-            fileSystemReady = true;
-        } catch (error) {
-            fileSystemError = error;
-        }
+        fileSystemReady = false;
+        fileSystemError = "Bootsharp FileSystem package is not exposed by motely-wasm@23.";
         // motely-wasm is an EMBEDDED build (the runtime is inlined into the JS as
         // base64 — see dist/generated/resources.g.mjs), so boot() takes no args and
         // needs no served binaries. The old boot("/motely-wasm/bin") was leftover

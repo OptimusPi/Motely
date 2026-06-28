@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { MotelyJamlyzerResult, MotelySeedAnalysis } from "motely-wasm/motely/analysis";
+import { MotelyJaml, MotelyJamlyzer, type MotelyJamlyzerSeedResult } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 
 export type AnalyzerStatus = "idle" | "running" | "done" | "error";
@@ -13,7 +12,7 @@ export function useAnalyzer() {
     const [status, setStatus] = useState<AnalyzerStatus>("idle");
     const [error, setError] = useState<string | null>(null);
     const [tallyLabels, setTallyLabels] = useState<string[]>([]);
-    const [rawAnalysis, setRawAnalysis] = useState<MotelySeedAnalysis | null>(null);
+    const [rawAnalysis, setRawAnalysis] = useState<MotelyJamlyzerSeedResult | null>(null);
 
     const analyze = useCallback((seed: string, jaml: string) => {
         setScore(null);

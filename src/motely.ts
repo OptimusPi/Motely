@@ -1,7 +1,7 @@
 "use client";
 
 export { default as bootsharp } from "motely-wasm";
-export { Program as Motely } from "motely-wasm/motely/wasm";
+export * as Motely from "motely-wasm";
 
 export {
   decodeMotelyItem,
