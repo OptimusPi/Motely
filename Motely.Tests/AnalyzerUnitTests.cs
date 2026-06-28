@@ -182,7 +182,7 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
     // (chunk, calls, ms, rolls/ms). Expect a U/quadratic shape: tiny chunks pay per-call boot AND
     // offset-replay (composite resume is O(offset)), big chunks amortize the boot. Bumping TOTAL to
     // a million is only cheap if you scroll events-only (those resume O(1) via the state bag).
-    [Fact]
+    [Fact(Skip = "Performance benchmark: too slow for the normal test run (composite resume is O(total^2))")]
     public void Benchmark_ScrollPagination_ChunkSizeSweep()
     {
         const int total = 1000; // bounded: composite offset-replay is cumulatively O(total^2)
