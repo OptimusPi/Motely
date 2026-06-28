@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { MotelyJamlyzerResult, MotelySeedAnalysis } from "motely-wasm/motely/analysis";
-import { ensureMotelyReady } from "../lib/motely/runtime.js";
+import type { MotelyJamlyzerSeedResult } from "motely-wasm";
+import { ensureMotelyReady, parseJaml, tallyLabelsFor, analyzeSeeds } from "../lib/motely/runtime.js";
 
 export type AnalyzerStatus = "idle" | "running" | "done" | "error";
 
@@ -13,7 +12,9 @@ export function useAnalyzer() {
     const [status, setStatus] = useState<AnalyzerStatus>("idle");
     const [error, setError] = useState<string | null>(null);
     const [tallyLabels, setTallyLabels] = useState<string[]>([]);
-    const [rawAnalysis, setRawAnalysis] = useState<MotelySeedAnalysis | null>(null);
+    // motely-wasm@23's analyzer returns the seed result directly (was the nested
+    // `MotelySeedAnalysis` under `.analysis`).
+    const [rawAnalysis, setRawAnalysis] = useState<MotelyJamlyzerSeedResult | null>(null);
 
     const analyze = useCallback((seed: string, jaml: string) => {
         setScore(null);
@@ -25,21 +26,13 @@ export function useAnalyzer() {
         void (async () => {
             try {
                 await ensureMotelyReady();
-                let validation = "valid";
-                try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
-                if (validation !== "valid") {
-                    throw new Error(validation || "Invalid JAML.");
-                }
-                const analyzeConfig = Motely.parseJaml(jaml);
-                analyzeConfig.seeds = [seed];
-                const result: MotelyJamlyzerResult = Motely.jamlyzer(analyzeConfig);
-                if (result.error) {
-                    throw new Error(result.error);
-                }
-                if (result.tallyLabels) setTallyLabels(result.tallyLabels);
-                const seedResult = result.seeds[0];
-                if (seedResult?.analysis) {
-                    setRawAnalysis(seedResult.analysis);
+                const config = parseJaml(jaml);
+                config.seeds = [seed];
+                setTallyLabels(tallyLabelsFor(config));
+                const rows = analyzeSeeds(config);
+                const seedResult = rows[0];
+                if (seedResult) {
+                    setRawAnalysis(seedResult);
                     setScore(seedResult.score);
                 }
                 setStatus("done");

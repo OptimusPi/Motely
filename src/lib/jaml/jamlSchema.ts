@@ -1,4 +1,4 @@
-import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+import { MotelyDeck, MotelyStake } from "motely-wasm";
 import {
   MotelyItemEdition,
   MotelyItemSeal,

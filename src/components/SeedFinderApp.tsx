@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
+import { MotelyDeck, MotelyStake } from "motely-wasm";
 import { JimboApp, JimboAppScroll } from "../ui/jimboApp.js";
 import { JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";

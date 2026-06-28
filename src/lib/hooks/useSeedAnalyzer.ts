@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Program as MotelyNamespace } from "motely-wasm/motely/wasm";
-import type { MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
+import type { MotelyJamlyzerSeedResult } from "motely-wasm";
+import { ensureMotelyReady, parseJaml, analyzeSeeds } from "../motely/runtime.js";
 
-type MotelyApi = typeof MotelyNamespace;
-
-export function useSeedAnalyzer(motely: MotelyApi | null, seed: string | null, jaml?: string) {
+// motely-wasm@23 removed the `Program` namespace, so this no longer takes an
+// engine handle — it boots lazily via ensureMotelyReady() and uses the shared
+// analyzer adapter directly.
+export function useSeedAnalyzer(seed: string | null, jaml?: string) {
     const [data, setData] = useState<MotelyJamlyzerSeedResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!seed || seed === "LOCKED" || !motely) {
+        if (!seed || seed === "LOCKED") {
             // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing async-derived data when inputs invalidate
             setData(null);
             return;
@@ -24,22 +25,15 @@ export function useSeedAnalyzer(motely: MotelyApi | null, seed: string | null, j
             setLoading(true);
             setError(null);
             try {
-                const config = jaml ?? `version: 1\nconfig:\n  deck: Erratic\n  stake: White\n`;
-                let validation = "valid";
-                try { motely.parseJaml(config); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML."; }
+                await ensureMotelyReady();
                 if (abortController.signal.aborted) return;
-                if (validation !== "valid") {
-                    throw new Error(validation || "Invalid JAML.");
-                }
 
-                const analyzeConfig = motely.parseJaml(config);
-                analyzeConfig.seeds = [seed];
-                const result = motely.jamlyzer(analyzeConfig);
+                const source = jaml ?? `version: 1\nconfig:\n  deck: Erratic\n  stake: White\n`;
+                const config = parseJaml(source);
+                config.seeds = [seed];
+                const rows = analyzeSeeds(config);
                 if (abortController.signal.aborted) return;
-                if (result.error) {
-                    throw new Error(result.error);
-                }
-                setData(result.seeds[0] ?? null);
+                setData(rows[0] ?? null);
             } catch (err) {
                 if (abortController.signal.aborted) return;
                 console.error("[useSeedAnalyzer] Analysis error:", err);
@@ -50,7 +44,7 @@ export function useSeedAnalyzer(motely: MotelyApi | null, seed: string | null, j
         })();
 
         return () => abortController.abort();
-    }, [motely, seed, jaml]);
+    }, [seed, jaml]);
 
     return { data, loading, error };
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
+import { useCallback, useRef, useState } from "react";
+import { MotelySearch } from "motely-wasm";
+import type { MotelyProgress, MotelyScoredSeedResult } from "motely-wasm";
+import { ensureMotelyReady, parseJaml, runSearch } from "../lib/motely/runtime.js";
 import { JimboPanel, JimboButton } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JimboStack, JimboRow } from "../ui/jimboLayout.js";
@@ -26,7 +27,7 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
   const [matched, setMatched] = useState<bigint>(0n);
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [searchRef, setSearchRef] = useState<IMotelySearch | null>(null);
+  const cancelledRef = useRef(false);
 
   const handleStart = useCallback(async () => {
     setError(null);
@@ -34,11 +35,15 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
     setSearched(0n);
     setMatched(0n);
     setStatus("running");
+    cancelledRef.current = false;
 
-    let validation = "valid";
-    try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
-    if (validation !== "valid") {
-      setError(validation);
+    await ensureMotelyReady();
+
+    let config;
+    try {
+      config = parseJaml(jaml);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Invalid JAML");
       setStatus("error");
       return;
     }
@@ -51,28 +56,27 @@ export function MotelyHello({ jaml = STARTER_JAML, searchCount = 5000 }: MotelyH
       setMatched(p.matchingSeeds);
     };
 
-    Motely.onScoredResult.subscribe(onScored);
-    Motely.onProgress.subscribe(onProg);
+    MotelySearch.onScoredResult.subscribe(onScored);
+    MotelySearch.onProgress.subscribe(onProg);
 
     try {
-      const search = Motely.runRandomSearch(Motely.parseJaml(jaml), searchCount);
-      search.start();
-      setSearchRef(search);
-      await search.waitForCompletionAsync(undefined);
-      setStatus(search.isCompleted ? "done" : "idle");
+      await runSearch(config, "random", { count: searchCount });
+      setStatus(cancelledRef.current ? "idle" : "done");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setStatus("error");
     } finally {
-      Motely.onScoredResult.unsubscribe(onScored);
-      Motely.onProgress.unsubscribe(onProg);
-      setSearchRef(null);
+      MotelySearch.onScoredResult.unsubscribe(onScored);
+      MotelySearch.onProgress.unsubscribe(onProg);
     }
   }, [jaml, searchCount]);
 
   const handleStop = useCallback(() => {
-    searchRef?.cancel();
-  }, [searchRef]);
+    // motely-wasm@23 has no engine-level cancel; mark cancelled so the run resolves
+    // to "idle". The in-flight random search finishes in the background.
+    cancelledRef.current = true;
+    setStatus("idle");
+  }, []);
 
   const statusTone =
     status === "running" ? "blue" : status === "done" ? "green" : status === "error" ? "red" : "dark";
