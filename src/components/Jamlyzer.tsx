@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { MotelyJamlyzerResult, MotelyJamlyzerSeedResult } from "motely-wasm/motely/analysis";
-import { MotelyBossBlind, MotelyVoucher, MotelyTag, MotelyBoosterPack } from "motely-wasm/motely/enums";
-import { ensureMotelyReady } from "../lib/motely/runtime.js";
+import type { MotelyJamlyzerSeedResult } from "motely-wasm";
+import { MotelyBossBlind, MotelyVoucher, MotelyTag, MotelyBoosterPack } from "motely-wasm";
+import { ensureMotelyReady, parseJaml, analyzeSeeds } from "../lib/motely/runtime.js";
 import { JimboInnerPanel, JimboPanel } from "../ui/panel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JamlSeedSpinner } from "./JamlSeedSpinner.js";
@@ -29,7 +28,7 @@ export interface JamlyzerProps {
 
 type JamlyzerLoadState =
   | { status: "loading" }
-  | { status: "ready"; result: MotelyJamlyzerResult; elapsedMs: number }
+  | { status: "ready"; result: { seeds: MotelyJamlyzerSeedResult[] }; elapsedMs: number }
   | { status: "error"; message: string };
 
 function seedMatches(row: MotelyJamlyzerSeedResult): boolean {
@@ -106,19 +105,12 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
         if (!trimmed) {
           throw new Error("Write a JAML filter first.");
         }
-        let validation = "valid";
-        try { Motely.parseJaml(trimmed); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
-        if (validation !== "valid") {
-          throw new Error(String(validation ?? "Invalid JAML"));
-        }
+        const config = parseJaml(trimmed);
         const t0 = performance.now();
-        const result = Motely.jamlyzer(Motely.parseJaml(trimmed));
+        const seeds = analyzeSeeds(config);
         const elapsedMs = performance.now() - t0;
         if (cancelled) return;
-        if (result.error) {
-          throw new Error(result.error);
-        }
-        setLoad({ status: "ready", result, elapsedMs });
+        setLoad({ status: "ready", result: { seeds }, elapsedMs });
       } catch (error) {
         if (cancelled) return;
         setLoad({
@@ -173,15 +165,11 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
     );
   }
 
-  const { elapsedMs, result } = load;
+  const { elapsedMs } = load;
   const matchCount = rows.filter(seedMatches).length;
   const isMatch = current ? seedMatches(current) : false;
-  const tallyLine =
-    result.tallyLabels && result.tallyLabels.length > 0 && current
-      ? result.tallyLabels.map((label, i) => `${label}: ${current.tallies[i] ?? 0}`).join(" · ")
-      : null;
 
-  const hasAnalysis = !!current?.analysis;
+  const hasAnalysis = !!current?.antes;
 
   return (
     <div className={rootClass} style={style}>
@@ -215,15 +203,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
             </JimboText>
           </JimboPanel>
 
-          {tallyLine ? (
-            <JimboInnerPanel className="j-jamlyzer__tallies">
-              <JimboText size="xs" tone="white" className="j-text-center">
-                {tallyLine}
-              </JimboText>
-            </JimboInnerPanel>
-          ) : null}
-
-          {hasAnalysis && current.analysis?.antes && (
+          {hasAnalysis && current.antes && (
             <JimboInnerPanel className="j-jamlyzer__details">
               <JimboSpinner
                 value={`Ante ${selectedAnte}`}
@@ -234,7 +214,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
               />
 
               {(() => {
-                const anteData = current.analysis?.antes.find(a => a.ante === selectedAnte);
+                const anteData = current.antes.find(a => a.ante === selectedAnte);
                 if (!anteData) {
                   return (
                     <JimboText size="xs" tone="grey" className="j-text-center">
@@ -252,7 +232,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                       </JimboText>
                       <div className="j-row j-row--gap-md j-row--justify-center j-row--align-center">
                         <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className={`j-jamlyzer__card-wrap ${anteData.bossMatched ? "j-jamlyzer__card-wrap--matched" : ""}`}>
+                          <div className="j-jamlyzer__card-wrap">
                             <JamlBoss bossName={getBossDisplayName(anteData.boss)} scale={0.5} />
                           </div>
                           <JimboText size="micro" tone="white" className="j-text-center">
@@ -260,7 +240,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                           </JimboText>
                         </div>
                         <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className={`j-jamlyzer__card-wrap ${anteData.voucherMatched ? "j-jamlyzer__card-wrap--matched" : ""}`}>
+                          <div className="j-jamlyzer__card-wrap">
                             <JamlVoucher voucherName={getVoucherDisplayName(anteData.voucher)} scale={0.5} />
                           </div>
                           <JimboText size="micro" tone="white" className="j-text-center">
@@ -277,7 +257,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                       </JimboText>
                       <div className="j-row j-row--gap-md j-row--justify-center j-row--align-center">
                         <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className={`j-jamlyzer__card-wrap ${anteData.smallBlindTagMatched ? "j-jamlyzer__card-wrap--matched" : ""}`}>
+                          <div className="j-jamlyzer__card-wrap">
                             <JamlTag tagName={getTagDisplayName(anteData.smallBlindTag)} scale={0.5} />
                           </div>
                           <JimboText size="micro" tone="white" className="j-text-center">
@@ -285,7 +265,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                           </JimboText>
                         </div>
                         <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className={`j-jamlyzer__card-wrap ${anteData.bigBlindTagMatched ? "j-jamlyzer__card-wrap--matched" : ""}`}>
+                          <div className="j-jamlyzer__card-wrap">
                             <JamlTag tagName={getTagDisplayName(anteData.bigBlindTag)} scale={0.5} />
                           </div>
                           <JimboText size="micro" tone="white" className="j-text-center">
@@ -300,15 +280,14 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                       <JimboText size="xs" tone="gold" className="j-text-center">
                         Shop Queue
                       </JimboText>
-                      {anteData.shopQueue && anteData.shopQueue.length > 0 ? (
+                      {anteData.shopItems && anteData.shopItems.length > 0 ? (
                         <div className="j-jamlyzer__cards-grid">
-                          {anteData.shopQueue.map((item, idx) => {
-                            const resolved = getResolvedItem(item.item.value, 0.45);
-                            const isMatched = item.matched;
+                          {anteData.shopItems.map((item, idx) => {
+                            const resolved = getResolvedItem(item.value, 0.45);
                             return (
                               <div
                                 key={idx}
-                                className={`j-jamlyzer__card-wrap ${isMatched ? "j-jamlyzer__card-wrap--matched" : ""}`}
+                                className="j-jamlyzer__card-wrap"
                               >
                                 {resolved.kind === "voucher" && (
                                   <JamlVoucher voucherName={resolved.voucherName} scale={0.45} />
@@ -342,16 +321,15 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
                           {anteData.packs.map((pack, packIdx) => (
                             <div key={packIdx} className="j-stack j-stack--gap-xs">
                               <JimboText size="xs" tone="white" className="j-text-center">
-                                {getBoosterPackDisplayName(pack.type)}
+                                {getBoosterPackDisplayName(pack.pack)}
                               </JimboText>
                               <div className="j-jamlyzer__cards-grid">
                                 {pack.items.map((item, itemIdx) => {
-                                  const resolved = getResolvedItem(item.item.value, 0.45);
-                                  const isMatched = item.matched;
+                                  const resolved = getResolvedItem(item.value, 0.45);
                                   return (
                                     <div
                                       key={itemIdx}
-                                      className={`j-jamlyzer__card-wrap ${isMatched ? "j-jamlyzer__card-wrap--matched" : ""}`}
+                                      className="j-jamlyzer__card-wrap"
                                     >
                                       {resolved.kind === "voucher" && (
                                         <JamlVoucher voucherName={resolved.voucherName} scale={0.45} />

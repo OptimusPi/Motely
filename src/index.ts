@@ -110,7 +110,7 @@ export {
     JamlAestheticSelector,
     type JamlAestheticSelectorProps,
 } from "./components/JamlAestheticSelector.js";
-export { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
+export { JamlAesthetic } from "motely-wasm";
 export {
     JamlSeedInput,
     type JamlSeedInputProps,

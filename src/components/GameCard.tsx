@@ -168,7 +168,7 @@ function resolvePackedAnalyzerItem(item: AnalyzerShopItem, scale: number): Analy
     // of truth for the bit layout. The previous version hand-rolled nibble
     // constants (catNibble === 5 /* Joker */ etc.) that did NOT match the real
     // Motely enum, so categories decoded as bogus 1..5 values. decodeMotelyItem
-    // reads MOTELY_ITEM_FORMATS_BY_VALUE + Motely.decode*, so the category,
+    // reads MOTELY_ITEM_FORMATS_BY_VALUE + the local packed-int decoder, so the category,
     // edition, seal, enhancement, rank, suit, and stickers are all correct.
     const decoded = decodeMotelyItem(item.value);
     if (!decoded) return null;

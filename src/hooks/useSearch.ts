@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
-import { ensureMotelyReady, setJimmolateProbe, clearJimmolateProbe } from "../lib/motely/runtime.js";
+import { MotelySearch } from "motely-wasm";
+import type { MotelyProgress, MotelyScoredSeedResult } from "motely-wasm";
+import {
+    ensureMotelyReady,
+    parseJaml,
+    runSearch,
+    setJimmolateProbe,
+    clearJimmolateProbe,
+    enableJimmolate,
+    type EngineSearchMode,
+} from "../lib/motely/runtime.js";
 
 export interface SearchResult {
     seed: string;
@@ -35,31 +42,16 @@ const INITIAL_STATE: UseSearchState = {
     tallyLabels: [],
 };
 
-
-// Jimmolate is enabled by the caller (setJimmolateProbe + Motely.enableJimmolate),
-// so this just selects the search mode against the parsed config.
-function configure(jaml: string, mode: SearchMode, opts: { aesthetic?: number; seeds?: string[]; count?: number }): IMotelySearch {
-    const config = Motely.parseJaml(jaml);
-    if (mode === "seedlist" && opts.seeds && opts.seeds.length > 0) {
-        config.seeds = opts.seeds;
-        return Motely.runSeedListSearch(config);
-    }
-    if (mode === "random" && typeof opts.count === "number" && opts.count > 0) {
-        return Motely.runRandomSearch(config, opts.count);
-    }
-    return Motely.runAestheticSearch(config, (opts.aesthetic ?? 0) as JamlAesthetic);
-}
-
 export function useSearch() {
     const [state, setState] = useState<UseSearchState>(INITIAL_STATE);
-    const searchRef = useRef<IMotelySearch | null>(null);
     const cleanupRef = useRef<(() => void) | null>(null);
+    // motely-wasm@23 has no engine-level cancel; this flag just decides whether the
+    // terminal status reads "cancelled" once the in-flight Promise settles.
+    const cancelledRef = useRef(false);
 
     const teardown = useCallback(() => {
         cleanupRef.current?.();
         cleanupRef.current = null;
-        searchRef.current?.cancel();
-        searchRef.current = null;
     }, []);
 
     useEffect(() => () => teardown(), [teardown]);
@@ -69,28 +61,25 @@ export function useSearch() {
             try {
                 await ensureMotelyReady();
 
-                let validation = "valid";
-                try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
-                if (validation !== "valid") {
-                    setState((s) => ({ ...s, status: "error", error: validation }));
+                let config;
+                try {
+                    config = parseJaml(jaml);
+                } catch (e) {
+                    setState((s) => ({ ...s, status: "error", error: e instanceof Error ? e.message : "Invalid JAML" }));
                     return;
                 }
 
                 teardown();
-
+                cancelledRef.current = false;
                 setState({ ...INITIAL_STATE, status: "running" });
 
                 const onResult = (result: MotelyScoredSeedResult) => {
                     setState((s) => ({
                         ...s,
-                        results: [...s.results, {
-                            seed: result.seed,
-                            score: result.score,
-                            tallyColumns: Array.from(result.tallies),
-                        }].slice(0, 1000),
+                        results: [...s.results, { seed: result.seed, score: result.score }].slice(0, 1000),
                     }));
                 };
-                Motely.onScoredResult.subscribe(onResult);
+                MotelySearch.onScoredResult.subscribe(onResult);
 
                 const onProgress = (progress: MotelyProgress) => {
                     const elapsedSec = Number(progress.elapsedMilliseconds) / 1000;
@@ -102,35 +91,36 @@ export function useSearch() {
                         seedsPerSecond: sps,
                     }));
                 };
-                Motely.onProgress.subscribe(onProgress);
+                MotelySearch.onProgress.subscribe(onProgress);
 
                 cleanupRef.current = () => {
-                    Motely.onScoredResult.unsubscribe(onResult);
-                    Motely.onProgress.unsubscribe(onProgress);
+                    MotelySearch.onScoredResult.unsubscribe(onResult);
+                    MotelySearch.onProgress.unsubscribe(onProgress);
                 };
 
                 if (opts.predicate) {
                     const pred = opts.predicate;
                     setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
-                    Motely.enableJimmolate();
+                    enableJimmolate();
                 }
-                const search = configure(jaml, mode, opts).start();
-                searchRef.current = search;
 
                 try {
-                    await search.waitForCompletionAsync();
+                    await runSearch(config, mode as EngineSearchMode, {
+                        seeds: opts.seeds,
+                        count: opts.count,
+                        aesthetic: opts.aesthetic,
+                    });
                     setState((s) => ({
                         ...s,
-                        status: search.isCompleted ? "completed" : "cancelled",
-                        totalSearched: search.totalSeedsSearched,
-                        matchingSeeds: search.matchingSeeds,
+                        status: cancelledRef.current ? "cancelled" : "completed",
                         seedsPerSecond: 0,
                     }));
                 } finally {
-                    if (opts.predicate) clearJimmolateProbe();
-                    cleanupRef.current?.();
-                    cleanupRef.current = null;
-                    searchRef.current = null;
+                    if (opts.predicate) {
+                        clearJimmolateProbe();
+                        enableJimmolate(false);
+                    }
+                    teardown();
                 }
             } catch (error) {
                 clearJimmolateProbe();
@@ -161,9 +151,12 @@ export function useSearch() {
     );
 
     const cancel = useCallback(() => {
-        searchRef.current?.cancel();
+        // No engine-level cancel in motely-wasm@23: stop ingesting results and mark
+        // the UI cancelled. The in-flight search finishes in the background.
+        cancelledRef.current = true;
+        teardown();
         setState((s) => ({ ...s, status: "cancelled", seedsPerSecond: 0 }));
-    }, []);
+    }, [teardown]);
 
     const reset = useCallback(() => {
         teardown();

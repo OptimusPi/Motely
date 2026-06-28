@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
-import { ensureMotelyReady } from "../lib/motely/runtime.js";
+import type { JamlAesthetic } from "motely-wasm";
+import { ensureMotelyReady, parseJaml } from "../lib/motely/runtime.js";
 import type {
     PoolInboundMessage,
     PoolOutboundMessage,
@@ -299,7 +298,7 @@ export function useSearchPool(options: UseSearchPoolOptions = {}) {
             try {
                 await ensureMotelyReady();
                 let validation = "valid";
-                try { Motely.parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
+                try { parseJaml(jaml); } catch (e) { validation = e instanceof Error ? e.message : "Invalid JAML"; }
                 if (validation !== "valid") {
                     setState((s) => ({ ...s, status: "error", error: validation }));
                     return;

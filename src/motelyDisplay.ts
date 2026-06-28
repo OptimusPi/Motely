@@ -1,10 +1,17 @@
-import { Program as Motely } from "motely-wasm/motely/wasm";
+import { MotelyBossBlind, MotelyVoucher, MotelyTag, MotelyBoosterPack } from "motely-wasm";
 import { MOTELY_ITEM_FORMATS_BY_VALUE } from "./decode/motelyItemFormats.js";
 
 type RuntimeEnum = Record<string, string | number>;
-type MotelyRuntimeEnums = typeof Motely & Record<string, RuntimeEnum>;
 
-const MotelyEnums = Motely as MotelyRuntimeEnums;
+// motely-wasm@23 exposes the enums as top-level runtime objects (numeric → name
+// reverse maps) instead of `Program.MotelyBossBlind` etc. Bundle them so the
+// runtimeEnumKey lookups below stay unchanged.
+const MotelyEnums = {
+  MotelyBossBlind,
+  MotelyVoucher,
+  MotelyTag,
+  MotelyBoosterPack,
+} as unknown as Record<string, RuntimeEnum>;
 
 function runtimeEnumKey(
   enumObject: Record<string, unknown>,

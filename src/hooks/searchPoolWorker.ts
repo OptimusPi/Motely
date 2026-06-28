@@ -5,11 +5,16 @@
 // hook is responsible for partitioning the input space and assigning each worker
 // a disjoint slice via the fields on PoolStartMessage. This worker just runs
 // what it is told.
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { MotelyDeck, MotelyStake } from "motely-wasm/motely/enums";
-import type { JamlAesthetic, JamlConfig } from "motely-wasm/motely/filters/jaml";
-import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
+import { MotelySearch } from "motely-wasm";
+import type { MotelyProgress, MotelyScoredSeedResult, MotelyDeck, MotelyStake, JamlConfig } from "motely-wasm";
+import {
+    ensureMotelyReady,
+    parseJaml,
+    runSearch,
+    setJimmolateProbe,
+    enableJimmolate,
+    type EngineSearchMode,
+} from "../lib/motely/runtime.js";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 
@@ -93,9 +98,11 @@ export type PoolOutboundMessage =
     | PoolCancelledMessage
     | PoolErrorMessage;
 
-let currentSearch: IMotelySearch | null = null;
 let unsubscribers: Array<() => void> = [];
 let workerIndex = 0;
+// motely-wasm@23 searches don't return totals; capture them from the last
+// MotelyProgress broadcast before the search Promise resolves.
+let lastProgress: MotelyProgress | null = null;
 
 function detachListeners(): void {
     for (const off of unsubscribers) off();
@@ -104,6 +111,7 @@ function detachListeners(): void {
 
 function attachListeners(): void {
     detachListeners();
+    lastProgress = null;
 
     const onResult = (result: MotelyScoredSeedResult) => {
         self.postMessage({
@@ -111,13 +119,14 @@ function attachListeners(): void {
             workerIndex,
             seed: result.seed,
             score: result.score,
-            tallyColumns: Array.from(result.tallies),
+            tallyColumns: [],
         } satisfies PoolResultMessage);
     };
-    Motely.onScoredResult.subscribe(onResult);
-    unsubscribers.push(() => Motely.onScoredResult.unsubscribe(onResult));
+    MotelySearch.onScoredResult.subscribe(onResult);
+    unsubscribers.push(() => MotelySearch.onScoredResult.unsubscribe(onResult));
 
     const onProgress = (progress: MotelyProgress) => {
+        lastProgress = progress;
         self.postMessage({
             type: "progress",
             workerIndex,
@@ -127,8 +136,8 @@ function attachListeners(): void {
             seedsPerMs: progress.seedsPerMillisecond,
         } satisfies PoolProgressMessage);
     };
-    Motely.onProgress.subscribe(onProgress);
-    unsubscribers.push(() => Motely.onProgress.unsubscribe(onProgress));
+    MotelySearch.onProgress.subscribe(onProgress);
+    unsubscribers.push(() => MotelySearch.onProgress.unsubscribe(onProgress));
 
     const onSeedMatch = (seed: string) => {
         self.postMessage({
@@ -137,8 +146,8 @@ function attachListeners(): void {
             seed,
         } satisfies PoolMatchMessage);
     };
-    Motely.onSeedMatch.subscribe(onSeedMatch);
-    unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
+    MotelySearch.onSeedMatch.subscribe(onSeedMatch);
+    unsubscribers.push(() => MotelySearch.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
 // deck/stake are config fields now; the worker is single-threaded, so the old
@@ -153,36 +162,24 @@ function applyCommonOverrides(config: JamlConfig, message: PoolStartMessage): Ja
     return config;
 }
 
-function configureSettings(message: PoolStartMessage): IMotelySearch {
-    const config = applyCommonOverrides(Motely.parseJaml(message.jaml), message);
-
-    switch (message.mode) {
-        case "aesthetic":
-            return Motely.runAestheticSearch(config, (message.aesthetic ?? 0) as JamlAesthetic);
-        case "seedlist": {
-            config.seeds = message.seeds ?? [];
-            return Motely.runSeedListSearch(config);
-        }
-        case "random": {
-            const count = typeof message.count === "number" && message.count > 0 ? message.count : 0;
-            return Motely.runRandomSearch(config, count);
-        }
-        case "sequential": {
-            const start = typeof message.startBatchIndex === "string" ? BigInt(message.startBatchIndex) : undefined;
-            const end = typeof message.endBatchIndex === "string" ? BigInt(message.endBatchIndex) : undefined;
-            const batchChars = typeof message.batchCharacterCount === "number" ? message.batchCharacterCount : undefined;
-            return Motely.runSequentialSearch(config, start, end, batchChars);
-        }
-        default:
-            return Motely.runAestheticSearch(config, 0 as JamlAesthetic);
-    }
+function startSearchFor(message: PoolStartMessage): Promise<void> {
+    const config = applyCommonOverrides(parseJaml(message.jaml), message);
+    return runSearch(config, message.mode as EngineSearchMode, {
+        seeds: message.seeds,
+        count: message.count,
+        aesthetic: message.aesthetic,
+        startBatchIndex: typeof message.startBatchIndex === "string" ? BigInt(message.startBatchIndex) : undefined,
+        endBatchIndex: typeof message.endBatchIndex === "string" ? BigInt(message.endBatchIndex) : undefined,
+        batchCharacterCount: typeof message.batchCharacterCount === "number" ? message.batchCharacterCount : undefined,
+    });
 }
 
 self.onmessage = async (event: MessageEvent) => {
     const data = event.data as PoolInboundMessage;
 
     if (data.type === "stop") {
-        currentSearch?.cancel();
+        // No engine-level cancel in motely-wasm@23: the owning hook terminates this
+        // worker to truly stop. Detach + ack so the pool can settle.
         detachListeners();
         self.postMessage({ type: "cancelled", workerIndex } satisfies PoolCancelledMessage);
         return;
@@ -199,7 +196,7 @@ self.onmessage = async (event: MessageEvent) => {
             try {
                 const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
                 setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
-                Motely.enableJimmolate();
+                enableJimmolate();
             } catch (err) {
                 console.error("Failed to compile worker Jimmolate predicate:", err);
             }
@@ -207,27 +204,20 @@ self.onmessage = async (event: MessageEvent) => {
 
         attachListeners();
 
-        currentSearch?.cancel();
-        const search = configureSettings(data);
-        search.start();
-        currentSearch = search;
-
         try {
-            await search.waitForCompletionAsync();
+            await startSearchFor(data);
             self.postMessage({
                 type: "complete",
                 workerIndex,
-                status: search.isCompleted ? "Completed" : "Cancelled",
-                total: Number(search.totalSeedsSearched),
-                matched: Number(search.matchingSeeds),
+                status: "Completed",
+                total: lastProgress ? Number(lastProgress.seedsSearched) : 0,
+                matched: lastProgress ? Number(lastProgress.matchingSeeds) : 0,
             } satisfies PoolCompleteMessage);
         } finally {
             detachListeners();
-            currentSearch = null;
         }
     } catch (error) {
         detachListeners();
-        currentSearch = null;
         self.postMessage({
             type: "error",
             workerIndex,

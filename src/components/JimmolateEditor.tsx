@@ -19,7 +19,7 @@ import { JimboText } from "../ui/jimboText.js";
 
 /**
  * A Jimmolate predicate: per-seed JavaScript that runs INSIDE the Motely search
- * loop (bound to `Motely.jimmolateProbe` pre-boot — see lib/motely/runtime.ts),
+ * loop (bound to `Jimmolate.findSeed` pre-boot — see lib/motely/runtime.ts),
  * layered on top of the JAML must/should/mustNot clauses. Return `true` to keep
  * a seed, `false` to reject it.
  */

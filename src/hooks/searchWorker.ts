@@ -4,10 +4,16 @@
 // so no SharedArrayBuffer / COOP+COEP headers are required to deploy this.
 // If a future change reintroduces SAB, switch the deployment to the Cloudflare
 // permanent named tunnel so COOP/COEP can be enforced at the edge.
-import { Program as Motely } from "motely-wasm/motely/wasm";
-import type { IMotelySearch, MotelyProgress, MotelyScoredSeedResult } from "motely-wasm/motely";
-import type { JamlAesthetic } from "motely-wasm/motely/filters/jaml";
-import { ensureMotelyReady, setJimmolateProbe } from "../lib/motely/runtime.js";
+import { MotelySearch } from "motely-wasm";
+import type { MotelyProgress, MotelyScoredSeedResult, JamlAesthetic } from "motely-wasm";
+import {
+    ensureMotelyReady,
+    parseJaml,
+    runSearch,
+    setJimmolateProbe,
+    enableJimmolate,
+    type EngineSearchMode,
+} from "../lib/motely/runtime.js";
 
 const self = globalThis as typeof globalThis & DedicatedWorkerGlobalScope;
 
@@ -21,8 +27,10 @@ type StartMessage = {
     predicateStr?: string;
 };
 
-let currentSearch: IMotelySearch | null = null;
 let unsubscribers: Array<() => void> = [];
+// motely-wasm@23 searches don't return totals; the final figures come from the
+// last MotelyProgress broadcast before the search Promise resolves.
+let lastProgress: MotelyProgress | null = null;
 
 function detachListeners(): void {
     for (const off of unsubscribers) off();
@@ -31,19 +39,21 @@ function detachListeners(): void {
 
 function attachListeners(): void {
     detachListeners();
+    lastProgress = null;
 
     const onResult = (result: MotelyScoredSeedResult) => {
         self.postMessage({
             type: "result",
             seed: result.seed,
             score: result.score,
-            tallyColumns: Array.from(result.tallies),
+            tallyColumns: [],
         });
     };
-    Motely.onScoredResult.subscribe(onResult);
-    unsubscribers.push(() => Motely.onScoredResult.unsubscribe(onResult));
+    MotelySearch.onScoredResult.subscribe(onResult);
+    unsubscribers.push(() => MotelySearch.onScoredResult.unsubscribe(onResult));
 
     const onProgress = (progress: MotelyProgress) => {
+        lastProgress = progress;
         self.postMessage({
             type: "progress",
             searched: Number(progress.seedsSearched),
@@ -52,36 +62,31 @@ function attachListeners(): void {
             seedsPerMs: progress.seedsPerMillisecond,
         });
     };
-    Motely.onProgress.subscribe(onProgress);
-    unsubscribers.push(() => Motely.onProgress.unsubscribe(onProgress));
+    MotelySearch.onProgress.subscribe(onProgress);
+    unsubscribers.push(() => MotelySearch.onProgress.unsubscribe(onProgress));
 
     const onSeedMatch = (seed: string) => {
         self.postMessage({ type: "match", seed });
     };
-    Motely.onSeedMatch.subscribe(onSeedMatch);
-    unsubscribers.push(() => Motely.onSeedMatch.unsubscribe(onSeedMatch));
+    MotelySearch.onSeedMatch.subscribe(onSeedMatch);
+    unsubscribers.push(() => MotelySearch.onSeedMatch.unsubscribe(onSeedMatch));
 }
 
-function configureSettings(message: StartMessage): IMotelySearch {
-    const config = Motely.parseJaml(message.jaml);
-    if (message.mode === "aesthetic") {
-        return Motely.runAestheticSearch(config, (message.aesthetic ?? 0) as JamlAesthetic);
-    }
-    if (message.mode === "seedlist" && message.seeds && message.seeds.length > 0) {
-        config.seeds = message.seeds;
-        return Motely.runSeedListSearch(config);
-    }
-    if (message.mode === "random" && typeof message.count === "number" && message.count > 0) {
-        return Motely.runRandomSearch(config, message.count);
-    }
-    return Motely.runAestheticSearch(config, 0 as JamlAesthetic);
+function startSearchFor(message: StartMessage): Promise<void> {
+    const config = parseJaml(message.jaml);
+    return runSearch(config, message.mode as EngineSearchMode, {
+        seeds: message.seeds,
+        count: message.count,
+        aesthetic: message.aesthetic,
+    });
 }
 
 self.onmessage = async (event: MessageEvent) => {
     const data = event.data as StartMessage | { type: "stop" };
 
     if (data.type === "stop") {
-        currentSearch?.cancel();
+        // No engine-level cancel in motely-wasm@23: the owning hook terminates this
+        // worker to truly stop the search. Detach + ack so the UI can settle.
         detachListeners();
         self.postMessage({ type: "cancelled" });
         return;
@@ -96,7 +101,7 @@ self.onmessage = async (event: MessageEvent) => {
             try {
                 const pred = new Function("seed", "deck", "stake", `return (${data.predicateStr})(seed, deck, stake);`) as (seed: string, deck: number, stake: number) => boolean;
                 setJimmolateProbe((seed, deck, stake) => pred(seed, deck, stake));
-                Motely.enableJimmolate();
+                enableJimmolate();
             } catch (err) {
                 console.error("Failed to compile worker Jimmolate predicate:", err);
             }
@@ -104,26 +109,19 @@ self.onmessage = async (event: MessageEvent) => {
 
         attachListeners();
 
-        currentSearch?.cancel();
-        const search = configureSettings(data);
-        search.start();
-        currentSearch = search;
-
         try {
-            await search.waitForCompletionAsync();
+            await startSearchFor(data);
             self.postMessage({
                 type: "complete",
-                status: search.isCompleted ? "Completed" : "Cancelled",
-                total: Number(search.totalSeedsSearched),
-                matched: Number(search.matchingSeeds),
+                status: "Completed",
+                total: lastProgress ? Number(lastProgress.seedsSearched) : 0,
+                matched: lastProgress ? Number(lastProgress.matchingSeeds) : 0,
             });
         } finally {
             detachListeners();
-            currentSearch = null;
         }
     } catch (error) {
         detachListeners();
-        currentSearch = null;
         self.postMessage({
             type: "error",
             message: error instanceof Error ? error.message : String(error),
