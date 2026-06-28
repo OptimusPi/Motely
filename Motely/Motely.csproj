@@ -15,6 +15,7 @@
   <!-- Packages (versions from Directory.Packages.props) -->
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="SharpYaml" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <!-- Native AOT / WASM: source-generated YAML accessors (replaces reflection in DeserializerBuilder) -->

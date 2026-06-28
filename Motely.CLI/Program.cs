@@ -7,7 +7,6 @@ using Motely.CLI;
 using Motely.Data;
 using Motely.Filters;
 using Motely.Filters.Native;
-using YamlDotNet.RepresentationModel;
 
 partial class Program
 {
@@ -760,18 +759,6 @@ partial class Program
         var updated = string.Join(normalizedNewline, lines);
         if (originalHasTrailingNewline || lines.Count > 0)
             updated += normalizedNewline;
-
-        try
-        {
-            var yaml = new YamlStream();
-            using var reader = new StringReader(updated);
-            yaml.Load(reader);
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
 
         if (!JamlConfigLoader.TryLoad(updated, out _, out var loadError))
         {

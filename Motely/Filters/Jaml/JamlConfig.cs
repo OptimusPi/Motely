@@ -131,6 +131,7 @@ public sealed class SpectralCardSourceConfig
     public int[] BoosterPacks { get; set; } = [];
     public int[] SixthSense { get; set; } = [];
     public int[] Seance { get; set; } = [];
+    public bool RequireMegaPack { get; set; }
 
     /// <summary>
     /// When true, booster Spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).

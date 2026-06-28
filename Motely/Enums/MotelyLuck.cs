@@ -20,6 +20,8 @@ public enum MotelyLuck
     /// <summary>2 Oops — quadruple odds.</summary>
     X4 = 4,
 
+    X5 = 5,
+
     /// <summary>3 Oops — octuple odds.</summary>
     X8 = 8,
 

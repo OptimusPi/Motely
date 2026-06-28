@@ -512,11 +512,15 @@ public static class JamlScoring
                     if (packType == MotelyBoosterPackType.Spectral)
                     {
                         hadNaturalSpectralPack = true;
+                        var packSize = pack.GetPackSize();
                         var contents = ctx.GetNextSpectralPackContents(
                             ref spectralStream,
-                            pack.GetPackSize()
+                            packSize
                         );
-                        if (!ArrayContains(sources.BoosterPacks, packIndex))
+                        if (
+                            !ArrayContains(sources.BoosterPacks, packIndex)
+                            || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                        )
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchSpectral(contents[i], clause);
@@ -525,11 +529,15 @@ public static class JamlScoring
 
                     if (etherealWant && !hadNaturalSpectralPack && weightedShopDrawNumber == 2)
                     {
+                        var packSize = pack.GetPackSize();
                         var contents = ctx.GetNextSpectralPackContents(
                             ref spectralStream,
-                            pack.GetPackSize()
+                            packSize
                         );
-                        if (!ArrayContains(sources.BoosterPacks, packIndex))
+                        if (
+                            !ArrayContains(sources.BoosterPacks, packIndex)
+                            || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                        )
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchSpectral(contents[i], clause);
@@ -632,8 +640,12 @@ public static class JamlScoring
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
                     continue;
-                var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
-                if (!ArrayContains(sources.BoosterPacks, packIndex))
+                var packSize = pack.GetPackSize();
+                var contents = ctx.GetNextArcanaPackContents(ref tarotStream, packSize);
+                if (
+                    !ArrayContains(sources.BoosterPacks, packIndex)
+                    || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                )
                     continue;
                 for (int i = 0; i < contents.Length; i++)
                     count += MatchSpectral(contents[i], clause);
@@ -668,11 +680,15 @@ public static class JamlScoring
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 if (pack.GetPackType() != MotelyBoosterPackType.Celestial)
                     continue;
+                var packSize = pack.GetPackSize();
                 var contents = ctx.GetNextCelestialPackContents(
                     ref planetStream,
-                    pack.GetPackSize()
+                    packSize
                 );
-                if (!ArrayContains(sources.BoosterPacks, packIndex))
+                if (
+                    !ArrayContains(sources.BoosterPacks, packIndex)
+                    || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                )
                     continue;
                 for (int i = 0; i < contents.Length; i++)
                     count += MatchSpectral(contents[i], clause);

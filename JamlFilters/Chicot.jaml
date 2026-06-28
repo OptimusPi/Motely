@@ -2,8 +2,8 @@ name: Chicory hunt
 deck: Red
 stake: White
 must:
-  - legendaryJoker: Chicory
+  - legendaryJoker: Chicot
 should:
-  - legendaryJoker: Chicory
+  - legendaryJoker: Chicot
     antes: [1, 2]
     score: 100

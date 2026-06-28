@@ -27,12 +27,11 @@ The solution is `Motely.slnx`. Projects:
 - `Motely/` — the core engine (vectorized SIMD seed search).
 - `Motely.CLI/` — command-line head.
 - `Motely.TUI/` — terminal UI head.
-- `Motely.Wasm/` — WebAssembly head (Bootsharp interop).
-- `Motely.DataLake/` — data/results tooling.
+- `Motely.Data/` — data/results tooling.
 - `Motely.Tests/` — the test project.
 
-Other top-level items: `JamlFilters/` (pre-made `.jaml` filter configs),
-`jaml-lang/` (the JAML language), and `Seeds/`.
+Other top-level items: `JamlFilters/` (pre-made `.jaml` filter configs) and
+`Seeds/`.
 
 ## JAML
 
@@ -41,32 +40,15 @@ language: its own vocabulary, grammar, and validator. It has two surface syntaxe
 — YAML and JSON — that both parse to the same `JamlConfig`. YAML is just the most
 comfortable way to write JAML down; it is not what JAML *is*.
 
-See `JamlFilters/` for ready-made filters to copy and adapt, and `jaml-lang/` for
-the language service.
+See `JamlFilters/` for ready-made filters to copy and adapt.
 
-### Language tooling (LSP, grammar, editor support)
+### Language validation
 
-JAML has real tooling, all generated from the engine — one source of truth, no
-drift:
-
-- **`jaml-lang/`** — the TypeScript language service: diagnostics (unknown keys,
-  invalid enum *values* like a bad rank or seal, bad deck/stake), context-aware
-  completion, and hover. Its vocab tables (`src/generated.ts`) are generated from
-  `Motely/Filters/Jaml/JamlVocab.cs`.
-- **`jaml-lsp/`** — the LSP server (stdio) and VS Code extension, with a TextMate
-  grammar generated alongside the vocab.
-
-Both the vocab and the grammar are emitted by **`Motely.Schema`** from `JamlVocab`
-and the engine's enums — the C# engine is the only source of truth:
-
-```powershell
-dotnet run --project Motely.Schema          # regenerate vocab + grammar from the engine
-cd jaml-lang; npm install; npm test         # build + test the language service
-```
-
-A typo'd joker name, an unknown clause key, or a bad rank squiggles in your editor
-with the same judgement the engine itself would pass — because the tables came
-from the engine.
+JAML is validated by the Motely engine when filters are loaded and when search
+plans are built. A typo'd joker name, an unknown clause key, or a bad rank should
+fail loudly instead of being silently softened into a different filter. The C#
+engine/domain model is the source of truth for clause meaning, source paths, and
+PRNG behavior.
 
 ## Finding a Balatro Seed
 
@@ -80,6 +62,7 @@ The filter lives in `JamlFilters/yourfilter.jaml`. Run from the repo root so
 
 ## Working with agents
 
-`CLAUDE.md` covers how AI agents should work in this repo (consent, running
-policy, the Bootsharp docs). This README is the human-facing source of truth for
-what Motely is and how to build it.
+`AGENTS.md` is the authoritative instruction file for AI agents working in this
+repo. `CLAUDE.md` intentionally contains only `@AGENTS.md` so Claude loads the
+same instructions. This README is the human-facing source of truth for what
+Motely is and how to build it.
