@@ -143,7 +143,7 @@
     "clsx": "^2.1.1",
     "jaml-lang": "^0.1.2",
     "js-yaml": "^4.3.0",
-    "lucide-react": "^1.21.0",
+    "lucide-react": "^1.22.0",
     "tailwind-merge": "^2.6.1",
     "zustand": "^5.0.14"
   }
