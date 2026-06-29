@@ -14,6 +14,11 @@ public sealed class JimmolateFilterTests
 
     private static (long Matching, List<string> Matched) RunWithJimmolate(
         MotelyIndividualSeedSearcher predicate
+    ) => RunWithJimmolate(Seeds, predicate);
+
+    private static (long Matching, List<string> Matched) RunWithJimmolate(
+        string[] seeds,
+        MotelyIndividualSeedSearcher predicate
     )
     {
         var matched = new List<string>();
@@ -22,7 +27,7 @@ public sealed class JimmolateFilterTests
             )
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
-            .WithListSearch(Seeds, Seeds.Length)
+            .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithJimmolate(predicate)
@@ -64,6 +69,29 @@ public sealed class JimmolateFilterTests
 
         Assert.Equal(1L, matching);
         Assert.Equal(target, Assert.Single(matched));
+    }
+
+    // The real Immolate model: a finder that actually FINDS a seed by its derivation. ALEEB is
+    // hidden in a list of decoys; the finder identifies it by its VERIFIED ante-1 fingerprint —
+    // Magic Trick voucher AND The Window boss (see seeds/ALEEB.verified.txt). Two independent
+    // derived facts, read live off the context, so no decoy passes by coincidence. It finds ALEEB.
+    [Fact]
+    public void Jimmolate_FindsAleebAmongDecoys_ByVerifiedAnteOneFingerprint()
+    {
+        string[] seeds = ["PIROCKS", "ALEEB", "LOVEYAHB"];
+
+        var (matching, matched) = RunWithJimmolate(seeds, (ref MotelySingleSearchContext ctx) =>
+        {
+            if (ctx.GetAnteFirstVoucher(1) != MotelyVoucher.MagicTrick)
+                return false;
+
+            var bossStream = ctx.CreateBossStream();
+            var runState = new MotelyRunState();
+            return ctx.GetBossForAnte(ref bossStream, 1, ref runState) == MotelyBossBlind.TheWindow;
+        });
+
+        Assert.Equal("ALEEB", Assert.Single(matched)); // pulled the needle out of the decoys
+        Assert.Equal(1L, matching);
     }
 
     // The OG Immolate mental model: the predicate gets a live, drivable per-seed context,

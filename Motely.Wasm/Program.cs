@@ -27,29 +27,38 @@ public static class BootsharpRenamers
             : @default;
     }
 
-    // Hide the C# bootstrap and any ref-struct (Span/ref struct never marshals) from the JS surface.
+    // Hide the C# bootstrap and any unmarshallable type from the JS surface:
+    //  - ref structs (Span etc.) never marshal
+    //  - byref `Type&` (from `ref`/`out` params like `ref MotelySingleBossStream`) emits an invalid
+    //    JS node name (`export const Foo& = …`), so it must be erased too — exposing the context
+    //    instance made Bootsharp walk these for the first time.
     [RenameNode]
     public static string? RenameNode(Type type, string @default) =>
         type == typeof(Boot) ? null
         : type.IsByRefLike ? null
+        : type.IsByRef ? null
         : @default;
 
-    // Jimmolate's seed finder hands JS a MotelySingleSearchContext. Most of its surface is SIMD /
-    // ref-struct streams that can't marshal — erase those members so Bootsharp never emits invalid
-    // `Type&` syntax for them. The seed finder only ever needs ctx.GetSeed().
-    [RenameMember]
-    public static string? RenameMember(MemberInfo info, string @default) =>
-        info is MethodInfo m
-        && m.DeclaringType == typeof(MotelySingleSearchContext)
-        && (m.GetParameters().Any(p => Unmarshallable(p.ParameterType)) || Unmarshallable(m.ReturnType))
-            ? null
-            : @default;
+}
 
-    private static bool Unmarshallable(Type t) =>
-        t.IsByRef
-        || t.IsByRefLike
-        || (t.Name.StartsWith("MotelySingle", StringComparison.Ordinal)
-            && (t.Name.EndsWith("Stream", StringComparison.Ordinal) || t.Name == "MotelySingleItemSet"));
+[SpecializeImport(typeof(MotelySingleSearchContext))]
+public abstract class MotelySingleSearchContextImport(int id) : SpecializedImport(id)
+{
+    public abstract MotelyDeck Deck { get; }
+    public abstract MotelyStake Stake { get; }
+    public abstract string GetSeed();
+    // First voucher of an ante — int in, enum out, marshals clean. Lets a JS predicate
+    // DERIVE a fact about the seed (e.g. ante-1 voucher) instead of just reading its name.
+    public abstract MotelyVoucher GetAnteFirstVoucher(int ante);
+}
+
+[SpecializeExport(typeof(MotelySingleSearchContext))]
+public sealed class MotelySingleSearchContextExport(MotelySingleSearchContext ctx) : SpecializedExport(ctx)
+{
+    public MotelyDeck Deck => ctx.Deck;
+    public MotelyStake Stake => ctx.Stake;
+    public string GetSeed() => ctx.GetSeed();
+    public MotelyVoucher GetAnteFirstVoucher(int ante) => ctx.GetAnteFirstVoucher(ante);
 }
 
 // C# entry point — bootstrap only, hidden from JS by RenameNode above.
@@ -88,6 +97,16 @@ public static class MotelyJaml
     public static string? Validate(string jaml) =>
         JamlConfigLoader.TryLoad(jaml, out _, out var error) ? null : (error ?? "Invalid JAML.");
 
+    [Export]
+    public static string? ValidateLine(string line) =>
+        JummyLine.TryToClause(line, out _, out var error) ? null : error;
+
+    [Export]
+    public static string? CanonicalizeLine(string line) =>
+        JummyLine.TryToClause(line, out var clause, out var error)
+            ? JummyLine.FromClause(clause!)
+            : throw new InvalidOperationException(error ?? "Invalid JUMMY line.");
+
     /// <summary>Plan a search (keyword candidate counts etc.) for the given JamlConfig.</summary>
     [Export]
     public static JamlSearchPlan CreatePlan(JamlConfig jaml) =>
@@ -98,19 +117,7 @@ public static class MotelyJaml
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
 }
 
-// ── JUMMY ────────────────────────────────────────────────────────────────────
-public static class MotelyJummy
-{
-    [Export]
-    public static string? Validate(string line) =>
-        JummyLine.TryToClause(line, out _, out var error) ? null : error;
 
-    [Export]
-    public static string? Canonicalize(string line) =>
-        JummyLine.TryToClause(line, out var clause, out var error)
-            ? JummyLine.FromClause(clause!)
-            : throw new InvalidOperationException(error ?? "Invalid JUMMY line.");
-}
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 public static class MotelyUtilities
@@ -220,13 +227,10 @@ public static class MotelySearch
         if (OnScoredResult is not null)
             settings = settings.WithScoredResultCallback(t => OnScoredResult.Invoke(t));
 
-        // Jimmolate: opt-in JS-authored seed finder, slotted as a link in the engine's filter chain.
-        if (Jimmolate.Enabled)
+        if (Jimmolate.FindSeed is { } findSeed)
         {
-            MotelyDeck deck = jaml.Deck;
-            MotelyStake stake = jaml.Stake;
             settings = settings.WithJimmolate(
-                (ref MotelySingleSearchContext ctx) => Jimmolate.FindSeed(ctx.GetSeed(), deck, stake));
+                (ref MotelySingleSearchContext ctx) => findSeed(ctx));
         }
 
         using var search = mode(settings).CreateSearch();
@@ -235,15 +239,12 @@ public static class MotelySearch
 }
 
 // ── Jimmolate ────────────────────────────────────────────────────────────────
-// A seed finder you write in JS and drop into the engine's filter chain — the imperative
-// "is this the seed?" mental model the old-head seed gods know from Immolate. Bind FindSeed
-// BEFORE boot() (Bootsharp snapshots [Import] bindings at boot; assigning after is a no-op),
-// then flip Enabled to make it gate seeds during a search.
+// Immolate model: one predicate = one kernel. Bound (Import) BEFORE boot(), compiled
+// into the engine run — not a mutable post-boot slot. JS assigns
+//   Jimmolate.findSeed = (ctx) => bool;
+// BEFORE bootsharp.boot(). The predicate runs native in-engine on the live ctx.
 public static partial class Jimmolate
 {
     [Import]
-    public static partial bool FindSeed(string seed, MotelyDeck deck, MotelyStake stake);
-
-    [Export]
-    public static bool Enabled { get; set; }
+    public static partial Func<MotelySingleSearchContext, bool>? FindSeed { get; set; }
 }

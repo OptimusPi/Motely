@@ -1,88 +1,46 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { harness } from "./harness.mjs";
-import { jaml } from "./fixtures.mjs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const { MotelyJaml, MotelySearch, MotelyJamlyzer, MotelyVoucher, MotelyDeck, MotelyStake, Jimmolate } =
-    harness;
+// JS mirror of find-claude22.cs. Jimmolate is one-kernel-per-boot: the predicate is an [Import],
+// so it must be BOUND BEFORE boot(). This suite boots its OWN runtime with the finder already in
+// place — it can't reuse the shared harness.mjs (which boots at import, before any finder is set).
+//
+// The find is real: CLAUDE22 is pulled out of decoys by DERIVING its ante-1 voucher (Paint Brush,
+// Erratic/White), not by reading its name. ctx.getAnteFirstVoucher(1) runs native, in-engine.
 
-const parse = (text) => MotelyJaml.fromYaml(text);
+const testsDir = dirname(fileURLToPath(import.meta.url));
+const entry = process.env.MOTELY_WASM_ENTRY
+    ? resolve(process.env.MOTELY_WASM_ENTRY)
+    : resolve(testsDir, "..", "dist", "index.mjs");
 
-// Two seeds, both surviving the JAML phase — jimmolate is the only gate that can drop them.
-// JamlSearchBuilder requires at least one clause, so we add a non-blocking `should` that only
-// scores seeds without rejecting any (mirrors the PassthroughFilterDesc + JimmolateFilter combo
-// in JimmolateFilterTests.cs, where the passthrough passes all seeds to the jimmolate hook).
-const twoSeeds =
-    "name: t\ndeck: Red\nstake: White\nseeds: [UNITTEST, ALEEBOOO]\n" +
-    "should:\n  - voucher: Overstock Plus\n    antes: [1]\n    score: 1\n";
+const mod = await import(pathToFileURL(entry).href);
+const bootsharp = mod.default;
+const { MotelyJaml, MotelySearch, Jimmolate, MotelyVoucher } = mod;
 
-async function found(yaml) {
-    const seeds = [];
-    const on = (r) => seeds.push(r.seed);
-    MotelySearch.onScoredResult.subscribe(on);
-    try { await MotelySearch.searchList(parse(yaml)); }
-    finally { MotelySearch.onScoredResult.unsubscribe(on); }
-    return seeds.sort();
-}
+const scored = [];
+MotelySearch.onScoredResult.subscribe((r) => scored.push(r.seed));
 
-function withFinder(fn) {
-    harness.setFinder(fn);
-    Jimmolate.enabled = true;
-    return () => { Jimmolate.enabled = false; harness.resetFinder(); };
-}
+// BIND BEFORE BOOT — the predicate derives the ante-1 voucher (the Immolate model).
+Jimmolate.findSeed = (ctx) => ctx.getAnteFirstVoucher(1) === MotelyVoucher.PaintBrush;
 
-describe("Jimmolate seed finder", () => {
-    it("accept-all: every seed passes through", async () => {
-        const teardown = withFinder(() => true);
-        try { assert.deepEqual(await found(twoSeeds), ["ALEEBOOO", "UNITTEST"]); }
-        finally { teardown(); }
-    });
+await bootsharp.boot();
+if (bootsharp.getStatus() !== bootsharp.BootStatus.Booted)
+    throw new Error("boot: expected BootStatus.Booted");
 
-    it("reject-all: no seeds pass through", async () => {
-        const teardown = withFinder(() => false);
-        try { assert.deepEqual(await found(twoSeeds), []); }
-        finally { teardown(); }
-    });
-
-    // Mirrors JimmolateFilterTests.Jimmolate_PredicateBoolDrivesFiltering_KeepsOnlyTargetSeed.
-    it("predicate bool drives filtering: keep only UNITTEST", async () => {
-        const teardown = withFinder((seed) => seed === "UNITTEST");
-        try { assert.deepEqual(await found(twoSeeds), ["UNITTEST"]); }
-        finally { teardown(); }
-    });
-
-    // JS side can't get a live search context (Bootsharp marshals deck+stake, not a C# ref struct),
-    // but it does receive the JAML's deck and stake — verify they're passed correctly.
-    it("finder receives the correct deck and stake from the JAML config", async () => {
-        const seen = [];
-        const teardown = withFinder((seed, deck, stake) => { seen.push({ seed, deck, stake }); return true; });
-        try {
-            await found(twoSeeds);
-            assert.equal(seen.length, 2, "finder called once per seed");
-            for (const { deck, stake } of seen) {
-                assert.equal(deck, MotelyDeck.Red, "deck matches JAML");
-                assert.equal(stake, MotelyStake.White, "stake matches JAML");
-            }
-        } finally { teardown(); }
-    });
-
-    // Finder must only be offered seeds that already survived the JAML must-clauses.
-    it("finder is offered only JAML-surviving seeds", async () => {
-        // Discover AAAAAAAA's ante-1 voucher via the analyzer, then build a must-filter
-        // that only AAAAAAAA satisfies — BBBBBBBB should never reach jimmolate.
-        const [a] = MotelyJamlyzer.analyzeSeeds(parse(
-            "name: t\ndeck: Red\nstake: White\nseeds: [AAAAAAAA]\n"
-        ));
-        const voucherName = MotelyVoucher[a.antes[0].voucher];
-        const filter =
-            `name: t\ndeck: Red\nstake: White\nseeds: [AAAAAAAA, BBBBBBBB]\nmust:\n` +
-            `  - voucher: ${voucherName}\n    antes: [1]\n`;
-
-        const offered = [];
-        const teardown = withFinder((seed) => { offered.push(seed); return true; });
-        try {
-            await found(filter);
-            assert.deepEqual(offered, ["AAAAAAAA"], "BBBBBBBB failed the JAML filter; jimmolate never sees it");
-        } finally { teardown(); }
+describe("Jimmolate — derives, finds CLAUDE22 by its ante-1 voucher", () => {
+    it("pulls CLAUDE22 out of decoys by Paint Brush, not by name", async () => {
+        scored.length = 0;
+        // Non-blocking `should` satisfies JamlSearchBuilder's "≥1 clause" rule and scores every
+        // surviving seed; jimmolate is the gate that actually drops the decoys.
+        const jaml = MotelyJaml.fromYaml(
+            "name: t\ndeck: Erratic\nstake: White\n" +
+            "seeds: [DECOY111, CLAUDE22, DECOY222]\n" +
+            "should:\n  - voucher: Overstock\n    antes: [1]\n    score: 1\n"
+        );
+        await MotelySearch.searchList(jaml);
+        assert.deepEqual(scored.sort(), ["CLAUDE22"],
+            "jimmolate keeps only the seed whose ante-1 voucher is Paint Brush");
     });
 });

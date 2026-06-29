@@ -1,0 +1,179 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Motely.Filters.Jaml;
+
+namespace Motely;
+
+// Seeds flow from a SOURCE (the search/provider) to a SINK. This is the bounded "best seeds"
+// sink: scored seeds are offered to it, it keeps only the top-N by score (push the new high
+// score on, evict the lowest off the bottom once the count exceeds the limit), and hands the
+// survivors back to be written to their final destination — a JAML `seeds:` block on disk.
+//
+// The default limit is 314 (pi x 100 — pifreak). The pure text rewrite + collector both live
+// here so the CLI (file IO) and Motely.Wasm (browser File System Access) share one tested core.
+public static class MotelyTopSeedSink
+{
+    /// <summary>Default number of best seeds kept when no explicit limit is given (pi x 100).</summary>
+    public const int DefaultLimit = 314;
+
+    /// <summary>
+    /// Bounded top-N-by-score collector. A min-heap keyed on (score, sequence): every offered seed
+    /// is enqueued, and once the count exceeds <paramref name="limit"/> the lowest-scoring entry is
+    /// dropped. Ties break by insertion order (earlier wins). Not thread-safe; one per search.
+    /// </summary>
+    public sealed class Collector(int limit)
+    {
+        private readonly PriorityQueue<SavedSeedEntry, (int Score, long Sequence)> _queue = new();
+        private long _sequence;
+
+        public void Consider(string seed, int score)
+        {
+            _queue.Enqueue(new(seed, score, _sequence), (score, _sequence));
+            _sequence++;
+
+            if (_queue.Count > limit)
+                _queue.Dequeue();
+        }
+
+        public IReadOnlyList<string> GetSeeds() =>
+            _queue
+                .UnorderedItems.Select(static item => item.Element)
+                .OrderByDescending(static item => item.Score)
+                .ThenBy(static item => item.Sequence)
+                .Select(static item => item.Seed)
+                .Distinct(StringComparer.Ordinal)
+                .Take(limit)
+                .ToArray();
+    }
+
+    private readonly record struct SavedSeedEntry(string Seed, int Score, long Sequence);
+
+    /// <summary>
+    /// Pure text transform: rewrite (or append, if absent) the top-level <c>seeds:</c> block of a
+    /// JAML document with the given seeds. No IO, no validation. The original newline style is
+    /// preserved. Seeds are normalized (<see cref="MotelyGlobals.NormalizeSeed"/>), de-duped, and
+    /// capped at <see cref="MotelyGlobals.SavedSeedLimit"/> as a hard safety bound.
+    /// </summary>
+    public static string RewriteSeedsBlock(string jamlText, IReadOnlyList<string> seeds)
+    {
+        string normalizedNewline = jamlText.Contains("\r\n", StringComparison.Ordinal)
+            ? "\r\n"
+            : "\n";
+        var normalizedSeeds = seeds
+            .Select(static seed => MotelyGlobals.NormalizeSeed(seed))
+            .Where(static seed => !string.IsNullOrWhiteSpace(seed))
+            .Distinct(StringComparer.Ordinal)
+            .Take(MotelyGlobals.SavedSeedLimit)
+            .ToArray();
+
+        var originalHasTrailingNewline = jamlText.EndsWith("\n", StringComparison.Ordinal);
+        var lines = jamlText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
+        var replacementLines = BuildSeedsBlockLines(normalizedSeeds);
+
+        int seedsStart = FindTopLevelSeedsLine(lines);
+        if (seedsStart >= 0)
+        {
+            int seedsEndExclusive = FindNextTopLevelKeyLine(lines, seedsStart + 1);
+            lines.RemoveRange(seedsStart, seedsEndExclusive - seedsStart);
+            lines.InsertRange(seedsStart, replacementLines);
+        }
+        else
+        {
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
+                lines.RemoveAt(lines.Count - 1);
+
+            if (lines.Count > 0)
+                lines.Add(string.Empty);
+
+            lines.AddRange(replacementLines);
+        }
+
+        var updated = string.Join(normalizedNewline, lines);
+        if (originalHasTrailingNewline || lines.Count > 0)
+            updated += normalizedNewline;
+
+        return updated;
+    }
+
+    /// <summary>
+    /// Rewrite the <c>seeds:</c> block then confirm the result still loads as valid JAML. Returns
+    /// false with <paramref name="error"/> set if the rewritten document does not parse — so a bad
+    /// write is caught before it ever touches disk.
+    /// </summary>
+    public static bool TryRewriteAndValidate(
+        string jamlText,
+        IReadOnlyList<string> seeds,
+        out string newText,
+        out string? error
+    )
+    {
+        newText = RewriteSeedsBlock(jamlText, seeds);
+        if (!JamlConfigLoader.TryLoad(newText, out _, out var loadError))
+        {
+            error = loadError ?? "Updated JAML did not validate.";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    private static List<string> BuildSeedsBlockLines(IReadOnlyList<string> seeds)
+    {
+        if (seeds.Count == 0)
+            return ["seeds: []"];
+
+        var lines = new List<string>(seeds.Count + 1) { "seeds:" };
+        lines.AddRange(seeds.Select(static seed => $"  - {seed}"));
+        return lines;
+    }
+
+    private static int FindTopLevelSeedsLine(IReadOnlyList<string> lines)
+    {
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (!TryGetTopLevelKey(lines[i], out var key))
+                continue;
+
+            if (string.Equals(key, "seeds", StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static int FindNextTopLevelKeyLine(IReadOnlyList<string> lines, int startIndex)
+    {
+        for (int i = startIndex; i < lines.Count; i++)
+        {
+            if (TryGetTopLevelKey(lines[i], out _))
+                return i;
+        }
+
+        return lines.Count;
+    }
+
+    private static bool TryGetTopLevelKey(string line, out string? key)
+    {
+        key = null;
+        if (string.IsNullOrWhiteSpace(line))
+            return false;
+        if (char.IsWhiteSpace(line[0]))
+            return false;
+
+        var trimmed = line.Trim();
+        if (
+            trimmed.StartsWith("#", StringComparison.Ordinal)
+            || trimmed.StartsWith("-", StringComparison.Ordinal)
+        )
+            return false;
+
+        int colonIndex = trimmed.IndexOf(':');
+        if (colonIndex <= 0)
+            return false;
+
+        key = trimmed[..colonIndex].Trim();
+        return key.Length > 0;
+    }
+}
