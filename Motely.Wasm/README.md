@@ -29,8 +29,6 @@ MotelySearch.onProgress.subscribe((p) => {
 MotelySearch.onSeedMatch.subscribe((seedOrRow) => console.log(seedOrRow));
 MotelySearch.onScoredResult.subscribe((result) => console.log(result.seed, result.score));
 
-Jimmolate.findSeed = (seed, deck, stake) => true;
-
 await bootsharp.boot();
 ```
 
@@ -96,25 +94,27 @@ await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
 
 ## Jimmolate
 
-Jimmolate is an optional JS-authored seed predicate in the engine filter chain. The browser-safe WASM surface receives `seed`, `deck`, and `stake`; live `MotelySingleSearchContext` ref-struct streams remain engine-side and are not marshalled to JavaScript.
+Jimmolate is an optional single-seed predicate compiled into the search — the OG Immolate `filter(inst) => keep?` model. Because the WASM runtime is single-threaded, the predicate is wired into the engine at boot, so it must be **bound before `boot()`**, not swapped at runtime.
 
 ```js
-Jimmolate.findSeed = (seed, deck, stake) => seed === "UNITTEST";
-Jimmolate.enabled = true;
-try {
-  await MotelySearch.searchList(jaml);
-} finally {
-  Jimmolate.enabled = false;
-}
+import bootsharp, { Jimmolate, MotelySearch } from "motely-wasm";
+
+// Bind BEFORE boot(). The predicate runs native, in-engine, on each surviving seed.
+Jimmolate.findSeed = (ctx) => ctx.getSeed() === "UNITTEST";
+
+await bootsharp.boot();
+await MotelySearch.searchList(jaml);
 ```
 
-## JUMMY
+> Today the predicate's `ctx` exposes `getSeed()`, `deck`, and `stake`. Voucher/boss/pack queries cross next; for those derivations now, use JAML `must`/`should` clauses.
 
-JUMMY is one human line per JAML criterion. The WASM wrapper delegates to the engine's `JummyLine` parser/formatter so packed item identity stays canonical.
+## JAML lines
+
+One-line JAML criteria use the engine's `JummyLine` parser/formatter so packed item identity stays canonical.
 
 ```js
-MotelyJummy.validate("Eternal Blueprint in antes 1 or 2"); // null
-MotelyJummy.canonicalize("Showman in antes 1, 2");        // "Showman in antes 1 or 2"
+MotelyJaml.validateLine("Eternal Blueprint in antes 1 or 2"); // null
+MotelyJaml.canonicalizeLine("Showman in antes 1, 2");        // "Showman in antes 1 or 2"
 ```
 
 ## Utilities
@@ -145,11 +145,9 @@ The release script at the repository root syncs `package.json` to `<MotelyVersio
 
 The package test suite mirrors the C# behavior tests that are meaningful through the public WASM surface:
 
-- boot/runtime and version export
 - JAML YAML/JSON parse and validation strictness
 - JAMLyzer ante structure, event windows, score-by-analysis, and stream-state resume
 - real list/random/sequential searches
-- Jimmolate accept/reject/predicate/deck-stake behavior
 - AND scoring, default source fallback, Hieroglyph pack-slot reachability, and luck-source regressions
 - JUMMY canonicalization
 - seed math and keyword utility parity

@@ -695,39 +695,13 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         _completionSource.TrySetResult(completed);
     }
 
+    // Native driver for provider mode: spin batches flat-out on this (p)thread, then flush.
+    // Mirror of MotelySearchPlan.ExecuteSequentialPlan. The browser drives the same per-batch
+    // primitive cooperatively via RunProviderBrowserPumpAsync instead of this tight loop.
     private void RunProviderPlan(MotelySearchPlan plan)
     {
-        while (Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested)
-        {
-            if (plan._providerExhausted)
-            {
-                break;
-            }
-
-            plan.SearchProviderBatch();
-            plan._localBatchesCompleted++;
-            if (plan._providerExhausted)
-            {
-                break;
-            }
-
-
-            // Report progress
-            PrintReport();
-        }
-
-        // Force flush any remaining seeds in filter batches
-        if (_additionalFilters.Length != 0 && plan._filterSeedBatches != null)
-        {
-            for (int i = 0; i < _additionalFilters.Length; i++)
-            {
-                var batch = &plan._filterSeedBatches[i];
-                if (batch->SeedCount != 0)
-                {
-                    plan.SearchFilterBatch(i, batch);
-                }
-            }
-        }
+        while (plan.TryExecuteProviderBatch()) { }
+        plan.FlushFilterBatches();
     }
 
     public Task RunSearchAsync(CancellationToken cancellationToken = default)
@@ -776,15 +750,14 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         {
             if (_isProviderMode)
             {
-                // Provider mode (single-seed datalake re-derivation) is a fast, bounded job.
-                // Run it inline on the one thread and signal completion ourselves — the native
-                // path leans on WorkerCoordinator's finally for that, which we never reach here.
-                RunProviderPlan(_plans[0]);
-                SignalSearchCompleted();
+                // Provider mode (datalake re-derivation): pump cooperatively too so a large
+                // re-derivation surfaces to the event loop between batches instead of freezing
+                // the one thread. Bootsharp marshals the Task to a JS Promise, same as below.
+                _ = RunProviderBrowserPumpAsync();
             }
             else
             {
-                // Batch search: pump cooperatively (await Task.Yield between batches) so the
+                // Batch search: pump cooperatively (await Task.Delay(1) between batches) so the
                 // single thread surfaces to the event loop and the UI repaints instead of
                 // freezing under the SIMD grind. Bootsharp marshals the Task to a JS Promise.
                 _ = RunSequentialBrowserPumpAsync();
@@ -1158,6 +1131,38 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             // Re-evaluate the per-thread auto-cutoff rate gate for the next batch.
             if (Search._autoScoreCutoff)
                 UpdateAutoCutoffGate();
+
+            // Report progress
+            Search.PrintReport();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Runs one provider batch. Returns false when the search is finished — disposed,
+        /// cancelled, or the provider is exhausted — at which point the caller flushes.
+        /// Mirror of <see cref="TryExecuteSequentialBatch"/> so the browser pump can drive
+        /// provider mode a single batch at a time and await between them for a repaint; the
+        /// native driver (<see cref="RunProviderPlan"/>) just calls it in a tight loop.
+        /// </summary>
+        internal bool TryExecuteProviderBatch()
+        {
+            if (Volatile.Read(ref Search._isDisposed) != 0)
+                return false;
+
+            if (Search._cancellationToken.IsCancellationRequested)
+                return false;
+
+            if (_providerExhausted)
+                return false;
+
+            SearchProviderBatch();
+            _localBatchesCompleted++;
+
+            // Provider drained on this batch: the work is done, but skip the report and tell
+            // the caller to stop and flush (matches the old inline loop's post-batch break).
+            if (_providerExhausted)
+                return false;
 
             // Report progress
             Search.PrintReport();

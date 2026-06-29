@@ -570,7 +570,7 @@ partial class Program
             using var resultSink = new CompositeMotelyResultSink(resultSinks);
             int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
             var saveSeedsCollector = saveSeedsOption.HasValue()
-                ? new TopSeedCollector(MotelyGlobals.SavedSeedLimit)
+                ? new MotelyTopSeedSink.Collector(MotelyGlobals.SavedSeedLimit)
                 : null;
             var saveSeedMatches = saveSeedsOption.HasValue()
                 ? new List<string>(MotelyGlobals.SavedSeedLimit)
@@ -678,41 +678,14 @@ partial class Program
 
     // ── Summary ──
 
-    private sealed class TopSeedCollector(int limit)
-    {
-        private readonly PriorityQueue<SavedSeedEntry, (int Score, long Sequence)> _queue = new();
-        private long _sequence;
-
-        public void Consider(string seed, int score)
-        {
-            _queue.Enqueue(new(seed, score, _sequence), (score, _sequence));
-            _sequence++;
-
-            if (_queue.Count > limit)
-                _queue.Dequeue();
-        }
-
-        public IReadOnlyList<string> GetSeeds() =>
-            _queue
-                .UnorderedItems.Select(static item => item.Element)
-                .OrderByDescending(static item => item.Score)
-                .ThenBy(static item => item.Sequence)
-                .Select(static item => item.Seed)
-                .Distinct(StringComparer.Ordinal)
-                .Take(limit)
-                .ToArray();
-    }
-
-    private readonly record struct SavedSeedEntry(string Seed, int Score, long Sequence);
-
+    // Top-N collection + the seeds: rewrite now live in Motely core (MotelyTopSeedSink), shared
+    // with Motely.Wasm. This wrapper just adds the file IO around the validated text transform.
     private static bool TryWriteSeedsToJamlFile(
         string jamlPath,
         IReadOnlyList<string> seeds,
         out string? error
     )
     {
-        error = null;
-
         string original;
         try
         {
@@ -724,47 +697,8 @@ partial class Program
             return false;
         }
 
-        string normalizedNewline = original.Contains("\r\n", StringComparison.Ordinal)
-            ? "\r\n"
-            : "\n";
-        var normalizedSeeds = seeds
-            .Select(static seed => MotelyGlobals.NormalizeSeed(seed))
-            .Where(static seed => !string.IsNullOrWhiteSpace(seed))
-            .Distinct(StringComparer.Ordinal)
-            .Take(MotelyGlobals.SavedSeedLimit)
-            .ToArray();
-
-        var originalHasTrailingNewline = original.EndsWith("\n", StringComparison.Ordinal);
-        var lines = original.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
-        var replacementLines = BuildSeedsBlockLines(normalizedSeeds);
-
-        int seedsStart = FindTopLevelSeedsLine(lines);
-        if (seedsStart >= 0)
-        {
-            int seedsEndExclusive = FindNextTopLevelKeyLine(lines, seedsStart + 1);
-            lines.RemoveRange(seedsStart, seedsEndExclusive - seedsStart);
-            lines.InsertRange(seedsStart, replacementLines);
-        }
-        else
-        {
-            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
-                lines.RemoveAt(lines.Count - 1);
-
-            if (lines.Count > 0)
-                lines.Add(string.Empty);
-
-            lines.AddRange(replacementLines);
-        }
-
-        var updated = string.Join(normalizedNewline, lines);
-        if (originalHasTrailingNewline || lines.Count > 0)
-            updated += normalizedNewline;
-
-        if (!JamlConfigLoader.TryLoad(updated, out _, out var loadError))
-        {
-            error = loadError ?? "Updated JAML did not validate.";
+        if (!MotelyTopSeedSink.TryRewriteAndValidate(original, seeds, out var updated, out error))
             return false;
-        }
 
         try
         {
@@ -776,64 +710,6 @@ partial class Program
             error = ex.Message;
             return false;
         }
-    }
-
-    private static List<string> BuildSeedsBlockLines(IReadOnlyList<string> seeds)
-    {
-        if (seeds.Count == 0)
-            return ["seeds: []"];
-
-        var lines = new List<string>(seeds.Count + 1) { "seeds:" };
-        lines.AddRange(seeds.Select(static seed => $"  - {seed}"));
-        return lines;
-    }
-
-    private static int FindTopLevelSeedsLine(IReadOnlyList<string> lines)
-    {
-        for (int i = 0; i < lines.Count; i++)
-        {
-            if (!TryGetTopLevelKey(lines[i], out var key))
-                continue;
-
-            if (string.Equals(key, "seeds", StringComparison.OrdinalIgnoreCase))
-                return i;
-        }
-
-        return -1;
-    }
-
-    private static int FindNextTopLevelKeyLine(IReadOnlyList<string> lines, int startIndex)
-    {
-        for (int i = startIndex; i < lines.Count; i++)
-        {
-            if (TryGetTopLevelKey(lines[i], out _))
-                return i;
-        }
-
-        return lines.Count;
-    }
-
-    private static bool TryGetTopLevelKey(string line, out string? key)
-    {
-        key = null;
-        if (string.IsNullOrWhiteSpace(line))
-            return false;
-        if (char.IsWhiteSpace(line[0]))
-            return false;
-
-        var trimmed = line.Trim();
-        if (
-            trimmed.StartsWith("#", StringComparison.Ordinal)
-            || trimmed.StartsWith("-", StringComparison.Ordinal)
-        )
-            return false;
-
-        int colonIndex = trimmed.IndexOf(':');
-        if (colonIndex <= 0)
-            return false;
-
-        key = trimmed[..colonIndex].Trim();
-        return key.Length > 0;
     }
 
     static void PrintSummary(IMotelySearch search, int batchCharCount, bool cancelled)

@@ -2,22 +2,22 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { harness } from "./harness.mjs";
 
-const { MotelyJummy, MotelyUtilities, JamlAesthetic } = harness;
+const { MotelyJaml, MotelyUtilities, JamlAesthetic } = harness;
 
-describe("MotelyJummy", () => {
+describe("MotelyJaml line helpers", () => {
     it("canonicalizes the pinned Eternal Blueprint line", () => {
-        assert.equal(MotelyJummy.validate("Eternal Blueprint in antes 1 or 2"), null);
+        assert.equal(MotelyJaml.validateLine("Eternal Blueprint in antes 1 or 2"), null);
         assert.equal(
-            MotelyJummy.canonicalize("Eternal Blueprint in antes 1 or 2"),
+            MotelyJaml.canonicalizeLine("Eternal Blueprint in antes 1 or 2"),
             "Eternal Blueprint in antes 1 or 2"
         );
     });
 
     it("canonicalizes ante tails and comma/or separators", () => {
-        assert.equal(MotelyJummy.canonicalize("Blueprint"), "Blueprint");
-        assert.equal(MotelyJummy.canonicalize("Blueprint in ante 1"), "Blueprint in ante 1");
-        assert.equal(MotelyJummy.canonicalize("Blueprint in antes 1 or 2"), "Blueprint in antes 1 or 2");
-        assert.equal(MotelyJummy.canonicalize("Showman in antes 1, 2"), "Showman in antes 1 or 2");
+        assert.equal(MotelyJaml.canonicalizeLine("Blueprint"), "Blueprint");
+        assert.equal(MotelyJaml.canonicalizeLine("Blueprint in ante 1"), "Blueprint in ante 1");
+        assert.equal(MotelyJaml.canonicalizeLine("Blueprint in antes 1 or 2"), "Blueprint in antes 1 or 2");
+        assert.equal(MotelyJaml.canonicalizeLine("Showman in antes 1, 2"), "Showman in antes 1 or 2");
     });
 
     it("round-trips modifiers, wildcard, and consumables", () => {
@@ -32,7 +32,7 @@ describe("MotelyJummy", () => {
             "Black Hole in antes 2 or 3",
             "Pluto in ante 1",
             "Planet X in antes 1 or 2 or 3",
-        ]) assert.equal(MotelyJummy.canonicalize(line), line);
+        ]) assert.equal(MotelyJaml.canonicalizeLine(line), line);
     });
 
     it("round-trips standard cards, starting draw, vouchers, tags, bosses, and events", () => {
@@ -50,14 +50,14 @@ describe("MotelyJummy", () => {
             "Business Payout rolls 0",
             "Bloodstone Trigger rolls 0",
             "Parking Payout rolls 0",
-        ]) assert.equal(MotelyJummy.canonicalize(line), line);
+        ]) assert.equal(MotelyJaml.canonicalizeLine(line), line);
     });
 
     it("rejects invalid lines loudly", () => {
-        const error = MotelyJummy.validate("Definitely Not A JUMMY Line");
+        const error = MotelyJaml.validateLine("Definitely Not A JUMMY Line");
         assert.equal(typeof error, "string");
         assert.ok(error.length > 0);
-        assert.throws(() => MotelyJummy.canonicalize("Definitely Not A JUMMY Line"));
+        assert.throws(() => MotelyJaml.canonicalizeLine("Definitely Not A JUMMY Line"));
     });
 });
 
