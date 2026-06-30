@@ -61,6 +61,7 @@ public sealed record MotelyJamlyzerPulls(
 /// <summary>
 /// Resumable state bag for every stream, in AND out. Returned on every result and accepted back as
 /// <c>resumeFrom</c> on the next <see cref="MotelyJamlyzer.Analyze(JamlConfig, MotelyJamlyzerStreamStates, int)"/>
+/// (or, per seed, <see cref="MotelyJamlyzer.Analyze(JamlConfig, IReadOnlyDictionary{string, MotelyJamlyzerStreamStates}, int)"/>)
 /// so the next window continues exactly where this one stopped — no duplicated, no skipped rolls.
 /// <para>
 /// Two stream classes, two exact resume mechanisms, one bag:
@@ -116,7 +117,7 @@ public static class MotelyJamlyzer
     public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(
         JamlConfig config,
         int eventRolls = 20
-    ) => AnalyzeCore(config, resumeFrom: null, eventRolls);
+    ) => AnalyzeCore(config, resumeStates: null, eventRolls);
 
     /// <summary>
     /// Analyze each seed, resuming every event stream from <paramref name="resumeFrom"/> — the state
@@ -129,19 +130,39 @@ public static class MotelyJamlyzer
     )
     {
         // The bag's 14 event-stream State doubles are positions in a *specific* seed's PRNG. Replaying
-        // them across a multi-seed config would inject seed[0]'s state into seed[1..], silently
-        // corrupting their event rolls. Resume is inherently a single-seed scroll.
+        // one bag across a multi-seed config would inject seed[0]'s state into seed[1..], silently
+        // corrupting their event rolls. A single bag is inherently a single-seed scroll — to scroll
+        // many seeds at once, hand each its own bag via the dictionary overload below.
         if (config.Seeds.Count > 1)
             throw new InvalidOperationException(
                 $"Resume (resumeFrom) is single-seed only; config has {config.Seeds.Count} seeds. "
-                    + "Scroll one seed at a time — the state bag is seed-specific."
+                    + "Scroll one seed at a time, or use the per-seed dictionary overload — the "
+                    + "state bag is seed-specific."
             );
-        return AnalyzeCore(config, resumeFrom, eventRolls);
+        return AnalyzeCore(
+            config,
+            new Dictionary<string, MotelyJamlyzerStreamStates> { [config.Seeds[0]] = resumeFrom },
+            eventRolls
+        );
     }
+
+    /// <summary>
+    /// Analyze each seed, resuming it from its own state bag in <paramref name="resumeFrom"/> (keyed
+    /// by seed). Each <see cref="MotelyJamlyzerSeedResult"/> already carries its <c>Seed</c> and
+    /// <c>StreamStates</c>, so the next page is just
+    /// <c>prev.ToDictionary(r => r.Seed, r => r.StreamStates)</c>. Seeds absent from the map start
+    /// fresh (offset 0), which is how a new seed joins a scroll already in progress. Duplicate seeds
+    /// in <paramref name="config"/> collapse to one bag under the shared key.
+    /// </summary>
+    public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(
+        JamlConfig config,
+        IReadOnlyDictionary<string, MotelyJamlyzerStreamStates> resumeFrom,
+        int eventRolls = 20
+    ) => AnalyzeCore(config, resumeFrom, eventRolls);
 
     private static IReadOnlyList<MotelyJamlyzerSeedResult> AnalyzeCore(
         JamlConfig config,
-        MotelyJamlyzerStreamStates? resumeFrom,
+        IReadOnlyDictionary<string, MotelyJamlyzerStreamStates>? resumeStates,
         int eventRolls
     )
     {
@@ -151,7 +172,10 @@ public static class MotelyJamlyzer
 
         foreach (var seed in config.Seeds)
         {
-            var filterDesc = new MotelyJamlyzerFilterDesc(antesToAnalyze, eventRolls, resumeFrom);
+            // Each seed resumes from its own bag; one absent from the map starts fresh (offset 0).
+            MotelyJamlyzerStreamStates? seedResume =
+                resumeStates is not null && resumeStates.TryGetValue(seed, out var s) ? s : null;
+            var filterDesc = new MotelyJamlyzerFilterDesc(antesToAnalyze, eventRolls, seedResume);
             var settings = new MotelySearchSettings<MotelyJamlyzerFilterDesc.JamlyzerFilter>(
                 filterDesc
             )

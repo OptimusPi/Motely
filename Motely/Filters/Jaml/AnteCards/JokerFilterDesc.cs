@@ -19,7 +19,10 @@ public sealed class JokerClause : IJamlClause, IAnteScopedClause
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
     public JokerSourceConfig? Sources { get; set; }
-    public LegendaryJokerSourceConfig LegendarySources { get; set; } = new();
+
+    /// <summary>Legendary-path sources for any Legendary names in this mixed clause. Null = apply
+    /// <see cref="LegendaryJokerFilterDesc.DefaultSources"/> (same convention as <see cref="Sources"/>).</summary>
+    public LegendaryJokerSourceConfig? LegendarySources { get; set; }
 }
 
 public struct JokerFilterDesc(JokerClause clause)
