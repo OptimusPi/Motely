@@ -58,6 +58,7 @@ desktop.ini
 
 # --- Motely runtime outputs ---
 /Seeds/
+.seeds/
 /analysis.json
 /JamlFilters/old
 nuget.config.local
