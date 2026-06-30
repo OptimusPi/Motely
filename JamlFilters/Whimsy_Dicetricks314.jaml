@@ -10,10 +10,13 @@ deck: Anaglyph
 stake: White
 
 must:
-  - legendaryJoker: Perkeo
-    antes: [1,2,3]
   - smallBlindTag: NegativeTag
     antes: [4]
+  - joker: OopsAll6s
+    antes: [4]
+    sources:
+      shopItems: [2, 3, 4, 5]
+    min: 3
 should:
 
 

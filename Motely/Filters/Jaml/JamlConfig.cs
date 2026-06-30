@@ -73,7 +73,8 @@ public sealed class JokerSourceConfig
 
 public sealed class LegendaryJokerSourceConfig
 {
-    public int[] ShopItems { get; set; } = [];
+    // No ShopItems: shops never offer legendary/Soul jokers, so a shop slot would silently match
+    // nothing. The loader rejects a `shopItems:` key on legendaryJoker sources outright.
 
     /// <summary>
     /// Legacy: pack offering slots where The Soul may count from either arcana or Spectral path.

@@ -243,6 +243,71 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Analyze_MultiSeedResume_EachSeedScrollsIndependently()
+    {
+        string[] seeds = ["UNITTEST", "ALEEB", "1234567"];
+
+        static JamlConfig Config(string[] seeds)
+        {
+            var c = JamlConfigLoader.FromYaml("seeds: []");
+            foreach (var s in seeds)
+                c.Seeds.Add(s);
+            return c;
+        }
+
+        // Each seed's uninterrupted 20-roll window, keyed by seed.
+        var full = MotelyJamlyzer.Analyze(Config(seeds), eventRolls: 20).ToDictionary(r => r.Seed);
+
+        // Page all three seeds together: 10 rolls, then resume each from ITS OWN bag for 10 more.
+        var page1 = MotelyJamlyzer.Analyze(Config(seeds), eventRolls: 10);
+        var resume = page1.ToDictionary(r => r.Seed, r => r.StreamStates);
+        var page2 = MotelyJamlyzer.Analyze(Config(seeds), resume, eventRolls: 10);
+
+        // The fix: each seed's stitched end-state must equal ITS OWN full-window end-state. If a bag
+        // leaked across seeds (the old multi-seed bug), seed[1..]'s end-state would not match here.
+        foreach (var p2 in page2)
+        {
+            var p1 = page1.Single(r => r.Seed == p2.Seed);
+            var f = full[p2.Seed];
+
+            Assert.Equal(f.StreamStates, p2.StreamStates);
+            Assert.Equal<IEnumerable<MotelyItemEdition>>(
+                f.Events.WheelOfFortune,
+                p1.Events.WheelOfFortune.Concat(p2.Events.WheelOfFortune)
+            );
+            Assert.Equal<IEnumerable<int>>(
+                f.Events.Misprint,
+                p1.Events.Misprint.Concat(p2.Events.Misprint)
+            );
+        }
+    }
+
+    [Fact]
+    public void Analyze_MultiSeedResume_SeedAbsentFromMapStartsFresh()
+    {
+        var config = JamlConfigLoader.FromYaml("seeds: []");
+        config.Seeds.Add("UNITTEST");
+        config.Seeds.Add("ALEEB");
+
+        // Map carries only UNITTEST's bag; ALEEB is absent → must start fresh at offset 0, not throw.
+        var seeded = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: 10)[0];
+        var fresh = MotelyJamlyzer.Analyze(SeedConfig("ALEEB"), eventRolls: 10)[0];
+
+        var resume = new Dictionary<string, MotelyJamlyzerStreamStates>
+        {
+            [seeded.Seed] = seeded.StreamStates,
+        };
+        var results = MotelyJamlyzer.Analyze(config, resume, eventRolls: 10);
+
+        var aleeb = results.Single(r => r.Seed == "ALEEB");
+        Assert.Equal(10, aleeb.StreamStates.RollOffset); // fresh window, not resumed
+        Assert.Equal(fresh.StreamStates, aleeb.StreamStates);
+
+        var unittest = results.Single(r => r.Seed == "UNITTEST");
+        Assert.Equal(20, unittest.StreamStates.RollOffset); // resumed: 10 + 10
+    }
+
+    [Fact]
     public void Analyze_GhostDeck_Runs()
     {
         var results = MotelyJamlyzer.Analyze(

@@ -1211,7 +1211,7 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        var sources = clause.Sources;
+        var sources = clause.Sources ?? LegendaryJokerFilterDesc.DefaultSources;
         int userMaxPack = sources.MaxReferencedBoosterSlot();
 
         foreach (int ante in clause.Antes)
@@ -1357,7 +1357,7 @@ public static class JamlScoring
                 Jokers = [],
                 IsWildcard = true,
                 Edition = clause.Edition,
-                Sources = clause.LegendarySources,
+                Sources = clause.LegendarySources ?? LegendaryJokerFilterDesc.DefaultSources,
                 Antes = clause.Antes,
                 Min = clause.Min,
                 Max = clause.Max,
@@ -1405,7 +1405,7 @@ public static class JamlScoring
                 Jokers = legendary,
                 IsWildcard = false,
                 Edition = clause.Edition,
-                Sources = clause.LegendarySources,
+                Sources = clause.LegendarySources ?? LegendaryJokerFilterDesc.DefaultSources,
                 Antes = clause.Antes,
                 Min = clause.Min,
                 Max = clause.Max,
