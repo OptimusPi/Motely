@@ -151,15 +151,22 @@ public static class MotelyUtilities
 // (Each result also carries a `score` when the JAML has should-clauses — score-by-JAMLyzer.)
 public static class MotelyJamlyzer
 {
+    /// <summary>
+    /// Each analyzed seed, streamed as it's produced — the JAMLyzer twin of MotelySearch.OnScoredResult.
+    /// Fires from the analyze path only (never the search loop), so a full analysis is built solely for
+    /// seeds you actually ask to analyze — not for the spam the top-N heap would evict.
+    /// </summary>
+    [Export] public static event Action<MotelyJamlyzerSeedResult>? OnJamlyzedResult;
+
     /// <summary>Analyze each seed with the default window (20 rolls) from each stream's natural start.</summary>
     [Export]
     public static MotelyJamlyzerSeedResult[] AnalyzeSeeds(JamlConfig jaml) =>
-        [.. JamlyzerEngine.Analyze(jaml)];
+        Emit(JamlyzerEngine.Analyze(jaml));
 
     /// <summary>Analyze each seed with an explicit roll window (the first page of a scroll).</summary>
     [Export]
     public static MotelyJamlyzerSeedResult[] AnalyzeSeedsPaged(JamlConfig jaml, int eventRolls) =>
-        [.. JamlyzerEngine.Analyze(jaml, eventRolls)];
+        Emit(JamlyzerEngine.Analyze(jaml, eventRolls));
 
     /// <summary>
     /// Resume each seed from the <c>streamStates</c> bag handed back by a previous page, continuing
@@ -168,7 +175,25 @@ public static class MotelyJamlyzer
     [Export]
     public static MotelyJamlyzerSeedResult[] ResumeSeeds(
         JamlConfig jaml, MotelyJamlyzerStreamStates resumeFrom, int eventRolls) =>
-        [.. JamlyzerEngine.Analyze(jaml, resumeFrom, eventRolls)];
+        Emit(JamlyzerEngine.Analyze(jaml, resumeFrom, eventRolls));
+
+    // Materialize the analysis, firing OnJamlyzedResult per seed as it lands, and still return the
+    // full array (back-compat with callers that take the return value). When nobody's subscribed,
+    // skip the per-item walk and just build the array.
+    private static MotelyJamlyzerSeedResult[] Emit(IEnumerable<MotelyJamlyzerSeedResult> results)
+    {
+        var handler = OnJamlyzedResult;
+        if (handler is null)
+            return [.. results];
+
+        var collected = new List<MotelyJamlyzerSeedResult>();
+        foreach (var result in results)
+        {
+            collected.Add(result);
+            handler.Invoke(result);
+        }
+        return [.. collected];
+    }
 }
 
 // ── Search ───────────────────────────────────────────────────────────────────
@@ -220,9 +245,18 @@ public static class MotelySearch
             .WithStake(jaml.Stake)
             .WithThreadCount(1); // WASM has no pthreads — one thread, runs on the caller.
 
+        // A scoring search (has must/should clauses) ships its per-seed output — the
+        // seed,score,tallies CSV string — out through the SAME seedMatchCallback the bare
+        // no-scoring path uses. When a rich consumer is listening (OnScoredResult), that CSV is
+        // redundant with the structured object and is the only source of the double-emit. So we
+        // withhold the CSV courier in exactly that case. Non-scoring searches keep bare OnSeedMatch
+        // regardless (the courier is the only way bare matches get out).
+        bool isScoringSearch = jaml.Must.Count + jaml.Should.Count > 0;
+        bool suppressRedundantCsv = isScoringSearch && OnScoredResult is not null;
+
         if (OnProgress is not null)
             settings = settings.WithProgressCallback(p => OnProgress.Invoke(p));
-        if (OnSeedMatch is not null)
+        if (OnSeedMatch is not null && !suppressRedundantCsv)
             settings = settings.WithSeedMatchCallback(s => OnSeedMatch.Invoke(s));
         if (OnScoredResult is not null)
             settings = settings.WithScoredResultCallback(t => OnScoredResult.Invoke(t));
@@ -247,4 +281,36 @@ public static partial class Jimmolate
 {
     [Import]
     public static partial Func<MotelySingleSearchContext, bool>? FindSeed { get; set; }
+}
+
+// ── Per-search Jimmolate (the C# shape) ──────────────────────────────────────
+// EXPERIMENT: prove the predicate can be passed AS AN ARGUMENT per search — matching
+// C#'s `search.WithJimmolate(pred)` — instead of the global pre-boot slot above.
+// A user interface crosses by instance binding (interop-instances): JS provides an
+// object implementing it; C# uses it as the real interface. (A delegate can't be
+// implemented by a JS object, so the predicate must be an interface, not a Func.)
+public interface IJimmolatePredicate
+{
+    bool FindSeed(MotelySingleSearchContext ctx);
+}
+
+public static class MotelySearchWith
+{
+    /// <summary>Search the JAML's seed list, gating on a predicate handed in per call.</summary>
+    [Export]
+    public static async Task SearchList(JamlConfig jaml, IJimmolatePredicate predicate)
+    {
+        if (jaml.Seeds.Count == 0)
+            throw new InvalidOperationException("JAML has no seeds to search.");
+
+        var settings = JamlSearchBuilder.CreateSettings(jaml)
+            .WithDeck(jaml.Deck)
+            .WithStake(jaml.Stake)
+            .WithThreadCount(1)
+            .WithListSearch(jaml.Seeds, jaml.Seeds.Count)
+            .WithJimmolate((ref MotelySingleSearchContext ctx) => predicate.FindSeed(ctx));
+
+        using var search = settings.CreateSearch();
+        await search.RunSearchAsync();
+    }
 }

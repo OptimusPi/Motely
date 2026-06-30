@@ -40,12 +40,16 @@ public sealed class MotelyDuckSeedProvider : IMotelySeedProvider, IDisposable
         {
             if (_exhausted)
                 return ReadOnlySpan<char>.Empty;
-            if (!_reader.Read())
+            while (_reader.Read())
             {
-                _exhausted = true;
-                return ReadOnlySpan<char>.Empty;
+                if (_reader.IsDBNull(0))
+                    continue;
+                var seed = _reader.GetString(0);
+                if (!string.IsNullOrEmpty(seed))
+                    return seed;
             }
-            return _reader.GetString(0).AsSpan();
+            _exhausted = true;
+            return ReadOnlySpan<char>.Empty;
         }
     }
 
