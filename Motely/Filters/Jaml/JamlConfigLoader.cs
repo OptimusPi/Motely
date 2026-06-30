@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Motely.Filters;
+using Motely.Filters.Jummy;
 using SharpYaml.Model;
 
 namespace Motely.Filters.Jaml;
@@ -175,8 +176,21 @@ public static class JamlConfigLoader
 
     private static IEnumerable<IJamlClause> ParseClauseList(NodeReader root, string key)
     {
-        foreach (var item in root.GetObjectList(key) ?? [])
-            yield return ParseClause(item);
+        foreach (var item in root.GetClauseList(key) ?? [])
+            yield return ParseClauseSource(item);
+    }
+
+    // A clause in a list is either a structured mapping (joker: …) or a single-line JAML clause
+    // ("Eternal Blueprint in antes 1 or 2"), turned into a real clause through the engine's own
+    // line converter off MotelyItem identity — no second grammar.
+    private static IJamlClause ParseClauseSource(ClauseSource source) =>
+        source.Line is { } line ? ParseLineClause(line) : ParseClause(source.Mapping!);
+
+    private static IJamlClause ParseLineClause(string line)
+    {
+        if (!JummyLine.TryToClause(line, out var clause, out var error))
+            throw new InvalidOperationException($"Invalid JAML line '{line}': {error}");
+        return clause!;
     }
 
     private static IJamlClause ParseClause(NodeReader node)
@@ -407,8 +421,8 @@ public static class JamlConfigLoader
         string? label
     )
     {
-        var readers = data.GetObjectList("clauses") ?? data.GetObjectList(discriminator) ?? [];
-        var children = readers.Select(ParseClause).ToArray();
+        var sources = data.GetClauseList("clauses") ?? data.GetClauseList(discriminator) ?? [];
+        var children = sources.Select(ParseClauseSource).ToArray();
         HoistAntes(children, antes);
         clause.Clauses = children;
         clause.Min = min;
@@ -865,6 +879,9 @@ public static class JamlConfigLoader
 
     private static string Slugify(string name) => Normalize(name);
 
+    // One entry in a clause list: a structured mapping, or a single-line JAML clause.
+    private readonly record struct ClauseSource(NodeReader? Mapping, string? Line);
+
     private interface IReader
     {
         IReadOnlyList<string> Keys { get; }
@@ -875,6 +892,7 @@ public static class JamlConfigLoader
         string[]? GetStringArray(string key);
         IReader? GetObject(string key);
         IReadOnlyList<NodeReader>? GetObjectList(string key);
+        IReadOnlyList<ClauseSource>? GetClauseList(string key);
     }
 
     private sealed class OverlayReader(IReader primary, IReader fallback) : IReader
@@ -887,6 +905,7 @@ public static class JamlConfigLoader
         public string[]? GetStringArray(string key) => primary.GetStringArray(key) ?? fallback.GetStringArray(key);
         public IReader? GetObject(string key) => primary.GetObject(key) ?? fallback.GetObject(key);
         public IReadOnlyList<NodeReader>? GetObjectList(string key) => primary.GetObjectList(key) ?? fallback.GetObjectList(key);
+        public IReadOnlyList<ClauseSource>? GetClauseList(string key) => primary.GetClauseList(key) ?? fallback.GetClauseList(key);
     }
 
     private sealed class NodeReader : IReader
@@ -940,6 +959,31 @@ public static class JamlConfigLoader
             if (value is YamlSequence sequence)
                 return sequence.OfType<YamlMapping>().Select(static item => new NodeReader(item)).ToArray();
             return null;
+        }
+
+        // A clause-list entry is either a mapping (structured clause) or a scalar (a single-line
+        // JAML clause). Anything else fails loudly — the loader never silently drops a list entry.
+        public IReadOnlyList<ClauseSource>? GetClauseList(string key)
+        {
+            if (!_items.TryGetValue(key, out var value) || value is not YamlSequence sequence)
+                return null;
+            var items = new List<ClauseSource>();
+            foreach (var element in sequence)
+            {
+                switch (element)
+                {
+                    case YamlMapping mapping:
+                        items.Add(new ClauseSource(new NodeReader(mapping), null));
+                        break;
+                    case YamlValue { Value: { } raw }:
+                        items.Add(new ClauseSource(null, raw.ToString()));
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Clause list '{key}' has an entry that is neither a clause mapping nor a JUMMY line.");
+                }
+            }
+            return items;
         }
 
         private static string? Scalar(YamlElement element) => element switch

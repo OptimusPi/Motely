@@ -66,6 +66,38 @@ public interface IMotelySeedScoreProvider
     );
 }
 
+// ── Seed analyze provider ─────────────────────────────────────────────────────
+// Twin of the score provider: runs per-seed AFTER the filter (and after scoring, on the
+// survivors), on the SAME MotelyVectorSearchContext — so a 1-thread search can produce the full
+// per-seed breakdown inline. Tap a found seed → its data already rode along, no second interop.
+public interface IMotelySeedAnalyzeDesc
+{
+    public IMotelySeedAnalyzeProvider CreateAnalyzeProvider(ref MotelyFilterCreationContext ctx);
+}
+
+public interface IMotelySeedAnalyzeDesc<TAnalyzeProvider> : IMotelySeedAnalyzeDesc
+    where TAnalyzeProvider : struct, IMotelySeedAnalyzeProvider
+{
+    public new TAnalyzeProvider CreateAnalyzeProvider(ref MotelyFilterCreationContext ctx);
+
+    IMotelySeedAnalyzeProvider IMotelySeedAnalyzeDesc.CreateAnalyzeProvider(
+        ref MotelyFilterCreationContext ctx
+    )
+    {
+        return CreateAnalyzeProvider(ref ctx);
+    }
+}
+
+public interface IMotelySeedAnalyzeProvider
+{
+    // Analyze the seeds in baseFilterMask, firing the provider's own per-seed callback. No return
+    // mask: analysis never gates the search — it observes the survivors and emits their breakdowns.
+    void Analyze(
+        ref MotelyVectorSearchContext searchContext,
+        VectorMask baseFilterMask
+    );
+}
+
 public interface IMotelySeedRouter
 {
     public void InjectSingleSeedContext(in MotelySingleSearchContext ctx);
@@ -105,6 +137,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithStartBatchIndex(long startBatchIndex);
     IMotelySearchSettings WithEndBatchIndex(long endBatchIndex);
     IMotelySearchSettings WithSeedScoreProvider(IMotelySeedScoreDesc seedScoreDesc);
+    IMotelySearchSettings WithSeedAnalyzeProvider(IMotelySeedAnalyzeDesc seedAnalyzeDesc);
     IMotelySearchSettings WithSeedRouter(IMotelySeedRouterDesc desc);
     IMotelySearchSettings WithListSearch(IEnumerable<string> seeds, int seedCount = -1);
     IMotelySearchSettings WithRandomSearch(int count);
@@ -143,6 +176,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public IList<IMotelySeedFilterDesc>? AdditionalFilters { get; set; } = null;
 
     public IMotelySeedScoreDesc? SeedScoreDesc { get; set; } = null;
+
+    public IMotelySeedAnalyzeDesc? SeedAnalyzeDesc { get; set; } = null;
 
     public IMotelySeedRouterDesc? SeedRouterDesc { get; set; } = null;
 
@@ -267,6 +302,14 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
+    public MotelySearchSettings<TBaseFilter> WithSeedAnalyzeProvider(
+        IMotelySeedAnalyzeDesc seedAnalyzeDesc
+    )
+    {
+        SeedAnalyzeDesc = seedAnalyzeDesc;
+        return this;
+    }
+
     public MotelySearchSettings<TBaseFilter> WithSeedRouter(IMotelySeedRouterDesc desc)
     {
         SeedRouterDesc = desc;
@@ -288,6 +331,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     IMotelySearchSettings IMotelySearchSettings.WithSeedScoreProvider(IMotelySeedScoreDesc desc) =>
         WithSeedScoreProvider(desc);
+
+    IMotelySearchSettings IMotelySearchSettings.WithSeedAnalyzeProvider(IMotelySeedAnalyzeDesc desc) =>
+        WithSeedAnalyzeProvider(desc);
 
     IMotelySearchSettings IMotelySearchSettings.WithSeedRouter(IMotelySeedRouterDesc desc) =>
         WithSeedRouter(desc);
@@ -468,6 +514,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private readonly bool _isProviderMode;
 
     private readonly IMotelySeedScoreProvider? _scoreProvider;
+    private readonly IMotelySeedAnalyzeProvider? _analyzeProvider;
     private readonly IMotelySeedRouter? _seedRouter;
 
     // IInternalMotelySearch implementation
@@ -581,6 +628,15 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     }
 
     /// <summary>
+    /// Tries to get the analyze provider if one was configured.
+    /// </summary>
+    public bool TryGetAnalyzeProvider([NotNullWhen(true)] out IMotelySeedAnalyzeProvider? analyzeProvider)
+    {
+        analyzeProvider = _analyzeProvider;
+        return analyzeProvider != null;
+    }
+
+    /// <summary>
     /// Tries to get the single seed router if configured
     /// </summary>
     public bool TryGetSingleSeedRouter([NotNullWhen(true)] out IMotelySeedRouter? seedRouter)
@@ -636,6 +692,12 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         if (settings.SeedScoreDesc != null)
         {
             _scoreProvider = settings.SeedScoreDesc.CreateScoreProvider(ref filterCreationContext);
+        }
+
+        // Create the analyze provider if one was specified
+        if (settings.SeedAnalyzeDesc != null)
+        {
+            _analyzeProvider = settings.SeedAnalyzeDesc.CreateAnalyzeProvider(ref filterCreationContext);
         }
 
         // Create the context provider if one was specified
@@ -745,23 +807,25 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     {
         _elapsedTime.Start();
 
-        // Browser: one thread, no pthreads, nothing to offload to.
+        // Browser: one thread, no pthreads. Pump cooperatively (await Task.Delay(1) between
+        // batches) so the single thread surfaces to the event loop and the UI repaints instead
+        // of freezing under the SIMD grind. The pump completes _completionSource on its way out;
+        // Bootsharp marshals that Task to the JS Promise.
         if (OperatingSystem.IsBrowser())
         {
-            if (_isProviderMode)
-            {
-                // Provider mode (datalake re-derivation): pump cooperatively too so a large
-                // re-derivation surfaces to the event loop between batches instead of freezing
-                // the one thread. Bootsharp marshals the Task to a JS Promise, same as below.
-                _ = RunProviderBrowserPumpAsync();
-            }
-            else
-            {
-                // Batch search: pump cooperatively (await Task.Delay(1) between batches) so the
-                // single thread surfaces to the event loop and the UI repaints instead of
-                // freezing under the SIMD grind. Bootsharp marshals the Task to a JS Promise.
-                _ = RunSequentialBrowserPumpAsync();
-            }
+            Task pump = _isProviderMode
+                ? RunProviderBrowserPumpAsync()
+                : RunSequentialBrowserPumpAsync();
+
+            // Don't drop the handle. If the pump faults before it can signal completion, route
+            // the exception onto the SAME _completionSource the Promise awaits — otherwise the
+            // await hangs forever with no error (the detached `_ = pump()` it replaced did exactly
+            // that). This is the browser's stand-in for the native WorkerCoordinator's catch.
+            pump.ContinueWith(
+                t => _completionSource.TrySetException(t.Exception!.InnerException ?? t.Exception),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
             return;
         }
 

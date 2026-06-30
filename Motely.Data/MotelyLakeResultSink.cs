@@ -14,7 +14,11 @@ namespace Motely.Data;
 /// in-memory staging table, then moved into the lake with a single <c>MERGE … SELECT</c> that goes
 /// through the catalog and dedupes on seed. On dispose a <c>CHECKPOINT</c> flushes inlined rows to
 /// Parquet, runs maintenance, and clears the catalog WAL before the connection closes. One
-/// <c>seeds_&lt;filterId&gt;</c> table per filter; the tally columns are fixed (<c>t0..tN</c>).
+/// <c>seeds_&lt;filterId&gt;</c> table per filter.
+///
+/// Rows are thin: <c>(seed, score)</c>. The seed is the whole game — Motely/JAMLyzer re-explode any
+/// detail (jokers, tallies, packs) deterministically from it, so persisting derived columns would
+/// just be a stale cache. Score is kept only as the cheap key for ranking the hoard without a re-run.
 /// </summary>
 public sealed class MotelyLakeResultSink : IMotelyResultSink
 {
@@ -23,15 +27,13 @@ public sealed class MotelyLakeResultSink : IMotelyResultSink
     private readonly DuckDBAppender _appender;
     private readonly string _table;
     private readonly string _staging;
-    private readonly int _tallyCount;
     private long _staged;
     private bool _disposed;
 
-    public MotelyLakeResultSink(string filterId, int tallyCount)
+    public MotelyLakeResultSink(string filterId)
     {
         _table = $"seeds_{filterId}";
         _staging = $"staging_{filterId}";
-        _tallyCount = tallyCount;
         _connection = MotelyDuckLake.Open(attachLake: true);
 
         // The lake table (in the catalog) and an in-memory staging table with the same shape.
@@ -51,9 +53,6 @@ public sealed class MotelyLakeResultSink : IMotelyResultSink
 
             var row = _appender.CreateRow();
             row.AppendValue(result.Seed).AppendValue(result.Score);
-            int[] tallies = result.Tallies;
-            for (int i = 0; i < _tallyCount; i++)
-                row.AppendValue(i < tallies.Length ? tallies[i] : 0);
             row.EndRow();
             _staged++;
         }

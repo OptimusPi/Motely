@@ -36,9 +36,13 @@ public static class MotelyDuckLake
         if (attachLake)
         {
             Directory.CreateDirectory(SeedsPath);
+            // SQLite catalog = multiple local clients (per DuckLake's catalog guidance). WAL +
+            // busy_timeout are required or concurrent writers hit "database is locked" (ducklake#128).
             Execute(
                 connection,
-                $"ATTACH 'ducklake:sqlite:{Sql(CatalogPath)}' AS {LakeAlias} (DATA_PATH '{Sql(SeedsPath)}')"
+                $"ATTACH 'ducklake:sqlite:{Sql(CatalogPath)}' AS {LakeAlias} "
+                    + $"(DATA_PATH '{Sql(SeedsPath)}', META_TYPE 'sqlite', "
+                    + "META_JOURNAL_MODE 'WAL', META_BUSY_TIMEOUT 500)"
             );
         }
         return connection;

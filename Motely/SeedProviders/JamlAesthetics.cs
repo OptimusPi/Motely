@@ -127,21 +127,33 @@ file static class EchoAestheticSeeds
 
     public static IEnumerable<string> Enumerate()
     {
-        string alphabet = new string(MotelyGlobals.SeedDigits);
+        // char[] (not ReadOnlySpan) so it can be held across the `yield return`s below.
+        char[] alphabet = MotelyGlobals.SeedDigits.ToArray();
+        // Reuse one 8-char buffer instead of interpolating a fresh string per seed (~1B of them).
+        // Pattern ABAxBxxx: positions 0,2 = a; positions 1,4 = b; positions 3,5,6,7 = x1..x4.
+        char[] buffer = new char[8];
 
         foreach (char a in Letters)
         {
+            buffer[0] = a;
+            buffer[2] = a;
             foreach (char b in Letters)
             {
-                foreach (char x1 in alphabet)
+                buffer[1] = b;
+                buffer[4] = b;
+                for (int i1 = 0; i1 < alphabet.Length; i1++)
                 {
-                    foreach (char x2 in alphabet)
+                    buffer[3] = alphabet[i1];
+                    for (int i2 = 0; i2 < alphabet.Length; i2++)
                     {
-                        foreach (char x3 in alphabet)
+                        buffer[5] = alphabet[i2];
+                        for (int i3 = 0; i3 < alphabet.Length; i3++)
                         {
-                            foreach (char x4 in alphabet)
+                            buffer[6] = alphabet[i3];
+                            for (int i4 = 0; i4 < alphabet.Length; i4++)
                             {
-                                yield return $"{a}{b}{a}{x1}{b}{x2}{x3}{x4}";
+                                buffer[7] = alphabet[i4];
+                                yield return new string(buffer);
                             }
                         }
                     }
