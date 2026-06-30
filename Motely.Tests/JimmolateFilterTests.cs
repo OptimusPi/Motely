@@ -23,8 +23,8 @@ public sealed class JimmolateFilterTests
     {
         var matched = new List<string>();
         var settings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
-                new PassthroughFilterDesc()
-            )
+            new PassthroughFilterDesc()
+        )
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
             .WithListSearch(seeds, seeds.Length)
@@ -41,7 +41,9 @@ public sealed class JimmolateFilterTests
     [Fact]
     public void Jimmolate_AcceptAll_KeepsEverySeed()
     {
-        var (matching, matched) = RunWithJimmolate(static (ref MotelySingleSearchContext _) => true);
+        var (matching, matched) = RunWithJimmolate(
+            static (ref MotelySingleSearchContext _) => true
+        );
 
         Assert.Equal((long)Seeds.Length, matching);
         Assert.Equal(Seeds.Length, matched.Count);
@@ -80,15 +82,19 @@ public sealed class JimmolateFilterTests
     {
         string[] seeds = ["PIROCKS", "ALEEB", "LOVEYAHB"];
 
-        var (matching, matched) = RunWithJimmolate(seeds, (ref MotelySingleSearchContext ctx) =>
-        {
-            if (ctx.GetAnteFirstVoucher(1) != MotelyVoucher.MagicTrick)
-                return false;
+        var (matching, matched) = RunWithJimmolate(
+            seeds,
+            (ref MotelySingleSearchContext ctx) =>
+            {
+                if (ctx.GetAnteFirstVoucher(1) != MotelyVoucher.MagicTrick)
+                    return false;
 
-            var bossStream = ctx.CreateBossStream();
-            var runState = new MotelyRunState();
-            return ctx.GetBossForAnte(ref bossStream, 1, ref runState) == MotelyBossBlind.TheWindow;
-        });
+                var bossStream = ctx.CreateBossStream();
+                var runState = new MotelyRunState();
+                return ctx.GetBossForAnte(ref bossStream, 1, ref runState)
+                    == MotelyBossBlind.TheWindow;
+            }
+        );
 
         Assert.Equal("ALEEB", Assert.Single(matched)); // pulled the needle out of the decoys
         Assert.Equal(1L, matching);

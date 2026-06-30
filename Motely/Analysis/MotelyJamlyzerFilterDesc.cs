@@ -2,7 +2,11 @@ using System.ComponentModel;
 
 namespace Motely.Analysis;
 
-public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRolls = 20, MotelyJamlyzerStreamStates? resumeFrom = null) : IMotelySeedFilterDesc<MotelyJamlyzerFilterDesc.JamlyzerFilter>
+public sealed class MotelyJamlyzerFilterDesc(
+    int[] antesToAnalyze,
+    int eventRolls = 20,
+    MotelyJamlyzerStreamStates? resumeFrom = null
+) : IMotelySeedFilterDesc<MotelyJamlyzerFilterDesc.JamlyzerFilter>
 {
     public List<MotelyJamlyzerAnteResult> Antes { get; } = [];
     public MotelyJamlyzerEvents? Events { get; set; }
@@ -73,7 +77,8 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
                 for (int i = 0; i < maxPacks; i++)
                 {
                     MotelyBoosterPack pack = ctx.GetNextBoosterPack(ref packStream);
-                    MotelyItem[] contents = GetPackContents(ref ctx, ante, pack, ref state).AsArray();
+                    MotelyItem[] contents = GetPackContents(ref ctx, ante, pack, ref state)
+                        .AsArray();
                     packs[i] = new(pack, contents);
                 }
 
@@ -89,10 +94,16 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
                 // resampling uses the correct state (pre-activation for this ante).
                 voucherState.ActivateVoucher(voucher);
 
-                filterDesc.Antes.Add(new(ante, boss, voucher, smallTag, bigTag, shopItems, packs, pulls, shopStreams));
+                filterDesc.Antes.Add(
+                    new(ante, boss, voucher, smallTag, bigTag, shopItems, packs, pulls, shopStreams)
+                );
             }
 
-            (filterDesc.Events, filterDesc.StreamStates) = CollectEvents(ref ctx, n, filterDesc._resumeFrom);
+            (filterDesc.Events, filterDesc.StreamStates) = CollectEvents(
+                ref ctx,
+                n,
+                filterDesc._resumeFrom
+            );
 
             if (ctx.Deck == MotelyDeck.Erratic)
             {
@@ -115,41 +126,41 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
         )
         {
             // Joker streams
-            var judgementStream  = ctx.CreateJudgementJokerStream(ante);
-            var wraithStream     = ctx.CreateWraithJokerStream(ante);
-            var riffRaffStream   = ctx.CreateRiffRaffJokerStream(ante);
-            var rareTagStream    = ctx.CreateRareTagJokerStream(ante);
+            var judgementStream = ctx.CreateJudgementJokerStream(ante);
+            var wraithStream = ctx.CreateWraithJokerStream(ante);
+            var riffRaffStream = ctx.CreateRiffRaffJokerStream(ante);
+            var rareTagStream = ctx.CreateRareTagJokerStream(ante);
             var uncommonTagStream = ctx.CreateUncommonTagJokerStream(ante);
-            var legendaryStream  = ctx.CreateLegendaryJokerStream(ante);
+            var legendaryStream = ctx.CreateLegendaryJokerStream(ante);
 
             // Tarot streams
-            var emperorStream    = ctx.CreateEmperorTarotStream(ante);
+            var emperorStream = ctx.CreateEmperorTarotStream(ante);
             var purpleSealStream = ctx.CreatePurpleSealTarotStream(ante);
 
             // Spectral streams
             var sixthSenseStream = ctx.CreateSixthSenseSpectralStream(ante);
-            var seanceStream     = ctx.CreateSeanceSpectralStream(ante);
+            var seanceStream = ctx.CreateSeanceSpectralStream(ante);
 
             // Voucher sequence
-            var voucherStream    = ctx.CreateVoucherStream(ante);
+            var voucherStream = ctx.CreateVoucherStream(ante);
 
-            MotelyItem[]    judgement    = new MotelyItem[n];
-            MotelyItem[]    wraith       = new MotelyItem[n];
-            MotelyItem[]    riffRaff     = new MotelyItem[n];
-            MotelyItem[]    rareTag      = new MotelyItem[n];
-            MotelyItem[]    uncommonTag  = new MotelyItem[n];
-            MotelyItem[]    legendary    = new MotelyItem[n];
-            MotelyItem[]    emperor      = new MotelyItem[n * 2]; // 2 tarots per use
-            MotelyItem[]    purpleSeal   = new MotelyItem[n];
-            MotelyItem[]    sixthSense   = new MotelyItem[n];
-            MotelyItem[]    seance       = new MotelyItem[n];
-            MotelyVoucher[] vouchers     = new MotelyVoucher[n];
+            MotelyItem[] judgement = new MotelyItem[n];
+            MotelyItem[] wraith = new MotelyItem[n];
+            MotelyItem[] riffRaff = new MotelyItem[n];
+            MotelyItem[] rareTag = new MotelyItem[n];
+            MotelyItem[] uncommonTag = new MotelyItem[n];
+            MotelyItem[] legendary = new MotelyItem[n];
+            MotelyItem[] emperor = new MotelyItem[n * 2]; // 2 tarots per use
+            MotelyItem[] purpleSeal = new MotelyItem[n];
+            MotelyItem[] sixthSense = new MotelyItem[n];
+            MotelyItem[] seance = new MotelyItem[n];
+            MotelyVoucher[] vouchers = new MotelyVoucher[n];
 
             // Replay [0, offset) and discard, then keep [offset, offset+n). Re-running the exact
             // same calls advances every resample substream identically — exact resume by construction.
             for (int i = 0; i < offset + n; i++)
             {
-                var j  = ctx.GetNextJoker(ref judgementStream);
+                var j = ctx.GetNextJoker(ref judgementStream);
                 var wr = ctx.GetNextJoker(ref wraithStream);
                 var rr = ctx.GetNextJoker(ref riffRaffStream);
                 var rt = ctx.GetNextJoker(ref rareTagStream);
@@ -168,16 +179,32 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
                     continue;
 
                 int w = i - offset;
-                judgement[w] = j; wraith[w] = wr; riffRaff[w] = rr;
-                rareTag[w] = rt; uncommonTag[w] = ut; legendary[w] = lg;
-                emperor[w * 2] = e0; emperor[w * 2 + 1] = e1;
-                purpleSeal[w] = ps; sixthSense[w] = ss; seance[w] = se; vouchers[w] = vc;
+                judgement[w] = j;
+                wraith[w] = wr;
+                riffRaff[w] = rr;
+                rareTag[w] = rt;
+                uncommonTag[w] = ut;
+                legendary[w] = lg;
+                emperor[w * 2] = e0;
+                emperor[w * 2 + 1] = e1;
+                purpleSeal[w] = ps;
+                sixthSense[w] = ss;
+                seance[w] = se;
+                vouchers[w] = vc;
             }
 
             return new(
-                judgement, wraith, emperor, purpleSeal,
-                sixthSense, seance, riffRaff, rareTag, uncommonTag,
-                legendary, vouchers
+                judgement,
+                wraith,
+                emperor,
+                purpleSeal,
+                sixthSense,
+                seance,
+                riffRaff,
+                rareTag,
+                uncommonTag,
+                legendary,
+                vouchers
             );
         }
 
@@ -191,21 +218,21 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
             // Shop-source streams share the keys the shop item queue consumes, but each raw
             // queue is read on its own copy of stream state — collecting them here does not
             // perturb the resolved shop above. None depend on voucher run-state.
-            var shopJokerStream     = ctx.CreateShopJokerStream(ante);
-            var commonJokerStream   = ctx.CreateCommonShopJokerStream(ante);
+            var shopJokerStream = ctx.CreateShopJokerStream(ante);
+            var commonJokerStream = ctx.CreateCommonShopJokerStream(ante);
             var uncommonJokerStream = ctx.CreateUncommonShopJokerStream(ante);
-            var rareJokerStream     = ctx.CreateRareShopJokerStream(ante);
-            var shopTarotStream     = ctx.CreateShopTarotStream(ante);
-            var shopPlanetStream    = ctx.CreateShopPlanetStream(ante);
-            var shopSpectralStream  = ctx.CreateShopSpectralStream(ante);
+            var rareJokerStream = ctx.CreateRareShopJokerStream(ante);
+            var shopTarotStream = ctx.CreateShopTarotStream(ante);
+            var shopPlanetStream = ctx.CreateShopPlanetStream(ante);
+            var shopSpectralStream = ctx.CreateShopSpectralStream(ante);
 
-            MotelyItem[] shopJokers     = new MotelyItem[n];
-            MotelyItem[] commonJokers   = new MotelyItem[n];
+            MotelyItem[] shopJokers = new MotelyItem[n];
+            MotelyItem[] commonJokers = new MotelyItem[n];
             MotelyItem[] uncommonJokers = new MotelyItem[n];
-            MotelyItem[] rareJokers     = new MotelyItem[n];
-            MotelyItem[] shopTarots     = new MotelyItem[n];
-            MotelyItem[] shopPlanets    = new MotelyItem[n];
-            MotelyItem[] shopSpectrals  = new MotelyItem[n];
+            MotelyItem[] rareJokers = new MotelyItem[n];
+            MotelyItem[] shopTarots = new MotelyItem[n];
+            MotelyItem[] shopPlanets = new MotelyItem[n];
+            MotelyItem[] shopSpectrals = new MotelyItem[n];
 
             // Same offset-replay as pulls: discard [0, offset), keep [offset, offset+n).
             for (int i = 0; i < offset + n; i++)
@@ -222,13 +249,23 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
                     continue;
 
                 int w = i - offset;
-                shopJokers[w] = sj; commonJokers[w] = cj; uncommonJokers[w] = uj;
-                rareJokers[w] = rj; shopTarots[w] = st; shopPlanets[w] = sp; shopSpectrals[w] = ss;
+                shopJokers[w] = sj;
+                commonJokers[w] = cj;
+                uncommonJokers[w] = uj;
+                rareJokers[w] = rj;
+                shopTarots[w] = st;
+                shopPlanets[w] = sp;
+                shopSpectrals[w] = ss;
             }
 
             return new(
-                shopJokers, commonJokers, uncommonJokers, rareJokers,
-                shopTarots, shopPlanets, shopSpectrals
+                shopJokers,
+                commonJokers,
+                uncommonJokers,
+                rareJokers,
+                shopTarots,
+                shopPlanets,
+                shopSpectrals
             );
         }
 
@@ -241,60 +278,97 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
             // No resume bag -> each stream starts at the seed's natural start.
             // With a resume bag -> each stream resumes from its saved State double, so the
             // window continues exactly where the previous one stopped (no prefix re-roll).
-            var luckyMoney  = resume is null ? ctx.CreateLuckyCardMoneyStream()  : ctx.ResumeStream(resume.LuckyMoney);
-            var luckyMult   = resume is null ? ctx.CreateLuckyCardMultStream()   : ctx.ResumeStream(resume.LuckyMult);
-            var wheel       = resume is null ? ctx.CreateWheelOfFortuneStream()  : ctx.ResumeStream(resume.WheelOfFortune);
-            var cavendish   = resume is null ? ctx.CreateCavendishPrngStream()   : ctx.ResumeStream(resume.Cavendish);
-            var grosMichel  = resume is null ? ctx.CreateGrosMichelPrngStream()  : ctx.ResumeStream(resume.GrosMichel);
-            var space       = resume is null ? ctx.CreateSpacePrngStream()       : ctx.ResumeStream(resume.Space);
-            var business    = resume is null ? ctx.CreateBusinessPrngStream()    : ctx.ResumeStream(resume.Business);
-            var bloodstone  = resume is null ? ctx.CreateBloodstonePrngStream()  : ctx.ResumeStream(resume.Bloodstone);
-            var parking     = resume is null ? ctx.CreateParkingPrngStream()     : ctx.ResumeStream(resume.Parking);
-            var eightBall   = resume is null ? ctx.CreateEightBallPrngStream()   : ctx.ResumeStream(resume.EightBall);
-            var glass       = resume is null ? ctx.CreateGlassPrngStream()       : ctx.ResumeStream(resume.Glass);
-            var omenGlobe   = resume is null ? ctx.CreateOmenGlobePrngStream()   : ctx.ResumeStream(resume.OmenGlobe);
-            var theWheel    = resume is null ? ctx.CreateTheWheelPrngStream()    : ctx.ResumeStream(resume.TheWheel);
-            var misprint    = resume is null ? ctx.CreateMisprintPrngStream()    : ctx.ResumeStream(resume.Misprint);
+            var luckyMoney = resume is null
+                ? ctx.CreateLuckyCardMoneyStream()
+                : ctx.ResumeStream(resume.LuckyMoney);
+            var luckyMult = resume is null
+                ? ctx.CreateLuckyCardMultStream()
+                : ctx.ResumeStream(resume.LuckyMult);
+            var wheel = resume is null
+                ? ctx.CreateWheelOfFortuneStream()
+                : ctx.ResumeStream(resume.WheelOfFortune);
+            var cavendish = resume is null
+                ? ctx.CreateCavendishPrngStream()
+                : ctx.ResumeStream(resume.Cavendish);
+            var grosMichel = resume is null
+                ? ctx.CreateGrosMichelPrngStream()
+                : ctx.ResumeStream(resume.GrosMichel);
+            var space = resume is null
+                ? ctx.CreateSpacePrngStream()
+                : ctx.ResumeStream(resume.Space);
+            var business = resume is null
+                ? ctx.CreateBusinessPrngStream()
+                : ctx.ResumeStream(resume.Business);
+            var bloodstone = resume is null
+                ? ctx.CreateBloodstonePrngStream()
+                : ctx.ResumeStream(resume.Bloodstone);
+            var parking = resume is null
+                ? ctx.CreateParkingPrngStream()
+                : ctx.ResumeStream(resume.Parking);
+            var eightBall = resume is null
+                ? ctx.CreateEightBallPrngStream()
+                : ctx.ResumeStream(resume.EightBall);
+            var glass = resume is null
+                ? ctx.CreateGlassPrngStream()
+                : ctx.ResumeStream(resume.Glass);
+            var omenGlobe = resume is null
+                ? ctx.CreateOmenGlobePrngStream()
+                : ctx.ResumeStream(resume.OmenGlobe);
+            var theWheel = resume is null
+                ? ctx.CreateTheWheelPrngStream()
+                : ctx.ResumeStream(resume.TheWheel);
+            var misprint = resume is null
+                ? ctx.CreateMisprintPrngStream()
+                : ctx.ResumeStream(resume.Misprint);
 
-            bool[]              luckyMoneyRolls = new bool[N];
-            bool[]              luckyMultRolls  = new bool[N];
-            MotelyItemEdition[] wheelRolls      = new MotelyItemEdition[N];
-            bool[]              cavendishRolls  = new bool[N];
-            bool[]              grosMichelRolls = new bool[N];
-            bool[]              spaceRolls      = new bool[N];
-            bool[]              businessRolls   = new bool[N];
-            bool[]              bloodstoneRolls = new bool[N];
-            bool[]              parkingRolls    = new bool[N];
-            bool[]              eightBallRolls  = new bool[N];
-            bool[]              glassRolls      = new bool[N];
-            bool[]              omenGlobeRolls  = new bool[N];
-            bool[]              theWheelRolls   = new bool[N];
-            int[]               misprintRolls   = new int[N];
+            bool[] luckyMoneyRolls = new bool[N];
+            bool[] luckyMultRolls = new bool[N];
+            MotelyItemEdition[] wheelRolls = new MotelyItemEdition[N];
+            bool[] cavendishRolls = new bool[N];
+            bool[] grosMichelRolls = new bool[N];
+            bool[] spaceRolls = new bool[N];
+            bool[] businessRolls = new bool[N];
+            bool[] bloodstoneRolls = new bool[N];
+            bool[] parkingRolls = new bool[N];
+            bool[] eightBallRolls = new bool[N];
+            bool[] glassRolls = new bool[N];
+            bool[] omenGlobeRolls = new bool[N];
+            bool[] theWheelRolls = new bool[N];
+            int[] misprintRolls = new int[N];
 
             for (int i = 0; i < N; i++)
             {
-                luckyMoneyRolls[i]  = ctx.GetNextLuckyMoney(ref luckyMoney);
-                luckyMultRolls[i]   = ctx.GetNextLuckyMult(ref luckyMult);
-                wheelRolls[i]       = ctx.GetNextWheelOfFortune(ref wheel);
-                cavendishRolls[i]   = ctx.GetNextCavendishExtinct(ref cavendish);
-                grosMichelRolls[i]  = ctx.GetNextGrosMichelExtinct(ref grosMichel);
-                spaceRolls[i]       = ctx.GetNextSpaceLevelup(ref space);
-                businessRolls[i]    = ctx.GetNextBusinessPayout(ref business);
-                bloodstoneRolls[i]  = ctx.GetNextBloodstoneTrigger(ref bloodstone);
-                parkingRolls[i]     = ctx.GetNextParkingPayout(ref parking);
-                eightBallRolls[i]   = ctx.GetNextEightBallTarot(ref eightBall);
-                glassRolls[i]       = ctx.GetNextGlassDestroy(ref glass);
-                omenGlobeRolls[i]   = ctx.GetNextOmenGlobeSpectral(ref omenGlobe);
-                theWheelRolls[i]    = ctx.GetNextWheelStaysFlipped(ref theWheel);
-                misprintRolls[i]    = ctx.GetNextMisprintMult(ref misprint);
+                luckyMoneyRolls[i] = ctx.GetNextLuckyMoney(ref luckyMoney);
+                luckyMultRolls[i] = ctx.GetNextLuckyMult(ref luckyMult);
+                wheelRolls[i] = ctx.GetNextWheelOfFortune(ref wheel);
+                cavendishRolls[i] = ctx.GetNextCavendishExtinct(ref cavendish);
+                grosMichelRolls[i] = ctx.GetNextGrosMichelExtinct(ref grosMichel);
+                spaceRolls[i] = ctx.GetNextSpaceLevelup(ref space);
+                businessRolls[i] = ctx.GetNextBusinessPayout(ref business);
+                bloodstoneRolls[i] = ctx.GetNextBloodstoneTrigger(ref bloodstone);
+                parkingRolls[i] = ctx.GetNextParkingPayout(ref parking);
+                eightBallRolls[i] = ctx.GetNextEightBallTarot(ref eightBall);
+                glassRolls[i] = ctx.GetNextGlassDestroy(ref glass);
+                omenGlobeRolls[i] = ctx.GetNextOmenGlobeSpectral(ref omenGlobe);
+                theWheelRolls[i] = ctx.GetNextWheelStaysFlipped(ref theWheel);
+                misprintRolls[i] = ctx.GetNextMisprintMult(ref misprint);
             }
 
             var events = new MotelyJamlyzerEvents(
-                luckyMoneyRolls, luckyMultRolls, wheelRolls,
-                cavendishRolls, grosMichelRolls, spaceRolls,
-                businessRolls, bloodstoneRolls, parkingRolls,
-                eightBallRolls, glassRolls, omenGlobeRolls,
-                theWheelRolls, misprintRolls
+                luckyMoneyRolls,
+                luckyMultRolls,
+                wheelRolls,
+                cavendishRolls,
+                grosMichelRolls,
+                spaceRolls,
+                businessRolls,
+                bloodstoneRolls,
+                parkingRolls,
+                eightBallRolls,
+                glassRolls,
+                omenGlobeRolls,
+                theWheelRolls,
+                misprintRolls
             );
 
             // End-of-window state bag — hand straight back as resumeFrom. RollOffset advances by this
@@ -302,11 +376,20 @@ public sealed class MotelyJamlyzerFilterDesc(int[] antesToAnalyze, int eventRoll
             // the event streams resume exactly without re-rolling.
             var states = new MotelyJamlyzerStreamStates(
                 (resume?.RollOffset ?? 0) + N,
-                luckyMoney.State, luckyMult.State, wheel.State,
-                cavendish.State, grosMichel.State, space.State,
-                business.State, bloodstone.State, parking.State,
-                eightBall.State, glass.State, omenGlobe.State,
-                theWheel.State, misprint.State
+                luckyMoney.State,
+                luckyMult.State,
+                wheel.State,
+                cavendish.State,
+                grosMichel.State,
+                space.State,
+                business.State,
+                bloodstone.State,
+                parking.State,
+                eightBall.State,
+                glass.State,
+                omenGlobe.State,
+                theWheel.State,
+                misprint.State
             );
 
             return (events, states);

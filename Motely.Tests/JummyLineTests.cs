@@ -15,7 +15,11 @@ public class JummyLineTests
     public void EternalBlueprintInAntes1Or2_parsesToTheExpectedClause()
     {
         Assert.True(
-            JummyLine.TryToClause("Eternal Blueprint in antes 1 or 2", out var clause, out var error),
+            JummyLine.TryToClause(
+                "Eternal Blueprint in antes 1 or 2",
+                out var clause,
+                out var error
+            ),
             $"parse failed: {error}"
         );
 
@@ -29,7 +33,9 @@ public class JummyLineTests
     [Fact]
     public void EternalBlueprintInAntes1Or2_roundTripsBackToTheSameLine()
     {
-        Assert.True(JummyLine.TryToClause("Eternal Blueprint in antes 1 or 2", out var clause, out _));
+        Assert.True(
+            JummyLine.TryToClause("Eternal Blueprint in antes 1 or 2", out var clause, out _)
+        );
         Assert.Equal("Eternal Blueprint in antes 1 or 2", JummyLine.FromClause(clause!));
     }
 
@@ -42,7 +48,10 @@ public class JummyLineTests
     [InlineData("Blueprint in antes 1, 2, 3", new[] { 1, 2, 3 })]
     public void AnteTail_parsesAndCanonicalizes(string line, int[] expectedAntes)
     {
-        Assert.True(JummyLine.TryToClause(line, out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
         Assert.Equal(expectedAntes, Assert.IsType<JokerClause>(clause).Antes);
     }
 
@@ -62,7 +71,10 @@ public class JummyLineTests
     [InlineData("Foil Oops! All 6s in ante 1")]
     public void Modifiers_roundTrip(string line)
     {
-        Assert.True(JummyLine.TryToClause(line, out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
         Assert.Equal(line, JummyLine.FromClause(clause!));
     }
 
@@ -98,7 +110,10 @@ public class JummyLineTests
                 failures.Add($"{j}: '{line}' parsed back to [{string.Join(",", back.Jokers)}]");
         }
 
-        Assert.True(failures.Count == 0, $"{failures.Count} joker(s) did not round-trip:\n{string.Join("\n", failures)}");
+        Assert.True(
+            failures.Count == 0,
+            $"{failures.Count} joker(s) did not round-trip:\n{string.Join("\n", failures)}"
+        );
     }
 
     // ── Consumable families (tarot / spectral / planet) ───────────────────────
@@ -112,7 +127,10 @@ public class JummyLineTests
     [InlineData("Planet X in antes 1 or 2 or 3")]
     public void Consumables_roundTrip(string line)
     {
-        Assert.True(JummyLine.TryToClause(line, out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
         Assert.Equal(line, JummyLine.FromClause(clause!));
     }
 
@@ -127,10 +145,22 @@ public class JummyLineTests
     public void EveryTarot_spectral_planet_roundTripsThroughTheLine()
     {
         var failures = new List<string>();
-        RoundTripAll(failures, (MotelyTarotCard t) => new TarotCardClause { Tarots = [t], Antes = [1] });
-        RoundTripAll(failures, (MotelySpectralCard s) => new SpectralCardClause { Spectrals = [s], Antes = [1] });
-        RoundTripAll(failures, (MotelyPlanetCard p) => new PlanetCardClause { Planets = [p], Antes = [1] });
-        Assert.True(failures.Count == 0, $"{failures.Count} consumable(s) did not round-trip:\n{string.Join("\n", failures)}");
+        RoundTripAll(
+            failures,
+            (MotelyTarotCard t) => new TarotCardClause { Tarots = [t], Antes = [1] }
+        );
+        RoundTripAll(
+            failures,
+            (MotelySpectralCard s) => new SpectralCardClause { Spectrals = [s], Antes = [1] }
+        );
+        RoundTripAll(
+            failures,
+            (MotelyPlanetCard p) => new PlanetCardClause { Planets = [p], Antes = [1] }
+        );
+        Assert.True(
+            failures.Count == 0,
+            $"{failures.Count} consumable(s) did not round-trip:\n{string.Join("\n", failures)}"
+        );
     }
 
     // ── Remaining one-line families ───────────────────────────────────────────
@@ -140,14 +170,24 @@ public class JummyLineTests
     [InlineData("Gold Ace of Spades in antes 1 or 2")]
     public void StandardCards_roundTrip(string line)
     {
-        Assert.True(JummyLine.TryToClause(line, out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
         Assert.Equal(line, JummyLine.FromClause(clause!));
     }
 
     [Fact]
     public void StandardCard_parsesToExpectedClause()
     {
-        Assert.True(JummyLine.TryToClause("Red Seal Polychrome Steel King of Hearts in ante 1", out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(
+                "Red Seal Polychrome Steel King of Hearts in ante 1",
+                out var clause,
+                out var error
+            ),
+            $"parse failed: {error}"
+        );
         var standard = Assert.IsType<StandardCardClause>(clause);
         Assert.Equal(MotelyStandardcardRank.King, standard.Rank);
         Assert.Equal(MotelyStandardcardSuit.Hearts, standard.Suit);
@@ -163,12 +203,14 @@ public class JummyLineTests
         var failures = new List<string>();
         foreach (var card in Enum.GetValues<MotelyStandardCard>())
         {
-            var line = JummyLine.FromClause(new StandardCardClause
-            {
-                Rank = card.GetRank(),
-                Suit = card.GetSuit(),
-                Antes = [1],
-            });
+            var line = JummyLine.FromClause(
+                new StandardCardClause
+                {
+                    Rank = card.GetRank(),
+                    Suit = card.GetSuit(),
+                    Antes = [1],
+                }
+            );
             if (line is null)
             {
                 failures.Add($"{card}: FromClause returned null");
@@ -182,19 +224,31 @@ public class JummyLineTests
             if (JummyLine.FromClause(clause!) != line)
                 failures.Add($"{card}: '{line}' -> '{JummyLine.FromClause(clause!)}'");
         }
-        Assert.True(failures.Count == 0, $"{failures.Count} standard card(s) did not round-trip:\n{string.Join("\n", failures)}");
+        Assert.True(
+            failures.Count == 0,
+            $"{failures.Count} standard card(s) did not round-trip:\n{string.Join("\n", failures)}"
+        );
     }
 
     [Fact]
     public void StartingDraw_roundTripsRankSuitOnly()
     {
-        Assert.True(JummyLine.TryToClause("Starting Draw King of Hearts in ante 1", out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(
+                "Starting Draw King of Hearts in ante 1",
+                out var clause,
+                out var error
+            ),
+            $"parse failed: {error}"
+        );
         var draw = Assert.IsType<StartingDrawClause>(clause);
         Assert.Equal(MotelyStandardcardRank.King, draw.Rank);
         Assert.Equal(MotelyStandardcardSuit.Hearts, draw.Suit);
         Assert.Equal("Starting Draw King of Hearts in ante 1", JummyLine.FromClause(clause!));
 
-        Assert.False(JummyLine.TryToClause("Starting Draw Red Seal King of Hearts", out _, out error));
+        Assert.False(
+            JummyLine.TryToClause("Starting Draw Red Seal King of Hearts", out _, out error)
+        );
         Assert.Contains("rank/suit only", error);
     }
 
@@ -202,10 +256,31 @@ public class JummyLineTests
     public void EveryVoucher_tag_boss_roundTripsThroughTheLine()
     {
         var failures = new List<string>();
-        RoundTripAll(failures, (MotelyVoucher v) => new VoucherClause { Vouchers = [v], Rolls = [0], Antes = [1] });
-        RoundTripAll(failures, (MotelyTag t) => new TagClause { Tags = [t], Rolls = [0, 1], Antes = [1] });
+        RoundTripAll(
+            failures,
+            (MotelyVoucher v) =>
+                new VoucherClause
+                {
+                    Vouchers = [v],
+                    Rolls = [0],
+                    Antes = [1],
+                }
+        );
+        RoundTripAll(
+            failures,
+            (MotelyTag t) =>
+                new TagClause
+                {
+                    Tags = [t],
+                    Rolls = [0, 1],
+                    Antes = [1],
+                }
+        );
         RoundTripAll(failures, (MotelyBossBlind b) => new BossClause { Bosses = [b], Antes = [1] });
-        Assert.True(failures.Count == 0, $"{failures.Count} feature clause(s) did not round-trip:\n{string.Join("\n", failures)}");
+        Assert.True(
+            failures.Count == 0,
+            $"{failures.Count} feature clause(s) did not round-trip:\n{string.Join("\n", failures)}"
+        );
     }
 
     [Theory]
@@ -216,7 +291,10 @@ public class JummyLineTests
     [InlineData("Boss The Wall in ante 3", typeof(BossClause))]
     public void FeaturePrefixes_parseToExpectedClauseTypes(string line, Type expectedType)
     {
-        Assert.True(JummyLine.TryToClause(line, out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
         Assert.IsType(expectedType, clause);
         Assert.Equal(line, JummyLine.FromClause(clause!));
     }
@@ -236,7 +314,10 @@ public class JummyLineTests
     [InlineData("Parking Payout rolls 0", typeof(ParkingPayoutClause))]
     public void Events_parseToExpectedClauseTypes(string line, Type expectedType)
     {
-        Assert.True(JummyLine.TryToClause(line, out var clause, out var error), $"parse failed: {error}");
+        Assert.True(
+            JummyLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
         Assert.IsType(expectedType, clause);
         Assert.Equal(line, JummyLine.FromClause(clause!));
     }
@@ -244,7 +325,9 @@ public class JummyLineTests
     [Fact]
     public void EventLuck_rejectsUnsupportedEvent()
     {
-        Assert.False(JummyLine.TryToClause("Business Payout rolls 0 with luck 4", out _, out var error));
+        Assert.False(
+            JummyLine.TryToClause("Business Payout rolls 0 with luck 4", out _, out var error)
+        );
         Assert.Contains("does not support luck", error);
     }
 
@@ -252,8 +335,20 @@ public class JummyLineTests
     public void LogicAndMultiValueClauses_areNotSingleJummyLines()
     {
         Assert.Null(JummyLine.FromClause(new AndClause { Clauses = [] }));
-        Assert.Null(JummyLine.FromClause(new JokerClause { Jokers = [MotelyJoker.Blueprint, MotelyJoker.Brainstorm] }));
-        Assert.Null(JummyLine.FromClause(new VoucherClause { Vouchers = [MotelyVoucher.Telescope, MotelyVoucher.Observatory], Rolls = [0] }));
+        Assert.Null(
+            JummyLine.FromClause(
+                new JokerClause { Jokers = [MotelyJoker.Blueprint, MotelyJoker.Brainstorm] }
+            )
+        );
+        Assert.Null(
+            JummyLine.FromClause(
+                new VoucherClause
+                {
+                    Vouchers = [MotelyVoucher.Telescope, MotelyVoucher.Observatory],
+                    Rolls = [0],
+                }
+            )
+        );
     }
 
     private static void RoundTripAll<T>(List<string> failures, Func<T, IJamlClause> make)
@@ -293,8 +388,10 @@ public class JummyLineTests
 
         foreach (var item in samples)
         {
-            Assert.True(FormatUtils.TryParseMotelyItem(FormatUtils.FormatItem(item), out var back),
-                $"could not parse '{FormatUtils.FormatItem(item)}'");
+            Assert.True(
+                FormatUtils.TryParseMotelyItem(FormatUtils.FormatItem(item), out var back),
+                $"could not parse '{FormatUtils.FormatItem(item)}'"
+            );
             Assert.Equal(item.Value, back.Value);
         }
     }

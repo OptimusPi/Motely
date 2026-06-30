@@ -21,7 +21,8 @@ public sealed class DuckLakeDrownProvider : IMotelySeedProvider, IDisposable
             using var conn = new DuckDBConnection("Data Source=:memory:");
             conn.Open();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = $"SELECT DISTINCT seed FROM read_parquet('{parquetFile.Replace("\\", "/")}')";
+            cmd.CommandText =
+                $"SELECT DISTINCT seed FROM read_parquet('{parquetFile.Replace("\\", "/")}')";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {

@@ -112,9 +112,7 @@ public sealed class MotelyEchoSeedProvider : IMotelySeedProvider
 
     public MotelyEchoSeedProvider()
     {
-        _echoEnumerator = JamlAesthetics
-            .EnumerateSeeds(JamlAesthetic.Echo)
-            .GetEnumerator();
+        _echoEnumerator = JamlAesthetics.EnumerateSeeds(JamlAesthetic.Echo).GetEnumerator();
     }
 
     public ReadOnlySpan<char> NextSeed()

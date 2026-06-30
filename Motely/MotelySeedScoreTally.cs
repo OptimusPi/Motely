@@ -59,7 +59,4 @@ public struct MotelyScoredSeedResult : IMotelySeedScores
     }
 
     public readonly int[] Tallies => _tallyValues.AsSpan(0, _tallyCount).ToArray();
-
 }
-
-

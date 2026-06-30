@@ -7,9 +7,12 @@ public class LuckyEventLuckTests
 {
     private const string DifferentialSeed = "41111111";
 
-    private static (long SeedsSearched, long MatchingSeeds, int? Score, int? Tally) RunSingleSeedJaml(
-        string jaml
-    )
+    private static (
+        long SeedsSearched,
+        long MatchingSeeds,
+        int? Score,
+        int? Tally
+    ) RunSingleSeedJaml(string jaml)
     {
         Assert.True(
             JamlConfigLoader.TryLoad(jaml, out var config, out var error),

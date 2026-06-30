@@ -100,14 +100,19 @@ public static class JummyLine
         if (clause.Rank is not { } rank || clause.Suit is not { } suit)
             return null;
         var card = (MotelyStandardCard)((int)rank | (int)suit);
-        return StartingDrawPrefix + FormatUtils.FormatItem(new MotelyItem(card)) + AnteTail(clause.Antes);
+        return StartingDrawPrefix
+            + FormatUtils.FormatItem(new MotelyItem(card))
+            + AnteTail(clause.Antes);
     }
 
     private static string? FromVoucher(VoucherClause clause)
     {
         if (clause.Vouchers.Length != 1)
             return null;
-        return VoucherPrefix + FormatUtils.FormatVoucher(clause.Vouchers[0]) + RollsTail(clause.Rolls) + AnteTail(clause.Antes);
+        return VoucherPrefix
+            + FormatUtils.FormatVoucher(clause.Vouchers[0])
+            + RollsTail(clause.Rolls)
+            + AnteTail(clause.Antes);
     }
 
     private static string? FromTag(TagClause clause)
@@ -234,15 +239,18 @@ public static class JummyLine
                 };
                 return true;
 
-            case MotelyItemTypeCategory.TarotCard when TryParseSpecific<MotelyTarotCard>(item, out var tarot):
+            case MotelyItemTypeCategory.TarotCard
+                when TryParseSpecific<MotelyTarotCard>(item, out var tarot):
                 clause = new TarotCardClause { Tarots = [tarot], Antes = antes };
                 return true;
 
-            case MotelyItemTypeCategory.SpectralCard when TryParseSpecific<MotelySpectralCard>(item, out var spectral):
+            case MotelyItemTypeCategory.SpectralCard
+                when TryParseSpecific<MotelySpectralCard>(item, out var spectral):
                 clause = new SpectralCardClause { Spectrals = [spectral], Antes = antes };
                 return true;
 
-            case MotelyItemTypeCategory.PlanetCard when TryParseSpecific<MotelyPlanetCard>(item, out var planet):
+            case MotelyItemTypeCategory.PlanetCard
+                when TryParseSpecific<MotelyPlanetCard>(item, out var planet):
                 clause = new PlanetCardClause { Planets = [planet], Antes = antes };
                 return true;
 
@@ -253,37 +261,61 @@ public static class JummyLine
                     Suit = item.StandardcardSuit,
                     Seal = item.Seal == MotelyItemSeal.None ? null : item.Seal,
                     Edition = item.Edition == MotelyItemEdition.None ? null : item.Edition,
-                    Enhancement = item.Enhancement == MotelyItemEnhancement.None ? null : item.Enhancement,
+                    Enhancement =
+                        item.Enhancement == MotelyItemEnhancement.None ? null : item.Enhancement,
                     Antes = antes,
                 };
                 return true;
         }
 
-        error = $"Item '{withoutAnte}' isn't a JUMMY-supported clause yet (category {item.TypeCategory}).";
+        error =
+            $"Item '{withoutAnte}' isn't a JUMMY-supported clause yet (category {item.TypeCategory}).";
         return false;
     }
 
-    private static bool TryParseStartingDraw(string text, int[] antes, out IJamlClause? clause, out string? error)
+    private static bool TryParseStartingDraw(
+        string text,
+        int[] antes,
+        out IJamlClause? clause,
+        out string? error
+    )
     {
         clause = null;
-        if (!FormatUtils.TryParseMotelyItem(text, out var item) || item.TypeCategory != MotelyItemTypeCategory.Standardcard)
+        if (
+            !FormatUtils.TryParseMotelyItem(text, out var item)
+            || item.TypeCategory != MotelyItemTypeCategory.Standardcard
+        )
         {
             error = $"Starting Draw requires a standard card, got '{text}'.";
             return false;
         }
 
-        if (item.Seal != MotelyItemSeal.None || item.Edition != MotelyItemEdition.None || item.Enhancement != MotelyItemEnhancement.None)
+        if (
+            item.Seal != MotelyItemSeal.None
+            || item.Edition != MotelyItemEdition.None
+            || item.Enhancement != MotelyItemEnhancement.None
+        )
         {
             error = "Starting Draw supports rank/suit only.";
             return false;
         }
 
-        clause = new StartingDrawClause { Rank = item.StandardcardRank, Suit = item.StandardcardSuit, Antes = antes };
+        clause = new StartingDrawClause
+        {
+            Rank = item.StandardcardRank,
+            Suit = item.StandardcardSuit,
+            Antes = antes,
+        };
         error = null;
         return true;
     }
 
-    private static bool TryParseVoucher(string text, int[] antes, out IJamlClause? clause, out string? error)
+    private static bool TryParseVoucher(
+        string text,
+        int[] antes,
+        out IJamlClause? clause,
+        out string? error
+    )
     {
         var (head, rolls, rollError) = SplitRollsTail(text);
         if (rollError != null)
@@ -300,12 +332,22 @@ public static class JummyLine
             return false;
         }
 
-        clause = new VoucherClause { Vouchers = [voucher], Rolls = rolls.Length == 0 ? [0] : rolls, Antes = antes };
+        clause = new VoucherClause
+        {
+            Vouchers = [voucher],
+            Rolls = rolls.Length == 0 ? [0] : rolls,
+            Antes = antes,
+        };
         error = null;
         return true;
     }
 
-    private static bool TryParseGenericTag(string text, int[] antes, out IJamlClause? clause, out string? error)
+    private static bool TryParseGenericTag(
+        string text,
+        int[] antes,
+        out IJamlClause? clause,
+        out string? error
+    )
     {
         var (head, rolls, rollError) = SplitRollsTail(text);
         if (rollError != null)
@@ -317,7 +359,13 @@ public static class JummyLine
         return TryParseTag(head, rolls.Length == 0 ? [0, 1] : rolls, antes, out clause, out error);
     }
 
-    private static bool TryParseTag(string text, int[] rolls, int[] antes, out IJamlClause? clause, out string? error)
+    private static bool TryParseTag(
+        string text,
+        int[] rolls,
+        int[] antes,
+        out IJamlClause? clause,
+        out string? error
+    )
     {
         if (!TryParseFormattedEnum(text, FormatUtils.FormatTag, out MotelyTag tag))
         {
@@ -326,12 +374,22 @@ public static class JummyLine
             return false;
         }
 
-        clause = new TagClause { Tags = [tag], Rolls = rolls, Antes = antes };
+        clause = new TagClause
+        {
+            Tags = [tag],
+            Rolls = rolls,
+            Antes = antes,
+        };
         error = null;
         return true;
     }
 
-    private static bool TryParseBoss(string text, int[] antes, out IJamlClause? clause, out string? error)
+    private static bool TryParseBoss(
+        string text,
+        int[] antes,
+        out IJamlClause? clause,
+        out string? error
+    )
     {
         if (!TryParseFormattedEnum(text, FormatUtils.FormatBoss, out MotelyBossBlind boss))
         {
@@ -397,20 +455,68 @@ public static class JummyLine
 
     private static readonly EventSpec[] EventSpecs =
     [
-        new("Lucky Money", true, static (rolls, with) => new LuckyMoneyClause { Rolls = rolls, With = with }),
-        new("Lucky Mult", true, static (rolls, with) => new LuckyMultClause { Rolls = rolls, With = with }),
-        new("Wheel of Fortune", true, static (rolls, with) => new WheelOfFortuneClause { Rolls = rolls, With = with }),
-        new("Gros Michel Extinct", true, static (rolls, with) => new GrosMichelExtinctClause { Rolls = rolls, With = with }),
-        new("Cavendish Extinct", true, static (rolls, with) => new CavendishExtinctClause { Rolls = rolls, With = with }),
-        new("Space Levelup", true, static (rolls, with) => new SpaceLevelupClause { Rolls = rolls, With = with }),
-        new("Glass Destroy", true, static (rolls, with) => new GlassDestroyClause { Rolls = rolls, With = with }),
-        new("Wheel Stays Flipped", true, static (rolls, with) => new WheelStaysFlippedClause { Rolls = rolls, With = with }),
-        new("Business Payout", false, static (rolls, _) => new BusinessPayoutClause { Rolls = rolls }),
-        new("Bloodstone Trigger", false, static (rolls, _) => new BloodstoneTriggerClause { Rolls = rolls }),
-        new("Parking Payout", false, static (rolls, _) => new ParkingPayoutClause { Rolls = rolls }),
+        new(
+            "Lucky Money",
+            true,
+            static (rolls, with) => new LuckyMoneyClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Lucky Mult",
+            true,
+            static (rolls, with) => new LuckyMultClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Wheel of Fortune",
+            true,
+            static (rolls, with) => new WheelOfFortuneClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Gros Michel Extinct",
+            true,
+            static (rolls, with) => new GrosMichelExtinctClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Cavendish Extinct",
+            true,
+            static (rolls, with) => new CavendishExtinctClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Space Levelup",
+            true,
+            static (rolls, with) => new SpaceLevelupClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Glass Destroy",
+            true,
+            static (rolls, with) => new GlassDestroyClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Wheel Stays Flipped",
+            true,
+            static (rolls, with) => new WheelStaysFlippedClause { Rolls = rolls, With = with }
+        ),
+        new(
+            "Business Payout",
+            false,
+            static (rolls, _) => new BusinessPayoutClause { Rolls = rolls }
+        ),
+        new(
+            "Bloodstone Trigger",
+            false,
+            static (rolls, _) => new BloodstoneTriggerClause { Rolls = rolls }
+        ),
+        new(
+            "Parking Payout",
+            false,
+            static (rolls, _) => new ParkingPayoutClause { Rolls = rolls }
+        ),
     ];
 
-    private readonly record struct EventSpec(string Name, bool AllowLuck, Func<int[], JamlWith, IJamlClause> Create);
+    private readonly record struct EventSpec(
+        string Name,
+        bool AllowLuck,
+        Func<int[], JamlWith, IJamlClause> Create
+    );
 
     private static bool TryParseEventPayload(string text, string name, out string payload)
     {
@@ -423,7 +529,10 @@ public static class JummyLine
         return true;
     }
 
-    private static (string Text, MotelyLuck? Luck, string? Error) SplitLuckTail(string text, bool allowLuck)
+    private static (string Text, MotelyLuck? Luck, string? Error) SplitLuckTail(
+        string text,
+        bool allowLuck
+    )
     {
         const string marker = " with luck ";
         int idx = text.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
@@ -437,7 +546,10 @@ public static class JummyLine
         return (text[..idx].TrimEnd(), luck, null);
     }
 
-    private static (string Text, int Value, string? Error) SplitRequiredIntTail(string text, string marker)
+    private static (string Text, int Value, string? Error) SplitRequiredIntTail(
+        string text,
+        string marker
+    )
     {
         int idx = text.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
         if (idx < 0)
@@ -490,8 +602,10 @@ public static class JummyLine
     {
         foreach (var candidate in Enum.GetValues<T>())
         {
-            if (string.Equals(format(candidate), text, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(candidate.ToString(), text, StringComparison.OrdinalIgnoreCase))
+            if (
+                string.Equals(format(candidate), text, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(candidate.ToString(), text, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 value = candidate;
                 return true;

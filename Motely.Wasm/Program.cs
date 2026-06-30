@@ -22,7 +22,10 @@ public static class BootsharpRenamers
     public static string RenameModule(Type type, string @default)
     {
         var ns = type.Namespace ?? "";
-        return ns == "Motely.Wasm" || ns == "Motely" || ns.StartsWith("Motely.", StringComparison.Ordinal)
+        return
+            ns == "Motely.Wasm"
+            || ns == "Motely"
+            || ns.StartsWith("Motely.", StringComparison.Ordinal)
             ? "index"
             : @default;
     }
@@ -38,7 +41,6 @@ public static class BootsharpRenamers
         : type.IsByRefLike ? null
         : type.IsByRef ? null
         : @default;
-
 }
 
 [SpecializeImport(typeof(MotelySingleSearchContext))]
@@ -47,17 +49,21 @@ public abstract class MotelySingleSearchContextImport(int id) : SpecializedImpor
     public abstract MotelyDeck Deck { get; }
     public abstract MotelyStake Stake { get; }
     public abstract string GetSeed();
+
     // First voucher of an ante — int in, enum out, marshals clean. Lets a JS predicate
     // DERIVE a fact about the seed (e.g. ante-1 voucher) instead of just reading its name.
     public abstract MotelyVoucher GetAnteFirstVoucher(int ante);
 }
 
 [SpecializeExport(typeof(MotelySingleSearchContext))]
-public sealed class MotelySingleSearchContextExport(MotelySingleSearchContext ctx) : SpecializedExport(ctx)
+public sealed class MotelySingleSearchContextExport(MotelySingleSearchContext ctx)
+    : SpecializedExport(ctx)
 {
     public MotelyDeck Deck => ctx.Deck;
     public MotelyStake Stake => ctx.Stake;
+
     public string GetSeed() => ctx.GetSeed();
+
     public MotelyVoucher GetAnteFirstVoucher(int ante) => ctx.GetAnteFirstVoucher(ante);
 }
 
@@ -74,9 +80,10 @@ public static class MotelyWasm
 {
     [Export]
     public static string GetVersion() =>
-        typeof(MotelyWasm).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-        ?? typeof(MotelyWasm).Assembly.GetName().Version?.ToString()
-        ?? "unknown";
+        typeof(MotelyWasm)
+            .Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion
+        ?? typeof(MotelyWasm).Assembly.GetName().Version?.ToString() ?? "unknown";
 }
 
 // ── JAML ─────────────────────────────────────────────────────────────────────
@@ -109,41 +116,87 @@ public static class MotelyJaml
 
     /// <summary>Plan a search (keyword candidate counts etc.) for the given JamlConfig.</summary>
     [Export]
-    public static JamlSearchPlan CreatePlan(JamlConfig jaml) =>
-        JamlSearchBuilder.CreatePlan(jaml);
+    public static JamlSearchPlan CreatePlan(JamlConfig jaml) => JamlSearchBuilder.CreatePlan(jaml);
 
     /// <summary>Display names of the built-in native (C#) filters.</summary>
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
 }
 
-
-
 // ── Utilities ────────────────────────────────────────────────────────────────
 public static class MotelyUtilities
 {
-    [Export] public static long SeedToTotalIndex(string seed) => SeedMath.SeedToTotalIndex(seed);
-    [Export] public static string TotalIndexToSeed(long index) => SeedMath.TotalIndexToSeed(index);
-    [Export] public static long SeedToSearchIndex(string seed) => SeedMath.SeedToSearchIndex(seed);
-    [Export] public static string SearchIndexToSeed(long index, int length) => SeedMath.SearchIndexToSeed(index, length);
-    [Export] public static long GetFirstSeedOfLength(int length) => SeedMath.GetFirstSeedOfLength(length);
-    [Export] public static long MaxSearchIndexInclusive(int length) => SeedMath.MaxSearchIndexInclusive(length);
-    [Export] public static long SeedToBatchIndex(string seed, int batchSize) => SeedMath.SeedToBatchIndex(seed, batchSize);
-    [Export] public static string BatchIndexToSeedPrefix(long batchIndex, int batchSize) => SeedMath.BatchIndexToSeedPrefix(batchIndex, batchSize);
-    [Export] public static long[] SearchIndexRangeToBatchRange(long startSearchIndexInclusive, long stopSearchIndexInclusive, int batchCharCount)
+    [Export]
+    public static long SeedToTotalIndex(string seed) => SeedMath.SeedToTotalIndex(seed);
+
+    [Export]
+    public static string TotalIndexToSeed(long index) => SeedMath.TotalIndexToSeed(index);
+
+    [Export]
+    public static long SeedToSearchIndex(string seed) => SeedMath.SeedToSearchIndex(seed);
+
+    [Export]
+    public static string SearchIndexToSeed(long index, int length) =>
+        SeedMath.SearchIndexToSeed(index, length);
+
+    [Export]
+    public static long GetFirstSeedOfLength(int length) => SeedMath.GetFirstSeedOfLength(length);
+
+    [Export]
+    public static long MaxSearchIndexInclusive(int length) =>
+        SeedMath.MaxSearchIndexInclusive(length);
+
+    [Export]
+    public static long SeedToBatchIndex(string seed, int batchSize) =>
+        SeedMath.SeedToBatchIndex(seed, batchSize);
+
+    [Export]
+    public static string BatchIndexToSeedPrefix(long batchIndex, int batchSize) =>
+        SeedMath.BatchIndexToSeedPrefix(batchIndex, batchSize);
+
+    [Export]
+    public static long[] SearchIndexRangeToBatchRange(
+        long startSearchIndexInclusive,
+        long stopSearchIndexInclusive,
+        int batchCharCount
+    )
     {
-        var (start, end) = SeedMath.SearchIndexRangeToBatchRange(startSearchIndexInclusive, stopSearchIndexInclusive, batchCharCount);
+        var (start, end) = SeedMath.SearchIndexRangeToBatchRange(
+            startSearchIndexInclusive,
+            stopSearchIndexInclusive,
+            batchCharCount
+        );
         return [start, end];
     }
 
-    [Export] public static string[] RepeatCharKeywords(int repeatCount) => [.. MotelySeedKeywordSequences.RepeatCharKeywords(repeatCount)];
-    [Export] public static string[] AscendingDigitLetterKeywords(int length) => [.. MotelySeedKeywordSequences.AscendingDigitLetterKeywords(length)];
-    [Export] public static string[] DescendingDigitLetterKeywords(int length) => [.. MotelySeedKeywordSequences.DescendingDigitLetterKeywords(length)];
-    [Export] public static string[] MirrorPatternKeywords(int length) => [.. MotelySeedKeywordSequences.MirrorPatternKeywords(length)];
-    [Export] public static long GetAestheticSeedCount(JamlAesthetic aesthetic) => MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic);
-    [Export] public static string[] GrossKeywords() => MotelySeedKeywordSequences.GrossKeywords;
-    [Export] public static string[] FunnyKeywords() => MotelySeedKeywordSequences.FunnyKeywords;
-    [Export] public static string[] BalatroKeywords() => MotelySeedKeywordSequences.BalatroKeywords;
+    [Export]
+    public static string[] RepeatCharKeywords(int repeatCount) =>
+        [.. MotelySeedKeywordSequences.RepeatCharKeywords(repeatCount)];
+
+    [Export]
+    public static string[] AscendingDigitLetterKeywords(int length) =>
+        [.. MotelySeedKeywordSequences.AscendingDigitLetterKeywords(length)];
+
+    [Export]
+    public static string[] DescendingDigitLetterKeywords(int length) =>
+        [.. MotelySeedKeywordSequences.DescendingDigitLetterKeywords(length)];
+
+    [Export]
+    public static string[] MirrorPatternKeywords(int length) =>
+        [.. MotelySeedKeywordSequences.MirrorPatternKeywords(length)];
+
+    [Export]
+    public static long GetAestheticSeedCount(JamlAesthetic aesthetic) =>
+        MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic);
+
+    [Export]
+    public static string[] GrossKeywords() => MotelySeedKeywordSequences.GrossKeywords;
+
+    [Export]
+    public static string[] FunnyKeywords() => MotelySeedKeywordSequences.FunnyKeywords;
+
+    [Export]
+    public static string[] BalatroKeywords() => MotelySeedKeywordSequences.BalatroKeywords;
 }
 
 // ── JAMLyzer ─────────────────────────────────────────────────────────────────
@@ -156,7 +209,8 @@ public static class MotelyJamlyzer
     /// Fires from the analyze path only (never the search loop), so a full analysis is built solely for
     /// seeds you actually ask to analyze — not for the spam the top-N heap would evict.
     /// </summary>
-    [Export] public static event Action<MotelyJamlyzerSeedResult>? OnJamlyzedResult;
+    [Export]
+    public static event Action<MotelyJamlyzerSeedResult>? OnJamlyzedResult;
 
     /// <summary>Analyze each seed with the default window (20 rolls) from each stream's natural start.</summary>
     [Export]
@@ -174,8 +228,10 @@ public static class MotelyJamlyzer
     /// </summary>
     [Export]
     public static MotelyJamlyzerSeedResult[] ResumeSeeds(
-        JamlConfig jaml, MotelyJamlyzerStreamStates resumeFrom, int eventRolls) =>
-        Emit(JamlyzerEngine.Analyze(jaml, resumeFrom, eventRolls));
+        JamlConfig jaml,
+        MotelyJamlyzerStreamStates resumeFrom,
+        int eventRolls
+    ) => Emit(JamlyzerEngine.Analyze(jaml, resumeFrom, eventRolls));
 
     // Materialize the analysis, firing OnJamlyzedResult per seed as it lands, and still return the
     // full array (back-compat with callers that take the return value). When nobody's subscribed,
@@ -205,9 +261,14 @@ public static class MotelyJamlyzer
 // The awaited Task just signals completion; there is no return payload to keep in sync.
 public static class MotelySearch
 {
-    [Export] public static event Action<MotelyProgress>? OnProgress;
-    [Export] public static event Action<string>? OnSeedMatch;
-    [Export] public static event Action<MotelyScoredSeedResult>? OnScoredResult;
+    [Export]
+    public static event Action<MotelyProgress>? OnProgress;
+
+    [Export]
+    public static event Action<string>? OnSeedMatch;
+
+    [Export]
+    public static event Action<MotelyScoredSeedResult>? OnScoredResult;
 
     /// <summary>Search the explicit seed list in the JAML.</summary>
     [Export]
@@ -221,13 +282,20 @@ public static class MotelySearch
     /// <summary>Sequentially walk the seed space across the given batch range.</summary>
     [Export]
     public static Task SearchSequential(
-        JamlConfig jaml, long startBatchIndex, long endBatchIndex, int batchCharacterCount)
+        JamlConfig jaml,
+        long startBatchIndex,
+        long endBatchIndex,
+        int batchCharacterCount
+    )
     {
-        return Run(jaml, s => s
-            .WithSequentialSearch()
-            .WithStartBatchIndex(startBatchIndex)
-            .WithEndBatchIndex(endBatchIndex)
-            .WithBatchCharacterCount(batchCharacterCount));
+        return Run(
+            jaml,
+            s =>
+                s.WithSequentialSearch()
+                    .WithStartBatchIndex(startBatchIndex)
+                    .WithEndBatchIndex(endBatchIndex)
+                    .WithBatchCharacterCount(batchCharacterCount)
+        );
     }
 
     /// <summary>Search a number of random seeds.</summary>
@@ -238,9 +306,12 @@ public static class MotelySearch
     }
 
     private static async Task Run(
-        JamlConfig jaml, Func<IMotelySearchSettings, IMotelySearchSettings> mode)
+        JamlConfig jaml,
+        Func<IMotelySearchSettings, IMotelySearchSettings> mode
+    )
     {
-        var settings = JamlSearchBuilder.CreateSettings(jaml)
+        var settings = JamlSearchBuilder
+            .CreateSettings(jaml)
             .WithDeck(jaml.Deck)
             .WithStake(jaml.Stake)
             .WithThreadCount(1); // WASM has no pthreads — one thread, runs on the caller.
@@ -263,8 +334,7 @@ public static class MotelySearch
 
         if (Jimmolate.FindSeed is { } findSeed)
         {
-            settings = settings.WithJimmolate(
-                (ref MotelySingleSearchContext ctx) => findSeed(ctx));
+            settings = settings.WithJimmolate((ref MotelySingleSearchContext ctx) => findSeed(ctx));
         }
 
         using var search = mode(settings).CreateSearch();
@@ -303,7 +373,8 @@ public static class MotelySearchWith
         if (jaml.Seeds.Count == 0)
             throw new InvalidOperationException("JAML has no seeds to search.");
 
-        var settings = JamlSearchBuilder.CreateSettings(jaml)
+        var settings = JamlSearchBuilder
+            .CreateSettings(jaml)
             .WithDeck(jaml.Deck)
             .WithStake(jaml.Stake)
             .WithThreadCount(1)

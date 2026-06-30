@@ -23,10 +23,7 @@ public sealed record MotelyJamlyzerAnteResult(
     MotelyJamlyzerShopStreams ShopStreams
 );
 
-public sealed record MotelyJamlyzerPack(
-    MotelyBoosterPack Pack,
-    IReadOnlyList<MotelyItem> Items
-);
+public sealed record MotelyJamlyzerPack(MotelyBoosterPack Pack, IReadOnlyList<MotelyItem> Items);
 
 /// <summary>
 /// Per-ante raw shop-source PRNG queues, read independently of the resolved <c>ShopItems</c>.
@@ -48,16 +45,16 @@ public sealed record MotelyJamlyzerShopStreams(
 /// All arrays have length == eventRolls. EmperorTarots has length == eventRolls * 2 (2 per use).
 /// </summary>
 public sealed record MotelyJamlyzerPulls(
-    IReadOnlyList<MotelyItem>    JudgementJokers,
-    IReadOnlyList<MotelyItem>    WraithJokers,
-    IReadOnlyList<MotelyItem>    EmperorTarots,
-    IReadOnlyList<MotelyItem>    PurpleSealTarots,
-    IReadOnlyList<MotelyItem>    SixthSenseSpectrals,
-    IReadOnlyList<MotelyItem>    SeanceSpectrals,
-    IReadOnlyList<MotelyItem>    RiffRaffJokers,
-    IReadOnlyList<MotelyItem>    RareTagJokers,
-    IReadOnlyList<MotelyItem>    UncommonTagJokers,
-    IReadOnlyList<MotelyItem>    LegendaryJokers,
+    IReadOnlyList<MotelyItem> JudgementJokers,
+    IReadOnlyList<MotelyItem> WraithJokers,
+    IReadOnlyList<MotelyItem> EmperorTarots,
+    IReadOnlyList<MotelyItem> PurpleSealTarots,
+    IReadOnlyList<MotelyItem> SixthSenseSpectrals,
+    IReadOnlyList<MotelyItem> SeanceSpectrals,
+    IReadOnlyList<MotelyItem> RiffRaffJokers,
+    IReadOnlyList<MotelyItem> RareTagJokers,
+    IReadOnlyList<MotelyItem> UncommonTagJokers,
+    IReadOnlyList<MotelyItem> LegendaryJokers,
     IReadOnlyList<MotelyVoucher> VoucherSequence
 );
 
@@ -97,45 +94,56 @@ public sealed record MotelyJamlyzerStreamStates(
 );
 
 public sealed record MotelyJamlyzerEvents(
-    bool[]                LuckyMoney,
-    bool[]                LuckyMult,
-    MotelyItemEdition[]   WheelOfFortune,
-    bool[]                Cavendish,
-    bool[]                GrosMichel,
-    bool[]                Space,
-    bool[]                Business,
-    bool[]                Bloodstone,
-    bool[]                Parking,
-    bool[]                EightBall,
-    bool[]                Glass,
-    bool[]                OmenGlobe,
-    bool[]                TheWheel,
-    int[]                 Misprint
+    bool[] LuckyMoney,
+    bool[] LuckyMult,
+    MotelyItemEdition[] WheelOfFortune,
+    bool[] Cavendish,
+    bool[] GrosMichel,
+    bool[] Space,
+    bool[] Business,
+    bool[] Bloodstone,
+    bool[] Parking,
+    bool[] EightBall,
+    bool[] Glass,
+    bool[] OmenGlobe,
+    bool[] TheWheel,
+    int[] Misprint
 );
 
 public static class MotelyJamlyzer
 {
     /// <summary>Analyze each seed with every event stream starting at the seed's natural start (0).</summary>
-    public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(JamlConfig config, int eventRolls = 20)
-        => AnalyzeCore(config, resumeFrom: null, eventRolls);
+    public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(
+        JamlConfig config,
+        int eventRolls = 20
+    ) => AnalyzeCore(config, resumeFrom: null, eventRolls);
 
     /// <summary>
     /// Analyze each seed, resuming every event stream from <paramref name="resumeFrom"/> — the state
     /// bag handed back by a previous call — so the rolls continue where the last window stopped.
     /// </summary>
-    public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(JamlConfig config, MotelyJamlyzerStreamStates resumeFrom, int eventRolls = 20)
+    public static IReadOnlyList<MotelyJamlyzerSeedResult> Analyze(
+        JamlConfig config,
+        MotelyJamlyzerStreamStates resumeFrom,
+        int eventRolls = 20
+    )
     {
         // The bag's 14 event-stream State doubles are positions in a *specific* seed's PRNG. Replaying
         // them across a multi-seed config would inject seed[0]'s state into seed[1..], silently
         // corrupting their event rolls. Resume is inherently a single-seed scroll.
         if (config.Seeds.Count > 1)
             throw new InvalidOperationException(
-                $"Resume (resumeFrom) is single-seed only; config has {config.Seeds.Count} seeds. " +
-                "Scroll one seed at a time — the state bag is seed-specific.");
+                $"Resume (resumeFrom) is single-seed only; config has {config.Seeds.Count} seeds. "
+                    + "Scroll one seed at a time — the state bag is seed-specific."
+            );
         return AnalyzeCore(config, resumeFrom, eventRolls);
     }
 
-    private static IReadOnlyList<MotelyJamlyzerSeedResult> AnalyzeCore(JamlConfig config, MotelyJamlyzerStreamStates? resumeFrom, int eventRolls)
+    private static IReadOnlyList<MotelyJamlyzerSeedResult> AnalyzeCore(
+        JamlConfig config,
+        MotelyJamlyzerStreamStates? resumeFrom,
+        int eventRolls
+    )
     {
         var antesToAnalyze = ComputeAntes(config);
         bool hasScore = config.Must.Count + config.Should.Count > 0;
@@ -144,7 +152,9 @@ public static class MotelyJamlyzer
         foreach (var seed in config.Seeds)
         {
             var filterDesc = new MotelyJamlyzerFilterDesc(antesToAnalyze, eventRolls, resumeFrom);
-            var settings = new MotelySearchSettings<MotelyJamlyzerFilterDesc.JamlyzerFilter>(filterDesc)
+            var settings = new MotelySearchSettings<MotelyJamlyzerFilterDesc.JamlyzerFilter>(
+                filterDesc
+            )
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithListSearch([seed])
@@ -154,11 +164,13 @@ public static class MotelyJamlyzer
             if (hasScore)
             {
                 settings = settings
-                    .WithSeedScoreProvider(new JamlShouldScoreDesc(
-                        [.. config.Must],
-                        [.. config.Should],
-                        minimumTotalScore: 0
-                    ))
+                    .WithSeedScoreProvider(
+                        new JamlShouldScoreDesc(
+                            [.. config.Must],
+                            [.. config.Should],
+                            minimumTotalScore: 0
+                        )
+                    )
                     .WithScoredResultCallback(tally => score = tally.Score);
             }
 
@@ -166,7 +178,16 @@ public static class MotelyJamlyzer
             search.Start();
             search.AwaitCompletion();
 
-            results.Add(new(seed, score, filterDesc.Antes, filterDesc.Events!, filterDesc.StreamStates!, filterDesc.ErraticDeck));
+            results.Add(
+                new(
+                    seed,
+                    score,
+                    filterDesc.Antes,
+                    filterDesc.Events!,
+                    filterDesc.StreamStates!,
+                    filterDesc.ErraticDeck
+                )
+            );
         }
 
         return results;
@@ -175,9 +196,14 @@ public static class MotelyJamlyzer
     internal static int[] ComputeAntes(JamlConfig config)
     {
         var set = new SortedSet<int>();
-        foreach (var clause in config.Must.Concat(config.Should).Concat(config.MustNot).OfType<IAnteScopedClause>())
-            foreach (var ante in clause.Antes)
-                set.Add(ante);
+        foreach (
+            var clause in config
+                .Must.Concat(config.Should)
+                .Concat(config.MustNot)
+                .OfType<IAnteScopedClause>()
+        )
+        foreach (var ante in clause.Antes)
+            set.Add(ante);
         return set.Count > 0 ? [.. set] : [1, 2, 3, 4, 5, 6, 7, 8];
     }
 }

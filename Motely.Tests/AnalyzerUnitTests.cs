@@ -7,7 +7,11 @@ namespace Motely.Tests;
 
 public sealed class AnalyzerUnitTests(ITestOutputHelper output)
 {
-    private static JamlConfig SeedConfig(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
+    private static JamlConfig SeedConfig(
+        string seed,
+        MotelyDeck deck = MotelyDeck.Red,
+        MotelyStake stake = MotelyStake.White
+    )
     {
         var config = JamlConfigLoader.FromYaml("seeds: []");
         config.Seeds.Add(seed);
@@ -80,12 +84,25 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
 
         // First 10, then resume from the returned state bag for 10 more.
         var page1 = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: 10)[0];
-        var page2 = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), page1.StreamStates, eventRolls: 10)[0];
+        var page2 = MotelyJamlyzer.Analyze(
+            SeedConfig("UNITTEST"),
+            page1.StreamStates,
+            eventRolls: 10
+        )[0];
 
         // page1 ++ page2 must reconstruct the full window exactly (no re-roll, no drift).
-        Assert.Equal<IEnumerable<MotelyItemEdition>>(full.Events.WheelOfFortune, page1.Events.WheelOfFortune.Concat(page2.Events.WheelOfFortune));
-        Assert.Equal<IEnumerable<int>>(full.Events.Misprint,                      page1.Events.Misprint.Concat(page2.Events.Misprint));
-        Assert.Equal<IEnumerable<bool>>(full.Events.LuckyMoney,                   page1.Events.LuckyMoney.Concat(page2.Events.LuckyMoney));
+        Assert.Equal<IEnumerable<MotelyItemEdition>>(
+            full.Events.WheelOfFortune,
+            page1.Events.WheelOfFortune.Concat(page2.Events.WheelOfFortune)
+        );
+        Assert.Equal<IEnumerable<int>>(
+            full.Events.Misprint,
+            page1.Events.Misprint.Concat(page2.Events.Misprint)
+        );
+        Assert.Equal<IEnumerable<bool>>(
+            full.Events.LuckyMoney,
+            page1.Events.LuckyMoney.Concat(page2.Events.LuckyMoney)
+        );
 
         // And the stitched state must land on the same end-state as the full window.
         Assert.Equal(full.StreamStates, page2.StreamStates);
@@ -100,26 +117,80 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
             var p2 = page2.Antes[a];
 
             // Every pulls member.
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.JudgementJokers,     p1.Pulls.JudgementJokers.Concat(p2.Pulls.JudgementJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.WraithJokers,        p1.Pulls.WraithJokers.Concat(p2.Pulls.WraithJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.EmperorTarots,       p1.Pulls.EmperorTarots.Concat(p2.Pulls.EmperorTarots));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.PurpleSealTarots,    p1.Pulls.PurpleSealTarots.Concat(p2.Pulls.PurpleSealTarots));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.SixthSenseSpectrals, p1.Pulls.SixthSenseSpectrals.Concat(p2.Pulls.SixthSenseSpectrals));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.SeanceSpectrals,     p1.Pulls.SeanceSpectrals.Concat(p2.Pulls.SeanceSpectrals));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.RiffRaffJokers,      p1.Pulls.RiffRaffJokers.Concat(p2.Pulls.RiffRaffJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.RareTagJokers,       p1.Pulls.RareTagJokers.Concat(p2.Pulls.RareTagJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.UncommonTagJokers,   p1.Pulls.UncommonTagJokers.Concat(p2.Pulls.UncommonTagJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.Pulls.LegendaryJokers,     p1.Pulls.LegendaryJokers.Concat(p2.Pulls.LegendaryJokers));
-            Assert.Equal<IEnumerable<MotelyVoucher>>(fa.Pulls.VoucherSequence,  p1.Pulls.VoucherSequence.Concat(p2.Pulls.VoucherSequence));
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.JudgementJokers,
+                p1.Pulls.JudgementJokers.Concat(p2.Pulls.JudgementJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.WraithJokers,
+                p1.Pulls.WraithJokers.Concat(p2.Pulls.WraithJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.EmperorTarots,
+                p1.Pulls.EmperorTarots.Concat(p2.Pulls.EmperorTarots)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.PurpleSealTarots,
+                p1.Pulls.PurpleSealTarots.Concat(p2.Pulls.PurpleSealTarots)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.SixthSenseSpectrals,
+                p1.Pulls.SixthSenseSpectrals.Concat(p2.Pulls.SixthSenseSpectrals)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.SeanceSpectrals,
+                p1.Pulls.SeanceSpectrals.Concat(p2.Pulls.SeanceSpectrals)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.RiffRaffJokers,
+                p1.Pulls.RiffRaffJokers.Concat(p2.Pulls.RiffRaffJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.RareTagJokers,
+                p1.Pulls.RareTagJokers.Concat(p2.Pulls.RareTagJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.UncommonTagJokers,
+                p1.Pulls.UncommonTagJokers.Concat(p2.Pulls.UncommonTagJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.Pulls.LegendaryJokers,
+                p1.Pulls.LegendaryJokers.Concat(p2.Pulls.LegendaryJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyVoucher>>(
+                fa.Pulls.VoucherSequence,
+                p1.Pulls.VoucherSequence.Concat(p2.Pulls.VoucherSequence)
+            );
 
             // Every shop-source member.
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.ShopStreams.ShopJokers,         p1.ShopStreams.ShopJokers.Concat(p2.ShopStreams.ShopJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.ShopStreams.CommonShopJokers,   p1.ShopStreams.CommonShopJokers.Concat(p2.ShopStreams.CommonShopJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.ShopStreams.UncommonShopJokers, p1.ShopStreams.UncommonShopJokers.Concat(p2.ShopStreams.UncommonShopJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.ShopStreams.RareShopJokers,     p1.ShopStreams.RareShopJokers.Concat(p2.ShopStreams.RareShopJokers));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.ShopStreams.ShopTarots,         p1.ShopStreams.ShopTarots.Concat(p2.ShopStreams.ShopTarots));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.ShopStreams.ShopPlanets,        p1.ShopStreams.ShopPlanets.Concat(p2.ShopStreams.ShopPlanets));
-            Assert.Equal<IEnumerable<MotelyItem>>(fa.ShopStreams.ShopSpectrals,      p1.ShopStreams.ShopSpectrals.Concat(p2.ShopStreams.ShopSpectrals));
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.ShopStreams.ShopJokers,
+                p1.ShopStreams.ShopJokers.Concat(p2.ShopStreams.ShopJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.ShopStreams.CommonShopJokers,
+                p1.ShopStreams.CommonShopJokers.Concat(p2.ShopStreams.CommonShopJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.ShopStreams.UncommonShopJokers,
+                p1.ShopStreams.UncommonShopJokers.Concat(p2.ShopStreams.UncommonShopJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.ShopStreams.RareShopJokers,
+                p1.ShopStreams.RareShopJokers.Concat(p2.ShopStreams.RareShopJokers)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.ShopStreams.ShopTarots,
+                p1.ShopStreams.ShopTarots.Concat(p2.ShopStreams.ShopTarots)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.ShopStreams.ShopPlanets,
+                p1.ShopStreams.ShopPlanets.Concat(p2.ShopStreams.ShopPlanets)
+            );
+            Assert.Equal<IEnumerable<MotelyItem>>(
+                fa.ShopStreams.ShopSpectrals,
+                p1.ShopStreams.ShopSpectrals.Concat(p2.ShopStreams.ShopSpectrals)
+            );
         }
     }
 
@@ -133,17 +204,27 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
         var c = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), b.StreamStates, eventRolls: 7)[0];
 
         Assert.Equal(20, full.StreamStates.RollOffset);
-        Assert.Equal(5,  a.StreamStates.RollOffset);
+        Assert.Equal(5, a.StreamStates.RollOffset);
         Assert.Equal(13, b.StreamStates.RollOffset);
         Assert.Equal(20, c.StreamStates.RollOffset);
         Assert.Equal(full.StreamStates, c.StreamStates);
 
-        Assert.Equal<IEnumerable<int>>(full.Events.Misprint,
-            a.Events.Misprint.Concat(b.Events.Misprint).Concat(c.Events.Misprint));
-        Assert.Equal<IEnumerable<MotelyItem>>(full.Antes[0].Pulls.EmperorTarots,
-            a.Antes[0].Pulls.EmperorTarots.Concat(b.Antes[0].Pulls.EmperorTarots).Concat(c.Antes[0].Pulls.EmperorTarots));
-        Assert.Equal<IEnumerable<MotelyItem>>(full.Antes[7].ShopStreams.ShopPlanets,
-            a.Antes[7].ShopStreams.ShopPlanets.Concat(b.Antes[7].ShopStreams.ShopPlanets).Concat(c.Antes[7].ShopStreams.ShopPlanets));
+        Assert.Equal<IEnumerable<int>>(
+            full.Events.Misprint,
+            a.Events.Misprint.Concat(b.Events.Misprint).Concat(c.Events.Misprint)
+        );
+        Assert.Equal<IEnumerable<MotelyItem>>(
+            full.Antes[0].Pulls.EmperorTarots,
+            a.Antes[0]
+                .Pulls.EmperorTarots.Concat(b.Antes[0].Pulls.EmperorTarots)
+                .Concat(c.Antes[0].Pulls.EmperorTarots)
+        );
+        Assert.Equal<IEnumerable<MotelyItem>>(
+            full.Antes[7].ShopStreams.ShopPlanets,
+            a.Antes[7]
+                .ShopStreams.ShopPlanets.Concat(b.Antes[7].ShopStreams.ShopPlanets)
+                .Concat(c.Antes[7].ShopStreams.ShopPlanets)
+        );
     }
 
     [Fact]
@@ -157,14 +238,16 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
         var results = MotelyJamlyzer.Analyze(config);
         Assert.Equal(3, results.Count);
         Assert.Equal("UNITTEST", results[0].Seed);
-        Assert.Equal("ALEEB",    results[1].Seed);
-        Assert.Equal("1234567",  results[2].Seed);
+        Assert.Equal("ALEEB", results[1].Seed);
+        Assert.Equal("1234567", results[2].Seed);
     }
 
     [Fact]
     public void Analyze_GhostDeck_Runs()
     {
-        var results = MotelyJamlyzer.Analyze(SeedConfig("KK1XD111", MotelyDeck.Ghost, MotelyStake.Black));
+        var results = MotelyJamlyzer.Analyze(
+            SeedConfig("KK1XD111", MotelyDeck.Ghost, MotelyStake.Black)
+        );
         Assert.Single(results);
         Assert.Equal(8, results[0].Antes.Count);
     }
@@ -182,7 +265,9 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
     // (chunk, calls, ms, rolls/ms). Expect a U/quadratic shape: tiny chunks pay per-call boot AND
     // offset-replay (composite resume is O(offset)), big chunks amortize the boot. Bumping TOTAL to
     // a million is only cheap if you scroll events-only (those resume O(1) via the state bag).
-    [Fact(Skip = "Performance benchmark: too slow for the normal test run (composite resume is O(total^2))")]
+    [Fact(
+        Skip = "Performance benchmark: too slow for the normal test run (composite resume is O(total^2))"
+    )]
     public void Benchmark_ScrollPagination_ChunkSizeSweep()
     {
         const int total = 1000; // bounded: composite offset-replay is cumulatively O(total^2)
@@ -195,7 +280,8 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
         foreach (int chunk in chunks)
         {
             var sw = Stopwatch.StartNew();
-            int rolled = 0, calls = 0;
+            int rolled = 0,
+                calls = 0;
             MotelyJamlyzerStreamStates? state = null;
             while (rolled < total)
             {
@@ -211,7 +297,9 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
 
             Assert.Equal(total, state!.RollOffset); // sanity: the scroll covered exactly TOTAL
             double ms = sw.Elapsed.TotalMilliseconds;
-            output.WriteLine($"{chunk,5} | {calls,6} | {ms,6:F1} | {total / Math.Max(ms, 0.001),8:F1}");
+            output.WriteLine(
+                $"{chunk, 5} | {calls, 6} | {ms, 6:F1} | {total / Math.Max(ms, 0.001), 8:F1}"
+            );
         }
     }
 }

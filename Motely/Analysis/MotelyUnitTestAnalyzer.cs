@@ -110,9 +110,7 @@ public sealed record class MotelyAnteAnalysis(
     bool BigBlindTagMatched = false
 );
 
-public sealed record class MotelyAnalyzedItem(
-    [property: JsonIgnore] MotelyItem Item
-)
+public sealed record class MotelyAnalyzedItem([property: JsonIgnore] MotelyItem Item)
 {
     public string Name => FormatUtils.FormatItem(Item);
     public int Value => Item.Value;
@@ -153,13 +151,14 @@ public static partial class MotelyUnitTestAnalyzer
         {
             MotelyUnitTestAnalyzerFilterDesc filterDesc = new();
 
-            var searchSettings = new MotelySearchSettings<MotelyUnitTestAnalyzerFilterDesc.LegacyTextAnalyzerFilter>(
-                filterDesc
-            )
-                .WithDeck(cfg.Deck)
-                .WithStake(cfg.Stake)
-                .WithListSearch([cfg.Seed]) // Single seed analysis
-                .WithThreadCount(1);
+            var searchSettings =
+                new MotelySearchSettings<MotelyUnitTestAnalyzerFilterDesc.LegacyTextAnalyzerFilter>(
+                    filterDesc
+                )
+                    .WithDeck(cfg.Deck)
+                    .WithStake(cfg.Stake)
+                    .WithListSearch([cfg.Seed]) // Single seed analysis
+                    .WithThreadCount(1);
 
             using var search = searchSettings.CreateSearch();
             search.Start();
