@@ -1655,6 +1655,14 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 }
             }
 
+            // Clear dynamic pseudohash entries this filter cached for THIS batch's seeds. Without
+            // this, the next batch that reuses this FilterSeedBatch hits CachePartialHash's
+            // "already cached" short-circuit and re-derives the next seeds against the previous
+            // batch's hashes — silently dropping every batch after the first. Mirrors the provider's
+            // post-base-filter Reset (see SearchSeeds). The base-key hashes live in SeedHashes and
+            // are restored from InitialCache, so the next BatchSeeds copy is unaffected.
+            filterBatch->SeedHashCache.Reset();
+
             filterBatch->SeedCount = 0;
         }
 
