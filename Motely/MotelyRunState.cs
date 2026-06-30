@@ -61,7 +61,6 @@ public ref struct MotelyRunState
     // Boss caching for scoring - generated once per seed to maintain state
     public MotelyBossBlind[]? CachedBosses;
 
-
     public readonly bool ShowmanActive => _showmanActive;
 
     public void ActivateVoucher(MotelyVoucher voucher)

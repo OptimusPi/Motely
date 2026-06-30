@@ -26,8 +26,7 @@ public struct TwoBlackHoleFilterDesc()
     /// <summary>The <c>.cl</c> returned the count when <c>blackHoles &gt;= 2</c>; this is that cutoff.</summary>
     public const int MinBlackHoles = 2;
 
-    public readonly TwoBlackHoleFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
-        new();
+    public readonly TwoBlackHoleFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new();
 
     public struct TwoBlackHoleFilter() : IMotelySeedFilter
     {

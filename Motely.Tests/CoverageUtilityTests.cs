@@ -48,8 +48,12 @@ public sealed class CoverageUtilityTests
     {
         Assert.Throws<ArgumentException>(() => SeedMath.SeedToTotalIndex("10"));
         Assert.Throws<ArgumentOutOfRangeException>(() => SeedMath.TotalIndexToSeed(-1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => SeedMath.SearchIndexRangeToBatchRange(0, 1, 0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => SeedMath.SearchIndexRangeToBatchRange(2, 1, 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            SeedMath.SearchIndexRangeToBatchRange(0, 1, 0)
+        );
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            SeedMath.SearchIndexRangeToBatchRange(2, 1, 1)
+        );
     }
 
     [Fact]
@@ -73,31 +77,53 @@ public sealed class CoverageUtilityTests
     [Fact]
     public void KeywordSequences_AestheticCountsAndValidationArePinned()
     {
-        Assert.Equal(MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount, MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Gross));
-        Assert.Equal(MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount, MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Funny));
-        Assert.Equal(MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount, MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Balatro));
-        Assert.Throws<ArgumentOutOfRangeException>(() => MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Palindrome));
+        Assert.Equal(
+            MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount,
+            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Gross)
+        );
+        Assert.Equal(
+            MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount,
+            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Funny)
+        );
+        Assert.Equal(
+            MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount,
+            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Balatro)
+        );
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Palindrome)
+        );
 
-        foreach (var keywords in new[]
-        {
-            MotelySeedKeywordSequences.GrossKeywords,
-            MotelySeedKeywordSequences.FunnyKeywords,
-            MotelySeedKeywordSequences.BalatroKeywords,
-        })
+        foreach (
+            var keywords in new[]
+            {
+                MotelySeedKeywordSequences.GrossKeywords,
+                MotelySeedKeywordSequences.FunnyKeywords,
+                MotelySeedKeywordSequences.BalatroKeywords,
+            }
+        )
         {
             Assert.NotEmpty(keywords);
-            Assert.All(keywords, keyword =>
-            {
-                Assert.InRange(keyword.Length, 1, 8);
-                Assert.All(keyword.ToUpperInvariant(), c => Assert.Contains(c, MotelyGlobals.SeedDigits));
-            });
+            Assert.All(
+                keywords,
+                keyword =>
+                {
+                    Assert.InRange(keyword.Length, 1, 8);
+                    Assert.All(
+                        keyword.ToUpperInvariant(),
+                        c => Assert.Contains(c, MotelyGlobals.SeedDigits)
+                    );
+                }
+            );
         }
     }
 
     [Fact]
     public void NativeFilterNames_ParseEveryDisplayNameAndFactoryCreatesSettings()
     {
-        Assert.Equal(Enum.GetValues<MotelyNativeFilter>().Length, MotelyNativeFilterNames.DisplayNames.Length);
+        Assert.Equal(
+            Enum.GetValues<MotelyNativeFilter>().Length,
+            MotelyNativeFilterNames.DisplayNames.Length
+        );
 
         foreach (var expected in Enum.GetValues<MotelyNativeFilter>())
         {
@@ -112,6 +138,8 @@ public sealed class CoverageUtilityTests
     public void NativeFilterNames_RejectUnknownAndFactoryRejectsOutOfRange()
     {
         Assert.False(MotelyNativeFilterNames.TryParse("not-a-filter", out _));
-        Assert.Throws<ArgumentOutOfRangeException>(() => MotelyNativeFilterFactory.CreateSettings((MotelyNativeFilter)999));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            MotelyNativeFilterFactory.CreateSettings((MotelyNativeFilter)999)
+        );
     }
 }

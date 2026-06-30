@@ -79,7 +79,8 @@ partial class Program
         // would silently map to a different point than the user typed.
         if (seed.Length != MotelyGlobals.MaxSeedLength)
         {
-            error = $"'{input}' must be exactly {MotelyGlobals.MaxSeedLength} characters (1-9, A-Z).";
+            error =
+                $"'{input}' must be exactly {MotelyGlobals.MaxSeedLength} characters (1-9, A-Z).";
             return false;
         }
         foreach (char c in seed)
@@ -408,9 +409,7 @@ partial class Program
                 nSettings = nSettings
                     .WithSeedMatchCallback(StickyProgress.WriteResultLine)
                     .WithProgressCallback(
-                        quietOption.HasValue()
-                            ? CaptureProgress
-                            : WriteProgressLineToStderr
+                        quietOption.HasValue() ? CaptureProgress : WriteProgressLineToStderr
                     );
 
                 if (!quietOption.HasValue())
@@ -430,13 +429,17 @@ partial class Program
                 return 1;
             }
 
-            if (!JamlFileLoader.TryLoadFromPath(jamlOption.ParsedValue, out var config, out var loadError))
+            if (
+                !JamlFileLoader.TryLoadFromPath(
+                    jamlOption.ParsedValue,
+                    out var config,
+                    out var loadError
+                )
+            )
             {
                 Console.Error.WriteLine($"Error: {loadError}");
                 return 1;
             }
-
-
 
             var deck = config.Deck;
             var stake = config.Stake;
@@ -856,5 +859,4 @@ partial class Program
             observed = original;
         }
     }
-
 }

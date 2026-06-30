@@ -45,7 +45,9 @@ public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
                     Vector256<int>.One,
                     Vector256<int>.Zero
                 );
-                if (Vector256.GreaterThanOrEqual(count, minVec).ExtractMostSignificantBits() == 0xFF)
+                if (
+                    Vector256.GreaterThanOrEqual(count, minVec).ExtractMostSignificantBits() == 0xFF
+                )
                     break;
             }
             return Vector256.GreaterThanOrEqual(count, minVec);

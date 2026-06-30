@@ -220,7 +220,10 @@ public sealed class MotelyTopSeedSinkTests
         var best = c.GetSeeds(); // BBBB.., CCCC.., AAAA.. (top 3, score desc)
 
         var doc = "name: t\nseeds: []\n";
-        Assert.True(MotelyTopSeedSink.TryRewriteAndValidate(doc, best, out var updated, out var err), err);
+        Assert.True(
+            MotelyTopSeedSink.TryRewriteAndValidate(doc, best, out var updated, out var err),
+            err
+        );
         Assert.True(JamlConfigLoader.TryLoad(updated, out var cfg, out _));
         Assert.Equal(best, cfg!.Seeds);
     }

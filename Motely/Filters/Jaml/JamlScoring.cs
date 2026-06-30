@@ -196,7 +196,6 @@ public static class JamlScoring
         return clause.Score != 0 ? total : matched;
     }
 
-
     public static int CountRawOccurrences(
         ref MotelySingleSearchContext ctx,
         IJamlClause clause,
@@ -681,10 +680,7 @@ public static class JamlScoring
                 if (pack.GetPackType() != MotelyBoosterPackType.Celestial)
                     continue;
                 var packSize = pack.GetPackSize();
-                var contents = ctx.GetNextCelestialPackContents(
-                    ref planetStream,
-                    packSize
-                );
+                var contents = ctx.GetNextCelestialPackContents(ref planetStream, packSize);
                 if (
                     !ArrayContains(sources.BoosterPacks, packIndex)
                     || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
@@ -1222,7 +1218,12 @@ public static class JamlScoring
         {
             int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, ref runState);
             count += LegendarySoulMatcher.CountAnte(
-                ref ctx, ante, clause, maxPack, stopAfterFirstMatch: false);
+                ref ctx,
+                ante,
+                clause,
+                maxPack,
+                stopAfterFirstMatch: false
+            );
         }
 
         return count;

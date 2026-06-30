@@ -36,12 +36,14 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
             // Seed = first field of each line. DuckDB positional reference (#1) never depends on a
             // generated column name (column0 vs column00 flips at 11+ columns; duckdb#19724).
             // null_padding keeps ragged short rows (e.g. "SEED,1") instead of erroring.
-            _ => $"SELECT #1 AS seed FROM read_csv('{EscapeSql(path)}', header = false, null_padding = true)",
+            _ =>
+                $"SELECT #1 AS seed FROM read_csv('{EscapeSql(path)}', header = false, null_padding = true)",
         };
         var countSql = ext switch
         {
             ".parquet" or ".pq" => $"SELECT COUNT(*) FROM read_parquet('{EscapeSql(path)}')",
-            _ => $"SELECT COUNT(*) FROM read_csv('{EscapeSql(path)}', header = false, null_padding = true)",
+            _ =>
+                $"SELECT COUNT(*) FROM read_csv('{EscapeSql(path)}', header = false, null_padding = true)",
         };
 
         using var countCmd = _connection.CreateCommand();

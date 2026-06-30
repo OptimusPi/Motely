@@ -19,7 +19,12 @@ public class DefaultFallbackTests
 
     private static (long Matching, int Score) Score(JokerClause clause)
     {
-        var config = new JamlConfig { Id = "default-fallback", Deck = MotelyDeck.Red, Stake = MotelyStake.White };
+        var config = new JamlConfig
+        {
+            Id = "default-fallback",
+            Deck = MotelyDeck.Red,
+            Stake = MotelyStake.White,
+        };
         config.Should.Add(clause);
 
         int score = 0;
@@ -41,7 +46,9 @@ public class DefaultFallbackTests
     public void SourcelessWildcardJoker_DefaultsToAllAntesAndShopAndPacks()
     {
         // No antes, no sources — the clause as the loader hands it over.
-        var (implicitMatching, implicitScore) = Score(new JokerClause { IsWildcard = true, Score = 1 });
+        var (implicitMatching, implicitScore) = Score(
+            new JokerClause { IsWildcard = true, Score = 1 }
+        );
 
         // The same clause with the defaults written out longhand.
         var (_, explicitScore) = Score(
@@ -58,7 +65,10 @@ public class DefaultFallbackTests
             }
         );
 
-        Assert.True(implicitScore > 0, "a sourceless wildcard joker must match jokers, not nothing");
+        Assert.True(
+            implicitScore > 0,
+            "a sourceless wildcard joker must match jokers, not nothing"
+        );
         Assert.Equal(explicitScore, implicitScore); // defaults == antes 1..8, shop 0..7, packs 0..5
         Assert.Equal(1, implicitMatching);
     }
@@ -79,6 +89,9 @@ public class DefaultFallbackTests
 
         var (_, wideScore) = Score(new JokerClause { IsWildcard = true, Score = 1 }); // defaulted
 
-        Assert.True(wideScore >= narrowScore, "the all-antes default must cover at least the single-slot case");
+        Assert.True(
+            wideScore >= narrowScore,
+            "the all-antes default must cover at least the single-slot case"
+        );
     }
 }

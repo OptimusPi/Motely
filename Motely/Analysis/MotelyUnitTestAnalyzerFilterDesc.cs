@@ -15,7 +15,8 @@ public sealed class MotelyUnitTestAnalyzerFilterDesc()
         return new LegacyTextAnalyzerFilter(this);
     }
 
-    public readonly struct LegacyTextAnalyzerFilter(MotelyUnitTestAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
+    public readonly struct LegacyTextAnalyzerFilter(MotelyUnitTestAnalyzerFilterDesc filterDesc)
+        : IMotelySeedFilter
     {
         public MotelyUnitTestAnalyzerFilterDesc FilterDesc { get; } = filterDesc;
 

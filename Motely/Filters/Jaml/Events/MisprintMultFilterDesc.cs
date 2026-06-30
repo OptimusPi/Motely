@@ -25,7 +25,10 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
 
     public MisprintMultFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        Debug.Assert(_clause.Rolls.Length > 0, "Misprint clause must provide at least one roll index.");
+        Debug.Assert(
+            _clause.Rolls.Length > 0,
+            "Misprint clause must provide at least one roll index."
+        );
         int[] sortedRolls = [.. _clause.Rolls];
         Array.Sort(sortedRolls);
         // Broadcast the threshold to all 8 lanes ONCE here, never per-roll in the hot path.
@@ -52,7 +55,8 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
             var matchCounts = Vector256<int>.Zero;
             var minVector = Vector256.Create(min);
             int total = sorted.Length;
-            int p = 0, seen = 0;
+            int p = 0,
+                seen = 0;
 
             for (int idx = 0; idx <= maxRoll; idx++)
             {
@@ -73,10 +77,14 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
                 matchCounts = Vector256.Add(
                     matchCounts,
                     Vector256.Create(
-                        trigger[0] ? 1 : 0, trigger[1] ? 1 : 0,
-                        trigger[2] ? 1 : 0, trigger[3] ? 1 : 0,
-                        trigger[4] ? 1 : 0, trigger[5] ? 1 : 0,
-                        trigger[6] ? 1 : 0, trigger[7] ? 1 : 0
+                        trigger[0] ? 1 : 0,
+                        trigger[1] ? 1 : 0,
+                        trigger[2] ? 1 : 0,
+                        trigger[3] ? 1 : 0,
+                        trigger[4] ? 1 : 0,
+                        trigger[5] ? 1 : 0,
+                        trigger[6] ? 1 : 0,
+                        trigger[7] ? 1 : 0
                     )
                 );
 

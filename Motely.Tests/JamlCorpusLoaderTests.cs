@@ -10,7 +10,8 @@ public sealed class JamlCorpusLoaderTests
     public void JamlFiltersCorpus_LoadsAllJamlFiles()
     {
         var corpusDir = FindCorpusDir();
-        var files = Directory.GetFiles(corpusDir, "*.jaml", SearchOption.AllDirectories)
+        var files = Directory
+            .GetFiles(corpusDir, "*.jaml", SearchOption.AllDirectories)
             .OrderBy(static f => f, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
@@ -52,6 +53,8 @@ public sealed class JamlCorpusLoaderTests
             dir = dir.Parent;
         }
 
-        throw new DirectoryNotFoundException("Could not find JamlFilters from test output directory.");
+        throw new DirectoryNotFoundException(
+            "Could not find JamlFilters from test output directory."
+        );
     }
 }

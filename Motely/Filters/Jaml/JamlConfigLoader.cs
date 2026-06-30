@@ -10,28 +10,69 @@ public static class JamlConfigLoader
 {
     private static readonly string[] RootKeys =
     [
-        "id", "name", "description", "author", "dateCreated", "deck", "stake", "seeds", "must", "should", "mustNot",
+        "id",
+        "name",
+        "description",
+        "author",
+        "dateCreated",
+        "deck",
+        "stake",
+        "seeds",
+        "must",
+        "should",
+        "mustNot",
     ];
 
     private static readonly string[] SharedClauseKeys =
     [
-        "ante", "antes", "min", "max", "score", "label", "sources", "with", "luck", "vouchers",
+        "ante",
+        "antes",
+        "min",
+        "max",
+        "score",
+        "label",
+        "sources",
+        "with",
+        "luck",
+        "vouchers",
     ];
 
     private static readonly string[] JokerClauseKeys =
     [
-        "joker", "jokers", "commonJoker", "commonJokers", "uncommonJoker", "uncommonJokers",
-        "rareJoker", "rareJokers", "edition", "stickers", "shopItems", "boosterPacks",
+        "joker",
+        "jokers",
+        "commonJoker",
+        "commonJokers",
+        "uncommonJoker",
+        "uncommonJokers",
+        "rareJoker",
+        "rareJokers",
+        "edition",
+        "stickers",
+        "shopItems",
+        "boosterPacks",
     ];
 
     private static readonly string[] LegendaryClauseKeys =
     [
-        "legendaryJoker", "legendaryJokers", "edition", "soulCardOnly", "soulEditionRolls", "boosterPacks",
+        "legendaryJoker",
+        "legendaryJokers",
+        "edition",
+        "soulCardOnly",
+        "soulEditionRolls",
+        "boosterPacks",
     ];
 
     private static readonly string[] StandardCardKeys =
     [
-        "standardCard", "rank", "suit", "enhancement", "seal", "edition", "shopItems", "boosterPacks",
+        "standardCard",
+        "rank",
+        "suit",
+        "enhancement",
+        "seal",
+        "edition",
+        "shopItems",
+        "boosterPacks",
     ];
 
     private static readonly string[] StartingDrawKeys = ["startingDraw", "rank", "suit"];
@@ -40,36 +81,87 @@ public static class JamlConfigLoader
 
     private static readonly string[] EventKeys =
     [
-        "luckyMoney", "luckyMult", "misprintMult", "wheelOfFortune", "grosMichelExtinct",
-        "cavendishExtinct", "spaceLevelup", "businessPayout", "bloodstoneTrigger",
-        "parkingPayout", "glassDestroy", "wheelStaysFlipped", "rolls", "mult", "value",
+        "luckyMoney",
+        "luckyMult",
+        "misprintMult",
+        "wheelOfFortune",
+        "grosMichelExtinct",
+        "cavendishExtinct",
+        "spaceLevelup",
+        "businessPayout",
+        "bloodstoneTrigger",
+        "parkingPayout",
+        "glassDestroy",
+        "wheelStaysFlipped",
+        "rolls",
+        "mult",
+        "value",
     ];
 
     private static readonly string[] JokerSourceKeys =
     [
-        "shopItems", "boosterPacks", "judgement", "emperor", "wraith", "riffRaff", "rareTag",
-        "uncommonTag", "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers",
+        "shopItems",
+        "boosterPacks",
+        "judgement",
+        "emperor",
+        "wraith",
+        "riffRaff",
+        "rareTag",
+        "uncommonTag",
+        "commonShopJokers",
+        "uncommonShopJokers",
+        "rareShopJokers",
+        "allShopJokers",
     ];
 
     private static readonly string[] LegendarySourceKeys =
     [
-        "shopItems", "boosterPacks", "arcanaPacks", "spectralPacks", "soulCard", "requireMega", "requireMegaPack",
+        "shopItems",
+        "boosterPacks",
+        "arcanaPacks",
+        "spectralPacks",
+        "soulCard",
+        "requireMega",
+        "requireMegaPack",
     ];
 
-    private static readonly string[] TarotSourceKeys = ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"];
+    private static readonly string[] TarotSourceKeys =
+    [
+        "shopItems",
+        "boosterPacks",
+        "emperor",
+        "purpleSealOrEightBall",
+        "charmTag",
+    ];
 
-    private static readonly string[] SpectralSourceKeys = ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"];
+    private static readonly string[] SpectralSourceKeys =
+    [
+        "shopItems",
+        "boosterPacks",
+        "sixthSense",
+        "seance",
+        "etherealTag",
+        "requireMega",
+        "requireMegaPack",
+    ];
 
     private static readonly string[] PlanetSourceKeys = ["shopItems", "boosterPacks"];
 
     private static readonly string[] StandardSourceKeys =
     [
-        "shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw",
+        "shopItems",
+        "boosterPacks",
+        "certificate",
+        "incantation",
+        "familiar",
+        "grim",
+        "deckDraw",
     ];
 
     private static readonly string[] EventSourceKeys = ["luck"];
 
     private static readonly string[] WithKeys = ["luck", "vouchers"];
+
     public static bool TryLoad(string content, out JamlConfig? config, out string? error)
     {
         try
@@ -195,7 +287,8 @@ public static class JamlConfigLoader
 
     private static IJamlClause ParseClause(NodeReader node)
     {
-        var discriminator = FindDiscriminator(node)
+        var discriminator =
+            FindDiscriminator(node)
             ?? throw new InvalidOperationException(
                 $"Clause has no recognised discriminator key. Keys: {string.Join(", ", node.Keys)}."
             );
@@ -212,9 +305,27 @@ public static class JamlConfigLoader
         switch (Normalize(discriminator))
         {
             case "and":
-                return ParseLogic(new AndClause(), data, discriminator, antes, min, max, score, label);
+                return ParseLogic(
+                    new AndClause(),
+                    data,
+                    discriminator,
+                    antes,
+                    min,
+                    max,
+                    score,
+                    label
+                );
             case "or":
-                return ParseLogic(new OrClause(), data, discriminator, antes, min, max, score, label);
+                return ParseLogic(
+                    new OrClause(),
+                    data,
+                    discriminator,
+                    antes,
+                    min,
+                    max,
+                    score,
+                    label
+                );
             case "joker":
             case "jokers":
                 return BuildJoker(node, discriminator, data, antes, min, max, score, label);
@@ -229,184 +340,317 @@ public static class JamlConfigLoader
                 return BuildRareJoker(node, discriminator, data, antes, min, max, score, label);
             case "legendaryjoker":
             case "legendaryjokers":
-                return BuildLegendaryJoker(node, discriminator, data, antes, min, max, score, label);
+                return BuildLegendaryJoker(
+                    node,
+                    discriminator,
+                    data,
+                    antes,
+                    min,
+                    max,
+                    score,
+                    label
+                );
             case "voucher":
-                return WithMax(new VoucherClause
-                {
-                    Vouchers = ParseEnumArray<MotelyVoucher>(node, discriminator),
-                    Rolls = data.GetIntArray("rolls") ?? [0],
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new VoucherClause
+                    {
+                        Vouchers = ParseEnumArray<MotelyVoucher>(node, discriminator),
+                        Rolls = data.GetIntArray("rolls") ?? [0],
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "tarotcard":
-                return WithMax(new TarotCardClause
-                {
-                    Tarots = ParseEnumArray<MotelyTarotCard>(node, discriminator),
-                    Sources = ParseTarotSources(data),
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new TarotCardClause
+                    {
+                        Tarots = ParseEnumArray<MotelyTarotCard>(node, discriminator),
+                        Sources = ParseTarotSources(data),
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "spectralcard":
-                return WithMax(new SpectralCardClause
-                {
-                    Spectrals = ParseEnumArray<MotelySpectralCard>(node, discriminator),
-                    Sources = ParseSpectralSources(data),
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new SpectralCardClause
+                    {
+                        Spectrals = ParseEnumArray<MotelySpectralCard>(node, discriminator),
+                        Sources = ParseSpectralSources(data),
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "planetcard":
-                return WithMax(new PlanetCardClause
-                {
-                    Planets = ParseEnumArray<MotelyPlanetCard>(node, discriminator),
-                    Sources = ParsePlanetSources(data),
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new PlanetCardClause
+                    {
+                        Planets = ParseEnumArray<MotelyPlanetCard>(node, discriminator),
+                        Sources = ParsePlanetSources(data),
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "standardcard":
                 return BuildStandardCard(data, antes, min, max, score, label);
             case "boss":
-                return WithMax(new BossClause
-                {
-                    Bosses = ParseEnumArray<MotelyBossBlind>(node, discriminator),
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new BossClause
+                    {
+                        Bosses = ParseEnumArray<MotelyBossBlind>(node, discriminator),
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "tag":
-                return WithMax(new TagClause
-                {
-                    Tags = ParseEnumArray<MotelyTag>(node, discriminator),
-                    Rolls = data.GetIntArray("rolls") ?? [0, 1],
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new TagClause
+                    {
+                        Tags = ParseEnumArray<MotelyTag>(node, discriminator),
+                        Rolls = data.GetIntArray("rolls") ?? [0, 1],
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "smallblindtag":
-                return WithMax(new TagClause
-                {
-                    Tags = ParseEnumArray<MotelyTag>(node, discriminator),
-                    Rolls = data.GetIntArray("rolls") ?? [0],
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new TagClause
+                    {
+                        Tags = ParseEnumArray<MotelyTag>(node, discriminator),
+                        Rolls = data.GetIntArray("rolls") ?? [0],
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "bigblindtag":
-                return WithMax(new TagClause
-                {
-                    Tags = ParseEnumArray<MotelyTag>(node, discriminator),
-                    Rolls = data.GetIntArray("rolls") ?? [1],
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new TagClause
+                    {
+                        Tags = ParseEnumArray<MotelyTag>(node, discriminator),
+                        Rolls = data.GetIntArray("rolls") ?? [1],
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "erraticrank":
-                return WithMax(new ErraticRankClause
-                {
-                    Rank = ParseRank(ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)),
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new ErraticRankClause
+                    {
+                        Rank = ParseRank(
+                            ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)
+                        ),
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "erraticranks":
-                return WithMax(new OrClause
-                {
-                    Clauses = ParseStringArray(node, discriminator)
-                        .Select(v => (IJamlClause)new ErraticRankClause
-                        {
-                            Rank = ParseRank(v),
-                            Antes = antes,
-                            Min = 1,
-                        })
-                        .ToArray(),
-                    Min = 1,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new OrClause
+                    {
+                        Clauses = ParseStringArray(node, discriminator)
+                            .Select(v =>
+                                (IJamlClause)
+                                    new ErraticRankClause
+                                    {
+                                        Rank = ParseRank(v),
+                                        Antes = antes,
+                                        Min = 1,
+                                    }
+                            )
+                            .ToArray(),
+                        Min = 1,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "erraticsuit":
-                return WithMax(new ErraticSuitClause
-                {
-                    Suit = ParseEnum<MotelyStandardcardSuit>(ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)),
-                    Antes = antes,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new ErraticSuitClause
+                    {
+                        Suit = ParseEnum<MotelyStandardcardSuit>(
+                            ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)
+                        ),
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "startingdraw":
                 return BuildStartingDraw(data, antes, min, max, score, label);
             case "luckymoney":
-                return WithMax(new LuckyMoneyClause
-                {
-                    Rolls = node.GetIntArray(discriminator) ?? [],
-                    With = ParseWith(data),
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new LuckyMoneyClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "luckymult":
-                return WithMax(new LuckyMultClause
-                {
-                    Rolls = node.GetIntArray(discriminator) ?? [],
-                    With = ParseWith(data),
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new LuckyMultClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "misprintmult":
-                return WithMax(new MisprintMultClause
-                {
-                    Rolls = node.GetIntArray(discriminator) ?? [],
-                    Mult = data.GetInt("mult") ?? data.GetInt("value") ?? 0,
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new MisprintMultClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        Mult = data.GetInt("mult") ?? data.GetInt("value") ?? 0,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "wheeloffortune":
-                return WithMax(new WheelOfFortuneClause
-                {
-                    Rolls = node.GetIntArray(discriminator) ?? [],
-                    With = ParseWith(data),
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new WheelOfFortuneClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "grosmichelextinct":
-                return WithMax(new GrosMichelExtinctClause { Rolls = node.GetIntArray(discriminator) ?? [], With = ParseWith(data), Min = min, Score = score, Label = label }, max);
+                return WithMax(
+                    new GrosMichelExtinctClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "cavendishextinct":
-                return WithMax(new CavendishExtinctClause { Rolls = node.GetIntArray(discriminator) ?? [], With = ParseWith(data), Min = min, Score = score, Label = label }, max);
+                return WithMax(
+                    new CavendishExtinctClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "spacelevelup":
-                return WithMax(new SpaceLevelupClause { Rolls = node.GetIntArray(discriminator) ?? [], With = ParseWith(data), Min = min, Score = score, Label = label }, max);
+                return WithMax(
+                    new SpaceLevelupClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "businesspayout":
-                return WithMax(new BusinessPayoutClause { Rolls = node.GetIntArray(discriminator) ?? [], Min = min, Score = score, Label = label }, max);
+                return WithMax(
+                    new BusinessPayoutClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "bloodstonetrigger":
-                return WithMax(new BloodstoneTriggerClause { Rolls = node.GetIntArray(discriminator) ?? [], Min = min, Score = score, Label = label }, max);
+                return WithMax(
+                    new BloodstoneTriggerClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "parkingpayout":
-                return WithMax(new ParkingPayoutClause { Rolls = node.GetIntArray(discriminator) ?? [], Min = min, Score = score, Label = label }, max);
+                return WithMax(
+                    new ParkingPayoutClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "glassdestroy":
-                return WithMax(new GlassDestroyClause { Rolls = node.GetIntArray(discriminator) ?? [], With = ParseWith(data), Min = min, Score = score, Label = label }, max);
+                return WithMax(
+                    new GlassDestroyClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             case "wheelstaysflipped":
-                return WithMax(new WheelStaysFlippedClause
-                {
-                    Rolls = node.GetIntArray(discriminator) ?? [],
-                    With = ParseWith(data),
-                    Min = min,
-                    Score = score,
-                    Label = label,
-                }, max);
+                return WithMax(
+                    new WheelStaysFlippedClause
+                    {
+                        Rolls = node.GetIntArray(discriminator) ?? [],
+                        With = ParseWith(data),
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
             default:
-                throw new InvalidOperationException($"Unhandled JAML discriminator '{discriminator}'.");
+                throw new InvalidOperationException(
+                    $"Unhandled JAML discriminator '{discriminator}'."
+                );
         }
     }
 
@@ -432,117 +676,199 @@ public static class JamlConfigLoader
         return clause;
     }
 
-    private static JokerClause BuildJoker(NodeReader node, string discriminator, IReader data, int[] antes, int min, int? max, int score, string? label)
+    private static JokerClause BuildJoker(
+        NodeReader node,
+        string discriminator,
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    )
     {
         var jokers = ParseJokerArray<MotelyJoker>(node, discriminator, out var any);
-        return WithMax(new JokerClause
-        {
-            Jokers = jokers,
-            IsWildcard = any,
-            Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
-            Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
-            Sources = ParseJokerSources(data),
-            Antes = antes,
-            Min = min,
-            Score = score,
-            Label = label,
-        }, max);
+        return WithMax(
+            new JokerClause
+            {
+                Jokers = jokers,
+                IsWildcard = any,
+                Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
+                Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
+                Sources = ParseJokerSources(data),
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
     }
 
-    private static CommonJokerClause BuildCommonJoker(NodeReader node, string discriminator, IReader data, int[] antes, int min, int? max, int score, string? label)
+    private static CommonJokerClause BuildCommonJoker(
+        NodeReader node,
+        string discriminator,
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    )
     {
         var jokers = ParseJokerArray<MotelyJokerCommon>(node, discriminator, out var any);
-        return WithMax(new CommonJokerClause
-        {
-            Jokers = jokers,
-            IsWildcard = any,
-            Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
-            Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
-            Sources = ParseJokerSources(data),
-            Antes = antes,
-            Min = min,
-            Score = score,
-            Label = label,
-        }, max);
+        return WithMax(
+            new CommonJokerClause
+            {
+                Jokers = jokers,
+                IsWildcard = any,
+                Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
+                Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
+                Sources = ParseJokerSources(data),
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
     }
 
-    private static UncommonJokerClause BuildUncommonJoker(NodeReader node, string discriminator, IReader data, int[] antes, int min, int? max, int score, string? label)
+    private static UncommonJokerClause BuildUncommonJoker(
+        NodeReader node,
+        string discriminator,
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    )
     {
         var jokers = ParseJokerArray<MotelyJokerUncommon>(node, discriminator, out var any);
-        return WithMax(new UncommonJokerClause
-        {
-            Jokers = jokers,
-            IsWildcard = any,
-            Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
-            Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
-            Sources = ParseJokerSources(data),
-            Antes = antes,
-            Min = min,
-            Score = score,
-            Label = label,
-        }, max);
+        return WithMax(
+            new UncommonJokerClause
+            {
+                Jokers = jokers,
+                IsWildcard = any,
+                Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
+                Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
+                Sources = ParseJokerSources(data),
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
     }
 
-    private static RareJokerClause BuildRareJoker(NodeReader node, string discriminator, IReader data, int[] antes, int min, int? max, int score, string? label)
+    private static RareJokerClause BuildRareJoker(
+        NodeReader node,
+        string discriminator,
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    )
     {
         var jokers = ParseJokerArray<MotelyJokerRare>(node, discriminator, out var any);
-        return WithMax(new RareJokerClause
-        {
-            Jokers = jokers,
-            IsWildcard = any,
-            Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
-            Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
-            Sources = ParseJokerSources(data),
-            Antes = antes,
-            Min = min,
-            Score = score,
-            Label = label,
-        }, max);
+        return WithMax(
+            new RareJokerClause
+            {
+                Jokers = jokers,
+                IsWildcard = any,
+                Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
+                Stickers = ParseEnumArray<MotelyJokerSticker>(data, "stickers", allowMissing: true),
+                Sources = ParseJokerSources(data),
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
     }
 
-    private static LegendaryJokerClause BuildLegendaryJoker(NodeReader node, string discriminator, IReader data, int[] antes, int min, int? max, int score, string? label)
+    private static LegendaryJokerClause BuildLegendaryJoker(
+        NodeReader node,
+        string discriminator,
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    )
     {
         var jokers = ParseJokerArray<MotelyJoker>(node, discriminator, out var any);
-        return WithMax(new LegendaryJokerClause
-        {
-            Jokers = jokers,
-            IsWildcard = any,
-            Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
-            Sources = ParseLegendarySources(data) ?? new LegendaryJokerSourceConfig(),
-            SoulCardOnly = data.GetBool("soulCardOnly") ?? false,
-            SoulEditionRolls = data.GetInt("soulEditionRolls") ?? 0,
-            Antes = antes,
-            Min = min,
-            Score = score,
-            Label = label,
-        }, max);
+        return WithMax(
+            new LegendaryJokerClause
+            {
+                Jokers = jokers,
+                IsWildcard = any,
+                Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
+                Sources = ParseLegendarySources(data) ?? new LegendaryJokerSourceConfig(),
+                SoulCardOnly = data.GetBool("soulCardOnly") ?? false,
+                SoulEditionRolls = data.GetInt("soulEditionRolls") ?? 0,
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
     }
 
-    private static StandardCardClause BuildStandardCard(IReader data, int[] antes, int min, int? max, int score, string? label) =>
-        WithMax(new StandardCardClause
-        {
-            Rank = ParseOptionalRank(data.GetString("rank")),
-            Suit = ParseOptionalEnum<MotelyStandardcardSuit>(data.GetString("suit")),
-            Enhancement = ParseOptionalEnum<MotelyItemEnhancement>(data.GetString("enhancement")),
-            Seal = ParseOptionalEnum<MotelyItemSeal>(data.GetString("seal")),
-            Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
-            Sources = ParseStandardSources(data),
-            Antes = antes,
-            Min = min,
-            Score = score,
-            Label = label,
-        }, max);
+    private static StandardCardClause BuildStandardCard(
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    ) =>
+        WithMax(
+            new StandardCardClause
+            {
+                Rank = ParseOptionalRank(data.GetString("rank")),
+                Suit = ParseOptionalEnum<MotelyStandardcardSuit>(data.GetString("suit")),
+                Enhancement = ParseOptionalEnum<MotelyItemEnhancement>(
+                    data.GetString("enhancement")
+                ),
+                Seal = ParseOptionalEnum<MotelyItemSeal>(data.GetString("seal")),
+                Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
+                Sources = ParseStandardSources(data),
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
 
-    private static StartingDrawClause BuildStartingDraw(IReader data, int[] antes, int min, int? max, int score, string? label) =>
-        WithMax(new StartingDrawClause
-        {
-            Rank = ParseOptionalRank(data.GetString("rank")),
-            Suit = ParseOptionalEnum<MotelyStandardcardSuit>(data.GetString("suit")),
-            Antes = antes,
-            Min = min,
-            Score = score,
-            Label = label,
-        }, max);
+    private static StartingDrawClause BuildStartingDraw(
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    ) =>
+        WithMax(
+            new StartingDrawClause
+            {
+                Rank = ParseOptionalRank(data.GetString("rank")),
+                Suit = ParseOptionalEnum<MotelyStandardcardSuit>(data.GetString("suit")),
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
 
     private static void HoistAntes(IJamlClause[] clauses, int[] antes)
     {
@@ -565,37 +891,75 @@ public static class JamlConfigLoader
             ValidateKeys(inner, [.. SharedClauseKeys, .. allowed], $"'{discriminator}' block");
     }
 
-    private static string[] ClauseKeys(string discriminator) => Normalize(discriminator) switch
-    {
-        "and" or "or" => LogicKeys,
-        "joker" or "jokers" or "commonjoker" or "commonjokers" or "uncommonjoker" or "uncommonjokers" or "rarejoker" or "rarejokers" => JokerClauseKeys,
-        "legendaryjoker" or "legendaryjokers" => LegendaryClauseKeys,
-        "voucher" => ["voucher", "rolls"],
-        "tarotcard" => ["tarotCard", "shopItems", "boosterPacks"],
-        "spectralcard" => ["spectralCard", "shopItems", "boosterPacks"],
-        "planetcard" => ["planetCard", "shopItems", "boosterPacks"],
-        "standardcard" => StandardCardKeys,
-        "boss" => ["boss"],
-        "tag" => ["tag", "rolls"],
-        "smallblindtag" => ["smallBlindTag", "rolls"],
-        "bigblindtag" => ["bigBlindTag", "rolls"],
-        "erraticrank" => ["erraticRank"],
-        "erraticranks" => ["erraticRanks"],
-        "erraticsuit" => ["erraticSuit"],
-        "startingdraw" => StartingDrawKeys,
-        _ => EventKeys,
-    };
+    private static string[] ClauseKeys(string discriminator) =>
+        Normalize(discriminator) switch
+        {
+            "and" or "or" => LogicKeys,
+            "joker"
+            or "jokers"
+            or "commonjoker"
+            or "commonjokers"
+            or "uncommonjoker"
+            or "uncommonjokers"
+            or "rarejoker"
+            or "rarejokers" => JokerClauseKeys,
+            "legendaryjoker" or "legendaryjokers" => LegendaryClauseKeys,
+            "voucher" => ["voucher", "rolls"],
+            "tarotcard" => ["tarotCard", "shopItems", "boosterPacks"],
+            "spectralcard" => ["spectralCard", "shopItems", "boosterPacks"],
+            "planetcard" => ["planetCard", "shopItems", "boosterPacks"],
+            "standardcard" => StandardCardKeys,
+            "boss" => ["boss"],
+            "tag" => ["tag", "rolls"],
+            "smallblindtag" => ["smallBlindTag", "rolls"],
+            "bigblindtag" => ["bigBlindTag", "rolls"],
+            "erraticrank" => ["erraticRank"],
+            "erraticranks" => ["erraticRanks"],
+            "erraticsuit" => ["erraticSuit"],
+            "startingdraw" => StartingDrawKeys,
+            _ => EventKeys,
+        };
 
     private static string[] AllDiscriminatorKeys() =>
-    [
-        "and", "or", "joker", "jokers", "commonJoker", "commonJokers", "uncommonJoker",
-        "uncommonJokers", "rareJoker", "rareJokers", "legendaryJoker", "legendaryJokers",
-        "voucher", "tarotCard", "spectralCard", "planetCard", "standardCard", "boss", "tag",
-        "smallBlindTag", "bigBlindTag", "erraticRank", "erraticRanks", "erraticSuit",
-        "startingDraw", "luckyMoney", "luckyMult", "misprintMult", "wheelOfFortune",
-        "grosMichelExtinct", "cavendishExtinct", "spaceLevelup", "businessPayout",
-        "bloodstoneTrigger", "parkingPayout", "glassDestroy", "wheelStaysFlipped",
-    ];
+        [
+            "and",
+            "or",
+            "joker",
+            "jokers",
+            "commonJoker",
+            "commonJokers",
+            "uncommonJoker",
+            "uncommonJokers",
+            "rareJoker",
+            "rareJokers",
+            "legendaryJoker",
+            "legendaryJokers",
+            "voucher",
+            "tarotCard",
+            "spectralCard",
+            "planetCard",
+            "standardCard",
+            "boss",
+            "tag",
+            "smallBlindTag",
+            "bigBlindTag",
+            "erraticRank",
+            "erraticRanks",
+            "erraticSuit",
+            "startingDraw",
+            "luckyMoney",
+            "luckyMult",
+            "misprintMult",
+            "wheelOfFortune",
+            "grosMichelExtinct",
+            "cavendishExtinct",
+            "spaceLevelup",
+            "businessPayout",
+            "bloodstoneTrigger",
+            "parkingPayout",
+            "glassDestroy",
+            "wheelStaysFlipped",
+        ];
 
     private static void ValidateKeys(IReader reader, string[] allowed, string scope)
     {
@@ -614,7 +978,8 @@ public static class JamlConfigLoader
             ValidateKeys(with, WithKeys, "with");
         if (sources != null)
             ValidateKeys(sources, EventSourceKeys, "event source");
-        var luckText = with?.GetString("luck") ?? sources?.GetString("luck") ?? data.GetString("luck");
+        var luckText =
+            with?.GetString("luck") ?? sources?.GetString("luck") ?? data.GetString("luck");
         var luckInt = with?.GetInt("luck") ?? sources?.GetInt("luck") ?? data.GetInt("luck");
         var result = new JamlWith();
         if (luckText != null)
@@ -632,12 +997,17 @@ public static class JamlConfigLoader
         var block = data.GetObject("sources");
         if (block != null)
             ValidateKeys(block, JokerSourceKeys, "joker source");
-        if (block is null && data.GetIntArray("shopItems") is null && data.GetIntArray("boosterPacks") is null)
+        if (
+            block is null
+            && data.GetIntArray("shopItems") is null
+            && data.GetIntArray("boosterPacks") is null
+        )
             return null;
         return new JokerSourceConfig
         {
             ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
-            BoosterPacks = block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+            BoosterPacks =
+                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
             Judgement = block?.GetIntArray("judgement") ?? [],
             Wraith = block?.GetIntArray("wraith") ?? [],
             RiffRaff = block?.GetIntArray("riffRaff") ?? [],
@@ -660,11 +1030,13 @@ public static class JamlConfigLoader
         return new LegendaryJokerSourceConfig
         {
             ShopItems = block?.GetIntArray("shopItems") ?? [],
-            BoosterPacks = block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+            BoosterPacks =
+                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
             ArcanaPacks = block?.GetIntArray("arcanaPacks") ?? [],
             SpectralPacks = block?.GetIntArray("spectralPacks") ?? [],
             SoulCard = block?.GetIntArray("soulCard") ?? [],
-            RequireMegaPack = block?.GetBool("requireMega") ?? block?.GetBool("requireMegaPack") ?? false,
+            RequireMegaPack =
+                block?.GetBool("requireMega") ?? block?.GetBool("requireMegaPack") ?? false,
         };
     }
 
@@ -673,12 +1045,17 @@ public static class JamlConfigLoader
         var block = data.GetObject("sources");
         if (block != null)
             ValidateKeys(block, TarotSourceKeys, "tarotCard source");
-        if (block is null && data.GetIntArray("shopItems") is null && data.GetIntArray("boosterPacks") is null)
+        if (
+            block is null
+            && data.GetIntArray("shopItems") is null
+            && data.GetIntArray("boosterPacks") is null
+        )
             return null;
         return new TarotCardSourceConfig
         {
             ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
-            BoosterPacks = block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+            BoosterPacks =
+                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
             Emperor = block?.GetIntArray("emperor") ?? [],
             PurpleSealOrEightBall = block?.GetIntArray("purpleSealOrEightBall") ?? [],
             CharmTag = block?.GetBool("charmTag") ?? false,
@@ -690,15 +1067,21 @@ public static class JamlConfigLoader
         var block = data.GetObject("sources");
         if (block != null)
             ValidateKeys(block, SpectralSourceKeys, "spectralCard source");
-        if (block is null && data.GetIntArray("shopItems") is null && data.GetIntArray("boosterPacks") is null)
+        if (
+            block is null
+            && data.GetIntArray("shopItems") is null
+            && data.GetIntArray("boosterPacks") is null
+        )
             return null;
         return new SpectralCardSourceConfig
         {
             ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
-            BoosterPacks = block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+            BoosterPacks =
+                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
             SixthSense = block?.GetIntArray("sixthSense") ?? [],
             Seance = block?.GetIntArray("seance") ?? [],
-            RequireMegaPack = block?.GetBool("requireMega") ?? block?.GetBool("requireMegaPack") ?? false,
+            RequireMegaPack =
+                block?.GetBool("requireMega") ?? block?.GetBool("requireMegaPack") ?? false,
             EtherealTag = block?.GetBool("etherealTag") ?? false,
         };
     }
@@ -708,12 +1091,17 @@ public static class JamlConfigLoader
         var block = data.GetObject("sources");
         if (block != null)
             ValidateKeys(block, PlanetSourceKeys, "planetCard source");
-        if (block is null && data.GetIntArray("shopItems") is null && data.GetIntArray("boosterPacks") is null)
+        if (
+            block is null
+            && data.GetIntArray("shopItems") is null
+            && data.GetIntArray("boosterPacks") is null
+        )
             return null;
         return new PlanetSourceConfig
         {
             ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
-            BoosterPacks = block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+            BoosterPacks =
+                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
         };
     }
 
@@ -722,12 +1110,17 @@ public static class JamlConfigLoader
         var block = data.GetObject("sources");
         if (block != null)
             ValidateKeys(block, StandardSourceKeys, "standardCard source");
-        if (block is null && data.GetIntArray("shopItems") is null && data.GetIntArray("boosterPacks") is null)
+        if (
+            block is null
+            && data.GetIntArray("shopItems") is null
+            && data.GetIntArray("boosterPacks") is null
+        )
             return null;
         return new StandardCardSourceConfig
         {
             ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
-            BoosterPacks = block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+            BoosterPacks =
+                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
             Certificate = block?.GetIntArray("certificate") ?? [],
             Incantation = block?.GetIntArray("incantation") ?? [],
             Familiar = block?.GetIntArray("familiar") ?? [],
@@ -752,7 +1145,8 @@ public static class JamlConfigLoader
     }
 
     private static TEnum[] ParseEnumArray<TEnum>(NodeReader node, string key)
-        where TEnum : struct, Enum => ParseStringArray(node, key).Select(ParseEnum<TEnum>).ToArray();
+        where TEnum : struct, Enum =>
+        ParseStringArray(node, key).Select(ParseEnum<TEnum>).ToArray();
 
     private static TEnum[] ParseEnumArray<TEnum>(IReader node, string key, bool allowMissing)
         where TEnum : struct, Enum
@@ -781,20 +1175,48 @@ public static class JamlConfigLoader
         return null;
     }
 
-    private static bool IsDiscriminator(string key) => Normalize(key) switch
-    {
-        "and" or "or" or "joker" or "jokers" or "commonjoker" or "commonjokers" or
-        "uncommonjoker" or "uncommonjokers" or "rarejoker" or "rarejokers" or
-        "legendaryjoker" or "legendaryjokers" or "voucher" or "tarotcard" or
-        "spectralcard" or "planetcard" or "standardcard" or "boss" or "tag" or
-        "smallblindtag" or "bigblindtag" or "erraticrank" or "erraticranks" or
-        "erraticsuit" or "startingdraw" or "luckymoney" or "luckymult" or
-        "misprintmult" or "wheeloffortune" or "grosmichelextinct" or
-        "cavendishextinct" or "spacelevelup" or "businesspayout" or
-        "bloodstonetrigger" or "parkingpayout" or "glassdestroy" or
-        "wheelstaysflipped" => true,
-        _ => false,
-    };
+    private static bool IsDiscriminator(string key) =>
+        Normalize(key) switch
+        {
+            "and"
+            or "or"
+            or "joker"
+            or "jokers"
+            or "commonjoker"
+            or "commonjokers"
+            or "uncommonjoker"
+            or "uncommonjokers"
+            or "rarejoker"
+            or "rarejokers"
+            or "legendaryjoker"
+            or "legendaryjokers"
+            or "voucher"
+            or "tarotcard"
+            or "spectralcard"
+            or "planetcard"
+            or "standardcard"
+            or "boss"
+            or "tag"
+            or "smallblindtag"
+            or "bigblindtag"
+            or "erraticrank"
+            or "erraticranks"
+            or "erraticsuit"
+            or "startingdraw"
+            or "luckymoney"
+            or "luckymult"
+            or "misprintmult"
+            or "wheeloffortune"
+            or "grosmichelextinct"
+            or "cavendishextinct"
+            or "spacelevelup"
+            or "businesspayout"
+            or "bloodstonetrigger"
+            or "parkingpayout"
+            or "glassdestroy"
+            or "wheelstaysflipped" => true,
+            _ => false,
+        };
 
     private static MotelyStandardcardRank? ParseOptionalRank(string? value) =>
         value is null ? null : ParseRank(value);
@@ -837,7 +1259,8 @@ public static class JamlConfigLoader
         if (Enum.TryParse<T>(value, ignoreCase: true, out var parsed))
             return parsed;
 
-        var normalized = value.Replace(" ", "", StringComparison.Ordinal)
+        var normalized = value
+            .Replace(" ", "", StringComparison.Ordinal)
             .Replace("-", "", StringComparison.Ordinal)
             .Replace("_", "", StringComparison.Ordinal);
         if (Enum.TryParse<T>(normalized, ignoreCase: true, out parsed))
@@ -850,29 +1273,38 @@ public static class JamlConfigLoader
 
     private static MotelyLuck ParseLuck(string value)
     {
-        if (int.TryParse(value.TrimStart('x', 'X'), NumberStyles.None, CultureInfo.InvariantCulture, out var numeric))
+        if (
+            int.TryParse(
+                value.TrimStart('x', 'X'),
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var numeric
+            )
+        )
             return ParseLuck(numeric);
         return ParseEnum<MotelyLuck>(value);
     }
 
-    private static MotelyLuck ParseLuck(int value) => value switch
-    {
-        1 => MotelyLuck.X1,
-        2 => MotelyLuck.X2,
-        4 => MotelyLuck.X4,
-        5 => MotelyLuck.X5,
-        8 => MotelyLuck.X8,
-        16 => MotelyLuck.X16,
-        32 => MotelyLuck.X32,
-        64 => MotelyLuck.X64,
-        _ => throw new InvalidOperationException($"Unsupported luck multiplier: {value}."),
-    };
+    private static MotelyLuck ParseLuck(int value) =>
+        value switch
+        {
+            1 => MotelyLuck.X1,
+            2 => MotelyLuck.X2,
+            4 => MotelyLuck.X4,
+            5 => MotelyLuck.X5,
+            8 => MotelyLuck.X8,
+            16 => MotelyLuck.X16,
+            32 => MotelyLuck.X32,
+            64 => MotelyLuck.X64,
+            _ => throw new InvalidOperationException($"Unsupported luck multiplier: {value}."),
+        };
 
     private static bool IsAny(string value) =>
         string.Equals(value, "any", StringComparison.OrdinalIgnoreCase);
 
     private static string Normalize(string value) =>
-        value.Replace(" ", "", StringComparison.Ordinal)
+        value
+            .Replace(" ", "", StringComparison.Ordinal)
             .Replace("-", "", StringComparison.Ordinal)
             .Replace("_", "", StringComparison.Ordinal)
             .ToLowerInvariant();
@@ -897,15 +1329,28 @@ public static class JamlConfigLoader
 
     private sealed class OverlayReader(IReader primary, IReader fallback) : IReader
     {
-        public IReadOnlyList<string> Keys => primary.Keys.Concat(fallback.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        public IReadOnlyList<string> Keys =>
+            primary.Keys.Concat(fallback.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
         public string? GetString(string key) => primary.GetString(key) ?? fallback.GetString(key);
+
         public int? GetInt(string key) => primary.GetInt(key) ?? fallback.GetInt(key);
+
         public bool? GetBool(string key) => primary.GetBool(key) ?? fallback.GetBool(key);
-        public int[]? GetIntArray(string key) => primary.GetIntArray(key) ?? fallback.GetIntArray(key);
-        public string[]? GetStringArray(string key) => primary.GetStringArray(key) ?? fallback.GetStringArray(key);
+
+        public int[]? GetIntArray(string key) =>
+            primary.GetIntArray(key) ?? fallback.GetIntArray(key);
+
+        public string[]? GetStringArray(string key) =>
+            primary.GetStringArray(key) ?? fallback.GetStringArray(key);
+
         public IReader? GetObject(string key) => primary.GetObject(key) ?? fallback.GetObject(key);
-        public IReadOnlyList<NodeReader>? GetObjectList(string key) => primary.GetObjectList(key) ?? fallback.GetObjectList(key);
-        public IReadOnlyList<ClauseSource>? GetClauseList(string key) => primary.GetClauseList(key) ?? fallback.GetClauseList(key);
+
+        public IReadOnlyList<NodeReader>? GetObjectList(string key) =>
+            primary.GetObjectList(key) ?? fallback.GetObjectList(key);
+
+        public IReadOnlyList<ClauseSource>? GetClauseList(string key) =>
+            primary.GetClauseList(key) ?? fallback.GetClauseList(key);
     }
 
     private sealed class NodeReader : IReader
@@ -923,17 +1368,40 @@ public static class JamlConfigLoader
         }
 
         public IReadOnlyList<string> Keys => _items.Keys.ToArray();
-        public string? GetString(string key) => _items.TryGetValue(key, out var value) ? Scalar(value) : null;
-        public int? GetInt(string key) => int.TryParse(GetString(key), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : null;
-        public bool? GetBool(string key) => bool.TryParse(GetString(key), out var value) ? value : null;
+
+        public string? GetString(string key) =>
+            _items.TryGetValue(key, out var value) ? Scalar(value) : null;
+
+        public int? GetInt(string key) =>
+            int.TryParse(
+                GetString(key),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var value
+            )
+                ? value
+                : null;
+
+        public bool? GetBool(string key) =>
+            bool.TryParse(GetString(key), out var value) ? value : null;
 
         public int[]? GetIntArray(string key)
         {
             if (!_items.TryGetValue(key, out var value))
                 return null;
             if (value is YamlSequence sequence)
-                return sequence.Select(item => int.Parse(Scalar(item) ?? "", CultureInfo.InvariantCulture)).ToArray();
-            if (Scalar(value) is { } scalar && int.TryParse(scalar, NumberStyles.Integer, CultureInfo.InvariantCulture, out var single))
+                return sequence
+                    .Select(item => int.Parse(Scalar(item) ?? "", CultureInfo.InvariantCulture))
+                    .ToArray();
+            if (
+                Scalar(value) is { } scalar
+                && int.TryParse(
+                    scalar,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var single
+                )
+            )
                 return [single];
             return null;
         }
@@ -950,14 +1418,19 @@ public static class JamlConfigLoader
         }
 
         public IReader? GetObject(string key) =>
-            _items.TryGetValue(key, out var value) && value is YamlMapping mapping ? new NodeReader(mapping) : null;
+            _items.TryGetValue(key, out var value) && value is YamlMapping mapping
+                ? new NodeReader(mapping)
+                : null;
 
         public IReadOnlyList<NodeReader>? GetObjectList(string key)
         {
             if (!_items.TryGetValue(key, out var value))
                 return null;
             if (value is YamlSequence sequence)
-                return sequence.OfType<YamlMapping>().Select(static item => new NodeReader(item)).ToArray();
+                return sequence
+                    .OfType<YamlMapping>()
+                    .Select(static item => new NodeReader(item))
+                    .ToArray();
             return null;
         }
 
@@ -980,16 +1453,18 @@ public static class JamlConfigLoader
                         break;
                     default:
                         throw new InvalidOperationException(
-                            $"Clause list '{key}' has an entry that is neither a clause mapping nor a JUMMY line.");
+                            $"Clause list '{key}' has an entry that is neither a clause mapping nor a JUMMY line."
+                        );
                 }
             }
             return items;
         }
 
-        private static string? Scalar(YamlElement element) => element switch
-        {
-            YamlValue value => value.Value?.ToString(),
-            _ => null,
-        };
+        private static string? Scalar(YamlElement element) =>
+            element switch
+            {
+                YamlValue value => value.Value?.ToString(),
+                _ => null,
+            };
     }
 }

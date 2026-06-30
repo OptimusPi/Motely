@@ -52,7 +52,6 @@ public sealed class JokerSourceConfig
     public int[] BoosterPacks { get; set; } = [];
 
     /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
-
     public int[] Judgement { get; set; } = [];
     public int[] Wraith { get; set; } = [];
     public int[] RiffRaff { get; set; } = [];

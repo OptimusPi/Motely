@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text;
-using VerifyTests;
 using DiffPlex;
 using DiffPlex.DiffBuilder;
+using VerifyTests;
 
 namespace Motely.Tests;
 
@@ -13,7 +13,7 @@ public static class ModuleInitializer
     {
         // Configure Verify to use DiffPlex for better diff output
         VerifyDiffPlex.Initialize();
-        
+
         // Optional: Configure Verify settings
         VerifierSettings.TreatAsString<StringBuilder>();
     }

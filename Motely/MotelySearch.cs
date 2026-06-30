@@ -92,10 +92,7 @@ public interface IMotelySeedAnalyzeProvider
 {
     // Analyze the seeds in baseFilterMask, firing the provider's own per-seed callback. No return
     // mask: analysis never gates the search — it observes the survivors and emits their breakdowns.
-    void Analyze(
-        ref MotelyVectorSearchContext searchContext,
-        VectorMask baseFilterMask
-    );
+    void Analyze(ref MotelyVectorSearchContext searchContext, VectorMask baseFilterMask);
 }
 
 public interface IMotelySeedRouter
@@ -332,8 +329,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithSeedScoreProvider(IMotelySeedScoreDesc desc) =>
         WithSeedScoreProvider(desc);
 
-    IMotelySearchSettings IMotelySearchSettings.WithSeedAnalyzeProvider(IMotelySeedAnalyzeDesc desc) =>
-        WithSeedAnalyzeProvider(desc);
+    IMotelySearchSettings IMotelySearchSettings.WithSeedAnalyzeProvider(
+        IMotelySeedAnalyzeDesc desc
+    ) => WithSeedAnalyzeProvider(desc);
 
     IMotelySearchSettings IMotelySearchSettings.WithSeedRouter(IMotelySeedRouterDesc desc) =>
         WithSeedRouter(desc);
@@ -630,7 +628,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     /// <summary>
     /// Tries to get the analyze provider if one was configured.
     /// </summary>
-    public bool TryGetAnalyzeProvider([NotNullWhen(true)] out IMotelySeedAnalyzeProvider? analyzeProvider)
+    public bool TryGetAnalyzeProvider(
+        [NotNullWhen(true)] out IMotelySeedAnalyzeProvider? analyzeProvider
+    )
     {
         analyzeProvider = _analyzeProvider;
         return analyzeProvider != null;
@@ -697,7 +697,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         // Create the analyze provider if one was specified
         if (settings.SeedAnalyzeDesc != null)
         {
-            _analyzeProvider = settings.SeedAnalyzeDesc.CreateAnalyzeProvider(ref filterCreationContext);
+            _analyzeProvider = settings.SeedAnalyzeDesc.CreateAnalyzeProvider(
+                ref filterCreationContext
+            );
         }
 
         // Create the context provider if one was specified
@@ -825,7 +827,8 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 t => _completionSource.TrySetException(t.Exception!.InnerException ?? t.Exception),
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
-                TaskScheduler.Default);
+                TaskScheduler.Default
+            );
             return;
         }
 
@@ -1048,14 +1051,19 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         {
             // Highest score seen so far; the monotonic-max clamp floor. Starts at int.MinValue.
             public int LearnedCutoff;
+
             // Raw candidate matches seen before the clamp (drives the rate estimate).
             public long RawMatches;
+
             // RawMatches snapshot at the last gate evaluation.
             public long LastGateRawMatches;
+
             // Elapsed ms at the last gate evaluation.
             public long LastGateMs;
+
             // Candidates dropped by the clamp once engaged.
             public long SeedsFiltered;
+
             // Whether the monotonic-max clamp is currently active.
             public bool Engaged;
         }
@@ -1263,8 +1271,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             if (windowMs < AUTO_CUTOFF_GATE_WINDOW_MS)
                 return;
 
-            long windowMatches =
-                _autoCutoffState.RawMatches - _autoCutoffState.LastGateRawMatches;
+            long windowMatches = _autoCutoffState.RawMatches - _autoCutoffState.LastGateRawMatches;
             long ratePerSec = windowMatches * 1000 / windowMs;
 
             _autoCutoffState.Engaged = ratePerSec >= AUTO_CUTOFF_ENGAGE_RATE_PER_SEC;

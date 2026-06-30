@@ -17,7 +17,12 @@ public class JamlSimdCoverageTests
     /// <summary>Runs a clause through the SIMD <c>Filter()</c> path (Must) and asserts the search ran.</summary>
     private static long RunMust(IJamlClause clause)
     {
-        var config = new JamlConfig { Id = "cov-must", Deck = MotelyDeck.Red, Stake = MotelyStake.White };
+        var config = new JamlConfig
+        {
+            Id = "cov-must",
+            Deck = MotelyDeck.Red,
+            Stake = MotelyStake.White,
+        };
         config.Must.Add(clause);
 
         var settings = JamlSearchBuilder
@@ -36,7 +41,12 @@ public class JamlSimdCoverageTests
     private static int RunShould(IJamlClause clause)
     {
         clause.Score = 1;
-        var config = new JamlConfig { Id = "cov-should", Deck = MotelyDeck.Red, Stake = MotelyStake.White };
+        var config = new JamlConfig
+        {
+            Id = "cov-should",
+            Deck = MotelyDeck.Red,
+            Stake = MotelyStake.White,
+        };
         config.Should.Add(clause);
 
         int score = -1;
@@ -63,22 +73,31 @@ public class JamlSimdCoverageTests
     {
         ExerciseBoth(
             new JokerClause { IsWildcard = true, Antes = [1, 2] },
-            new JokerClause { Jokers = [MotelyJoker.Blueprint], Antes = [1, 2] });
+            new JokerClause { Jokers = [MotelyJoker.Blueprint], Antes = [1, 2] }
+        );
         ExerciseBoth(
             new CommonJokerClause { IsWildcard = true, Antes = [1] },
-            new CommonJokerClause { IsWildcard = true, Antes = [1] });
+            new CommonJokerClause { IsWildcard = true, Antes = [1] }
+        );
         ExerciseBoth(
             new UncommonJokerClause
             {
                 IsWildcard = true,
                 Antes = [1],
                 // exercise the fast-path rarity stream branch
-                Sources = new JokerSourceConfig { ShopItems = [0, 1], BoosterPacks = [0], UncommonShopJokers = [0] },
+                Sources = new JokerSourceConfig
+                {
+                    ShopItems = [0, 1],
+                    BoosterPacks = [0],
+                    UncommonShopJokers = [0],
+                },
             },
-            new UncommonJokerClause { IsWildcard = true, Antes = [1] });
+            new UncommonJokerClause { IsWildcard = true, Antes = [1] }
+        );
         ExerciseBoth(
             new RareJokerClause { IsWildcard = true, Antes = [1] },
-            new RareJokerClause { IsWildcard = true, Antes = [1] });
+            new RareJokerClause { IsWildcard = true, Antes = [1] }
+        );
         ExerciseBoth(
             new LegendaryJokerClause
             {
@@ -91,7 +110,8 @@ public class JamlSimdCoverageTests
                 IsWildcard = true,
                 Antes = [1],
                 Sources = new LegendaryJokerSourceConfig { ArcanaPacks = [0], SpectralPacks = [0] },
-            });
+            }
+        );
     }
 
     [Fact]
@@ -103,71 +123,118 @@ public class JamlSimdCoverageTests
             {
                 Tarots = [MotelyTarotCard.TheFool],
                 Antes = [1],
-                Sources = new TarotCardSourceConfig { ShopItems = [0, 1], BoosterPacks = [0], Emperor = [0], PurpleSealOrEightBall = [0] },
+                Sources = new TarotCardSourceConfig
+                {
+                    ShopItems = [0, 1],
+                    BoosterPacks = [0],
+                    Emperor = [0],
+                    PurpleSealOrEightBall = [0],
+                },
             },
-            new TarotCardClause { Tarots = [MotelyTarotCard.TheFool], Antes = [1] });
+            new TarotCardClause { Tarots = [MotelyTarotCard.TheFool], Antes = [1] }
+        );
 
         ExerciseBoth(
             new SpectralCardClause
             {
                 Spectrals = [MotelySpectralCard.Familiar],
                 Antes = [1],
-                Sources = new SpectralCardSourceConfig { ShopItems = [0], BoosterPacks = [0], SixthSense = [0], Seance = [0] },
+                Sources = new SpectralCardSourceConfig
+                {
+                    ShopItems = [0],
+                    BoosterPacks = [0],
+                    SixthSense = [0],
+                    Seance = [0],
+                },
             },
-            new SpectralCardClause { Spectrals = [MotelySpectralCard.Familiar], Antes = [1] });
+            new SpectralCardClause { Spectrals = [MotelySpectralCard.Familiar], Antes = [1] }
+        );
 
         ExerciseBoth(
             new PlanetCardClause { Planets = [MotelyPlanetCard.Mercury], Antes = [1] },
-            new PlanetCardClause { Planets = [MotelyPlanetCard.Mercury], Antes = [1] });
+            new PlanetCardClause { Planets = [MotelyPlanetCard.Mercury], Antes = [1] }
+        );
 
         ExerciseBoth(
-            new StandardCardClause { Rank = MotelyStandardcardRank.Two, Suit = MotelyStandardcardSuit.Spades, Antes = [1] },
-            new StandardCardClause { Rank = MotelyStandardcardRank.Two, Antes = [1] });
+            new StandardCardClause
+            {
+                Rank = MotelyStandardcardRank.Two,
+                Suit = MotelyStandardcardSuit.Spades,
+                Antes = [1],
+            },
+            new StandardCardClause { Rank = MotelyStandardcardRank.Two, Antes = [1] }
+        );
 
         ExerciseBoth(
             new ErraticRankClause { Rank = MotelyStandardcardRank.Two, Antes = [1] },
-            new ErraticRankClause { Rank = MotelyStandardcardRank.Two, Antes = [1] });
+            new ErraticRankClause { Rank = MotelyStandardcardRank.Two, Antes = [1] }
+        );
 
         ExerciseBoth(
             new ErraticSuitClause { Suit = MotelyStandardcardSuit.Spades, Antes = [1] },
-            new ErraticSuitClause { Suit = MotelyStandardcardSuit.Spades, Antes = [1] });
+            new ErraticSuitClause { Suit = MotelyStandardcardSuit.Spades, Antes = [1] }
+        );
     }
 
     [Fact]
     public void Features_FilterAndScore()
     {
         ExerciseBoth(
-            new VoucherClause { Vouchers = [MotelyVoucher.Overstock], Rolls = [0], Antes = [1] },
-            new VoucherClause { Vouchers = [MotelyVoucher.Overstock], Rolls = [0], Antes = [1] });
+            new VoucherClause
+            {
+                Vouchers = [MotelyVoucher.Overstock],
+                Rolls = [0],
+                Antes = [1],
+            },
+            new VoucherClause
+            {
+                Vouchers = [MotelyVoucher.Overstock],
+                Rolls = [0],
+                Antes = [1],
+            }
+        );
         ExerciseBoth(
-            new TagClause { Tags = [MotelyTag.RareTag], Rolls = [0], Antes = [1] },
-            new TagClause { Tags = [MotelyTag.RareTag], Rolls = [0], Antes = [1] });
+            new TagClause
+            {
+                Tags = [MotelyTag.RareTag],
+                Rolls = [0],
+                Antes = [1],
+            },
+            new TagClause
+            {
+                Tags = [MotelyTag.RareTag],
+                Rolls = [0],
+                Antes = [1],
+            }
+        );
         ExerciseBoth(
             new BossClause { Bosses = [MotelyBossBlind.CeruleanBell], Antes = [1] },
-            new BossClause { Bosses = [MotelyBossBlind.CeruleanBell], Antes = [1] });
+            new BossClause { Bosses = [MotelyBossBlind.CeruleanBell], Antes = [1] }
+        );
         ExerciseBoth(
             new StartingDrawClause { Rank = MotelyStandardcardRank.Two, Antes = [1] },
-            new StartingDrawClause { Rank = MotelyStandardcardRank.Two, Antes = [1] });
+            new StartingDrawClause { Rank = MotelyStandardcardRank.Two, Antes = [1] }
+        );
     }
 
     [Fact]
     public void Events_FilterAndScore()
     {
         IJamlClause[] Make() =>
-        [
-            new LuckyMoneyClause { Rolls = [0, 1] },
-            new LuckyMultClause { Rolls = [0, 1] },
-            new MisprintMultClause { Rolls = [0, 1], Mult = 1 },
-            new WheelOfFortuneClause { Rolls = [0] },
-            new CavendishExtinctClause { Rolls = [0] },
-            new GrosMichelExtinctClause { Rolls = [0] },
-            new SpaceLevelupClause { Rolls = [0] },
-            new BusinessPayoutClause { Rolls = [0] },
-            new BloodstoneTriggerClause { Rolls = [0] },
-            new ParkingPayoutClause { Rolls = [0] },
-            new GlassDestroyClause { Rolls = [0] },
-            new WheelStaysFlippedClause { Rolls = [0] },
-        ];
+            [
+                new LuckyMoneyClause { Rolls = [0, 1] },
+                new LuckyMultClause { Rolls = [0, 1] },
+                new MisprintMultClause { Rolls = [0, 1], Mult = 1 },
+                new WheelOfFortuneClause { Rolls = [0] },
+                new CavendishExtinctClause { Rolls = [0] },
+                new GrosMichelExtinctClause { Rolls = [0] },
+                new SpaceLevelupClause { Rolls = [0] },
+                new BusinessPayoutClause { Rolls = [0] },
+                new BloodstoneTriggerClause { Rolls = [0] },
+                new ParkingPayoutClause { Rolls = [0] },
+                new GlassDestroyClause { Rolls = [0] },
+                new WheelStaysFlippedClause { Rolls = [0] },
+            ];
 
         var must = Make();
         var should = Make();
