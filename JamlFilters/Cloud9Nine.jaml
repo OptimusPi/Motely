@@ -1,0 +1,14 @@
+name: Cloud 9 — fifteen nines ☁️9️⃣
+deck: Erratic
+stake: White
+must:
+  - erraticRank: Nine
+    min: 15
+  - joker: Cloud9
+    antes: [1, 2]
+should:
+  - joker: Cloud9
+    antes: [1]
+    score: 40
+  - erraticRank: Nine
+    score: 1
