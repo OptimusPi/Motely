@@ -14,7 +14,9 @@ public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
     public MotelyJoker[] Jokers { get; set; } = [];
     public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
-    public LegendaryJokerSourceConfig Sources { get; set; } = new();
+    /// <summary>Null = apply <see cref="LegendaryJokerFilterDesc.DefaultSources"/>; an explicit block
+    /// overrides wholesale (same convention as every other clause's <c>Sources</c>).</summary>
+    public LegendaryJokerSourceConfig? Sources { get; set; }
 
     /// <summary>
     /// When true, match as soon as The Soul appears in a targeted arcana/Spectral pack (Tarot/Spectral
@@ -35,9 +37,19 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
 {
     private readonly LegendaryJokerClause _clause = clause;
 
+    /// <summary>Source of truth for legendary/Soul defaults when a clause gives no <c>sources:</c> block:
+    /// the SIMD/vector path walks all 6 booster-pack slots (legacy type-agnostic mode — both arcana and
+    /// Spectral packs gate The Soul). Shop stays empty (shops never offer legendaries). The single-seed
+    /// scoring path narrows this per ante via <c>ClampBoosterPackSlotForAnte</c> (Hieroglyph/Petroglyph
+    /// pack-count routing). Applied only when <c>Sources</c> is null; an explicit block overrides wholesale.</summary>
+    internal static readonly LegendaryJokerSourceConfig DefaultSources = new()
+    {
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
+    };
+
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var src = _clause.Sources;
+        var src = _clause.Sources ?? DefaultSources;
 
         int maxBoosterPack = src.MaxReferencedBoosterSlot();
 
@@ -54,7 +66,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             SoulEditionRolls = _clause.SoulEditionRolls,
             Sources = new LegendaryJokerSourceConfig
             {
-                ShopItems = src.ShopItems,
                 BoosterPacks = src.BoosterPacks,
                 ArcanaPacks = src.ArcanaPacks,
                 SpectralPacks = src.SpectralPacks,

@@ -114,9 +114,10 @@ public static class JamlConfigLoader
         "allShopJokers",
     ];
 
+    // No "shopItems": shops never offer legendaries — accepting it would silently match nothing.
+    // Listing it here makes a legendaryJoker `sources: { shopItems: ... }` a loud unknown-key error.
     private static readonly string[] LegendarySourceKeys =
     [
-        "shopItems",
         "boosterPacks",
         "arcanaPacks",
         "spectralPacks",
@@ -810,7 +811,9 @@ public static class JamlConfigLoader
                 Jokers = jokers,
                 IsWildcard = any,
                 Edition = ParseOptionalEnum<MotelyItemEdition>(data.GetString("edition")),
-                Sources = ParseLegendarySources(data) ?? new LegendaryJokerSourceConfig(),
+                // Null when no sources: block — lets LegendaryJokerFilterDesc.DefaultSources apply.
+                // An explicit block yields a non-null config and overrides wholesale (no default merge).
+                Sources = ParseLegendarySources(data),
                 SoulCardOnly = data.GetBool("soulCardOnly") ?? false,
                 SoulEditionRolls = data.GetInt("soulEditionRolls") ?? 0,
                 Antes = antes,
@@ -1029,7 +1032,6 @@ public static class JamlConfigLoader
             ValidateKeys(block, LegendarySourceKeys, "legendaryJoker source");
         return new LegendaryJokerSourceConfig
         {
-            ShopItems = block?.GetIntArray("shopItems") ?? [],
             BoosterPacks =
                 block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
             ArcanaPacks = block?.GetIntArray("arcanaPacks") ?? [],
