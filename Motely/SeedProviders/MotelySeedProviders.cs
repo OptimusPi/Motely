@@ -319,6 +319,58 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
 }
 
 /// <summary>
+/// Drains <paramref name="first"/> to exhaustion, then falls through to <paramref name="second"/>.
+/// Used to always run a JAML file's saved <c>seeds:</c> list ahead of whatever seed source the
+/// search was otherwise configured with.
+/// </summary>
+public sealed class MotelyChainedSeedProvider(IMotelySeedProvider first, IMotelySeedProvider second)
+    : IMotelySeedProvider
+{
+    private bool _firstExhausted;
+
+    public long SeedCount { get; } =
+        first.SeedCount >= 0 && second.SeedCount >= 0
+            ? first.SeedCount + second.SeedCount
+            : -1;
+
+    public ReadOnlySpan<char> NextSeed()
+    {
+        if (!_firstExhausted)
+        {
+            var seed = first.NextSeed();
+            if (!seed.IsEmpty)
+                return seed;
+            _firstExhausted = true;
+        }
+        return second.NextSeed();
+    }
+
+    public int NextSeeds(string[] seeds)
+    {
+        if (seeds == null || seeds.Length == 0)
+            return 0;
+
+        int count = 0;
+        if (!_firstExhausted)
+        {
+            count = first.NextSeeds(seeds);
+            if (count < seeds.Length)
+                _firstExhausted = true;
+        }
+
+        if (count < seeds.Length)
+        {
+            var remaining = new string[seeds.Length - count];
+            int gotFromSecond = second.NextSeeds(remaining);
+            Array.Copy(remaining, 0, seeds, count, gotFromSecond);
+            count += gotFromSecond;
+        }
+
+        return count;
+    }
+}
+
+/// <summary>
 /// Optional <see cref="IMotelySeedProvider"/> for <see cref="IAsyncEnumerable{T}"/> sources.
 /// Pass to <see cref="MotelySearchSettings{TBaseFilter}.WithProviderSearch"/>; do not use unless you
 /// truly need async streaming — prefer <see cref="MotelySeedListProvider"/> / <see cref="MotelySearchSettings{TBaseFilter}.WithListSearch"/>.

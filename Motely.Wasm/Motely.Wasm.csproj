@@ -1,24 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <IsPackable>false</IsPackable>
-    <Version>$(MotelyVersion)</Version>
-    <BootsharpName>motely-wasm</BootsharpName>
-    <!-- Bootsharp overwrites <dir>/package.json every build; park the throwaway in obj/. -->
-    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)\obj</BootsharpPackageDirectory>
-    <!-- test.mjs imports ./Motely.Wasm/dist/index.mjs (npm-publishable layout; matches the
-         reference impl + package.json "main"/"files"). Bootsharp emits the single-file module here. -->
-    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\dist</BootsharpPublishDirectory>
-    <!-- Empty BinariesDirectory = embedded base64 single-file: boot() needs no served files. -->
-  </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Bootsharp" />
-  </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+        <IsPackable>false</IsPackable>
+        <IsPublishable>true</IsPublishable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <BootsharpName>motely</BootsharpName>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Motely\Motely.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Bootsharp" />
+        <PackageReference Include="Bootsharp.Inject" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Motely/Motely.csproj" />
+    </ItemGroup>
+
 </Project>

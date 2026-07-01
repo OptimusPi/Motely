@@ -11,9 +11,9 @@ stake: White
 
 must:
   - smallBlindTag: NegativeTag
-    antes: [4]
+    antes: [2,3,5]
   - joker: OopsAll6s
-    antes: [4]
+    antes: [2,3,5]
     sources:
       shopItems: [2, 3, 4, 5]
     min: 3
