@@ -11,6 +11,7 @@ using Motely.Filters.Native;
 partial class Program
 {
     private static readonly CancellationTokenSource _cts = new();
+    private const int DefaultBatchCharCount = 4;
 
     private static List<string> BuildKeywordInputs(
         CommandOption<string> keywordOption,
@@ -150,11 +151,6 @@ partial class Program
             "Analyze one or more seeds (comma-separated) as human-readable text.",
             CommandOptionType.SingleValue
         );
-        var saveSeedsOption = app.Option(
-            "--save-seeds",
-            "Write the top 1000 matched seeds back into the JAML file's top-level seeds: block.",
-            CommandOptionType.NoValue
-        );
         var deckOption = app.Option<string>(
             "--deck <NAME>",
             "Deck name (Red, Blue, Yellow, Green, Black, Magic, Nebula, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic)",
@@ -266,7 +262,11 @@ partial class Program
             CommandOptionType.NoValue
         );
         threadsOption.DefaultValue = Environment.ProcessorCount;
-        batchCharCountOption.DefaultValue = 4;
+        // No DefaultValue here (unlike threadsOption above): CommandOption.HasValue() reports
+        // true forever once a DefaultValue is set, so it could never again distinguish "user
+        // typed --batchCharCount" from "didn't" — which is exactly the signal this needs to
+        // decide whether to override a JAML's saved seeds: list. Default of 4 is applied at
+        // each read site instead (DefaultBatchCharCount below).
 
         app.OnExecuteAsync(async _ =>
         {
@@ -305,14 +305,6 @@ partial class Program
                     return 1;
                 }
 
-                if (saveSeedsOption.HasValue())
-                {
-                    Console.Error.WriteLine(
-                        "Error: --save-seeds requires --jaml to know which file to update."
-                    );
-                    return 1;
-                }
-
                 var nDeck = deckOption.HasValue()
                     ? Enum.Parse<MotelyDeck>(deckOption.ParsedValue, true)
                     : MotelyDeck.Red;
@@ -322,7 +314,9 @@ partial class Program
                 int nThreads = threadsOption.HasValue()
                     ? threadsOption.ParsedValue
                     : Environment.ProcessorCount;
-                int nBatch = batchCharCountOption.ParsedValue;
+                int nBatch = batchCharCountOption.HasValue()
+                    ? batchCharCountOption.ParsedValue
+                    : DefaultBatchCharCount;
 
                 if (
                     !MotelyNativeFilterNames.TryParse(
@@ -388,8 +382,7 @@ partial class Program
                                 : null,
                             StartSeedSearchIndex: nStartIdx,
                             StopSeedSearchIndex: nStopIdx,
-                            BatchCharacterCount: nBatch,
-                            JamlAestheticFallback: null
+                            BatchCharacterCount: nBatch
                         ),
                         msg => Console.Error.WriteLine(msg),
                         out var nSearchModeError,
@@ -448,7 +441,12 @@ partial class Program
                 drown ? 1
                 : threadsOption.HasValue() ? threadsOption.ParsedValue
                 : Environment.ProcessorCount;
-            int batchCharCount = batchCharCountOption.ParsedValue;
+            int batchCharCount = batchCharCountOption.HasValue()
+                ? batchCharCountOption.ParsedValue
+                : DefaultBatchCharCount;
+            // Only non-null when the user actually typed --batchCharCount — an explicit request
+            // for the real sequential sweep, which should override a JAML's saved seeds: list.
+            int? explicitBatchCharCount = batchCharCountOption.HasValue() ? batchCharCount : null;
 
             if (drown && threadsOption.HasValue() && threadsOption.ParsedValue != 1)
                 Console.Error.WriteLine(
@@ -540,8 +538,7 @@ partial class Program
                             : null,
                         StartSeedSearchIndex: jStartIdx,
                         StopSeedSearchIndex: jStopIdx,
-                        BatchCharacterCount: batchCharCount,
-                        JamlAestheticFallback: null
+                        BatchCharacterCount: explicitBatchCharCount
                     ),
                     msg => Console.Error.WriteLine(msg),
                     out var jamlSearchModeError,
@@ -572,15 +569,9 @@ partial class Program
             }
             using var resultSink = new CompositeMotelyResultSink(resultSinks);
             int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
-            var saveSeedsCollector = saveSeedsOption.HasValue()
-                ? new MotelyTopSeedSink.Collector(MotelyGlobals.SavedSeedLimit)
-                : null;
-            var saveSeedMatches = saveSeedsOption.HasValue()
-                ? new List<string>(MotelyGlobals.SavedSeedLimit)
-                : null;
-            var saveSeedMatchSet = saveSeedsOption.HasValue()
-                ? new HashSet<string>(StringComparer.Ordinal)
-                : null;
+            var saveSeedsCollector = new MotelyTopSeedSink.Collector(MotelyGlobals.SavedSeedLimit);
+            var saveSeedMatches = new List<string>(MotelyGlobals.SavedSeedLimit);
+            var saveSeedMatchSet = new HashSet<string>(StringComparer.Ordinal);
 
             // Always attach a progress callback so 'p' hotkey stays current;
             // quiet mode swaps in the silent capture variant.
@@ -600,7 +591,7 @@ partial class Program
                         return;
 
                     resultSink.OnScored(in tally);
-                    saveSeedsCollector?.Consider(tally.Seed, tally.Score);
+                    saveSeedsCollector.Consider(tally.Seed, tally.Score);
                 });
             }
             else
@@ -609,9 +600,7 @@ partial class Program
                 {
                     resultSink.OnSeed(seed);
                     if (
-                        saveSeedMatches != null
-                        && saveSeedMatchSet != null
-                        && saveSeedMatches.Count < MotelyGlobals.SavedSeedLimit
+                        saveSeedMatches.Count < MotelyGlobals.SavedSeedLimit
                         && saveSeedMatchSet.Add(seed)
                     )
                     {
@@ -639,11 +628,10 @@ partial class Program
             }
 
             cancelled |= _cts.Token.IsCancellationRequested;
-            if (saveSeedsOption.HasValue())
             {
                 var seedsToSave = hasStructuredScores
-                    ? saveSeedsCollector?.GetSeeds() ?? []
-                    : (IReadOnlyList<string>)(saveSeedMatches ?? []);
+                    ? saveSeedsCollector.GetSeeds()
+                    : (IReadOnlyList<string>)saveSeedMatches;
 
                 if (TryWriteSeedsToJamlFile(jamlOption.ParsedValue, seedsToSave, out var saveError))
                     Console.Error.WriteLine(

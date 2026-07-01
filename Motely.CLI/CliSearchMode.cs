@@ -26,9 +26,11 @@ internal static class CliSearchMode
         double? StartPercent,
         long? StartSeedSearchIndex,
         long? StopSeedSearchIndex,
-        int BatchCharacterCount,
-        IReadOnlyList<JamlAesthetic>? JamlAestheticFallback
+        int? BatchCharacterCount
     );
+
+    /// <summary>Default batch character count when the caller didn't pass one explicitly.</summary>
+    private const int DefaultBatchCharacterCount = 4;
 
     public static bool TryApplySearchMode(
         IMotelySearchSettings settings,
@@ -80,13 +82,6 @@ internal static class CliSearchMode
             )
             {
                 error = "Error: --startSeed/--stopSeed apply only to default sequential search.";
-                return false;
-            }
-
-            if (input.JamlAestheticFallback is { Count: > 0 })
-            {
-                error =
-                    "Error: --startSeed/--stopSeed cannot be used when JAML declares aesthetics.";
                 return false;
             }
         }
@@ -240,25 +235,25 @@ internal static class CliSearchMode
         {
             updated = updated.WithAestheticSearch(explicitAesthetic.Value);
         }
-        else if (input.JamlSeeds is { Count: > 0 })
+        // An explicit batch/range option means the caller asked for a real sequential sweep —
+        // don't let a JAML file's saved `seeds:` list silently replace it with just those seeds.
+        bool hasExplicitSequentialRange =
+            input.BatchCharacterCount.HasValue
+            || input.StartBatch.HasValue
+            || input.EndBatch.HasValue
+            || input.StartPercent.HasValue
+            || hasSeedIndexOptions;
+
+        if (input.JamlSeeds is { Count: > 0 } && !hasExplicitSequentialRange)
         {
             // A JAML `seeds:` array front-runs the search as a seed list by default.
             updated = updated.WithListSearch(input.JamlSeeds, input.JamlSeeds.Count);
         }
-        else if (input.JamlAestheticFallback is { Count: > 0 })
-        {
-            updated = updated.WithAestheticSearch(input.JamlAestheticFallback[0]);
-            if (input.JamlAestheticFallback.Count > 1)
-            {
-                writeWarning?.Invoke(
-                    $"Warning: JAML has {input.JamlAestheticFallback.Count} aesthetics; using first only."
-                );
-            }
-        }
         else
         {
+            int batchCharacterCount = input.BatchCharacterCount ?? DefaultBatchCharacterCount;
             updated = updated.WithSequentialSearch();
-            updated = updated.WithBatchCharacterCount(input.BatchCharacterCount);
+            updated = updated.WithBatchCharacterCount(batchCharacterCount);
 
             bool hasSeedRange =
                 input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
@@ -288,7 +283,7 @@ internal static class CliSearchMode
                 var (sb, ebExclusive) = SeedMath.SearchIndexRangeToBatchRange(
                     startIdx,
                     stopIdx,
-                    input.BatchCharacterCount
+                    batchCharacterCount
                 );
                 updated = updated.WithStartBatchIndex(sb).WithEndBatchIndex(ebExclusive);
             }
@@ -305,7 +300,7 @@ internal static class CliSearchMode
                         return false;
                     }
 
-                    int nonBatchChars = MotelyGlobals.MaxSeedLength - input.BatchCharacterCount;
+                    int nonBatchChars = MotelyGlobals.MaxSeedLength - batchCharacterCount;
                     long maxBatch = (long)Math.Pow(MotelyGlobals.SeedDigits.Length, nonBatchChars);
                     long startBatch = (long)(maxBatch * (pct / 100.0));
                     if (startBatch < 0)
