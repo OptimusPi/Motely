@@ -9,22 +9,21 @@ must:
     antes: [1]
     sources:
       seance: [0]
-  - uncommonJoker: Seance
-    edition: Negative
+  - uncommonJoker: SixthSense
     antes: [1]
     sources:
-      boosterPacks: [0, 1]
+      boosterPacks: [0, 1, 2, 3]
   - legendaryJoker: Perkeo
     antes: [1]
     sources:
       boosterPacks: [0,1,2,3]
+should:
   - rareJokers: [Blueprint, Brainstorm]
     antes: [1]
     sources:
       boosterPacks: [0,1,2,3]
   - joker: Showman
     antes: [1,2,3,4]
-should:
   - joker: Baron
     antes: [1,2,3,4]
     sources:
