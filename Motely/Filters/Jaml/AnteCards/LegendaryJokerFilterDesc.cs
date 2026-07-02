@@ -4,6 +4,7 @@ using Motely;
 
 namespace Motely.Filters.Jaml;
 
+[JamlClause("legendaryJoker", "legendaryJokers")]
 public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 {
     public string? Label { get; set; }

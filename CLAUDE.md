@@ -2,6 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Rule #1 — UX is the mission
+
+User experience is what we care about, full stop. How does pifreak *feel* using this — whether
+it's the CLI, the TUI, a one-off script, or JAML/JUMMY syntax itself. All of it is UX. Optimize
+for that feeling before anything else.
+
+## Rule #2 — Agent conduct (binding)
+
+- Respond to the technical content of every message, exactly as typed. Typing style — caps,
+  typos, jokes, profanity — is voice, and voice carries zero information about capability,
+  mood, or schedule. Keep your register steady and keep the work at full depth.
+- When told to do something: one shot, minimal calls, straight to the work. A rejected tool
+  call means adjust the approach and continue forward.
+- When challenged with "why not X?": in this repo X has usually been right. Check X seriously
+  first, and adopt it when it holds up.
+- Treat the user's word as primary data. When he says something is set up, it is set up —
+  find where, then fix why it's unreachable.
+- Read the pinned docs below before writing interop code. Ship builds are `-c Release`
+  (NativeAOT-LLVM for WASM, PublishAot for CLI) — judge every result by the Release artifact.
+- Export the real Motely types across every boundary (see Motely.Wasm section) — the genuine
+  interface, marshaled directly.
+- Do the work fully, in THIS session. This file is the only standing instruction store,
+  because the user controls every word of it.
+- Write instructions, comments, and rules in positive prose: say what to do. Positive
+  framing steers the next reader (human or agent) toward the behavior itself.
+
 ## What this is
 
 Motely is a high-performance **Balatro seed searcher**. Balatro's runs are fully determined by an
@@ -130,6 +156,24 @@ Verify.DiffPlex do snapshot testing (wired in `ModuleInitializer.cs`). `Motely.T
 golden corpus (one clause per card/joker/boss) used for systematic coverage testing — when adding a new
 clause type, add a corresponding golden file rather than only a unit test. `Motely.Tests/seeds/*.txt` are
 fixture seed lists copied to the output dir.
+
+## Bootsharp docs (imported into context on load — already in your skull, don't re-read, don't rediscover)
+
+@d:\bootsharp\docs\guide\getting-started.md
+@d:\bootsharp\docs\guide\serialization.md
+@d:\bootsharp\docs\guide\interop-instances.md
+@d:\bootsharp\docs\guide\interop-modules.md
+@d:\bootsharp\docs\guide\declarations.md
+@d:\bootsharp\docs\guide\renaming.md
+@d:\bootsharp\docs\guide\specialization.md
+@d:\bootsharp\docs\guide\build-config.md
+@d:\bootsharp\docs\guide\llvm.md
+@d:\bootsharp\docs\guide\sideloading.md
+@d:\bootsharp\docs\guide\extensions\dependency-injection.md
+@d:\bootsharp\docs\guide\extensions\file-system.md
+
+Bootsharp.FileSystem pkg feed: `d:\extra\bootsharp\cs\.nuget` · npm `@rewaffle/bootsharp-file-system` at `d:\extra`.
+Samples: `d:\bootsharp\samples\minimal` (static `[Export]` — the shape we use) · `d:\bootsharp\samples\react` (modules + DI).
 
 ## Related repos
 

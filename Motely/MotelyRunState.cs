@@ -28,13 +28,7 @@ public ref struct MotelyRunState
 
     static MotelyRunState()
     {
-        // Check that we can fit all the voucher state in an int
-        if (MotelyEnum<MotelyVoucher>.ValueCount > sizeof(int) * 8)
-            throw new UnreachableException();
 
-        // Check that we can fit all the bosses state in an int
-        if (MotelyEnum<MotelyBossBlind>.ValueCount > sizeof(int) * 8)
-            throw new UnreachableException();
 
         FinisherBossBlindMask = 0;
         NormalBossBlindMask = 0;

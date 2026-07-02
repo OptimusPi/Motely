@@ -11,15 +11,12 @@ stake: White
 
 must:
   - smallBlindTag: NegativeTag
-    antes: [2,3,5]
-  - joker: OopsAll6s
-    antes: [2,3,5]
-    sources:
-      shopItems: [2, 3, 4, 5]
-    min: 3
+    antes: [4]
+  - legendaryJoker: Perkeo
+    antes: [1,2,3]
+  - joker: Showman
+    antes: [1,2,3]
 should:
-
-
   - joker: OopsAll6s
     antes: [4]
     sources:

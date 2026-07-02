@@ -6,10 +6,10 @@
     <WarningsAsErrors>$(WarningsAsErrors);NU1603</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Bootsharp" Version="0.9.0" />
-    <PackageVersion Include="Bootsharp.Common" Version="0.9.0" />
-    <PackageVersion Include="Bootsharp.Inject" Version="0.9.0" />
-    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.6.22.1427" />
+    <PackageVersion Include="Bootsharp" Version="0.9.1-alpha.2" />
+    <PackageVersion Include="Bootsharp.Common" Version="0.9.1-alpha.2" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.9.1-alpha.2" />
+    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.7.1.1608" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.3" />
@@ -28,6 +28,8 @@
     <PackageVersion Include="Verify.DiffPlex" Version="3.1.2" />
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <!-- Direct pin lifts the Swashbuckle transitive past GHSA-v5pm-xwqc-g5wc (2.4.1 audit break). -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.9.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.5" />
