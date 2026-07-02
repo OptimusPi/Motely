@@ -15,6 +15,19 @@ public record MotelyJsRunState(int VoucherBitfield, int BossBitfield)
             BossBitfield = BossBitfield,
         };
     }
+
+    public static MotelyJsRunState FromRunState(in MotelyRunState state) =>
+        new(state.VoucherBitfield, state.BossBitfield);
+
+    /// <summary>The snapshot after buying/activating <paramref name="voucher"/>.</summary>
+    public MotelyJsRunState WithVoucherActive(MotelyVoucher voucher) =>
+        this with { VoucherBitfield = VoucherBitfield | (1 << (int)voucher) };
+
+    public bool IsVoucherActive(MotelyVoucher voucher) =>
+        (VoucherBitfield & (1 << (int)voucher)) != 0;
+
+    public bool HasSeenBoss(MotelyBossBlind boss) =>
+        (BossBitfield & (1 << boss.GetBossIndex())) != 0;
 }
 
 public record MotelyBossStateResult(MotelyBossBlind Boss, MotelyJsRunState RunState);
