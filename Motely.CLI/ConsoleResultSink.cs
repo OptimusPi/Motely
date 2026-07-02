@@ -14,6 +14,15 @@ internal sealed class ConsoleResultSink : IMotelyResultSink
 
     private static readonly bool _color = !Console.IsOutputRedirected;
 
+    public ConsoleResultSink(IReadOnlyList<string>? tallyLabels = null)
+    {
+        if (tallyLabels is { Count: > 0 })
+        {
+            var header = $"seed,score,{string.Join(",", tallyLabels)}";
+            StickyProgress.WriteResultLine(_color ? $"{Dim}{header}{Reset}" : header);
+        }
+    }
+
     public void OnSeed(string seed) => StickyProgress.WriteResultLine(seed);
 
     public void OnScored(in MotelyScoredSeedResult tally)

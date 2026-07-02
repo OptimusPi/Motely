@@ -235,6 +235,13 @@ internal static class CliSearchMode
         {
             updated = updated.WithAestheticSearch(explicitAesthetic.Value);
         }
+        // The JAML seeds: replay and the sequential sweep are the *default* modes — they apply
+        // only when the caller picked no explicit search input above. An explicit mode
+        // (--keyword, --random, --aesthetic, --source, --seeds) already installed its provider;
+        // reaching the block below would silently stomp it back to sequential.
+        if (explicitSearchModeCount > 0)
+            return true;
+
         // An explicit batch/range option means the caller asked for a real sequential sweep —
         // don't let a JAML file's saved `seeds:` list silently replace it with just those seeds.
         bool hasExplicitSequentialRange =
