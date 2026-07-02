@@ -50,31 +50,42 @@ public static class MotelyTopSeedSink
     private readonly record struct SavedSeedEntry(string Seed, int Score, long Sequence);
 
     /// <summary>
-    /// Pure text transform: rewrite (or append, if absent) the top-level <c>seeds:</c> block of a
-    /// JAML document with the given seeds. No IO, no validation. The original newline style is
-    /// preserved. Seeds are normalized (<see cref="MotelyGlobals.NormalizeSeed"/>), de-duped, and
-    /// capped at <see cref="MotelyGlobals.SavedSeedLimit"/> as a hard safety bound.
+    /// Pure text transform: merge the given seeds into the top-level <c>seeds:</c> block of a
+    /// JAML document (appending the block if absent). Seeds already in the document are a seed
+    /// provider the user curated — they stay, in front, in their original order; new finds go
+    /// after them. No IO, no validation. The original newline style is preserved. Seeds are
+    /// normalized (<see cref="MotelyGlobals.NormalizeSeed"/>), de-duped, and capped at
+    /// <see cref="MotelyGlobals.SavedSeedLimit"/> as a hard safety bound.
     /// </summary>
     public static string RewriteSeedsBlock(string jamlText, IReadOnlyList<string> seeds)
     {
         string normalizedNewline = jamlText.Contains("\r\n", StringComparison.Ordinal)
             ? "\r\n"
             : "\n";
-        var normalizedSeeds = seeds
+
+        var originalHasTrailingNewline = jamlText.EndsWith("\n", StringComparison.Ordinal);
+        var lines = jamlText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
+
+        int seedsStart = FindTopLevelSeedsLine(lines);
+        int seedsEndExclusive =
+            seedsStart >= 0 ? FindNextTopLevelKeyLine(lines, seedsStart + 1) : -1;
+        var existingSeeds =
+            seedsStart >= 0
+                ? ExtractExistingSeeds(lines, seedsStart, seedsEndExclusive)
+                : (IReadOnlyList<string>)[];
+
+        var normalizedSeeds = existingSeeds
+            .Concat(seeds)
             .Select(static seed => MotelyGlobals.NormalizeSeed(seed))
             .Where(static seed => !string.IsNullOrWhiteSpace(seed))
             .Distinct(StringComparer.Ordinal)
             .Take(MotelyGlobals.SavedSeedLimit)
             .ToArray();
 
-        var originalHasTrailingNewline = jamlText.EndsWith("\n", StringComparison.Ordinal);
-        var lines = jamlText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
         var replacementLines = BuildSeedsBlockLines(normalizedSeeds);
 
-        int seedsStart = FindTopLevelSeedsLine(lines);
         if (seedsStart >= 0)
         {
-            int seedsEndExclusive = FindNextTopLevelKeyLine(lines, seedsStart + 1);
             lines.RemoveRange(seedsStart, seedsEndExclusive - seedsStart);
             lines.InsertRange(seedsStart, replacementLines);
         }
@@ -117,6 +128,51 @@ public static class MotelyTopSeedSink
 
         error = null;
         return true;
+    }
+
+    /// <summary>
+    /// Pull the seeds already present in a <c>seeds:</c> region, in document order. Handles both
+    /// the block form (<c>- SEED</c> items) and the inline form (<c>seeds: [A, B]</c>), tolerating
+    /// quotes and trailing <c>#</c> comments (a '#' can never be part of a seed — the seed
+    /// alphabet is alphanumeric).
+    /// </summary>
+    private static List<string> ExtractExistingSeeds(
+        IReadOnlyList<string> lines,
+        int seedsStart,
+        int seedsEndExclusive
+    )
+    {
+        var seeds = new List<string>();
+
+        var firstLine = lines[seedsStart];
+        var inlineValue = firstLine[(firstLine.IndexOf(':') + 1)..];
+        int commentIndex = inlineValue.IndexOf('#');
+        if (commentIndex >= 0)
+            inlineValue = inlineValue[..commentIndex];
+        inlineValue = inlineValue.Trim().TrimStart('[').TrimEnd(']');
+        foreach (var part in inlineValue.Split(',', StringSplitOptions.TrimEntries))
+        {
+            var seed = part.Trim('"', '\'');
+            if (seed.Length > 0)
+                seeds.Add(seed);
+        }
+
+        for (int i = seedsStart + 1; i < seedsEndExclusive; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (!trimmed.StartsWith("- ", StringComparison.Ordinal))
+                continue;
+
+            var item = trimmed[2..];
+            commentIndex = item.IndexOf('#');
+            if (commentIndex >= 0)
+                item = item[..commentIndex];
+            var seed = item.Trim().Trim('"', '\'');
+            if (seed.Length > 0)
+                seeds.Add(seed);
+        }
+
+        return seeds;
     }
 
     private static List<string> BuildSeedsBlockLines(IReadOnlyList<string> seeds)

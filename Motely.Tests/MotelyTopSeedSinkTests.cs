@@ -84,12 +84,13 @@ public sealed class MotelyTopSeedSinkTests
         Assert.Equal(314, MotelyTopSeedSink.DefaultLimit);
     }
 
-    // ── seeds: rewrite round-trip (after rewrite, the doc MUST reload and contain exactly these) ──
+    // ── seeds: rewrite round-trip (existing seeds are a curated provider: they stay, in front,
+    //    in order; new finds merge in after them — a save NEVER deletes a seed) ──
 
     private static readonly string[] NewSeeds = ["XXXXXXXX", "YYYYYYYY", "ZZZZZZZZ"];
 
     [Fact]
-    public void Rewrite_BlockForm_ReplacedValidExact()
+    public void Rewrite_BlockForm_MergesExistingInFront()
     {
         var doc = "name: t\nseeds:\n  - OLDAAAAA\n  - OLDBBBBB\n";
 
@@ -98,11 +99,11 @@ public sealed class MotelyTopSeedSinkTests
             err
         );
         Assert.True(JamlConfigLoader.TryLoad(updated, out var cfg, out _));
-        Assert.Equal(NewSeeds, cfg!.Seeds);
+        Assert.Equal(["OLDAAAAA", "OLDBBBBB", .. NewSeeds], cfg!.Seeds);
     }
 
     [Fact]
-    public void Rewrite_InlineForm_Replaced()
+    public void Rewrite_InlineForm_MergesExistingInFront()
     {
         var doc = "name: t\nseeds: [OLDAAAAA, OLDBBBBB]\n";
 
@@ -111,7 +112,21 @@ public sealed class MotelyTopSeedSinkTests
             err
         );
         Assert.True(JamlConfigLoader.TryLoad(updated, out var cfg, out _));
-        Assert.Equal(NewSeeds, cfg!.Seeds);
+        Assert.Equal(["OLDAAAAA", "OLDBBBBB", .. NewSeeds], cfg!.Seeds);
+    }
+
+    [Fact]
+    public void Rewrite_DedupesNewAgainstExisting()
+    {
+        var doc = "name: t\nseeds:\n  - XXXXXXXX\n  - OLDAAAAA\n";
+
+        Assert.True(
+            MotelyTopSeedSink.TryRewriteAndValidate(doc, NewSeeds, out var updated, out var err),
+            err
+        );
+        Assert.True(JamlConfigLoader.TryLoad(updated, out var cfg, out _));
+        // XXXXXXXX keeps its curated front spot; only the genuinely new seeds append.
+        Assert.Equal(["XXXXXXXX", "OLDAAAAA", "YYYYYYYY", "ZZZZZZZZ"], cfg!.Seeds);
     }
 
     [Fact]
@@ -140,7 +155,7 @@ public sealed class MotelyTopSeedSinkTests
             err
         );
         Assert.True(JamlConfigLoader.TryLoad(updated, out var cfg, out _));
-        Assert.Equal(NewSeeds, cfg!.Seeds);
+        Assert.Equal(["OLDAAAAA", .. NewSeeds], cfg!.Seeds);
         // The clause that followed the seeds block must survive untouched.
         Assert.Contains("Overstock Plus", updated);
     }
@@ -165,9 +180,19 @@ public sealed class MotelyTopSeedSinkTests
     }
 
     [Fact]
-    public void Rewrite_EmptyList_EmitsEmptySeeds()
+    public void Rewrite_EmptyList_PreservesExistingSeeds()
     {
         var doc = "name: t\nseeds:\n  - OLDAAAAA\n";
+
+        Assert.True(MotelyTopSeedSink.TryRewriteAndValidate(doc, [], out var updated, out _));
+        Assert.True(JamlConfigLoader.TryLoad(updated, out var cfg, out _));
+        Assert.Equal(["OLDAAAAA"], cfg!.Seeds);
+    }
+
+    [Fact]
+    public void Rewrite_EmptyList_NoExisting_EmitsEmptySeeds()
+    {
+        var doc = "name: t\nseeds: []\n";
 
         Assert.True(MotelyTopSeedSink.TryRewriteAndValidate(doc, [], out var updated, out _));
         Assert.Contains("seeds: []", updated);
