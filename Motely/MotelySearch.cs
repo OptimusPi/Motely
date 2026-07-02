@@ -150,6 +150,11 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelyScoredSeedResult> callback);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
+
+    /// <summary>
+    /// Attach Jimmolate — a per-seed predicate ("does this seed pass?"), the classic Immolate
+    /// <c>.cl</c> filter mental model — to the search's filter chain. See <see cref="MotelyGlossary"/>.
+    /// </summary>
     IMotelySearchSettings WithJimmolate(MotelyIndividualSeedSearcher searcher);
 
     IMotelySearch CreateSearch();
@@ -454,6 +459,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
+    /// <inheritdoc cref="IMotelySearchSettings.WithJimmolate"/>
     public MotelySearchSettings<TBaseFilter> WithJimmolate(
         MotelyIndividualSeedSearcher? searcher = null
     )

@@ -5,9 +5,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- The frontier model IS the brain. This MCP server is the bridge: it exposes the
-         REAL Motely engine over stdio so the client (Claude) can validate JAML and run
-         bounded searches in-process. No Vercel, no money hole, no lesser embedded AI. -->
+    <!-- Stdio MCP server for JAML/JUMMY validation. Seed searching is intentionally NOT done here;
+         it runs client-side in the MCP App UI via motely-wasm. -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.Data\Motely.Data.csproj" />
   </ItemGroup>
 
 </Project>
