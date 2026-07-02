@@ -14,8 +14,7 @@
 
     <ItemGroup>
         <PackageReference Include="Bootsharp" />
-        <PackageReference Include="Bootsharp.Inject" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Bootsharp.FileSystem" />
     </ItemGroup>
 
     <ItemGroup>

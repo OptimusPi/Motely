@@ -651,11 +651,6 @@ partial class Program
         {
             return app.Execute(args);
         }
-        catch (UnrecognizedCommandParsingException ex)
-        {
-            Console.Error.WriteLine($"Error: {ex.Message}");
-            return 1;
-        }
         catch (CommandParsingException ex)
         {
             Console.Error.WriteLine($"Error: {ex.Message}");

@@ -220,6 +220,15 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// </summary>
     public Action<MotelyScoredSeedResult>? ScoredResultCallback { get; set; }
 
+    /// <summary>
+    /// Run the whole workload synchronously on the calling thread — no worker threads, no
+    /// browser pump. For small bounded analyses (Jamlyzer) that must complete inside a
+    /// synchronous call on every platform: the browser pump yields to the event loop between
+    /// batches, so a blocking <see cref="IMotelySearch.AwaitCompletion"/> on the same single
+    /// thread would deadlock. Internal: hosts should use the async pump for real searches.
+    /// </summary>
+    internal bool RunInline { get; set; }
+
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
         ThreadCount = threadCount;
@@ -525,6 +534,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private long _batchIndex;
     private readonly MotelySearchPlan[] _plans;
     private readonly int _threadCount;
+    private readonly bool _runInline;
 
     // True when exactly one thread ever advances _batchIndex: the browser pump (single thread,
     // regardless of how many plans ProcessorCount allocated) or a 1-thread native run. Lets
@@ -725,6 +735,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
 
         _threadCount = Math.Max(1, settings.ThreadCount);
+        _runInline = settings.RunInline;
         _singleBatchConsumer = OperatingSystem.IsBrowser() || _threadCount == 1;
         _plans = new MotelySearchPlan[_threadCount];
         for (int i = 0; i < _threadCount; i++)
@@ -808,6 +819,28 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private void StartSearchThreads()
     {
         _elapsedTime.Start();
+
+        // Inline (Jamlyzer): the entire bounded workload runs synchronously on the caller,
+        // so AwaitCompletion() is safe on every platform, including the browser's single
+        // thread where the pump below would deadlock it.
+        if (_runInline)
+        {
+            try
+            {
+                RunWorkerBody(_plans[0]);
+            }
+            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+            {
+                // honour cooperative cancellation — no error
+            }
+            catch (Exception ex)
+            {
+                _completionSource.TrySetException(ex);
+                return;
+            }
+            SignalSearchCompleted();
+            return;
+        }
 
         // Browser: one thread, no pthreads. Pump cooperatively (await Task.Delay(1) between
         // batches) so the single thread surfaces to the event loop and the UI repaints instead

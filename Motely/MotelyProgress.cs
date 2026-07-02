@@ -4,7 +4,7 @@ namespace Motely;
 /// Progress information reported during Motely search operations.
 /// Durations are milliseconds (same basis as the internal progress ticker).
 /// </summary>
-public class MotelyProgress
+public sealed record MotelyProgress
 {
     public long CompletedBatchCount { get; set; }
     public long TotalBatchCount { get; set; }
