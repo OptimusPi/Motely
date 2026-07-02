@@ -490,6 +490,11 @@ partial class Program
                 return 1;
             }
 
+            Console.WriteLine(
+                $"  Cost:  ~{config.SimdCostPerSeed():0.#} crunches/seed "
+                    + $"({config.EstimateFilterCrunches():N0} per {MotelyGlobals.MaxVectorWidth}-seed batch, worst case)"
+            );
+
             IMotelySearchSettings settings = plan
                 .Settings.WithDeck(deck)
                 .WithStake(stake)
@@ -555,7 +560,10 @@ partial class Program
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
             bool hasStructuredScores = scoreTallyColumns > 0;
-            var resultSinks = new List<IMotelyResultSink> { new ConsoleResultSink() };
+            var resultSinks = new List<IMotelyResultSink>
+            {
+                new ConsoleResultSink(hasStructuredScores ? plan.TallyLabels : null),
+            };
             if (hasStructuredScores)
             {
                 // Persist scored seeds to the Parquet lake so --drown can replay them later.
