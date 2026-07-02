@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Rule #1 — UX is the mission
 
 User experience is what we care about, full stop. How does pifreak *feel* using this — whether
-it's the CLI, the TUI, a one-off script, or JAML/JUMMY syntax itself. All of it is UX. Optimize
+it's the CLI, a one-off script, or JAML/JUMMY syntax itself. All of it is UX. Optimize
 for that feeling before anything else.
 
 ## Rule #2 — Agent conduct (binding)
@@ -42,8 +42,10 @@ The solution (`Motely.slnx`) has 5 projects:
 | `Motely` | Core engine: SIMD seed search, Balatro PRNG reimplementation, the JAML filter DSL, hand-coded "native" filters, scoring/analysis. No entry point. |
 | `Motely.CLI` | Headless command-line runner (`OutputType=Exe`, AOT-publishable). References `Motely` + `Motely.Data`. |
 | `Motely.Data` | DuckDB/Parquet "seed lake" persistence (writing found seeds, replaying/"drowning" previously found seeds). Only project touching DuckDB; excluded under `#if !BROWSER`. |
-| `Motely.TUI` | Interactive Terminal.Gui v2 shell, plus an embedded ASP.NET Core API for distributed/remote search workers. Running it with CLI args just tells you to use `Motely.CLI` instead — CLI and TUI are cleanly separated. |
-| `Motely.Tests` | xUnit + Verify.Xunit (snapshot testing) + coverlet. References only core `Motely` (not CLI/Data/TUI). |
+| `Motely.Wasm` | Bootsharp/NativeAOT-LLVM browser head — exports the real Motely types across the JS boundary. Needs the `wasm-tools` workload installed. |
+| `Motely.Tests` | xUnit + Verify.Xunit (snapshot testing) + coverlet. References only core `Motely` (not CLI/Data). |
+
+`Motely.TUI` was removed from the tree (recoverable from git history) — the CLI is the runner.
 
 `Motely.Mcp` does **not** exist yet in this tree — it's only referenced via a package-version comment
 in `Directory.Packages.props` (pinning `ModelContextProtocol`) and an unmerged `origin/MCP-DOCS` branch.
@@ -55,7 +57,7 @@ in-browser).
 
 ## Build, test, run
 
-SDK is pinned by `global.json` (10.0.204, `rollForward: latestPatch`). Central package management is
+SDK is pinned by `global.json` (10.0.301, `rollForward: latestPatch`). Central package management is
 on (`Directory.Packages.props`, `ManagePackageVersionsCentrally=true`), and `TreatWarningsAsErrors=true`
 solution-wide — a build with new warnings will fail.
 
@@ -66,7 +68,6 @@ dotnet test --filter FullyQualifiedName~JummyLineTests.SomeTestName   # single t
 dotnet run --project Motely.CLI -- --jaml JamlFilters/Perkeo.jaml
 dotnet run --project Motely.CLI -- --native PerkeoObservatory --random 1000000
 dotnet run --project Motely.CLI -- --analyze <seed[,seed...]>
-dotnet run --project Motely.TUI
 ```
 
 Release builds enable AVX2/AVX/AVX512F/AVX512BW hardware intrinsics and `PublishAot` for the CLI —
@@ -90,7 +91,7 @@ Everything hangs off interfaces in `Motely/MotelySearch.cs`:
   consumer for logic that doesn't lend itself to SIMD (e.g. some analysis/native filters).
 - `MotelySearchSettings<TBaseFilter>` — fluent builder (`WithDeck`, `WithThreadCount`,
   `WithSequentialSearch`, `WithProviderSearch`, `WithSeedScoreProvider`, `WithAutoScoreCutoff`, ...) that
-  CLI/TUI construct and call `.Start()` on.
+  the CLI constructs and calls `.Start()` on.
 - `MotelySearch<TBaseFilter>` — the engine itself: spins up dedicated native `Thread`s (not the task
   pool, to pin long CPU-bound loops), each running a `MotelySequentialSearchPlan` or
   `MotelyProviderSearchPlan`. Uses thread-local counters aggregated via `Volatile.Read` to avoid
