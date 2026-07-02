@@ -143,13 +143,19 @@ partial class Program
 
         var jamlOption = app.Option<string>(
             "--jaml <JAML>",
-            "JAML config file",
+            "JAML (Jimbo's Ante Markup Language) config file",
             CommandOptionType.SingleValue
         );
         var analyzeOption = app.Option<string>(
             "--analyze <SEED[,SEED...]>",
-            "Analyze one or more seeds (comma-separated) as human-readable text.",
+            "Analyze one or more seeds (comma-separated) as human-readable text, using the "
+                + "legacy text-block analyzer (NOT JAMLyzer — see --glossary).",
             CommandOptionType.SingleValue
+        );
+        var glossaryOption = app.Option(
+            "--glossary",
+            "Print what JAML, JUMMY, Jimmolate, and JAMLyzer mean, then exit.",
+            CommandOptionType.NoValue
         );
         var deckOption = app.Option<string>(
             "--deck <NAME>",
@@ -270,6 +276,12 @@ partial class Program
 
         app.OnExecuteAsync(async _ =>
         {
+            if (glossaryOption.HasValue())
+            {
+                Console.WriteLine(MotelyGlossary.Render());
+                return 0;
+            }
+
             if (args.Length == 0)
             {
                 app.ShowHelp();
@@ -437,9 +449,8 @@ partial class Program
             var deck = config.Deck;
             var stake = config.Stake;
             bool drown = drownOption.HasValue();
-            int threads =
-                drown ? 1
-                : threadsOption.HasValue() ? threadsOption.ParsedValue
+            int threads = threadsOption.HasValue()
+                ? threadsOption.ParsedValue
                 : Environment.ProcessorCount;
             int batchCharCount = batchCharCountOption.HasValue()
                 ? batchCharCountOption.ParsedValue
@@ -447,11 +458,6 @@ partial class Program
             // Only non-null when the user actually typed --batchCharCount — an explicit request
             // for the real sequential sweep, which should override a JAML's saved seeds: list.
             int? explicitBatchCharCount = batchCharCountOption.HasValue() ? batchCharCount : null;
-
-            if (drown && threadsOption.HasValue() && threadsOption.ParsedValue != 1)
-                Console.Error.WriteLine(
-                    "Warning: --drown forces --threads 1 for safe provider reads."
-                );
 
             // Default is auto: without --cutoff we self-tune the score gate instead of
             // emitting every seed. An explicit integer turns auto off and pins the gate.
@@ -641,7 +647,7 @@ partial class Program
                     ? saveSeedsCollector.GetSeeds()
                     : (IReadOnlyList<string>)saveSeedMatches;
 
-                if (TryWriteSeedsToJamlFile(jamlOption.ParsedValue, seedsToSave, out var saveError))
+                if (JamlFileLoader.TrySaveSeeds(jamlOption.ParsedValue, seedsToSave, out var saveError))
                     Console.Error.WriteLine(
                         $"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {jamlOption.ParsedValue}"
                     );
@@ -671,40 +677,6 @@ partial class Program
     }
 
     // ── Summary ──
-
-    // Top-N collection + the seeds: rewrite now live in Motely core (MotelyTopSeedSink), shared
-    // with Motely.Wasm. This wrapper just adds the file IO around the validated text transform.
-    private static bool TryWriteSeedsToJamlFile(
-        string jamlPath,
-        IReadOnlyList<string> seeds,
-        out string? error
-    )
-    {
-        string original;
-        try
-        {
-            original = File.ReadAllText(jamlPath);
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-
-        if (!MotelyTopSeedSink.TryRewriteAndValidate(original, seeds, out var updated, out error))
-            return false;
-
-        try
-        {
-            File.WriteAllText(jamlPath, updated);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-    }
 
     static void PrintSummary(IMotelySearch search, int batchCharCount, bool cancelled)
     {

@@ -1,15 +1,14 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>23.1.0</MotelyVersion>
+    <MotelyVersion>23.2.0</MotelyVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors>$(WarningsAsErrors);NU1603</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Bootsharp" Version="0.9.1-alpha.2" />
-    <PackageVersion Include="Bootsharp.Common" Version="0.9.1-alpha.2" />
-    <PackageVersion Include="Bootsharp.Inject" Version="0.9.1-alpha.2" />
-    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.7.1.1608" />
+    <PackageVersion Include="Bootsharp" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.Common" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.9.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.3" />
@@ -33,10 +32,8 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.5" />
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageVersion Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" Version="16.3.0" />
+
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
-    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <!-- Motely.Mcp (added 2026-06-28) — VERIFY ModelContextProtocol version with `dotnet restore` and bump to latest preview if it fails. -->
     <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.3" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
