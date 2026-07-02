@@ -4,5 +4,5 @@
   <Project Path="Motely/Motely.csproj" />
   <Project Path="Motely.Data/Motely.Data.csproj" />
   <Project Path="Motely.Mcp/Motely.Mcp.csproj" />
-  <Project Path="Motely.Wasm/Motely.Wasm.csproj" />
+  <!-- Motely.Wasm is built/published separately: `dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release` -->
 </Solution>

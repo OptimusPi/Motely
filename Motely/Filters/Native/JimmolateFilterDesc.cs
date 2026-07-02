@@ -3,7 +3,9 @@ using System.Runtime.CompilerServices;
 namespace Motely.Filters.Native;
 
 /// <summary>
-/// Additional filter that runs a <see cref="MotelyIndividualSeedSearcher"/> on each lane
+/// Jimmolate: a per-seed predicate ("does this seed pass?"), the classic Immolate <c>.cl</c>
+/// filter mental model. Wraps a <see cref="MotelyIndividualSeedSearcher"/> and runs it against
+/// every lane's live single-seed context. See <see cref="MotelyGlossary"/> for the full definition.
 /// </summary>
 public readonly struct JimmolateFilterDesc(MotelyIndividualSeedSearcher searcher)
     : IMotelySeedFilterDesc<JimmolateFilterDesc.JimmolateFilter>

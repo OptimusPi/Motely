@@ -2,6 +2,12 @@ using System.ComponentModel;
 
 namespace Motely.Analysis;
 
+/// <summary>
+/// JAMLyzer's filter: walks every ante's boss/voucher/tags/shop/packs and every relevant PRNG
+/// stream for one seed, answering "what does this seed actually contain?" — as opposed to
+/// Jimmolate, which only answers "does this seed pass?". Unrelated to the CLI's legacy
+/// <c>--analyze</c> flag (<see cref="MotelyUnitTestAnalyzer"/>). See <see cref="MotelyGlossary"/>.
+/// </summary>
 public sealed class MotelyJamlyzerFilterDesc(
     int[] antesToAnalyze,
     int eventRolls = 20,
