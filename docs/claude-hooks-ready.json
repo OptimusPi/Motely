@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -Command \"$in = [Console]::In.ReadToEnd() | ConvertFrom-Json; $f = $in.tool_input.file_path; if ($f -like '*.cs' -and $f -notlike '*\\\\obj\\\\*' -and $f -notlike '*\\\\bin\\\\*') { dotnet build 'D:\\MotelyJAML\\Motely.slnx' --no-restore -v q --nologo 2>&1 | Select-Object -Last 12; exit $LASTEXITCODE }\"",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -Command \"$in = [Console]::In.ReadToEnd() | ConvertFrom-Json; $f = $in.tool_input.file_path; if ($f -match '[\\\\/]Seeds[\\\\/].*\\.csv$') { [Console]::Error.WriteLine('The seed lake stays truthful when SeedLakeSink is its only author — run the search (or --makeitrain) to grow this file.'); exit 2 }\""
+          }
+        ]
+      }
+    ]
+  }
+}
