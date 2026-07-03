@@ -65,6 +65,18 @@ Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[Rena
 - `Seeds/` — the seed lake output root (`MOTELY_DATALAKE_PATH` or `--results-path` overrides).
 - `Motely.Tests/GoldenJamlFiles/` — Verify snapshot goldens; `seeds/*.txt` fixtures copy to output.
 
+## Project skills and hooks
+
+- `.claude/skills/release-motely-wasm/` — the complete npm release ritual; pifreak invokes it (`/release-motely-wasm`) and confirms the version and the publish.
+- `.claude/skills/jaml-authoring/` — the JAML clause/JUMMY/vocabulary reference; read it before writing any `.jaml` filter.
+- `docs/claude-hooks-ready.json` — build-on-.cs-edit and seed-lake-guard hooks, staged for `.claude/settings.json`; pifreak activates them by hand.
+
+## Gotchas worth knowing
+
+- Verify snapshot tests compare against `Motely.Tests/GoldenJamlFiles/`; an intended output change is accepted by copying the `.received.` file over its `.verified.` twin — read the diff first and confirm the change is the behavior you meant.
+- Motely.TUI exists as `bin/`/`obj/` build artifacts; its project file lives outside the tree today, so the solution builds engine, CLI, and tests.
+- `searchSequential` on the WASM surface takes bigints — the C# parameters are `long`.
+
 ## Build notes
 
 - `Directory.Packages.props` owns every package version centrally and `<MotelyVersion>` — the one number that versions assemblies and the npm package.
