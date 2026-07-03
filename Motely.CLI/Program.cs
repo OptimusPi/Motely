@@ -4,7 +4,6 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Analysis;
 using Motely.CLI;
-using Motely.Data;
 using Motely.Filters;
 using Motely.Filters.Native;
 
@@ -214,17 +213,17 @@ partial class Program
         );
         var sourceOption = app.Option<string>(
             "--source <NAME_OR_PATH>",
-            "Seed source file name or absolute path",
+            "Seed source: .csv/.txt/.parquet/.duckdb/.db file (DuckDB reads them all), local or http(s)/s3. Seeds ride the first column.",
             CommandOptionType.SingleValue
         );
         var drownOption = app.Option(
-            "--drown",
-            "Replay every saved seed for this JAML filter from the Parquet lake (.seeds/<filterId>/*.parquet) via DuckDB, as a front seed-list search.",
+            "--makeitrain",
+            "Make it rain: replay every saved seed for this JAML filter from its seed-lake file (Seeds/<filterId>.csv) as a front seed-list search.",
             CommandOptionType.NoValue
         );
         var resultsPathOption = app.Option<string>(
             "--results-path <PATH>",
-            "Root folder of the per-filter Parquet seed-lake (default: .seeds; env MOTELY_DATALAKE_PATH).",
+            "Root folder of the seed lake (default: .seeds; env MOTELY_DATALAKE_PATH).",
             CommandOptionType.SingleValue
         );
         var seedsOption = app.Option<string>(
@@ -312,7 +311,7 @@ partial class Program
                 if (drownOption.HasValue())
                 {
                     Console.Error.WriteLine(
-                        "Error: --drown currently requires --jaml so the CLI can resolve the normalized filterId."
+                        "Error: --makeitrain currently requires --jaml so the CLI can resolve the normalized filterId."
                     );
                     return 1;
                 }
@@ -572,12 +571,11 @@ partial class Program
             };
             if (hasStructuredScores)
             {
-                // Persist scored seeds to the Parquet lake so --drown can replay them later.
+                // Persist found seeds to the seed lake so --drown can replay them later.
                 resultSinks.Add(
-                    new MotelyParquetSeedSink(
+                    new SeedLakeSink(
                         resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
-                        config.Id,
-                        plan.TallyLabels
+                        config.Id
                     )
                 );
             }
@@ -626,7 +624,7 @@ partial class Program
             if (!quietOption.HasValue())
             {
                 Console.Error.WriteLine(
-                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| drown=lake.parquet via DuckDB" : "(sequential only)")}"
+                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| makeitrain=Seeds CSV via DuckDB" : "(sequential only)")}"
                 );
             }
 

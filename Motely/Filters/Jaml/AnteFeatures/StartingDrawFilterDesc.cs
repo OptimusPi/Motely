@@ -34,7 +34,7 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
         {
             var clause = _clause; // Capture in local for lambda
             return ctx.SearchIndividualSeeds(
-                (ref MotelySingleSearchContext ctx) =>
+                (MotelySingleSearchContext ctx) =>
                 {
                     int matchCount = 0;
 
@@ -65,7 +65,7 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
                         }
                     }
 
-                    return matchCount >= clause.Min;
+                    return (matchCount >= clause.Min) ? 1 : 0;
                 }
             );
         }

@@ -148,7 +148,7 @@ public readonly struct LegendaryJokerShopSoulFilterDesc(
                 return result;
 
             return ctx.SearchIndividualSeeds(
-                (ref MotelySingleSearchContext sctx) =>
+                (MotelySingleSearchContext sctx) =>
                 {
                     for (int i = 0; i < antes.Length; i++)
                     {
@@ -160,9 +160,9 @@ public readonly struct LegendaryJokerShopSoulFilterDesc(
                                 maxP
                             )
                         )
-                            return true;
+                            return 1;
                     }
-                    return false;
+                    return 0;
                 }
             );
         }

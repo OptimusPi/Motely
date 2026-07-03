@@ -40,7 +40,7 @@ public sealed class MotelyJamlyzerFilterDesc(
             public readonly bool HasBuffoonStream => !BuffoonStream.IsNull;
         }
 
-        public readonly bool CheckSeed(ref MotelySingleSearchContext ctx)
+        public readonly int CheckSeed(MotelySingleSearchContext ctx)
         {
             int maxAnte = filterDesc._maxAnte;
             int n = filterDesc._eventRolls;
@@ -120,7 +120,7 @@ public sealed class MotelyJamlyzerFilterDesc(
                 filterDesc.ErraticDeck = deck;
             }
 
-            return true;
+            return 1;
         }
 
         private static MotelyJamlyzerPulls CollectPulls(

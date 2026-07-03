@@ -130,7 +130,7 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
 
             return ctx.SearchIndividualSeeds(
                 candidateMask,
-                (ref MotelySingleSearchContext singleCtx) =>
+                (MotelySingleSearchContext singleCtx) =>
                 {
                     int matchCount = 0;
 
@@ -147,11 +147,11 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                         {
                             matchCount++;
                             if (matchCount >= needed)
-                                return true;
+                                return 1;
                         }
                     }
 
-                    return false;
+                    return 0;
                 }
             );
         }

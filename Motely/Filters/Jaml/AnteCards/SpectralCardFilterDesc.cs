@@ -108,9 +108,11 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
             var sources = clause.Sources ?? DefaultSources;
             if (sources.RequireMegaPack)
                 return ctx.SearchIndividualSeeds(
-                    (ref MotelySingleSearchContext single) =>
+                    (MotelySingleSearchContext single) =>
                         JamlScoring.CountSpectralCardOccurrencesForFilter(ref single, clause)
                         >= needed
+                            ? 1
+                            : 0
                 );
 
             var shopIndices = sources.ShopItems;

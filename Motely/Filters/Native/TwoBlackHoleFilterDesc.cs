@@ -52,7 +52,7 @@ public struct TwoBlackHoleFilterDesc()
             // --- Individual seed introspection on the survivors. ---
             return searchContext.SearchIndividualSeeds(
                 matching,
-                (ref MotelySingleSearchContext ctx) =>
+                (MotelySingleSearchContext ctx) =>
                 {
                     MotelySingleBoosterPackStream packs = ctx.CreateBoosterPackStream(1);
 
@@ -69,13 +69,13 @@ public struct TwoBlackHoleFilterDesc()
                     }
 
                     if (!showmanFound)
-                        return false;
+                        return 0;
 
                     // Pack 2 — must be a Celestial pack (the vector narrow already
                     // guaranteed this for the lane, re-check on the scalar stream).
                     MotelyBoosterPack celestialPack = ctx.GetNextBoosterPack(ref packs);
                     if (celestialPack.GetPackType() != MotelyBoosterPackType.Celestial)
-                        return false;
+                        return 0;
 
                     // Count Black Holes WITHOUT de-duplication (showman = true): use the
                     // no-item-set GetNextPlanet overload so Black Hole can repeat in-pack.
@@ -88,7 +88,7 @@ public struct TwoBlackHoleFilterDesc()
                             blackHoles++;
                     }
 
-                    return blackHoles >= MinBlackHoles;
+                    return (blackHoles >= MinBlackHoles) ? 1 : 0;
                 }
             );
         }
