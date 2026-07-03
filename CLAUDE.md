@@ -59,6 +59,10 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 
 Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[RenameModule] → "index"` folds every namespace so `import { MotelySearch, MotelyJaml } from "motely-wasm"` works directly (the fold is safe while exported short names stay unique — check when adding exports). `Jimmolate.Filter` is a JS `[Import]` bound before `boot()`, speaking the Immolate contract: `filter(inst) => score` (numbers; booleans coerce to 1/0). Search APIs return `Task<MotelyScoredSeedResult[]>` — call, await, use — with `onProgress`/`onSeedMatch`/`onScoredResult` events streaming alongside. Tallies cross the boundary as `Int32Array`. **Read all fourteen Bootsharp docs in full before working here** — the interop model rewards it.
 
+### JAML editor toolchain
+
+`dotnet run --project Motely.Schema` (from the repo root) regenerates `jaml-lang/src/generated.ts`, `jaml-lsp/syntaxes/jaml.tmLanguage.json`, and `jaml-lsp/schemas/jaml.schema.json` straight from `JamlVocab` and the engine's enums — rerun it after any vocabulary or enum change so the editor tooling stays in lockstep (`--dry-run` shows the target paths). `jaml-lang/` is the TypeScript language core (`npm test` runs its Node suite); `jaml-lsp/` is the VS Code extension for `.jaml`/`.jummy` files (`npm run build`, `npm run package` for the vsix).
+
 ### Supporting directories
 
 - `JamlFilters/` — authored `.jaml` corpus; `JamlCorpusLoaderTests` keeps it loading.
