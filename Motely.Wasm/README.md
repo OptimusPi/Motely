@@ -78,6 +78,8 @@ const results = await MotelySearch.searchList(jaml);
 for (const r of results) console.log(r.seed, r.score, r.tallies);
 ```
 
+Each result is a `MotelyScoredSeedResult`: `seed` (string), `score` (number), and `tallies` — the raw per-clause hit counts, one per should-clause in JAML order. Tallies cross the boundary as an `Int32Array`; call `Array.from(r.tallies)` when a plain array matters.
+
 Events stream alongside for live UIs: `onProgress` ticks while the search runs,
 `onSeedMatch` delivers each bare seed as it's found, `onScoredResult` delivers each typed
 result incrementally.
@@ -150,10 +152,9 @@ npm run serve   # hand-drive the test UI at http://127.0.0.1:4173/
 npm run pack:check
 ```
 
-The test UI (`testui/index.html`) is a plain ES-module page — boot, validate, search, results
-table — and the Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
+The test UI (`testui/index.html`) is a plain ES-module page with a CodeMirror 6 editor: live engine-driven lint and completion while you type, a Jimmolate filter box compiled straight into the browser search, and a results table — feedback is continuous, so there is no validate button. The Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
 
-The release script at the repository root syncs `package.json` to `<MotelyVersion>` in `Directory.Packages.props`, publishes the WASM build, runs the JS tests against that artifact, and then calls `npm publish`.
+Releasing, from `Motely.Wasm/`: sync `"version"` in `package.json` to `<MotelyVersion>` in the repo-root `Directory.Packages.props`, run `npm test` and `npm run test:ui` green, then `npm publish`.
 
 ## Current coverage focus
 
