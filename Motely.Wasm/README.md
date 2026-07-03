@@ -36,7 +36,7 @@ await bootsharp.boot();
 
 ## Parse and validate JAML
 
-Use `fromYaml` or `fromJson` once, then pass the returned `JamlConfig` to analyzer/search calls. Invalid filters fail loudly; unknown keys are not silently ignored.
+Use `fromYaml` or `fromJson` once, then pass the returned `JamlConfig` to analyzer/search calls. Invalid filters fail loudly, and unknown keys raise errors too, so every mistake surfaces at parse time.
 
 ```js
 const jaml = MotelyJaml.fromYaml(`
@@ -124,7 +124,7 @@ MotelyJaml.canonicalizeLine("Showman in antes 1, 2");         // "Showman in ant
 
 ## Vocabulary
 
-`MotelyJaml.listItems(kind, query)` serves the real engine vocabulary — jokers, vouchers, tags, bosses, and the rest — for autocomplete and agent grounding. Names come straight from the engine enums, so nothing hand-maintained can drift.
+`MotelyJaml.listItems(kind, query)` serves the real engine vocabulary — jokers, vouchers, tags, bosses, and the rest — for autocomplete and agent grounding. Names come straight from the engine enums, so the vocabulary stays in lockstep with the engine by construction.
 
 ```js
 MotelyJaml.listItems("joker", "lucky"); // ["LuckyCat", ...] — case-insensitive substring match
@@ -152,7 +152,7 @@ npm run serve   # hand-drive the test UI at http://127.0.0.1:4173/
 npm run pack:check
 ```
 
-The test UI (`testui/index.html`) is a plain ES-module page with a CodeMirror 6 editor: live engine-driven lint and completion while you type, a Jimmolate filter box compiled straight into the browser search, and a results table — feedback is continuous, so there is no validate button. The Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
+The test UI (`testui/index.html`) is a plain ES-module page with a CodeMirror 6 editor: live engine-driven lint and completion while you type, a Jimmolate filter box compiled straight into the browser search, and a results table — feedback is continuous — live linting validates every keystroke, which is why the UI stays button-free. The Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
 
 Releasing, from `Motely.Wasm/`: sync `"version"` in `package.json` to `<MotelyVersion>` in the repo-root `Directory.Packages.props`, run `npm test` and `npm run test:ui` green, then `npm publish`.
 
