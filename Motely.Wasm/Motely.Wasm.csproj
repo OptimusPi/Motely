@@ -30,6 +30,6 @@
       <_PackageJsonText>$([System.IO.File]::ReadAllText($(_PackageJsonPath)))</_PackageJsonText>
       <_PackageJsonStamped>$([System.Text.RegularExpressions.Regex]::Replace($(_PackageJsonText), '"version":\s*"[^"]*"', '"version": "$(MotelyVersion)"'))</_PackageJsonStamped>
     </PropertyGroup>
-    <WriteLinesToFile File="$(_PackageJsonPath)" Lines="$(_PackageJsonStamped)" Overwrite="true" WriteOnlyWhenDifferent="true" Condition="'$(_PackageJsonStamped)' != '$(_PackageJsonText)'" />
+    <WriteLinesToFile File="$(_PackageJsonPath)" Lines="$(_PackageJsonStamped.Replace(';', '%3B'))" Overwrite="true" WriteOnlyWhenDifferent="true" Condition="'$(_PackageJsonStamped)' != '$(_PackageJsonText)'" />
   </Target>
 </Project>
