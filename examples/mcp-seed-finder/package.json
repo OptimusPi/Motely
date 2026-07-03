@@ -4,12 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development concurrently \"cross-env VITE_INPUT=mcp-app.html vite build --watch --mode mcp\" \"tsx --watch server.ts\"",
-    "predev:web": "node scripts/copy-motely-bin.mjs",
+    "dev": "cross-env NODE_ENV=development concurrently \"vite build --watch --mode mcp\" \"tsx --watch server.ts\"",
     "dev:web": "vite",
-    "build": "cross-env VITE_INPUT=mcp-app.html vite build --mode mcp",
-    "prebuild:web": "node scripts/copy-motely-bin.mjs",
-    "build:web": "vite build",
+    "build": "vite build --mode mcp",
+    "build:web": "vite build --mode web",
+    "preserve": "npm run build",
     "serve": "tsx server.ts"
   },
   "dependencies": {
@@ -17,8 +16,9 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "jaml-codemirror": "workspace:*",
     "jaml-ui": "workspace:*",
-    "motely-wasm": "^18.1.0",
+    "motely-wasm": "^23.3.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "zod": "^4.1.13"
@@ -34,7 +34,6 @@
     "cross-env": "^10.1.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vite": "^8.0.13",
-    "vite-plugin-singlefile": "^2.3.0"
+    "vite": "^8.0.13"
   }
 }

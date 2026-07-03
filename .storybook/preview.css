@@ -1,30 +1,6 @@
-html {
-  background: #0f1c1e !important;
-}
-
-body {
-  background: transparent !important;
-  margin: 0;
-  padding: 0;
-}
-
-#storybook-root {
-  background: transparent !important;
-  padding: 0;
-}
-
-/* Center the fixed 320×568 shell in the canvas. No flex: a fixed-size box
-   with inset:0 + margin:auto is centered on both axes. Never fluid. */
-.sb-stage {
-  position: fixed;
-  inset: 0;
-  width: 320px;
-  height: 568px;
-  margin: auto;
-}
-
-.sb-show-main,
-.docs-story,
-.sbdocs-preview {
-  background: transparent !important;
+.story-root {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #0c1818;
 }

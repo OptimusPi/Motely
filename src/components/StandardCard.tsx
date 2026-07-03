@@ -11,8 +11,9 @@ const CARD_WIDTH = 71
 const CARD_HEIGHT = 95
 
 interface StandardCardProps {
-  suit: CardSuit
-  rank: CardRank
+  suit?: CardSuit
+  rank?: CardRank
+  name?: string
   enhancement?: CardEnhancement
   seal?: CardSeal
   edition?: CardEdition
@@ -21,9 +22,20 @@ interface StandardCardProps {
   style?: React.CSSProperties
 }
 
+function parseStandardcardName(name: string): { rank: CardRank; suit: CardSuit } | null {
+  const match = /^(.*?)(?:\s+of\s+|\s+)(.*?)$/i.exec(name.trim())
+  if (!match) return null
+  const rawRank = match[1].trim()
+  const rawSuit = match[2].trim()
+  const rank = (rawRank === 'A' ? 'Ace' : rawRank === 'K' ? 'King' : rawRank === 'Q' ? 'Queen' : rawRank === 'J' ? 'Jack' : rawRank) as CardRank
+  const suit = rawSuit.charAt(0).toUpperCase() + rawSuit.slice(1).toLowerCase() as CardSuit
+  return RANK_MAP[rank] !== undefined && SUIT_MAP[suit] !== undefined ? { rank, suit } : null
+}
+
 export function StandardCard({
   suit,
   rank,
+  name,
   enhancement,
   seal,
   edition,
@@ -31,11 +43,14 @@ export function StandardCard({
   size = 71,
   style,
 }: StandardCardProps) {
-  const col = RANK_MAP[rank]
-  const row = SUIT_MAP[suit]
+  const parsed = !rank || !suit ? (name ? parseStandardcardName(name) : null) : null
+  const finalRank = rank ?? parsed?.rank
+  const finalSuit = suit ?? parsed?.suit
+  const col = finalRank ? RANK_MAP[finalRank] : undefined
+  const row = finalSuit ? SUIT_MAP[finalSuit] : undefined
 
   if (col === undefined || row === undefined) {
-    console.warn(`Invalid card: ${rank} of ${suit}`)
+    console.warn(`Invalid card: ${finalRank} of ${finalSuit}`)
     return null
   }
 

@@ -1,4 +1,5 @@
 import { defineCatalog } from "./engine";
+import type { BadgeTone } from "./components/layout.js";
 
 /**
  * Balatro Catalog — Component vocabulary for AI-generated UI.
@@ -132,10 +133,29 @@ export const balatroCatalog = defineCatalog({
         isEternal?: boolean;
         isPerishable?: boolean;
         isRental?: boolean;
+        scale?: number;
       };
-      scale?: number;
     },
     description: "Renders a real Balatro card using jaml-ui's sprite system.",
+  },
+
+  // ── Mascot ──
+  JammyMascot: {
+    props: {} as {
+      mood?: "idle" | "happy" | "surprised";
+      size?: number;
+      menuItems?: { label: string; action: string; tone?: BadgeTone }[];
+      onMenuAction?: boolean; // if true, the mascot emits actions
+    },
+    description:
+      "Jammy — the whimsical seed-mascot. Tap to open an orbital menu of actions.",
+  },
+  JammyOrbitalMenu: {
+    props: {} as {
+      items: { label: string; action: string; tone?: BadgeTone }[];
+      radius?: number;
+    },
+    description: "Radial menu orbiting a center point. Used by JammyMascot.",
   },
 
   // ── Encyclopedia / Reference ──

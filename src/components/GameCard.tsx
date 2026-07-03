@@ -301,30 +301,33 @@ export function JamlGameCard({ card, type, className = "", hoverTilt = false }: 
                     animated: face.animated,
                 }),
             );
-    } else if (rank && suit) {
-        const enhancerPos = (enhancements ?? [])
-            .map((m) => ENHANCER_MAP[m])
-            .find((pos): pos is { x: number; y: number } => Boolean(pos)) ?? { x: 1, y: 0 };
-        layers.push(
-            new Layer({
-                pos: enhancerPos,
-                name: "background",
-                order: 0,
-                source: SPRITE_SHEETS.enhancers.src,
-                rows: SPRITE_SHEETS.enhancers.rows,
-                columns: SPRITE_SHEETS.enhancers.columns,
-            }),
-        );
-        layers.push(
-            new Layer({
-                pos: { x: RANK_MAP[rank] ?? 0, y: SUIT_MAP[suit] ?? 0 },
-                name,
-                order: 1,
-                source: SPRITE_SHEETS.deck.src,
-                rows: SPRITE_SHEETS.deck.rows,
-                columns: SPRITE_SHEETS.deck.columns,
-            }),
-        );
+    } else {
+        const standardcard = rank && suit ? { rank, suit } : parseStandardcardName(name);
+        if (standardcard) {
+            const enhancerPos = (enhancements ?? [])
+                .map((m) => ENHANCER_MAP[m])
+                .find((pos): pos is { x: number; y: number } => Boolean(pos)) ?? { x: 1, y: 0 };
+            layers.push(
+                new Layer({
+                    pos: enhancerPos,
+                    name: "background",
+                    order: 0,
+                    source: SPRITE_SHEETS.enhancers.src,
+                    rows: SPRITE_SHEETS.enhancers.rows,
+                    columns: SPRITE_SHEETS.enhancers.columns,
+                }),
+            );
+            layers.push(
+                new Layer({
+                    pos: { x: RANK_MAP[standardcard.rank] ?? 0, y: SUIT_MAP[standardcard.suit] ?? 0 },
+                    name,
+                    order: 1,
+                    source: SPRITE_SHEETS.deck.src,
+                    rows: SPRITE_SHEETS.deck.rows,
+                    columns: SPRITE_SHEETS.deck.columns,
+                }),
+            );
+        }
     }
 
     if (edition) {

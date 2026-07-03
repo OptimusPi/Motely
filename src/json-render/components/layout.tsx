@@ -204,9 +204,11 @@ export const Divider: React.FC<DividerProps> = ({ className = "" }) => {
 };
 
 /* ─── Badge ─── */
+export type BadgeTone = "red" | "blue" | "green" | "orange" | "gold" | "purple" | "grey";
+
 export interface BadgeProps {
   label: string;
-  tone?: "red" | "blue" | "green" | "orange" | "gold" | "purple" | "grey";
+  tone?: BadgeTone;
   className?: string;
 }
 

@@ -1,5 +1,5 @@
-import React from "react";
-import { Panel, Stack, Text, Badge, Divider } from "./layout.js";
+import { type FC, useState } from "react";
+import { Panel, Stack, Text, Badge, type BadgeTone } from "./layout.js";
 
 /**
  * Domain components — SearchStats, ErrorBanner, LoadingPulse, SeedCard, etc.
@@ -18,7 +18,7 @@ export interface SearchStatsProps {
   className?: string;
 }
 
-export const SearchStats: React.FC<SearchStatsProps> = ({
+export const SearchStats: FC<SearchStatsProps> = ({
   status,
   seedsSearched,
   matchesFound,
@@ -120,12 +120,12 @@ export interface ErrorBannerProps {
   className?: string;
 }
 
-export const ErrorBanner: React.FC<ErrorBannerProps> = ({
+export const ErrorBanner: FC<ErrorBannerProps> = ({
   message,
   onDismiss,
   className = "",
 }) => {
-  const [dismissed, setDismissed] = React.useState(false);
+  const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
 
   return (
@@ -173,7 +173,7 @@ export interface LoadingPulseProps {
   className?: string;
 }
 
-export const LoadingPulse: React.FC<LoadingPulseProps> = ({
+export const LoadingPulse: FC<LoadingPulseProps> = ({
   text = "Loading...",
   className = "",
 }) => {
@@ -215,7 +215,7 @@ export interface SeedCardProps {
   className?: string;
 }
 
-export const SeedCard: React.FC<SeedCardProps> = ({
+export const SeedCard: FC<SeedCardProps> = ({
   seed,
   score,
   rank,
@@ -314,14 +314,14 @@ export interface SeedListProps {
   className?: string;
 }
 
-export const SeedList: React.FC<SeedListProps> = ({
+export const SeedList: FC<SeedListProps> = ({
   seeds,
   scores,
   total,
   pageSize = 20,
   className = "",
 }) => {
-  const [page, setPage] = React.useState(0);
+  const [page, setPage] = useState(0);
   const maxPage = Math.ceil((total ?? seeds.length) / pageSize) - 1;
   const start = page * pageSize;
   const visible = seeds.slice(start, start + pageSize);
@@ -398,7 +398,7 @@ export interface JokerBadgeProps {
   className?: string;
 }
 
-export const JokerBadge: React.FC<JokerBadgeProps> = ({
+export const JokerBadge: FC<JokerBadgeProps> = ({
   name,
   edition,
   rarity,
@@ -420,9 +420,9 @@ export const JokerBadge: React.FC<JokerBadgeProps> = ({
 
   return (
     <div className={className} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <Badge label={name} tone={(rarityTone[rarity ?? ""] as any) || "grey"} />
+      <Badge label={name} tone={(rarityTone[rarity ?? ""] as BadgeTone) || "grey"} />
       {edition && (
-        <Badge label={edition} tone={(editionTone[edition] as any) || "grey"} />
+        <Badge label={edition} tone={(editionTone[edition] as BadgeTone) || "grey"} />
       )}
     </div>
   );
@@ -434,7 +434,7 @@ export interface EditionBadgeProps {
   className?: string;
 }
 
-export const EditionBadge: React.FC<EditionBadgeProps> = ({
+export const EditionBadge: FC<EditionBadgeProps> = ({
   edition,
   className = "",
 }) => {
@@ -445,5 +445,5 @@ export const EditionBadge: React.FC<EditionBadgeProps> = ({
     Negative: "red",
   };
 
-  return <Badge className={className} label={edition} tone={(map[edition] as any) || "grey"} />;
+  return <Badge className={className} label={edition} tone={(map[edition] as BadgeTone) || "grey"} />;
 };

@@ -2,9 +2,11 @@ import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
-import bootsharp from "motely-wasm";
+import bootsharp, { Jimmolate } from "motely-wasm";
 import { SeedFinderApp } from "./SeedFinderApp";
 import { STARTER_JAML } from "./constants";
+
+Jimmolate.filter = () => 1;
 
 function extractJaml(result: CallToolResult): string | null {
   if (
@@ -72,5 +74,5 @@ function McpSeedFinder() {
   return <SeedFinderApp jaml={jaml} onChange={setJaml} onRunRequest={handleRunRequest} />;
 }
 
-await bootsharp.boot("/motely-wasm/bin");
+await bootsharp.boot();
 createRoot(document.getElementById("root")!).render(<McpSeedFinder />);

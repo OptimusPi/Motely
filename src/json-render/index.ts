@@ -26,6 +26,13 @@ export type {
 export { JamlGameCard } from "./components/game.js";
 export type { JamlGameCardProps } from "./components/game.js";
 
+export { JammyMascot, JammyOrbitalMenu } from "./components/mascot.js";
+export type {
+  JammyMascotProps,
+  JammyOrbitalMenuProps,
+  JammyOrbitalMenuItem,
+} from "./components/mascot.js";
+
 export {
   JokerCard, SynergyCard, BossBlindCard, DeckCard, StakeCard, StrategyAdvisor,
 } from "./components/reference.js";

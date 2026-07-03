@@ -1,5 +1,5 @@
 import { JsonNode } from "../engine.js";
-import { findSynergies, getRecommendedSynergies } from "../knowledge/synergies.js";
+import { getRecommendedSynergies } from "../knowledge/synergies.js";
 
 /**
  * Build a json-render spec for the encyclopedia view.

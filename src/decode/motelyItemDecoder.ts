@@ -83,6 +83,11 @@ export interface MotelyRuntimeItem {
   enhancement?: number;
   suit?: number;
   rank?: number;
+  standardcardSuit?: number;
+  standardcardRank?: number;
+  isPerishable?: boolean;
+  isEternal?: boolean;
+  isRental?: boolean;
 }
 
 export interface DecodedMotelyItem {
@@ -194,7 +199,8 @@ export function motelyItemEnhancementName(input: MotelyItemInput): string | null
 export function motelyStandardcardRankName(input: MotelyItemInput): string | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
-  const val = typeof input === "number" ? ((input & 0xF) as MotelyStandardcardRank) : (input.rank as MotelyStandardcardRank);
+  const rawRank = typeof input === "number" ? (input & 0xF) : (input.standardcardRank ?? input.rank);
+  const val = rawRank as MotelyStandardcardRank;
   if (val == null) return null;
   return RANKS[val] ?? null;
 }
@@ -202,7 +208,8 @@ export function motelyStandardcardRankName(input: MotelyItemInput): string | nul
 export function motelyStandardcardSuitName(input: MotelyItemInput): "Clubs" | "Diamonds" | "Hearts" | "Spades" | null {
   if (input == null) return null;
   if (motelyItemRenderCategory(input) !== "playing") return null;
-  const val = typeof input === "number" ? (((input >>> 4) & 0x3) as MotelyStandardcardSuit) : (input.suit as MotelyStandardcardSuit);
+  const rawSuit = typeof input === "number" ? ((input >>> 4) & 0x3) : (input.standardcardSuit ?? input.suit);
+  const val = rawSuit as MotelyStandardcardSuit;
   if (val == null) return null;
   return SUITS[val] ?? null;
 }
@@ -230,9 +237,9 @@ export function decodeMotelyItem(input: MotelyItemInput): DecodedMotelyItem | nu
     enhancement: motelyItemEnhancementName(input),
     rank: motelyStandardcardRankName(input),
     suit: motelyStandardcardSuitName(input),
-    isEternal: typeof input === "number" ? ((input >>> 30) & 1) !== 0 : isStickerSet(input, 30),
-    isPerishable: typeof input === "number" ? ((input >>> 31) & 1) !== 0 : isStickerSet(input, 31),
-    isRental: typeof input === "number" ? ((input >>> 29) & 1) !== 0 : isStickerSet(input, 29),
+    isEternal: typeof input === "number" ? ((input >>> 30) & 1) !== 0 : (input?.isEternal ?? isStickerSet(input, 30)),
+    isPerishable: typeof input === "number" ? ((input >>> 31) & 1) !== 0 : (input?.isPerishable ?? isStickerSet(input, 31)),
+    isRental: typeof input === "number" ? ((input >>> 29) & 1) !== 0 : (input?.isRental ?? isStickerSet(input, 29)),
   };
 }
 

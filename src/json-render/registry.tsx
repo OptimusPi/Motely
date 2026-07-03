@@ -1,4 +1,3 @@
-import React from "react";
 import type { Registry } from "./engine.js";
 import {
   Panel,
@@ -19,6 +18,7 @@ import {
   EditionBadge,
 } from "./components/domain.js";
 import { JamlGameCard } from "./components/game.js";
+import { JammyMascot, JammyOrbitalMenu } from "./components/mascot.js";
 import {
   JokerCard,
   SynergyCard,
@@ -58,6 +58,10 @@ export const balatroRegistry: Registry = {
 
   // ── Game Cards ──
   JamlGameCard,
+
+  // ── Mascot ──
+  JammyMascot,
+  JammyOrbitalMenu,
 
   // ── Encyclopedia ──
   JokerCard,

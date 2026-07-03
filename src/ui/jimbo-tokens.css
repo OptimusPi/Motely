@@ -93,3 +93,27 @@ body {
   padding: var(--j-space-4);
   box-shadow: var(--j-shadow);
 }
+
+/* ── Jammy mascot animations ── */
+@keyframes jammy-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+
+@keyframes jammy-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-16px) scale(1.08); }
+  60% { transform: translateY(4px) scale(0.96); }
+}
+
+@keyframes jammy-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-3deg); }
+  40% { transform: translateX(4px) rotate(3deg); }
+  60% { transform: translateX(-3px) rotate(-2deg); }
+  80% { transform: translateX(3px) rotate(2deg); }
+}
+
+.jammy-idle { animation: jammy-idle 2.5s ease-in-out infinite; }
+.jammy-bounce { animation: jammy-bounce 0.6s ease-out; }
+.jammy-shake { animation: jammy-shake 0.4s ease-in-out; }

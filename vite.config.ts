@@ -7,12 +7,6 @@ const PEER_EXTERNALS = [
   "react-dom",
   "react/jsx-runtime",
   "react/jsx-dev-runtime",
-  "three",
-  "@react-three/fiber",
-  "@react-three/drei",
-  "@react-spring/three",
-  "react-icons",
-  /^react-icons\//,
   // motely-wasm: externalize so consumers control resolution. Next.js apps
   // get it via npm transitive resolution; the singlefile MCP iframe gets it
   // via an importmap pointing at unpkg (browser fetches once, caches across
@@ -36,15 +30,6 @@ export default defineConfig({
       tsconfigPath: "./tsconfig.json",
     }),
   ],
-  // Worker bundles do NOT inherit the top-level `external` list, so the WASM
-  // engine (statically imported by searchPoolWorker) would otherwise get
-  // inlined — ~30 MB. Externalize the peers here too to keep the contract.
-  worker: {
-    format: "es",
-    rollupOptions: {
-      external: PEER_EXTERNALS,
-    },
-  },
   build: {
     outDir: "dist",
     emptyOutDir: true,
@@ -56,7 +41,6 @@ export default defineConfig({
         ui: resolve(__dirname, "src/ui.ts"),
         core: resolve(__dirname, "src/core.ts"),
         motely: resolve(__dirname, "src/motely.ts"),
-        r3f: resolve(__dirname, "src/r3f.ts"),
       },
       formats: ["es"],
     },

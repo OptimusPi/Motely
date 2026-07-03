@@ -1,4 +1,5 @@
-import React from "react";
+import type React from "react";
+import { type ReactNode, Fragment } from "react";
 
 /**
  * json-render — Zero-dependency JSON-to-React engine.
@@ -15,9 +16,10 @@ export interface JsonNode {
 }
 
 export type ComponentProps<P = Record<string, unknown>> = P & {
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Registry = Record<string, React.ComponentType<any>>;
 
 /**
@@ -26,7 +28,7 @@ export type Registry = Record<string, React.ComponentType<any>>;
  * Unknown types log a warning and render null (graceful degradation).
  * Each child gets a stable key from its index in the children array.
  */
-export function render(node: JsonNode, registry: Registry): React.ReactNode {
+export function render(node: JsonNode, registry: Registry): ReactNode {
   const Component = registry[node.type];
 
   if (!Component) {
@@ -35,9 +37,7 @@ export function render(node: JsonNode, registry: Registry): React.ReactNode {
   }
 
   const children = node.children?.map((child, i) => (
-    <React.Fragment key={i}>
-      {render(child, registry)}
-    </React.Fragment>
+    <Fragment key={i}>{render(child, registry)}</Fragment>
   ));
 
   return <Component {...(node.props ?? {})}>{children}</Component>;
@@ -49,9 +49,9 @@ export function render(node: JsonNode, registry: Registry): React.ReactNode {
 export function renderList(
   nodes: JsonNode[],
   registry: Registry
-): React.ReactNode[] {
+): ReactNode[] {
   return nodes.map((node, i) => (
-    <React.Fragment key={i}>{render(node, registry)}</React.Fragment>
+    <Fragment key={i}>{render(node, registry)}</Fragment>
   ));
 }
 

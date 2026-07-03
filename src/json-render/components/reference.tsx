@@ -1,10 +1,9 @@
-import React from "react";
-import { Badge, Panel, Stack, Text, Divider } from "./layout.js";
+import { type FC } from "react";
+import { Badge, Panel, Stack, Text, Divider, type BadgeTone } from "./layout.js";
 import {
   getJoker,
   getSynergies,
   type JokerInfo,
-  type JokerRarity,
   type JokerCategory,
 } from "../knowledge/jokers.js";
 import {
@@ -19,7 +18,6 @@ import {
 } from "../knowledge/decks.js";
 import {
   getBoss,
-  getBossesByCategory,
   type BossInfo,
   type BossCategory,
 } from "../knowledge/bosses.js";
@@ -38,7 +36,7 @@ export interface JokerCardProps {
   className?: string;
 }
 
-export const JokerCard: React.FC<JokerCardProps> = ({
+export const JokerCard: FC<JokerCardProps> = ({
   name,
   showSynergies = true,
   className = "",
@@ -52,14 +50,7 @@ export const JokerCard: React.FC<JokerCardProps> = ({
     );
   }
 
-  const rarityColor: Record<JokerRarity, string> = {
-    Common: "var(--j-grey)",
-    Uncommon: "var(--j-green)",
-    Rare: "var(--j-blue)",
-    Legendary: "var(--j-gold)",
-  };
-
-  const categoryTone: Record<JokerCategory, string> = {
+  const categoryTone: Record<JokerCategory, BadgeTone> = {
     Copy: "blue",
     "X-Mult": "purple",
     Flat: "green",
@@ -93,7 +84,7 @@ export const JokerCard: React.FC<JokerCardProps> = ({
         </div>
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <Badge label={joker.category} tone={categoryTone[joker.category] as any} />
+          <Badge label={joker.category} tone={categoryTone[joker.category]} />
           <Badge label={joker.jamlKey} tone="grey" />
         </div>
 
@@ -126,7 +117,7 @@ export interface SynergyCardProps {
   className?: string;
 }
 
-export const SynergyCard: React.FC<SynergyCardProps> = ({
+export const SynergyCard: FC<SynergyCardProps> = ({
   name,
   className = "",
 }) => {
@@ -139,7 +130,7 @@ export const SynergyCard: React.FC<SynergyCardProps> = ({
     );
   }
 
-  const difficultyTone: Record<SynergyInfo["difficulty"], string> = {
+  const difficultyTone: Record<SynergyInfo["difficulty"], BadgeTone> = {
     Easy: "green",
     Medium: "orange",
     Hard: "red",
@@ -159,7 +150,7 @@ export const SynergyCard: React.FC<SynergyCardProps> = ({
           }}
         >
           <Text body={synergy.name} variant="title" />
-          <Badge label={synergy.difficulty} tone={difficultyTone[synergy.difficulty] as any} />
+          <Badge label={synergy.difficulty} tone={difficultyTone[synergy.difficulty]} />
         </div>
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -208,7 +199,7 @@ export interface BossBlindCardProps {
   className?: string;
 }
 
-export const BossBlindCard: React.FC<BossBlindCardProps> = ({
+export const BossBlindCard: FC<BossBlindCardProps> = ({
   name,
   className = "",
 }) => {
@@ -221,14 +212,14 @@ export const BossBlindCard: React.FC<BossBlindCardProps> = ({
     );
   }
 
-  const threatTone: Record<BossInfo["threatLevel"], string> = {
+  const threatTone: Record<BossInfo["threatLevel"], BadgeTone> = {
     Low: "green",
     Medium: "orange",
     High: "red",
     Lethal: "purple",
   };
 
-  const categoryTone: Record<BossCategory, string> = {
+  const categoryTone: Record<BossCategory, BadgeTone> = {
     Debuffer: "red",
     Restrictor: "orange",
     Obfuscator: "blue",
@@ -250,8 +241,8 @@ export const BossBlindCard: React.FC<BossBlindCardProps> = ({
         >
           <Text body={boss.name} variant="title" />
           <div style={{ display: "flex", gap: 6 }}>
-            <Badge label={boss.category} tone={categoryTone[boss.category] as any} />
-            <Badge label={boss.threatLevel} tone={threatTone[boss.threatLevel] as any} />
+            <Badge label={boss.category} tone={categoryTone[boss.category]} />
+            <Badge label={boss.threatLevel} tone={threatTone[boss.threatLevel]} />
           </div>
         </div>
 
@@ -294,7 +285,7 @@ export interface DeckCardProps {
   className?: string;
 }
 
-export const DeckCard: React.FC<DeckCardProps> = ({
+export const DeckCard: FC<DeckCardProps> = ({
   name,
   className = "",
 }) => {
@@ -307,7 +298,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
     );
   }
 
-  const difficultyTone: Record<DeckInfo["difficulty"], string> = {
+  const difficultyTone: Record<DeckInfo["difficulty"], BadgeTone> = {
     Easy: "green",
     Medium: "orange",
     Hard: "red",
@@ -326,7 +317,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           }}
         >
           <Text body={deck.name} variant="title" />
-          <Badge label={deck.difficulty} tone={difficultyTone[deck.difficulty] as any} />
+          <Badge label={deck.difficulty} tone={difficultyTone[deck.difficulty]} />
         </div>
 
         <Badge label={deck.jamlKey} tone="grey" />
@@ -357,7 +348,7 @@ export interface StakeCardProps {
   className?: string;
 }
 
-export const StakeCard: React.FC<StakeCardProps> = ({
+export const StakeCard: FC<StakeCardProps> = ({
   name,
   className = "",
 }) => {
@@ -370,7 +361,7 @@ export const StakeCard: React.FC<StakeCardProps> = ({
     );
   }
 
-  const difficultyTone: Record<StakeInfo["difficulty"], string> = {
+  const difficultyTone: Record<StakeInfo["difficulty"], BadgeTone> = {
     Easy: "green",
     Medium: "orange",
     Hard: "red",
@@ -390,7 +381,7 @@ export const StakeCard: React.FC<StakeCardProps> = ({
           }}
         >
           <Text body={stake.name} variant="title" />
-          <Badge label={stake.difficulty} tone={difficultyTone[stake.difficulty] as any} />
+          <Badge label={stake.difficulty} tone={difficultyTone[stake.difficulty]} />
         </div>
 
         <Badge label={stake.jamlKey} tone="grey" />
@@ -412,7 +403,7 @@ export interface StrategyAdvisorProps {
   className?: string;
 }
 
-export const StrategyAdvisor: React.FC<StrategyAdvisorProps> = ({
+export const StrategyAdvisor: FC<StrategyAdvisorProps> = ({
   jokers,
   className = "",
 }) => {

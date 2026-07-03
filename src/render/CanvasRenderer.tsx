@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Layer } from "./Layer.js";
-import { useJamlCardRenderer } from "../ui/hooks.js";
+import { useJamlCardRenderer } from "./useJamlCardRenderer.js";
 
 export interface JamlCardRendererProps {
     layers: Layer[];

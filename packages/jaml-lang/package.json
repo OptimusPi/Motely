@@ -1,0 +1,48 @@
+{
+  "name": "jaml-lang",
+  "displayName": "JAML Language Support",
+  "description": "Language support for JAML (Jimbo's Ante Markup Language): grammar, brackets, and LSP client.",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "motely",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Programming Languages"],
+  "activationEvents": ["onLanguage:jaml"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "jaml",
+        "aliases": ["JAML", "jaml"],
+        "extensions": [".jaml"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jaml",
+        "scopeName": "source.jaml",
+        "path": "./syntaxes/jaml.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -p . --watch",
+    "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=dist/extension.js && esbuild ../jaml-lsp/src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.mjs",
+    "vscode:prepublish": "pnpm bundle",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.3"
+  }
+}

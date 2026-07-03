@@ -5,33 +5,36 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
-import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import bootsharp, { Jimmolate, MotelyJaml } from "motely-wasm";
+
+Jimmolate.filter = () => 1;
 
 const port = Number(process.env.PORT ?? 3001);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(here, "dist");
 const resourceUri = "ui://seed-finder/mcp-app.html";
+const baseUrl = `http://localhost:${port}`;
+const appHtmlPath = path.join(distDir, "mcp-app.html");
 
-function findMotelyBin(startDir: string): string | null {
-  let dir = startDir;
-  while (true) {
-    const candidate = path.join(dir, "node_modules", "motely-wasm", "bin");
-    if (existsSync(candidate)) return candidate;
+// Boot the Motely WASM engine once; validation tools run server-side.
+await bootsharp.boot();
 
-    const parent = path.dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
+// Vite emits relative asset paths (e.g. ./assets/index-xxx.js). The MCP App resource
+// is rendered in an isolated context, so rewrite them to absolute server URLs.
+async function loadAppHtml(): Promise<string> {
+  let html = await fs.readFile(appHtmlPath, "utf-8");
+  html = html.replace(/(src|href)="\.\/assets\//g, `$1="${baseUrl}/assets/`);
+  return html;
 }
 
 function createServer(): McpServer {
   const server = new McpServer({
-    name: "seed-finder-mcp-example",
-    version: "0.0.0",
+    name: "seed-finder-mcp",
+    version: "0.1.0",
   });
 
   registerAppTool(
@@ -62,13 +65,49 @@ function createServer(): McpServer {
     },
   );
 
+  server.tool(
+    "jaml_validate",
+    "Validate a JAML (or JSON) filter against the real Motely loader. Returns OK or the exact loader error.",
+    { jaml: z.string() },
+    async ({ jaml }): Promise<CallToolResult> => {
+      const error = MotelyJaml.validate(jaml);
+      return {
+        content: [
+          {
+            type: "text",
+            text: error ? `INVALID: ${error}` : "OK — valid JAML.",
+          },
+        ],
+        isError: !!error,
+      };
+    },
+  );
+
+  server.tool(
+    "jummy_validate",
+    "Parse a one-line JUMMY string (e.g. 'Eternal Blueprint in antes 1 or 2') and report whether it maps to a valid JAML clause.",
+    { line: z.string() },
+    async ({ line }): Promise<CallToolResult> => {
+      const error = MotelyJaml.validateLine(line);
+      return {
+        content: [
+          {
+            type: "text",
+            text: error ? `INVALID JUMMY: ${error}` : "OK — parses to a valid clause.",
+          },
+        ],
+        isError: !!error,
+      };
+    },
+  );
+
   registerAppResource(
     server,
     resourceUri,
     resourceUri,
     { mimeType: RESOURCE_MIME_TYPE },
     async (): Promise<ReadResourceResult> => {
-      const html = await fs.readFile(path.join(distDir, "mcp-app.html"), "utf-8");
+      const html = await loadAppHtml();
       return {
         contents: [
           {
@@ -77,11 +116,9 @@ function createServer(): McpServer {
             text: html,
             _meta: {
               ui: {
-                // Fallback approach for motely assets: keep HTML single-file and
-                // allow binary fetches from this same origin.
                 csp: {
-                  connect_domains: [`http://localhost:${port}`],
-                  resource_domains: [`http://localhost:${port}`],
+                  connect_domains: [baseUrl],
+                  resource_domains: [baseUrl],
                 },
               },
             },
@@ -95,28 +132,25 @@ function createServer(): McpServer {
 }
 
 async function start() {
+  const server = createServer();
   const app = createMcpExpressApp({ host: "0.0.0.0" });
   app.use(cors());
   app.use(express.json({ limit: "1mb" }));
 
-  const motelyBin = findMotelyBin(here);
-  if (motelyBin) {
-    app.use("/motely-wasm/bin", express.static(motelyBin));
-  }
+  // Serve the Vite build output as static assets.
+  app.use(express.static(distDir));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
 
   app.all("/mcp", async (req: Request, res: Response) => {
-    const server = createServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
     });
 
     res.on("close", () => {
       void transport.close();
-      void server.close();
     });
 
     try {
@@ -136,6 +170,9 @@ async function start() {
 
   app.listen(port, () => {
     console.log(`Seed finder MCP server listening at http://localhost:${port}/mcp`);
+    console.log(`Static assets served from ${distDir}`);
+    console.log(`Tools: find_balatro_seeds, jaml_validate, jummy_validate`);
+    console.log(`App resource: ${resourceUri}`);
   });
 }
 
