@@ -33,7 +33,7 @@ public struct PerkeoObservatoryFilterDesc()
 
             return searchContext.SearchIndividualSeeds(
                 matching,
-                (ref MotelySingleSearchContext searchContext) =>
+                (MotelySingleSearchContext searchContext) =>
                 {
                     MotelySingleTarotStream tarotStream = default;
                     MotelySingleSpectralStream spectralStream = default;
@@ -62,7 +62,9 @@ public struct PerkeoObservatoryFilterDesc()
                             if (!soulStreamInit)
                                 soulStream = searchContext.CreateLegendaryJokerStream(1);
                             return searchContext.GetNextJoker(ref soulStream).Type
-                                == MotelyItemType.Perkeo;
+                                == MotelyItemType.Perkeo
+                                ? 1
+                                : 0;
                         }
                     }
 
@@ -80,7 +82,9 @@ public struct PerkeoObservatoryFilterDesc()
                             if (!soulStreamInit)
                                 soulStream = searchContext.CreateLegendaryJokerStream(1);
                             return searchContext.GetNextJoker(ref soulStream).Type
-                                == MotelyItemType.Perkeo;
+                                == MotelyItemType.Perkeo
+                                ? 1
+                                : 0;
                         }
                     }
 
@@ -111,7 +115,9 @@ public struct PerkeoObservatoryFilterDesc()
                                 if (!soulStreamInit)
                                     soulStream = searchContext.CreateLegendaryJokerStream(2);
                                 return searchContext.GetNextJoker(ref soulStream).Type
-                                    == MotelyItemType.Perkeo;
+                                    == MotelyItemType.Perkeo
+                                ? 1
+                                : 0;
                             }
                         }
 
@@ -136,12 +142,14 @@ public struct PerkeoObservatoryFilterDesc()
                                 if (!soulStreamInit)
                                     soulStream = searchContext.CreateLegendaryJokerStream(2);
                                 return searchContext.GetNextJoker(ref soulStream).Type
-                                    == MotelyItemType.Perkeo;
+                                    == MotelyItemType.Perkeo
+                                ? 1
+                                : 0;
                             }
                         }
                     }
 
-                    return false;
+                    return 0;
                 }
             );
         }

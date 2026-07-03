@@ -76,7 +76,7 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
             int maxBoosterPack = _maxBoosterPack;
 
             return ctx.SearchIndividualSeeds(
-                (ref MotelySingleSearchContext singleCtx) =>
+                (MotelySingleSearchContext singleCtx) =>
                 {
                     int needed = clause.Min;
                     Debug.Assert(needed > 0, "StandardCardClause.Min must be > 0 — loader bug.");
@@ -166,7 +166,7 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
                             break;
                     }
 
-                    return count >= needed;
+                    return (count >= needed) ? 1 : 0;
                 }
             );
         }

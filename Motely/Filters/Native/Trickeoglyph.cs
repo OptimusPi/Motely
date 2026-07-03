@@ -103,7 +103,7 @@ public struct TrickeoglyphFilterDesc()
             // STEP 2: Individual processing for SHOULD clauses (soul jokers)
             return searchContext.SearchIndividualSeeds(
                 finalMask,
-                (ref MotelySingleSearchContext searchContext) =>
+                (MotelySingleSearchContext searchContext) =>
                 {
                     // Passed MUST requirements, now check SHOULD for bonus scoring
 
@@ -121,7 +121,7 @@ public struct TrickeoglyphFilterDesc()
                         ref searchContext
                     );
 
-                    return hasCanio && hasPerkeoNegative;
+                    return (hasCanio && hasPerkeoNegative) ? 1 : 0;
                 }
             );
         }

@@ -72,7 +72,7 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
     }
 }
 
-public delegate bool MotelyIndividualSeedSearcher(ref MotelySingleSearchContext searchContext);
+public delegate int MotelyIndividualSeedSearcher(MotelySingleSearchContext searchContext);
 
 internal readonly unsafe struct MotelySearchContextParams(
     PartialSeedHashCache* seedHashCache,
@@ -201,7 +201,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     public int GetSeed(int lane, char* output) => _contextParams.GetSeed(lane, output);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public VectorMask SearchIndividualSeeds(MotelyIndividualSeedSearcher searcher)
+    public VectorMask SearchIndividualSeeds(MotelyIndividualSeedSearcher searcher, int scoreCutoff = 1)
     {
         uint results = 0;
 
@@ -215,9 +215,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
                     lane
                 );
 
-                bool success = searcher(ref singleSearchContext);
-
-                if (success)
+                if (searcher(singleSearchContext) >= scoreCutoff)
                 {
                     results |= 1u << lane;
                 }
@@ -228,7 +226,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public VectorMask SearchIndividualSeeds(VectorMask mask, MotelyIndividualSeedSearcher searcher)
+    public VectorMask SearchIndividualSeeds(VectorMask mask, MotelyIndividualSeedSearcher searcher, int scoreCutoff = 1)
     {
         if (mask.IsAllFalse())
             return mask;
@@ -247,9 +245,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
                     lane
                 );
 
-                bool success = searcher(ref singleSearchContext);
-
-                if (success)
+                if (searcher(singleSearchContext) >= scoreCutoff)
                 {
                     results |= 1u << lane;
                 }

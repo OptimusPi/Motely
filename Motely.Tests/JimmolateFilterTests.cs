@@ -42,7 +42,7 @@ public sealed class JimmolateFilterTests
     public void Jimmolate_AcceptAll_KeepsEverySeed()
     {
         var (matching, matched) = RunWithJimmolate(
-            static (ref MotelySingleSearchContext _) => true
+            static (MotelySingleSearchContext _) => 1
         );
 
         Assert.Equal((long)Seeds.Length, matching);
@@ -53,7 +53,7 @@ public sealed class JimmolateFilterTests
     public void Jimmolate_RejectAll_KeepsNothing()
     {
         var (matching, matched) = RunWithJimmolate(
-            static (ref MotelySingleSearchContext _) => false
+            static (MotelySingleSearchContext _) => 0
         );
 
         Assert.Equal(0L, matching);
@@ -66,7 +66,7 @@ public sealed class JimmolateFilterTests
         const string target = "UNITTEST";
 
         var (matching, matched) = RunWithJimmolate(
-            static (ref MotelySingleSearchContext ctx) => ctx.GetSeed() == target
+            static (MotelySingleSearchContext ctx) => ctx.GetSeed() == target ? 1 : 0
         );
 
         Assert.Equal(1L, matching);
@@ -84,15 +84,17 @@ public sealed class JimmolateFilterTests
 
         var (matching, matched) = RunWithJimmolate(
             seeds,
-            (ref MotelySingleSearchContext ctx) =>
+            (MotelySingleSearchContext ctx) =>
             {
                 if (ctx.GetAnteFirstVoucher(1) != MotelyVoucher.MagicTrick)
-                    return false;
+                    return 0;
 
                 var bossStream = ctx.CreateBossStream();
                 var runState = new MotelyRunState();
                 return ctx.GetBossForAnte(ref bossStream, 1, ref runState)
-                    == MotelyBossBlind.TheWindow;
+                    == MotelyBossBlind.TheWindow
+                        ? 1
+                        : 0;
             }
         );
 
@@ -107,7 +109,7 @@ public sealed class JimmolateFilterTests
     public void Jimmolate_StateThreadedBossChain_MatchesByrefStreamWalk()
     {
         var (matching, _) = RunWithJimmolate(
-            (ref MotelySingleSearchContext ctx) =>
+            (MotelySingleSearchContext ctx) =>
             {
                 var bossStream = ctx.CreateBossStream();
                 var byrefState = new MotelyRunState();
@@ -123,7 +125,7 @@ public sealed class JimmolateFilterTests
                     Assert.True(threaded.HasSeenBoss(expected));
                 }
 
-                return true;
+                return 1;
             }
         );
 
@@ -137,7 +139,7 @@ public sealed class JimmolateFilterTests
     public void Jimmolate_StateThreadedVoucher_MatchesByrefStateActivation()
     {
         var (matching, _) = RunWithJimmolate(
-            (ref MotelySingleSearchContext ctx) =>
+            (MotelySingleSearchContext ctx) =>
             {
                 var byrefState = new MotelyRunState();
                 var anteOne = ctx.GetAnteFirstVoucher(1, in byrefState);
@@ -156,7 +158,7 @@ public sealed class JimmolateFilterTests
                 var threadedAnteTwo = ctx.GetAnteFirstVoucherWithState(2, bought);
                 Assert.Equal(expectedAnteTwo, threadedAnteTwo.Voucher);
 
-                return true;
+                return 1;
             }
         );
 
@@ -172,13 +174,15 @@ public sealed class JimmolateFilterTests
 
         var (matching, matched) = RunWithJimmolate(
             seeds,
-            (ref MotelySingleSearchContext ctx) =>
+            (MotelySingleSearchContext ctx) =>
             {
                 if (ctx.GetAnteFirstVoucher(1) != MotelyVoucher.MagicTrick)
-                    return false;
+                    return 0;
 
                 return ctx.GetBossForAnteWithState(1, ctx.NewRunState()).Boss
-                    == MotelyBossBlind.TheWindow;
+                    == MotelyBossBlind.TheWindow
+                        ? 1
+                        : 0;
             }
         );
 
@@ -195,13 +199,13 @@ public sealed class JimmolateFilterTests
         var seen = new List<string>();
 
         var (matching, matched) = RunWithJimmolate(
-            (ref MotelySingleSearchContext ctx) =>
+            (MotelySingleSearchContext ctx) =>
             {
                 seen.Add(ctx.GetSeed());
                 var bossStream = ctx.CreateBossStream();
                 var runState = new MotelyRunState();
                 var boss = ctx.GetBossForAnte(ref bossStream, 1, ref runState);
-                return boss != default;
+                return boss != default ? 1 : 0;
             }
         );
 

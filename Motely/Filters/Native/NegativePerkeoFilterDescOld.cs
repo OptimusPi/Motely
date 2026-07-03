@@ -44,7 +44,7 @@ public struct NegativePerkeoFilterDescOld()
 
                 seedMask |= searchContext.SearchIndividualSeeds(
                     negativePerkeoMask,
-                    (ref MotelySingleSearchContext searchContext) =>
+                    (MotelySingleSearchContext searchContext) =>
                     {
                         // We need to check if this ante has the soul
                         MotelySingleTarotStream tarotStream = default;
@@ -78,7 +78,7 @@ public struct NegativePerkeoFilterDescOld()
                                         pack.GetPackSize()
                                     )
                                 )
-                                    return true;
+                                    return 1;
                             }
 
                             if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
@@ -98,11 +98,11 @@ public struct NegativePerkeoFilterDescOld()
                                         pack.GetPackSize()
                                     )
                                 )
-                                    return true;
+                                    return 1;
                             }
                         }
 
-                        return false;
+                        return 0;
                     }
                 );
             }

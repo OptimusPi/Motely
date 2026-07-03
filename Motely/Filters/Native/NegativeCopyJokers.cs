@@ -136,7 +136,7 @@ public struct NegativeCopyFilterDesc()
             // Now do full individual processing for seeds with potential
             return searchContext.SearchIndividualSeeds(
                 hasPotential,
-                (ref MotelySingleSearchContext ctx) =>
+                (MotelySingleSearchContext ctx) =>
                 {
                     int blueprintCount = 0;
                     int brainstormCount = 0;
@@ -264,7 +264,7 @@ public struct NegativeCopyFilterDesc()
                     int endScore = Math.Min(totalCopyJokers, 6) + totalNegatives;
 
                     // Return true if score meets threshold
-                    return endScore >= 5;
+                    return (endScore >= 5) ? 1 : 0;
                 }
             );
         }

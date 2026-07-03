@@ -178,6 +178,19 @@ public static class JummyLine
 
     private static string JoinNumbers(int[] values) => string.Join(" or ", values);
 
+    /// <summary>Null when <paramref name="line"/> parses as a JUMMY clause; the parser's error otherwise.</summary>
+    public static string? Validate(string line) =>
+        TryToClause(line, out _, out string? error) ? null : error;
+
+    /// <summary>The canonical spelling of <paramref name="line"/>: parse, then format back.</summary>
+    /// <exception cref="FormatException">The line does not parse.</exception>
+    public static string Canonicalize(string line)
+    {
+        if (!TryToClause(line, out IJamlClause? clause, out string? error))
+            throw new FormatException(error);
+        return FromClause(clause!) ?? throw new InvalidOperationException(line);
+    }
+
     // ── Line → clause ─────────────────────────────────────────────────────────
 
     public static bool TryToClause(string line, out IJamlClause? clause, out string? error)

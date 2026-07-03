@@ -30,10 +30,9 @@ public static class JamlSearchBuilder
 
     public static IMotelySearchSettings CreateSettings(JamlConfig config, int engineCutoff = 0)
     {
-        if (!config.HasAnyClauses())
-            throw new InvalidOperationException(
-                $"JAML filter '{config.Id}' has no must/should/mustNot clauses."
-            );
+        // A JAML with no must/should/mustNot clauses is a valid, real search: a pure
+        // Jimmolate host predicate driving the whole filter (the OG Immolate .cl mental
+        // model — deck/stake/seeds and nothing else, the engine yields to the host filter).
 
         // A clause that named no antes defaults to all 8 (sourceless == "anywhere"), the ante
         // analog of the FilterDesc source defaults. Normalize once here so the SIMD Filter and the

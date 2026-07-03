@@ -36,10 +36,11 @@
 
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
+    <!-- DuckDB reads the seed sources: read_csv/read_parquet, local or http via httpfs. -->
+    <PackageReference Include="DuckDB.NET.Data.Full" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.Data\Motely.Data.csproj" />
   </ItemGroup>
 </Project>

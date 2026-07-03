@@ -1,6 +1,5 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
-using Motely.Data;
 using Motely.Filters;
 
 namespace Motely.CLI;
@@ -104,7 +103,7 @@ internal static class CliSearchMode
         if (explicitSearchModeCount > 1)
         {
             error =
-                "Error: choose only one search input mode: --source, --seeds, --drown, --keyword, --keywords, --random, or --aesthetic.";
+                "Error: choose only one search input mode: --source, --seeds, --makeitrain, --keyword, --keywords, --random, or --aesthetic.";
             return false;
         }
 
@@ -115,19 +114,19 @@ internal static class CliSearchMode
         {
             if (string.IsNullOrWhiteSpace(input.FilterId))
             {
-                error = "Error: --drown requires a resolved filterId (use --jaml).";
+                error = "Error: --makeitrain requires a resolved filterId (use --jaml).";
                 return false;
             }
 
-            string lakeDir = MotelyLakePaths.LakeDir(input.ResultsRootPath, input.FilterId!);
-            if (!Directory.Exists(lakeDir) || !Directory.EnumerateFiles(lakeDir, "*.parquet").Any())
+            string lakeFile = SeedLakeSink.LakePath(input.ResultsRootPath, input.FilterId!);
+            if (!File.Exists(lakeFile))
             {
                 error =
-                    $"Error: no saved seeds for filter '{input.FilterId}' at '{lakeDir}'. Run a search first.";
+                    $"Error: no saved seeds for filter '{input.FilterId}' at '{lakeFile}'. Run a search first.";
                 return false;
             }
 
-            var drownProvider = new DuckLakeDrownProvider(lakeDir);
+            var drownProvider = new SeedSourceProvider(lakeFile, distinct: true);
             updated = updated.WithProviderSearch(drownProvider);
             sourceLifetime = drownProvider;
             return true;

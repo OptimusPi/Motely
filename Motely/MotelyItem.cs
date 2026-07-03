@@ -2,52 +2,78 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
+// One packed int is the only storage. Every facet reads and WRITES through it — bidirectional
+// get/set pairs — so the struct serializes with its real fields across boundaries (WASM interop
+// included) and round-trips by value. Non-mutating members are `readonly` to keep call sites on
+// readonly receivers copy-free.
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
+public struct MotelyItem(int value) : IEquatable<MotelyItem>
 {
-    public int Value { get; } = value;
+    public int Value { get; set; } = value;
 
-    public readonly MotelyItemType Type
+    public MotelyItemType Type
     {
-        get { return (MotelyItemType)(Value & MotelyGlobals.ItemTypeMask); }
+        readonly get { return (MotelyItemType)(Value & MotelyGlobals.ItemTypeMask); }
+        set { Value = (Value & ~MotelyGlobals.ItemTypeMask) | (int)value; }
     }
-    public readonly MotelyItemTypeCategory TypeCategory
+    public MotelyItemTypeCategory TypeCategory
     {
-        get { return (MotelyItemTypeCategory)(Value & MotelyGlobals.ItemTypeCategoryMask); }
+        readonly get { return (MotelyItemTypeCategory)(Value & MotelyGlobals.ItemTypeCategoryMask); }
+        set { Value = (Value & ~MotelyGlobals.ItemTypeCategoryMask) | (int)value; }
     }
-    public readonly MotelyItemSeal Seal
+    public MotelyItemSeal Seal
     {
-        get { return (MotelyItemSeal)(Value & MotelyGlobals.ItemSealMask); }
+        readonly get { return (MotelyItemSeal)(Value & MotelyGlobals.ItemSealMask); }
+        set { Value = (Value & ~MotelyGlobals.ItemSealMask) | (int)value; }
     }
-    public readonly MotelyItemEnhancement Enhancement
+    public MotelyItemEnhancement Enhancement
     {
-        get { return (MotelyItemEnhancement)(Value & MotelyGlobals.ItemEnhancementMask); }
+        readonly get { return (MotelyItemEnhancement)(Value & MotelyGlobals.ItemEnhancementMask); }
+        set { Value = (Value & ~MotelyGlobals.ItemEnhancementMask) | (int)value; }
     }
-    public readonly MotelyItemEdition Edition
+    public MotelyItemEdition Edition
     {
-        get { return (MotelyItemEdition)(Value & MotelyGlobals.ItemEditionMask); }
-    }
-
-    public readonly MotelyStandardcardSuit StandardcardSuit
-    {
-        get { return (MotelyStandardcardSuit)(Value & MotelyGlobals.StandardcardSuitMask); }
-    }
-    public readonly MotelyStandardcardRank StandardcardRank
-    {
-        get { return (MotelyStandardcardRank)(Value & MotelyGlobals.StandardcardRankMask); }
+        readonly get { return (MotelyItemEdition)(Value & MotelyGlobals.ItemEditionMask); }
+        set { Value = (Value & ~MotelyGlobals.ItemEditionMask) | (int)value; }
     }
 
-    public readonly bool IsPerishable
+    public MotelyStandardcardSuit StandardcardSuit
     {
-        get { return (Value & (1 << MotelyGlobals.PerishableStickerOffset)) != 0; }
+        readonly get { return (MotelyStandardcardSuit)(Value & MotelyGlobals.StandardcardSuitMask); }
+        set { Value = (Value & ~MotelyGlobals.StandardcardSuitMask) | (int)value; }
     }
-    public readonly bool IsEternal
+    public MotelyStandardcardRank StandardcardRank
     {
-        get { return (Value & (1 << MotelyGlobals.EternalStickerOffset)) != 0; }
+        readonly get { return (MotelyStandardcardRank)(Value & MotelyGlobals.StandardcardRankMask); }
+        set { Value = (Value & ~MotelyGlobals.StandardcardRankMask) | (int)value; }
     }
-    public readonly bool IsRental
+
+    public bool IsPerishable
     {
-        get { return (Value & (1 << MotelyGlobals.RentalStickerOffset)) != 0; }
+        readonly get { return (Value & (1 << MotelyGlobals.PerishableStickerOffset)) != 0; }
+        set
+        {
+            int mask = 1 << MotelyGlobals.PerishableStickerOffset;
+            Value = value ? (Value | mask) : (Value & ~mask);
+        }
+    }
+    public bool IsEternal
+    {
+        readonly get { return (Value & (1 << MotelyGlobals.EternalStickerOffset)) != 0; }
+        set
+        {
+            int mask = 1 << MotelyGlobals.EternalStickerOffset;
+            Value = value ? (Value | mask) : (Value & ~mask);
+        }
+    }
+    public bool IsRental
+    {
+        readonly get { return (Value & (1 << MotelyGlobals.RentalStickerOffset)) != 0; }
+        set
+        {
+            int mask = 1 << MotelyGlobals.RentalStickerOffset;
+            Value = value ? (Value | mask) : (Value & ~mask);
+        }
     }
 
     public readonly bool IsInvalid
@@ -68,51 +94,51 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
         : this((int)joker | (int)MotelyItemTypeCategory.Joker | (int)edition) { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem AsType(MotelyItemType type)
+    public readonly MotelyItem AsType(MotelyItemType type)
     {
         return new((Value & ~MotelyGlobals.ItemTypeMask) | (int)type);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem WithSeal(MotelyItemSeal seal)
+    public readonly MotelyItem WithSeal(MotelyItemSeal seal)
     {
         return new((Value & ~MotelyGlobals.ItemSealMask) | (int)seal);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem WithEnhancement(MotelyItemEnhancement enhancement)
+    public readonly MotelyItem WithEnhancement(MotelyItemEnhancement enhancement)
     {
         return new((Value & ~MotelyGlobals.ItemEnhancementMask) | (int)enhancement);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem WithEdition(MotelyItemEdition edition)
+    public readonly MotelyItem WithEdition(MotelyItemEdition edition)
     {
         return new((Value & ~MotelyGlobals.ItemEditionMask) | (int)edition);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem WithPerishable(bool isPerishable)
+    public readonly MotelyItem WithPerishable(bool isPerishable)
     {
         int mask = 1 << MotelyGlobals.PerishableStickerOffset;
         return new(isPerishable ? (Value | mask) : (Value & ~mask));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem WithEternal(bool isEternal)
+    public readonly MotelyItem WithEternal(bool isEternal)
     {
         int mask = 1 << MotelyGlobals.EternalStickerOffset;
         return new(isEternal ? (Value | mask) : (Value & ~mask));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItem WithRental(bool isRental)
+    public readonly MotelyItem WithRental(bool isRental)
     {
         int mask = 1 << MotelyGlobals.RentalStickerOffset;
         return new(isRental ? (Value | mask) : (Value & ~mask));
     }
 
-    public override string ToString()
+    public override readonly string ToString()
     {
         string stringified = Type.ToString();
 
@@ -158,12 +184,12 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Equals(MotelyItem other)
+    public readonly bool Equals(MotelyItem other)
     {
         return Value == other.Value;
     }
 
-    public override bool Equals(object? obj)
+    public override readonly bool Equals(object? obj)
     {
         return obj is MotelyItem item && Equals(item);
     }
@@ -180,7 +206,7 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
         return !a.Equals(b);
     }
 
-    public override int GetHashCode()
+    public override readonly int GetHashCode()
     {
         return Value.GetHashCode();
     }

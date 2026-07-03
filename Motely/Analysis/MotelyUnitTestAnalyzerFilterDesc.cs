@@ -39,7 +39,7 @@ public sealed class MotelyUnitTestAnalyzerFilterDesc()
             public readonly bool HasBuffoonStream => !BuffoonStream.IsNull;
         }
 
-        public readonly bool CheckSeed(ref MotelySingleSearchContext ctx)
+        public readonly int CheckSeed(MotelySingleSearchContext ctx)
         {
             // Create voucher state to track activated vouchers across antes
             MotelyRunState voucherState = new();
@@ -135,7 +135,7 @@ public sealed class MotelyUnitTestAnalyzerFilterDesc()
 
             FilterDesc.LastAnalysis = new(null, antes, ctx.Deck, deckComposition, deckBreakdown);
 
-            return false; // Always return false since we're just analyzing
+            return 0; // Always report no match; this filter only analyzes
         }
 
         /// <summary>

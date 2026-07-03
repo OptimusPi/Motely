@@ -155,7 +155,7 @@ public interface IMotelySearchSettings
     /// Attach Jimmolate — a per-seed predicate ("does this seed pass?"), the classic Immolate
     /// <c>.cl</c> filter mental model — to the search's filter chain. See <see cref="MotelyGlossary"/>.
     /// </summary>
-    IMotelySearchSettings WithJimmolate(MotelyIndividualSeedSearcher searcher);
+    IMotelySearchSettings WithJimmolate(MotelyIndividualSeedSearcher searcher, int scoreCutoff = 1);
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -394,8 +394,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         WithAutoScoreCutoff(enabled);
 
     IMotelySearchSettings IMotelySearchSettings.WithJimmolate(
-        MotelyIndividualSeedSearcher searcher
-    ) => WithJimmolate(searcher);
+        MotelyIndividualSeedSearcher searcher,
+        int scoreCutoff
+    ) => WithJimmolate(searcher, scoreCutoff);
 
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
@@ -461,12 +462,13 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     /// <inheritdoc cref="IMotelySearchSettings.WithJimmolate"/>
     public MotelySearchSettings<TBaseFilter> WithJimmolate(
-        MotelyIndividualSeedSearcher? searcher = null
+        MotelyIndividualSeedSearcher? searcher = null,
+        int scoreCutoff = 1
     )
     {
         if (searcher is null)
             throw new InvalidOperationException("Jimmolate searcher is not registered.");
-        return WithAdditionalFilter(new JimmolateFilterDesc(searcher));
+        return WithAdditionalFilter(new JimmolateFilterDesc(searcher, scoreCutoff));
     }
 
     public IMotelySearch Start(CancellationToken cancellationToken = default)

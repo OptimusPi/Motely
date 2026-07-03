@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Motely.Filters.Jaml;
 
@@ -84,7 +83,7 @@ public struct JamlShouldScoreDesc
 
             return searchContext.SearchIndividualSeeds(
                 baseFilterMask,
-                (ref MotelySingleSearchContext singleCtx) =>
+                (MotelySingleSearchContext singleCtx) =>
                 {
                     var runState = new MotelyRunState();
                     JamlScoring.PrepareRunState(
@@ -106,7 +105,7 @@ public struct JamlShouldScoreDesc
                         );
 
                         if (raw < mustClauses[i].Min)
-                            return false;
+                            return 0;
                     }
 
                     for (int i = 0; i < shouldClauses.Length; i++)
@@ -128,33 +127,19 @@ public struct JamlShouldScoreDesc
                     tally.Score = totalScore;
 
                     bool passedCutoff = totalScore >= cutoff;
-                    if (passedCutoff && seedMatchCallback != null)
+                    if (passedCutoff)
                     {
+                        // The seed-match channel carries identity only — the bare seed, the
+                        // engine's original contract. Scores and tallies travel typed, in the
+                        // scored-result channel this tally buffer feeds.
                         char* seedPtr = stackalloc char[MotelyGlobals.MaxSeedLength];
                         int seedLength = singleCtx.GetSeed(seedPtr);
                         string seedStr = new string(seedPtr, 0, seedLength);
                         tally.Seed = seedStr;
-
-                        var sb = new StringBuilder(seedStr.Length + 16 + shouldClauses.Length * 4);
-                        sb.Append(seedStr);
-                        sb.Append(',');
-                        sb.Append(totalScore);
-                        for (int i = 0; i < tally.TallyCount; i++)
-                        {
-                            sb.Append(',');
-                            sb.Append(tally.GetTally(i));
-                        }
-
-                        seedMatchCallback(sb.ToString());
-                    }
-                    else if (passedCutoff)
-                    {
-                        char* seedPtr = stackalloc char[MotelyGlobals.MaxSeedLength];
-                        int seedLength = singleCtx.GetSeed(seedPtr);
-                        tally.Seed = new string(seedPtr, 0, seedLength);
+                        seedMatchCallback?.Invoke(seedStr);
                     }
 
-                    return passedCutoff;
+                    return (passedCutoff) ? 1 : 0;
                 }
             );
         }

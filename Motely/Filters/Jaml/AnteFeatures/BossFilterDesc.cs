@@ -46,7 +46,7 @@ public readonly struct BossFilterDesc(BossClause clause)
             int maxAnte = _maxAnte;
 
             return ctx.SearchIndividualSeeds(
-                (ref MotelySingleSearchContext singleCtx) =>
+                (MotelySingleSearchContext singleCtx) =>
                 {
                     var state = new MotelyRunState();
 
@@ -81,7 +81,7 @@ public readonly struct BossFilterDesc(BossClause clause)
                             totalCount++;
                     }
 
-                    return totalCount >= clause.Min;
+                    return (totalCount >= clause.Min) ? 1 : 0;
                 }
             );
         }

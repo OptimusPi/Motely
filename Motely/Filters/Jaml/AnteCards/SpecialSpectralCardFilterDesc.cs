@@ -72,8 +72,10 @@ public struct SpecialSpectralCardFilterDesc(SpectralCardClause clause)
             int min = clause.Min;
             return ctx.SearchIndividualSeeds(
                 relevant,
-                (ref MotelySingleSearchContext single) =>
+                (MotelySingleSearchContext single) =>
                     JamlScoring.CountSpectralCardOccurrencesForFilter(ref single, clause) >= min
+                        ? 1
+                        : 0
             );
         }
     }

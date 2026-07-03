@@ -389,7 +389,7 @@ public struct ShuffleFinderFilterDesc()
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             return searchContext.SearchIndividualSeeds(
-                (ref MotelySingleSearchContext searchContext) =>
+                (MotelySingleSearchContext searchContext) =>
                 {
                     MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyStandardCard>.ValueCount];
 
@@ -440,11 +440,11 @@ public struct ShuffleFinderFilterDesc()
                     // double handScore = BestScore(hand).Score;
 
                     if (fiveCount < 2 || sevenCount < 2 || threeCount < 2)
-                        return false;
+                        return 0;
 
                     hand = deck.AsSpan().Slice(deck.Length - 21, 8);
 
-                    return BestScore(hand).Score == 1208; // Royal flush
+                    return BestScore(hand).Score == 1208 ? 1 : 0; // Royal flush
                 }
             );
         }

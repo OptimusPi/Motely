@@ -190,21 +190,21 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
 
             return searchContext.SearchIndividualSeeds(
                 hiero,
-                (ref MotelySingleSearchContext searchContext) =>
+                (MotelySingleSearchContext searchContext) =>
                 {
                     // Real verify step
                     int score1 = CheckAnteForLegendaryJoker(hAnte - 1, ref searchContext);
 
                     if (score1 < 110)
-                        return false;
+                        return 0;
                     int score2 = CheckAnteForLegendaryJoker(hAnte, ref searchContext);
 
                     if (score1 + score2 >= 111)
                     {
-                        return true;
+                        return 1;
                     }
 
-                    return false;
+                    return 0;
                 }
             );
         }

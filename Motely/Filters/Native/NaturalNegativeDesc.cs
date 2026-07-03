@@ -116,10 +116,11 @@ public struct NaturalNegativesFilterDesc()
 
             return searchContext.SearchIndividualSeeds(
                 matching,
-                (ref MotelySingleSearchContext searchContext) =>
+                (MotelySingleSearchContext searchContext) =>
                 {
-                    return CheckAnteForPerkeo(1, ref searchContext)
-                        || CheckAnteForPerkeo(2, ref searchContext);
+                    return CheckAnteForPerkeo(1, ref searchContext) || CheckAnteForPerkeo(2, ref searchContext)
+                        ? 1
+                        : 0;
                 }
             );
         }
