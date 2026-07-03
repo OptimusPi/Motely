@@ -1,11 +1,12 @@
 # jaml-ui — agent notes
 
-This repo is now focused on two things:
+This is a pnpm workspace centered on:
 
-1. **`src/json-render/`** — zero-dependency JSON-to-React engine with a Balatro component catalog.
-2. **`examples/mcp-seed-finder/`** — a working MCP App that uses json-render + motely-wasm.
+1. **`src/json-render/`** — zero-dependency JSON-to-React engine with a Balatro component catalog; its Storybook stories live in `src/json-render/stories/`.
+2. **`examples/mcp-seed-finder/`** — a working MCP App that uses json-render + motely-wasm (plus `examples/seed-finder`, the web variant).
+3. **`packages/`** — `jaml-codemirror` (editor integration, a workspace dep of the MCP example), `jaml-lang` (VS Code extension), and `jaml-lsp`.
 
-The legacy Jimbo UI component library and Storybook harness were stripped. `src/ui/` now only contains the Jimbo CSS token file (`jimbo.css`) that json-render components use.
+`src/ui/` holds the Jimbo CSS tokens (`jimbo.css`, `jimbo-tokens.css`, `tokens.ts`) that json-render components use.
 
 ## Commands
 
@@ -13,6 +14,7 @@ The legacy Jimbo UI component library and Storybook harness were stripped. `src/
 - `pnpm build` — build the library to `dist/`.
 - `pnpm typecheck` — `tsc --noEmit`.
 - `pnpm lint` — ESLint.
+- `pnpm storybook` — Storybook dev server on port 3141 for the json-render stories.
 - `cd examples/mcp-seed-finder && pnpm build` — build the MCP App single-file HTML.
 
 ## Package surface
@@ -29,5 +31,5 @@ Subpath exports:
 ## Working rules
 
 - Keep `json-render` zero runtime deps (React only).
-- Don't reintroduce large component trees, design-system primitives, or storybook scaffolding without explicit user approval.
+- Keep the library surface lean; get explicit user approval before adding large component trees or design-system primitives.
 - Confirm before publishing or irreversible git operations.
