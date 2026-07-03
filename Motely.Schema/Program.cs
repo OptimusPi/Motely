@@ -197,6 +197,7 @@ var rootProps = new Dictionary<string, object>
     ["name"]        = new { type = "string" },
     ["description"] = new { type = "string" },
     ["author"]      = new { type = "string" },
+    ["dateCreated"] = new { type = "string", format = "date-time" },
     ["seeds"]       = new { type = "array", items = new { type = "string" } },
     ["deck"]        = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyDeck", []) },
     ["stake"]       = new { type = "string", @enum = enumMap.GetValueOrDefault("MotelyStake", []) },

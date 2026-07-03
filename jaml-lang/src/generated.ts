@@ -23,7 +23,7 @@ export const Enums: Record<string, readonly string[]> = {
 };
 
 export const Discriminators: readonly string[] = ["and", "bigBlindTag", "bloodstoneTrigger", "boss", "businessPayout", "cavendishExtinct", "commonJoker", "commonJokers", "erraticRank", "erraticRanks", "erraticSuit", "glassDestroy", "grosMichelExtinct", "joker", "jokers", "legendaryJoker", "legendaryJokers", "luckyMoney", "luckyMult", "misprintMult", "or", "parkingPayout", "planetCard", "rareJoker", "rareJokers", "smallBlindTag", "spaceLevelup", "spectralCard", "standardCard", "startingDraw", "tag", "tarotCard", "uncommonJoker", "uncommonJokers", "voucher", "wheelOfFortune", "wheelStaysFlipped"];
-export const RootKeys: readonly string[] = ["author", "deck", "description", "id", "must", "mustNot", "name", "seeds", "should", "stake"];
+export const RootKeys: readonly string[] = ["author", "dateCreated", "deck", "description", "id", "must", "mustNot", "name", "seeds", "should", "stake"];
 export const AllClauseLevelKeys: readonly string[] = ["ante", "antes", "edition", "enhancement", "label", "max", "min", "rank", "score", "seal", "shopItems", "soulCardOnly", "soulEditionRolls", "sources", "stickers", "suit", "value"];
 
 export const RootValueEnums: Record<string, string> = { deck: "MotelyDeck", stake: "MotelyStake" };

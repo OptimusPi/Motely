@@ -14,7 +14,7 @@
       "name": "entity.name.tag.discriminator.jaml"
     },
     {
-      "match": "\\b(?:purpleSealOrEightBall|uncommonShopJokers|soulEditionRolls|commonShopJokers|rareShopJokers|allShopJokers|spectralPacks|soulCardOnly|boosterPacks|description|enhancement|uncommonTag|arcanaPacks|requireMega|etherealTag|certificate|incantation|sixthSense|shopItems|judgement|stickers|riffRaff|soulCard|charmTag|familiar|deckDraw|mustNot|edition|sources|rareTag|emperor|author|should|wraith|seance|stake|seeds|antes|label|score|value|name|deck|must|ante|rank|seal|suit|grim|luck|max|min|id)(?=\\s*:)",
+      "match": "\\b(?:purpleSealOrEightBall|uncommonShopJokers|soulEditionRolls|commonShopJokers|rareShopJokers|allShopJokers|spectralPacks|soulCardOnly|boosterPacks|description|dateCreated|enhancement|uncommonTag|arcanaPacks|requireMega|etherealTag|certificate|incantation|sixthSense|shopItems|judgement|stickers|riffRaff|soulCard|charmTag|familiar|deckDraw|mustNot|edition|sources|rareTag|emperor|author|should|wraith|seance|stake|seeds|antes|label|score|value|name|deck|must|ante|rank|seal|suit|grim|luck|max|min|id)(?=\\s*:)",
       "name": "keyword.other.key.jaml"
     },
     {

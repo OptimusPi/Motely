@@ -16,6 +16,10 @@
     "author": {
       "type": "string"
     },
+    "dateCreated": {
+      "type": "string",
+      "format": "date-time"
+    },
     "seeds": {
       "type": "array",
       "items": {
@@ -464,7 +468,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -589,7 +599,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -1034,7 +1050,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -1248,7 +1270,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -2018,7 +2046,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -2102,7 +2136,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -2325,7 +2365,22 @@
                 "type": "string"
               },
               "rank": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
               },
               "suit": {
                 "type": "string",
@@ -2419,7 +2474,22 @@
                 "type": "string"
               },
               "rank": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
               },
               "suit": {
                 "type": "string",
@@ -2679,7 +2749,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -2807,7 +2883,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -3386,7 +3468,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -3511,7 +3599,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -3956,7 +4050,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -4170,7 +4270,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -4940,7 +5046,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -5024,7 +5136,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -5247,7 +5365,22 @@
                 "type": "string"
               },
               "rank": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
               },
               "suit": {
                 "type": "string",
@@ -5341,7 +5474,22 @@
                 "type": "string"
               },
               "rank": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
               },
               "suit": {
                 "type": "string",
@@ -5601,7 +5749,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -5729,7 +5883,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -6308,7 +6468,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -6433,7 +6599,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -6878,7 +7050,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -7092,7 +7270,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -7862,7 +8046,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -7946,7 +8136,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -8169,7 +8365,22 @@
                 "type": "string"
               },
               "rank": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
               },
               "suit": {
                 "type": "string",
@@ -8263,7 +8474,22 @@
                 "type": "string"
               },
               "rank": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
               },
               "suit": {
                 "type": "string",
@@ -8523,7 +8749,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
@@ -8651,7 +8883,13 @@
               "stickers": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "None",
+                    "Eternal",
+                    "Perishable",
+                    "Rental"
+                  ]
                 }
               },
               "shopItems": {
