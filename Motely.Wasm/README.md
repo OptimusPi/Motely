@@ -94,18 +94,20 @@ const fromWalk = await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
 
 ## Jimmolate
 
-Jimmolate is a JS-authored seed predicate in the engine filter chain — the classic Immolate "does this seed pass?" model. The predicate receives the live `MotelySingleSearchContext` as an interop instance, so it can drive every query a native C# filter can. Bind it before `boot()`; keep-all (`(inst) => true`) is the neutral binding.
+Jimmolate is a JS-authored seed filter in the engine filter chain, speaking the real Immolate `.cl` contract: `filter(inst) => score` — a number, and the host sets the bar with a score cutoff. Returning `true`/`false` also works for convenience; booleans coerce to 1/0. The filter receives the live `MotelySingleSearchContext` as an interop instance, so it can drive every query a native C# filter can. Bind it before `boot()`; keep-all (`(inst) => 1`) is the neutral binding.
 
-The ante-1 fingerprint predicate from the C# unit tests, authored in JS — real voucher and boss queries pulling one needle out of the decoys:
+The ante-1 fingerprint filter from the C# unit tests, authored in JS — real voucher and boss queries pulling one needle out of the decoys:
 
 ```js
 Jimmolate.filter = (inst) => {
-  if (inst.getAnteFirstVoucher(1) !== MotelyVoucher.MagicTrick) return false;
+  if (inst.getAnteFirstVoucher(1) !== MotelyVoucher.MagicTrick) return 0;
   const result = inst.getBossForAnteWithState(1, inst.newRunState());
-  return result.boss === MotelyBossBlind.TheWindow;
+  return result.boss === MotelyBossBlind.TheWindow ? 1 : 0;
 };
 await MotelySearch.searchList(jaml);
 ```
+
+A JAML with zero must/should/mustNot clauses (deck, stake, seeds only — the real Immolate shape) is a first-class search: the Jimmolate filter carries the whole decision.
 
 Stream walkers that thread `ref` state are C#-only shapes; their state-threaded twins (value in, value out) are the JS-facing equivalents.
 
@@ -116,6 +118,14 @@ JUMMY is one human line per JAML criterion — the terse spelling of a JAML clau
 ```js
 MotelyJaml.validateLine("Eternal Blueprint in antes 1 or 2"); // null
 MotelyJaml.canonicalizeLine("Showman in antes 1, 2");         // "Showman in antes 1 or 2"
+```
+
+## Vocabulary
+
+`MotelyJaml.listItems(kind, query)` serves the real engine vocabulary — jokers, vouchers, tags, bosses, and the rest — for autocomplete and agent grounding. Names come straight from the engine enums, so nothing hand-maintained can drift.
+
+```js
+MotelyJaml.listItems("joker", "lucky"); // ["LuckyCat", ...] — case-insensitive substring match
 ```
 
 ## Utilities
