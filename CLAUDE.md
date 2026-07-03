@@ -53,7 +53,7 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 
 ### Motely.CLI
 
-`Program.cs` + `CliSearchMode.cs` pick one exclusive input mode: seed list/source file, `--makeitrain` lake replay, keyword, random, aesthetic, or the default sequential sweep. **The seed lake** is bare seeds in `Seeds/<filterId>.csv`, appended live by `SeedLakeSink` and streamed back by `SeedSourceProvider` (DuckDB reads; sources may be .csv/.txt/.parquet/.duckdb). Replay always re-runs lake seeds through the *current* JAML's clauses and scoring, so weight changes take effect with zero invalidation bookkeeping.
+`Program.cs` + `CliSearchMode.cs` pick one exclusive input mode: seed list/source file, `--makeitrain` lake replay, keyword, random, aesthetic, or the default sequential sweep. **The seed lake** is bare seeds in `Seeds/<filterId>.csv`, appended live by `SeedLakeSink` and streamed back by `SeedSourceProvider` (DuckDB reads; sources may be .csv/.txt/.parquet/.json, a JAML file's `seeds:` block, or a .db/.duckdb/.sqlite database — table resolution prefers `seeds`, then `results` (the BSO archive shape), then the sole table; SQLite files attach through the sqlite extension automatically). `Seeds/bso/` holds curated scored imports from the 16-month BSO era. Replay always re-runs lake seeds through the *current* JAML's clauses and scoring, so weight changes take effect with zero invalidation bookkeeping.
 
 ### Motely.Wasm
 

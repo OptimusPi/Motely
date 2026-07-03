@@ -94,3 +94,5 @@ should:
     antes: [3]
   - joker: LuckyCat
     antes: [2]
+
+seeds: []
