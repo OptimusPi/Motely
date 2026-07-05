@@ -7,3 +7,5 @@ should:
   - legendaryJoker: Perkeo
     antes: [1, 2]
     score: 100
+
+seeds: []

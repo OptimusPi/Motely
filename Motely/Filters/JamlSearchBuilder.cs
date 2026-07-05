@@ -24,9 +24,32 @@ public static class JamlSearchBuilder
         {
             Settings = settings,
             ScoreTallyColumnCount = config.Should.Count,
-            TallyLabels = [.. config.Should.Select((c, i) => c.Label ?? $"score{i}")],
+            TallyLabels = [.. config.Should.Select(DefaultTallyLabel)],
         };
     }
+
+    /// <summary>
+    /// The tally-column label for a should clause: the author's explicit label when given,
+    /// otherwise the clause rendered as its terse JUMMY line (e.g. "Blueprint in ante 1"),
+    /// with "score{index}" as the last-resort name for clauses JUMMY can't render.
+    /// </summary>
+    internal static string DefaultTallyLabel(IJamlClause clause, int index) =>
+        clause.Label ?? Jummy.JummyLine.FromClause(LabelRenderable(clause)) ?? $"score{index}";
+
+    /// <summary>
+    /// JUMMY renders JokerClause but keeps LegendaryJokerClause out of its round-trip grammar
+    /// (parsing a joker line always yields a JokerClause). For labeling only, view a legendary
+    /// clause through an equivalent JokerClause so "Perkeo in ante 1 or 2" still names its column.
+    /// </summary>
+    private static IJamlClause LabelRenderable(IJamlClause clause) =>
+        clause is LegendaryJokerClause { IsWildcard: false } lj
+            ? new JokerClause
+            {
+                Jokers = lj.Jokers,
+                Antes = lj.Antes,
+                Edition = lj.Edition,
+            }
+            : clause;
 
     public static IMotelySearchSettings CreateSettings(JamlConfig config, int engineCutoff = 0)
     {
