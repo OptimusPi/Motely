@@ -1,6 +1,6 @@
 import { type FC, useState } from "react";
-import { JamlGameCard } from "./game.js";
 import { Badge, type BadgeTone } from "./layout.js";
+import { JAMMY_SEED_MASCOT_DATA_URI } from "./jammySeedMascotImage.js";
 
 export interface JammyOrbitalMenuItem {
   label: string;
@@ -115,9 +115,11 @@ export const JammyMascot: FC<JammyMascotProps> = ({
         }}
         aria-label="Jammy mascot"
       >
-        <JamlGameCard
-          type="joker"
-          card={{ name: "Blueprint", scale: size / 71 }}
+        <img
+          src={JAMMY_SEED_MASCOT_DATA_URI}
+          alt="Jammy"
+          draggable={false}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
         />
       </button>
       {open && menuItems && (
