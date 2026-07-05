@@ -30,6 +30,12 @@ export function getVocabulary(): Vocabulary | null {
     for (const kind of KINDS) {
       vocab[kind] = MotelyJaml.listItems(kind, "");
     }
+    // "Any" is a real JAML wildcard, but narrower than jaml-lang's own
+    // completions.js assumes: MotelyJaml.fromYaml only accepts it for
+    // joker/legendaryJoker (both map to "joker" below), not boss/voucher/
+    // tag/deck — verified empirically against motely-wasm@23.3.0, not
+    // copied from jaml-lang's unconditional (and partly wrong) unshift.
+    vocab.joker = ["Any", ...vocab.joker];
     cached = vocab;
     return cached;
   } catch {
