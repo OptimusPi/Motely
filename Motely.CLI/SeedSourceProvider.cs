@@ -46,11 +46,17 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
         bool structured = ext is ".json" or ".jaml" or ".yaml" or ".yml";
 
         string select = distinct ? "SELECT DISTINCT" : "SELECT";
-        string count = distinct ? "COUNT(DISTINCT #1)" : "COUNT(*)";
+        // Seeds arrive scrubbed: stray whitespace and carriage returns (mixed-newline
+        // lakes) trim away at the SQL layer, and NULL rows from tolerant parsing stay out
+        // of the stream entirely.
+        const string seedExpr = "trim(#1, ' ' || chr(9) || chr(13))";
+        string count = distinct ? $"COUNT(DISTINCT {seedExpr})" : "COUNT(*)";
         // The lake accepts exactly what a Balatro seed is: base-35, [1-9A-Z], up to 8 chars.
         // header = false keeps every row (auto-detect eats a seed in single-column files);
         // the shape test drops legacy header rows ("Seed") and stray junk instead.
-        string seedShape = distinct || structured ? " WHERE #1 SIMILAR TO '[1-9A-Z]{1,8}'" : "";
+        string seedShape =
+            $" WHERE {seedExpr} IS NOT NULL AND length({seedExpr}) > 0"
+            + (distinct || structured ? $" AND {seedExpr} SIMILAR TO '[1-9A-Z]{{1,8}}'" : "");
 
         string from = ext switch
         {
@@ -76,12 +82,14 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
             // CSV and TXT both stream through read_csv: seed = first field of each line.
             // DuckDB positional reference (#1) never depends on a generated column name
             // (column0 vs column00 flips at 11+ columns; duckdb#19724). null_padding keeps
-            // ragged short rows (e.g. "SEED,1") instead of erroring.
+            // ragged short rows (e.g. "SEED,1"); strict_mode=false + ignore_errors keep a
+            // lake readable even when writers disagree on line endings (COPY emits LF,
+            // SeedLakeSink appends CRLF) — the seed shape test guards the stream regardless.
             _ =>
-                $"read_csv('{EscapeSql(path)}', header = false, null_padding = true, all_varchar = true)",
+                $"read_csv('{EscapeSql(path)}', header = false, null_padding = true, all_varchar = true, strict_mode = false, ignore_errors = true)",
         };
 
-        var sql = $"{select} #1 AS seed FROM {from}{seedShape}";
+        var sql = $"{select} {seedExpr} AS seed FROM {from}{seedShape}";
         var countSql = $"SELECT {count} FROM {from}{seedShape}";
 
         using var countCmd = _connection.CreateCommand();

@@ -77,3 +77,4 @@ nuget.config.local
 .mcp.json
 .mcp.local.json
 /.seeds
+/.playwright-mcp
