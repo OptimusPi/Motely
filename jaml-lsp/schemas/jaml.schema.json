@@ -49,7 +49,16 @@
                   "array"
                 ]
               },
-              "clauses": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
                 "type": "string"
               },
               "ante": {
@@ -64,6 +73,9 @@
                   "minimum": 0,
                   "maximum": 39
                 }
+              },
+              "clauses": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -103,6 +115,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -122,6 +159,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -164,6 +213,31 @@
                   "VioletVessel",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -178,6 +252,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -192,6 +278,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -271,6 +369,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -291,18 +417,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -380,6 +494,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -400,18 +542,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -440,6 +570,31 @@
                   "Ace",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -467,6 +622,31 @@
                   "Ace",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -485,6 +665,31 @@
                   "Spades",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -499,6 +704,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -516,6 +733,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -684,6 +913,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -704,18 +961,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -882,6 +1127,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -902,18 +1175,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -1080,6 +1341,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -1095,12 +1384,6 @@
               },
               "soulEditionRolls": {
                 "type": "integer"
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -1266,6 +1549,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -1281,12 +1592,6 @@
               },
               "soulEditionRolls": {
                 "type": "integer"
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -1301,6 +1606,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -1319,6 +1636,18 @@
                   "array"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
               "with": {
                 "type": "object"
               }
@@ -1335,6 +1664,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "mult": {
                 "type": "string"
@@ -1356,7 +1697,16 @@
                   "array"
                 ]
               },
-              "clauses": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
                 "type": "string"
               },
               "ante": {
@@ -1371,6 +1721,9 @@
                   "minimum": 0,
                   "maximum": 39
                 }
+              },
+              "clauses": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1385,6 +1738,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1412,17 +1777,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -1458,6 +1839,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -1478,18 +1887,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -1526,6 +1923,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -1546,18 +1971,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -1598,6 +2011,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -1617,6 +2055,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -1653,17 +2103,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -1678,6 +2144,34 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
               },
               "rank": {
                 "type": "string",
@@ -1739,18 +2233,6 @@
                   "Polychrome",
                   "Negative"
                 ]
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -1765,6 +2247,31 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               },
               "rank": {
                 "type": "string",
@@ -1831,6 +2338,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -1873,17 +2405,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -1963,6 +2511,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -1983,18 +2559,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -2075,6 +2639,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -2095,18 +2687,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -2155,6 +2735,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -2175,6 +2780,18 @@
                   "array"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
               "with": {
                 "type": "object"
               }
@@ -2191,6 +2808,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -2216,7 +2845,16 @@
                   "array"
                 ]
               },
-              "clauses": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
                 "type": "string"
               },
               "ante": {
@@ -2231,6 +2869,9 @@
                   "minimum": 0,
                   "maximum": 39
                 }
+              },
+              "clauses": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2270,6 +2911,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -2289,6 +2955,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2331,6 +3009,31 @@
                   "VioletVessel",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -2345,6 +3048,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2359,6 +3074,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -2438,6 +3165,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -2458,18 +3213,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -2547,6 +3290,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -2567,18 +3338,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -2607,6 +3366,31 @@
                   "Ace",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -2634,6 +3418,31 @@
                   "Ace",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -2652,6 +3461,31 @@
                   "Spades",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -2666,6 +3500,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -2683,6 +3529,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -2851,6 +3709,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -2871,18 +3757,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -3049,6 +3923,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -3069,18 +3971,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -3247,6 +4137,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -3262,12 +4180,6 @@
               },
               "soulEditionRolls": {
                 "type": "integer"
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -3433,6 +4345,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -3448,12 +4388,6 @@
               },
               "soulEditionRolls": {
                 "type": "integer"
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -3468,6 +4402,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -3486,6 +4432,18 @@
                   "array"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
               "with": {
                 "type": "object"
               }
@@ -3502,6 +4460,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "mult": {
                 "type": "string"
@@ -3523,7 +4493,16 @@
                   "array"
                 ]
               },
-              "clauses": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
                 "type": "string"
               },
               "ante": {
@@ -3538,6 +4517,9 @@
                   "minimum": 0,
                   "maximum": 39
                 }
+              },
+              "clauses": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -3552,6 +4534,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -3579,17 +4573,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -3625,6 +4635,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -3645,18 +4683,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -3693,6 +4719,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -3713,18 +4767,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -3765,6 +4807,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -3784,6 +4851,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -3820,17 +4899,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -3845,6 +4940,34 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
               },
               "rank": {
                 "type": "string",
@@ -3906,18 +5029,6 @@
                   "Polychrome",
                   "Negative"
                 ]
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -3932,6 +5043,31 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               },
               "rank": {
                 "type": "string",
@@ -3998,6 +5134,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -4040,17 +5201,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -4130,6 +5307,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -4150,18 +5355,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -4242,6 +5435,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -4262,18 +5483,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -4322,6 +5531,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -4342,6 +5576,18 @@
                   "array"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
               "with": {
                 "type": "object"
               }
@@ -4358,6 +5604,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -4383,7 +5641,16 @@
                   "array"
                 ]
               },
-              "clauses": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
                 "type": "string"
               },
               "ante": {
@@ -4398,6 +5665,9 @@
                   "minimum": 0,
                   "maximum": 39
                 }
+              },
+              "clauses": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -4437,6 +5707,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -4456,6 +5751,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -4498,6 +5805,31 @@
                   "VioletVessel",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -4512,6 +5844,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -4526,6 +5870,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -4605,6 +5961,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -4625,18 +6009,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -4714,6 +6086,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -4734,18 +6134,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -4774,6 +6162,31 @@
                   "Ace",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -4801,6 +6214,31 @@
                   "Ace",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -4819,6 +6257,31 @@
                   "Spades",
                   "Any"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               }
             },
             "additionalProperties": false
@@ -4833,6 +6296,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -4850,6 +6325,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -5018,6 +6505,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -5038,18 +6553,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -5216,6 +6719,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -5236,18 +6767,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -5414,6 +6933,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -5429,12 +6976,6 @@
               },
               "soulEditionRolls": {
                 "type": "integer"
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -5600,6 +7141,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -5615,12 +7184,6 @@
               },
               "soulEditionRolls": {
                 "type": "integer"
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -5635,6 +7198,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -5653,6 +7228,18 @@
                   "array"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
               "with": {
                 "type": "object"
               }
@@ -5669,6 +7256,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "mult": {
                 "type": "string"
@@ -5690,7 +7289,16 @@
                   "array"
                 ]
               },
-              "clauses": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
                 "type": "string"
               },
               "ante": {
@@ -5705,6 +7313,9 @@
                   "minimum": 0,
                   "maximum": 39
                 }
+              },
+              "clauses": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -5719,6 +7330,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -5746,17 +7369,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -5792,6 +7431,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -5812,18 +7479,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -5860,6 +7515,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -5880,18 +7563,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -5932,6 +7603,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -5951,6 +7647,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"
@@ -5987,17 +7695,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -6012,6 +7736,34 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
               },
               "rank": {
                 "type": "string",
@@ -6073,18 +7825,6 @@
                   "Polychrome",
                   "Negative"
                 ]
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
               }
             },
             "additionalProperties": false
@@ -6099,6 +7839,31 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
               },
               "rank": {
                 "type": "string",
@@ -6165,6 +7930,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -6207,17 +7997,33 @@
                   "Any"
                 ]
               },
-              "shopItems": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
                 "type": "array",
                 "items": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
                 }
               },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+              "sources": {
+                "type": "object"
               }
             },
             "additionalProperties": false
@@ -6297,6 +8103,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -6317,18 +8151,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -6409,6 +8231,34 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
               "edition": {
                 "type": "string",
                 "enum": [
@@ -6429,18 +8279,6 @@
                     "Perishable",
                     "Rental"
                   ]
-                }
-              },
-              "shopItems": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
-              },
-              "boosterPacks": {
-                "type": "array",
-                "items": {
-                  "type": "integer"
                 }
               }
             },
@@ -6489,6 +8327,31 @@
                   "Any"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
               "rolls": {
                 "type": "array",
                 "items": {
@@ -6509,6 +8372,18 @@
                   "array"
                 ]
               },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
               "with": {
                 "type": "object"
               }
@@ -6525,6 +8400,18 @@
                   "string",
                   "array"
                 ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
               },
               "with": {
                 "type": "object"

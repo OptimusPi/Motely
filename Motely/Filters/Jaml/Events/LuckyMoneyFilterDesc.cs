@@ -6,11 +6,11 @@ namespace Motely.Filters.Jaml;
 
 public sealed class LuckyMoneyClause : IRollScopedClause
 {
-    /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys. Has a With
+    /// <summary>This clause's complete, final clause-level key list. Has a With
     /// property, so with/luck/vouchers/sources(-as-luck-container) are genuinely valid here —
     /// unlike clause types with no With property, where the old loader silently accepted and
     /// dropped them.</summary>
-    public static readonly string[] ClauseKeys = ["with"];
+    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

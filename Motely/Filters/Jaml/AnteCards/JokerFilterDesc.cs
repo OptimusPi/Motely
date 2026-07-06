@@ -10,11 +10,11 @@ namespace Motely.Filters.Jaml;
 public sealed class JokerClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>
-    /// This clause's own clause-level keys beyond JamlClause.SharedKeys — the single source
+    /// This clause's complete, final clause-level key list — the single source
     /// JamlConfigLoader's ValidateKeys and Motely.Schema's generator both read, so "what keys
     /// does a joker clause accept" can't drift into two hand-copied answers again.
     /// </summary>
-    public static readonly string[] ClauseKeys = ["edition", "stickers", "shopItems", "boosterPacks"];
+    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "stickers"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

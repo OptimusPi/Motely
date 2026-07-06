@@ -730,29 +730,15 @@ public static class JamlConfigLoader
         }
     }
 
-    // Every discriminator's allowed keys are read off its real clause type (JamlClause.SharedKeys
-    // + IAnteScopedClause.AnteScopedExtraKeys if applicable + the type's own static ClauseKeys +
-    // "sources" if the type has a SourceConfigType) via JamlDiscriminatorRegistry — the single
-    // place this grammar lives, also read by Motely.Schema for jaml-lang/jaml-lsp generation.
+    // Every discriminator's allowed keys are its clause type's own complete, final ClauseKeys
+    // list — no composition at read time. JamlDiscriminatorRegistry.ClauseKeysFor reads that
+    // field directly via reflection; Motely.Schema reads the exact same field for generation.
     private static void ValidateClauseKeys(string discriminator, IReader outer, IReader? inner)
     {
-        var allowed = AllowedClauseKeys(discriminator).ToArray();
+        var allowed = JamlDiscriminatorRegistry.ClauseKeysFor(discriminator);
         ValidateKeys(outer, [.. allowed, .. JamlDiscriminatorRegistry.Entries.Keys], "clause");
         if (inner != null)
             ValidateKeys(inner, allowed, $"'{discriminator}' block");
-    }
-
-    private static IEnumerable<string> AllowedClauseKeys(string discriminator)
-    {
-        if (!JamlDiscriminatorRegistry.Entries.TryGetValue(discriminator, out var entry))
-            return JamlClause.SharedKeys;
-
-        IEnumerable<string> keys = JamlClause.SharedKeys;
-        if (typeof(IAnteScopedClause).IsAssignableFrom(entry.ClauseType))
-            keys = keys.Concat(JamlClause.AnteScopedExtraKeys);
-        if (entry.SourceConfigType != null)
-            keys = keys.Append("sources");
-        return keys.Concat(JamlDiscriminatorRegistry.ClauseKeysFor(discriminator));
     }
 
     private static void ValidateKeys(IReader reader, IEnumerable<string> allowed, string scope)
@@ -764,24 +750,23 @@ public static class JamlConfigLoader
         }
     }
 
+    // The only real spelling is `with: { luck, vouchers }` — ValidateClauseKeys already
+    // rejects bare `luck:`/`vouchers:` and `sources: {luck}` as unknown keys before parsing
+    // ever reaches here (confirmed this session: those were legacy fallbacks, not real
+    // grammar, and real corpus filters using them have been fixed to use `with:` instead).
     private static JamlWith ParseWith(IReader data)
     {
         var with = data.GetObject("with");
-        var sources = data.GetObject("sources");
-        if (with != null)
-            ValidateKeys(with, JamlClause.WithBlockKeys, "with");
-        if (sources != null)
-            ValidateKeys(sources, JamlClause.EventSourcesLuckKey, "event source");
-        var luckText =
-            with?.GetString("luck") ?? sources?.GetString("luck") ?? data.GetString("luck");
-        var luckInt = with?.GetInt("luck") ?? sources?.GetInt("luck") ?? data.GetInt("luck");
+        if (with == null)
+            return new JamlWith();
+
+        ValidateKeys(with, JamlClause.WithBlockKeys, "with");
         var result = new JamlWith();
-        if (luckText != null)
+        if (with.GetString("luck") is { } luckText)
             result.Luck = ParseLuck(luckText);
-        else if (luckInt.HasValue)
-            result.Luck = ParseLuck(luckInt.Value);
-        var vouchers = with?.GetStringArray("vouchers") ?? data.GetStringArray("vouchers");
-        if (vouchers != null)
+        else if (with.GetInt("luck") is { } luckInt)
+            result.Luck = ParseLuck(luckInt);
+        if (with.GetStringArray("vouchers") is { } vouchers)
             result.Vouchers = vouchers.Select(ParseEnum<MotelyVoucher>).ToArray();
         return result;
     }
@@ -793,15 +778,13 @@ public static class JamlConfigLoader
             ValidateKeys(block, JokerSourceConfig.SourceKeys, "joker source");
         if (
             block is null
-            && data.GetIntArray("shopItems") is null
-            && data.GetIntArray("boosterPacks") is null
         )
             return null;
         return new JokerSourceConfig
         {
-            ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
+            ShopItems = block?.GetIntArray("shopItems") ?? [],
             BoosterPacks =
-                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+                block?.GetIntArray("boosterPacks") ?? [],
             Judgement = block?.GetIntArray("judgement") ?? [],
             Wraith = block?.GetIntArray("wraith") ?? [],
             RiffRaff = block?.GetIntArray("riffRaff") ?? [],
@@ -817,14 +800,14 @@ public static class JamlConfigLoader
     private static LegendaryJokerSourceConfig? ParseLegendarySources(IReader data)
     {
         var block = data.GetObject("sources");
-        if (block is null && data.GetIntArray("boosterPacks") is null)
+        if (block is null)
             return null;
         if (block != null)
             ValidateKeys(block, LegendaryJokerSourceConfig.SourceKeys, "legendaryJoker source");
         return new LegendaryJokerSourceConfig
         {
             BoosterPacks =
-                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+                block?.GetIntArray("boosterPacks") ?? [],
             ArcanaPacks = block?.GetIntArray("arcanaPacks") ?? [],
             SpectralPacks = block?.GetIntArray("spectralPacks") ?? [],
             SoulCard = block?.GetIntArray("soulCard") ?? [],
@@ -840,15 +823,13 @@ public static class JamlConfigLoader
             ValidateKeys(block, TarotCardSourceConfig.SourceKeys, "tarotCard source");
         if (
             block is null
-            && data.GetIntArray("shopItems") is null
-            && data.GetIntArray("boosterPacks") is null
         )
             return null;
         return new TarotCardSourceConfig
         {
-            ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
+            ShopItems = block?.GetIntArray("shopItems") ?? [],
             BoosterPacks =
-                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+                block?.GetIntArray("boosterPacks") ?? [],
             Emperor = block?.GetIntArray("emperor") ?? [],
             PurpleSealOrEightBall = block?.GetIntArray("purpleSealOrEightBall") ?? [],
             CharmTag = block?.GetBool("charmTag") ?? false,
@@ -862,15 +843,13 @@ public static class JamlConfigLoader
             ValidateKeys(block, SpectralCardSourceConfig.SourceKeys, "spectralCard source");
         if (
             block is null
-            && data.GetIntArray("shopItems") is null
-            && data.GetIntArray("boosterPacks") is null
         )
             return null;
         return new SpectralCardSourceConfig
         {
-            ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
+            ShopItems = block?.GetIntArray("shopItems") ?? [],
             BoosterPacks =
-                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+                block?.GetIntArray("boosterPacks") ?? [],
             SixthSense = block?.GetIntArray("sixthSense") ?? [],
             Seance = block?.GetIntArray("seance") ?? [],
             RequireMegaPack =
@@ -886,15 +865,13 @@ public static class JamlConfigLoader
             ValidateKeys(block, PlanetSourceConfig.SourceKeys, "planetCard source");
         if (
             block is null
-            && data.GetIntArray("shopItems") is null
-            && data.GetIntArray("boosterPacks") is null
         )
             return null;
         return new PlanetSourceConfig
         {
-            ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
+            ShopItems = block?.GetIntArray("shopItems") ?? [],
             BoosterPacks =
-                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+                block?.GetIntArray("boosterPacks") ?? [],
         };
     }
 
@@ -905,15 +882,13 @@ public static class JamlConfigLoader
             ValidateKeys(block, StandardCardSourceConfig.SourceKeys, "standardCard source");
         if (
             block is null
-            && data.GetIntArray("shopItems") is null
-            && data.GetIntArray("boosterPacks") is null
         )
             return null;
         return new StandardCardSourceConfig
         {
-            ShopItems = block?.GetIntArray("shopItems") ?? data.GetIntArray("shopItems") ?? [],
+            ShopItems = block?.GetIntArray("shopItems") ?? [],
             BoosterPacks =
-                block?.GetIntArray("boosterPacks") ?? data.GetIntArray("boosterPacks") ?? [],
+                block?.GetIntArray("boosterPacks") ?? [],
             Certificate = block?.GetIntArray("certificate") ?? [],
             Incantation = block?.GetIntArray("incantation") ?? [],
             Familiar = block?.GetIntArray("familiar") ?? [],

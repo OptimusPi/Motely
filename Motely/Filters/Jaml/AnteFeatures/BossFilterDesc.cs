@@ -5,8 +5,8 @@ namespace Motely.Filters.Jaml;
 
 public sealed class BossClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>No extras beyond JamlClause.SharedKeys — no Rolls field yet (see below).</summary>
-    public static readonly string[] ClauseKeys = [];
+    /// <summary>Complete clause-level key list — no Rolls field yet (see below).</summary>
+    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

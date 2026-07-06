@@ -14,11 +14,13 @@ must:
 
   - tarotCard: TheMagician
     antes: [1]
-    boosterPacks: [1]
+    sources:
+      boosterPacks: [1]
 
   - tarotCard: Judgement
     antes: [1]
-    boosterPacks: [1]
+    sources:
+      boosterPacks: [1]
 
   - legendaryJoker: Perkeo
     antes: [1,2,3,4]

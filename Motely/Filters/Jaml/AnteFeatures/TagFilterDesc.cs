@@ -6,9 +6,9 @@ namespace Motely.Filters.Jaml;
 
 public sealed class TagClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys — shared by
+    /// <summary>This clause's complete, final clause-level key list — shared by
     /// tag/smallBlindTag/bigBlindTag, all backed by this same TagClause type.</summary>
-    public static readonly string[] ClauseKeys = ["rolls"];
+    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "rolls"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

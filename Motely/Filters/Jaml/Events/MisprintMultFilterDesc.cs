@@ -6,9 +6,9 @@ namespace Motely.Filters.Jaml;
 
 public sealed class MisprintMultClause : IRollScopedClause
 {
-    /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys. No With
+    /// <summary>This clause's complete, final clause-level key list. No With
     /// property here — with/luck/vouchers are NOT valid on this clause.</summary>
-    public static readonly string[] ClauseKeys = ["mult", "value"];
+    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "mult", "value"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
