@@ -8,6 +8,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "vite build && tsc -p . --emitDeclarationOnly",
+    "typecheck": "tsc --noEmit -p .",
     "watch": "tsc -p . --watch"
   },
   "dependencies": {

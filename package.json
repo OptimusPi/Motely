@@ -43,9 +43,10 @@
     "build": "vite build",
     "dev": "vite build --watch",
     "typecheck": "tsc --noEmit --pretty false",
+    "typecheck:all": "pnpm typecheck && pnpm -r --if-present run typecheck",
     "prepack": "npm run build",
-    "storybook": "storybook dev -p 3141",
-    "build-storybook": "storybook build",
+    "storybook": "pnpm run build && pnpm --filter jaml-codemirror build && storybook dev -p 3141",
+    "build-storybook": "pnpm run build && pnpm --filter jaml-codemirror build && storybook build",
     "lint": "eslint ."
   },
   "engines": {

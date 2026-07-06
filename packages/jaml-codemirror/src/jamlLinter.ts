@@ -30,12 +30,6 @@ function looksLikeJummyLine(line: string): boolean {
   return true;
 }
 
-function rangeToPos(doc: YAML.Document, range: { [0]: number; [1]: number; [2]: number }) {
-  const lc = (doc as unknown as { lineCounter?: YAML.LineCounter }).lineCounter;
-  if (!lc) return { line: 0, col: 0 };
-  return lc.linePos(range[0]);
-}
-
 export async function jamlLinter(source: string): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
 

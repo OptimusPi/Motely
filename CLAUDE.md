@@ -12,7 +12,8 @@ This is a pnpm workspace centered on:
 
 - `pnpm install` — install root + workspace example deps.
 - `pnpm build` — build the library to `dist/`.
-- `pnpm typecheck` — `tsc --noEmit`.
+- `pnpm typecheck` — `tsc --noEmit` for `src/`.
+- `pnpm typecheck:all` — the above plus `typecheck` in every `packages/*` workspace member.
 - `pnpm lint` — ESLint.
 - `pnpm storybook` — Storybook dev server on port 3141 for the json-render stories.
 - `cd examples/mcp-seed-finder && pnpm build` — build the MCP App single-file HTML.

@@ -7,7 +7,6 @@ import {
   type CompletionItem,
   type Definition,
   type DefinitionLink,
-  type Diagnostic,
   type Hover,
   ProposedFeatures,
   TextDocumentSyncKind,
@@ -92,8 +91,8 @@ connection.onDefinition(async (params): Promise<Definition | DefinitionLink[] | 
 function getWordAt(text: string, offset: number): string {
   const before = text.slice(0, offset);
   const after = text.slice(offset);
-  const matchBefore = before.match(/[\s:\[\]{},'"]+$/);
-  const matchAfter = after.match(/^[\s:\[\]{},'"]+/);
+  const matchBefore = before.match(/[\s:[\]{},'"]+$/);
+  const matchAfter = after.match(/^[\s:[\]{},'"]+/);
   const start = matchBefore ? before.length - matchBefore[0].length : 0;
   const end = matchAfter ? offset + matchAfter[0].length : offset;
   return text.slice(start, end).trim();
