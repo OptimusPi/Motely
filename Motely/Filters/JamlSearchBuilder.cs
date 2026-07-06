@@ -33,7 +33,7 @@ public static class JamlSearchBuilder
     /// otherwise the clause rendered as its terse JUMMY line (e.g. "Blueprint in ante 1"),
     /// with "score{index}" as the last-resort name for clauses JUMMY can't render.
     /// </summary>
-    internal static string DefaultTallyLabel(IJamlClause clause, int index) =>
+    public static string DefaultTallyLabel(IJamlClause clause, int index) =>
         clause.Label ?? Jummy.JummyLine.FromClause(LabelRenderable(clause)) ?? $"score{index}";
 
     /// <summary>
