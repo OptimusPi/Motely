@@ -9,6 +9,13 @@ namespace Motely.Filters.Jaml;
 
 public sealed class JokerClause : IJamlClause, IAnteScopedClause
 {
+    /// <summary>
+    /// This clause's own clause-level keys beyond JamlClause.SharedKeys — the single source
+    /// JamlConfigLoader's ValidateKeys and Motely.Schema's generator both read, so "what keys
+    /// does a joker clause accept" can't drift into two hand-copied answers again.
+    /// </summary>
+    public static readonly string[] ClauseKeys = ["edition", "stickers", "shopItems", "boosterPacks"];
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -339,6 +346,9 @@ public struct JokerFilterDesc(JokerClause clause)
 
 public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
 {
+    /// <summary>Same shape as JokerClause — reuse its ClauseKeys directly, no second copy.</summary>
+    public static readonly string[] ClauseKeys = JokerClause.ClauseKeys;
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -353,6 +363,9 @@ public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
 
 public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
 {
+    /// <summary>Same shape as JokerClause — reuse its ClauseKeys directly, no second copy.</summary>
+    public static readonly string[] ClauseKeys = JokerClause.ClauseKeys;
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -367,6 +380,9 @@ public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
 
 public sealed class RareJokerClause : IJamlClause, IAnteScopedClause
 {
+    /// <summary>Same shape as JokerClause — reuse its ClauseKeys directly, no second copy.</summary>
+    public static readonly string[] ClauseKeys = JokerClause.ClauseKeys;
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
