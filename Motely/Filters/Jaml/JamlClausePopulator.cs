@@ -191,11 +191,14 @@ public static partial class JamlConfigLoader
         );
     }
 
-    // The one deliberate alias in the whole grammar: requireMega/requireMegaPack both bind to
-    // RequireMegaPack (LegendaryJokerSourceConfig, SpectralCardSourceConfig) — not drift, kept
-    // as a two-line special case rather than inventing an attribute for a single rule.
+    // The deliberate aliases in the whole grammar — two wire keys binding to one property —
+    // kept as small special cases rather than inventing an attribute for a couple of rules:
+    // requireMega/requireMegaPack -> RequireMegaPack (LegendaryJokerSourceConfig,
+    // SpectralCardSourceConfig); mult/value -> Mult (MisprintMultClause).
     private static string ResolveWireKeyAlias(string key) =>
-        string.Equals(key, "requireMega", StringComparison.OrdinalIgnoreCase) ? "requireMegaPack" : key;
+        string.Equals(key, "requireMega", StringComparison.OrdinalIgnoreCase) ? "requireMegaPack"
+        : string.Equals(key, "value", StringComparison.OrdinalIgnoreCase) ? "mult"
+        : key;
 
     private static string ToPascalCase(string camelCaseKey) =>
         char.ToUpperInvariant(camelCaseKey[0]) + camelCaseKey[1..];
