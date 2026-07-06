@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using Motely.Filters;
 using Motely.Filters.Jummy;
 using SharpYaml.Model;
 
@@ -8,161 +7,6 @@ namespace Motely.Filters.Jaml;
 
 public static class JamlConfigLoader
 {
-    private static readonly string[] RootKeys =
-    [
-        "id",
-        "name",
-        "description",
-        "author",
-        "dateCreated",
-        "deck",
-        "stake",
-        "seeds",
-        "must",
-        "should",
-        "mustNot",
-    ];
-
-    private static readonly string[] SharedClauseKeys =
-    [
-        "ante",
-        "antes",
-        "min",
-        "max",
-        "score",
-        "label",
-        "sources",
-        "with",
-        "luck",
-        "vouchers",
-    ];
-
-    private static readonly string[] JokerClauseKeys =
-    [
-        "joker",
-        "jokers",
-        "commonJoker",
-        "commonJokers",
-        "uncommonJoker",
-        "uncommonJokers",
-        "rareJoker",
-        "rareJokers",
-        "edition",
-        "stickers",
-        "shopItems",
-        "boosterPacks",
-    ];
-
-    private static readonly string[] LegendaryClauseKeys =
-    [
-        "legendaryJoker",
-        "legendaryJokers",
-        "edition",
-        "soulCardOnly",
-        "soulEditionRolls",
-        "boosterPacks",
-    ];
-
-    private static readonly string[] StandardCardKeys =
-    [
-        "standardCard",
-        "rank",
-        "suit",
-        "enhancement",
-        "seal",
-        "edition",
-        "shopItems",
-        "boosterPacks",
-    ];
-
-    private static readonly string[] StartingDrawKeys = ["startingDraw", "rank", "suit"];
-
-    private static readonly string[] LogicKeys = ["and", "or", "clauses"];
-
-    private static readonly string[] EventKeys =
-    [
-        "luckyMoney",
-        "luckyMult",
-        "misprintMult",
-        "wheelOfFortune",
-        "grosMichelExtinct",
-        "cavendishExtinct",
-        "spaceLevelup",
-        "businessPayout",
-        "bloodstoneTrigger",
-        "parkingPayout",
-        "glassDestroy",
-        "wheelStaysFlipped",
-        "rolls",
-        "mult",
-        "value",
-    ];
-
-    private static readonly string[] JokerSourceKeys =
-    [
-        "shopItems",
-        "boosterPacks",
-        "judgement",
-        "emperor",
-        "wraith",
-        "riffRaff",
-        "rareTag",
-        "uncommonTag",
-        "commonShopJokers",
-        "uncommonShopJokers",
-        "rareShopJokers",
-        "allShopJokers",
-    ];
-
-    // No "shopItems": shops never offer legendaries — accepting it would silently match nothing.
-    // Listing it here makes a legendaryJoker `sources: { shopItems: ... }` a loud unknown-key error.
-    private static readonly string[] LegendarySourceKeys =
-    [
-        "boosterPacks",
-        "arcanaPacks",
-        "spectralPacks",
-        "soulCard",
-        "requireMega",
-        "requireMegaPack",
-    ];
-
-    private static readonly string[] TarotSourceKeys =
-    [
-        "shopItems",
-        "boosterPacks",
-        "emperor",
-        "purpleSealOrEightBall",
-        "charmTag",
-    ];
-
-    private static readonly string[] SpectralSourceKeys =
-    [
-        "shopItems",
-        "boosterPacks",
-        "sixthSense",
-        "seance",
-        "etherealTag",
-        "requireMega",
-        "requireMegaPack",
-    ];
-
-    private static readonly string[] PlanetSourceKeys = ["shopItems", "boosterPacks"];
-
-    private static readonly string[] StandardSourceKeys =
-    [
-        "shopItems",
-        "boosterPacks",
-        "certificate",
-        "incantation",
-        "familiar",
-        "grim",
-        "deckDraw",
-    ];
-
-    private static readonly string[] EventSourceKeys = ["luck"];
-
-    private static readonly string[] WithKeys = ["luck", "vouchers"];
-
     public static bool TryLoad(string content, out JamlConfig? config, out string? error)
     {
         try
@@ -245,7 +89,7 @@ public static class JamlConfigLoader
 
     private static JamlConfig ParseConfig(NodeReader root)
     {
-        ValidateKeys(root, RootKeys, "JAML root");
+        ValidateKeys(root, JamlConfig.RootKeys, "JAML root");
         var name = root.GetString("name");
         var config = new JamlConfig
         {
@@ -886,85 +730,32 @@ public static class JamlConfigLoader
         }
     }
 
+    // Every discriminator's allowed keys are read off its real clause type (JamlClause.SharedKeys
+    // + IAnteScopedClause.AnteScopedExtraKeys if applicable + the type's own static ClauseKeys +
+    // "sources" if the type has a SourceConfigType) via JamlDiscriminatorRegistry — the single
+    // place this grammar lives, also read by Motely.Schema for jaml-lang/jaml-lsp generation.
     private static void ValidateClauseKeys(string discriminator, IReader outer, IReader? inner)
     {
-        var allowed = ClauseKeys(discriminator);
-        ValidateKeys(outer, [.. SharedClauseKeys, .. allowed, .. AllDiscriminatorKeys()], "clause");
+        var allowed = AllowedClauseKeys(discriminator).ToArray();
+        ValidateKeys(outer, [.. allowed, .. JamlDiscriminatorRegistry.Entries.Keys], "clause");
         if (inner != null)
-            ValidateKeys(inner, [.. SharedClauseKeys, .. allowed], $"'{discriminator}' block");
+            ValidateKeys(inner, allowed, $"'{discriminator}' block");
     }
 
-    private static string[] ClauseKeys(string discriminator) =>
-        Normalize(discriminator) switch
-        {
-            "and" or "or" => LogicKeys,
-            "joker"
-            or "jokers"
-            or "commonjoker"
-            or "commonjokers"
-            or "uncommonjoker"
-            or "uncommonjokers"
-            or "rarejoker"
-            or "rarejokers" => JokerClauseKeys,
-            "legendaryjoker" or "legendaryjokers" => LegendaryClauseKeys,
-            "voucher" => ["voucher", "rolls"],
-            "tarotcard" => ["tarotCard", "shopItems", "boosterPacks"],
-            "spectralcard" => ["spectralCard", "shopItems", "boosterPacks"],
-            "planetcard" => ["planetCard", "shopItems", "boosterPacks"],
-            "standardcard" => StandardCardKeys,
-            "boss" => ["boss"],
-            "tag" => ["tag", "rolls"],
-            "smallblindtag" => ["smallBlindTag", "rolls"],
-            "bigblindtag" => ["bigBlindTag", "rolls"],
-            "erraticrank" => ["erraticRank"],
-            "erraticranks" => ["erraticRanks"],
-            "erraticsuit" => ["erraticSuit"],
-            "startingdraw" => StartingDrawKeys,
-            _ => EventKeys,
-        };
+    private static IEnumerable<string> AllowedClauseKeys(string discriminator)
+    {
+        if (!JamlDiscriminatorRegistry.Entries.TryGetValue(discriminator, out var entry))
+            return JamlClause.SharedKeys;
 
-    private static string[] AllDiscriminatorKeys() =>
-        [
-            "and",
-            "or",
-            "joker",
-            "jokers",
-            "commonJoker",
-            "commonJokers",
-            "uncommonJoker",
-            "uncommonJokers",
-            "rareJoker",
-            "rareJokers",
-            "legendaryJoker",
-            "legendaryJokers",
-            "voucher",
-            "tarotCard",
-            "spectralCard",
-            "planetCard",
-            "standardCard",
-            "boss",
-            "tag",
-            "smallBlindTag",
-            "bigBlindTag",
-            "erraticRank",
-            "erraticRanks",
-            "erraticSuit",
-            "startingDraw",
-            "luckyMoney",
-            "luckyMult",
-            "misprintMult",
-            "wheelOfFortune",
-            "grosMichelExtinct",
-            "cavendishExtinct",
-            "spaceLevelup",
-            "businessPayout",
-            "bloodstoneTrigger",
-            "parkingPayout",
-            "glassDestroy",
-            "wheelStaysFlipped",
-        ];
+        IEnumerable<string> keys = JamlClause.SharedKeys;
+        if (typeof(IAnteScopedClause).IsAssignableFrom(entry.ClauseType))
+            keys = keys.Concat(JamlClause.AnteScopedExtraKeys);
+        if (entry.SourceConfigType != null)
+            keys = keys.Append("sources");
+        return keys.Concat(JamlDiscriminatorRegistry.ClauseKeysFor(discriminator));
+    }
 
-    private static void ValidateKeys(IReader reader, string[] allowed, string scope)
+    private static void ValidateKeys(IReader reader, IEnumerable<string> allowed, string scope)
     {
         foreach (var key in reader.Keys)
         {
@@ -978,9 +769,9 @@ public static class JamlConfigLoader
         var with = data.GetObject("with");
         var sources = data.GetObject("sources");
         if (with != null)
-            ValidateKeys(with, WithKeys, "with");
+            ValidateKeys(with, JamlClause.WithBlockKeys, "with");
         if (sources != null)
-            ValidateKeys(sources, EventSourceKeys, "event source");
+            ValidateKeys(sources, JamlClause.EventSourcesLuckKey, "event source");
         var luckText =
             with?.GetString("luck") ?? sources?.GetString("luck") ?? data.GetString("luck");
         var luckInt = with?.GetInt("luck") ?? sources?.GetInt("luck") ?? data.GetInt("luck");
@@ -999,7 +790,7 @@ public static class JamlConfigLoader
     {
         var block = data.GetObject("sources");
         if (block != null)
-            ValidateKeys(block, JokerSourceKeys, "joker source");
+            ValidateKeys(block, JokerSourceConfig.SourceKeys, "joker source");
         if (
             block is null
             && data.GetIntArray("shopItems") is null
@@ -1029,7 +820,7 @@ public static class JamlConfigLoader
         if (block is null && data.GetIntArray("boosterPacks") is null)
             return null;
         if (block != null)
-            ValidateKeys(block, LegendarySourceKeys, "legendaryJoker source");
+            ValidateKeys(block, LegendaryJokerSourceConfig.SourceKeys, "legendaryJoker source");
         return new LegendaryJokerSourceConfig
         {
             BoosterPacks =
@@ -1046,7 +837,7 @@ public static class JamlConfigLoader
     {
         var block = data.GetObject("sources");
         if (block != null)
-            ValidateKeys(block, TarotSourceKeys, "tarotCard source");
+            ValidateKeys(block, TarotCardSourceConfig.SourceKeys, "tarotCard source");
         if (
             block is null
             && data.GetIntArray("shopItems") is null
@@ -1068,7 +859,7 @@ public static class JamlConfigLoader
     {
         var block = data.GetObject("sources");
         if (block != null)
-            ValidateKeys(block, SpectralSourceKeys, "spectralCard source");
+            ValidateKeys(block, SpectralCardSourceConfig.SourceKeys, "spectralCard source");
         if (
             block is null
             && data.GetIntArray("shopItems") is null
@@ -1092,7 +883,7 @@ public static class JamlConfigLoader
     {
         var block = data.GetObject("sources");
         if (block != null)
-            ValidateKeys(block, PlanetSourceKeys, "planetCard source");
+            ValidateKeys(block, PlanetSourceConfig.SourceKeys, "planetCard source");
         if (
             block is null
             && data.GetIntArray("shopItems") is null
@@ -1111,7 +902,7 @@ public static class JamlConfigLoader
     {
         var block = data.GetObject("sources");
         if (block != null)
-            ValidateKeys(block, StandardSourceKeys, "standardCard source");
+            ValidateKeys(block, StandardCardSourceConfig.SourceKeys, "standardCard source");
         if (
             block is null
             && data.GetIntArray("shopItems") is null

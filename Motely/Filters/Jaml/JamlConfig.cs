@@ -5,6 +5,11 @@ namespace Motely.Filters.Jaml;
 /// </summary>
 public sealed class JamlConfig
 {
+    /// <summary>The document root's own keys. "dateCreated" has no backing property here — it's
+    /// accepted as human/tooling metadata only, never read by the loader; not a drift bug.</summary>
+    public static readonly string[] RootKeys =
+        ["id", "name", "description", "author", "dateCreated", "deck", "stake", "seeds", "must", "should", "mustNot"];
+
     public required string Id { get; set; }
     public string? Name { get; set; }
     public string? Description { get; set; }
