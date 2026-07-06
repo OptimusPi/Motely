@@ -47,6 +47,18 @@ public static class JamlConfigExtensions
 
 public sealed class JokerSourceConfig
 {
+    /// <summary>
+    /// This class's own settable properties, camelCased — the single source JamlConfigLoader's
+    /// ValidateKeys and Motely.Schema's generator both read. No "emperor": there's no such
+    /// property here (that's TarotCardSourceConfig's field) — the old loader accepted it anyway
+    /// and silently dropped it.
+    /// </summary>
+    public static readonly string[] SourceKeys =
+    [
+        "shopItems", "boosterPacks", "judgement", "wraith", "riffRaff", "rareTag", "uncommonTag",
+        "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers",
+    ];
+
     /// <summary>Assembled shop slots via the full shop item stream (any item type).</summary>
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
@@ -73,6 +85,14 @@ public sealed class JokerSourceConfig
 
 public sealed class LegendaryJokerSourceConfig
 {
+    /// <summary>
+    /// requireMega/requireMegaPack are both real aliases the loader accepts for the one
+    /// RequireMegaPack bool below — the only case where this list has two entries for one
+    /// property, and it's a deliberate alias, not drift.
+    /// </summary>
+    public static readonly string[] SourceKeys =
+        ["boosterPacks", "arcanaPacks", "spectralPacks", "soulCard", "requireMega", "requireMegaPack"];
+
     // No ShopItems: shops never offer legendary/Soul jokers, so a shop slot would silently match
     // nothing. The loader rejects a `shopItems:` key on legendaryJoker sources outright.
 
@@ -114,6 +134,9 @@ public sealed class LegendaryJokerSourceConfig
 
 public sealed class TarotCardSourceConfig
 {
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"];
+
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
     public int[] Emperor { get; set; } = [];
@@ -127,6 +150,10 @@ public sealed class TarotCardSourceConfig
 
 public sealed class SpectralCardSourceConfig
 {
+    /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"];
+
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
     public int[] SixthSense { get; set; } = [];
@@ -146,12 +173,17 @@ public sealed class SpectralCardSourceConfig
 
 public sealed class PlanetSourceConfig
 {
+    public static readonly string[] SourceKeys = ["shopItems", "boosterPacks"];
+
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
 }
 
 public sealed class StandardCardSourceConfig
 {
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw"];
+
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
 

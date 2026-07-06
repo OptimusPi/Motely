@@ -7,6 +7,9 @@ namespace Motely.Filters.Jaml;
 
 public sealed class ErraticSuitClause : IJamlClause, IAnteScopedClause
 {
+    /// <summary>No extras beyond JamlClause.SharedKeys — the value itself carries the suit.</summary>
+    public static readonly string[] ClauseKeys = [];
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }

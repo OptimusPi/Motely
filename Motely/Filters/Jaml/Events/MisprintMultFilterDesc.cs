@@ -6,6 +6,10 @@ namespace Motely.Filters.Jaml;
 
 public sealed class MisprintMultClause : IJamlClause
 {
+    /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys. No With
+    /// property here — with/luck/vouchers are NOT valid on this clause.</summary>
+    public static readonly string[] ClauseKeys = ["rolls", "mult"];
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }

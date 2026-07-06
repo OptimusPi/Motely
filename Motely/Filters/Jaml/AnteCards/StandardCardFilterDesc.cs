@@ -5,6 +5,9 @@ namespace Motely.Filters.Jaml;
 
 public sealed class StandardCardClause : IJamlClause, IAnteScopedClause
 {
+    /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys.</summary>
+    public static readonly string[] ClauseKeys = ["rank", "suit", "enhancement", "seal", "edition", "shopItems", "boosterPacks"];
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }

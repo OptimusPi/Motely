@@ -6,6 +6,10 @@ namespace Motely.Filters.Jaml;
 
 public sealed class TagClause : IJamlClause, IAnteScopedClause
 {
+    /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys — shared by
+    /// tag/smallBlindTag/bigBlindTag, all backed by this same TagClause type.</summary>
+    public static readonly string[] ClauseKeys = ["rolls"];
+
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
