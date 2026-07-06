@@ -19,6 +19,17 @@ public interface IAnteScopedClause : IJamlClause
     int[] Antes { get; set; }
 }
 
+/// <summary>
+/// Capability for clauses scoped to specific PRNG roll indices instead of antes (the 12 event
+/// clauses — LuckyMoney, WheelOfFortune, MisprintMult, etc.). The rolls are the discriminator's
+/// own bare value (<c>luckyMoney: [0, 1, 2]</c>, read via <c>node.GetIntArray(discriminator)</c>
+/// in JamlConfigLoader), not a nested key — unlike IAnteScopedClause's `ante`/`antes` keys.
+/// </summary>
+public interface IRollScopedClause : IJamlClause
+{
+    int[] Rolls { get; set; }
+}
+
 public static class JamlClause
 {
     /// <summary>Keys every IJamlClause implementation accepts — exactly the interface's own

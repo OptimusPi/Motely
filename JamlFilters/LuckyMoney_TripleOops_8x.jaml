@@ -7,8 +7,10 @@ description: >
   1-in-15 chance; at 8x luck that is ~8/15 per lucky card. This finds seeds where
   the first three Lucky-card money rolls all pay $20 (luckyMoney [0,1,2] min 3 at
   luck 8), then ranks how far the $20 streak keeps running.
-  Realistic 3-Oops path: Oops! All 6s (joker) + Ankh (clones it) + a copy joker
-  (Blueprint/Brainstorm) pointed at Oops! = three doublers.
+  Realistic path to three Oops! effects: the base Oops! All 6s joker, plus Ankh
+  cloning it. Blueprint/Brainstorm are scored below for other reasons — copy
+  jokers don't copy Oops!'s luck modifier, so they aren't a third doubler.
+  (Correction, pifreak.)
 deck: Red
 stake: White
 must:
@@ -40,24 +42,24 @@ should:
   - luckyMoney: [0, 1, 2]
     min: 3
     score: 20
-    sources:
+    with:
       luck: 8
   # Reward seeds whose $20 streak keeps running at 8x luck
   - luckyMoney: [3]
     score: 8
-    sources:
+    with:
       luck: 8
   - luckyMoney: [4]
     score: 7
-    sources:
+    with:
       luck: 8
   - luckyMoney: [5, 6, 7]
     score: 5
-    sources:
+    with:
       luck: 8
   - luckyMoney: [8, 9, 10]
     score: 3
-    sources:
+    with:
       luck: 8
   # Extra copier = even more Oops potential
   - joker: Brainstorm

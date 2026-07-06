@@ -4,11 +4,11 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class MisprintMultClause : IJamlClause
+public sealed class MisprintMultClause : IRollScopedClause
 {
     /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys. No With
     /// property here — with/luck/vouchers are NOT valid on this clause.</summary>
-    public static readonly string[] ClauseKeys = ["rolls", "mult"];
+    public static readonly string[] ClauseKeys = ["mult", "value"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

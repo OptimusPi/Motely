@@ -12,5 +12,5 @@ should:
   - luckyMoney: [0]
     label: lucky_money_r0_luck5
     score: 100
-    sources:
+    with:
       luck: 5

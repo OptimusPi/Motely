@@ -4,8 +4,9 @@ author: pifreak
 description: >
   Oops! All 6s in ante 1's first shop, then Ankh copies it -> two Oops! = 2^2 = 4x luck.
   At 4x luck the first three Lucky cards must each pay $20 (luckyMoney [0,1,2] min 3).
-  should: ranks seeds by how much FURTHER the lucky-money streak runs at 4x luck,
-  plus copy-jokers (Blueprint/Brainstorm) that can clone Oops! for even more luck.
+  should: ranks seeds by how much FURTHER the lucky-money streak runs at 4x luck.
+  Blueprint/Brainstorm are scored below too, but NOT for cloning Oops! All 6s'
+  luck modifier — copy jokers don't copy that effect. (Correction, pifreak.)
 deck: Red
 stake: White
 must:
@@ -37,7 +38,7 @@ should:
     # With 4x luck, demand the first three Lucky cards all hit $20
   - luckyMoney: [0, 1, 2]
     min: 3
-    sources:
+    with:
       luck: 4
     score: 10
 
@@ -45,27 +46,27 @@ should:
   # Reward seeds whose lucky-money streak keeps paying at 4x luck
   - luckyMoney: [3]
     score: 5
-    sources:
+    with:
       luck: 4
   - luckyMoney: [4]
     score: 4
-    sources:
+    with:
       luck: 4
   - luckyMoney: [5]
     score: 4
-    sources:
+    with:
       luck: 4
   - luckyMoney: [6]
     score: 3
-    sources:
+    with:
       luck: 4
   - luckyMoney: [7]
     score: 3
-    sources:
+    with:
       luck: 4
   - luckyMoney: [8, 9, 10]
     score: 2
-    sources:
+    with:
       luck: 4
   - joker: Blueprint
     antes: [1, 2, 3]
