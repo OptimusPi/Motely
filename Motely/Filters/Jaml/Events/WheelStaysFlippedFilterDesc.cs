@@ -4,10 +4,10 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class WheelStaysFlippedClause : IJamlClause
+public sealed class WheelStaysFlippedClause : IRollScopedClause
 {
     /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys.</summary>
-    public static readonly string[] ClauseKeys = ["rolls", "with", "luck", "vouchers", "sources"];
+    public static readonly string[] ClauseKeys = ["with"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

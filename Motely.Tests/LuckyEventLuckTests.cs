@@ -38,7 +38,7 @@ public class LuckyEventLuckTests
     }
 
     [Fact]
-    public void LuckyMoney_Roll0_UsesSourcesLuckMultiplier()
+    public void LuckyMoney_Roll0_UsesWithLuckMultiplier()
     {
         var defaultLuck = """
             name: LuckyMoneyDefaultLuck
@@ -58,13 +58,13 @@ public class LuckyEventLuckTests
             stake: White
             must:
               - luckyMoney: [0]
-                sources:
+                with:
                   luck: 5
             should:
               - luckyMoney: [0]
                 label: lucky_money_r0_luck5
                 score: 100
-                sources:
+                with:
                   luck: 5
             """;
 
@@ -83,7 +83,7 @@ public class LuckyEventLuckTests
     }
 
     [Fact]
-    public void LuckyMult_LoadsSourcesLuck()
+    public void LuckyMult_LoadsWithLuck()
     {
         var jaml = """
             name: LuckyMultLuck5
@@ -91,13 +91,13 @@ public class LuckyEventLuckTests
             stake: White
             must:
               - luckyMult: [0]
-                sources:
+                with:
                   luck: 5
             should:
               - luckyMult: [0]
                 label: lucky_mult_r0_luck5
                 score: 100
-                sources:
+                with:
                   luck: 5
             """;
 
@@ -115,7 +115,7 @@ public class LuckyEventLuckTests
     }
 
     [Fact]
-    public void GrosMichelExtinct_LoadsSourcesLuck()
+    public void GrosMichelExtinct_LoadsWithLuck()
     {
         var jaml = """
             name: GrosMichelExtinctLuck5
@@ -123,7 +123,7 @@ public class LuckyEventLuckTests
             stake: White
             must:
               - grosMichelExtinct: [0]
-                sources:
+                with:
                   luck: 5
             """;
 
@@ -153,7 +153,7 @@ public class LuckyEventLuckTests
             stake: White
             must:
               - luckyMult: [0]
-                sources:
+                with:
                   luck: 5
             """;
 

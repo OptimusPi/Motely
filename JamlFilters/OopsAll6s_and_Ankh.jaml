@@ -5,7 +5,8 @@ deck: Red
 stake: White
 must:
   - luckyMoney: [0,1,2]
-    luck: 4 # 1x luck normal  Oops! All 6's uis DO&BLE -> 2 luck another OopsAll6s -> double luck -> 4
+    with:
+      luck: 4 # 1x luck normal  Oops! All 6's uis DO&BLE -> 2 luck another OopsAll6s -> double luck -> 4
 
 should:
   - joker: Showman

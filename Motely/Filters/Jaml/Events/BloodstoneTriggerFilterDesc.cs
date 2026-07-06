@@ -4,11 +4,11 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class BloodstoneTriggerClause : IJamlClause
+public sealed class BloodstoneTriggerClause : IRollScopedClause
 {
     /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys. No With
     /// property here (flat 50/50, see below) — with/luck/vouchers are NOT valid on this clause.</summary>
-    public static readonly string[] ClauseKeys = ["rolls"];
+    public static readonly string[] ClauseKeys = [];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

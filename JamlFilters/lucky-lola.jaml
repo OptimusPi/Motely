@@ -36,8 +36,10 @@ should:
   - commonJoker: Splash
     score: 15
   - luckyMult: [0, 1, 2, 3]
-    luck: 4
+    with:
+      luck: 4
     score: 50
   - luckyMoney: [0, 1]
-    luck: 4
+    with:
+      luck: 4
     score: 20
