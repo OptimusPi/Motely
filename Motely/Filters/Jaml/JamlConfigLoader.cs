@@ -1159,19 +1159,36 @@ public static class JamlConfigLoader
                 return null;
             if (value is YamlSequence sequence)
                 return sequence
-                    .Select(item => int.Parse(Scalar(item) ?? "", CultureInfo.InvariantCulture))
+                    .SelectMany(item => ParseIntOrRange(Scalar(item) ?? "", key))
                     .ToArray();
-            if (
-                Scalar(value) is { } scalar
-                && int.TryParse(
-                    scalar,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var single
-                )
-            )
-                return [single];
+            if (Scalar(value) is { } scalar)
+                return ParseIntOrRange(scalar, key).ToArray();
             return null;
+        }
+
+        // "1-39" expands to every int 1..39 inclusive, so a clause doesn't need shopItems: [0, 1,
+        // 2, ..., 999] spelled out by hand — one range token, or bare "N-M", stands in for the
+        // whole list. Plain "N" still parses as a single value, same as before.
+        private static readonly System.Text.RegularExpressions.Regex RangePattern =
+            new(@"^(\d+)\s*-\s*(\d+)$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static IEnumerable<int> ParseIntOrRange(string token, string key)
+        {
+            if (RangePattern.Match(token) is { Success: true } rangeMatch)
+            {
+                int start = int.Parse(rangeMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                int end = int.Parse(rangeMatch.Groups[2].Value, CultureInfo.InvariantCulture);
+                if (end < start)
+                    throw new InvalidOperationException(
+                        $"'{key}': range '{token}' has end < start."
+                    );
+                return Enumerable.Range(start, end - start + 1);
+            }
+
+            if (int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var single))
+                return [single];
+
+            throw new InvalidOperationException($"'{key}': '{token}' is not a valid integer or range (e.g. '1-39').");
         }
 
         public string[]? GetStringArray(string key)
