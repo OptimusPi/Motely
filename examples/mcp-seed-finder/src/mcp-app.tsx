@@ -2,11 +2,12 @@ import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
-import bootsharp, { Jimmolate } from "motely-wasm";
+import bootsharp from "motely-wasm";
+import { bindJimmolateBridge } from "jaml-codemirror";
 import { SeedFinderApp } from "./SeedFinderApp";
 import { STARTER_JAML } from "./constants";
 
-Jimmolate.filter = () => 1;
+bindJimmolateBridge();
 
 function extractJaml(result: CallToolResult): string | null {
   if (

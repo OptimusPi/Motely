@@ -1,5 +1,11 @@
-import { JamlCodeEditor } from "jaml-codemirror";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  JamlCodeEditor,
+  JimmolateEditor,
+  DEFAULT_JIMMOLATE_SOURCE,
+  compileJimmolatePredicate,
+  setJimmolatePredicate,
+} from "jaml-codemirror";
+import { useCallback, useMemo, useState } from "react";
 import { MotelyJaml, MotelySearch } from "motely-wasm";
 import { render, balatroRegistry, JammyMascot, type JsonNode } from "jaml-ui";
 
@@ -22,6 +28,7 @@ export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppPro
   const [matchingSeeds, setMatchingSeeds] = useState<number>(0);
   const [seedsPerSecond, setSeedsPerSecond] = useState<number>(0);
   const [startedAt, setStartedAt] = useState<number>(0);
+  const [jimmolateSource, setJimmolateSource] = useState<string>(DEFAULT_JIMMOLATE_SOURCE);
 
   const runSearch = useCallback(async () => {
     if (status === "running") return;
@@ -29,6 +36,14 @@ export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppPro
     const validation = MotelyJaml.validate(jaml);
     if (validation) {
       setError(validation);
+      setStatus("error");
+      return;
+    }
+
+    try {
+      setJimmolatePredicate(compileJimmolatePredicate(jimmolateSource));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       setStatus("error");
       return;
     }
@@ -74,7 +89,7 @@ export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppPro
       MotelySearch.onScoredResult.unsubscribe(onResult);
       MotelySearch.onProgress.unsubscribe(onProgress);
     }
-  }, [jaml, onRunRequest, status]);
+  }, [jaml, jimmolateSource, onRunRequest, status]);
 
   const spec: JsonNode = useMemo(
     () => ({
@@ -151,6 +166,25 @@ export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppPro
           onChange={onChange}
           height="100%"
           placeholder="JAML filter..."
+        />
+      </div>
+
+      <div
+        style={{
+          width: "100%",
+          height: 100,
+          marginTop: 16,
+          border: "2px solid var(--j-panel-edge)",
+          borderRadius: "var(--j-radius)",
+          overflow: "hidden",
+          boxSizing: "border-box",
+        }}
+      >
+        <JimmolateEditor
+          value={jimmolateSource}
+          onChange={setJimmolateSource}
+          height="100%"
+          placeholder="Jimmolate predicate..."
         />
       </div>
 

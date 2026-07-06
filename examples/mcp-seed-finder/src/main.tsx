@@ -1,10 +1,11 @@
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
-import bootsharp, { Jimmolate } from "motely-wasm";
+import bootsharp from "motely-wasm";
+import { bindJimmolateBridge } from "jaml-codemirror";
 import { SeedFinderApp } from "./SeedFinderApp";
 import { STARTER_JAML } from "./constants";
 
-Jimmolate.filter = () => 1;
+bindJimmolateBridge();
 
 function StandaloneApp() {
   const [jaml, setJaml] = useState(STARTER_JAML);
