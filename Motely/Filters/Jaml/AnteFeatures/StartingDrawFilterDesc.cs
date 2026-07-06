@@ -6,8 +6,8 @@ namespace Motely.Filters.Jaml;
 
 public sealed class StartingDrawClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's own clause-level keys beyond JamlClause.SharedKeys.</summary>
-    public static readonly string[] ClauseKeys = ["rank", "suit"];
+    /// <summary>This clause's complete, final clause-level key list.</summary>
+    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "rank", "suit"];
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

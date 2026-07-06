@@ -6,10 +6,12 @@ must:
     antes: [1]
   - tarotCard: Judgement
     antes: [1]
-    boosterPacks: [1]
+    sources:
+      boosterPacks: [1]
   - tarotCard: TheMagician
     antes: [1]
-    boosterPacks: [1]
+    sources:
+      boosterPacks: [1]
   - joker: RiffRaff
     antes: [1]
     sources:
