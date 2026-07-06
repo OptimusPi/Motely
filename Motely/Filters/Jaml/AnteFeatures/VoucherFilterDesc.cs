@@ -5,7 +5,7 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class VoucherClause : IJamlClause, IAnteScopedClause
+public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
     public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "rolls"];

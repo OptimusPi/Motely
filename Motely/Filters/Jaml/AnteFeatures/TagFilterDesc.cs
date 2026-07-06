@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-public sealed class TagClause : IJamlClause, IAnteScopedClause
+public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list — shared by
     /// tag/smallBlindTag/bigBlindTag, all backed by this same TagClause type.</summary>
