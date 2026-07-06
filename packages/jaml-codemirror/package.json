@@ -1,6 +1,6 @@
 {
   "name": "jaml-codemirror",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "description": "CodeMirror 6 language support for JAML with diagnostics and completions.",
