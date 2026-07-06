@@ -37,13 +37,9 @@ should:
     score: 3
   - rareJoker: Blueprint
     antes: [1]
-    sources:
-      emperor: [1,2]
     score: 1
   - rareJoker: Brainstorm
     antes: [1]
-    sources:
-      emperor: [1,2]
     score: 1
   - legendaryJoker: Perkeo
     antes: [1,2]
