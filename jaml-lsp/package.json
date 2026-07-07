@@ -65,6 +65,41 @@
         "isSticky": true
       }
     ],
+    "notebooks": [
+      {
+        "type": "jaml-notebook",
+        "displayName": "JAML Seed Search Notebook",
+        "selector": [{ "filenamePattern": "*.jamlnb" }]
+      }
+    ],
+    "commands": [
+      {
+        "command": "jaml.runSearch",
+        "title": "JAML: Run Seed Search",
+        "category": "JAML"
+      },
+      {
+        "command": "jaml.stopSearch",
+        "title": "JAML: Stop Seed Search",
+        "category": "JAML"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "jaml.runSearch",
+          "when": "resourceLangId == jaml || resourceLangId == jummy",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "jaml.runSearch",
+        "key": "ctrl+enter",
+        "when": "editorTextFocus && (resourceLangId == jaml || resourceLangId == jummy)"
+      }
+    ],
     "configuration": {
       "title": "JAML",
       "properties": {
@@ -87,6 +122,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.97.0",
+    "@types/node": "^22.0.0",
     "typescript": "^5.6.0",
     "@vscode/vsce": "^3.0.0"
   }
