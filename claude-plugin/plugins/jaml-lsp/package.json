@@ -1,0 +1,13 @@
+{
+  "name": "jaml-language-server",
+  "version": "1.2.0",
+  "description": "Standalone stdio LSP server for JAML (Jimbo's Ante Markup Language) .jaml filters — diagnostics, completions, and hover generated from Motely's clause registry.",
+  "bin": {
+    "jaml-language-server": "dist/server.js"
+  },
+  "files": [
+    "dist/server.js"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/OptimusPi/MotelyJAML"
+}
