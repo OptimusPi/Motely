@@ -1,7 +1,7 @@
 {
   "name": "jaml-lsp",
   "description": "LSP for JAML .jaml filters — diagnostics, completions, and hover, generated from Motely's own clause registry. Bundled self-contained; no separate install.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": { "name": "pifreak" },
   "license": "MIT",
   "repository": "https://github.com/OptimusPi/MotelyJAML",
