@@ -6,45 +6,22 @@ disable-model-invocation: true
 
 # Release motely-wasm
 
-This is the complete, real release sequence. Every step below is the whole story — follow it in order and the release lands clean.
+Run this straight through, no check-ins, until the one real stop point at the end.
 
-## 1. One number rules them all
+1. Bump `<MotelyVersion>` in `Directory.Packages.props`. The `SyncNpmPackageVersion` build target stamps `Motely.Wasm/package.json` from it automatically — don't hand-edit the package.json.
 
-Bump `<MotelyVersion>` in `Directory.Packages.props` at the repo root. A build target (`SyncNpmPackageVersion` in `Motely.Wasm/Motely.Wasm.csproj`) stamps `Motely.Wasm/package.json` from it automatically, so the props file is the single place the version lives. pifreak confirms the number.
+2. Prove it green, in order, from the repo root then `Motely.Wasm/`:
+   ```sh
+   dotnet test
+   npm test          # publishes Release into dist/, runs the Node suite against dist/index.mjs
+   npm run test:ui   # Playwright in real Chromium against the same artifact
+   ```
+   Any red: stop and fix, don't ship past a failure.
 
-## 2. Prove it green
+3. Commit, tag with the bare version (`git tag <version>`, matching `<MotelyVersion>` exactly), push the commit.
 
-From `Motely.Wasm/`:
+4. `npm run pack:check` — eyeball tarball contents/version.
 
-```sh
-npm test          # dotnet publish -c Release into dist/, then the Node suite against dist/index.mjs
-npm run test:ui   # Playwright in real Chromium against the same artifact
-```
+5. **Stop here.** `npm publish` writes to the public registry — this is the one step that needs an explicit go, same as any irreversible action affecting shared state for any user, not special handling. Everything above (tests, tag, commit) is reversible local work — do all of it without pausing.
 
-From the repo root:
-
-```sh
-dotnet test       # the C# suite
-```
-
-All three green means the artifact in `dist/` is the artifact you ship — `npm test`'s pretest already built it.
-
-## 3. Commit and tag
-
-Commit the working tree so the release has a real anchor, then tag with the bare version:
-
-```sh
-git tag <version>        # e.g. git tag 23.3.0 — matches <MotelyVersion> exactly
-```
-
-## 4. Publish
-
-From `Motely.Wasm/`:
-
-```sh
-npm run pack:check   # eyeball the tarball contents and version one last time
-npm publish
-git push && git push --tags
-```
-
-`npm publish` reaches the real registry — pifreak says go before this step runs.
+6. On go: `npm publish`, then `git push --tags`.
