@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { validate, getCompletions, getHover } from "jaml-lang";
+import { registerJamlChatParticipant } from "./chatParticipant.js";
 
 const JAML_LANG = "jaml";
 let diagnosticCollection: vscode.DiagnosticCollection;
@@ -7,6 +8,8 @@ let diagnosticCollection: vscode.DiagnosticCollection;
 export function activate(ctx: vscode.ExtensionContext) {
   diagnosticCollection = vscode.languages.createDiagnosticCollection(JAML_LANG);
   ctx.subscriptions.push(diagnosticCollection);
+
+  registerJamlChatParticipant(ctx);
 
   // Diagnostics on open + change
   ctx.subscriptions.push(
