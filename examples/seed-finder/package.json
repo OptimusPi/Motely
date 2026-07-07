@@ -11,7 +11,7 @@
   "dependencies": {
     "jaml-codemirror": "workspace:*",
     "jaml-ui": "workspace:*",
-    "motely-wasm": "^23.3.0",
+    "motely-wasm": "^24.0.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

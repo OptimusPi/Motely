@@ -10,6 +10,7 @@ import {
   MotelyVoucher,
   MotelyDeck,
   MotelyStake,
+  MotelyItem,
 } from "motely-wasm";
 import {
   JamlGameCard,
@@ -54,10 +55,10 @@ function stakeDisplayName(stake: MotelyStake): string {
   return splitCamelCase(MotelyStake[stake]);
 }
 
-function ItemCard({ value }: { value: number }) {
+function ItemCard({ item }: { item: MotelyItem }) {
   const resolved = useMemo(
-    () => decodeMotelyItemToJamlCard(value, 0.85),
-    [value]
+    () => decodeMotelyItemToJamlCard(item, 0.85),
+    [item]
   );
   if (!resolved) return <div className="j-analyzer-unknown">?</div>;
   return (
@@ -78,7 +79,7 @@ function PackSection({ pack }: { pack: MotelyJamlyzerAnteResult["packs"][number]
       </div>
       <div className="j-analyzer-card-row">
         {pack.items.map((item, i) => (
-          <ItemCard key={i} value={item.value} />
+          <ItemCard key={i} item={item} />
         ))}
       </div>
     </div>
@@ -324,7 +325,7 @@ export function JamlyzerView({ result, deck, stake, maxAnte = 8 }: JamlyzerViewP
           <h3 className="j-analyzer-section-title">Shop</h3>
           <div className="j-analyzer-card-row">
             {ante.shopItems.map((item, i) => (
-              <ItemCard key={i} value={item.value} />
+              <ItemCard key={i} item={item} />
             ))}
           </div>
         </div>

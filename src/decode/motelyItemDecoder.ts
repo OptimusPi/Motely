@@ -5,7 +5,7 @@ import {
   MotelyItemEnhancement,
   MotelyStandardcardRank,
   MotelyStandardcardSuit,
-} from "../lib/motely/motelyCompatEnums.js";
+} from "motely-wasm";
 
 type MotelyItemCategoryName = "Standardcard" | "SpectralCard" | "TarotCard" | "PlanetCard" | "Joker" | "Invalid";
 
