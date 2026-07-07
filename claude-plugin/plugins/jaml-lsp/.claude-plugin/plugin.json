@@ -1,6 +1,6 @@
 {
   "name": "jaml-lsp",
-  "description": "Real LSP for JAML .jaml filters — diagnostics, completions, and hover, generated from Motely's own clause registry. Bundled self-contained; no separate install.",
+  "description": "LSP for JAML .jaml filters — diagnostics, completions, and hover, generated from Motely's own clause registry. Bundled self-contained; no separate install.",
   "version": "1.0.0",
   "author": { "name": "pifreak" },
   "license": "MIT",

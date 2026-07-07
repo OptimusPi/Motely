@@ -5,7 +5,7 @@
     {
       "name": "jaml-lsp",
       "source": "./plugins/jaml-lsp",
-      "description": "Real LSP for JAML .jaml filters — diagnostics, completions, and hover, straight from Motely's clause registry."
+      "description": "LSP for JAML .jaml filters — diagnostics, completions, and hover, straight from Motely's clause registry."
     }
   ]
 }
