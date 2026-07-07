@@ -1,6 +1,6 @@
 import { build } from "esbuild";
 import { execSync } from "node:child_process";
-import { rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -41,3 +41,11 @@ await build({
   outfile: join(here, "dist", "server.js"),
   banner: { js: "#!/usr/bin/env node" },
 });
+
+// Claude Code plugin: ${CLAUDE_PLUGIN_ROOT} resolves to the plugin's own installed directory at
+// runtime (non-configurable), so the bundled server must physically live there. Copying the
+// already-built file (rather than a second build() with write:false) preserves the +x esbuild
+// set on the shebang'd output — taking over the write ourselves would silently drop that.
+const pluginDist = join(here, "..", "claude-plugin", "plugins", "jaml-lsp", "dist");
+mkdirSync(pluginDist, { recursive: true });
+copyFileSync(join(here, "dist", "server.js"), join(pluginDist, "server.js"));
