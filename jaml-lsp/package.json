@@ -5,29 +5,47 @@
   "version": "2.0.0",
   "publisher": "pifreak",
   "license": "MIT",
-  "engines": { "vscode": "^1.97.0" },
-  "categories": ["Programming Languages", "Linters"],
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
   "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/OptimusPi/MotelyJAML"
   },
   "extensionDependencies": [],
-  "extensionRecommendations": ["redhat.vscode-yaml"],
+  "extensionRecommendations": [
+    "redhat.vscode-yaml"
+  ],
   "activationEvents": [],
+  "type": "module",
   "main": "./dist/extension.js",
   "contributes": {
     "languages": [
       {
         "id": "jaml",
-        "aliases": ["JAML", "jaml"],
-        "extensions": [".jaml"],
+        "aliases": [
+          "JAML",
+          "jaml"
+        ],
+        "extensions": [
+          ".jaml"
+        ],
         "configuration": "./language-configuration.json"
       },
       {
         "id": "jummy",
-        "aliases": ["Jummy", "jummy"],
-        "extensions": [".jummy"],
+        "aliases": [
+          "Jummy",
+          "jummy"
+        ],
+        "extensions": [
+          ".jummy"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -40,13 +58,17 @@
     ],
     "jsonValidation": [
       {
-        "fileMatch": ["*.jaml"],
+        "fileMatch": [
+          "*.jaml"
+        ],
         "url": "./schemas/jaml.schema.json"
       }
     ],
     "yamlValidation": [
       {
-        "fileMatch": ["*.jaml"],
+        "fileMatch": [
+          "*.jaml"
+        ],
         "url": "./schemas/jaml.schema.json"
       }
     ],
@@ -69,7 +91,11 @@
       {
         "type": "jaml-notebook",
         "displayName": "JAML Seed Search Notebook",
-        "selector": [{ "filenamePattern": "*.jamlnb" }]
+        "selector": [
+          {
+            "filenamePattern": "*.jamlnb"
+          }
+        ]
       }
     ],
     "commands": [
@@ -118,12 +144,14 @@
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
-    "jaml-lang": "file:../jaml-lang"
+    "jaml-lang": "file:../jaml-lang",
+    "vscode-languageserver": "^10.1.0",
+    "vscode-languageserver-textdocument": "^1.0.12"
   },
   "devDependencies": {
-    "@types/vscode": "^1.97.0",
     "@types/node": "^22.0.0",
-    "typescript": "^5.6.0",
-    "@vscode/vsce": "^3.0.0"
+    "@types/vscode": "^1.97.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.6.0"
   }
 }

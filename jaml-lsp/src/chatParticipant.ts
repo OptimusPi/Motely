@@ -3,10 +3,9 @@ import { Vocab } from "jaml-lang";
 
 const PARTICIPANT_ID = "jimbo.chat";
 
-// @jimbo — a schema-aware chat participant, not a novel model integration. Same shape as VS
-// Code's own @mssql/@pgsql: borrow the user's already-signed-in Copilot model via the stable
-// vscode.lm API and ground every answer in the real vocabulary (Vocab, generated straight off
-// JamlDiscriminatorRegistry) so it can't invent syntax that doesn't exist.
+// @jimbo — a schema-aware chat participant (same shape as VS Code's @mssql/@pgsql). Borrows the
+// user's signed-in Copilot model via vscode.lm and grounds answers in Vocab (generated from
+// JamlDiscriminatorRegistry) so it stays within the grammar that actually exists.
 export function registerJamlChatParticipant(ctx: vscode.ExtensionContext) {
   const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handleChatRequest);
   participant.iconPath = vscode.Uri.joinPath(ctx.extensionUri, "icon.png");
@@ -28,9 +27,7 @@ const JAML_MOTDS = [
   "Judgement, Ankh, Moon, Lovers",
 ];
 
-// Deterministic-per-question is fine and cheaper than real randomness: pick from the participant
-// call's own timing quirk via a rotating counter, so it varies ask-to-ask without needing
-// Math.random seeding to matter.
+// Rotating counter so the answer varies ask-to-ask.
 let motdCounter = 0;
 
 function isStandsForQuestion(prompt: string): boolean {
@@ -82,10 +79,8 @@ async function handleChatRequest(
   }
 }
 
-// The whole point: every fact the model gets is pulled straight from generated.ts, which is
-// itself reflected off the real C# clause/source-config types. If JAML's grammar changes, this
-// prompt changes automatically the next time Motely.Schema runs — nothing here is hand-maintained
-// vocabulary that can drift.
+// Every fact in the prompt comes from generated.ts (reflected off the C# clause/source-config
+// types), so it tracks the grammar automatically whenever Motely.Schema regenerates.
 function buildSystemPrompt(activeJamlText?: string): string {
   const sections = [
     "You are a JAML (Jimbo's Ante Markup Language) assistant for Balatro seed filters.",

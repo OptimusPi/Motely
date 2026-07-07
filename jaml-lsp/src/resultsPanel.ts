@@ -51,30 +51,46 @@ export class ResultsPanel {
   }
 
   private setHtml(state: "idle" | "searching" | "done" | "error", extra?: string, summary?: SearchSummary): void {
-    this.panel.webview.html = buildHtml(state, extra, summary);
+    this.panel.webview.html = buildHtml(state, extra, summary, makeNonce());
   }
+}
+
+function makeNonce(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  for (let i = 0; i < 32; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+// Webview content is script-enabled, and both the filter preview (first chars of the user's
+// .jaml file) and error messages are document-derived \u2014 escape everything interpolated, lock
+// the page down with a nonce'd CSP, and build streamed rows with DOM APIs, never innerHTML.
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
 function buildHtml(
   state: "idle" | "searching" | "done" | "error",
   extra?: string,
-  summary?: SearchSummary
+  summary?: SearchSummary,
+  nonce = "",
 ): string {
   const rows = summary?.results.slice(0, 500).map(r =>
-    `<tr><td class="seed">${r.seed}</td><td class="score">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
+    `<tr><td class="seed">${esc(r.seed)}</td><td class="score">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
   ).join("") ?? "";
 
   const header = {
     idle: "Waiting\u2026",
-    searching: `Searching\u2026 <span class="filter">${extra ?? ""}</span>`,
-    done: `${summary?.matched} matches in ${summary?.searched} seeds \u00b7 ${summary?.elapsedMs}ms \u00b7 status: ${summary?.status}`,
-    error: `Error: ${extra}`,
+    searching: `Searching\u2026 <span class="filter">${esc(extra ?? "")}</span>`,
+    done: `${esc(summary?.matched ?? "")} matches in ${esc(summary?.searched ?? "")} seeds \u00b7 ${summary?.elapsedMs}ms \u00b7 status: ${esc(summary?.status ?? "")}`,
+    error: `Error: ${esc(extra ?? "")}`,
   }[state];
 
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <style>
   body{font:13px/1.5 var(--vscode-editor-font-family,monospace);color:var(--vscode-editor-foreground);background:var(--vscode-editor-background);padding:1rem;margin:0}
   h2{font-size:1rem;margin:0 0 .75rem}
@@ -98,8 +114,7 @@ ${state === "done" && summary && summary.results.length > 0 ? `
   <tbody id="tbody">${rows}</tbody>
 </table>` : state === "done" ? `<p class="empty">No matching seeds found.</p>` : ""}
 ${state === "searching" ? `<p class="empty" id="live">Running\u2026</p>` : ""}
-<script>
-  const vscode = acquireVsCodeApi();
+<script nonce="${nonce}">
   const tbody = document.getElementById('tbody');
   const live = document.getElementById('live');
   window.addEventListener('message', e => {
@@ -107,7 +122,13 @@ ${state === "searching" ? `<p class="empty" id="live">Running\u2026</p>` : ""}
     if(type === 'results' && tbody && results){
       results.forEach(r => {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td class="seed">'+r.seed+'</td><td class="score">'+(r.score>0?r.score:'\u2014')+'</td>';
+        const seedTd = document.createElement('td');
+        seedTd.className = 'seed';
+        seedTd.textContent = r.seed;
+        const scoreTd = document.createElement('td');
+        scoreTd.className = 'score';
+        scoreTd.textContent = r.score > 0 ? String(r.score) : '\u2014';
+        tr.append(seedTd, scoreTd);
         tbody.appendChild(tr);
       });
       if(live) live.textContent = tbody.children.length + ' hits so far\u2026';

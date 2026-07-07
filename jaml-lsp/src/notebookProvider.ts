@@ -120,10 +120,14 @@ export class JamlNotebookExecutor {
   }
 }
 
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
 function buildNotebookHtml(results: { seed: string; score: number }[], summary: { status: string; searched: string; matched: string; elapsedMs: number }): string {
   const isRunning = summary.status === "running";
   const rows = results.slice(0, 200).map(r =>
-    `<tr><td style="font-weight:600;letter-spacing:.05em;padding:2px 8px">${r.seed}</td><td style="padding:2px 8px;opacity:.6">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
+    `<tr><td style="font-weight:600;letter-spacing:.05em;padding:2px 8px">${esc(r.seed)}</td><td style="padding:2px 8px;opacity:.6">${r.score > 0 ? r.score : "\u2014"}</td></tr>`
   ).join("");
   const searchedFmt = Number(BigInt(summary.searched)).toLocaleString();
   const statusLine = isRunning

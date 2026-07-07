@@ -63,9 +63,8 @@ export function activate(ctx: vscode.ExtensionContext) {
   );
 }
 
-// Seed search + notebook + CodeLens — the WASM-backed features, restored from v1.2.0 and
-// rewired to the real motely-wasm@23.x API (see searchRunner.ts). The run button appears on
-// line 1 of every .jaml/.jummy file; .jamlnb notebooks run the same engine per cell.
+// Seed search + notebook + CodeLens, bound to motely-wasm@23.x (see searchRunner.ts). The run
+// button sits on line 1 of every .jaml/.jummy file; .jamlnb notebooks run the engine per cell.
 function registerSeedSearch(ctx: vscode.ExtensionContext) {
   initSearch(ctx.extensionPath);
 
