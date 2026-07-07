@@ -39,12 +39,21 @@ export function init(extensionPath: string): void {
   _extPath = extensionPath;
 }
 
-// Resolution order, real package name (motely-wasm@23.x, ESM, entry dist/index.mjs):
-//   1. dist/motely-wasm/dist/index.mjs — staged into the VSIX (self-contained)
-//   2. an open workspace's node_modules/motely-wasm — dev / monorepo (e.g. jaml-ui)
+// Resolution order (motely-wasm@23.x, ESM, entry dist/index.mjs):
+//   1. dist/motely-wasm/dist/index.mjs — staged into the VSIX
+//   2. an open workspace's node_modules/motely-wasm — e.g. jaml-ui
 function resolveWasmEntry(): string {
   const bundled = path.join(_extPath, "dist", "motely-wasm", "dist", "index.mjs");
   if (fs.existsSync(bundled)) return bundled;
+
+  // Loading motely-wasm from an open folder's node_modules means executing that folder's code.
+  // Gate it on workspace trust so an untrusted folder can't get its own module run via search.
+  if (!vscode.workspace.isTrusted) {
+    throw new Error(
+      "Seed search needs a trusted workspace to load motely-wasm from node_modules. " +
+        "Trust this workspace, or ship the WASM bundled in the extension.",
+    );
+  }
 
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     const entry = path.join(folder.uri.fsPath, "node_modules", "motely-wasm", "dist", "index.mjs");
@@ -90,9 +99,8 @@ type OnProgress = (searched: bigint, matching: bigint) => void;
 type OnResult = (seed: string, score: number) => void;
 type OnComplete = (summary: SearchSummary) => void;
 
-// Same public signature the notebook kernel and results panel already call — only the engine
-// binding underneath changed (real MotelyJaml.fromYaml + MotelySearch.searchRandom + the real
-// onProgress/onScoredResult event bus, replacing the drifted MotelyProgram/SearchEvents names).
+// Public signature is shared with the notebook kernel and results panel. Binds to
+// MotelyJaml.fromYaml + MotelySearch.searchRandom and the onProgress/onScoredResult event bus.
 export async function runSearch(
   jaml: string,
   seedCount: number,
