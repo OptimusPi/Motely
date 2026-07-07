@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Motely.Filters.Jaml;
 
 /// <summary>
@@ -10,7 +12,11 @@ namespace Motely.Filters.Jaml;
 /// AllDiscriminatorKeys(), and the loader's ClauseKeys(string) switch, all at once.
 /// </summary>
 public sealed record JamlDiscriminatorEntry(
+    [property: DynamicallyAccessedMembers(JamlDiscriminatorRegistry.ClauseReflectionShape)]
+    [param: DynamicallyAccessedMembers(JamlDiscriminatorRegistry.ClauseReflectionShape)]
     Type ClauseType,
+    [property: DynamicallyAccessedMembers(JamlDiscriminatorRegistry.ClauseReflectionShape)]
+    [param: DynamicallyAccessedMembers(JamlDiscriminatorRegistry.ClauseReflectionShape)]
     Type? SourceConfigType,
     Type? ValueEnumType,
     bool RollsAreInlineValue = false,
@@ -19,6 +25,21 @@ public sealed record JamlDiscriminatorEntry(
 
 public static class JamlDiscriminatorRegistry
 {
+    // The one set of reflection capabilities every clause/source-config type in this registry
+    // needs to survive NativeAOT trimming: a public parameterless constructor
+    // (Activator.CreateInstance), public instance properties (GetProperty for
+    // With/Sources/Jokers/IsWildcard/generic scalars), and public static fields (GetField for the
+    // ClauseKeys/SourceKeys markers). Every entry below is built from a compile-time
+    // `typeof(ConcreteType)` literal, so annotating ClauseType/SourceConfigType with this once
+    // (on the record above) is what lets the trimmer statically verify — not just tolerate —
+    // every downstream Activator.CreateInstance/GetProperty/GetField call in
+    // JamlClausePopulator and JamlConfigWriter that flows through entry.ClauseType or
+    // entry.SourceConfigType.
+    public const DynamicallyAccessedMemberTypes ClauseReflectionShape =
+        DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+        | DynamicallyAccessedMemberTypes.PublicProperties
+        | DynamicallyAccessedMemberTypes.PublicFields;
+
     public static readonly IReadOnlyDictionary<string, JamlDiscriminatorEntry> Entries =
         new Dictionary<string, JamlDiscriminatorEntry>(StringComparer.OrdinalIgnoreCase)
         {
@@ -64,7 +85,10 @@ public static class JamlDiscriminatorRegistry
     /// <summary>Reads a Type's public static readonly string[] field by name via reflection —
     /// the actual mechanism that lets JamlConfigLoader and Motely.Schema read ClauseKeys/
     /// SourceKeys off arbitrary clause/source types without each caller needing its own switch.</summary>
-    public static string[] StaticStringArrayField(Type type, string fieldName)
+    public static string[] StaticStringArrayField(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] Type type,
+        string fieldName
+    )
     {
         // FlattenHierarchy: AndClause/OrClause declare no ClauseKeys of their own — they inherit
         // it from LogicClause. Without this flag, GetField only sees a type's own members.
