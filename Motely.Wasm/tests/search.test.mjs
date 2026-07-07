@@ -6,6 +6,7 @@ import { voucherSearch } from "./fixtures.mjs";
 const { MotelyJaml, MotelySearch, MotelyJamlyzer, MotelyVoucher } = harness;
 
 const parse = (text) => MotelyJaml.fromYaml(text);
+const scoreOf = (result) => result?.score ?? result?.Score ?? 0;
 
 // A real, discriminating find: learn a deterministic attribute of a real seed from the analyzer,
 // then prove the finder finds that seed and rejects one that lacks it. The call returns the
@@ -76,5 +77,46 @@ describe("MotelySearch — real seed finding", () => {
             assert.match(s, /^[1-9A-Z]{8}$/, "the seed-match event carries bare base-35 8-char seeds");
         for (const r of a.results)
             assert.match(r.seed, /^[1-9A-Z]{8}$/, "returned results carry the same real seeds, typed");
+    });
+
+    // Real 10M-seed sweep, no fixture, no stub. Score = how many of ante 1/2/3's first pack
+    // hold a Popcorn, 0-3 — one `should` clause per ante (must clauses don't score) — then rank
+    // real hits by that real number. batchCharacterCount=4 sweeps 35^4 seeds/batch; 7 batches ~= 10.5M.
+    it("scores real seeds by how many of ante 1/2/3's first pack hold Popcorn, across ~10M seeds", async () => {
+        const filter = `name: PopcornFirstPackScore
+deck: Red
+stake: White
+should:
+  - joker: Popcorn
+    antes: [1]
+    sources:
+      boosterPacks: [0]
+    score: 1
+  - joker: Popcorn
+    antes: [2]
+    sources:
+      boosterPacks: [0]
+    score: 1
+  - joker: Popcorn
+    antes: [3]
+    sources:
+      boosterPacks: [0]
+    score: 1
+`;
+        const config = parse(filter);
+        const started = Date.now();
+        const results = await MotelySearch.searchSequential(config, 0n, 7n, 4);
+        const elapsedMs = Date.now() - started;
+
+        assert.ok(results.length > 0, "the sweep turns up real hits, not zero");
+        console.log(`swept ~10.5M seeds in ${elapsedMs}ms, ${results.length} hits, sample:`, results[0]);
+
+        const ranked = [...results].sort((a, b) => Number(scoreOf(b)) - Number(scoreOf(a)));
+        const top = ranked.slice(0, 5).map((r) => ({ seed: r.seed, score: Number(scoreOf(r)) }));
+        console.log("top Popcorn-first-pack seeds:", top);
+
+        for (const r of results) assert.match(r.seed, /^[1-9A-Z]{8}$/);
+        assert.ok(top[0].score >= 1, "best real seed scores at least 1 Popcorn-first-pack ante");
+        assert.ok(top[0].score <= 3, "score never exceeds the 3 antes actually checked");
     });
 });
