@@ -22,7 +22,6 @@
     "redhat.vscode-yaml"
   ],
   "activationEvents": [],
-  "type": "module",
   "main": "./dist/extension.js",
   "contributes": {
     "languages": [
@@ -137,10 +136,13 @@
       }
     }
   },
+  "bin": {
+    "jaml-language-server": "./dist/server.js"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node esbuild.mjs",
     "check-types": "tsc --noEmit",
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "npm run check-types && npm run build",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
@@ -152,6 +154,7 @@
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.97.0",
     "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.6.0"
   }
 }
