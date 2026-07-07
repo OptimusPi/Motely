@@ -206,6 +206,9 @@ public static partial class JamlConfigLoader
         return mapping.Count == 0 ? null : mapping;
     }
 
+    // Returns null ONLY when sources itself is null. A non-null-but-all-default config emits an
+    // empty `sources: {}` mapping — the loader treats null (use DefaultSources) and explicit-empty
+    // (override with "match nowhere") as distinct, so writing must preserve that distinction.
     private static YamlMapping? WriteSourceConfig(object? sources, Type sourceType)
     {
         if (sources is null)
@@ -221,7 +224,7 @@ public static partial class JamlConfigLoader
             if (node != null)
                 mapping.Add(new YamlValue(group.First()), node);
         }
-        return mapping.Count == 0 ? null : mapping;
+        return mapping;
     }
 
     private static void WriteExtraProperties(YamlMapping mapping, Type clauseType, IReadOnlyList<string> clauseKeys, object instance)
