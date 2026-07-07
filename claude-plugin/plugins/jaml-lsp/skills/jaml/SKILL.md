@@ -33,7 +33,7 @@ At least one of `must` / `should` / `mustNot` is required.
 
 Item keys: `joker`, `rareJoker`, `uncommonJoker`, `commonJoker`, `legendaryJoker`, `voucher`, `tag`, `smallBlindTag`, `bigBlindTag`, `boss`, `tarotCard`, `planetCard`, `spectralCard`, `standardCard`.
 
-Modifiers: `edition` (Foil, Holographic, Polychrome, Negative), `stickers` (Eternal, Perishable, Rental), `antes` (list of ante numbers), `score` (should only), `min` / `max` (occurrence bounds), `and` / `or` (nested clause lists).
+Modifiers: `edition` (Foil, Holographic, Polychrome, Negative), `stickers` (Eternal, Perishable, Rental), `antes` (integers 0–39 — ante 0 is a real ante, the Hieroglyph/Petroglyph rewind visit), `score` (should only), `min` / `max` (occurrence bounds), `and` / `or` (nested clause lists).
 
 `sources` scopes where an item may appear, per stream:
 
