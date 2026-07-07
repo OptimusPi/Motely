@@ -32,7 +32,13 @@ interface MotelyWasm {
 
 let ready: Promise<MotelyWasm> | null = null;
 let _extPath = "";
-let cancelled = false;
+
+// MotelySearch.onProgress/onScoredResult are global singletons on the WASM namespace — a broadcast
+// carries no search identity, so two concurrent searches' handlers would receive each other's
+// events. Enforce single-flight (one search at a time) and give the in-flight call its own cancel
+// token so stopSearch targets exactly it, not a later search that reused a shared flag.
+let inFlight = false;
+let activeToken: { cancelled: boolean } | null = null;
 
 /** Must be called once with the extension path before any search. */
 export function init(extensionPath: string): void {
@@ -108,17 +114,23 @@ export async function runSearch(
   onResult: OnResult,
   onComplete: OnComplete,
 ): Promise<void> {
+  if (inFlight) {
+    throw new Error("A JAML search is already running. Stop it before starting another.");
+  }
   const { MotelyJaml, MotelySearch } = await getWasm();
-  cancelled = false;
+
+  inFlight = true;
+  const token = { cancelled: false };
+  activeToken = token;
 
   const results: SearchResult[] = [];
   const startMs = Date.now();
 
   const progressHandler = (p: MotelyProgress) => {
-    if (!cancelled) onProgress(p.seedsSearched, p.matchingSeeds);
+    if (!token.cancelled) onProgress(p.seedsSearched, p.matchingSeeds);
   };
   const resultHandler = (r: MotelyScoredSeedResult) => {
-    if (cancelled) return;
+    if (token.cancelled) return;
     results.push({ seed: r.seed, score: r.score });
     onResult(r.seed, r.score);
   };
@@ -136,7 +148,7 @@ export async function runSearch(
       score: r.score,
     })) ?? results;
     onComplete({
-      status: cancelled ? "stopped" : "done",
+      status: token.cancelled ? "stopped" : "done",
       searched: seedCount.toString(),
       matched: authoritative.length.toString(),
       results: authoritative.sort((a, b) => b.score - a.score).slice(0, 500),
@@ -145,12 +157,14 @@ export async function runSearch(
   } finally {
     MotelySearch.onProgress.unsubscribe(progressHandler);
     MotelySearch.onScoredResult.unsubscribe(resultHandler);
+    inFlight = false;
+    if (activeToken === token) activeToken = null;
   }
 }
 
 // motely-wasm@23.x's search surface has no cancellation entry point — searchRandom is a single
-// awaited call. Best effort: flip a flag so in-flight callbacks stop reaching the UI. The engine
-// keeps running to completion under the hood.
+// awaited call. Best effort: flip the active call's token so its callbacks stop reaching the UI.
+// The engine keeps running to completion under the hood.
 export function stopSearch(): void {
-  cancelled = true;
+  if (activeToken) activeToken.cancelled = true;
 }
