@@ -53,6 +53,43 @@ public sealed class JamlConfigWriterTests
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
+    // Regression: an explicit `sources: {}` means "override with match-nowhere" and is distinct
+    // from an absent sources: (use DefaultSources). ToYaml must not collapse the two by dropping
+    // an all-default sources block.
+    [Fact]
+    public void ToYaml_PreservesExplicitEmptySources()
+    {
+        const string jaml = """
+            id: empty-sources
+            must:
+              - joker: [Blueprint]
+                sources: {}
+            """;
+        var original = JamlConfigLoader.FromYaml(jaml);
+        var originalClause = Assert.IsType<JokerClause>(original.Must[0]);
+        Assert.NotNull(originalClause.Sources);
+
+        var reloaded = JamlConfigLoader.FromYaml(JamlConfigLoader.ToYaml(original));
+        var reloadedClause = Assert.IsType<JokerClause>(reloaded.Must[0]);
+        Assert.NotNull(reloadedClause.Sources);
+    }
+
+    // Regression: erraticRanks: [...] with an explicit min: must carry that min onto the wrapping
+    // OrClause (how many of the listed ranks must appear), not silently reset to 1.
+    [Fact]
+    public void ErraticRanks_HonorsExplicitMin()
+    {
+        const string jaml = """
+            id: erratic-min
+            must:
+              - erraticRanks: [Two, Three, Four]
+                min: 3
+            """;
+        var config = JamlConfigLoader.FromYaml(jaml);
+        var or = Assert.IsType<Motely.Filters.OrClause>(config.Must[0]);
+        Assert.Equal(3, or.Min);
+    }
+
     private static string FindCorpusDir()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

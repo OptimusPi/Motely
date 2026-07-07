@@ -265,7 +265,9 @@ public static partial class JamlConfigLoader
                                     }
                             )
                             .ToArray(),
-                        Min = 1,
+                        // How many of the listed erratic ranks must appear (child Min=1 is
+                        // per-rank: each just needs one occurrence). Honor an explicit min:.
+                        Min = min,
                         Score = score,
                         Label = label,
                     },
