@@ -227,13 +227,13 @@ deck: Red
 stake: White
 must:
   - luckyMoney: [0]
-    sources:
+    with:
       luck: 5
 should:
   - luckyMoney: [0]
     label: lucky_money_r0_luck5
     score: 100
-    sources:
+    with:
       luck: 5
 `, ["41111111"]);
         assert.equal(Number(luck5.progress.seedsSearched), 1);
@@ -255,7 +255,7 @@ deck: Red
 stake: White
 must:
   - luckyMult: [0]
-    sources:
+    with:
       luck: 5
 `, seeds);
 

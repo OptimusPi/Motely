@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Motely.Filters.Jaml;
@@ -85,7 +86,10 @@ public static partial class JamlConfigLoader
     // Replaces ParseJokerSources/ParseLegendarySources/ParseTarotSources/ParseSpectralSources/
     // ParsePlanetSources/ParseStandardSources: one reflection-driven reader over a source-config
     // type's own SourceKeys, honoring the two real bool aliases (requireMega/requireMegaPack).
-    private static object? PopulateSourceConfig(Type sourceType, IReader data)
+    private static object? PopulateSourceConfig(
+        [DynamicallyAccessedMembers(JamlDiscriminatorRegistry.ClauseReflectionShape)] Type sourceType,
+        IReader data
+    )
     {
         var block = data.GetObject("sources");
         if (block is null)
