@@ -56,6 +56,15 @@
         "path": "./snippets/jaml.json"
       }
     ],
+    "chatParticipants": [
+      {
+        "id": "jimbo.chat",
+        "name": "jimbo",
+        "fullName": "Jimbo",
+        "description": "Ask about JAML syntax, get help writing or explaining Balatro seed-filter clauses.",
+        "isSticky": true
+      }
+    ],
     "configuration": {
       "title": "JAML",
       "properties": {
