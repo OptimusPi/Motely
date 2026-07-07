@@ -61,7 +61,11 @@ Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[Rena
 
 ### JAML editor toolchain
 
-`dotnet run --project Motely.Schema` (from the repo root) regenerates `jaml-lang/src/generated.ts`, `jaml-lsp/syntaxes/jaml.tmLanguage.json`, and `jaml-lsp/schemas/jaml.schema.json` straight from `JamlVocab` and the engine's enums — rerun it after any vocabulary or enum change so the editor tooling stays in lockstep (`--dry-run` shows the target paths). `jaml-lang/` is the TypeScript language core (`npm test` runs its Node suite); `jaml-lsp/` is the VS Code extension for `.jaml`/`.jummy` files (`npm run build`, `npm run package` for the vsix).
+One source of truth drives the whole toolchain. `JamlDiscriminatorRegistry` maps each discriminator to its clause and source-config types, and every type carries its own complete `ClauseKeys`/`SourceKeys` list — so the loader, the schema generator, and the editor tooling all read the same facts. `dotnet run Motely.Schema.cs` (a C# file-based app, from the repo root) regenerates `jaml-lang/src/generated.ts`, `jaml-lsp/syntaxes/jaml.tmLanguage.json`, and `jaml-lsp/schemas/jaml.schema.json` straight from that registry and the engine's enums — rerun it after any vocabulary or enum change and the editor tooling stays in lockstep.
+
+`jaml-lang/` is the TypeScript language core (`validate`/`getCompletions`/`getHover`/`getDiagnostics` over the generated vocab; `npm test` runs its Node suite). `jaml-lsp/` bundles that core two ways with esbuild: `dist/extension.js`, the VS Code extension for `.jaml`/`.jummy` files (highlighting, diagnostics, completions, hover, the `@jimbo` chat participant, seed search, and `.jamlnb` notebooks — `npm run build`, `npm run package` for the vsix), and `dist/server.js`, a standalone stdio LSP server any editor can spawn (Neovim, Zed, Claude Code's IDE diagnostics), exposed via the `jaml-language-server` bin.
+
+`JamlConfigLoader` reads YAML/JSON to a typed `JamlConfig`; `JamlConfigLoader.ToYaml` writes one back out, so editors and apps can round-trip a filter through save and reload.
 
 ### Supporting directories
 
@@ -73,7 +77,6 @@ Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[Rena
 
 - `.claude/skills/release-motely-wasm/` — the complete npm release ritual; pifreak invokes it (`/release-motely-wasm`) and confirms the version and the publish.
 - `.claude/skills/jaml-authoring/` — the JAML clause/JUMMY/vocabulary reference; read it before writing any `.jaml` filter.
-- `docs/claude-hooks-ready.json` — build-on-.cs-edit and seed-lake-guard hooks, staged for `.claude/settings.json`; pifreak activates them by hand.
 
 ## Gotchas worth knowing
 
