@@ -37,11 +37,15 @@ export default function App() {
 
 ## Boot motely-wasm
 
+`motely-wasm` ships embedded — the boot resources travel inside the module, so `boot()` takes no argument.
+
 ```tsx
 import bootsharp from "motely-wasm";
 
-await bootsharp.boot("/motely-wasm/bin");
+if (bootsharp.getStatus() === bootsharp.BootStatus.Standby) await bootsharp.boot();
 ```
+
+Boot once per JS realm. Each web worker is its own realm, so a worker fleet boots one engine apiece — see the fleet section in the [motely-wasm README](https://www.npmjs.com/package/motely-wasm) for the module-worker and `MessagePort` rules that keep a worker from hanging.
 
 ## MCP App example
 

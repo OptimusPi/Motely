@@ -18,6 +18,15 @@ export const Default: Story = {
     result: fixture as unknown as Parameters<typeof JamlyzerView>[0]["result"],
     deck: 0,
     stake: 0,
-    maxAnte: 8,
+  },
+};
+
+export const WithClauseHighlighting: Story = {
+  args: {
+    result: fixture as unknown as Parameters<typeof JamlyzerView>[0]["result"],
+    deck: 0,
+    stake: 0,
+    jamlText: `deck: Red\nstake: White\nshould:\n  - joker: WeeJoker\n    score: 1\n  - tarot: The Fool\n    score: 1\nmust:\n  - boss: The Hook\nmustNot:\n  - voucher: Overstock\n`,
+    tallies: [2, 1],
   },
 };

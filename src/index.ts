@@ -24,6 +24,22 @@ export {
 } from "./components/JamlyzerView.js";
 
 export {
+  JamlyzerBulk,
+  type JamlyzerBulkProps,
+} from "./components/JamlyzerBulk.js";
+
+export {
+  parseJamlClauses,
+  type ParsedJamlClause,
+  type JamlClauseKind,
+  type JamlItemType,
+  type ParsedJamlFilters,
+  matchClauseToItem,
+  matchClauseToAnte,
+  matchMotelyItemToClause,
+} from "./lib/jaml/parseClauses.js";
+
+export {
   DeckSprite,
   DECK_SPRITE_POS,
   STAKE_SPRITE_POS,
