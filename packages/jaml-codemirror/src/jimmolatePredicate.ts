@@ -1,21 +1,29 @@
 import type { Diagnostic } from "@codemirror/lint";
+import * as Motely from "motely-wasm";
 import { Jimmolate } from "motely-wasm";
+import type { MotelySingleSearchContext } from "motely-wasm";
 
 /**
  * The OG Immolate contract: `filter(inst) => score`. `inst` is the live
  * `MotelySingleSearchContext` interop instance (same context native C#
- * filters use). Booleans coerce to 1/0; the engine keeps every seed whose
- * score reaches the cutoff (default 1).
+ * filters use), typed straight from motely-wasm's generated declarations.
+ * Booleans coerce to 1/0; the engine keeps every seed whose score reaches
+ * the cutoff (default 1).
  */
-export type JimmolatePredicate = (inst: unknown) => number | boolean;
+export type JimmolatePredicate = (
+  inst: MotelySingleSearchContext
+) => number | boolean;
 
-export const DEFAULT_JIMMOLATE_SOURCE = `// Jimmolate — a JS-authored predicate run inside the engine, alongside your
-// JAML must / should / mustNot clauses. Contract: filter(inst) => score
-// (booleans coerce to 1/0; the engine keeps seeds whose score reaches the
-// cutoff, default 1). inst is the live MotelySingleSearchContext — the same
-// context native C# filters use.
-
-return true;
+export const DEFAULT_JIMMOLATE_SOURCE = `// Jimmolate — a JS-authored score provider run inside the engine, alongside
+// your JAML must / should / mustNot clauses. Contract: filter(inst) => score.
+// The engine keeps seeds whose score reaches the cutoff (default 1); booleans
+// coerce to 1/0. inst is the live MotelySingleSearchContext — the same context
+// native C# filters use. A real example, not a stub: score ante 1's first
+// voucher, weighting the money engines.
+const voucher = inst.getAnteFirstVoucher(1);
+if (voucher === Motely.MotelyVoucher.SeedMoney) return 2;
+if (voucher === Motely.MotelyVoucher.MoneyTree) return 3;
+return 1;
 `;
 
 /**
@@ -31,8 +39,8 @@ return true;
  */
 export function compileJimmolatePredicate(source: string): JimmolatePredicate {
   // eslint-disable-next-line @typescript-eslint/no-implied-eval -- this IS the feature: user JS run per-seed inside the search
-  const fn = new Function("inst", source);
-  return fn as JimmolatePredicate;
+  const fn = new Function("inst", "Motely", source);
+  return ((inst: unknown) => fn(inst, Motely)) as JimmolatePredicate;
 }
 
 export function jimmolateLinter(source: string): Diagnostic[] {
@@ -65,7 +73,7 @@ function coerce(result: number | boolean): number {
  * without needing to rebind before another boot. Call once, before boot().
  */
 export function bindJimmolateBridge(): void {
-  Jimmolate.filter = (inst: unknown) => coerce(currentPredicate(inst));
+  Jimmolate.filter = (inst: MotelySingleSearchContext) => coerce(currentPredicate(inst));
 }
 
 export function setJimmolatePredicate(predicate: JimmolatePredicate): void {

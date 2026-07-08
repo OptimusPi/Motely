@@ -1,6 +1,6 @@
 {
   "name": "jaml-codemirror",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "type": "module",
   "description": "CodeMirror 6 language support for JAML with diagnostics and completions.",
@@ -20,7 +20,7 @@
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.5",
     "@uiw/react-codemirror": "^4.23.10",
-    "motely-wasm": "^23.3.0",
+    "motely-wasm": "^24.0.0",
     "react": "^19.2.6",
     "yaml": "^2.7.1"
   },

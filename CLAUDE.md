@@ -4,7 +4,7 @@ This is a pnpm workspace centered on:
 
 1. **`src/json-render/`** — zero-dependency JSON-to-React engine with a Balatro component catalog; its Storybook stories live in `src/json-render/stories/`.
 2. **`examples/mcp-seed-finder/`** — a working MCP App that uses json-render + motely-wasm (plus `examples/seed-finder`, the web variant).
-3. **`packages/`** — `jaml-codemirror` (editor integration, a workspace dep of the MCP example), `jaml-lang` (VS Code extension), and `jaml-lsp`.
+3. **`packages/`** — `jaml-codemirror` (editor integration, a workspace dep of the MCP example). The real `jaml-lang`/`jaml-lsp` (JAML language support, generated from the C# engine via `Motely.Schema`) live in the `MotelyJAML` repo, not here — a separate hand-written copy used to live in this repo's `packages/` and was deleted as duplicate, drifting work.
 
 `src/ui/` holds the Jimbo CSS tokens (`jimbo.css`, `jimbo-tokens.css`, `tokens.ts`) that json-render components use.
 
