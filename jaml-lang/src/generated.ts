@@ -4,6 +4,7 @@
 
 export const Enums: Record<string, readonly string[]> = {
     MotelyBossBlind: ["TheClub", "TheGoad", "TheHead", "TheHook", "TheManacle", "ThePillar", "ThePsychic", "TheWindow", "TheArm", "TheFish", "TheFlint", "TheHouse", "TheMark", "TheMouth", "TheNeedle", "TheWall", "TheWater", "TheWheel", "TheEye", "TheTooth", "ThePlant", "TheSerpent", "TheOx", "AmberAcorn", "CeruleanBell", "CrimsonHeart", "VerdantLeaf", "VioletVessel"],
+    MotelyDeck: ["Red", "Blue", "Yellow", "Green", "Black", "Magic", "Nebula", "Ghost", "Abandoned", "Checkered", "Zodiac", "Painted", "Anaglyph", "Plasma", "Erratic"],
     MotelyItemEdition: ["None", "Foil", "Holographic", "Polychrome", "Negative"],
     MotelyItemEnhancement: ["None", "Bonus", "Mult", "Wild", "Glass", "Steel", "Stone", "Gold", "Lucky"],
     MotelyItemSeal: ["None", "Gold", "Red", "Blue", "Purple"],
@@ -14,6 +15,7 @@ export const Enums: Record<string, readonly string[]> = {
     MotelyJokerUncommon: ["JokerStencil", "FourFingers", "Mime", "CeremonialDagger", "MarbleJoker", "LoyaltyCard", "Dusk", "Fibonacci", "SteelJoker", "Hack", "Pareidolia", "SpaceJoker", "Burglar", "Blackboard", "SixthSense", "Constellation", "Hiker", "CardSharp", "Madness", "Seance", "Vampire", "Shortcut", "Hologram", "Cloud9", "Rocket", "MidasMask", "Luchador", "GiftCard", "TurtleBean", "Erosion", "ToTheMoon", "StoneJoker", "LuckyCat", "Bull", "DietCola", "TradingCard", "FlashCard", "SpareTrousers", "Ramen", "Seltzer", "Castle", "MrBones", "Acrobat", "SockAndBuskin", "Troubadour", "Certificate", "SmearedJoker", "Throwback", "RoughGem", "Bloodstone", "Arrowhead", "OnyxAgate", "GlassJoker", "Showman", "FlowerPot", "MerryAndy", "OopsAll6s", "TheIdol", "SeeingDouble", "Matador", "Satellite", "Cartomancer", "Astronomer", "Bootstraps"],
     MotelyPlanetCard: ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "PlanetX", "Ceres", "Eris"],
     MotelySpectralCard: ["Familiar", "Grim", "Incantation", "Talisman", "Aura", "Wraith", "Sigil", "Ouija", "Ectoplasm", "Immolate", "Ankh", "DejaVu", "Hex", "Trance", "Medium", "Cryptid", "TheSoul", "BlackHole"],
+    MotelyStake: ["White", "Red", "Green", "Black", "Blue", "Purple", "Orange", "Gold"],
     MotelyStandardcardRank: ["Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King", "Ace"],
     MotelyStandardcardSuit: ["Clubs", "Diamonds", "Hearts", "Spades"],
     MotelyTag: ["UncommonTag", "RareTag", "NegativeTag", "FoilTag", "HolographicTag", "PolychromeTag", "InvestmentTag", "VoucherTag", "BossTag", "StandardTag", "CharmTag", "MeteorTag", "BuffoonTag", "HandyTag", "GarbageTag", "EtherealTag", "CouponTag", "DoubleTag", "JuggleTag", "D6Tag", "TopupTag", "SpeedTag", "OrbitalTag", "EconomyTag"],
@@ -23,7 +25,6 @@ export const Enums: Record<string, readonly string[]> = {
 
 export const Discriminators: readonly string[] = ["and", "bigBlindTag", "bloodstoneTrigger", "boss", "businessPayout", "cavendishExtinct", "commonJoker", "commonJokers", "erraticRank", "erraticRanks", "erraticSuit", "glassDestroy", "grosMichelExtinct", "joker", "jokers", "legendaryJoker", "legendaryJokers", "luckyMoney", "luckyMult", "misprintMult", "or", "parkingPayout", "planetCard", "rareJoker", "rareJokers", "smallBlindTag", "spaceLevelup", "spectralCard", "standardCard", "startingDraw", "tag", "tarotCard", "uncommonJoker", "uncommonJokers", "voucher", "wheelOfFortune", "wheelStaysFlipped"];
 export const RootKeys: readonly string[] = ["author", "dateCreated", "deck", "description", "id", "must", "mustNot", "name", "seeds", "should", "stake"];
-export const AllClauseLevelKeys: readonly string[] = ["ante", "antes", "clauses", "edition", "enhancement", "label", "luck", "max", "min", "mult", "rank", "rolls", "score", "seal", "soulCardOnly", "soulEditionRolls", "sources", "stickers", "suit", "value", "vouchers", "with"];
 
 export const RootValueEnums: Record<string, string> = { deck: "MotelyDeck", stake: "MotelyStake" };
 

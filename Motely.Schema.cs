@@ -90,9 +90,17 @@ var clauseKeyValueEnum = new Dictionary<string, string>(StringComparer.OrdinalIg
     ["rank"] = "MotelyStandardcardRank",
     ["stickers"] = "MotelyJokerSticker",
 };
+// Root keys whose value is constrained to an enum. Emitted as RootValueEnums and, like the
+// clause-level table, their enums must be present in enumMap for validation to have members.
+var rootValueEnums = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+{
+    ["deck"] = "MotelyDeck",
+    ["stake"] = "MotelyStake",
+};
+
 // These enums aren't always referenced as a discriminator's own value (e.g. MotelyItemEdition
 // backs a clause-level "edition:" key, not a discriminator), so make sure they're in enumMap too.
-foreach (var enumName in clauseKeyValueEnum.Values.Distinct())
+foreach (var enumName in clauseKeyValueEnum.Values.Concat(rootValueEnums.Values).Distinct())
 {
     if (enumMap.ContainsKey(enumName)) continue;
     var type = typeof(JamlConfig).Assembly.GetTypes().FirstOrDefault(t => t.Name == enumName && t.IsEnum)
@@ -146,10 +154,12 @@ ts.AppendLine();
 
 ts.AppendLine($"export const Discriminators: readonly string[] = [{string.Join(", ", discriminators.Select(k => $"\"{k}\""))}];");
 ts.AppendLine($"export const RootKeys: readonly string[] = [{string.Join(", ", rootKeys.OrderBy(k => k).Select(k => $"\"{k}\""))}];");
-ts.AppendLine($"export const AllClauseLevelKeys: readonly string[] = [{string.Join(", ", allClauseLevelKeys.Select(k => $"\"{k}\""))}];");
+// No AllClauseLevelKeys export: a clause key is only valid relative to a discriminator
+// (DiscriminatorClauseKeys). The flat union exists solely for the TextMate grammar below,
+// where highlighting cannot be context-sensitive.
 ts.AppendLine();
 
-ts.AppendLine("export const RootValueEnums: Record<string, string> = { deck: \"MotelyDeck\", stake: \"MotelyStake\" };");
+ts.AppendLine($"export const RootValueEnums: Record<string, string> = {{ {string.Join(", ", rootValueEnums.Select(kv => $"{kv.Key}: \"{kv.Value}\""))} }};");
 ts.AppendLine();
 
 ts.AppendLine("export const DiscriminatorValueEnum: Record<string, string> = {");

@@ -14,6 +14,8 @@ npm install motely-wasm
 
 Bootsharp exports a default runtime object plus named API namespaces. Subscribe to exported events and bind imports before `boot()`.
 
+This package ships embedded: the boot resources travel inside the module, so `boot()` takes no argument. `getStatus()` reports where the runtime is — boot when it returns `BootStatus.Standby`, and it's ready to use at `BootStatus.Booted`.
+
 ```js
 import bootsharp, {
   MotelyJaml,
@@ -93,6 +95,58 @@ const fromWalk = await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
 ```
 
 `searchSequential` uses bigint batch indices because the C# parameters are `long`.
+
+## The fleet — one engine per web worker
+
+A batch index is a seed prefix. `batchChars` names how many trailing characters a single batch enumerates, so one batch covers `35 ** batchChars` seeds and the space holds `35 ** (8 - batchChars)` batches. Batch `0` is the block of seeds beginning `1111…`, batch `1` the next block, and so on up through `GGGG…`. Handing a worker a range of batch indices is the same as handing it a range of seed prefixes.
+
+Give each worker its own contiguous block and the fleet needs no coordination at all:
+
+```js
+const totalBatches = 35 ** (8 - batchChars);
+const blockSize = Math.floor(totalBatches / fleetSize);
+
+// worker w owns [w * blockSize, (w + 1) * blockSize) — the last worker takes the remainder
+const startBatch = w * blockSize;
+const endBatch = w === fleetSize - 1 ? totalBatches : (w + 1) * blockSize;
+await MotelySearch.searchSequential(config, BigInt(startBatch), BigInt(endBatch), batchChars);
+```
+
+Blocks are disjoint by construction, so two workers never report the same seed and the fleet shares nothing: no queue, no locks, no mid-run coordination. A worker computes its own range from its own index, so it never needs to know the fleet size or agree with anyone. Losing a worker simply leaves its block unfinished, and every other block is untouched.
+
+Search the seed space for however long the user cares to wait. The full 35⁸ ≈ 2.25 trillion seeds take days; real searches sample, then stop. Blocks make that sampling addressable — you can say which prefixes you covered, resume from a saved cursor, and hand block `w` to a second browser or a server just as easily as to a second worker.
+
+Report progress per worker. Each worker owns its own counts, and summing them for a headline number is the consumer's job — a fleet has no single global tick to subscribe to.
+
+Two environment rules keep a worker from hanging silently:
+
+- **Use a module worker.** `new Worker(url, { type: "module" })`. Chromium forbids dynamic `import()` inside a classic worker, and import maps don't reach workers, so pass `motely-wasm`'s absolute URL and `import()` it inside.
+- **Release `self.onmessage` before `boot()`.** `dotnet.js` instantiates assets over the worker's global message channel and never resolves while an app handler holds it ([dotnet/runtime#114918](https://github.com/dotnet/runtime/issues/114918)). Take the init message once, null the handler, and run all further traffic over a transferred `MessagePort`.
+
+Stop a worker with `worker.terminate()` — it ends the batch mid-loop, immediately.
+
+```js
+// worker.js
+self.onmessage = (e) => {
+  self.onmessage = null; // free the global channel for dotnet.js
+  const { port, motelyUrl, jaml, startBatch, endBatch, batchChars } = e.data;
+  (async () => {
+    const engine = await import(motelyUrl);
+    engine.Jimmolate.filter = () => 1;
+    if (engine.default.getStatus() === engine.default.BootStatus.Standby)
+      await engine.default.boot();
+
+    const config = engine.MotelyJaml.fromYaml(jaml);
+    const found = [];
+    const onScored = (r) => found.push({ seed: r.seed, score: r.score });
+    engine.MotelySearch.onScoredResult.subscribe(onScored);
+    await engine.MotelySearch.searchSequential(config, BigInt(startBatch), BigInt(endBatch), batchChars);
+    port.postMessage({ type: "finished", found });
+  })();
+};
+```
+
+Boot each worker's engine once and reuse it: booting is the expensive part, searching is not.
 
 ## Jimmolate
 
