@@ -16,9 +16,8 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "jaml-codemirror": "workspace:*",
     "jaml-ui": "workspace:*",
-    "motely-wasm": "^24.0.0",
+    "motely-wasm": "^24.1.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "zod": "^4.1.13"
