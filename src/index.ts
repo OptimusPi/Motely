@@ -24,6 +24,11 @@ export {
 } from "./components/JamlyzerView.js";
 
 export {
+  JimboBalatroFooter,
+  type JimboBalatroFooterProps,
+} from "./components/JimboBalatroFooter.js";
+
+export {
   JamlyzerBulk,
   type JamlyzerBulkProps,
 } from "./components/JamlyzerBulk.js";
