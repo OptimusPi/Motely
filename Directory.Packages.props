@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>24.0.0</MotelyVersion>
+    <MotelyVersion>24.1.0</MotelyVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors>$(WarningsAsErrors);NU1603</WarningsAsErrors>
   </PropertyGroup>
