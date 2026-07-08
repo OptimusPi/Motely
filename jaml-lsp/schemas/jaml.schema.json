@@ -28,11 +28,36 @@
     },
     "deck": {
       "type": "string",
-      "enum": []
+      "enum": [
+        "Red",
+        "Blue",
+        "Yellow",
+        "Green",
+        "Black",
+        "Magic",
+        "Nebula",
+        "Ghost",
+        "Abandoned",
+        "Checkered",
+        "Zodiac",
+        "Painted",
+        "Anaglyph",
+        "Plasma",
+        "Erratic"
+      ]
     },
     "stake": {
       "type": "string",
-      "enum": []
+      "enum": [
+        "White",
+        "Red",
+        "Green",
+        "Black",
+        "Blue",
+        "Purple",
+        "Orange",
+        "Gold"
+      ]
     },
     "must": {
       "type": "array",

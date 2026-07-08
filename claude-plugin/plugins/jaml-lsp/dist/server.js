@@ -10100,6 +10100,7 @@ function getWellformedEdit(textEdit) {
 // ../jaml-lang/dist/generated.js
 var Enums = {
   MotelyBossBlind: ["TheClub", "TheGoad", "TheHead", "TheHook", "TheManacle", "ThePillar", "ThePsychic", "TheWindow", "TheArm", "TheFish", "TheFlint", "TheHouse", "TheMark", "TheMouth", "TheNeedle", "TheWall", "TheWater", "TheWheel", "TheEye", "TheTooth", "ThePlant", "TheSerpent", "TheOx", "AmberAcorn", "CeruleanBell", "CrimsonHeart", "VerdantLeaf", "VioletVessel"],
+  MotelyDeck: ["Red", "Blue", "Yellow", "Green", "Black", "Magic", "Nebula", "Ghost", "Abandoned", "Checkered", "Zodiac", "Painted", "Anaglyph", "Plasma", "Erratic"],
   MotelyItemEdition: ["None", "Foil", "Holographic", "Polychrome", "Negative"],
   MotelyItemEnhancement: ["None", "Bonus", "Mult", "Wild", "Glass", "Steel", "Stone", "Gold", "Lucky"],
   MotelyItemSeal: ["None", "Gold", "Red", "Blue", "Purple"],
@@ -10110,6 +10111,7 @@ var Enums = {
   MotelyJokerUncommon: ["JokerStencil", "FourFingers", "Mime", "CeremonialDagger", "MarbleJoker", "LoyaltyCard", "Dusk", "Fibonacci", "SteelJoker", "Hack", "Pareidolia", "SpaceJoker", "Burglar", "Blackboard", "SixthSense", "Constellation", "Hiker", "CardSharp", "Madness", "Seance", "Vampire", "Shortcut", "Hologram", "Cloud9", "Rocket", "MidasMask", "Luchador", "GiftCard", "TurtleBean", "Erosion", "ToTheMoon", "StoneJoker", "LuckyCat", "Bull", "DietCola", "TradingCard", "FlashCard", "SpareTrousers", "Ramen", "Seltzer", "Castle", "MrBones", "Acrobat", "SockAndBuskin", "Troubadour", "Certificate", "SmearedJoker", "Throwback", "RoughGem", "Bloodstone", "Arrowhead", "OnyxAgate", "GlassJoker", "Showman", "FlowerPot", "MerryAndy", "OopsAll6s", "TheIdol", "SeeingDouble", "Matador", "Satellite", "Cartomancer", "Astronomer", "Bootstraps"],
   MotelyPlanetCard: ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "PlanetX", "Ceres", "Eris"],
   MotelySpectralCard: ["Familiar", "Grim", "Incantation", "Talisman", "Aura", "Wraith", "Sigil", "Ouija", "Ectoplasm", "Immolate", "Ankh", "DejaVu", "Hex", "Trance", "Medium", "Cryptid", "TheSoul", "BlackHole"],
+  MotelyStake: ["White", "Red", "Green", "Black", "Blue", "Purple", "Orange", "Gold"],
   MotelyStandardcardRank: ["Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King", "Ace"],
   MotelyStandardcardSuit: ["Clubs", "Diamonds", "Hearts", "Spades"],
   MotelyTag: ["UncommonTag", "RareTag", "NegativeTag", "FoilTag", "HolographicTag", "PolychromeTag", "InvestmentTag", "VoucherTag", "BossTag", "StandardTag", "CharmTag", "MeteorTag", "BuffoonTag", "HandyTag", "GarbageTag", "EtherealTag", "CouponTag", "DoubleTag", "JuggleTag", "D6Tag", "TopupTag", "SpeedTag", "OrbitalTag", "EconomyTag"],
@@ -10118,7 +10120,6 @@ var Enums = {
 };
 var Discriminators = ["and", "bigBlindTag", "bloodstoneTrigger", "boss", "businessPayout", "cavendishExtinct", "commonJoker", "commonJokers", "erraticRank", "erraticRanks", "erraticSuit", "glassDestroy", "grosMichelExtinct", "joker", "jokers", "legendaryJoker", "legendaryJokers", "luckyMoney", "luckyMult", "misprintMult", "or", "parkingPayout", "planetCard", "rareJoker", "rareJokers", "smallBlindTag", "spaceLevelup", "spectralCard", "standardCard", "startingDraw", "tag", "tarotCard", "uncommonJoker", "uncommonJokers", "voucher", "wheelOfFortune", "wheelStaysFlipped"];
 var RootKeys = ["author", "dateCreated", "deck", "description", "id", "must", "mustNot", "name", "seeds", "should", "stake"];
-var AllClauseLevelKeys = ["ante", "antes", "clauses", "edition", "enhancement", "label", "luck", "max", "min", "mult", "rank", "rolls", "score", "seal", "soulCardOnly", "soulEditionRolls", "sources", "stickers", "suit", "value", "vouchers", "with"];
 var RootValueEnums = { deck: "MotelyDeck", stake: "MotelyStake" };
 var DiscriminatorValueEnum = {
   "bigBlindTag": "MotelyTag",
@@ -10243,7 +10244,6 @@ function getDiagnostics(text) {
 }
 var ROOT_KEYS = new Set(RootKeys.map((k) => k.toLowerCase()));
 var DISC_SET = new Set(Discriminators.map((k) => k.toLowerCase()));
-var CLAUSE_KEYS = new Set(AllClauseLevelKeys.map((k) => k.toLowerCase()));
 var CLAUSE_VALUE_ENUM = new Map(Object.entries(ClauseKeyValueEnum).map(([k, v]) => [k.toLowerCase(), v]));
 function lineOffsets(text) {
   const offsets = [0];
@@ -10268,6 +10268,22 @@ function indentOf(raw) {
   while (i < raw.length && (raw[i] === " " || raw[i] === "	"))
     i++;
   return i;
+}
+function findClauseDiscriminator(lines, start, clauseIndent) {
+  for (let j = start; j < lines.length; j++) {
+    const raw = lines[j];
+    const trimmed = raw.trimStart();
+    if (!trimmed || trimmed.startsWith("#"))
+      continue;
+    if (j > start && indentOf(raw) <= clauseIndent)
+      break;
+    const content = j === start ? trimmed.replace(/^-\s*/, "") : trimmed;
+    const key = extractKey("  " + content);
+    if (key && DISC_SET.has(key.toLowerCase())) {
+      return Discriminators.find((d) => d.toLowerCase() === key.toLowerCase()) ?? key;
+    }
+  }
+  return null;
 }
 function validate(text) {
   const diags = [];
@@ -10302,7 +10318,16 @@ function validate(text) {
   let clauseDiscriminator = null;
   let inSources = false;
   let sourcesIndent = -1;
+  let inWith = false;
+  let withIndent = -1;
   let inSection = false;
+  function checkKeyAllowed(disc, key, lineIdx, raw, ind) {
+    const allowed = DiscriminatorClauseKeys[disc];
+    if (allowed && !allowed.some((k) => k.toLowerCase() === key.toLowerCase())) {
+      const col = raw.indexOf(key, ind);
+      diag(lineIdx, col, key.length, "error", `Key '${key}' is not valid for ${disc}.`);
+    }
+  }
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     const trimmed = raw.trimStart();
@@ -10339,16 +10364,20 @@ function validate(text) {
     if (trimmed.startsWith("- ") && inSection) {
       const content = trimmed.slice(2).trimStart();
       clauseIndent = ind;
-      clauseDiscriminator = null;
       inClause = true;
       inSources = false;
+      inWith = false;
+      clauseDiscriminator = findClauseDiscriminator(lines, i, ind);
       const key = extractKey("  " + content);
       if (key) {
-        if (!DISC_SET.has(key.toLowerCase()) && !CLAUSE_KEYS.has(key.toLowerCase())) {
-          const col = raw.indexOf(key, ind);
-          diag(i, col, key.length, "error", `Unknown key '${key}'.`);
-        } else if (DISC_SET.has(key.toLowerCase())) {
-          clauseDiscriminator = key;
+        if (!DISC_SET.has(key.toLowerCase())) {
+          if (clauseDiscriminator) {
+            checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
+          } else {
+            const col = raw.indexOf(key, ind);
+            diag(i, col, key.length, "error", `Clause has no discriminator (expected a clause type key like joker:, voucher:, tag:, ...).`);
+          }
+        } else {
           const val = extractValue(raw);
           if (val) {
             const canon = Discriminators.find((d) => d.toLowerCase() === key.toLowerCase()) ?? key;
@@ -10372,14 +10401,15 @@ function validate(text) {
       if (!key)
         continue;
       if (key.toLowerCase() === "sources") {
+        if (clauseDiscriminator)
+          checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
         inSources = true;
         sourcesIndent = ind;
         continue;
       }
       if (inSources && ind > sourcesIndent) {
         if (clauseDiscriminator) {
-          const canon = Discriminators.find((d) => d.toLowerCase() === clauseDiscriminator.toLowerCase()) ?? clauseDiscriminator;
-          const allowed = DiscriminatorSourceKeys[canon];
+          const allowed = DiscriminatorSourceKeys[clauseDiscriminator];
           if (allowed && !allowed.some((k) => k.toLowerCase() === key.toLowerCase())) {
             const col = raw.indexOf(key, ind);
             diag(i, col, key.length, "error", `Unknown source key '${key}' for ${clauseDiscriminator}.`);
@@ -10390,13 +10420,18 @@ function validate(text) {
       if (inSources && ind <= sourcesIndent) {
         inSources = false;
       }
-      if (!DISC_SET.has(key.toLowerCase()) && !CLAUSE_KEYS.has(key.toLowerCase())) {
-        const col = raw.indexOf(key, ind);
-        diag(i, col, key.length, "error", `Unknown clause key '${key}'.`);
+      if (key.toLowerCase() === "with") {
+        if (clauseDiscriminator)
+          checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
+        inWith = true;
+        withIndent = ind;
         continue;
       }
+      if (inWith && ind > withIndent)
+        continue;
+      if (inWith && ind <= withIndent)
+        inWith = false;
       if (DISC_SET.has(key.toLowerCase())) {
-        clauseDiscriminator = key;
         const val = extractValue(raw);
         if (val) {
           const canon = Discriminators.find((d) => d.toLowerCase() === key.toLowerCase()) ?? key;
@@ -10413,12 +10448,7 @@ function validate(text) {
         continue;
       }
       if (clauseDiscriminator) {
-        const canon = Discriminators.find((d) => d.toLowerCase() === clauseDiscriminator.toLowerCase()) ?? clauseDiscriminator;
-        const allowed = DiscriminatorClauseKeys[canon];
-        if (allowed && !allowed.some((k) => k.toLowerCase() === key.toLowerCase())) {
-          const col = raw.indexOf(key, ind);
-          diag(i, col, key.length, "warning", `Key '${key}' is not valid for ${clauseDiscriminator}.`);
-        }
+        checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
       }
       checkClauseValueEnum(key, raw, i, ind);
     }

@@ -20,7 +20,6 @@ const JAML_MOTDS = [
   "Just Another Markup, Love",
   "Jimbo Absolutely Materializes Legendaries",
   "Jelly-Assed Multiplayer Loot",
-  "Just Another Motely Language",
   "Jesters Assemble, Multipliers Loom",
   "Just Ante-up, My Love",
   "Jubilant Absurdist Markup Lexicon",

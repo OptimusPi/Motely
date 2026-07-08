@@ -1,7 +1,7 @@
 import {
   Discriminators, RootKeys, Enums,
   DiscriminatorValueEnum, DiscriminatorClauseKeys, DiscriminatorSourceKeys,
-  ClauseKeyValueEnum, AllClauseLevelKeys,
+  ClauseKeyValueEnum,
 } from "./generated.js";
 
 export interface Diagnostic {
@@ -54,7 +54,6 @@ export function getDiagnostics(text: string): LspDiagnostic[] {
 
 const ROOT_KEYS = new Set(RootKeys.map((k) => k.toLowerCase()));
 const DISC_SET  = new Set(Discriminators.map((k) => k.toLowerCase()));
-const CLAUSE_KEYS = new Set(AllClauseLevelKeys.map((k) => k.toLowerCase()));
 // Clause-level key -> enum name, case-insensitive. Single source: generated ClauseKeyValueEnum.
 const CLAUSE_VALUE_ENUM = new Map(
   Object.entries(ClauseKeyValueEnum).map(([k, v]) => [k.toLowerCase(), v]),
@@ -86,6 +85,28 @@ function indentOf(raw: string): number {
   let i = 0;
   while (i < raw.length && (raw[i] === " " || raw[i] === "\t")) i++;
   return i;
+}
+
+/**
+ * Prescan a clause block (list item starting at `start`) and return its canonical
+ * discriminator, if any. YAML maps are unordered — the discriminator may appear
+ * after other keys — so key validity can only be judged once the whole clause
+ * has been seen. There is no flat "all clause keys" fallback on purpose: a key
+ * is only ever valid relative to a discriminator.
+ */
+function findClauseDiscriminator(lines: string[], start: number, clauseIndent: number): string | null {
+  for (let j = start; j < lines.length; j++) {
+    const raw = lines[j];
+    const trimmed = raw.trimStart();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (j > start && indentOf(raw) <= clauseIndent) break; // next sibling / dedent ends the clause
+    const content = j === start ? trimmed.replace(/^-\s*/, "") : trimmed;
+    const key = extractKey("  " + content);
+    if (key && DISC_SET.has(key.toLowerCase())) {
+      return Discriminators.find((d) => d.toLowerCase() === key.toLowerCase()) ?? key;
+    }
+  }
+  return null;
 }
 
 /**
@@ -128,7 +149,19 @@ export function validate(text: string): Diagnostic[] {
   let clauseDiscriminator: string | null = null;
   let inSources = false;
   let sourcesIndent = -1;
+  let inWith = false;
+  let withIndent = -1;
   let inSection = false; // inside must/should/mustNot
+
+  // A key is valid only relative to the clause's discriminator — generated
+  // DiscriminatorClauseKeys is the sole authority; no flat union exists.
+  function checkKeyAllowed(disc: string, key: string, lineIdx: number, raw: string, ind: number) {
+    const allowed = DiscriminatorClauseKeys[disc];
+    if (allowed && !allowed.some((k) => k.toLowerCase() === key.toLowerCase())) {
+      const col = raw.indexOf(key, ind);
+      diag(lineIdx, col, key.length, "error", `Key '${key}' is not valid for ${disc}.`);
+    }
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
@@ -170,17 +203,21 @@ export function validate(text: string): Diagnostic[] {
     if (trimmed.startsWith("- ") && inSection) {
       const content = trimmed.slice(2).trimStart();
       clauseIndent = ind;
-      clauseDiscriminator = null;
       inClause = true;
       inSources = false;
+      inWith = false;
+      clauseDiscriminator = findClauseDiscriminator(lines, i, ind);
 
       const key = extractKey("  " + content);
       if (key) {
-        if (!DISC_SET.has(key.toLowerCase()) && !CLAUSE_KEYS.has(key.toLowerCase())) {
-          const col = raw.indexOf(key, ind);
-          diag(i, col, key.length, "error", `Unknown key '${key}'.`);
-        } else if (DISC_SET.has(key.toLowerCase())) {
-          clauseDiscriminator = key;
+        if (!DISC_SET.has(key.toLowerCase())) {
+          if (clauseDiscriminator) {
+            checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
+          } else {
+            const col = raw.indexOf(key, ind);
+            diag(i, col, key.length, "error", `Clause has no discriminator (expected a clause type key like joker:, voucher:, tag:, ...).`);
+          }
+        } else {
           // Validate discriminator value
           const val = extractValue(raw);
           if (val) {
@@ -211,16 +248,16 @@ export function validate(text: string): Diagnostic[] {
 
       // entering sources block?
       if (key.toLowerCase() === "sources") {
+        if (clauseDiscriminator) checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
         inSources = true;
         sourcesIndent = ind;
         continue;
       }
 
       if (inSources && ind > sourcesIndent) {
-        // validate source key
+        // validate source key — prescan already canonicalized the discriminator
         if (clauseDiscriminator) {
-          const canon = Discriminators.find((d) => d.toLowerCase() === clauseDiscriminator!.toLowerCase()) ?? clauseDiscriminator;
-          const allowed = DiscriminatorSourceKeys[canon];
+          const allowed = DiscriminatorSourceKeys[clauseDiscriminator];
           if (allowed && !allowed.some((k) => k.toLowerCase() === key.toLowerCase())) {
             const col = raw.indexOf(key, ind);
             diag(i, col, key.length, "error", `Unknown source key '${key}' for ${clauseDiscriminator}.`);
@@ -234,15 +271,21 @@ export function validate(text: string): Diagnostic[] {
         inSources = false;
       }
 
-      if (!DISC_SET.has(key.toLowerCase()) && !CLAUSE_KEYS.has(key.toLowerCase())) {
-        const col = raw.indexOf(key, ind);
-        diag(i, col, key.length, "error", `Unknown clause key '${key}'.`);
+      // entering with block? The `with` key itself is gated per-discriminator;
+      // with-modifier vocabulary has no codegen table yet, so inside the block
+      // we stay silent rather than guess.
+      if (key.toLowerCase() === "with") {
+        if (clauseDiscriminator) checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
+        inWith = true;
+        withIndent = ind;
         continue;
       }
+      if (inWith && ind > withIndent) continue;
+      if (inWith && ind <= withIndent) inWith = false;
 
-      // If it's a discriminator, update the current one
+      // Discriminator line (may appear after other keys; prescan already resolved
+      // the clause's discriminator) — validate its value only
       if (DISC_SET.has(key.toLowerCase())) {
-        clauseDiscriminator = key;
         const val = extractValue(raw);
         if (val) {
           const canon = Discriminators.find((d) => d.toLowerCase() === key.toLowerCase()) ?? key;
@@ -263,14 +306,10 @@ export function validate(text: string): Diagnostic[] {
         continue;
       }
 
-      // Check it's allowed for this discriminator
+      // Gate against the discriminator's allowed keys — the only valid question.
+      // A clause with no discriminator was already flagged at its list item.
       if (clauseDiscriminator) {
-        const canon = Discriminators.find((d) => d.toLowerCase() === clauseDiscriminator!.toLowerCase()) ?? clauseDiscriminator;
-        const allowed = DiscriminatorClauseKeys[canon];
-        if (allowed && !allowed.some((k) => k.toLowerCase() === key.toLowerCase())) {
-          const col = raw.indexOf(key, ind);
-          diag(i, col, key.length, "warning", `Key '${key}' is not valid for ${clauseDiscriminator}.`);
-        }
+        checkKeyAllowed(clauseDiscriminator, key, i, raw, ind);
       }
 
       // Enum-constrained value check (seal/rank/edition/suit/enhancement/stickers).

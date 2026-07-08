@@ -1,0 +1,16 @@
+{
+  "name": "motely-consumer",
+  "private": true,
+  "type": "module",
+  "description": "A consumer of motely-wasm exactly as npmjs.org serves it: install the package, open a page, find seeds. Nothing here reaches into the repo.",
+  "scripts": {
+    "serve": "node serve.mjs",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "motely-wasm": "^24.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}
