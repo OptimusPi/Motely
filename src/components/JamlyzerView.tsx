@@ -35,7 +35,7 @@ export interface JamlyzerViewProps {
   result: MotelyJamlyzerSeedResult;
   deck?: MotelyDeck;
   stake?: MotelyStake;
-  /** @deprecated Ante rail is now driven by the returned `antes` data, including ante 0. */
+  /** Maximum ante number to display in the rail. Antes 0–39 are valid in Balatro. */
   maxAnte?: number;
   /** Raw JAML text used to derive clause identities for highlighting. */
   jamlText?: string;
@@ -297,7 +297,17 @@ function ErraticDeckPanel({
   );
 }
 
-export function JamlyzerView({ result, deck, stake, jamlText, clauses: clausesProp, tallies, onHoverClause }: JamlyzerViewProps) {
+export function JamlyzerView({
+  result,
+  deck,
+  stake,
+  maxAnte: maxAnteProp,
+  jamlText,
+  clauses: clausesProp,
+  tallies,
+  onHoverClause,
+}: JamlyzerViewProps) {
+  const maxAnte = maxAnteProp ?? 39;
   const [selectedAnte, setSelectedAnte] = useState<number>(() => result.antes[0]?.ante ?? 0);
   const [hoveredClause, setHoveredClause] = useState<ParsedJamlClause | null>(null);
 
@@ -319,7 +329,15 @@ export function JamlyzerView({ result, deck, stake, jamlText, clauses: clausesPr
     return m;
   }, [matches, hoveredClause]);
 
-  const anteNumbers = useMemo(() => result.antes.map((a) => a.ante).sort((a, b) => a - b), [result.antes]);
+  const availableAntes = useMemo(
+    () => new Set(result.antes.map((a) => a.ante)),
+    [result.antes]
+  );
+
+  const anteNumbers = useMemo(
+    () => Array.from({ length: maxAnte + 1 }, (_, i) => i),
+    [maxAnte]
+  );
 
   const ante = useMemo(
     () => result.antes.find((a) => a.ante === selectedAnte) ?? result.antes[0],

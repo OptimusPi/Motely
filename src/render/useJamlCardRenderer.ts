@@ -26,8 +26,10 @@ function renderImage(
   if (layer.order === 0) {
     canvas.width = cardWidth;
     canvas.height = cardHeight;
-    canvasStyle.width = `${cardWidth}px`;
-    canvasStyle.height = `${cardHeight}px`;
+    // Let the CSS class size the canvas to its container; the intrinsic
+    // width/height above determine the drawing resolution.
+    canvasStyle.width = "";
+    canvasStyle.height = "";
   }
 
   canvasStyle.imageRendering = "pixelated";
