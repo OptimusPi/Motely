@@ -4,6 +4,8 @@
  * without a full YAML parse — walks indentation levels line by line.
  */
 
+import { Discriminators } from "./generated.js";
+
 export type JamlContextKind =
   | "root-key"          // completing a root-level key (name:, deck:, must:, ...)
   | "root-value"        // completing the value of a root key (deck: <HERE>)
@@ -84,15 +86,11 @@ export function getContext(text: string, offset: number): JamlContext {
   let inSourcesBlock = false;
   let sourcesIndent = -1;
 
-  const clauseDiscriminators = new Set([
-    "boss","joker","jokers","commonJoker","commonJokers","uncommonJoker","uncommonJokers",
-    "rareJoker","rareJokers","legendaryJoker","legendaryJokers","voucher","tarotCard",
-    "spectralCard","planetCard","standardCard","tag","smallBlindTag","bigBlindTag",
-    "luckyMoney","luckyMult","misprintMult","wheelOfFortune","grosMichelExtinct",
-    "cavendishExtinct","spaceLevelup","businessPayout","bloodstoneTrigger","parkingPayout",
-    "glassDestroy","wheelStaysFlipped","startingDraw","erraticRank","erraticRanks",
-    "erraticSuit","and","or",
-  ]);
+  // Straight from the generated Discriminators list — no hand-copied second
+  // source of truth to drift from Motely.Schema.cs's output. Matching is
+  // case-insensitive since JAML authors don't always hit canonical casing.
+  const clauseDiscriminatorsLower = new Set(Discriminators.map((d) => d.toLowerCase()));
+  const isDiscriminator = (key: string) => clauseDiscriminatorsLower.has(key.toLowerCase());
 
   // Walk up from the line above cursor to gather context
   for (let i = cursorLine; i >= 0; i--) {
@@ -123,9 +121,7 @@ export function getContext(text: string, offset: number): JamlContext {
         const keyMatch = jContent.match(/^([\w-]+)\s*:/);
         if (keyMatch) {
           const k = keyMatch[1];
-          if (clauseDiscriminators.has(k) || clauseDiscriminators.has(
-            k.charAt(0).toUpperCase() + k.slice(1))
-          ) {
+          if (isDiscriminator(k)) {
             discriminatorFound = k;
             break;
           }
@@ -155,9 +151,7 @@ export function getContext(text: string, offset: number): JamlContext {
 
   // We're inside a clause
   if (isValuePosition && valueKey) {
-    const isDisc = clauseDiscriminators.has(valueKey) ||
-      clauseDiscriminators.has(valueKey.charAt(0).toUpperCase() + valueKey.slice(1));
-    if (isDisc) {
+    if (isDiscriminator(valueKey)) {
       return { kind: "discriminator-value", discriminator: valueKey, prefix, valueKey };
     }
     return { kind: "clause-value", discriminator: discriminatorFound, prefix, valueKey };
