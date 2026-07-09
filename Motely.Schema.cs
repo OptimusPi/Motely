@@ -5,7 +5,8 @@
 // file-based apps enable by default so those calls don't error as build failures.
 //
 // Motely.Schema — emits jaml-lang/src/generated.ts, jaml-lsp/syntaxes/jaml.tmLanguage.json,
-// and jaml-lsp/schemas/jaml.schema.json.
+// and jaml-lsp/schemas/jaml.schema.json. jaml-codemirror consumes jaml-lang's generated.ts
+// too (via validate/getCompletions), so it never needs its own generation step.
 //
 // Run:  dotnet run Motely.Schema.cs                 (from repo root)
 //       dotnet run Motely.Schema.cs -- --dry-run     (show paths only)
