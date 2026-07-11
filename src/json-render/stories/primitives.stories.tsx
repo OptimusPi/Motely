@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { JimboButton, JimboTextArea } from "../../ui.js";
+import { JimboButton, JimboPanel, JimboTextArea } from "../../ui.js";
 import { Stack } from "../components/layout.js";
 
 const meta: Meta = {
@@ -34,4 +34,15 @@ export const TextArea: StoryObj = {
       />
     );
   },
+};
+
+export const Panel: StoryObj = {
+  render: () => (
+    <JimboPanel style={{ width: 320 }}>
+      <span className="j-text j-text--label j-text--upper">A Jimbo Panel</span>
+      <span className="j-text j-text--micro j-text--grey">
+        Rounded, bordered surface used throughout jaml-ui.
+      </span>
+    </JimboPanel>
+  ),
 };

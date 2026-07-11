@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { JamlCodeEditor } from "jaml-codemirror";
-import { JamlyzerView, JimboButton } from "jaml-ui";
+import { JamlyzerView, JimboButton, JimboPanel } from "jaml-ui";
 import {
   MotelyJaml,
   MotelyJamlyzer,
@@ -93,10 +93,10 @@ export function App() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#1a1b26",
-        color: "#c0caf5",
+        background: "var(--j-darkest)",
+        color: "var(--j-text-color, #fff)",
         padding: 16,
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "inherit",
       }}
     >
       <div
@@ -108,17 +108,11 @@ export function App() {
           gap: 16,
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <h1 style={{ margin: 0, fontSize: 20 }}>Seed Finder</h1>
-          <div
-            style={{
-              flex: 1,
-              minHeight: 320,
-              border: "1px solid #414868",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
-          >
+        <JimboPanel style={{ gap: 12 }}>
+          <h1 className="j-text j-text--label j-text--upper" style={{ margin: 0, fontSize: 20 }}>
+            Seed Finder
+          </h1>
+          <div style={{ flex: 1, minHeight: 320, borderRadius: 8, overflow: "hidden" }}>
             <JamlCodeEditor
               value={jaml}
               onChange={setJaml}
@@ -129,15 +123,10 @@ export function App() {
           <JimboButton tone="orange" onClick={runSearch} disabled={status === "running"}>
             {status === "running" ? "Searching..." : "Search Random"}
           </JimboButton>
-          {error && <div style={{ color: "#f7768e", fontSize: 13 }}>{error}</div>}
-          <div
-            style={{
-              background: "#24283b",
-              border: "1px solid #414868",
-              borderRadius: 8,
-              padding: 12,
-            }}
-          >
+          {error && (
+            <div className="j-text j-text--micro j-text--red">{error}</div>
+          )}
+          <JimboPanel style={{ padding: 12 }}>
             <div
               style={{
                 display: "flex",
@@ -146,10 +135,10 @@ export function App() {
                 marginBottom: 12,
               }}
             >
-              <span style={{ fontSize: 13, color: "#7aa2f7" }}>
+              <span className="j-text j-text--micro j-text--blue">
                 {status === "running" ? "Searching..." : `${results.length} results`}
               </span>
-              <span style={{ fontSize: 13, color: "#565f89" }}>
+              <span className="j-text j-text--micro j-text--grey">
                 {progress.seedsSearched} searched
               </span>
             </div>
@@ -166,23 +155,18 @@ export function App() {
                 </JimboButton>
               ))}
             </div>
-          </div>
-        </div>
+          </JimboPanel>
+        </JimboPanel>
 
         <div>
           {analysis ? (
             <JamlyzerView result={analysis.result} deck={analysis.deck} stake={analysis.stake} />
           ) : (
-            <div
-              style={{
-                padding: 24,
-                background: "#24283b",
-                borderRadius: 8,
-                color: "#565f89",
-              }}
-            >
-              Click a seed result to run Jamlyzer and display the full ante-by-ante breakdown.
-            </div>
+            <JimboPanel>
+              <span className="j-text j-text--micro j-text--grey">
+                Click a seed result to run Jamlyzer and display the full ante-by-ante breakdown.
+              </span>
+            </JimboPanel>
           )}
         </div>
       </div>
