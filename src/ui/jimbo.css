@@ -280,6 +280,22 @@
 /* No glass-sheen overlay. Balatro panels are flat solid color with a
    chunky border + drop shadow — no diagonal sheen pass. */
 
+.j-textarea {
+  background-color: var(--j-darkest);
+  color: var(--j-text-color, #fff);
+  border: var(--j-panel-border-width) solid var(--j-border-silver);
+  border-radius: var(--j-radius-md, var(--j-radius-lg));
+  padding: var(--j-space-sm, 8px);
+  font-family: monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.j-textarea:focus {
+  outline: 2px solid var(--j-blue);
+  outline-offset: -2px;
+}
+
 .j-panel__body {
   flex: 1;
   overflow: auto;
