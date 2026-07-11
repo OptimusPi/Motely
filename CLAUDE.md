@@ -57,7 +57,23 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 
 ### Motely.Wasm
 
-Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[RenameModule] → "index"` folds every namespace so `import { MotelySearch, MotelyJaml } from "motely-wasm"` works directly (the fold is safe while exported short names stay unique — check when adding exports). `Jimmolate.Filter` is a JS `[Import]` bound before `boot()`, speaking the Immolate contract: `filter(inst) => score` (numbers; booleans coerce to 1/0). Search APIs return `Task<MotelyScoredSeedResult[]>` — call, await, use — with `onProgress`/`onSeedMatch`/`onScoredResult` events streaming alongside. Tallies cross the boundary as `Int32Array`. **Read all fourteen Bootsharp docs in full before working here** — the interop model rewards it.
+
+The fourteen Bootsharp docs, pinned so they load every session instead of relying on a reminder to go read them:
+
+@../bootsharp/docs/index.md
+@../bootsharp/docs/guide/index.md
+@../bootsharp/docs/guide/getting-started.md
+@../bootsharp/docs/guide/build-config.md
+@../bootsharp/docs/guide/declarations.md
+@../bootsharp/docs/guide/interop-instances.md
+@../bootsharp/docs/guide/interop-modules.md
+@../bootsharp/docs/guide/llvm.md
+@../bootsharp/docs/guide/renaming.md
+@../bootsharp/docs/guide/serialization.md
+@../bootsharp/docs/guide/sideloading.md
+@../bootsharp/docs/guide/specialization.md
+@../bootsharp/docs/guide/extensions/dependency-injection.md
+@../bootsharp/docs/guide/extensions/file-system.md
 
 ### JAML editor toolchain
 
@@ -78,7 +94,7 @@ One source of truth drives the whole toolchain. `JamlDiscriminatorRegistry` maps
 ## Project skills and hooks
 
 - `.claude/skills/release-motely-wasm/` — the complete npm release ritual; pifreak invokes it (`/release-motely-wasm`) and confirms the version and the publish.
-- `.claude/skills/jaml-authoring/` — the JAML clause/JUMMY/vocabulary reference; read it before writing any `.jaml` filter.
+- JAML clause/JUMMY/vocabulary reference lives in the **Balatro Seed Oracle MCP server** (part of seedfinder.app), not this repo — call its `learn_jaml` tool before writing any `.jaml` filter.
 
 ## Gotchas worth knowing
 
