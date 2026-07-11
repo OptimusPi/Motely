@@ -26,6 +26,11 @@ export default defineConfig({
         "src/**/*.stories.ts",
         "src/**/*.test.tsx",
         "src/**/*.test.ts",
+        // Storybook-only source: pulls in jaml-codemirror, which is a sibling
+        // workspace package (not a jaml-ui dependency). Built from source by
+        // Storybook directly; never part of the published package.
+        "src/components/SeedFinderApp.tsx",
+        "src/components/McpSeedFinderApp.tsx",
       ],
       tsconfigPath: "./tsconfig.json",
     }),

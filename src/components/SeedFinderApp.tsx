@@ -1,19 +1,23 @@
+"use client";
+
 import { useCallback, useState } from "react";
 import { JamlCodeEditor } from "jaml-codemirror";
-import { JamlyzerView } from "jaml-ui";
 import {
   MotelyJaml,
   MotelyJamlyzer,
   MotelySearch,
   type MotelyJamlyzerSeedResult,
 } from "motely-wasm";
+import { JimboButton } from "../ui/JimboButton.js";
+import { JimboPanel } from "../ui/JimboPanel.js";
+import { JamlyzerView } from "./JamlyzerView.js";
 
 interface SearchResult {
   seed: string;
   score: number;
 }
 
-export function App({ initialJaml }: { initialJaml: string }) {
+export function SeedFinderApp({ initialJaml }: { initialJaml: string }) {
   const [jaml, setJaml] = useState(initialJaml);
   const [status, setStatus] = useState<"idle" | "running" | "completed" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -83,16 +87,19 @@ export function App({ initialJaml }: { initialJaml: string }) {
     [jaml]
   );
 
-  const analyzeSeed = useCallback((seed: string) => {
-    try {
-      const config = MotelyJaml.fromYaml(jaml);
-      config.seeds = [seed];
-      const [result] = MotelyJamlyzer.analyzeSeeds(config);
-      setAnalysis({ seed, result, deck: config.deck, stake: config.stake });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [jaml]);
+  const analyzeSeed = useCallback(
+    (seed: string) => {
+      try {
+        const config = MotelyJaml.fromYaml(jaml);
+        config.seeds = [seed];
+        const [result] = MotelyJamlyzer.analyzeSeeds(config);
+        setAnalysis({ seed, result, deck: config.deck, stake: config.stake });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [jaml]
+  );
 
   const loadJaml = useCallback(async () => {
     const [handle] = await (window as any).showOpenFilePicker({
@@ -113,130 +120,92 @@ export function App({ initialJaml }: { initialJaml: string }) {
     await writable.close();
   }, [jaml]);
 
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#1a1b26",
-        color: "#c0caf5",
-        padding: 16,
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 960,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "320px 1fr",
-          gap: 16,
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <h1 style={{ margin: 0, fontSize: 20 }}>Seed Finder</h1>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={loadJaml}>Load</button>
-            <button onClick={saveJaml}>Save</button>
+    <div className="j-app" style={{ width: "100%", maxWidth: "none", minWidth: 0, height: "100%", maxHeight: "none", minHeight: "100vh" }}>
+      <div className="j-app__scroll" style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16, alignItems: "start" }}>
+        <div className="j-flex-col j-gap-md">
+          <span className="j-text j-text--display">Seed Finder</span>
+
+          <div className="j-flex j-gap-sm">
+            <JimboButton size="sm" tone="blue" onClick={loadJaml}>
+              Load
+            </JimboButton>
+            <JimboButton size="sm" tone="blue" onClick={saveJaml}>
+              Save
+            </JimboButton>
           </div>
-          <div
-            style={{
-              flex: 1,
-              minHeight: 320,
-              border: "1px solid #414868",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
-          >
+
+          <JimboPanel style={{ minHeight: 320, padding: 0, overflow: "hidden" }}>
             <JamlCodeEditor
               value={jaml}
               onChange={setJaml}
               height="100%"
               placeholder="Write your JAML filter here..."
             />
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={() => runSearch("list")} disabled={status === "running"}>
+          </JimboPanel>
+
+          <div className="j-flex j-gap-sm j-flex-wrap">
+            <JimboButton onClick={() => runSearch("list")} disabled={status === "running"}>
               Search List
-            </button>
-            <button onClick={() => runSearch("random")} disabled={status === "running"}>
+            </JimboButton>
+            <JimboButton onClick={() => runSearch("random")} disabled={status === "running"}>
               Search Random
-            </button>
-            <button onClick={() => runSearch("sequential")} disabled={status === "running"}>
+            </JimboButton>
+            <JimboButton onClick={() => runSearch("sequential")} disabled={status === "running"}>
               Search Sequential
-            </button>
+            </JimboButton>
           </div>
+
           {error && (
-            <div style={{ color: "#f7768e", fontSize: 13 }}>{error}</div>
+            <span className="j-text j-text--body j-text--red">{error}</span>
           )}
-          <div
-            style={{
-              background: "#24283b",
-              border: "1px solid #414868",
-              borderRadius: 8,
-              padding: 12,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <span style={{ fontSize: 13, color: "#7aa2f7" }}>
+
+          <JimboPanel>
+            <div className="j-flex j-justify-between j-items-center j-mt-sm" style={{ marginBottom: 12 }}>
+              <span className="j-text j-text--sm j-text--blue">
                 {status === "running" ? "Searching..." : `${results.length} results`}
               </span>
-              <span style={{ fontSize: 13, color: "#565f89" }}>
+              <span className="j-text j-text--xs j-text--grey">
                 {progress.seedsSearched} searched
               </span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="j-flex-col j-gap-sm">
               {results.map((r) => (
-                <button
+                <JimboButton
                   key={r.seed}
+                  tone="grey"
+                  size="sm"
+                  className="j-btn--full"
                   onClick={() => analyzeSeed(r.seed)}
                   disabled={status === "running"}
-                  style={{
-                    textAlign: "left",
-                    background: "#1a1b26",
-                    border: "1px solid #414868",
-                    borderRadius: 6,
-                    padding: "8px 12px",
-                    color: "#c0caf5",
-                    cursor: "pointer",
-                  }}
                 >
-                  <div style={{ fontWeight: 600 }}>{r.seed}</div>
-                  <div style={{ fontSize: 12, color: "#565f89" }}>Score: {r.score}</div>
-                </button>
+                  <span className="j-info-card__title">{r.seed}</span>{" "}
+                  <span className="j-info-card__sub">Score: {r.score}</span>
+                </JimboButton>
               ))}
             </div>
-          </div>
+          </JimboPanel>
         </div>
 
         <div>
           {analysis ? (
-            <JamlyzerView
-              result={analysis.result}
-              deck={analysis.deck}
-              stake={analysis.stake}
-            />
+            <JamlyzerView result={analysis.result} deck={analysis.deck} stake={analysis.stake} />
           ) : (
-            <div
-              style={{
-                padding: 24,
-                background: "#24283b",
-                borderRadius: 8,
-                color: "#565f89",
-              }}
-            >
-              Click a seed result to run Jamlyzer and display the full ante-by-ante breakdown.
-            </div>
+            <JimboPanel>
+              <span className="j-text j-text--body j-text--grey">
+                Click a seed result to run Jamlyzer and display the full ante-by-ante breakdown.
+              </span>
+            </JimboPanel>
           )}
         </div>
       </div>
     </div>
   );
 }
+
+export const STARTER_JAML = `must:
+  - joker: Blueprint
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+deck: Red
+stake: White
+`;

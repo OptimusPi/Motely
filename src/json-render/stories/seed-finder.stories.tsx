@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import bootsharp, { Jimmolate } from "motely-wasm";
-import { App as SeedFinderApp } from "../../../examples/seed-finder/src/App.js";
-import { STARTER_JAML } from "../../../examples/seed-finder/src/constants.js";
+import { SeedFinderApp, STARTER_JAML } from "../../components/SeedFinderApp.js";
 
 Jimmolate.filter = () => 1;
 

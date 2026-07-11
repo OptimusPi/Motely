@@ -374,6 +374,7 @@
   position: relative;
   border-radius: var(--j-radius-md);
   background: var(--j-btn-face-color, var(--j-orange));
+  color: var(--j-white);
   text-align: center;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
   /* Drop shadow at 30% opacity per design. Stacked solid offset, no blur. */

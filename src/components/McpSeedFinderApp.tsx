@@ -1,3 +1,5 @@
+"use client";
+
 import {
   JamlCodeEditor,
   JimmolateEditor,
@@ -7,9 +9,12 @@ import {
 } from "jaml-codemirror";
 import { useCallback, useMemo, useState } from "react";
 import { MotelyJaml, MotelySearch } from "motely-wasm";
-import { render, balatroRegistry, JammyMascot, JimboButton, JimboPanel, type JsonNode } from "jaml-ui";
+import { render, balatroRegistry, type JsonNode } from "../json-render/index.js";
+import { JammyMascot } from "../json-render/components/mascot.js";
+import { JimboButton } from "../ui/JimboButton.js";
+import { JimboPanel } from "../ui/JimboPanel.js";
 
-export interface SeedFinderAppProps {
+export interface McpSeedFinderAppProps {
   jaml: string;
   onChange: (next: string) => void;
   onRunRequest?: (jaml: string) => Promise<void> | void;
@@ -20,14 +25,13 @@ interface SearchResult {
   score: number;
 }
 
-export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppProps) {
+export function McpSeedFinderApp({ jaml, onChange, onRunRequest }: McpSeedFinderAppProps) {
   const [status, setStatus] = useState<"idle" | "running" | "completed" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [totalSearched, setTotalSearched] = useState<string>("0");
   const [matchingSeeds, setMatchingSeeds] = useState<number>(0);
   const [seedsPerSecond, setSeedsPerSecond] = useState<number>(0);
-  const [startedAt, setStartedAt] = useState<number>(0);
   const [jimmolateSource, setJimmolateSource] = useState<string>(DEFAULT_JIMMOLATE_SOURCE);
 
   const runSearch = useCallback(async () => {
@@ -56,7 +60,6 @@ export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppPro
     setTotalSearched("0");
     setMatchingSeeds(0);
     setSeedsPerSecond(0);
-    setStartedAt(Date.now());
 
     const config = MotelyJaml.fromYaml(jaml);
 
@@ -160,9 +163,7 @@ export function SeedFinderApp({ jaml, onChange, onRunRequest }: SeedFinderAppPro
           />
         </JimboPanel>
 
-        {error && (
-          <span className="j-text j-text--body j-text--red j-mt-sm">{error}</span>
-        )}
+        {error && <span className="j-text j-text--body j-text--red j-mt-sm">{error}</span>}
 
         <JimboButton
           tone="red"

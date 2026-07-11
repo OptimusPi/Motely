@@ -9,9 +9,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import bootsharp, { Jimmolate, MotelyJaml } from "motely-wasm";
+import bootsharp, { MotelyJaml, MotelyJamlyzer } from "motely-wasm";
+import { bindJimmolateBridge } from "jaml-codemirror";
 
-Jimmolate.filter = () => 1;
+bindJimmolateBridge();
 
 const port = Number(process.env.PORT ?? 3001);
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -67,10 +68,13 @@ function createServer(): McpServer {
 
   server.tool(
     "jaml_validate",
-    "Validate a JAML (or JSON) filter against the real Motely loader. Returns OK or the exact loader error.",
+    "Validate JAML against the real Motely loader — a single clause line (e.g. 'Eternal Blueprint in antes 1 or 2') " +
+      "or a full multi-clause filter. JUMMY is JAML; there is no separate format or conversion step. " +
+      "Returns OK or the exact loader error.",
     { jaml: z.string() },
     async ({ jaml }): Promise<CallToolResult> => {
-      const error = MotelyJaml.validate(jaml);
+      const isSingleLine = !jaml.includes("\n");
+      const error = isSingleLine ? MotelyJaml.validateLine(jaml) : MotelyJaml.validate(jaml);
       return {
         content: [
           {
@@ -84,19 +88,35 @@ function createServer(): McpServer {
   );
 
   server.tool(
-    "jummy_validate",
-    "Parse a one-line JUMMY string (e.g. 'Eternal Blueprint in antes 1 or 2') and report whether it maps to a valid JAML clause.",
-    { line: z.string() },
-    async ({ line }): Promise<CallToolResult> => {
-      const error = MotelyJaml.validateLine(line);
+    "analyze_seed",
+    "Jamlyzer: run a full ante-by-ante breakdown of one seed against a JAML filter (deck, stake, vouchers, tags, shop/pack contents per ante). Returns the raw analysis result as JSON.",
+    {
+      seed: z.string().min(1),
+      jaml_filter: z.string().min(1),
+    },
+    async ({ seed, jaml_filter }): Promise<CallToolResult> => {
+      const validation = MotelyJaml.validate(jaml_filter);
+      if (validation) {
+        return {
+          content: [{ type: "text", text: `INVALID JAML: ${validation}` }],
+          isError: true,
+        };
+      }
+
+      const config = MotelyJaml.fromYaml(jaml_filter);
+      config.seeds = [seed];
+      const [result] = MotelyJamlyzer.analyzeSeeds(config);
+
       return {
         content: [
           {
             type: "text",
-            text: error ? `INVALID JUMMY: ${error}` : "OK — parses to a valid clause.",
+            text: JSON.stringify(result, (_key, value) =>
+              typeof value === "bigint" ? value.toString() : value,
+            ),
           },
         ],
-        isError: !!error,
+        structuredContent: { seed, result },
       };
     },
   );
