@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "jaml-codemirror": "^0.2.1",
     "jaml-ui": "workspace:*",
     "motely-wasm": "^24.1.0",
     "react": "^19.2.6",

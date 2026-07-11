@@ -397,6 +397,7 @@ export function JamlyzerView({
               key={n}
               className="j-btn j-btn--xs"
               data-pressed={n === selectedAnte}
+              disabled={!availableAntes.has(n)}
               onClick={() => setSelectedAnte(n)}
               style={{ width: "100%" }}
             >
