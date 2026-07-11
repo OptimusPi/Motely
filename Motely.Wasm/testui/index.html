@@ -55,8 +55,13 @@
 
 <script type="module">
   import bootsharp, * as Motely from "/dist/index.mjs";
-  const { MotelyWasm, MotelyJaml, MotelySearch, Jimmolate } = Motely;
+  import * as fs from "@rewaffle/bootsharp-file-system";
+  const { MotelyWasm, MotelyJaml, MotelySearch, Jimmolate, MotelyFileSystem } = Motely;
   Object.assign(globalThis, Motely); // predicates reference MotelyVoucher etc. by name
+
+  // Must run before boot() — wires MotelyFileSystem's IFileMounter import to the browser's
+  // File System Access API (see D:\bootsharp\docs\guide\extensions\file-system.md).
+  fs.init(MotelyFileSystem);
   import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
   import { yaml } from "https://esm.sh/@codemirror/lang-yaml@6.1.2";
   import { autocompletion } from "https://esm.sh/@codemirror/autocomplete@6.18.4";
