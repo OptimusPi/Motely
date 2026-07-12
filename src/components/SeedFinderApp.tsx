@@ -17,6 +17,21 @@ interface SearchResult {
   score: number;
 }
 
+interface FileSystemFileHandleLike {
+  getFile(): Promise<File>;
+  createWritable(): Promise<{ write(data: string): Promise<void>; close(): Promise<void> }>;
+}
+
+interface FilePickerWindow {
+  showOpenFilePicker(options: {
+    types: { description: string; accept: Record<string, string[]> }[];
+  }): Promise<FileSystemFileHandleLike[]>;
+  showSaveFilePicker(options: {
+    suggestedName: string;
+    types: { description: string; accept: Record<string, string[]> }[];
+  }): Promise<FileSystemFileHandleLike>;
+}
+
 export function SeedFinderApp({ initialJaml }: { initialJaml: string }) {
   const [jaml, setJaml] = useState(initialJaml);
   const [status, setStatus] = useState<"idle" | "running" | "completed" | "error">("idle");
@@ -102,7 +117,7 @@ export function SeedFinderApp({ initialJaml }: { initialJaml: string }) {
   );
 
   const loadJaml = useCallback(async () => {
-    const [handle] = await (window as any).showOpenFilePicker({
+    const [handle] = await (window as unknown as FilePickerWindow).showOpenFilePicker({
       types: [{ description: "JAML files", accept: { "text/yaml": [".jaml", ".yaml", ".yml"] } }],
     });
     const file = await handle.getFile();
@@ -111,7 +126,7 @@ export function SeedFinderApp({ initialJaml }: { initialJaml: string }) {
   }, []);
 
   const saveJaml = useCallback(async () => {
-    const handle = await (window as any).showSaveFilePicker({
+    const handle = await (window as unknown as FilePickerWindow).showSaveFilePicker({
       suggestedName: "filter.jaml",
       types: [{ description: "JAML file", accept: { "text/yaml": [".jaml"] } }],
     });

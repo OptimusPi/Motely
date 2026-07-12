@@ -66,6 +66,44 @@ function createServer(): McpServer {
     },
   );
 
+  registerAppTool(
+    server,
+    "quick_search",
+    {
+      title: "Quick seed search",
+      description:
+        "Easier search: one plain JUMMY line instead of full JAML (e.g. 'Eternal Blueprint in antes 1 or 2'). " +
+        "Runs a smaller default sample for a fast result.",
+      inputSchema: {
+        jummy_line: z.string().min(1),
+        sample_size: z.number().int().positive().max(500_000).optional(),
+      },
+      _meta: { ui: { resourceUri } },
+    },
+    async ({ jummy_line, sample_size = 10_000 }): Promise<CallToolResult> => {
+      const lineError = MotelyJaml.validateLine(jummy_line);
+      if (lineError) {
+        return {
+          content: [{ type: "text", text: `INVALID: ${lineError}` }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Seed finder UI opened.\njaml_filter:\n${jummy_line}\nmax_results: ${sample_size}`,
+          },
+        ],
+        structuredContent: {
+          jaml_filter: jummy_line,
+          max_results: sample_size,
+        },
+      };
+    },
+  );
+
   server.tool(
     "jaml_validate",
     "Validate JAML against the real Motely loader — a single clause line (e.g. 'Eternal Blueprint in antes 1 or 2') " +

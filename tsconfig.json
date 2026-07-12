@@ -24,6 +24,8 @@
     "**/*.stories.tsx",
     "**/*.stories.ts",
     "**/*.test.tsx",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "src/components/SeedFinderApp.tsx",
+    "src/components/McpSeedFinderApp.tsx"
   ]
 }
