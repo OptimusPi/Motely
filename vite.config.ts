@@ -2,6 +2,15 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
+// Entries whose source has a top-level "use client" directive. Vite's library
+// build strips module-level directives when bundling, so Next.js's RSC
+// compiler can't see these are client boundaries and tries to render them as
+// Server Components — crashing on any hook use (e.g. "useRef is not a
+// function"). Re-adding the banner only to these entries (not shared chunks
+// like core.js/spriteMapper) is enough: Next only checks the directive on the
+// module a consumer actually imports.
+const CLIENT_ENTRIES = new Set(["index.js", "ui.js", "motely.js"]);
+
 const PEER_EXTERNALS = [
   "react",
   "react-dom",
@@ -59,6 +68,7 @@ export default defineConfig({
           if (info.name?.endsWith(".css")) return "ui/jimbo.css";
           return "assets/[name]-[hash][extname]";
         },
+        banner: (chunk) => (CLIENT_ENTRIES.has(chunk.fileName) ? '"use client";' : ""),
       },
     },
   },
