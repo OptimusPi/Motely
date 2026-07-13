@@ -11,13 +11,11 @@
 // Run:  dotnet run Motely.Schema.cs                 (from repo root)
 //       dotnet run Motely.Schema.cs -- --dry-run     (show paths only)
 //
-// A C# 14 file-based app (no .csproj of its own) — per Nate's explicit call this session.
+// A C# 14 file-based app (no .csproj of its own).
 // All data comes directly from the real clause/source types via JamlDiscriminatorRegistry
 // (Motely/Filters/Jaml/JamlDiscriminatorRegistry.cs) — reflection over ClauseKeys/SourceKeys
 // fields that live on the types themselves, plus Enum.GetNames<T>() for the item vocab.
-// Zero hand-copied grammar tables. This replaces the old JamlVocab.cs-driven generator
-// (JamlVocab.cs was deleted this session — it was a second hand-maintained truth that had
-// already drifted from what JamlConfigLoader.cs actually accepts).
+// Zero hand-copied grammar tables.
 
 using System.Text;
 using System.Text.Json;

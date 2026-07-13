@@ -23,7 +23,7 @@ export const Enums: Record<string, readonly string[]> = {
     MotelyVoucher: ["Overstock", "OverstockPlus", "ClearanceSale", "Liquidation", "Hone", "GlowUp", "RerollSurplus", "RerollGlut", "CrystalBall", "OmenGlobe", "Telescope", "Observatory", "Grabber", "NachoTong", "Wasteful", "Recyclomancy", "TarotMerchant", "TarotTycoon", "PlanetMerchant", "PlanetTycoon", "SeedMoney", "MoneyTree", "Blank", "Antimatter", "MagicTrick", "Illusion", "Hieroglyph", "Petroglyph", "DirectorsCut", "Retcon", "PaintBrush", "Palette"],
 };
 
-export const Discriminators: readonly string[] = ["and", "bigBlindTag", "bloodstoneTrigger", "boss", "businessPayout", "cavendishExtinct", "commonJoker", "commonJokers", "erraticRank", "erraticRanks", "erraticSuit", "glassDestroy", "grosMichelExtinct", "joker", "jokers", "legendaryJoker", "legendaryJokers", "luckyMoney", "luckyMult", "misprintMult", "or", "parkingPayout", "planetCard", "rareJoker", "rareJokers", "smallBlindTag", "spaceLevelup", "spectralCard", "standardCard", "startingDraw", "tag", "tarotCard", "uncommonJoker", "uncommonJokers", "voucher", "wheelOfFortune", "wheelStaysFlipped"];
+export const Discriminators: readonly string[] = ["and", "bigBlindTag", "bloodstoneTrigger", "boss", "businessPayout", "cavendishExtinct", "commonJoker", "commonJokers", "erraticRank", "erraticRanks", "erraticSuit", "glassDestroy", "grosMichelExtinct", "joker", "jokers", "legendaryJoker", "legendaryJokers", "luckyMoney", "luckyMult", "misprintMult", "or", "parkingPayout", "planetCard", "planetCards", "rareJoker", "rareJokers", "smallBlindTag", "spaceLevelup", "spectralCard", "spectralCards", "standardCard", "standardCards", "startingDraw", "tag", "tarotCard", "tarotCards", "uncommonJoker", "uncommonJokers", "voucher", "wheelOfFortune", "wheelStaysFlipped"];
 export const RootKeys: readonly string[] = ["author", "dateCreated", "deck", "description", "id", "must", "mustNot", "name", "seeds", "should", "stake"];
 
 export const RootValueEnums: Record<string, string> = { deck: "MotelyDeck", stake: "MotelyStake" };
@@ -41,12 +41,15 @@ export const DiscriminatorValueEnum: Record<string, string> = {
     "legendaryJoker": "MotelyJoker",
     "legendaryJokers": "MotelyJoker",
     "planetCard": "MotelyPlanetCard",
+    "planetCards": "MotelyPlanetCard",
     "rareJoker": "MotelyJokerRare",
     "rareJokers": "MotelyJokerRare",
     "smallBlindTag": "MotelyTag",
     "spectralCard": "MotelySpectralCard",
+    "spectralCards": "MotelySpectralCard",
     "tag": "MotelyTag",
     "tarotCard": "MotelyTarotCard",
+    "tarotCards": "MotelyTarotCard",
     "uncommonJoker": "MotelyJokerUncommon",
     "uncommonJokers": "MotelyJokerUncommon",
     "voucher": "MotelyVoucher",
@@ -85,15 +88,19 @@ export const DiscriminatorClauseKeys: Record<string, readonly string[]> = {
     "or": ["min", "max", "score", "label", "ante", "antes", "clauses"],
     "parkingPayout": ["min", "max", "score", "label"],
     "planetCard": ["min", "max", "score", "label", "ante", "antes", "sources"],
+    "planetCards": ["min", "max", "score", "label", "ante", "antes", "sources"],
     "rareJoker": ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "stickers"],
     "rareJokers": ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "stickers"],
     "smallBlindTag": ["min", "max", "score", "label", "ante", "antes", "rolls"],
     "spaceLevelup": ["min", "max", "score", "label", "with"],
     "spectralCard": ["min", "max", "score", "label", "ante", "antes", "sources"],
+    "spectralCards": ["min", "max", "score", "label", "ante", "antes", "sources"],
     "standardCard": ["min", "max", "score", "label", "ante", "antes", "sources", "rank", "suit", "enhancement", "seal", "edition"],
+    "standardCards": ["min", "max", "score", "label", "ante", "antes", "sources", "rank", "suit", "enhancement", "seal", "edition"],
     "startingDraw": ["min", "max", "score", "label", "ante", "antes", "rank", "suit"],
     "tag": ["min", "max", "score", "label", "ante", "antes", "rolls"],
     "tarotCard": ["min", "max", "score", "label", "ante", "antes", "sources"],
+    "tarotCards": ["min", "max", "score", "label", "ante", "antes", "sources"],
     "uncommonJoker": ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "stickers"],
     "uncommonJokers": ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "stickers"],
     "voucher": ["min", "max", "score", "label", "ante", "antes", "rolls"],
@@ -109,11 +116,15 @@ export const DiscriminatorSourceKeys: Record<string, readonly string[]> = {
     "legendaryJoker": ["boosterPacks", "arcanaPacks", "spectralPacks", "soulCard", "requireMega", "requireMegaPack"],
     "legendaryJokers": ["boosterPacks", "arcanaPacks", "spectralPacks", "soulCard", "requireMega", "requireMegaPack"],
     "planetCard": ["shopItems", "boosterPacks"],
+    "planetCards": ["shopItems", "boosterPacks"],
     "rareJoker": ["shopItems", "boosterPacks", "judgement", "wraith", "riffRaff", "rareTag", "uncommonTag", "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers"],
     "rareJokers": ["shopItems", "boosterPacks", "judgement", "wraith", "riffRaff", "rareTag", "uncommonTag", "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers"],
     "spectralCard": ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"],
+    "spectralCards": ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"],
     "standardCard": ["shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw"],
+    "standardCards": ["shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw"],
     "tarotCard": ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"],
+    "tarotCards": ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"],
     "uncommonJoker": ["shopItems", "boosterPacks", "judgement", "wraith", "riffRaff", "rareTag", "uncommonTag", "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers"],
     "uncommonJokers": ["shopItems", "boosterPacks", "judgement", "wraith", "riffRaff", "rareTag", "uncommonTag", "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers"],
 };

@@ -7,9 +7,7 @@ namespace Motely.Filters.Jaml;
 /// concrete clause type (whose static ClauseKeys field is the real key list) and, where
 /// applicable, its source-config type (whose static SourceKeys field is the real source-key
 /// list) and the enum type backing its scalar value. JamlConfigLoader (real parsing/validation)
-/// and Motely.Schema (jaml-lang/jaml-lsp/jaml-codemirror generation) both read this same table —
-/// replaces JamlVocab.Discriminators, JamlVocab.DiscriminatorValueEnum, the loader's own
-/// AllDiscriminatorKeys(), and the loader's ClauseKeys(string) switch, all at once.
+/// and Motely.Schema (jaml-lang/jaml-lsp/jaml-codemirror generation) both read this same table.
 /// </summary>
 public sealed record JamlDiscriminatorEntry(
     [property: DynamicallyAccessedMembers(JamlDiscriminatorRegistry.ClauseReflectionShape)]
@@ -56,9 +54,13 @@ public static class JamlDiscriminatorRegistry
             ["legendaryJokers"] = new(typeof(LegendaryJokerClause), typeof(LegendaryJokerSourceConfig), typeof(MotelyJoker)),
             ["voucher"]         = new(typeof(VoucherClause), null, typeof(MotelyVoucher), RollsDefault: [0]),
             ["tarotCard"]       = new(typeof(TarotCardClause), typeof(TarotCardSourceConfig), typeof(MotelyTarotCard)),
+            ["tarotCards"]      = new(typeof(TarotCardClause), typeof(TarotCardSourceConfig), typeof(MotelyTarotCard)),
             ["spectralCard"]    = new(typeof(SpectralCardClause), typeof(SpectralCardSourceConfig), typeof(MotelySpectralCard)),
+            ["spectralCards"]   = new(typeof(SpectralCardClause), typeof(SpectralCardSourceConfig), typeof(MotelySpectralCard)),
             ["planetCard"]      = new(typeof(PlanetCardClause), typeof(PlanetSourceConfig), typeof(MotelyPlanetCard)),
+            ["planetCards"]     = new(typeof(PlanetCardClause), typeof(PlanetSourceConfig), typeof(MotelyPlanetCard)),
             ["standardCard"]    = new(typeof(StandardCardClause), typeof(StandardCardSourceConfig), null),
+            ["standardCards"]   = new(typeof(StandardCardClause), typeof(StandardCardSourceConfig), null),
             ["tag"]             = new(typeof(TagClause), null, typeof(MotelyTag), RollsDefault: [0, 1]),
             ["smallBlindTag"]   = new(typeof(TagClause), null, typeof(MotelyTag), RollsDefault: [0]),
             ["bigBlindTag"]     = new(typeof(TagClause), null, typeof(MotelyTag), RollsDefault: [1]),

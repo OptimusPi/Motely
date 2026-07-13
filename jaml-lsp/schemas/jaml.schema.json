@@ -1835,6 +1835,60 @@
           },
           {
             "required": [
+              "planetCards"
+            ],
+            "properties": {
+              "planetCards": {
+                "type": "string",
+                "enum": [
+                  "Mercury",
+                  "Venus",
+                  "Earth",
+                  "Mars",
+                  "Jupiter",
+                  "Saturn",
+                  "Uranus",
+                  "Neptune",
+                  "Pluto",
+                  "PlanetX",
+                  "Ceres",
+                  "Eris",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
               "rareJoker"
             ],
             "properties": {
@@ -2161,10 +2215,173 @@
           },
           {
             "required": [
+              "spectralCards"
+            ],
+            "properties": {
+              "spectralCards": {
+                "type": "string",
+                "enum": [
+                  "Familiar",
+                  "Grim",
+                  "Incantation",
+                  "Talisman",
+                  "Aura",
+                  "Wraith",
+                  "Sigil",
+                  "Ouija",
+                  "Ectoplasm",
+                  "Immolate",
+                  "Ankh",
+                  "DejaVu",
+                  "Hex",
+                  "Trance",
+                  "Medium",
+                  "Cryptid",
+                  "TheSoul",
+                  "BlackHole",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
               "standardCard"
             ],
             "properties": {
               "standardCard": {
+                "type": [
+                  "string",
+                  "array"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
+              "rank": {
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
+              },
+              "suit": {
+                "type": "string",
+                "enum": [
+                  "Clubs",
+                  "Diamonds",
+                  "Hearts",
+                  "Spades"
+                ]
+              },
+              "enhancement": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Bonus",
+                  "Mult",
+                  "Wild",
+                  "Glass",
+                  "Steel",
+                  "Stone",
+                  "Gold",
+                  "Lucky"
+                ]
+              },
+              "seal": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Gold",
+                  "Red",
+                  "Blue",
+                  "Purple"
+                ]
+              },
+              "edition": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Foil",
+                  "Holographic",
+                  "Polychrome",
+                  "Negative"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
+              "standardCards"
+            ],
+            "properties": {
+              "standardCards": {
                 "type": [
                   "string",
                   "array"
@@ -2403,6 +2620,70 @@
             ],
             "properties": {
               "tarotCard": {
+                "type": "string",
+                "enum": [
+                  "TheFool",
+                  "TheMagician",
+                  "TheHighPriestess",
+                  "TheEmpress",
+                  "TheEmperor",
+                  "TheHierophant",
+                  "TheLovers",
+                  "TheChariot",
+                  "Justice",
+                  "TheHermit",
+                  "TheWheelOfFortune",
+                  "Strength",
+                  "TheHangedMan",
+                  "Death",
+                  "Temperance",
+                  "TheDevil",
+                  "TheTower",
+                  "TheStar",
+                  "TheMoon",
+                  "TheSun",
+                  "Judgement",
+                  "TheWorld",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
+              "tarotCards"
+            ],
+            "properties": {
+              "tarotCards": {
                 "type": "string",
                 "enum": [
                   "TheFool",
@@ -4631,6 +4912,60 @@
           },
           {
             "required": [
+              "planetCards"
+            ],
+            "properties": {
+              "planetCards": {
+                "type": "string",
+                "enum": [
+                  "Mercury",
+                  "Venus",
+                  "Earth",
+                  "Mars",
+                  "Jupiter",
+                  "Saturn",
+                  "Uranus",
+                  "Neptune",
+                  "Pluto",
+                  "PlanetX",
+                  "Ceres",
+                  "Eris",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
               "rareJoker"
             ],
             "properties": {
@@ -4957,10 +5292,173 @@
           },
           {
             "required": [
+              "spectralCards"
+            ],
+            "properties": {
+              "spectralCards": {
+                "type": "string",
+                "enum": [
+                  "Familiar",
+                  "Grim",
+                  "Incantation",
+                  "Talisman",
+                  "Aura",
+                  "Wraith",
+                  "Sigil",
+                  "Ouija",
+                  "Ectoplasm",
+                  "Immolate",
+                  "Ankh",
+                  "DejaVu",
+                  "Hex",
+                  "Trance",
+                  "Medium",
+                  "Cryptid",
+                  "TheSoul",
+                  "BlackHole",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
               "standardCard"
             ],
             "properties": {
               "standardCard": {
+                "type": [
+                  "string",
+                  "array"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
+              "rank": {
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
+              },
+              "suit": {
+                "type": "string",
+                "enum": [
+                  "Clubs",
+                  "Diamonds",
+                  "Hearts",
+                  "Spades"
+                ]
+              },
+              "enhancement": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Bonus",
+                  "Mult",
+                  "Wild",
+                  "Glass",
+                  "Steel",
+                  "Stone",
+                  "Gold",
+                  "Lucky"
+                ]
+              },
+              "seal": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Gold",
+                  "Red",
+                  "Blue",
+                  "Purple"
+                ]
+              },
+              "edition": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Foil",
+                  "Holographic",
+                  "Polychrome",
+                  "Negative"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
+              "standardCards"
+            ],
+            "properties": {
+              "standardCards": {
                 "type": [
                   "string",
                   "array"
@@ -5199,6 +5697,70 @@
             ],
             "properties": {
               "tarotCard": {
+                "type": "string",
+                "enum": [
+                  "TheFool",
+                  "TheMagician",
+                  "TheHighPriestess",
+                  "TheEmpress",
+                  "TheEmperor",
+                  "TheHierophant",
+                  "TheLovers",
+                  "TheChariot",
+                  "Justice",
+                  "TheHermit",
+                  "TheWheelOfFortune",
+                  "Strength",
+                  "TheHangedMan",
+                  "Death",
+                  "Temperance",
+                  "TheDevil",
+                  "TheTower",
+                  "TheStar",
+                  "TheMoon",
+                  "TheSun",
+                  "Judgement",
+                  "TheWorld",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
+              "tarotCards"
+            ],
+            "properties": {
+              "tarotCards": {
                 "type": "string",
                 "enum": [
                   "TheFool",
@@ -7427,6 +7989,60 @@
           },
           {
             "required": [
+              "planetCards"
+            ],
+            "properties": {
+              "planetCards": {
+                "type": "string",
+                "enum": [
+                  "Mercury",
+                  "Venus",
+                  "Earth",
+                  "Mars",
+                  "Jupiter",
+                  "Saturn",
+                  "Uranus",
+                  "Neptune",
+                  "Pluto",
+                  "PlanetX",
+                  "Ceres",
+                  "Eris",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
               "rareJoker"
             ],
             "properties": {
@@ -7753,10 +8369,173 @@
           },
           {
             "required": [
+              "spectralCards"
+            ],
+            "properties": {
+              "spectralCards": {
+                "type": "string",
+                "enum": [
+                  "Familiar",
+                  "Grim",
+                  "Incantation",
+                  "Talisman",
+                  "Aura",
+                  "Wraith",
+                  "Sigil",
+                  "Ouija",
+                  "Ectoplasm",
+                  "Immolate",
+                  "Ankh",
+                  "DejaVu",
+                  "Hex",
+                  "Trance",
+                  "Medium",
+                  "Cryptid",
+                  "TheSoul",
+                  "BlackHole",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
               "standardCard"
             ],
             "properties": {
               "standardCard": {
+                "type": [
+                  "string",
+                  "array"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              },
+              "rank": {
+                "type": "string",
+                "enum": [
+                  "Two",
+                  "Three",
+                  "Four",
+                  "Five",
+                  "Six",
+                  "Seven",
+                  "Eight",
+                  "Nine",
+                  "Ten",
+                  "Jack",
+                  "Queen",
+                  "King",
+                  "Ace"
+                ]
+              },
+              "suit": {
+                "type": "string",
+                "enum": [
+                  "Clubs",
+                  "Diamonds",
+                  "Hearts",
+                  "Spades"
+                ]
+              },
+              "enhancement": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Bonus",
+                  "Mult",
+                  "Wild",
+                  "Glass",
+                  "Steel",
+                  "Stone",
+                  "Gold",
+                  "Lucky"
+                ]
+              },
+              "seal": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Gold",
+                  "Red",
+                  "Blue",
+                  "Purple"
+                ]
+              },
+              "edition": {
+                "type": "string",
+                "enum": [
+                  "None",
+                  "Foil",
+                  "Holographic",
+                  "Polychrome",
+                  "Negative"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
+              "standardCards"
+            ],
+            "properties": {
+              "standardCards": {
                 "type": [
                   "string",
                   "array"
@@ -7995,6 +8774,70 @@
             ],
             "properties": {
               "tarotCard": {
+                "type": "string",
+                "enum": [
+                  "TheFool",
+                  "TheMagician",
+                  "TheHighPriestess",
+                  "TheEmpress",
+                  "TheEmperor",
+                  "TheHierophant",
+                  "TheLovers",
+                  "TheChariot",
+                  "Justice",
+                  "TheHermit",
+                  "TheWheelOfFortune",
+                  "Strength",
+                  "TheHangedMan",
+                  "Death",
+                  "Temperance",
+                  "TheDevil",
+                  "TheTower",
+                  "TheStar",
+                  "TheMoon",
+                  "TheSun",
+                  "Judgement",
+                  "TheWorld",
+                  "Any"
+                ]
+              },
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ante": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 39
+              },
+              "antes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 39
+                }
+              },
+              "sources": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "required": [
+              "tarotCards"
+            ],
+            "properties": {
+              "tarotCards": {
                 "type": "string",
                 "enum": [
                   "TheFool",
