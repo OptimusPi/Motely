@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>motely-wasm — test UI</title>
+<!-- testui is a zero-dependency static server (serve.mjs), no bundler — bare specifiers
+     need an explicit import map or the browser can't resolve them. -->
+<script type="importmap">
+{
+  "imports": {
+    "@rewaffle/bootsharp-file-system": "/node_modules/@rewaffle/bootsharp-file-system/index.js"
+  }
+}
+</script>
 <style>
   :root { --ink: #1d2733; --soft: #5a6b7d; --line: #d8dee6; --go: #1e7a3c; --bad: #b3261e; }
   * { box-sizing: border-box; }
@@ -46,6 +55,14 @@
   <span id="validation"></span>
 </div>
 
+<div class="row">
+  <button id="mount" disabled>Mount folder…</button>
+  <input id="filename" placeholder="filter-name" style="font:0.9rem ui-monospace,Consolas,monospace;padding:0.4rem 0.6rem;border:1px solid var(--line);border-radius:6px" disabled>
+  <button id="save" disabled>Save .jaml</button>
+  <button id="load" disabled>Load .jaml</button>
+  <span id="fsStatus" style="color:var(--soft);font-size:0.9rem"></span>
+</div>
+
 <p id="progress"></p>
 
 <table>
@@ -56,12 +73,16 @@
 <script type="module">
   import bootsharp, * as Motely from "/dist/index.mjs";
   import * as fs from "@rewaffle/bootsharp-file-system";
-  const { MotelyWasm, MotelyJaml, MotelySearch, Jimmolate, MotelyFileSystem } = Motely;
+  const { MotelyWasm, MotelyJaml, MotelySearch, Jimmolate, IFileMounter, MotelyFileSystem } = Motely;
   Object.assign(globalThis, Motely); // predicates reference MotelyVoucher etc. by name
 
-  // Must run before boot() — wires MotelyFileSystem's IFileMounter import to the browser's
-  // File System Access API (see D:\bootsharp\docs\guide\extensions\file-system.md).
-  fs.init(MotelyFileSystem);
+  // Must run before boot() — wires the browser's File System Access API to the
+  // IFileMounter interop Bootsharp.FileSystem auto-injects into C# (see
+  // D:\bootsharp\docs\guide\extensions\file-system.md). IFileMounter is the raw
+  // extension-provided binding; MotelyFileSystem (MotelyFileSystem.cs) is this
+  // project's own feature built on top of it — pick a folder once, then
+  // save/load/delete .jaml files directly on disk.
+  fs.init(IFileMounter);
   import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
   import { yaml } from "https://esm.sh/@codemirror/lang-yaml@6.1.2";
   import { autocompletion } from "https://esm.sh/@codemirror/autocomplete@6.18.4";
@@ -177,6 +198,42 @@ should:
   $("status").textContent = `booted · motely ${MotelyWasm.getVersion()}`;
   $("status").classList.add("booted");
   $("search").disabled = false;
+  $("mount").disabled = false;
+
+  MotelyFileSystem.onChange.subscribe((text) => {
+    $("fsStatus").textContent = `changed: ${text}`;
+  });
+
+  $("mount").addEventListener("click", async () => {
+    $("mount").disabled = true;
+    $("fsStatus").textContent = "picking folder…";
+    const mounted = await MotelyFileSystem.pickAndMountFolder();
+    $("mount").disabled = false;
+    if (!mounted) { $("fsStatus").textContent = "cancelled"; return; }
+    $("fsStatus").textContent = "folder mounted";
+    $("filename").disabled = false;
+    $("save").disabled = false;
+    $("load").disabled = false;
+  });
+
+  $("save").addEventListener("click", async () => {
+    const name = $("filename").value.trim();
+    if (!name) { $("fsStatus").textContent = "enter a filename first"; return; }
+    await MotelyFileSystem.saveJamlFilter(name, view.state.doc.toString());
+    $("fsStatus").textContent = `saved ${name}.jaml`;
+  });
+
+  $("load").addEventListener("click", async () => {
+    const name = $("filename").value.trim();
+    if (!name) { $("fsStatus").textContent = "enter a filename first"; return; }
+    try {
+      const jaml = await MotelyFileSystem.loadJamlFilter(name);
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: jaml } });
+      $("fsStatus").textContent = `loaded ${name}.jaml`;
+    } catch (e) {
+      $("fsStatus").textContent = `load failed: ${e.message ?? e}`;
+    }
+  });
 
   // Test hooks: Playwright (and curious humans) drive the page through these.
   globalThis.__motely = {
