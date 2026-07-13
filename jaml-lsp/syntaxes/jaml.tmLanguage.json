@@ -10,7 +10,7 @@
       "name": "comment.line.number-sign.jaml"
     },
     {
-      "match": "\\b(?:bloodstoneTrigger|grosMichelExtinct|wheelStaysFlipped|cavendishExtinct|legendaryJokers|businessPayout|legendaryJoker|uncommonJokers|wheelOfFortune|parkingPayout|smallBlindTag|uncommonJoker|commonJokers|erraticRanks|glassDestroy|misprintMult|spaceLevelup|spectralCard|standardCard|startingDraw|bigBlindTag|commonJoker|erraticRank|erraticSuit|luckyMoney|planetCard|rareJokers|luckyMult|rareJoker|tarotCard|voucher|jokers|joker|boss|and|tag|or)(?=\\s*:)",
+      "match": "\\b(?:bloodstoneTrigger|grosMichelExtinct|wheelStaysFlipped|cavendishExtinct|legendaryJokers|businessPayout|legendaryJoker|uncommonJokers|wheelOfFortune|parkingPayout|smallBlindTag|spectralCards|standardCards|uncommonJoker|commonJokers|erraticRanks|glassDestroy|misprintMult|spaceLevelup|spectralCard|standardCard|startingDraw|bigBlindTag|commonJoker|erraticRank|erraticSuit|planetCards|luckyMoney|planetCard|rareJokers|tarotCards|luckyMult|rareJoker|tarotCard|voucher|jokers|joker|boss|and|tag|or)(?=\\s*:)",
       "name": "entity.name.tag.discriminator.jaml"
     },
     {
