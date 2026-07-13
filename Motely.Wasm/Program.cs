@@ -1,5 +1,7 @@
 using System.Reflection;
 using Bootsharp;
+using Bootsharp.Inject;
+using Microsoft.Extensions.DependencyInjection;
 using Motely;
 using Motely.Analysis;
 using Motely.Filters;
@@ -10,7 +12,31 @@ using JamlyzerEngine = Motely.Analysis.MotelyJamlyzer;
 
 public static partial class Program
 {
-    public static void Main() { }
+    public static void Main()
+    {
+        // AddBootsharp() registers every extension's interop-injected interface (e.g.
+        // Bootsharp.FileSystem's IFileMounter) into this container. MotelyServices captures
+        // the built provider statically so [Export] methods — which are plain static methods,
+        // not DI-constructed instances — can still resolve those services on demand.
+        var services = new ServiceCollection().AddBootsharp().BuildServiceProvider();
+        MotelyServices.Init(services);
+    }
+}
+
+/// <summary>Static service locator for the one process-wide DI container Bootsharp builds.
+/// [Export] methods are static (Bootsharp doesn't construct instances per call), so this is
+/// how they reach interop-injected services like IFileMounter — same pattern as the
+/// Bootsharp.FileSystem sample app's own Global class.</summary>
+public static class MotelyServices
+{
+    private static IServiceProvider? _services;
+
+    public static void Init(IServiceProvider services) => _services = services;
+
+    public static T Get<T>()
+        where T : notnull =>
+        (_services ?? throw new InvalidOperationException("MotelyServices.Init was never called."))
+            .GetRequiredService<T>();
 }
 
 /// <summary>JavaScript cannot express C# byref: the generator renders those signatures as CLR
