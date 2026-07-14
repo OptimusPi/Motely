@@ -6,7 +6,6 @@ using Motely;
 using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
-using Motely.Filters.Jummy;
 using Motely.SeedProviders;
 using JamlyzerEngine = Motely.Analysis.MotelyJamlyzer;
 
@@ -125,12 +124,12 @@ public static partial class MotelyJaml
         return [.. names.Where(n => n.Contains(query, StringComparison.OrdinalIgnoreCase))];
     }
 
-    /// <summary>Null when the JUMMY line parses; the parser's loud error otherwise.</summary>
+    /// <summary>Null when the line parses as one-line JAML; the parser's loud error otherwise.</summary>
     [Export]
-    public static string? ValidateLine(string line) => JummyLine.Validate(line);
+    public static string? ValidateLine(string line) => JamlLine.Validate(line);
 
     [Export]
-    public static string CanonicalizeLine(string line) => JummyLine.Canonicalize(line);
+    public static string CanonicalizeLine(string line) => JamlLine.Canonicalize(line);
 }
 
 public static partial class MotelyJamlyzer

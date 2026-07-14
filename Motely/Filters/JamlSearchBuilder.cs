@@ -30,16 +30,17 @@ public static class JamlSearchBuilder
 
     /// <summary>
     /// The tally-column label for a should clause: the author's explicit label when given,
-    /// otherwise the clause rendered as its terse JUMMY line (e.g. "Blueprint in ante 1"),
-    /// with "score{index}" as the last-resort name for clauses JUMMY can't render.
+    /// otherwise the clause rendered as its terse one-line JAML spelling (e.g. "Blueprint in ante 1"),
+    /// with "score{index}" as the last-resort name for clauses that spelling can't render.
     /// </summary>
     public static string DefaultTallyLabel(IJamlClause clause, int index) =>
-        clause.Label ?? Jummy.JummyLine.FromClause(LabelRenderable(clause)) ?? $"score{index}";
+        clause.Label ?? JamlLine.FromClause(LabelRenderable(clause)) ?? $"score{index}";
 
     /// <summary>
-    /// JUMMY renders JokerClause but keeps LegendaryJokerClause out of its round-trip grammar
-    /// (parsing a joker line always yields a JokerClause). For labeling only, view a legendary
-    /// clause through an equivalent JokerClause so "Perkeo in ante 1 or 2" still names its column.
+    /// The one-line spelling renders JokerClause but keeps LegendaryJokerClause out of its
+    /// round-trip grammar (parsing a joker line always yields a JokerClause). For labeling only,
+    /// view a legendary clause through an equivalent JokerClause so "Perkeo in ante 1 or 2" still
+    /// names its column.
     /// </summary>
     private static IJamlClause LabelRenderable(IJamlClause clause) =>
         clause is LegendaryJokerClause { IsWildcard: false } lj

@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Motely.Filters.Jaml;
 
-namespace Motely.Filters.Jummy;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
-/// JUMMY — one line, one JAML criterion. Formatting/parsing delegates item and enum
+/// One line, one JAML clause. Formatting/parsing delegates item and enum
 /// spellings to the engine's own canonical formatters whenever they exist.
 /// </summary>
-public static class JummyLine
+public static class JamlLine
 {
     private const string Wildcard = "Any";
     private const string VoucherPrefix = "Voucher ";
@@ -178,7 +177,7 @@ public static class JummyLine
 
     private static string JoinNumbers(int[] values) => string.Join(" or ", values);
 
-    /// <summary>Null when <paramref name="line"/> parses as a JUMMY clause; the parser's error otherwise.</summary>
+    /// <summary>Null when <paramref name="line"/> parses as one-line JAML; the parser's error otherwise.</summary>
     public static string? Validate(string line) =>
         TryToClause(line, out _, out string? error) ? null : error;
 
@@ -200,7 +199,7 @@ public static class JummyLine
 
         if (string.IsNullOrWhiteSpace(line))
         {
-            error = "Empty JUMMY line.";
+            error = "Empty JAML line.";
             return false;
         }
 
@@ -282,7 +281,7 @@ public static class JummyLine
         }
 
         error =
-            $"Item '{withoutAnte}' isn't a JUMMY-supported clause yet (category {item.TypeCategory}).";
+            $"Item '{withoutAnte}' isn't a supported one-line clause yet (category {item.TypeCategory}).";
         return false;
     }
 
@@ -552,7 +551,7 @@ public static class JummyLine
         if (idx < 0)
             return (text, null, null);
         if (!allowLuck)
-            return (text, null, "This JUMMY event does not support luck.");
+            return (text, null, "This event does not support luck.");
         var luckText = text[(idx + marker.Length)..].Trim();
         if (!int.TryParse(luckText, out var numeric) || !TryParseLuck(numeric, out var luck))
             return (text, null, $"Bad luck multiplier '{luckText}'.");

@@ -1,13 +1,13 @@
-using Motely.Filters.Jummy;
+using Motely.Filters.Jaml;
 
 namespace Motely.Tests;
 
 /// <summary>
-/// JUMMY ⟷ JAML round-trip. The thesis under test: an item is a packed int that maps
-/// to exactly one descriptive string and back, so a JUMMY line (item string + ante
+/// One-line JAML round-trip. The thesis under test: an item is a packed int that maps
+/// to exactly one descriptive string and back, so a one-line spelling (item string + ante
 /// tail) and a JAML joker clause are deterministic, lossless re-encodings of each other.
 /// </summary>
-public class JummyLineTests
+public class JamlLineTests
 {
     // ── The exact example, pinned ─────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ public class JummyLineTests
     public void EternalBlueprintInAntes1Or2_parsesToTheExpectedClause()
     {
         Assert.True(
-            JummyLine.TryToClause(
+            JamlLine.TryToClause(
                 "Eternal Blueprint in antes 1 or 2",
                 out var clause,
                 out var error
@@ -34,9 +34,9 @@ public class JummyLineTests
     public void EternalBlueprintInAntes1Or2_roundTripsBackToTheSameLine()
     {
         Assert.True(
-            JummyLine.TryToClause("Eternal Blueprint in antes 1 or 2", out var clause, out _)
+            JamlLine.TryToClause("Eternal Blueprint in antes 1 or 2", out var clause, out _)
         );
-        Assert.Equal("Eternal Blueprint in antes 1 or 2", JummyLine.FromClause(clause!));
+        Assert.Equal("Eternal Blueprint in antes 1 or 2", JamlLine.FromClause(clause!));
     }
 
     // ── Tails ─────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ public class JummyLineTests
     public void AnteTail_parsesAndCanonicalizes(string line, int[] expectedAntes)
     {
         Assert.True(
-            JummyLine.TryToClause(line, out var clause, out var error),
+            JamlLine.TryToClause(line, out var clause, out var error),
             $"parse failed: {error}"
         );
         Assert.Equal(expectedAntes, Assert.IsType<JokerClause>(clause).Antes);
@@ -58,9 +58,9 @@ public class JummyLineTests
     [Fact]
     public void CommaAndOrSeparators_areInterchangeable()
     {
-        Assert.True(JummyLine.TryToClause("Showman in antes 1, 2", out var a, out _));
-        Assert.True(JummyLine.TryToClause("Showman in antes 1 or 2", out var b, out _));
-        Assert.Equal(JummyLine.FromClause(a!), JummyLine.FromClause(b!));
+        Assert.True(JamlLine.TryToClause("Showman in antes 1, 2", out var a, out _));
+        Assert.True(JamlLine.TryToClause("Showman in antes 1 or 2", out var b, out _));
+        Assert.Equal(JamlLine.FromClause(a!), JamlLine.FromClause(b!));
     }
 
     // ── Modifiers ride the packed int ─────────────────────────────────────────
@@ -72,18 +72,18 @@ public class JummyLineTests
     public void Modifiers_roundTrip(string line)
     {
         Assert.True(
-            JummyLine.TryToClause(line, out var clause, out var error),
+            JamlLine.TryToClause(line, out var clause, out var error),
             $"parse failed: {error}"
         );
-        Assert.Equal(line, JummyLine.FromClause(clause!));
+        Assert.Equal(line, JamlLine.FromClause(clause!));
     }
 
     [Fact]
     public void Wildcard_roundTrips()
     {
-        Assert.True(JummyLine.TryToClause("Any in ante 1", out var clause, out _));
+        Assert.True(JamlLine.TryToClause("Any in ante 1", out var clause, out _));
         Assert.True(Assert.IsType<JokerClause>(clause).IsWildcard);
-        Assert.Equal("Any in ante 1", JummyLine.FromClause(clause!));
+        Assert.Equal("Any in ante 1", JamlLine.FromClause(clause!));
     }
 
     // ── The whole joker universe round-trips ──────────────────────────────────
@@ -94,13 +94,13 @@ public class JummyLineTests
         var failures = new List<string>();
         foreach (var j in Enum.GetValues<MotelyJoker>())
         {
-            var line = JummyLine.FromClause(new JokerClause { Jokers = [j], Antes = [1] });
+            var line = JamlLine.FromClause(new JokerClause { Jokers = [j], Antes = [1] });
             if (line is null)
             {
                 failures.Add($"{j}: FromClause returned null");
                 continue;
             }
-            if (!JummyLine.TryToClause(line, out var clause, out var error))
+            if (!JamlLine.TryToClause(line, out var clause, out var error))
             {
                 failures.Add($"{j}: '{line}' failed to parse ({error})");
                 continue;
@@ -128,16 +128,16 @@ public class JummyLineTests
     public void Consumables_roundTrip(string line)
     {
         Assert.True(
-            JummyLine.TryToClause(line, out var clause, out var error),
+            JamlLine.TryToClause(line, out var clause, out var error),
             $"parse failed: {error}"
         );
-        Assert.Equal(line, JummyLine.FromClause(clause!));
+        Assert.Equal(line, JamlLine.FromClause(clause!));
     }
 
     [Fact]
     public void TheFool_parsesToATarotClause()
     {
-        Assert.True(JummyLine.TryToClause("The Fool in ante 1", out var clause, out _));
+        Assert.True(JamlLine.TryToClause("The Fool in ante 1", out var clause, out _));
         Assert.Equal([MotelyTarotCard.TheFool], Assert.IsType<TarotCardClause>(clause).Tarots);
     }
 
@@ -171,17 +171,17 @@ public class JummyLineTests
     public void StandardCards_roundTrip(string line)
     {
         Assert.True(
-            JummyLine.TryToClause(line, out var clause, out var error),
+            JamlLine.TryToClause(line, out var clause, out var error),
             $"parse failed: {error}"
         );
-        Assert.Equal(line, JummyLine.FromClause(clause!));
+        Assert.Equal(line, JamlLine.FromClause(clause!));
     }
 
     [Fact]
     public void StandardCard_parsesToExpectedClause()
     {
         Assert.True(
-            JummyLine.TryToClause(
+            JamlLine.TryToClause(
                 "Red Seal Polychrome Steel King of Hearts in ante 1",
                 out var clause,
                 out var error
@@ -203,7 +203,7 @@ public class JummyLineTests
         var failures = new List<string>();
         foreach (var card in Enum.GetValues<MotelyStandardCard>())
         {
-            var line = JummyLine.FromClause(
+            var line = JamlLine.FromClause(
                 new StandardCardClause
                 {
                     Rank = card.GetRank(),
@@ -216,13 +216,13 @@ public class JummyLineTests
                 failures.Add($"{card}: FromClause returned null");
                 continue;
             }
-            if (!JummyLine.TryToClause(line, out var clause, out var error))
+            if (!JamlLine.TryToClause(line, out var clause, out var error))
             {
                 failures.Add($"{card}: '{line}' failed to parse ({error})");
                 continue;
             }
-            if (JummyLine.FromClause(clause!) != line)
-                failures.Add($"{card}: '{line}' -> '{JummyLine.FromClause(clause!)}'");
+            if (JamlLine.FromClause(clause!) != line)
+                failures.Add($"{card}: '{line}' -> '{JamlLine.FromClause(clause!)}'");
         }
         Assert.True(
             failures.Count == 0,
@@ -234,7 +234,7 @@ public class JummyLineTests
     public void StartingDraw_roundTripsRankSuitOnly()
     {
         Assert.True(
-            JummyLine.TryToClause(
+            JamlLine.TryToClause(
                 "Starting Draw King of Hearts in ante 1",
                 out var clause,
                 out var error
@@ -244,10 +244,10 @@ public class JummyLineTests
         var draw = Assert.IsType<StartingDrawClause>(clause);
         Assert.Equal(MotelyStandardcardRank.King, draw.Rank);
         Assert.Equal(MotelyStandardcardSuit.Hearts, draw.Suit);
-        Assert.Equal("Starting Draw King of Hearts in ante 1", JummyLine.FromClause(clause!));
+        Assert.Equal("Starting Draw King of Hearts in ante 1", JamlLine.FromClause(clause!));
 
         Assert.False(
-            JummyLine.TryToClause("Starting Draw Red Seal King of Hearts", out _, out error)
+            JamlLine.TryToClause("Starting Draw Red Seal King of Hearts", out _, out error)
         );
         Assert.Contains("rank/suit only", error);
     }
@@ -292,11 +292,11 @@ public class JummyLineTests
     public void FeaturePrefixes_parseToExpectedClauseTypes(string line, Type expectedType)
     {
         Assert.True(
-            JummyLine.TryToClause(line, out var clause, out var error),
+            JamlLine.TryToClause(line, out var clause, out var error),
             $"parse failed: {error}"
         );
         Assert.IsType(expectedType, clause);
-        Assert.Equal(line, JummyLine.FromClause(clause!));
+        Assert.Equal(line, JamlLine.FromClause(clause!));
     }
 
     [Theory]
@@ -315,33 +315,33 @@ public class JummyLineTests
     public void Events_parseToExpectedClauseTypes(string line, Type expectedType)
     {
         Assert.True(
-            JummyLine.TryToClause(line, out var clause, out var error),
+            JamlLine.TryToClause(line, out var clause, out var error),
             $"parse failed: {error}"
         );
         Assert.IsType(expectedType, clause);
-        Assert.Equal(line, JummyLine.FromClause(clause!));
+        Assert.Equal(line, JamlLine.FromClause(clause!));
     }
 
     [Fact]
     public void EventLuck_rejectsUnsupportedEvent()
     {
         Assert.False(
-            JummyLine.TryToClause("Business Payout rolls 0 with luck 4", out _, out var error)
+            JamlLine.TryToClause("Business Payout rolls 0 with luck 4", out _, out var error)
         );
         Assert.Contains("does not support luck", error);
     }
 
     [Fact]
-    public void LogicAndMultiValueClauses_areNotSingleJummyLines()
+    public void LogicAndMultiValueClauses_areNotSingleJamlLines()
     {
-        Assert.Null(JummyLine.FromClause(new AndClause { Clauses = [] }));
+        Assert.Null(JamlLine.FromClause(new AndClause { Clauses = [] }));
         Assert.Null(
-            JummyLine.FromClause(
+            JamlLine.FromClause(
                 new JokerClause { Jokers = [MotelyJoker.Blueprint, MotelyJoker.Brainstorm] }
             )
         );
         Assert.Null(
-            JummyLine.FromClause(
+            JamlLine.FromClause(
                 new VoucherClause
                 {
                     Vouchers = [MotelyVoucher.Telescope, MotelyVoucher.Observatory],
@@ -356,24 +356,24 @@ public class JummyLineTests
     {
         foreach (var value in Enum.GetValues<T>())
         {
-            var line = JummyLine.FromClause(make(value));
+            var line = JamlLine.FromClause(make(value));
             if (line is null)
             {
                 failures.Add($"{typeof(T).Name}.{value}: FromClause returned null");
                 continue;
             }
-            if (!JummyLine.TryToClause(line, out var clause, out var error))
+            if (!JamlLine.TryToClause(line, out var clause, out var error))
             {
                 failures.Add($"{typeof(T).Name}.{value}: '{line}' failed to parse ({error})");
                 continue;
             }
-            var back = JummyLine.FromClause(clause!);
+            var back = JamlLine.FromClause(clause!);
             if (back != line)
                 failures.Add($"{typeof(T).Name}.{value}: '{line}' -> '{back}'");
         }
     }
 
-    // ── The int law itself (the foundation JUMMY stands on) ───────────────────
+    // ── The int law itself (the foundation the one-line spelling stands on) ───
 
     [Fact]
     public void FormatThenParse_isIdentityOnThePackedInt()

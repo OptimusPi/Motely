@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using Motely.Filters.Jummy;
 using SharpYaml.Model;
 
 namespace Motely.Filters.Jaml;
@@ -125,7 +124,7 @@ public static partial class JamlConfigLoader
 
     private static IJamlClause ParseLineClause(string line)
     {
-        if (!JummyLine.TryToClause(line, out var clause, out var error))
+        if (!JamlLine.TryToClause(line, out var clause, out var error))
             throw new InvalidOperationException($"Invalid JAML line '{line}': {error}");
         return clause!;
     }
@@ -747,7 +746,7 @@ public static partial class JamlConfigLoader
                         break;
                     default:
                         throw new InvalidOperationException(
-                            $"Clause list '{key}' has an entry that is neither a clause mapping nor a JUMMY line."
+                            $"Clause list '{key}' has an entry that is neither a clause mapping nor a one-line clause."
                         );
                 }
             }

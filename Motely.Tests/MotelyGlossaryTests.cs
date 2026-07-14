@@ -7,7 +7,6 @@ public class MotelyGlossaryTests
 {
     [Theory]
     [InlineData("JAML")]
-    [InlineData("JUMMY")]
     [InlineData("Jimmolate")]
     [InlineData("JAMLyzer")]
     public void TryGet_KnownTerm_ReturnsNonEmptyDefinition(string term)
