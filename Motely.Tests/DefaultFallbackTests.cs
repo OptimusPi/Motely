@@ -97,8 +97,8 @@ public class DefaultFallbackTests
 
     // ── Tally-column labels ──
     // CreatePlan names each should-clause tally column. An explicit label: wins; an
-    // unlabeled clause gets its JUMMY line as the column name; scoreN is the last resort
-    // for clauses JUMMY cannot render as a single line.
+    // unlabeled clause gets its one-line JAML spelling as the column name; scoreN is the
+    // last resort for clauses that spelling cannot render as a single line.
 
     private static JamlConfig LabelConfig(params IJamlClause[] should)
     {
@@ -122,28 +122,28 @@ public class DefaultFallbackTests
     }
 
     [Fact]
-    public void TallyLabels_UnlabeledClause_UsesJummyLine()
+    public void TallyLabels_UnlabeledClause_UsesJamlLine()
     {
         var clause = new JokerClause { Jokers = [MotelyJoker.Blueprint], Antes = [1, 2] };
-        var expected = Motely.Filters.Jummy.JummyLine.FromClause(clause);
+        var expected = Motely.Filters.Jaml.JamlLine.FromClause(clause);
 
         var plan = JamlSearchBuilder.CreatePlan(LabelConfig(clause));
 
-        Assert.NotNull(expected); // a single named joker always renders as a JUMMY line
+        Assert.NotNull(expected); // a single named joker always renders as one line
         Assert.Equal([expected!], plan.TallyLabels);
         Assert.DoesNotContain("score0", plan.TallyLabels);
     }
 
     [Fact]
-    public void TallyLabels_JummyUnrenderableClause_FallsBackToScoreIndex()
+    public void TallyLabels_JamlLineUnrenderableClause_FallsBackToScoreIndex()
     {
-        // Two jokers in one clause has no single-line JUMMY form (FromClause returns null),
+        // Two jokers in one clause has no single-line form (FromClause returns null),
         // so the column keeps its positional name.
         var unrenderable = new JokerClause
         {
             Jokers = [MotelyJoker.Blueprint, MotelyJoker.Brainstorm],
         };
-        Assert.Null(Motely.Filters.Jummy.JummyLine.FromClause(unrenderable));
+        Assert.Null(Motely.Filters.Jaml.JamlLine.FromClause(unrenderable));
 
         var labeled = new JokerClause { Jokers = [MotelyJoker.Blueprint], Label = "bp" };
         var plan = JamlSearchBuilder.CreatePlan(LabelConfig(labeled, unrenderable));
@@ -154,13 +154,13 @@ public class DefaultFallbackTests
     [Fact]
     public void TallyLabels_LegendaryJokerClause_RendersLikeItsJokerLine()
     {
-        // JUMMY keeps LegendaryJokerClause out of its round-trip grammar, so the label
-        // path views it through an equivalent JokerClause instead of falling to scoreN.
+        // The one-line spelling keeps LegendaryJokerClause out of its round-trip grammar, so
+        // the label path views it through an equivalent JokerClause instead of falling to scoreN.
         var legendary = new LegendaryJokerClause { Jokers = [MotelyJoker.Perkeo], Antes = [1, 2] };
         var asJoker = new JokerClause { Jokers = [MotelyJoker.Perkeo], Antes = [1, 2] };
 
         var plan = JamlSearchBuilder.CreatePlan(LabelConfig(legendary));
 
-        Assert.Equal([Motely.Filters.Jummy.JummyLine.FromClause(asJoker)!], plan.TallyLabels);
+        Assert.Equal([Motely.Filters.Jaml.JamlLine.FromClause(asJoker)!], plan.TallyLabels);
     }
 }

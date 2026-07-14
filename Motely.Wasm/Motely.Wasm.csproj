@@ -15,16 +15,18 @@
   </PropertyGroup>
 
   <!-- Cloudflare Workers (and other embedders that block runtime WebAssembly.compile/instantiate
-       from raw bytes) can't boot the default embedded build: Bootsharp's boot() always calls
+       from raw bytes) can't boot the default embedded build: Bootsharp's boot() would call
        WebAssembly.instantiate() on raw bytes internally. Publish with
-       -p:MotelyWasmTarget=workers to get a sideloaded build instead: a real, standalone .wasm
-       file (plus assemblies/icu as separate files) that a bundler can statically import and
-       precompile at deploy time, paired with dist-workers/workers-boot.mjs, which boots via a
-       custom instantiateWasm that instantiates that precompiled module (cheap linking, not code
-       generation - allowed even where dynamic compilation is blocked). -->
+       -p:MotelyWasmTarget=workers to get a build that fixes this instead: a real, standalone
+       .wasm file that BootsharpStaticWasmImport has resources.g.mjs statically import, so a
+       bundler (eg Wrangler) precompiles it into a WebAssembly.Module at deploy time. boot()
+       itself then detects that precompiled Module and links it via a custom instantiateWasm
+       (cheap linking, not code generation - allowed even where dynamic compilation is blocked).
+       Consumers keep calling plain boot() with no arguments, exactly as with the embedded build. -->
   <PropertyGroup Condition="'$(MotelyWasmTarget)' == 'workers'">
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\dist-workers</BootsharpPublishDirectory>
     <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\dist-workers\bin</BootsharpBinariesDirectory>
+    <BootsharpStaticWasmImport>true</BootsharpStaticWasmImport>
   </PropertyGroup>
 
   <ItemGroup>

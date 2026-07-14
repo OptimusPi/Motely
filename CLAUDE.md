@@ -15,7 +15,7 @@ Write positive prose everywhere — docs, comments, commit messages say what to 
 ```sh
 dotnet build                                              # whole solution (Motely.slnx: engine, CLI, tests)
 dotnet test                                               # C# suite (xUnit + Verify snapshots)
-dotnet test --filter "FullyQualifiedName~JummyLineTests"  # one test class
+dotnet test --filter "FullyQualifiedName~JamlLineTests"   # one test class
 dotnet test --filter "DisplayName~<fragment>"             # one test by name
 ```
 
@@ -45,9 +45,8 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 
 - **Two execution contexts, one filter model.** `MotelyVectorSearchContext` (partials per domain: Joker, Shop, Tarot, Packs, Tags, Vouchers, …) is the 8-wide SIMD path filters run on. `MotelySingleSearchContext` (same partial layout plus Boss, Shuffle, RunState) is the per-seed scalar path used for scoring, analysis, and the JS Jimmolate filter. `MotelySearch.cs` is the driver; `MotelySearch.Browser.cs` is its WASM-facing partial.
 - **Filters are descriptors.** `IMotelySeedFilterDesc` describes a filter; `MotelyFilterCreationContext` instantiates it. `JamlSearchBuilder.CreateSettings` composes the chain from a `JamlConfig`: `must` clauses append filters, `mustNot` wraps in `NegationFilterDesc`, `should` installs `JamlShouldScoreDesc` for weighted scoring. A clause-free JAML (deck/stake/seeds only, host predicate carries the decision) is a first-class search.
-- **JAML** lives in `Motely/Filters/Jaml/` — `JamlConfig`, `JamlConfigLoader` (`FromYaml`/`FromJson`; validation is loud and every key is checked at load, so typos surface immediately), clause types, per-feature descriptors under `AnteCards/`, `AnteFeatures/`, `Events/`.
+- **JAML** lives in `Motely/Filters/Jaml/` — `JamlConfig`, `JamlConfigLoader` (`FromYaml`/`FromJson`; validation is loud and every key is checked at load, so typos surface immediately), clause types, per-feature descriptors under `AnteCards/`, `AnteFeatures/`, `Events/`. `JamlLine` (`Motely/Filters/Jaml/JamlLine.cs`) is the one-human-line spelling of a JAML clause, with `Validate`/`Canonicalize`.
 - **JAMLyzer** (`Motely/Analysis/MotelyJamlyzer.cs`) produces per-seed ante-by-ante breakdowns; supports paged analysis with resumable stream states.
-- **JUMMY** (`Motely/Filters/Jummy/JummyLine.cs`) is the one-human-line spelling of a JAML clause, with `Validate`/`Canonicalize`.
 - **Native filters** (`Motely/Filters/Native/`) are hand-written C# filters (PerkeoObservatory, Jimmolate, ErraticFinder, …), reachable via CLI `--native <name>`; coverage focuses on the JAML path and lets these speed demons run free.
 - `LuaRandom`/`VectorLuaRandom` reproduce Balatro's RNG exactly — determinism here is the whole product.
 
@@ -95,17 +94,14 @@ One source of truth drives the whole toolchain. `JamlDiscriminatorRegistry` maps
 ## Project skills and hooks
 
 - `.claude/skills/release-motely-wasm/` — the complete npm release ritual; pifreak invokes it (`/release-motely-wasm`) and confirms the version and the publish.
-- JAML clause/JUMMY/vocabulary reference lives in the **Balatro Seed Oracle MCP server** (part of seedfinder.app), not this repo — call its `learn_jaml` tool before writing any `.jaml` filter.
-
-## Gotchas worth knowing
-
-- Verify snapshot tests compare against `Motely.Tests/GoldenJamlFiles/`; an intended output change is accepted by copying the `.received.` file over its `.verified.` twin — read the diff first and confirm the change is the behavior you meant.
-- Motely.TUI exists as `bin/`/`obj/` build artifacts; its project file lives outside the tree today, so the solution builds engine, CLI, and tests.
-- `searchSequential` on the WASM surface takes bigints — the C# parameters are `long`.
+- JAML clause/vocabulary reference lives in the **Balatro Seed Oracle MCP server** (part of seedfinder.app), not this repo — call its `learn_jaml` tool before writing any `.jaml` filter.
 
 ## Build notes
 
 - `Directory.Packages.props` owns every package version centrally and `<MotelyVersion>` — the one number that versions assemblies and the npm package.
 - Release CLI builds enable AVX-512 intrinsics, TieredPGO, ServerGC; the engine is built for 512-bit SIMD.
 - `nuget.config` keeps merge-friendly sources so a per-user local Bootsharp feed can join in.
-- Installing Binaryen (`wasm-opt` on PATH) makes WASM builds fully optimized; builds succeed and stay correct without it.
+- Install Binaryen (`wasm-opt` on PATH) for fully optimized WASM builds; builds succeed and stay correct without it too.
+- Accept an intended Verify snapshot change by reading the diff, confirming it's the behavior you meant, then copying the `.received.` file over its `.verified.` twin in `Motely.Tests/GoldenJamlFiles/`.
+- The solution builds engine, CLI, and tests; Motely.TUI's project file lives outside the tree, with only its `bin/`/`obj/` build artifacts present here today.
+- Call `searchSequential` on the WASM surface with bigints; they map to the C# `long` parameters underneath.

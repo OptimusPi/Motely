@@ -7,10 +7,10 @@ namespace Motely;
 public sealed record MotelyGlossaryTerm(string Term, string? Acronym, string Definition);
 
 /// <summary>
-/// The single source of truth for what JAML, JUMMY, Jimmolate, and JAMLyzer mean. Every
+/// The single source of truth for what JAML, Jimmolate, and JAMLyzer mean. Every
 /// consumer-facing surface (CLI <c>--glossary</c>, the MCP glossary tool, and the WASM/npm
 /// export) renders from this list, so the explanation only has to be written once and can't
-/// drift between surfaces the way the four hand-written copies in READMEs/help text used to.
+/// drift between surfaces the way the hand-written copies in READMEs/help text used to.
 /// </summary>
 public static class MotelyGlossary
 {
@@ -21,14 +21,10 @@ public static class MotelyGlossary
             "Jimbo's Ante Markup Language",
             "Motely's filter config language. Written as YAML or JSON — both syntaxes parse to "
                 + "the same typed JamlConfig. A JAML file declares 'must' (hard requirements) and "
-                + "'should' (scored, optional) clauses against a seed's antes."
-        ),
-        new(
-            "JUMMY",
-            null,
-            "One human-readable line = one JAML clause, e.g. 'Eternal Blueprint in antes 1 or 2'. "
-                + "JUMMY lines parse to and format back from a JAML clause losslessly, so they're "
-                + "a plain-English shorthand for editing a single 'must'/'should' entry by hand."
+                + "'should' (scored, optional) clauses against a seed's antes. A clause can also be "
+                + "written as one human-readable line, e.g. 'Eternal Blueprint in antes 1 or 2' — "
+                + "that line parses to and formats back from the clause losslessly, so it's a "
+                + "plain-English shorthand for editing a single 'must'/'should' entry by hand."
         ),
         new(
             "Jimmolate",

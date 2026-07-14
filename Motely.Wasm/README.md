@@ -1,6 +1,6 @@
 # motely-wasm
 
-`motely-wasm` is the Bootsharp/WebAssembly package for MotelyJAML: the production Balatro seed-search engine, JAML loader, JAMLyzer analyzer, JUMMY one-line parser, and selected seed utilities exposed to JavaScript.
+`motely-wasm` is the Bootsharp/WebAssembly package for MotelyJAML: the production Balatro seed-search engine, JAML loader, JAMLyzer analyzer, one-line JAML parser, and selected seed utilities exposed to JavaScript.
 
 JAML is Jimbo's Ante Markup Language. YAML and JSON are the concrete syntaxes; both load to the same typed `JamlConfig` that the engine executes.
 
@@ -167,9 +167,9 @@ A JAML with zero must/should/mustNot clauses (deck, stake, seeds only — the re
 
 Stream walkers that thread `ref` state are C#-only shapes; their state-threaded twins (value in, value out) are the JS-facing equivalents.
 
-## JUMMY
+## One-line JAML
 
-JUMMY is one human line per JAML criterion — the terse spelling of a JAML clause, so it lives on `MotelyJaml`. Both calls delegate to the engine's `JummyLine` parser/formatter so packed item identity stays canonical.
+A JAML clause can be written as one human line — the terse spelling of a clause, so it lives on `MotelyJaml`. Both calls delegate to the engine's `JamlLine` parser/formatter so packed item identity stays canonical.
 
 ```js
 MotelyJaml.validateLine("Eternal Blueprint in antes 1 or 2"); // null
@@ -220,7 +220,7 @@ The package test suite mirrors the C# behavior tests that are meaningful through
 - real list/random/sequential searches
 - Jimmolate accept/reject predicate behavior against the live context
 - AND scoring, default source fallback, Hieroglyph pack-slot reachability, and luck-source regressions
-- JUMMY canonicalization
+- One-line JAML canonicalization
 - seed math and keyword utility parity
 
 Corpus-file loading and live ref-struct seed-router introspection remain native test concerns rather than JavaScript package behavior.

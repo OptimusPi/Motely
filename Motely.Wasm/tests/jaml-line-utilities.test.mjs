@@ -4,7 +4,7 @@ import { harness } from "./harness.mjs";
 
 const { MotelyJaml, MotelyUtilities, JamlAesthetic } = harness;
 
-describe("MotelyJaml — JUMMY lines", () => {
+describe("MotelyJaml — one-line JAML", () => {
     it("canonicalizes the pinned Eternal Blueprint line", () => {
         assert.equal(MotelyJaml.validateLine("Eternal Blueprint in antes 1 or 2"), null);
         assert.equal(
@@ -54,10 +54,10 @@ describe("MotelyJaml — JUMMY lines", () => {
     });
 
     it("rejects invalid lines loudly", () => {
-        const error = MotelyJaml.validateLine("Definitely Not A JUMMY Line");
+        const error = MotelyJaml.validateLine("Definitely Not A JAML Line");
         assert.equal(typeof error, "string");
         assert.ok(error.length > 0);
-        assert.throws(() => MotelyJaml.canonicalizeLine("Definitely Not A JUMMY Line"));
+        assert.throws(() => MotelyJaml.canonicalizeLine("Definitely Not A JAML Line"));
     });
 });
 
