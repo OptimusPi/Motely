@@ -1,3 +1,4 @@
+#if BOOTSHARP_FILESYSTEM
 using System.Text;
 using Bootsharp;
 using Bootsharp.FileSystem;
@@ -7,6 +8,13 @@ using Bootsharp.FileSystem;
 /// (Bootsharp.FileSystem — sponsor-exclusive extension, see
 /// D:\bootsharp\docs\guide\extensions\file-system.md). Lets a user pick a folder once,
 /// then save/load/list .jaml files in it directly — no copy-paste, no localStorage.
+///
+/// The JS half of this extension, @rewaffle/bootsharp-file-system, lives on a private
+/// sponsor-only registry, so motely-wasm declares it as an OPTIONAL peer dependency and
+/// never as a hard one. A public MIT package that hard-depends on a paid private package
+/// 404s on install for every consumer who is not a sponsor — which is exactly what
+/// motely-wasm 24.1.1 did to everyone who tried to install it. Sponsors who add the peer
+/// get these methods; everyone else gets the whole engine and simply no folder picker.
 /// </summary>
 public static partial class MotelyFileSystem
 {
@@ -69,3 +77,4 @@ public static partial class MotelyFileSystem
     [Export]
     public static Task DeleteJamlFilter(string fileName) => Fs.DeleteFile(JamlUri(fileName));
 }
+#endif // BOOTSHARP_FILESYSTEM

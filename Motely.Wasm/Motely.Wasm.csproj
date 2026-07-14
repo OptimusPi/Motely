@@ -29,10 +29,22 @@
     <BootsharpStaticWasmImport>true</BootsharpStaticWasmImport>
   </PropertyGroup>
 
+  <!-- Bootsharp.FileSystem is a sponsor-exclusive extension: it ships on a private feed,
+       not nuget.org. Referencing it unconditionally makes this project unbuildable for
+       everyone who is not a sponsor — including on a second machine of your own, which is
+       how motely-wasm shipped a version nobody could install. So the local-folder feature
+       is opt-in: build with -p:EnableFileSystem=true where the feed is configured, and
+       MotelyFileSystem's exports come along. Build without it and the engine is complete;
+       there is simply no folder picker. -->
+  <PropertyGroup>
+    <EnableFileSystem Condition="'$(EnableFileSystem)' == ''">false</EnableFileSystem>
+    <DefineConstants Condition="'$(EnableFileSystem)' == 'true'">$(DefineConstants);BOOTSHARP_FILESYSTEM</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Bootsharp" />
     <PackageReference Include="Bootsharp.Inject" />
-    <PackageReference Include="Bootsharp.FileSystem" />
+    <PackageReference Include="Bootsharp.FileSystem" Condition="'$(EnableFileSystem)' == 'true'" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
@@ -41,13 +53,16 @@
   </ItemGroup>
 
   <!-- package.json is the published npm manifest; MotelyVersion (Directory.Packages.props)
-       is the single source of truth. Stamp it on every build so the two can never drift. -->
+       is the single source of truth. Stamp it on every build so the two can never drift.
+
+       A node script does the stamping, not an MSBuild regex over the raw file. MSBuild
+       normalizes backslashes to forward slashes inside property values, so reading the JSON
+       as text and writing it back turned every `\"` in a script string into `/"` — valid on
+       Windows, corrupt everywhere else, and silent either way because nothing re-read the
+       file during the build. Parsing real JSON has no opinion about backslashes. -->
   <Target Name="SyncNpmPackageVersion" BeforeTargets="Build">
-    <PropertyGroup>
-      <_PackageJsonPath>$(MSBuildProjectDirectory)\package.json</_PackageJsonPath>
-      <_PackageJsonText>$([System.IO.File]::ReadAllText($(_PackageJsonPath)))</_PackageJsonText>
-      <_PackageJsonStamped>$([System.Text.RegularExpressions.Regex]::Replace($(_PackageJsonText), '"version":\s*"[^"]*"', '"version": "$(MotelyVersion)"'))</_PackageJsonStamped>
-    </PropertyGroup>
-    <WriteLinesToFile File="$(_PackageJsonPath)" Lines="$(_PackageJsonStamped.Replace(';', '%3B'))" Overwrite="true" WriteOnlyWhenDifferent="true" Condition="'$(_PackageJsonStamped)' != '$(_PackageJsonText)'" />
+    <Exec Command="node &quot;$(MSBuildProjectDirectory)/scripts/stamp-npm-version.mjs&quot; $(MotelyVersion)"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          StandardOutputImportance="low" />
   </Target>
 </Project>

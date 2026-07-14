@@ -133,9 +133,25 @@ if (dryRun)
     return 0;
 }
 
-Directory.CreateDirectory(Path.GetDirectoryName(generatedTsPath)!);
-Directory.CreateDirectory(Path.GetDirectoryName(tmGrammarPath)!);
-Directory.CreateDirectory(Path.GetDirectoryName(jsonSchemaPath)!);
+// A target whose folder is gone was deleted on purpose, so this generator leaves it
+// buried. It writes to the consumers that are still here and names the ones it skipped.
+//
+// This used to call Directory.CreateDirectory on every target, which meant the generator
+// rebuilt its own consumers: delete jaml-lsp/, run the schema step, and jaml-lsp/ is back
+// on disk, untracked, ready to drift again. A package that resurrects itself on the next
+// build is a package nobody can ever finish removing. Now removal sticks.
+bool TargetLives(string path) => Directory.Exists(Path.GetDirectoryName(path)!);
+
+foreach (var (label, path) in new[]
+         {
+             ("jaml-lang generated.ts", generatedTsPath),
+             ("jaml-lsp tmLanguage", tmGrammarPath),
+             ("jaml-lsp json schema", jsonSchemaPath),
+         })
+{
+    if (!TargetLives(path))
+        Console.WriteLine($"skipped {label} — {Path.GetDirectoryName(path)} is gone, leaving it that way");
+}
 
 // ── generated.ts ──────────────────────────────────────────────────────────────
 
@@ -184,8 +200,11 @@ foreach (var (disc, keys) in discSourceKeys)
     ts.AppendLine($"    \"{disc}\": [{string.Join(", ", keys.Select(k => $"\"{k}\""))}],");
 ts.AppendLine("};");
 
-File.WriteAllText(generatedTsPath, ts.ToString(), Encoding.UTF8);
-Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, generatedTsPath)}");
+if (TargetLives(generatedTsPath))
+{
+    File.WriteAllText(generatedTsPath, ts.ToString(), Encoding.UTF8);
+    Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, generatedTsPath)}");
+}
 
 // ── TextMate grammar ──────────────────────────────────────────────────────────
 
@@ -217,10 +236,13 @@ var grammar = new
     }
 };
 
-File.WriteAllText(tmGrammarPath,
-    JsonSerializer.Serialize(grammar, new JsonSerializerOptions { WriteIndented = true }),
-    Encoding.UTF8);
-Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, tmGrammarPath)}");
+if (TargetLives(tmGrammarPath))
+{
+    File.WriteAllText(tmGrammarPath,
+        JsonSerializer.Serialize(grammar, new JsonSerializerOptions { WriteIndented = true }),
+        Encoding.UTF8);
+    Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, tmGrammarPath)}");
+}
 
 // ── JSON Schema ───────────────────────────────────────────────────────────────
 
@@ -290,9 +312,12 @@ var jsonSchema = new
     properties = rootProps,
 };
 
-File.WriteAllText(jsonSchemaPath,
-    JsonSerializer.Serialize(jsonSchema, new JsonSerializerOptions { WriteIndented = true }),
-    Encoding.UTF8);
-Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, jsonSchemaPath)}");
+if (TargetLives(jsonSchemaPath))
+{
+    File.WriteAllText(jsonSchemaPath,
+        JsonSerializer.Serialize(jsonSchema, new JsonSerializerOptions { WriteIndented = true }),
+        Encoding.UTF8);
+    Console.WriteLine($"wrote {Path.GetRelativePath(repoRoot, jsonSchemaPath)}");
+}
 
 return 0;
