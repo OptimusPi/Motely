@@ -4,7 +4,10 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Analysis;
 using Motely.CLI;
+using Motely.Data;
+using Motely.Enums;
 using Motely.Filters;
+using Motely.Filters.Jaml;
 using Motely.Filters.Native;
 
 partial class Program
@@ -218,7 +221,7 @@ partial class Program
         );
         var drownOption = app.Option(
             "--makeitrain",
-            "Make it rain: replay every saved seed for this JAML filter from its seed-lake file (Seeds/<filterId>.csv) as a front seed-list search.",
+            "Make it rain: re-search every seed saved for this JAML filter, read straight from its DuckLake catalog (<results-path>/<filterId>.catalog).",
             CommandOptionType.NoValue
         );
         var resultsPathOption = app.Option<string>(

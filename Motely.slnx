@@ -1,5 +1,7 @@
 <Solution>
   <Project Path="Motely.CLI/Motely.CLI.csproj" />
+  <Project Path="Motely.DistributedWorker/Motely.DistributedWorker.csproj" />
+  <Project Path="Motely.HelperAPI/Motely.HelperAPI.csproj" />
   <Project Path="Motely.Tests/Motely.Tests.csproj" />
   <Project Path="Motely/Motely.csproj" />
   <!-- Motely.Wasm is built/published separately: `dotnet publish Motely.Wasm/Motely.Wasm.csproj -c Release` -->
