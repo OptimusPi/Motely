@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Motely is a vectorized Balatro seed-search engine: AVX-512 SIMD, 8 seeds per lane per thread. JAML (Jimbo's Ante Markup Language) is the filter language — YAML and JSON both load to the same typed `JamlConfig` the engine executes. The repo ships the engine as a library, a CLI, and an npm WebAssembly package (`motely-wasm`).
 
-Write positive prose everywhere — docs, comments, commit messages say what to do and why it helps. pifreak's word is the spec: check code and docs against what he says. When a single fact is missing, ask him in one direct sentence.
+Write positive prose everywhere — docs, comments, commit messages say what to do and why it helps. Naty (pifreak) is the author; she/they. Her word is the spec: check code and docs against what she says. When a single fact is missing, ask her in one direct sentence.
+
+Run the engine. `dotnet run --project Motely.CLI -- --jaml <file>` is a normal, expected part of working here — a search that runs and finds a seed is the proof, and a test that fakes the search proves nothing. Surface errors where she can see them rather than piping them away.
 
 ## Commands
 
@@ -75,15 +77,13 @@ The fourteen Bootsharp docs, pinned so they load every session instead of relyin
 @../bootsharp/docs/guide/extensions/dependency-injection.md
 @../bootsharp/docs/guide/extensions/file-system.md
 
-### JAML editor toolchain
+### JAML grammar lives in C#
 
-One source of truth drives the whole toolchain. `JamlDiscriminatorRegistry` maps each discriminator to its clause and source-config types, and every type carries its own complete `ClauseKeys`/`SourceKeys` list — so the loader, the schema generator, and the editor tooling all read the same facts. `dotnet run Motely.Schema.cs` (a C# file-based app, from the repo root) regenerates `jaml-lang/src/generated.ts`, `jaml-lsp/syntaxes/jaml.tmLanguage.json`, and `jaml-lsp/schemas/jaml.schema.json` straight from that registry and the engine's enums — rerun it after any vocabulary or enum change and the editor tooling stays in lockstep.
+**The C# engine is the only grammar.** `JamlDiscriminatorRegistry` maps each discriminator to its clause and source-config types, and every type carries its own `ClauseKeys`/`SourceKeys` list, so the loader reads the same facts the engine executes. `JamlConfigLoader` reads YAML/JSON into a typed `JamlConfig` and validates every key at load, so a typo surfaces immediately; `JamlConfigLoader.ToYaml` writes one back out, so an app can round-trip a filter through save and reload.
 
-`jaml-lang/` is the TypeScript language core (`validate`/`getCompletions`/`getHover`/`getDiagnostics` over the generated vocab; `npm test` runs its Node suite). `jaml-lsp/` bundles that core two ways with esbuild: `dist/extension.js`, the VS Code extension for `.jaml`/`.jummy` files (highlighting, diagnostics, completions, hover, the `@jimbo` chat participant, seed search, and `.jamlnb` notebooks — `npm run build`, `npm run package` for the vsix), and `dist/server.js`, a standalone stdio LSP server any editor can spawn (Neovim, Zed, Claude Code's IDE diagnostics), exposed via the `jaml-language-server` bin. `jaml-codemirror/` is the third consumer of that same core: a CodeMirror 6 language package (`JamlCodeEditor`, `JimmolateEditor`, the Jimmolate JS-predicate bridge) for any React app that wants a JAML editor without embedding VS Code — its linter and completions call straight into `jaml-lang`'s `validate`/`getCompletions`, so it carries zero hand-written vocabulary of its own and can never drift from the engine.
+**The TypeScript reimplementations are gone, on purpose.** `jaml-lsp` (a VS Code extension and a stdio language server) and `jaml-codemirror` were both deleted: each one carried its own copy of the grammar, so every vocabulary change meant editing the same facts in three places and shipping three packages in lockstep. Editors reach the grammar through `motely-wasm` instead — the engine itself, compiled, doing the parsing it already does. **Leave them buried.** A third implementation of a grammar the engine already owns is a place for the truth to rot, not a feature.
 
-`jaml-lang/src/context.ts` (the cursor-position walker all three consumers share via `getCompletions`/`getHover`) reads its discriminator set from the generated `Discriminators` export, not a hand-copied list — the same discipline as the rest of the toolchain.
-
-`JamlConfigLoader` reads YAML/JSON to a typed `JamlConfig`; `JamlConfigLoader.ToYaml` writes one back out, so editors and apps can round-trip a filter through save and reload.
+`dotnet run Motely.Schema.cs` (from the repo root) still emits `jaml-lang/src/generated.ts` for any live TypeScript consumer, straight from the registry and the engine's enums. It writes **only to folders that already exist** and prints what it skipped — a generator that recreates its own deleted consumers is how a removed package comes back on the next build, and that is the exact loop this repo spent months in. Rerun it after any vocabulary or enum change.
 
 ### Supporting directories
 

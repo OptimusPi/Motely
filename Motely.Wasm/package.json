@@ -1,7 +1,7 @@
 {
   "name": "motely-wasm",
   "type": "module",
-  "version": "24.1.1",
+  "version": "24.1.2",
   "description": "Balatro seed search + per-seed analysis, powered by JAML (Jimbo's Ante Markup Language). Vectorized SIMD engine, compiled to WebAssembly.",
   "author": "Nathanial P. Howard",
   "license": "MIT",
@@ -22,8 +22,13 @@
     "serve": "node testui/serve.mjs",
     "pack:check": "npm pack --dry-run"
   },
-  "dependencies": {
-    "@rewaffle/bootsharp-file-system": "latest"
+  "peerDependencies": {
+    "@rewaffle/bootsharp-file-system": "*"
+  },
+  "peerDependenciesMeta": {
+    "@rewaffle/bootsharp-file-system": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0"
