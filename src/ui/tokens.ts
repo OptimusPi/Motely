@@ -1,14 +1,16 @@
 /**
- * Balatro design tokens — colors eyedropped from actual game pixels.
+ * Balatro design tokens — JS mirror of src/ui/jimbo-tokens.css :root.
+ *
+ * CSS custom properties (--j-*) are the source of truth for DOM.
+ * Keep every hex here in lockstep with jimbo-tokens.css.
  * Do NOT replace with Lua HEX values; the game's shader pipeline transforms them.
  *
- * IMPORTANT: For DOM components, use CSS custom properties (--j-red, etc.)
- * from jimbo.css. Only use these JS constants for contexts that cannot use
- * CSS — such as R3F/Canvas, inline SVG fills, or imperative animation APIs.
+ * Use these JS constants only where CSS vars cannot apply — Canvas, SVG fills,
+ * CodeMirror themes, or imperative animation APIs.
  */
 
 export const JimboColorOption = {
-  RED: '#ff4c40',
+  RED: '#fe5148',
   BLUE: '#0093ff',
   GREEN: '#429f79',
   ORANGE: '#ff9800',
@@ -23,8 +25,11 @@ export const JimboColorOption = {
 
   DARK_GREY: '#3a5055',
   DARKEST: '#1e2b2d',
-  GREY: '#708386',
+  GREY: '#a8bcbf',
   TEAL_GREY: '#404c4e',
+  SURFACE: '#3a5055',
+  SURFACE_INSET: '#2a3a3f',
+  SURFACE_INSET_ALT: '#324347',
 
   PANEL_EDGE: '#1e2e32',
   INNER_BORDER: '#334461',
@@ -57,15 +62,23 @@ export function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+/**
+ * Motion mirrors engine/moveable.lua juice_up defaults (amount 0.4, ~0.4s)
+ * and press lip on UI buttons — solid south edge, not soft elevation blur.
+ */
 export const JIMBO_ANIMATIONS = {
   JUICE_UP_SCALE: 1.05,
   JUICE_DOWN_SCALE: 1.0,
-  JUICE_DURATION: 150,
+  /** Lua juice_up end_time ≈ start + 0.4s */
+  JUICE_DURATION: 400,
+  JUICE_AMOUNT: 0.4,
   JUICE_EASING: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+  /** Lua zoom hover bonus */
+  HOVER_SCALE: 1.05,
   SWAY_AMOUNT: 1.5,
   SWAY_DURATION: 4000,
   PRESS_TRANSLATE_Y: 2,
-  PRESS_DURATION: 50,
+  PRESS_DURATION: 55,
   CARD_TILT_MAX: 6,
   MENU_SINK_DURATION: 200,
   MENU_RISE_DURATION: 300,
@@ -73,4 +86,3 @@ export const JIMBO_ANIMATIONS = {
   LETTER_POP_RATE: 3,
   LETTER_BUMP_RATE: 2.666,
 } as const
-

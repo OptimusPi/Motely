@@ -3,15 +3,18 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
+// Tokens live in jimbo-tokens.css; component classes in jimbo.css.
+const TOKENS_CSS = readFileSync('src/ui/jimbo-tokens.css', 'utf8');
 const CSS = readFileSync('src/ui/jimbo.css', 'utf8');
+const ALL_CSS = `${TOKENS_CSS}\n${CSS}`;
 
 // Extract token names defined on :root (and in @media variants).
 const tokenSet = new Set();
-for (const m of CSS.matchAll(/(--j[a-zA-Z0-9-]+)\s*:/g)) tokenSet.add(m[1]);
+for (const m of ALL_CSS.matchAll(/(--j[a-zA-Z0-9-]+)\s*:/g)) tokenSet.add(m[1]);
 
-// Extract class names defined in jimbo.css.
+// Extract class names defined in jimbo.css (+ any utilities).
 const classSet = new Set();
-for (const m of CSS.matchAll(/\.(j-[a-zA-Z0-9_-]+)/g)) classSet.add(m[1]);
+for (const m of ALL_CSS.matchAll(/\.(j-[a-zA-Z0-9_-]+)/g)) classSet.add(m[1]);
 
 // Walk source tree and collect references.
 function walk(dir, out = []) {
@@ -24,7 +27,7 @@ function walk(dir, out = []) {
   return out;
 }
 const files = walk('src');
-files.push('src/ui/jimbo.css');
+files.push('src/ui/jimbo.css', 'src/ui/jimbo-tokens.css');
 const SOURCES = files.map((f) => readFileSync(f, 'utf8')).join('\n');
 
 const unusedTokens = [];

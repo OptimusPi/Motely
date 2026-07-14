@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   jimbo.css — Jimbo Design System
-   Balatro-inspired design tokens + component classes.
+   jimbo.css — Jimbo Design System (component classes)
+   Tokens live in jimbo-tokens.css (sole :root source of truth).
    Eyedropped from actual game shader output — not Lua hex values.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@import '../../fonts.css';
+@import './jimbo-tokens.css';
 
 /* Global Scrollbar Hide */
 * {
@@ -14,97 +14,6 @@
 
 *::-webkit-scrollbar {
   display: none !important;
-}
-
-/* ── Design Tokens (CSS Custom Properties) ─────────────────────────────── */
-
-:root {
-  /* Colors — eyedropped from Balatro's rendered shader output */
-  --j-red: #fe5148;
-  --j-blue: #0093ff;
-  --j-green: #429f79;
-  --j-orange: #ff9800;
-  --j-gold: #e4b643;
-  --j-purple: #9e74ce;
-
-  --j-dark-red: #a02721;
-  --j-dark-blue: #0057a1;
-  --j-dark-orange: #a05b00;
-  --j-dark-green: #215f46;
-  --j-dark-purple: #5e437e;
-
-  --j-dark-grey: #3a5055;
-  --j-darkest: #1e2b2d;
-  /* Bumped from #708386 to a brighter slate. The old value was dark enough
-     that tone="grey" text vanished into --j-darkest / --j-dark-grey panels
-     ("Jokers" header reading as a smear). Still reads as "grey" semantically
-     but actually visible on dark surfaces. */
-  --j-grey: #a8bcbf;
-  --j-teal-grey: #404c4e;
-  /* Surface roles — semantic, not positional.
-     --j-surface-inset is a sunken tile sitting ON a panel (darker than
-     the panel face so it has visual depth). Use --j-surface-inset-alt
-     to alternate (zebra-stripe lists, paired info-cards, etc). */
-  --j-surface-inset: #2a3a3f;
-  --j-surface-inset-alt: #324347;
-
-  --j-panel-edge: #1e2e32;
-  --j-inner-border: #334461;
-  --j-border-silver: #b9c2d2;
-  --j-border-south: #777e89;
-
-  --j-gold-text: #e4b643;
-  --j-green-text: #35bd86;
-  --j-orange-text: #ff8f00;
-  --j-white: #ffffff;
-  --j-black: #000000;
-
-  --j-tarot-btn: #9e74ce;
-  --j-planet-btn: #00a7ca;
-  --j-spectral-btn: #2e76fd;
-  --j-tarot-btn-dark: #5e437e;
-  --j-planet-btn-dark: #00657c;
-  --j-spectral-btn-dark: #14449e;
-
-  /* Typography */
-  --j-font: 'm6x11plus', 'm6x11', monospace;
-  /* Coding font — used by JamlCodeEditor and .j-code-block. JetBrains Mono
-     with a long OS-native fallback chain so the UI still reads as code even
-     when the Google Fonts stylesheet fails to load. */
-  --j-font-code: 'JetBrains Mono', 'Roboto Mono', monospace;
-  --j-text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
-  /* Drop-shadow under a card sitting on the table. Eyedropped from Balatro
-     hand/collection screens (IMG_4916, IMG_3672, IMG_4919). Used via
-     filter: drop-shadow(var(--j-card-shadow)). */
-  --j-card-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
-
-  /* Spacing */
-  --j-space-xs: 2px;
-  --j-space-sm: 4px;
-  --j-space-md: 8px;
-  --j-space-lg: 12px;
-  --j-space-xl: 16px;
-
-  /* App shell — HARD-LOCKED 320×540. One size, ALWAYS — never fluid, never
-     resizes. iPhone SE portrait height (568) minus the 28px JimboBalatroFooter
-     that sits below .j-app (total embed rectangle stays 320×568). */
-  --j-footer-h: 28px;
-  --j-app-w: 320px;
-  --j-app-h: 540px;
-
-  /* Radii — Balatro is chunky, not bubbly. Never > 10px. */
-  --j-radius-sm: 4px;
-  --j-radius-md: 6px;
-  --j-radius-lg: 8px;
-  --j-radius-pill: 10px;
-
-  /* Animation */
-  --j-press-y: 2px;
-  --j-press-speed: 55ms;
-  --j-panel-border-width: 3px;
-  --j-panel-south-edge-width: calc(var(--j-panel-border-width) / 2);
-  --j-panel-border-width-heavy: 6px;
-  --j-surface-shadow-depth: 4px;
 }
 
 
@@ -301,6 +210,9 @@
   overflow: auto;
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--j-space-md);
 }
 
 .j-panel__back {
@@ -1580,13 +1492,101 @@
   border-radius: 3px;
   text-shadow: var(--j-text-shadow);
   flex-shrink: 0;
+  background: var(--j-blue);
 }
+
+.j-section-header__tag--red { background: var(--j-red); }
+.j-section-header__tag--orange { background: var(--j-orange); }
+.j-section-header__tag--blue { background: var(--j-blue); }
+.j-section-header__tag--green { background: var(--j-green); }
+.j-section-header__tag--purple { background: var(--j-purple); }
+.j-section-header__tag--gold {
+  background: var(--j-gold);
+  color: var(--j-darkest);
+  text-shadow: none;
+}
+.j-section-header__tag--grey { background: var(--j-dark-grey); color: var(--j-grey); }
 
 .j-section-header__rule {
   flex: 1;
   height: 2px;
   border-radius: 1px;
-  opacity: 0.33;
+  opacity: 0.45;
+  background: var(--j-blue);
+}
+
+.j-section-header__rule--red { background: var(--j-red); }
+.j-section-header__rule--orange { background: var(--j-orange); }
+.j-section-header__rule--blue { background: var(--j-blue); }
+.j-section-header__rule--green { background: var(--j-green); }
+.j-section-header__rule--purple { background: var(--j-purple); }
+.j-section-header__rule--gold { background: var(--j-gold); }
+.j-section-header__rule--grey { background: var(--j-grey); }
+
+/* ── Fluid page shell (fan sites / seedfinder marketing) ──────────────── */
+/* Not the 320×540 embed. Full viewport, Jimbo type + spacing, no SaaS card. */
+
+.j-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--j-font);
+  color: var(--j-white);
+  position: relative;
+}
+
+.j-page__main {
+  flex: 1;
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: var(--j-space-xl) var(--j-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--j-space-xl);
+  box-sizing: border-box;
+}
+
+.j-page__footer {
+  flex-shrink: 0;
+}
+
+.j-page__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--j-space-lg);
+}
+
+@media (min-width: 720px) {
+  .j-page__row {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .j-page__row > .j-panel {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* Code / copy row inside a panel */
+.j-copy-row {
+  display: flex;
+  align-items: center;
+  gap: var(--j-space-sm);
+  min-width: 0;
+}
+
+.j-copy-row__code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--j-font-code);
+  font-size: 12px;
+  color: var(--j-white);
+  letter-spacing: 0;
 }
 
 
@@ -3726,6 +3726,31 @@
 .j-mystery-slot canvas {
   transition: opacity 200ms, filter 200ms;
 }
+
+/* ── Jammy mascot motion (class names used by json-render mascot) ───────── */
+
+@keyframes jammy-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+
+@keyframes jammy-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-16px) scale(1.08); }
+  60% { transform: translateY(4px) scale(0.96); }
+}
+
+@keyframes jammy-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-3deg); }
+  40% { transform: translateX(4px) rotate(3deg); }
+  60% { transform: translateX(-3px) rotate(-2deg); }
+  80% { transform: translateX(3px) rotate(2deg); }
+}
+
+.jammy-idle { animation: jammy-idle 2.5s ease-in-out infinite; }
+.jammy-bounce { animation: jammy-bounce 0.6s ease-out; }
+.jammy-shake { animation: jammy-shake 0.4s ease-in-out; }
 
 .j-mystery-slot__sprite--empty {
   opacity: 0.5 !important;

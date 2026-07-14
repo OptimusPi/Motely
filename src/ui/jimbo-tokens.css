@@ -1,119 +1,104 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   jimbo-tokens.css — Balatro Design Tokens
-   ~80 lines. Eyedropped from game shader output. No component classes.
-   Components use these via inline style={{ color: 'var(--j-red)' }} or
-   a tiny utility class (e.g. .j-red) if they prefer.
+   jimbo-tokens.css — sole source of truth for Jimbo CSS custom properties.
+
+   Values eyedropped from Balatro shader output (not Lua hex).
+   Component classes live in jimbo.css and @import this file.
+   JS mirror: tokens.ts — keep hex in lockstep with :root below.
    ═══════════════════════════════════════════════════════════════════════ */
 
 @import '../../fonts.css';
 
 :root {
-  /* ── Palette ── */
-  --j-red:        #fe5148;
-  --j-blue:       #0093ff;
-  --j-green:      #429f79;
-  --j-orange:     #ff9800;
-  --j-gold:       #e4b643;
-  --j-purple:     #9e74ce;
+  /* Colors — eyedropped from Balatro's rendered shader output */
+  --j-red: #fe5148;
+  --j-blue: #0093ff;
+  --j-green: #429f79;
+  --j-orange: #ff9800;
+  --j-gold: #e4b643;
+  --j-purple: #9e74ce;
 
-  --j-dark-red:   #a02721;
-  --j-dark-blue:  #0057a1;
-  --j-dark-orange:#a05b00;
+  --j-dark-red: #a02721;
+  --j-dark-blue: #0057a1;
+  --j-dark-orange: #a05b00;
   --j-dark-green: #215f46;
-  --j-dark-purple:#5e437e;
+  --j-dark-purple: #5e437e;
 
-  --j-grey:       #a8bcbf;
-  --j-dark-grey:  #3a5055;
-  --j-darkest:    #1e2b2d;
+  --j-dark-grey: #3a5055;
+  --j-darkest: #1e2b2d;
+  /* Bumped from #708386 to a brighter slate. The old value was dark enough
+     that tone="grey" text vanished into --j-darkest / --j-dark-grey panels
+     ("Jokers" header reading as a smear). Still reads as "grey" semantically
+     but actually visible on dark surfaces. */
+  --j-grey: #a8bcbf;
+  --j-teal-grey: #404c4e;
 
-  /* Surfaces */
-  --j-surface:          #3a5055;
-  --j-surface-inset:    #2a3a3f;
-  --j-surface-inset-alt:#324347;
-  --j-panel-edge:       #4a6a70;
+  /* Surface roles — semantic, not positional.
+     --j-surface is the raised panel face (same family as dark-grey).
+     --j-surface-inset is a sunken tile sitting ON a panel (darker so it
+     has visual depth). Use --j-surface-inset-alt to alternate (zebra
+     lists, paired info-cards, etc). */
+  --j-surface: #3a5055;
+  --j-surface-inset: #2a3a3f;
+  --j-surface-inset-alt: #324347;
 
-  /* ── Typography ── */
-  --j-font:       'm6x11plus', 'm6x11', 'Courier New', monospace;
-  --j-font-code:  'JetBrains Mono', 'Courier New', monospace;
-  --j-text-xs:    10px;
-  --j-text-sm:    12px;
-  --j-text-md:    14px;
-  --j-text-lg:    16px;
-  --j-text-xl:    20px;
-  --j-text-2xl:   24px;
+  --j-panel-edge: #1e2e32;
+  --j-inner-border: #334461;
+  --j-border-silver: #b9c2d2;
+  --j-border-south: #777e89;
 
-  /* ── Spacing ── */
-  --j-space-1: 4px;
-  --j-space-2: 8px;
-  --j-space-3: 12px;
-  --j-space-4: 16px;
-  --j-space-5: 24px;
-  --j-space-6: 32px;
+  --j-gold-text: #e4b643;
+  --j-green-text: #35bd86;
+  --j-orange-text: #ff8f00;
+  --j-white: #ffffff;
+  --j-black: #000000;
 
-  /* ── Shape ── */
-  --j-radius:    8px;
-  --j-radius-lg: 12px;
-  --j-shadow:    0 4px 8px rgba(0,0,0,0.35);
-  --j-shadow-lg: 0 8px 16px rgba(0,0,0,0.45);
+  --j-tarot-btn: #9e74ce;
+  --j-planet-btn: #00a7ca;
+  --j-spectral-btn: #2e76fd;
+  --j-tarot-btn-dark: #5e437e;
+  --j-planet-btn-dark: #00657c;
+  --j-spectral-btn-dark: #14449e;
 
-  /* ── Motion ── */
+  /* Typography */
+  --j-font: 'm6x11plus', 'm6x11', monospace;
+  /* Coding font — used by JamlCodeEditor and .j-code-block. JetBrains Mono
+     with a long OS-native fallback chain so the UI still reads as code even
+     when the Google Fonts stylesheet fails to load. */
+  --j-font-code: 'JetBrains Mono', 'Roboto Mono', monospace;
+  --j-text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  /* Drop-shadow under a card sitting on the table. Eyedropped from Balatro
+     hand/collection screens (IMG_4916, IMG_3672, IMG_4919). Used via
+     filter: drop-shadow(var(--j-card-shadow)). */
+  --j-card-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+
+  /* Spacing — xs…xl only. No parallel 1…6 scale. */
+  --j-space-xs: 2px;
+  --j-space-sm: 4px;
+  --j-space-md: 8px;
+  --j-space-lg: 12px;
+  --j-space-xl: 16px;
+
+  /* App shell — HARD-LOCKED 320×540. One size, ALWAYS — never fluid, never
+     resizes. iPhone SE portrait height (568) minus the 28px JimboBalatroFooter
+     that sits below .j-app (total embed rectangle stays 320×568). */
+  --j-footer-h: 28px;
+  --j-app-w: 320px;
+  --j-app-h: 540px;
+
+  /* Radii — Balatro is chunky, not bubbly. Never > 10px. */
+  --j-radius-sm: 4px;
+  --j-radius-md: 6px;
+  --j-radius-lg: 8px;
+  --j-radius-pill: 10px;
+
+  /* Animation / chrome depth */
+  --j-press-y: 2px;
+  --j-press-speed: 55ms;
+  --j-panel-border-width: 3px;
+  --j-panel-south-edge-width: calc(var(--j-panel-border-width) / 2);
+  --j-panel-border-width-heavy: 6px;
+  --j-surface-shadow-depth: 4px;
   --j-transition: 0.15s ease-out;
+  --j-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+  --j-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.45);
 }
-
-/* Global: hide scrollbars, pixel-font default, dark bg */
-* { scrollbar-width: none; -ms-overflow-style: none; }
-*::-webkit-scrollbar { display: none; }
-
-body {
-  font-family: var(--j-font);
-  background: var(--j-darkest);
-  color: var(--j-grey);
-}
-
-/* ── Tiny utility classes (optional, ~20 lines) ── */
-.j-red   { color: var(--j-red); }
-.j-blue  { color: var(--j-blue); }
-.j-green { color: var(--j-green); }
-.j-gold  { color: var(--j-gold); }
-.j-grey  { color: var(--j-grey); }
-.j-muted { color: var(--j-dark-grey); }
-
-.j-surface       { background: var(--j-surface); }
-.j-surface-inset { background: var(--j-surface-inset); }
-
-.j-text-xs { font-size: var(--j-text-xs); }
-.j-text-sm { font-size: var(--j-text-sm); }
-.j-text-md { font-size: var(--j-text-md); }
-.j-text-lg { font-size: var(--j-text-lg); }
-
-.j-panel {
-  border: 2px solid var(--j-panel-edge);
-  border-radius: var(--j-radius);
-  background: var(--j-surface);
-  padding: var(--j-space-4);
-  box-shadow: var(--j-shadow);
-}
-
-/* ── Jammy mascot animations ── */
-@keyframes jammy-idle {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-4px) rotate(1deg); }
-}
-
-@keyframes jammy-bounce {
-  0%, 100% { transform: translateY(0) scale(1); }
-  40% { transform: translateY(-16px) scale(1.08); }
-  60% { transform: translateY(4px) scale(0.96); }
-}
-
-@keyframes jammy-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px) rotate(-3deg); }
-  40% { transform: translateX(4px) rotate(3deg); }
-  60% { transform: translateX(-3px) rotate(-2deg); }
-  80% { transform: translateX(3px) rotate(2deg); }
-}
-
-.jammy-idle { animation: jammy-idle 2.5s ease-in-out infinite; }
-.jammy-bounce { animation: jammy-bounce 0.6s ease-out; }
-.jammy-shake { animation: jammy-shake 0.4s ease-in-out; }

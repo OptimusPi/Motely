@@ -1,14 +1,30 @@
 "use client";
 
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
+import { JimboSectionHeader, type JimboSectionTone } from "./JimboSectionHeader.js";
 
-export type JimboPanelProps = HTMLAttributes<HTMLDivElement>;
+export interface JimboPanelProps extends HTMLAttributes<HTMLDivElement> {
+  /** Optional section tag at the top of the panel */
+  title?: ReactNode;
+  tone?: JimboSectionTone;
+  /** Wrap children in .j-panel__body (default true when title set, else false for flex freestyle) */
+  body?: boolean;
+}
 
-export function JimboPanel({ className, children, ...rest }: JimboPanelProps) {
+export function JimboPanel({
+  title,
+  tone = "blue",
+  body,
+  className,
+  children,
+  ...rest
+}: JimboPanelProps) {
   const classes = ["j-panel", className].filter(Boolean).join(" ");
+  const wrapBody = body ?? Boolean(title);
   return (
     <div className={classes} {...rest}>
-      {children}
+      {title != null && title !== false ? <JimboSectionHeader label={title} tone={tone} /> : null}
+      {wrapBody ? <div className="j-panel__body">{children}</div> : children}
     </div>
   );
 }
