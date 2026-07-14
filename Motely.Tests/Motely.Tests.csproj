@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Motely/Motely.csproj" />
-    <ProjectReference Include="../Motely.Data/Motely.Data.csproj" />
+    <ProjectReference Include="../Motely.DataLake/Motely.DataLake.csproj" />
   </ItemGroup>
 
   <ItemGroup>

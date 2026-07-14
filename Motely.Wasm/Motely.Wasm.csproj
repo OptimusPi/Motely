@@ -14,6 +14,19 @@
     <!-- Empty BinariesDirectory = embedded base64 single-file: boot() needs no served files. -->
   </PropertyGroup>
 
+  <!-- Cloudflare Workers (and other embedders that block runtime WebAssembly.compile/instantiate
+       from raw bytes) can't boot the default embedded build: Bootsharp's boot() always calls
+       WebAssembly.instantiate() on raw bytes internally. Publish with
+       -p:MotelyWasmTarget=workers to get a sideloaded build instead: a real, standalone .wasm
+       file (plus assemblies/icu as separate files) that a bundler can statically import and
+       precompile at deploy time, paired with dist-workers/workers-boot.mjs, which boots via a
+       custom instantiateWasm that instantiates that precompiled module (cheap linking, not code
+       generation - allowed even where dynamic compilation is blocked). -->
+  <PropertyGroup Condition="'$(MotelyWasmTarget)' == 'workers'">
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)\dist-workers</BootsharpPublishDirectory>
+    <BootsharpBinariesDirectory>$(MSBuildProjectDirectory)\dist-workers\bin</BootsharpBinariesDirectory>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Bootsharp" />
     <PackageReference Include="Bootsharp.Inject" />
