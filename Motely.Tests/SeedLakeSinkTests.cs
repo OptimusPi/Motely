@@ -1,4 +1,4 @@
-using Motely.Data;
+using Motely.DataLake;
 
 namespace Motely.Tests;
 

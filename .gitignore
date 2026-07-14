@@ -79,3 +79,4 @@ nuget.config.local
 .mcp.local.json
 /.seeds
 /.playwright-mcp
+/Motely.Wasm/dist-workers

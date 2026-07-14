@@ -1,5 +1,6 @@
 using System.Data.Common;
 using DuckDB.NET.Data;
+using Motely.SeedProviders;
 
 namespace Motely.DataLake;
 

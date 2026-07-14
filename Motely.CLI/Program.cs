@@ -4,7 +4,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Analysis;
 using Motely.CLI;
-using Motely.Data;
+using Motely.DataLake;
 using Motely.Enums;
 using Motely.Filters;
 using Motely.Filters.Jaml;
