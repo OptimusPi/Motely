@@ -2,14 +2,21 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
-// Entries whose source has a top-level "use client" directive. Vite's library
-// build strips module-level directives when bundling, so Next.js's RSC
-// compiler can't see these are client boundaries and tries to render them as
-// Server Components — crashing on any hook use (e.g. "useRef is not a
-// function"). Re-adding the banner only to these entries (not shared chunks
-// like core.js/spriteMapper) is enough: Next only checks the directive on the
-// module a consumer actually imports.
-const CLIENT_ENTRIES = new Set(["index.js", "ui.js", "motely.js"]);
+// Entries that really are client boundaries — they export React components and
+// call hooks. Vite's library build strips module-level directives when bundling,
+// so Next.js's RSC compiler can't see the boundary and tries to render them as
+// Server Components, crashing on any hook use (e.g. "useRef is not a function").
+// Re-adding the banner to these entries (not shared chunks like core.js or
+// spriteMapper) is enough: Next only checks the directive on the module a
+// consumer actually imports.
+//
+// motely.js stays off this list on purpose. It exports pure enum decoders and
+// re-exports motely-wasm, a single-file native-LLVM ESM module that runs in Node
+// and in the browser alike — no React, no hooks, no client boundary. Banner it and
+// every server caller importing decodeMotelyItemName through it dies with
+// "decodeMotelyItemName is on the client", which is exactly what took the MCP
+// JAMLyzer down.
+const CLIENT_ENTRIES = new Set(["index.js", "ui.js"]);
 
 const PEER_EXTERNALS = [
   "react",
