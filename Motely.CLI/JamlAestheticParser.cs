@@ -1,3 +1,5 @@
+using Motely.SeedProviders;
+
 namespace Motely.CLI;
 
 /// <summary>

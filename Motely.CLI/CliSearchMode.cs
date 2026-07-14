@@ -1,6 +1,8 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
+using Motely.Data;
 using Motely.Filters;
+using Motely.SeedProviders;
 
 namespace Motely.CLI;
 
@@ -121,12 +123,11 @@ internal static class CliSearchMode
             string lakeFile = SeedLakeSink.LakePath(input.ResultsRootPath, input.FilterId!);
             if (!File.Exists(lakeFile))
             {
-                error =
-                    $"Error: no saved seeds for filter '{input.FilterId}' at '{lakeFile}'. Run a search first.";
+                error = $"Error: no saved seeds at '{lakeFile}'. Run a search first.";
                 return false;
             }
 
-            var drownProvider = new SeedSourceProvider(lakeFile, distinct: true);
+            var drownProvider = SeedSourceProvider.FromLake(lakeFile, input.FilterId!);
             updated = updated.WithProviderSearch(drownProvider);
             sourceLifetime = drownProvider;
             return true;
