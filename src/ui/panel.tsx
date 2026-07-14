@@ -35,11 +35,7 @@ export function JimboModal({ open, onClose, title, className, children }: JimboM
         className={["j-modal", "j-panel", className].filter(Boolean).join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
-        {title && (
-          <div className="j-modal__title-wrap">
-            <h2 className="j-modal__title">{title}</h2>
-          </div>
-        )}
+        {title && <h2 className="j-modal__title">{title}</h2>}
         <div className="j-panel__body">{children}</div>
       </div>
     </div>

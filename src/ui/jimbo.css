@@ -1185,26 +1185,13 @@
   min-height: 0;
 }
 
-.j-modal__title-wrap {
-  display: flex;
-  justify-content: center;
-  margin: calc(var(--j-space-md) * -1) 0 var(--j-space-md);
-  flex-shrink: 0;
-}
-
 .j-modal__title {
-  /* Red pill title chip — matches IMG_3725 "GAME OVER" and IMG_3693 "Settings"
-     header pattern. White text on bright red, rounded-pill, no border, with
-     the standard 30% drop-lip below it. Sits half-inset over the panel face. */
-  display: inline-block;
-  text-align: center;
-  margin: 0;
-  padding: 4px 18px;
-  background: var(--j-red);
-  border: none;
-  border-radius: var(--j-radius-pill);
-  box-shadow: 0 3px 0 0 rgba(0, 0, 0, 0.3);
+  margin: 0 0 var(--j-space-sm);
+  font-family: var(--j-font);
+  font-size: var(--j-text-lg);
   color: var(--j-white);
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 
 .j-input-modal__message {
