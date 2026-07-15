@@ -29,22 +29,11 @@
     <BootsharpStaticWasmImport>true</BootsharpStaticWasmImport>
   </PropertyGroup>
 
-  <!-- Bootsharp.FileSystem is a sponsor-exclusive extension: it ships on a private feed,
-       not nuget.org. Referencing it unconditionally makes this project unbuildable for
-       everyone who is not a sponsor — including on a second machine of your own, which is
-       how motely-wasm shipped a version nobody could install. So the local-folder feature
-       is opt-in: build with -p:EnableFileSystem=true where the feed is configured, and
-       MotelyFileSystem's exports come along. Build without it and the engine is complete;
-       there is simply no folder picker. -->
-  <PropertyGroup>
-    <EnableFileSystem Condition="'$(EnableFileSystem)' == ''">false</EnableFileSystem>
-    <DefineConstants Condition="'$(EnableFileSystem)' == 'true'">$(DefineConstants);BOOTSHARP_FILESYSTEM</DefineConstants>
-  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Bootsharp" />
     <PackageReference Include="Bootsharp.Inject" />
-    <PackageReference Include="Bootsharp.FileSystem" Condition="'$(EnableFileSystem)' == 'true'" />
+    <PackageReference Include="Bootsharp.FileSystem" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
