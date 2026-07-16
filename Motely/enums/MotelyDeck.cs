@@ -23,7 +23,7 @@ public static class MotelyDeckExt
 {
     public static MotelyRunState GetDefaultRunState(this MotelyDeck deck)
     {
-        MotelyRunState state = default;
+        MotelyRunState state = new();
 
         switch (deck)
         {

@@ -52,7 +52,7 @@ public sealed class MotelyJamlyzerFilterDesc(
 
             for (int ante = 1; ante <= maxAnte; ante++)
             {
-                MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, ref voucherState);
+                MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, voucherState);
                 MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
 
                 AnteAnalysisState state = new()
@@ -91,7 +91,7 @@ public sealed class MotelyJamlyzerFilterDesc(
                 // pulls streams — card/joker-activated streams beyond shops/packs.
                 // offset rolls are replayed-and-discarded so a resumed window is exact even for the
                 // resample-backed streams (Emperor, Voucher) where state is not a single double.
-                var pulls = CollectPulls(ref ctx, ante, in voucherState, n, offset);
+                var pulls = CollectPulls(ref ctx, ante, voucherState, n, offset);
 
                 // raw shop-source queues, read independently of the resolved shop above
                 var shopStreams = CollectShopStreams(ref ctx, ante, n, offset);
@@ -126,7 +126,7 @@ public sealed class MotelyJamlyzerFilterDesc(
         private static MotelyJamlyzerPulls CollectPulls(
             ref MotelySingleSearchContext ctx,
             int ante,
-            in MotelyRunState voucherState,
+            MotelyRunState voucherState,
             int n,
             int offset
         )

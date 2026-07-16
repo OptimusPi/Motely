@@ -72,7 +72,7 @@ public sealed class MotelyUnitTestAnalyzerFilterDesc()
                 };
 
                 // Boss
-                MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, ref voucherState);
+                MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, voucherState);
 
                 // Voucher - get with state for proper progression
                 MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, voucherState);

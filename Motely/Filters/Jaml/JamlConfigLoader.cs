@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
-using SharpYaml.Model;
 
 namespace Motely.Filters.Jaml;
 
@@ -22,18 +20,16 @@ public static partial class JamlConfigLoader
         }
     }
 
+    // Named FromYaml for call-site compatibility (JamlSearchBuilder, the WASM exports, the whole
+    // test suite call this by name) — but nothing here depends on YAML. JamlDocumentParser is
+    // JAML's own tokenizer, built the same way JamlLine.cs already parses one clause line: no
+    // borrowed grammar, no third-party parser rejecting shorthand the language is supposed to
+    // understand.
     public static JamlConfig FromYaml(string content)
     {
         try
         {
-            var stream = YamlStream.Load(new StringReader(content));
-
-            if (stream.Count == 0)
-                throw new InvalidOperationException("YAML document is empty.");
-
-            if (stream[0].Contents is not YamlMapping root)
-                throw new InvalidOperationException("JAML root must be a mapping.");
-
+            var root = JamlDocumentParser.ParseJaml(content);
             return ParseConfig(new NodeReader(root));
         }
         catch (InvalidOperationException)
@@ -42,7 +38,7 @@ public static partial class JamlConfigLoader
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"YAML parse error: {ex.Message}", ex);
+            throw new InvalidOperationException($"JAML parse error: {ex.Message}", ex);
         }
     }
 
@@ -62,19 +58,20 @@ public static partial class JamlConfigLoader
         }
     }
 
+    // Real JSON — genuinely different grammar from JAML's own indentation-based document format,
+    // so it gets its own reader (JamlDocumentParser.ParseJson) rather than being coerced through
+    // the line-oriented one above. Same tree shape out (JMap/JSeq/JScalar), same NodeReader,
+    // same ParseConfig — the difference is entirely in tokenizing, not in what a JAML clause means.
     public static JamlConfig FromJson(string content)
     {
         try
         {
-            return FromYaml(content);
+            var root = JamlDocumentParser.ParseJson(content);
+            return ParseConfig(new NodeReader(root));
         }
         catch (InvalidOperationException)
         {
             throw;
-        }
-        catch (JsonException ex)
-        {
-            throw new InvalidOperationException($"JSON parse error: {ex.Message}", ex);
         }
         catch (Exception ex)
         {
@@ -143,7 +140,11 @@ public static partial class JamlConfigLoader
         var antes = data.GetIntArray("antes") ?? data.GetIntArray("ante") ?? [];
         var min = data.GetInt("min") ?? 1;
         var max = data.GetInt("max");
-        var score = data.GetInt("score") ?? 0;
+        // An unspecified score is worth 1, not 0 — a should clause you bothered to write should
+        // count for something. Explicit scores (including negative penalties) still win; this
+        // only fills the blank. Defaulting to 0 silently made unscored should clauses contribute
+        // nothing, the bug that zeroed whole filters for ~10 months.
+        var score = data.GetInt("score") ?? 1;
         var label = data.GetString("label");
 
         switch (Normalize(discriminator))
@@ -629,24 +630,18 @@ public static partial class JamlConfigLoader
             primary.GetClauseList(key) ?? fallback.GetClauseList(key);
     }
 
+    // Backed by JAML's own tree (JMap/JSeq/JScalar from JamlDocumentParser) instead of a
+    // third-party YAML library's node types — same IReader contract as before, so every call
+    // site above is untouched; only what builds the tree changed.
     private sealed class NodeReader : IReader
     {
-        private readonly Dictionary<string, YamlElement> _items;
+        private readonly JMap _map;
 
-        public NodeReader(YamlMapping mapping)
-        {
-            _items = new Dictionary<string, YamlElement>(StringComparer.OrdinalIgnoreCase);
-            foreach (var key in mapping.Keys)
-            {
-                if (Scalar(key) is { } name)
-                    _items[name] = mapping[key]!;
-            }
-        }
+        public NodeReader(JMap map) => _map = map;
 
-        public IReadOnlyList<string> Keys => _items.Keys.ToArray();
+        public IReadOnlyList<string> Keys => _map.Keys;
 
-        public string? GetString(string key) =>
-            _items.TryGetValue(key, out var value) ? Scalar(value) : null;
+        public string? GetString(string key) => Scalar(_map.Get(key));
 
         public int? GetInt(string key) =>
             int.TryParse(
@@ -663,10 +658,11 @@ public static partial class JamlConfigLoader
 
         public int[]? GetIntArray(string key)
         {
-            if (!_items.TryGetValue(key, out var value))
+            var value = _map.Get(key);
+            if (value is null)
                 return null;
-            if (value is YamlSequence sequence)
-                return sequence
+            if (value is JSeq sequence)
+                return sequence.Items
                     .SelectMany(item => ParseIntOrRange(Scalar(item) ?? "", key))
                     .ToArray();
             if (Scalar(value) is { } scalar)
@@ -701,27 +697,27 @@ public static partial class JamlConfigLoader
 
         public string[]? GetStringArray(string key)
         {
-            if (!_items.TryGetValue(key, out var value))
+            var value = _map.Get(key);
+            if (value is null)
                 return null;
-            if (value is YamlSequence sequence)
-                return sequence.Select(item => Scalar(item) ?? "").ToArray();
+            if (value is JSeq sequence)
+                return sequence.Items.Select(item => Scalar(item) ?? "").ToArray();
             if (Scalar(value) is { } scalar)
                 return [scalar];
             return null;
         }
 
         public IReader? GetObject(string key) =>
-            _items.TryGetValue(key, out var value) && value is YamlMapping mapping
-                ? new NodeReader(mapping)
-                : null;
+            _map.Get(key) is JMap map ? new NodeReader(map) : null;
 
         public IReadOnlyList<NodeReader>? GetObjectList(string key)
         {
-            if (!_items.TryGetValue(key, out var value))
+            var value = _map.Get(key);
+            if (value is null)
                 return null;
-            if (value is YamlSequence sequence)
-                return sequence
-                    .OfType<YamlMapping>()
+            if (value is JSeq sequence)
+                return sequence.Items
+                    .OfType<JMap>()
                     .Select(static item => new NodeReader(item))
                     .ToArray();
             return null;
@@ -731,18 +727,18 @@ public static partial class JamlConfigLoader
         // JAML clause). Anything else fails loudly — the loader never silently drops a list entry.
         public IReadOnlyList<ClauseSource>? GetClauseList(string key)
         {
-            if (!_items.TryGetValue(key, out var value) || value is not YamlSequence sequence)
+            if (_map.Get(key) is not JSeq sequence)
                 return null;
             var items = new List<ClauseSource>();
-            foreach (var element in sequence)
+            foreach (var element in sequence.Items)
             {
                 switch (element)
                 {
-                    case YamlMapping mapping:
-                        items.Add(new ClauseSource(new NodeReader(mapping), null));
+                    case JMap map:
+                        items.Add(new ClauseSource(new NodeReader(map), null));
                         break;
-                    case YamlValue { Value: { } raw }:
-                        items.Add(new ClauseSource(null, raw.ToString()));
+                    case JScalar { Value: { } raw }:
+                        items.Add(new ClauseSource(null, raw));
                         break;
                     default:
                         throw new InvalidOperationException(
@@ -753,10 +749,10 @@ public static partial class JamlConfigLoader
             return items;
         }
 
-        private static string? Scalar(YamlElement element) =>
+        private static string? Scalar(JNode? element) =>
             element switch
             {
-                YamlValue value => value.Value?.ToString(),
+                JScalar value => value.Value,
                 _ => null,
             };
     }

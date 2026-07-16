@@ -584,8 +584,8 @@ partial class Program
             }
             using var resultSink = new CompositeMotelyResultSink(resultSinks);
             int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
-            var saveSeedsCollector = new MotelyTopSeedSink.Collector(MotelyGlobals.SavedSeedLimit);
-            var saveSeedMatches = new List<string>(MotelyGlobals.SavedSeedLimit);
+            var saveSeedsCollector = new MotelyTopSeedSink.Collector(int.MaxValue);
+            var saveSeedMatches = new List<string>();
             var saveSeedMatchSet = new HashSet<string>(StringComparer.Ordinal);
 
             // Always attach a progress callback so 'p' hotkey stays current;
@@ -614,10 +614,7 @@ partial class Program
                 settings = settings.WithSeedMatchCallback(seed =>
                 {
                     resultSink.OnSeed(seed);
-                    if (
-                        saveSeedMatches.Count < MotelyGlobals.SavedSeedLimit
-                        && saveSeedMatchSet.Add(seed)
-                    )
+                    if (saveSeedMatchSet.Add(seed))
                     {
                         saveSeedMatches.Add(seed);
                     }

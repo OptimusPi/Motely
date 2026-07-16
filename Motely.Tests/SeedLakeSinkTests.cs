@@ -90,22 +90,19 @@ public sealed class SeedLakeSinkTests : IDisposable
     }
 
     [Fact]
-    public void SeedSourceProvider_ReadsFromJamlsOwnSeedsField()
+    public void SeedSourceProvider_ReadsSeedsFromARealJamlFile()
     {
-        var jamlPath = Path.Combine(_root, "filter.jaml");
-        Directory.CreateDirectory(_root);
-        File.WriteAllText(
-            jamlPath,
-            """
-            name: test
-            seeds: [AAAAAAAA, BBBBBBBB, CCCCCCCC]
-            must:
-              - voucher: Overstock
-            """
+        // A real corpus filter with a seeds: block — no fabricated JAML. The provider's seed count
+        // must equal what the loader parses from the same file, cross-checking the two readers.
+        var jamlPath = Path.Combine(AppContext.BaseDirectory, "GoldenJamlFiles", "Zerkeo_Pure.jaml");
+        Assert.True(
+            JamlConfigLoader.TryLoad(File.ReadAllText(jamlPath), out var config, out var error),
+            error
         );
+        Assert.NotEmpty(config!.Seeds);
 
         using var provider = new SeedSourceProvider(jamlPath);
 
-        Assert.Equal(3, provider.SeedCount);
+        Assert.Equal(config.Seeds.Count, provider.SeedCount);
     }
 }

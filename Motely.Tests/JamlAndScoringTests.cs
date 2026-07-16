@@ -38,6 +38,29 @@ public class JamlAndScoringTests
         return (search.MatchingSeeds, score, tally);
     }
 
+    // Accessibility/correctness gate: a should clause you bothered to write, but gave no explicit
+    // score, is worth 1 — not 0. Defaulting to 0 silently made unscored should clauses contribute
+    // nothing, the bug that zeroed whole filters for ~10 months. This test is that fix, pinned.
+    [Fact]
+    public void ShouldClause_WithNoExplicitScore_DefaultsToOne()
+    {
+        Assert.True(
+            JamlConfigLoader.TryLoad(
+                """
+                name: default-score-is-one
+                deck: Red
+                stake: White
+                should:
+                  - joker: Blueprint
+                """,
+                out var config,
+                out var error
+            ),
+            error
+        );
+        Assert.Equal(1, config!.Should[0].Score);
+    }
+
     [Fact]
     public void AndClause_BothChildrenMatchOnce_TalliesOneConjunctionNotSum()
     {

@@ -5,18 +5,16 @@ using Motely.Filters.Jaml;
 
 namespace Motely;
 
-// Seeds flow from a SOURCE (the search/provider) to a SINK. This is the bounded "best seeds"
-// sink: scored seeds are offered to it, it keeps only the top-N by score (push the new high
-// score on, evict the lowest off the bottom once the count exceeds the limit), and hands the
-// survivors back to be written to their final destination — a JAML `seeds:` block on disk.
+// Seeds flow from a SOURCE (the search/provider) to a SINK. Scored seeds are offered to the
+// Collector below, which keeps only the top-N by score when given a real limit (push the new
+// high score on, evict the lowest off the bottom once the count exceeds it) — or all of them,
+// unbounded, when the caller passes int.MaxValue. Survivors get written to their final
+// destination — a JAML `seeds:` block on disk.
 //
-// The default limit is 314 (pi x 100 — pifreak). The pure text rewrite + collector both live
-// here so the CLI (file IO) and Motely.Wasm (browser File System Access) share one tested core.
+// The pure text rewrite + collector both live here so the CLI (file IO) and Motely.Wasm (browser
+// File System Access) share one tested core.
 public static class MotelyTopSeedSink
 {
-    /// <summary>Default number of best seeds kept when no explicit limit is given (pi x 100).</summary>
-    public const int DefaultLimit = 314;
-
     /// <summary>
     /// Bounded top-N-by-score collector. A min-heap keyed on (score, sequence): every offered seed
     /// is enqueued, and once the count exceeds <paramref name="limit"/> the lowest-scoring entry is
@@ -54,8 +52,8 @@ public static class MotelyTopSeedSink
     /// JAML document (appending the block if absent). Seeds already in the document are a seed
     /// provider the user curated — they stay, in front, in their original order; new finds go
     /// after them. No IO, no validation. The original newline style is preserved. Seeds are
-    /// normalized (<see cref="MotelyGlobals.NormalizeSeed"/>), de-duped, and capped at
-    /// <see cref="MotelyGlobals.SavedSeedLimit"/> as a hard safety bound.
+    /// normalized (<see cref="MotelyGlobals.NormalizeSeed"/>) and de-duped — no count cap; the
+    /// caller's Collector (if any) already decided how many survive.
     /// </summary>
     public static string RewriteSeedsBlock(string jamlText, IReadOnlyList<string> seeds)
     {
@@ -79,7 +77,6 @@ public static class MotelyTopSeedSink
             .Select(static seed => MotelyGlobals.NormalizeSeed(seed))
             .Where(static seed => !string.IsNullOrWhiteSpace(seed))
             .Distinct(StringComparer.Ordinal)
-            .Take(MotelyGlobals.SavedSeedLimit)
             .ToArray();
 
         var replacementLines = BuildSeedsBlockLines(normalizedSeeds);

@@ -89,7 +89,7 @@ public struct JamlShouldScoreDesc
                     JamlScoring.PrepareRunState(
                         ref singleCtx,
                         CombineForPrepareRunState(mustClauses, shouldClauses),
-                        ref runState
+                        runState
                     );
 
                     int totalScore = 0;
@@ -101,7 +101,7 @@ public struct JamlShouldScoreDesc
                         int raw = JamlScoring.CountRawOccurrences(
                             ref singleCtx,
                             mustClauses[i],
-                            ref runState
+                            runState
                         );
 
                         if (raw < mustClauses[i].Min)
@@ -113,12 +113,12 @@ public struct JamlShouldScoreDesc
                         int raw = JamlScoring.CountRawOccurrences(
                             ref singleCtx,
                             shouldClauses[i],
-                            ref runState
+                            runState
                         );
                         int weighted = JamlScoring.CountOccurrences(
                             ref singleCtx,
                             shouldClauses[i],
-                            ref runState
+                            runState
                         );
                         tally.AddTally(raw);
                         totalScore += weighted * shouldClauses[i].Score;

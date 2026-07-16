@@ -203,6 +203,29 @@ public static class JamlLine
             return false;
         }
 
+        // A trailing "score N" is captured here and applied to whatever clause the rest parses to,
+        // so a whole should clause fits on one forgiving line — "Perkeo in antes 1-8 score 100" —
+        // instead of fragile multi-line YAML (a bare list item can't carry an indented `score:`).
+        var (withoutScore, score, scoreError) = SplitScoreTail(line.Trim());
+        if (scoreError != null)
+        {
+            error = scoreError;
+            return false;
+        }
+
+        if (!TryToClauseCore(withoutScore, out clause, out error))
+            return false;
+
+        if (score is { } s)
+            clause!.Score = s;
+        return true;
+    }
+
+    private static bool TryToClauseCore(string line, out IJamlClause? clause, out string? error)
+    {
+        clause = null;
+        error = null;
+
         var (withoutAnte, antes, anteError) = SplitAnteTail(line.Trim());
         if (anteError != null)
         {
@@ -661,6 +684,21 @@ public static class JamlLine
         return (head, values, error);
     }
 
+    // A trailing "score N" (N may be negative — a penalty). Absent → (text, null, null), so a line
+    // with no score just parses normally and the clause takes its default. This is what lets a whole
+    // should clause live on one forgiving line instead of fragile multi-line YAML.
+    private static (string Text, int? Score, string? Error) SplitScoreTail(string text)
+    {
+        const string marker = " score ";
+        int idx = text.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+            return (text, null, null);
+        var scoreText = text[(idx + marker.Length)..].Trim();
+        if (!int.TryParse(scoreText, out var value))
+            return (text, null, $"Bad score '{scoreText}' in '{text}'.");
+        return (text[..idx].TrimEnd(), value, null);
+    }
+
     private static (string Head, int[] Antes, string? Error) SplitAnteTail(string line)
     {
         int idx = line.IndexOf(" in ante", StringComparison.OrdinalIgnoreCase);
@@ -680,14 +718,78 @@ public static class JamlLine
     {
         var tokens = text.Split([' ', ',', '\t'], StringSplitOptions.RemoveEmptyEntries);
         var values = new List<int>(tokens.Length);
+        // A "to"/"through"/"thru" word means the NEXT number closes an inclusive range with the
+        // previous one — "1 to 8" is 1..8, not the two numbers 1 and 8. "or"/"and" are plain list
+        // separators (skipped). This is the difference between a range and a list, in human words.
+        bool rangePending = false;
         foreach (var token in tokens)
         {
-            if (token.Equals("or", StringComparison.OrdinalIgnoreCase))
+            if (token.Equals("or", StringComparison.OrdinalIgnoreCase)
+                || token.Equals("and", StringComparison.OrdinalIgnoreCase))
+            {
+                rangePending = false;
                 continue;
+            }
+            if (token.Equals("to", StringComparison.OrdinalIgnoreCase)
+                || token.Equals("through", StringComparison.OrdinalIgnoreCase)
+                || token.Equals("thru", StringComparison.OrdinalIgnoreCase))
+            {
+                rangePending = true;
+                continue;
+            }
+
+            // A range token — "1-8", "1..8", "3–6" (en dash) — expands inclusively, ascending or
+            // descending. This is the shorthand a real person reaches for; the parser meets it.
+            if (TrySplitRange(token, out int lo, out int hi))
+            {
+                AppendRange(values, lo, hi);
+                rangePending = false;
+                continue;
+            }
+
             if (!int.TryParse(token, out var value))
                 return ([], $"Bad numeric token '{token}' in '{fullLine}'.");
+
+            // "N to M": expand from the number we already added up to this one (exclusive of the
+            // start, which is already in the list), so "1 to 8" reads as 1..8 in order.
+            if (rangePending && values.Count > 0)
+            {
+                int start = values[^1];
+                if (value >= start)
+                    for (int n = start + 1; n <= value; n++) values.Add(n);
+                else
+                    for (int n = start - 1; n >= value; n--) values.Add(n);
+                rangePending = false;
+                continue;
+            }
+
             values.Add(value);
         }
         return ([.. values], null);
+    }
+
+    private static void AppendRange(List<int> values, int lo, int hi)
+    {
+        if (lo <= hi)
+            for (int n = lo; n <= hi; n++) values.Add(n);
+        else
+            for (int n = lo; n >= hi; n--) values.Add(n);
+    }
+
+    // Recognizes "A-B", "A..B", or "A<en-dash>B" as an inclusive integer range. Returns false for a
+    // plain number (which the caller parses directly) or anything that isn't two integers around a
+    // single separator, so genuinely malformed tokens still surface as errors.
+    private static bool TrySplitRange(string token, out int lo, out int hi)
+    {
+        lo = 0;
+        hi = 0;
+        string[]? parts =
+            token.Contains("..", StringComparison.Ordinal) ? token.Split("..", StringSplitOptions.RemoveEmptyEntries)
+            : token.Contains('–') ? token.Split('–')          // en dash
+            : token.Contains('-') ? token.Split('-')
+            : null;
+        return parts is { Length: 2 }
+            && int.TryParse(parts[0].Trim(), out lo)
+            && int.TryParse(parts[1].Trim(), out hi);
     }
 }

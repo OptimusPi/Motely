@@ -4,9 +4,6 @@ public static partial class MotelyGlobals
 {
     public const int MaxCachedPseudoHashKeyLength = 32;
 
-    /// <summary>Cap on how many saved/top seeds any head retains from a search. Engine-wide, not CLI-specific.</summary>
-    public const int SavedSeedLimit = 314;
-
     public static readonly char[] SeedDigits = [.. "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
     public const int MaxSeedLength = 8;
     public const int MaxVectorWidth = 8;

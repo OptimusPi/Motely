@@ -335,8 +335,8 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
     )]
     public void Benchmark_ScrollPagination_ChunkSizeSweep()
     {
-        const int total = 1000; // bounded: composite offset-replay is cumulatively O(total^2)
-        int[] chunks = [1, 2, 5, 10, 50, 100, 500, 1000];
+        const int total = 100000; // bounded: composite offset-replay is cumulatively O(total^2)
+        int[] chunks = [1, 10, 100, 1000, 10000];
 
         output.WriteLine($"seed=UNITTEST  total={total} rolls per chunk size");
         output.WriteLine("chunk |  calls |     ms | rolls/ms");

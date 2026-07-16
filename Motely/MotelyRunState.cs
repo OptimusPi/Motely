@@ -1,48 +1,17 @@
-using System.Diagnostics;
-
 namespace Motely;
 
-/// <summary>JS-serializable snapshot of <see cref="MotelyRunState"/> (voucher + boss bitfields).</summary>
-public record MotelyJsRunState(int VoucherBitfield, int BossBitfield)
-{
-    public static readonly MotelyJsRunState Default = new(0, 0);
-
-    public MotelyRunState ToRunState()
-    {
-        return new MotelyRunState
-        {
-            VoucherBitfield = VoucherBitfield,
-            BossBitfield = BossBitfield,
-        };
-    }
-
-    public static MotelyJsRunState FromRunState(in MotelyRunState state) =>
-        new(state.VoucherBitfield, state.BossBitfield);
-
-    /// <summary>The snapshot after buying/activating <paramref name="voucher"/>.</summary>
-    public MotelyJsRunState WithVoucherActive(MotelyVoucher voucher) =>
-        this with { VoucherBitfield = VoucherBitfield | (1 << (int)voucher) };
-
-    public bool IsVoucherActive(MotelyVoucher voucher) =>
-        (VoucherBitfield & (1 << (int)voucher)) != 0;
-
-    public bool HasSeenBoss(MotelyBossBlind boss) =>
-        (BossBitfield & (1 << boss.GetBossIndex())) != 0;
-}
-
-public record MotelyBossStateResult(MotelyBossBlind Boss, MotelyJsRunState RunState);
-
-public record MotelyVoucherStateResult(MotelyVoucher Voucher, MotelyJsRunState RunState);
-
-public ref struct MotelyRunState
+// A plain reference type, not a ref struct — it doesn't need to be. The actual hot state in this
+// engine's SIMD sweep is the PRNG stream's own double, copied by value through the vector path;
+// this is small bookkeeping (two bitfields, a luck multiplier, a cached boss array) mutated
+// through a shared reference, same as everywhere else in C#. One type, used identically inside
+// the engine and across the WASM boundary — no separate marshalable twin, no conversion functions.
+public sealed record MotelyRunState
 {
     private static readonly int FinisherBossBlindMask;
     private static readonly int NormalBossBlindMask;
 
     static MotelyRunState()
     {
-
-
         FinisherBossBlindMask = 0;
         NormalBossBlindMask = 0;
         foreach (MotelyBossBlind bossBlind in MotelyEnum<MotelyBossBlind>.Values)
@@ -58,24 +27,28 @@ public ref struct MotelyRunState
         }
     }
 
-    public int VoucherBitfield;
-    public int BossBitfield;
-    public int ExtendedPackAnteBitfield;
-    public int Luck;
+    // All settable only through the real methods below (ActivateVoucher, SeeBoss, etc.) — a raw
+    // public setter let a caller bypass their guards (e.g. ActivateExtendedPackAnte's `ante > 0`
+    // check), which a bare `{ get; set; }` field never enforced.
+    public int VoucherBitfield { get; private set; }
+    public int BossBitfield { get; private set; }
+    public int ExtendedPackAnteBitfield { get; private set; }
 
-    private bool _showmanActive;
+    // MotelyLuck, not int — the enum exists specifically so an invalid multiplier (a stray "3")
+    // can't be represented at all, the same reason JamlWith.Luck is typed this way.
+    public MotelyLuck Luck { get; set; } = MotelyLuck.X1;
 
     // Boss caching for scoring - generated once per seed to maintain state
-    public MotelyBossBlind[]? CachedBosses;
+    public MotelyBossBlind[]? CachedBosses { get; set; }
 
-    public readonly bool ShowmanActive => _showmanActive;
+    public bool ShowmanActive { get; private set; }
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {
         VoucherBitfield |= 1 << (int)voucher;
     }
 
-    public readonly bool IsVoucherActive(MotelyVoucher voucher)
+    public bool IsVoucherActive(MotelyVoucher voucher)
     {
         return (VoucherBitfield & (1 << (int)voucher)) != 0;
     }
@@ -86,7 +59,7 @@ public ref struct MotelyRunState
             ExtendedPackAnteBitfield |= 1 << ante;
     }
 
-    public readonly bool IsExtendedPackAnteActive(int ante)
+    public bool IsExtendedPackAnteActive(int ante)
     {
         return ante > 0 && (ExtendedPackAnteBitfield & (1 << ante)) != 0;
     }
@@ -96,7 +69,7 @@ public ref struct MotelyRunState
         BossBitfield |= 1 << boss.GetBossIndex();
     }
 
-    public readonly bool HasSeenBoss(MotelyBossBlind boss)
+    public bool HasSeenBoss(MotelyBossBlind boss)
     {
         return (BossBitfield & (1 << boss.GetBossIndex())) != 0;
     }
@@ -115,6 +88,6 @@ public ref struct MotelyRunState
 
     public void ActivateShowman()
     {
-        _showmanActive = true;
+        ShowmanActive = true;
     }
 }

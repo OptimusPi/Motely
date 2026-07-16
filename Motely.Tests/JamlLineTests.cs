@@ -63,6 +63,52 @@ public class JamlLineTests
         Assert.Equal(JamlLine.FromClause(a!), JamlLine.FromClause(b!));
     }
 
+    // ── JUMMY: Jammy Understands My Mumbling ──────────────────────────────────
+    // The forgiving shorthand a real person actually types — ranges and filler words —
+    // must parse, not throw. Accessibility requirement: capture loose input, don't demand
+    // precise typing. These tests are the gate; if a change breaks them, JUMMY regressed.
+
+    [Theory]
+    [InlineData("Blueprint in antes 1-8", new[] { 1, 2, 3, 4, 5, 6, 7, 8 })]
+    [InlineData("Blueprint in antes 1..3", new[] { 1, 2, 3 })]
+    [InlineData("Blueprint in antes 1 to 3", new[] { 1, 2, 3 })]
+    [InlineData("Blueprint in antes 1 through 3", new[] { 1, 2, 3 })]
+    [InlineData("Blueprint in antes 3-1", new[] { 3, 2, 1 })]
+    [InlineData("Blueprint in antes 1-2, 5", new[] { 1, 2, 5 })]
+    public void AnteRange_expandsInclusively(string line, int[] expected)
+    {
+        Assert.True(
+            JamlLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
+        Assert.Equal(expected, Assert.IsType<JokerClause>(clause).Antes);
+    }
+
+    [Theory]
+    [InlineData("Perkeo score 100", 100)]
+    [InlineData("Perkeo score 1", 1)]
+    [InlineData("Perkeo score -5", -5)]
+    public void ScoreTail_capturedOnOneLine(string line, int expectedScore)
+    {
+        Assert.True(
+            JamlLine.TryToClause(line, out var clause, out var error),
+            $"parse failed: {error}"
+        );
+        Assert.Equal(expectedScore, clause!.Score);
+    }
+
+    [Fact]
+    public void ScoreTail_ridesAlongsideAnAnteRange()
+    {
+        Assert.True(
+            JamlLine.TryToClause("Perkeo in antes 1-8 score 100", out var clause, out var error),
+            $"parse failed: {error}"
+        );
+        var joker = Assert.IsType<JokerClause>(clause);
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8], joker.Antes);
+        Assert.Equal(100, joker.Score);
+    }
+
     // ── Modifiers ride the packed int ─────────────────────────────────────────
 
     [Theory]
