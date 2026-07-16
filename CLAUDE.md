@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Motely is a vectorized Balatro seed-search engine: AVX-512 SIMD, 8 seeds per lane per thread. JAML (Jimbo's Ante Markup Language) is the filter language — YAML and JSON both load to the same typed `JamlConfig` the engine executes. The repo ships the engine as a library, a CLI, and an npm WebAssembly package (`motely-wasm`).
 
-Write positive prose everywhere — docs, comments, commit messages say what to do and why it helps. Naty (pifreak) is the author; she/they. Her word is the spec: check code and docs against what she says. When a single fact is missing, ask her in one direct sentence.
+Write positive prose everywhere — docs, comments, commit messages say what to do and why it helps. Nat (pifreak) is the author; she/they. Her word is the spec: check code and docs against what she says. When a single fact is missing, ask her in one direct sentence.
 
 Run the engine. `dotnet run --project Motely.CLI -- --jaml <file>` is a normal, expected part of working here — a search that runs and finds a seed is the proof, and a test that fakes the search proves nothing. Surface errors where she can see them rather than piping them away.
 

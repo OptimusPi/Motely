@@ -20,7 +20,7 @@ public unsafe partial class MotelySingleSearchContext
     public MotelyBossBlind GetBossForAnte(
         ref MotelySingleBossStream stream,
         int ante,
-        ref MotelyRunState state
+        MotelyRunState state
     )
     {
         // 23 is the maximum number of boss blinds in the pool, because there is 23 non-finisher boss blinds

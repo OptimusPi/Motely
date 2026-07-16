@@ -61,7 +61,7 @@ public partial class MotelySingleSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyVoucher GetAnteFirstVoucher(
         int ante,
-        in MotelyRunState voucherState,
+        MotelyRunState voucherState,
         bool isCached = false
     )
     {
@@ -118,7 +118,7 @@ public partial class MotelySingleSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyVoucher GetNextVoucher(
         ref MotelySingleVoucherStream voucherStream,
-        in MotelyRunState voucherState
+        MotelyRunState voucherState
     )
     {
         MotelyVoucher voucher = (MotelyVoucher)GetNextRandomInt(

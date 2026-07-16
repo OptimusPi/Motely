@@ -3,7 +3,7 @@ namespace Motely.Filters.Jaml;
 /// <summary>
 /// JAML config consumed by JamlSearchBuilder.
 /// </summary>
-public sealed class JamlConfig
+public sealed record JamlConfig
 {
     /// <summary>The document root's own keys. "dateCreated" has no backing property here — it's
     /// accepted as human/tooling metadata only, never read by the loader; not a drift bug.</summary>
@@ -31,7 +31,7 @@ public sealed class JamlConfig
 ///   <item><b>Availability</b> — <see cref="Vouchers"/>: things appear that otherwise can't.</item>
 /// </list>
 /// </summary>
-public sealed class JamlWith
+public sealed record JamlWith
 {
     /// <summary>Oops! All 6s multiplier — each Oops doubles the odds (X2, X4, X8…). X1 = base odds.</summary>
     public MotelyLuck Luck { get; set; } = MotelyLuck.X1;
@@ -50,7 +50,7 @@ public static class JamlConfigExtensions
         config.Must.Count != 0 || config.Should.Count != 0 || config.MustNot.Count != 0;
 }
 
-public sealed class JokerSourceConfig
+public sealed record JokerSourceConfig
 {
     /// <summary>
     /// This class's own settable properties, camelCased — the single source JamlConfigLoader's
@@ -88,7 +88,7 @@ public sealed class JokerSourceConfig
     public int[] AllShopJokers { get; set; } = [];
 }
 
-public sealed class LegendaryJokerSourceConfig
+public sealed record LegendaryJokerSourceConfig
 {
     /// <summary>
     /// requireMega/requireMegaPack are both real aliases the loader accepts for the one
@@ -137,7 +137,7 @@ public sealed class LegendaryJokerSourceConfig
     }
 }
 
-public sealed class TarotCardSourceConfig
+public sealed record TarotCardSourceConfig
 {
     public static readonly string[] SourceKeys =
         ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"];
@@ -153,7 +153,7 @@ public sealed class TarotCardSourceConfig
     public bool CharmTag { get; set; }
 }
 
-public sealed class SpectralCardSourceConfig
+public sealed record SpectralCardSourceConfig
 {
     /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
     public static readonly string[] SourceKeys =
@@ -176,7 +176,7 @@ public sealed class SpectralCardSourceConfig
     // Likely Jimmolate territory. Do not implement naively.
 }
 
-public sealed class PlanetSourceConfig
+public sealed record PlanetSourceConfig
 {
     public static readonly string[] SourceKeys = ["shopItems", "boosterPacks"];
 
@@ -184,7 +184,7 @@ public sealed class PlanetSourceConfig
     public int[] BoosterPacks { get; set; } = [];
 }
 
-public sealed class StandardCardSourceConfig
+public sealed record StandardCardSourceConfig
 {
     public static readonly string[] SourceKeys =
         ["shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw"];

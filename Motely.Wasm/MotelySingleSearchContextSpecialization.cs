@@ -3,7 +3,16 @@ using Motely;
 
 // The declared JS surface of the live single-seed search context (specialization.md): every
 // member a JavaScript Jimmolate predicate can drive. Stream walkers that thread C# byref state
-// stay engine-side; their state-threaded twins (value in, value out) are the JS equivalents.
+// stay engine-side.
+//
+// RunState is NOT on this surface yet, on purpose: MotelyRunState is a `ref struct` because it's
+// used in MotelyVectorSearchContext's actual SIMD hot path (CreateShopItemStream reads
+// IsVoucherActive per ante, per 8-seed batch, across the whole search space) — it can't cross the
+// WASM boundary as-is, and a prior attempt to bridge it with a hand-rolled marshalable twin type
+// (MotelyJsRunState + manual ToRunState()/FromRunState() conversion) was scaffolded here but never
+// actually implemented, so the methods threw at runtime despite type-checking at compile time.
+// Real fix needs a design pass — see the RunState redesign note in project memory/CLAUDE.md-level
+// planning, not another silent stub.
 
 [SpecializeImport(typeof(MotelySingleSearchContext))]
 public abstract class MotelySingleSearchContextImport(int id) : SpecializedImport(id)
@@ -15,17 +24,6 @@ public abstract class MotelySingleSearchContextImport(int id) : SpecializedImpor
 
     public abstract MotelySinglePrngStream CreatePrngStream(string key, bool isCached = false);
     public abstract MotelySinglePrngStream ResumeStream(double state);
-
-    public abstract MotelyJsRunState NewRunState();
-    public abstract MotelyJsRunState ActivateVoucherWithState(
-        MotelyVoucher voucher,
-        MotelyJsRunState state
-    );
-    public abstract MotelyBossStateResult GetBossForAnteWithState(int ante, MotelyJsRunState state);
-    public abstract MotelyVoucherStateResult GetAnteFirstVoucherWithState(
-        int ante,
-        MotelyJsRunState state
-    );
 
     public abstract MotelySingleBossStream CreateBossStream();
     public abstract MotelyVoucher GetAnteFirstVoucher(int ante, bool isCached = false);
@@ -181,21 +179,6 @@ public sealed class MotelySingleSearchContextExport(MotelySingleSearchContext ct
         ctx.CreatePrngStream(key, isCached);
 
     public MotelySinglePrngStream ResumeStream(double state) => ctx.ResumeStream(state);
-
-    public MotelyJsRunState NewRunState() => ctx.NewRunState();
-
-    public MotelyJsRunState ActivateVoucherWithState(
-        MotelyVoucher voucher,
-        MotelyJsRunState state
-    ) => ctx.ActivateVoucherWithState(voucher, state);
-
-    public MotelyBossStateResult GetBossForAnteWithState(int ante, MotelyJsRunState state) =>
-        ctx.GetBossForAnteWithState(ante, state);
-
-    public MotelyVoucherStateResult GetAnteFirstVoucherWithState(
-        int ante,
-        MotelyJsRunState state
-    ) => ctx.GetAnteFirstVoucherWithState(ante, state);
 
     public MotelySingleBossStream CreateBossStream() => ctx.CreateBossStream();
 

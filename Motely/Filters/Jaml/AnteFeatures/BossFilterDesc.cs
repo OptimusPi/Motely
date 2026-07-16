@@ -61,7 +61,7 @@ public readonly struct BossFilterDesc(BossClause clause)
                             cachedBosses[ante] = singleCtx.GetBossForAnte(
                                 ref bossStream,
                                 ante,
-                                ref state
+                                state
                             );
                         state.CachedBosses = cachedBosses;
                     }

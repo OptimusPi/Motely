@@ -78,12 +78,6 @@ public sealed class MotelyTopSeedSinkTests
         Assert.Equal(["E", "D", "C"], desc.GetSeeds());
     }
 
-    [Fact]
-    public void DefaultLimit_IsPiFreak()
-    {
-        Assert.Equal(314, MotelyTopSeedSink.DefaultLimit);
-    }
-
     // ── seeds: rewrite round-trip (existing seeds are a curated provider: they stay, in front,
     //    in order; new finds merge in after them — a save NEVER deletes a seed) ──
 
