@@ -5,10 +5,9 @@
 // screenshot-driven primitive design lands. `git grep TODO(jimbo-primitives)`.
 /* eslint-disable jaml-design/no-inline-style, jaml-design/no-token-in-jsx-style */
 
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, placeholder as cmPlaceholder } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
-import { yaml } from "@codemirror/lang-yaml";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
@@ -93,15 +92,16 @@ export function JamlCodeEditor({
   placeholder = "",
   minHeight = 320,
 }: JamlCodeEditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const suppressEmitRef = useRef(false);
   const lastSyncedValueRef = useRef(value);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; });
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  // React 19 ref-callback cleanup: the CodeMirror view's lifecycle is tied
+  // directly to the element's, no separate mount effect needed.
+  const setContainer = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
 
     const view = new EditorView({
       state: EditorState.create({
@@ -111,7 +111,6 @@ export function JamlCodeEditor({
           lineNumbers(),
           highlightActiveLine(),
           drawSelection(),
-          yaml(),
           syntaxHighlighting(balatroHighlight),
           balatroTheme,
           EditorView.lineWrapping,
@@ -126,7 +125,7 @@ export function JamlCodeEditor({
           }),
         ],
       }),
-      parent: containerRef.current,
+      parent: node,
     });
 
     viewRef.current = view;
@@ -167,7 +166,7 @@ export function JamlCodeEditor({
 
   return (
     <div
-      ref={containerRef}
+      ref={setContainer}
       style={{ width: "100%", minHeight, background: JimboColorOption.DARKEST }}
     />
   );

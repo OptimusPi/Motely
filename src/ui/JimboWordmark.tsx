@@ -2,7 +2,7 @@
 
 import type { HTMLAttributes, ReactNode } from "react";
 
-export interface JimboWordmarkProps extends HTMLAttributes<HTMLDivElement> {
+export interface JimboWordmarkProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   title: ReactNode;
   sub?: ReactNode;
 }

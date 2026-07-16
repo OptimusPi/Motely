@@ -11,7 +11,8 @@ import {
   type MotelyJamlyzerSeedResult,
 } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
-import { JimboInnerPanel, JimboPanel } from "../ui/panel.js";
+import { JimboInnerPanel } from "../ui/panel.js";
+import { JimboPanel } from "../ui/JimboPanel.js";
 import { JimboText } from "../ui/jimboText.js";
 import { JamlSeedSpinner } from "./JamlSeedSpinner.js";
 import { JimboSpinner } from "../ui/JimboSpinner.js";

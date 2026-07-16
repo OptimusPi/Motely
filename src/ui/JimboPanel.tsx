@@ -3,7 +3,7 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { JimboSectionHeader, type JimboSectionTone } from "./JimboSectionHeader.js";
 
-export interface JimboPanelProps extends HTMLAttributes<HTMLDivElement> {
+export interface JimboPanelProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   /** Optional section tag at the top of the panel */
   title?: ReactNode;
   tone?: JimboSectionTone;
