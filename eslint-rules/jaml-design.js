@@ -4,22 +4,28 @@
 const EMOJI_RE =
   /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}\u{1F900}-\u{1F9FF}]/u;
 
-const noRawButton = {
+// All of jaml-ui is Jimbo. src/ui/ is the primitive layer — it is *made of* raw
+// HTML, that is its job. Everywhere else composes Jimbo* primitives and nothing
+// else. Banning only <button> while <div> walks free was incoherent: a raw <div>
+// is exactly as much un-themed host-rendered HTML as a raw <button>.
+// Fragments (<> / <React.Fragment>) are not elements and are fine.
+const noRawHtml = {
   meta: {
     type: 'problem',
-    docs: { description: 'Use JimboButton instead of raw <button>' },
+    docs: { description: 'Only Jimbo* primitives outside src/ui/. No raw HTML.' },
     messages: {
-      raw: 'Raw <{{tag}}> is not allowed outside src/ui/. Use a Jimbo* primitive (e.g. JimboButton). See CLAUDE.md design rules.',
+      raw: 'Raw <{{tag}}> is not allowed outside src/ui/. All of jaml-ui is Jimbo — compose a Jimbo* primitive. If the primitive you need does not exist, add it to src/ui/ with a story. See CLAUDE.md "Design rules".',
     },
     schema: [],
   },
   create(context) {
-    const banned = new Set(['button', 'input', 'select', 'textarea']);
     return {
       JSXOpeningElement(node) {
         const name = node.name;
+        // Lowercase JSXIdentifier === an intrinsic HTML element. A capitalized
+        // one is a component; a JSXMemberExpression (<Foo.Bar>) is too.
         if (name.type !== 'JSXIdentifier') return;
-        if (!banned.has(name.name)) return;
+        if (!/^[a-z]/.test(name.name)) return;
         context.report({ node, messageId: 'raw', data: { tag: name.name } });
       },
     };
@@ -276,9 +282,72 @@ const noInlineComponent = {
   },
 };
 
+// Rule #1: no flex, anywhere in src/. MCP host iframes size flex content
+// differently per host, so a flex layout reflows differently depending on where
+// the app is embedded. Grid and absolute positioning are deterministic.
+// This is the CI mirror of the same rule in .claude/hooks/check-design.mjs.
+// Note: gap / justifyContent / alignItems / placeItems are all valid in grid and
+// are deliberately NOT flagged.
+const noFlex = {
+  meta: {
+    type: 'problem',
+    docs: { description: 'No flex. Use grid or absolute positioning.' },
+    messages: {
+      flex:
+        'flex is not allowed ({{what}}). Rule #1: this UI ships as an MCP app inside host iframes that size flex content differently per host. Use display: grid or absolute positioning — grid + placeItems: "center" to center, gridAutoFlow: "column" for a row. See CLAUDE.md "Design rules".',
+    },
+    schema: [],
+  },
+  create(context) {
+    const FLEX_PROPS = new Set([
+      'flexDirection',
+      'flexWrap',
+      'flexGrow',
+      'flexShrink',
+      'flexBasis',
+      'flex',
+    ]);
+    function keyName(k) {
+      if (!k) return null;
+      return k.type === 'Identifier' ? k.name : k.type === 'Literal' ? k.value : null;
+    }
+    return {
+      JSXAttribute(node) {
+        if (node.name?.name !== 'style') return;
+        const expr = node.value?.expression;
+        if (!expr || expr.type !== 'ObjectExpression') return;
+        for (const prop of expr.properties) {
+          if (prop.type !== 'Property') continue;
+          const name = keyName(prop.key);
+          if (typeof name !== 'string') continue;
+          if (name === 'display') {
+            const v = prop.value;
+            if (
+              v.type === 'Literal' &&
+              typeof v.value === 'string' &&
+              /^(inline-)?flex$/.test(v.value.trim())
+            ) {
+              context.report({
+                node: prop,
+                messageId: 'flex',
+                data: { what: `display: "${v.value}"` },
+              });
+            }
+            continue;
+          }
+          if (FLEX_PROPS.has(name)) {
+            context.report({ node: prop, messageId: 'flex', data: { what: name } });
+          }
+        }
+      },
+    };
+  },
+};
+
 export default {
   rules: {
-    'no-raw-button': noRawButton,
+    'no-flex': noFlex,
+    'no-raw-html': noRawHtml,
     'no-emoji-jsx': noEmojiJsx,
     'no-uppercase-text': noUppercaseText,
     'no-bold-style': noBoldStyle,

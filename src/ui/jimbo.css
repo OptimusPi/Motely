@@ -178,8 +178,9 @@
     0 calc(var(--j-surface-shadow-depth) + var(--j-panel-south-edge-width)) 0 0 rgba(0, 0, 0, 0.55),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   padding: var(--j-space-lg);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: stretch;
   overflow: visible;
   position: relative;
@@ -206,12 +207,12 @@
 }
 
 .j-panel__body {
-  flex: 1;
   overflow: auto;
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-md);
 }
 
@@ -395,7 +396,9 @@
 /* ── Badge ─────────────────────────────────────────────────────────────── */
 
 .j-badge {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   border-radius: var(--j-radius-sm);
   font-family: var(--j-font);
@@ -456,11 +459,12 @@
 /* ── Tabs ──────────────────────────────────────────────────────────────── */
 
 .j-tabs {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   gap: var(--j-space-sm);
   align-items: flex-end;
   justify-content: center;
-  flex-wrap: nowrap;
   width: 100%;
   /* No overflow clipping. Setting overflow-x:auto forces overflow-y to clip
      too (CSS spec), which decapitates the bouncing arrow at its apex. The
@@ -473,18 +477,20 @@
 .j-tab {
   /* Stack: indicator arrow on top, JimboButton below. The button does its
      own styling — this wrapper just positions the indicator above it. */
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   position: relative;
-  flex: 0 0 auto;
   gap: 2px;
 }
 
 .j-tab__indicator {
   height: 10px;
   margin-bottom: 3px;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   justify-content: center;
   align-items: flex-end;
 }
@@ -599,8 +605,9 @@
 
 /* Vertical tabs */
 .j-vtabs {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
@@ -625,8 +632,9 @@
 /* ── Toggle List ──────────────────────────────────────────────────────── */
 
 .j-toggle-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
@@ -643,7 +651,9 @@
   /* Plain seated row inside the outer panel. No row backdrop — items rest
      directly on the panel surface; the checkbox alone carries the visual
      weight. Label fills, checkbox pinned right so columns align. */
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: space-between;
   gap: var(--j-space-md);
@@ -729,8 +739,9 @@
   pointer-events: none;
   z-index: 9999;
   transition: opacity 120ms ease;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   gap: 4px;
 }
@@ -769,12 +780,15 @@
 /* ── Layout Utilities ─────────────────────────────────────────────────── */
 
 .j-flex {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
 }
 
 .j-flex-col {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
 }
 
 .j-items-center {
@@ -807,7 +821,9 @@
 /* ── Flank Nav ────────────────────────────────────────────────────────── */
 
 .j-flank {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: stretch;
   justify-content: center;
   gap: var(--j-space-md);
@@ -817,17 +833,16 @@
 
 .j-flank__content {
   position: relative;
-  flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
 }
 
 .j-flank__btn {
   /* The flanking buttons span the FULL height of the content beside them —
      no top/bottom margin. align-items:stretch on .j-flank then makes them
      match content height exactly. */
-  flex-shrink: 0;
   align-self: stretch;
   width: 40px;
   border: none;
@@ -836,7 +851,9 @@
   background-color: var(--j-red);
   color: var(--j-white);
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   box-shadow: 0 var(--j-press-y) 0 0 var(--j-dark-red);
@@ -860,13 +877,16 @@
 /* ── Copy Row ─────────────────────────────────────────────────────────── */
 
 .j-copy-row {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
 .j-copy-row__field {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: var(--j-space-md);
 }
@@ -913,20 +933,25 @@
   border-radius: var(--j-radius-lg);
   box-shadow: 0 3px 0 0 rgba(0, 0, 0, 0.5);
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
 }
 
 .j-code-block__header {
   padding: 8px 12px;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--j-inner-border);
 }
 
 .j-code-block__meta {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   gap: 8px;
   align-items: center;
 }
@@ -952,7 +977,9 @@
   background: none;
   border: none;
   cursor: pointer;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
 }
 
 .j-code-block__copy[data-copied="false"] {
@@ -977,7 +1004,8 @@
 /* ── Filter Bar ───────────────────────────────────────────────────────── */
 
 .j-filter-bar {
-  display: flex;
+  display: grid;
+  grid-auto-flow: row;
   gap: 24px;
   padding: var(--j-space-xl);
   background-color: var(--j-dark-grey);
@@ -985,7 +1013,7 @@
   box-shadow: 0 3px 0 0 var(--j-border-south);
   border-radius: var(--j-radius-lg);
   position: relative;
-  flex-wrap: wrap;
+  grid-template-columns: repeat(auto-fill, max-content);
 }
 
 .j-filter-bar__field {
@@ -1026,7 +1054,9 @@
   top: 0;
   bottom: 0;
   width: 48px;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   pointer-events: none;
@@ -1074,7 +1104,9 @@
   position: absolute;
   inset: 0;
   z-index: 1000;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   padding: var(--j-space-md);
@@ -1085,8 +1117,9 @@
   width: 100%;
   max-width: 345px;
   max-height: calc(100% - 32px);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   overflow: hidden;
   border-radius: var(--j-radius-lg);
   animation: jimbo-modal-in 140ms cubic-bezier(0.2, 0, 0.2, 1.4) both;
@@ -1177,7 +1210,9 @@
   gap: 4px;
 }
 .j-jaml-ide-visual__byline {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   gap: 8px;
   align-items: center;
 }
@@ -1193,7 +1228,9 @@
 }
 
 .j-input-modal__actions {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   justify-content: flex-end;
   gap: var(--j-space-md);
   margin-top: 14px;
@@ -1230,11 +1267,12 @@
 }
 
 .j-footer__line--wrap {
-  display: flex;
+  display: grid;
+  grid-auto-flow: row;
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  flex-wrap: wrap;
+  grid-template-columns: repeat(auto-fill, max-content);
 }
 
 .j-footer__chunk {
@@ -1242,7 +1280,9 @@
 }
 
 .j-footer__chunk--credit {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   gap: 0.25rem;
 }
 
@@ -1264,7 +1304,9 @@
 }
 
 .j-footer__extra {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   margin-left: 0.25rem;
 }
@@ -1415,8 +1457,8 @@
   max-height: var(--j-app-h);
   min-height: var(--j-app-h);
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr auto;
   background: transparent;
   border: none;
   border-radius: 0;
@@ -1428,24 +1470,24 @@
 }
 
 .j-app__content {
-  flex: 1;
   min-height: 0;
   overflow: hidden;
   padding: var(--j-space-lg) var(--j-space-lg) var(--j-space-md);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
 }
 
 .j-app__scroll {
-  flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--j-space-lg) var(--j-space-lg) var(--j-space-md);
   scrollbar-width: none;
   -ms-overflow-style: none;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-md);
 }
 
@@ -1464,12 +1506,12 @@
 }
 
 .j-app__footer {
-  flex-shrink: 0;
   padding: var(--j-space-md) var(--j-space-lg) var(--j-space-md);
   border-top: var(--j-panel-border-width) solid var(--j-black);
   background: var(--j-dark-grey);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
@@ -1477,7 +1519,9 @@
 /* Colored tag + horizontal rule — reusable section divider. */
 
 .j-section-header {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: var(--j-space-md);
   margin-bottom: var(--j-space-md);
@@ -1528,21 +1572,22 @@
 
 .j-page {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   font-family: var(--j-font);
   color: var(--j-white);
   position: relative;
 }
 
 .j-page__main {
-  flex: 1;
   width: 100%;
   max-width: 48rem;
   margin: 0 auto;
   padding: var(--j-space-xl) var(--j-space-lg);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-xl);
   box-sizing: border-box;
 }
@@ -1552,8 +1597,9 @@
 }
 
 .j-page__row {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-lg);
 }
 
@@ -1571,7 +1617,9 @@
 
 /* Code / copy row inside a panel */
 .j-copy-row {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: var(--j-space-sm);
   min-width: 0;
@@ -1594,8 +1642,9 @@
 /* < value > control matching Balatro settings rows. */
 
 .j-spinner-wrap {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   gap: var(--j-space-xs);
 }
@@ -1605,7 +1654,9 @@
 }
 
 .j-spinner {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: stretch;
   gap: var(--j-space-sm);
 }
@@ -1613,7 +1664,9 @@
 .j-spinner__value {
   min-width: 96px;
   padding: 4px 12px;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   background: var(--j-red);
@@ -1627,7 +1680,9 @@
    dim grey circle. Carousel page indicator pattern. */
 
 .j-stepper {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -1640,7 +1695,9 @@
   border: none;
   cursor: pointer;
   padding: 4px;
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
 }
@@ -1661,8 +1718,9 @@
 /* ── Slider ──────────────────────────────────────────────────────────── */
 
 .j-slider-wrap {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: stretch;
   gap: var(--j-space-xs);
   width: 100%;
@@ -1678,7 +1736,9 @@
    value pill riding the boundary. */
 .j-slider {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   height: 28px;
   /* Reserve half-badge width on each side so the thumb doesn't clip when
@@ -1726,7 +1786,9 @@
 /* Red pill displaying a numeric value. Click to edit inline. */
 
 .j-value-badge {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   min-width: 40px;
@@ -1775,7 +1837,9 @@
 /* Two stat halves joined into one pill — used for Hands × Discards. */
 
 .j-dual-chip {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: stretch;
   border-radius: var(--j-radius-md);
   overflow: hidden;
@@ -1785,7 +1849,9 @@
 .j-dual-chip__half {
   min-width: 40px;
   padding: 6px 14px;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   color: var(--j-white);
@@ -1839,7 +1905,9 @@
   background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: var(--j-space-md);
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: var(--j-space-md);
   cursor: pointer;
@@ -1929,7 +1997,9 @@
 
 .j-game-card--unknown {
   aspect-ratio: 0.75;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   background: #1a1a1a;
@@ -1943,7 +2013,9 @@
   --j-card-glare-y: 50%;
   aspect-ratio: var(--j-card-aspect);
   width: 100%;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   position: relative;
   perspective: 900px;
   user-select: none;
@@ -1999,15 +2071,18 @@
 /* ── Panel Spinner ───────────────────────────────────────────────────── */
 
 .j-panel-spinner {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-xs);
   width: min(100%, 320px);
   max-width: 320px;
 }
 
 .j-panel-spinner__label {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
 }
 
@@ -2031,7 +2106,9 @@
   height: 100%;
   min-height: 140px;
   padding: 0;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   box-shadow: 0 var(--j-panel-border-width-heavy) 0 0 rgba(0, 0, 0, 0.3);
@@ -2057,8 +2134,9 @@
   min-height: 140px;
   max-height: 140px;
   overflow: visible;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   justify-content: center;
   gap: var(--j-space-xs);
@@ -2073,7 +2151,9 @@
 }
 
 .j-panel-spinner__media {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   min-height: 60px;
@@ -2108,12 +2188,12 @@
 /* ── IDE ─────────────────────────────────────────────────────────────── */
 
 .j-ide {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   /* Grow to fill a fixed-height flex parent (e.g. the 320x540 .j-app shell)
      so the IDE never leaves dead space below it; min-height stays as the
      floor for standalone (non-flex-parent) usage so it can't collapse. */
-  flex: 1 1 auto;
   min-height: 420px;
   max-width: 100%;
   overflow: hidden;
@@ -2128,10 +2208,11 @@
 }
 
 .j-ide__header {
-  display: flex;
+  display: grid;
+  grid-auto-flow: row;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  grid-template-columns: repeat(auto-fill, max-content);
   gap: 12px;
   padding: 10px 14px;
   border-bottom: var(--j-panel-border-width) solid var(--j-panel-edge);
@@ -2163,15 +2244,18 @@
 }
 
 .j-ide__actions {
-  display: flex;
+  display: grid;
+  grid-auto-flow: row;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
+  grid-template-columns: repeat(auto-fill, max-content);
   gap: 8px;
 }
 
 .j-ide-toolbar {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 6px;
   padding: 8px 4px 6px;
@@ -2207,17 +2291,18 @@
 }
 
 .j-ide-results {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
 .j-ide-results__bridge {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: stretch;
   gap: var(--j-space-xs);
-  flex-shrink: 0;
 }
 
 .j-ide-results__bridge-hint {
@@ -2229,8 +2314,9 @@
 /* ── Seed Input ───────────────────────────────────────────────────────── */
 
 .j-seed-input {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-xs);
   width: fit-content;
   max-width: 100%;
@@ -2305,15 +2391,18 @@
 }
 
 .j-seed-spinner {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-xs);
   width: 100%;
   max-width: 100%;
 }
 
 .j-seed-spinner__meta {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: space-between;
   gap: var(--j-space-sm);
@@ -2355,14 +2444,16 @@
 /* ── Aesthetic Selector ──────────────────────────────────────────────── */
 
 .j-aesthetic-selector {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
 .j-aesthetic-selector__list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, max-content);
   gap: var(--j-space-sm);
 }
 
@@ -2401,8 +2492,9 @@
   width: 100%;
   height: 100%;
   background: var(--j-darkest);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   font-family: var(--j-font);
   color: var(--j-white);
   overflow: hidden;
@@ -2461,7 +2553,9 @@
 }
 
 .j-showcase__section-header {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: var(--j-space-md);
   margin-bottom: var(--j-space-md);
@@ -2483,8 +2577,9 @@
 }
 
 .j-showcase__filter-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-md);
   margin-bottom: var(--j-space-xl);
 }
@@ -2493,21 +2588,27 @@
   background: var(--j-surface-inset);
   border-radius: var(--j-radius-md);
   padding: 10px;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 10px;
   cursor: pointer;
 }
 
 .j-showcase__filter-sprites {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   gap: 2px;
 }
 
 .j-showcase__filter-sprite {
   width: 30px;
   height: 40px;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
 }
@@ -2563,8 +2664,9 @@
   padding: 8px 10px 10px;
   border-top: 2px solid var(--j-black);
   background: var(--j-dark-grey);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: 6px;
 }
 
@@ -2572,7 +2674,9 @@
 /* ── Footer suit animation ────────────────────────────────────────────── */
 
 .j-footer__suits {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
 }
 
@@ -2587,7 +2691,9 @@
 .j-footer__suit-char {
   position: absolute;
   inset: 0;
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   opacity: 0;
@@ -2606,7 +2712,9 @@
 
 /* WeeJoker harvest — tap icon + seed, green flash on copy. */
 .j-seed-copy {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   gap: var(--j-space-sm);
@@ -2629,10 +2737,11 @@
 }
 
 .j-seed-copy__icon {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   width: 28px;
   height: 28px;
   border-radius: var(--j-radius-sm);
@@ -2664,7 +2773,9 @@
 /* ── Motely version badge ─────────────────────────────────────────────── */
 
 .j-motely-badge {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 6px;
 }
@@ -2679,10 +2790,10 @@
 /* ── Jamlyzer ─────────────────────────────────────────────────────────── */
 
 .j-jamlyzer {
-  flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   justify-content: center;
   gap: var(--j-space-sm);
   width: 100%;
@@ -2733,8 +2844,9 @@
 }
 
 .j-jamlyzer__details {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
   margin-top: var(--j-space-sm);
   width: 100%;
@@ -2742,8 +2854,9 @@
 }
 
 .j-jamlyzer__details-section {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-xs);
   background: var(--j-surface-inset);
   padding: var(--j-space-sm);
@@ -2752,15 +2865,18 @@
 }
 
 .j-jamlyzer__cards-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, max-content);
   gap: var(--j-space-xs);
   justify-content: center;
 }
 
 .j-jamlyzer__card-wrap {
   position: relative;
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   border-radius: var(--j-radius-sm);
   box-sizing: border-box;
   padding: 2px;
@@ -2780,10 +2896,10 @@
 
 
 .j-ide__jamlyzer {
-  flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   padding: var(--j-space-sm) var(--j-space-md);
   overflow: hidden;
 }
@@ -2805,17 +2921,18 @@
 }
 
 .j-filter-browser__list-panel .j-panel__body {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   min-height: 0;
 }
 
 .j-filter-browser__list {
-  flex: 1;
   min-height: 0;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
@@ -2858,13 +2975,16 @@
 }
 
 .j-filter-browser__targets {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, max-content);
   gap: var(--j-space-xs);
 }
 
 .j-filter-browser__target {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   padding: 2px 5px;
   border-radius: var(--j-radius-sm);
   background: var(--j-teal-grey);
@@ -2875,8 +2995,9 @@
 }
 
 .j-filter-browser__pager {
-  flex-shrink: 0;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   justify-content: center;
   padding-top: var(--j-space-md);
 }
@@ -2900,8 +3021,9 @@
 .j-filter-browser__meta,
 .j-filter-browser__actions {
   width: 100%;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   gap: var(--j-space-sm);
 }
@@ -2925,8 +3047,9 @@
 
 .j-picker {
   max-height: 80vh;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
 }
 
 .j-picker__section {
@@ -2977,8 +3100,9 @@
 }
 
 .j-picker__item {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   gap: 3px;
   padding: 3px;
@@ -3000,8 +3124,9 @@
 }
 
 .j-picker__pair {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: var(--j-space-sm);
 }
 
@@ -3012,12 +3137,12 @@
 }
 
 .j-story-phone {
-  width: 320px;
-  height: 568px;
+  width: var(--j-app-w);
+  height: var(--j-app-h);
 }
 
 .j-story-panel-grid {
-  width: 320px;
+  width: var(--j-app-w);
 }
 
 .j-story-card-grid {
@@ -3052,7 +3177,9 @@
 }
 
 .j-text--dance-container {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
 }
 
 .j-font-dance-char {
@@ -3117,8 +3244,9 @@
 
 /* ── Spinner — `< value >` cycler. Value is a display badge, NOT a button. ── */
 .j-spinner-wrap {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   gap: 4px;
   width: 100%;
@@ -3131,14 +3259,18 @@
   text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
 }
 .j-spinner {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   gap: 6px;
 }
 /* Value badge — flat red fill with dark-red south edge. No hover, no click. */
 .j-spinner__value {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   min-width: 80px;
@@ -3163,7 +3295,8 @@
 .j-stack--lg { gap: 12px; }
 .j-stack--xl { gap: 16px; }
 
-.j-row { display: flex; flex-direction: row; align-items: center; }
+.j-row { display: grid; grid-auto-flow: column;
+  grid-auto-columns: max-content; align-items: center; }
 .j-row--xs { gap: 2px; }
 .j-row--sm { gap: 4px; }
 .j-row--md { gap: 8px; }
@@ -3189,8 +3322,9 @@
 
 /* ── Stat Callout — label strip + big pixel number ────────────────────── */
 .j-stat {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: stretch;
   background: var(--j-darkest);
   border-radius: var(--j-radius-md);
@@ -3228,8 +3362,9 @@
 
 /* ── Section Header — red strip + title + downward triangle ──────────── */
 .j-section-header {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   align-items: center;
   width: 100%;
 }
@@ -3279,7 +3414,9 @@
 
 /* ── Price Tag — yellow $X badge ─────────────────────────────────────── */
 .j-price-tag {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   background: var(--j-gold);
@@ -3303,7 +3440,9 @@
 .j-toggle {
   appearance: none;
   -webkit-appearance: none;
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   width: 18px;
@@ -3333,7 +3472,9 @@
 .j-toggle--orange[data-on="true"] { background: var(--j-orange); border-color: var(--j-dark-orange); }
 
 .j-toggle-row {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 8px;
   padding: 4px 0;
@@ -3452,8 +3593,9 @@
 
 /* ── Progress Bar ────────────────────────────────────────────────────── */
 .j-progress {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: 2px;
   width: 100%;
 }
@@ -3500,7 +3642,9 @@
 
 /* ── Status Pill (specialization of badge — short single-word state) ── */
 .j-status-pill {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
@@ -3525,7 +3669,9 @@
 
 /* ── Seed Row and Results Scroll (Curator V3) ────────────────────────── */
 .j-seed-row {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
@@ -3564,12 +3710,12 @@
   color: #e4b643;
 }
 .j-results-scroll {
-  flex: 1;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: 4px;
 }
 .j-results-scroll::-webkit-scrollbar {
@@ -3578,13 +3724,13 @@
 
 /* ── Jamlyzer Stream Layout (Curator V3) ─────────────────────────────── */
 .j-ante-scroll {
-  flex: 1;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
   scroll-snap-type: y mandatory;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: 8px;
 }
 .j-ante-scroll::-webkit-scrollbar {
@@ -3596,12 +3742,15 @@
   border: 2px solid #334461;
   border-radius: 6px;
   padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
   gap: 4px;
 }
 .j-ante-section__head {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 2px;
@@ -3613,7 +3762,9 @@
   text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
 }
 .j-stream {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 4px;
   padding: 3px 4px;
@@ -3634,10 +3785,9 @@
   letter-spacing: 0.06em;
 }
 .j-stream__items {
-  flex: 1;
-  display: flex;
+  display: grid;
   gap: 3px;
-  flex-wrap: wrap;
+  grid-template-columns: repeat(auto-fill, max-content);
 }
 .j-stream-item {
   background: #0b1416;
@@ -3675,7 +3825,9 @@
 .j-mystery-slot__card {
   position: absolute;
   inset: 0;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
@@ -3698,7 +3850,9 @@
   border-radius: 50%;
   background: #ff4c40; /* C.RED */
   color: #fff; /* C.WHITE */
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: center;
   font-size: 11px;
