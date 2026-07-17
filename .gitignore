@@ -80,4 +80,3 @@ nuget.config.local
 /.seeds
 /.playwright-mcp
 /Motely.Wasm/dist-workers
-/Motely.Wasm
