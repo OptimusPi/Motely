@@ -26,11 +26,14 @@ const input = payload.tool_input ?? {};
 if (tool !== 'Edit' && tool !== 'Write' && tool !== 'MultiEdit') process.exit(0);
 
 const filePath = (input.file_path ?? '').replace(/\\/g, '/');
-// Only enforce on TSX/JSX inside src/. Stories and src/ui/ get a pass for
+// Enforce on TSX/JSX and CSS inside src/. Stories and src/ui/ get a pass for
 // raw <button>/<input> (they are the primitives or test them directly).
+// The no-flex rule (#1) has no exemptions and applies to CSS too — jimbo.css is
+// where most layout actually lives.
 if (!/\/src\//.test(filePath)) process.exit(0);
-if (!/\.(tsx|jsx)$/.test(filePath)) process.exit(0);
+if (!/\.(tsx|jsx|css)$/.test(filePath)) process.exit(0);
 
+const isCss = /\.css$/.test(filePath);
 const isUi = /\/src\/ui\//.test(filePath);
 const isStory = /\.stories\.(tsx|jsx)$/.test(filePath);
 
@@ -48,8 +51,47 @@ const text = chunks.join('\n');
 
 const violations = [];
 
-// 1. Raw <button>/<input>/<select>/<textarea> outside src/ui and stories.
-if (!isUi && !isStory) {
+// 0. Suppressing a design rule is itself a violation. A blocked edit means the
+// approach changes, not that the rule goes away. This is the escape hatch that
+// turns a caught problem into a shipped one, so it is closed at the hook layer
+// where a comment cannot reach it.
+const SUPPRESS = [
+  [/\/[/*]\s*eslint-disable(-next-line)?[^\n]*jaml-design/, 'eslint-disable of a jaml-design rule'],
+  [/@ts-ignore/, '@ts-ignore'],
+  [/@ts-expect-error/, '@ts-expect-error'],
+  [/@ts-nocheck/, '@ts-nocheck'],
+];
+for (const [re, label] of SUPPRESS) {
+  if (re.test(text)) {
+    violations.push(
+      `${label} detected. Do not suppress a design rule to make an edit land — the rule is the requirement, so change the approach instead. If you believe the rule is wrong here, say so in your response rather than routing around it. See CLAUDE.md "Design rules".`,
+    );
+    break;
+  }
+}
+
+// 1. No flex. Anywhere in src/. MCP host iframes size flex content differently
+// per host, so flex layout reflows differently depending on where the app is
+// embedded. Grid and absolute positioning are deterministic. Note that gap,
+// justify-content, align-items and place-items are all valid in grid and are
+// deliberately NOT banned here.
+const FLEX = [
+  [/display\s*:\s*['"]?\s*(inline-)?flex\b/, 'display: flex / inline-flex'],
+  [/\bflex-(direction|wrap|grow|shrink|basis)\s*:/, 'a flex-* property'],
+  [/\bflex(Direction|Wrap|Grow|Shrink|Basis)\s*:/, 'a flex* style property'],
+  [/(^|[;{\s'"])flex\s*:\s*['"]?[\d.]/m, 'the flex shorthand'],
+];
+for (const [re, label] of FLEX) {
+  if (re.test(text)) {
+    violations.push(
+      `${label} detected. Rule #1: no flex anywhere in src/. This UI ships as an MCP app inside host iframes that size flex content differently per host, so flex reflows differently depending on where it is embedded. Use display: grid or absolute positioning — grid + place-items: center to center, grid-auto-flow: column for a row. gap/justify-content/align-items are fine inside grid. See CLAUDE.md "Design rules".`,
+    );
+    break;
+  }
+}
+
+// 2. Raw <button>/<input>/<select>/<textarea> outside src/ui and stories.
+if (!isCss && !isUi && !isStory) {
   const m = /<(button|input|select|textarea)\b/.exec(text);
   if (m) {
     violations.push(

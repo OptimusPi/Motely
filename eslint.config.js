@@ -28,10 +28,30 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
-      'jaml-design/no-raw-button': 'off',
-      'jaml-design/no-emoji-jsx': 'off',
-      'jaml-design/no-uppercase-text': 'off',
-      'jaml-design/no-bold-style': 'off',
+      // Design rules — the CI mirror of .claude/hooks/check-design.mjs. The hook
+      // only guards Claude's Edit/Write inside a session; these guard everything
+      // else (IDE edits, commits, other agents, CI). Source of truth for all of
+      // them: CLAUDE.md "Design rules".
+      'jaml-design/no-flex': 'error',
+      'jaml-design/no-raw-html': 'error',
+      'jaml-design/no-emoji-jsx': 'error',
+      'jaml-design/no-uppercase-text': 'error',
+      'jaml-design/no-bold-style': 'error',
+      'jaml-design/no-inline-style': 'error',
+      'jaml-design/no-token-in-jsx-style': 'error',
+      'jaml-design/no-inline-component': 'error',
+    },
+  },
+  // src/ui/ IS the primitive layer: JimboButton is *made of* a raw <button>, and
+  // it styles itself inline. Stories exercise the primitives directly. Both are
+  // exempt from the rules that exist to push consumers toward the primitives.
+  // no-flex is NOT exempted anywhere — rule #1 has no exceptions.
+  {
+    files: ['src/ui/**/*.{ts,tsx}', '**/*.stories.{ts,tsx}'],
+    rules: {
+      'jaml-design/no-raw-html': 'off',
+      'jaml-design/no-inline-style': 'off',
+      'jaml-design/no-inline-component': 'off',
     },
   },
   storybook.configs["flat/recommended"]
