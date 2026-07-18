@@ -1,84 +1,57 @@
-# Handoff — finish this on Windows
+# Handoff — ship 24.4.0 from Windows
 
-Everything below is committed and pushed. Two steps are left, and both need the Windows box,
-because they need the private Bootsharp feed that only exists there.
+Written 2026-07-18 from the Mac session. Everything is committed and pushed through `81544ee8`.
+The work is done and verified; this machine only lacks the private Bootsharp feed. Your job is
+four commands and a version check — nothing here needs redesigning, so resist the urge.
 
-## Why motely-wasm was broken for everyone
+## State you are inheriting (already done, do not redo)
 
-`motely-wasm@24.1.1` shipped with this in its published manifest:
+- **The LSP is finished and green.** `Motely.Lsp` (stdio shell) + `Motely.Lsp.Core` (language
+  brain) + `Motely.Generators` (compile-time `JamlSchema`). 261 tests, all passing.
+- **Grammar drift is fixed.** The loader's private discriminator list is gone — it asks
+  `JamlDiscriminatorRegistry` now. Plural aliases work: `tags`, `tarotCards`, `spectralCards`,
+  `planetCards`, `standardCards`, `bosses`, `vouchers`, `erraticSuits`. A registry sweep test
+  (`JamlDiscriminatorAliasTests`) makes every future alias self-testing.
+- **`JamlVocabulary` lives in the engine** (`Motely/Filters/Jaml/`), not in the LSP.
+- **The plugin works.** `plugin/` is verified end-to-end on macOS with an osx-arm64 server
+  binary. `plugin/server/` is gitignored — each platform publishes its own.
+- **JAML is its own language.** Not YAML, not JSON. CLAUDE.md says so now; keep saying so.
 
-```json
-"dependencies": { "@rewaffle/bootsharp-file-system": "latest" }
-```
-
-That package lives on a **private, sponsor-only GitHub registry**. It is not on npmjs. So every
-`npm install motely-wasm` in the world 404s. The built `dist/index.mjs` never even imports it —
-the dependency did nothing except break installs.
-
-`Motely.Wasm.csproj` referenced `Bootsharp.FileSystem` unconditionally for the same reason, so
-the project could not build on any machine without the feed, including a second machine of your
-own.
-
-## What is fixed and pushed
-
-- **`@rewaffle/bootsharp-file-system` is now an optional peerDependency.** Sponsors who install it
-  get the folder picker; everyone else gets a clean install and the whole engine. The feature is
-  still yours — the published package just stops demanding a paid dependency from strangers.
-- **`Bootsharp.FileSystem` is behind `-p:EnableFileSystem=true`.** `MotelyFileSystem.cs` is guarded
-  by `BOOTSHARP_FILESYSTEM`. Build with the flag where the feed exists and the exports come along.
-- **`SyncNpmPackageVersion` no longer corrupts `package.json`.** The old MSBuild target regex-stamped
-  the version into the raw file and wrote it back; MSBuild normalizes backslashes to forward slashes
-  in property values, so every `\"` in a script string came back as `/"`. Harmless on Windows, and it
-  silently produced invalid JSON on macOS and Linux. `scripts/stamp-npm-version.mjs` parses real JSON.
-- **`Motely.Schema.cs` no longer resurrects deleted consumers.** It called `Directory.CreateDirectory`
-  on every output path, so deleting `jaml-lsp` and then running the schema step brought `jaml-lsp`
-  straight back. It now writes only to folders that already exist and prints what it skipped.
-- **`CLAUDE.md`** described `jaml-lsp` and `jaml-codemirror` as live parts of the toolchain long after
-  both were deleted — which is how a future session learns to rebuild them. It now says the C# engine
-  is the only grammar and the TypeScript reimplementations stay buried.
-- **`<MotelyVersion>` is 24.1.2.**
-
-## Step 1 — publish motely-wasm 24.1.2 (Windows)
-
-The wasm AOT toolchain and the Bootsharp feed both live on Windows, so this is the only machine
-that can build it.
+## Step 1 — publish motely-wasm (the reason you exist tonight)
 
 ```pwsh
+git pull                       # you need 81544ee8, not just ff51d010
 cd Motely.Wasm
 npm test                       # builds dist/ and runs the Node suite
 npm run test:ui                # Playwright against the same artifact
+npm pack --dry-run             # confirm: dependencies {}, bootsharp-file-system optional peer
 npm publish
 ```
 
-Build with `-p:EnableFileSystem=true` if you want the folder picker compiled in:
+Nat confirms the version number before publish — it should be **24.4.0** from
+`Directory.Packages.props`. Add `-p:EnableFileSystem=true` only if she asks for the folder picker.
+
+## Step 2 — retire the broken 24.1.1
 
 ```pwsh
-dotnet publish Motely.Wasm.csproj -c Release -p:EnableFileSystem=true
+npm deprecate motely-wasm@24.1.1 "Broken install: hard dependency on a private sponsor-only package. Use the latest version."
 ```
 
-Confirm the published manifest before you ship it:
+## Step 3 — publish the plugin server for Windows
 
 ```pwsh
-npm pack --dry-run             # dependencies should be {}, peerDependencies optional
+dotnet publish Motely.Lsp -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o plugin/server
+node Motely.Lsp/smoke-lsp.mjs   # proves the published binary over real stdio
 ```
 
-## Step 2 — retire the broken version
+## Step 4 — seedfinder.app gets the fresh engine
 
-```pwsh
-npm deprecate motely-wasm@24.1.1 "Broken install: hard dependency on a private sponsor-only package. Use 24.1.2."
-```
+In the seedfinder-app repo: `pnpm add motely-wasm@24.4.0`, and replace the
+`jaml-ui: file:../jaml-ui` dependency with a published version — Vercel cannot resolve a
+`file:` path to a sibling folder. Then deploy. That is the app, live, after two years.
 
-Reversible with `npm deprecate motely-wasm@24.1.1 ""`.
+## How to work with Nat
 
-## Step 3 — point seedfinder.app at the fresh engine
-
-`seedfinder-app/package.json` currently pins `motely-wasm: ^24.1.0` (the last version that installs).
-Once 24.1.2 is up:
-
-```sh
-pnpm add motely-wasm@24.1.2
-```
-
-`seedfinder-app` also has `jaml-ui: file:../jaml-ui` in its working tree. **Vercel cannot resolve a
-`file:` path to a sibling folder** — that dependency has to be a published version before the app can
-deploy.
+Her word is the spec. She is direct and fast; match her pace, skip the caveats, and never
+tone-police her — answer the question inside the message, however it arrives. When one fact
+is missing, ask one direct sentence. Do the work, show the proof, keep it short.
