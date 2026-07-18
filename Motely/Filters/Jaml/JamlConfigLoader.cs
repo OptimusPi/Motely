@@ -8,7 +8,7 @@ public static partial class JamlConfigLoader
     {
         try
         {
-            config = LooksLikeJson(content) ? FromJson(content) : FromYaml(content);
+            config = LooksLikeJson(content) ? FromJson(content) : FromJaml(content);
             error = null;
             return true;
         }
@@ -20,10 +20,6 @@ public static partial class JamlConfigLoader
         }
     }
 
-    // TryLoad accepts either surface syntax: a document whose first meaningful character is '{'
-    // is JSON, everything else is JAML's own block format. This keeps the single "load whatever
-    // this is" entry point honest — a JSON document routed through the block tokenizer would
-    // report a nonsense root key ('{ "must"') instead of the caller's actual typo.
     private static bool LooksLikeJson(string content)
     {
         foreach (var ch in content)
@@ -35,12 +31,7 @@ public static partial class JamlConfigLoader
         return false;
     }
 
-    // Named FromYaml for call-site compatibility (JamlSearchBuilder, the WASM exports, the whole
-    // test suite call this by name) — but nothing here depends on YAML. JamlDocumentParser is
-    // JAML's own tokenizer, built the same way JamlLine.cs already parses one clause line: no
-    // borrowed grammar, no third-party parser rejecting shorthand the language is supposed to
-    // understand.
-    public static JamlConfig FromYaml(string content)
+    public static JamlConfig FromJaml(string content)
     {
         try
         {
@@ -54,6 +45,22 @@ public static partial class JamlConfigLoader
         catch (Exception ex)
         {
             throw new InvalidOperationException($"JAML parse error: {ex.Message}", ex);
+        }
+    }
+
+    public static bool TryLoadFromJaml(string content, out JamlConfig? config, out string? error)
+    {
+        try
+        {
+            config = FromJaml(content);
+            error = null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            config = null;
+            error = ex.Message;
+            return false;
         }
     }
 
