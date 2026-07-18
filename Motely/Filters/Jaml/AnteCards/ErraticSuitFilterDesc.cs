@@ -5,7 +5,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-[JamlDiscriminator("erraticSuit",
+[JamlDiscriminator("erraticSuit", "erraticSuits",
     ValueEnum = typeof(MotelyStandardcardSuit))]
 public sealed class ErraticSuitClause : IJamlClause, IAnteScopedClause
 {

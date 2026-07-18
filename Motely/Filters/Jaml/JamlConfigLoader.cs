@@ -202,6 +202,7 @@ public static partial class JamlConfigLoader
             case "legendaryjokers":
                 return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
             case "voucher":
+            case "vouchers":
                 {
                     var clause = PopulateAndCast<VoucherClause>(discriminator, node, data, antes, min, max, score, label);
                     clause.Vouchers = ParseEnumArray<MotelyVoucher>(node, discriminator);
@@ -232,6 +233,7 @@ public static partial class JamlConfigLoader
             case "standardcards":
                 return PopulateAndCast<StandardCardClause>(discriminator, node, data, antes, min, max, score, label);
             case "boss":
+            case "bosses":
                 {
                     var clause = PopulateAndCast<BossClause>(discriminator, node, data, antes, min, max, score, label);
                     clause.Bosses = ParseEnumArray<MotelyBossBlind>(node, discriminator);
@@ -294,6 +296,7 @@ public static partial class JamlConfigLoader
                     max
                 );
             case "erraticsuit":
+            case "erraticsuits":
                 return WithMax(
                     new ErraticSuitClause
                     {

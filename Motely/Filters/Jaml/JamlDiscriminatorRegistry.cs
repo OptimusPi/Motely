@@ -42,6 +42,7 @@ public static class JamlDiscriminatorRegistry
         new Dictionary<string, JamlDiscriminatorEntry>(StringComparer.OrdinalIgnoreCase)
         {
             ["boss"]            = new(typeof(BossClause), null, typeof(MotelyBossBlind)),
+            ["bosses"]          = new(typeof(BossClause), null, typeof(MotelyBossBlind)),
             ["joker"]           = new(typeof(JokerClause), typeof(JokerSourceConfig), typeof(MotelyJoker)),
             ["jokers"]          = new(typeof(JokerClause), typeof(JokerSourceConfig), typeof(MotelyJoker)),
             ["commonJoker"]     = new(typeof(CommonJokerClause), typeof(JokerSourceConfig), typeof(MotelyJokerCommon)),
@@ -53,6 +54,7 @@ public static class JamlDiscriminatorRegistry
             ["legendaryJoker"]  = new(typeof(LegendaryJokerClause), typeof(LegendaryJokerSourceConfig), typeof(MotelyJoker)),
             ["legendaryJokers"] = new(typeof(LegendaryJokerClause), typeof(LegendaryJokerSourceConfig), typeof(MotelyJoker)),
             ["voucher"]         = new(typeof(VoucherClause), null, typeof(MotelyVoucher), RollsDefault: [0]),
+            ["vouchers"]        = new(typeof(VoucherClause), null, typeof(MotelyVoucher), RollsDefault: [0]),
             ["tarotCard"]       = new(typeof(TarotCardClause), typeof(TarotCardSourceConfig), typeof(MotelyTarotCard)),
             ["tarotCards"]      = new(typeof(TarotCardClause), typeof(TarotCardSourceConfig), typeof(MotelyTarotCard)),
             ["spectralCard"]    = new(typeof(SpectralCardClause), typeof(SpectralCardSourceConfig), typeof(MotelySpectralCard)),
@@ -68,6 +70,7 @@ public static class JamlDiscriminatorRegistry
             ["erraticRank"]     = new(typeof(ErraticRankClause), null, typeof(MotelyStandardcardRank)),
             ["erraticRanks"]    = new(typeof(ErraticRankClause), null, typeof(MotelyStandardcardRank)),
             ["erraticSuit"]     = new(typeof(ErraticSuitClause), null, typeof(MotelyStandardcardSuit)),
+            ["erraticSuits"]    = new(typeof(ErraticSuitClause), null, typeof(MotelyStandardcardSuit)),
             ["startingDraw"]    = new(typeof(StartingDrawClause), null, null),
             ["luckyMoney"]      = new(typeof(LuckyMoneyClause), null, null, RollsAreInlineValue: true),
             ["luckyMult"]       = new(typeof(LuckyMultClause), null, null, RollsAreInlineValue: true),
