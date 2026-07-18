@@ -79,11 +79,17 @@ The fourteen Bootsharp docs, pinned so they load every session instead of relyin
 
 ### JAML grammar lives in C#
 
-**The C# engine is the only grammar.** `JamlDiscriminatorRegistry` maps each discriminator to its clause and source-config types, and every type carries its own `ClauseKeys`/`SourceKeys` list, so the loader reads the same facts the engine executes. `JamlConfigLoader` reads YAML/JSON into a typed `JamlConfig` and validates every key at load, so a typo surfaces immediately; `JamlConfigLoader.ToYaml` writes one back out, so an app can round-trip a filter through save and reload.
+**The C# engine is the only grammar.** `JamlDiscriminatorRegistry` maps each discriminator to its clause and source-config types, and every type carries its own `ClauseKeys`/`SourceKeys` list annotated with `[JamlDiscriminator]`. `Motely.Generators` reads those attributes at compile time and emits `JamlSchema.g.cs` — a switch-based lookup class that replaces runtime reflection. `JamlConfigLoader` reads YAML/JSON into a typed `JamlConfig` and validates every key at load, so a typo surfaces immediately; `JamlConfigLoader.ToYaml` writes one back out, so an app can round-trip a filter through save and reload.
 
 **The TypeScript reimplementations are gone, on purpose.** `jaml-lsp` (a VS Code extension and a stdio language server) and `jaml-codemirror` were both deleted: each one carried its own copy of the grammar, so every vocabulary change meant editing the same facts in three places and shipping three packages in lockstep. Editors reach the grammar through `motely-wasm` instead — the engine itself, compiled, doing the parsing it already does. **Leave them buried.** A third implementation of a grammar the engine already owns is a place for the truth to rot, not a feature.
 
-`dotnet run Motely.Schema.cs` (from the repo root) still emits `jaml-lang/src/generated.ts` for any live TypeScript consumer, straight from the registry and the engine's enums. It writes **only to folders that already exist** and prints what it skipped — a generator that recreates its own deleted consumers is how a removed package comes back on the next build, and that is the exact loop this repo spent months in. Rerun it after any vocabulary or enum change.
+`dotnet run --project Motely.Schema` emits a TypeScript schema snapshot of every discriminator, its clause keys, source keys, value enums, and flags — regenerated after any vocabulary or enum change. It prints to stdout; redirect to write `jaml-lang/src/generated.ts` if that package were still alive (it's not).
+
+### Motely.Lsp — the JAML language server
+
+**Motely.Lsp.Core** is the protocol-free language brain: `JamlLanguageService.Diagnose/Hover/Complete` computed straight off the engine (`JamlConfigLoader` for parsing, generated `JamlSchema` for keys, the engine's enums for vocabulary). **Motely.Lsp** is its stdio shell — hand-rolled Content-Length framed JSON-RPC 2.0 (`JsonRpcChannel` + `LspServer`), single-threaded, full-document sync, publishing diagnostics on open/change with hover and completion on request. Logging goes to stderr only; stdout is the protocol channel. The server is stream-injectable, so `LspServerProtocolTests` drives complete framed sessions through in-memory streams — no processes, no timing.
+
+**plugin/** is the Claude Code plugin: `.claude-plugin/plugin.json` + `.lsp.json` pointing `${CLAUDE_PLUGIN_ROOT}/server/Motely.Lsp` at a self-contained single-file publish (`dotnet publish Motely.Lsp -c Release -r <rid> --self-contained -p:PublishSingleFile=true -o plugin/server`). `node Motely.Lsp/smoke-lsp.mjs` proves the published binary end-to-end over real stdio. `restartOnCrash`/`shutdownTimeout` stay unset — Claude Code before v2.1.205 silently skips servers that set them.
 
 ### Supporting directories
 

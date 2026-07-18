@@ -1,10 +1,12 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using Motely.Filters.Jaml;
 using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters;
 
+[JamlDiscriminator("or")]
 public sealed class OrClause : LogicClause { }
 
 public static class MotelySeedFilterDescExtensions

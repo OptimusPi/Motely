@@ -51,25 +51,25 @@ public static partial class JamlConfigLoader
     public static string ToYaml(JamlConfig config)
     {
         var root = new JMap();
-        root.Set("id", new JScalar(config.Id));
+        root.Set("id", new JScalar(config.Id), default);
         if (config.Name != null)
-            root.Set("name", new JScalar(config.Name));
+            root.Set("name", new JScalar(config.Name), default);
         if (config.Description != null)
-            root.Set("description", new JScalar(config.Description));
+            root.Set("description", new JScalar(config.Description), default);
         if (config.Author != null)
-            root.Set("author", new JScalar(config.Author));
+            root.Set("author", new JScalar(config.Author), default);
         if (config.Deck != MotelyDeck.Red)
-            root.Set("deck", new JScalar(config.Deck.ToString()));
+            root.Set("deck", new JScalar(config.Deck.ToString()), default);
         if (config.Stake != MotelyStake.White)
-            root.Set("stake", new JScalar(config.Stake.ToString()));
+            root.Set("stake", new JScalar(config.Stake.ToString()), default);
         if (config.Seeds.Count > 0)
-            root.Set("seeds", StringArrayNode(config.Seeds));
+            root.Set("seeds", StringArrayNode(config.Seeds), default);
         if (config.Must.Count > 0)
-            root.Set("must", ClauseListNode(config.Must));
+            root.Set("must", ClauseListNode(config.Must), default);
         if (config.Should.Count > 0)
-            root.Set("should", ClauseListNode(config.Should));
+            root.Set("should", ClauseListNode(config.Should), default);
         if (config.MustNot.Count > 0)
-            root.Set("mustNot", ClauseListNode(config.MustNot));
+            root.Set("mustNot", ClauseListNode(config.MustNot), default);
 
         var sb = new StringBuilder();
         WriteMap(sb, root, 0);
@@ -194,7 +194,7 @@ public static partial class JamlConfigLoader
         {
             var logicDiscriminator = logic is AndClause ? "and" : "or";
             var logicMapping = new JMap();
-            logicMapping.Set(logicDiscriminator, ClauseListNode(logic.Clauses));
+            logicMapping.Set(logicDiscriminator, ClauseListNode(logic.Clauses), default);
             WriteCommonKeys(logicMapping, logic);
             return logicMapping;
         }
@@ -205,17 +205,17 @@ public static partial class JamlConfigLoader
         var entry = JamlDiscriminatorRegistry.Entries[discriminator];
 
         var mapping = new JMap();
-        mapping.Set(discriminator, DiscriminatorValueNode(discriminator, entry, clause));
+        mapping.Set(discriminator, DiscriminatorValueNode(discriminator, entry, clause), default);
         WriteCommonKeys(mapping, clause);
 
         if (clause is IAnteScopedClause anteScoped && anteScoped.Antes.Length > 0)
-            mapping.Set("antes", IntArrayNode(anteScoped.Antes));
+            mapping.Set("antes", IntArrayNode(anteScoped.Antes), default);
 
         if (clause is IRollScopedClause rollScoped && !entry.RollsAreInlineValue)
         {
             var isDefault = entry.RollsDefault != null && rollScoped.Rolls.SequenceEqual(entry.RollsDefault);
             if (!isDefault)
-                mapping.Set("rolls", IntArrayNode(rollScoped.Rolls));
+                mapping.Set("rolls", IntArrayNode(rollScoped.Rolls), default);
         }
 
         var clauseKeys = JamlDiscriminatorRegistry.StaticStringArrayField(entry.ClauseType, "ClauseKeys");
@@ -225,7 +225,7 @@ public static partial class JamlConfigLoader
             var with = (JamlWith)entry.ClauseType.GetProperty("With")!.GetValue(clause)!;
             var withNode = WriteWith(with);
             if (withNode != null)
-                mapping.Set("with", withNode);
+                mapping.Set("with", withNode, default);
         }
 
         if (clauseKeys.Contains("sources", StringComparer.OrdinalIgnoreCase) && entry.SourceConfigType is { } sourceType)
@@ -233,7 +233,7 @@ public static partial class JamlConfigLoader
             var sources = entry.ClauseType.GetProperty("Sources")!.GetValue(clause);
             var sourcesNode = WriteSourceConfig(sources, sourceType);
             if (sourcesNode != null)
-                mapping.Set("sources", sourcesNode);
+                mapping.Set("sources", sourcesNode, default);
         }
 
         WriteExtraProperties(mapping, entry.ClauseType, clauseKeys, clause);
@@ -244,17 +244,17 @@ public static partial class JamlConfigLoader
     private static void WriteCommonKeys(JMap mapping, IJamlClause clause)
     {
         if (clause.Label != null)
-            mapping.Set("label", new JScalar(clause.Label));
+            mapping.Set("label", new JScalar(clause.Label), default);
         if (clause.Min != 1)
-            mapping.Set("min", JScalar.Of(clause.Min));
+            mapping.Set("min", JScalar.Of(clause.Min), default);
         if (clause.Max.HasValue)
-            mapping.Set("max", JScalar.Of(clause.Max.Value));
+            mapping.Set("max", JScalar.Of(clause.Max.Value), default);
         // 1 is the unspecified-score default (see JamlConfigLoader.ParseClause) — writing it back
         // out would be indistinguishable from an author who explicitly typed "score: 1", which is
         // fine (both mean the same thing), but omitting it when it's the default keeps a
         // round-tripped file looking like what a human would actually write.
         if (clause.Score != 1)
-            mapping.Set("score", JScalar.Of(clause.Score));
+            mapping.Set("score", JScalar.Of(clause.Score), default);
     }
 
     // erraticRank/erraticSuit read a scalar directly off the discriminator key (not an array);
@@ -296,9 +296,9 @@ public static partial class JamlConfigLoader
     {
         var mapping = new JMap();
         if (with.Luck != MotelyLuck.X1)
-            mapping.Set("luck", new JScalar(with.Luck.ToString()));
+            mapping.Set("luck", new JScalar(with.Luck.ToString()), default);
         if (with.Vouchers.Length > 0)
-            mapping.Set("vouchers", StringArrayNode(with.Vouchers.Select(v => v.ToString())));
+            mapping.Set("vouchers", StringArrayNode(with.Vouchers.Select(v => v.ToString())), default);
         return mapping.Keys.Count == 0 ? null : mapping;
     }
 
@@ -318,7 +318,7 @@ public static partial class JamlConfigLoader
                 continue;
             var node = GenericPropertyToNode(prop, sources);
             if (node != null)
-                mapping.Set(group.First(), node);
+                mapping.Set(group.First(), node, default);
         }
         return mapping;
     }
@@ -337,7 +337,7 @@ public static partial class JamlConfigLoader
                 continue;
             var node = GenericPropertyToNode(prop, instance);
             if (node != null)
-                mapping.Set(group.First(), node);
+                mapping.Set(group.First(), node, default);
         }
     }
 

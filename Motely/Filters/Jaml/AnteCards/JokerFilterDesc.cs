@@ -7,14 +7,13 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("joker", "jokers",
+    ValueEnum = typeof(MotelyJoker), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class JokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>
-    /// This clause's complete, final clause-level key list — the single source
-    /// JamlConfigLoader's ValidateKeys and Motely.Schema's generator both read, so "what keys
-    /// does a joker clause accept" can't drift into two hand-copied answers again.
-    /// </summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "stickers"];
+    /// <summary>Clause keys mirror JokerFilterDesc's — the desc owns the grammar, but the
+    /// clause type needs the field for key validation and schema generation.</summary>
+    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -33,9 +32,49 @@ public sealed class JokerClause : IJamlClause, IAnteScopedClause
 }
 
 public struct JokerFilterDesc(JokerClause clause)
-    : IMotelySeedFilterDesc<JokerFilterDesc.JokerFilter>
+    : IMotelySeedFilterDesc<JokerFilterDesc.JokerFilter>,
+      IJamlClauseDesc<JokerClause>
 {
     private readonly JokerClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["joker", "jokers"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys =>
+        ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "stickers"];
+
+    /// <inheritdoc/>
+    public static bool Set(JokerClause clause, string key, IJamlValueReader value)
+    {
+        switch (key.ToLowerInvariant())
+        {
+            case "edition":
+                if (!value.TryEnum<MotelyItemEdition>(out var edition)) return false;
+                clause.Edition = edition;
+                return true;
+            case "stickers":
+                if (!value.TryEnumArray<MotelyJokerSticker>(out var stickers)) return false;
+                clause.Stickers = stickers;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(JokerClause clause, IJamlValueReader value)
+    {
+        if (value.IsAny)
+        {
+            clause.IsWildcard = true;
+            return true;
+        }
+        if (!value.TryEnumArray<MotelyJoker>(out var jokers))
+            return false;
+        clause.Jokers = jokers;
+        return true;
+    }
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Specialty/legendary sources stay off by default.
@@ -344,10 +383,12 @@ public struct JokerFilterDesc(JokerClause clause)
 
 // ── Rarity-specific joker clauses ──
 
+[JamlDiscriminator("commonJoker", "commonJokers",
+    ValueEnum = typeof(MotelyJokerCommon), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse its ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerClause.ClauseKeys;
+    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
+    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -361,10 +402,12 @@ public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
     public JokerSourceConfig? Sources { get; set; }
 }
 
+[JamlDiscriminator("uncommonJoker", "uncommonJokers",
+    ValueEnum = typeof(MotelyJokerUncommon), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse its ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerClause.ClauseKeys;
+    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
+    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -378,10 +421,12 @@ public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
     public JokerSourceConfig? Sources { get; set; }
 }
 
+[JamlDiscriminator("rareJoker", "rareJokers",
+    ValueEnum = typeof(MotelyJokerRare), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class RareJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse its ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerClause.ClauseKeys;
+    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
+    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

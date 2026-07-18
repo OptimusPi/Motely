@@ -5,6 +5,8 @@ using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("voucher",
+    ValueEnum = typeof(MotelyVoucher), RollsDefault = new[] { 0 })]
 public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>

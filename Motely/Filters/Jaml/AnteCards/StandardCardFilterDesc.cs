@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("standardCard", "standardCards",
+    SourceConfigType = typeof(StandardCardSourceConfig))]
 public sealed class StandardCardClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>

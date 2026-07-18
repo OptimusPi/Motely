@@ -4,6 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("grosMichelExtinct", RollsAreInlineValue = true)]
 public sealed class GrosMichelExtinctClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>

@@ -43,7 +43,7 @@ public static partial class JamlConfigLoader
                 : data.GetIntArray("rolls") ?? entry.RollsDefault ?? [];
         }
 
-        var clauseKeys = JamlDiscriminatorRegistry.StaticStringArrayField(entry.ClauseType, "ClauseKeys");
+        var clauseKeys = JamlSchema.ClauseKeysFor(discriminator);
 
         if (clauseKeys.Contains("with", StringComparer.OrdinalIgnoreCase))
         {

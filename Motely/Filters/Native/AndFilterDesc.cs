@@ -1,8 +1,10 @@
 using System;
 using System.Runtime.CompilerServices;
+using Motely.Filters.Jaml;
 
 namespace Motely.Filters;
 
+[JamlDiscriminator("and")]
 public sealed class AndClause : LogicClause { }
 
 public struct AndFilterDesc(IMotelySeedFilterDesc[] filters)

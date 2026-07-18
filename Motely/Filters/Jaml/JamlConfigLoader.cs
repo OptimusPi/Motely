@@ -8,7 +8,7 @@ public static partial class JamlConfigLoader
     {
         try
         {
-            config = FromYaml(content);
+            config = LooksLikeJson(content) ? FromJson(content) : FromYaml(content);
             error = null;
             return true;
         }
@@ -18,6 +18,21 @@ public static partial class JamlConfigLoader
             error = ex.Message;
             return false;
         }
+    }
+
+    // TryLoad accepts either surface syntax: a document whose first meaningful character is '{'
+    // is JSON, everything else is JAML's own block format. This keeps the single "load whatever
+    // this is" entry point honest — a JSON document routed through the block tokenizer would
+    // report a nonsense root key ('{ "must"') instead of the caller's actual typo.
+    private static bool LooksLikeJson(string content)
+    {
+        foreach (var ch in content)
+        {
+            if (char.IsWhiteSpace(ch))
+                continue;
+            return ch == '{';
+        }
+        return false;
     }
 
     // Named FromYaml for call-site compatibility (JamlSearchBuilder, the WASM exports, the whole

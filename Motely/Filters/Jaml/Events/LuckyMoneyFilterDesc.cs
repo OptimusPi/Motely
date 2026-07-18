@@ -4,6 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("luckyMoney", RollsAreInlineValue = true)]
 public sealed class LuckyMoneyClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list. Has a With
