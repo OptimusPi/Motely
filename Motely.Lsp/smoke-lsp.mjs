@@ -2,7 +2,7 @@
 // with a typo, expect positioned diagnostics, shut down clean. Run: node smoke-lsp.mjs <exe>
 import { spawn } from "node:child_process";
 
-const exe = process.argv[2] ?? "plugin/server/Motely.Lsp.exe";
+const exe = process.argv[2] ?? process.env.MOTELY_LSP_SERVER ?? "plugin/server/Motely.Lsp.exe";
 const server = spawn(exe, [], { stdio: ["pipe", "pipe", "inherit"] });
 
 const frame = (msg) => {
