@@ -21,7 +21,6 @@ import bootsharp, {
   MotelyJaml,
   MotelyJamlyzer,
   MotelySearch,
-  Jimmolate,
 } from "motely-wasm";
 
 MotelySearch.onProgress.subscribe((p) => {
@@ -30,8 +29,6 @@ MotelySearch.onProgress.subscribe((p) => {
 
 MotelySearch.onSeedMatch.subscribe((seed) => console.log(seed));
 MotelySearch.onScoredResult.subscribe((result) => console.log(result.seed, result.score));
-
-Jimmolate.filter = (inst) => true;
 
 await bootsharp.boot();
 ```
@@ -132,7 +129,6 @@ self.onmessage = (e) => {
   const { port, motelyUrl, jaml, startBatch, endBatch, batchChars } = e.data;
   (async () => {
     const engine = await import(motelyUrl);
-    engine.Jimmolate.filter = () => 1;
     if (engine.default.getStatus() === engine.default.BootStatus.Standby)
       await engine.default.boot();
 
@@ -147,25 +143,6 @@ self.onmessage = (e) => {
 ```
 
 Boot each worker's engine once and reuse it: booting is the expensive part, searching is not.
-
-## Jimmolate
-
-Jimmolate is a JS-authored seed filter in the engine filter chain, speaking the real Immolate `.cl` contract: `filter(inst) => score` — a number, and the host sets the bar with a score cutoff. Returning `true`/`false` also works for convenience; booleans coerce to 1/0. The filter receives the live `MotelySingleSearchContext` as an interop instance, so it can drive every query a native C# filter can. Bind it before `boot()`; keep-all (`(inst) => 1`) is the neutral binding.
-
-The ante-1 fingerprint filter from the C# unit tests, authored in JS — real voucher and boss queries pulling one needle out of the decoys:
-
-```js
-Jimmolate.filter = (inst) => {
-  if (inst.getAnteFirstVoucher(1) !== MotelyVoucher.MagicTrick) return 0;
-  const result = inst.getBossForAnteWithState(1, inst.newRunState());
-  return result.boss === MotelyBossBlind.TheWindow ? 1 : 0;
-};
-await MotelySearch.searchList(jaml);
-```
-
-A JAML with zero must/should/mustNot clauses (deck, stake, seeds only — the real Immolate shape) is a first-class search: the Jimmolate filter carries the whole decision.
-
-Stream walkers that thread `ref` state are C#-only shapes; their state-threaded twins (value in, value out) are the JS-facing equivalents.
 
 ## One-line JAML
 
@@ -206,7 +183,7 @@ npm run serve   # hand-drive the test UI at http://127.0.0.1:4173/
 npm run pack:check
 ```
 
-The test UI (`testui/index.html`) is a plain ES-module page with a CodeMirror 6 editor: live engine-driven lint and completion while you type, a Jimmolate filter box compiled straight into the browser search, and a results table — feedback is continuous — live linting validates every keystroke, which is why the UI stays button-free. The Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
+The test UI (`testui/index.html`) is a plain ES-module page with a CodeMirror 6 editor: live engine-driven lint and completion while you type, and a results table — feedback is continuous — live linting validates every keystroke, which is why the UI stays button-free. The Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
 
 Releasing, from `Motely.Wasm/`: sync `"version"` in `package.json` to `<MotelyVersion>` in the repo-root `Directory.Packages.props`, run `npm test` and `npm run test:ui` green, then `npm publish`.
 
@@ -218,7 +195,6 @@ The package test suite mirrors the C# behavior tests that are meaningful through
 - JAML YAML/JSON parse and validation strictness
 - JAMLyzer ante structure, event windows, score-by-analysis, and stream-state resume
 - real list/random/sequential searches
-- Jimmolate accept/reject predicate behavior against the live context
 - AND scoring, default source fallback, Hieroglyph pack-slot reachability, and luck-source regressions
 - One-line JAML canonicalization
 - seed math and keyword utility parity

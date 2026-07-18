@@ -2,7 +2,7 @@ using Bootsharp;
 using Motely;
 
 // The declared JS surface of the live single-seed search context (specialization.md): every
-// member a JavaScript Jimmolate predicate can drive. Stream walkers that thread C# byref state
+// member a JavaScript host can drive. Stream walkers that thread C# byref state
 // stay engine-side.
 //
 // RunState is NOT on this surface yet, on purpose: MotelyRunState is a `ref struct` because it's

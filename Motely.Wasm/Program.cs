@@ -41,7 +41,7 @@ public static class MotelyServices
 /// <summary>JavaScript cannot express C# byref: the generator renders those signatures as CLR
 /// byref notation ("Type&"), which is not valid C# (CS1525 across Interop.g.cs). Erase exactly
 /// the members whose signature needs byref/byref-like shapes; their state-threaded twins
-/// (value in, value out — see JimmolateFilterTests) remain on the surface.</summary>
+/// (value in, value out) remain on the surface.</summary>
 public static class MotelyWasmRenaming
 {
     /// <summary>One flat import surface: every C# namespace folds into the root `index` module,
@@ -208,21 +208,11 @@ public static partial class MotelySearch
                 results.Add(r);
                 OnScoredResult?.Invoke(r);
             });
-        settings = withMode(settings)
-            .WithJimmolate(Jimmolate.Filter);
+        settings = withMode(settings);
         using IMotelySearch search = settings.CreateSearch();
         await search.RunSearchAsync();
         return [.. results];
     }
-}
-
-public static partial class Jimmolate
-{
-    /// <summary>The predicate — the OG Immolate filter(inst) => keep? contract — bound from JavaScript before boot(): the live single-seed
-    /// context crosses as an interop instance, so the predicate can drive every query a native
-    /// filter can. Keep-all (<c>ctx => true</c>) is the neutral binding.</summary>
-    [Import]
-    public static partial int Filter(MotelySingleSearchContext ctx);
 }
 
 public static partial class MotelyUtilities

@@ -7,7 +7,6 @@ public class MotelyGlossaryTests
 {
     [Theory]
     [InlineData("JAML")]
-    [InlineData("Jimmolate")]
     [InlineData("JAMLyzer")]
     public void TryGet_KnownTerm_ReturnsNonEmptyDefinition(string term)
     {
@@ -22,7 +21,7 @@ public class MotelyGlossaryTests
     public void TryGet_IsCaseInsensitive()
     {
         Assert.NotNull(MotelyGlossary.TryGet("jaml"));
-        Assert.NotNull(MotelyGlossary.TryGet("JIMMOLATE"));
+        Assert.NotNull(MotelyGlossary.TryGet("JAMLYZER"));
     }
 
     [Fact]

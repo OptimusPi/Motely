@@ -45,11 +45,6 @@
 
 <div id="editor"></div>
 
-<label for="predicate" style="display:block;margin-top:0.75rem;color:var(--soft);font-size:0.9rem">
-  Jimmolate filter — <code>(inst) =&gt; keep?</code>, the OG Immolate contract, run inside the engine
-</label>
-<textarea id="predicate" spellcheck="false" rows="2" style="width:100%;font:0.9rem/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:0.5rem">(inst) => true</textarea>
-
 <div class="row">
   <button id="search" disabled>Search</button>
   <span id="validation"></span>
@@ -73,8 +68,8 @@
 <script type="module">
   import bootsharp, * as Motely from "/dist/index.mjs";
   import * as fs from "@rewaffle/bootsharp-file-system";
-  const { MotelyWasm, MotelyJaml, MotelySearch, Jimmolate, IFileMounter, MotelyFileSystem } = Motely;
-  Object.assign(globalThis, Motely); // predicates reference MotelyVoucher etc. by name
+  const { MotelyWasm, MotelyJaml, MotelySearch, IFileMounter, MotelyFileSystem } = Motely;
+  Object.assign(globalThis, Motely);
 
   // Must run before boot() — wires the browser's File System Access API to the
   // IFileMounter interop Bootsharp.FileSystem auto-injects into C# (see
@@ -90,10 +85,7 @@
 
   const $ = (id) => document.getElementById(id);
 
-  // Bind the import and subscribe events before boot — the bridge forms at boot().
-  // The filter delegates to a swappable function; the Search button compiles #predicate into it.
-  let finder = () => true;
-  Jimmolate.filter = (inst) => { const r = finder(inst); return typeof r === "number" ? Math.trunc(r) : r ? 1 : 0; };
+  // Subscribe events before boot — the bridge forms at boot().
   MotelySearch.onProgress.subscribe((p) => {
     $("progress").textContent = `searched ${p.seedsSearched} · matches ${p.matchingSeeds}`;
   });
@@ -245,8 +237,6 @@ should:
     $("search").disabled = true;
     $("results").replaceChildren();
     try {
-      const code = $("predicate").value.trim();
-      finder = code ? (0, eval)(code) : () => true;
       const config = MotelyJaml.fromYaml(view.state.doc.toString());
       const results = await MotelySearch.searchList(config);
       for (const r of results) {

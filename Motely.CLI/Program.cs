@@ -156,7 +156,7 @@ partial class Program
         );
         var glossaryOption = app.Option(
             "--glossary",
-            "Print what JAML, Jimmolate, and JAMLyzer mean, then exit.",
+            "Print what JAML and JAMLyzer mean, then exit.",
             CommandOptionType.NoValue
         );
         var deckOption = app.Option<string>(

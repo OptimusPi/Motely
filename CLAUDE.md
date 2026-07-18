@@ -45,11 +45,11 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 
 ### Motely — the engine
 
-- **Two execution contexts, one filter model.** `MotelyVectorSearchContext` (partials per domain: Joker, Shop, Tarot, Packs, Tags, Vouchers, …) is the 8-wide SIMD path filters run on. `MotelySingleSearchContext` (same partial layout plus Boss, Shuffle, RunState) is the per-seed scalar path used for scoring, analysis, and the JS Jimmolate filter. `MotelySearch.cs` is the driver; `MotelySearch.Browser.cs` is its WASM-facing partial.
+- **Two execution contexts, one filter model.** `MotelyVectorSearchContext` (partials per domain: Joker, Shop, Tarot, Packs, Tags, Vouchers, …) is the 8-wide SIMD path filters run on. `MotelySingleSearchContext` (same partial layout plus Boss, Shuffle, RunState) is the per-seed scalar path used for scoring and analysis. `MotelySearch.cs` is the driver; `MotelySearch.Browser.cs` is its WASM-facing partial.
 - **Filters are descriptors.** `IMotelySeedFilterDesc` describes a filter; `MotelyFilterCreationContext` instantiates it. `JamlSearchBuilder.CreateSettings` composes the chain from a `JamlConfig`: `must` clauses append filters, `mustNot` wraps in `NegationFilterDesc`, `should` installs `JamlShouldScoreDesc` for weighted scoring. A clause-free JAML (deck/stake/seeds only, host predicate carries the decision) is a first-class search.
 - **JAML** lives in `Motely/Filters/Jaml/` — `JamlConfig`, `JamlConfigLoader` (`FromYaml`/`FromJson`; validation is loud and every key is checked at load, so typos surface immediately), clause types, per-feature descriptors under `AnteCards/`, `AnteFeatures/`, `Events/`. `JamlLine` (`Motely/Filters/Jaml/JamlLine.cs`) is the one-human-line spelling of a JAML clause, with `Validate`/`Canonicalize`.
 - **JAMLyzer** (`Motely/Analysis/MotelyJamlyzer.cs`) produces per-seed ante-by-ante breakdowns; supports paged analysis with resumable stream states.
-- **Native filters** (`Motely/Filters/Native/`) are hand-written C# filters (PerkeoObservatory, Jimmolate, ErraticFinder, …), reachable via CLI `--native <name>`; coverage focuses on the JAML path and lets these speed demons run free.
+- **Native filters** (`Motely/Filters/Native/`) are hand-written C# filters (PerkeoObservatory, ErraticFinder, …), reachable via CLI `--native <name>`; coverage focuses on the JAML path and lets these speed demons run free.
 - `LuaRandom`/`VectorLuaRandom` reproduce Balatro's RNG exactly — determinism here is the whole product.
 
 ### Motely.CLI
@@ -58,7 +58,7 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 
 ### Motely.Wasm
 
-Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[RenameModule] → "index"` folds every namespace so `import { MotelySearch, MotelyJaml } from "motely-wasm"` works directly (the fold is safe while exported short names stay unique — check when adding exports). `Jimmolate.Filter` is a JS `[Import]` bound before `boot()`, speaking the Immolate contract: `filter(inst) => score` (numbers; booleans coerce to 1/0). Search APIs return `Task<MotelyScoredSeedResult[]>` — call, await, use — with `onProgress`/`onSeedMatch`/`onScoredResult` events streaming alongside. Tallies cross the boundary as `Int32Array`.
+Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[RenameModule] → "index"` folds every namespace so `import { MotelySearch, MotelyJaml } from "motely-wasm"` works directly (the fold is safe while exported short names stay unique — check when adding exports). Search APIs return `Task<MotelyScoredSeedResult[]>` — call, await, use — with `onProgress`/`onSeedMatch`/`onScoredResult` events streaming alongside. Tallies cross the boundary as `Int32Array`.
 
 The fourteen Bootsharp docs, pinned so they load every session instead of relying on a reminder to go read them:
 

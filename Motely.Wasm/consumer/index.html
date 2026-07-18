@@ -17,7 +17,6 @@
   .editor .cm-editor { border-radius: 8px; }
   .editor .cm-content { font: 0.9rem/1.5 ui-monospace, Consolas, monospace; }
   #jaml .cm-content { min-height: 160px; }
-  #jimmolate .cm-content { min-height: 72px; }
   .row { display: flex; gap: 0.6rem; margin-top: 0.85rem; flex-wrap: wrap; align-items: center; }
   button { font: inherit; font-weight: 600; padding: 0.5rem 1.1rem; border: none;
            border-radius: 8px; background: var(--ink); color: #fff; cursor: pointer; }
@@ -40,9 +39,6 @@
 <label for="jaml">JAML filter — live lint and completion come from the engine's own vocabulary</label>
 <div class="editor" id="jaml"></div>
 
-<label for="jimmolate">Jimmolate predicate — <code>(inst) =&gt; score</code>, the OG Immolate contract, run inside the engine</label>
-<div class="editor" id="jimmolate"></div>
-
 <div class="row">
   <button id="search" disabled>Search</button>
   <span id="validation"></span>
@@ -58,27 +54,17 @@
 <script type="module">
   // motely-wasm exactly as npm installs it. serve.mjs maps /motely/ -> node_modules/motely-wasm/dist/.
   import bootsharp, * as Motely from "/motely/index.mjs";
-  const { MotelyWasm, MotelyJaml, MotelySearch, Jimmolate } = Motely;
-
-  // Predicates name engine enums directly (MotelyVoucher.MagicTrick), so hand them the globals.
+  const { MotelyWasm, MotelyJaml, MotelySearch } = Motely;
   Object.assign(globalThis, Motely);
 
   import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
   import { yaml } from "https://esm.sh/@codemirror/lang-yaml@6.1.2";
-  import { javascript } from "https://esm.sh/@codemirror/lang-javascript@6.2.2";
   import { autocompletion } from "https://esm.sh/@codemirror/autocomplete@6.18.4";
   import { linter, lintGutter } from "https://esm.sh/@codemirror/lint@6.8.4";
 
   const $ = (id) => document.getElementById(id);
 
-  // Bind the JS import and subscribe to events BEFORE boot() — the bridge forms at boot.
-  // Jimmolate delegates to a swappable function so Search can recompile it per run.
-  let predicate = () => 1;
-  Jimmolate.filter = (inst) => {
-    const r = predicate(inst);
-    return typeof r === "number" ? Math.trunc(r) : r ? 1 : 0;
-  };
-
+  // Subscribe to events BEFORE boot() — the bridge forms at boot.
   let searched = 0n;
   MotelySearch.onProgress.subscribe((p) => {
     searched = p.seedsSearched;
@@ -157,7 +143,6 @@
     return diagnostics;
   }
 
-  // A clause-free JAML is a first-class search: the Jimmolate predicate carries the decision.
   const jamlView = new EditorView({
     doc: `name: consumer
 deck: Red
@@ -169,13 +154,6 @@ stake: White
       autocompletion({ override: [jamlComplete], activateOnTyping: true }),
       lintGutter(), linter(jamlLint, { delay: 300 }),
     ],
-  });
-
-  // Jimmolate is JavaScript, so it gets the JavaScript grammar — real highlighting, not a textarea.
-  const jimmolateView = new EditorView({
-    doc: `(inst) => inst.getAnteFirstVoucher(1) === MotelyVoucher.Overstock ? 1 : 0`,
-    parent: $("jimmolate"),
-    extensions: [basicSetup, javascript()],
   });
 
   function addRow(r) {
@@ -195,7 +173,6 @@ stake: White
   // Test hooks: Playwright drives the page through these, same as a human drives the editors.
   globalThis.__app = {
     setJaml: (t) => jamlView.dispatch({ changes: { from: 0, to: jamlView.state.doc.length, insert: t } }),
-    setJimmolate: (t) => jimmolateView.dispatch({ changes: { from: 0, to: jimmolateView.state.doc.length, insert: t } }),
     seedsSearched: () => searched,
   };
 
@@ -204,7 +181,6 @@ stake: White
     $("results").replaceChildren();
     $("progress").textContent = "searching…";
     try {
-      predicate = (0, eval)(jimmolateView.state.doc.toString().trim());
       const config = MotelyJaml.fromYaml(jamlView.state.doc.toString());
       // A real find: walk fresh seeds. searchList only re-scores the `seeds:` block.
       await MotelySearch.searchRandom(config, 20000);
