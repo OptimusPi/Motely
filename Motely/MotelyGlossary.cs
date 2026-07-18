@@ -7,7 +7,7 @@ namespace Motely;
 public sealed record MotelyGlossaryTerm(string Term, string? Acronym, string Definition);
 
 /// <summary>
-/// The single source of truth for what JAML, Jimmolate, and JAMLyzer mean. Every
+/// The single source of truth for what JAML and JAMLyzer mean. Every
 /// consumer-facing surface (CLI <c>--glossary</c>, the MCP glossary tool, and the WASM/npm
 /// export) renders from this list, so the explanation only has to be written once and can't
 /// drift between surfaces the way the hand-written copies in READMEs/help text used to.
@@ -27,23 +27,12 @@ public static class MotelyGlossary
                 + "plain-English shorthand for editing a single 'must'/'should' entry by hand."
         ),
         new(
-            "Jimmolate",
-            null,
-            "A per-seed predicate you plug into the search — the classic Immolate '.cl' filter "
-                + "mental model (\"does this seed pass?\"), ported to Motely. It receives a live, "
-                + "drivable single-seed search context (not just a seed string), so it can read "
-                + "vouchers, bosses, shop items, or any other stream before returning keep/reject. "
-                + "In WASM, the predicate itself is authored host-side (e.g. in JS) and runs inside "
-                + "the compiled engine on every seed."
-        ),
-        new(
             "JAMLyzer",
             null,
             "The per-seed analyzer: walks every ante's boss, voucher, tags, shop, and packs — plus "
                 + "every relevant PRNG stream — for a seed, and (when the JAML has 'should' clauses) "
-                + "attaches a score. It answers \"what does this seed actually contain?\", as opposed "
-                + "to Jimmolate, which only answers \"does this seed pass?\". Unrelated to the CLI's "
-                + "older --analyze flag, which runs a separate legacy text-block analyzer."
+                + "attaches a score. It answers \"what does this seed actually contain?\". Unrelated "
+                + "to the CLI's older --analyze flag, which runs a separate legacy text-block analyzer."
         ),
     ];
 

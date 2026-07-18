@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-// The product, proven where UX lives: real Chromium, the shipped module, the CM6 editor,
-// and the Jimmolate filter gating a search — zero buttons for validation, ever.
+// The product, proven where UX lives: real Chromium, the shipped module, and the CM6
+// editor — zero buttons for validation, ever.
 test.beforeEach(async ({ page }) => {
   await page.goto("/testui/index.html");
   await expect(page.locator("#status")).toContainText("booted", { timeout: 60_000 });
@@ -36,15 +36,4 @@ test("search returns scored seeds and streams progress", async ({ page }) => {
   await expect(rows).toHaveCount(2, { timeout: 60_000 });
   await expect(rows.first().locator("td").first()).toHaveText(/^[1-9A-Z]{8}$/);
   await expect(page.locator("#progress")).toContainText("searched 2");
-});
-
-test("the Jimmolate filter's bool is law, in the browser", async ({ page }) => {
-  await page.fill("#predicate", "(inst) => false");
-  await page.click("#search");
-  await expect(page.locator("#progress")).toContainText("searched 2", { timeout: 60_000 });
-  await expect(page.locator("#results tr")).toHaveCount(0);
-
-  await page.fill("#predicate", "(inst) => true");
-  await page.click("#search");
-  await expect(page.locator("#results tr")).toHaveCount(2, { timeout: 60_000 });
 });
