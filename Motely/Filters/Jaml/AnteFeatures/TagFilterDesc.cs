@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-[JamlDiscriminator("tag", "smallBlindTag", "bigBlindTag",
+[JamlDiscriminator("tag", "tags", "smallBlindTag", "bigBlindTag",
     ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 0, 1 })]
 public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {

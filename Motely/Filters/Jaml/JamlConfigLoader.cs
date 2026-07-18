@@ -208,24 +208,28 @@ public static partial class JamlConfigLoader
                     return clause;
                 }
             case "tarotcard":
+            case "tarotcards":
                 {
                     var clause = PopulateAndCast<TarotCardClause>(discriminator, node, data, antes, min, max, score, label);
                     clause.Tarots = ParseEnumArray<MotelyTarotCard>(node, discriminator);
                     return clause;
                 }
             case "spectralcard":
+            case "spectralcards":
                 {
                     var clause = PopulateAndCast<SpectralCardClause>(discriminator, node, data, antes, min, max, score, label);
                     clause.Spectrals = ParseEnumArray<MotelySpectralCard>(node, discriminator);
                     return clause;
                 }
             case "planetcard":
+            case "planetcards":
                 {
                     var clause = PopulateAndCast<PlanetCardClause>(discriminator, node, data, antes, min, max, score, label);
                     clause.Planets = ParseEnumArray<MotelyPlanetCard>(node, discriminator);
                     return clause;
                 }
             case "standardcard":
+            case "standardcards":
                 return PopulateAndCast<StandardCardClause>(discriminator, node, data, antes, min, max, score, label);
             case "boss":
                 {
@@ -234,6 +238,7 @@ public static partial class JamlConfigLoader
                     return clause;
                 }
             case "tag":
+            case "tags":
                 {
                     var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
                     clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
@@ -467,48 +472,10 @@ public static partial class JamlConfigLoader
         return null;
     }
 
+    // The registry is the one place discriminators are enumerated; a hand-written copy here
+    // is exactly how tags/tarotCards/spectralCards/planetCards silently stopped parsing.
     private static bool IsDiscriminator(string key) =>
-        Normalize(key) switch
-        {
-            "and"
-            or "or"
-            or "joker"
-            or "jokers"
-            or "commonjoker"
-            or "commonjokers"
-            or "uncommonjoker"
-            or "uncommonjokers"
-            or "rarejoker"
-            or "rarejokers"
-            or "legendaryjoker"
-            or "legendaryjokers"
-            or "voucher"
-            or "tarotcard"
-            or "spectralcard"
-            or "planetcard"
-            or "standardcard"
-            or "boss"
-            or "tag"
-            or "smallblindtag"
-            or "bigblindtag"
-            or "erraticrank"
-            or "erraticranks"
-            or "erraticsuit"
-            or "startingdraw"
-            or "luckymoney"
-            or "luckymult"
-            or "misprintmult"
-            or "wheeloffortune"
-            or "grosmichelextinct"
-            or "cavendishextinct"
-            or "spacelevelup"
-            or "businesspayout"
-            or "bloodstonetrigger"
-            or "parkingpayout"
-            or "glassdestroy"
-            or "wheelstaysflipped" => true,
-            _ => false,
-        };
+        JamlDiscriminatorRegistry.Entries.ContainsKey(Normalize(key));
 
     private static MotelyStandardcardRank? ParseOptionalRank(string? value) =>
         value is null ? null : ParseRank(value);

@@ -62,6 +62,7 @@ public static class JamlDiscriminatorRegistry
             ["standardCard"]    = new(typeof(StandardCardClause), typeof(StandardCardSourceConfig), null),
             ["standardCards"]   = new(typeof(StandardCardClause), typeof(StandardCardSourceConfig), null),
             ["tag"]             = new(typeof(TagClause), null, typeof(MotelyTag), RollsDefault: [0, 1]),
+            ["tags"]            = new(typeof(TagClause), null, typeof(MotelyTag), RollsDefault: [0, 1]),
             ["smallBlindTag"]   = new(typeof(TagClause), null, typeof(MotelyTag), RollsDefault: [0]),
             ["bigBlindTag"]     = new(typeof(TagClause), null, typeof(MotelyTag), RollsDefault: [1]),
             ["erraticRank"]     = new(typeof(ErraticRankClause), null, typeof(MotelyStandardcardRank)),
