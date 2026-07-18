@@ -1,8 +1,9 @@
-namespace Motely.Lsp.Core;
+namespace Motely.Filters.Jaml;
 
 /// <summary>
-/// The engine's enums as hover/completion vocabulary — the same anti-hallucination surface
-/// <c>MotelyJaml.ListItems</c> serves over WASM, kept here so both shells read one list.
+/// The one table of JAML's enum vocabulary, living in the engine next to
+/// <see cref="JamlDiscriminatorRegistry"/> so every consumer — the LSP, the WASM
+/// <c>ListItems</c> export, hover, completion — reads the same facts the engine executes.
 /// </summary>
 public static class JamlVocabulary
 {
