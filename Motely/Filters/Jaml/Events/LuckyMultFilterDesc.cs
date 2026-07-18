@@ -4,6 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("luckyMult", RollsAreInlineValue = true)]
 public sealed class LuckyMultClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>

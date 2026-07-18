@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("boss", ValueEnum = typeof(MotelyBossBlind))]
 public sealed class BossClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>Complete clause-level key list — no Rolls field yet (see below).</summary>

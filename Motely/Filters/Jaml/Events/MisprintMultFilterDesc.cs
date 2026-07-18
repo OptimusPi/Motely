@@ -4,6 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("misprintMult", RollsAreInlineValue = true)]
 public sealed class MisprintMultClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list. No With

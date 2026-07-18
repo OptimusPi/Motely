@@ -102,12 +102,8 @@ public static class JamlDiscriminatorRegistry
     }
 
     public static string[] ClauseKeysFor(string discriminator) =>
-        Entries.TryGetValue(discriminator, out var entry)
-            ? StaticStringArrayField(entry.ClauseType, "ClauseKeys")
-            : [];
+        JamlSchema.ClauseKeysFor(discriminator);
 
     public static string[] SourceKeysFor(string discriminator) =>
-        Entries.TryGetValue(discriminator, out var entry) && entry.SourceConfigType is { } sourceType
-            ? StaticStringArrayField(sourceType, "SourceKeys")
-            : [];
+        JamlSchema.SourceKeysFor(discriminator) ?? [];
 }

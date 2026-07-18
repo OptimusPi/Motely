@@ -16,4 +16,11 @@
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
   </ItemGroup>
+
+  <!-- JamlGrammarGenerator produces JamlSchema.g.cs from [JamlDiscriminator] attributes -->
+  <ItemGroup>
+    <ProjectReference Include="..\Motely.Generators\Motely.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>

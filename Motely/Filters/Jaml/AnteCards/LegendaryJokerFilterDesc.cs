@@ -4,6 +4,8 @@ using Motely;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("legendaryJoker", "legendaryJokers",
+    ValueEnum = typeof(MotelyJoker), SourceConfigType = typeof(LegendaryJokerSourceConfig))]
 public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>

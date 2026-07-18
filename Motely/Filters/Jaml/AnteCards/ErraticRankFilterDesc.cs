@@ -5,6 +5,8 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("erraticRank", "erraticRanks",
+    ValueEnum = typeof(MotelyStandardcardRank))]
 public sealed class ErraticRankClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>Complete clause-level key list — the value itself carries the rank.</summary>

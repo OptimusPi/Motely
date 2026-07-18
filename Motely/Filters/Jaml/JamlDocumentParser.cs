@@ -6,7 +6,13 @@ namespace Motely.Filters.Jaml;
 // sources:/with:/clauses: blocks) — small enough that JAML parses itself, the same way
 // JamlLine.cs already parses one clause line without borrowing anyone else's grammar.
 
-internal abstract class JNode { }
+internal abstract class JNode
+{
+    // Where this node sits in the source. The parser knows every position as it walks the lines;
+    // keeping it here is what lets a diagnostic point at the character instead of the document.
+    // Nodes the writer builds from scratch leave this default (IsEmpty) — they have no source.
+    public JamlSpan Span { get; init; }
+}
 
 internal sealed class JMap : JNode
 {
@@ -14,18 +20,28 @@ internal sealed class JMap : JNode
     // case-insensitive, matching every wire key in the grammar (camelCase, but authors mistype
     // case sometimes and the loader has always tolerated it).
     private readonly Dictionary<string, JNode> _items = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, JamlSpan> _keySpans = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _order = [];
 
     public IReadOnlyList<string> Keys => _order;
 
-    public void Set(string key, JNode value)
+    // The key's own span is required, and tracked separately from the value's: "unknown key
+    // 'jokerz'" has to underline jokerz, while the value node's span points at whatever came
+    // after the colon. No convenience overload that defaults it — a document where some keys
+    // know where they are and some don't is worse than one where none do, because nothing tells
+    // you which is which.
+    public void Set(string key, JNode value, JamlSpan keySpan)
     {
         if (!_items.ContainsKey(key))
             _order.Add(key);
         _items[key] = value;
+        _keySpans[key] = keySpan;
     }
 
     public JNode? Get(string key) => _items.TryGetValue(key, out var v) ? v : null;
+
+    /// <summary>The span of the key itself as written, or an empty span for a synthesized node.</summary>
+    public JamlSpan KeySpan(string key) => _keySpans.TryGetValue(key, out var s) ? s : default;
 }
 
 internal sealed class JSeq : JNode
@@ -52,9 +68,19 @@ internal sealed class JScalar(string value, JScalarKind kind = JScalarKind.Bare)
 
 /// <summary>Thrown with a line number so a parse failure points at the actual offending line,
 /// the same way the old SharpYaml errors did (Zerkeo.jaml's "mapping values not allowed" case
-/// this session) — losing that would be a real regression, not just a cosmetic one.</summary>
-internal sealed class JamlSyntaxException(string message, int line)
-    : Exception($"JAML parse error at line {line + 1}: {message}");
+/// this session) — losing that would be a real regression, not just a cosmetic one.
+/// The position is kept as data as well as formatted into the message, so an editor can draw a
+/// squiggle on the offending line rather than regex it back out of the text.</summary>
+internal sealed class JamlSyntaxException(string message, JamlSpan span)
+    : Exception($"JAML parse error at line {span.StartLine + 1}: {message}")
+{
+    /// <summary>The message without the "JAML parse error at line N:" preamble.</summary>
+    public string RawMessage { get; } = message;
+
+    /// <summary>Where the failure sits. Required — every throw site is holding the line it failed
+    /// on, so there is no such thing as a parse error that doesn't know where it happened.</summary>
+    public JamlSpan Span { get; } = span;
+}
 
 internal static class JamlDocumentParser
 {
@@ -66,7 +92,7 @@ internal static class JamlDocumentParser
         int i = 0;
         var root = ParseBlock(lines, ref i, 0);
         if (root is not JMap map)
-            throw new JamlSyntaxException("JAML root must be a mapping.", 0);
+            throw new JamlSyntaxException("JAML root must be a mapping.", JamlSpan.OfLine(0, lines.Length > 0 ? lines[0] : ""));
         return map;
     }
 
@@ -97,15 +123,15 @@ internal static class JamlDocumentParser
             if (lineIndent < indent)
                 break;
             if (lineIndent > indent)
-                throw new JamlSyntaxException($"Unexpected indent (expected {indent} spaces).", i);
+                throw new JamlSyntaxException($"Unexpected indent (expected {indent} spaces).", JamlSpan.OfLine(i, lines[i]));
 
-            var (key, inlineValue) = SplitKeyValue(lines[i], i);
+            var (key, inlineValue, keySpan) = SplitKeyValue(lines[i], i);
             int keyLineIndent = lineIndent;
             i++;
 
             if (inlineValue is "|" or ">" or "|-" or ">-" or "|+" or ">+")
             {
-                map.Set(key, new JScalar(ParseBlockScalar(lines, ref i, keyLineIndent, inlineValue[0])));
+                map.Set(key, new JScalar(ParseBlockScalar(lines, ref i, keyLineIndent, inlineValue[0])), keySpan);
             }
             else if (inlineValue is { Length: > 0 } && inlineValue.StartsWith('[') && !inlineValue.EndsWith(']'))
             {
@@ -113,11 +139,11 @@ internal static class JamlDocumentParser
                 // items and the closing "]" continue on following lines (real corpus files write
                 // long shopItems:/seeds: arrays this way for readability). `i` already points at
                 // the line right after the key line; the collector picks up from there.
-                map.Set(key, ParseMultilineFlowArray(lines, ref i, inlineValue));
+                map.Set(key, ParseMultilineFlowArray(lines, ref i, inlineValue), keySpan);
             }
             else if (inlineValue is { Length: > 0 })
             {
-                map.Set(key, ParseScalarOrFlow(inlineValue, i - 1));
+                map.Set(key, ParseScalarOrFlow(inlineValue, i - 1), keySpan);
             }
             else
             {
@@ -138,7 +164,8 @@ internal static class JamlDocumentParser
                     key,
                     childIndent > indent || sameIndentBlockStart
                         ? ParseBlock(lines, ref i, childIndent)
-                        : new JMap()
+                        : new JMap(),
+                    keySpan
                 );
             }
         }
@@ -157,7 +184,7 @@ internal static class JamlDocumentParser
             if (lineIndent < indent)
                 break;
             if (lineIndent > indent)
-                throw new JamlSyntaxException($"Unexpected indent (expected {indent} spaces).", i);
+                throw new JamlSyntaxException($"Unexpected indent (expected {indent} spaces).", JamlSpan.OfLine(i, lines[i]));
 
             string trimmed = lines[i].AsSpan(lineIndent).ToString();
             if (!trimmed.StartsWith('-'))
@@ -217,15 +244,24 @@ internal static class JamlDocumentParser
         return idx + 1 == content.Length || char.IsWhiteSpace(content[idx + 1]);
     }
 
-    private static (string Key, string? Value) SplitKeyValue(string line, int lineIndex)
+    // Also reports where the key itself sits on the line. "Unknown key 'jokerz'" has to underline
+    // jokerz — the column is free here (it's just how far in the text was trimmed) and impossible
+    // to recover later, once the key is a bare string detached from its line.
+    private static (string Key, string? Value, JamlSpan KeySpan) SplitKeyValue(string line, int lineIndex)
     {
-        string trimmed = StripComment(line).TrimStart();
+        string uncommented = StripComment(line);
+        string trimmed = uncommented.TrimStart();
+        int keyColumn = uncommented.Length - trimmed.Length;
         int idx = trimmed.IndexOf(':');
         if (idx < 0 || (idx + 1 < trimmed.Length && !char.IsWhiteSpace(trimmed[idx + 1])))
-            throw new JamlSyntaxException($"Expected 'key: value' or 'key:', got '{trimmed}'.", lineIndex);
+            throw new JamlSyntaxException(
+                $"Expected 'key: value' or 'key:', got '{trimmed}'.",
+                JamlSpan.OnLine(lineIndex, keyColumn, trimmed.TrimEnd().Length));
         string key = trimmed[..idx].Trim();
         string value = trimmed[(idx + 1)..].Trim();
-        return (key, value.Length == 0 ? null : value);
+        // The key as written, before Trim() collapsed any padding between it and the colon.
+        int keyLength = trimmed[..idx].TrimEnd().Length;
+        return (key, value.Length == 0 ? null : value, JamlSpan.OnLine(lineIndex, keyColumn, keyLength));
     }
 
     // Collects a flow array "[a, b, c]" that spans multiple lines — either "key: [" left open at
@@ -240,7 +276,7 @@ internal static class JamlDocumentParser
         while (!sb.ToString().Contains(']'))
         {
             if (i >= lines.Length)
-                throw new JamlSyntaxException("Unterminated flow array (missing ']').", i - 1);
+                throw new JamlSyntaxException("Unterminated flow array (missing ']').", JamlSpan.OfLine(i - 1, lines[i - 1]));
             sb.Append(' ').Append(StripComment(lines[i]).Trim());
             i++;
         }
@@ -365,6 +401,23 @@ internal static class JamlDocumentParser
     // own indentation-based format, so it gets its own small recursive-descent reader rather
     // than being coerced through the line-oriented parser above). ─────────────────────────────
 
+    // The JSON reader walks a character offset rather than lines, so it converts back to a
+    // line/column here. Every JSON error used to report line 0 no matter where it happened —
+    // an editor drew every squiggle on the first line of the file. Errors are rare enough that
+    // counting newlines at throw time costs nothing worth measuring.
+    private static JamlSpan JsonSpan(string text, int index, int length = 1)
+    {
+        int clamped = Math.Clamp(index, 0, Math.Max(text.Length - 1, 0));
+        int line = 0, lineStart = 0;
+        for (int k = 0; k < clamped; k++)
+            if (text[k] == '\n')
+            {
+                line++;
+                lineStart = k + 1;
+            }
+        return JamlSpan.OnLine(line, clamped - lineStart, length);
+    }
+
     public static JMap ParseJson(string text)
     {
         int i = 0;
@@ -372,9 +425,9 @@ internal static class JamlDocumentParser
         var node = ParseJsonValue(text, ref i);
         SkipJsonWhitespace(text, ref i);
         if (i != text.Length)
-            throw new JamlSyntaxException("Trailing content after JSON document.", 0);
+            throw new JamlSyntaxException("Trailing content after JSON document.", JsonSpan(text, i));
         if (node is not JMap map)
-            throw new JamlSyntaxException("JSON root must be an object.", 0);
+            throw new JamlSyntaxException("JSON root must be an object.", JsonSpan(text, 0));
         return map;
     }
 
@@ -382,7 +435,7 @@ internal static class JamlDocumentParser
     {
         SkipJsonWhitespace(text, ref i);
         if (i >= text.Length)
-            throw new JamlSyntaxException("Unexpected end of JSON.", 0);
+            throw new JamlSyntaxException("Unexpected end of JSON.", JsonSpan(text, i));
         return text[i] switch
         {
             '{' => ParseJsonObject(text, ref i),
@@ -406,13 +459,15 @@ internal static class JamlDocumentParser
         {
             SkipJsonWhitespace(text, ref i);
             if (i >= text.Length || text[i] != '"')
-                throw new JamlSyntaxException("Expected a JSON object key.", 0);
+                throw new JamlSyntaxException("Expected a JSON object key.", JsonSpan(text, i));
+            int keyStart = i;
             string key = ParseJsonString(text, ref i);
+            var keySpan = JsonSpan(text, keyStart, i - keyStart);
             SkipJsonWhitespace(text, ref i);
             if (i >= text.Length || text[i] != ':')
-                throw new JamlSyntaxException("Expected ':' after JSON object key.", 0);
+                throw new JamlSyntaxException("Expected ':' after JSON object key.", JsonSpan(text, i));
             i++;
-            map.Set(key, ParseJsonValue(text, ref i));
+            map.Set(key, ParseJsonValue(text, ref i), keySpan);
             SkipJsonWhitespace(text, ref i);
             if (i < text.Length && text[i] == ',')
             {
@@ -424,7 +479,7 @@ internal static class JamlDocumentParser
                 i++;
                 break;
             }
-            throw new JamlSyntaxException("Expected ',' or '}' in JSON object.", 0);
+            throw new JamlSyntaxException("Expected ',' or '}' in JSON object.", JsonSpan(text, i));
         }
         return map;
     }
@@ -453,7 +508,7 @@ internal static class JamlDocumentParser
                 i++;
                 break;
             }
-            throw new JamlSyntaxException("Expected ',' or ']' in JSON array.", 0);
+            throw new JamlSyntaxException("Expected ',' or ']' in JSON array.", JsonSpan(text, i));
         }
         return seq;
     }
@@ -489,7 +544,7 @@ internal static class JamlDocumentParser
             i++;
         }
         if (i >= text.Length)
-            throw new JamlSyntaxException("Unterminated JSON string.", 0);
+            throw new JamlSyntaxException("Unterminated JSON string.", JsonSpan(text, i));
         i++; // closing quote
         return sb.ToString();
     }
@@ -510,7 +565,7 @@ internal static class JamlDocumentParser
         while (i < text.Length && text[i] != ',' && text[i] != '}' && text[i] != ']' && !char.IsWhiteSpace(text[i]))
             i++;
         if (i == start)
-            throw new JamlSyntaxException($"Unexpected character '{text[i]}' in JSON.", 0);
+            throw new JamlSyntaxException($"Unexpected character '{text[i]}' in JSON.", JsonSpan(text, i));
         return new JScalar(text[start..i]);
     }
 

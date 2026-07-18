@@ -4,6 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("parkingPayout", RollsAreInlineValue = true)]
 public sealed class ParkingPayoutClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list. No With

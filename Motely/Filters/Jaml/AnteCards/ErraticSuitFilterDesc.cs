@@ -5,6 +5,8 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
+[JamlDiscriminator("erraticSuit",
+    ValueEnum = typeof(MotelyStandardcardSuit))]
 public sealed class ErraticSuitClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>Complete clause-level key list — the value itself carries the suit.</summary>
