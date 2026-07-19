@@ -8,7 +8,7 @@ public static partial class JamlConfigLoader
     {
         try
         {
-            config = LooksLikeJson(content) ? FromJson(content) : FromJaml(content);
+            config = FromJaml(content);
             error = null;
             return true;
         }
@@ -18,17 +18,6 @@ public static partial class JamlConfigLoader
             error = ex.Message;
             return false;
         }
-    }
-
-    private static bool LooksLikeJson(string content)
-    {
-        foreach (var ch in content)
-        {
-            if (char.IsWhiteSpace(ch))
-                continue;
-            return ch == '{';
-        }
-        return false;
     }
 
     public static JamlConfig FromJaml(string content)
@@ -48,22 +37,6 @@ public static partial class JamlConfigLoader
         }
     }
 
-    public static bool TryLoadFromJaml(string content, out JamlConfig? config, out string? error)
-    {
-        try
-        {
-            config = FromJaml(content);
-            error = null;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            config = null;
-            error = ex.Message;
-            return false;
-        }
-    }
-
     public static bool TryLoadFromJson(string content, out JamlConfig? config, out string? error)
     {
         try
@@ -80,10 +53,6 @@ public static partial class JamlConfigLoader
         }
     }
 
-    // Real JSON — genuinely different grammar from JAML's own indentation-based document format,
-    // so it gets its own reader (JamlDocumentParser.ParseJson) rather than being coerced through
-    // the line-oriented one above. Same tree shape out (JMap/JSeq/JScalar), same NodeReader,
-    // same ParseConfig — the difference is entirely in tokenizing, not in what a JAML clause means.
     public static JamlConfig FromJson(string content)
     {
         try

@@ -25,24 +25,39 @@ public static class MotelyTopSeedSink
         private readonly PriorityQueue<SavedSeedEntry, (int Score, long Sequence)> _queue = new();
         private long _sequence;
 
+        // Scored results arrive on every worker thread — the engine invokes result callbacks with
+        // no serialization. PriorityQueue is not thread-safe, so concurrent Enqueue can corrupt the
+        // heap rather than merely lose an entry, and this queue is what gets written back into the
+        // filter's seeds: block. The lock lives here so a caller cannot forget it, and it is only
+        // ever taken when a seed actually matches.
+        private readonly object _gate = new();
+
         public void Consider(string seed, int score)
         {
-            _queue.Enqueue(new(seed, score, _sequence), (score, _sequence));
-            _sequence++;
+            lock (_gate)
+            {
+                _queue.Enqueue(new(seed, score, _sequence), (score, _sequence));
+                _sequence++;
 
-            if (_queue.Count > limit)
-                _queue.Dequeue();
+                if (_queue.Count > limit)
+                    _queue.Dequeue();
+            }
         }
 
-        public IReadOnlyList<string> GetSeeds() =>
-            _queue
-                .UnorderedItems.Select(static item => item.Element)
-                .OrderByDescending(static item => item.Score)
-                .ThenBy(static item => item.Sequence)
-                .Select(static item => item.Seed)
-                .Distinct(StringComparer.Ordinal)
-                .Take(limit)
-                .ToArray();
+        public IReadOnlyList<string> GetSeeds()
+        {
+            lock (_gate)
+            {
+                return _queue
+                    .UnorderedItems.Select(static item => item.Element)
+                    .OrderByDescending(static item => item.Score)
+                    .ThenBy(static item => item.Sequence)
+                    .Select(static item => item.Seed)
+                    .Distinct(StringComparer.Ordinal)
+                    .Take(limit)
+                    .ToArray();
+            }
+        }
     }
 
     private readonly record struct SavedSeedEntry(string Seed, int Score, long Sequence);

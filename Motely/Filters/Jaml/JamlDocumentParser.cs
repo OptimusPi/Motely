@@ -129,9 +129,20 @@ internal static class JamlDocumentParser
             int keyLineIndent = lineIndent;
             i++;
 
-            if (inlineValue is "|" or ">" or "|-" or ">-" or "|+" or ">+")
+            if (inlineValue is "|" or ">")
             {
                 map.Set(key, new JScalar(ParseBlockScalar(lines, ref i, keyLineIndent, inlineValue[0])), keySpan);
+            }
+            else if (inlineValue is "|-" or ">-" or "|+" or ">+")
+            {
+                // YAML's chomping indicators, refused on purpose. They tune how many trailing
+                // newlines survive a block — a distinction JAML has nowhere to express, since
+                // ParseBlockScalar always drops trailing blank lines. Accepting them would mean
+                // reading '|+' and silently doing what '|' does, so a filter says one thing and
+                // means another with nothing to warn the author. Two block styles, both honored.
+                throw new JamlSyntaxException(
+                    $"'{inlineValue}' is not a JAML block style. Use '|' to keep line breaks or '>' to fold them into spaces.",
+                    JamlSpan.OfLine(i - 1, lines[i - 1]));
             }
             else if (inlineValue is { Length: > 0 } && inlineValue.StartsWith('[') && !inlineValue.EndsWith(']'))
             {
@@ -347,9 +358,10 @@ internal static class JamlDocumentParser
     }
 
     // A scalar value, or a flow array "[a, b, c]" — JAML's one and only bracket syntax. No flow
-    // mappings, no multi-line block scalars: the real corpus never uses them, and JUMMY's one-line
-    // clause tail already covers the case (a whole clause on one line) that would otherwise tempt
-    // someone to reach for a fancier YAML form.
+    // mappings: JamlLine's one-line clause tail already covers the case (a whole clause on one
+    // line) that would otherwise tempt someone to reach for a fancier YAML form. Block scalars
+    // are a separate path — see ParseBlockScalar, reached from ParseMapping when a key's value
+    // is '|' or '>'.
     private static JNode ParseScalarOrFlow(string text, int lineIndex)
     {
         text = text.Trim();

@@ -133,7 +133,7 @@ public sealed class SeedProviderTests
     public void AestheticSeedProvider_GrossYieldsKeywordSeeds()
     {
         var provider = new MotelyAestheticSeedProvider(JamlAesthetic.Gross);
-        Assert.Equal(183_030_995L, provider.SeedCount);
+        Assert.Equal(MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount, provider.SeedCount);
 
         var first = provider.NextSeed().ToString();
         Assert.InRange(first.Length, 4, 8);

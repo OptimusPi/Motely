@@ -17,7 +17,7 @@ public sealed class JamlConfigWriterTests
         foreach (var file in files)
         {
             var relative = Path.GetRelativePath(corpusDir, file);
-            var original = JamlConfigLoader.FromYaml(File.ReadAllText(file));
+            var original = JamlConfigLoader.FromJaml(File.ReadAllText(file));
 
             string written;
             try
@@ -65,11 +65,11 @@ public sealed class JamlConfigWriterTests
               - joker: [Blueprint]
                 sources: {}
             """;
-        var original = JamlConfigLoader.FromYaml(jaml);
+        var original = JamlConfigLoader.FromJaml(jaml);
         var originalClause = Assert.IsType<JokerClause>(original.Must[0]);
         Assert.NotNull(originalClause.Sources);
 
-        var reloaded = JamlConfigLoader.FromYaml(JamlConfigLoader.ToYaml(original));
+        var reloaded = JamlConfigLoader.FromJaml(JamlConfigLoader.ToYaml(original));
         var reloadedClause = Assert.IsType<JokerClause>(reloaded.Must[0]);
         Assert.NotNull(reloadedClause.Sources);
     }
@@ -85,7 +85,7 @@ public sealed class JamlConfigWriterTests
               - erraticRanks: [Two, Three, Four]
                 min: 3
             """;
-        var config = JamlConfigLoader.FromYaml(jaml);
+        var config = JamlConfigLoader.FromJaml(jaml);
         var or = Assert.IsType<Motely.Filters.OrClause>(config.Must[0]);
         Assert.Equal(3, or.Min);
     }

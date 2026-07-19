@@ -115,10 +115,10 @@ public class JamlJsonLoaderTests
     }
 
     [Fact]
-    public void FromYaml_InvalidYaml_ThrowsWithMessage()
+    public void FromJaml_InvalidJaml_ThrowsWithMessage()
     {
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            JamlConfigLoader.FromYaml("must: [")
+            JamlConfigLoader.FromJaml("must: [")
         );
         Assert.NotEmpty(ex.Message);
     }

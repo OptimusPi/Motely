@@ -8,9 +8,9 @@ namespace Motely.Tests;
 public class JamlLineClauseTests
 {
     [Fact]
-    public void Yaml_LineClauseInMust_BecomesTheExpectedClause()
+    public void Jaml_LineClauseInMust_BecomesTheExpectedClause()
     {
-        var config = JamlConfigLoader.FromYaml(
+        var config = JamlConfigLoader.FromJaml(
             """
             name: line in must
             must:
@@ -25,9 +25,9 @@ public class JamlLineClauseTests
     }
 
     [Fact]
-    public void Yaml_MixedLineAndStructuredClauses_BothLoad()
+    public void Jaml_MixedLineAndStructuredClauses_BothLoad()
     {
-        var config = JamlConfigLoader.FromYaml(
+        var config = JamlConfigLoader.FromJaml(
             """
             name: mixed
             must:
@@ -54,9 +54,9 @@ public class JamlLineClauseTests
     }
 
     [Fact]
-    public void Yaml_LineClauseInsideAndBlock_Loads()
+    public void Jaml_LineClauseInsideAndBlock_Loads()
     {
-        var config = JamlConfigLoader.FromYaml(
+        var config = JamlConfigLoader.FromJaml(
             """
             name: nested
             must:
@@ -72,7 +72,7 @@ public class JamlLineClauseTests
     }
 
     [Fact]
-    public void Yaml_GarbageLineClause_FailsLoudly()
+    public void Jaml_GarbageLineClause_FailsLoudly()
     {
         var ok = JamlConfigLoader.TryLoad(
             """

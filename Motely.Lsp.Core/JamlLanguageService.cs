@@ -25,26 +25,13 @@ public static partial class JamlLanguageService
             return [];
         try
         {
-            _ = LooksLikeJson(text)
-                ? JamlConfigLoader.FromJson(text)
-                : JamlConfigLoader.FromYaml(text);
+            _ = JamlConfigLoader.FromJaml(text);
             return [];
         }
         catch (Exception ex)
         {
             return [ToDiagnostic(ex, text)];
         }
-    }
-
-    private static bool LooksLikeJson(string text)
-    {
-        foreach (var ch in text)
-        {
-            if (char.IsWhiteSpace(ch))
-                continue;
-            return ch == '{';
-        }
-        return false;
     }
 
     private static JamlDiagnostic ToDiagnostic(Exception ex, string text)

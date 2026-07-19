@@ -5,7 +5,7 @@ namespace Motely.Filters.Jaml;
 
 // The write-side mirror of JamlClausePopulator: turns a JamlConfig back into JAML text using the
 // exact same ClauseKeys/SourceKeys reflection the loader reads, so a round trip through
-// FromYaml(ToYaml(config)) reproduces the same clause data. Not guaranteed to reproduce the
+// FromJaml(ToYaml(config)) reproduces the same clause data. Not guaranteed to reproduce the
 // original TEXT (e.g. "smallBlindTag"/"bigBlindTag" both come back out as "tag" with an explicit
 // rolls: block; erraticRanks shorthand comes back out as "or" — both are real, parseable,
 // semantically-identical JAML) — this is a data round trip, not a byte-for-byte one.
@@ -77,7 +77,7 @@ public static partial class JamlConfigLoader
     }
 
     // ── JAML text emission — writes the same indented block format the native parser reads,
-    // so ToYaml(config) round-trips through FromYaml unchanged. No third-party writer: the tree
+    // so ToYaml(config) round-trips through FromJaml unchanged. No third-party writer: the tree
     // built above (JMap/JSeq/JScalar) is JAML's own, so JAML also owns writing it back out. ─────
 
     private static void WriteMap(StringBuilder sb, JMap map, int indent)

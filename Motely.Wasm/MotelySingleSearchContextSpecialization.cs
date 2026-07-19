@@ -5,14 +5,10 @@ using Motely;
 // member a JavaScript host can drive. Stream walkers that thread C# byref state
 // stay engine-side.
 //
-// RunState is NOT on this surface yet, on purpose: MotelyRunState is a `ref struct` because it's
-// used in MotelyVectorSearchContext's actual SIMD hot path (CreateShopItemStream reads
-// IsVoucherActive per ante, per 8-seed batch, across the whole search space) — it can't cross the
-// WASM boundary as-is, and a prior attempt to bridge it with a hand-rolled marshalable twin type
-// (MotelyJsRunState + manual ToRunState()/FromRunState() conversion) was scaffolded here but never
-// actually implemented, so the methods threw at runtime despite type-checking at compile time.
-// Real fix needs a design pass — see the RunState redesign note in project memory/CLAUDE.md-level
-// planning, not another silent stub.
+// RunState members aren't on this surface yet; nothing blocks adding them. MotelyRunState is a
+// sealed record and MotelySingleSearchContext is a class, so both cross as ordinary types.
+// Bootsharp serializes records by value, so a member that advances run state returns the new
+// state alongside its result — mutating a crossed copy in place changes nothing on the far side.
 
 [SpecializeImport(typeof(MotelySingleSearchContext))]
 public abstract class MotelySingleSearchContextImport(int id) : SpecializedImport(id)

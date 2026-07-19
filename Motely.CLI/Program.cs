@@ -9,6 +9,7 @@ using Motely.Enums;
 using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Filters.Native;
+using Motely.SeedProviders;
 
 partial class Program
 {
@@ -213,6 +214,11 @@ partial class Program
             "--aesthetic <NAME>",
             $"Search seeds from an aesthetic provider ({JamlAestheticParser.KnownJamlStringsDescription()})",
             CommandOptionType.SingleValue
+        );
+        var findOneOption = app.Option(
+            "--findone",
+            $"Find one seed and stop: sweeps every aesthetic first ({JamlAestheticParser.KnownJamlStringsDescription()}), then falls back to the sequential sweep if none of them matched.",
+            CommandOptionType.NoValue
         );
         var sourceOption = app.Option<string>(
             "--source <NAME_OR_PATH>",
@@ -613,10 +619,16 @@ partial class Program
             {
                 settings = settings.WithSeedMatchCallback(seed =>
                 {
-                    resultSink.OnSeed(seed);
-                    if (saveSeedMatchSet.Add(seed))
+                    // Every worker thread calls this, and the engine serializes nothing. A bare
+                    // HashSet/List here loses finds under concurrent Add — silently, and more often
+                    // the more threads are working. The lock costs nothing at match frequency.
+                    lock (saveSeedMatches)
                     {
-                        saveSeedMatches.Add(seed);
+                        resultSink.OnSeed(seed);
+                        if (saveSeedMatchSet.Add(seed))
+                        {
+                            saveSeedMatches.Add(seed);
+                        }
                     }
                 });
             }
@@ -628,16 +640,97 @@ partial class Program
                 );
             }
 
-            using var search = settings.Start(_cts.Token);
             bool cancelled = false;
-            try
+            IMotelySearch search;
+
+            async Task<bool> RunPass(IMotelySearch pass)
             {
-                await search.WaitForCompletionAsync(_cts.Token);
+                try
+                {
+                    await pass.WaitForCompletionAsync(_cts.Token);
+                    return false;
+                }
+                catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
+                {
+                    return true;
+                }
             }
-            catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
+
+            // Naming an explicit sequential range (--startBatch/--endBatch/--startPercent/
+            // --startSeed/--stopSeed) says you want the sweep itself, so --findone skips the
+            // aesthetic pass entirely rather than answering a different question than you asked.
+            bool findOneSequentialOnly =
+                startBatchOption.HasValue()
+                || endBatchOption.HasValue()
+                || startPercentOption.HasValue()
+                || startSeedOption.HasValue()
+                || stopSeedOption.HasValue();
+
+            if (findOneOption.HasValue() && findOneSequentialOnly)
             {
-                cancelled = true;
+                settings = settings
+                    .WithSequentialSearch()
+                    .WithBatchCharacterCount(batchCharCount)
+                    .StopAfter(1);
+                search = settings.Start(_cts.Token);
+                cancelled = await RunPass(search);
             }
+            else if (findOneOption.HasValue())
+            {
+                // Every aesthetic first, in declaration order, as one continuous seed stream —
+                // palindromes and echoes and the rest are a tiny, pretty corner of the space, so
+                // sweeping all of them costs almost nothing next to the sequential grind, and a
+                // seed like AAABBBAA is a better answer than the first one counting finds.
+                // StopAfter(1) ends the pass on the first match (a handful arrive together — one
+                // SIMD batch is 8 lanes; see StopAfterMatches).
+                // An explicit --aesthetic narrows the sweep to that one family, which is how you
+                // time them against each other; without it, every family runs in enum order.
+                var aesthetics =
+                    aestheticOption.HasValue()
+                    && JamlAestheticParser.TryParse(aestheticOption.ParsedValue.Trim(), out var onlyOne)
+                        ? [onlyOne]
+                        : Enum.GetValues<JamlAesthetic>();
+                settings = settings
+                    .WithProviderSearch(
+                        new MotelySeedListProvider(
+                            aesthetics.SelectMany(JamlAesthetics.EnumerateSeeds),
+                            aesthetics.Sum(JamlAesthetics.GetSeedCount)
+                        )
+                    )
+                    .StopAfter(1);
+
+                var aestheticPass = settings.Start(_cts.Token);
+                cancelled = await RunPass(aestheticPass);
+
+                if (!cancelled && aestheticPass.MatchingSeeds == 0)
+                {
+                    aestheticPass.Dispose();
+                    if (!quietOption.HasValue())
+                        Console.Error.WriteLine(
+                            "No aesthetic seed matched — falling back to the sequential sweep."
+                        );
+
+                    settings = settings
+                        .WithSequentialSearch()
+                        .WithBatchCharacterCount(batchCharCount)
+                        .StopAfter(1);
+                    aestheticPass = settings.Start(_cts.Token);
+                    cancelled = await RunPass(aestheticPass);
+                }
+                else if (!cancelled && !quietOption.HasValue())
+                {
+                    Console.Error.WriteLine("Found it in the aesthetics — no sequential sweep needed.");
+                }
+
+                search = aestheticPass;
+            }
+            else
+            {
+                search = settings.Start(_cts.Token);
+                cancelled = await RunPass(search);
+            }
+
+            using var _search = search;
 
             cancelled |= _cts.Token.IsCancellationRequested;
             {
@@ -682,14 +775,26 @@ partial class Program
         Console.Out.Flush();
         Console.WriteLine();
         Console.WriteLine(cancelled ? "STOPPED" : "COMPLETED");
-        Console.WriteLine(
-            $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds:N0} matched"
-        );
         var elapsed = TimeSpan.FromMilliseconds(search.ElapsedMs);
-        Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
-        double speed =
-            elapsed.TotalSeconds > 0 ? search.TotalSeedsSearched / elapsed.TotalSeconds : 0;
-        Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
+
+        // A run that stopped on the match limit quit on purpose, part-way through a batch. Seeds
+        // searched and seeds/sec describe a sweep that never happened — the honest number for a
+        // find-one run is how long it took to find one.
+        if (search.StoppedOnMatchLimit)
+        {
+            Console.WriteLine($"  Found: {search.MatchingSeeds:N0} seed(s)");
+            Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff} to first find");
+        }
+        else
+        {
+            Console.WriteLine(
+                $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds:N0} matched"
+            );
+            Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
+            double speed =
+                elapsed.TotalSeconds > 0 ? search.TotalSeedsSearched / elapsed.TotalSeconds : 0;
+            Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
+        }
         if (search.IsSequentialBatchSearch)
         {
             long max = (long)Math.Pow(35, 8 - batchCharCount);

@@ -13,7 +13,7 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
         MotelyStake stake = MotelyStake.White
     )
     {
-        var config = JamlConfigLoader.FromYaml("seeds: []");
+        var config = JamlConfigLoader.FromJaml("seeds: []");
         config.Seeds.Add(seed);
         config.Deck = deck;
         config.Stake = stake;
@@ -230,7 +230,7 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
     [Fact]
     public void Analyze_MultipleSeeds_ReturnsOneResultEach()
     {
-        var config = JamlConfigLoader.FromYaml("seeds: []");
+        var config = JamlConfigLoader.FromJaml("seeds: []");
         config.Seeds.Add("UNITTEST");
         config.Seeds.Add("ALEEB");
         config.Seeds.Add("1234567");
@@ -249,7 +249,7 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
 
         static JamlConfig Config(string[] seeds)
         {
-            var c = JamlConfigLoader.FromYaml("seeds: []");
+            var c = JamlConfigLoader.FromJaml("seeds: []");
             foreach (var s in seeds)
                 c.Seeds.Add(s);
             return c;
@@ -285,7 +285,7 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
     [Fact]
     public void Analyze_MultiSeedResume_SeedAbsentFromMapStartsFresh()
     {
-        var config = JamlConfigLoader.FromYaml("seeds: []");
+        var config = JamlConfigLoader.FromJaml("seeds: []");
         config.Seeds.Add("UNITTEST");
         config.Seeds.Add("ALEEB");
 
@@ -320,7 +320,7 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
     [Fact]
     public void ComputeAntes_NoAnteClause_ReturnsAllEight()
     {
-        var config = JamlConfigLoader.FromYaml("seeds: []");
+        var config = JamlConfigLoader.FromJaml("seeds: []");
         var antes = MotelyJamlyzer.ComputeAntes(config);
         Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8], antes);
     }

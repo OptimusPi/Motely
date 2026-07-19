@@ -35,6 +35,9 @@ CLI examples (AOT publish is default-on; `-p:EnableCliAot=false` for a fast dev 
 dotnet run --project Motely.CLI -- --jaml JamlFilters/01WeeMonday.jaml
 dotnet run --project Motely.CLI -- --jaml <file> --makeitrain   # replay the filter's saved seed lake
 dotnet run --project Motely.CLI -- --analyze SEED --jaml <file>
+dotnet run --project Motely.CLI -- --jaml <file> --findone       # every aesthetic, then the sequential sweep
+dotnet run --project Motely.CLI -- --jaml <file> --findone --aesthetic palindrome   # one family only
+dotnet run --project Motely.CLI -- --jaml <file> --findone --startBatch 0           # sequential only
 ```
 
 Releasing motely-wasm: bump `<MotelyVersion>` in `Directory.Packages.props` (the single version source — a build target stamps `Motely.Wasm/package.json` from it), run both npm suites green, then `npm publish` from `Motely.Wasm/`. pifreak confirms the version number and the publish step.
@@ -51,6 +54,10 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 - **JAMLyzer** (`Motely/Analysis/MotelyJamlyzer.cs`) produces per-seed ante-by-ante breakdowns; supports paged analysis with resumable stream states.
 - **Native filters** (`Motely/Filters/Native/`) are hand-written C# filters (PerkeoObservatory, ErraticFinder, …), reachable via CLI `--native <name>`; coverage focuses on the JAML path and lets these speed demons run free.
 - `LuaRandom`/`VectorLuaRandom` reproduce Balatro's RNG exactly — determinism here is the whole product.
+- **Why the sequential sweep is batched.** A batch fixes the *rightmost* `8 - batchCharCount` characters (`MotelySearch.cs:2148-2153`) and varies the left ones. Balatro's PRNG keys off the seed suffix, so every seed in a batch shares the same pseudohashes — computed once at `:2159` and reused across all 35^batchCharCount seeds. That sharing is what makes sequential roughly 13x cheaper per seed than feeding arbitrary seeds through a provider, where no two seeds share a suffix. One `Interlocked` claims a batch and that is the entire synchronization budget, so a bigger batch means both more hash reuse and less chatter. `--batchCharCount 4` is the right default; only 1 is a real mistake, and only single-threaded, where per-batch overhead is paid serially.
+- **`StopAfter(n)`** on `IMotelySearchSettings` ends a run once at least n seeds match, cancelling through the token workers already poll. "At least" is the contract, never exactly n — a batch scores all 8 SIMD lanes before anyone checks for cancellation. Reaching the limit completes the search rather than aborting it (`IMotelySearch.StoppedOnMatchLimit` tells the two apart), so callers take the first result rather than assuming they got one.
+- **Seeds-searched counts real seeds**, incremented per 8-wide vector at the one sequential leaf (`SearchVector`, `i == 0`) and by fetched count in provider mode. Deriving it as completed batches x `SeedsPerBatch` looked cheaper and reported 1,838,265,625 seeds — 13.8 billion seeds/sec on one thread — for a `StopAfter` run that quit inside its first batch. The leaf increment measures inside run-to-run noise; a full batch reports exactly 35^batchCharCount.
+- **Callbacks fire from every worker thread.** `WithSeedMatchCallback`/`WithScoredResultCallback` are invoked with no serialization, so anything they touch must be thread-safe — a plain `List`/`HashSet` will silently drop finds.
 
 ### Motely.CLI
 

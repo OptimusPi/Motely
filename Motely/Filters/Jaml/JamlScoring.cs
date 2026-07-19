@@ -27,8 +27,9 @@ public static class JamlScoring
             if (clauseMaxAnte > maxAnte)
                 maxAnte = clauseMaxAnte;
 
-            if (clauses[i] is BossClause && clauseMaxAnte > maxBossAnte)
-                maxBossAnte = clauseMaxAnte;
+            int clauseMaxBossAnte = GetMaxBossAnte(clauses[i]);
+            if (clauseMaxBossAnte > maxBossAnte)
+                maxBossAnte = clauseMaxBossAnte;
         }
 
         int maxVoucherAnte = maxAnte < 8 ? maxAnte + 1 : maxAnte;
@@ -1875,6 +1876,31 @@ public static class JamlScoring
         for (int i = 0; i < clauses.Length; i++)
         {
             int nestedMax = GetMaxAnte(clauses[i]);
+            if (nestedMax > max)
+                max = nestedMax;
+        }
+        return max;
+    }
+
+    // The highest ante any BOSS clause in this tree asks about, or 0 for a tree holding none.
+    // PrepareRunState sizes CachedBosses from this, so it has to descend into and:/or: the same
+    // way GetMaxAnte does — a boss clause only ever reachable through a conjunction still gets
+    // its ante scored, and CountBossOccurrences indexes CachedBosses by that ante directly.
+    private static int GetMaxBossAnte(IJamlClause clause) =>
+        clause switch
+        {
+            BossClause c => ArrayMax(c.Antes),
+            AndClause c => MaxNestedBossAnte(c.Clauses),
+            OrClause c => MaxNestedBossAnte(c.Clauses),
+            _ => 0,
+        };
+
+    private static int MaxNestedBossAnte(IJamlClause[] clauses)
+    {
+        int max = 0;
+        for (int i = 0; i < clauses.Length; i++)
+        {
+            int nestedMax = GetMaxBossAnte(clauses[i]);
             if (nestedMax > max)
                 max = nestedMax;
         }

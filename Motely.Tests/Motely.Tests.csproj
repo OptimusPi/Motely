@@ -30,12 +30,11 @@
     <Using Include="Motely.Enums" />
   </ItemGroup>
 
-  <!-- TEMPORARY: the Jimmolate/RunState re-add is in progress and these two test files reference
-       API that isn't wired yet (NewRunState, GetBossForAnteWithState, CreateSettings jimmolate:).
-       Excluded so the rest of the suite compiles and runs. Delete this ItemGroup to restore them
-       once MotelySingleSearchContext.RunState.cs is finished. -->
+  <!-- JimmolateScoringOrderTests.cs does not exist in the tree; it referenced a run-state API
+       (NewRunState / GetBossForAnteWithState) that was never wired up. The exclusion stays only so
+       a future restore of that file doesn't silently break the build. JimmolateFilterTests.cs is
+       compiled and running. -->
   <ItemGroup>
-    <Compile Remove="JimmolateFilterTests.cs" />
     <Compile Remove="JimmolateScoringOrderTests.cs" />
   </ItemGroup>
 

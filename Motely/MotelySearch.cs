@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -150,6 +151,21 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithScoredResultCallback(Action<MotelyScoredSeedResult> callback);
     IMotelySearchSettings WithAutoScoreCutoff(bool enabled = true);
+    IMotelySearchSettings StopAfter(long matchCount);
+
+    /// <summary>
+    /// Attach Jimmolate — a per-seed predicate ("does this seed pass?"), the classic Immolate
+    /// <c>.cl</c> filter mental model. The predicate is compiled C# and receives a live, drivable
+    /// <see cref="MotelySingleSearchContext"/>, so it can read vouchers, bosses, shop items or any
+    /// other stream before returning keep/reject — the same thing an Immolate kernel did, minus the
+    /// OpenCL. It runs through <see cref="MotelyVectorSearchContext.SearchIndividualSeeds"/>, which
+    /// is the engine's scalar escape hatch, so keep the predicate cheap: it is called per seed.
+    /// This is a native/CLI-side feature. There is no cross-boundary version of it and there cannot
+    /// usefully be one — a predicate authored in JS would marshal once per seed plus once more for
+    /// every context member it touches. JAML is the equivalent that crosses a boundary: it travels
+    /// once as data and then executes natively at full width.
+    /// </summary>
+    IMotelySearchSettings WithJimmolate(MotelyIndividualSeedSearcher searcher, int scoreCutoff = 1);
 
     IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
@@ -199,6 +215,15 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public bool CsvOutput { get; set; } = false;
     public bool QuietMode { get; set; } = false;
     public bool AutoScoreCutoff { get; set; } = false;
+
+    /// <summary>
+    /// Stop searching once AT LEAST this many seeds have matched; 0 (the default) searches the
+    /// whole space. "At least" is the honest contract, not a promise of exactly N: a batch scores
+    /// all 8 SIMD lanes before anyone checks for cancellation, and every worker thread is mid-batch
+    /// when the limit trips, so <c>StopAfter(1)</c> routinely delivers a handful. Callers who want
+    /// one seed should take the first result, not assume they received a single one.
+    /// </summary>
+    public long StopAfterMatches { get; set; } = 0;
 
     /// <summary>
     /// Callback for progress updates - useful for UI progress bars and logging
@@ -387,6 +412,14 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithAutoScoreCutoff(bool enabled) =>
         WithAutoScoreCutoff(enabled);
 
+    IMotelySearchSettings IMotelySearchSettings.StopAfter(long matchCount) =>
+        StopAfter(matchCount);
+
+    IMotelySearchSettings IMotelySearchSettings.WithJimmolate(
+        MotelyIndividualSeedSearcher searcher,
+        int scoreCutoff
+    ) => WithJimmolate(searcher, scoreCutoff);
+
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
 
@@ -449,6 +482,19 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
+    /// <inheritdoc cref="StopAfterMatches" />
+    public MotelySearchSettings<TBaseFilter> StopAfter(long matchCount)
+    {
+        StopAfterMatches = matchCount;
+        return this;
+    }
+
+    /// <inheritdoc cref="IMotelySearchSettings.WithJimmolate"/>
+    public MotelySearchSettings<TBaseFilter> WithJimmolate(
+        MotelyIndividualSeedSearcher searcher,
+        int scoreCutoff = 1
+    ) => WithAdditionalFilter(new Motely.Filters.Native.JimmolateFilterDesc(searcher, scoreCutoff));
+
     public IMotelySearch Start(CancellationToken cancellationToken = default)
     {
         MotelySearch<TBaseFilter> search = new(this);
@@ -467,6 +513,14 @@ public interface IMotelySearch : IDisposable
     bool IsSequentialBatchSearch { get; }
     long BatchIndex { get; }
     long CompletedBatchCount { get; }
+
+    /// <summary>
+    /// True when the run ended because <see cref="MotelySearchSettings{TBaseFilter}.StopAfterMatches"/>
+    /// was reached rather than because the space ran out. Throughput is not a meaningful number for
+    /// such a run — it stopped on purpose, mid-batch — so callers should report time-to-find instead
+    /// of seeds/sec.
+    /// </summary>
+    bool StoppedOnMatchLimit { get; }
 
     IMotelySearch Start(CancellationToken cancellationToken = default);
     Task RunSearchAsync(CancellationToken cancellationToken = default);
@@ -495,6 +549,19 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private readonly MotelySearchParameters _searchParameters;
 
     internal CancellationToken _cancellationToken = CancellationToken.None;
+
+    // StopAfter: workers already poll _cancellationToken at every batch boundary, so reaching the
+    // match limit cancels through that same path rather than adding a second stop signal for every
+    // loop to check. The source is linked to the caller's token, so either can end the run.
+    private readonly long _stopAfterMatches;
+    private long _stopMatchCount;
+    private CancellationTokenSource? _stopSource;
+
+    // Distinguishes "stopped because we found what was asked for" from "the caller cancelled".
+    // SignalSearchCompleted reports the former as a completed search — hitting the limit is the
+    // search succeeding, and a caller awaiting completion must not read it as an aborted run.
+    private int _stoppedOnMatchLimit;
+
     private readonly TaskCompletionSource<bool> _completionSource = new(
         TaskCreationOptions.RunContinuationsAsynchronously
     );
@@ -536,6 +603,9 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     public bool IsCompleted => _completionSource.Task.IsCompleted;
     public bool IsSequentialBatchSearch => !_isProviderMode;
 
+    /// <inheritdoc />
+    public bool StoppedOnMatchLimit => Volatile.Read(ref _stoppedOnMatchLimit) != 0;
+
     public long BatchIndex => _batchIndex;
 
     // Batches actually completed (aggregated from thread-local counters)
@@ -558,23 +628,15 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     {
         get
         {
-            if (_isProviderMode)
-            {
-                long totalSeeds = 0;
-                for (int i = 0; i < _plans.Length; i++)
-                {
-                    totalSeeds += _plans[i].SnapshotSeedsSearched();
-                }
-                return totalSeeds;
-            }
-
-            long totalBatches = 0;
+            // One path: both modes count seeds they looked at. Deriving sequential from
+            // completedBatches * SeedsPerBatch credits a whole batch to a run that stopped inside
+            // one, which is wrong by up to 35^batchCharCount per thread.
+            long totalSeeds = 0;
             for (int i = 0; i < _plans.Length; i++)
             {
-                totalBatches += _plans[i].SnapshotBatchesCompleted();
+                totalSeeds += _plans[i].SnapshotSeedsSearched();
             }
-
-            return totalBatches * _plans[0].SeedsPerBatch;
+            return totalSeeds;
         }
     }
     public long MatchingSeeds
@@ -659,6 +721,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         _seedMatchCallback = settings.SeedMatchCallback;
         _scoredResultCallback = settings.ScoredResultCallback;
         _autoScoreCutoff = settings.AutoScoreCutoff;
+        _stopAfterMatches = settings.StopAfterMatches;
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
         {
@@ -751,8 +814,10 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private void SignalSearchCompleted()
     {
         Thread.MemoryBarrier();
+        bool stoppedOnLimit = Volatile.Read(ref _stoppedOnMatchLimit) != 0;
         bool completed =
-            Volatile.Read(ref _isDisposed) == 0 && !_cancellationToken.IsCancellationRequested;
+            Volatile.Read(ref _isDisposed) == 0
+            && (stoppedOnLimit || !_cancellationToken.IsCancellationRequested);
         _completionSource.TrySetResult(completed);
     }
 
@@ -784,8 +849,44 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         if (Interlocked.Exchange(ref _hasStarted, 1) != 0)
             throw new InvalidOperationException("Search has already been started.");
 
-        _cancellationToken = cancellationToken;
+        if (_stopAfterMatches > 0)
+        {
+            _stopSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cancellationToken = _stopSource.Token;
+        }
+        else
+        {
+            _cancellationToken = cancellationToken;
+        }
+
         StartSearchThreads();
+    }
+
+    /// <summary>
+    /// Counts one matched seed toward <see cref="MotelySearchSettings{TBaseFilter}.StopAfterMatches"/>
+    /// and cancels the run once the limit is reached. Called from the reporting paths, which are
+    /// the only places a match becomes real (a seed dropped by the auto-cutoff never gets here).
+    /// Threads in flight finish their current batch, so the run delivers at least the limit.
+    /// </summary>
+    internal void NoteMatchForStop()
+    {
+        if (_stopAfterMatches <= 0)
+            return;
+
+        if (Interlocked.Increment(ref _stopMatchCount) != _stopAfterMatches)
+            return;
+
+        // Exactly the thread that crosses the threshold cancels, so Cancel() runs once even
+        // though later matches keep incrementing past it.
+        Interlocked.Exchange(ref _stoppedOnMatchLimit, 1);
+        try
+        {
+            _stopSource?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Disposed mid-run: the search is already ending, which is what cancelling wanted.
+        }
     }
 
     /// <summary>
@@ -1023,6 +1124,10 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         for (int i = 0; i < _plans.Length; i++)
             _plans[i].Dispose();
         Marshal.FreeHGlobal((nint)_pseudoHashKeyLengths);
+
+        // After the Join above, so no worker is still inside NoteMatchForStop calling Cancel().
+        _stopSource?.Dispose();
+
         _completionSource.TrySetResult(false);
 
         GC.SuppressFinalize(this);
@@ -1193,7 +1298,15 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
             SearchSequentialBatch(batchIdx);
 
-            _localBatchesCompleted++;
+            // Only book a batch that ran to the end. SearchVector returns early on cancellation and
+            // the outer loop keeps calling it, so an abandoned batch still returns normally —
+            // counting it would overstate CompletedBatchCount and the --startBatch resume hint it
+            // feeds. Once per batch, never per seed.
+            if (
+                Volatile.Read(ref Search._isDisposed) == 0
+                && !Search._cancellationToken.IsCancellationRequested
+            )
+                _localBatchesCompleted++;
 
             // Check for timed-out filter batches
             if (Search._additionalFilters.Length != 0)
@@ -1433,6 +1546,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
                     Search._scoredResultCallback?.Invoke(_resultBuffer[lane]);
                     _localMatchingSeeds++;
+                    Search.NoteMatchForStop();
                 }
             }
         }
@@ -1456,6 +1570,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
                     string seedStr = new Span<char>(seed, length).ToString();
                     Search._seedMatchCallback?.Invoke(seedStr);
+                    Search.NoteMatchForStop();
                 }
             }
         }
@@ -2141,6 +2256,18 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
             if (i == 0)
             {
+                // The one leaf every sequential seed passes through, once per 8-wide vector. Count
+                // here rather than deriving from completed batches, so a run that stops mid-batch
+                // reports what it looked at. The final vector is zero-padded — 35 digits don't fill
+                // 5 lanes of 8, see the lane loop below breaking on 0 — so count carrying lanes.
+                _localSeedsSearched +=
+                    MotelyGlobals.MaxVectorWidth
+                    - BitOperations.PopCount(
+                        Vector512
+                            .Equals(seedDigitVector, Vector512<double>.Zero)
+                            .ExtractMostSignificantBits()
+                    );
+
                 SearchSeeds(
                     new MotelySearchContextParams(
                         _hashCache,

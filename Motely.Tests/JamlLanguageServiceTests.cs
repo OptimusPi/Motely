@@ -49,14 +49,6 @@ public class JamlLanguageServiceTests
     }
 
     [Fact]
-    public void Diagnose_JsonDocument_RoutesThroughTheJsonReader()
-    {
-        var text = /*lang=json*/ """{ "must": [{ "joker": "Blueprint" }], "boses": [] }""";
-        var diagnostic = Assert.Single(JamlLanguageService.Diagnose(text));
-        Assert.Contains("boses", diagnostic.Message);
-    }
-
-    [Fact]
     public void Diagnose_SyntaxError_CarriesTheParsersSpan()
     {
         var text = "name: ok\nmust\n";

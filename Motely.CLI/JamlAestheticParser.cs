@@ -15,6 +15,10 @@ public static class JamlAestheticParser
     [
         ("palindrome", JamlAesthetic.Palindrome),
         ("echo", JamlAesthetic.Echo),
+        ("mirror", JamlAesthetic.Mirror),
+        ("repeater", JamlAesthetic.Repeater),
+        ("step", JamlAesthetic.Step),
+        ("leet", JamlAesthetic.Leet),
         ("gross", JamlAesthetic.Gross),
         ("funny", JamlAesthetic.Funny),
         ("balatro", JamlAesthetic.Balatro),
