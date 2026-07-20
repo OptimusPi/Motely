@@ -1,67 +1,191 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { render } from "../engine.js";
-import type { JsonNode } from "../engine.js";
-import { balatroRegistry } from "../registry.js";
+import type React from "react";
+import { useEffect, useState } from "react";
+import {
+  MotelyJaml,
+  MotelyJamlyzer,
+  MotelyBossBlind,
+  MotelyVoucher,
+  type MotelyJamlyzerSeedResult,
+} from "motely-wasm";
+import { ensureMotelyReady } from "../../lib/motely/runtime.js";
 import { JimboApp } from "../../ui/JimboApp.js";
+import { JimboPanel } from "../../ui/JimboPanel.js";
+import { JimboText } from "../../ui/jimboText.js";
+import { JimboSwipeDeck } from "../../ui/JimboSwipeDeck.js";
+import {
+  resolveAnalyzerShopItem,
+  JamlGameCard,
+  JamlBoss,
+  JamlVoucher,
+} from "../../components/GameCard.js";
+import { BOSSES, VOUCHERS } from "../../sprites/spriteData.js";
 
 /**
- * Real rows from the community seed library (list_seeds, 2026-07-19).
- * Nothing here is invented — seed, score, deck, stake and filter are the
- * stored values. Fields the library returns as null stay absent.
+ * Live triage: motely-wasm boots IN the browser, analyzes real seeds, and each
+ * card is a real MotelyJamlyzerSeedResult — score, boss, voucher and decoded
+ * shop-item sprites straight off the engine. Nothing here is frozen JSON; this
+ * is the client-side analysis path the MCP app runs, which is exactly why it
+ * belongs in a dev server you can drive from a phone.
  */
-const FOUND_SEEDS = [
-  { seed: "H95HQCVY", score: 1000, deck: "Ghost", stake: "White", filter: "cola-faucet-v3-early-detonation-whimsy" },
-  { seed: "BQ6MGFG8", score: 800, deck: "Ghost", stake: "White", filter: "cola-faucet-ghost" },
-  { seed: "ILJYQ7NG", score: 610, deck: "Ghost", stake: "White", filter: null },
-  { seed: "R1CZLXJ8", score: 399, deck: "Red", stake: "White", filter: null },
-  { seed: "RQ18NZ7U", score: 380, deck: "Anaglyph", stake: "White", filter: "whimsy-dicetricks" },
-  { seed: "7KHAAHL5", score: 345, deck: "Anaglyph", stake: "White", filter: "whimsy-dicetricks" },
-  { seed: "QWXWNV1R", score: 255, deck: "Ghost", stake: "White", filter: null },
-  { seed: "NAT1GH8W", score: 220, deck: "Anaglyph", stake: "White", filter: "nat-oops-copy-dynasty" },
-  { seed: "5WP4U311", score: 200, deck: "Anaglyph", stake: "White", filter: "anaglyph-negativetag-skipper" },
-  { seed: "WVDWUEAA", score: 198, deck: "Plasma", stake: "White", filter: null },
-  { seed: "3LOVEOOG", score: 160, deck: "Anaglyph", stake: "White", filter: "anaglyph-negativetag-skipper-v2" },
-  { seed: "POAYQFL1", score: 160, deck: "Red", stake: "White", filter: "perkeo-oops-shitload" },
-  { seed: "LOLAEFGT", score: 140, deck: "Red", stake: "White", filter: "lola-perkeo" },
-];
 
-function seedCard(row: (typeof FOUND_SEEDS)[number]): JsonNode {
-  const body: JsonNode[] = [
-    { type: "Text", props: { body: row.seed, variant: "title" } },
-    { type: "Spacer", props: { size: 8 } },
-    { type: "Text", props: { body: `Score ${row.score}`, variant: "accent" } },
-    { type: "Spacer", props: { size: 12 } },
-    {
-      type: "Grid",
-      props: { columns: 2, gap: 8 },
-      children: [
-        { type: "Badge", props: { label: row.deck, tone: "purple" } },
-        { type: "Badge", props: { label: row.stake, tone: "grey" } },
-      ],
-    },
-  ];
+// Real seeds from the community library (list_seeds). analyzeSeeds reads the
+// seeds off the JAML's own `seeds:` field and returns per-ante analysis.
+const TRIAGE_JAML = `deck: Anaglyph
+stake: White
+should:
+  - joker: Perkeo
+    score: 10
+  - joker: Blueprint
+    score: 5
+  - joker: Brainstorm
+    score: 5
+seeds:
+  - H95HQCVY
+  - BQ6MGFG8
+  - ILJYQ7NG
+  - RQ18NZ7U
+  - 7KHAAHL5
+  - NAT1GH8W
+  - 5WP4U311
+  - 3LOVEOOG
+  - POAYQFL1
+  - LOLAEFGT
+`;
 
-  if (row.filter) {
-    body.push({ type: "Spacer", props: { size: 12 } });
-    body.push({ type: "Text", props: { body: row.filter, variant: "muted" } });
-  }
-
-  return {
-    type: "Panel",
-    props: { title: "Found seed", variant: "accent" },
-    children: body,
-  };
+function bossName(v: MotelyBossBlind): string {
+  const key = MotelyBossBlind[v];
+  if (!key) return "Small Blind";
+  const norm = key.toLowerCase();
+  return BOSSES.find((b) => b.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === norm)?.name ?? key;
 }
 
-/** The entire screen as data. A server could send exactly this. */
-const TRIAGE_SPEC: JsonNode = {
-  type: "SwipeDeck",
-  props: { width: 280, height: 360 },
-  children: FOUND_SEEDS.map(seedCard),
-};
+function voucherName(v: MotelyVoucher): string {
+  const key = MotelyVoucher[v];
+  if (!key) return "";
+  const norm = key.toLowerCase();
+  return VOUCHERS.find((x) => x.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === norm)?.name ?? key;
+}
+
+function ShopItem({ value, scale = 0.4 }: { value: number; scale?: number }) {
+  const resolved = resolveAnalyzerShopItem({ id: String(value), name: "", value }, scale);
+  if (resolved.kind === "voucher") return <JamlVoucher voucherName={resolved.voucherName} scale={scale} />;
+  if (resolved.kind === "joker" || resolved.kind === "consumable" || resolved.kind === "playing")
+    return <JamlGameCard card={resolved.card} type={resolved.type} />;
+  return (
+    <div
+      className="j-game-card j-game-card--unknown"
+      style={{ "--j-card-width": `${71 * scale}px` } as React.CSSProperties}
+    >
+      <JimboText size="micro" tone="grey">?</JimboText>
+    </div>
+  );
+}
+
+/** One real analyzed seed, painted as a triage card. */
+function SeedCard({ row }: { row: MotelyJamlyzerSeedResult }) {
+  const isMatch = (row.score ?? 0) >= 1;
+  const ante1 = row.antes?.find((a) => a.ante === 1);
+
+  return (
+    <JimboPanel style={{ width: "100%", height: "100%", boxSizing: "border-box" }}>
+      <div style={{ display: "grid", gap: 10, justifyItems: "center" }}>
+        <JimboText size="lg" tone="white">{row.seed}</JimboText>
+        <JimboText size="sm" tone={isMatch ? "green" : "red"}>
+          {isMatch ? `Match · score ${row.score}` : `Miss · score ${row.score}`}
+        </JimboText>
+
+        {ante1 ? (
+          <>
+            <div style={{ display: "grid", gridAutoFlow: "column", gap: 12, justifyContent: "center" }}>
+              <div style={{ display: "grid", gap: 4, justifyItems: "center" }}>
+                <JamlBoss bossName={bossName(ante1.boss)} scale={0.42} />
+                <JimboText size="micro" tone="grey">{bossName(ante1.boss)}</JimboText>
+              </div>
+              <div style={{ display: "grid", gap: 4, justifyItems: "center" }}>
+                <JamlVoucher voucherName={voucherName(ante1.voucher)} scale={0.42} />
+                <JimboText size="micro" tone="grey">{voucherName(ante1.voucher)}</JimboText>
+              </div>
+            </div>
+
+            <JimboText size="micro" tone="gold">Ante 1 shop</JimboText>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, auto)",
+                gap: 4,
+                justifyContent: "center",
+              }}
+            >
+              {(ante1.shopItems ?? []).slice(0, 8).map((item, i) => (
+                <ShopItem key={i} value={item.value} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <JimboText size="xs" tone="grey">No ante-1 analysis</JimboText>
+        )}
+      </div>
+    </JimboPanel>
+  );
+}
+
+type LoadState =
+  | { status: "loading" }
+  | { status: "ready"; rows: readonly MotelyJamlyzerSeedResult[]; ms: number }
+  | { status: "error"; message: string };
+
+function LiveTriage() {
+  const [load, setLoad] = useState<LoadState>({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        await ensureMotelyReady();
+        const t0 = performance.now();
+        const rows = MotelyJamlyzer.analyzeSeeds(MotelyJaml.fromYaml(TRIAGE_JAML.trim()));
+        const ms = performance.now() - t0;
+        if (!cancelled) setLoad({ status: "ready", rows, ms });
+      } catch (e) {
+        if (!cancelled) setLoad({ status: "error", message: e instanceof Error ? e.message : String(e) });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (load.status === "loading")
+    return (
+      <JimboPanel>
+        <JimboText size="sm" tone="white">Booting motely-wasm, analyzing…</JimboText>
+      </JimboPanel>
+    );
+
+  if (load.status === "error")
+    return (
+      <JimboPanel>
+        <JimboText size="xs" tone="red">{load.message}</JimboText>
+      </JimboPanel>
+    );
+
+  return (
+    <div style={{ display: "grid", gap: 8, justifyItems: "center" }}>
+      <JimboText size="micro" tone="grey">
+        {load.ms.toFixed(0)} ms · {load.rows.length} seeds analyzed live
+      </JimboText>
+      <JimboSwipeDeck width={300} height={400}>
+        {load.rows.map((row) => (
+          <SeedCard key={row.seed} row={row} />
+        ))}
+      </JimboSwipeDeck>
+    </div>
+  );
+}
 
 const meta: Meta = {
-  title: "Json Render / SwipeDeck",
+  title: "Wire Format/SwipeDeck",
   parameters: { layout: "centered" },
   decorators: [
     (Story) => (
@@ -76,19 +200,10 @@ export default meta;
 type Story = StoryObj;
 
 /**
- * Drag left to pass, right to keep. Arrow keys work too, backspace undoes.
- * Touch-dragging is the point — this is built for triaging a search that
- * returned more seeds than anyone will read.
+ * Drag left to pass, right to keep. Arrow keys and backspace-to-undo also work.
+ * Every card is a seed run through motely-wasm live in this browser tab.
  */
-export const Triage: Story = {
-  render: () => <>{render(TRIAGE_SPEC, balatroRegistry)}</>,
-};
-
-/** The spec above, as the JSON a server would actually put on the wire. */
-export const AsWireFormat: Story = {
-  render: () => (
-    <pre style={{ maxWidth: 520, overflowX: "auto", fontSize: 11, lineHeight: 1.5 }}>
-      {JSON.stringify(TRIAGE_SPEC, null, 2)}
-    </pre>
-  ),
+export const LiveTriage_: Story = {
+  name: "Live Triage",
+  render: () => <LiveTriage />,
 };

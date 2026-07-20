@@ -22,7 +22,7 @@ function JamlIdeVisualStory() {
 }
 
 const meta: Meta = {
-  title: "JAML IDE / JamlIdeVisual (drag-and-drop)",
+  title: "Screens/JAML IDE/Visual Builder",
   parameters: { layout: "fullscreen" },
 };
 

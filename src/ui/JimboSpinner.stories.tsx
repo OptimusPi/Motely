@@ -3,7 +3,7 @@ import { useState } from "react";
 import { JimboSpinner } from "./JimboSpinner.js";
 
 const meta: Meta<typeof JimboSpinner> = {
-  title: "ui/JimboSpinner",
+  title: "Primitives/Display/JimboSpinner",
   component: JimboSpinner,
 };
 export default meta;

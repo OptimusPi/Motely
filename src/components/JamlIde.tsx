@@ -187,7 +187,7 @@ function ResultsView({
             >
               <span
                 style={{
-                  fontFamily: "m6x11plus, monospace",
+                  fontFamily: "var(--j-font-code)",
                   fontWeight: "normal",
                   fontSize: 14,
                   letterSpacing: 1,

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JimboWordmark } from "./JimboWordmark.js";
 
 const meta: Meta<typeof JimboWordmark> = {
-  title: "ui/JimboWordmark",
+  title: "Foundations/Wordmark",
   component: JimboWordmark,
 };
 export default meta;

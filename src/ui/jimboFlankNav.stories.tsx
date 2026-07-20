@@ -3,7 +3,7 @@ import { JimboFlankNav } from "./jimboFlankNav.js";
 import { JimboText } from "./jimboText.js";
 
 const meta: Meta<typeof JimboFlankNav> = {
-  title: "ui/JimboFlankNav",
+  title: "Primitives/Layout/JimboFlankNav",
   component: JimboFlankNav,
 };
 export default meta;

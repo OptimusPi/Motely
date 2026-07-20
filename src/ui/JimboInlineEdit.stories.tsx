@@ -3,7 +3,7 @@ import { useState } from "react";
 import { JimboInlineEdit } from "./JimboInlineEdit.js";
 
 const meta: Meta<typeof JimboInlineEdit> = {
-  title: "ui/JimboInlineEdit",
+  title: "Primitives/Inputs/JimboInlineEdit",
   component: JimboInlineEdit,
 };
 export default meta;

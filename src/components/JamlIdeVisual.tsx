@@ -135,7 +135,7 @@ function ClauseCard({
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                     style={{
-                        fontFamily: "m6x11plus, ui-monospace, monospace",
+                        fontFamily: "var(--j-font-code)",
                         fontSize: 13,
                         color: C.WHITE,
                         letterSpacing: 0.5,
@@ -149,12 +149,12 @@ function ClauseCard({
                 <div style={{ display: "flex", gap: 3, marginTop: 3, alignItems: "center", flexWrap: "wrap" }}>
                     {clause.antes && clause.antes.length > 0 && (
                         <>
-                            <div style={{ fontFamily: "m6x11plus, ui-monospace, monospace", fontSize: 8, color: C.GREY, letterSpacing: 1 }}>A</div>
+                            <div style={{ fontFamily: "var(--j-font-code)", fontSize: 8, color: C.GREY, letterSpacing: 1 }}>A</div>
                             {clause.antes.map((a) => (
                                 <div
                                     key={a}
                                     style={{
-                                        fontFamily: "m6x11plus, ui-monospace, monospace",
+                                        fontFamily: "var(--j-font-code)",
                                         fontSize: 9,
                                         padding: "1px 4px",
                                         background: C.DARKEST,
@@ -173,7 +173,7 @@ function ClauseCard({
                         <div
                             style={{
                                 marginLeft: 4,
-                                fontFamily: "m6x11plus, ui-monospace, monospace",
+                                fontFamily: "var(--j-font-code)",
                                 fontSize: 9,
                                 padding: "1px 5px",
                                 background: C.RED,
@@ -234,7 +234,7 @@ function MysteryAddTile({ zone, onTap }: { zone: JamlZone; onTap?: () => void })
                     background: C.DARKEST,
                     border: `2px solid ${z.color}`,
                     borderRadius: 6,
-                    fontFamily: "m6x11plus, ui-monospace, monospace",
+                    fontFamily: "var(--j-font-code)",
                     fontSize: 24,
                     color: z.color,
                 }}
@@ -243,7 +243,7 @@ function MysteryAddTile({ zone, onTap }: { zone: JamlZone; onTap?: () => void })
             </div>
             <div
                 style={{
-                    fontFamily: "m6x11plus, ui-monospace, monospace",
+                    fontFamily: "var(--j-font-code)",
                     fontSize: 12,
                     color: z.accent,
                 }}
@@ -284,7 +284,7 @@ function ZoneRail({
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                 <div
                     style={{
-                        fontFamily: "m6x11plus, ui-monospace, monospace",
+                        fontFamily: "var(--j-font-code)",
                         fontSize: 12,
                         padding: "2px 6px",
                         background: z.color,
@@ -296,11 +296,11 @@ function ZoneRail({
                     {z.label}
                 </div>
                 <div style={{ flex: 1, height: 2, background: `${z.color}55`, borderRadius: 1 }} />
-                <div style={{ fontFamily: "m6x11plus, ui-monospace, monospace", fontSize: 8, color: C.GREY }}>
+                <div style={{ fontFamily: "var(--j-font-code)", fontSize: 8, color: C.GREY }}>
                     {clauses.length}
                 </div>
             </div>
-            <div style={{ fontFamily: "m6x11plus, ui-monospace, monospace", fontSize: 9, color: C.GREY, letterSpacing: 0.5, marginBottom: 8 }}>
+            <div style={{ fontFamily: "var(--j-font-code)", fontSize: 9, color: C.GREY, letterSpacing: 0.5, marginBottom: 8 }}>
                 {z.hint}
             </div>
 

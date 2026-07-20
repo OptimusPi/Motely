@@ -1,12 +1,34 @@
 import { type FC, useState } from "react";
+import { FiAlertTriangle, FiChevronLeft, FiChevronRight, FiX } from "react-icons/fi";
 import { Panel, Stack, Text, Badge, type BadgeTone } from "./layout.js";
+import { JimboText } from "../../ui/jimboText.js";
+import { JimboButton } from "../../ui/JimboButton.js";
+import { JimboIconButton } from "../../ui/JimboIconButton.js";
 
 /**
  * Domain components — SearchStats, ErrorBanner, LoadingPulse, SeedCard, etc.
  *
- * These are Balatro-specific UI components used by the json-render system.
- * All use CSS tokens and the layout primitives above.
+ * Balatro-specific json-render nodes. Layout is grid, never flex (host iframes
+ * size flex differently per host — see CLAUDE.md rule #1), interactive controls
+ * are the real Jimbo button primitives, and every spacing/radius value comes from
+ * a real --j-* token. An earlier pass used flex, raw <button>s, an emoji, and
+ * invented tokens (--j-radius, --j-space-3, --j-text-lg) that render as fallback.
  */
+
+/* Reusable grid rows — the no-flex replacements for the old flex rows. */
+const ROW: React.CSSProperties = {
+  display: "grid",
+  gridAutoFlow: "column",
+  gridAutoColumns: "max-content",
+  alignItems: "center",
+};
+// Wraps pills onto more rows without flex-wrap: auto-fit grid tracks sized to content.
+const PILLS: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(64px, max-content))",
+  gap: 6,
+  justifyContent: "start",
+};
 
 /* ─── SearchStats ─── */
 export interface SearchStatsProps {
@@ -47,13 +69,7 @@ export const SearchStats: FC<SearchStatsProps> = ({
   return (
     <Panel className={className} variant="accent">
       <Stack gap={8}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        <div style={{ ...ROW, gap: 8, justifyContent: "start" }}>
           <div
             style={{
               width: 8,
@@ -65,14 +81,7 @@ export const SearchStats: FC<SearchStatsProps> = ({
           />
           <Text body={statusLabel} variant="accent" />
           {status === "running" && (
-            <span
-              style={{
-                animation: "pulse 1.5s infinite",
-                color: "var(--j-blue)",
-              }}
-            >
-              ...
-            </span>
+            <span style={{ animation: "pulse 1.5s infinite", color: "var(--j-blue)" }}>...</span>
           )}
         </div>
 
@@ -120,11 +129,7 @@ export interface ErrorBannerProps {
   className?: string;
 }
 
-export const ErrorBanner: FC<ErrorBannerProps> = ({
-  message,
-  onDismiss,
-  className = "",
-}) => {
+export const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss, className = "" }) => {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
 
@@ -133,35 +138,28 @@ export const ErrorBanner: FC<ErrorBannerProps> = ({
       className={className}
       style={{
         border: "2px solid var(--j-red)",
-        borderRadius: "var(--j-radius)",
+        borderRadius: "var(--j-radius-lg)",
         background: "var(--j-dark-red)",
-        padding: "var(--j-space-3) var(--j-space-4)",
-        display: "flex",
+        padding: "var(--j-space-lg) var(--j-space-xl)",
+        display: "grid",
+        gridTemplateColumns: "1fr auto",
         alignItems: "center",
-        justifyContent: "space-between",
         gap: 12,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ color: "var(--j-red)", fontSize: "var(--j-text-lg)" }}>⚠</span>
+      <div style={{ ...ROW, gap: 8 }}>
+        <FiAlertTriangle color="var(--j-red)" aria-hidden />
         <Text body={message} variant="error" />
       </div>
       {onDismiss && (
-        <button
-          onClick={() => setDismissed(true)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--j-red)",
-            cursor: "pointer",
-            fontSize: "var(--j-text-lg)",
-            padding: 0,
-            lineHeight: 1,
-          }}
+        <JimboIconButton
+          size="sm"
+          tone="destructive"
           aria-label="Dismiss error"
+          onClick={() => setDismissed(true)}
         >
-          ×
-        </button>
+          <FiX />
+        </JimboIconButton>
       )}
     </div>
   );
@@ -173,35 +171,24 @@ export interface LoadingPulseProps {
   className?: string;
 }
 
-export const LoadingPulse: FC<LoadingPulseProps> = ({
-  text = "Loading...",
-  className = "",
-}) => {
-  return (
+export const LoadingPulse: FC<LoadingPulseProps> = ({ text = "Loading...", className = "" }) => (
+  <div
+    className={className}
+    style={{ ...ROW, gap: 12, justifyContent: "center", padding: "var(--j-space-xl)" }}
+  >
     <div
-      className={className}
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        padding: "var(--j-space-5)",
+        width: 16,
+        height: 16,
+        borderRadius: "50%",
+        background: "var(--j-blue)",
+        animation: "pulse 1.5s infinite",
+        boxShadow: "0 0 12px var(--j-blue)",
       }}
-    >
-      <div
-        style={{
-          width: 16,
-          height: 16,
-          borderRadius: "50%",
-          background: "var(--j-blue)",
-          animation: "pulse 1.5s infinite",
-          boxShadow: "0 0 12px var(--j-blue)",
-        }}
-      />
-      <Text body={text} variant="muted" />
-    </div>
-  );
-};
+    />
+    <Text body={text} variant="muted" />
+  </div>
+);
 
 /* ─── SeedCard ─── */
 export interface SeedCardProps {
@@ -233,9 +220,9 @@ export const SeedCard: FC<SeedCardProps> = ({
       tabIndex={onClick ? 0 : undefined}
       style={{
         border: "2px solid var(--j-panel-edge)",
-        borderRadius: "var(--j-radius)",
+        borderRadius: "var(--j-radius-lg)",
         background: "var(--j-surface-inset)",
-        padding: "var(--j-space-3)",
+        padding: "var(--j-space-lg)",
         cursor: onClick ? "pointer" : "default",
         transition: "var(--j-transition)",
         position: "relative",
@@ -256,37 +243,22 @@ export const SeedCard: FC<SeedCardProps> = ({
       }}
     >
       <Stack gap={8}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center" }}>
+          <div style={{ ...ROW, gap: 8 }}>
             {rank !== undefined && (
-              <span
-                style={{
-                  color: "var(--j-gold)",
-                  fontSize: "var(--j-text-sm)",
-                  fontWeight: 700,
-                  minWidth: 24,
-                }}
-              >
+              <JimboText size="sm" tone="gold">
                 #{rank}
-              </span>
+              </JimboText>
             )}
             <Text body={seed} variant="accent" />
           </div>
-          {score !== undefined && (
-            <Badge label={String(score)} tone="gold" />
-          )}
+          {score !== undefined && <Badge label={String(score)} tone="gold" />}
         </div>
 
         {edition && <Badge label={edition} tone="purple" />}
 
         {highlights && highlights.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div style={PILLS}>
             {highlights.map((h, i) => (
               <Badge key={i} label={h} tone="green" />
             ))}
@@ -294,7 +266,7 @@ export const SeedCard: FC<SeedCardProps> = ({
         )}
 
         {jokers && jokers.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div style={PILLS}>
             {jokers.map((j, i) => (
               <Badge key={i} label={j} tone="blue" />
             ))}
@@ -339,51 +311,24 @@ export const SeedList: FC<SeedListProps> = ({
       ))}
 
       {maxPage > 0 && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 12,
-            alignItems: "center",
-            padding: "var(--j-space-3) 0",
-          }}
-        >
-          <button
+        <div style={{ ...ROW, gap: 12, justifyContent: "center", padding: "var(--j-space-lg) 0" }}>
+          <JimboButton
+            size="sm"
+            tone="grey"
             disabled={page <= 0}
             onClick={() => setPage((p) => p - 1)}
-            style={{
-              background: "var(--j-surface-inset)",
-              border: "2px solid var(--j-panel-edge)",
-              color: "var(--j-grey)",
-              padding: "4px 12px",
-              borderRadius: "var(--j-radius)",
-              cursor: page <= 0 ? "not-allowed" : "pointer",
-              opacity: page <= 0 ? 0.5 : 1,
-              fontFamily: "var(--j-font)",
-            }}
           >
-            ← Prev
-          </button>
-          <Text
-            body={`${page + 1} / ${maxPage + 1}`}
-            variant="muted"
-          />
-          <button
+            <FiChevronLeft /> Prev
+          </JimboButton>
+          <Text body={`${page + 1} / ${maxPage + 1}`} variant="muted" />
+          <JimboButton
+            size="sm"
+            tone="grey"
             disabled={page >= maxPage}
             onClick={() => setPage((p) => p + 1)}
-            style={{
-              background: "var(--j-surface-inset)",
-              border: "2px solid var(--j-panel-edge)",
-              color: "var(--j-grey)",
-              padding: "4px 12px",
-              borderRadius: "var(--j-radius)",
-              cursor: page >= maxPage ? "not-allowed" : "pointer",
-              opacity: page >= maxPage ? 0.5 : 1,
-              fontFamily: "var(--j-font)",
-            }}
           >
-            Next →
-          </button>
+            Next <FiChevronRight />
+          </JimboButton>
         </div>
       )}
     </Stack>
@@ -398,20 +343,15 @@ export interface JokerBadgeProps {
   className?: string;
 }
 
-export const JokerBadge: FC<JokerBadgeProps> = ({
-  name,
-  edition,
-  rarity,
-  className = "",
-}) => {
-  const rarityTone: Record<string, string> = {
+export const JokerBadge: FC<JokerBadgeProps> = ({ name, edition, rarity, className = "" }) => {
+  const rarityTone: Record<string, BadgeTone> = {
     Common: "grey",
     Uncommon: "green",
     Rare: "red",
     Legendary: "gold",
   };
 
-  const editionTone: Record<string, string> = {
+  const editionTone: Record<string, BadgeTone> = {
     Foil: "blue",
     Holographic: "green",
     Polychrome: "purple",
@@ -419,11 +359,9 @@ export const JokerBadge: FC<JokerBadgeProps> = ({
   };
 
   return (
-    <div className={className} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <Badge label={name} tone={(rarityTone[rarity ?? ""] as BadgeTone) || "grey"} />
-      {edition && (
-        <Badge label={edition} tone={(editionTone[edition] as BadgeTone) || "grey"} />
-      )}
+    <div className={className} style={{ ...ROW, gap: 6 }}>
+      <Badge label={name} tone={rarityTone[rarity ?? ""] ?? "grey"} />
+      {edition && <Badge label={edition} tone={editionTone[edition] ?? "grey"} />}
     </div>
   );
 };
@@ -434,16 +372,13 @@ export interface EditionBadgeProps {
   className?: string;
 }
 
-export const EditionBadge: FC<EditionBadgeProps> = ({
-  edition,
-  className = "",
-}) => {
-  const map: Record<string, string> = {
+export const EditionBadge: FC<EditionBadgeProps> = ({ edition, className = "" }) => {
+  const map: Record<string, BadgeTone> = {
     Foil: "blue",
     Holographic: "green",
     Polychrome: "purple",
     Negative: "red",
   };
 
-  return <Badge className={className} label={edition} tone={(map[edition] as BadgeTone) || "grey"} />;
+  return <Badge className={className} label={edition} tone={map[edition] ?? "grey"} />;
 };

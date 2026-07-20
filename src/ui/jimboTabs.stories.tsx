@@ -3,7 +3,7 @@ import { useState } from "react";
 import { JimboTabs } from "./jimboTabs.js";
 
 const meta: Meta<typeof JimboTabs> = {
-  title: "ui/JimboTabs",
+  title: "Primitives/Layout/JimboTabs",
   component: JimboTabs,
 };
 export default meta;

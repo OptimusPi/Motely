@@ -21,7 +21,6 @@ export const JimboColorOption = {
   DARK_BLUE: '#0057a1',
   DARK_ORANGE: '#a05b00',
   DARK_GREEN: '#215f46',
-  DARK_PURPLE: '#5e437e',
 
   DARK_GREY: '#3a5055',
   DARKEST: '#1e2b2d',
@@ -29,7 +28,6 @@ export const JimboColorOption = {
   TEAL_GREY: '#404c4e',
   SURFACE: '#3a5055',
   SURFACE_INSET: '#2a3a3f',
-  SURFACE_INSET_ALT: '#324347',
 
   PANEL_EDGE: '#1e2e32',
   INNER_BORDER: '#334461',

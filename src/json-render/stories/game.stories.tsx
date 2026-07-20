@@ -3,7 +3,7 @@ import { Stack } from "../components/layout.js";
 import { JamlGameCard } from "../components/game.js";
 
 const meta: Meta<typeof JamlGameCard> = {
-  title: "json-render/Game",
+  title: "Wire Format/Game",
   component: JamlGameCard,
 };
 

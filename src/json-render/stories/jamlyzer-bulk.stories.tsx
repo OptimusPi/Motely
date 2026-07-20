@@ -3,7 +3,7 @@ import { JamlyzerBulk } from "../../components/JamlyzerBulk.js";
 import fixture from "./fixtures/jamlyzer-aaaaaaaa.json";
 
 const meta: Meta<typeof JamlyzerBulk> = {
-  title: "Jamlyzer / JamlyzerBulk",
+  title: "Screens/Jamlyzer/Bulk",
   component: JamlyzerBulk,
   parameters: {
     layout: "fullscreen",

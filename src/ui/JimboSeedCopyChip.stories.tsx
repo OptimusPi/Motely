@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JimboSeedCopyChip } from "./JimboSeedCopyChip.js";
 
 const meta: Meta<typeof JimboSeedCopyChip> = {
-  title: "ui/JimboSeedCopyChip",
+  title: "Primitives/Display/JimboSeedCopyChip",
   component: JimboSeedCopyChip,
 };
 export default meta;

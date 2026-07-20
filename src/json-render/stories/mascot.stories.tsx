@@ -4,7 +4,7 @@ import { Panel, Stack, Text } from "../components/layout.js";
 import { JammyMascot, JammyOrbitalMenu } from "../components/mascot.js";
 
 const meta: Meta<typeof JammyMascot> = {
-  title: "json-render/Mascot",
+  title: "Wire Format/Mascot",
   component: JammyMascot,
 };
 

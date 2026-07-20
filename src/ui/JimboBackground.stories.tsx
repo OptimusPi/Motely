@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JimboBackground } from "./JimboBackground.js";
 
 const meta: Meta<typeof JimboBackground> = {
-  title: "ui/JimboBackground",
+  title: "Foundations/Background",
   component: JimboBackground,
   parameters: { layout: "fullscreen" },
 };

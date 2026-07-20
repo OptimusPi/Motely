@@ -11,6 +11,7 @@ import {
   type MotelyJamlyzerSeedResult,
 } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
+import { fromJaml } from "../lib/motely/jamlParse.js";
 import { JimboInnerPanel } from "../ui/panel.js";
 import { JimboPanel } from "../ui/JimboPanel.js";
 import { JimboText } from "../ui/jimboText.js";
@@ -118,7 +119,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
           throw new Error(String(validation ?? "Invalid JAML"));
         }
         const t0 = performance.now();
-        const seeds = MotelyJamlyzer.analyzeSeeds(MotelyJaml.fromYaml(trimmed));
+        const seeds = MotelyJamlyzer.analyzeSeeds(fromJaml(trimmed));
         const elapsedMs = performance.now() - t0;
         if (cancelled) return;
         setLoad({ status: "ready", seeds, elapsedMs });

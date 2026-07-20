@@ -4,7 +4,7 @@ import { useState } from "react";
 import { JimboButton } from "./JimboButton.js";
 
 const meta: Meta = {
-  title: "ui/JimboInnerPanel",
+  title: "Primitives/Layout/JimboInnerPanel",
 };
 export default meta;
 

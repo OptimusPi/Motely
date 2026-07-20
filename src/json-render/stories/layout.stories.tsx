@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, Stack, Grid, Text, Badge } from "../components/layout.js";
 
 const meta: Meta<typeof Panel> = {
-  title: "json-render/Layout",
+  title: "Wire Format/Layout",
 };
 
 export default meta;

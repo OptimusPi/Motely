@@ -3,7 +3,7 @@ import { JimboApp } from "./JimboApp.js";
 import { JimboText } from "./jimboText.js";
 
 const meta: Meta<typeof JimboApp> = {
-  title: "ui/JimboApp",
+  title: "Primitives/Layout/JimboApp",
   component: JimboApp,
   parameters: { layout: "fullscreen" },
 };

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JimboBalatroFooter } from "./JimboBalatroFooter.js";
 
 const meta: Meta<typeof JimboBalatroFooter> = {
-  title: "ui/JimboBalatroFooter",
+  title: "Foundations/Balatro Footer",
   component: JimboBalatroFooter,
   parameters: { layout: "fullscreen" },
 };

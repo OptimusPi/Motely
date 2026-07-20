@@ -13,7 +13,7 @@ import { JimboTextInput } from "./JimboTextInput.js";
 import { JimboText } from "./jimboText.js";
 
 const meta: Meta = {
-  title: "ui/JimboPicker",
+  title: "Primitives/Inputs/JimboPicker",
 };
 export default meta;
 

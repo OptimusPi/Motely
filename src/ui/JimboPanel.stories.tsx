@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JimboPanel } from "./JimboPanel.js";
 
 const meta: Meta<typeof JimboPanel> = {
-  title: "ui/JimboPanel",
+  title: "Primitives/Layout/JimboPanel",
   component: JimboPanel,
 };
 export default meta;

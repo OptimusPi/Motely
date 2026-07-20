@@ -3,7 +3,7 @@ import { JimboIconButton } from "./JimboIconButton.js";
 import { FiX } from "react-icons/fi";
 
 const meta: Meta<typeof JimboIconButton> = {
-  title: "ui/JimboIconButton",
+  title: "Primitives/Actions/JimboIconButton",
   component: JimboIconButton,
 };
 export default meta;

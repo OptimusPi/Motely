@@ -3,7 +3,7 @@ import { JamlIde } from './JamlIde';
 import { JimboApp } from '../ui/JimboApp.js';
 
 const meta = {
-  title: 'APPS / JAML IDE',
+  title: 'Screens/JAML IDE/IDE Shell',
   component: JamlIde,
   parameters: { layout: 'fullscreen' },
   decorators: [

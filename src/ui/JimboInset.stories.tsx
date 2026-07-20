@@ -3,7 +3,7 @@ import { JimboInset } from "./JimboInset.js";
 import { JimboText } from "./jimboText.js";
 
 const meta: Meta<typeof JimboInset> = {
-  title: "ui/JimboInset",
+  title: "Primitives/Layout/JimboInset",
   component: JimboInset,
 };
 export default meta;

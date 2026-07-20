@@ -10,7 +10,7 @@ import {
 } from "../components/reference.js";
 
 const meta: Meta<typeof JokerCard> = {
-  title: "json-render/Reference",
+  title: "Wire Format/Reference",
 };
 
 export default meta;

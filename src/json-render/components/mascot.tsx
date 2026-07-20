@@ -1,6 +1,19 @@
-import { type FC, useState } from "react";
+import { type FC, type KeyboardEvent, useState } from "react";
 import { Badge, type BadgeTone } from "./layout.js";
 import { JAMMY_SEED_MASCOT_DATA_URI } from "./jammySeedMascotImage.js";
+
+// Enter/Space activate a role="button" element — the a11y contract a real
+// <button> gives for free. These wrap bare content (an image, a badge) where a
+// JimboButton's bevel/face chrome would be wrong, so they follow SeedCard's
+// role="button" div pattern rather than the raw <button> the design rules forbid.
+function onActivateKey(handler: () => void) {
+  return (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handler();
+    }
+  };
+}
 
 export interface JammyOrbitalMenuItem {
   label: string;
@@ -39,24 +52,25 @@ export const JammyOrbitalMenu: FC<JammyOrbitalMenuProps> = ({
         const angle = start + i * step;
         const x = Math.cos(angle) * radius;
         const y = Math.sin(angle) * radius;
+        const activate = () => onAction?.(item.action);
         return (
-          <button
+          <div
             key={item.action + i}
-            onClick={() => onAction?.(item.action)}
+            role="button"
+            tabIndex={0}
+            onClick={activate}
+            onKeyDown={onActivateKey(activate)}
             style={{
               position: "absolute",
               left: "50%",
               top: "50%",
               transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
               pointerEvents: "auto",
-              background: "none",
-              border: "none",
-              padding: 0,
               cursor: "pointer",
             }}
           >
             <Badge label={item.label} tone={item.tone ?? "blue"} />
-          </button>
+          </div>
         );
       })}
     </div>
@@ -79,19 +93,14 @@ export const JammyMascot: FC<JammyMascotProps> = ({
   className = "",
 }) => {
   const [open, setOpen] = useState(false);
+  const interactive = Boolean(menuItems && menuItems.length > 0);
 
   const handleClick = () => {
-    if (menuItems && menuItems.length > 0) {
-      setOpen((v) => !v);
-    }
+    if (interactive) setOpen((v) => !v);
   };
 
   const animation =
-    mood === "happy"
-      ? "jammy-bounce"
-      : mood === "surprised"
-        ? "jammy-shake"
-        : "jammy-idle";
+    mood === "happy" ? "jammy-bounce" : mood === "surprised" ? "jammy-shake" : "jammy-idle";
 
   return (
     <div
@@ -103,17 +112,17 @@ export const JammyMascot: FC<JammyMascotProps> = ({
         display: "inline-block",
       }}
     >
-      <button
+      <div
+        role={interactive ? "button" : undefined}
+        tabIndex={interactive ? 0 : undefined}
         onClick={handleClick}
+        onKeyDown={interactive ? onActivateKey(handleClick) : undefined}
+        aria-label="Jammy mascot"
         style={{
-          background: "none",
-          border: "none",
-          padding: 0,
-          cursor: menuItems && menuItems.length > 0 ? "pointer" : "default",
+          cursor: interactive ? "pointer" : "default",
           width: size,
           height: size,
         }}
-        aria-label="Jammy mascot"
       >
         <img
           src={JAMMY_SEED_MASCOT_DATA_URI}
@@ -121,7 +130,7 @@ export const JammyMascot: FC<JammyMascotProps> = ({
           draggable={false}
           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
         />
-      </button>
+      </div>
       {open && menuItems && (
         <JammyOrbitalMenu
           items={menuItems}

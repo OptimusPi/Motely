@@ -196,7 +196,7 @@
   border: var(--j-panel-border-width) solid var(--j-border-silver);
   border-radius: var(--j-radius-md, var(--j-radius-lg));
   padding: var(--j-space-sm, 8px);
-  font-family: monospace;
+  font-family: var(--j-font-code);
   font-size: 13px;
   resize: vertical;
 }
@@ -225,8 +225,8 @@
 }
 
 .j-back-btn .j-btn__face {
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 4px;
+  padding-bottom: 6px;
 }
 
 .j-back-btn-wrap {
@@ -289,12 +289,15 @@
   background: var(--j-btn-face-color, var(--j-orange));
   color: var(--j-white);
   text-align: center;
+  line-height: 1;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
   /* Drop shadow at 30% opacity per design. Stacked solid offset, no blur. */
   box-shadow: 0 calc(var(--j-press-y) + 2px) 0 0 rgba(0, 0, 0, 0.3);
   transform: translate(0, 0);
   transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear, background-color var(--j-press-speed) linear;
-  overflow: hidden;
+  /* No overflow:hidden — it sheared pixel-font ascenders whenever padding ran
+     tight. Nothing inside the face bleeds, so clipping bought nothing. */
+  overflow: visible;
   isolation: isolate;
 }
 
@@ -318,35 +321,37 @@
   background: var(--j-btn-shadow-color, var(--j-dark-orange));
 }
 
-/* Sizes */
+/* Sizes. Text anchors to the TOP of the face: the smaller pad goes on top and
+   the slack sits under the glyphs, matching the in-game buttons where the label
+   hugs the top edge above the pressed lip. */
 .j-btn--xs .j-btn__face {
-  padding-top: 6px;
+  padding-top: 3px;
   padding-right: 8px;
-  padding-bottom: 3px;
+  padding-bottom: 6px;
   padding-left: 8px;
   font-size: 11px;
 }
 
 .j-btn--sm .j-btn__face {
-  padding-top: 6px;
+  padding-top: 5px;
   padding-right: 12px;
-  padding-bottom: 5px;
+  padding-bottom: 6px;
   padding-left: 12px;
   font-size: 13px;
 }
 
 .j-btn--md .j-btn__face {
-  padding-top: 9px;
+  padding-top: 6px;
   padding-right: 18px;
-  padding-bottom: 6px;
+  padding-bottom: 9px;
   padding-left: 18px;
   font-size: 16px;
 }
 
 .j-btn--lg .j-btn__face {
-  padding-top: 11px;
+  padding-top: 6px;
   padding-right: 18px;
-  padding-bottom: 6px;
+  padding-bottom: 11px;
   padding-left: 18px;
   font-size: 20px;
 }
@@ -511,50 +516,9 @@
   visibility: hidden;
 }
 
-.j-tab__btn {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  cursor: pointer;
-  border-radius: var(--j-radius-md);
-  padding: 6px 14px;
-  min-height: 28px;
-  background: var(--j-red);
-  box-shadow: 0 5px 0 0 rgba(0, 0, 0, 0.6);
-  color: var(--j-white);
-  text-align: center;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
-  transition: filter 80ms linear, opacity 80ms linear;
-  outline: none;
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.j-tab__btn::before {
-  content: none;
-}
-
-.j-tab__btn > * {
-  position: relative;
-  z-index: 1;
-}
-
-.j-tab__btn[data-active="true"] {
-  /* The tab button does NOT grow / shrink / bob — only the red arrow above
-     it animates. The button holds still so the row of tabs reads as a fixed
-     baseline. The arrow is the only motion. */
-  opacity: 1;
-}
-
-.j-tab__btn[data-active="true"]:hover {
-  background: var(--j-red);
-}
-
-.j-tab__btn[data-active="false"]:hover {
-  background: var(--j-dark-red);
-}
-
+/* Tabs render real JimboButtons (.j-btn--sm .j-btn--red) — no bespoke tab
+   button. The selected tab is marked only by the bouncing arrow above it;
+   the buttons themselves hold still so the row reads as a fixed baseline. */
 
 @keyframes jimbo-bounce {
 
@@ -2703,6 +2667,25 @@
   animation-timing-function: ease-out;
 }
 
+/* Suit colors — the game's inks, not inventions: hearts/diamonds red,
+   spades/clubs black (G.C BLACK #374244, see balatro-lua-notes.md). The dark
+   suits keep legible on the dark bar via the house hard-offset edge, flipped
+   light — recoloring them white is not an option. */
+.j-footer__suit-char--red {
+  color: var(--j-red);
+}
+
+.j-footer__suit-char--black {
+  color: #374244;
+  filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, 0.35));
+}
+
+.j-footer__suit-char svg {
+  display: block;
+  width: 0.95em;
+  height: 0.95em;
+}
+
 
 /* ── Copy row label ───────────────────────────────────────────────────── */
 
@@ -3697,7 +3680,7 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .j-seed-row__code {
-  font-family: 'm6x11', monospace;
+  font-family: var(--j-font-m6x11);
   font-size: 16px;
   color: #fff;
   letter-spacing: 1.5px;
@@ -3705,7 +3688,7 @@
   flex: 1;
 }
 .j-seed-row__score {
-  font-family: 'm6x11', monospace;
+  font-family: var(--j-font-m6x11);
   font-size: 16px;
   color: #e4b643;
 }
@@ -3756,7 +3739,7 @@
   margin-bottom: 2px;
 }
 .j-ante-section__title {
-  font-family: 'm6x11', monospace;
+  font-family: var(--j-font-m6x11);
   font-size: 16px;
   color: #e4b643;
   text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
@@ -3776,7 +3759,7 @@
   box-shadow: inset 0 0 0 1px rgba(228, 182, 67, 0.4);
 }
 .j-stream__label {
-  font-family: 'm6x11', monospace;
+  font-family: var(--j-font-m6x11);
   font-size: 8px;
   color: #708386;
   width: 56px;
@@ -3794,7 +3777,7 @@
   border: 1px solid #334461;
   border-radius: 3px;
   padding: 2px 5px;
-  font-family: 'm6x11', monospace;
+  font-family: var(--j-font-m6x11);
   font-size: 8px;
   color: #b9c2d2;
   white-space: nowrap;
@@ -3856,7 +3839,7 @@
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-family: 'm6x11plus', ui-monospace, monospace;
+  font-family: var(--j-font);
   cursor: pointer;
   line-height: 1;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
@@ -3869,7 +3852,7 @@
   bottom: -16px;
   left: 50%;
   transform: translateX(-50%) translateZ(10px);
-  font-family: 'm6x11plus', ui-monospace, monospace;
+  font-family: var(--j-font);
   font-size: 10px;
   color: var(--j-mystery-slot-label-color);
   white-space: nowrap;

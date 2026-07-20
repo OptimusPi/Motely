@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JamlMapEditor } from "./JamlMapEditor.js";
 
 const meta: Meta<typeof JamlMapEditor> = {
-  title: "Ante Map / JamlMapEditor",
+  title: "Screens/Ante Map/Editor",
   component: JamlMapEditor,
   parameters: { layout: "fullscreen" },
 };

@@ -1,11 +1,30 @@
 import React from "react";
+import { JimboPanel } from "../../ui/JimboPanel.js";
+import { JimboText, type JimboTextSize, type JimboTextTone } from "../../ui/jimboText.js";
+import { JimboBadge, type JimboBadgeTone } from "../../ui/JimboBadge.js";
+import { JimboStack, type JimboGap } from "../../ui/JimboLayout.js";
+import type { JimboSectionTone } from "../../ui/JimboSectionHeader.js";
 
 /**
- * Layout primitives — Panel, Stack, Grid, Text, Spacer, Divider, Badge.
+ * json-render layout primitives — Panel, Stack, Grid, Text, Spacer, Divider, Badge.
  *
- * All use CSS custom properties from jimbo-tokens.css.
- * No external classes. No BEM. Just inline styles + tokens.
+ * These are the node types the json-render engine maps to. They are thin adapters
+ * over the real Jimbo primitives in src/ui/ — the design system with the classes
+ * eyedropped from the game shader, the press-lip, the pixel fonts. An earlier pass
+ * hand-rolled these with inline styles and invented tokens (--j-text-lg,
+ * --j-space-4, --j-radius) that don't exist in jimbo-tokens.css, so every fontSize
+ * resolved to invalid and the text fell back to a system font at the wrong size.
+ * Delegating fixes the rendering and keeps one grammar instead of two.
  */
+
+/* Map a pixel gap number onto the --j-space-* scale (xs 2 · sm 4 · md 8 · lg 12 · xl 16). */
+function gapToken(gap: number): JimboGap {
+  if (gap <= 2) return "xs";
+  if (gap <= 4) return "sm";
+  if (gap <= 8) return "md";
+  if (gap <= 12) return "lg";
+  return "xl";
+}
 
 /* ─── Panel ─── */
 export interface PanelProps {
@@ -16,59 +35,28 @@ export interface PanelProps {
   children?: React.ReactNode;
 }
 
+const PANEL_TONE: Record<NonNullable<PanelProps["variant"]>, JimboSectionTone> = {
+  default: "blue",
+  accent: "blue",
+  muted: "grey",
+};
+
 export const Panel: React.FC<PanelProps> = ({
   title,
   subtitle,
   variant = "default",
-  className = "",
+  className,
   children,
-}) => {
-  const bg =
-    variant === "accent"
-      ? "var(--j-dark-blue)"
-      : variant === "muted"
-        ? "var(--j-surface-inset)"
-        : "var(--j-surface)";
-
-  return (
-    <div
-      className={className}
-      style={{
-        border: "2px solid var(--j-panel-edge)",
-        borderRadius: "var(--j-radius)",
-        background: bg,
-        padding: "var(--j-space-4)",
-        boxShadow: "var(--j-shadow)",
-      }}
-    >
-      {title && (
-        <h3
-          style={{
-            color: "var(--j-blue)",
-            fontSize: "var(--j-text-lg)",
-            margin: "0 0 var(--j-space-2) 0",
-            fontFamily: "var(--j-font)",
-          }}
-        >
-          {title}
-        </h3>
-      )}
-      {subtitle && (
-        <p
-          style={{
-            color: "var(--j-grey)",
-            fontSize: "var(--j-text-sm)",
-            margin: "0 0 var(--j-space-3) 0",
-            opacity: 0.8,
-          }}
-        >
-          {subtitle}
-        </p>
-      )}
-      {children}
-    </div>
-  );
-};
+}) => (
+  <JimboPanel title={title} tone={PANEL_TONE[variant]} body className={className}>
+    {subtitle ? (
+      <JimboText size="sm" tone="grey">
+        {subtitle}
+      </JimboText>
+    ) : null}
+    {children}
+  </JimboPanel>
+);
 
 /* ─── Stack ─── */
 export interface StackProps {
@@ -78,27 +66,11 @@ export interface StackProps {
   children?: React.ReactNode;
 }
 
-export const Stack: React.FC<StackProps> = ({
-  gap = 12,
-  align = "stretch",
-  className = "",
-  children,
-}) => {
-  return (
-    <div
-      className={className}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap,
-        alignItems: align,
-        width: "100%",
-      }}
-    >
-      {children}
-    </div>
-  );
-};
+export const Stack: React.FC<StackProps> = ({ gap = 12, align, className, children }) => (
+  <JimboStack gap={gapToken(gap)} align={align} className={className}>
+    {children}
+  </JimboStack>
+);
 
 /* ─── Grid ─── */
 export interface GridProps {
@@ -108,70 +80,48 @@ export interface GridProps {
   children?: React.ReactNode;
 }
 
-export const Grid: React.FC<GridProps> = ({
-  columns = 3,
-  gap = 16,
-  className = "",
-  children,
-}) => {
-  return (
-    <div
-      className={className}
-      style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap,
-        width: "100%",
-      }}
-    >
-      {children}
-    </div>
-  );
-};
+// Grid is deterministic across host iframes (unlike flex), so it needs no primitive.
+export const Grid: React.FC<GridProps> = ({ columns = 3, gap = 16, className, children }) => (
+  <div
+    className={className}
+    style={{
+      display: "grid",
+      gridTemplateColumns: `repeat(${columns}, 1fr)`,
+      gap,
+      width: "100%",
+    }}
+  >
+    {children}
+  </div>
+);
 
 /* ─── Text ─── */
 export interface TextProps {
   body: string;
   variant?: "title" | "body" | "muted" | "accent" | "error";
   className?: string;
-  children?: React.ReactNode; // allows wrapping text in spans
+  children?: React.ReactNode;
 }
 
-export const Text: React.FC<TextProps> = ({
-  body,
-  variant = "body",
-  className = "",
-  children,
-}) => {
-  const colors: Record<string, string> = {
-    title: "var(--j-gold)",
-    body: "var(--j-grey)",
-    muted: "var(--j-dark-grey)",
-    accent: "var(--j-blue)",
-    error: "var(--j-red)",
-  };
+// json-render's variants → the real (size, tone) axes JimboText exposes.
+const TEXT_MAP: Record<
+  NonNullable<TextProps["variant"]>,
+  { size: JimboTextSize; tone: JimboTextTone }
+> = {
+  title: { size: "lg", tone: "gold" },
+  body: { size: "md", tone: "grey" },
+  muted: { size: "sm", tone: "grey" },
+  accent: { size: "md", tone: "blue" },
+  error: { size: "sm", tone: "red" },
+};
 
-  const sizes: Record<string, string> = {
-    title: "var(--j-text-xl)",
-    body: "var(--j-text-md)",
-    muted: "var(--j-text-sm)",
-    accent: "var(--j-text-md)",
-    error: "var(--j-text-sm)",
-  };
-
+export const Text: React.FC<TextProps> = ({ body, variant = "body", className, children }) => {
+  const { size, tone } = TEXT_MAP[variant];
   return (
-    <span
-      className={className}
-      style={{
-        color: colors[variant] || colors.body,
-        fontSize: sizes[variant] || sizes.body,
-        fontFamily: "var(--j-font)",
-        lineHeight: 1.4,
-      }}
-    >
+    <JimboText size={size} tone={tone} className={className}>
       {body}
       {children}
-    </span>
+    </JimboText>
   );
 };
 
@@ -180,28 +130,26 @@ export interface SpacerProps {
   size?: number;
 }
 
-export const Spacer: React.FC<SpacerProps> = ({ size = 16 }) => {
-  return <div style={{ height: size, width: "100%" }} />;
-};
+export const Spacer: React.FC<SpacerProps> = ({ size = 16 }) => (
+  <div style={{ height: size, width: "100%" }} />
+);
 
 /* ─── Divider ─── */
 export interface DividerProps {
   className?: string;
 }
 
-export const Divider: React.FC<DividerProps> = ({ className = "" }) => {
-  return (
-    <div
-      className={className}
-      style={{
-        height: 2,
-        background: "var(--j-panel-edge)",
-        width: "100%",
-        margin: "var(--j-space-3) 0",
-      }}
-    />
-  );
-};
+export const Divider: React.FC<DividerProps> = ({ className }) => (
+  <div
+    className={className}
+    style={{
+      height: 2,
+      background: "var(--j-panel-edge)",
+      width: "100%",
+      margin: "var(--j-space-lg) 0",
+    }}
+  />
+);
 
 /* ─── Badge ─── */
 export type BadgeTone = "red" | "blue" | "green" | "orange" | "gold" | "purple" | "grey";
@@ -212,41 +160,20 @@ export interface BadgeProps {
   className?: string;
 }
 
-export const Badge: React.FC<BadgeProps> = ({
-  label,
-  tone = "grey",
-  className = "",
-}) => {
-  const toneMap: Record<string, { bg: string; color: string }> = {
-    red: { bg: "var(--j-dark-red)", color: "var(--j-red)" },
-    blue: { bg: "var(--j-dark-blue)", color: "var(--j-blue)" },
-    green: { bg: "var(--j-dark-green)", color: "var(--j-green)" },
-    orange: { bg: "var(--j-dark-orange)", color: "var(--j-orange)" },
-    gold: { bg: "var(--j-dark-orange)", color: "var(--j-gold)" },
-    purple: { bg: "var(--j-dark-purple)", color: "var(--j-purple)" },
-    grey: { bg: "var(--j-surface-inset)", color: "var(--j-grey)" },
-  };
-
-  const t = toneMap[tone] || toneMap.grey;
-
-  return (
-    <span
-      className={className}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "2px 10px",
-        borderRadius: 999,
-        background: t.bg,
-        color: t.color,
-        fontSize: "var(--j-text-xs)",
-        fontFamily: "var(--j-font)",
-        fontWeight: 700,
-        letterSpacing: "0.5px",
-        textTransform: "uppercase" as const,
-      }}
-    >
-      {label}
-    </span>
-  );
+// JimboBadge has no gold tone on purpose — gold is reserved for text, not pill
+// surfaces — so gold folds to the nearest warm badge, orange.
+const BADGE_TONE: Record<BadgeTone, JimboBadgeTone> = {
+  red: "red",
+  blue: "blue",
+  green: "green",
+  orange: "orange",
+  gold: "orange",
+  purple: "purple",
+  grey: "grey",
 };
+
+export const Badge: React.FC<BadgeProps> = ({ label, tone = "grey", className }) => (
+  <JimboBadge tone={BADGE_TONE[tone]} className={className}>
+    {label}
+  </JimboBadge>
+);

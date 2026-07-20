@@ -26,6 +26,22 @@ const input = payload.tool_input ?? {};
 if (tool !== 'Edit' && tool !== 'Write' && tool !== 'MultiEdit') process.exit(0);
 
 const filePath = (input.file_path ?? '').replace(/\\/g, '/');
+
+// The enforcement layer is not editable. When a rule blocks an edit, the known
+// failure mode is to edit the rule instead — so writes to the hooks, the eslint
+// mirror, or the settings that wire them up are blocked outright, regardless of
+// content. If a rule is genuinely wrong, say so to the user; only a human
+// changes these files.
+if (/(^|\/)(\.claude\/(hooks\/|settings(\.local)?\.json$)|eslint-rules\/)/.test(filePath)) {
+  process.stderr.write(
+    'BLOCKED: this file is part of the design-rule enforcement layer ' +
+      '(.claude/hooks/, eslint-rules/, .claude/settings.json) and is not ' +
+      'editable by agents. If you believe a rule is wrong, stop and say so ' +
+      'in your response — do not modify the enforcement itself.\n',
+  );
+  process.exit(2);
+}
+
 // Enforce on TSX/JSX and CSS inside src/. Stories and src/ui/ get a pass for
 // raw <button>/<input> (they are the primitives or test them directly).
 // The no-flex rule (#1) has no exemptions and applies to CSS too — jimbo.css is

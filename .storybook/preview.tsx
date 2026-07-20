@@ -7,6 +7,12 @@ import { JimboBalatroFooter } from "../src/components/JimboBalatroFooter.js";
 const preview: Preview = {
   parameters: {
     layout: "fullscreen",
+    options: {
+      storySort: {
+        order: ["Welcome", "Foundations", "Primitives", "Cards & Sprites", "Wire Format", "Screens"],
+        method: "alphabetical",
+      },
+    },
     backgrounds: {
       options: {
         balatro: { name: "balatro", value: "#0c1818" }

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DeckSprite, DECK_SPRITE_POS, STAKE_SPRITE_POS } from "./DeckSprite.js";
 
 const meta: Meta<typeof DeckSprite> = {
-  title: "components/DeckSprite",
+  title: "Cards & Sprites/DeckSprite",
   component: DeckSprite,
   args: { deck: "erratic", size: 50 },
 };

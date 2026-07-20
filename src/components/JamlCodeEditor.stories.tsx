@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { JamlCodeEditor } from './JamlCodeEditor';
 
 const meta = {
-  title: 'Editor / JAML Code Editor',
+  title: 'Screens/JAML IDE/Code Editor',
   component: JamlCodeEditor,
 } satisfies Meta<typeof JamlCodeEditor>;
 export default meta;

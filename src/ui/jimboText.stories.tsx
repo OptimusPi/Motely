@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JimboText } from "./jimboText.js";
 
 const meta: Meta<typeof JimboText> = {
-  title: "ui/JimboText",
+  title: "Primitives/Display/JimboText",
   component: JimboText,
 };
 export default meta;

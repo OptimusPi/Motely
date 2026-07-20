@@ -21,7 +21,6 @@
   --j-dark-blue: #0057a1;
   --j-dark-orange: #a05b00;
   --j-dark-green: #215f46;
-  --j-dark-purple: #5e437e;
 
   --j-dark-grey: #3a5055;
   --j-darkest: #1e2b2d;
@@ -35,11 +34,9 @@
   /* Surface roles — semantic, not positional.
      --j-surface is the raised panel face (same family as dark-grey).
      --j-surface-inset is a sunken tile sitting ON a panel (darker so it
-     has visual depth). Use --j-surface-inset-alt to alternate (zebra
-     lists, paired info-cards, etc). */
+     has visual depth). */
   --j-surface: #3a5055;
   --j-surface-inset: #2a3a3f;
-  --j-surface-inset-alt: #324347;
 
   --j-panel-edge: #1e2e32;
   --j-inner-border: #334461;
@@ -61,6 +58,9 @@
 
   /* Typography */
   --j-font: 'm6x11plus', 'm6x11', monospace;
+  /* The 16px-grid pixel font, for surfaces whose sizes snap to m6x11's
+     [16,32,48] grid (seed rows, ante titles, stream chips). */
+  --j-font-m6x11: 'm6x11', 'm6x11plus', monospace;
   /* Coding font — used by JamlCodeEditor and .j-code-block. JetBrains Mono
      with a long OS-native fallback chain so the UI still reads as code even
      when the Google Fonts stylesheet fails to load. */
@@ -80,7 +80,6 @@
 
   /* App shell — HARD-LOCKED 375x375. One size, ALWAYS — never fluid, never
      resizes. */
-  --j-footer-h: 28px;
   --j-app-w: 375px;
   --j-app-h: 375px;
 
@@ -99,5 +98,4 @@
   --j-surface-shadow-depth: 4px;
   --j-transition: 0.15s ease-out;
   --j-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
-  --j-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.45);
 }

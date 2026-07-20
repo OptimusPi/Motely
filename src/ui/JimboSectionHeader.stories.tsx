@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JimboSectionHeader } from "./JimboSectionHeader.js";
 
 const meta: Meta<typeof JimboSectionHeader> = {
-  title: "ui/JimboSectionHeader",
+  title: "Primitives/Layout/JimboSectionHeader",
   component: JimboSectionHeader,
 };
 export default meta;

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JamlGameCard, JamlVoucher, JamlTag, JamlBoss } from "./GameCard.js";
 
 const meta: Meta<typeof JamlGameCard> = {
-  title: "components/GameCard",
+  title: "Cards & Sprites/GameCard",
   component: JamlGameCard,
   args: { card: { name: "Joker", scale: 1 }, type: "joker" },
 };

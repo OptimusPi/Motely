@@ -4,7 +4,7 @@ import { JimboApp } from "../../ui/JimboApp.js";
 import fixture from "./fixtures/jamlyzer-aaaaaaaa.json";
 
 const meta: Meta<typeof JamlyzerView> = {
-  title: "Jamlyzer / JamlyzerView",
+  title: "Screens/Jamlyzer/View",
   component: JamlyzerView,
   parameters: {
     layout: "fullscreen",

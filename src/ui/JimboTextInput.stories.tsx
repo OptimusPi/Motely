@@ -3,7 +3,7 @@ import { useState } from "react";
 import { JimboTextInput } from "./JimboTextInput.js";
 
 const meta: Meta<typeof JimboTextInput> = {
-  title: "ui/JimboTextInput",
+  title: "Primitives/Inputs/JimboTextInput",
   component: JimboTextInput,
 };
 export default meta;
