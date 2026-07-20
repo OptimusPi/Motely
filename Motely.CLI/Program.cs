@@ -315,6 +315,14 @@ partial class Program
 
             // --native mode — run a hardcoded C# filter by name
             if (nativeOption.HasValue())
+                return await RunNativeMode();
+
+            return await RunJamlMode();
+
+            // A local function, not a method: it captures the CommandOption objects themselves, so
+            // HasValue() keeps meaning "the user typed this" (see the DefaultValue note above).
+            // Reading values into a parameter list would quietly destroy that distinction.
+            async Task<int> RunNativeMode()
             {
                 // --drown needs a normalized filterId from a JAML file.
                 if (drownOption.HasValue())
@@ -435,321 +443,324 @@ partial class Program
                 return _cts.Token.IsCancellationRequested ? 1 : 0;
             }
 
-            // --jaml mode
-            if (!jamlOption.HasValue())
+            // --jaml mode — the main path: load the filter, build the search, run the passes.
+            async Task<int> RunJamlMode()
             {
-                Console.Error.WriteLine("Error: --jaml <path> or --native <name> required.");
-                return 1;
-            }
-
-            if (
-                !JamlFileLoader.TryLoadFromPath(
-                    jamlOption.ParsedValue,
-                    out var config,
-                    out var loadError
-                )
-            )
-            {
-                Console.Error.WriteLine($"Error: {loadError}");
-                return 1;
-            }
-
-            var deck = config.Deck;
-            var stake = config.Stake;
-            bool drown = drownOption.HasValue();
-            int threads = threadsOption.HasValue()
-                ? threadsOption.ParsedValue
-                : Environment.ProcessorCount;
-            int batchCharCount = batchCharCountOption.HasValue()
-                ? batchCharCountOption.ParsedValue
-                : DefaultBatchCharCount;
-            // Only non-null when the user actually typed --batchCharCount — an explicit request
-            // for the real sequential sweep, which should override a JAML's saved seeds: list.
-            int? explicitBatchCharCount = batchCharCountOption.HasValue() ? batchCharCount : null;
-
-            // Default is auto: without --cutoff we self-tune the score gate instead of
-            // emitting every seed. An explicit integer turns auto off and pins the gate.
-            bool cutoffAuto = true;
-            int cutoffFixed = int.MinValue;
-            if (cutoffOption.HasValue())
-            {
-                var cutoffValue = cutoffOption.ParsedValue.Trim();
-                if (string.Equals(cutoffValue, "auto", StringComparison.OrdinalIgnoreCase))
+                if (!jamlOption.HasValue())
                 {
-                    cutoffAuto = true;
-                }
-                else if (int.TryParse(cutoffValue, out cutoffFixed))
-                {
-                    cutoffAuto = false;
-                }
-                else
-                {
-                    Console.Error.WriteLine("Error: --cutoff must be an integer or 'auto'.");
+                    Console.Error.WriteLine("Error: --jaml <path> or --native <name> required.");
                     return 1;
                 }
-            }
 
-            int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
-            JamlSearchPlan plan;
-            try
-            {
-                // Push fixed --cutoff into the engine so low-scoring seeds are dropped at
-                // the scorer (no callback spam, no per-seed string concat). Auto still needs
-                // the caller-side running-max below since the engine threshold is static.
-                plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
-            }
-            catch (InvalidOperationException ex)
-            {
-                Console.Error.WriteLine($"Error: {ex.Message}");
-                return 1;
-            }
-
-            Console.WriteLine(
-                $"  Cost:  ~{config.SimdCostPerSeed():0.#} crunches/seed "
-                    + $"({config.EstimateFilterCrunches():N0} per {MotelyGlobals.MaxVectorWidth}-seed batch, worst case)"
-            );
-
-            IMotelySearchSettings settings = plan
-                .Settings.WithDeck(deck)
-                .WithStake(stake)
-                .WithThreadCount(threads);
-
-            if (
-                !TryParseSeedOptions(
-                    startSeedOption,
-                    stopSeedOption,
-                    out var jStartIdx,
-                    out var jStopIdx,
-                    out var jSeedOptError
+                if (
+                    !JamlFileLoader.TryLoadFromPath(
+                        jamlOption.ParsedValue,
+                        out var config,
+                        out var loadError
+                    )
                 )
-            )
-            {
-                Console.Error.WriteLine(jSeedOptError);
-                return 1;
-            }
+                {
+                    Console.Error.WriteLine($"Error: {loadError}");
+                    return 1;
+                }
 
-            if (
-                !CliSearchMode.TryApplySearchMode(
-                    settings,
-                    new CliSearchMode.Input(
-                        SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
-                        SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
-                        Drown: drown,
-                        ResultsRootPath: resultsPathOption.HasValue()
-                            ? resultsPathOption.ParsedValue
-                            : null,
-                        FilterId: config.Id,
-                        JamlSeeds: config.Seeds,
-                        KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
-                        PaddingCharsOption: paddingOption.HasValue()
-                            ? paddingOption.ParsedValue
-                            : null,
-                        RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
-                        AestheticName: aestheticOption.HasValue()
-                            ? aestheticOption.ParsedValue
-                            : null,
-                        StartBatch: startBatchOption.HasValue()
-                            ? startBatchOption.ParsedValue
-                            : null,
-                        EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
-                        StartPercent: startPercentOption.HasValue()
-                            ? startPercentOption.ParsedValue
-                            : null,
-                        StartSeedSearchIndex: jStartIdx,
-                        StopSeedSearchIndex: jStopIdx,
-                        BatchCharacterCount: explicitBatchCharCount
-                    ),
-                    msg => Console.Error.WriteLine(msg),
-                    out var jamlSearchModeError,
-                    out settings,
-                    out var jamlSourceLifetime
+                var deck = config.Deck;
+                var stake = config.Stake;
+                bool drown = drownOption.HasValue();
+                int threads = threadsOption.HasValue()
+                    ? threadsOption.ParsedValue
+                    : Environment.ProcessorCount;
+                int batchCharCount = batchCharCountOption.HasValue()
+                    ? batchCharCountOption.ParsedValue
+                    : DefaultBatchCharCount;
+                // Only non-null when the user actually typed --batchCharCount — an explicit request
+                // for the real sequential sweep, which should override a JAML's saved seeds: list.
+                int? explicitBatchCharCount = batchCharCountOption.HasValue() ? batchCharCount : null;
+
+                // Default is auto: without --cutoff we self-tune the score gate instead of
+                // emitting every seed. An explicit integer turns auto off and pins the gate.
+                bool cutoffAuto = true;
+                int cutoffFixed = int.MinValue;
+                if (cutoffOption.HasValue())
+                {
+                    var cutoffValue = cutoffOption.ParsedValue.Trim();
+                    if (string.Equals(cutoffValue, "auto", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cutoffAuto = true;
+                    }
+                    else if (int.TryParse(cutoffValue, out cutoffFixed))
+                    {
+                        cutoffAuto = false;
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("Error: --cutoff must be an integer or 'auto'.");
+                        return 1;
+                    }
+                }
+
+                int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
+                JamlSearchPlan plan;
+                try
+                {
+                    // Push fixed --cutoff into the engine so low-scoring seeds are dropped at
+                    // the scorer (no callback spam, no per-seed string concat). Auto still needs
+                    // the caller-side running-max below since the engine threshold is static.
+                    plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.Error.WriteLine($"Error: {ex.Message}");
+                    return 1;
+                }
+
+                Console.WriteLine(
+                    $"  Cost:  ~{config.SimdCostPerSeed():0.#} crunches/seed "
+                        + $"({config.EstimateFilterCrunches():N0} per {MotelyGlobals.MaxVectorWidth}-seed batch, worst case)"
+                );
+
+                IMotelySearchSettings settings = plan
+                    .Settings.WithDeck(deck)
+                    .WithStake(stake)
+                    .WithThreadCount(threads);
+
+                if (
+                    !TryParseSeedOptions(
+                        startSeedOption,
+                        stopSeedOption,
+                        out var jStartIdx,
+                        out var jStopIdx,
+                        out var jSeedOptError
+                    )
                 )
-            )
-            {
-                Console.Error.WriteLine(jamlSearchModeError);
-                return 1;
-            }
+                {
+                    Console.Error.WriteLine(jSeedOptError);
+                    return 1;
+                }
 
-            using var _jamlSourceLifetime = jamlSourceLifetime;
+                if (
+                    !CliSearchMode.TryApplySearchMode(
+                        settings,
+                        new CliSearchMode.Input(
+                            SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
+                            SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
+                            Drown: drown,
+                            ResultsRootPath: resultsPathOption.HasValue()
+                                ? resultsPathOption.ParsedValue
+                                : null,
+                            FilterId: config.Id,
+                            JamlSeeds: config.Seeds,
+                            KeywordInputs: BuildKeywordInputs(keywordOption, keywordsOption),
+                            PaddingCharsOption: paddingOption.HasValue()
+                                ? paddingOption.ParsedValue
+                                : null,
+                            RandomCount: randomOption.HasValue() ? randomOption.ParsedValue : null,
+                            AestheticName: aestheticOption.HasValue()
+                                ? aestheticOption.ParsedValue
+                                : null,
+                            StartBatch: startBatchOption.HasValue()
+                                ? startBatchOption.ParsedValue
+                                : null,
+                            EndBatch: endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
+                            StartPercent: startPercentOption.HasValue()
+                                ? startPercentOption.ParsedValue
+                                : null,
+                            StartSeedSearchIndex: jStartIdx,
+                            StopSeedSearchIndex: jStopIdx,
+                            BatchCharacterCount: explicitBatchCharCount
+                        ),
+                        msg => Console.Error.WriteLine(msg),
+                        out var jamlSearchModeError,
+                        out settings,
+                        out var jamlSourceLifetime
+                    )
+                )
+                {
+                    Console.Error.WriteLine(jamlSearchModeError);
+                    return 1;
+                }
 
-            int scoreTallyColumns = plan.ScoreTallyColumnCount;
-            bool hasStructuredScores = scoreTallyColumns > 0;
-            var resultSinks = new List<IMotelyResultSink>
+                using var _jamlSourceLifetime = jamlSourceLifetime;
+
+                int scoreTallyColumns = plan.ScoreTallyColumnCount;
+                bool hasStructuredScores = scoreTallyColumns > 0;
+                var resultSinks = new List<IMotelyResultSink>
             {
                 new ConsoleResultSink(hasStructuredScores ? plan.TallyLabels : null),
             };
-            if (hasStructuredScores)
-            {
-                // Persist found seeds to the seed lake so --drown can replay them later.
-                resultSinks.Add(
-                    new SeedLakeSink(
-                        resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
-                        config.Id
-                    )
-                );
-            }
-            using var resultSink = new CompositeMotelyResultSink(resultSinks);
-            int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
-            var saveSeedsCollector = new MotelyTopSeedSink.Collector(int.MaxValue);
-            var saveSeedMatches = new List<string>();
-            var saveSeedMatchSet = new HashSet<string>(StringComparer.Ordinal);
-
-            // Always attach a progress callback so 'p' hotkey stays current;
-            // quiet mode swaps in the silent capture variant.
-            settings = settings
-                .WithProgressCallback(
-                    quietOption.HasValue() ? CaptureProgress : WriteProgressLineToStderr
-                )
-                .WithAutoScoreCutoff(cutoffAuto);
-
-            if (hasStructuredScores)
-            {
-                settings = settings.WithScoredResultCallback(tally =>
+                if (hasStructuredScores)
                 {
-                    if (
-                        !ShouldEmitScore(tally.Score, cutoffAuto, cutoffFixed, ref cliLearnedCutoff)
-                    )
-                        return;
-
-                    resultSink.OnScored(in tally);
-                    saveSeedsCollector.Consider(tally.Seed, tally.Score);
-                });
-            }
-            else
-            {
-                settings = settings.WithSeedMatchCallback(seed =>
-                {
-                    // Every worker thread calls this, and the engine serializes nothing. A bare
-                    // HashSet/List here loses finds under concurrent Add — silently, and more often
-                    // the more threads are working. The lock costs nothing at match frequency.
-                    lock (saveSeedMatches)
-                    {
-                        resultSink.OnSeed(seed);
-                        if (saveSeedMatchSet.Add(seed))
-                        {
-                            saveSeedMatches.Add(seed);
-                        }
-                    }
-                });
-            }
-
-            if (!quietOption.HasValue())
-            {
-                Console.Error.WriteLine(
-                    $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| makeitrain=Seeds CSV via DuckDB" : "(sequential only)")}"
-                );
-            }
-
-            bool cancelled = false;
-            IMotelySearch search;
-
-            async Task<bool> RunPass(IMotelySearch pass)
-            {
-                try
-                {
-                    await pass.WaitForCompletionAsync(_cts.Token);
-                    return false;
-                }
-                catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
-                {
-                    return true;
-                }
-            }
-
-            // Naming an explicit sequential range (--startBatch/--endBatch/--startPercent/
-            // --startSeed/--stopSeed) says you want the sweep itself, so --findone skips the
-            // aesthetic pass entirely rather than answering a different question than you asked.
-            bool findOneSequentialOnly =
-                startBatchOption.HasValue()
-                || endBatchOption.HasValue()
-                || startPercentOption.HasValue()
-                || startSeedOption.HasValue()
-                || stopSeedOption.HasValue();
-
-            if (findOneOption.HasValue() && findOneSequentialOnly)
-            {
-                settings = settings
-                    .WithSequentialSearch()
-                    .WithBatchCharacterCount(batchCharCount)
-                    .StopAfter(1);
-                search = settings.Start(_cts.Token);
-                cancelled = await RunPass(search);
-            }
-            else if (findOneOption.HasValue())
-            {
-                // Every aesthetic first, in declaration order, as one continuous seed stream —
-                // palindromes and echoes and the rest are a tiny, pretty corner of the space, so
-                // sweeping all of them costs almost nothing next to the sequential grind, and a
-                // seed like AAABBBAA is a better answer than the first one counting finds.
-                // StopAfter(1) ends the pass on the first match (a handful arrive together — one
-                // SIMD batch is 8 lanes; see StopAfterMatches).
-                // An explicit --aesthetic narrows the sweep to that one family, which is how you
-                // time them against each other; without it, every family runs in enum order.
-                var aesthetics =
-                    aestheticOption.HasValue()
-                    && JamlAestheticParser.TryParse(aestheticOption.ParsedValue.Trim(), out var onlyOne)
-                        ? [onlyOne]
-                        : Enum.GetValues<JamlAesthetic>();
-                settings = settings
-                    .WithProviderSearch(
-                        new MotelySeedListProvider(
-                            aesthetics.SelectMany(JamlAesthetics.EnumerateSeeds),
-                            aesthetics.Sum(JamlAesthetics.GetSeedCount)
+                    // Persist found seeds to the seed lake so --drown can replay them later.
+                    resultSinks.Add(
+                        new SeedLakeSink(
+                            resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
+                            config.Id
                         )
+                    );
+                }
+                using var resultSink = new CompositeMotelyResultSink(resultSinks);
+                int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
+                var saveSeedsCollector = new MotelyTopSeedSink.Collector(int.MaxValue);
+                var saveSeedMatches = new List<string>();
+                var saveSeedMatchSet = new HashSet<string>(StringComparer.Ordinal);
+
+                // Always attach a progress callback so 'p' hotkey stays current;
+                // quiet mode swaps in the silent capture variant.
+                settings = settings
+                    .WithProgressCallback(
+                        quietOption.HasValue() ? CaptureProgress : WriteProgressLineToStderr
                     )
-                    .StopAfter(1);
+                    .WithAutoScoreCutoff(cutoffAuto);
 
-                var aestheticPass = settings.Start(_cts.Token);
-                cancelled = await RunPass(aestheticPass);
-
-                if (!cancelled && aestheticPass.MatchingSeeds == 0)
+                if (hasStructuredScores)
                 {
-                    aestheticPass.Dispose();
-                    if (!quietOption.HasValue())
-                        Console.Error.WriteLine(
-                            "No aesthetic seed matched — falling back to the sequential sweep."
-                        );
+                    settings = settings.WithScoredResultCallback(tally =>
+                    {
+                        if (
+                            !ShouldEmitScore(tally.Score, cutoffAuto, cutoffFixed, ref cliLearnedCutoff)
+                        )
+                            return;
 
+                        resultSink.OnScored(in tally);
+                        saveSeedsCollector.Consider(tally.Seed, tally.Score);
+                    });
+                }
+                else
+                {
+                    settings = settings.WithSeedMatchCallback(seed =>
+                    {
+                        // Every worker thread calls this, and the engine serializes nothing. A bare
+                        // HashSet/List here loses finds under concurrent Add — silently, and more often
+                        // the more threads are working. The lock costs nothing at match frequency.
+                        lock (saveSeedMatches)
+                        {
+                            resultSink.OnSeed(seed);
+                            if (saveSeedMatchSet.Add(seed))
+                            {
+                                saveSeedMatches.Add(seed);
+                            }
+                        }
+                    });
+                }
+
+                if (!quietOption.HasValue())
+                {
+                    Console.Error.WriteLine(
+                        $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| makeitrain=Seeds CSV via DuckDB" : "(sequential only)")}"
+                    );
+                }
+
+                bool cancelled = false;
+                IMotelySearch search;
+
+                async Task<bool> RunPass(IMotelySearch pass)
+                {
+                    try
+                    {
+                        await pass.WaitForCompletionAsync(_cts.Token);
+                        return false;
+                    }
+                    catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
+                    {
+                        return true;
+                    }
+                }
+
+                // Naming an explicit sequential range (--startBatch/--endBatch/--startPercent/
+                // --startSeed/--stopSeed) says you want the sweep itself, so --findone skips the
+                // aesthetic pass entirely rather than answering a different question than you asked.
+                bool findOneSequentialOnly =
+                    startBatchOption.HasValue()
+                    || endBatchOption.HasValue()
+                    || startPercentOption.HasValue()
+                    || startSeedOption.HasValue()
+                    || stopSeedOption.HasValue();
+
+                if (findOneOption.HasValue() && findOneSequentialOnly)
+                {
                     settings = settings
                         .WithSequentialSearch()
                         .WithBatchCharacterCount(batchCharCount)
                         .StopAfter(1);
-                    aestheticPass = settings.Start(_cts.Token);
-                    cancelled = await RunPass(aestheticPass);
+                    search = settings.Start(_cts.Token);
+                    cancelled = await RunPass(search);
                 }
-                else if (!cancelled && !quietOption.HasValue())
+                else if (findOneOption.HasValue())
                 {
-                    Console.Error.WriteLine("Found it in the aesthetics — no sequential sweep needed.");
+                    // Every aesthetic first, in declaration order, as one continuous seed stream —
+                    // palindromes and echoes and the rest are a tiny, pretty corner of the space, so
+                    // sweeping all of them costs almost nothing next to the sequential grind, and a
+                    // seed like AAABBBAA is a better answer than the first one counting finds.
+                    // StopAfter(1) ends the pass on the first match (a handful arrive together — one
+                    // SIMD batch is 8 lanes; see StopAfterMatches).
+                    // An explicit --aesthetic narrows the sweep to that one family, which is how you
+                    // time them against each other; without it, every family runs in enum order.
+                    var aesthetics =
+                        aestheticOption.HasValue()
+                        && JamlAestheticParser.TryParse(aestheticOption.ParsedValue.Trim(), out var onlyOne)
+                            ? [onlyOne]
+                            : Enum.GetValues<JamlAesthetic>();
+                    settings = settings
+                        .WithProviderSearch(
+                            new MotelySeedListProvider(
+                                aesthetics.SelectMany(JamlAesthetics.EnumerateSeeds),
+                                aesthetics.Sum(JamlAesthetics.GetSeedCount)
+                            )
+                        )
+                        .StopAfter(1);
+
+                    var aestheticPass = settings.Start(_cts.Token);
+                    cancelled = await RunPass(aestheticPass);
+
+                    if (!cancelled && aestheticPass.MatchingSeeds == 0)
+                    {
+                        aestheticPass.Dispose();
+                        if (!quietOption.HasValue())
+                            Console.Error.WriteLine(
+                                "No aesthetic seed matched — falling back to the sequential sweep."
+                            );
+
+                        settings = settings
+                            .WithSequentialSearch()
+                            .WithBatchCharacterCount(batchCharCount)
+                            .StopAfter(1);
+                        aestheticPass = settings.Start(_cts.Token);
+                        cancelled = await RunPass(aestheticPass);
+                    }
+                    else if (!cancelled && !quietOption.HasValue())
+                    {
+                        Console.Error.WriteLine("Found it in the aesthetics — no sequential sweep needed.");
+                    }
+
+                    search = aestheticPass;
+                }
+                else
+                {
+                    search = settings.Start(_cts.Token);
+                    cancelled = await RunPass(search);
                 }
 
-                search = aestheticPass;
+                using var _search = search;
+
+                cancelled |= _cts.Token.IsCancellationRequested;
+                {
+                    var seedsToSave = hasStructuredScores
+                        ? saveSeedsCollector.GetSeeds()
+                        : (IReadOnlyList<string>)saveSeedMatches;
+
+                    if (JamlFileLoader.TrySaveSeeds(jamlOption.ParsedValue, seedsToSave, out var saveError))
+                        Console.Error.WriteLine(
+                            $"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {jamlOption.ParsedValue}"
+                        );
+                    else
+                        Console.Error.WriteLine(
+                            $"Warning: could not save seeds back into JAML: {saveError}"
+                        );
+                }
+
+                PrintSummary(search, batchCharCount, cancelled);
+                return cancelled ? 1 : 0;
             }
-            else
-            {
-                search = settings.Start(_cts.Token);
-                cancelled = await RunPass(search);
-            }
-
-            using var _search = search;
-
-            cancelled |= _cts.Token.IsCancellationRequested;
-            {
-                var seedsToSave = hasStructuredScores
-                    ? saveSeedsCollector.GetSeeds()
-                    : (IReadOnlyList<string>)saveSeedMatches;
-
-                if (JamlFileLoader.TrySaveSeeds(jamlOption.ParsedValue, seedsToSave, out var saveError))
-                    Console.Error.WriteLine(
-                        $"Saved {seedsToSave.Count:N0} seed(s) into top-level seeds: in {jamlOption.ParsedValue}"
-                    );
-                else
-                    Console.Error.WriteLine(
-                        $"Warning: could not save seeds back into JAML: {saveError}"
-                    );
-            }
-
-            PrintSummary(search, batchCharCount, cancelled);
-            return cancelled ? 1 : 0;
         });
 
         try
