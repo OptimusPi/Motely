@@ -3,7 +3,7 @@ namespace Motely.Tests;
 public sealed class JamlConfigWriterTests
 {
     [Fact]
-    public void ToYaml_RoundTripsEveryCorpusFile()
+    public void ToJaml_RoundTripsEveryCorpusFile()
     {
         var corpusDir = FindCorpusDir();
         var files = Directory
@@ -22,17 +22,17 @@ public sealed class JamlConfigWriterTests
             string written;
             try
             {
-                written = JamlConfigLoader.ToYaml(original);
+                written = JamlConfigLoader.ToJaml(original);
             }
             catch (Exception ex)
             {
-                failures.Add($"{relative}: ToYaml threw: {ex.Message}");
+                failures.Add($"{relative}: ToJaml threw: {ex.Message}");
                 continue;
             }
 
             if (!JamlConfigLoader.TryLoad(written, out var reloaded, out var error))
             {
-                failures.Add($"{relative}: round-tripped YAML failed to reload: {error}\n---\n{written}");
+                failures.Add($"{relative}: round-tripped JAML failed to reload: {error}\n---\n{written}");
                 continue;
             }
 
@@ -54,10 +54,10 @@ public sealed class JamlConfigWriterTests
     }
 
     // Regression: an explicit `sources: {}` means "override with match-nowhere" and is distinct
-    // from an absent sources: (use DefaultSources). ToYaml must not collapse the two by dropping
+    // from an absent sources: (use DefaultSources). ToJaml must not collapse the two by dropping
     // an all-default sources block.
     [Fact]
-    public void ToYaml_PreservesExplicitEmptySources()
+    public void ToJaml_PreservesExplicitEmptySources()
     {
         const string jaml = """
             id: empty-sources
@@ -69,7 +69,7 @@ public sealed class JamlConfigWriterTests
         var originalClause = Assert.IsType<JokerClause>(original.Must[0]);
         Assert.NotNull(originalClause.Sources);
 
-        var reloaded = JamlConfigLoader.FromJaml(JamlConfigLoader.ToYaml(original));
+        var reloaded = JamlConfigLoader.FromJaml(JamlConfigLoader.ToJaml(original));
         var reloadedClause = Assert.IsType<JokerClause>(reloaded.Must[0]);
         Assert.NotNull(reloadedClause.Sources);
     }

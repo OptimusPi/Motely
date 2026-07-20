@@ -791,9 +791,15 @@ partial class Program
                 $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds:N0} matched"
             );
             Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
-            double speed =
-                elapsed.TotalSeconds > 0 ? search.TotalSeedsSearched / elapsed.TotalSeconds : 0;
-            Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
+            if (elapsed.TotalSeconds >= 1.0)
+            {
+                double speed = search.TotalSeedsSearched / elapsed.TotalSeconds;
+                Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
+            }
+            else
+            {
+                Console.WriteLine("  Speed: (too short to measure)");
+            }
         }
         if (search.IsSequentialBatchSearch)
         {

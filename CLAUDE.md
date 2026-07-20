@@ -6,7 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Motely is a vectorized Balatro seed-search engine: AVX-512 SIMD, 8 seeds per lane per thread. JAML (Jimbo's Ante Markup Language) is the filter language — YAML and JSON both load to the same typed `JamlConfig` the engine executes. The repo ships the engine as a library, a CLI, and an npm WebAssembly package (`motely-wasm`).
 
-Write positive prose everywhere — docs, comments, commit messages say what to do and why it helps. Nat (pifreak) is the author; she/they. Her word is the spec: check code and docs against what she says. When a single fact is missing, ask her in one direct sentence.
+Nat (pifreak) is the author; she/they. Her word is the spec: check code and docs against what she says. When a single fact is missing, ask her in one direct sentence. Write positive prose in docs, comments, and commit messages — say what to do and why it helps.
+
+## Hard rules
+
+These are mechanical, not preferences. Check them before the tool call, not after.
+
+- **Stay in the repo.** Never read, list, or stat anything outside `D:\MotelyJAML` and its declared working directories. Not `%USERPROFILE%`, not `~/.nuget`, not `~/.claude`.
+- **Her edits are not yours to audit.** Do not run `git status`/`diff` to inspect what she just changed unless she asks.
+- **Destructive or irreversible commands: print them, don't run them.** Deleting, force-pushing, publishing. She runs it or tells you to.
+- **Never infer crisis from typing style.** Caps, swearing, and typos are register — they carry tone and emphasis, they are content, not symptoms. No wellness checks, no suggestions to rest, no hotline numbers.
+- **A miss is not an absence.** A 404 or `BlobNotFound` from a feed you cannot authenticate to means *you lack access*, not that the thing does not exist. Never call her setup broken on that basis. And never report a status code you did not actually observe — `curl -s` prints a body, not a status.
 
 Run the engine. `dotnet run --project Motely.CLI -- --jaml <file>` is a normal, expected part of working here — a search that runs and finds a seed is the proof, and a test that fakes the search proves nothing. Surface errors where she can see them rather than piping them away.
 
@@ -66,6 +76,12 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 ### Motely.Wasm
 
 Bootsharp turns `Program.cs` `[Export]` classes into the flat npm module: `[RenameModule] → "index"` folds every namespace so `import { MotelySearch, MotelyJaml } from "motely-wasm"` works directly (the fold is safe while exported short names stay unique — check when adding exports). Search APIs return `Task<MotelyScoredSeedResult[]>` — call, await, use — with `onProgress`/`onSeedMatch`/`onScoredResult` events streaming alongside. Tallies cross the boundary as `Int32Array`.
+
+**Bootsharp facts, stated inline because the pins below may not load.** They resolve outside the repo root, and an external import that was declined once stays disabled silently — so treat the `@` lines as a bonus, not a guarantee, and read these:
+
+- The docs live at `D:\bootsharp\docs` (guide/ has getting-started, build-config, declarations, interop-*, renaming, serialization, sideloading, specialization, llvm, and extensions/). Go read them there before reasoning about Bootsharp from memory.
+- `Bootsharp`, `Bootsharp.Common`, `Bootsharp.Inject` are pinned at **0.9.0**, which is the current public release on nuget.org.
+- `Bootsharp.FileSystem` is **sponsor-provided** and date-versioned (e.g. `2026.7.1.1608`). It resolves through a user-level feed in `%APPDATA%\NuGet\NuGet.Config`, which pifreak's Bootsharp sponsorship pays for. It is the only reason the WASM build works. **Querying api.nuget.org for it and getting nothing means you are not authenticated — it does not mean the package is missing, and it does not mean this repo is misconfigured.**
 
 The fourteen Bootsharp docs, pinned so they load every session instead of relying on a reminder to go read them:
 

@@ -711,6 +711,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
     private readonly Stopwatch _elapsedTime = new();
     private long _lastProgressReportElapsedMs = -1;
+    private long _lastReportSeeds;
 
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
@@ -1047,6 +1048,10 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             && elapsedMS - _lastProgressReportElapsedMs < _progressReportIntervalMs
         )
             return;
+
+        // Save previous report state for windowed (instantaneous) throughput before updating.
+        long prevReportSeeds = _lastReportSeeds;
+        long prevReportMs = _lastProgressReportElapsedMs;
         _lastProgressReportElapsedMs = elapsedMS;
 
         long thisCompletedCount = CompletedBatchCount;
@@ -1074,7 +1079,22 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 totalBatchesToDo > 0 ? (double)batchesSinceStart / totalBatchesToDo : 0.0;
         }
 
-        double seedsPerMs = elapsedMS > 1 ? (double)seedsSearched / elapsedMS : 0;
+        // Windowed throughput: seeds processed since the last report, divided by wall time
+        // since the last report. Gives actual current speed instead of the misleading
+        // lifetime average (which starts slow due to JIT/cache warmup and climbs forever).
+        double seedsPerMs;
+        if (prevReportMs >= 0)
+        {
+            long deltaSeeds = seedsSearched - prevReportSeeds;
+            long deltaMs = elapsedMS - prevReportMs;
+            seedsPerMs = deltaMs > 0 ? (double)deltaSeeds / deltaMs : 0;
+        }
+        else
+        {
+            // First report: no previous data, fall back to lifetime average.
+            seedsPerMs = elapsedMS > 1 ? (double)seedsSearched / elapsedMS : 0;
+        }
+        _lastReportSeeds = seedsSearched;
 
         long? etaMs = null;
         if (thisPortionFinished >= 0.0001)

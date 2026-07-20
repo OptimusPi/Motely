@@ -66,9 +66,12 @@ public static class JamlSearchBuilder
                 anteScoped.Antes = DefaultAntes;
 
         IMotelySearchSettings settings =
-            new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
-                new PassthroughFilterDesc()
-            );
+            config.Filter is { Length: > 0 } filterName
+                && MotelyNativeFilterNames.TryParse(filterName, out var nativeFilter)
+                ? MotelyNativeFilterFactory.CreateSettings(nativeFilter)
+                : new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+                    new PassthroughFilterDesc()
+                );
 
         foreach (var clause in config.Must)
             settings = settings.WithAdditionalFilter(ClauseToFilterDesc(clause));

@@ -3,9 +3,9 @@ using System.Text;
 
 namespace Motely.Filters.Jaml;
 
-// The write-side mirror of JamlClausePopulator: turns a JamlConfig back into JAML text using the
-// exact same ClauseKeys/SourceKeys reflection the loader reads, so a round trip through
-// FromJaml(ToYaml(config)) reproduces the same clause data. Not guaranteed to reproduce the
+    // The write-side mirror of JamlClausePopulator: turns a JamlConfig back into JAML text using the
+    // exact same ClauseKeys/SourceKeys reflection the loader reads, so a round trip through
+    // FromJaml(ToJaml(config)) reproduces the same clause data. Not guaranteed to reproduce the
 // original TEXT (e.g. "smallBlindTag"/"bigBlindTag" both come back out as "tag" with an explicit
 // rolls: block; erraticRanks shorthand comes back out as "or" — both are real, parseable,
 // semantically-identical JAML) — this is a data round trip, not a byte-for-byte one.
@@ -48,7 +48,7 @@ public static partial class JamlConfigLoader
             ["tag"] = "Tags",
         };
 
-    public static string ToYaml(JamlConfig config)
+    public static string ToJaml(JamlConfig config)
     {
         var root = new JMap();
         root.Set("id", new JScalar(config.Id), default);
@@ -64,6 +64,8 @@ public static partial class JamlConfigLoader
             root.Set("stake", new JScalar(config.Stake.ToString()), default);
         if (config.Seeds.Count > 0)
             root.Set("seeds", StringArrayNode(config.Seeds), default);
+        if (config.Filter is { Length: > 0 })
+            root.Set("filter", new JScalar(config.Filter), default);
         if (config.Must.Count > 0)
             root.Set("must", ClauseListNode(config.Must), default);
         if (config.Should.Count > 0)
@@ -77,7 +79,7 @@ public static partial class JamlConfigLoader
     }
 
     // ── JAML text emission — writes the same indented block format the native parser reads,
-    // so ToYaml(config) round-trips through FromJaml unchanged. No third-party writer: the tree
+    // so ToJaml(config) round-trips through FromJaml unchanged. No third-party writer: the tree
     // built above (JMap/JSeq/JScalar) is JAML's own, so JAML also owns writing it back out. ─────
 
     private static void WriteMap(StringBuilder sb, JMap map, int indent)
@@ -128,7 +130,7 @@ public static partial class JamlConfigLoader
         foreach (var item in seq.Items)
         {
             if (item is not JMap itemMap)
-                throw new InvalidOperationException("ToYaml: expected a clause mapping in a block sequence.");
+                throw new InvalidOperationException("ToJaml: expected a clause mapping in a block sequence.");
             var keys = itemMap.Keys;
             if (keys.Count == 0)
             {
@@ -201,7 +203,7 @@ public static partial class JamlConfigLoader
 
         var type = clause.GetType();
         if (!CanonicalDiscriminatorByClauseType.TryGetValue(type, out var discriminator))
-            throw new InvalidOperationException($"ToYaml: no discriminator registered for clause type '{type.Name}'.");
+            throw new InvalidOperationException($"ToJaml: no discriminator registered for clause type '{type.Name}'.");
         var entry = JamlDiscriminatorRegistry.Entries[discriminator];
 
         var mapping = new JMap();
@@ -279,7 +281,7 @@ public static partial class JamlConfigLoader
     private static JSeq ItemArrayValueNode(string discriminator, JamlDiscriminatorEntry entry, IJamlClause clause)
     {
         if (!ItemArrayPropertyByDiscriminator.TryGetValue(discriminator, out var propName))
-            throw new InvalidOperationException($"ToYaml: no item-array mapping for discriminator '{discriminator}'.");
+            throw new InvalidOperationException($"ToJaml: no item-array mapping for discriminator '{discriminator}'.");
 
         var isWildcardProp = entry.ClauseType.GetProperty("IsWildcard");
         if (isWildcardProp != null && (bool)(isWildcardProp.GetValue(clause) ?? false))
@@ -374,7 +376,7 @@ public static partial class JamlConfigLoader
         }
 
         throw new InvalidOperationException(
-            $"ToYaml: unsupported property type '{type}' on {prop.DeclaringType?.Name}.{prop.Name}."
+            $"ToJaml: unsupported property type '{type}' on {prop.DeclaringType?.Name}.{prop.Name}."
         );
     }
 

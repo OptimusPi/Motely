@@ -246,9 +246,12 @@ file static class RepeaterAestheticSeeds
                 int c = alphabet.Length;
                 long total = 0;
 
-                // pattern lengths 1 through 7 (pattern of 8 = always 1 seed per pattern, included)
-                // For pattern length p, there are c^p patterns, and each produces exactly 1 seed (always padded to 8).
-                for (int p = 1; p <= MotelyGlobals.MaxSeedLength; p++)
+                // Pattern lengths 1 through 7. For pattern length p there are c^p patterns, each
+                // producing exactly 1 seed (always padded to 8). Length 8 is excluded on purpose:
+                // a pattern that already fills the seed repeats zero times, so it is the identity —
+                // all 35^8 seeds, the entire search space, arriving one heap-allocated string at a
+                // time. That is not an aesthetic, and it starves every family queued behind it.
+                for (int p = 1; p < MotelyGlobals.MaxSeedLength; p++)
                 {
                     long patterns = 1;
                     for (int i = 0; i < p; i++)
@@ -266,7 +269,9 @@ file static class RepeaterAestheticSeeds
         char[] alphabet = MotelyGlobals.SeedDigits;
         char[] buf = new char[MotelyGlobals.MaxSeedLength];
 
-        for (int patternLen = 1; patternLen <= MotelyGlobals.MaxSeedLength; patternLen++)
+        // 1 through 7, matching SeedCount above — a length-8 pattern repeats zero times and would
+        // enumerate the whole 35^8 space here, so the sweep would never reach the next aesthetic.
+        for (int patternLen = 1; patternLen < MotelyGlobals.MaxSeedLength; patternLen++)
         {
             // Build a pattern buffer then recursively fill it
             char[] pattern = new char[patternLen];

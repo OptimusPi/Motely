@@ -92,6 +92,17 @@ public static partial class JamlConfigLoader
             config.Stake = ParseEnum<MotelyStake>(stake);
 
         config.Seeds.AddRange(root.GetStringArray("seeds") ?? []);
+        if (root.GetString("filter") is { Length: > 0 } filterName)
+        {
+            if (!MotelyNativeFilterNames.TryParse(filterName, out _))
+            {
+                string valid = string.Join(", ", MotelyNativeFilterNames.DisplayNames);
+                throw new InvalidOperationException(
+                    $"Unknown native filter '{filterName}'. Valid filters: {valid}"
+                );
+            }
+            config.Filter = filterName;
+        }
         config.Must.AddRange(ParseClauseList(root, "must"));
         config.Should.AddRange(ParseClauseList(root, "should"));
         config.MustNot.AddRange(ParseClauseList(root, "mustNot"));
