@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JamlyzerView } from "../../components/JamlyzerView.js";
+import { JimboApp } from "../../ui/JimboApp.js";
 import fixture from "./fixtures/jamlyzer-aaaaaaaa.json";
 
 const meta: Meta<typeof JamlyzerView> = {
@@ -8,6 +9,13 @@ const meta: Meta<typeof JamlyzerView> = {
   parameters: {
     layout: "fullscreen",
   },
+  decorators: [
+    (Story) => (
+      <JimboApp>
+        <Story />
+      </JimboApp>
+    ),
+  ],
 };
 
 export default meta;

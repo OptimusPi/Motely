@@ -78,12 +78,11 @@
   --j-space-lg: 12px;
   --j-space-xl: 16px;
 
-  /* App shell — HARD-LOCKED 320×540. One size, ALWAYS — never fluid, never
-     resizes. iPhone SE portrait height (568) minus the 28px JimboBalatroFooter
-     that sits below .j-app (total embed rectangle stays 320×568). */
+  /* App shell — HARD-LOCKED 375x375. One size, ALWAYS — never fluid, never
+     resizes. */
   --j-footer-h: 28px;
-  --j-app-w: 320px;
-  --j-app-h: 540px;
+  --j-app-w: 375px;
+  --j-app-h: 375px;
 
   /* Radii — Balatro is chunky, not bubbly. Never > 10px. */
   --j-radius-sm: 4px;

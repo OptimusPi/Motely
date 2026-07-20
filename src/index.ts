@@ -96,7 +96,11 @@ export { JamlIdeToolbar, type JamlIdeToolbarProps, type JamlIdeMode } from "./co
 export { JamlMapPreview, type JamlMapPreviewProps } from "./components/JamlMapPreview.js";
 
 export * from "./ui.js";
-export * from "./motely.js";
+// motely.js is NOT re-exported here on purpose. This entry is a client boundary
+// ("use client" above), and re-exporting the pure decoders through it hands
+// server callers a client-marked copy — decodeMotelyItemName then dies with
+// "is on the client" even though dist/motely.js itself is clean. Server callers
+// import from "jaml-ui/motely", which is what that subpath export is for.
 
 // ── json-render v2 — zero-dep JSON-to-React engine ──
 export * from "./json-render/index.js";

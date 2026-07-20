@@ -1,9 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { JamlIde } from './JamlIde';
+import { JimboApp } from '../ui/JimboApp.js';
 
 const meta = {
   title: 'APPS / JAML IDE',
   component: JamlIde,
+  parameters: { layout: 'fullscreen' },
+  decorators: [
+    (Story) => (
+      <JimboApp>
+        <Story />
+      </JimboApp>
+    ),
+  ],
 } satisfies Meta<typeof JamlIde>;
 
 export default meta;

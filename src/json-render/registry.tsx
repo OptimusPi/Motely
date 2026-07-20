@@ -27,6 +27,7 @@ import {
   StakeCard,
   StrategyAdvisor,
 } from "./components/reference.js";
+import { JimboSwipeDeck } from "../ui/JimboSwipeDeck.js";
 
 /**
  * Balatro Component Registry
@@ -58,6 +59,11 @@ export const balatroRegistry: Registry = {
 
   // ── Game Cards ──
   JamlGameCard,
+
+  // ── Triage ──
+  // Each child is one card. A spec hands it N seed trees; the deck deals them
+  // one at a time and the swipe behaviour stays on this side of the wire.
+  SwipeDeck: JimboSwipeDeck,
 
   // ── Mascot ──
   JammyMascot,

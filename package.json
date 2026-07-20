@@ -81,7 +81,7 @@
     "yaml": "^2.9.0"
   },
   "peerDependencies": {
-    "motely-wasm": "^24.4.0",
+    "motely-wasm": "^24.5.0",
     "react": "^18.2.0 || ^19.0.0",
     "react-dom": "^18.2.0 || ^19.0.0"
   },
@@ -107,7 +107,7 @@
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.6",
     "@lezer/highlight": "^1.2.3",
-    "motely-wasm": "^24.4.0",
+    "motely-wasm": "^24.5.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "storybook": "^10.5.0",
