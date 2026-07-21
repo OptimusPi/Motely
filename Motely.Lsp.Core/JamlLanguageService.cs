@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Motely.Filters.Jaml;
 
 namespace Motely.Lsp.Core;
@@ -10,7 +9,7 @@ namespace Motely.Lsp.Core;
 /// vocabulary). Protocol-free on purpose: the stdio server, the WASM package, and tests all
 /// call these same three methods, so the grammar stays authored exactly once, in C#.
 /// </summary>
-public static partial class JamlLanguageService
+public static class JamlLanguageService
 {
     // ── Diagnostics ─────────────────────────────────────────────────────────────────────
 
@@ -36,8 +35,11 @@ public static partial class JamlLanguageService
 
     private static JamlDiagnostic ToDiagnostic(Exception ex, string text)
     {
-        // The tokenizer knows exactly where it failed — use its span directly.
+        // Both positioned failures carry the span the parser/loader already held — walk the
+        // inner chain (FromJaml can wrap) and paint the squiggle exactly where it belongs.
         for (Exception? walk = ex; walk is not null; walk = walk.InnerException)
+        {
+            // Syntax: the tokenizer's own span, message without the "at line N" preamble.
             if (walk is JamlSyntaxException syntax)
                 return new JamlDiagnostic(
                     ClampSpan(syntax.Span, text),
@@ -46,47 +48,26 @@ public static partial class JamlLanguageService
                     "JAML0001"
                 );
 
-        // Semantic errors quote the offending token ("Unknown JAML root key: 'boses'.") —
-        // underline its first occurrence in the source so the squiggle lands on the typo.
-        var message = ex.Message;
-        var quoted = QuotedTokenRegex().Match(message);
-        if (quoted.Success)
-        {
-            var token = quoted.Groups[1].Value;
-            var span = FindFirst(text, token);
-            if (span is not null)
+            // Semantic (unknown key, bad value): the span of the token the loader rejected —
+            // no regex over the message, no re-searching the document for a quoted word.
+            if (walk is JamlSemanticException semantic && !semantic.Span.IsEmpty)
                 return new JamlDiagnostic(
-                    span.Value,
-                    message,
+                    semantic.Span,
+                    semantic.Message,
                     JamlDiagnosticSeverity.Error,
                     "JAML0100"
                 );
         }
 
+        // A semantic error the loader couldn't place (a value outside its enum, until those
+        // throw sites carry a span too): underline the first line rather than invent a column.
         var firstLineLength = text.IndexOf('\n') is var nl && nl >= 0 ? nl : text.Length;
         return new JamlDiagnostic(
             JamlSpan.WholeLine(0, Math.Max(firstLineLength, 1)),
-            message,
+            ex.Message,
             JamlDiagnosticSeverity.Error,
             "JAML0100"
         );
-    }
-
-    [GeneratedRegex("'([^']+)'")]
-    private static partial Regex QuotedTokenRegex();
-
-    private static JamlSpan? FindFirst(string text, string token)
-    {
-        if (token.Length == 0)
-            return null;
-        var lines = SplitLines(text);
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var col = lines[i].IndexOf(token, StringComparison.Ordinal);
-            if (col >= 0)
-                return JamlSpan.OnLine(i, col, token.Length);
-        }
-        return null;
     }
 
     private static JamlSpan ClampSpan(JamlSpan span, string text)

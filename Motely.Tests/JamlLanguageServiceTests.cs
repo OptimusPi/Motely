@@ -57,6 +57,21 @@ public class JamlLanguageServiceTests
         Assert.Equal(1, diagnostic.Span.StartLine);
     }
 
+    [Fact]
+    public void Diagnose_UnknownKey_ThatAlsoAppearsAsAValue_UnderlinesTheKeyNotTheFirstMatch()
+    {
+        // "boses" is both the name value (line 0) and the unknown key (line 1). Locating the
+        // squiggle by string-searching the document finds line 0; the engine's own key span
+        // finds the key itself on line 1. This is exactly the drift the span-carrying loader
+        // removes — the diagnostic points at what the loader rejected, not at a lookalike word.
+        var text = "name: boses\nboses:\n  - joker: Blueprint\n";
+        var diagnostic = Assert.Single(JamlLanguageService.Diagnose(text));
+        Assert.Contains("boses", diagnostic.Message);
+        Assert.Equal(1, diagnostic.Span.StartLine);
+        Assert.Equal(0, diagnostic.Span.StartColumn);
+        Assert.Equal("boses".Length, diagnostic.Span.EndColumn);
+    }
+
     // ── Hover ───────────────────────────────────────────────────────────────────────────
 
     [Fact]
