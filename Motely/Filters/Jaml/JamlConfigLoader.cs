@@ -391,7 +391,9 @@ public static partial class JamlConfigLoader
         foreach (var key in reader.Keys)
         {
             if (!allowed.Any(a => string.Equals(a, key, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Unknown {scope} key: '{key}'.");
+                // The parser tracked where this key sits; hand that span to the diagnostic
+                // rather than making an editor rediscover the typo by string-searching.
+                throw new JamlSemanticException($"Unknown {scope} key: '{key}'.", reader.KeySpan(key));
         }
     }
 
@@ -566,6 +568,7 @@ public static partial class JamlConfigLoader
     private interface IReader
     {
         IReadOnlyList<string> Keys { get; }
+        JamlSpan KeySpan(string key);
         string? GetString(string key);
         int? GetInt(string key);
         bool? GetBool(string key);
@@ -580,6 +583,11 @@ public static partial class JamlConfigLoader
     {
         public IReadOnlyList<string> Keys =>
             primary.Keys.Concat(fallback.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+        // The key belongs to whichever reader actually wrote it down; prefer the primary's span
+        // and fall back only when the primary never saw the key (empty span).
+        public JamlSpan KeySpan(string key) =>
+            primary.KeySpan(key) is { IsEmpty: false } span ? span : fallback.KeySpan(key);
 
         public string? GetString(string key) => primary.GetString(key) ?? fallback.GetString(key);
 
@@ -612,6 +620,8 @@ public static partial class JamlConfigLoader
         public NodeReader(JMap map) => _map = map;
 
         public IReadOnlyList<string> Keys => _map.Keys;
+
+        public JamlSpan KeySpan(string key) => _map.KeySpan(key);
 
         public string? GetString(string key) => Scalar(_map.Get(key));
 
