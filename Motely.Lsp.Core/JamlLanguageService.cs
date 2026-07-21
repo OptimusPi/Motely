@@ -15,8 +15,10 @@ public static class JamlLanguageService
 
     /// <summary>
     /// Parse <paramref name="text"/> with the real engine loader and report what it reports.
-    /// Syntax errors carry the parser's own <see cref="JamlSpan"/>; semantic errors (unknown
-    /// key, unknown enum value) are located by finding the quoted token in the source.
+    /// Every positioned failure carries its own <see cref="JamlSpan"/> straight from the engine —
+    /// the tokenizer's for a syntax error, the rejected key's for an unknown-key error — so the
+    /// squiggle lands on the offending token. A semantic error the loader can't yet place
+    /// (a value outside its enum) falls back to the first line.
     /// </summary>
     public static IReadOnlyList<JamlDiagnostic> Diagnose(string text)
     {
