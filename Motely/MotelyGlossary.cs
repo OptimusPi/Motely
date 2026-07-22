@@ -19,8 +19,8 @@ public static class MotelyGlossary
         new(
             "JAML",
             "Jimbo's Ante Markup Language",
-            "Motely's filter config language. Written as YAML or JSON — both syntaxes parse to "
-                + "the same typed JamlConfig. A JAML file declares 'must' (hard requirements) and "
+            "Motely's filter config language. Its own grammar, its own parser — not YAML, not "
+                + "JSON. A JAML file declares 'must' (hard requirements) and "
                 + "'should' (scored, optional) clauses against a seed's antes. A clause can also be "
                 + "written as one human-readable line, e.g. 'Eternal Blueprint in antes 1 or 2' — "
                 + "that line parses to and formats back from the clause losslessly, so it's a "
