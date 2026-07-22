@@ -72,6 +72,18 @@ public class JamlLanguageServiceTests
         Assert.Equal("boses".Length, diagnostic.Span.EndColumn);
     }
 
+    [Fact]
+    public void Diagnose_BadBossValue_BuiltThroughItsDescriptor_IsPositioned()
+    {
+        // Boss builds through its descriptor now, reading its value via the span-carrying reader.
+        // A value outside MotelyBossBlind is reported on the clause's line — the desc rail carries
+        // a real diagnostic, not a swallowed or location-less one.
+        var text = "must:\n  - boss: NotARealBoss\n";
+        var diagnostic = Assert.Single(JamlLanguageService.Diagnose(text));
+        Assert.Contains("NotARealBoss", diagnostic.Message);
+        Assert.Equal(1, diagnostic.Span.StartLine);
+    }
+
     // ── Hover ───────────────────────────────────────────────────────────────────────────
 
     [Fact]
