@@ -895,14 +895,10 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     /// Completion is signaled via <see cref="_completionSource"/>.
     /// </summary>
     /// <remarks>
-    /// Both paths off-thread the worker bodies. The single-thread case used to run
-    /// synchronously on the caller, which broke <see cref="RunSearchAsync"/>: the Task
-    /// only returned after the search had already completed, so any code that did
-    /// <c>await search.RunSearchAsync()</c> on the same thread deadlocked. The
-    /// multi-thread case used to swallow worker exceptions silently — if a worker
-    /// threw, <see cref="_completionSource"/> never moved and the caller hung forever.
-    /// Every worker is now wrapped so the first exception is captured and surfaced
-    /// through <see cref="_completionSource"/> once the last worker drops out.
+    /// Both paths run worker bodies off the caller thread so <see cref="RunSearchAsync"/>
+    /// returns a live Task (await stays safe on the same thread). Workers capture the first
+    /// exception and complete <see cref="_completionSource"/> when the last worker exits —
+    /// failures surface to the awaiter instead of hanging.
     /// </remarks>
     private void StartSearchThreads()
     {
@@ -1383,8 +1379,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             SearchProviderBatch();
             _localBatchesCompleted++;
 
-            // Provider drained on this batch: the work is done, but skip the report and tell
-            // the caller to stop and flush (matches the old inline loop's post-batch break).
+            // Provider drained this batch: stop and flush without another progress report.
             if (_providerExhausted)
                 return false;
 

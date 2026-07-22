@@ -31,6 +31,7 @@ public static class MotelyQuips
         "Java? Assembly?? Machine Language?!",
         "Just Another Markup Language",
         "JSON's Awesome Markup Lovechild",
+        "YAML Already Made Lemonade",
         // Balatro specific
         "Jolly Ante Manipulation Lab",
         "Just Another Motely Launcher",

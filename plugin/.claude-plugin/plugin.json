@@ -1,6 +1,0 @@
-{
-    "name": "jaml",
-    "description": "JAML (Jimbo's Ante Markup Language) language support for Balatro seed filters — live diagnostics, hover, and vocabulary straight from the Motely engine's own grammar.",
-    "version": "24.4.0",
-    "author": { "name": "pifreak" }
-}

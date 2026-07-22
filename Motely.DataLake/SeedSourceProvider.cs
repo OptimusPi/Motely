@@ -43,6 +43,7 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
         var ext = Path.GetExtension(path).ToLowerInvariant();
         // JSON/JAML sources carry structure around their seeds, so the shape test is
         // what separates seed from scaffolding — it always applies for them.
+        // .json here is a seed-list file (DuckDB), not a JAML filter loader.
         bool structured = ext is ".json" or ".jaml";
 
         string select = distinct ? "SELECT DISTINCT" : "SELECT";

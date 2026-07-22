@@ -3,19 +3,14 @@ using System.Text;
 
 namespace Motely.Filters.Jaml;
 
-    // The write-side mirror of JamlClausePopulator: turns a JamlConfig back into JAML text using the
-    // exact same ClauseKeys/SourceKeys reflection the loader reads, so a round trip through
-    // FromJaml(ToJaml(config)) reproduces the same clause data. Not guaranteed to reproduce the
-// original TEXT (e.g. "smallBlindTag"/"bigBlindTag" both come back out as "tag" with an explicit
-// rolls: block; erraticRanks shorthand comes back out as "or" — both are real, parseable,
-// semantically-identical JAML) — this is a data round trip, not a byte-for-byte one.
+    // Write-side mirror of JamlClausePopulator: JamlConfig → JAML text via the same
+// ClauseKeys/SourceKeys the loader reads. FromJaml(ToJaml(config)) preserves clause data.
+// Text shape may differ (e.g. smallBlindTag/bigBlindTag rewrite as tag + rolls; erraticRanks
+// as or) — still valid, parseable, same meaning. Data round trip, not byte-for-byte.
 public static partial class JamlConfigLoader
 {
-    // The canonical discriminator per clause type is derived from JamlDiscriminatorRegistry.Entries
-    // ITSELF — first-registered-wins, in the registry's own declared order — not a hand-typed
-    // parallel list. A hand-typed list drifts the moment a discriminator is added to the registry
-    // and someone forgets to also add it here (this happened: 9 plural-form discriminators were
-    // missing from the old list). There is now exactly one place a discriminator is enumerated.
+    // Canonical discriminator per clause type: first-registered wins from
+    // JamlDiscriminatorRegistry.Entries — one enumeration, no parallel list to maintain.
     private static readonly Dictionary<Type, string> CanonicalDiscriminatorByClauseType = BuildCanonicalDiscriminatorMap();
 
     private static Dictionary<Type, string> BuildCanonicalDiscriminatorMap()

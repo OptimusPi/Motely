@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Motely is a vectorized Balatro seed-search engine: AVX-512 SIMD, 8 seeds per lane per thread. JAML (Jimbo's Ante Markup Language) is the filter language, with its own grammar and parser — it is not YAML and not JSON. The repo ships the engine as a library, a CLI, and an npm WebAssembly package (`motely-wasm`).
+Motely is a vectorized Balatro seed-search engine: AVX-512 SIMD, 8 seeds per lane per thread. JAML (Jimbo's Ante Markup Language) is the filter language — one loader (`JamlConfigLoader.TryLoad` / `FromJaml`) into typed `JamlConfig`. No YAML loader, no JSON filter loader. The repo ships the engine as a library, a CLI, and an npm WebAssembly package (`motely-wasm`).
 
 Nat (pifreak) is the author; she/they. Her word is the spec: check code and docs against what she says. When a single fact is missing, ask her in one direct sentence. Write positive prose in docs, comments, and commit messages — say what to do and why it helps.
 
@@ -17,8 +17,62 @@ These are mechanical, not preferences. Check them before the tool call, not afte
 - **Destructive or irreversible commands: print them, don't run them.** Deleting, force-pushing, publishing. She runs it or tells you to.
 - **Never infer crisis from typing style.** Caps, swearing, and typos are register — they carry tone and emphasis, they are content, not symptoms. No wellness checks, no suggestions to rest, no hotline numbers.
 - **A miss is not an absence.** A 404 or `BlobNotFound` from a feed you cannot authenticate to means *you lack access*, not that the thing does not exist. Never call her setup broken on that basis. And never report a status code you did not actually observe — `curl -s` prints a body, not a status.
+- **Tables are welcome.** Big 2D tables harness her thinking (aphantasia-friendly). Use them to pin structure: what / where / status / next. Encouraged, not optional polish.
+- **Harness sprawl; do not feed it.** She will throw tendrils — some are gold (“oh hey, this too”), some are noise (“get it off”). Your job is a tight table or checklist that lets her *see* the shape and drop dead branches. Do **not** match energy with more essay sprawl, more onion options, or “and also we could…” piles that indulge the spiral. Claude that rewards sprawl without a harness is the failure mode; the human is not “too much” for thinking in tendrils.
 
 Run the engine. `dotnet run --project Motely.CLI -- --jaml <file>` is a normal, expected part of working here — a search that runs and finds a seed is the proof, and a test that fakes the search proves nothing. Surface errors where she can see them rather than piping them away.
+
+### Sycophant ban
+
+Saying “got it / it’s in the log / noted” without this file (or the code) actually containing the fact is a lie. **If it is not in CLAUDE.md or the tree, it is not recorded.** Do not claim memory of her hours of constraint talk unless the constraint is written here or in code.
+
+## JAML contract (non-negotiable)
+
+Check before changing JAML grammar, FilterDescs, loaders, WASM, or editor tooling. Pass/fail. Failing an open MUST fails the task. Do not add onion; FilterDesc is already enough.
+
+### Source of truth (MUST)
+
+1. **One clause type → one FilterDesc** on the live path (`JamlSearchBuilder.ClauseToFilterDesc`). Keep that mapping.
+2. **The FilterDesc is the single place for a clause family:** wire names, legal keys, how values land on the clause, and `CreateFilter` / `Filter`. Grammar lives next to the SIMD that runs.
+3. **`IJamlClauseDesc` is the intended contract.** Finish it on every family. No parallel “language service” that re-declares the same keys.
+4. **`JamlConfig` is a dumb document bag** (id/deck/stake/must/should/mustNot). Not the grammar SoT.
+5. **Closed game vocabulary = engine enums.** Not hand-maintained mega `string[]` name lists.
+
+### Forbidden shapes (MUST NOT)
+
+6. **MUST NOT** treat a vertical `string[] ClauseKeys` / phone-book vocab as the language. Keys are **switch arms** (`Set`) or generated dispatch that **calls the desc**.
+7. **MUST NOT** add another hand discriminator map (`JamlDiscriminatorRegistry`-style) once descs + generated switch cover the wires. **Rename is not a design** (“JamlRegistry” on the same dictionary = fail).
+8. **MUST NOT** stack onion on FilterDesc (registry + schema arrays + half-LSP brain + third TS grammar).
+9. **MUST NOT** resurrect deleted third grammars (`jaml-lsp` / `jaml-codemirror` / TS reimplementation of JAML).
+9b. **MUST NOT** add a YAML or JSON **filter** loader. JAML text only (`TryLoad`/`FromJaml`). Seed-list `.json` for lakes is fine; that is not a filter grammar.
+10. **MUST NOT** market copy: “the REAL product/engine”, sleepy/honey package blurbs. State what it is and what you do with it.
+11. **MUST NOT** write wrong-then-fix diaries in comments/docs. Present tense: what it is and why it helps.
+12. **MUST NOT** persist identity profiling or slur associations from chat. Caps/typos = register.
+
+### PRNG / proof (MUST)
+
+13. **Streams are keyed; order within a key is law.** Skip rolls on a stream → wrong items.
+14. **A search that finds a seed is proof.** Fake-search unit tests prove nothing.
+
+### Open debt (TODO — close only with code + tests)
+
+- [ ] **T1** `IJamlClauseDesc` on every clause family; loader calls `Set` / `SetDiscriminatorValue`.
+- [ ] **T2** Generated schema = dispatch to descs only; stop treating `ClauseKeys` arrays as the product.
+- [ ] **T3** Delete or supersede hand `JamlDiscriminatorRegistry.Entries` once T1+T2 cover every wire.
+- [ ] **T4** Wire or delete orphans: `SpecialSpectralCardFilterDesc`, `LegendarySoulEditionFilterDesc` (`JamlClauseExtensions.CreateDesc` does not exist).
+- [ ] **T5** Source config shapes with the desc family that uses them (or generated from it).
+- [ ] **T6** If LSP returns: thin stdio over engine only. No second grammar.
+- [ ] **T7** WASM = same engine shape as native. Wrong shape → delete and redo.
+
+### Self-test before claim-done
+
+Any **yes** = stop and undo:
+
+- Touched grammar without going through a FilterDesc?
+- Added a string[] or registry “for editor vocab”?
+- Renamed a mess instead of deleting parallel truth?
+- Wrote wrong-then-fix or “the REAL …” copy?
+- Claimed search correctness without a real CLI/engine run?
 
 ## Commands
 
@@ -60,13 +114,13 @@ Dependency direction points inward to the engine: **Motely** (library) ← Motel
 
 - **Two execution contexts, one filter model.** `MotelyVectorSearchContext` (partials per domain: Joker, Shop, Tarot, Packs, Tags, Vouchers, …) is the 8-wide SIMD path filters run on. `MotelySingleSearchContext` (same partial layout plus Boss, Shuffle, RunState) is the per-seed scalar path used for scoring and analysis. `MotelySearch.cs` is the driver; `MotelySearch.Browser.cs` is its WASM-facing partial.
 - **Filters are descriptors.** `IMotelySeedFilterDesc` describes a filter; `MotelyFilterCreationContext` instantiates it. `JamlSearchBuilder.CreateSettings` composes the chain from a `JamlConfig`: `must` clauses append filters, `mustNot` wraps in `NegationFilterDesc`, `should` installs `JamlShouldScoreDesc` for weighted scoring. A clause-free JAML (deck/stake/seeds only, host predicate carries the decision) is a first-class search.
-- **JAML** lives in `Motely/Filters/Jaml/` — `JamlConfig`, `JamlConfigLoader` (`FromJaml`; validation is loud and every key is checked at load, so typos surface immediately), clause types, per-feature descriptors under `AnteCards/`, `AnteFeatures/`, `Events/`. `JamlLine` (`Motely/Filters/Jaml/JamlLine.cs`) is the one-human-line spelling of a JAML clause, with `Validate`/`Canonicalize`.
+- **JAML** lives in `Motely/Filters/Jaml/` — `JamlConfig`, `JamlConfigLoader` (`TryLoad`/`FromJaml` only; validation is loud and every key is checked at load), clause types, per-feature descriptors under `AnteCards/`, `AnteFeatures/`, `Events/`. `JamlLine` is the one-human-line spelling of a clause. `ToJaml` writes JAML text back.
 - **JAMLyzer** (`Motely/Analysis/MotelyJamlyzer.cs`) produces per-seed ante-by-ante breakdowns; supports paged analysis with resumable stream states.
 - **Native filters** (`Motely/Filters/Native/`) are hand-written C# filters (PerkeoObservatory, ErraticFinder, …), reachable via CLI `--native <name>`; coverage focuses on the JAML path and lets these speed demons run free.
 - `LuaRandom`/`VectorLuaRandom` reproduce Balatro's RNG exactly — determinism here is the whole product.
 - **Why the sequential sweep is batched.** A batch fixes the *rightmost* `8 - batchCharCount` characters (`MotelySearch.cs:2148-2153`) and varies the left ones. Balatro's PRNG keys off the seed suffix, so every seed in a batch shares the same pseudohashes — computed once at `:2159` and reused across all 35^batchCharCount seeds. That sharing is what makes sequential roughly 13x cheaper per seed than feeding arbitrary seeds through a provider, where no two seeds share a suffix. One `Interlocked` claims a batch and that is the entire synchronization budget, so a bigger batch means both more hash reuse and less chatter. `--batchCharCount 4` is the right default; only 1 is a real mistake, and only single-threaded, where per-batch overhead is paid serially.
 - **`StopAfter(n)`** on `IMotelySearchSettings` ends a run once at least n seeds match, cancelling through the token workers already poll. "At least" is the contract, never exactly n — a batch scores all 8 SIMD lanes before anyone checks for cancellation. Reaching the limit completes the search rather than aborting it (`IMotelySearch.StoppedOnMatchLimit` tells the two apart), so callers take the first result rather than assuming they got one.
-- **Seeds-searched counts real seeds**, incremented per 8-wide vector at the one sequential leaf (`SearchVector`, `i == 0`) and by fetched count in provider mode. Deriving it as completed batches x `SeedsPerBatch` looked cheaper and reported 1,838,265,625 seeds — 13.8 billion seeds/sec on one thread — for a `StopAfter` run that quit inside its first batch. The leaf increment measures inside run-to-run noise; a full batch reports exactly 35^batchCharCount.
+- **Seeds-searched** increments at the sequential leaf (`SearchVector`, `i == 0`) per 8-wide vector, and by fetched count in provider mode. A full batch reports exactly 35^batchCharCount; early `StopAfter` reports only the vectors that actually ran.
 - **Callbacks fire from every worker thread.** `WithSeedMatchCallback`/`WithScoredResultCallback` are invoked with no serialization, so anything they touch must be thread-safe — a plain `List`/`HashSet` will silently drop finds.
 
 ### Motely.CLI
@@ -102,17 +156,11 @@ The fourteen Bootsharp docs, pinned so they load every session instead of relyin
 
 ### JAML grammar lives in C#
 
-**The C# engine is the only grammar.** `JamlDiscriminatorRegistry` maps each discriminator to its clause and source-config types, and every type carries its own `ClauseKeys`/`SourceKeys` list annotated with `[JamlDiscriminator]`. `Motely.Generators` reads those attributes at compile time and emits `JamlSchema.g.cs` — a switch-based lookup class that replaces runtime reflection. `JamlConfigLoader` reads JAML into a typed `JamlConfig` and validates every key at load, so a typo surfaces immediately; `JamlConfigLoader.ToJaml` writes one back out, so an app can round-trip a filter through save and reload. JAML is its own language with its own parser (`JamlDocumentParser`) — it is not YAML and not JSON.
+**The C# engine is the only grammar.** FilterDescs + loader + `JamlDocumentParser`. `JamlConfigLoader` reads **JAML text only** (`TryLoad`/`FromJaml`); `ToJaml` writes JAML back. No YAML package, no JSON filter interchange path — those were footguns and are gone. Seed lakes may still use `.json` as a **seed list** format (DuckDB); that is not a second filter grammar.
 
 **The TypeScript reimplementations are gone, on purpose.** `jaml-lsp` (a VS Code extension and a stdio language server) and `jaml-codemirror` were both deleted: each one carried its own copy of the grammar, so every vocabulary change meant editing the same facts in three places and shipping three packages in lockstep. Editors reach the grammar through `motely-wasm` instead — the engine itself, compiled, doing the parsing it already does. **Leave them buried.** A third implementation of a grammar the engine already owns is a place for the truth to rot, not a feature.
 
 `dotnet run --project Motely.Schema` emits a TypeScript schema snapshot of every discriminator, its clause keys, source keys, value enums, and flags — regenerated after any vocabulary or enum change. It prints to stdout; redirect to write `jaml-lang/src/generated.ts` if that package were still alive (it's not).
-
-### Motely.Lsp — the JAML language server
-
-**Motely.Lsp.Core** is the protocol-free language brain: `JamlLanguageService.Diagnose/Hover/Complete` computed straight off the engine (`JamlConfigLoader` for parsing, generated `JamlSchema` for keys, the engine's enums for vocabulary). **Motely.Lsp** is its stdio shell — hand-rolled Content-Length framed JSON-RPC 2.0 (`JsonRpcChannel` + `LspServer`), single-threaded, full-document sync, publishing diagnostics on open/change with hover and completion on request. Logging goes to stderr only; stdout is the protocol channel. The server is stream-injectable, so `LspServerProtocolTests` drives complete framed sessions through in-memory streams — no processes, no timing.
-
-**plugin/** is the Claude Code plugin: `.claude-plugin/plugin.json` + `.lsp.json` pointing `${CLAUDE_PLUGIN_ROOT}/server/Motely.Lsp` at a self-contained single-file publish (`dotnet publish Motely.Lsp -c Release -r <rid> --self-contained -p:PublishSingleFile=true -o plugin/server`). `node Motely.Lsp/smoke-lsp.mjs` proves the published binary end-to-end over real stdio. `restartOnCrash`/`shutdownTimeout` stay unset — Claude Code before v2.1.205 silently skips servers that set them.
 
 ### Supporting directories
 

@@ -42,10 +42,14 @@ public class JamlLineClauseTests
     }
 
     [Fact]
-    public void Json_LineClauseString_BecomesTheExpectedClause()
+    public void Jaml_LineClauseString_BecomesTheExpectedClause()
     {
-        var config = JamlConfigLoader.FromJson(
-            """{ "name": "json line", "must": ["Boss The Wall in ante 3"] }"""
+        var config = JamlConfigLoader.FromJaml(
+            """
+            name: line clause
+            must:
+              - Boss The Wall in ante 3
+            """
         );
 
         var boss = Assert.IsType<BossClause>(Assert.Single(config.Must));

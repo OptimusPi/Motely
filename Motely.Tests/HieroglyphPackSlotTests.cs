@@ -115,7 +115,7 @@ public class HieroglyphPackSlotTests
     }
 
     /// <summary>
-    /// The old user-facing early-ante cap knob is no longer valid JAML syntax.
+    /// Unknown early-ante pack-cap keys are rejected at load (valid hieroglyph scans use sources).
     /// </summary>
     [Fact]
     public void EarlyAntesMaxPackSourceProperty_IsRejected()

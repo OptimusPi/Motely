@@ -5,7 +5,7 @@ namespace Motely;
 
 public struct VectorLuaRandom
 {
-    // AUDIT ISSUE #3: Hoist vector constants to avoid repeated creation in hot paths
+    // Vector constants hoisted so hot paths reuse them.
     private static readonly Vector512<double> _vecPI = Vector512.Create(3.14159265358979323846);
     private static readonly Vector512<double> _vecE = Vector512.Create(2.7182818284590452354);
     private static readonly Vector512<double> _vecOne = Vector512.Create(1d);

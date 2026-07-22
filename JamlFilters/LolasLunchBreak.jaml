@@ -25,3 +25,16 @@ should:
   - voucher: Telescope
     antes: [1, 2]
     score: 5
+
+seeds:
+  - S6VK5VYU
+  - 4492297Y
+  - WQFLAM6X
+  - 9KTBS1J3
+  - 9WETYJSL
+  - 6EGVR7OH
+  - RRLLQ856
+  - RKV1HCNA
+  - QFJOWZUZ
+  - 7A8YMBVE
+  - L9FUPCES

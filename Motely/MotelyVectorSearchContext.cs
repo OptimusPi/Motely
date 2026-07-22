@@ -34,7 +34,7 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
     public MotelyResampleStreams ResamplePrngStreams;
     public int ResamplePrngStreamInitCount;
 
-    // AUDIT ISSUE #1: Use StrongBox instead of boxing to object to avoid GC allocations
+    // StrongBox keeps resample streams as a typed heap cell — no object-box churn.
     public List<StrongBox<MotelyVectorPrngStream>>? HighResamplePrngStreams;
     public bool IsCached = isCached;
     public readonly bool IsInvalid => InitialPrngStream.IsInvalid;
@@ -61,7 +61,7 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
 
             for (int i = 0; i < HighResamplePrngStreams.Count; i++)
             {
-                // AUDIT ISSUE #1: Access StrongBox.Value instead of unboxing
+                // StrongBox.Value — typed path, no unbox.
                 stream.HighResamplePrngStreams.Add(
                     HighResamplePrngStreams[i].Value.CreateSingleStream(lane)
                 );
@@ -136,7 +136,7 @@ internal readonly unsafe struct MotelySearchContextParams(
     }
 }
 
-// AUDIT ISSUE #4: Hoisted vector constants to avoid repeated creation in hot paths
+// Vector constants live here so hot paths reuse them.
 internal static class MotelyVectorConstants
 {
     // PRNG iteration constants
@@ -299,7 +299,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         // Then we vectorize and do the last characters of the seed
         Vector512<double> numVector = Vector512.Create(num);
 
-        // AUDIT ISSUE #4: Use hoisted constants instead of creating in loop
+        // Reuse hoisted vector constants.
         for (int i = seedLastCharacterLength - 1; i >= 0; i--)
         {
             numVector = Vector512.Divide(MotelyVectorConstants.HashConstant, numVector);
@@ -317,7 +317,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Vector512<double> InternalPseudoHash(string key, Vector512<double> partialHash)
     {
-        // AUDIT ISSUE #4: Use hoisted constants instead of creating in loop
+        // Reuse hoisted vector constants.
         for (int i = key.Length - 1; i >= 0; i--)
         {
             partialHash = Vector512.Divide(MotelyVectorConstants.HashConstant, partialHash);
@@ -508,7 +508,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
 
             Debug.Assert(resampleStream.HighResamplePrngStreams != null);
 
-            // AUDIT ISSUE #1: Use StrongBox to avoid boxing allocations
+            // StrongBox — typed heap cell for the stream.
             if (resample < resampleStream.HighResamplePrngStreams.Count)
             {
                 return ref resampleStream.HighResamplePrngStreams[resample].Value;

@@ -110,8 +110,7 @@ public static partial class JamlConfigLoader
         return instance;
     }
 
-    // aliasKeys: every wire key that resolves to this one property (order matters — first
-    // present value wins, matching the old `data.GetX("a") ?? data.GetX("b") ?? default` chains).
+    // aliasKeys: every wire key for this property; first present value wins.
     private static void SetGenericProperty(object target, PropertyInfo prop, IReader data, IReadOnlyList<string> aliasKeys)
     {
         var type = prop.PropertyType;
