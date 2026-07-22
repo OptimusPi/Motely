@@ -243,7 +243,7 @@ public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClaus
 - [ ] `public static JamlParseResult Parse(string, JamlSourceFormat = Auto)` — never throws
 - [ ] Recovery: unknown key → record+skip; bad clause → record+next; structural → stop subtree, resume sibling
 - [ ] `Config` non-null on partial parse (drives completion mid-typing)
-- [ ] Reimplement `FromYaml`/`FromJson`/`TryLoad` over `Parse`, signatures unchanged
+- [ ] Reimplement `FromJaml`/`FromJson`/`TryLoad` over `Parse`, signatures unchanged
 - [ ] Replace `ValidateKeys` (`:379-386`) throw-on-first with accumulator
 - [ ] Unify: `JamlSyntaxException` currently wrapped into `InvalidOperationException` with a
       doubly-nested message; `JamlLine.Canonicalize` throws `FormatException` instead
@@ -336,7 +336,7 @@ Completion context via `NodeAt`: root → `RootKeys`; in clause → `KeysFor(dis
 | [ ] `semanticTokens` | `Core.Tokens` | VS Code, CodeMirror |
 | [ ] `formatting` | `Core.Format` | VS Code |
 
-- [ ] **Decide before format-on-save:** does `JamlConfigWriter.ToYaml` preserve comments? If no → off by default.
+- [ ] **Decide before format-on-save:** does `JamlConfigWriter.ToJaml` preserve comments? If no → off by default.
 
 ## T11 — VS Code extension
 **New:** `vscode-jaml/`
