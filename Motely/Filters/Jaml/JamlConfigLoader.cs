@@ -37,39 +37,6 @@ public static partial class JamlConfigLoader
         }
     }
 
-    public static bool TryLoadFromJson(string content, out JamlConfig? config, out string? error)
-    {
-        try
-        {
-            config = FromJson(content);
-            error = null;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            config = null;
-            error = ex.Message;
-            return false;
-        }
-    }
-
-    public static JamlConfig FromJson(string content)
-    {
-        try
-        {
-            var root = JamlDocumentParser.ParseJson(content);
-            return ParseConfig(new NodeReader(root));
-        }
-        catch (InvalidOperationException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"JSON parse error: {ex.Message}", ex);
-        }
-    }
-
     public static LegendaryJokerSourceConfig CreateLegendaryJokerSources(
         LegendaryJokerSourceConfig? userConfig
     ) => userConfig ?? new LegendaryJokerSourceConfig();
@@ -149,11 +116,6 @@ public static partial class JamlConfigLoader
         var score = data.GetInt("score") ?? 1;
         var label = data.GetString("label");
 
-        // Families migrated to the sane path build themselves off their descriptor; the switch
-        // below is the shrinking legacy fallback for the ones not yet moved.
-        if (DescBuilders.TryGetValue(Normalize(discriminator), out var descBuild))
-            return descBuild(discriminator, node, data, antes, min, max, score, label);
-
         switch (Normalize(discriminator))
         {
             case "and":
@@ -193,6 +155,13 @@ public static partial class JamlConfigLoader
             case "legendaryjoker":
             case "legendaryjokers":
                 return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
+            case "voucher":
+            case "vouchers":
+                {
+                    var clause = PopulateAndCast<VoucherClause>(discriminator, node, data, antes, min, max, score, label);
+                    clause.Vouchers = ParseEnumArray<MotelyVoucher>(node, discriminator);
+                    return clause;
+                }
             case "tarotcard":
             case "tarotcards":
                 {
@@ -217,6 +186,32 @@ public static partial class JamlConfigLoader
             case "standardcard":
             case "standardcards":
                 return PopulateAndCast<StandardCardClause>(discriminator, node, data, antes, min, max, score, label);
+            case "boss":
+            case "bosses":
+                {
+                    var clause = PopulateAndCast<BossClause>(discriminator, node, data, antes, min, max, score, label);
+                    clause.Bosses = ParseEnumArray<MotelyBossBlind>(node, discriminator);
+                    return clause;
+                }
+            case "tag":
+            case "tags":
+                {
+                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
+                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
+                    return clause;
+                }
+            case "smallblindtag":
+                {
+                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
+                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
+                    return clause;
+                }
+            case "bigblindtag":
+                {
+                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
+                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
+                    return clause;
+                }
             case "erraticrank":
                 return WithMax(
                     new ErraticRankClause
@@ -254,6 +249,23 @@ public static partial class JamlConfigLoader
                     },
                     max
                 );
+            case "erraticsuit":
+            case "erraticsuits":
+                return WithMax(
+                    new ErraticSuitClause
+                    {
+                        Suit = ParseEnum<MotelyStandardcardSuit>(
+                            ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)
+                        ),
+                        Antes = antes,
+                        Min = min,
+                        Score = score,
+                        Label = label,
+                    },
+                    max
+                );
+            case "startingdraw":
+                return BuildStartingDraw(data, antes, min, max, score, label);
             case "luckymoney":
             case "luckymult":
             case "misprintmult":
@@ -296,6 +308,27 @@ public static partial class JamlConfigLoader
         return clause;
     }
 
+    private static StartingDrawClause BuildStartingDraw(
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    ) =>
+        WithMax(
+            new StartingDrawClause
+            {
+                Rank = ParseOptionalRank(data.GetString("rank")),
+                Suit = ParseOptionalEnum<MotelyStandardcardSuit>(data.GetString("suit")),
+                Antes = antes,
+                Min = min,
+                Score = score,
+                Label = label,
+            },
+            max
+        );
+
     private static void HoistAntes(IJamlClause[] clauses, int[] antes)
     {
         if (antes.Length == 0)
@@ -325,16 +358,12 @@ public static partial class JamlConfigLoader
         foreach (var key in reader.Keys)
         {
             if (!allowed.Any(a => string.Equals(a, key, StringComparison.OrdinalIgnoreCase)))
-                // The parser tracked where this key sits; hand that span to the diagnostic
-                // rather than making an editor rediscover the typo by string-searching.
-                throw new JamlSemanticException($"Unknown {scope} key: '{key}'.", reader.KeySpan(key));
+                throw new InvalidOperationException($"Unknown {scope} key: '{key}'.");
         }
     }
 
-    // The only real spelling is `with: { luck, vouchers }` — ValidateClauseKeys already
-    // rejects bare `luck:`/`vouchers:` and `sources: {luck}` as unknown keys before parsing
-    // ever reaches here (confirmed this session: those were legacy fallbacks, not real
-    // grammar, and real corpus filters using them have been fixed to use `with:` instead).
+    // Luck/vouchers live under `with: { luck, vouchers }`. Bare `luck:`/`vouchers:` and
+    // `sources: {luck}` are unknown keys and die in ValidateClauseKeys before this runs.
     private static JamlWith ParseWith(IReader data)
     {
         var with = data.GetObject("with");
@@ -403,6 +432,9 @@ public static partial class JamlConfigLoader
     private static bool IsDiscriminator(string key) =>
         JamlDiscriminatorRegistry.Entries.ContainsKey(Normalize(key));
 
+    private static MotelyStandardcardRank? ParseOptionalRank(string? value) =>
+        value is null ? null : ParseRank(value);
+
     private static MotelyStandardcardRank ParseRank(string value)
     {
         if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var pip))
@@ -431,6 +463,9 @@ public static partial class JamlConfigLoader
             _ => ParseEnum<MotelyStandardcardRank>(value),
         };
     }
+
+    private static T? ParseOptionalEnum<T>(string? value)
+        where T : struct, Enum => value is null ? null : ParseEnum<T>(value);
 
     private static T ParseEnum<T>(string value)
         where T : struct, Enum
@@ -496,7 +531,6 @@ public static partial class JamlConfigLoader
     private interface IReader
     {
         IReadOnlyList<string> Keys { get; }
-        JamlSpan KeySpan(string key);
         string? GetString(string key);
         int? GetInt(string key);
         bool? GetBool(string key);
@@ -511,11 +545,6 @@ public static partial class JamlConfigLoader
     {
         public IReadOnlyList<string> Keys =>
             primary.Keys.Concat(fallback.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-
-        // The key belongs to whichever reader actually wrote it down; prefer the primary's span
-        // and fall back only when the primary never saw the key (empty span).
-        public JamlSpan KeySpan(string key) =>
-            primary.KeySpan(key) is { IsEmpty: false } span ? span : fallback.KeySpan(key);
 
         public string? GetString(string key) => primary.GetString(key) ?? fallback.GetString(key);
 
@@ -538,9 +567,7 @@ public static partial class JamlConfigLoader
             primary.GetClauseList(key) ?? fallback.GetClauseList(key);
     }
 
-    // Backed by JAML's own tree (JMap/JSeq/JScalar from JamlDocumentParser) instead of a
-    // third-party YAML library's node types — same IReader contract as before, so every call
-    // site above is untouched; only what builds the tree changed.
+    // Backed by JAML's own tree (JMap/JSeq/JScalar from JamlDocumentParser).
     private sealed class NodeReader : IReader
     {
         private readonly JMap _map;
@@ -548,8 +575,6 @@ public static partial class JamlConfigLoader
         public NodeReader(JMap map) => _map = map;
 
         public IReadOnlyList<string> Keys => _map.Keys;
-
-        public JamlSpan KeySpan(string key) => _map.KeySpan(key);
 
         public string? GetString(string key) => Scalar(_map.Get(key));
 

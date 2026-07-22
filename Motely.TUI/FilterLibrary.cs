@@ -11,8 +11,6 @@ public static class FilterLibrary
 
     public static string JamlDirectory => Path.Combine(WorkingDirectory, "JamlFilters");
 
-    public static string JsonDirectory => Path.Combine(WorkingDirectory, "JsonFilters");
-
     public static IReadOnlyList<FilterLibraryEntry> DiscoverLocalFilters()
     {
         EnsureDirectories();
@@ -26,16 +24,8 @@ public static class FilterLibrary
                 new FilterLibraryEntry(Path.GetFileNameWithoutExtension(file), "jaml", file)
             );
 
-        foreach (
-            var file in Directory.GetFiles(JsonDirectory, "*.json", SearchOption.TopDirectoryOnly)
-        )
-            filters.Add(
-                new FilterLibraryEntry(Path.GetFileNameWithoutExtension(file), "json", file)
-            );
-
         return filters
-            .OrderBy(static filter => filter.Format, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(static filter => filter.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static filter => filter.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
@@ -75,6 +65,5 @@ public static class FilterLibrary
     public static void EnsureDirectories()
     {
         Directory.CreateDirectory(JamlDirectory);
-        Directory.CreateDirectory(JsonDirectory);
     }
 }

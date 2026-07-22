@@ -54,10 +54,9 @@ public static class JamlConfigExtensions
 public sealed record JokerSourceConfig
 {
     /// <summary>
-    /// This class's own settable properties, camelCased — the single source JamlConfigLoader's
-    /// ValidateKeys and Motely.Schema's generator both read. No "emperor": there's no such
-    /// property here (that's TarotCardSourceConfig's field) — the old loader accepted it anyway
-    /// and silently dropped it.
+    /// This class's settable properties, camelCased — the single list JamlConfigLoader
+    /// ValidateKeys and Motely.Schema both read. <c>emperor</c> lives on
+    /// <see cref="TarotCardSourceConfig"/>, not here.
     /// </summary>
     public static readonly string[] SourceKeys =
     [

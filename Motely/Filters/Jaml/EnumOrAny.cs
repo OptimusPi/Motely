@@ -3,7 +3,7 @@ namespace Motely.Filters.Jaml;
 /// <summary>
 /// Wildcard-or-specific value union for clause discriminators that accept the JAML literal
 /// scalar <c>any</c> (case-insensitive) in addition to a typed enum member name. The clause
-/// type's rarity is encoded by the YAML key (<c>joker:</c>, <c>commonJoker:</c>, etc.), not
+/// type's rarity is encoded by the clause key (<c>joker:</c>, <c>commonJoker:</c>, etc.), not
 /// by the value — so this type only carries the wildcard flag and a specific enum value.
 /// </summary>
 /// <remarks>

@@ -17,3 +17,7 @@ should:
       ]
   - smallBlindTag: NegativeTag
     score: 10
+
+seeds:
+  - V6LZ72N1
+  - M7SCIIOF

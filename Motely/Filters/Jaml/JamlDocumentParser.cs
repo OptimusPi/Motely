@@ -1,10 +1,7 @@
 namespace Motely.Filters.Jaml;
 
-// JAML's own document tree — no YAML library, no YAML semantics borrowed. A JAML document is a
-// small, fixed shape (root key/value pairs; must/should/mustNot lists of either a nested
-// key/value clause block or a one-line clause string; flow arrays like [0,1,2]; nested
-// sources:/with:/clauses: blocks) — small enough that JAML parses itself, the same way
-// JamlLine.cs already parses one clause line without borrowing anyone else's grammar.
+// JAML document tree. One grammar: root key/value pairs; must/should/mustNot clause lists
+// (block or one-line); flow arrays; nested sources:/with:/clauses:. Parses itself.
 
 internal abstract class JNode
 {
@@ -66,11 +63,8 @@ internal sealed class JScalar(string value, JScalarKind kind = JScalarKind.Bare)
     public static JScalar Of(bool value) => new(value ? "true" : "false");
 }
 
-/// <summary>Thrown with a line number so a parse failure points at the actual offending line,
-/// the same way the old SharpYaml errors did (Zerkeo.jaml's "mapping values not allowed" case
-/// this session) — losing that would be a real regression, not just a cosmetic one.
-/// The position is kept as data as well as formatted into the message, so an editor can draw a
-/// squiggle on the offending line rather than regex it back out of the text.</summary>
+/// <summary>Parse failure with a <see cref="JamlSpan"/> so editors can underline the
+/// offending line. Position lives on the exception and in the message text.</summary>
 internal sealed class JamlSyntaxException(string message, JamlSpan span)
     : Exception($"JAML parse error at line {span.StartLine + 1}: {message}")
 {
@@ -407,183 +401,5 @@ internal static class JamlDocumentParser
             }
             break;
         }
-    }
-
-    // ── Real JSON (the WASM/API JSON entry point — genuinely different grammar from JAML's
-    // own indentation-based format, so it gets its own small recursive-descent reader rather
-    // than being coerced through the line-oriented parser above). ─────────────────────────────
-
-    // The JSON reader walks a character offset rather than lines, so it converts back to a
-    // line/column here. Every JSON error used to report line 0 no matter where it happened —
-    // an editor drew every squiggle on the first line of the file. Errors are rare enough that
-    // counting newlines at throw time costs nothing worth measuring.
-    private static JamlSpan JsonSpan(string text, int index, int length = 1)
-    {
-        int clamped = Math.Clamp(index, 0, Math.Max(text.Length - 1, 0));
-        int line = 0, lineStart = 0;
-        for (int k = 0; k < clamped; k++)
-            if (text[k] == '\n')
-            {
-                line++;
-                lineStart = k + 1;
-            }
-        return JamlSpan.OnLine(line, clamped - lineStart, length);
-    }
-
-    public static JMap ParseJson(string text)
-    {
-        int i = 0;
-        SkipJsonWhitespace(text, ref i);
-        var node = ParseJsonValue(text, ref i);
-        SkipJsonWhitespace(text, ref i);
-        if (i != text.Length)
-            throw new JamlSyntaxException("Trailing content after JSON document.", JsonSpan(text, i));
-        if (node is not JMap map)
-            throw new JamlSyntaxException("JSON root must be an object.", JsonSpan(text, 0));
-        return map;
-    }
-
-    private static JNode ParseJsonValue(string text, ref int i)
-    {
-        SkipJsonWhitespace(text, ref i);
-        if (i >= text.Length)
-            throw new JamlSyntaxException("Unexpected end of JSON.", JsonSpan(text, i));
-        return text[i] switch
-        {
-            '{' => ParseJsonObject(text, ref i),
-            '[' => ParseJsonArray(text, ref i),
-            '"' => new JScalar(ParseJsonString(text, ref i)),
-            _ => ParseJsonLiteral(text, ref i),
-        };
-    }
-
-    private static JMap ParseJsonObject(string text, ref int i)
-    {
-        var map = new JMap();
-        i++; // '{'
-        SkipJsonWhitespace(text, ref i);
-        if (i < text.Length && text[i] == '}')
-        {
-            i++;
-            return map;
-        }
-        while (true)
-        {
-            SkipJsonWhitespace(text, ref i);
-            if (i >= text.Length || text[i] != '"')
-                throw new JamlSyntaxException("Expected a JSON object key.", JsonSpan(text, i));
-            int keyStart = i;
-            string key = ParseJsonString(text, ref i);
-            var keySpan = JsonSpan(text, keyStart, i - keyStart);
-            SkipJsonWhitespace(text, ref i);
-            if (i >= text.Length || text[i] != ':')
-                throw new JamlSyntaxException("Expected ':' after JSON object key.", JsonSpan(text, i));
-            i++;
-            map.Set(key, ParseJsonValue(text, ref i), keySpan);
-            SkipJsonWhitespace(text, ref i);
-            if (i < text.Length && text[i] == ',')
-            {
-                i++;
-                continue;
-            }
-            if (i < text.Length && text[i] == '}')
-            {
-                i++;
-                break;
-            }
-            throw new JamlSyntaxException("Expected ',' or '}' in JSON object.", JsonSpan(text, i));
-        }
-        return map;
-    }
-
-    private static JSeq ParseJsonArray(string text, ref int i)
-    {
-        var seq = new JSeq();
-        i++; // '['
-        SkipJsonWhitespace(text, ref i);
-        if (i < text.Length && text[i] == ']')
-        {
-            i++;
-            return seq;
-        }
-        while (true)
-        {
-            seq.Items.Add(ParseJsonValue(text, ref i));
-            SkipJsonWhitespace(text, ref i);
-            if (i < text.Length && text[i] == ',')
-            {
-                i++;
-                continue;
-            }
-            if (i < text.Length && text[i] == ']')
-            {
-                i++;
-                break;
-            }
-            throw new JamlSyntaxException("Expected ',' or ']' in JSON array.", JsonSpan(text, i));
-        }
-        return seq;
-    }
-
-    private static string ParseJsonString(string text, ref int i)
-    {
-        i++; // opening quote
-        var sb = new System.Text.StringBuilder();
-        while (i < text.Length && text[i] != '"')
-        {
-            char c = text[i];
-            if (c == '\\' && i + 1 < text.Length)
-            {
-                i++;
-                sb.Append(text[i] switch
-                {
-                    '"' => '"',
-                    '\\' => '\\',
-                    '/' => '/',
-                    'n' => '\n',
-                    't' => '\t',
-                    'r' => '\r',
-                    'b' => '\b',
-                    'f' => '\f',
-                    'u' => ParseJsonUnicodeEscape(text, ref i),
-                    var other => other,
-                });
-            }
-            else
-            {
-                sb.Append(c);
-            }
-            i++;
-        }
-        if (i >= text.Length)
-            throw new JamlSyntaxException("Unterminated JSON string.", JsonSpan(text, i));
-        i++; // closing quote
-        return sb.ToString();
-    }
-
-    private static char ParseJsonUnicodeEscape(string text, ref int i)
-    {
-        // i is at 'u'; the 4 hex digits follow.
-        string hex = text.Substring(i + 1, 4);
-        i += 4;
-        return (char)Convert.ToInt32(hex, 16);
-    }
-
-    // true/false/null/numbers all round-trip through JScalar as their literal text — every
-    // downstream consumer (GetInt/GetBool/GetString) already parses text, same as the JAML path.
-    private static JScalar ParseJsonLiteral(string text, ref int i)
-    {
-        int start = i;
-        while (i < text.Length && text[i] != ',' && text[i] != '}' && text[i] != ']' && !char.IsWhiteSpace(text[i]))
-            i++;
-        if (i == start)
-            throw new JamlSyntaxException($"Unexpected character '{text[i]}' in JSON.", JsonSpan(text, i));
-        return new JScalar(text[start..i]);
-    }
-
-    private static void SkipJsonWhitespace(string text, ref int i)
-    {
-        while (i < text.Length && char.IsWhiteSpace(text[i]))
-            i++;
     }
 }

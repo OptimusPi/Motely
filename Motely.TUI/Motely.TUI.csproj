@@ -32,9 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <!-- ApiServerWindow launches the REAL API (HelperApiHost.Build) instead of building its own
-         second copy — this is what makes that possible, and what let Swashbuckle/OpenApi (and
-         the CVE they dragged in) come out of the TUI entirely. -->
+    <!-- ApiServerWindow hosts the API via HelperApiHost.Build (shared with Motely.HelperAPI). -->
     <ProjectReference Include="..\Motely.HelperAPI\Motely.HelperAPI.csproj" />
     <!-- SearchWindow uses SeedSourceProvider for file-source searches. -->
     <ProjectReference Include="..\Motely.DataLake\Motely.DataLake.csproj" />

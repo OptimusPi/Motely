@@ -263,8 +263,7 @@ public sealed class AnalyzerUnitTests(ITestOutputHelper output)
         var resume = page1.ToDictionary(r => r.Seed, r => r.StreamStates);
         var page2 = MotelyJamlyzer.Analyze(Config(seeds), resume, eventRolls: 10);
 
-        // The fix: each seed's stitched end-state must equal ITS OWN full-window end-state. If a bag
-        // leaked across seeds (the old multi-seed bug), seed[1..]'s end-state would not match here.
+        // Each seed's stitched end-state equals that seed's full-window end-state — bags stay per-seed.
         foreach (var p2 in page2)
         {
             var p1 = page1.Single(r => r.Seed == p2.Seed);

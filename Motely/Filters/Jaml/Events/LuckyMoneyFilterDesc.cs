@@ -7,10 +7,8 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("luckyMoney", RollsAreInlineValue = true)]
 public sealed class LuckyMoneyClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list. Has a With
-    /// property, so with/luck/vouchers/sources(-as-luck-container) are genuinely valid here —
-    /// unlike clause types with no With property, where the old loader silently accepted and
-    /// dropped them.</summary>
+    /// <summary>Clause-level keys. Includes <c>with</c> because this clause has a
+    /// <see cref="With"/> property (luck / vouchers).</summary>
     public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
 
     public string? Label { get; set; }
