@@ -51,7 +51,7 @@ public static class JamlLanguageService
                 );
 
             // Semantic (unknown key, bad value): the span of the token the loader rejected —
-            // no regex over the message, no re-searching the document for a quoted word.
+            // no regex over the message, no re-searching the document for a lookalike word.
             if (walk is JamlSemanticException semantic && !semantic.Span.IsEmpty)
                 return new JamlDiagnostic(
                     semantic.Span,
@@ -63,19 +63,19 @@ public static class JamlLanguageService
 
         // A semantic error the loader couldn't place (a value outside its enum, until those
         // throw sites carry a span too): underline the first line rather than invent a column.
-        var firstLineLength = text.IndexOf('\n') is var nl && nl >= 0 ? nl : text.Length;
         return new JamlDiagnostic(
-            JamlSpan.WholeLine(0, Math.Max(firstLineLength, 1)),
+            FirstLineSpan(text),
             ex.Message,
             JamlDiagnosticSeverity.Error,
             "JAML0100"
         );
     }
 
-    private static JamlSpan ClampSpan(JamlSpan span, string text)
+    private static JamlSpan ClampSpan(JamlSpan span, string text) =>
+        span.IsEmpty ? FirstLineSpan(text) : span;
+
+    private static JamlSpan FirstLineSpan(string text)
     {
-        if (!span.IsEmpty)
-            return span;
         var firstLineLength = text.IndexOf('\n') is var nl && nl >= 0 ? nl : text.Length;
         return JamlSpan.WholeLine(0, Math.Max(firstLineLength, 1));
     }
@@ -142,12 +142,11 @@ public static class JamlLanguageService
 
         var colon = body.IndexOf(':');
         if (colon >= 0)
-            return CompleteValue(lines, line, body[..colon].Trim(), body[(colon + 1)..].TrimStart());
+            return CompleteValue(body[..colon].Trim(), body[(colon + 1)..].TrimStart());
         return CompleteKey(lines, line, indent, isListItem, body);
     }
 
-    private static IReadOnlyList<JamlCompletionItem> CompleteValue(
-        string[] lines, int line, string key, string valuePrefix)
+    private static IReadOnlyList<JamlCompletionItem> CompleteValue(string key, string valuePrefix)
     {
         // Root-level deck/stake, and any clause key with a known enum vocabulary.
         if (JamlVocabulary.EnumForKey(key) is { } keyEnum)
@@ -249,8 +248,7 @@ public static class JamlLanguageService
                 reference = lineIndent;
 
             var body = raw.TrimStart();
-            var fromListItem = body.StartsWith("- ", StringComparison.Ordinal);
-            if (fromListItem)
+            if (body.StartsWith("- ", StringComparison.Ordinal))
                 body = body[2..].TrimStart();
 
             var colon = body.IndexOf(':');
