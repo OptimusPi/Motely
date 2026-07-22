@@ -58,6 +58,9 @@ public interface IJamlValueReader
     /// <summary>Reads an int array, accepting "1", "[1,2]" and "1-8" alike.</summary>
     bool TryIntArray(out int[] value);
 
+    /// <summary>Reads a card rank, accepting pips (2–10), letters (J/Q/K/A) and names alike.</summary>
+    bool TryRank(out MotelyStandardcardRank value);
+
     /// <summary>Reads one enum member by name, or reports a diagnostic naming the near misses.</summary>
     bool TryEnum<TEnum>(out TEnum value) where TEnum : struct, Enum;
 

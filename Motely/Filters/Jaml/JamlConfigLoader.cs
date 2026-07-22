@@ -254,23 +254,6 @@ public static partial class JamlConfigLoader
                     },
                     max
                 );
-            case "erraticsuit":
-            case "erraticsuits":
-                return WithMax(
-                    new ErraticSuitClause
-                    {
-                        Suit = ParseEnum<MotelyStandardcardSuit>(
-                            ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)
-                        ),
-                        Antes = antes,
-                        Min = min,
-                        Score = score,
-                        Label = label,
-                    },
-                    max
-                );
-            case "startingdraw":
-                return BuildStartingDraw(data, antes, min, max, score, label);
             case "luckymoney":
             case "luckymult":
             case "misprintmult":
@@ -312,27 +295,6 @@ public static partial class JamlConfigLoader
         clause.Label = label;
         return clause;
     }
-
-    private static StartingDrawClause BuildStartingDraw(
-        IReader data,
-        int[] antes,
-        int min,
-        int? max,
-        int score,
-        string? label
-    ) =>
-        WithMax(
-            new StartingDrawClause
-            {
-                Rank = ParseOptionalRank(data.GetString("rank")),
-                Suit = ParseOptionalEnum<MotelyStandardcardSuit>(data.GetString("suit")),
-                Antes = antes,
-                Min = min,
-                Score = score,
-                Label = label,
-            },
-            max
-        );
 
     private static void HoistAntes(IJamlClause[] clauses, int[] antes)
     {
@@ -441,9 +403,6 @@ public static partial class JamlConfigLoader
     private static bool IsDiscriminator(string key) =>
         JamlDiscriminatorRegistry.Entries.ContainsKey(Normalize(key));
 
-    private static MotelyStandardcardRank? ParseOptionalRank(string? value) =>
-        value is null ? null : ParseRank(value);
-
     private static MotelyStandardcardRank ParseRank(string value)
     {
         if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var pip))
@@ -472,9 +431,6 @@ public static partial class JamlConfigLoader
             _ => ParseEnum<MotelyStandardcardRank>(value),
         };
     }
-
-    private static T? ParseOptionalEnum<T>(string? value)
-        where T : struct, Enum => value is null ? null : ParseEnum<T>(value);
 
     private static T ParseEnum<T>(string value)
         where T : struct, Enum

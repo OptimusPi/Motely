@@ -25,6 +25,9 @@ public static partial class JamlConfigLoader
             ["bigBlindTag"]   = BuildViaDesc<TagFilterDesc, TagClause>,
             ["voucher"]       = BuildViaDesc<VoucherFilterDesc, VoucherClause>,
             ["vouchers"]      = BuildViaDesc<VoucherFilterDesc, VoucherClause>,
+            ["erraticSuit"]   = BuildViaDesc<ErraticSuitFilterDesc, ErraticSuitClause>,
+            ["erraticSuits"]  = BuildViaDesc<ErraticSuitFilterDesc, ErraticSuitClause>,
+            ["startingDraw"]  = BuildViaDesc<StartingDrawFilterDesc, StartingDrawClause>,
         };
 
     // Common fields come straight off the clause's own interfaces — no desc, no reflection.
@@ -106,6 +109,19 @@ public static partial class JamlConfigLoader
             value = reader.GetIntArray(key)
                 ?? throw new JamlSemanticException($"'{key}' must be a number or list of numbers.", Span);
             return true;
+        }
+
+        public bool TryRank(out MotelyStandardcardRank value)
+        {
+            try
+            {
+                value = ParseRank(Text);
+                return true;
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new JamlSemanticException(ex.Message, Span);
+            }
         }
 
         public bool TryEnum<TEnum>(out TEnum value) where TEnum : struct, Enum
