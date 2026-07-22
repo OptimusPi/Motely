@@ -2,10 +2,8 @@
 
   <PropertyGroup>
     <!-- netstandard2.0 is the host requirement, not the SDK's: this DLL is loaded by
-         VBCSCompiler, Rider and VS, each carrying its own Roslyn. -->
+         VBCSCompiler, Rider, and VS, each carrying its own Roslyn. -->
     <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
