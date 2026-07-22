@@ -193,13 +193,6 @@ public static partial class JamlConfigLoader
             case "legendaryjoker":
             case "legendaryjokers":
                 return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
-            case "voucher":
-            case "vouchers":
-                {
-                    var clause = PopulateAndCast<VoucherClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Vouchers = ParseEnumArray<MotelyVoucher>(node, discriminator);
-                    return clause;
-                }
             case "tarotcard":
             case "tarotcards":
                 {
@@ -224,25 +217,6 @@ public static partial class JamlConfigLoader
             case "standardcard":
             case "standardcards":
                 return PopulateAndCast<StandardCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "tag":
-            case "tags":
-                {
-                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
-                    return clause;
-                }
-            case "smallblindtag":
-                {
-                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
-                    return clause;
-                }
-            case "bigblindtag":
-                {
-                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
-                    return clause;
-                }
             case "erraticrank":
                 return WithMax(
                     new ErraticRankClause

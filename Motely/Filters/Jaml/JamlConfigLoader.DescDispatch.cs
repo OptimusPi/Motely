@@ -17,8 +17,14 @@ public static partial class JamlConfigLoader
     private static readonly Dictionary<string, DescBuilder> DescBuilders =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["boss"]   = BuildViaDesc<BossFilterDesc, BossClause>,
-            ["bosses"] = BuildViaDesc<BossFilterDesc, BossClause>,
+            ["boss"]          = BuildViaDesc<BossFilterDesc, BossClause>,
+            ["bosses"]        = BuildViaDesc<BossFilterDesc, BossClause>,
+            ["tag"]           = BuildViaDesc<TagFilterDesc, TagClause>,
+            ["tags"]          = BuildViaDesc<TagFilterDesc, TagClause>,
+            ["smallBlindTag"] = BuildViaDesc<TagFilterDesc, TagClause>,
+            ["bigBlindTag"]   = BuildViaDesc<TagFilterDesc, TagClause>,
+            ["voucher"]       = BuildViaDesc<VoucherFilterDesc, VoucherClause>,
+            ["vouchers"]      = BuildViaDesc<VoucherFilterDesc, VoucherClause>,
         };
 
     // Common fields come straight off the clause's own interfaces — no desc, no reflection.
