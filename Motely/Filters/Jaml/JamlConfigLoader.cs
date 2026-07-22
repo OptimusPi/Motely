@@ -149,6 +149,11 @@ public static partial class JamlConfigLoader
         var score = data.GetInt("score") ?? 1;
         var label = data.GetString("label");
 
+        // Families migrated to the sane path build themselves off their descriptor; the switch
+        // below is the shrinking legacy fallback for the ones not yet moved.
+        if (DescBuilders.TryGetValue(Normalize(discriminator), out var descBuild))
+            return descBuild(discriminator, node, data, antes, min, max, score, label);
+
         switch (Normalize(discriminator))
         {
             case "and":
@@ -219,13 +224,6 @@ public static partial class JamlConfigLoader
             case "standardcard":
             case "standardcards":
                 return PopulateAndCast<StandardCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "boss":
-            case "bosses":
-                {
-                    var clause = PopulateAndCast<BossClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Bosses = ParseEnumArray<MotelyBossBlind>(node, discriminator);
-                    return clause;
-                }
             case "tag":
             case "tags":
                 {
