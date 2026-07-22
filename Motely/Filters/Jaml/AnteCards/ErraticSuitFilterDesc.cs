@@ -9,21 +9,40 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyStandardcardSuit))]
 public sealed class ErraticSuitClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Complete clause-level key list — the value itself carries the suit.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes"];
+    /// <summary>Clause keys mirror ErraticSuitFilterDesc's — the value itself carries the suit.</summary>
+    public static readonly string[] ClauseKeys = ErraticSuitFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyStandardcardSuit Suit { get; set; }
+    public MotelyStandardcardSuit Suit { get; set; }
 }
 
 public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
-    : IMotelySeedFilterDesc<ErraticSuitFilterDesc.ErraticSuitFilter>
+    : IMotelySeedFilterDesc<ErraticSuitFilterDesc.ErraticSuitFilter>,
+      IJamlClauseDesc<ErraticSuitClause>
 {
     private readonly ErraticSuitClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["erraticSuit", "erraticSuits"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes"];
+
+    /// <summary>Erratic-suit clauses carry no keys beyond the common set.</summary>
+    public static bool Set(ErraticSuitClause clause, string key, IJamlValueReader value) => false;
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(ErraticSuitClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnum<MotelyStandardcardSuit>(out var suit))
+            return false;
+        clause.Suit = suit;
+        return true;
+    }
 
     public ErraticSuitFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

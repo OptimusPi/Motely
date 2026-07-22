@@ -7,8 +7,8 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("startingDraw")]
 public sealed class StartingDrawClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "rank", "suit"];
+    /// <summary>Clause keys mirror StartingDrawFilterDesc's — the desc owns the grammar.</summary>
+    public static readonly string[] ClauseKeys = StartingDrawFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -20,9 +20,36 @@ public sealed class StartingDrawClause : IJamlClause, IAnteScopedClause
 }
 
 public struct StartingDrawFilterDesc(StartingDrawClause clause)
-    : IMotelySeedFilterDesc<StartingDrawFilterDesc.StartingDrawFilter>
+    : IMotelySeedFilterDesc<StartingDrawFilterDesc.StartingDrawFilter>,
+      IJamlClauseDesc<StartingDrawClause>
 {
     private readonly StartingDrawClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["startingDraw"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "rank", "suit"];
+
+    /// <summary>startingDraw carries its rank and suit as keys, not as a discriminator value.</summary>
+    public static bool Set(StartingDrawClause clause, string key, IJamlValueReader value)
+    {
+        switch (key.ToLowerInvariant())
+        {
+            case "rank":
+                if (!value.TryRank(out var rank))
+                    return false;
+                clause.Rank = rank;
+                return true;
+            case "suit":
+                if (!value.TryEnum<MotelyStandardcardSuit>(out var suit))
+                    return false;
+                clause.Suit = suit;
+                return true;
+            default:
+                return false;
+        }
+    }
 
     public StartingDrawFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
