@@ -44,7 +44,8 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
             return ImmutableArray<Entry>.Empty;
 
         var clauseTypeFull = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var clauseKeysMember = FindClauseKeysMember(type);
+        // T2: keys live on the FilterDesc (IJamlClauseDesc), not mirrored on the clause type.
+        var clauseKeysMember = FindClauseKeysForClause(type);
         var builder = ImmutableArray.CreateBuilder<Entry>(attrs.Length);
 
         foreach (var attr in attrs)
@@ -88,6 +89,32 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
         }
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Resolve ClauseKeys from the FilterDesc that owns the grammar.
+    /// Convention: <c>FooClause</c> → sibling <c>FooFilterDesc.ClauseKeys</c>
+    /// (IJamlClauseDesc). And/Or stay on <c>LogicClause</c>.
+    /// </summary>
+    private static string? FindClauseKeysForClause(INamedTypeSymbol clauseType)
+    {
+        if (clauseType.Name is "AndClause" or "OrClause")
+            return FindClauseKeysMember(clauseType);
+
+        if (clauseType.Name.EndsWith("Clause", StringComparison.Ordinal)
+            && clauseType.Name.Length > "Clause".Length)
+        {
+            var descName = clauseType.Name.Substring(0, clauseType.Name.Length - "Clause".Length) + "FilterDesc";
+            foreach (var desc in clauseType.ContainingNamespace.GetTypeMembers(descName))
+            {
+                var keys = FindClauseKeysMember(desc);
+                if (keys is not null)
+                    return keys;
+            }
+        }
+
+        // Fallback: keys declared on the clause/base (logic bags only after T2).
+        return FindClauseKeysMember(clauseType);
     }
 
     private static string[] ExtractWires(AttributeData attr)
