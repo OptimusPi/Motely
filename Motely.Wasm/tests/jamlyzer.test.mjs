@@ -5,7 +5,7 @@ import { jaml } from "./fixtures.mjs";
 
 const { MotelyJaml, MotelyJamlyzer, MotelyVoucher } = harness;
 
-const parse = (text) => MotelyJaml.fromYaml(text);
+const parse = (text) => MotelyJaml.fromJaml(text);
 
 // Every per-ante composite-stream member the state bag must reconstruct on resume. Mirrors the C#
 // AnalyzerUnitTests sweep — if offset-replay were wrong for any of these, its concat would diverge.

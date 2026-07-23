@@ -5,7 +5,7 @@ import { voucherSearch } from "./fixtures.mjs";
 
 const { MotelyJaml, MotelySearch, MotelyJamlyzer, MotelyVoucher } = harness;
 
-const parse = (text) => MotelyJaml.fromYaml(text);
+const parse = (text) => MotelyJaml.fromJaml(text);
 
 // A real, discriminating find: learn a deterministic attribute of a real seed from the analyzer,
 // then prove the finder finds that seed and rejects one that lacks it. The call returns the

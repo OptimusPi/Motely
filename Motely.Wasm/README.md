@@ -35,10 +35,10 @@ await bootsharp.boot();
 
 ## Parse and validate JAML
 
-Use `fromYaml` or `fromJson` once, then pass the returned `JamlConfig` to analyzer/search calls. Invalid filters fail loudly, and unknown keys raise errors too, so every mistake surfaces at parse time.
+Use `fromJaml` once, then pass the returned `JamlConfig` to analyzer/search calls. Invalid filters fail loudly, and unknown keys raise errors too, so every mistake surfaces at parse time.
 
 ```js
-const jaml = MotelyJaml.fromYaml(`
+const jaml = MotelyJaml.fromJaml(`
 name: example
 deck: Red
 stake: White
@@ -132,7 +132,7 @@ self.onmessage = (e) => {
     if (engine.default.getStatus() === engine.default.BootStatus.Standby)
       await engine.default.boot();
 
-    const config = engine.MotelyJaml.fromYaml(jaml);
+    const config = engine.MotelyJaml.fromJaml(jaml);
     const found = [];
     const onScored = (r) => found.push({ seed: r.seed, score: r.score });
     engine.MotelySearch.onScoredResult.subscribe(onScored);

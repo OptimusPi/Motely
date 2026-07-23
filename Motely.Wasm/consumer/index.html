@@ -181,7 +181,7 @@ stake: White
     $("results").replaceChildren();
     $("progress").textContent = "searching…";
     try {
-      const config = MotelyJaml.fromYaml(jamlView.state.doc.toString());
+      const config = MotelyJaml.fromJaml(jamlView.state.doc.toString());
       // A real find: walk fresh seeds. searchList only re-scores the `seeds:` block.
       await MotelySearch.searchRandom(config, 20000);
       $("progress").textContent = `done · searched ${searched} · ${$("results").childElementCount} shown`;

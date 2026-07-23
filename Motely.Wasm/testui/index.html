@@ -237,7 +237,7 @@ should:
     $("search").disabled = true;
     $("results").replaceChildren();
     try {
-      const config = MotelyJaml.fromYaml(view.state.doc.toString());
+      const config = MotelyJaml.fromJaml(view.state.doc.toString());
       const results = await MotelySearch.searchList(config);
       for (const r of results) {
         const tr = document.createElement("tr");

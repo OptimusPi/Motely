@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { harness } from "./harness.mjs";
 
 const { MotelyJaml, MotelySearch, MotelyDeck, MotelyStake } = harness;
-const parse = (text) => MotelyJaml.fromYaml(text);
+const parse = (text) => MotelyJaml.fromJaml(text);
 
 async function searchList(yaml, seeds) {
     const config = parse(yaml);
@@ -37,16 +37,19 @@ function scoreOf(result) {
     return result?.score ?? result?.Score ?? 0;
 }
 
-describe("C# parity — JAML JSON loader", () => {
-    it("fromJson parses deck, stake, and top-level clause groups", () => {
-        const config = MotelyJaml.fromJson(`{
-            "name": "json happy",
-            "deck": "Erratic",
-            "stake": "Gold",
-            "must": [{ "joker": "Blueprint" }],
-            "should": [{ "voucher": "Telescope", "score": 5 }],
-            "mustNot": [{ "joker": "Vagabond" }]
-        }`);
+describe("C# parity — JAML loader (engine only)", () => {
+    it("fromJaml parses deck, stake, and top-level clause groups", () => {
+        const config = MotelyJaml.fromJaml(`name: jaml happy
+deck: Erratic
+stake: Gold
+must:
+  - joker: Blueprint
+should:
+  - voucher: Telescope
+    score: 5
+mustNot:
+  - joker: Vagabond
+`);
 
         assert.equal(config.deck, MotelyDeck.Erratic);
         assert.equal(config.stake, MotelyStake.Gold);
@@ -55,16 +58,17 @@ describe("C# parity — JAML JSON loader", () => {
         assert.equal(config.mustNot.length, 1);
     });
 
-    it("validate rejects unknown JSON root and clause keys loudly", () => {
-        const root = MotelyJaml.validate(`{ "must": [{ "joker": "Blueprint" }], "boses": [] }`);
-        const clause = MotelyJaml.validate(`{ "must": [{ "joker": "Blueprint", "boosterPakcz": [0] }] }`);
+    it("validate rejects unknown root and clause keys loudly", () => {
+        const root = MotelyJaml.validate(`name: t\nboses:\n  - joker: Blueprint\n`);
+        const clause = MotelyJaml.validate(
+            `name: t\nmust:\n  - joker: Blueprint\n    boosterPakcz: [0]\n`
+        );
         assert.match(root, /boses/);
         assert.match(clause, /boosterPakcz/);
     });
 
-    it("fromJson and fromYaml throw on malformed input", () => {
-        assert.throws(() => MotelyJaml.fromJson("{ not json"));
-        assert.throws(() => MotelyJaml.fromYaml("must: ["));
+    it("fromJaml throws on malformed input", () => {
+        assert.throws(() => MotelyJaml.fromJaml("must: ["));
     });
 });
 
