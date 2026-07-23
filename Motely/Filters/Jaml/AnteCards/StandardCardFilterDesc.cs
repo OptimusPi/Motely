@@ -227,3 +227,21 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         }
     }
 }
+
+/// <summary>
+/// <c>sources:</c> block for <c>standardCard:</c>. Colocated with <see cref="StandardCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record StandardCardSourceConfig
+{
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+
+    public int[] Certificate { get; set; } = [];
+    public int[] Incantation { get; set; } = [];
+    public int[] Familiar { get; set; } = [];
+    public int[] Grim { get; set; } = [];
+    public int[] DeckDraw { get; set; } = [];
+}

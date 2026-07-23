@@ -342,3 +342,29 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         }
     }
 }
+
+/// <summary>
+/// <c>sources:</c> block for <c>spectralCard:</c>. Colocated with <see cref="SpectralCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record SpectralCardSourceConfig
+{
+    /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+    public int[] SixthSense { get; set; } = [];
+    public int[] Seance { get; set; } = [];
+    public bool RequireMegaPack { get; set; }
+
+    /// <summary>
+    /// When true, booster Spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).
+    /// </summary>
+    public bool EtherealTag { get; set; }
+
+    // TODO: OmenGlobe — voucher that allows Spectral cards to appear in Arcana packs.
+    // This is voucher-state-gated AND changes the Arcana pack PRNG path (not a simple slot array).
+    // Much more complex than other sources — needs voucher state tracking + pack stream branching.
+    // Do not implement naively.
+}

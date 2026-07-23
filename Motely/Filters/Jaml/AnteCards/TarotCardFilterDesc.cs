@@ -338,3 +338,22 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         }
     }
 }
+
+/// <summary>
+/// <c>sources:</c> block for <c>tarotCard:</c>. Colocated with <see cref="TarotCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record TarotCardSourceConfig
+{
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+    public int[] Emperor { get; set; } = [];
+    public int[] PurpleSealOrEightBall { get; set; } = [];
+
+    /// <summary>
+    /// When true, booster arcana scoring may consume the Charm-tag bonus pack (second weighted slot, no natural Arcana).
+    /// </summary>
+    public bool CharmTag { get; set; }
+}

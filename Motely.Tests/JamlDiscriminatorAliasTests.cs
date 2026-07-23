@@ -120,4 +120,26 @@ public sealed class JamlDiscriminatorAliasTests
         Assert.Equal(Motely.Filters.LogicClause.ClauseKeys, JamlSchema.ClauseKeysFor("and"));
         Assert.Equal(Motely.Filters.LogicClause.ClauseKeys, JamlSchema.ClauseKeysFor("or"));
     }
+
+    /// <summary>
+    /// T5 lock: schema SourceKeysFor / SourceConfigTypeFor point at source shapes colocated
+    /// with the desc family (not a phone book on the JamlConfig bag).
+    /// </summary>
+    [Theory]
+    [InlineData("joker", typeof(JokerSourceConfig))]
+    [InlineData("commonJoker", typeof(JokerSourceConfig))]
+    [InlineData("legendaryJoker", typeof(LegendaryJokerSourceConfig))]
+    [InlineData("tarotCard", typeof(TarotCardSourceConfig))]
+    [InlineData("spectralCard", typeof(SpectralCardSourceConfig))]
+    [InlineData("planetCard", typeof(PlanetSourceConfig))]
+    [InlineData("standardCard", typeof(StandardCardSourceConfig))]
+    public void SchemaSourceKeys_MatchColocatedSourceConfig(string discriminator, Type sourceConfigType)
+    {
+        Assert.Equal(sourceConfigType, JamlSchema.SourceConfigTypeFor(discriminator));
+
+        var keys = (string[])sourceConfigType
+            .GetField("SourceKeys", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
+            .GetValue(null)!;
+        Assert.Equal(keys, JamlSchema.SourceKeysFor(discriminator));
+    }
 }

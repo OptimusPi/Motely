@@ -226,3 +226,14 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         }
     }
 }
+
+/// <summary>
+/// <c>sources:</c> block for <c>planetCard:</c>. Colocated with <see cref="PlanetCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record PlanetSourceConfig
+{
+    public static readonly string[] SourceKeys = ["shopItems", "boosterPacks"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+}
