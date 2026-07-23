@@ -84,8 +84,9 @@ public sealed class MotelyUnitTestAnalyzerFilterDesc()
                 MotelyTag smallTag = ctx.GetNextTag(ref tagStream);
                 MotelyTag bigTag = ctx.GetNextTag(ref tagStream);
 
-                // Shop Queue
-                MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante);
+                // Shop Queue — pass voucherState so Magic Trick (and friends) set rates;
+                // CreateShopItemStream(ante) alone uses a default state with no vouchers.
+                MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante, voucherState);
 
                 int maxSlots = ante == 1 ? 15 : 50;
                 MotelyAnalyzedItem[] shopItems = new MotelyAnalyzedItem[maxSlots];
