@@ -82,7 +82,7 @@ Check before changing JAML grammar, FilterDescs, loaders, WASM, or editor toolin
 ### Open debt (TODO — close only with code + tests)
 
 - [x] **T1** `IJamlClauseDesc` + desc dispatch on every **wire** family; loader builds clauses with concrete `new` + `Set`/`SetDiscriminatorValue` (no Activator/GetProperty). Residual: And/Or are logic clauses (not desc families); Soul/BlackHole SIMD specials are **T4** (composition hooks, not separate wires).
-- [ ] **T2** Generated schema = dispatch to descs only; stop treating `ClauseKeys` arrays as the product (clause types still mirror desc keys for the generator).
+- [x] **T2** Generated `JamlSchema.ClauseKeysFor` dispatches to **FilterDesc.ClauseKeys** (`FooClause` → sibling `FooFilterDesc`); clause types no longer mirror keys. And/Or still use `LogicClause.ClauseKeys`. SourceKeys on source configs remain (see **T5**).
 - [x] **T3** Hand `JamlDiscriminatorRegistry.Entries` deleted — wires live on `[JamlDiscriminator]` → generated `JamlSchema` (`IsKnownDiscriminator`, keys, rolls).
 - [ ] **T4** **KEEP SIMD — do not delete.** `SpecialSpectralCardFilterDesc` (Soul/BlackHole) and `LegendarySoulEditionFilterDesc` are real vector filters; hooks are incomplete/wrong-docs. Marked in source. Rewire only with Nat OK (different hook may be correct).
 - [ ] **T5** Source config shapes with the desc family that uses them (or generated from it).

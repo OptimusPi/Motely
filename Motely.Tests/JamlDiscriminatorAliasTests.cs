@@ -89,4 +89,35 @@ public sealed class JamlDiscriminatorAliasTests
                 $"'{d}' → {clauseType.Name} is not IJamlClause.");
         }
     }
+
+    /// <summary>
+    /// T2 lock: schema ClauseKeysFor dispatches to the FilterDesc, not a clause-type mirror.
+    /// </summary>
+    [Theory]
+    [InlineData("joker", typeof(JokerFilterDesc))]
+    [InlineData("commonJoker", typeof(CommonJokerFilterDesc))]
+    [InlineData("tag", typeof(TagFilterDesc))]
+    [InlineData("luckyMoney", typeof(LuckyMoneyFilterDesc))]
+    [InlineData("voucher", typeof(VoucherFilterDesc))]
+    public void SchemaClauseKeys_MatchDescNotClauseMirror(string discriminator, Type descType)
+    {
+        var descKeys = (string[])descType
+            .GetProperty("ClauseKeys", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
+            .GetValue(null)!;
+        Assert.Equal(descKeys, JamlSchema.ClauseKeysFor(discriminator));
+
+        // Wire clause types no longer carry a public static ClauseKeys field (the old product).
+        var clauseType = JamlSchema.ClauseTypeFor(discriminator);
+        Assert.Null(
+            clauseType.GetField(
+                "ClauseKeys",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static));
+    }
+
+    [Fact]
+    public void LogicWires_StillReadLogicClauseKeys()
+    {
+        Assert.Equal(Motely.Filters.LogicClause.ClauseKeys, JamlSchema.ClauseKeysFor("and"));
+        Assert.Equal(Motely.Filters.LogicClause.ClauseKeys, JamlSchema.ClauseKeysFor("or"));
+    }
 }
