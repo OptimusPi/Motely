@@ -64,4 +64,29 @@ public sealed class JamlDiscriminatorAliasTests
         var tag = Assert.IsType<TagClause>(Assert.Single(config!.Must));
         Assert.Equal(expectedRolls, tag.Rolls);
     }
+
+    /// <summary>
+    /// T1 lock: every schema wire is known, and non-logic wires resolve to an IJamlClause type
+    /// the loader can construct. And/Or are logic bags (not IJamlClauseDesc families).
+    /// </summary>
+    [Fact]
+    public void EverySchemaWire_IsKnown_AndNonLogicResolvesToClauseType()
+    {
+        Assert.NotEmpty(JamlSchema.Discriminators);
+        foreach (var d in JamlSchema.Discriminators)
+        {
+            Assert.True(
+                JamlSchema.IsKnownDiscriminator(d),
+                $"'{d}' is listed in Discriminators but IsKnownDiscriminator returned false.");
+
+            if (string.Equals(d, "and", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(d, "or", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var clauseType = JamlSchema.ClauseTypeFor(d);
+            Assert.True(
+                typeof(IJamlClause).IsAssignableFrom(clauseType),
+                $"'{d}' → {clauseType.Name} is not IJamlClause.");
+        }
+    }
 }
