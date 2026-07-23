@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyTarotCard), SourceConfigType = typeof(TarotCardSourceConfig))]
 public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = TarotCardFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -47,7 +44,6 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         clause.Tarots = tarots;
         return true;
     }
-
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Specialty sources (Emperor, Purple Seal) stay off

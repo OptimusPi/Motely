@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("spaceLevelup", RollsAreInlineValue = true)]
 public sealed class SpaceLevelupClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = SpaceLevelupFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -32,7 +29,6 @@ public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
 
     /// <inheritdoc/>
     public static bool Set(SpaceLevelupClause clause, string key, IJamlValueReader value) => false;
-
 
     public SpaceLevelupFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

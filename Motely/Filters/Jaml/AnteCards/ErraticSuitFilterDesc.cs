@@ -9,9 +9,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyStandardcardSuit))]
 public sealed class ErraticSuitClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Complete clause-level key list — the value itself carries the suit.</summary>
-    public static readonly string[] ClauseKeys = ErraticSuitFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -45,7 +42,6 @@ public struct ErraticSuitFilterDesc(ErraticSuitClause clause)
         clause.Suit = suit;
         return true;
     }
-
 
     public ErraticSuitFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

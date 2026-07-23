@@ -7,10 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("misprintMult", RollsAreInlineValue = true)]
 public sealed class MisprintMultClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list. No With
-    /// property here — with/luck/vouchers are NOT valid on this clause.</summary>
-    public static readonly string[] ClauseKeys = MisprintMultFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -49,7 +45,6 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
                 return false;
         }
     }
-
 
     public MisprintMultFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

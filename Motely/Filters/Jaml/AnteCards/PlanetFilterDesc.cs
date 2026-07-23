@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyPlanetCard), SourceConfigType = typeof(PlanetSourceConfig))]
 public sealed class PlanetCardClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = PlanetCardFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -48,7 +45,6 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         clause.Planets = planets;
         return true;
     }
-
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Applied only when <c>Sources</c> is null, so a

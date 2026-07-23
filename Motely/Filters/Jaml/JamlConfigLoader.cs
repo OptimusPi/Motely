@@ -265,8 +265,8 @@ public static partial class JamlConfigLoader
         }
     }
 
-    // Allowed keys = desc ClauseKeys (via generated JamlSchema) plus every wire discriminator
-    // so the outer map may carry the disc key itself.
+    // Allowed keys = FilterDesc.ClauseKeys (via generated JamlSchema) plus every wire
+    // discriminator so the outer map may carry the disc key itself.
     private static void ValidateClauseKeys(string discriminator, IReader outer, IReader? inner)
     {
         var allowed = JamlSchema.ClauseKeysFor(discriminator);

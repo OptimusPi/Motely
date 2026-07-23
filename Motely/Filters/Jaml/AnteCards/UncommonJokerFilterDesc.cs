@@ -49,7 +49,6 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
         return true;
     }
 
-
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — 8 shop slots + 6 packs.
     /// Specialty/fast-path sources stay off by default. Applied only when <c>Sources</c> is null.</summary>
     internal static readonly JokerSourceConfig DefaultSources = new()

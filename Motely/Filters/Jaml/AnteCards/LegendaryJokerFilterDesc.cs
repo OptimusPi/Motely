@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyJoker), SourceConfigType = typeof(LegendaryJokerSourceConfig))]
 public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = LegendaryJokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -85,7 +82,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         clause.Jokers = jokers;
         return true;
     }
-
 
     /// <summary>Source of truth for legendary/Soul defaults when a clause gives no <c>sources:</c> block:
     /// the SIMD/vector path walks all 6 booster-pack slots (legacy type-agnostic mode — both arcana and

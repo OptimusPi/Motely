@@ -6,9 +6,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("boss", "bosses", ValueEnum = typeof(MotelyBossBlind))]
 public sealed class BossClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Complete clause-level key list — no Rolls field yet (see below).</summary>
-    public static readonly string[] ClauseKeys = BossFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -45,7 +42,6 @@ public readonly struct BossFilterDesc(BossClause clause)
         clause.Bosses = bosses;
         return true;
     }
-
 
     public BossFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

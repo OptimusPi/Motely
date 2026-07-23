@@ -9,9 +9,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyVoucher), RollsDefault = new[] { 0 })]
 public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = VoucherFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -51,7 +48,6 @@ public struct VoucherFilterDesc(VoucherClause clause)
         clause.Vouchers = vouchers;
         return true;
     }
-
 
     public readonly VoucherFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelySpectralCard), SourceConfigType = typeof(SpectralCardSourceConfig))]
 public sealed class SpectralCardClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = SpectralCardFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -47,7 +44,6 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         clause.Spectrals = spectrals;
         return true;
     }
-
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Specialty sources (Sixth Sense, Seance) stay off

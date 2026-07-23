@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("startingDraw")]
 public sealed class StartingDrawClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = StartingDrawFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -48,7 +45,6 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
                 return false;
         }
     }
-
 
     public StartingDrawFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("glassDestroy", RollsAreInlineValue = true)]
 public sealed class GlassDestroyClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = GlassDestroyFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -32,7 +29,6 @@ public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
 
     /// <inheritdoc/>
     public static bool Set(GlassDestroyClause clause, string key, IJamlValueReader value) => false;
-
 
     public GlassDestroyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

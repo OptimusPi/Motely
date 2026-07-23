@@ -9,9 +9,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyStandardcardRank))]
 public sealed class ErraticRankClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Complete clause-level key list — the value itself carries the rank.</summary>
-    public static readonly string[] ClauseKeys = ErraticRankFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -45,7 +42,6 @@ public struct ErraticRankFilterDesc(ErraticRankClause clause)
         clause.Rank = rank;
         return true;
     }
-
 
     public ErraticRankFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

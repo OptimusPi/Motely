@@ -7,10 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("bloodstoneTrigger", RollsAreInlineValue = true)]
 public sealed class BloodstoneTriggerClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list. No With
-    /// property here (flat 50/50, see below) — with/luck/vouchers are NOT valid on this clause.</summary>
-    public static readonly string[] ClauseKeys = BloodstoneTriggerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -35,7 +31,6 @@ public struct BloodstoneTriggerFilterDesc(BloodstoneTriggerClause clause)
 
     /// <inheritdoc/>
     public static bool Set(BloodstoneTriggerClause clause, string key, IJamlValueReader value) => false;
-
 
     public BloodstoneTriggerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

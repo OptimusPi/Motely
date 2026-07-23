@@ -13,10 +13,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 1 })]
 public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list — shared by
-    /// tag/smallBlindTag/bigBlindTag, all backed by this same TagClause type.</summary>
-    public static readonly string[] ClauseKeys = TagFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -56,7 +52,6 @@ public struct TagFilterDesc(TagClause clause)
         clause.Tags = tags;
         return true;
     }
-
 
     public TagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

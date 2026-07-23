@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("luckyMult", RollsAreInlineValue = true)]
 public sealed class LuckyMultClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = LuckyMultFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -32,7 +29,6 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
 
     /// <inheritdoc/>
     public static bool Set(LuckyMultClause clause, string key, IJamlValueReader value) => false;
-
 
     public LuckyMultFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

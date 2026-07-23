@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("grosMichelExtinct", RollsAreInlineValue = true)]
 public sealed class GrosMichelExtinctClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = GrosMichelExtinctFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -32,7 +29,6 @@ public struct GrosMichelExtinctFilterDesc(GrosMichelExtinctClause clause)
 
     /// <inheritdoc/>
     public static bool Set(GrosMichelExtinctClause clause, string key, IJamlValueReader value) => false;
-
 
     public GrosMichelExtinctFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

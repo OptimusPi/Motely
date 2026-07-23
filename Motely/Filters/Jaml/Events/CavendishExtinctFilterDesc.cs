@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("cavendishExtinct", RollsAreInlineValue = true)]
 public sealed class CavendishExtinctClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = CavendishExtinctFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -32,7 +29,6 @@ public struct CavendishExtinctFilterDesc(CavendishExtinctClause clause)
 
     /// <inheritdoc/>
     public static bool Set(CavendishExtinctClause clause, string key, IJamlValueReader value) => false;
-
 
     public CavendishExtinctFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

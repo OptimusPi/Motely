@@ -11,10 +11,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyJoker), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class JokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Clause keys mirror JokerFilterDesc's — the desc owns the grammar, but the
-    /// clause type needs the field for key validation and schema generation.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -387,9 +383,6 @@ public struct JokerFilterDesc(JokerClause clause)
     ValueEnum = typeof(MotelyJokerCommon), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -406,9 +399,6 @@ public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
     ValueEnum = typeof(MotelyJokerUncommon), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -425,9 +415,6 @@ public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
     ValueEnum = typeof(MotelyJokerRare), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class RareJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
