@@ -9,7 +9,7 @@ public sealed class LuckyMoneyClause : IRollScopedClause
 {
     /// <summary>Clause-level keys. Includes <c>with</c> because this clause has a
     /// <see cref="With"/> property (luck / vouchers).</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
+    public static readonly string[] ClauseKeys = LuckyMoneyFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -20,9 +20,20 @@ public sealed class LuckyMoneyClause : IRollScopedClause
 }
 
 public struct LuckyMoneyFilterDesc(LuckyMoneyClause clause)
-    : IMotelySeedFilterDesc<LuckyMoneyFilterDesc.LuckyMoneyFilter>
+    : IMotelySeedFilterDesc<LuckyMoneyFilterDesc.LuckyMoneyFilter>,
+      IJamlClauseDesc<LuckyMoneyClause>
 {
     private readonly LuckyMoneyClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["luckyMoney"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "with"];
+
+    /// <inheritdoc/>
+    public static bool Set(LuckyMoneyClause clause, string key, IJamlValueReader value) => false;
+
 
     public LuckyMoneyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

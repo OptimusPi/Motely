@@ -7,7 +7,7 @@ namespace Motely.Filters.Jaml;
 public sealed class BossClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>Complete clause-level key list — no Rolls field yet (see below).</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes"];
+    public static readonly string[] ClauseKeys = BossFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -21,9 +21,31 @@ public sealed class BossClause : IJamlClause, IAnteScopedClause
 }
 
 public readonly struct BossFilterDesc(BossClause clause)
-    : IMotelySeedFilterDesc<BossFilterDesc.BossFilter>
+    : IMotelySeedFilterDesc<BossFilterDesc.BossFilter>,
+      IJamlClauseDesc<BossClause>
 {
     private readonly BossClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["boss", "bosses"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes"];
+
+    /// <inheritdoc/>
+    public static bool Set(BossClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(BossClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelyBossBlind>(out var bosses)) return false;
+        clause.Bosses = bosses;
+        return true;
+    }
+
 
     public BossFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

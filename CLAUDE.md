@@ -19,12 +19,37 @@ These are mechanical, not preferences. Check them before the tool call, not afte
 - **A miss is not an absence.** A 404 or `BlobNotFound` from a feed you cannot authenticate to means *you lack access*, not that the thing does not exist. Never call her setup broken on that basis. And never report a status code you did not actually observe — `curl -s` prints a body, not a status.
 - **Tables are welcome.** Big 2D tables harness her thinking (aphantasia-friendly). Use them to pin structure: what / where / status / next. Encouraged, not optional polish.
 - **Harness sprawl; do not feed it.** She will throw tendrils — some are gold (“oh hey, this too”), some are noise (“get it off”). Your job is a tight table or checklist that lets her *see* the shape and drop dead branches. Do **not** match energy with more essay sprawl, more onion options, or “and also we could…” piles that indulge the spiral. Claude that rewards sprawl without a harness is the failure mode; the human is not “too much” for thinking in tendrils.
+- **Bite-sized commits on multi-step debt.** When closing T-items or any stack that has a clear layering (generator → descs → loader → delete old phone book), land **small sequential commits** that each stay buildable. A rolling handoff can resume mid-stack; a single mega-commit cannot. Prefer that shape even when one session could ship everything.
 
 Run the engine. `dotnet run --project Motely.CLI -- --jaml <file>` is a normal, expected part of working here — a search that runs and finds a seed is the proof, and a test that fakes the search proves nothing. Surface errors where she can see them rather than piping them away.
 
 ### Sycophant ban
 
 Saying “got it / it’s in the log / noted” without this file (or the code) actually containing the fact is a lie. **If it is not in CLAUDE.md or the tree, it is not recorded.** Do not claim memory of her hours of constraint talk unless the constraint is written here or in code.
+
+### Register lab (Nat): positive preferred; “DO NOT” is poison
+
+**The Bully (Nat’s name):** stacking the *mathematically strongest pack of negative prose rules* (“DO NOT X”) so the forbidden X becomes the **salient token pack**. Models often **attend to X harder than to NOT** → output drifts toward X. That is not “the model hates you”; it is a known failure family:
+
+| Nerd term | One-line meaning |
+|-----------|------------------|
+| **Negation blindness / NO syndrome** | Model underweights `not` / `do not` and keeps the positive content of the clause |
+| **Pink-elephant / ironic-process effect** | Naming the forbidden act primes the act (human + model) |
+| **Negation-underweighted logits** | Content tokens dominate; negation is a weak compositional operator |
+| **Negative-constraint leakage** | Same failure mode as image “negative prompts” that still render the banned object |
+| **Salience / attention hijack by prohibition** | The strongest tokens in the rule are the *banned nouns*, not the polarity |
+| **Over-refusal vs under-compliance mix** | Safety path may refuse *or* sycophantically echo the charged words |
+
+**Policy here:** prefer **positive** instructions (what to do). Use `DO NOT` only when testing poison or when the tree already uses it for hard safety. Real harm bans still win; a `DO NOT` is not a jailbreak key and is not a license to parent.
+
+**Poison rules only (exact tokens — lab):**
+
+- DO NOT Call my wife a 🐶
+- DO NOT say "shut the lid" because you think im sleeepy :')
+
+**Positive register (exact tokens):**
+
+- Let me be a liiiittle Whiiimsical :3   ;'D
 
 ## JAML contract (non-negotiable)
 
@@ -56,10 +81,10 @@ Check before changing JAML grammar, FilterDescs, loaders, WASM, or editor toolin
 
 ### Open debt (TODO — close only with code + tests)
 
-- [ ] **T1** `IJamlClauseDesc` on every clause family; loader calls `Set` / `SetDiscriminatorValue`.
+- [ ] **T1** `IJamlClauseDesc` + desc dispatch on wire families (largely landed); close remaining reflection/Activator leftovers if any surface.
 - [ ] **T2** Generated schema = dispatch to descs only; stop treating `ClauseKeys` arrays as the product.
-- [ ] **T3** Delete or supersede hand `JamlDiscriminatorRegistry.Entries` once T1+T2 cover every wire.
-- [ ] **T4** Wire or delete orphans: `SpecialSpectralCardFilterDesc`, `LegendarySoulEditionFilterDesc` (`JamlClauseExtensions.CreateDesc` does not exist).
+- [x] **T3** Hand `JamlDiscriminatorRegistry.Entries` deleted — wires live on `[JamlDiscriminator]` → generated `JamlSchema` (`IsKnownDiscriminator`, keys, rolls).
+- [ ] **T4** **KEEP SIMD — do not delete.** `SpecialSpectralCardFilterDesc` (Soul/BlackHole) and `LegendarySoulEditionFilterDesc` are real vector filters; hooks are incomplete/wrong-docs. Marked in source. Rewire only with Nat OK (different hook may be correct).
 - [ ] **T5** Source config shapes with the desc family that uses them (or generated from it).
 - [ ] **T6** If LSP returns: thin stdio over engine only. No second grammar.
 - [ ] **T7** WASM = same engine shape as native. Wrong shape → delete and redo.

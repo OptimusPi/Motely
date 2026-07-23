@@ -8,7 +8,7 @@ namespace Motely.Filters.Jaml;
 public sealed class SpaceLevelupClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
+    public static readonly string[] ClauseKeys = SpaceLevelupFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -19,9 +19,20 @@ public sealed class SpaceLevelupClause : IRollScopedClause
 }
 
 public struct SpaceLevelupFilterDesc(SpaceLevelupClause clause)
-    : IMotelySeedFilterDesc<SpaceLevelupFilterDesc.SpaceLevelupFilter>
+    : IMotelySeedFilterDesc<SpaceLevelupFilterDesc.SpaceLevelupFilter>,
+      IJamlClauseDesc<SpaceLevelupClause>
 {
     private readonly SpaceLevelupClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["spaceLevelup"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "with"];
+
+    /// <inheritdoc/>
+    public static bool Set(SpaceLevelupClause clause, string key, IJamlValueReader value) => false;
+
 
     public SpaceLevelupFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

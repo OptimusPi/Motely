@@ -26,3 +26,7 @@ should:
   - joker: Showman
     antes: [1, 2]
     score: 1
+
+seeds:
+  - IZC16111
+  - XJR22111
