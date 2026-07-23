@@ -2,7 +2,7 @@ namespace Motely.Filters.Jaml;
 
 /// <summary>
 /// The one table of JAML's enum vocabulary, living in the engine next to
-/// <see cref="JamlDiscriminatorRegistry"/> so every consumer — the LSP, the WASM
+/// <see cref="JamlSchema"/> so every consumer — the LSP, the WASM
 /// <c>ListItems</c> export, hover, completion — reads the same facts the engine executes.
 /// </summary>
 public static class JamlVocabulary

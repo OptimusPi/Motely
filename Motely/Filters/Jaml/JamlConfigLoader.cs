@@ -157,75 +157,30 @@ public static partial class JamlConfigLoader
                 return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
             case "voucher":
             case "vouchers":
-                {
-                    var clause = PopulateAndCast<VoucherClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Vouchers = ParseEnumArray<MotelyVoucher>(node, discriminator);
-                    return clause;
-                }
+                return PopulateAndCast<VoucherClause>(discriminator, node, data, antes, min, max, score, label);
             case "tarotcard":
             case "tarotcards":
-                {
-                    var clause = PopulateAndCast<TarotCardClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Tarots = ParseEnumArray<MotelyTarotCard>(node, discriminator);
-                    return clause;
-                }
+                return PopulateAndCast<TarotCardClause>(discriminator, node, data, antes, min, max, score, label);
             case "spectralcard":
             case "spectralcards":
-                {
-                    var clause = PopulateAndCast<SpectralCardClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Spectrals = ParseEnumArray<MotelySpectralCard>(node, discriminator);
-                    return clause;
-                }
+                return PopulateAndCast<SpectralCardClause>(discriminator, node, data, antes, min, max, score, label);
             case "planetcard":
             case "planetcards":
-                {
-                    var clause = PopulateAndCast<PlanetCardClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Planets = ParseEnumArray<MotelyPlanetCard>(node, discriminator);
-                    return clause;
-                }
+                return PopulateAndCast<PlanetCardClause>(discriminator, node, data, antes, min, max, score, label);
             case "standardcard":
             case "standardcards":
-                return PopulateAndCast<StandardCardClause>(discriminator, node, data, antes, min, max, score, label);
+                return PopulateAndCast<StandardCardClause>(
+                    discriminator, node, data, antes, min, max, score, label, applyDiscriminatorValue: false);
             case "boss":
             case "bosses":
-                {
-                    var clause = PopulateAndCast<BossClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Bosses = ParseEnumArray<MotelyBossBlind>(node, discriminator);
-                    return clause;
-                }
+                return PopulateAndCast<BossClause>(discriminator, node, data, antes, min, max, score, label);
             case "tag":
             case "tags":
-                {
-                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
-                    return clause;
-                }
             case "smallblindtag":
-                {
-                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
-                    return clause;
-                }
             case "bigblindtag":
-                {
-                    var clause = PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-                    clause.Tags = ParseEnumArray<MotelyTag>(node, discriminator);
-                    return clause;
-                }
+                return PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
             case "erraticrank":
-                return WithMax(
-                    new ErraticRankClause
-                    {
-                        Rank = ParseRank(
-                            ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)
-                        ),
-                        Antes = antes,
-                        Min = min,
-                        Score = score,
-                        Label = label,
-                    },
-                    max
-                );
+                return PopulateAndCast<ErraticRankClause>(discriminator, node, data, antes, min, max, score, label);
             case "erraticranks":
                 return WithMax(
                     new OrClause
@@ -251,21 +206,10 @@ public static partial class JamlConfigLoader
                 );
             case "erraticsuit":
             case "erraticsuits":
-                return WithMax(
-                    new ErraticSuitClause
-                    {
-                        Suit = ParseEnum<MotelyStandardcardSuit>(
-                            ScalarValue(node, discriminator) ?? throw MissingValue(discriminator)
-                        ),
-                        Antes = antes,
-                        Min = min,
-                        Score = score,
-                        Label = label,
-                    },
-                    max
-                );
+                return PopulateAndCast<ErraticSuitClause>(discriminator, node, data, antes, min, max, score, label);
             case "startingdraw":
-                return BuildStartingDraw(data, antes, min, max, score, label);
+                return PopulateAndCast<StartingDrawClause>(
+                    discriminator, node, data, antes, min, max, score, label, applyDiscriminatorValue: false);
             case "luckymoney":
             case "luckymult":
             case "misprintmult":
@@ -278,7 +222,7 @@ public static partial class JamlConfigLoader
             case "parkingpayout":
             case "glassdestroy":
             case "wheelstaysflipped":
-                return Populate(discriminator, JamlDiscriminatorRegistry.Entries[discriminator], node, data, antes, min, max, score, label);
+                return Populate(discriminator, node, data, antes, min, max, score, label);
             default:
                 throw new InvalidOperationException(
                     $"Unhandled JAML discriminator '{discriminator}'."
@@ -308,27 +252,6 @@ public static partial class JamlConfigLoader
         return clause;
     }
 
-    private static StartingDrawClause BuildStartingDraw(
-        IReader data,
-        int[] antes,
-        int min,
-        int? max,
-        int score,
-        string? label
-    ) =>
-        WithMax(
-            new StartingDrawClause
-            {
-                Rank = ParseOptionalRank(data.GetString("rank")),
-                Suit = ParseOptionalEnum<MotelyStandardcardSuit>(data.GetString("suit")),
-                Antes = antes,
-                Min = min,
-                Score = score,
-                Label = label,
-            },
-            max
-        );
-
     private static void HoistAntes(IJamlClause[] clauses, int[] antes)
     {
         if (antes.Length == 0)
@@ -342,13 +265,12 @@ public static partial class JamlConfigLoader
         }
     }
 
-    // Every discriminator's allowed keys are its clause type's own complete, final ClauseKeys
-    // list — no composition at read time. JamlDiscriminatorRegistry.ClauseKeysFor reads that
-    // field directly via reflection; Motely.Schema reads the exact same field for generation.
+    // Allowed keys = desc ClauseKeys (via generated JamlSchema) plus every wire discriminator
+    // so the outer map may carry the disc key itself.
     private static void ValidateClauseKeys(string discriminator, IReader outer, IReader? inner)
     {
-        var allowed = JamlDiscriminatorRegistry.ClauseKeysFor(discriminator);
-        ValidateKeys(outer, [.. allowed, .. JamlDiscriminatorRegistry.Entries.Keys], "clause");
+        var allowed = JamlSchema.ClauseKeysFor(discriminator);
+        ValidateKeys(outer, [.. allowed, .. JamlSchema.Discriminators], "clause");
         if (inner != null)
             ValidateKeys(inner, allowed, $"'{discriminator}' block");
     }
@@ -388,14 +310,6 @@ public static partial class JamlConfigLoader
         return clause;
     }
 
-    private static TEnum[] ParseJokerArray<TEnum>(NodeReader node, string key, out bool any)
-        where TEnum : struct, Enum
-    {
-        var values = ParseStringArray(node, key);
-        any = values.Length == 1 && IsAny(values[0]);
-        return any ? [] : values.Select(ParseEnum<TEnum>).ToArray();
-    }
-
     private static TEnum[] ParseEnumArray<TEnum>(NodeReader node, string key)
         where TEnum : struct, Enum =>
         ParseStringArray(node, key).Select(ParseEnum<TEnum>).ToArray();
@@ -427,10 +341,10 @@ public static partial class JamlConfigLoader
         return null;
     }
 
-    // The registry is the one place discriminators are enumerated; a hand-written copy here
-    // is exactly how tags/tarotCards/spectralCards/planetCards silently stopped parsing.
+    // Generated JamlSchema is the one wire list — a hand copy here is how plurals once
+    // silently stopped parsing.
     private static bool IsDiscriminator(string key) =>
-        JamlDiscriminatorRegistry.Entries.ContainsKey(Normalize(key));
+        JamlSchema.IsKnownDiscriminator(key);
 
     private static MotelyStandardcardRank? ParseOptionalRank(string? value) =>
         value is null ? null : ParseRank(value);
