@@ -170,7 +170,7 @@ public class JamlLineTests
     [InlineData("Aura in ante 1")]
     [InlineData("Black Hole in antes 2 or 3")]
     [InlineData("Pluto in ante 1")]
-    [InlineData("Planet X in antes 1 or 2 or 3")]
+    [InlineData("Planet X in antes 1-3")]
     public void Consumables_roundTrip(string line)
     {
         Assert.True(

@@ -175,7 +175,30 @@ public static class JamlLine
         return " in antes " + JoinNumbers(antes);
     }
 
-    private static string JoinNumbers(int[] values) => string.Join(" or ", values);
+    // Collapse ascending consecutive runs into ranges the parser reads back ("1-6"),
+    // so the writer speaks the same range dialect the reader already accepts.
+    private static string JoinNumbers(int[] values)
+    {
+        if (values.Length == 0)
+            return "";
+        var parts = new List<string>();
+        int runStart = values[0], prev = values[0];
+        for (int i = 1; i < values.Length; i++)
+        {
+            if (values[i] == prev + 1) { prev = values[i]; continue; }
+            parts.Add(FormatRun(runStart, prev));
+            runStart = prev = values[i];
+        }
+        parts.Add(FormatRun(runStart, prev));
+        return string.Join(" or ", parts);
+    }
+
+    // A single number stays itself; an adjacent pair reads "2 or 3"; three or more
+    // become an inclusive "1-6" range.
+    private static string FormatRun(int start, int end) =>
+        start == end ? start.ToString()
+        : end == start + 1 ? $"{start} or {end}"
+        : $"{start}-{end}";
 
     /// <summary>Null when <paramref name="line"/> parses as one-line JAML; the parser's error otherwise.</summary>
     public static string? Validate(string line) =>

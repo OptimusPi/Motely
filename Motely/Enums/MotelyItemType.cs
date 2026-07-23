@@ -9,6 +9,7 @@ internal enum InternalInvalid
     PlanetExcludedByStream,
     TarotExcludedByStream,
     SpectralExcludedByStream,
+    StandardCardExcludedByStream,
 }
 
 public enum MotelyItemType
@@ -295,4 +296,6 @@ public enum MotelyItemType
     TarotExcludedByStream = MotelyItemTypeCategory.Invalid | InternalInvalid.TarotExcludedByStream,
     SpectralExcludedByStream =
         MotelyItemTypeCategory.Invalid | InternalInvalid.SpectralExcludedByStream,
+    StandardCardExcludedByStream =
+        MotelyItemTypeCategory.Invalid | InternalInvalid.StandardCardExcludedByStream,
 }

@@ -14,13 +14,13 @@ public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedC
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyVoucher[] Vouchers { get; set; }
+    public MotelyVoucher[] Vouchers { get; set; } = [];
 
     /// <summary>
     /// Voucher-stream indices per ante: 0 = ante award, 1+ = further draws on that ante's
     /// voucher stream (Hieroglyph bonus, voucher-tag shop extras, etc.).
     /// </summary>
-    public required int[] Rolls { get; set; }
+    public int[] Rolls { get; set; } = [0];
 }
 
 public struct VoucherFilterDesc(VoucherClause clause)
@@ -33,18 +33,20 @@ public struct VoucherFilterDesc(VoucherClause clause)
     public static string[] Discriminators => ["voucher", "vouchers"];
 
     /// <inheritdoc/>
-    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "rolls"];
+    public static string[] ClauseKeys =>
+        ["min", "max", "score", "label", "ante", "antes", "rolls"];
 
     /// <inheritdoc/>
-    public static bool Set(VoucherClause clause, string key, IJamlValueReader value)
-    {
-        return false;
-    }
+    public static bool Set(VoucherClause clause, string key, IJamlValueReader value) =>
+        // A voucher clause carries no type-specific keys beyond the common set and the roll
+        // machinery; there is no per-key assignment to make here.
+        false;
 
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(VoucherClause clause, IJamlValueReader value)
     {
-        if (!value.TryEnumArray<MotelyVoucher>(out var vouchers)) return false;
+        if (!value.TryEnumArray<MotelyVoucher>(out var vouchers))
+            return false;
         clause.Vouchers = vouchers;
         return true;
     }
