@@ -84,7 +84,7 @@ Check before changing JAML grammar, FilterDescs, loaders, WASM, or editor toolin
 - [x] **T1** `IJamlClauseDesc` + desc dispatch on every **wire** family; loader builds clauses with concrete `new` + `Set`/`SetDiscriminatorValue` (no Activator/GetProperty). Residual: And/Or are logic clauses (not desc families); Soul/BlackHole SIMD specials are **T4** (composition hooks, not separate wires).
 - [x] **T2** Generated `JamlSchema.ClauseKeysFor` dispatches to **FilterDesc.ClauseKeys** (`FooClause` → sibling `FooFilterDesc`); clause types no longer mirror keys. And/Or still use `LogicClause.ClauseKeys`. SourceKeys on source configs remain (see **T5**).
 - [x] **T3** Hand `JamlDiscriminatorRegistry.Entries` deleted — wires live on `[JamlDiscriminator]` → generated `JamlSchema` (`IsKnownDiscriminator`, keys, rolls).
-- [ ] **T4** **KEEP SIMD — do not delete.** `SpecialSpectralCardFilterDesc` (Soul/BlackHole) and `LegendarySoulEditionFilterDesc` are real vector filters; hooks are incomplete/wrong-docs. Marked in source. Rewire only with Nat OK (different hook may be correct).
+- [x] **T4** **KEEP SIMD — do not delete.** `SpecialSpectralCardFilterDesc` (Soul/BlackHole): live route via `Handles` in `JamlSearchBuilder.ClauseToFilterDesc`. `LegendarySoulEditionFilterDesc` remains standalone composition; live `legendaryJoker:` edition prefilter stays inside `LegendaryJokerFilterDesc` via `LegendarySoulEditionPrefilter`.
 - [ ] **T5** Source config shapes with the desc family that uses them (or generated from it).
 - [ ] **T6** If LSP returns: thin stdio over engine only. No second grammar.
 - [ ] **T7** WASM = same engine shape as native. Wrong shape → delete and redo.

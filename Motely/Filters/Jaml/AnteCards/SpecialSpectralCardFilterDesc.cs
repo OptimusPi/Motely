@@ -20,10 +20,10 @@ namespace Motely.Filters.Jaml;
 /// <see cref="Motely.Filters.Native.TwoBlackHoleFilterDesc"/>.
 ///
 /// <b>KEEP — real SIMD, not dead code.</b> Reuses <see cref="SpectralCardClause"/> (no separate
-/// JAML keyword). Intended route: <c>spectralCard:</c> → <see cref="Handles"/> true → this filter
-/// instead of the normal spectral content path. Hook is incomplete today; rewire only with care
-/// and Nat OK (T4). <see cref="Handles"/> / <see cref="JamlScoring.TargetsSpecialSpectral"/> are
-/// the gate — do not delete this type to “clean” the tree.
+/// JAML keyword). Live route: <c>spectralCard:</c> → <see cref="Handles"/> true →
+/// <see cref="JamlSearchBuilder.ClauseToFilterDesc"/> installs this filter instead of
+/// <see cref="SpectralCardFilterDesc"/>. Gate is <see cref="Handles"/> /
+/// <see cref="JamlScoring.TargetsSpecialSpectral"/> — leave this type on the tree.
 /// </summary>
 public struct SpecialSpectralCardFilterDesc(SpectralCardClause clause)
     : IMotelySeedFilterDesc<SpecialSpectralCardFilterDesc.SpecialSpectralCardFilter>

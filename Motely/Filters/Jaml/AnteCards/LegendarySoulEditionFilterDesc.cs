@@ -7,10 +7,10 @@ namespace Motely.Filters.Jaml;
 /// <summary>
 /// Fast vector filter: legendary soul stream edition only (ExcludeJokerType | ExcludeStickers).
 ///
-/// <b>KEEP — real SIMD, not dead code.</b> Live path today often uses
-/// <see cref="LegendarySoulEditionPrefilter"/> inside <see cref="LegendaryJokerFilterDesc"/> rather
-/// than composing this desc as a separate filter. This type remains a valid composition form for
-/// edition-only soul-stream work; do not delete. Rewire / alternate hook only with Nat OK (T4).
+/// <b>KEEP — real SIMD, not dead code.</b> The live <c>legendaryJoker:</c> path applies the same
+/// work via <see cref="LegendarySoulEditionPrefilter"/> inside <see cref="LegendaryJokerFilterDesc"/>
+/// (edition + Min==1). This desc is the standalone composition form of that prefilter for callers
+/// that want edition-only soul-stream filtering without the full legendary match; leave it on the tree.
 /// </summary>
 public struct LegendarySoulEditionFilterDesc(LegendaryJokerClause clause)
     : IMotelySeedFilterDesc<LegendarySoulEditionFilterDesc.LegendarySoulEditionFilter>
