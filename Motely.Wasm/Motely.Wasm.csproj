@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <Version>$(MotelyVersion)</Version>
+    <!-- Real Bootsharp props only (build-config.md): Name, PublishDirectory, BinariesDirectory, PackageDirectory. -->
+    <BootsharpName>motely-wasm</BootsharpName>
+    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)/obj</BootsharpPackageDirectory>
+    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)/dist</BootsharpPublishDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bootsharp" />
+    <PackageReference Include="Bootsharp.Inject" />
+    <PackageReference Include="Bootsharp.FileSystem" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+
+  <Target Name="SyncNpmPackageVersion" BeforeTargets="Build">
+    <Exec Command="node &quot;$(MSBuildProjectDirectory)/scripts/stamp-npm-version.mjs&quot; $(MotelyVersion)"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          StandardOutputImportance="low" />
+  </Target>
+</Project>
