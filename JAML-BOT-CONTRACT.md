@@ -1,5 +1,5 @@
-# Moved
+# Bot contract pointer
 
-The load-bearing copy is **`CLAUDE.md` → section “JAML contract (non-negotiable)”**.
+Load-bearing rules live in **`CLAUDE.md`**.
 
-That file is what Claude Code actually injects. A side doc is not “the log.” If a bot says “got it, noted” and it is only here, they lied — check `CLAUDE.md`.
+If a bot says “got it / noted” and the fact is only in chat, it lied — check `CLAUDE.md` or the tree.
