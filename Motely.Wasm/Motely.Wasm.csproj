@@ -5,16 +5,28 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <Version>$(MotelyVersion)</Version>
-    <!-- Real Bootsharp props only (build-config.md): Name, PublishDirectory, BinariesDirectory, PackageDirectory. -->
     <BootsharpName>motely-wasm</BootsharpName>
     <BootsharpPackageDirectory>$(MSBuildProjectDirectory)/obj</BootsharpPackageDirectory>
     <BootsharpPublishDirectory>$(MSBuildProjectDirectory)/dist</BootsharpPublishDirectory>
   </PropertyGroup>
 
+  <!--
+    Bootsharp.FileSystem is sponsor-feed only (not nuget.org). Unconditional reference
+    makes the project unbuildable without that feed. Opt in where the feed exists:
+
+      dotnet publish Motely.Wasm.csproj -c Release -p:EnableFileSystem=true
+
+    Without the flag the engine is complete; there is no folder picker.
+  -->
+  <PropertyGroup>
+    <EnableFileSystem Condition="'$(EnableFileSystem)' == ''">false</EnableFileSystem>
+    <DefineConstants Condition="'$(EnableFileSystem)' == 'true'">$(DefineConstants);BOOTSHARP_FILESYSTEM</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Bootsharp" />
     <PackageReference Include="Bootsharp.Inject" />
-    <PackageReference Include="Bootsharp.FileSystem" />
+    <PackageReference Include="Bootsharp.FileSystem" Condition="'$(EnableFileSystem)' == 'true'" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
