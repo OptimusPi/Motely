@@ -9,7 +9,7 @@ namespace Motely.Filters.Jaml;
 public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources"];
+    public static readonly string[] ClauseKeys = TarotCardFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -23,9 +23,31 @@ public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
 }
 
 public struct TarotCardFilterDesc(TarotCardClause clause)
-    : IMotelySeedFilterDesc<TarotCardFilterDesc.TarotCardFilter>
+    : IMotelySeedFilterDesc<TarotCardFilterDesc.TarotCardFilter>,
+      IJamlClauseDesc<TarotCardClause>
 {
     private readonly TarotCardClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["tarotCard", "tarotCards"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "sources"];
+
+    /// <inheritdoc/>
+    public static bool Set(TarotCardClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(TarotCardClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelyTarotCard>(out var tarots)) return false;
+        clause.Tarots = tarots;
+        return true;
+    }
+
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Specialty sources (Emperor, Purple Seal) stay off

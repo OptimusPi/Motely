@@ -9,7 +9,7 @@ namespace Motely.Filters.Jaml;
 public sealed class SpectralCardClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources"];
+    public static readonly string[] ClauseKeys = SpectralCardFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -23,9 +23,31 @@ public sealed class SpectralCardClause : IJamlClause, IAnteScopedClause
 }
 
 public struct SpectralCardFilterDesc(SpectralCardClause clause)
-    : IMotelySeedFilterDesc<SpectralCardFilterDesc.SpectralCardFilter>
+    : IMotelySeedFilterDesc<SpectralCardFilterDesc.SpectralCardFilter>,
+      IJamlClauseDesc<SpectralCardClause>
 {
     private readonly SpectralCardClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["spectralCard", "spectralCards"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "sources"];
+
+    /// <inheritdoc/>
+    public static bool Set(SpectralCardClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(SpectralCardClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelySpectralCard>(out var spectrals)) return false;
+        clause.Spectrals = spectrals;
+        return true;
+    }
+
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Specialty sources (Sixth Sense, Seance) stay off

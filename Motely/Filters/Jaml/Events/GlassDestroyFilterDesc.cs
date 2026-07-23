@@ -8,7 +8,7 @@ namespace Motely.Filters.Jaml;
 public sealed class GlassDestroyClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
+    public static readonly string[] ClauseKeys = GlassDestroyFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -19,9 +19,20 @@ public sealed class GlassDestroyClause : IRollScopedClause
 }
 
 public struct GlassDestroyFilterDesc(GlassDestroyClause clause)
-    : IMotelySeedFilterDesc<GlassDestroyFilterDesc.GlassDestroyFilter>
+    : IMotelySeedFilterDesc<GlassDestroyFilterDesc.GlassDestroyFilter>,
+      IJamlClauseDesc<GlassDestroyClause>
 {
     private readonly GlassDestroyClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["glassDestroy"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "with"];
+
+    /// <inheritdoc/>
+    public static bool Set(GlassDestroyClause clause, string key, IJamlValueReader value) => false;
+
 
     public GlassDestroyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

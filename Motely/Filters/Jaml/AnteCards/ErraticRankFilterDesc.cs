@@ -10,7 +10,7 @@ namespace Motely.Filters.Jaml;
 public sealed class ErraticRankClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>Complete clause-level key list — the value itself carries the rank.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes"];
+    public static readonly string[] ClauseKeys = ErraticRankFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -21,9 +21,31 @@ public sealed class ErraticRankClause : IJamlClause, IAnteScopedClause
 }
 
 public struct ErraticRankFilterDesc(ErraticRankClause clause)
-    : IMotelySeedFilterDesc<ErraticRankFilterDesc.ErraticRankFilter>
+    : IMotelySeedFilterDesc<ErraticRankFilterDesc.ErraticRankFilter>,
+      IJamlClauseDesc<ErraticRankClause>
 {
     private readonly ErraticRankClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["erraticRank", "erraticRanks"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes"];
+
+    /// <inheritdoc/>
+    public static bool Set(ErraticRankClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(ErraticRankClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnum<MotelyStandardcardRank>(out var rank)) return false;
+        clause.Rank = rank;
+        return true;
+    }
+
 
     public ErraticRankFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

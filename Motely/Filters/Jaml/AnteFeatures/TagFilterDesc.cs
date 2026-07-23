@@ -4,13 +4,18 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-[JamlDiscriminator("tag", "tags", "smallBlindTag", "bigBlindTag",
+// Three attributes: tag/tags default both blind offers; the blind-specific wires pin one roll.
+[JamlDiscriminator("tag", "tags",
     ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 0, 1 })]
+[JamlDiscriminator("smallBlindTag",
+    ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 0 })]
+[JamlDiscriminator("bigBlindTag",
+    ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 1 })]
 public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list — shared by
     /// tag/smallBlindTag/bigBlindTag, all backed by this same TagClause type.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "rolls"];
+    public static readonly string[] ClauseKeys = TagFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -26,9 +31,32 @@ public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClaus
     public required int[] Rolls { get; set; }
 }
 
-public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>
+public struct TagFilterDesc(TagClause clause)
+    : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>,
+      IJamlClauseDesc<TagClause>
 {
     private readonly TagClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["tag", "tags", "smallBlindTag", "bigBlindTag"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "rolls"];
+
+    /// <inheritdoc/>
+    public static bool Set(TagClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(TagClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelyTag>(out var tags)) return false;
+        clause.Tags = tags;
+        return true;
+    }
+
 
     public TagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

@@ -9,7 +9,7 @@ namespace Motely.Filters.Jaml;
 public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "soulCardOnly", "soulEditionRolls"];
+    public static readonly string[] ClauseKeys = LegendaryJokerFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -38,9 +38,54 @@ public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 }
 
 public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
-    : IMotelySeedFilterDesc<LegendaryJokerFilterDesc.LegendaryJokerFilter>
+    : IMotelySeedFilterDesc<LegendaryJokerFilterDesc.LegendaryJokerFilter>,
+      IJamlClauseDesc<LegendaryJokerClause>
 {
     private readonly LegendaryJokerClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["legendaryJoker", "legendaryJokers"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys =>
+        ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "soulCardOnly", "soulEditionRolls"];
+
+    /// <inheritdoc/>
+    public static bool Set(LegendaryJokerClause clause, string key, IJamlValueReader value)
+    {
+        switch (key.ToLowerInvariant())
+        {
+            case "edition":
+                if (!value.TryEnum<MotelyItemEdition>(out var edition)) return false;
+                clause.Edition = edition;
+                return true;
+            case "soulcardonly":
+                if (!value.TryBool(out var soulOnly)) return false;
+                clause.SoulCardOnly = soulOnly;
+                return true;
+            case "souleditionrolls":
+                if (!value.TryInt(out var rolls)) return false;
+                clause.SoulEditionRolls = rolls;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(LegendaryJokerClause clause, IJamlValueReader value)
+    {
+        if (value.IsAny)
+        {
+            clause.IsWildcard = true;
+            return true;
+        }
+        if (!value.TryEnumArray<MotelyJoker>(out var jokers))
+            return false;
+        clause.Jokers = jokers;
+        return true;
+    }
+
 
     /// <summary>Source of truth for legendary/Soul defaults when a clause gives no <c>sources:</c> block:
     /// the SIMD/vector path walks all 6 booster-pack slots (legacy type-agnostic mode — both arcana and

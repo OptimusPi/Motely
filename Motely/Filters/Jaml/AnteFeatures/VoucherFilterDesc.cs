@@ -10,7 +10,7 @@ namespace Motely.Filters.Jaml;
 public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "rolls"];
+    public static readonly string[] ClauseKeys = VoucherFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -27,9 +27,31 @@ public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedC
 }
 
 public struct VoucherFilterDesc(VoucherClause clause)
-    : IMotelySeedFilterDesc<VoucherFilterDesc.VoucherFilter>
+    : IMotelySeedFilterDesc<VoucherFilterDesc.VoucherFilter>,
+      IJamlClauseDesc<VoucherClause>
 {
     private readonly VoucherClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["voucher", "vouchers"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "rolls"];
+
+    /// <inheritdoc/>
+    public static bool Set(VoucherClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(VoucherClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelyVoucher>(out var vouchers)) return false;
+        clause.Vouchers = vouchers;
+        return true;
+    }
+
 
     public readonly VoucherFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

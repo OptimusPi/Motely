@@ -8,7 +8,7 @@ namespace Motely.Filters.Jaml;
 public sealed class WheelOfFortuneClause : IRollScopedClause
 {
     /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
+    public static readonly string[] ClauseKeys = WheelOfFortuneFilterDesc.ClauseKeys;
 
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
@@ -19,9 +19,20 @@ public sealed class WheelOfFortuneClause : IRollScopedClause
 }
 
 public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
-    : IMotelySeedFilterDesc<WheelOfFortuneFilterDesc.WheelOfFortuneFilter>
+    : IMotelySeedFilterDesc<WheelOfFortuneFilterDesc.WheelOfFortuneFilter>,
+      IJamlClauseDesc<WheelOfFortuneClause>
 {
     private readonly WheelOfFortuneClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["wheelOfFortune"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "with"];
+
+    /// <inheritdoc/>
+    public static bool Set(WheelOfFortuneClause clause, string key, IJamlValueReader value) => false;
+
 
     public WheelOfFortuneFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
