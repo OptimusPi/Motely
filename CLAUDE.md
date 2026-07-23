@@ -86,7 +86,7 @@ Check before changing JAML grammar, FilterDescs, loaders, WASM, or editor toolin
 - [x] **T3** Hand `JamlDiscriminatorRegistry.Entries` deleted — wires live on `[JamlDiscriminator]` → generated `JamlSchema` (`IsKnownDiscriminator`, keys, rolls).
 - [x] **T4** **KEEP SIMD — do not delete.** `SpecialSpectralCardFilterDesc` (Soul/BlackHole): live route via `Handles` in `JamlSearchBuilder.ClauseToFilterDesc`. `LegendarySoulEditionFilterDesc` remains standalone composition; live `legendaryJoker:` edition prefilter stays inside `LegendaryJokerFilterDesc` via `LegendarySoulEditionPrefilter`.
 - [x] **T5** Source config shapes sit with the desc family that uses them (`JokerSourceConfig` on joker descs, `LegendaryJokerSourceConfig` / tarot / spectral / planet / standard next to their FilterDescs). `JamlConfig` stays a dumb document bag.
-- [ ] **T6** If LSP returns: thin stdio over engine only. No second grammar.
+- [x] **T6** Real LSP: `Motely.Lsp` (stdio JSON-RPC) + `Motely.Lsp.Core` (`JamlLanguageService` → `JamlConfigLoader` / `JamlSchema` / enums). VS Code extension `vscode-jaml` is a thin `vscode-languageclient` host only — no TS grammar.
 - [ ] **T7** WASM = same engine shape as native. Wrong shape → delete and redo.
 
 ### Self-test before claim-done
@@ -183,7 +183,7 @@ The fourteen Bootsharp docs, pinned so they load every session instead of relyin
 
 **The C# engine is the only grammar.** FilterDescs + loader + `JamlDocumentParser`. `JamlConfigLoader` reads **JAML text only** (`TryLoad`/`FromJaml`); `ToJaml` writes JAML back. No YAML package, no JSON filter interchange path — those were footguns and are gone. Seed lakes may still use `.json` as a **seed list** format (DuckDB); that is not a second filter grammar.
 
-**The TypeScript reimplementations are gone, on purpose.** `jaml-lsp` (a VS Code extension and a stdio language server) and `jaml-codemirror` were both deleted: each one carried its own copy of the grammar, so every vocabulary change meant editing the same facts in three places and shipping three packages in lockstep. Editors reach the grammar through `motely-wasm` instead — the engine itself, compiled, doing the parsing it already does. **Leave them buried.** A third implementation of a grammar the engine already owns is a place for the truth to rot, not a feature.
+**The TypeScript reimplementations of the grammar stay buried.** `jaml-lang` / old `jaml-lsp` (TS validator + completions) and `jaml-codemirror` each carried a second copy of the vocabulary — that shape is forbidden. Editors reach the grammar through **`Motely.Lsp`**: a thin C# JSON-RPC stdio server whose answers come from `JamlConfigLoader` + generated `JamlSchema` + engine enums (`Motely.Lsp.Core.JamlLanguageService`). The VS Code package `vscode-jaml` only hosts that process via `vscode-languageclient`. No second grammar in TypeScript.
 
 `dotnet run --project Motely.Schema` emits a TypeScript schema snapshot of every discriminator, its clause keys, source keys, value enums, and flags — regenerated after any vocabulary or enum change. It prints to stdout; redirect to write `jaml-lang/src/generated.ts` if that package were still alive (it's not).
 

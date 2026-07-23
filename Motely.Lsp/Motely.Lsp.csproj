@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AssemblyName>Motely.Lsp</AssemblyName>
+    <!-- Hand-rolled JSON-RPC 2.0 over stdio. Thin shell: every answer comes from
+         Motely.Lsp.Core to the Motely engine. Publish self-contained for the VS Code extension:
+         dotnet publish Motely.Lsp -c Release -r osx-arm64 -p:SelfContained=true -p:PublishSingleFile=true -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely.Lsp.Core\Motely.Lsp.Core.csproj" />
+  </ItemGroup>
+
+</Project>

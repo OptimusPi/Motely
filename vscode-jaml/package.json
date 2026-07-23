@@ -1,0 +1,73 @@
+{
+  "name": "jaml-language-support",
+  "displayName": "JAML (Motely)",
+  "description": "Real JAML language support: Motely.Lsp over stdio — engine diagnostics, hover, and completion.",
+  "version": "3.0.0",
+  "publisher": "pifreak",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OptimusPi/MotelyJAML"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:jaml"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "jaml",
+        "aliases": [
+          "JAML",
+          "jaml",
+          "Jimbo's Ante Markup Language"
+        ],
+        "extensions": [
+          ".jaml"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": {
+      "title": "JAML",
+      "properties": {
+        "jaml.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the Motely.Lsp executable. Empty = bundled server/Motely.Lsp, else workspace `dotnet run --project Motely.Lsp`."
+        },
+        "jaml.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace Motely.Lsp ↔ VS Code communication in the Output panel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.95.0",
+    "typescript": "^5.6.0"
+  }
+}

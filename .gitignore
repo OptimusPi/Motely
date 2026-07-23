@@ -41,6 +41,9 @@ npm-debug.log*
 yarn-error.log
 pnpm-debug.log*
 .npmrc
+/vscode-jaml/out/
+/vscode-jaml/server/
+/vscode-jaml/*.vsix
 
 # --- Logs & temp ---
 *.log
