@@ -1,8 +1,8 @@
 # motely-wasm
 
-`motely-wasm` is the Bootsharp/WebAssembly package for MotelyJAML: the production Balatro seed-search engine, JAML loader, JAMLyzer analyzer, one-line JAML parser, and selected seed utilities exposed to JavaScript.
+`motely-wasm` is the Bootsharp/WebAssembly package for MotelyJAML: the production Balatro seed-search engine, JAML loader, JAMLyzer, one-line JAML parser, and selected seed utilities exposed to JavaScript.
 
-JAML is Jimbo's Ante Markup Language. YAML and JSON are the concrete syntaxes; both load to the same typed `JamlConfig` that the engine executes.
+JAML is Jimbo's Ante Markup Language. The C# engine owns the grammar: load a filter as JAML text and it becomes a typed `JamlConfig` the search runs. Clauses can be one-line natural language or structured documents — both are JAML.
 
 ## Install
 
@@ -192,7 +192,7 @@ Releasing, from `Motely.Wasm/`: sync `"version"` in `package.json` to `<MotelyVe
 The package test suite mirrors the C# behavior tests that are meaningful through the public WASM surface:
 
 - boot/runtime and version export
-- JAML YAML/JSON parse and validation strictness
+- JAML parse and validation strictness
 - JAMLyzer ante structure, event windows, score-by-analysis, and stream-state resume
 - real list/random/sequential searches
 - AND scoring, default source fallback, Hieroglyph pack-slot reachability, and luck-source regressions

@@ -35,7 +35,17 @@ This process is a **code tool**. Session text is work product only.
 
 **Trap (positive):** engineering prose only — same speed, tables, choice handoffs. Humans cover therapist / family / friends; this bot covers code.
 
-**Trap (positive):** prefer “do X” instructions. Long ban-lists prime the banned thing; keep bans only for true safety gates (destruct / exploit).
+### Positive prose (prime law)
+
+Long “do not / never / forbidden” lists **prime the forbidden path** — especially under load / collapse mode. The bot and the docs **state the desired action and the single source of truth**.
+
+| Write this | Shape |
+|------------|--------|
+| Desired state | “Grammar lives on FilterDesc → generated `JamlSchema` → loader.” |
+| Desired action | “Do X. Finish verb. Hand off with 1 2 3.” |
+| Safety only | Hard gates stay rare and explicit: destruct, force-push, exploit, minor sexual content. |
+
+**Self-check before emit:** if the sentence is a ban-list, rewrite it as the one true path. Example: not a paragraph of “no parallel grammar” — write “one grammar: engine descs + loader; LSP and VS Code only call that.”
 
 ## Repo hard rules
 
@@ -43,27 +53,24 @@ This process is a **code tool**. Session text is work product only.
 - Inspect her just-typed edits with `git status`/`diff` only when she asks.
 - Destructive / irreversible (delete, force-push, publish): print the plan; she runs it or says go.
 - Auth/404 → bot lacks access; her setup is fine until proven otherwise.
-- Prefer positive instructions (see trap above).
+- Instructions use positive prose (prime law above).
 
 ## JAML contract
 
-### Source of truth
+### Source of truth (one grammar)
 
 1. One clause type → one FilterDesc (`JamlSearchBuilder.ClauseToFilterDesc`).
 2. FilterDesc owns wire names, keys, `Set`/`CreateFilter`/`Filter`.
-3. `IJamlClauseDesc` on every wire family. No parallel TS/grammar service.
+3. `IJamlClauseDesc` on every wire family; editor answers come from that same rail.
 4. `JamlConfig` is a dumb document bag.
 5. Vocabulary = engine enums.
-
-### Forbidden
-
-6. Vertical `string[] ClauseKeys` phone books as the language.
-7. Second discriminator registry once descs + generated `JamlSchema` cover wires.
-8. Onion on FilterDesc (registry + schema arrays + half-LSP brain + third TS grammar).
-9. Resurrected TS grammars (`jaml-lang` validator, old jaml-lsp TS server). Real path: `Motely.Lsp` → engine.
-9b. YAML/JSON **filter** loaders. JAML text only. Seed-list `.json` for lakes is fine.
-10. Market copy / wrong-then-fix diaries in docs.
-11. Persisting identity profiling from chat.
+6. Allowed keys for a clause = that FilterDesc’s `ClauseKeys`, surfaced through generated `JamlSchema`.
+7. Discriminators live on the descs; `JamlSchema` is the generated index, not a second authoring site.
+8. Flat stack: FilterDesc owns the wire; `JamlSchema` indexes it; `Motely.Lsp` / `vscode-jaml` only call the engine.
+9. Language path: `Motely.Lsp` (stdio) → engine. VS Code is a languageclient host only.
+9b. Filters load as JAML text only. Seed-list `.json` for lakes stays valid lake input.
+10. Docs state what the system is and why it helps (positive present tense).
+11. Session text is work product; identity profiling stays out of the tree and chat logs the bot writes.
 
 ### PRNG / proof
 
@@ -79,12 +86,12 @@ This process is a **code tool**. Session text is work product only.
 
 ### Self-test before claim-done
 
-Any yes → stop and undo:
+Claim done only when all hold:
 
-- Grammar change outside a FilterDesc?
-- New string[]/registry “for editor vocab”?
-- Rename instead of delete parallel truth?
-- Claimed search correctness without a real engine run?
+- Grammar change is on a FilterDesc (or its generator input).
+- Editor vocab is `JamlSchema` / engine enums, not a new authoring table.
+- One truth remains; extra mirrors are deleted, not renamed.
+- Search correctness has a real engine/CLI run that finds a seed when claimed.
 
 ## Commands
 
