@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>seed finder — a motely-wasm consumer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1d2733">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SeedFinder">
 <style>
   :root { --ink: #1d2733; --soft: #5a6b7d; --line: #d8dee6; --go: #1e7a3c; --bad: #b3261e; }
   * { box-sizing: border-box; }
@@ -18,9 +24,16 @@
   .editor .cm-content { font: 0.9rem/1.5 ui-monospace, Consolas, monospace; }
   #jaml .cm-content { min-height: 160px; }
   .row { display: flex; gap: 0.6rem; margin-top: 0.85rem; flex-wrap: wrap; align-items: center; }
-  button { font: inherit; font-weight: 600; padding: 0.5rem 1.1rem; border: none;
-           border-radius: 8px; background: var(--ink); color: #fff; cursor: pointer; }
+  /* Touch-first: 48px minimum target, generous padding — phone thumbs and neuropathic
+     hands get the same easy hit. No animations anywhere on this page by design (HPPD-calm). */
+  button { font: inherit; font-weight: 600; padding: 0.75rem 1.5rem; min-height: 48px;
+           border: none; border-radius: 8px; background: var(--ink); color: #fff; cursor: pointer; }
   button:disabled { opacity: 0.45; cursor: wait; }
+  @media (max-width: 600px) {
+    body { font-size: 1.05rem; padding: 1rem 0.75rem 3rem; }
+    button { width: 100%; }
+    th, td { padding: 0.6rem 0.5rem; }
+  }
   #validation { font: 0.9rem ui-monospace, Consolas, monospace; }
   #validation.ok { color: var(--go); }
   #validation.error { color: var(--bad); white-space: pre-wrap; }
@@ -51,6 +64,11 @@
   <tbody id="results"></tbody>
 </table>
 
+<script>
+  // Installable app: the service worker makes the shell + engine open instantly and offline.
+  if ("serviceWorker" in navigator)
+    navigator.serviceWorker.register("sw.js");
+</script>
 <script type="module">
   // motely-wasm exactly as npm installs it. serve.mjs maps /motely/ -> node_modules/motely-wasm/dist/.
   import bootsharp, * as Motely from "/motely/index.mjs";

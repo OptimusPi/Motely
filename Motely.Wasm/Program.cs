@@ -186,6 +186,29 @@ public static partial class MotelySearch
                     .WithEndBatchIndex(endBatchIndex)
         );
 
+    /// <summary>
+    /// Sequential sweep that stops at the first match — the WASM twin of the CLI's
+    /// <c>--findone</c>, same engine chain plus <c>StopAfter(1)</c>. The vector batch in
+    /// flight drains when the limit trips, so the array can carry a few bonus matches;
+    /// callers wanting exactly one take <c>[0]</c>. Empty array = the range held nothing.
+    /// </summary>
+    [Export]
+    public static Task<MotelyScoredSeedResult[]> FindOne(
+        JamlConfig config,
+        long startBatchIndex,
+        long endBatchIndex,
+        int batchCharacterCount
+    ) =>
+        RunAsync(
+            config,
+            s =>
+                s.WithSequentialSearch()
+                    .WithBatchCharacterCount(batchCharacterCount)
+                    .WithStartBatchIndex(startBatchIndex)
+                    .WithEndBatchIndex(endBatchIndex)
+                    .StopAfter(1)
+        );
+
     private static async Task<MotelyScoredSeedResult[]> RunAsync(
         JamlConfig config,
         Func<IMotelySearchSettings, IMotelySearchSettings> withMode

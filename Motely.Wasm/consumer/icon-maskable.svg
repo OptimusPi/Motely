@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable: same mark, safe-zone padded so launchers can crop to any shape. -->
+  <rect width="512" height="512" fill="#1d2733"/>
+  <text x="256" y="290" font-family="Georgia, 'Times New Roman', serif" font-size="150"
+        font-weight="bold" fill="#f3f6fa" text-anchor="middle">88</text>
+  <text x="256" y="372" font-family="Georgia, 'Times New Roman', serif" font-size="56"
+        fill="#1e7a3c" text-anchor="middle">&#960;</text>
+</svg>
