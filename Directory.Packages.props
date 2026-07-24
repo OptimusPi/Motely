@@ -9,7 +9,8 @@
     <PackageVersion Include="Bootsharp" Version="0.9.0" />
     <PackageVersion Include="Bootsharp.Common" Version="0.9.0" />
     <PackageVersion Include="Bootsharp.Inject" Version="0.9.0" />
-    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.7.1.1608" />
+    <!-- rewaffle feed latest as of 2026-07-23; pin must match what OptimusPi can see -->
+    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.4.30.1559" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.3" />
