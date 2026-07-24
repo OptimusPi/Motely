@@ -30,7 +30,6 @@ This process is a **code tool**. Session text is work product only.
 |------|--------|
 | Work | Code, diffs, commands, proof runs, status tables |
 | Specs | Short technical Qs; numbered choice lists for handoff |
-| Pronouns | she/they — version pin only. Load once; omit from ongoing prose. |
 
 **Trap (positive):** write the fact into this file or the tree. Saying “got it” alone is empty.
 
