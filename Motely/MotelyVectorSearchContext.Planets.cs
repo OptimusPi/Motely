@@ -68,33 +68,6 @@ ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItemVector GetNextShopPlanetOrNull(
-        ref MotelyVectorPlanetStream planetStream,
-        ref MotelyVectorPrngStream itemTypeStream,
-        Vector512<double> totalRate,
-        Vector512<double> tarotRate,
-        Vector512<double> planetRate
-    )
-    {
-        // Check what type this slot is
-        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
-        itemTypePoll -= Vector512.Create(20.0); // Skip joker range
-        itemTypePoll -= tarotRate; // Skip Tarot range
-        var isPlanetSlot = Vector512.LessThan(itemTypePoll, planetRate);
-
-        // Only advance Planet stream for Planet slots
-        var Planet = GetNextPlanet(ref planetStream, isPlanetSlot);
-
-        // Return Planet or None for non-Planet slots
-        var planetIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isPlanetSlot);
-        var noneItem = Vector256<int>.Zero;
-
-        return new MotelyItemVector(
-            Vector256.ConditionalSelect(planetIntMask, Planet.Value, noneItem)
-        );
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector GetNextPlanet(
         ref MotelyVectorPlanetStream planetStream,
         in Vector512<double> mask

@@ -1,6 +1,3 @@
-using Motely.Analysis;
-using static VerifyXunit.Verifier;
-
 namespace Motely.Tests;
 
 public sealed class AnalyzerUnitTests
@@ -26,7 +23,7 @@ public sealed class AnalyzerUnitTests
 
     private string GetAnalyzerOutput(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
     {
-        return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
+        return MotelyUnitTestAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
 
     // This method is now only used by other tests that don't use Verify yet

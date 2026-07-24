@@ -333,8 +333,30 @@ unsafe partial struct MotelyVectorSearchContext
         int editionRate
     )
     {
-        Vector512<double> editionPoll = GetNextRandom(ref stream);
+        return SelectEdition(GetNextRandom(ref stream), editionRate);
+    }
 
+    /// <summary>
+    /// Masked edition roll: only lanes in <paramref name="mask"/> advance the edition PRNG,
+    /// mirroring the scalar engine where the edition stream is only pulled when the slot
+    /// actually yields a joker. Lanes outside the mask return garbage the caller discards.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private VectorEnum256<MotelyItemEdition> GetNextEdition(
+        ref MotelyVectorPrngStream stream,
+        int editionRate,
+        in Vector512<double> mask
+    )
+    {
+        return SelectEdition(GetNextRandom(ref stream, mask), editionRate);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static VectorEnum256<MotelyItemEdition> SelectEdition(
+        Vector512<double> editionPoll,
+        int editionRate
+    )
+    {
         // O_O
         return new(
             Vector256.ConditionalSelect(
@@ -381,12 +403,33 @@ unsafe partial struct MotelyVectorSearchContext
         ref MotelyVectorPrngStream rentalStream
     )
     {
+        return ApplyNextStickers(
+            item,
+            ref eternalPerishableStream,
+            ref rentalStream,
+            Vector512<double>.AllBitsSet
+        );
+    }
+
+    /// <summary>
+    /// Masked sticker roll: only lanes in <paramref name="mask"/> advance the sticker PRNGs,
+    /// mirroring the scalar engine where sticker streams are only pulled when the slot
+    /// actually yields a joker.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private MotelyItemVector ApplyNextStickers(
+        MotelyItemVector item,
+        ref MotelyVectorPrngStream eternalPerishableStream,
+        ref MotelyVectorPrngStream rentalStream,
+        in Vector512<double> mask
+    )
+    {
         if (Stake < MotelyStake.Black)
             return item;
 
         Debug.Assert(!eternalPerishableStream.IsInvalid);
 
-        Vector512<double> stickerPoll = GetNextRandom(ref eternalPerishableStream);
+        Vector512<double> stickerPoll = GetNextRandom(ref eternalPerishableStream, mask);
 
         Vector256<int> eternalMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(
             Vector512.GreaterThan(stickerPoll, Vector512.Create(0.7))
@@ -426,7 +469,7 @@ unsafe partial struct MotelyVectorSearchContext
 
         Debug.Assert(!rentalStream.IsInvalid);
 
-        stickerPoll = GetNextRandom(ref rentalStream);
+        stickerPoll = GetNextRandom(ref rentalStream, mask);
 
         Vector256<int> rentallMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(
             Vector512.GreaterThan(stickerPoll, Vector512.Create(0.7))
@@ -515,8 +558,10 @@ unsafe partial struct MotelyVectorSearchContext
 
         if (stream.DoesProvideJokerType)
         {
-            // Pick the joker
-            Vector512<double> rarityPoll = GetNextRandom(ref stream.RarityPrngStream);
+            // Pick the joker. The rarity roll is masked: the scalar engine only pulls the
+            // rarity PRNG when the shop slot actually is a joker, so unmasked advancement
+            // here desyncs every lane whose slot count differs (proof: VectorScalarParityTests).
+            Vector512<double> rarityPoll = GetNextRandom(ref stream.RarityPrngStream, mask);
 
             Vector512<double> rareMask =
                 Vector512.GreaterThan(rarityPoll, Vector512.Create(0.95)) & mask;
@@ -571,14 +616,15 @@ unsafe partial struct MotelyVectorSearchContext
             jokers = ApplyNextStickers(
                 jokers,
                 ref stream.EternalPerishablePrngStream,
-                ref stream.RentalPrngStream
+                ref stream.RentalPrngStream,
+                mask
             );
         }
 
         if (stream.DoesProvideEdition)
         {
             jokers = new(
-                jokers.Value | GetNextEdition(ref stream.EditionPrngStream, 1).HardwareVector
+                jokers.Value | GetNextEdition(ref stream.EditionPrngStream, 1, mask).HardwareVector
             );
         }
 
