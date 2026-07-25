@@ -82,7 +82,7 @@ Long “do not / never / forbidden” lists **prime the forbidden path**. The bo
 | ID | Status | Note |
 |----|--------|------|
 | T1–T6 | done | Descs, schema, Soul route, source configs, Motely.Lsp |
-| **T7** | open | WASM = same engine shape as native; wrong shape → delete and redo |
+| **T7** | done | WASM = same engine shape: `FromJaml` + `JamlSearchBuilder` + search modes incl. `FindOne`; UI uses `listItems` only (no key phone book) |
 
 ### Self-test before claim-done
 
@@ -111,6 +111,6 @@ WASM (when present): from `Motely.Wasm/`, `npm test` / `npm run test:ui`.
 - **Motely.CLI** — exclusive input modes; seed lake under `Seeds/`.
 - **Motely.Lsp** / **Motely.Lsp.Core** — thin stdio JSON-RPC; answers from engine only.
 - **vscode-jaml** — languageclient host only; no TS grammar.
-- **motely-wasm** — same engine surface as native (T7).
+- **motely-wasm** — same engine surface as native (T7 done).
 
 Dependency points inward to Motely.

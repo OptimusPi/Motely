@@ -93,40 +93,24 @@
   // Embedded build: the boot resources travel inside the module, so boot() takes no argument.
   await bootsharp.boot();
 
-  // ── JAML authoring: completion and lint read the engine's real vocabulary ──
-  const VALUE_KINDS = {
-    joker: "joker", jokers: "joker", commonJoker: "joker", uncommonJoker: "joker",
-    rareJoker: "joker", legendaryJoker: "joker",
-    voucher: "voucher", boss: "boss", tag: "tag", smallBlindTag: "tag", bigBlindTag: "tag",
-    deck: "deck", stake: "stake", edition: "edition", seal: "seal",
-    tarotCard: "tarotCard", spectralCard: "spectralCard", planetCard: "planetCard",
-  };
-  const KEYS = [
-    "name", "deck", "stake", "seeds", "must", "should", "mustNot",
-    "joker", "legendaryJoker", "voucher", "tarotCard", "spectralCard", "planetCard",
-    "standardCard", "boss", "tag", "smallBlindTag", "bigBlindTag",
-    "antes", "score", "min", "max", "edition", "sources", "and", "or",
-  ];
+  // Value complete via existing listItems only (written key = kind). No key phone book.
+  function tryList(kind, query) {
+    try { return MotelyJaml.listItems(kind, query || null); }
+    catch { return null; }
+  }
 
   function jamlComplete(context) {
     const line = context.state.doc.lineAt(context.pos);
     const before = line.text.slice(0, context.pos - line.from);
-
     const valueMatch = before.match(/([A-Za-z]+):\s*([A-Za-z]*)$/);
-    if (valueMatch && VALUE_KINDS[valueMatch[1]]) {
-      const partial = valueMatch[2];
-      const names = MotelyJaml.listItems(VALUE_KINDS[valueMatch[1]], partial || null);
-      return { from: context.pos - partial.length, options: names.map((label) => ({ label, type: "constant" })) };
-    }
-
-    const keyMatch = before.match(/(?:^|-\s+)([A-Za-z]*)$/);
-    if (keyMatch && (context.explicit || keyMatch[1].length > 0)) {
-      return {
-        from: context.pos - keyMatch[1].length,
-        options: KEYS.map((label) => ({ label: label + ": ", type: "property", displayLabel: label })),
-      };
-    }
-    return null;
+    if (!valueMatch) return null;
+    const partial = valueMatch[2];
+    const names = tryList(valueMatch[1], partial || null);
+    if (!names) return null;
+    return {
+      from: context.pos - partial.length,
+      options: names.map((label) => ({ label, type: "constant" })),
+    };
   }
 
   function jamlLint(view) {
@@ -142,15 +126,16 @@
       out.textContent = "valid ✓";
       out.className = "ok";
     }
-    // Value typos parse clean but never match — catch them against the engine vocabulary.
     for (let n = 1; n <= view.state.doc.lines; n++) {
       const line = view.state.doc.line(n);
       const m = line.text.match(/^\s*-?\s*([A-Za-z]+):\s*([A-Za-z]+)\s*$/);
-      if (!m || !VALUE_KINDS[m[1]] || m[2] === "Any") continue;
-      const kind = VALUE_KINDS[m[1]];
-      const exact = MotelyJaml.listItems(kind, m[2]).some((x) => x.toLowerCase() === m[2].toLowerCase());
+      if (!m || m[2] === "Any") continue;
+      const kind = m[1];
+      const names = tryList(kind, m[2]);
+      if (names === null) continue;
+      const exact = names.some((x) => x.toLowerCase() === m[2].toLowerCase());
       if (!exact) {
-        const near = MotelyJaml.listItems(kind, m[2].slice(0, 4))[0];
+        const near = tryList(kind, m[2].slice(0, 4))?.[0];
         const at = line.from + line.text.indexOf(m[2], m[0].indexOf(":"));
         diagnostics.push({
           from: at, to: at + m[2].length, severity: "error",

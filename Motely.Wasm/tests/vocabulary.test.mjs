@@ -28,4 +28,10 @@ describe("MotelyJaml — vocabulary (listItems)", () => {
     it("rejects unknown kinds loudly, naming the valid ones", () => {
         assert.throws(() => MotelyJaml.listItems("pokemon")); // the throw crosses; C# exception text stays engine-side
     });
+
+    it("short nicknames are not vocabulary kinds (path B)", () => {
+        assert.throws(() => MotelyJaml.listItems("planet"));
+        assert.throws(() => MotelyJaml.listItems("tarot"));
+        assert.ok(MotelyJaml.listItems("planetCard").length > 0);
+    });
 });

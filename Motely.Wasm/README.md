@@ -89,9 +89,11 @@ Available modes:
 const fromList = await MotelySearch.searchList(jaml);
 const fromRandom = await MotelySearch.searchRandom(jaml, 1000);
 const fromWalk = await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
+// CLI --findone twin: sequential + StopAfter(1). Callers wanting exactly one take [0].
+const first = await MotelySearch.findOne(jaml, 0n, 1n, 1);
 ```
 
-`searchSequential` uses bigint batch indices because the C# parameters are `long`.
+`searchSequential` / `findOne` use bigint batch indices because the C# parameters are `long`.
 
 ## The fleet — one engine per web worker
 
@@ -153,12 +155,13 @@ MotelyJaml.validateLine("Eternal Blueprint in antes 1 or 2"); // null
 MotelyJaml.canonicalizeLine("Showman in antes 1, 2");         // "Showman in antes 1 or 2"
 ```
 
-## Vocabulary
+## Enum lists (`listItems`)
 
-`MotelyJaml.listItems(kind, query)` serves the real engine vocabulary — jokers, vouchers, tags, bosses, and the rest — for autocomplete and agent grounding. Names come straight from the engine enums, so the vocabulary stays in lockstep with the engine by construction.
+`MotelyJaml.listItems(kind, query)` is a thin export of generated `JamlSchema.ListItems`. Kind is a discriminator wire (`joker`, `tarotCard`, …) or an enum-typed property key (`edition`, `deck`, …). Short nicknames like `tarot` / `planet` are not kinds.
 
 ```js
 MotelyJaml.listItems("joker", "lucky"); // ["LuckyCat", ...] — case-insensitive substring match
+MotelyJaml.listItems("planetCard");     // canonical wire, not "planet"
 ```
 
 ## Utilities

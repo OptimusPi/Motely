@@ -77,4 +77,18 @@ describe("MotelySearch — real seed finding", () => {
         for (const r of a.results)
             assert.match(r.seed, /^[1-9A-Z]{8}$/, "returned results carry the same real seeds, typed");
     });
+
+    // CLI --findone twin: same JamlSearchBuilder chain + StopAfter(1). Any-joker must
+    // matches immediately in batch 0 — proof is a real seed string, not a mock.
+    it("findOne returns a real seed from sequential range (CLI --findone twin)", async () => {
+        const config = parse(`name: t
+deck: Red
+stake: White
+must:
+  - joker: Any
+`);
+        const results = await MotelySearch.findOne(config, 0n, 1n, 1);
+        assert.ok(results.length >= 1, "findOne must hit at least one seed in batch 0");
+        assert.match(results[0].seed, /^[1-9A-Z]{8}$/);
+    });
 });
