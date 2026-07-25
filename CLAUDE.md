@@ -4,16 +4,20 @@ Work file for Claude Code in this repo. Code and proof only.
 
 ## What this is
 
-Motely is a vectorized Balatro seed-search engine (AVX-512, 8 seeds per lane). JAML is the filter language: one loader (`JamlConfigLoader.TryLoad` / `FromJaml`) into typed `JamlConfig`. Engine library + CLI + `motely-wasm` + `Motely.Lsp` (stdio).
+Motely is a vectorized Balatro seed-search engine (AVX-512, 8 seeds per lane). JAML is the filter language: one loader (`JamlConfigLoader.TryLoad` / `FromJaml`) into typed `JamlConfig`. Surfaces: engine library + CLI + `motely-wasm` + `Motely.Lsp` (stdio) + `Motely.JsonRender` (jamlyzer JSON/HTML/`--jamlui` report CLI).
 
 Missing fact → one direct question. Docs/commits: positive present tense (what it is and why it helps).
+
+`Motely.JsonRender` is in-tree. Delete or empty that project only with explicit operator go.
+
+Sprint board: `HANDOFF-CLAUDE.md`. When it is marked **Grok-owned**, execute the whole backlog top→bottom; do not invent pick menus or stop for phase tokens.
 
 ## Session mode (hard)
 
 | Rule | Do this |
 |------|---------|
-| **One task** | Finish the **current** verb only. After it, stop. |
-| **Choice** | Big work → short numbered list (`1` `2` `3` or `A` `B` `C`…). Real options the operator can pick. |
+| **One task** | Finish the **current** verb only. After it, stop — unless the handoff sprint says run the full backlog. |
+| **Choice** | Ambiguity only → short numbered list. Known backlog → execute; do not quiz the operator for sport. |
 | **Handoff** | Each stop is a clean handoff: status table + next-step list. Context stays short. |
 | **Output** | Code, diffs, commands, proof runs, status tables. |
 | **Proof** | Real CLI/engine search that finds a seed. Fake-search tests prove nothing. |
@@ -106,6 +110,7 @@ dotnet run --project Motely.CLI -- --jaml <file>
 dotnet run --project Motely.CLI -- --jaml <file> --collect 1
 dotnet run --project Motely.CLI -- --jaml <file> --collect 100
 dotnet run --project Motely.Lsp   # stdio LSP; vscode-jaml hosts this
+dotnet run --project Motely.JsonRender -- --jaml <file> --seeds AAAAAAAA --html out.html
 ```
 
 WASM (when present): from `Motely.Wasm/`, `npm test` / `npm run test:ui`.
@@ -115,7 +120,9 @@ WASM (when present): from `Motely.Wasm/`, `npm test` / `npm run test:ui`.
 - **Motely** — SIMD + scalar search contexts; filters are descs; JAML under `Filters/Jaml/`.
 - **Motely.CLI** — exclusive input modes; seed lake under `Seeds/`.
 - **Motely.Lsp** / **Motely.Lsp.Core** — thin stdio JSON-RPC; answers from engine only.
+- **Motely.JsonRender** — jamlyzer report CLI (JSON / HTML / jaml-ui dialect). Not a second grammar.
 - **vscode-jaml** — languageclient host only; no TS grammar.
 - **motely-wasm** — same engine surface as native (T7 done).
+- **jaml-ui** — sibling product UI repo; not Motely. Open only when operator names a concrete file/goal.
 
 Dependency points inward to Motely.
