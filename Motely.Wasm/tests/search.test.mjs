@@ -73,8 +73,22 @@ describe("MotelySearch — list / sequential / collect", () => {
             assert.match(r.seed, /^[1-9A-Z]{8}$/);
     });
 
-    // CLI --collect 1 twin: JamlSearchBuilder + StopAfter(1). Any-joker hits in batch 0.
-    it("findOne returns seed from sequential range (CLI --collect 1 twin)", async () => {
+    // CLI --collect N twin: JamlSearchBuilder + StopAfter(N). Any-joker hits in batch 0.
+    it("collect stops near N matches (CLI --collect N twin)", async () => {
+        const config = parse(`name: t
+deck: Red
+stake: White
+must:
+  - joker: Any
+`);
+        const results = await MotelySearch.collect(config, 5n, 0n, 1n, 1);
+        assert.ok(results.length >= 1, "collect must hit at least one seed in batch 0");
+        // Thread count is 1 in WASM; overshoot is one SIMD batch (8), not thousands.
+        assert.ok(results.length <= 32, `collect(5) overshot badly: ${results.length}`);
+        assert.match(results[0].seed, /^[1-9A-Z]{8}$/);
+    });
+
+    it("findOne is collect(1)", async () => {
         const config = parse(`name: t
 deck: Red
 stake: White

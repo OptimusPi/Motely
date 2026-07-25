@@ -161,27 +161,42 @@ public static partial class MotelySearch
         );
 
     /// <summary>
-    /// Sequential sweep that stops at the first match — the WASM twin of the CLI's
-    /// CLI twin of <c>--collect 1</c>: same engine chain plus <c>StopAfter(1)</c>. The vector batch in
-    /// flight drains when the limit trips, so the array can carry a few bonus matches;
-    /// callers wanting exactly one take <c>[0]</c>. Empty array = the range held nothing.
+    /// Sequential sweep that stops after about <paramref name="stopAfter"/> matches —
+    /// CLI <c>--collect N</c> twin. Same <see cref="JamlSearchBuilder"/> + <c>StopAfter(N)</c>.
+    /// SIMD may deliver a few over the limit; empty array = range held nothing.
+    /// Batch indices are JS BigInt (C# <c>long</c>).
     /// </summary>
     [Export]
-    public static Task<MotelyScoredSeedResult[]> FindOne(
+    public static Task<MotelyScoredSeedResult[]> Collect(
         JamlConfig config,
+        long stopAfter,
         long startBatchIndex,
         long endBatchIndex,
         int batchCharacterCount
-    ) =>
-        RunAsync(
+    )
+    {
+        if (stopAfter < 1)
+            throw new ArgumentOutOfRangeException(nameof(stopAfter), stopAfter, "stopAfter must be >= 1.");
+
+        return RunAsync(
             config,
             s =>
                 s.WithSequentialSearch()
                     .WithBatchCharacterCount(batchCharacterCount)
                     .WithStartBatchIndex(startBatchIndex)
                     .WithEndBatchIndex(endBatchIndex)
-                    .StopAfter(1)
+                    .StopAfter(stopAfter)
         );
+    }
+
+    /// <summary><see cref="Collect"/> with <c>stopAfter: 1</c> — CLI <c>--collect 1</c>.</summary>
+    [Export]
+    public static Task<MotelyScoredSeedResult[]> FindOne(
+        JamlConfig config,
+        long startBatchIndex,
+        long endBatchIndex,
+        int batchCharacterCount
+    ) => Collect(config, stopAfter: 1, startBatchIndex, endBatchIndex, batchCharacterCount);
 
     private static async Task<MotelyScoredSeedResult[]> RunAsync(
         JamlConfig config,

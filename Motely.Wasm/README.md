@@ -89,11 +89,14 @@ Available modes:
 const fromList = await MotelySearch.searchList(jaml);
 const fromRandom = await MotelySearch.searchRandom(jaml, 1000);
 const fromWalk = await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
-// CLI --collect 1 twin: sequential + StopAfter(1). Callers wanting exactly one take [0].
+// CLI --collect N twin: sequential + StopAfter(N). SIMD may deliver a few over.
+const batch = await MotelySearch.collect(jaml, 100n, 0n, 1n, 1);
+// --collect 1
 const first = await MotelySearch.findOne(jaml, 0n, 1n, 1);
+// same as: MotelySearch.collect(jaml, 1n, 0n, 1n, 1)
 ```
 
-`searchSequential` / `findOne` use bigint batch indices because the C# parameters are `long`.
+`searchSequential` / `collect` / `findOne` use bigint for batch indices and for `stopAfter` (C# `long`).
 
 ## The fleet — one engine per web worker
 
