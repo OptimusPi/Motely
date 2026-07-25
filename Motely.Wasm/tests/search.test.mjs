@@ -7,10 +7,8 @@ const { MotelyJaml, MotelySearch, MotelyJamlyzer, MotelyVoucher } = harness;
 
 const parse = (text) => MotelyJaml.fromJaml(text);
 
-// A real, discriminating find: learn a deterministic attribute of a real seed from the analyzer,
-// then prove the finder finds that seed and rejects one that lacks it. The call returns the
-// scored results — await it, use it. Events stream progress alongside for live UIs.
-describe("MotelySearch — real seed finding", () => {
+// Discriminating find: analyzer voucher on AAAAAAAA; list search keeps that seed, drops BBBBBBBB.
+describe("MotelySearch — list / sequential / collect", () => {
     it("finds exactly the seed that has the analyzed ante-1 voucher", async () => {
         const [a] = MotelyJamlyzer.analyzeSeeds(parse("name: t\ndeck: Red\nstake: White\nseeds: [AAAAAAAA]\n"));
         const voucherName = MotelyVoucher[a.antes[0].voucher]; // numeric enum -> name
@@ -25,8 +23,7 @@ describe("MotelySearch — real seed finding", () => {
             MotelySearch.onProgress.unsubscribe(onP);
         }
 
-        assert.deepEqual(results.map((r) => r.seed), ["AAAAAAAA"],
-            "finds the seed that really has the voucher, not the one that doesn't");
+        assert.deepEqual(results.map((r) => r.seed), ["AAAAAAAA"]);
         assert.ok(lastProgress, "progress fired");
         assert.equal(Number(lastProgress.seedsSearched), 2);
     });
@@ -46,10 +43,8 @@ describe("MotelySearch — real seed finding", () => {
         assert.equal(Number(progress.seedsSearched), 8, "searched exactly the requested count");
     });
 
-    // Sequential = brute-force walk of the seed space. base-35, 8-char seeds: each batch sweeps
-    // 35^batchCharacterCount seeds. [0,1) with bc=1 is one batch = exactly 35 seeds — a real,
-    // deterministic slice we can pin a count to (not a "completes" no-op).
-    it("searchSequential walks an exact, deterministic 35-seed slice and emits real seeds", async () => {
+    // Sequential: base-35, 8-char. [0,1) with bc=1 = one batch = 35 seeds.
+    it("searchSequential walks a deterministic 35-seed slice", async () => {
         const filter = voucherSearch(MotelyVoucher[0], ["AAAAAAAA"]); // seed list is ignored in sequential mode
         const run = async () => {
             const matched = [];
@@ -73,14 +68,13 @@ describe("MotelySearch — real seed finding", () => {
         assert.equal(a.count, 35, "one batch (bc=1) sweeps the 35-char alphabet");
         assert.equal(a.count, b.count, "the walk is deterministic");
         for (const s of a.matched)
-            assert.match(s, /^[1-9A-Z]{8}$/, "the seed-match event carries bare base-35 8-char seeds");
+            assert.match(s, /^[1-9A-Z]{8}$/);
         for (const r of a.results)
-            assert.match(r.seed, /^[1-9A-Z]{8}$/, "returned results carry the same real seeds, typed");
+            assert.match(r.seed, /^[1-9A-Z]{8}$/);
     });
 
-    // CLI --findone twin: same JamlSearchBuilder chain + StopAfter(1). Any-joker must
-    // matches immediately in batch 0 — proof is a real seed string, not a mock.
-    it("findOne returns a real seed from sequential range (CLI --findone twin)", async () => {
+    // CLI --collect 1 twin: JamlSearchBuilder + StopAfter(1). Any-joker hits in batch 0.
+    it("findOne returns seed from sequential range (CLI --collect 1 twin)", async () => {
         const config = parse(`name: t
 deck: Red
 stake: White

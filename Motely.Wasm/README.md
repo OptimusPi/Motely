@@ -89,7 +89,7 @@ Available modes:
 const fromList = await MotelySearch.searchList(jaml);
 const fromRandom = await MotelySearch.searchRandom(jaml, 1000);
 const fromWalk = await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
-// CLI --findone twin: sequential + StopAfter(1). Callers wanting exactly one take [0].
+// CLI --collect 1 twin: sequential + StopAfter(1). Callers wanting exactly one take [0].
 const first = await MotelySearch.findOne(jaml, 0n, 1n, 1);
 ```
 

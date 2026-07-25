@@ -215,10 +215,10 @@ partial class Program
             $"Search seeds from an aesthetic provider ({JamlAestheticParser.KnownJamlStringsDescription()})",
             CommandOptionType.SingleValue
         );
-        var findOneOption = app.Option(
-            "--findone",
-            $"Find one seed and stop: sweeps every aesthetic first ({JamlAestheticParser.KnownJamlStringsDescription()}), then falls back to the sequential sweep if none of them matched.",
-            CommandOptionType.NoValue
+        var collectOption = app.Option<long>(
+            "--collect <N>",
+            $"Collect up to N matching seeds and stop (SIMD batches may deliver a few over). Sweeps every aesthetic first ({JamlAestheticParser.KnownJamlStringsDescription()}), then sequential if still short. Replaces --findone (use --collect 1).",
+            CommandOptionType.SingleValue
         );
         var sourceOption = app.Option<string>(
             "--source <NAME_OR_PATH>",
@@ -667,34 +667,43 @@ partial class Program
                 }
 
                 // Naming an explicit sequential range (--startBatch/--endBatch/--startPercent/
-                // --startSeed/--stopSeed) says you want the sweep itself, so --findone skips the
+                // --startSeed/--stopSeed) says you want the sweep itself, so --collect skips the
                 // aesthetic pass entirely rather than answering a different question than you asked.
-                bool findOneSequentialOnly =
+                bool collectSequentialOnly =
                     startBatchOption.HasValue()
                     || endBatchOption.HasValue()
                     || startPercentOption.HasValue()
                     || startSeedOption.HasValue()
                     || stopSeedOption.HasValue();
 
-                if (findOneOption.HasValue() && findOneSequentialOnly)
+                long collectLimit = 0;
+                if (collectOption.HasValue())
+                {
+                    collectLimit = collectOption.ParsedValue;
+                    if (collectLimit < 1)
+                    {
+                        Console.Error.WriteLine("--collect N requires N >= 1.");
+                        return 1;
+                    }
+                }
+
+                if (collectLimit > 0 && collectSequentialOnly)
                 {
                     settings = settings
                         .WithSequentialSearch()
                         .WithBatchCharacterCount(batchCharCount)
-                        .StopAfter(1);
+                        .StopAfter(collectLimit);
                     search = settings.Start(_cts.Token);
                     cancelled = await RunPass(search);
                 }
-                else if (findOneOption.HasValue())
+                else if (collectLimit > 0)
                 {
                     // Every aesthetic first, in declaration order, as one continuous seed stream —
                     // palindromes and echoes and the rest are a tiny, pretty corner of the space, so
                     // sweeping all of them costs almost nothing next to the sequential grind, and a
                     // seed like AAABBBAA is a better answer than the first one counting finds.
-                    // StopAfter(1) ends the pass on the first match (a handful arrive together — one
-                    // SIMD batch is 8 lanes; see StopAfterMatches).
-                    // An explicit --aesthetic narrows the sweep to that one family, which is how you
-                    // time them against each other; without it, every family runs in enum order.
+                    // StopAfter(N) ends once N matches are booked (SIMD may deliver a few over; see
+                    // StopAfterMatches). An explicit --aesthetic narrows the sweep to that family.
                     var aesthetics =
                         aestheticOption.HasValue()
                         && JamlAestheticParser.TryParse(aestheticOption.ParsedValue.Trim(), out var onlyOne)
@@ -707,29 +716,40 @@ partial class Program
                                 aesthetics.Sum(JamlAesthetics.GetSeedCount)
                             )
                         )
-                        .StopAfter(1);
+                        .StopAfter(collectLimit);
 
                     var aestheticPass = settings.Start(_cts.Token);
                     cancelled = await RunPass(aestheticPass);
 
-                    if (!cancelled && aestheticPass.MatchingSeeds == 0)
+                    // Still short after aesthetics → sequential for the remainder.
+                    long remaining = collectLimit - aestheticPass.MatchingSeeds;
+                    if (!cancelled && remaining > 0)
                     {
                         aestheticPass.Dispose();
                         if (!quietOption.HasValue())
-                            Console.Error.WriteLine(
-                                "No aesthetic seed matched — falling back to the sequential sweep."
-                            );
+                        {
+                            if (aestheticPass.MatchingSeeds == 0)
+                                Console.Error.WriteLine(
+                                    "No aesthetic seed matched — falling back to the sequential sweep."
+                                );
+                            else
+                                Console.Error.WriteLine(
+                                    $"Collected {aestheticPass.MatchingSeeds}/{collectLimit} from aesthetics — sequential for the rest."
+                                );
+                        }
 
                         settings = settings
                             .WithSequentialSearch()
                             .WithBatchCharacterCount(batchCharCount)
-                            .StopAfter(1);
+                            .StopAfter(remaining);
                         aestheticPass = settings.Start(_cts.Token);
                         cancelled = await RunPass(aestheticPass);
                     }
                     else if (!cancelled && !quietOption.HasValue())
                     {
-                        Console.Error.WriteLine("Found it in the aesthetics — no sequential sweep needed.");
+                        Console.Error.WriteLine(
+                            $"Collected {aestheticPass.MatchingSeeds} from aesthetics — no sequential sweep needed."
+                        );
                     }
 
                     search = aestheticPass;
@@ -793,8 +813,8 @@ partial class Program
         // find-one run is how long it took to find one.
         if (search.StoppedOnMatchLimit)
         {
-            Console.WriteLine($"  Found: {search.MatchingSeeds:N0} seed(s)");
-            Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff} to first find");
+            Console.WriteLine($"  Found: {search.MatchingSeeds:N0} seed(s) (StopAfter; SIMD/thread overshoot ok)");
+            Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
         }
         else
         {

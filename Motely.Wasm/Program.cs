@@ -162,7 +162,7 @@ public static partial class MotelySearch
 
     /// <summary>
     /// Sequential sweep that stops at the first match — the WASM twin of the CLI's
-    /// <c>--findone</c>, same engine chain plus <c>StopAfter(1)</c>. The vector batch in
+    /// CLI twin of <c>--collect 1</c>: same engine chain plus <c>StopAfter(1)</c>. The vector batch in
     /// flight drains when the limit trips, so the array can carry a few bonus matches;
     /// callers wanting exactly one take <c>[0]</c>. Empty array = the range held nothing.
     /// </summary>

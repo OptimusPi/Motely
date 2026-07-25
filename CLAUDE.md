@@ -99,7 +99,8 @@ Claim done only when all hold:
 dotnet build
 dotnet test
 dotnet run --project Motely.CLI -- --jaml <file>
-dotnet run --project Motely.CLI -- --jaml <file> --findone
+dotnet run --project Motely.CLI -- --jaml <file> --collect 1
+dotnet run --project Motely.CLI -- --jaml <file> --collect 100
 dotnet run --project Motely.Lsp   # stdio LSP; vscode-jaml hosts this
 ```
 
