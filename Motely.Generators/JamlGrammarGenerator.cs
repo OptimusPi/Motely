@@ -551,7 +551,7 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
         sb.AppendLine("        System.Type enumType =");
         sb.AppendLine("            EnumTypeForKind(kind)");
         sb.AppendLine("            ?? throw new System.ArgumentException(");
-        sb.AppendLine("                $\"Unknown vocabulary kind '{kind}'. Use a discriminator wire, a short wire alias, or a property/root key whose type is an engine enum.\");");
+        sb.AppendLine("                $\"Unknown vocabulary kind '{kind}'. Use a discriminator wire (e.g. tarotCard) or a property/root key whose type is an engine enum.\");");
         sb.AppendLine("        string[] names = System.Enum.GetNames(enumType);");
         sb.AppendLine("        if (string.IsNullOrWhiteSpace(query))");
         sb.AppendLine("            return names;");

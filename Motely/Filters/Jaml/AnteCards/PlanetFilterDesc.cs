@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-[JamlDiscriminator("planetCard", "planetCards", "planet",
+[JamlDiscriminator("planetCard", "planetCards",
     ValueEnum = typeof(MotelyPlanetCard), SourceConfigType = typeof(PlanetSourceConfig))]
 public sealed class PlanetCardClause : IJamlClause, IAnteScopedClause
 {
@@ -48,7 +48,7 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Applied only when <c>Sources</c> is null, so a
-    /// terse clause like <c>planet: Pluto</c> just works; any explicit block overrides wholesale.</summary>
+    /// terse clause like <c>planetCard: Pluto</c> just works; any explicit block overrides wholesale.</summary>
     internal static readonly PlanetSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],

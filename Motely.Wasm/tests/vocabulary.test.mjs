@@ -18,7 +18,7 @@ describe("MotelyJaml — vocabulary (listItems)", () => {
         assert.ok(MotelyJaml.listItems("stake").includes("Gold"));
         assert.ok(MotelyJaml.listItems("voucher").includes("Telescope"));
         assert.ok(MotelyJaml.listItems("edition").includes("Negative"));
-        assert.ok(MotelyJaml.listItems("tarot").length > 0);
+        assert.ok(MotelyJaml.listItems("tarotCard").length > 0);
     });
 
     it("matches case-insensitively by substring", () => {
