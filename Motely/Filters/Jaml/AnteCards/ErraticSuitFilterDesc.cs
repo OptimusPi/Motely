@@ -14,7 +14,7 @@ public sealed class ErraticSuitClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyStandardcardSuit Suit { get; set; }
+    public MotelyStandardcardSuit Suit { get; set; }
 }
 
 public struct ErraticSuitFilterDesc(ErraticSuitClause clause)

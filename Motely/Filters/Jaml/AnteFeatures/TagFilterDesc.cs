@@ -18,13 +18,13 @@ public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClaus
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyTag[] Tags { get; set; }
+    public MotelyTag[] Tags { get; set; } = [];
 
     /// <summary>
     /// Tag-stream draw indices per ante: 0 = small-blind offer, 1 = big-blind offer,
     /// 2+ = further draws on the same ante stream (replay / double-tag extras).
     /// </summary>
-    public required int[] Rolls { get; set; }
+    public int[] Rolls { get; set; } = [];
 }
 
 public struct TagFilterDesc(TagClause clause)

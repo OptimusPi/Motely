@@ -13,7 +13,7 @@ public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyTarotCard[] Tarots { get; set; }
+    public MotelyTarotCard[] Tarots { get; set; } = [];
 
     // null = no `sources:` block → TarotCardFilterDesc.DefaultSources. Explicit block used verbatim.
     public TarotCardSourceConfig? Sources { get; set; }

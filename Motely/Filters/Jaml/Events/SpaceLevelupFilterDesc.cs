@@ -5,7 +5,7 @@ using System.Runtime.Intrinsics;
 namespace Motely.Filters.Jaml;
 
 [JamlDiscriminator("spaceLevelup", RollsAreInlineValue = true)]
-public sealed class SpaceLevelupClause : IRollScopedClause
+public sealed class SpaceLevelupClause : IRollScopedClause, IWithScopedClause
 {
     public string? Label { get; set; }
     public int Min { get; set; } = 1;

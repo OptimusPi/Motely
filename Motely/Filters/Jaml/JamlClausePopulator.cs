@@ -81,70 +81,13 @@ public static partial class JamlConfigLoader
     }
 
     private static IJamlClause CreateClause(string discriminator) =>
-        Normalize(discriminator) switch
-        {
-            "joker" or "jokers" => new JokerClause(),
-            "commonjoker" or "commonjokers" => new CommonJokerClause(),
-            "uncommonjoker" or "uncommonjokers" => new UncommonJokerClause(),
-            "rarejoker" or "rarejokers" => new RareJokerClause(),
-            "legendaryjoker" or "legendaryjokers" => new LegendaryJokerClause(),
-            "voucher" or "vouchers" => new VoucherClause { Vouchers = [], Rolls = [] },
-            "tarotcard" or "tarotcards" => new TarotCardClause { Tarots = [] },
-            "spectralcard" or "spectralcards" => new SpectralCardClause { Spectrals = [] },
-            "planetcard" or "planetcards" => new PlanetCardClause { Planets = [] },
-            "standardcard" or "standardcards" => new StandardCardClause(),
-            "boss" or "bosses" => new BossClause { Bosses = [] },
-            "tag" or "tags" or "smallblindtag" or "bigblindtag" => new TagClause { Tags = [], Rolls = [] },
-            "erraticrank" or "erraticranks" => new ErraticRankClause { Rank = default },
-            "erraticsuit" or "erraticsuits" => new ErraticSuitClause { Suit = default },
-            "startingdraw" => new StartingDrawClause(),
-            "luckymoney" => new LuckyMoneyClause(),
-            "luckymult" => new LuckyMultClause(),
-            "misprintmult" => new MisprintMultClause(),
-            "wheeloffortune" => new WheelOfFortuneClause(),
-            "grosmichelextinct" => new GrosMichelExtinctClause(),
-            "cavendishextinct" => new CavendishExtinctClause(),
-            "spacelevelup" => new SpaceLevelupClause(),
-            "businesspayout" => new BusinessPayoutClause(),
-            "bloodstonetrigger" => new BloodstoneTriggerClause(),
-            "parkingpayout" => new ParkingPayoutClause(),
-            "glassdestroy" => new GlassDestroyClause(),
-            "wheelstaysflipped" => new WheelStaysFlippedClause(),
-            _ => throw new InvalidOperationException(
-                $"Populator: cannot construct clause for discriminator '{discriminator}'."
-            ),
-        };
+        JamlSchema.CreateClause(discriminator);
 
     private static void ApplyWith(IJamlClause clause, IReader data)
     {
-        // Only families that list "with" in ClauseKeys own a With property.
-        switch (clause)
-        {
-            case LuckyMoneyClause c:
-                c.With = ParseWith(data);
-                break;
-            case LuckyMultClause c:
-                c.With = ParseWith(data);
-                break;
-            case WheelOfFortuneClause c:
-                c.With = ParseWith(data);
-                break;
-            case GrosMichelExtinctClause c:
-                c.With = ParseWith(data);
-                break;
-            case CavendishExtinctClause c:
-                c.With = ParseWith(data);
-                break;
-            case SpaceLevelupClause c:
-                c.With = ParseWith(data);
-                break;
-            case GlassDestroyClause c:
-                c.With = ParseWith(data);
-                break;
-            case WheelStaysFlippedClause c:
-                c.With = ParseWith(data);
-                break;
-        }
+        // Families that list "with" in ClauseKeys implement IWithScopedClause.
+        if (clause is IWithScopedClause withScoped)
+            withScoped.With = ParseWith(data);
     }
 
     private static void ApplySources(IJamlClause clause, IReader data)

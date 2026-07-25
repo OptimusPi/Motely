@@ -13,7 +13,7 @@ public sealed class PlanetCardClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyPlanetCard[] Planets { get; set; }
+    public MotelyPlanetCard[] Planets { get; set; } = [];
 
     // null = the author wrote no `sources:` block → PlanetCardFilterDesc.DefaultSources
     // applies. Any explicit block (even partial) is used verbatim — defaults never merge in.

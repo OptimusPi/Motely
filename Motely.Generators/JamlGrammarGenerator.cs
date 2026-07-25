@@ -375,6 +375,8 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
             sb.AppendLine("    public static string[] Discriminators => [];");
             sb.AppendLine("    public static string[] NormalizedDiscriminators => [];");
             sb.AppendLine("    public static System.Collections.Generic.IReadOnlyList<(System.Type EnumType, string Kind)> ValueEnumKinds => [];");
+            sb.AppendLine("    public static IJamlClause CreateClause(string discriminator) =>");
+            sb.AppendLine("        throw new System.InvalidOperationException($\"Cannot construct clause for discriminator '{discriminator}'.\");");
             EmitListItems(sb);
             sb.AppendLine("}");
             spc.AddSource("JamlSchema.g.cs", sb.ToString());
@@ -383,6 +385,25 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
 
         sb.AppendLine("    private static string N(string d) =>");
         sb.AppendLine("        d.ToLowerInvariant().Replace(\" \", \"\").Replace(\"-\", \"\").Replace(\"_\", \"\");");
+        sb.AppendLine();
+
+        // CreateClause — one factory from [JamlDiscriminator] wires. Empty shells; Populate fills them.
+        sb.AppendLine("    /// <summary>Construct an empty clause shell for a wire name. Generated from disc attributes.</summary>");
+        sb.AppendLine("    public static IJamlClause CreateClause(string discriminator) => N(discriminator) switch");
+        sb.AppendLine("    {");
+        foreach (var group in all.GroupBy(e => e.ClauseTypeFull).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            var patterns = string.Join(
+                " or ",
+                group.SelectMany(e => e.Normalized)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(n => n, StringComparer.Ordinal)
+                    .Select(n => $"\"{n}\""));
+            sb.AppendLine($"        {patterns} => new {group.Key}(),");
+        }
+        sb.AppendLine("        _ => throw new System.InvalidOperationException(");
+        sb.AppendLine("            $\"Cannot construct clause for discriminator '{discriminator}'.\"),");
+        sb.AppendLine("    };");
         sb.AppendLine();
 
         // ClauseKeysFor

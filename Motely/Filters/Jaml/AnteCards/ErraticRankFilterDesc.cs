@@ -14,7 +14,7 @@ public sealed class ErraticRankClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyStandardcardRank Rank { get; set; }
+    public MotelyStandardcardRank Rank { get; set; }
 }
 
 public struct ErraticRankFilterDesc(ErraticRankClause clause)

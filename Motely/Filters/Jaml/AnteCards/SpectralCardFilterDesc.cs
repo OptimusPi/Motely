@@ -13,7 +13,7 @@ public sealed class SpectralCardClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelySpectralCard[] Spectrals { get; set; }
+    public MotelySpectralCard[] Spectrals { get; set; } = [];
 
     // null = no `sources:` block → SpectralCardFilterDesc.DefaultSources. Explicit block used verbatim.
     public SpectralCardSourceConfig? Sources { get; set; }
