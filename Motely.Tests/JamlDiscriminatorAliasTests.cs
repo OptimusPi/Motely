@@ -142,4 +142,40 @@ public sealed class JamlDiscriminatorAliasTests
             .GetValue(null)!;
         Assert.Equal(keys, JamlSchema.SourceKeysFor(discriminator));
     }
+
+    // Property type on the shape IS the vocabulary — generated KeyValueEnumTypeFor, no hand table.
+
+    [Theory]
+    [InlineData("deck", typeof(MotelyDeck))]
+    [InlineData("stake", typeof(MotelyStake))]
+    [InlineData("edition", typeof(MotelyItemEdition))]
+    [InlineData("seal", typeof(MotelyItemSeal))]
+    [InlineData("enhancement", typeof(MotelyItemEnhancement))]
+    [InlineData("rank", typeof(MotelyStandardcardRank))]
+    [InlineData("suit", typeof(MotelyStandardcardSuit))]
+    [InlineData("stickers", typeof(MotelyJokerSticker))]
+    [InlineData("luck", typeof(MotelyLuck))]
+    public void SchemaKeyValueEnum_ComesFromPropertyType(string key, Type expectedEnum)
+    {
+        Assert.Equal(expectedEnum, JamlSchema.KeyValueEnumTypeFor(key));
+        Assert.Equal(expectedEnum, JamlSchema.EnumTypeForKind(key));
+    }
+
+    [Theory]
+    [InlineData("tarot", typeof(MotelyTarotCard))]
+    [InlineData("spectral", typeof(MotelySpectralCard))]
+    [InlineData("planet", typeof(MotelyPlanetCard))]
+    public void SchemaShortWire_IsRealDiscriminatorAlias(string wire, Type expectedEnum)
+    {
+        Assert.True(JamlSchema.IsKnownDiscriminator(wire));
+        Assert.Equal(expectedEnum, JamlSchema.ValueEnumTypeFor(wire));
+        Assert.Equal(expectedEnum, JamlSchema.EnumTypeForKind(wire));
+    }
+
+    [Fact]
+    public void SchemaListItems_EditionNamesMatchEngineEnum()
+    {
+        Assert.Equal(Enum.GetNames<MotelyItemEdition>(), JamlSchema.ListItems("edition"));
+        Assert.Contains("LuckyCat", JamlSchema.ListItems("joker", "luckyc"));
+    }
 }

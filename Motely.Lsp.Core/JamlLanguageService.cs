@@ -101,7 +101,7 @@ public static class JamlLanguageService
             return new JamlHoverInfo(span, md);
         }
 
-        foreach (var (enumType, kind) in JamlVocabulary.Enums)
+        foreach (var (enumType, kind) in JamlSchema.ValueEnumKinds)
             if (Enum.GetNames(enumType).FirstOrDefault(n =>
                     n.Equals(word, StringComparison.OrdinalIgnoreCase)) is { } exact)
                 return new JamlHoverInfo(span, $"**{exact}** — {kind} (`{enumType.Name}`)");
@@ -141,15 +141,16 @@ public static class JamlLanguageService
     private static IReadOnlyList<JamlCompletionItem> CompleteValue(
         string[] lines, int line, string key, string valuePrefix)
     {
-        if (JamlVocabulary.EnumForKey(key) is { } keyEnum)
-            return FilterNames(Enum.GetNames(keyEnum), valuePrefix, "value", keyEnum.Name);
-
+        // Discriminator value first (adds "Any" wildcard). Property/root keys second.
         if (IsDiscriminator(key) && JamlSchema.ValueEnumTypeFor(key) is { } valueEnum)
         {
             var names = Enum.GetNames(valueEnum).ToList();
             names.Add("Any");
             return FilterNames(names, valuePrefix, "value", valueEnum.Name);
         }
+
+        if (JamlSchema.EnumTypeForKind(key) is { } keyEnum)
+            return FilterNames(Enum.GetNames(keyEnum), valuePrefix, "value", keyEnum.Name);
 
         return [];
     }

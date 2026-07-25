@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-[JamlDiscriminator("planetCard", "planetCards",
+[JamlDiscriminator("planetCard", "planetCards", "planet",
     ValueEnum = typeof(MotelyPlanetCard), SourceConfigType = typeof(PlanetSourceConfig))]
 public sealed class PlanetCardClause : IJamlClause, IAnteScopedClause
 {

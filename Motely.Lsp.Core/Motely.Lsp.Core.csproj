@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <!-- Protocol-free language brain: diagnostics, hover, completion — off the engine's own
-         grammar (JamlSchema, JamlConfigLoader, JamlVocabulary). Motely.Lsp (stdio) and any
+         grammar (JamlSchema, JamlConfigLoader). Motely.Lsp (stdio) and any
          future shell call in here; the grammar stays authored once, in C#. -->
   </PropertyGroup>
 

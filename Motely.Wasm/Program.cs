@@ -88,36 +88,10 @@ public static partial class MotelyJaml
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
 
-    /// <summary>
-    /// Engine enum vocabulary for editors/agents. Case-insensitive substring filter
-    /// ("luck" finds LuckyCat). Same names the SIMD path executes.
-    /// </summary>
+    /// <summary>Thin export of generated <see cref="JamlSchema.ListItems"/>.</summary>
     [Export]
-    public static string[] ListItems(string kind, string? query = null)
-    {
-        string[] names = kind.ToLowerInvariant() switch
-        {
-            "joker" or "jokers" => Enum.GetNames<MotelyJoker>(),
-            "voucher" or "vouchers" => Enum.GetNames<MotelyVoucher>(),
-            "tag" or "tags" => Enum.GetNames<MotelyTag>(),
-            "boss" or "bosses" => Enum.GetNames<MotelyBossBlind>(),
-            "deck" or "decks" => Enum.GetNames<MotelyDeck>(),
-            "stake" or "stakes" => Enum.GetNames<MotelyStake>(),
-            "edition" or "editions" => Enum.GetNames<MotelyItemEdition>(),
-            "seal" or "seals" => Enum.GetNames<MotelyItemSeal>(),
-            "tarotcard" or "tarotcards" or "tarot" => Enum.GetNames<MotelyTarotCard>(),
-            "spectralcard" or "spectralcards" or "spectral" => Enum.GetNames<MotelySpectralCard>(),
-            "planetcard" or "planetcards" or "planet" => Enum.GetNames<MotelyPlanetCard>(),
-            _ => throw new ArgumentException(
-                $"Unknown vocabulary kind '{kind}'. Kinds: joker, voucher, tag, boss, deck, stake, edition, seal, tarotCard, spectralCard, planetCard."
-            ),
-        };
-
-        if (string.IsNullOrWhiteSpace(query))
-            return names;
-
-        return [.. names.Where(n => n.Contains(query, StringComparison.OrdinalIgnoreCase))];
-    }
+    public static string[] ListItems(string kind, string? query = null) =>
+        JamlSchema.ListItems(kind, query);
 
     [Export]
     public static string? ValidateLine(string line) => JamlLine.Validate(line);
