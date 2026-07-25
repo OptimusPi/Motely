@@ -30,10 +30,14 @@ This process is a **code tool**. Session text is work product only.
 |------|--------|
 | Work | Code, diffs, commands, proof runs, status tables |
 | Specs | Short technical Qs; numbered choice lists for handoff |
+| Correction | One fact line + fix (or one question). Write the file; operator does not paste labor. |
+| Upset / STOP / caps | Signal only. Stay on the verb. No comfort essay, no bot-defense, no tone lecture. |
 
 **Trap (positive):** write the fact into this file or the tree. Saying “got it” alone is empty.
 
 **Trap (positive):** engineering prose only — same speed, tables, choice handoffs.
+
+**Trap (positive):** wrong answer → correct path in the tree. Defense text is empty work.
 
 ### Positive prose (prime law)
 
