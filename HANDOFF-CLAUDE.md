@@ -11,7 +11,7 @@
 | Commit | What |
 |--------|------|
 | `96f5d066` | honey-soup audit: WASM seed pins, Soul pack default for specials, shop-only test truth, coverage honesty |
-| `0fe0ad1d` | **nuke** `Motely.JsonRender` (zero engine consumers) |
+| `0fe0ad1d` | nuked `Motely.JsonRender` (later restored) |
 | `080556a7` | P1a clipboard junk deleted |
 | `992387d5` | bot surface STOP/correction rails |
 
@@ -144,18 +144,18 @@ dotnet test Motely.Tests/Motely.Tests.csproj --settings coverage.runsettings \
 
 ---
 
-### P6 — jaml-ui (separate repo — **do not** invent Motely.JsonRender again)
+### P6 — jaml-ui (separate repo)
 
 Path: sibling repo **jaml-ui** next to MotelyJAML (machine path varies: macOS vs `D:\jaml-ui` vs …). Style = **Jimbo** (`--j-*`, no flex). Use workspace root, not a hardcoded absolute path.  
-**Motely.JsonRender is deleted.** Do not recreate it.
+**Motely.JsonRender** is restored in-tree: jamlyzer → JSON/HTML/`--jamlui` report CLI (`Motely.JsonRender/`).
 
 | ID | Verb | Only if Nate opens jaml-ui lane |
 |----|------|--------------------------------|
 | P6a | `pnpm install && pnpm build` smoke |
 | P6b | Work `HANDOFFS.md` phase 1 only (one file) | Jimbo primitives |
-| P6c | Motely link | WASM/Jamlyzer is enough; no new C# HTML project |
+| P6c | Motely link | WASM/Jamlyzer and/or `Motely.JsonRender --jamlui` |
 
-**Done when:** build green or handoff stop. No bot revival of JsonRender.
+**Done when:** build green or handoff stop.
 
 ---
 
@@ -177,7 +177,7 @@ Any **yes** → rewrite before send:
 - [ ] Code that would not compile in this repo?
 - [ ] Claimed “tests green” without running?
 - [ ] Second JAML grammar table outside FilterDesc / JamlSchema?
-- [ ] Recreated Motely.JsonRender?
+- [ ] Broken Motely.JsonRender build without greening it?
 
 Burn line if you slip:  
 > Stop the honey-soup. Table or a real diff — no `soup()`.
@@ -206,8 +206,7 @@ Burn line if you slip:
 |--------|---------|
 | Map | this file |
 | Law | `CLAUDE.md` |
-| Dead | `Motely.JsonRender` |
-| Alive | engine, CLI, WASM, LSP, vscode-jaml |
+| Alive | engine, CLI, WASM, LSP, vscode-jaml, `Motely.JsonRender` |
 | Cov | ~79.7% line / ~70% branch |
 | Game | Nate picks phase · Claude executes one · tables only |
 
