@@ -5,7 +5,7 @@
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <Format>cobertura</Format>
-          <Exclude>[Motely.DataLake]*,[Motely.DistributedWorker]*,[Motely.HelperAPI]*,[Motely.JsonRender]*,[Motely.TUI]*</Exclude>
+          <Exclude>[Motely.DataLake]*,[Motely.DistributedWorker]*,[Motely.HelperAPI]*,[Motely.TUI]*</Exclude>
           <ExcludeByFile>**/Motely/Filters/Native/*.cs,**/*.g.cs,**/obj/**/*.cs</ExcludeByFile>
           <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
         </Configuration>
