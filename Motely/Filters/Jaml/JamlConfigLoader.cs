@@ -116,6 +116,8 @@ public static partial class JamlConfigLoader
         var score = data.GetInt("score") ?? 1;
         var label = data.GetString("label");
 
+        // One construction path for every desc family. Logic + the multi-rank erratic
+        // sugar stay special; everything else is Populate → optional disc value.
         switch (Normalize(discriminator))
         {
             case "and":
@@ -140,48 +142,9 @@ public static partial class JamlConfigLoader
                     score,
                     label
                 );
-            case "joker":
-            case "jokers":
-                return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
-            case "commonjoker":
-            case "commonjokers":
-                return PopulateJokerFamily<MotelyJokerCommon>(discriminator, node, data, antes, min, max, score, label);
-            case "uncommonjoker":
-            case "uncommonjokers":
-                return PopulateJokerFamily<MotelyJokerUncommon>(discriminator, node, data, antes, min, max, score, label);
-            case "rarejoker":
-            case "rarejokers":
-                return PopulateJokerFamily<MotelyJokerRare>(discriminator, node, data, antes, min, max, score, label);
-            case "legendaryjoker":
-            case "legendaryjokers":
-                return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
-            case "voucher":
-            case "vouchers":
-                return PopulateAndCast<VoucherClause>(discriminator, node, data, antes, min, max, score, label);
-            case "tarotcard":
-            case "tarotcards":
-                return PopulateAndCast<TarotCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "spectralcard":
-            case "spectralcards":
-                return PopulateAndCast<SpectralCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "planetcard":
-            case "planetcards":
-                return PopulateAndCast<PlanetCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "standardcard":
-            case "standardcards":
-                return PopulateAndCast<StandardCardClause>(
-                    discriminator, node, data, antes, min, max, score, label, applyDiscriminatorValue: false);
-            case "boss":
-            case "bosses":
-                return PopulateAndCast<BossClause>(discriminator, node, data, antes, min, max, score, label);
-            case "tag":
-            case "tags":
-            case "smallblindtag":
-            case "bigblindtag":
-                return PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-            case "erraticrank":
-                return PopulateAndCast<ErraticRankClause>(discriminator, node, data, antes, min, max, score, label);
             case "erraticranks":
+                // Sugar: erraticRanks: [Ace, King] → Or of singular ErraticRank clauses.
+                // The singular wire (erraticRank) uses the normal Populate path.
                 return WithMax(
                     new OrClause
                     {
@@ -204,30 +167,50 @@ public static partial class JamlConfigLoader
                     },
                     max
                 );
-            case "erraticsuit":
-            case "erraticsuits":
-                return PopulateAndCast<ErraticSuitClause>(discriminator, node, data, antes, min, max, score, label);
-            case "startingdraw":
-                return PopulateAndCast<StartingDrawClause>(
-                    discriminator, node, data, antes, min, max, score, label, applyDiscriminatorValue: false);
-            case "luckymoney":
-            case "luckymult":
-            case "misprintmult":
-            case "wheeloffortune":
-            case "grosmichelextinct":
-            case "cavendishextinct":
-            case "spacelevelup":
-            case "businesspayout":
-            case "bloodstonetrigger":
-            case "parkingpayout":
-            case "glassdestroy":
-            case "wheelstaysflipped":
-                return Populate(discriminator, node, data, antes, min, max, score, label);
             default:
-                throw new InvalidOperationException(
-                    $"Unhandled JAML discriminator '{discriminator}'."
+                return PopulateDescClause(
+                    discriminator,
+                    node,
+                    data,
+                    antes,
+                    min,
+                    max,
+                    score,
+                    label
                 );
         }
+    }
+
+    /// <summary>
+    /// Single door for every <c>[JamlDiscriminator]</c> family: construct via
+    /// <see cref="Populate"/>, then apply the bare disc value when the schema says the
+    /// wire owns a value enum (<c>joker: Blueprint</c>). Property-shaped families
+    /// (standardCard, startingDraw) and roll-inline events skip that step — keys / rolls
+    /// already filled the clause.
+    /// </summary>
+    private static IJamlClause PopulateDescClause(
+        string discriminator,
+        NodeReader node,
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    )
+    {
+        var clause = Populate(discriminator, node, data, antes, min, max, score, label);
+
+        // ValueEnum on the attribute is the one true signal that the disc carries payload.
+        // Rolls-inline events put ints under the disc key; Populate already ate those.
+        if (JamlSchema.ValueEnumTypeFor(discriminator) is not null)
+        {
+            var discReader = DiscriminatorValueReader(node, discriminator);
+            if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
+                throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
+        }
+
+        return clause;
     }
 
     private static IJamlClause ParseLogic(

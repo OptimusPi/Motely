@@ -311,48 +311,6 @@ public static partial class JamlConfigLoader
         : string.Equals(key, "value", StringComparison.OrdinalIgnoreCase) ? "mult"
         : key;
 
-    private static IJamlClause PopulateJokerFamily<TEnum>(
-        string discriminator,
-        NodeReader node,
-        IReader data,
-        int[] antes,
-        int min,
-        int? max,
-        int score,
-        string? label
-    )
-        where TEnum : struct, Enum
-    {
-        var clause = Populate(discriminator, node, data, antes, min, max, score, label);
-        var discReader = DiscriminatorValueReader(node, discriminator);
-        if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
-            throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
-        return clause;
-    }
-
-    private static TClause PopulateAndCast<TClause>(
-        string discriminator,
-        NodeReader node,
-        IReader data,
-        int[] antes,
-        int min,
-        int? max,
-        int score,
-        string? label,
-        bool applyDiscriminatorValue = true
-    )
-        where TClause : class, IJamlClause
-    {
-        var clause = (TClause)Populate(discriminator, node, data, antes, min, max, score, label);
-        if (applyDiscriminatorValue)
-        {
-            var discReader = DiscriminatorValueReader(node, discriminator);
-            if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
-                throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
-        }
-        return clause;
-    }
-
     private static JamlLoaderValueReader DiscriminatorValueReader(NodeReader node, string discriminator)
     {
         if (node.GetStringArray(discriminator) is { } arr)
