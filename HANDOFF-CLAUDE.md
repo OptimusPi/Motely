@@ -132,7 +132,7 @@ dotnet test Motely.Tests/Motely.Tests.csproj --settings coverage.runsettings \
 
 ### P6 — jaml-ui (separate repo — **do not** invent Motely.JsonRender again)
 
-Path: `/Users/nate/Documents/GitHub/jaml-ui` (sibling). Style = **Jimbo** (`--j-*`, no flex).  
+Path: sibling repo **jaml-ui** next to MotelyJAML (machine path varies: macOS vs `D:\jaml-ui` vs …). Style = **Jimbo** (`--j-*`, no flex). Use workspace root, not a hardcoded absolute path.  
 **Motely.JsonRender is deleted.** Do not recreate it.
 
 | ID | Verb | Only if Nate opens jaml-ui lane |
