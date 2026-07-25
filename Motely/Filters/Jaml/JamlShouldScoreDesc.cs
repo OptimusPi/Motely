@@ -141,7 +141,7 @@ public struct JamlShouldScoreDesc
                                 runState
                             );
 
-                            if (raw < mustClauses[i].Min)
+                            if (!JamlScoring.MeetsOccurrenceBounds(raw, mustClauses[i]))
                                 return 0;
                         }
                     }

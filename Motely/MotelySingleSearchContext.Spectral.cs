@@ -55,6 +55,23 @@ public partial class MotelySingleSearchContext
             isCached
         );
 
+    /// <summary>
+    /// Spectral cards generated inside Arcana packs under Omen Globe (create_card type Spectral
+    /// in Arcana pack area). Uses Arcana pack item source so keys stay distinct from Spectral packs.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelySingleSpectralStream CreateArcanaOmenSpectralStream(
+        int ante,
+        bool isCached = false
+    ) =>
+        CreateSpectralStream(
+            MotelyPrngKeys.ArcanaPackItemSource,
+            ante,
+            searchSpectral: true,
+            soulBlackHoleable: true,
+            isCached
+        );
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelySingleSpectralStream CreateShopSpectralStream(int ante, bool isCached = false) =>
         CreateSpectralStream(MotelyPrngKeys.ShopItemSource, ante, true, false, isCached);

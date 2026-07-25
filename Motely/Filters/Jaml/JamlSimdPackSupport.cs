@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
@@ -69,5 +70,19 @@ internal static class JamlSimdPackSupport
                 Vector256<int>.Zero
             )
         );
+    }
+
+    /// <summary>
+    /// Vector form of match bounds: count ≥ min, and count ≤ max when max is set.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static VectorMask MeetsMinMaxMask(Vector256<int> matchCounts, int min, int? max)
+    {
+        Debug.Assert(min > 0);
+        var minOk = Vector256.GreaterThan(matchCounts, Vector256.Create(min - 1));
+        if (max is not > 0)
+            return new VectorMask(VectorizedComparisonToMask(minOk));
+        var maxOk = Vector256.LessThanOrEqual(matchCounts, Vector256.Create(max.Value));
+        return new VectorMask(VectorizedComparisonToMask(Vector256.BitwiseAnd(minOk, maxOk)));
     }
 }

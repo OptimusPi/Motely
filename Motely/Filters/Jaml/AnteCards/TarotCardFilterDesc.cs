@@ -348,11 +348,7 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                 }
             }
 
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, needed, clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

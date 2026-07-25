@@ -54,7 +54,8 @@ public static class JamlScoring
             GetMaxAnte(clause),
             GetMaxBossAnte(clause)
         );
-        return CountRawOccurrences(ref ctx, clause, runState) >= clause.Min;
+        int raw = CountRawOccurrences(ref ctx, clause, runState);
+        return MeetsOccurrenceBounds(raw, clause);
     }
 
     /// <summary>
@@ -70,7 +71,8 @@ public static class JamlScoring
             LegendaryJokerClause => true,
             SpectralCardClause sc => SpecialSpectralCardFilterDesc.Handles(sc)
                 || sc.Sources is { RequireMegaPack: true }
-                || sc.Sources is { EtherealTag: true },
+                || sc.Sources is { EtherealTag: true }
+                || sc.Sources is { OmenGlobe: true },
             TarotCardClause tc => tc.Sources is { CharmTag: true },
             JokerClause jc => JokerUsesLegendaryExactPath(jc),
             AndClause a => AllExactFilterConfirm(a.Clauses),
@@ -220,6 +222,22 @@ public static class JamlScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int CapScoreCountForTesting(int count, IJamlClause clause) =>
         CapScoreCount(count, clause);
+
+    /// <summary>
+    /// Match bounds contract: <see cref="IJamlClause.Min"/> is the lower gate;
+    /// <see cref="IJamlClause.Max"/> when set is the upper gate for must / filter confirm.
+    /// Score tallies still use <see cref="CapScoreCount"/> so should columns cap contribution.
+    /// SIMD prefilters may stay over-permissive on Max; scoring / exact confirm enforce it.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool MeetsOccurrenceBounds(int raw, IJamlClause clause)
+    {
+        if (raw < clause.Min)
+            return false;
+        if (clause.Max is { } max && max > 0 && raw > max)
+            return false;
+        return true;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CapScoreCount(int count, IJamlClause clause)
@@ -648,6 +666,10 @@ public static class JamlScoring
                 }
             }
 
+            // Omen Globe: 20% of Arcana pack cards become Spectral (voucher assumed when source is set).
+            if (sources.OmenGlobe)
+                count += CountOmenGlobeArcanaSpectrals(ref ctx, clause, sources, ante, runState);
+
             if (sources.SixthSense.Length > 0)
             {
                 var sixthSenseStream = ctx.CreateSixthSenseSpectralStream(ante);
@@ -683,6 +705,66 @@ public static class JamlScoring
                 count += CountTheSoulInArcanaPacks(ref ctx, clause, runState);
             if (SpectralClauseTargets(clause, MotelySpectralCard.BlackHole))
                 count += CountBlackHoleInCelestialPacks(ref ctx, clause, runState);
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Omen Globe: each Arcana pack card has a 1/5 chance to be generated as Spectral instead of
+    /// Tarot. Source flag assumes the voucher is owned. Pack slots follow <paramref name="sources"/>.BoosterPacks
+    /// when set; otherwise the full late-ante pack range.
+    /// </summary>
+    private static int CountOmenGlobeArcanaSpectrals(
+        ref MotelySingleSearchContext ctx,
+        SpectralCardClause clause,
+        SpectralCardSourceConfig sources,
+        int ante,
+        MotelyRunState runState
+    )
+    {
+        int userMaxPack =
+            sources.BoosterPacks.Length > 0
+                ? ArrayMax(sources.BoosterPacks)
+                : MotelyGlobals.LateAntesMaxPackSlot;
+        int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, runState);
+
+        var packStream = ctx.CreateBoosterPackStream(ante);
+        var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
+        var spectralStream = ctx.CreateArcanaOmenSpectralStream(ante);
+        var omenStream = ctx.CreateOmenGlobePrngStream();
+
+        int count = 0;
+
+        for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+        {
+            var pack = ctx.GetNextBoosterPack(ref packStream);
+            if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
+                continue;
+
+            bool slotWanted =
+                sources.BoosterPacks.Length == 0
+                || ArrayContains(sources.BoosterPacks, packIndex);
+            var packSize = pack.GetPackSize();
+            int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(packSize);
+            var packSet = new MotelySingleItemSet();
+
+            for (int c = 0; c < cardCount; c++)
+            {
+                // Balatro: type Tarot → 20% becomes Spectral via omen_globe before create_card.
+                if (ctx.GetNextOmenGlobeSpectral(ref omenStream))
+                {
+                    var spectral = ctx.GetNextSpectral(ref spectralStream, packSet);
+                    packSet.Append(spectral);
+                    if (slotWanted)
+                        count += MatchSpectral(spectral, clause);
+                }
+                else
+                {
+                    var tarot = ctx.GetNextTarot(ref tarotStream, packSet);
+                    packSet.Append(tarot);
+                }
+            }
         }
 
         return count;

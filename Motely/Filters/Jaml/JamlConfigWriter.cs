@@ -430,6 +430,8 @@ public static partial class JamlConfigLoader
             mapping.Set("etherealTag", JScalar.Of(true), default);
         if (sources.RequireMegaPack)
             mapping.Set("requireMegaPack", JScalar.Of(true), default);
+        if (sources.OmenGlobe)
+            mapping.Set("omenGlobe", JScalar.Of(true), default);
         return mapping;
     }
 

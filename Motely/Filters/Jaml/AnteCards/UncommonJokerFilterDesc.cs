@@ -457,12 +457,7 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
                 }
             }
 
-            Vector256<int> minVec = Vector256.Create(_clause.Min);
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(minVec, Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, _clause.Min, _clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

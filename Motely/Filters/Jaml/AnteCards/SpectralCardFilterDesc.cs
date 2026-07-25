@@ -139,8 +139,8 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
             var sources = clause.Sources ?? DefaultSources;
-            // Mega-only and Ethereal-tag bonus pack: one match core with scoring.
-            if (sources.RequireMegaPack || sources.EtherealTag)
+            // Mega / Ethereal / OmenGlobe: Arcana or pack-size rules live in scoring.
+            if (sources.RequireMegaPack || sources.EtherealTag || sources.OmenGlobe)
                 return ctx.SearchIndividualSeeds(
                     (MotelySingleSearchContext single) =>
                         JamlScoring.ClauseMeetsMinForFilter(ref single, clause) ? 1 : 0
@@ -352,11 +352,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                 }
             }
 
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, needed, clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -384,7 +380,16 @@ public sealed record SpectralCardSourceConfig
 {
     /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
     public static readonly string[] SourceKeys =
-        ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"];
+    [
+        "shopItems",
+        "boosterPacks",
+        "sixthSense",
+        "seance",
+        "etherealTag",
+        "requireMega",
+        "requireMegaPack",
+        "omenGlobe",
+    ];
 
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
@@ -397,8 +402,10 @@ public sealed record SpectralCardSourceConfig
     /// </summary>
     public bool EtherealTag { get; set; }
 
-    // TODO: OmenGlobe — voucher that allows Spectral cards to appear in Arcana packs.
-    // This is voucher-state-gated AND changes the Arcana pack PRNG path (not a simple slot array).
-    // Much more complex than other sources — needs voucher state tracking + pack stream branching.
-    // Do not implement naively.
+    /// <summary>
+    /// When true, count Spectral substitutes from Arcana packs under Omen Globe (20% per card).
+    /// Uses <c>boosterPacks</c> slots when set; otherwise walks the full late-ante pack range.
+    /// Assumes Omen Globe is owned for the clause (source means search that path).
+    /// </summary>
+    public bool OmenGlobe { get; set; }
 }

@@ -214,6 +214,7 @@ public static partial class JamlConfigLoader
                 block.GetBool("requireMegaPack")
                 ?? block.GetBool("requireMega")
                 ?? false,
+            OmenGlobe = block.GetBool("omenGlobe") ?? false,
         };
     }
 
