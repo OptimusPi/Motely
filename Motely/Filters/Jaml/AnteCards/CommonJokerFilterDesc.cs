@@ -49,8 +49,8 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — 8 shop slots + 6 packs.
-    /// Specialty sources stay off by default. Applied only when <c>Sources</c> is null.</summary>
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — shop slots only.
+    /// Packs and specialty streams need an explicit <c>sources:</c> block. Applied only when <c>Sources</c> is null.</summary>
     /// <inheritdoc cref="JokerFilterDesc.DefaultSources"/>
     internal static readonly JokerSourceConfig DefaultSources = JokerFilterDesc.DefaultSources;
 

@@ -12,6 +12,11 @@
 |--------|------|
 | `96f5d066` | honey-soup audit: WASM seed pins, Soul pack default for specials, shop-only test truth, coverage honesty |
 | `0fe0ad1d` | **nuke** `Motely.JsonRender` (zero engine consumers) |
+| `080556a7` | P1a clipboard junk deleted |
+| `992387d5` | bot surface STOP/correction rails |
+
+**Open phases:** P4 (needs cov target), P5 no-work, P6 jaml-ui only if opened, P7 ship gates.  
+**Closed this session:** P2 proof debt · P3 shop-only doc lock.
 
 **Green baseline:** `dotnet test` → 389 pass / 1 skip · line cov ~**79.7%** · branch ~**70%** (`coverage.runsettings`).
 
@@ -72,16 +77,24 @@
 
 ---
 
-### P2 — Proof debt (real finds, not shape)
+### P2 — Proof debt (real finds, not shape) — **done**
 
-| ID | Verb | Proof shape |
-|----|------|-------------|
-| P2a | Audit any remaining `/^[1-9A-Z]/` seed “proof” | grep tests; replace with known seed pins |
-| P2b | `searchRandom` | already: walk count + search-index roundtrip. Keep. |
-| P2c | WASM UI specs | already pin `AAAAAAAA`/`BBBBBBBB`. Keep. |
-| P2d | If adding filters | one CLI: `dotnet run --project Motely.CLI -- --jaml <f> --collect 1` must print a seed |
+| ID | Verb | Status |
+|----|------|--------|
+| P2a | Audit `/^[1-9A-Z]/` seed “proof” | **done** — zero shape-as-proof in tests |
+| P2b | `searchRandom` | keep: walk count + search-index roundtrip |
+| P2c | WASM UI specs | keep: pin `AAAAAAAA`/`BBBBBBBB` |
+| P2d | New filters | CLI `--collect 1` must print a seed |
 
-**Done when:** `rg '\[1-9A-Z\]' Motely.Wasm/tests Motely.Tests` shows zero shape-as-proof (or listed false positives).
+**False positives (not find-proof):**
+
+| Where | Why OK |
+|-------|--------|
+| `Motely.Wasm/tests/jaml-line-utilities.test.mjs:126` | keyword charset, not seed find |
+| `Motely.Tests/SeedProviderTests.cs` | provider emits valid base-35 chars |
+| `Motely.DataLake/SeedSourceProvider.cs` | lake SQL/validate charset |
+
+**Proof:** `dotnet test Motely.Tests` → 389 pass / 1 skip (2026-07-25).
 
 ---
 
@@ -90,13 +103,13 @@
 **Law (engine):** null `sources:` → **shop slots only** for ordinary jokers/consumables. Packs/specialty need explicit `sources:`.  
 **Exception:** TheSoul / BlackHole → `DefaultSpecialSources` (packs) — they never spawn in shop (`JamlScoring.ResolveSpectralSources`).
 
-| ID | Verb |
-|----|------|
-| P3a | Grep docs/examples that still say “default = shop + packs” → fix to shop-only |
-| P3b | Any new filter test without sources must expect **shop-only** behavior |
-| P3c | Multi-batch / pack-needed tests must set **explicit** `BoosterPacks` (see `ChainedMustClauseSeedTests`) |
+| ID | Verb | Status |
+|----|------|--------|
+| P3a | Grep docs that still say “default = shop + packs” | **done** — fixed Common/Rare/Uncommon FilterDesc summaries (were “8 shop + 6 packs”) |
+| P3b | New filter test without sources → shop-only | law holds; `DefaultFallbackTests` covers |
+| P3c | Multi-batch / pack-needed → explicit `BoosterPacks` | `ChainedMustClauseSeedTests` already |
 
-**Done when:** no doc/test contradicts shop-only + special spectral exception.
+**Done when:** no doc/test contradicts shop-only + special spectral exception. **Met** (2026-07-25).
 
 ---
 
