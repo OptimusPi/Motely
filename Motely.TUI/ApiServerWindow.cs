@@ -187,15 +187,12 @@ public class ApiServerWindow : Window
             Console.SetOut(logWriter);
             Console.SetError(logWriter);
 
-            // The REAL Motely API — the same code Motely.HelperAPI's own standalone executable
-            // runs (HelperApiHost.Build). This window used to build a second, inline copy of an
-            // ASP.NET Core host with its own Swagger setup; that duplicated the real API instead
-            // of launching it, so it drifted (no CORS, no worker status route, no wwwroot/WASM
-            // serving — none of what Motely.HelperAPI actually does). One implementation now.
+            // Same host as Motely.HelperAPI standalone: HelperApiHost.Build (CORS, worker status,
+            // wwwroot/WASM — one implementation for CLI and TUI).
             _server = HelperApiHost.Build(["--urls", $"http://{host}:{port}"]);
             await _server.StartAsync(_cts.Token);
 
-            // Update status AFTER server actually starts
+            // Status once the server is listening.
             Application.Invoke(() =>
             {
                 _statusLabel.Text = "Running";

@@ -3,10 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
-    <!-- Protocol-free language brains: diagnostics, hover, completion — computed straight off
-         the engine's own grammar (JamlSchema, JamlConfigLoader, JamlLine). The stdio shell
-         (Motely.Lsp) and the browser (Motely.Wasm) both call in here, so the grammar stays
-         authored exactly once, in C#. -->
+    <!-- Protocol-free language brain: diagnostics, hover, completion — off the engine's own
+         grammar (JamlSchema, JamlConfigLoader, JamlVocabulary). Motely.Lsp (stdio) and any
+         future shell call in here; the grammar stays authored once, in C#. -->
   </PropertyGroup>
 
   <ItemGroup>

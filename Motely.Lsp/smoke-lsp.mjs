@@ -1,8 +1,14 @@
-// Smoke-drives the published Motely.Lsp binary over real stdio: initialize, open a document
-// with a typo, expect positioned diagnostics, shut down clean. Run: node smoke-lsp.mjs <exe>
+// Smoke-drives the Motely.Lsp binary over real stdio: initialize, open a document
+// with a typo, expect positioned diagnostics, shut down clean.
+// Run: node Motely.Lsp/smoke-lsp.mjs <path-to-Motely.Lsp>
 import { spawn } from "node:child_process";
 
-const exe = process.argv[2] ?? process.env.MOTELY_LSP_SERVER ?? "plugin/server/Motely.Lsp.exe";
+const exe = process.argv[2] ?? process.env.MOTELY_LSP_SERVER;
+if (!exe) {
+    console.error("usage: node smoke-lsp.mjs <Motely.Lsp-exe>");
+    process.exit(2);
+}
+
 const server = spawn(exe, [], { stdio: ["pipe", "pipe", "inherit"] });
 
 const frame = (msg) => {

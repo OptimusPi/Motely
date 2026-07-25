@@ -1,7 +1,0 @@
-{
-    "jaml": {
-        "command": "${CLAUDE_PLUGIN_ROOT}/server/Motely.Lsp",
-        "extensionToLanguage": { ".jaml": "jaml" },
-        "diagnostics": true
-    }
-}

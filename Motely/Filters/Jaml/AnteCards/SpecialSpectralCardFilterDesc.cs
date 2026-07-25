@@ -19,9 +19,11 @@ namespace Motely.Filters.Jaml;
 /// <see cref="JamlScoring"/> (which walks Arcana/Celestial packs too). Same shape as
 /// <see cref="Motely.Filters.Native.TwoBlackHoleFilterDesc"/>.
 ///
-/// Reuses <see cref="SpectralCardClause"/>: the <c>spectralCard:</c> discriminator routes here via
-/// <see cref="JamlClauseExtensions.CreateDesc"/> when <see cref="Handles"/> is true — no separate
-/// JAML keyword, exactly how the joker path routes The Soul off to <c>LegendarySoulMatcher</c>.
+/// <b>KEEP — real SIMD, not dead code.</b> Reuses <see cref="SpectralCardClause"/> (no separate
+/// JAML keyword). Live route: <c>spectralCard:</c> → <see cref="Handles"/> true →
+/// <see cref="JamlSearchBuilder.ClauseToFilterDesc"/> installs this filter instead of
+/// <see cref="SpectralCardFilterDesc"/>. Gate is <see cref="Handles"/> /
+/// <see cref="JamlScoring.TargetsSpecialSpectral"/> — leave this type on the tree.
 /// </summary>
 public struct SpecialSpectralCardFilterDesc(SpectralCardClause clause)
     : IMotelySeedFilterDesc<SpecialSpectralCardFilterDesc.SpecialSpectralCardFilter>

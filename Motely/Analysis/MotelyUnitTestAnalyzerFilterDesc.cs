@@ -84,7 +84,10 @@ public sealed class MotelyUnitTestAnalyzerFilterDesc()
                 MotelyTag smallTag = ctx.GetNextTag(ref tagStream);
                 MotelyTag bigTag = ctx.GetNextTag(ref tagStream);
 
-                // Shop Queue
+                // Shop Queue — base rates only. voucherState marks each ante's voucher as seen
+                // for boss/voucher progression, but the analyzer never assumes a purchase, so
+                // rate vouchers (Magic Trick, Tarot/Planet Merchant) must not alter the shop
+                // stream. Matches miaklwalker/mathisfun_ ground truth.
                 MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante);
 
                 int maxSlots = ante == 1 ? 15 : 50;
@@ -136,71 +139,6 @@ public sealed class MotelyUnitTestAnalyzerFilterDesc()
             FilterDesc.LastAnalysis = new(null, antes, ctx.Deck, deckComposition, deckBreakdown);
 
             return 0; // Always report no match; this filter only analyzes
-        }
-
-        /// <summary>
-        /// Gets the draw order of cards for a specific ante
-        /// Format: "2_H,2_H,2_H,5_C" (comma-separated card strings)
-        /// For Erratic Deck: order from starting deck
-        /// For other decks: order from Standard Packs opened in this ante
-        /// </summary>
-        private static string? GetDrawOrderForAnte(
-            ref MotelySingleSearchContext ctx,
-            int ante,
-            ref AnteAnalysisState state
-        )
-        {
-            var drawCards = new List<string>();
-
-            if (ctx.Deck == MotelyDeck.Erratic)
-            {
-                // For Erratic Deck, cards are drawn from the starting deck in order
-                // We need to track cumulative draws across all antes up to this point
-                var deckStream = ctx.CreateErraticDeckPrngStream(isCached: false);
-
-                // Calculate cumulative cards drawn by this ante
-                // Each ante typically draws 5 cards per hand, but we'll show the deck order
-                // For simplicity, show first 52 cards (full deck) - the actual draw order
-                for (int i = 0; i < 52; i++)
-                {
-                    var card = ctx.GetNextErraticDeckCard(ref deckStream);
-                    drawCards.Add(FormatCardString(card.StandardcardRank, card.StandardcardSuit));
-                }
-            }
-            else
-            {
-                // For standard decks, cards come from Standard Packs opened in this ante
-                // Recreate the pack stream to get cards in order
-                var packStream = ctx.CreateBoosterPackStream(ante);
-                int maxPacks = ante == 1 ? 4 : 6;
-
-                var standardStream = ctx.CreateStandardPackCardStream(ante);
-
-                for (int i = 0; i < maxPacks; i++)
-                {
-                    var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (pack.GetPackType() == MotelyBoosterPackType.Standard)
-                    {
-                        var packSize = pack.GetPackSize();
-                        var packContents = ctx.GetNextStandardPackContents(
-                            ref standardStream,
-                            packSize
-                        );
-
-                        foreach (var item in packContents.AsArray())
-                        {
-                            if (item.TypeCategory == MotelyItemTypeCategory.Standardcard)
-                            {
-                                drawCards.Add(
-                                    FormatCardString(item.StandardcardRank, item.StandardcardSuit)
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-
-            return drawCards.Count > 0 ? string.Join(",", drawCards) : null;
         }
 
         /// <summary>

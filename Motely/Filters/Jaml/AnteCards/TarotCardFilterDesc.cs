@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyTarotCard), SourceConfigType = typeof(TarotCardSourceConfig))]
 public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -23,9 +20,30 @@ public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
 }
 
 public struct TarotCardFilterDesc(TarotCardClause clause)
-    : IMotelySeedFilterDesc<TarotCardFilterDesc.TarotCardFilter>
+    : IMotelySeedFilterDesc<TarotCardFilterDesc.TarotCardFilter>,
+      IJamlClauseDesc<TarotCardClause>
 {
     private readonly TarotCardClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["tarotCard", "tarotCards"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "sources"];
+
+    /// <inheritdoc/>
+    public static bool Set(TarotCardClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(TarotCardClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelyTarotCard>(out var tarots)) return false;
+        clause.Tarots = tarots;
+        return true;
+    }
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Specialty sources (Emperor, Purple Seal) stay off
@@ -319,4 +337,23 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
             return mask;
         }
     }
+}
+
+/// <summary>
+/// <c>sources:</c> block for <c>tarotCard:</c>. Colocated with <see cref="TarotCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record TarotCardSourceConfig
+{
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+    public int[] Emperor { get; set; } = [];
+    public int[] PurpleSealOrEightBall { get; set; } = [];
+
+    /// <summary>
+    /// When true, booster arcana scoring may consume the Charm-tag bonus pack (second weighted slot, no natural Arcana).
+    /// </summary>
+    public bool CharmTag { get; set; }
 }

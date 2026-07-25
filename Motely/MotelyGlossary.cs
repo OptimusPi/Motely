@@ -7,10 +7,8 @@ namespace Motely;
 public sealed record MotelyGlossaryTerm(string Term, string? Acronym, string Definition);
 
 /// <summary>
-/// The single source of truth for what JAML and JAMLyzer mean. Every
-/// consumer-facing surface (CLI <c>--glossary</c>, the MCP glossary tool, and the WASM/npm
-/// export) renders from this list, so the explanation only has to be written once and can't
-/// drift between surfaces the way the hand-written copies in READMEs/help text used to.
+/// Single glossary for JAML and JAMLyzer. CLI <c>--glossary</c>, the MCP glossary tool, and
+/// the WASM/npm export all render from this list — one write, every surface stays in lockstep.
 /// </summary>
 public static class MotelyGlossary
 {
@@ -19,7 +17,7 @@ public static class MotelyGlossary
         new(
             "JAML",
             "Jimbo's Ante Markup Language",
-            "Motely's filter config language. Written as YAML or JSON — both syntaxes parse to "
+            "Motely's filter config language. JAML text parses to "
                 + "the same typed JamlConfig. A JAML file declares 'must' (hard requirements) and "
                 + "'should' (scored, optional) clauses against a seed's antes. A clause can also be "
                 + "written as one human-readable line, e.g. 'Eternal Blueprint in antes 1 or 2' — "

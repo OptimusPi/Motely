@@ -1,53 +1,13 @@
-using System.Reflection;
 using System.Text;
 
 namespace Motely.Filters.Jaml;
 
-    // The write-side mirror of JamlClausePopulator: turns a JamlConfig back into JAML text using the
-    // exact same ClauseKeys/SourceKeys reflection the loader reads, so a round trip through
-    // FromJaml(ToJaml(config)) reproduces the same clause data. Not guaranteed to reproduce the
-// original TEXT (e.g. "smallBlindTag"/"bigBlindTag" both come back out as "tag" with an explicit
-// rolls: block; erraticRanks shorthand comes back out as "or" — both are real, parseable,
-// semantically-identical JAML) — this is a data round trip, not a byte-for-byte one.
+// Write-side mirror of JamlClausePopulator: JamlConfig → JAML text via typed switches.
+// FromJaml(ToJaml(config)) preserves clause data. Text shape may differ (e.g. smallBlindTag
+// rewrites as tag + rolls; erraticRanks as or) — still valid, parseable, same meaning.
+// No GetProperty / PropertyInfo — every clause family is a concrete write arm.
 public static partial class JamlConfigLoader
 {
-    // The canonical discriminator per clause type is derived from JamlDiscriminatorRegistry.Entries
-    // ITSELF — first-registered-wins, in the registry's own declared order — not a hand-typed
-    // parallel list. A hand-typed list drifts the moment a discriminator is added to the registry
-    // and someone forgets to also add it here (this happened: 9 plural-form discriminators were
-    // missing from the old list). There is now exactly one place a discriminator is enumerated.
-    private static readonly Dictionary<Type, string> CanonicalDiscriminatorByClauseType = BuildCanonicalDiscriminatorMap();
-
-    private static Dictionary<Type, string> BuildCanonicalDiscriminatorMap()
-    {
-        var map = new Dictionary<Type, string>();
-        foreach (var (discriminator, entry) in JamlDiscriminatorRegistry.Entries)
-        {
-            if (!map.ContainsKey(entry.ClauseType))
-                map[entry.ClauseType] = discriminator;
-        }
-        return map;
-    }
-
-    // Item-value array property per discriminator family — the write-side twin of the
-    // Jokers/Tarots/Spectrals/etc. assignments that stay bespoke on the read side (per family,
-    // not reflected, since the property name isn't a convention-derivable function of the key).
-    private static readonly Dictionary<string, string> ItemArrayPropertyByDiscriminator =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["joker"] = "Jokers",
-            ["commonJoker"] = "Jokers",
-            ["uncommonJoker"] = "Jokers",
-            ["rareJoker"] = "Jokers",
-            ["legendaryJoker"] = "Jokers",
-            ["voucher"] = "Vouchers",
-            ["tarotCard"] = "Tarots",
-            ["spectralCard"] = "Spectrals",
-            ["planetCard"] = "Planets",
-            ["boss"] = "Bosses",
-            ["tag"] = "Tags",
-        };
-
     public static string ToJaml(JamlConfig config)
     {
         var root = new JMap();
@@ -77,10 +37,6 @@ public static partial class JamlConfigLoader
         WriteMap(sb, root, 0);
         return sb.ToString();
     }
-
-    // ── JAML text emission — writes the same indented block format the native parser reads,
-    // so ToJaml(config) round-trips through FromJaml unchanged. No third-party writer: the tree
-    // built above (JMap/JSeq/JScalar) is JAML's own, so JAML also owns writing it back out. ─────
 
     private static void WriteMap(StringBuilder sb, JMap map, int indent)
     {
@@ -118,14 +74,12 @@ public static partial class JamlConfigLoader
         }
     }
 
-    // Plain scalar lists (seeds:, flat int/string arrays like antes:/rolls:/shopItems:) stay
-    // inline as "[a, b, c]" — only a sequence of clause mappings gets the multi-line "- " form.
     private static bool IsFlowArray(JSeq seq) => seq.Items.All(i => i is JScalar);
 
     private static void WriteSequence(StringBuilder sb, JSeq seq, int indent)
     {
         string pad = new(' ', indent);
-        int itemIndent = indent + 2; // where every key of this list item aligns, "- " included
+        int itemIndent = indent + 2;
 
         foreach (var item in seq.Items)
         {
@@ -137,12 +91,6 @@ public static partial class JamlConfigLoader
                 sb.Append(pad).Append("- {}\n");
                 continue;
             }
-            // The first key's "key: value" text rides the "- " line itself (no separate pad —
-            // "- " already occupies that column); any NESTED content the first key's own value
-            // carries (a sub-clause list under "or:", a mapping under "sources:") must still
-            // align at itemIndent like every other key here, not at column 0 — that was the bug:
-            // a nested "or:" clause's children printed at indent 0 and reparsed as separate
-            // top-level clauses instead of staying nested inside the "or:".
             string firstKey = keys[0];
             var firstValue = itemMap.Get(firstKey)!;
             sb.Append(pad).Append("- ");
@@ -153,9 +101,6 @@ public static partial class JamlConfigLoader
         }
     }
 
-    // Same cases as WriteKeyed, but for the key riding a "- " line: the "key:" text itself has no
-    // leading pad (the caller already wrote "- "), while anything nested under it uses `indent`
-    // as its real column, exactly like a normal (non-first) key at that list item's indent would.
     private static void WriteKeyedInline(StringBuilder sb, string key, JNode value, int indent)
     {
         switch (value)
@@ -190,56 +135,209 @@ public static partial class JamlConfigLoader
         return seq;
     }
 
-    private static JMap WriteClause(IJamlClause clause)
+    private static JMap WriteClause(IJamlClause clause) =>
+        clause switch
+        {
+            AndClause logic => WriteLogic("and", logic),
+            OrClause logic => WriteLogic("or", logic),
+            JokerClause c => WriteJokerFamily("joker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            CommonJokerClause c => WriteJokerFamily("commonJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            UncommonJokerClause c => WriteJokerFamily("uncommonJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            RareJokerClause c => WriteJokerFamily("rareJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            LegendaryJokerClause c => WriteLegendary(c),
+            VoucherClause c => WriteItems("voucher", c.Vouchers, c, rolls: c.Rolls, rollsDefault: [0]),
+            TarotCardClause c => WriteConsumable("tarotCard", c.Tarots, c.Sources, c),
+            SpectralCardClause c => WriteConsumable("spectralCard", c.Spectrals, c.Sources, c),
+            PlanetCardClause c => WriteConsumable("planetCard", c.Planets, c.Sources, c),
+            StandardCardClause c => WriteStandardCard(c),
+            BossClause c => WriteItems("boss", c.Bosses, c),
+            TagClause c => WriteItems("tag", c.Tags, c, rolls: c.Rolls, rollsDefault: [0, 1]),
+            ErraticRankClause c => WriteErraticRank(c),
+            ErraticSuitClause c => WriteErraticSuit(c),
+            StartingDrawClause c => WriteStartingDraw(c),
+            LuckyMoneyClause c => WriteInlineRollEvent("luckyMoney", c, c.With),
+            LuckyMultClause c => WriteInlineRollEvent("luckyMult", c, c.With),
+            MisprintMultClause c => WriteMisprint(c),
+            WheelOfFortuneClause c => WriteInlineRollEvent("wheelOfFortune", c, c.With),
+            GrosMichelExtinctClause c => WriteInlineRollEvent("grosMichelExtinct", c, c.With),
+            CavendishExtinctClause c => WriteInlineRollEvent("cavendishExtinct", c, c.With),
+            SpaceLevelupClause c => WriteInlineRollEvent("spaceLevelup", c, c.With),
+            BusinessPayoutClause c => WriteInlineRollEvent("businessPayout", c, with: null),
+            BloodstoneTriggerClause c => WriteInlineRollEvent("bloodstoneTrigger", c, with: null),
+            ParkingPayoutClause c => WriteInlineRollEvent("parkingPayout", c, with: null),
+            GlassDestroyClause c => WriteInlineRollEvent("glassDestroy", c, c.With),
+            WheelStaysFlippedClause c => WriteInlineRollEvent("wheelStaysFlipped", c, c.With),
+            _ => throw new InvalidOperationException(
+                $"ToJaml: no writer for clause type '{clause.GetType().Name}'."
+            ),
+        };
+
+    private static JMap WriteLogic(string discriminator, LogicClause logic)
     {
-        if (clause is LogicClause logic)
-        {
-            var logicDiscriminator = logic is AndClause ? "and" : "or";
-            var logicMapping = new JMap();
-            logicMapping.Set(logicDiscriminator, ClauseListNode(logic.Clauses), default);
-            WriteCommonKeys(logicMapping, logic);
-            return logicMapping;
-        }
-
-        var type = clause.GetType();
-        if (!CanonicalDiscriminatorByClauseType.TryGetValue(type, out var discriminator))
-            throw new InvalidOperationException($"ToJaml: no discriminator registered for clause type '{type.Name}'.");
-        var entry = JamlDiscriminatorRegistry.Entries[discriminator];
-
         var mapping = new JMap();
-        mapping.Set(discriminator, DiscriminatorValueNode(discriminator, entry, clause), default);
+        mapping.Set(discriminator, ClauseListNode(logic.Clauses), default);
+        WriteCommonKeys(mapping, logic);
+        return mapping;
+    }
+
+    private static JMap WriteJokerFamily<TEnum>(
+        string discriminator,
+        bool isWildcard,
+        TEnum[] jokers,
+        MotelyItemEdition? edition,
+        MotelyJokerSticker[] stickers,
+        JokerSourceConfig? sources,
+        IJamlClause clause
+    )
+        where TEnum : struct, Enum
+    {
+        var mapping = new JMap();
+        mapping.Set(discriminator, isWildcard ? StringArrayNode(["Any"]) : EnumArrayNode(jokers), default);
         WriteCommonKeys(mapping, clause);
+        WriteAntes(mapping, clause);
+        if (edition is { } ed)
+            mapping.Set("edition", new JScalar(ed.ToString()), default);
+        if (stickers.Length > 0)
+            mapping.Set("stickers", EnumArrayNode(stickers), default);
+        if (WriteJokerSources(sources) is { } sourcesNode)
+            mapping.Set("sources", sourcesNode, default);
+        return mapping;
+    }
 
-        if (clause is IAnteScopedClause anteScoped && anteScoped.Antes.Length > 0)
-            mapping.Set("antes", IntArrayNode(anteScoped.Antes), default);
+    private static JMap WriteLegendary(LegendaryJokerClause c)
+    {
+        var mapping = new JMap();
+        mapping.Set(
+            "legendaryJoker",
+            c.IsWildcard ? StringArrayNode(["Any"]) : EnumArrayNode(c.Jokers),
+            default
+        );
+        WriteCommonKeys(mapping, c);
+        WriteAntes(mapping, c);
+        if (c.Edition is { } ed)
+            mapping.Set("edition", new JScalar(ed.ToString()), default);
+        if (c.SoulCardOnly)
+            mapping.Set("soulCardOnly", JScalar.Of(true), default);
+        if (c.SoulEditionRolls != 0)
+            mapping.Set("soulEditionRolls", JScalar.Of(c.SoulEditionRolls), default);
+        if (WriteLegendarySources(c.Sources) is { } sourcesNode)
+            mapping.Set("sources", sourcesNode, default);
+        return mapping;
+    }
 
-        if (clause is IRollScopedClause rollScoped && !entry.RollsAreInlineValue)
+    private static JMap WriteItems<TEnum>(
+        string discriminator,
+        TEnum[] items,
+        IJamlClause clause,
+        int[]? rolls = null,
+        int[]? rollsDefault = null
+    )
+        where TEnum : struct, Enum
+    {
+        var mapping = new JMap();
+        mapping.Set(discriminator, EnumArrayNode(items), default);
+        WriteCommonKeys(mapping, clause);
+        WriteAntes(mapping, clause);
+        if (rolls is { } r && (rollsDefault is null || !r.SequenceEqual(rollsDefault)))
+            mapping.Set("rolls", IntArrayNode(r), default);
+        return mapping;
+    }
+
+    private static JMap WriteConsumable<TEnum>(
+        string discriminator,
+        TEnum[] items,
+        object? sources,
+        IJamlClause clause
+    )
+        where TEnum : struct, Enum
+    {
+        var mapping = new JMap();
+        mapping.Set(discriminator, EnumArrayNode(items), default);
+        WriteCommonKeys(mapping, clause);
+        WriteAntes(mapping, clause);
+        var sourcesNode = sources switch
         {
-            var isDefault = entry.RollsDefault != null && rollScoped.Rolls.SequenceEqual(entry.RollsDefault);
-            if (!isDefault)
-                mapping.Set("rolls", IntArrayNode(rollScoped.Rolls), default);
-        }
+            TarotCardSourceConfig t => WriteTarotSources(t),
+            SpectralCardSourceConfig s => WriteSpectralSources(s),
+            PlanetSourceConfig p => WritePlanetSources(p),
+            _ => null,
+        };
+        if (sourcesNode is not null)
+            mapping.Set("sources", sourcesNode, default);
+        return mapping;
+    }
 
-        var clauseKeys = JamlDiscriminatorRegistry.StaticStringArrayField(entry.ClauseType, "ClauseKeys");
+    private static JMap WriteStandardCard(StandardCardClause c)
+    {
+        var mapping = new JMap();
+        mapping.Set("standardCard", new JMap(), default);
+        WriteCommonKeys(mapping, c);
+        WriteAntes(mapping, c);
+        if (c.Rank is { } rank)
+            mapping.Set("rank", new JScalar(rank.ToString()), default);
+        if (c.Suit is { } suit)
+            mapping.Set("suit", new JScalar(suit.ToString()), default);
+        if (c.Enhancement is { } enh)
+            mapping.Set("enhancement", new JScalar(enh.ToString()), default);
+        if (c.Seal is { } seal)
+            mapping.Set("seal", new JScalar(seal.ToString()), default);
+        if (c.Edition is { } ed)
+            mapping.Set("edition", new JScalar(ed.ToString()), default);
+        if (WriteStandardSources(c.Sources) is { } sourcesNode)
+            mapping.Set("sources", sourcesNode, default);
+        return mapping;
+    }
 
-        if (clauseKeys.Contains("with", StringComparer.OrdinalIgnoreCase))
+    private static JMap WriteErraticRank(ErraticRankClause c)
+    {
+        var mapping = new JMap();
+        mapping.Set("erraticRank", new JScalar(c.Rank.ToString()), default);
+        WriteCommonKeys(mapping, c);
+        WriteAntes(mapping, c);
+        return mapping;
+    }
+
+    private static JMap WriteErraticSuit(ErraticSuitClause c)
+    {
+        var mapping = new JMap();
+        mapping.Set("erraticSuit", new JScalar(c.Suit.ToString()), default);
+        WriteCommonKeys(mapping, c);
+        WriteAntes(mapping, c);
+        return mapping;
+    }
+
+    private static JMap WriteStartingDraw(StartingDrawClause c)
+    {
+        var mapping = new JMap();
+        mapping.Set("startingDraw", new JMap(), default);
+        WriteCommonKeys(mapping, c);
+        WriteAntes(mapping, c);
+        if (c.Rank is { } rank)
+            mapping.Set("rank", new JScalar(rank.ToString()), default);
+        if (c.Suit is { } suit)
+            mapping.Set("suit", new JScalar(suit.ToString()), default);
+        return mapping;
+    }
+
+    private static JMap WriteInlineRollEvent(string discriminator, IRollScopedClause clause, JamlWith? with)
+    {
+        var mapping = new JMap();
+        mapping.Set(discriminator, IntArrayNode(clause.Rolls), default);
+        WriteCommonKeys(mapping, clause);
+        if (with is { } w)
         {
-            var with = (JamlWith)entry.ClauseType.GetProperty("With")!.GetValue(clause)!;
-            var withNode = WriteWith(with);
+            var withNode = WriteWith(w);
             if (withNode != null)
                 mapping.Set("with", withNode, default);
         }
+        return mapping;
+    }
 
-        if (clauseKeys.Contains("sources", StringComparer.OrdinalIgnoreCase) && entry.SourceConfigType is { } sourceType)
-        {
-            var sources = entry.ClauseType.GetProperty("Sources")!.GetValue(clause);
-            var sourcesNode = WriteSourceConfig(sources, sourceType);
-            if (sourcesNode != null)
-                mapping.Set("sources", sourcesNode, default);
-        }
-
-        WriteExtraProperties(mapping, entry.ClauseType, clauseKeys, clause);
-
+    private static JMap WriteMisprint(MisprintMultClause c)
+    {
+        var mapping = WriteInlineRollEvent("misprintMult", c, with: null);
+        if (c.Mult != 0)
+            mapping.Set("mult", JScalar.Of(c.Mult), default);
         return mapping;
     }
 
@@ -251,47 +349,14 @@ public static partial class JamlConfigLoader
             mapping.Set("min", JScalar.Of(clause.Min), default);
         if (clause.Max.HasValue)
             mapping.Set("max", JScalar.Of(clause.Max.Value), default);
-        // 1 is the unspecified-score default (see JamlConfigLoader.ParseClause) — writing it back
-        // out would be indistinguishable from an author who explicitly typed "score: 1", which is
-        // fine (both mean the same thing), but omitting it when it's the default keeps a
-        // round-tripped file looking like what a human would actually write.
         if (clause.Score != 1)
             mapping.Set("score", JScalar.Of(clause.Score), default);
     }
 
-    // erraticRank/erraticSuit read a scalar directly off the discriminator key (not an array);
-    // standardCard/startingDraw have no discriminator value at all — their real content lives in
-    // sibling keys the OverlayReader falls back to, so an empty block round-trips correctly.
-    private static JNode DiscriminatorValueNode(string discriminator, JamlDiscriminatorEntry entry, IJamlClause clause)
+    private static void WriteAntes(JMap mapping, IJamlClause clause)
     {
-        if (entry.RollsAreInlineValue)
-            return IntArrayNode(((IRollScopedClause)clause).Rolls);
-
-        if (string.Equals(discriminator, "erraticRank", StringComparison.OrdinalIgnoreCase))
-            return new JScalar(((ErraticRankClause)clause).Rank.ToString());
-        if (string.Equals(discriminator, "erraticSuit", StringComparison.OrdinalIgnoreCase))
-            return new JScalar(((ErraticSuitClause)clause).Suit.ToString());
-        if (string.Equals(discriminator, "standardCard", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(discriminator, "startingDraw", StringComparison.OrdinalIgnoreCase))
-            return new JMap();
-
-        return ItemArrayValueNode(discriminator, entry, clause);
-    }
-
-    private static JSeq ItemArrayValueNode(string discriminator, JamlDiscriminatorEntry entry, IJamlClause clause)
-    {
-        if (!ItemArrayPropertyByDiscriminator.TryGetValue(discriminator, out var propName))
-            throw new InvalidOperationException($"ToJaml: no item-array mapping for discriminator '{discriminator}'.");
-
-        var isWildcardProp = entry.ClauseType.GetProperty("IsWildcard");
-        if (isWildcardProp != null && (bool)(isWildcardProp.GetValue(clause) ?? false))
-            return StringArrayNode(["Any"]);
-
-        var items = (System.Collections.IEnumerable)entry.ClauseType.GetProperty(propName)!.GetValue(clause)!;
-        var names = new List<string>();
-        foreach (var item in items)
-            names.Add(item!.ToString()!);
-        return StringArrayNode(names);
+        if (clause is IAnteScopedClause { Antes.Length: > 0 } anteScoped)
+            mapping.Set("antes", IntArrayNode(anteScoped.Antes), default);
     }
 
     private static JMap? WriteWith(JamlWith with)
@@ -304,80 +369,108 @@ public static partial class JamlConfigLoader
         return mapping.Keys.Count == 0 ? null : mapping;
     }
 
-    // Returns null ONLY when sources itself is null. A non-null-but-all-default config emits an
-    // empty `sources: {}` mapping — the loader treats null (use DefaultSources) and explicit-empty
-    // (override with "match nowhere") as distinct, so writing must preserve that distinction.
-    private static JMap? WriteSourceConfig(object? sources, Type sourceType)
+    // null sources → omit. Non-null empty → `sources: {}` (explicit empty ≠ default).
+    private static JMap? WriteJokerSources(JokerSourceConfig? sources)
     {
         if (sources is null)
             return null;
-
-        var sourceKeys = JamlDiscriminatorRegistry.StaticStringArrayField(sourceType, "SourceKeys");
         var mapping = new JMap();
-        foreach (var group in sourceKeys.GroupBy(k => sourceType.GetProperty(ToPascalCase(ResolveWireKeyAlias(k)))))
-        {
-            if (group.Key is not { } prop)
-                continue;
-            var node = GenericPropertyToNode(prop, sources);
-            if (node != null)
-                mapping.Set(group.First(), node, default);
-        }
+        WriteIntArrayIfAny(mapping, "shopItems", sources.ShopItems);
+        WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        WriteIntArrayIfAny(mapping, "judgement", sources.Judgement);
+        WriteIntArrayIfAny(mapping, "wraith", sources.Wraith);
+        WriteIntArrayIfAny(mapping, "riffRaff", sources.RiffRaff);
+        WriteIntArrayIfAny(mapping, "rareTag", sources.RareTag);
+        WriteIntArrayIfAny(mapping, "uncommonTag", sources.UncommonTag);
+        WriteIntArrayIfAny(mapping, "commonShopJokers", sources.CommonShopJokers);
+        WriteIntArrayIfAny(mapping, "uncommonShopJokers", sources.UncommonShopJokers);
+        WriteIntArrayIfAny(mapping, "rareShopJokers", sources.RareShopJokers);
+        WriteIntArrayIfAny(mapping, "allShopJokers", sources.AllShopJokers);
         return mapping;
     }
 
-    private static void WriteExtraProperties(JMap mapping, Type clauseType, IReadOnlyList<string> clauseKeys, object instance)
+    private static JMap? WriteLegendarySources(LegendaryJokerSourceConfig? sources)
     {
-        var extraKeys = clauseKeys.Where(k =>
-            !PopulatorCommonKeys.Contains(k)
-            && !string.Equals(k, "with", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(k, "sources", StringComparison.OrdinalIgnoreCase)
-        );
-
-        foreach (var group in extraKeys.GroupBy(k => clauseType.GetProperty(ToPascalCase(ResolveWireKeyAlias(k)))))
-        {
-            if (group.Key is not { } prop)
-                continue;
-            var node = GenericPropertyToNode(prop, instance);
-            if (node != null)
-                mapping.Set(group.First(), node, default);
-        }
+        if (sources is null)
+            return null;
+        var mapping = new JMap();
+        WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        WriteIntArrayIfAny(mapping, "arcanaPacks", sources.ArcanaPacks);
+        WriteIntArrayIfAny(mapping, "spectralPacks", sources.SpectralPacks);
+        WriteIntArrayIfAny(mapping, "soulCard", sources.SoulCard);
+        if (sources.RequireMegaPack)
+            mapping.Set("requireMegaPack", JScalar.Of(true), default);
+        return mapping;
     }
 
-    // The write-side mirror of SetGenericProperty — same type coverage, same default-value
-    // suppression as the loader's own "?? default" fallbacks, so omitted-on-write round-trips to
-    // omitted-on-read.
-    private static JNode? GenericPropertyToNode(PropertyInfo prop, object instance)
+    private static JMap? WriteTarotSources(TarotCardSourceConfig? sources)
     {
-        var raw = prop.GetValue(instance);
-        if (raw is null)
+        if (sources is null)
             return null;
+        var mapping = new JMap();
+        WriteIntArrayIfAny(mapping, "shopItems", sources.ShopItems);
+        WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        WriteIntArrayIfAny(mapping, "emperor", sources.Emperor);
+        WriteIntArrayIfAny(mapping, "purpleSealOrEightBall", sources.PurpleSealOrEightBall);
+        if (sources.CharmTag)
+            mapping.Set("charmTag", JScalar.Of(true), default);
+        return mapping;
+    }
 
-        var type = prop.PropertyType;
-        var underlying = Nullable.GetUnderlyingType(type);
+    private static JMap? WriteSpectralSources(SpectralCardSourceConfig? sources)
+    {
+        if (sources is null)
+            return null;
+        var mapping = new JMap();
+        WriteIntArrayIfAny(mapping, "shopItems", sources.ShopItems);
+        WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        WriteIntArrayIfAny(mapping, "sixthSense", sources.SixthSense);
+        WriteIntArrayIfAny(mapping, "seance", sources.Seance);
+        if (sources.EtherealTag)
+            mapping.Set("etherealTag", JScalar.Of(true), default);
+        if (sources.RequireMegaPack)
+            mapping.Set("requireMegaPack", JScalar.Of(true), default);
+        return mapping;
+    }
 
-        if (type == typeof(int))
-            return (int)raw == 0 ? null : JScalar.Of((int)raw);
-        if (type == typeof(bool))
-            return (bool)raw ? JScalar.Of(true) : null;
-        if (type == typeof(int[]))
-            return ((int[])raw).Length == 0 ? null : IntArrayNode((int[])raw);
-        if (type == typeof(string))
-            return raw is string s && s.Length > 0 ? new JScalar(s) : null;
-        if (underlying == typeof(MotelyStandardcardRank))
-            return new JScalar(raw.ToString()!);
-        if (underlying is { IsEnum: true })
-            return new JScalar(raw.ToString()!);
-        if (type.IsArray && type.GetElementType() is { IsEnum: true })
-        {
-            var names = new List<string>();
-            foreach (var item in (System.Collections.IEnumerable)raw)
-                names.Add(item!.ToString()!);
-            return names.Count == 0 ? null : StringArrayNode(names);
-        }
+    private static JMap? WritePlanetSources(PlanetSourceConfig? sources)
+    {
+        if (sources is null)
+            return null;
+        var mapping = new JMap();
+        WriteIntArrayIfAny(mapping, "shopItems", sources.ShopItems);
+        WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        return mapping;
+    }
 
-        throw new InvalidOperationException(
-            $"ToJaml: unsupported property type '{type}' on {prop.DeclaringType?.Name}.{prop.Name}."
-        );
+    private static JMap? WriteStandardSources(StandardCardSourceConfig? sources)
+    {
+        if (sources is null)
+            return null;
+        var mapping = new JMap();
+        WriteIntArrayIfAny(mapping, "shopItems", sources.ShopItems);
+        WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        WriteIntArrayIfAny(mapping, "certificate", sources.Certificate);
+        WriteIntArrayIfAny(mapping, "incantation", sources.Incantation);
+        WriteIntArrayIfAny(mapping, "familiar", sources.Familiar);
+        WriteIntArrayIfAny(mapping, "grim", sources.Grim);
+        WriteIntArrayIfAny(mapping, "deckDraw", sources.DeckDraw);
+        return mapping;
+    }
+
+    private static void WriteIntArrayIfAny(JMap mapping, string key, int[] values)
+    {
+        if (values.Length > 0)
+            mapping.Set(key, IntArrayNode(values), default);
+    }
+
+    private static JSeq EnumArrayNode<TEnum>(IEnumerable<TEnum> values)
+        where TEnum : struct, Enum
+    {
+        var seq = new JSeq();
+        foreach (var v in values)
+            seq.Items.Add(new JScalar(v.ToString()!));
+        return seq;
     }
 
     private static JSeq IntArrayNode(IEnumerable<int> values)
@@ -396,16 +489,9 @@ public static partial class JamlConfigLoader
         return seq;
     }
 
-    // An integer never needs quoting — the writer already KNOWS it's an integer (JScalar.Of(int)
-    // said so), so there's nothing to guess. Only genuinely free-text values (names, labels,
-    // seeds) go through the disambiguation check below, and only because JAML's wire format is
-    // text — a human-typed word can't carry its own "I am a string" tag the way a real int can.
     private static string ScalarText(JScalar scalar) =>
         scalar.Kind == JScalarKind.Integer ? scalar.Value : ScalarText(scalar.Value);
 
-    // Quotes bare text only when it would otherwise misparse — colons, leading dashes, or values
-    // that read as a different type (a numeric-looking name, "true"/"false"). Bare text is the
-    // common case and stays bare, matching how the real corpus is authored.
     private static string ScalarText(string value)
     {
         bool needsQuote =

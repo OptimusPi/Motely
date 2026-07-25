@@ -7,10 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("misprintMult", RollsAreInlineValue = true)]
 public sealed class MisprintMultClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list. No With
-    /// property here — with/luck/vouchers are NOT valid on this clause.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "mult", "value"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -24,9 +20,31 @@ public sealed class MisprintMultClause : IRollScopedClause
 }
 
 public struct MisprintMultFilterDesc(MisprintMultClause clause)
-    : IMotelySeedFilterDesc<MisprintMultFilterDesc.MisprintMultFilter>
+    : IMotelySeedFilterDesc<MisprintMultFilterDesc.MisprintMultFilter>,
+      IJamlClauseDesc<MisprintMultClause>
 {
     private readonly MisprintMultClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["misprintMult"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "mult", "value"];
+
+    /// <inheritdoc/>
+    public static bool Set(MisprintMultClause clause, string key, IJamlValueReader value)
+    {
+        switch (key.ToLowerInvariant())
+        {
+            case "mult":
+            case "value":
+                if (!value.TryInt(out var mult)) return false;
+                clause.Mult = mult;
+                return true;
+            default:
+                return false;
+        }
+    }
 
     public MisprintMultFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

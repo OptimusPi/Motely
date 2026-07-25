@@ -112,6 +112,23 @@ public class JamlSimdCoverageTests
                 Sources = new LegendaryJokerSourceConfig { ArcanaPacks = [0], SpectralPacks = [0] },
             }
         );
+        // T4: edition prefilter path inside LegendaryJokerFilterDesc (LegendarySoulEditionPrefilter).
+        ExerciseBoth(
+            new LegendaryJokerClause
+            {
+                Jokers = [MotelyJoker.Perkeo],
+                Edition = MotelyItemEdition.Negative,
+                Antes = [1],
+                Min = 1,
+            },
+            new LegendaryJokerClause
+            {
+                Jokers = [MotelyJoker.Perkeo],
+                Edition = MotelyItemEdition.Negative,
+                Antes = [1],
+                Min = 1,
+            }
+        );
     }
 
     [Fact]
@@ -148,6 +165,16 @@ public class JamlSimdCoverageTests
                 },
             },
             new SpectralCardClause { Spectrals = [MotelySpectralCard.Familiar], Antes = [1] }
+        );
+
+        // T4: Soul/BlackHole take SpecialSpectralCardFilterDesc (pack-type narrow + scalar confirm).
+        ExerciseBoth(
+            new SpectralCardClause { Spectrals = [MotelySpectralCard.TheSoul], Antes = [1] },
+            new SpectralCardClause { Spectrals = [MotelySpectralCard.TheSoul], Antes = [1] }
+        );
+        ExerciseBoth(
+            new SpectralCardClause { Spectrals = [MotelySpectralCard.BlackHole], Antes = [1] },
+            new SpectralCardClause { Spectrals = [MotelySpectralCard.BlackHole], Antes = [1] }
         );
 
         ExerciseBoth(

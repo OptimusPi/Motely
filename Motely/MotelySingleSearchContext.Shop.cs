@@ -14,11 +14,13 @@ public struct MotelySingleShopItemStream
     public MotelySingleTarotStream TarotStream;
     public MotelySinglePlanetStream PlanetStream;
     public MotelySingleSpectralStream SpectralStream;
+    public MotelySinglePrngStream StandardCardStream;
 
     public readonly bool DoesProvideJokers => !JokerStream.IsNull;
     public readonly bool DoesProvideTarots => !TarotStream.IsNull;
     public readonly bool DoesProvidePlanets => !PlanetStream.IsNull;
     public readonly bool DoesProvideSpectrals => !SpectralStream.IsNull;
+    public readonly bool DoesProvideStandardCards => !StandardCardStream.IsInvalid;
 }
 
 [Flags]
@@ -28,6 +30,7 @@ public enum MotelyShopStreamFlags
     ExcludeTarots = 1 << 2,
     ExcludePlanets = 1 << 3,
     ExcludeSpectrals = 1 << 4,
+    ExcludeStandardCards = 1 << 5,
 
     Default = 0,
 }
@@ -72,6 +75,16 @@ public partial class MotelySingleSearchContext
                 flags.HasFlag(MotelyShopStreamFlags.ExcludeSpectrals) || Deck != MotelyDeck.Ghost
                     ? default
                     : CreateShopSpectralStream(ante, isCached),
+            // Deliberately uncached: CacheShopStream never registers this key, and the pseudohash
+            // cache is keyed by key *length*. "front"+"sho"+ante is 9 chars — the same length as
+            // the shop tarot key ("Tarot"+"sho"+ante) — so isCached:true only ever resolved
+            // because tarots happened to register 9 first. Under ExcludeTarots nothing registers
+            // it and GetPartialHashVector dereferences a null cache slot.
+            StandardCardStream = flags.HasFlag(MotelyShopStreamFlags.ExcludeStandardCards)
+                ? MotelySinglePrngStream.Invalid
+                : CreatePrngStream(
+                    MotelyPrngKeys.StandardCardBase + MotelyPrngKeys.ShopItemSource + ante
+                ),
 
             TarotRate = 4,
             PlanetRate = 4,
@@ -154,8 +167,14 @@ public partial class MotelySingleSearchContext
 
         if (itemTypePoll < stream.StandardcardRate)
         {
-            // This shop will generate a standard card
-            return new(MotelyItemType.NotImplemented);
+            if (!stream.DoesProvideStandardCards)
+                return new(MotelyItemType.StandardCardExcludedByStream);
+
+            // Magic Trick shop card = Balatro's create_card('Base', ..., 'sho'): a bare playing
+            // card, one 'front'+'sho'+ante pull. create_card only applies enhancement/edition/seal
+            // inside its `_type=='Joker'` block, which a 'Base' card never enters, so none apply.
+            // (The Illusion voucher's edition/enhancement layer is not mirrored yet.)
+            return GetNextShopStandardCard(ref stream.StandardCardStream);
         }
 
         // This shop will generate a Spectral card
@@ -164,4 +183,17 @@ public partial class MotelySingleSearchContext
 
         return GetNextSpectral(ref stream.SpectralStream);
     }
+
+    /// <summary>
+    /// The bare playing card a shop slot yields when Magic Trick is active. Mirrors Balatro's
+    /// create_card('Base', ..., 'sho'): a single 'front'+'sho'+ante draw for rank+suit, no
+    /// enhancement/edition/seal. Sequential-only by design — no SIMD prefilter queries shop
+    /// standard cards, so the vector path leaves them unread.
+    /// </summary>
+    public MotelyItem GetNextShopStandardCard(ref MotelySinglePrngStream cardStream)
+        => new(
+            MotelyEnum<MotelyStandardCard>.Values[
+                GetNextRandomInt(ref cardStream, 0, MotelyEnum<MotelyStandardCard>.ValueCount)
+            ]
+        );
 }

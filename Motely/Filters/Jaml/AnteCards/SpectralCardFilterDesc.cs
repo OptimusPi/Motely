@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelySpectralCard), SourceConfigType = typeof(SpectralCardSourceConfig))]
 public sealed class SpectralCardClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -23,9 +20,30 @@ public sealed class SpectralCardClause : IJamlClause, IAnteScopedClause
 }
 
 public struct SpectralCardFilterDesc(SpectralCardClause clause)
-    : IMotelySeedFilterDesc<SpectralCardFilterDesc.SpectralCardFilter>
+    : IMotelySeedFilterDesc<SpectralCardFilterDesc.SpectralCardFilter>,
+      IJamlClauseDesc<SpectralCardClause>
 {
     private readonly SpectralCardClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["spectralCard", "spectralCards"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "sources"];
+
+    /// <inheritdoc/>
+    public static bool Set(SpectralCardClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(SpectralCardClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelySpectralCard>(out var spectrals)) return false;
+        clause.Spectrals = spectrals;
+        return true;
+    }
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Specialty sources (Sixth Sense, Seance) stay off
@@ -323,4 +341,30 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
             return mask;
         }
     }
+}
+
+/// <summary>
+/// <c>sources:</c> block for <c>spectralCard:</c>. Colocated with <see cref="SpectralCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record SpectralCardSourceConfig
+{
+    /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+    public int[] SixthSense { get; set; } = [];
+    public int[] Seance { get; set; } = [];
+    public bool RequireMegaPack { get; set; }
+
+    /// <summary>
+    /// When true, booster Spectral scoring may consume the Ethereal-tag bonus pack (second weighted slot, no natural Spectral).
+    /// </summary>
+    public bool EtherealTag { get; set; }
+
+    // TODO: OmenGlobe — voucher that allows Spectral cards to appear in Arcana packs.
+    // This is voucher-state-gated AND changes the Arcana pack PRNG path (not a simple slot array).
+    // Much more complex than other sources — needs voucher state tracking + pack stream branching.
+    // Do not implement naively.
 }

@@ -76,37 +76,6 @@ ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItemVector GetNextShopSpectralOrNull(
-        ref MotelyVectorSpectralStream spectralStream,
-        ref MotelyVectorPrngStream itemTypeStream,
-        Vector512<double> totalRate,
-        Vector512<double> tarotRate,
-        Vector512<double> planetRate,
-        Vector512<double> standardcardRate,
-        Vector512<double> spectralRate
-    )
-    {
-        // Check what type this slot is
-        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
-        itemTypePoll -= Vector512.Create(20.0); // Skip joker range
-        itemTypePoll -= tarotRate; // Skip Tarot range
-        itemTypePoll -= planetRate; // Skip Planet range
-        itemTypePoll -= standardcardRate; // Skip standard card range
-        var isSpectralSlot = Vector512.LessThan(itemTypePoll, spectralRate);
-
-        // Only advance Spectral stream for Spectral slots
-        var Spectral = GetNextSpectral(ref spectralStream, isSpectralSlot);
-
-        // Return Spectral or None for non-Spectral slots
-        var spectralIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isSpectralSlot);
-        var noneItem = Vector256<int>.Zero;
-
-        return new MotelyItemVector(
-            Vector256.ConditionalSelect(spectralIntMask, Spectral.Value, noneItem)
-        );
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector GetNextSpectral(
         ref MotelyVectorSpectralStream stream,
         in Vector512<double> mask
@@ -225,10 +194,138 @@ ref partial struct MotelyVectorSearchContext
 
         MotelyVectorItemSet pack = new();
 
+        // Dedup against the pack like the scalar engine: a spectral pack never repeats a card,
+        // and Soul/BlackHole rolls are skipped for lanes that already hold one (parity with
+        // MotelySingleSearchContext.GetNextSpectralPackContents, proof: VectorScalarParityTests).
         for (int i = 0; i < size; i++)
-            pack.Append(GetNextSpectral(ref spectralStream));
+            pack.Append(GetNextSpectral(ref spectralStream, pack));
 
         return pack;
+    }
+
+    public MotelyItemVector GetNextSpectral(
+        ref MotelyVectorSpectralStream stream,
+        in MotelyVectorItemSet itemSet
+    )
+    {
+        Vector512<double> soulMaskDbl;
+        Vector256<int> soulMaskInt;
+        Vector512<double> blackHoleMaskDbl;
+        Vector256<int> blackHoleMaskInt;
+
+        if (stream.IsSoulBlackHoleable)
+        {
+            // Lanes whose pack already holds TheSoul skip the soul roll entirely (no PRNG pull),
+            // exactly like the scalar itemSet variant.
+            Vector512<double> soulValidMask = MotelyVectorUtils.ExtendIntMaskToDouble(
+                ~itemSet.Contains(MotelyItemType.TheSoul)
+            );
+            soulMaskDbl =
+                soulValidMask
+                & Vector512.GreaterThan(
+                    GetNextRandom(ref stream.SoulBlackHolePrngStream, soulValidMask),
+                    Vector512.Create(0.997)
+                );
+            soulMaskInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(soulMaskDbl);
+
+            // Black Hole roll: skipped for lanes that just rolled TheSoul and lanes whose pack
+            // already holds BlackHole.
+            Vector512<double> blackHoleValidMask =
+                MotelyVectorUtils.ExtendIntMaskToDouble(
+                    ~itemSet.Contains(MotelyItemType.BlackHole)
+                ) & ~soulMaskDbl;
+            blackHoleMaskDbl =
+                blackHoleValidMask
+                & Vector512.GreaterThan(
+                    GetNextRandom(ref stream.SoulBlackHolePrngStream, blackHoleValidMask),
+                    Vector512.Create(0.997)
+                );
+            blackHoleMaskInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(blackHoleMaskDbl);
+        }
+        else
+        {
+            soulMaskDbl = Vector512<double>.Zero;
+            soulMaskInt = Vector256<int>.Zero;
+            blackHoleMaskDbl = Vector512<double>.Zero;
+            blackHoleMaskInt = Vector256<int>.Zero;
+        }
+
+        Vector256<int> spectrals;
+
+        if (stream.ResampleStream.IsInvalid)
+        {
+            spectrals = Vector256.Create(
+                new MotelyItem(MotelyItemType.SpectralExcludedByStream).Value
+            );
+        }
+        else
+        {
+            Vector512<double> rollMask = ~soulMaskDbl & ~blackHoleMaskDbl;
+            spectrals = GetNextRandomInt(
+                ref stream.ResampleStream.InitialPrngStream,
+                0,
+                MotelyEnum<MotelySpectralCard>.ValueCount,
+                rollMask
+            );
+            spectrals = Vector256.BitwiseOr(
+                spectrals,
+                Vector256.Create((int)MotelyItemTypeCategory.SpectralCard)
+            );
+
+            int resampleCount = 0;
+            while (resampleCount < MotelyVectorResampleLimit)
+            {
+                Vector256<int> resampleMaskInt =
+                    (
+                        itemSet.Contains(new MotelyItemVector(spectrals))
+                        | Vector256.Equals(
+                            spectrals,
+                            Vector256.Create((int)MotelyItemType.TheSoul)
+                        )
+                        | Vector256.Equals(
+                            spectrals,
+                            Vector256.Create((int)MotelyItemType.BlackHole)
+                        )
+                    )
+                    & ~soulMaskInt
+                    & ~blackHoleMaskInt;
+
+                if (Vector256.EqualsAll(resampleMaskInt, Vector256<int>.Zero))
+                    break;
+
+                Vector256<int> nextSpectrals = GetNextRandomInt(
+                    ref GetResamplePrngStream(
+                        ref stream.ResampleStream,
+                        stream.ResampleKey,
+                        resampleCount
+                    ),
+                    0,
+                    MotelyEnum<MotelySpectralCard>.ValueCount,
+                    MotelyVectorUtils.ExtendIntMaskToDouble(resampleMaskInt)
+                );
+
+                nextSpectrals = Vector256.BitwiseOr(
+                    nextSpectrals,
+                    Vector256.Create((int)MotelyItemTypeCategory.SpectralCard)
+                );
+
+                spectrals = Vector256.ConditionalSelect(resampleMaskInt, nextSpectrals, spectrals);
+
+                ++resampleCount;
+            }
+        }
+
+        return new(
+            Vector256.ConditionalSelect(
+                soulMaskInt,
+                Vector256.Create((int)MotelyItemType.TheSoul),
+                Vector256.ConditionalSelect(
+                    blackHoleMaskInt,
+                    Vector256.Create((int)MotelyItemType.BlackHole),
+                    spectrals
+                )
+            )
+        );
     }
 
     public MotelyVectorItemSet GetNextSpectralPackContentsPerLane(

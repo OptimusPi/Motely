@@ -27,3 +27,7 @@ should:
     score: 8
   - luckyMoney: [9,10,11]
     score: 7
+
+seeds:
+  - OSNDF16V
+  - LWX4QDWV

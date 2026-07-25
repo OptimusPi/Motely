@@ -59,9 +59,7 @@ public static class MotelySeedKeywordSequences
     /// Must match <see cref="MotelyGlobals.GetPaddedSeedCountForKeywordsLong"/> for the paired <c>*Keywords</c> array;
     /// recompute with a one-off console if those tables change (see <c>Motely.Tests</c> guard test).
     /// </summary>
-    // Counts regenerated after the GenerateNPadVariations fix (keyword-contiguous,
-    // padLen + 1 slots). Gross keywords all have padLen ≤ 3 so they were never
-    // affected by the old bug; funny/balatro contain longer keywords and went up.
+    // Keyword-contiguous pad counts (padLen + 1 slots). Keep in sync with the generator.
     public const long GrossKeywordAestheticSeedCount = 1_252_817_510L;
     public const long FunnyKeywordAestheticSeedCount = 5_228_371_963L;
     public const long BalatroKeywordAestheticSeedCount = 6_938_858_608L;

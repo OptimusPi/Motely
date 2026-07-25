@@ -1,23 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-
 namespace Motely.Filters.Jaml;
 
-// The generic reflection-driven replacement for the ~30 hand-written Build*/Parse*Sources
-// functions. Every discriminator's ClauseKeys/SourceKeys field (baked directly onto the
-// clause/source-config type, the single source of truth also read by JamlDiscriminatorRegistry
-// and Motely.Schema) drives which properties get populated and how — no per-discriminator
-// hand-typed object initializer. Kept as a `partial` piece of JamlConfigLoader so it can reuse
-// the loader's private IReader/NodeReader/ParseWith/ParseEnum/ParseRank/etc. machinery.
+// Concrete clause construction + desc Set/SetDiscriminatorValue. No Activator, no GetProperty —
+// the compiler sees every type the loader builds (NativeAOT-friendly). Source blocks are typed
+// parsers next to each SourceConfig shape.
 public static partial class JamlConfigLoader
 {
-    // Keys every populated clause handles itself before the generic per-property loop runs.
+    // Keys every populated clause handles itself before the desc Set loop runs.
     private static readonly HashSet<string> PopulatorCommonKeys =
         new(StringComparer.OrdinalIgnoreCase) { "min", "max", "score", "label", "ante", "antes", "rolls" };
 
     private static IJamlClause Populate(
         string discriminator,
-        JamlDiscriminatorEntry entry,
         NodeReader node,
         IReader data,
         int[] antes,
@@ -27,7 +20,7 @@ public static partial class JamlConfigLoader
         string? label
     )
     {
-        var clause = (IJamlClause)Activator.CreateInstance(entry.ClauseType)!;
+        var clause = CreateClause(discriminator);
         clause.Label = label;
         clause.Min = min;
         clause.Max = max;
@@ -38,179 +31,286 @@ public static partial class JamlConfigLoader
 
         if (clause is IRollScopedClause rollScoped)
         {
-            rollScoped.Rolls = entry.RollsAreInlineValue
+            rollScoped.Rolls = JamlSchema.RollsAreInlineFor(discriminator)
                 ? node.GetIntArray(discriminator) ?? []
-                : data.GetIntArray("rolls") ?? entry.RollsDefault ?? [];
+                : data.GetIntArray("rolls") ?? JamlSchema.RollsDefaultFor(discriminator) ?? [];
         }
+
+        ApplyWith(clause, data);
+        ApplySources(clause, data);
 
         var clauseKeys = JamlSchema.ClauseKeysFor(discriminator);
-
-        if (clauseKeys.Contains("with", StringComparer.OrdinalIgnoreCase))
-        {
-            var withProp =
-                entry.ClauseType.GetProperty("With")
-                ?? throw new InvalidOperationException(
-                    $"'{entry.ClauseType.Name}' declares 'with' in ClauseKeys but has no With property."
-                );
-            withProp.SetValue(clause, ParseWith(data));
-        }
-
-        if (clauseKeys.Contains("sources", StringComparer.OrdinalIgnoreCase) && entry.SourceConfigType is { } sourceType)
-        {
-            var sourcesProp =
-                entry.ClauseType.GetProperty("Sources")
-                ?? throw new InvalidOperationException(
-                    $"'{entry.ClauseType.Name}' declares 'sources' in ClauseKeys but has no Sources property."
-                );
-            sourcesProp.SetValue(clause, PopulateSourceConfig(sourceType, data));
-        }
-
         var extraKeys = clauseKeys.Where(k =>
             !PopulatorCommonKeys.Contains(k)
             && !string.Equals(k, "with", StringComparison.OrdinalIgnoreCase)
             && !string.Equals(k, "sources", StringComparison.OrdinalIgnoreCase)
         );
 
-        foreach (var group in extraKeys.GroupBy(k => entry.ClauseType.GetProperty(ToPascalCase(ResolveWireKeyAlias(k)))))
+        var applied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var key in extraKeys)
         {
-            if (group.Key is null)
+            if (applied.Contains(key))
+                continue;
+            if (!KeyPresent(data, key) && !KeyPresent(data, ResolveWireKeyAlias(key)))
+                continue;
+
+            var reader = ValueReaderForKey(data, key);
+            if (!JamlClauseDescDispatch.TrySet(clause, key, reader))
+            {
                 throw new InvalidOperationException(
-                    $"Populator: '{entry.ClauseType.Name}' has no property matching key(s) '{string.Join("/", group)}'."
+                    $"Populator: '{clause.GetType().Name}' has no Set arm for key '{key}'."
                 );
-            SetGenericProperty(clause, group.Key, data, group.ToArray());
+            }
+
+            applied.Add(key);
+            if (string.Equals(key, "mult", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "value", StringComparison.OrdinalIgnoreCase))
+            {
+                applied.Add("mult");
+                applied.Add("value");
+            }
+            if (string.Equals(key, "requireMega", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "requireMegaPack", StringComparison.OrdinalIgnoreCase))
+            {
+                applied.Add("requireMega");
+                applied.Add("requireMegaPack");
+            }
         }
 
         return clause;
     }
 
-    // Replaces ParseJokerSources/ParseLegendarySources/ParseTarotSources/ParseSpectralSources/
-    // ParsePlanetSources/ParseStandardSources: one reflection-driven reader over a source-config
-    // type's own SourceKeys, honoring the two real bool aliases (requireMega/requireMegaPack).
-    private static object? PopulateSourceConfig(
-        [DynamicallyAccessedMembers(JamlDiscriminatorRegistry.ClauseReflectionShape)] Type sourceType,
-        IReader data
-    )
+    private static IJamlClause CreateClause(string discriminator) =>
+        Normalize(discriminator) switch
+        {
+            "joker" or "jokers" => new JokerClause(),
+            "commonjoker" or "commonjokers" => new CommonJokerClause(),
+            "uncommonjoker" or "uncommonjokers" => new UncommonJokerClause(),
+            "rarejoker" or "rarejokers" => new RareJokerClause(),
+            "legendaryjoker" or "legendaryjokers" => new LegendaryJokerClause(),
+            "voucher" or "vouchers" => new VoucherClause { Vouchers = [], Rolls = [] },
+            "tarotcard" or "tarotcards" => new TarotCardClause { Tarots = [] },
+            "spectralcard" or "spectralcards" => new SpectralCardClause { Spectrals = [] },
+            "planetcard" or "planetcards" => new PlanetCardClause { Planets = [] },
+            "standardcard" or "standardcards" => new StandardCardClause(),
+            "boss" or "bosses" => new BossClause { Bosses = [] },
+            "tag" or "tags" or "smallblindtag" or "bigblindtag" => new TagClause { Tags = [], Rolls = [] },
+            "erraticrank" or "erraticranks" => new ErraticRankClause { Rank = default },
+            "erraticsuit" or "erraticsuits" => new ErraticSuitClause { Suit = default },
+            "startingdraw" => new StartingDrawClause(),
+            "luckymoney" => new LuckyMoneyClause(),
+            "luckymult" => new LuckyMultClause(),
+            "misprintmult" => new MisprintMultClause(),
+            "wheeloffortune" => new WheelOfFortuneClause(),
+            "grosmichelextinct" => new GrosMichelExtinctClause(),
+            "cavendishextinct" => new CavendishExtinctClause(),
+            "spacelevelup" => new SpaceLevelupClause(),
+            "businesspayout" => new BusinessPayoutClause(),
+            "bloodstonetrigger" => new BloodstoneTriggerClause(),
+            "parkingpayout" => new ParkingPayoutClause(),
+            "glassdestroy" => new GlassDestroyClause(),
+            "wheelstaysflipped" => new WheelStaysFlippedClause(),
+            _ => throw new InvalidOperationException(
+                $"Populator: cannot construct clause for discriminator '{discriminator}'."
+            ),
+        };
+
+    private static void ApplyWith(IJamlClause clause, IReader data)
+    {
+        // Only families that list "with" in ClauseKeys own a With property.
+        switch (clause)
+        {
+            case LuckyMoneyClause c:
+                c.With = ParseWith(data);
+                break;
+            case LuckyMultClause c:
+                c.With = ParseWith(data);
+                break;
+            case WheelOfFortuneClause c:
+                c.With = ParseWith(data);
+                break;
+            case GrosMichelExtinctClause c:
+                c.With = ParseWith(data);
+                break;
+            case CavendishExtinctClause c:
+                c.With = ParseWith(data);
+                break;
+            case SpaceLevelupClause c:
+                c.With = ParseWith(data);
+                break;
+            case GlassDestroyClause c:
+                c.With = ParseWith(data);
+                break;
+            case WheelStaysFlippedClause c:
+                c.With = ParseWith(data);
+                break;
+        }
+    }
+
+    private static void ApplySources(IJamlClause clause, IReader data)
+    {
+        switch (clause)
+        {
+            case JokerClause c:
+                c.Sources = PopulateJokerSources(data);
+                break;
+            case CommonJokerClause c:
+                c.Sources = PopulateJokerSources(data);
+                break;
+            case UncommonJokerClause c:
+                c.Sources = PopulateJokerSources(data);
+                break;
+            case RareJokerClause c:
+                c.Sources = PopulateJokerSources(data);
+                break;
+            case LegendaryJokerClause c:
+                c.Sources = PopulateLegendaryJokerSources(data);
+                break;
+            case TarotCardClause c:
+                c.Sources = PopulateTarotSources(data);
+                break;
+            case SpectralCardClause c:
+                c.Sources = PopulateSpectralSources(data);
+                break;
+            case PlanetCardClause c:
+                c.Sources = PopulatePlanetSources(data);
+                break;
+            case StandardCardClause c:
+                c.Sources = PopulateStandardSources(data);
+                break;
+        }
+    }
+
+    private static bool KeyPresent(IReader data, string key) =>
+        data.Keys.Any(k => string.Equals(k, key, StringComparison.OrdinalIgnoreCase));
+
+    private static JamlLoaderValueReader ValueReaderForKey(IReader data, string key)
+    {
+        if (data.GetStringArray(key) is { } strings)
+            return JamlLoaderValueReader.FromStrings(strings);
+        if (data.GetIntArray(key) is { } ints)
+            return JamlLoaderValueReader.FromStrings(Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        if (data.GetInt(key) is { } i)
+            return JamlLoaderValueReader.FromScalar(i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (data.GetBool(key) is { } b)
+            return JamlLoaderValueReader.FromScalar(b ? "true" : "false");
+        return JamlLoaderValueReader.FromScalar(data.GetString(key));
+    }
+
+    private static JokerSourceConfig? PopulateJokerSources(IReader data)
     {
         var block = data.GetObject("sources");
         if (block is null)
             return null;
-
-        var sourceKeys = JamlDiscriminatorRegistry.StaticStringArrayField(sourceType, "SourceKeys");
-        ValidateKeys(block, sourceKeys, $"{sourceType.Name} source");
-
-        var instance = Activator.CreateInstance(sourceType)!;
-        foreach (var group in sourceKeys.GroupBy(k => sourceType.GetProperty(ToPascalCase(ResolveWireKeyAlias(k)))))
+        ValidateKeys(block, JokerSourceConfig.SourceKeys, $"{nameof(JokerSourceConfig)} source");
+        return new JokerSourceConfig
         {
-            if (group.Key is null)
-                throw new InvalidOperationException(
-                    $"Populator: '{sourceType.Name}' has no property matching key(s) '{string.Join("/", group)}'."
-                );
-            SetGenericProperty(instance, group.Key, block, group.ToArray());
-        }
-        return instance;
+            ShopItems = block.GetIntArray("shopItems") ?? [],
+            BoosterPacks = block.GetIntArray("boosterPacks") ?? [],
+            Judgement = block.GetIntArray("judgement") ?? [],
+            Wraith = block.GetIntArray("wraith") ?? [],
+            RiffRaff = block.GetIntArray("riffRaff") ?? [],
+            RareTag = block.GetIntArray("rareTag") ?? [],
+            UncommonTag = block.GetIntArray("uncommonTag") ?? [],
+            CommonShopJokers = block.GetIntArray("commonShopJokers") ?? [],
+            UncommonShopJokers = block.GetIntArray("uncommonShopJokers") ?? [],
+            RareShopJokers = block.GetIntArray("rareShopJokers") ?? [],
+            AllShopJokers = block.GetIntArray("allShopJokers") ?? [],
+        };
     }
 
-    // aliasKeys: every wire key that resolves to this one property (order matters — first
-    // present value wins, matching the old `data.GetX("a") ?? data.GetX("b") ?? default` chains).
-    private static void SetGenericProperty(object target, PropertyInfo prop, IReader data, IReadOnlyList<string> aliasKeys)
+    private static LegendaryJokerSourceConfig? PopulateLegendaryJokerSources(IReader data)
     {
-        var type = prop.PropertyType;
-        var underlying = Nullable.GetUnderlyingType(type);
-
-        if (type == typeof(int))
+        var block = data.GetObject("sources");
+        if (block is null)
+            return null;
+        ValidateKeys(block, LegendaryJokerSourceConfig.SourceKeys, $"{nameof(LegendaryJokerSourceConfig)} source");
+        return new LegendaryJokerSourceConfig
         {
-            int? val = null;
-            foreach (var k in aliasKeys)
-                val ??= data.GetInt(k);
-            prop.SetValue(target, val ?? 0);
-        }
-        else if (type == typeof(bool))
-        {
-            bool? val = null;
-            foreach (var k in aliasKeys)
-                val ??= data.GetBool(k);
-            prop.SetValue(target, val ?? false);
-        }
-        else if (type == typeof(int[]))
-        {
-            int[]? val = null;
-            foreach (var k in aliasKeys)
-                val ??= data.GetIntArray(k);
-            prop.SetValue(target, val ?? []);
-        }
-        else if (type == typeof(string))
-        {
-            string? val = null;
-            foreach (var k in aliasKeys)
-                val ??= data.GetString(k);
-            prop.SetValue(target, val);
-        }
-        else if (underlying == typeof(MotelyStandardcardRank))
-        {
-            string? val = null;
-            foreach (var k in aliasKeys)
-                val ??= data.GetString(k);
-            prop.SetValue(target, val is null ? null : ParseRank(val));
-        }
-        else if (underlying is { IsEnum: true } underlyingEnum)
-        {
-            string? val = null;
-            foreach (var k in aliasKeys)
-                val ??= data.GetString(k);
-            prop.SetValue(target, val is null ? null : ParseEnumDynamic(underlyingEnum, val));
-        }
-        else if (type.IsArray && type.GetElementType() is { IsEnum: true } elemType)
-        {
-            string[]? values = null;
-            foreach (var k in aliasKeys)
-                values ??= data.GetStringArray(k);
-            values ??= [];
-            var arr = Array.CreateInstance(elemType, values.Length);
-            for (int i = 0; i < values.Length; i++)
-                arr.SetValue(ParseEnumDynamic(elemType, values[i]), i);
-            prop.SetValue(target, arr);
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                $"Populator: unsupported property type '{type}' on {prop.DeclaringType?.Name}.{prop.Name}."
-            );
-        }
+            BoosterPacks = block.GetIntArray("boosterPacks") ?? [],
+            ArcanaPacks = block.GetIntArray("arcanaPacks") ?? [],
+            SpectralPacks = block.GetIntArray("spectralPacks") ?? [],
+            SoulCard = block.GetIntArray("soulCard") ?? [],
+            RequireMegaPack =
+                block.GetBool("requireMegaPack")
+                ?? block.GetBool("requireMega")
+                ?? false,
+        };
     }
 
-    private static object ParseEnumDynamic(Type enumType, string value)
+    private static TarotCardSourceConfig? PopulateTarotSources(IReader data)
     {
-        if (Enum.TryParse(enumType, value, ignoreCase: true, out var parsed))
-            return parsed!;
-
-        var normalized = value
-            .Replace(" ", "", StringComparison.Ordinal)
-            .Replace("-", "", StringComparison.Ordinal)
-            .Replace("_", "", StringComparison.Ordinal);
-        if (Enum.TryParse(enumType, normalized, ignoreCase: true, out parsed))
-            return parsed!;
-
-        throw new InvalidOperationException(
-            $"Cannot parse '{value}' as {enumType.Name}. Known values: {string.Join(", ", Enum.GetNames(enumType))}."
-        );
+        var block = data.GetObject("sources");
+        if (block is null)
+            return null;
+        ValidateKeys(block, TarotCardSourceConfig.SourceKeys, $"{nameof(TarotCardSourceConfig)} source");
+        return new TarotCardSourceConfig
+        {
+            ShopItems = block.GetIntArray("shopItems") ?? [],
+            BoosterPacks = block.GetIntArray("boosterPacks") ?? [],
+            Emperor = block.GetIntArray("emperor") ?? [],
+            PurpleSealOrEightBall = block.GetIntArray("purpleSealOrEightBall") ?? [],
+            CharmTag = block.GetBool("charmTag") ?? false,
+        };
     }
 
-    // The deliberate aliases in the whole grammar — two wire keys binding to one property —
-    // kept as small special cases rather than inventing an attribute for a couple of rules:
-    // requireMega/requireMegaPack -> RequireMegaPack (LegendaryJokerSourceConfig,
-    // SpectralCardSourceConfig); mult/value -> Mult (MisprintMultClause).
+    private static SpectralCardSourceConfig? PopulateSpectralSources(IReader data)
+    {
+        var block = data.GetObject("sources");
+        if (block is null)
+            return null;
+        ValidateKeys(block, SpectralCardSourceConfig.SourceKeys, $"{nameof(SpectralCardSourceConfig)} source");
+        return new SpectralCardSourceConfig
+        {
+            ShopItems = block.GetIntArray("shopItems") ?? [],
+            BoosterPacks = block.GetIntArray("boosterPacks") ?? [],
+            SixthSense = block.GetIntArray("sixthSense") ?? [],
+            Seance = block.GetIntArray("seance") ?? [],
+            EtherealTag = block.GetBool("etherealTag") ?? false,
+            RequireMegaPack =
+                block.GetBool("requireMegaPack")
+                ?? block.GetBool("requireMega")
+                ?? false,
+        };
+    }
+
+    private static PlanetSourceConfig? PopulatePlanetSources(IReader data)
+    {
+        var block = data.GetObject("sources");
+        if (block is null)
+            return null;
+        ValidateKeys(block, PlanetSourceConfig.SourceKeys, $"{nameof(PlanetSourceConfig)} source");
+        return new PlanetSourceConfig
+        {
+            ShopItems = block.GetIntArray("shopItems") ?? [],
+            BoosterPacks = block.GetIntArray("boosterPacks") ?? [],
+        };
+    }
+
+    private static StandardCardSourceConfig? PopulateStandardSources(IReader data)
+    {
+        var block = data.GetObject("sources");
+        if (block is null)
+            return null;
+        ValidateKeys(block, StandardCardSourceConfig.SourceKeys, $"{nameof(StandardCardSourceConfig)} source");
+        return new StandardCardSourceConfig
+        {
+            ShopItems = block.GetIntArray("shopItems") ?? [],
+            BoosterPacks = block.GetIntArray("boosterPacks") ?? [],
+            Certificate = block.GetIntArray("certificate") ?? [],
+            Incantation = block.GetIntArray("incantation") ?? [],
+            Familiar = block.GetIntArray("familiar") ?? [],
+            Grim = block.GetIntArray("grim") ?? [],
+            DeckDraw = block.GetIntArray("deckDraw") ?? [],
+        };
+    }
+
+    // requireMega/requireMegaPack and mult/value — deliberate aliases, not a reflection convention.
     private static string ResolveWireKeyAlias(string key) =>
         string.Equals(key, "requireMega", StringComparison.OrdinalIgnoreCase) ? "requireMegaPack"
         : string.Equals(key, "value", StringComparison.OrdinalIgnoreCase) ? "mult"
         : key;
 
-    private static string ToPascalCase(string camelCaseKey) =>
-        char.ToUpperInvariant(camelCaseKey[0]) + camelCaseKey[1..];
-
-    // The five joker-family clause types (Joker/CommonJoker/UncommonJoker/RareJoker/LegendaryJoker)
-    // share the same Jokers/IsWildcard property shape but different backing enum — that's the one
-    // piece the plan calls out as staying with its family rather than going fully generic, since
-    // it's already small and already correct.
     private static IJamlClause PopulateJokerFamily<TEnum>(
         string discriminator,
         NodeReader node,
@@ -223,11 +323,10 @@ public static partial class JamlConfigLoader
     )
         where TEnum : struct, Enum
     {
-        var entry = JamlDiscriminatorRegistry.Entries[discriminator];
-        var clause = Populate(discriminator, entry, node, data, antes, min, max, score, label);
-        var jokers = ParseJokerArray<TEnum>(node, discriminator, out var any);
-        entry.ClauseType.GetProperty("Jokers")!.SetValue(clause, jokers);
-        entry.ClauseType.GetProperty("IsWildcard")!.SetValue(clause, any);
+        var clause = Populate(discriminator, node, data, antes, min, max, score, label);
+        var discReader = DiscriminatorValueReader(node, discriminator);
+        if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
+            throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
         return clause;
     }
 
@@ -239,8 +338,29 @@ public static partial class JamlConfigLoader
         int min,
         int? max,
         int score,
-        string? label
+        string? label,
+        bool applyDiscriminatorValue = true
     )
-        where TClause : IJamlClause =>
-        (TClause)Populate(discriminator, JamlDiscriminatorRegistry.Entries[discriminator], node, data, antes, min, max, score, label);
+        where TClause : class, IJamlClause
+    {
+        var clause = (TClause)Populate(discriminator, node, data, antes, min, max, score, label);
+        if (applyDiscriminatorValue)
+        {
+            var discReader = DiscriminatorValueReader(node, discriminator);
+            if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
+                throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
+        }
+        return clause;
+    }
+
+    private static JamlLoaderValueReader DiscriminatorValueReader(NodeReader node, string discriminator)
+    {
+        if (node.GetStringArray(discriminator) is { } arr)
+            return JamlLoaderValueReader.FromStrings(arr);
+        if (node.GetIntArray(discriminator) is { } ints)
+            return JamlLoaderValueReader.FromStrings(
+                Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            );
+        return JamlLoaderValueReader.FromScalar(node.GetString(discriminator));
+    }
 }

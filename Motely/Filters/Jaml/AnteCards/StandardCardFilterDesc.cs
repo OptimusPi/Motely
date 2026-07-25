@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
     SourceConfigType = typeof(StandardCardSourceConfig))]
 public sealed class StandardCardClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources", "rank", "suit", "enhancement", "seal", "edition"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -26,9 +23,46 @@ public sealed class StandardCardClause : IJamlClause, IAnteScopedClause
 }
 
 public struct StandardCardFilterDesc(StandardCardClause clause)
-    : IMotelySeedFilterDesc<StandardCardFilterDesc.StandardCardFilter>
+    : IMotelySeedFilterDesc<StandardCardFilterDesc.StandardCardFilter>,
+      IJamlClauseDesc<StandardCardClause>
 {
     private readonly StandardCardClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["standardCard", "standardCards"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "sources", "rank", "suit", "enhancement", "seal", "edition"];
+
+    /// <inheritdoc/>
+    public static bool Set(StandardCardClause clause, string key, IJamlValueReader value)
+    {
+        switch (key.ToLowerInvariant())
+        {
+            case "rank":
+                if (!value.TryEnum<MotelyStandardcardRank>(out var rank)) return false;
+                clause.Rank = rank;
+                return true;
+            case "suit":
+                if (!value.TryEnum<MotelyStandardcardSuit>(out var suit)) return false;
+                clause.Suit = suit;
+                return true;
+            case "enhancement":
+                if (!value.TryEnum<MotelyItemEnhancement>(out var enh)) return false;
+                clause.Enhancement = enh;
+                return true;
+            case "seal":
+                if (!value.TryEnum<MotelyItemSeal>(out var seal)) return false;
+                clause.Seal = seal;
+                return true;
+            case "edition":
+                if (!value.TryEnum<MotelyItemEdition>(out var edition)) return false;
+                clause.Edition = edition;
+                return true;
+            default:
+                return false;
+        }
+    }
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Deferred specialty sources stay off by default.
@@ -192,4 +226,22 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
             return true;
         }
     }
+}
+
+/// <summary>
+/// <c>sources:</c> block for <c>standardCard:</c>. Colocated with <see cref="StandardCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record StandardCardSourceConfig
+{
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+
+    public int[] Certificate { get; set; } = [];
+    public int[] Incantation { get; set; } = [];
+    public int[] Familiar { get; set; } = [];
+    public int[] Grim { get; set; } = [];
+    public int[] DeckDraw { get; set; } = [];
 }

@@ -5,10 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- The JAML language server: JSON-RPC 2.0 over stdio, hand-rolled on purpose. LSP's
-         transport is ~50 lines of Content-Length framing, and owning it keeps the server a
-         plain, dependency-free exe that publishes self-contained for the Claude Code plugin:
-         dotnet publish Motely.Lsp -c Release -r win-x64 -\-self-contained -p:PublishSingleFile=true -->
+    <AssemblyName>Motely.Lsp</AssemblyName>
+    <!-- Hand-rolled JSON-RPC 2.0 over stdio. Thin shell: every answer comes from
+         Motely.Lsp.Core to the Motely engine. Publish self-contained for the VS Code extension:
+         dotnet publish Motely.Lsp -c Release -r osx-arm64 -p:SelfContained=true -p:PublishSingleFile=true -->
   </PropertyGroup>
 
   <ItemGroup>

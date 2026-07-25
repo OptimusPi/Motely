@@ -4,8 +4,13 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
-[JamlDiscriminator("tag", "tags", "smallBlindTag", "bigBlindTag",
+// Three attributes: tag/tags default both blind offers; the blind-specific wires pin one roll.
+[JamlDiscriminator("tag", "tags",
     ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 0, 1 })]
+[JamlDiscriminator("smallBlindTag",
+    ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 0 })]
+[JamlDiscriminator("bigBlindTag",
+    ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 1 })]
 public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
     /// <summary>Clause keys mirror TagFilterDesc's — the desc owns the grammar; shared by

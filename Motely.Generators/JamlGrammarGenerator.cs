@@ -16,9 +16,8 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
         var entries = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax,
-                transform: static (ctx, _) => ReadEntry(ctx))
-            .Where(static e => e is not null)
-            .Select(static (e, _) => e!.Value);
+                transform: static (ctx, _) => ReadEntries(ctx))
+            .SelectMany(static (list, _) => list);
 
         var collected = entries.Collect()
             .Select(static (entries, _) =>
@@ -27,57 +26,95 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(collected, static (spc, entries) => Emit(spc, entries));
     }
 
-    private static Entry? ReadEntry(GeneratorSyntaxContext ctx)
+    /// <summary>
+    /// One clause type may carry several [JamlDiscriminator] attributes
+    /// (different wires / rolls defaults). Each attribute becomes its own schema entry.
+    /// </summary>
+    private static ImmutableArray<Entry> ReadEntries(GeneratorSyntaxContext ctx)
     {
         if (ctx.Node is not ClassDeclarationSyntax classDecl)
-            return null;
+            return ImmutableArray<Entry>.Empty;
         if (ctx.SemanticModel.GetDeclaredSymbol(classDecl) is not INamedTypeSymbol type)
-            return null;
+            return ImmutableArray<Entry>.Empty;
 
-        var attr = type.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == AttributeFullName);
-        if (attr is null)
-            return null;
+        var attrs = type.GetAttributes()
+            .Where(a => a.AttributeClass?.ToDisplayString() == AttributeFullName)
+            .ToArray();
+        if (attrs.Length == 0)
+            return ImmutableArray<Entry>.Empty;
 
-        var wires = ExtractWires(attr);
-        if (wires.Length == 0)
-            return null;
-
-        var normalized = wires.Select(Normalize).ToArray();
         var clauseTypeFull = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        // T2: keys live on the FilterDesc (IJamlClauseDesc), not mirrored on the clause type.
+        var clauseKeysMember = FindClauseKeysForClause(type);
+        var builder = ImmutableArray.CreateBuilder<Entry>(attrs.Length);
 
-        var clauseKeysMember = FindClauseKeysMember(type);
+        foreach (var attr in attrs)
+        {
+            var wires = ExtractWires(attr);
+            if (wires.Length == 0)
+                continue;
 
-        var sourceConfigType = attr.NamedArguments
-            .FirstOrDefault(a => a.Key == "SourceConfigType").Value;
-        var sourceConfigFull = sourceConfigType.Kind == TypedConstantKind.Type
-            ? ((INamedTypeSymbol?)sourceConfigType.Value)?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-            : null;
-        var sourceKeysMember = sourceConfigFull is not null
-            ? FindSourceKeysMember(sourceConfigType)
-            : null;
+            var normalized = wires.Select(Normalize).ToArray();
 
-        var valueEnumType = attr.NamedArguments
-            .FirstOrDefault(a => a.Key == "ValueEnum").Value;
-        var valueEnumFull = valueEnumType.Kind == TypedConstantKind.Type
-            ? ((INamedTypeSymbol?)valueEnumType.Value)?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-            : null;
+            var sourceConfigType = attr.NamedArguments
+                .FirstOrDefault(a => a.Key == "SourceConfigType").Value;
+            var sourceConfigFull = sourceConfigType.Kind == TypedConstantKind.Type
+                ? ((INamedTypeSymbol?)sourceConfigType.Value)?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                : null;
+            var sourceKeysMember = sourceConfigFull is not null
+                ? FindSourceKeysMember(sourceConfigType)
+                : null;
 
-        var rollsInline = attr.NamedArguments
-            .FirstOrDefault(a => a.Key == "RollsAreInlineValue").Value;
-        bool rollsAreInlineValue = rollsInline.Kind == TypedConstantKind.Primitive
-            && rollsInline.Value is true;
+            var valueEnumType = attr.NamedArguments
+                .FirstOrDefault(a => a.Key == "ValueEnum").Value;
+            var valueEnumFull = valueEnumType.Kind == TypedConstantKind.Type
+                ? ((INamedTypeSymbol?)valueEnumType.Value)?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                : null;
 
-        var rollsDefault = attr.NamedArguments
-            .FirstOrDefault(a => a.Key == "RollsDefault").Value;
-        int[]? rollsDefaultArr = rollsDefault.Kind == TypedConstantKind.Array
-            ? rollsDefault.Values.Select(v => (int)v.Value!).ToArray()
-            : null;
+            var rollsInline = attr.NamedArguments
+                .FirstOrDefault(a => a.Key == "RollsAreInlineValue").Value;
+            bool rollsAreInlineValue = rollsInline.Kind == TypedConstantKind.Primitive
+                && rollsInline.Value is true;
 
-        return new Entry(
-            wires, normalized, clauseTypeFull, clauseKeysMember,
-            sourceConfigFull, sourceKeysMember,
-            valueEnumFull, rollsAreInlineValue, rollsDefaultArr);
+            var rollsDefault = attr.NamedArguments
+                .FirstOrDefault(a => a.Key == "RollsDefault").Value;
+            int[]? rollsDefaultArr = rollsDefault.Kind == TypedConstantKind.Array
+                ? rollsDefault.Values.Select(v => (int)v.Value!).ToArray()
+                : null;
+
+            builder.Add(new Entry(
+                wires, normalized, clauseTypeFull, clauseKeysMember,
+                sourceConfigFull, sourceKeysMember,
+                valueEnumFull, rollsAreInlineValue, rollsDefaultArr));
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Resolve ClauseKeys from the FilterDesc that owns the grammar.
+    /// Convention: <c>FooClause</c> → sibling <c>FooFilterDesc.ClauseKeys</c>
+    /// (IJamlClauseDesc). And/Or stay on <c>LogicClause</c>.
+    /// </summary>
+    private static string? FindClauseKeysForClause(INamedTypeSymbol clauseType)
+    {
+        if (clauseType.Name is "AndClause" or "OrClause")
+            return FindClauseKeysMember(clauseType);
+
+        if (clauseType.Name.EndsWith("Clause", StringComparison.Ordinal)
+            && clauseType.Name.Length > "Clause".Length)
+        {
+            var descName = clauseType.Name.Substring(0, clauseType.Name.Length - "Clause".Length) + "FilterDesc";
+            foreach (var desc in clauseType.ContainingNamespace.GetTypeMembers(descName))
+            {
+                var keys = FindClauseKeysMember(desc);
+                if (keys is not null)
+                    return keys;
+            }
+        }
+
+        // Fallback: keys declared on the clause/base (logic bags only after T2).
+        return FindClauseKeysMember(clauseType);
     }
 
     private static string[] ExtractWires(AttributeData attr)
@@ -145,6 +182,7 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
             sb.AppendLine("    public static System.Type? ValueEnumTypeFor(string discriminator) => null;");
             sb.AppendLine("    public static bool RollsAreInlineFor(string discriminator) => false;");
             sb.AppendLine("    public static int[]? RollsDefaultFor(string discriminator) => null;");
+            sb.AppendLine("    public static bool IsKnownDiscriminator(string discriminator) => false;");
             sb.AppendLine("    public static string[] Discriminators => [];");
             sb.AppendLine("    public static string[] NormalizedDiscriminators => [];");
             sb.AppendLine("}");
@@ -235,6 +273,22 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
         sb.AppendLine("    };");
         sb.AppendLine();
 
+        // IsKnownDiscriminator — supersedes hand JamlDiscriminatorRegistry.Entries.ContainsKey
+        var allNormalized = new HashSet<string>();
+        foreach (var e in all)
+            foreach (var n in e.Normalized)
+                allNormalized.Add(n);
+        sb.AppendLine("    public static bool IsKnownDiscriminator(string discriminator) => N(discriminator) switch");
+        sb.AppendLine("    {");
+        if (allNormalized.Count > 0)
+        {
+            var patterns = string.Join(" or ", allNormalized.OrderBy(n => n, StringComparer.Ordinal).Select(n => $"\"{n}\""));
+            sb.AppendLine($"        {patterns} => true,");
+        }
+        sb.AppendLine("        _ => false,");
+        sb.AppendLine("    };");
+        sb.AppendLine();
+
         // Discriminators array (all wire strings)
         sb.AppendLine("    public static string[] Discriminators =>");
         sb.AppendLine("    [");
@@ -247,15 +301,8 @@ public sealed class JamlGrammarGenerator : IIncrementalGenerator
         // NormalizedDiscriminators (distinct)
         sb.AppendLine("    public static string[] NormalizedDiscriminators =>");
         sb.AppendLine("    [");
-        var seen = new HashSet<string>();
-        foreach (var e in all)
-        {
-            foreach (var n in e.Normalized)
-            {
-                if (seen.Add(n))
-                    sb.AppendLine($"        \"{n}\",");
-            }
-        }
+        foreach (var n in allNormalized.OrderBy(x => x, StringComparer.Ordinal))
+            sb.AppendLine($"        \"{n}\",");
         sb.AppendLine("    ];");
 
         sb.AppendLine("}");

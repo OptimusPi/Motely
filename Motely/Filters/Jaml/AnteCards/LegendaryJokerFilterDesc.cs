@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyJoker), SourceConfigType = typeof(LegendaryJokerSourceConfig))]
 public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "soulCardOnly", "soulEditionRolls"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -38,9 +35,53 @@ public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
 }
 
 public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
-    : IMotelySeedFilterDesc<LegendaryJokerFilterDesc.LegendaryJokerFilter>
+    : IMotelySeedFilterDesc<LegendaryJokerFilterDesc.LegendaryJokerFilter>,
+      IJamlClauseDesc<LegendaryJokerClause>
 {
     private readonly LegendaryJokerClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["legendaryJoker", "legendaryJokers"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys =>
+        ["min", "max", "score", "label", "ante", "antes", "sources", "edition", "soulCardOnly", "soulEditionRolls"];
+
+    /// <inheritdoc/>
+    public static bool Set(LegendaryJokerClause clause, string key, IJamlValueReader value)
+    {
+        switch (key.ToLowerInvariant())
+        {
+            case "edition":
+                if (!value.TryEnum<MotelyItemEdition>(out var edition)) return false;
+                clause.Edition = edition;
+                return true;
+            case "soulcardonly":
+                if (!value.TryBool(out var soulOnly)) return false;
+                clause.SoulCardOnly = soulOnly;
+                return true;
+            case "souleditionrolls":
+                if (!value.TryInt(out var rolls)) return false;
+                clause.SoulEditionRolls = rolls;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(LegendaryJokerClause clause, IJamlValueReader value)
+    {
+        if (value.IsAny)
+        {
+            clause.IsWildcard = true;
+            return true;
+        }
+        if (!value.TryEnumArray<MotelyJoker>(out var jokers))
+            return false;
+        clause.Jokers = jokers;
+        return true;
+    }
 
     /// <summary>Source of truth for legendary/Soul defaults when a clause gives no <c>sources:</c> block:
     /// the SIMD/vector path walks all 6 booster-pack slots (legacy type-agnostic mode — both arcana and
@@ -160,5 +201,58 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                 }
             );
         }
+    }
+}
+
+/// <summary>
+/// <c>sources:</c> block for <c>legendaryJoker:</c>. Colocated with
+/// <see cref="LegendaryJokerFilterDesc"/> (T5).
+/// </summary>
+public sealed record LegendaryJokerSourceConfig
+{
+    /// <summary>
+    /// requireMega/requireMegaPack are both real aliases the loader accepts for the one
+    /// RequireMegaPack bool below — the only case where this list has two entries for one
+    /// property, and it's a deliberate alias, not drift.
+    /// </summary>
+    public static readonly string[] SourceKeys =
+        ["boosterPacks", "arcanaPacks", "spectralPacks", "soulCard", "requireMega", "requireMegaPack"];
+
+    // No ShopItems: shops never offer legendary/Soul jokers, so a shop slot would silently match
+    // nothing. The loader rejects a `shopItems:` key on legendaryJoker sources outright.
+
+    /// <summary>
+    /// Legacy: pack offering slots where The Soul may count from either arcana or Spectral path.
+    /// Ignored for slot matching when <see cref="ArcanaPacks"/> or <see cref="SpectralPacks"/> is non-empty.
+    /// </summary>
+    public int[] BoosterPacks { get; set; } = [];
+
+    /// <summary>
+    /// If non-empty (or <see cref="SpectralPacks"/> non-empty), only listed slots are checked on the arcana/Tarot path.
+    /// </summary>
+    public int[] ArcanaPacks { get; set; } = [];
+
+    /// <summary>Only listed slots on the Spectral pack path.</summary>
+    public int[] SpectralPacks { get; set; } = [];
+
+    public int[] SoulCard { get; set; } = [];
+
+    /// <summary>If true, only Mega-sized booster packs (e.g. Charm Tag Mega arcana) match.</summary>
+    public bool RequireMegaPack { get; set; }
+
+    /// <summary>Largest referenced pack slot index across all booster source arrays (-1 if none).</summary>
+    public int MaxReferencedBoosterSlot()
+    {
+        int m = -1;
+        foreach (var x in BoosterPacks)
+            if (x > m)
+                m = x;
+        foreach (var x in ArcanaPacks)
+            if (x > m)
+                m = x;
+        foreach (var x in SpectralPacks)
+            if (x > m)
+                m = x;
+        return m;
     }
 }

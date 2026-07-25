@@ -7,12 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("luckyMoney", RollsAreInlineValue = true)]
 public sealed class LuckyMoneyClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list. Has a With
-    /// property, so with/luck/vouchers/sources(-as-luck-container) are genuinely valid here —
-    /// unlike clause types with no With property, where the old loader silently accepted and
-    /// dropped them.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -22,9 +16,19 @@ public sealed class LuckyMoneyClause : IRollScopedClause
 }
 
 public struct LuckyMoneyFilterDesc(LuckyMoneyClause clause)
-    : IMotelySeedFilterDesc<LuckyMoneyFilterDesc.LuckyMoneyFilter>
+    : IMotelySeedFilterDesc<LuckyMoneyFilterDesc.LuckyMoneyFilter>,
+      IJamlClauseDesc<LuckyMoneyClause>
 {
     private readonly LuckyMoneyClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["luckyMoney"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "with"];
+
+    /// <inheritdoc/>
+    public static bool Set(LuckyMoneyClause clause, string key, IJamlValueReader value) => false;
 
     public LuckyMoneyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

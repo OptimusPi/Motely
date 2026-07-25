@@ -1,8 +1,8 @@
 {
   "name": "jaml-language-support",
-  "displayName": "Jimbo's Ante Markup Language",
-  "description": "Write JAML filters and run Balatro seed searches without leaving the editor.",
-  "version": "2.1.0",
+  "displayName": "JAML (Motely)",
+  "description": "Real JAML language support: Motely.Lsp over stdio — engine diagnostics, hover, and completion.",
+  "version": "3.0.0",
   "publisher": "pifreak",
   "license": "MIT",
   "engines": {
@@ -26,7 +26,8 @@
         "id": "jaml",
         "aliases": [
           "JAML",
-          "jaml"
+          "jaml",
+          "Jimbo's Ante Markup Language"
         ],
         "extensions": [
           ".jaml"
@@ -34,101 +35,23 @@
         "configuration": "./language-configuration.json"
       }
     ],
-    "chatParticipants": [
-      {
-        "id": "jaml.jimbo",
-        "name": "Jimbo",
-        "fullName": "Jimbo",
-        "description": "Write a JAML filter. Every answer is checked against the Motely engine before you see it.",
-        "isSticky": true,
-        "commands": [
-          {
-            "name": "filter",
-            "description": "Draft a JAML filter from a description, validated against the engine"
-          },
-          {
-            "name": "vocabulary",
-            "description": "List the real clause keys and value names the engine accepts"
-          }
-        ],
-        "disambiguation": [
-          {
-            "category": "jaml",
-            "description": "The user wants to write, fix, or understand a JAML filter for Balatro seed searching.",
-            "examples": [
-              "find me a seed with Perkeo in ante 1",
-              "why won't this jaml load",
-              "what's the key for planet cards"
-            ]
-          }
-        ]
-      }
-    ],
-    "languageModelTools": [
-      {
-        "name": "jaml_validate",
-        "displayName": "Validate JAML",
-        "modelDescription": "Validate a JAML filter against the real Motely engine. Returns 'valid' or the engine's exact parse/validation error. ALWAYS call this before showing a user any JAML — the engine is the only authority on which clause keys and value names exist, and invented keys like 'planet:' or values like '*any*' are common and will be rejected.",
-        "toolReferenceName": "jamlValidate",
-        "canBeReferencedInPrompt": true,
-        "icon": "$(check)",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "jaml": {
-              "type": "string",
-              "description": "The full JAML document text to validate."
-            }
-          },
-          "required": [
-            "jaml"
-          ]
-        }
-      }
-    ],
-    "commands": [
-      {
-        "command": "jaml.findOne",
-        "title": "Motely: Find One Seed",
-        "icon": "$(search)"
-      },
-      {
-        "command": "jaml.search",
-        "title": "Motely: Search This Filter",
-        "icon": "$(play)"
-      },
-      {
-        "command": "jaml.stop",
-        "title": "Motely: Stop Search",
-        "icon": "$(debug-stop)"
-      }
-    ],
-    "menus": {
-      "editor/title": [
-        {
-          "command": "jaml.findOne",
-          "when": "resourceLangId == jaml",
-          "group": "navigation@1"
-        },
-        {
-          "command": "jaml.search",
-          "when": "resourceLangId == jaml",
-          "group": "navigation@2"
-        }
-      ]
-    },
     "configuration": {
       "title": "JAML",
       "properties": {
-        "jaml.cliPath": {
+        "jaml.serverPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the Motely CLI executable. Leave empty to use 'dotnet run --project Motely.CLI' from the workspace root."
+          "description": "Absolute path to the Motely.Lsp executable. Empty = bundled server/Motely.Lsp, else workspace `dotnet run --project Motely.Lsp`."
         },
-        "jaml.threads": {
-          "type": "number",
-          "default": 0,
-          "description": "Threads to search with. 0 uses the CLI default."
+        "jaml.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace Motely.Lsp ↔ VS Code communication in the Output panel."
         }
       }
     }
@@ -137,8 +60,10 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "vsce package",
-    "publish:vsce": "vsce publish",
-    "publish:ovsx": "ovsx publish"
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

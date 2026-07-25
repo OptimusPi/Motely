@@ -4,6 +4,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Motely.Tests")]
 [assembly: InternalsVisibleTo("Motely.CLI")]
 [assembly: InternalsVisibleTo("MotelyWorker")]
-// The language service reads JamlSyntaxException.Span so an editor squiggle lands on the
-// offending character instead of being regexed back out of the message text.
 [assembly: InternalsVisibleTo("Motely.Lsp.Core")]
+[assembly: InternalsVisibleTo("Motely.Lsp")]

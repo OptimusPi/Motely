@@ -11,10 +11,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyJoker), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class JokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Clause keys mirror JokerFilterDesc's — the desc owns the grammar, but the
-    /// clause type needs the field for key validation and schema generation.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -387,9 +383,6 @@ public struct JokerFilterDesc(JokerClause clause)
     ValueEnum = typeof(MotelyJokerCommon), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -406,9 +399,6 @@ public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
     ValueEnum = typeof(MotelyJokerUncommon), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -425,9 +415,6 @@ public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
     ValueEnum = typeof(MotelyJokerRare), SourceConfigType = typeof(JokerSourceConfig))]
 public sealed class RareJokerClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Same shape as JokerClause — reuse JokerFilterDesc's ClauseKeys directly, no second copy.</summary>
-    public static readonly string[] ClauseKeys = JokerFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -438,4 +425,45 @@ public sealed class RareJokerClause : IJamlClause, IAnteScopedClause
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
     public JokerSourceConfig? Sources { get; set; }
+}
+
+/// <summary>
+/// <c>sources:</c> block for joker / common / uncommon / rare clauses. Lives with the joker
+/// desc family (T5) — not on the dumb <see cref="JamlConfig"/> bag.
+/// </summary>
+public sealed record JokerSourceConfig
+{
+    /// <summary>
+    /// This class's settable properties, camelCased — the single list JamlConfigLoader
+    /// ValidateKeys and Motely.Schema both read. <c>emperor</c> lives on
+    /// <see cref="TarotCardSourceConfig"/>, not here.
+    /// </summary>
+    public static readonly string[] SourceKeys =
+    [
+        "shopItems", "boosterPacks", "judgement", "wraith", "riffRaff", "rareTag", "uncommonTag",
+        "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers",
+    ];
+
+    /// <summary>Assembled shop slots via the full shop item stream (any item type).</summary>
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
+
+    /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
+    public int[] Judgement { get; set; } = [];
+    public int[] Wraith { get; set; } = [];
+    public int[] RiffRaff { get; set; } = [];
+    public int[] RareTag { get; set; } = [];
+    public int[] UncommonTag { get; set; } = [];
+
+    /// <summary>0..n rolls on the common shop joker PRNG only (fast path).</summary>
+    public int[] CommonShopJokers { get; set; } = [];
+
+    /// <summary>0..n rolls on the uncommon shop joker PRNG only (fast path; not the same indices as <see cref="ShopItems"/> when slots mix types).</summary>
+    public int[] UncommonShopJokers { get; set; } = [];
+
+    /// <summary>0..n rolls on the rare shop joker PRNG only (fast path).</summary>
+    public int[] RareShopJokers { get; set; } = [];
+
+    /// <summary>0..n rolls on the all-rarity shop joker stream (fast path).</summary>
+    public int[] AllShopJokers { get; set; } = [];
 }

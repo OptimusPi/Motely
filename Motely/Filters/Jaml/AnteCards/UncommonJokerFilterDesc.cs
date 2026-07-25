@@ -6,9 +6,48 @@ using static Motely.MotelyVectorUtils;
 namespace Motely.Filters.Jaml;
 
 public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
-    : IMotelySeedFilterDesc<UncommonJokerFilterDesc.UncommonJokerFilter>
+    : IMotelySeedFilterDesc<UncommonJokerFilterDesc.UncommonJokerFilter>,
+      IJamlClauseDesc<UncommonJokerClause>
 {
     private readonly UncommonJokerClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["uncommonJoker", "uncommonJokers"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => JokerFilterDesc.ClauseKeys;
+
+    /// <inheritdoc/>
+    public static bool Set(UncommonJokerClause clause, string key, IJamlValueReader value)
+    {
+        switch (key.ToLowerInvariant())
+        {
+            case "edition":
+                if (!value.TryEnum<MotelyItemEdition>(out var edition)) return false;
+                clause.Edition = edition;
+                return true;
+            case "stickers":
+                if (!value.TryEnumArray<MotelyJokerSticker>(out var stickers)) return false;
+                clause.Stickers = stickers;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(UncommonJokerClause clause, IJamlValueReader value)
+    {
+        if (value.IsAny)
+        {
+            clause.IsWildcard = true;
+            return true;
+        }
+        if (!value.TryEnumArray<MotelyJokerUncommon>(out var jokers))
+            return false;
+        clause.Jokers = jokers;
+        return true;
+    }
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — 8 shop slots + 6 packs.
     /// Specialty/fast-path sources stay off by default. Applied only when <c>Sources</c> is null.</summary>

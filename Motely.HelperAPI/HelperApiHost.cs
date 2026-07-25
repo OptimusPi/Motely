@@ -8,11 +8,10 @@ using Motely.DistributedWorker;
 namespace Motely.HelperAPI;
 
 /// <summary>
-/// The real Motely API — built once here, run two ways: as the standalone
+/// Motely API host — built once here, run two ways: as the standalone
 /// <c>Motely.HelperAPI</c> executable (<see cref="Program"/>'s <c>app.Run()</c>), and in-process
 /// from <c>Motely.TUI</c>'s ApiServerWindow (<c>StartAsync</c>/<c>WaitForShutdownAsync</c>/
-/// <c>StopAsync</c> for interactive start/stop control). One implementation, two callers — the
-/// TUI used to build its own second copy of this inline; that's what this file replaces.
+/// <c>StopAsync</c> for interactive start/stop). One implementation, two callers.
 /// </summary>
 public static class HelperApiHost
 {
@@ -113,6 +112,63 @@ public static class HelperApiHost
                 FilterId: o.FilterId
             ));
         });
+
+        // ── JAML validation — the engine's own loader is the ground truth, so JAMMY
+        //    (or any client) validates against exactly what the searcher accepts.
+        app.MapPost("/api/validate", (ValidateRequest req) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Jaml))
+                return Results.BadRequest(new ErrorResponse("Missing jaml text."));
+
+            bool ok = Motely.Filters.Jaml.JamlConfigLoader.TryLoad(
+                req.Jaml, out var config, out string? error);
+
+            var errors = new List<string>();
+            if (!ok && error is not null)
+                errors.Add(error);
+            if (ok && config is not null)
+            {
+                if (config.Must.Count + config.Should.Count + config.MustNot.Count == 0)
+                    errors.Add("warning: no must/should/mustNot clauses — this filter matches every seed.");
+            }
+            return Results.Ok(new ValidateResponse(ok && errors.Count == 0, errors));
+        });
+
+        // ── Multi-search (Motely Launchpad) ─────────────────────────────────
+        // The CLI/TUI run one filter at a time; these endpoints run K JAML filters
+        // concurrently in-process, each with its own engine thread pool, and expose
+        // live progress + found seeds for the dashboard in wwwroot.
+
+        app.MapGet("/api/filters", () => Results.Ok(SearchJobManager.ListFilters()));
+
+        app.MapGet("/api/filters/{name}", (string name) =>
+            SearchJobManager.ReadFilterJaml(name) is { } jaml
+                ? Results.Text(jaml, "text/plain")
+                : Results.NotFound(new ErrorResponse($"Filter '{name}' not found.")));
+
+        app.MapPost("/api/search", (StartSearchRequest req) =>
+        {
+            try
+            {
+                return Results.Ok(new StartSearchResponse(SearchJobManager.Start(req)));
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new ErrorResponse(ex.Message));
+            }
+        });
+
+        app.MapGet("/api/search", () => Results.Ok(SearchJobManager.ListJobs()));
+
+        app.MapGet("/api/search/{id}", (string id) =>
+            SearchJobManager.GetResults(id) is { } results
+                ? Results.Ok(results)
+                : Results.NotFound(new ErrorResponse($"Job '{id}' not found.")));
+
+        app.MapPost("/api/search/{id}/stop", (string id) =>
+            SearchJobManager.Stop(id)
+                ? Results.Ok(new StopSearchResponse(true))
+                : Results.NotFound(new ErrorResponse($"Job '{id}' not found.")));
 
         return app;
     }

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Motely.Lsp;
+using Motely.Lsp.Core;
 
 namespace Motely.Tests;
 
@@ -131,6 +132,17 @@ public class LspServerProtocolTests
 
         var error = ResponseTo(messages, 2)["error"]!;
         Assert.Equal(-32601, error["code"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public void Diagnose_UnderlinesUnknownKeyAtItsSpan()
+    {
+        // Key also appears as a value earlier — span must land on the key line, not first occurrence.
+        var text = "name: boses\nboses:\n";
+        var diags = JamlLanguageService.Diagnose(text);
+        var d = Assert.Single(diags);
+        Assert.Contains("boses", d.Message);
+        Assert.Equal(1, d.Span.StartLine);
     }
 
     // ── Session plumbing ────────────────────────────────────────────────────────────────

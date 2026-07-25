@@ -44,9 +44,7 @@ public static class JamlFileLoader
             return false;
         }
 
-        return string.Equals(Path.GetExtension(path), ".json", StringComparison.OrdinalIgnoreCase)
-            ? JamlConfigLoader.TryLoadFromJson(content, out config, out error)
-            : JamlConfigLoader.TryLoad(content, out config, out error);
+        return JamlConfigLoader.TryLoad(content, out config, out error);
     }
 
     /// <summary>

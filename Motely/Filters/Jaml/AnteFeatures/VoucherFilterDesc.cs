@@ -23,7 +23,7 @@ public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedC
     /// Voucher-stream indices per ante: 0 = ante award, 1+ = further draws on that ante's
     /// voucher stream (Hieroglyph bonus, voucher-tag shop extras, etc.).
     /// </summary>
-    public int[] Rolls { get; set; } = [];
+    public int[] Rolls { get; set; } = [0];
 }
 
 public struct VoucherFilterDesc(VoucherClause clause)

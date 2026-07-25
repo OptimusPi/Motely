@@ -17,3 +17,5 @@ should:
     max: 1
   - erraticRank: Nine
     score: 1
+
+seeds: []

@@ -128,31 +128,6 @@ ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItemVector GetNextShopTarotOrNull(
-        ref MotelyVectorTarotStream tarotStream,
-        ref MotelyVectorPrngStream itemTypeStream,
-        Vector512<double> totalRate,
-        Vector512<double> tarotRate
-    )
-    {
-        // Check what type this slot is
-        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
-        itemTypePoll -= Vector512.Create(20.0); // Skip joker range
-        var isTarotSlot = Vector512.LessThan(itemTypePoll, tarotRate);
-
-        // Only advance Tarot stream for Tarot slots
-        var Tarot = GetNextTarot(ref tarotStream, isTarotSlot);
-
-        // Return Tarot or None for non-Tarot slots
-        var tarotIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isTarotSlot);
-        var noneItem = Vector256<int>.Zero;
-
-        return new MotelyItemVector(
-            Vector256.ConditionalSelect(tarotIntMask, Tarot.Value, noneItem)
-        );
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector GetNextTarot(
         ref MotelyVectorTarotStream tarotStream,
         in Vector512<double> mask

@@ -224,7 +224,7 @@ public class MainMenuWindow : View
         {
             ShowErrorDialog(
                 "No Filters Found",
-                "No filter files found in JsonFilters/ or JamlFilters/"
+                "No filter files found in JamlFilters/"
             );
             return;
         }

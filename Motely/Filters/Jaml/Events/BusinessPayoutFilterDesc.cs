@@ -7,10 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("businessPayout", RollsAreInlineValue = true)]
 public sealed class BusinessPayoutClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list. No With
-    /// property here (flat 50/50, see below) — with/luck/vouchers are NOT valid on this clause.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -22,9 +18,19 @@ public sealed class BusinessPayoutClause : IRollScopedClause
 }
 
 public struct BusinessPayoutFilterDesc(BusinessPayoutClause clause)
-    : IMotelySeedFilterDesc<BusinessPayoutFilterDesc.BusinessPayoutFilter>
+    : IMotelySeedFilterDesc<BusinessPayoutFilterDesc.BusinessPayoutFilter>,
+      IJamlClauseDesc<BusinessPayoutClause>
 {
     private readonly BusinessPayoutClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["businessPayout"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label"];
+
+    /// <inheritdoc/>
+    public static bool Set(BusinessPayoutClause clause, string key, IJamlValueReader value) => false;
 
     public BusinessPayoutFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

@@ -7,8 +7,8 @@ namespace Motely.Lsp;
 
 /// <summary>
 /// The JAML language server: a single-threaded message loop over <see cref="JsonRpcChannel"/>
-/// that answers the LSP subset editors and Claude Code actually consume — lifecycle, document
-/// sync with published diagnostics, hover, and completion. Every answer comes from
+/// that answers the LSP subset editors actually consume — lifecycle, document sync with
+/// published diagnostics, hover, and completion. Every answer comes from
 /// <see cref="JamlLanguageService"/>, which reads the engine's own grammar.
 /// Logging goes to <paramref name="log"/> (stderr in production) — stdout is the protocol.
 /// </summary>
@@ -122,8 +122,6 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
         }
     }
 
-    // ── Results ─────────────────────────────────────────────────────────────────────────
-
     private static JsonObject InitializeResult() => new()
     {
         ["capabilities"] = new JsonObject
@@ -203,8 +201,6 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
             ["diagnostics"] = diagnostics,
         }));
     }
-
-    // ── Plumbing ────────────────────────────────────────────────────────────────────────
 
     private (string? Text, int Line, int Character) TextDocumentPosition(JsonNode? @params)
     {

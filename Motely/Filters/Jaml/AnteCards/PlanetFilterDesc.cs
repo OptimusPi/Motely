@@ -8,9 +8,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyPlanetCard), SourceConfigType = typeof(PlanetSourceConfig))]
 public sealed class PlanetCardClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "ante", "antes", "sources"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -24,9 +21,30 @@ public sealed class PlanetCardClause : IJamlClause, IAnteScopedClause
 }
 
 public struct PlanetCardFilterDesc(PlanetCardClause clause)
-    : IMotelySeedFilterDesc<PlanetCardFilterDesc.PlanetCardFilter>
+    : IMotelySeedFilterDesc<PlanetCardFilterDesc.PlanetCardFilter>,
+      IJamlClauseDesc<PlanetCardClause>
 {
     private readonly PlanetCardClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["planetCard", "planetCards"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "ante", "antes", "sources"];
+
+    /// <inheritdoc/>
+    public static bool Set(PlanetCardClause clause, string key, IJamlValueReader value)
+    {
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public static bool SetDiscriminatorValue(PlanetCardClause clause, IJamlValueReader value)
+    {
+        if (!value.TryEnumArray<MotelyPlanetCard>(out var planets)) return false;
+        clause.Planets = planets;
+        return true;
+    }
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
     /// (8 shop slots) plus the 6 booster packs. Applied only when <c>Sources</c> is null, so a
@@ -207,4 +225,15 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
             return mask;
         }
     }
+}
+
+/// <summary>
+/// <c>sources:</c> block for <c>planetCard:</c>. Colocated with <see cref="PlanetCardFilterDesc"/> (T5).
+/// </summary>
+public sealed record PlanetSourceConfig
+{
+    public static readonly string[] SourceKeys = ["shopItems", "boosterPacks"];
+
+    public int[] ShopItems { get; set; } = [];
+    public int[] BoosterPacks { get; set; } = [];
 }

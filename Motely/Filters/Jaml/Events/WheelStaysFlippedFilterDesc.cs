@@ -7,9 +7,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("wheelStaysFlipped", RollsAreInlineValue = true)]
 public sealed class WheelStaysFlippedClause : IRollScopedClause
 {
-    /// <summary>This clause's complete, final clause-level key list.</summary>
-    public static readonly string[] ClauseKeys = ["min", "max", "score", "label", "with"];
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }
@@ -19,9 +16,19 @@ public sealed class WheelStaysFlippedClause : IRollScopedClause
 }
 
 public struct WheelStaysFlippedFilterDesc(WheelStaysFlippedClause clause)
-    : IMotelySeedFilterDesc<WheelStaysFlippedFilterDesc.WheelStaysFlippedFilter>
+    : IMotelySeedFilterDesc<WheelStaysFlippedFilterDesc.WheelStaysFlippedFilter>,
+      IJamlClauseDesc<WheelStaysFlippedClause>
 {
     private readonly WheelStaysFlippedClause _clause = clause;
+
+    /// <inheritdoc/>
+    public static string[] Discriminators => ["wheelStaysFlipped"];
+
+    /// <inheritdoc/>
+    public static string[] ClauseKeys => ["min", "max", "score", "label", "with"];
+
+    /// <inheritdoc/>
+    public static bool Set(WheelStaysFlippedClause clause, string key, IJamlValueReader value) => false;
 
     public WheelStaysFlippedFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

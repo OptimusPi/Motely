@@ -6,8 +6,8 @@ namespace Motely.Lsp.Core;
 /// The JAML language brain: diagnostics, hover, and completion computed directly off the
 /// engine's own grammar — <c>JamlSchema</c> (generated from <c>[JamlDiscriminator]</c>),
 /// <c>JamlConfigLoader</c> (the one true parser), and the engine's enums (the one true
-/// vocabulary). Protocol-free on purpose: the stdio server, the WASM package, and tests all
-/// call these same three methods, so the grammar stays authored exactly once, in C#.
+/// vocabulary). Protocol-free on purpose: the stdio server and tests call these same methods,
+/// so the grammar stays authored exactly once, in C#.
 /// </summary>
 public static class JamlLanguageService
 {
@@ -92,7 +92,6 @@ public static class JamlLanguageService
         if (word.Length == 0)
             return null;
 
-        // A discriminator — the head of a clause.
         if (IsDiscriminator(word))
         {
             var keys = JamlSchema.ClauseKeysFor(word);
@@ -107,13 +106,11 @@ public static class JamlLanguageService
             return new JamlHoverInfo(span, md);
         }
 
-        // A vocabulary name — joker, voucher, tag, boss, and friends.
         foreach (var (enumType, kind) in JamlVocabulary.Enums)
             if (Enum.GetNames(enumType).FirstOrDefault(n =>
                     n.Equals(word, StringComparison.OrdinalIgnoreCase)) is { } exact)
                 return new JamlHoverInfo(span, $"**{exact}** — {kind} (`{enumType.Name}`)");
 
-        // A clause key inside a known clause.
         var context = ContextAt(lines, line);
         if (context.Discriminator is { } disc)
         {
@@ -149,11 +146,9 @@ public static class JamlLanguageService
     private static IReadOnlyList<JamlCompletionItem> CompleteValue(
         string[] lines, int line, string key, string valuePrefix)
     {
-        // Root-level deck/stake, and any clause key with a known enum vocabulary.
         if (JamlVocabulary.EnumForKey(key) is { } keyEnum)
             return FilterNames(Enum.GetNames(keyEnum), valuePrefix, "value", keyEnum.Name);
 
-        // The discriminator's own value: `joker: Lu` completes LuckyCat.
         if (IsDiscriminator(key) && JamlSchema.ValueEnumTypeFor(key) is { } valueEnum)
         {
             var names = Enum.GetNames(valueEnum).ToList();
@@ -167,28 +162,23 @@ public static class JamlLanguageService
     private static IReadOnlyList<JamlCompletionItem> CompleteKey(
         string[] lines, int line, int indent, bool isListItem, string typed)
     {
-        // Top of the document: the root keys.
         if (indent == 0 && !isListItem)
             return FilterNames(JamlConfig.RootKeys, typed, "key", "JAML root key");
 
         var context = ContextAt(lines, line);
 
-        // A fresh list item under must/should/mustNot starts with a discriminator.
         if (isListItem && context.InClauseList)
             return FilterNames(
                 JamlSchema.Discriminators.Distinct(StringComparer.OrdinalIgnoreCase),
                 typed, "discriminator", "JAML clause");
 
-        // Inside a sources: block — the clause's source keys.
         if (context.BlockKey is "sources" && context.Discriminator is { } srcDisc)
             return FilterNames(
                 JamlSchema.SourceKeysFor(srcDisc) ?? [], typed, "key", $"{srcDisc} source key");
 
-        // Inside a with: block — luck and vouchers.
         if (context.BlockKey is "with")
             return FilterNames(JamlClause.WithBlockKeys, typed, "key", "with-block key");
 
-        // Inside a clause body — that clause's keys.
         if (context.Discriminator is { } disc)
             return FilterNames(JamlSchema.ClauseKeysFor(disc), typed, "key", $"{disc} clause key");
 
@@ -240,9 +230,6 @@ public static class JamlLanguageService
             if (raw.Trim().Length == 0)
                 continue;
             var lineIndent = EffectiveIndent(raw);
-            // Sibling keys and the clause's own `- disc:` line sit at the SAME effective
-            // indent as the cursor line — they're part of the enclosing shape, so a strict
-            // "lower only" walk would skip the discriminator itself.
             if (i != line && lineIndent > reference)
                 continue;
             if (i != line)
@@ -274,8 +261,6 @@ public static class JamlLanguageService
         return new LineContext(discriminator, blockKey, inClauseList);
     }
 
-    /// <summary>Indentation where a list-item dash counts as content, so the keys inside
-    /// <c>- joker: X</c> nest under the item, matching how the document parser scopes them.</summary>
     private static int EffectiveIndent(string line)
     {
         var indent = CountIndent(line);

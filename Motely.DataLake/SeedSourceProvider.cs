@@ -43,7 +43,8 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
         var ext = Path.GetExtension(path).ToLowerInvariant();
         // JSON/JAML sources carry structure around their seeds, so the shape test is
         // what separates seed from scaffolding — it always applies for them.
-        bool structured = ext is ".json" or ".jaml" or ".yaml" or ".yml";
+        // .json here is a seed-list file (DuckDB), not a JAML filter loader.
+        bool structured = ext is ".json" or ".jaml";
 
         string select = distinct ? "SELECT DISTINCT" : "SELECT";
         // Seeds arrive scrubbed: stray whitespace and carriage returns (mixed-newline
@@ -73,7 +74,7 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
                 ) AS seed FROM (SELECT content::JSON AS j FROM read_text('{EscapeSql(path)}')))
                 """,
             // A JAML file is a seed source too: its seeds: block lists one seed per line.
-            ".jaml" or ".yaml" or ".yml" => $$"""
+            ".jaml" => $$"""
                 (SELECT unnest(regexp_extract_all(
                     regexp_extract(content, '(?ms)^seeds:(.*)$', 1),
                     '(?m)^\s*-\s*([1-9A-Z]{1,8})\s*$', 1

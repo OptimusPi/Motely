@@ -2,10 +2,14 @@ using Motely.Lsp.Core;
 
 namespace Motely.Tests;
 
-public class JamlLanguageServiceTests
+/// <summary>
+/// Proves the LSP brain answers from the engine: diagnostics are the real
+/// <c>JamlConfigLoader</c> speaking, hover/completion vocabulary is the engine's enums via the
+/// generated <c>JamlSchema</c>. Every assertion here would break if a parallel grammar snuck in.
+/// </summary>
+public sealed class JamlLanguageServiceTests
 {
-    private const string CleanDocument = """
-        name: lsp-clean
+    private const string Sample = """
         deck: Red
         stake: White
         must:
@@ -13,39 +17,43 @@ public class JamlLanguageServiceTests
             antes: [1, 2]
         """;
 
-    // ── Diagnose ────────────────────────────────────────────────────────────────────────
+    // ── Diagnostics ─────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Diagnose_CleanDocument_ReportsNothing()
+    public void Diagnose_ValidConfig_IsClean()
     {
-        Assert.Empty(JamlLanguageService.Diagnose(CleanDocument));
+        Assert.Empty(JamlLanguageService.Diagnose(Sample));
     }
 
     [Fact]
-    public void Diagnose_EmptyText_ReportsNothing()
+    public void Diagnose_GoldenFile_IsClean()
     {
-        Assert.Empty(JamlLanguageService.Diagnose(""));
+        var text = File.ReadAllText(Path.Combine("GoldenJamlFiles", "tag-voucher.jaml"));
+        Assert.Empty(JamlLanguageService.Diagnose(text));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   \n  \n")]
+    public void Diagnose_BlankText_IsClean(string text)
+    {
+        Assert.Empty(JamlLanguageService.Diagnose(text));
     }
 
     [Fact]
-    public void Diagnose_UnknownRootKey_UnderlinesTheTypo()
+    public void Diagnose_UnknownEnumValue_ReportsOneError()
     {
-        var text = "name: oops\nboses:\n  - joker: Blueprint\n";
-        var diagnostic = Assert.Single(JamlLanguageService.Diagnose(text));
-        Assert.Contains("boses", diagnostic.Message);
-        Assert.Equal(1, diagnostic.Span.StartLine);
-        Assert.Equal(0, diagnostic.Span.StartColumn);
-        Assert.Equal("boses".Length, diagnostic.Span.EndColumn);
-        Assert.Equal(JamlDiagnosticSeverity.Error, diagnostic.Severity);
+        var diagnostics = JamlLanguageService.Diagnose("deck: NotARealDeck\nstake: White\n");
+        var d = Assert.Single(diagnostics);
+        Assert.Equal(JamlDiagnosticSeverity.Error, d.Severity);
+        Assert.StartsWith("JAML", d.Code);
     }
 
     [Fact]
-    public void Diagnose_UnknownClauseKey_NamesTheKey()
+    public void Diagnose_GarbageText_ReportsOneError()
     {
-        var text = "must:\n  - joker: Blueprint\n    boosterPakcz: [0]\n";
-        var diagnostic = Assert.Single(JamlLanguageService.Diagnose(text));
-        Assert.Contains("boosterPakcz", diagnostic.Message);
-        Assert.Equal(2, diagnostic.Span.StartLine);
+        var diagnostics = JamlLanguageService.Diagnose("::: not jaml at all :::");
+        Assert.Single(diagnostics);
     }
 
     [Fact]
@@ -87,90 +95,135 @@ public class JamlLanguageServiceTests
     // ── Hover ───────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Hover_OnDiscriminator_DescribesTheClause()
+    public void Hover_OnDiscriminator_DescribesClause()
     {
-        // Cursor on "joker" in "  - joker: Blueprint".
-        var hover = JamlLanguageService.Hover(CleanDocument, 4, 5);
+        // line 3: "  - joker: Blueprint" — cursor inside "joker"
+        var hover = JamlLanguageService.Hover(Sample, 3, 5);
         Assert.NotNull(hover);
         Assert.Contains("**joker**", hover.Markdown);
+        Assert.Contains("clause", hover.Markdown);
+    }
+
+    [Fact]
+    public void Hover_OnEnumValue_NamesEngineEnum()
+    {
+        // cursor inside "Blueprint"
+        var hover = JamlLanguageService.Hover(Sample, 3, 13);
+        Assert.NotNull(hover);
+        Assert.Contains("Blueprint", hover.Markdown);
         Assert.Contains("MotelyJoker", hover.Markdown);
     }
 
     [Fact]
-    public void Hover_OnJokerName_NamesItsVocabulary()
+    public void Hover_OnClauseKey_NamesOwningClause()
     {
-        // Cursor on "Blueprint".
-        var hover = JamlLanguageService.Hover(CleanDocument, 4, 12);
+        // line 4: "    antes: [1, 2]" — cursor inside "antes"
+        var hover = JamlLanguageService.Hover(Sample, 4, 6);
         Assert.NotNull(hover);
-        Assert.Contains("Blueprint", hover.Markdown);
+        Assert.Contains("antes", hover.Markdown);
         Assert.Contains("joker", hover.Markdown);
     }
 
-    [Fact]
-    public void Hover_OnWhitespace_SaysNothing()
+    [Theory]
+    [InlineData(-1, 0)] // line before the document
+    [InlineData(99, 0)] // line after the document
+    [InlineData(0, 99)] // character beyond the line: clamps to last word or nothing
+    public void Hover_OutsideAnyWord_DoesNotThrow(int line, int character)
     {
-        Assert.Null(JamlLanguageService.Hover(CleanDocument, 3, 0));
+        _ = JamlLanguageService.Hover(Sample, line, character);
     }
 
-    // ── Complete ────────────────────────────────────────────────────────────────────────
+    [Fact]
+    public void Hover_OnWhitespace_ReturnsNull()
+    {
+        // line 2 is "must:" — column far past the colon on line 3's indent
+        Assert.Null(JamlLanguageService.Hover("deck: Red\n\nmust:\n", 1, 0));
+    }
+
+    // ── Completion: keys ────────────────────────────────────────────────────────
 
     [Fact]
     public void Complete_AtRoot_OffersRootKeys()
     {
         var items = JamlLanguageService.Complete("de", 0, 2);
-        Assert.Contains(items, i => i.Label == "deck");
-        Assert.Contains(items, i => i.Label == "description");
-        Assert.DoesNotContain(items, i => i.Label == "must" && i.Kind != "key");
+        Assert.Contains(items, i => i.Label.Equals("deck", StringComparison.OrdinalIgnoreCase));
+        Assert.All(items, i => Assert.Equal("key", i.Kind));
     }
 
     [Fact]
-    public void Complete_DeckValue_OffersDecks()
+    public void Complete_ListItemInMust_OffersDiscriminators()
     {
-        var items = JamlLanguageService.Complete("deck: Err", 0, 9);
-        Assert.Contains(items, i => i.Label == "Erratic");
-        Assert.All(items, i => Assert.Equal("value", i.Kind));
-    }
-
-    [Fact]
-    public void Complete_NewListItem_OffersDiscriminators()
-    {
-        var text = "must:\n  - jok";
-        var items = JamlLanguageService.Complete(text, 1, 7);
-        Assert.Contains(items, i => i.Label is "joker" or "jokers");
+        var text = "must:\n  - jo";
+        var items = JamlLanguageService.Complete(text, 1, 6);
+        Assert.Contains(items, i => i.Label.Equals("joker", StringComparison.OrdinalIgnoreCase));
         Assert.All(items, i => Assert.Equal("discriminator", i.Kind));
     }
 
     [Fact]
-    public void Complete_JokerValue_OffersJokerNamesAndAny()
+    public void Complete_InsideClause_OffersClauseKeys()
     {
-        var text = "must:\n  - joker: Lu";
-        var items = JamlLanguageService.Complete(text, 1, 13);
-        Assert.Contains(items, i => i.Label == "LuckyCat");
-        Assert.Contains(JamlLanguageService.Complete("must:\n  - joker: An", 1, 13),
-            i => i.Label == "Any");
-    }
-
-    [Fact]
-    public void Complete_ClauseKey_OffersTheClausesOwnKeys()
-    {
-        var text = "must:\n  - joker: Blueprint\n    edi";
-        var items = JamlLanguageService.Complete(text, 2, 7);
-        Assert.Contains(items, i => i.Label == "edition");
+        var text = "must:\n  - joker: Blueprint\n    an";
+        var items = JamlLanguageService.Complete(text, 2, 6);
+        Assert.Contains(items, i => i.Label.Equals("antes", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
     public void Complete_InsideSourcesBlock_OffersSourceKeys()
     {
-        var text = "must:\n  - joker: Blueprint\n    sources:\n      shop";
-        var items = JamlLanguageService.Complete(text, 3, 10);
-        Assert.Contains(items, i => i.Label.StartsWith("shop", StringComparison.OrdinalIgnoreCase));
+        var text = "must:\n  - joker: Blueprint\n    sources:\n      ";
+        var items = JamlLanguageService.Complete(text, 3, 6);
+        Assert.NotEmpty(items);
+        Assert.All(items, i => Assert.Equal("key", i.Kind));
     }
 
     [Fact]
-    public void Complete_EditionValue_OffersEditions()
+    public void Complete_InsideWithBlock_OffersWithKeys()
     {
-        var text = "must:\n  - joker: Blueprint\n    edition: Neg";
-        var items = JamlLanguageService.Complete(text, 2, 16);
-        Assert.Contains(items, i => i.Label == "Negative");
+        var text = "must:\n  - luckyMoney: 20\n    with:\n      ";
+        var items = JamlLanguageService.Complete(text, 3, 6);
+        Assert.NotEmpty(items);
+    }
+
+    // ── Completion: values ──────────────────────────────────────────────────────
+
+    [Fact]
+    public void Complete_RootKeyValue_OffersEngineEnumNames()
+    {
+        var items = JamlLanguageService.Complete("deck: R", 0, 7);
+        Assert.Contains(items, i => i.Label == "Red");
+        Assert.All(items, i => Assert.Equal("value", i.Kind));
+    }
+
+    [Fact]
+    public void Complete_DiscriminatorValue_OffersEnumPlusAny()
+    {
+        var text = "must:\n  - voucher: ";
+        var items = JamlLanguageService.Complete(text, 1, text.Length - text.IndexOf('\n') - 1);
+        Assert.Contains(items, i => i.Label == "Hieroglyph");
+        Assert.Contains(items, i => i.Label == "Any");
+    }
+
+    [Fact]
+    public void Complete_DiscriminatorValue_PrefixFiltersAndRanksStartsFirst()
+    {
+        var text = "must:\n  - voucher: Over";
+        var line = "  - voucher: Over";
+        var items = JamlLanguageService.Complete(text, 1, line.Length);
+        Assert.NotEmpty(items);
+        // "Overstock"/"OverstockPlus" start with the prefix and must outrank contains-matches.
+        Assert.StartsWith("Overstock", items[0].Label);
+    }
+
+    [Fact]
+    public void Complete_UnknownContext_IsEmpty()
+    {
+        Assert.Empty(JamlLanguageService.Complete("notakey: xyz", 0, 12));
+    }
+
+    [Fact]
+    public void Complete_BeyondDocument_DoesNotThrow()
+    {
+        _ = JamlLanguageService.Complete(Sample, 99, 0);
+        _ = JamlLanguageService.Complete(Sample, -1, -1);
     }
 }

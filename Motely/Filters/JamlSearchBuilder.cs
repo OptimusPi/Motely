@@ -95,7 +95,12 @@ public static class JamlSearchBuilder
         return settings;
     }
 
-    private static IMotelySeedFilterDesc ClauseToFilterDesc(IJamlClause clause) =>
+    /// <summary>
+    /// Maps one JAML clause to its SIMD filter desc. Soul/BlackHole spectral clauses route to
+    /// <see cref="SpecialSpectralCardFilterDesc"/> (T4); every other spectral stays on the content path.
+    /// Internal so tests can lock the special-spectral gate without reflecting private methods.
+    /// </summary>
+    internal static IMotelySeedFilterDesc ClauseToFilterDesc(IJamlClause clause) =>
         clause switch
         {
             JokerClause c => new JokerFilterDesc(c),
@@ -105,7 +110,9 @@ public static class JamlSearchBuilder
             LegendaryJokerClause c => new LegendaryJokerFilterDesc(c),
             VoucherClause c => new VoucherFilterDesc(c),
             TarotCardClause c => new TarotCardFilterDesc(c),
-            SpectralCardClause c => new SpectralCardFilterDesc(c),
+            SpectralCardClause c => SpecialSpectralCardFilterDesc.Handles(c)
+                ? new SpecialSpectralCardFilterDesc(c)
+                : new SpectralCardFilterDesc(c),
             PlanetCardClause c => new PlanetCardFilterDesc(c),
             BossClause c => new BossFilterDesc(c),
             TagClause c => new TagFilterDesc(c),
