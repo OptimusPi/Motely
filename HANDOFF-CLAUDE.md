@@ -40,7 +40,7 @@
 | S4 | P2/P3 residual: shape-proof + shop-only docs | **done** |
 | S5 | WASM `npm test` | **done** — 48 pass / 0 fail |
 | S6 | Commit board+law; push master | **commit done** (`86d23c96` + prior). **Push blocked:** no gh/https/ssh auth in this environment — Nate runs `git push`. |
-| S7 | jaml-ui sibling | **parked** — out of sprint |
+| S7 | jaml-ui sibling | **unparked** — JamlyzerView + git (`jaml-ui` `3d2c939`); Motely wire via --jamlui |
 | S8 | Coverage climb (P4) | **cancelled** — no target, not blocking ship |
 
 **Sprint status:** **closed in tree** — tests green, JsonRender law pinned, board sequential. **Nate:** `git push` (auth not available to the bot).
