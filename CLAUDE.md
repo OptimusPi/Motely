@@ -82,7 +82,7 @@ Long “do not / never / forbidden” lists **prime the forbidden path**. The bo
 | ID | Status | Note |
 |----|--------|------|
 | T1–T6 | done | Descs, schema, Soul route, source configs, Motely.Lsp |
-| **T7** | done | WASM = same engine shape: `FromJaml` + `JamlSearchBuilder` + list/random/sequential/`Collect(N)`/`FindOne` (= collect 1); UI uses `listItems` only |
+| **T7** | done | WASM = CLI search shape: list/random/sequential; `Collect(N)` aesthetics→sequential; `CollectSequential` for ranged stop; `FindOne` = collect 1; `listItems` only |
 
 ### Self-test before claim-done
 

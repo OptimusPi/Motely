@@ -83,20 +83,22 @@ Events stream alongside for live UIs: `onProgress` ticks while the search runs,
 `onSeedMatch` delivers each bare seed as it's found, `onScoredResult` delivers each typed
 result incrementally.
 
-Available modes:
+Available modes (same shape as CLI):
 
 ```js
 const fromList = await MotelySearch.searchList(jaml);
 const fromRandom = await MotelySearch.searchRandom(jaml, 1000);
 const fromWalk = await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
-// CLI --collect N twin: sequential + StopAfter(N). SIMD may deliver a few over.
-const batch = await MotelySearch.collect(jaml, 100n, 0n, 1n, 1);
-// --collect 1
-const first = await MotelySearch.findOne(jaml, 0n, 1n, 1);
-// same as: MotelySearch.collect(jaml, 1n, 0n, 1n, 1)
+
+// CLI --collect N: aesthetics first, then sequential for the remainder
+const batch = await MotelySearch.collect(jaml, 100n);
+const first = await MotelySearch.findOne(jaml); // collect(jaml, 1n)
+
+// CLI --collect N + --startBatch/--endBatch: sequential range only
+const slice = await MotelySearch.collectSequential(jaml, 5n, 0n, 1n, 1);
 ```
 
-`searchSequential` / `collect` / `findOne` use bigint for batch indices and for `stopAfter` (C# `long`).
+`stopAfter` and batch indices are JS BigInt (C# `long`).
 
 ## The fleet — one engine per web worker
 

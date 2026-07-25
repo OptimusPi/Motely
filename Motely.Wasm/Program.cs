@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using Bootsharp;
 using Bootsharp.Inject;
@@ -161,13 +162,52 @@ public static partial class MotelySearch
         );
 
     /// <summary>
-    /// Sequential sweep that stops after about <paramref name="stopAfter"/> matches —
-    /// CLI <c>--collect N</c> twin. Same <see cref="JamlSearchBuilder"/> + <c>StopAfter(N)</c>.
-    /// SIMD may deliver a few over the limit; empty array = range held nothing.
-    /// Batch indices are JS BigInt (C# <c>long</c>).
+    /// CLI <c>--collect N</c> shape: aesthetics first (all families), then sequential for the
+    /// remainder. <paramref name="stopAfter"/> is N (JS BigInt / C# <c>long</c>). SIMD may
+    /// deliver a few over the limit.
     /// </summary>
     [Export]
-    public static Task<MotelyScoredSeedResult[]> Collect(
+    public static async Task<MotelyScoredSeedResult[]> Collect(JamlConfig config, long stopAfter)
+    {
+        Debug.Assert(stopAfter >= 1, "stopAfter must be >= 1.");
+
+        List<MotelyScoredSeedResult> results = [];
+        var aesthetics = Enum.GetValues<JamlAesthetic>();
+        await RunIntoAsync(
+            config,
+            results,
+            s =>
+                s.WithProviderSearch(
+                        new MotelySeedListProvider(
+                            aesthetics.SelectMany(JamlAesthetics.EnumerateSeeds),
+                            aesthetics.Sum(JamlAesthetics.GetSeedCount)
+                        )
+                    )
+                    .StopAfter(stopAfter)
+        );
+
+        long remaining = stopAfter - results.Count;
+        if (remaining > 0)
+        {
+            await RunIntoAsync(
+                config,
+                results,
+                s =>
+                    s.WithSequentialSearch()
+                        .WithBatchCharacterCount(4)
+                        .StopAfter(remaining)
+            );
+        }
+
+        return [.. results];
+    }
+
+    /// <summary>
+    /// Collect with an explicit sequential range only (CLI <c>--collect N</c> + start/end batch).
+    /// No aesthetic pass. Batch indices are JS BigInt.
+    /// </summary>
+    [Export]
+    public static Task<MotelyScoredSeedResult[]> CollectSequential(
         JamlConfig config,
         long stopAfter,
         long startBatchIndex,
@@ -175,8 +215,7 @@ public static partial class MotelySearch
         int batchCharacterCount
     )
     {
-        if (stopAfter < 1)
-            throw new ArgumentOutOfRangeException(nameof(stopAfter), stopAfter, "stopAfter must be >= 1.");
+        Debug.Assert(stopAfter >= 1, "stopAfter must be >= 1.");
 
         return RunAsync(
             config,
@@ -189,14 +228,10 @@ public static partial class MotelySearch
         );
     }
 
-    /// <summary><see cref="Collect"/> with <c>stopAfter: 1</c> — CLI <c>--collect 1</c>.</summary>
+    /// <summary>CLI <c>--collect 1</c> — <see cref="Collect"/>(config, 1).</summary>
     [Export]
-    public static Task<MotelyScoredSeedResult[]> FindOne(
-        JamlConfig config,
-        long startBatchIndex,
-        long endBatchIndex,
-        int batchCharacterCount
-    ) => Collect(config, stopAfter: 1, startBatchIndex, endBatchIndex, batchCharacterCount);
+    public static Task<MotelyScoredSeedResult[]> FindOne(JamlConfig config) =>
+        Collect(config, stopAfter: 1);
 
     private static async Task<MotelyScoredSeedResult[]> RunAsync(
         JamlConfig config,
@@ -204,6 +239,16 @@ public static partial class MotelySearch
     )
     {
         List<MotelyScoredSeedResult> results = [];
+        await RunIntoAsync(config, results, withMode);
+        return [.. results];
+    }
+
+    private static async Task RunIntoAsync(
+        JamlConfig config,
+        List<MotelyScoredSeedResult> results,
+        Func<IMotelySearchSettings, IMotelySearchSettings> withMode
+    )
+    {
         IMotelySearchSettings settings = JamlSearchBuilder
             .CreateSettings(config)
             .WithDeck(config.Deck)
@@ -220,7 +265,6 @@ public static partial class MotelySearch
         settings = withMode(settings);
         using IMotelySearch search = settings.CreateSearch();
         await search.RunSearchAsync();
-        return [.. results];
     }
 }
 
