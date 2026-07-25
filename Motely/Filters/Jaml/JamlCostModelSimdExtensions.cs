@@ -75,10 +75,10 @@ public static class JamlCostModelSimdExtensions
         (double)clause.EstimateCrunches() / MotelyGlobals.MaxVectorWidth;
 
     /// <summary>
-    /// The must/mustNot chains reordered cheapest-first, without mutating the config: the order
-    /// <see cref="JamlSearchBuilder"/> should feed <c>WithAdditionalFilter</c> so trivial SIMD
-    /// clauses kill lanes before expensive scalar ones run. Stable sort: equal-cost clauses
-    /// keep their authored order.
+    /// The must/mustNot chains reordered cheapest-first, without mutating the config.
+    /// <see cref="JamlSearchBuilder.CreateSettings"/> feeds this order into
+    /// <c>WithAdditionalFilter</c> so trivial SIMD clauses kill lanes before expensive scalar
+    /// ones run. Stable sort: equal-cost clauses keep their authored order.
     /// </summary>
     public static IEnumerable<IJamlClause> CheapestFirst(this IReadOnlyList<IJamlClause> clauses) =>
         clauses.OrderBy(EstimateCrunches);

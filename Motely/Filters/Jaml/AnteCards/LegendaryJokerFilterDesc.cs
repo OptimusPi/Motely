@@ -101,8 +101,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
     {
         var src = _clause.Sources ?? DefaultSources;
 
-        int maxBoosterPack = src.MaxReferencedBoosterSlot();
-
         var normalizedClause = new LegendaryJokerClause
         {
             Label = _clause.Label,
@@ -138,24 +136,20 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                 );
         }
 
-        return new LegendaryJokerFilter(normalizedClause, maxBoosterPack);
+        return new LegendaryJokerFilter(normalizedClause);
     }
 
-    public struct LegendaryJokerFilter(LegendaryJokerClause clause, int maxBoosterPack)
-        : IMotelySeedFilter
+    public struct LegendaryJokerFilter(LegendaryJokerClause clause) : IMotelySeedFilter
     {
         private readonly LegendaryJokerClause _clause = clause;
-        private readonly int _maxBoosterPack = maxBoosterPack;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.SoulCardOnly || _clause.IsWildcard || _clause.Jokers.Length > 0);
+            Debug.Assert(_clause.Min > 0, "LegendaryJokerClause.Min must be > 0 — loader bug.");
 
             var clause = _clause;
-            var maxBoosterPack = _maxBoosterPack;
-            int needed = clause.Min;
-            Debug.Assert(needed > 0, "LegendaryJokerClause.Min must be > 0 — loader bug.");
 
             // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
             // souls (see LegendarySoulMatcher). Edition-only vector prefilter (Min==1) matches
@@ -178,31 +172,12 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                     return candidateMask;
             }
 
+            // Single match core: same PrepareRunState + LegendarySoulMatcher count as should-scoring
+            // (includes Hieroglyph/Petroglyph pack-slot clamp). Edition prefilter above stays vector.
             return ctx.SearchIndividualSeeds(
                 candidateMask,
                 (MotelySingleSearchContext singleCtx) =>
-                {
-                    int matchCount = 0;
-
-                    foreach (var ante in clause.Antes)
-                    {
-                        if (
-                            LegendarySoulMatcher.MatchAnte(
-                                ref singleCtx,
-                                ante,
-                                clause,
-                                maxBoosterPack
-                            )
-                        )
-                        {
-                            matchCount++;
-                            if (matchCount >= needed)
-                                return 1;
-                        }
-                    }
-
-                    return 0;
-                }
+                    JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
             );
         }
     }

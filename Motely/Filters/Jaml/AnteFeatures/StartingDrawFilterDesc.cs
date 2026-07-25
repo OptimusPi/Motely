@@ -1,6 +1,4 @@
-using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
 
 namespace Motely.Filters.Jaml;
 
@@ -58,41 +56,11 @@ public struct StartingDrawFilterDesc(StartingDrawClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            var clause = _clause; // Capture in local for lambda
+            // Single match core: same CountStartingDrawOccurrences as should-scoring.
+            var clause = _clause;
             return ctx.SearchIndividualSeeds(
-                (MotelySingleSearchContext ctx) =>
-                {
-                    int matchCount = 0;
-
-                    foreach (int ante in clause.Antes)
-                    {
-                        MotelyItem[] deck = new MotelyItem[
-                            MotelyEnum<MotelyStandardCard>.ValueCount
-                        ];
-                        for (int i = 0; i < deck.Length; i++)
-                        {
-                            deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
-                        }
-
-                        ctx.Shuffle("nr1", deck);
-
-                        int handSize = Math.Min(8, deck.Length);
-                        for (int i = 0; i < handSize; i++)
-                        {
-                            var card = deck[deck.Length - handSize + i];
-
-                            bool rankMatch =
-                                !clause.Rank.HasValue || card.StandardcardRank == clause.Rank.Value;
-                            bool suitMatch =
-                                !clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value;
-
-                            if (rankMatch && suitMatch)
-                                matchCount++;
-                        }
-                    }
-
-                    return (matchCount >= clause.Min) ? 1 : 0;
-                }
+                (MotelySingleSearchContext singleCtx) =>
+                    JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
             );
         }
     }

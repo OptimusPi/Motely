@@ -164,10 +164,7 @@ public struct JokerFilterDesc(JokerClause clause)
                 var clause = _clause;
                 return ctx.SearchIndividualSeeds(
                     (MotelySingleSearchContext singleCtx) =>
-                        JamlScoring.CountJokerClauseOccurrencesForFilter(ref singleCtx, clause)
-                        >= needed
-                            ? 1
-                            : 0
+                        JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
                 );
             }
 

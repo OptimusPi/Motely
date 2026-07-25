@@ -43,68 +43,23 @@ public readonly struct BossFilterDesc(BossClause clause)
         return true;
     }
 
-    public BossFilter CreateFilter(ref MotelyFilterCreationContext ctx)
-    {
-        int maxAnte = 0;
-        for (int i = 0; i < _clause.Antes.Length; i++)
-        {
-            if (_clause.Antes[i] > maxAnte)
-                maxAnte = _clause.Antes[i];
-        }
-        return new BossFilter(_clause, maxAnte);
-    }
+    public BossFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
+        new BossFilter(_clause);
 
-    public struct BossFilter(BossClause clause, int maxAnte) : IMotelySeedFilter
+    public struct BossFilter(BossClause clause) : IMotelySeedFilter
     {
         private readonly BossClause _clause = clause;
-        private readonly int _maxAnte = maxAnte;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Bosses.Length > 0);
 
+            // Single match core: same PrepareRunState + CountBossOccurrences as should-scoring.
             var clause = _clause;
-            int maxAnte = _maxAnte;
-
             return ctx.SearchIndividualSeeds(
                 (MotelySingleSearchContext singleCtx) =>
-                {
-                    var state = new MotelyRunState();
-
-                    if (maxAnte > 0)
-                    {
-                        var cachedBosses = new MotelyBossBlind[maxAnte + 1];
-                        var bossStream = singleCtx.CreateBossStream();
-                        for (int ante = 1; ante <= maxAnte; ante++)
-                            cachedBosses[ante] = singleCtx.GetBossForAnte(
-                                ref bossStream,
-                                ante,
-                                state
-                            );
-                        state.CachedBosses = cachedBosses;
-                    }
-
-                    int totalCount = 0;
-                    foreach (var ante in clause.Antes)
-                    {
-                        if (ante < 1 || ante > maxAnte)
-                            continue;
-                        bool found = false;
-                        for (int i = 0; i < clause.Bosses.Length; i++)
-                        {
-                            if (clause.Bosses[i] == state.CachedBosses![ante])
-                            {
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (found)
-                            totalCount++;
-                    }
-
-                    return (totalCount >= clause.Min) ? 1 : 0;
-                }
+                    JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
             );
         }
     }

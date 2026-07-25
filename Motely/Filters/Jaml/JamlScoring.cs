@@ -32,6 +32,39 @@ public static class JamlScoring
                 maxBossAnte = clauseMaxBossAnte;
         }
 
+        ApplyPrepareRunState(ref ctx, runState, maxAnte, maxBossAnte);
+    }
+
+    /// <summary>
+    /// Single match core for SIMD filter confirmation (<c>SearchIndividualSeeds</c> arms).
+    /// Same voucher/boss prepare + raw occurrence count as should-scoring for this clause, so
+    /// FilterDesc scalar confirm paths cannot drift from <see cref="CountRawOccurrences"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool ClauseMeetsMinForFilter(
+        ref MotelySingleSearchContext ctx,
+        IJamlClause clause
+    )
+    {
+        Debug.Assert(clause.Min > 0, "Clause.Min must be > 0 — loader bug.");
+        var runState = new MotelyRunState();
+        ApplyPrepareRunState(
+            ref ctx,
+            runState,
+            GetMaxAnte(clause),
+            GetMaxBossAnte(clause)
+        );
+        return CountRawOccurrences(ref ctx, clause, runState) >= clause.Min;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ApplyPrepareRunState(
+        ref MotelySingleSearchContext ctx,
+        MotelyRunState runState,
+        int maxAnte,
+        int maxBossAnte
+    )
+    {
         int maxVoucherAnte = maxAnte < 8 ? maxAnte + 1 : maxAnte;
         for (int ante = 1; ante <= maxVoucherAnte; ante++)
         {
@@ -616,14 +649,18 @@ public static class JamlScoring
         SpectralClauseTargets(clause, MotelySpectralCard.TheSoul)
         || SpectralClauseTargets(clause, MotelySpectralCard.BlackHole);
 
-    /// <summary>Scalar spectral count for the SIMD filter's per-seed confirmation pass (mirrors the should-scoring count).</summary>
+    /// <summary>
+    /// Scalar spectral count for the SIMD filter's per-seed confirmation pass.
+    /// Same prepare + count as <see cref="ClauseMeetsMinForFilter"/> / should-scoring.
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int CountSpectralCardOccurrencesForFilter(
         ref MotelySingleSearchContext ctx,
         SpectralCardClause clause
     )
     {
-        var runState = CreatePermissivePackRunState(clause.Antes);
+        var runState = new MotelyRunState();
+        ApplyPrepareRunState(ref ctx, runState, GetMaxAnte(clause), GetMaxBossAnte(clause));
         return CountSpectralCardOccurrences(ref ctx, clause, runState);
     }
 
@@ -1336,12 +1373,17 @@ public static class JamlScoring
         );
     }
 
+    /// <summary>
+    /// Scalar joker count for the SIMD filter's per-seed confirmation pass.
+    /// Same prepare + count as <see cref="ClauseMeetsMinForFilter"/> / should-scoring.
+    /// </summary>
     internal static int CountJokerClauseOccurrencesForFilter(
         ref MotelySingleSearchContext ctx,
         JokerClause clause
     )
     {
-        var runState = CreatePermissivePackRunState(clause.Antes);
+        var runState = new MotelyRunState();
+        ApplyPrepareRunState(ref ctx, runState, GetMaxAnte(clause), GetMaxBossAnte(clause));
         return CountJokerClauseOccurrences(ref ctx, clause, runState);
     }
 
@@ -1918,15 +1960,6 @@ public static class JamlScoring
                 max = nestedMax;
         }
         return max;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static MotelyRunState CreatePermissivePackRunState(int[] antes)
-    {
-        var runState = new MotelyRunState();
-        for (int i = 0; i < antes.Length; i++)
-            runState.ActivateExtendedPackAnte(antes[i]);
-        return runState;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
