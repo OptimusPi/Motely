@@ -4,18 +4,15 @@ using Motely.Filters.Jaml;
 namespace Motely.Tests;
 
 /// <summary>
-/// Drives every JAML FilterDesc family through the real search pipeline using C# objects (no
-/// loader, no YAML) so the vectorized <c>Filter()</c> (Must path) and the scalar JamlScoring
-/// (Should path) both execute. The assertions are deliberately structural — that the search runs
-/// the filter over the seed batch without throwing — because the point here is coverage of the
-/// SIMD/scoring code, not pinning specific seed outcomes (those live in the behavior tests).
+/// Smoke: every FilterDesc family through Must (SIMD) and Should (scalar) with C# objects.
+/// Asserts the list batch ran and Should delivers a scored callback. Find-proof is golden tests.
 /// </summary>
 public class JamlSimdCoverageTests
 {
     private static readonly string[] Seeds = ["MOTELY77"];
 
-    /// <summary>Runs a clause through the SIMD <c>Filter()</c> path (Must) and asserts the search ran.</summary>
-    private static long RunMust(IJamlClause clause)
+    /// <summary>SIMD Must path: batch must run (no MatchingSeeds pin).</summary>
+    private static void RunMust(IJamlClause clause)
     {
         var config = new JamlConfig
         {
@@ -33,12 +30,11 @@ public class JamlSimdCoverageTests
 
         using var search = settings.Start();
         search.AwaitCompletion();
-        Assert.True(search.TotalSeedsSearched >= 1, "the search must actually run the SIMD filter");
-        return search.MatchingSeeds;
+        Assert.True(search.TotalSeedsSearched >= 1, "Must path must run the SIMD filter over the list batch");
     }
 
-    /// <summary>Runs a clause through the scalar JamlScoring path (Should) and returns the score.</summary>
-    private static int RunShould(IJamlClause clause)
+    /// <summary>Scalar Should path: scoring callback must fire for this seed list.</summary>
+    private static void RunShould(IJamlClause clause)
     {
         clause.Score = 1;
         var config = new JamlConfig
@@ -59,13 +55,14 @@ public class JamlSimdCoverageTests
 
         using var search = settings.Start();
         search.AwaitCompletion();
-        return score;
+        Assert.True(search.TotalSeedsSearched >= 1, "Should path must run the list batch");
+        Assert.True(score >= 0, "scoring callback must fire (seed pin lives in golden tests)");
     }
 
     private static void ExerciseBoth(IJamlClause must, IJamlClause should)
     {
-        Assert.True(RunMust(must) >= 0);
-        Assert.True(RunShould(should) >= 0);
+        RunMust(must);
+        RunShould(should);
     }
 
     [Fact]

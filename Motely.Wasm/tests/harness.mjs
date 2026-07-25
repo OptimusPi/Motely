@@ -3,10 +3,9 @@
  * Embedded single-file build (empty BootsharpBinariesDirectory): the wasm + assemblies are
  * base64-inlined in resources.g.mjs, so boot() with no args picks them up automatically.
  *
- * Bootsharp wiring order (see docs/guide/getting-started.md): [Export] events must be
- * subscribed BEFORE boot() — that's when the C#↔JS bridge is established. So the harness
- * installs persistent event forwarders here, pre-boot; tests then add their own listeners
- * on the same events.
+ * Bootsharp wiring order: [Export] events must be subscribed BEFORE boot() — that's when
+ * the C#↔JS bridge is established. So the harness installs persistent event forwarders
+ * here, pre-boot; tests then add their own listeners on the same events.
  *
  * Override the entry with MOTELY_WASM_ENTRY=/abs/path/to/dist/index.mjs.
  */

@@ -17,24 +17,25 @@ There is no TypeScript reimplementation of the JAML grammar.
 # 1. Language server
 dotnet build Motely.Lsp
 
-# 2. Extension
+# 2. Extension host
 cd vscode-jaml
 npm install
 npm run compile
-# F5 in VS Code (Run Extension), or:
-code --install-extension .
+# F5 in VS Code: Run Extension (Extension Development Host)
 ```
 
 With the MotelyJAML workspace open, the extension runs:
 
 `dotnet run --project Motely.Lsp`
 
-## Bundle a self-contained server (ship)
+## Bundle a .vsix (ship)
 
 ```sh
 dotnet publish Motely.Lsp -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o vscode-jaml/server
 # win-x64 / linux-x64 as needed
-cd vscode-jaml && npm run package
+cd vscode-jaml
+npm run package          # npx @vscode/vsce package → jaml-language-support-*.vsix
+code --install-extension jaml-language-support-*.vsix
 ```
 
 ## Settings

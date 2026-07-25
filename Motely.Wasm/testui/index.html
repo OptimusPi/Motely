@@ -67,17 +67,17 @@
 
 <script type="module">
   import bootsharp, * as Motely from "/dist/index.mjs";
-  import * as fs from "@rewaffle/bootsharp-file-system";
   const { MotelyWasm, MotelyJaml, MotelySearch, IFileMounter, MotelyFileSystem } = Motely;
   Object.assign(globalThis, Motely);
 
-  // Must run before boot() — wires the browser's File System Access API to the
-  // IFileMounter interop Bootsharp.FileSystem auto-injects into C# (see
-  // D:\bootsharp\docs\guide\extensions\file-system.md). IFileMounter is the raw
-  // extension-provided binding; MotelyFileSystem (MotelyFileSystem.cs) is this
-  // project's own feature built on top of it — pick a folder once, then
-  // save/load/delete .jaml files directly on disk.
-  fs.init(IFileMounter);
+  // FS is optional: default dist (EnableFileSystem=false) exports neither IFileMounter
+  // nor MotelyFileSystem. build:fs / build:debug:fs ship both; then init before boot().
+  const hasFileSystem = Boolean(IFileMounter && MotelyFileSystem);
+  if (hasFileSystem) {
+    const fs = await import("@rewaffle/bootsharp-file-system");
+    fs.init(IFileMounter);
+  }
+
   import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
   import { yaml } from "https://esm.sh/@codemirror/lang-yaml@6.1.2";
   import { autocompletion } from "https://esm.sh/@codemirror/autocomplete@6.18.4";
@@ -170,42 +170,46 @@ should:
   $("status").textContent = `booted · motely ${MotelyWasm.getVersion()}`;
   $("status").classList.add("booted");
   $("search").disabled = false;
-  $("mount").disabled = false;
 
-  MotelyFileSystem.onChange.subscribe((text) => {
-    $("fsStatus").textContent = `changed: ${text}`;
-  });
-
-  $("mount").addEventListener("click", async () => {
-    $("mount").disabled = true;
-    $("fsStatus").textContent = "picking folder…";
-    const mounted = await MotelyFileSystem.pickAndMountFolder();
+  if (hasFileSystem) {
     $("mount").disabled = false;
-    if (!mounted) { $("fsStatus").textContent = "cancelled"; return; }
-    $("fsStatus").textContent = "folder mounted";
-    $("filename").disabled = false;
-    $("save").disabled = false;
-    $("load").disabled = false;
-  });
+    MotelyFileSystem.onChange.subscribe((text) => {
+      $("fsStatus").textContent = `changed: ${text}`;
+    });
 
-  $("save").addEventListener("click", async () => {
-    const name = $("filename").value.trim();
-    if (!name) { $("fsStatus").textContent = "enter a filename first"; return; }
-    await MotelyFileSystem.saveJamlFilter(name, view.state.doc.toString());
-    $("fsStatus").textContent = `saved ${name}.jaml`;
-  });
+    $("mount").addEventListener("click", async () => {
+      $("mount").disabled = true;
+      $("fsStatus").textContent = "picking folder…";
+      const mounted = await MotelyFileSystem.pickAndMountFolder();
+      $("mount").disabled = false;
+      if (!mounted) { $("fsStatus").textContent = "cancelled"; return; }
+      $("fsStatus").textContent = "folder mounted";
+      $("filename").disabled = false;
+      $("save").disabled = false;
+      $("load").disabled = false;
+    });
 
-  $("load").addEventListener("click", async () => {
-    const name = $("filename").value.trim();
-    if (!name) { $("fsStatus").textContent = "enter a filename first"; return; }
-    try {
-      const jaml = await MotelyFileSystem.loadJamlFilter(name);
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: jaml } });
-      $("fsStatus").textContent = `loaded ${name}.jaml`;
-    } catch (e) {
-      $("fsStatus").textContent = `load failed: ${e.message ?? e}`;
-    }
-  });
+    $("save").addEventListener("click", async () => {
+      const name = $("filename").value.trim();
+      if (!name) { $("fsStatus").textContent = "enter a filename first"; return; }
+      await MotelyFileSystem.saveJamlFilter(name, view.state.doc.toString());
+      $("fsStatus").textContent = `saved ${name}.jaml`;
+    });
+
+    $("load").addEventListener("click", async () => {
+      const name = $("filename").value.trim();
+      if (!name) { $("fsStatus").textContent = "enter a filename first"; return; }
+      try {
+        const jaml = await MotelyFileSystem.loadJamlFilter(name);
+        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: jaml } });
+        $("fsStatus").textContent = `loaded ${name}.jaml`;
+      } catch (e) {
+        $("fsStatus").textContent = `load failed: ${e.message ?? e}`;
+      }
+    });
+  } else {
+    $("fsStatus").textContent = "FS build off — mount/save/load disabled (npm run build:fs)";
+  }
 
   // Test hooks: Playwright (and curious humans) drive the page through these.
   globalThis.__motely = {

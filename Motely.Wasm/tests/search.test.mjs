@@ -42,7 +42,9 @@ describe("MotelySearch — list / sequential / collect", () => {
         assert.equal(Number(lastProgress.seedsSearched), 2);
     });
 
-    it("searchRandom walks exactly `count` seeds", async () => {
+    // Random draws are non-deterministic; proof = walk count + each hit is a real engine seed
+    // (search-index roundtrip). joker:Any matches densely so 8 draws always hit.
+    it("searchRandom finds real seeds and walks exactly `count`", async () => {
         let progress = null;
         const onP = (p) => {
             progress = p;
@@ -51,15 +53,28 @@ describe("MotelySearch — list / sequential / collect", () => {
         let results;
         try {
             results = await MotelySearch.searchRandom(
-                parse(voucherSearch(MotelyVoucher[0], ["AAAAAAAA"])),
+                parse(`name: t
+deck: Red
+stake: White
+must:
+  - joker: Any
+`),
                 8
             );
         } finally {
             MotelySearch.onProgress.unsubscribe(onP);
         }
-        assert.ok(Array.isArray(results));
         assert.ok(progress, "progress fired");
         assert.equal(Number(progress.seedsSearched), 8, "searched exactly the requested count");
+        assert.ok(results.length >= 1, "random + Any must find at least one seed");
+        for (const r of results) {
+            const idx = MotelyUtilities.seedToSearchIndex(r.seed);
+            assert.equal(
+                MotelyUtilities.searchIndexToSeed(idx, 8),
+                r.seed,
+                `seed ${r.seed} must round-trip search index`
+            );
+        }
     });
 
     // Sequential batch [0,1) bc=1 = 35 seeds starting at 11111111.

@@ -11,7 +11,8 @@ namespace Motely.Tests;
 /// <c>if (Sources.X.Length &gt; 0)</c> would simply never fire and the clause would match nothing.
 ///
 /// Ground truth is differential, not magic-number: a sourceless wildcard joker must score exactly
-/// the same as one that spells the defaults out by hand — antes 1..8, shop slots 0..7, packs 0..5.
+/// the same as one that spells the defaults out by hand — antes 1..8, shop slots 0..7
+/// (packs require an explicit <c>sources:</c> block).
 /// </summary>
 public class DefaultFallbackTests
 {
@@ -43,14 +44,14 @@ public class DefaultFallbackTests
     }
 
     [Fact]
-    public void SourcelessWildcardJoker_DefaultsToAllAntesAndShopAndPacks()
+    public void SourcelessWildcardJoker_DefaultsToAllAntesAndShopOnly()
     {
         // No antes, no sources — the clause as the loader hands it over.
         var (implicitMatching, implicitScore) = Score(
             new JokerClause { IsWildcard = true, Score = 1 }
         );
 
-        // The same clause with the defaults written out longhand.
+        // The same clause with shop-only defaults written out longhand (no packs).
         var (_, explicitScore) = Score(
             new JokerClause
             {
@@ -60,7 +61,6 @@ public class DefaultFallbackTests
                 Sources = new JokerSourceConfig
                 {
                     ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-                    BoosterPacks = [0, 1, 2, 3, 4, 5],
                 },
             }
         );
@@ -69,7 +69,7 @@ public class DefaultFallbackTests
             implicitScore > 0,
             "a sourceless wildcard joker must match jokers, not nothing"
         );
-        Assert.Equal(explicitScore, implicitScore); // defaults == antes 1..8, shop 0..7, packs 0..5
+        Assert.Equal(explicitScore, implicitScore); // defaults == antes 1..8, shop 0..7
         Assert.Equal(1, implicitMatching);
     }
 

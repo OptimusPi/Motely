@@ -21,8 +21,8 @@ public static partial class MotelyFileSystem
     private static string? _rootId;
     private static IFileSystem? _fs;
 
-    // No live UI to notify of external changes yet — MotelyFileSystemWatcher.OnChange
-    // (below) is what a consumer wires up if/when one is built.
+    // No live UI to notify of external changes yet — MotelyFileSystem.OnChange (below)
+    // is what a consumer wires up if/when one is built.
     private class Watcher : IFileWatcher
     {
         public Task HandleFileChanges(IReadOnlyList<Change> changes)

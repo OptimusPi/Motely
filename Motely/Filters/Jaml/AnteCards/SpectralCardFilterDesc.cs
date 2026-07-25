@@ -46,11 +46,22 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
     }
 
     /// <summary>
-    /// Filter-layer default when Sources is null. Shop only; packs/specialty need explicit sources:.
+    /// Filter-layer default when Sources is null for ordinary spectrals. Shop only;
+    /// packs/specialty need explicit <c>sources:</c>.
     /// </summary>
     internal static readonly SpectralCardSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+    };
+
+    /// <summary>
+    /// Null-sources default for TheSoul / BlackHole: those cards never appear in shop —
+    /// only Arcana/Celestial/Spectral packs. Shop-only <see cref="DefaultSources"/> would
+    /// make <c>spectralCard: TheSoul</c> match nothing.
+    /// </summary>
+    internal static readonly SpectralCardSourceConfig DefaultSpecialSources = new()
+    {
+        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public SpectralCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)

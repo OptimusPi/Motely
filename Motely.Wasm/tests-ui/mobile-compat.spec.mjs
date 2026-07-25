@@ -21,8 +21,10 @@ test.beforeEach(async ({ page }) => {
 test("boots and searches on a browser without Uint8Array.fromBase64", async ({ page }) => {
     await expect(page.locator("#status")).toContainText("booted", { timeout: 60_000 });
 
-    // Boot alone proves the assembly decode; the default document's search proves the
-    // whole engine came up and can score seeds — same flow the desktop spec relies on.
+    // Boot alone proves assembly decode; list search must pin default-doc seeds.
     await page.click("#search");
-    await expect(page.locator("#results tr").first()).toBeVisible({ timeout: 15_000 });
+    const rows = page.locator("#results tr");
+    await expect(rows).toHaveCount(2, { timeout: 15_000 });
+    const seeds = await rows.locator("td:first-child").allTextContents();
+    expect(seeds.sort()).toEqual(["AAAAAAAA", "BBBBBBBB"]);
 });

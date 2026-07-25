@@ -185,13 +185,13 @@ MotelyUtilities.repeatCharKeywords(3)[0];          // "AAA"
 From `Motely.Wasm/`:
 
 ```sh
-npm test        # publishes the Release build, then runs the Node suite against dist/index.mjs
-npm run test:ui # Playwright drives the real test UI in Chromium against the same artifact
+npm test        # pretest = Debug publish, then Node suite against dist/index.mjs
+npm run test:ui # Playwright: Chromium + testui (Search / Mount / Save / Load)
 npm run serve   # hand-drive the test UI at http://127.0.0.1:4173/
 npm run pack:check
 ```
 
-The test UI (`testui/index.html`) is a plain ES-module page with a CodeMirror 6 editor: live engine-driven lint and completion while you type, and a results table — feedback is continuous — live linting validates every keystroke, which is why the UI stays button-free. The Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
+The test UI (`testui/index.html`) is a plain ES-module page with CodeMirror 6: live engine lint and completion, a results table, and buttons for list search plus optional folder mount/save/load when the FS-enabled build is present. Playwright specs in `tests-ui/` pin known default-doc seeds (`AAAAAAAA`, `BBBBBBBB`) in a real browser.
 
 Releasing, from `Motely.Wasm/`: sync `"version"` in `package.json` to `<MotelyVersion>` in the repo-root `Directory.Packages.props`, run `npm test` and `npm run test:ui` green, then `npm publish`.
 
@@ -202,7 +202,7 @@ The package test suite mirrors the C# behavior tests that are meaningful through
 - boot/runtime and version export
 - JAML parse and validation strictness
 - JAMLyzer ante structure, event windows, score-by-analysis, and stream-state resume
-- real list/random/sequential searches
+- real list/random/sequential searches that pin known seeds (or random: walk count + search-index roundtrip)
 - AND scoring, default source fallback, Hieroglyph pack-slot reachability, and luck-source regressions
 - One-line JAML canonicalization
 - seed math and keyword utility parity

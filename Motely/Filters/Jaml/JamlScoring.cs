@@ -466,7 +466,7 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        var sources = ResolveSpectralSources(clause);
         int maxShop = ArrayMax(sources.ShopItems);
         int userMaxPack = ArrayMax(sources.BoosterPacks);
         int maxSixthSense = ArrayMax(sources.SixthSense);
@@ -596,6 +596,19 @@ public static class JamlScoring
     }
 
     /// <summary>
+    /// Explicit <c>sources:</c> wins. Null sources: shop-only for ordinary spectrals; pack slots
+    /// for Soul/BlackHole (they never appear in shop).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static SpectralCardSourceConfig ResolveSpectralSources(SpectralCardClause clause) =>
+        clause.Sources
+        ?? (
+            TargetsSpecialSpectral(clause)
+                ? SpectralCardFilterDesc.DefaultSpecialSources
+                : SpectralCardFilterDesc.DefaultSources
+        );
+
+    /// <summary>
     /// True when the clause names TheSoul and/or BlackHole — the "special" spectrals that need the
     /// Arcana/Celestial pack sources. Used to route <c>spectralCard:</c> to <see cref="SpecialSpectralCardFilterDesc"/>.
     /// </summary>
@@ -626,7 +639,7 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        var sources = ResolveSpectralSources(clause);
         int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
@@ -666,7 +679,7 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        var sources = ResolveSpectralSources(clause);
         int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
