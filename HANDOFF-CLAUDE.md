@@ -15,7 +15,7 @@
 
 **Green baseline:** `dotnet test` → 389 pass / 1 skip · line cov ~**79.7%** · branch ~**70%** (`coverage.runsettings`).
 
-**Out of scope unless operator says go:** jaml-ui sibling repo, force-push, delete `Seeds/sixtid4_recovered_clipboard.txt`, romantic/Jimbo easter-egg debate.
+**Out of scope unless operator says go:** jaml-ui sibling repo, force-push, romantic/Jimbo easter-egg debate.
 
 ---
 
@@ -63,11 +63,12 @@
 
 | ID | Verb | Notes |
 |----|------|--------|
-| P1a | **Clipboard junk** | `Seeds/sixtid4_recovered_clipboard.txt` — sycophant paste, not lake data. **Delete only if Nate says go.** |
+| P1a | **Clipboard junk** | **done** — deleted `Seeds/sixtid4_recovered_clipboard.txt` (sycophant paste, not lake data). |
 | P1b | **UI easter egg** | `Motely.TUI/SettingsWindow.cs` `"Jimbo is proud of you!"` — leave unless Nate wants strip. |
 | P1c | **Coverage smoke honesty** | `Jaml*CoverageTests` already assert batch-ran / callback-fired, not MatchingSeeds theater. **Do not** reintroduce `>= 0` fake finds. Golden tests pin seeds. |
 
-**Done when:** P1a resolved (delete or explicit skip) and table lists residual.
+**Done when:** P1a resolved (delete or explicit skip) and table lists residual.  
+**P1 residual:** P1b Jimbo string (leave); P1c already honest.
 
 ---
 
