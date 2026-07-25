@@ -72,13 +72,14 @@ public struct JokerFilterDesc(JokerClause clause)
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Specialty/legendary sources stay off by default.
-    /// Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when <see cref="JokerClause.Sources"/> is null (no <c>sources:</c> in JAML).
+    /// The loader leaves Sources null — this is not parse/language. Shop slots only; packs and
+    /// specialty streams require an explicit <c>sources:</c> block (wholesale, no merge).
+    /// </summary>
     internal static readonly JokerSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public JokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
@@ -105,8 +106,7 @@ public struct JokerFilterDesc(JokerClause clause)
             }
         }
 
-        // null sources → default shop+packs; resolved here (and in JamlScoring) since the loader
-        // no longer normalizes. Specialty/legendary sources stay off by default.
+        // null sources → filter default (shop only). Loader never fills Sources.
         var sources = _clause.Sources ?? DefaultSources;
         var shopIndices = sources.ShopItems;
         var boosterIndices = sources.BoosterPacks;

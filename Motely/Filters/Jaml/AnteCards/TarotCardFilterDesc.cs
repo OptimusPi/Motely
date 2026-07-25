@@ -15,7 +15,7 @@ public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
     public int[] Antes { get; set; } = [];
     public MotelyTarotCard[] Tarots { get; set; } = [];
 
-    // null = no `sources:` block → TarotCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    // null = no sources: in JAML → filter DefaultSources at CreateFilter/score (not parse).
     public TarotCardSourceConfig? Sources { get; set; }
 }
 
@@ -45,13 +45,12 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Specialty sources (Emperor, Purple Seal) stay off
-    /// by default. Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null. Shop only; packs/specialty need explicit sources:.
+    /// </summary>
     internal static readonly TarotCardSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public TarotCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)

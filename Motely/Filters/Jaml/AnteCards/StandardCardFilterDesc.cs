@@ -18,7 +18,7 @@ public sealed class StandardCardClause : IJamlClause, IAnteScopedClause
     public MotelyItemSeal? Seal { get; set; }
     public MotelyItemEdition? Edition { get; set; }
 
-    // null = no `sources:` block → StandardCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    // null = no sources: in JAML → filter DefaultSources at CreateFilter/score (not parse).
     public StandardCardSourceConfig? Sources { get; set; }
 }
 
@@ -64,13 +64,12 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         }
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Deferred specialty sources stay off by default.
-    /// Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null. Shop only; packs/specialty need explicit sources:.
+    /// </summary>
     internal static readonly StandardCardSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public StandardCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)

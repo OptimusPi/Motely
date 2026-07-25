@@ -51,11 +51,8 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
 
     /// <summary>Defaults when a clause specifies no <c>sources:</c> block — 8 shop slots + 6 packs.
     /// Specialty/fast-path sources stay off by default. Applied only when <c>Sources</c> is null.</summary>
-    internal static readonly JokerSourceConfig DefaultSources = new()
-    {
-        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
-    };
+    /// <inheritdoc cref="JokerFilterDesc.DefaultSources"/>
+    internal static readonly JokerSourceConfig DefaultSources = JokerFilterDesc.DefaultSources;
 
     public readonly UncommonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {

@@ -88,6 +88,10 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
     /// Spectral packs gate The Soul). Shop stays empty (shops never offer legendaries). The single-seed
     /// scoring path narrows this per ante via <c>ClampBoosterPackSlotForAnte</c> (Hieroglyph/Petroglyph
     /// pack-count routing). Applied only when <c>Sources</c> is null; an explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null. Legendaries default to booster pack slots only
+    /// (no shop). Soul/arcana/spectral/mega need explicit sources:. Loader leaves Sources null.
+    /// </summary>
     internal static readonly LegendaryJokerSourceConfig DefaultSources = new()
     {
         BoosterPacks = [0, 1, 2, 3, 4, 5],
