@@ -7,8 +7,9 @@
 **Law:** `CLAUDE.md` (design rules + pnpm). Enforcement: `.claude/hooks/check-design.mjs` + `eslint-rules/jaml-design.js`.  
 **Do not** disable a design rule to land an edit. If blocked, change the approach or stop and report.
 
-**Package:** `jaml-ui` **4.2.8** · sibling of MotelyJAML at  
-`/Users/nate/Documents/GitHub/jaml-ui`
+**Package:** `jaml-ui` **4.2.8** · sibling of MotelyJAML (same parent folder as `MotelyJAML` / `MotelyJAML` clone).
+
+**Paths:** use the **workspace root** Claude already has open. Absolute paths differ by machine (`~/Documents/GitHub/jaml-ui` vs `D:\jaml-ui` vs …). Do not treat a foreign absolute path as a bug — resolve relative to this repo.
 
 **Related (Motely):** Motely engine owns JAML grammar / search / WASM.  
 **Motely.JsonRender is deleted** — do **not** recreate a C# HTML/jamlui renderer in Motely. This package is the UI skin.
