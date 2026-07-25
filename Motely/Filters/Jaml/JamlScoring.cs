@@ -57,6 +57,76 @@ public static class JamlScoring
         return CountRawOccurrences(ref ctx, clause, runState) >= clause.Min;
     }
 
+    /// <summary>
+    /// True when the SIMD filter confirm path is the same law as scoring (no over-permissive
+    /// vector prefilter). Scoring may skip must re-eval when every must clause is exact.
+    /// </summary>
+    internal static bool IsExactFilterConfirm(IJamlClause clause) =>
+        clause switch
+        {
+            BossClause => true,
+            StartingDrawClause => true,
+            StandardCardClause => true,
+            LegendaryJokerClause => true,
+            SpectralCardClause sc => SpecialSpectralCardFilterDesc.Handles(sc)
+                || sc.Sources is { RequireMegaPack: true }
+                || sc.Sources is { EtherealTag: true },
+            TarotCardClause tc => tc.Sources is { CharmTag: true },
+            JokerClause jc => JokerUsesLegendaryExactPath(jc),
+            AndClause a => AllExactFilterConfirm(a.Clauses),
+            OrClause o => AllExactFilterConfirm(o.Clauses),
+            // Roll-scoped event filters are full vector counts (no coarse pack walk).
+            LuckyMoneyClause
+            or LuckyMultClause
+            or MisprintMultClause
+            or WheelOfFortuneClause
+            or CavendishExtinctClause
+            or GrosMichelExtinctClause
+            or SpaceLevelupClause
+            or BusinessPayoutClause
+            or BloodstoneTriggerClause
+            or ParkingPayoutClause
+            or GlassDestroyClause
+            or WheelStaysFlippedClause => true,
+            _ => false,
+        };
+
+    private static bool AllExactFilterConfirm(IJamlClause[] clauses)
+    {
+        if (clauses.Length == 0)
+            return false;
+        for (int i = 0; i < clauses.Length; i++)
+            if (!IsExactFilterConfirm(clauses[i]))
+                return false;
+        return true;
+    }
+
+    private static bool JokerUsesLegendaryExactPath(JokerClause clause)
+    {
+        if (clause.IsWildcard)
+            return true;
+        for (int i = 0; i < clause.Jokers.Length; i++)
+        {
+            if (
+                ((MotelyJokerRarity)((int)clause.Jokers[i] & MotelyGlobals.JokerRarityMask))
+                == MotelyJokerRarity.Legendary
+            )
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// True when every must clause already had an exact SIMD confirm — scoring re-eval of must
+    /// would only re-pay the same CountRawOccurrences law.
+    /// </summary>
+    internal static bool CanSkipMustReeval(IJamlClause[] mustClauses)
+    {
+        if (mustClauses.Length == 0)
+            return true;
+        return AllExactFilterConfirm(mustClauses);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ApplyPrepareRunState(
         ref MotelySingleSearchContext ctx,
