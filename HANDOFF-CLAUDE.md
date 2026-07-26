@@ -199,6 +199,57 @@ Uncovered pool ≈ 3548 lines — 92% is aggressive but in-pool.
 
 ---
 
+## Exclude audit — **Grok-owned, runs after S8 closes**
+
+Claude measured the exclude list against what actually ships and what the tests already
+pay for. The climb below (S8.P1–P3) keeps `coverage.runsettings` byte-identical; every
+row here is a **separate** verb with its **own** re-baseline, because two of them move the
+denominator and would otherwise look like the climb cheating.
+
+### A. Excluded today → **should count** (the real finding)
+
+| Target | Size | Why it should count | Cost of including |
+|--------|------|---------------------|-------------------|
+| **`[Motely.DataLake]*`** | 4 files / 423 lines | Already a `ProjectReference` of `Motely.Tests` **and** already has `SeedLakeSinkTests.cs`. The tests run, the lines execute, the report throws the credit away. Seed lakes are live input (CLAUDE.md 9b). | Lowest — tests exist, so it likely **raises** the rate. Do this one first. |
+| **`**/Motely/Filters/Native/*.cs`** | 18 files / 1915 lines | `--native <NAME>` is a shipped CLI mode (`Motely.CLI/Program.cs:265` — PerkeoObservatory, Observatory, Trickeoglyph, NaturalNegatives). Nine test files already reach into native/Immolate paths. Shipped + tested product code is the weakest possible exclude. | Highest — 1915 lines enter the denominator mostly uncovered. **Needs its own baseline commit** before any target is quoted against it. |
+
+### B. Counted today → **correctly counted** (leave alone)
+
+| Target | Size / rate | Verdict |
+|--------|-------------|---------|
+| `Motely.Analysis.MotelyUnitTestAnalyzer*` | 163 stmt @ 68.7% | Board hedged “only if still in measured tree.” Resolved: **live**, reachable from `Motely.CLI/Program.cs:877`. Keep counting; cover it, do not stub it. |
+| `ToString()` overrides (7 sites) | small | Debug-only, but 3 lines each and trivially assertable. **Test them, don’t exclude them** — an exclude here buys nothing and hides a real formatting contract. |
+
+### C. Excluded today → **keep excluded** (the excludes that earn their keep)
+
+| Target | Size | Why |
+|--------|------|-----|
+| `[Motely.TUI]*` | 20 files / 4547 lines | Console UI event loop. No seed proof is possible, and 4547 lines of untestable surface would swamp every real number. The exclude worth defending. |
+| `[Motely.JsonRender]*` | 5 files / 788 lines | Product call, already fixed on this board. Report renderer, not a grammar. |
+| `[Motely.DistributedWorker]*` | 6 files / 524 lines | Not shipped from this tree today. Revisit when it is. |
+| `[Motely.HelperAPI]*` | 4 files / 393 lines | Same. |
+
+### D. The exclude Claude wanted and **rejected**
+
+`MotelyVectorUtils.cs` — 202 statements, of which **138 are unreachable on any single
+machine**: the AdvSimd (ARM64 NEON), PackedSimd (WASM) and scalar-fallback branches only
+execute when the faster intrinsic is *missing*. On this x86 AVX-512 host they can never run
+(lines 21–23, 35–79, 90–181, 283–307).
+
+Excluding the file is the wrong fix: it would also discard the **64 reachable statements**
+that carry the live shift/mask contract — now all 64 covered, measured, so the file's
+remaining 138 uncovered lines are *exactly* the hardware-dead set and nothing else. The right fix is architectural, and it is already
+wired — `VectorPrimitiveCoverageTests.cs` asserts scalar parity, so the identical file drives
+Avx512F/Avx2 here and AdvSimd on an ARM64 host with **no source change and no skip flag**.
+
+**Grok verb:** run the standard coverage command on an ARM64 host (operator has an M1 Pro),
+then merge the two cobertura files (`reportgenerator -reports:x86.xml;arm64.xml -reporttypes:Cobertura`).
+The NEON lines land in the merged report honestly, because they genuinely executed. What
+stays uncovered after that merge is only the WASM branch — which belongs to `motely-wasm`
+and should be credited by a wasm run, not by an exclude.
+
+---
+
 ## Closed history (context)
 
 | Commit | What |
