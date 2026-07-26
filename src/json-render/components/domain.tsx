@@ -314,7 +314,7 @@ export const SeedList: FC<SeedListProps> = ({
         <div style={{ ...ROW, gap: 12, justifyContent: "center", padding: "var(--j-space-lg) 0" }}>
           <JimboButton
             size="sm"
-            tone="grey"
+            tone="blue"
             disabled={page <= 0}
             onClick={() => setPage((p) => p - 1)}
           >
@@ -323,7 +323,7 @@ export const SeedList: FC<SeedListProps> = ({
           <Text body={`${page + 1} / ${maxPage + 1}`} variant="muted" />
           <JimboButton
             size="sm"
-            tone="grey"
+            tone="blue"
             disabled={page >= maxPage}
             onClick={() => setPage((p) => p + 1)}
           >

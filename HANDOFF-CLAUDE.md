@@ -21,7 +21,8 @@
 | Git | `master` clean w/ origin (as of map write) |
 | Design system | **Jimbo** — `src/ui/jimbo.css`, `jimbo-tokens.css`, `Jimbo*` primitives |
 | Old design | deleted `92cc8c2` (“kimi revival”) — do not revive |
-| Jimbo migrate queue | `TODO(jimbo-primitives)` still on IDE files (see P1–P5) |
+| Jimbo migrate queue | defined by **per-file eslint baselines** on the phase map (repo total **430** at audit) — the `TODO(jimbo-primitives)` markers cover only P2–P5's 127 errors; P5b–P5d carry the other big files |
+| Done | **P1** (`JamlCodeEditor` → `JimboCodeSurface`) · **P6** (SwipeDeck + Layout stories already shipped) |
 | Detailed steps | also in `HANDOFFS.md` (this file = partner game + order + anti-soup) |
 
 ---
@@ -39,7 +40,7 @@
 1. Read this file + `CLAUDE.md` design rules.
 2. Do **only** the phase Nate named.
 3. Package manager = **pnpm** (never `npm install <pkg>` that writes package-lock).
-4. Proof: `pnpm build` and/or Storybook story console clean when claiming UI done.
+4. Proof: `npx eslint <phase file>` → **0 errors** (board lists each file's baseline), plus `pnpm build` and/or Storybook story console clean when claiming UI done. Build passing alone proves nothing — the build is green at 430 design errors.
 5. End with:
 
 | Field | Content |
@@ -68,7 +69,7 @@
 
 **Migrate procedure (P1–P5 every file):**
 
-1. List every `style={{ ... }}` in the file.
+1. List every `style={{ ... }}` **and every raw HTML tag** (`<div>`, `<span>`, …) in the file — `no-raw-html` is 287 of the repo's 430 errors; styles alone are ~⅓ of the real work.
 2. Replace with `Jimbo*` primitives (`JimboPanel`, `JimboInset`, `JimboInnerPanel`, `JimboSectionHeader`, `jimboText`, …).
 3. Else add `.j-*` in `jimbo.css` with existing `--j-*` tokens; layout = grid/absolute.
 4. Reusable fragment → new `Jimbo*` + `.stories.tsx`.
@@ -94,15 +95,28 @@
 
 ---
 
-### P1 — Migrate `JamlCodeEditor.tsx` → Jimbo
+### P0b — Fix `JimboIconButton` inline-flex (design system breaks rule 1)
+
+| Field | Content |
+|--------|---------|
+| File | `src/ui/JimboIconButton.tsx` — line ~71, `display: "inline-flex"` |
+| Baseline | **1** eslint error |
+| Why first | rule 1 has no exemptions; nobody can rewrite a block touching this file without fixing it, so it blocks the primitives layer |
+| Fix | grid (`display: "inline-grid"` + `place-items: center`) per rule 1's own guidance |
+
+**Done when:** `npx eslint src/ui/JimboIconButton.tsx` → 0 · `pnpm build` green.
+
+---
+
+### P1 — Migrate `JamlCodeEditor.tsx` → Jimbo — **done**
 
 | Field | Content |
 |--------|---------|
 | File | `src/components/JamlCodeEditor.tsx` |
 | Detail | `HANDOFFS.md` Handoff 1 |
-| Proof | `pnpm build`; IDE editor stories render; no `TODO(jimbo-primitives)` on this file |
-
-**Done when:** migrate procedure complete for this file only.
+| Shipped | new `JimboCodeSurface` primitive + story; `.j-code-surface` class; `TODO` + `eslint-disable` header removed; raw `<div>` gone |
+| Proof | eslint 0 problems **in that file** (was 1 × `no-raw-html`; repo-wide is not 0) · `pnpm build` · `pnpm typecheck:all` · `pnpm build-storybook` all green |
+| Kept | `JimboColorOption` inside `EditorView.theme(...)` — JS-generated stylesheet (canvas class), not JSX; `.cm-activeLine` needs hex+alpha concat |
 
 ---
 
@@ -111,10 +125,24 @@
 | Field | Content |
 |--------|---------|
 | File | `src/components/JamlMapPreview.tsx` |
+| Baseline | **18** eslint errors |
 | Detail | `HANDOFFS.md` Handoff 2 |
 | Note | canvas/SVG/R3F → `JimboColorOption`; JSX → `--j-*` |
+| Warning | do **not** invent a ZoneRail API here — that extraction is P2.5, shared with P3 |
 
-**Done when:** same as P1 for this file.
+**Done when:** `npx eslint src/components/JamlMapPreview.tsx` → 0 · `pnpm build` green.
+
+---
+
+### P2.5 — Extract shared `JimboZoneRail` (before P3)
+
+| Field | Content |
+|--------|---------|
+| Problem | `JamlMapPreview.tsx:115` and `JamlIdeVisual.tsx:257` each define a `ZoneRail` — different props, different chrome — plus parallel `ZONES` / `ZONE_META` color maps |
+| Ship | one `JimboZoneRail` primitive in `src/ui/` + story, and **one** zone-meta token map both consumers read |
+| Why its own phase | otherwise P2 silently sets the API for P3, or two near-twins ship (rule 8 sends both to one primitive) |
+
+**Done when:** both files import the shared primitive · story renders · `pnpm build` green.
 
 ---
 
@@ -123,10 +151,12 @@
 | Field | Content |
 |--------|---------|
 | File | `src/components/JamlIdeVisual.tsx` |
+| Baseline | **43** eslint errors |
 | Detail | `HANDOFFS.md` Handoff 3 |
+| Depends | **P2.5** (consumes `JimboZoneRail`) |
 | Note | drag/drop via `style={{ "--j-drag-x": … }}` + `.j-*` reader class |
 
-**Done when:** same as P1 for this file.
+**Done when:** `npx eslint src/components/JamlIdeVisual.tsx` → 0 · `pnpm build` green.
 
 ---
 
@@ -135,11 +165,12 @@
 | Field | Content |
 |--------|---------|
 | File | `src/components/JamlIde.tsx` |
+| Baseline | **36** eslint errors |
 | Detail | `HANDOFFS.md` Handoff 4 |
-| Depends | **P1–P3 first** so extracted primitives exist |
+| Depends | **P1–P3 first** so extracted primitives exist (real dep: imports MapPreview, IdeVisual, CodeEditor) |
 | Shape | compose `JimboApp` / `JimboLayout` / panels; no top-level JSX helpers |
 
-**Done when:** same as P1 for this file.
+**Done when:** `npx eslint src/components/JamlIde.tsx` → 0 · `pnpm build` green.
 
 ---
 
@@ -148,24 +179,59 @@
 | Field | Content |
 |--------|---------|
 | File | `src/components/jamlMap/JamlMapEditor.tsx` |
+| Baseline | **30** eslint errors |
 | Detail | `HANDOFFS.md` Handoff 5 |
-| Depends | P1–P4 |
-| Proof | `git grep 'TODO(jimbo-primitives)'` → **empty** |
+| Depends | P1–P4 **soft** — primitive reuse only. `JamlMapEditor` imports none of them (only `jamlMap/*` + `src/ui/*`); it can run first or in parallel |
+| Proof | `npx eslint src/components/jamlMap/JamlMapEditor.tsx` → 0 · plus `git grep 'TODO(jimbo-primitives)'` → **empty** (marker cleanup, **not** the completion gate — the markers cover only 127 of 430 errors) |
 
-**Done when:** last migrate TODO gone; `pnpm build` green.
+**Done when:** eslint 0 for this file; last migrate TODO gone; `pnpm build` green.
 
 ---
 
-### P6 — Stories: `JimboSwipeDeck` + `JimboLayout`
+### P5b — Migrate `JamlyzerView.tsx` → Jimbo
+
+| Field | Content |
+|--------|---------|
+| File | `src/components/JamlyzerView.tsx` |
+| Baseline | **110** eslint errors — the single worst file in the repo, bigger than P2+P3+P5 combined; it was missing from the original board |
+| Extra | ship `JamlyzerView` ante-0 fix here only if Nate merges P7c into this phase — otherwise pure migrate |
+
+**Done when:** `npx eslint src/components/JamlyzerView.tsx` → 0 · `pnpm build` green.
+
+---
+
+### P5c — Migrate `JamlyzerBulk.tsx` + `Jamlyzer.tsx` → Jimbo
+
+| Field | Content |
+|--------|---------|
+| Files | `src/components/JamlyzerBulk.tsx` (**41**) · `src/components/Jamlyzer.tsx` (**27**) |
+| Baseline | **68** eslint errors combined |
+| Depends | P5b soft — shares Jamlyzer chrome; reuse whatever P5b extracts |
+
+**Done when:** `npx eslint` → 0 for both files · `pnpm build` green.
+
+---
+
+### P5d — Migrate `src/json-render/components/*` → Jimbo
+
+| Field | Content |
+|--------|---------|
+| Files | `domain.tsx` (**32**) · `reference.tsx` (**22**) · `mascot.tsx` (**10**) · `layout.tsx` (**6**) |
+| Baseline | **70** eslint errors combined |
+| Note | these are the json-render engine's own components — the package's headline feature renders through them |
+
+**Done when:** `npx eslint src/json-render/components/` → 0 · `pnpm build` green.
+
+---
+
+### P6 — Stories: `JimboSwipeDeck` + `JimboLayout` — **done**
 
 | Field | Content |
 |--------|---------|
 | Detail | `HANDOFFS.md` Handoff 6 |
-| Template | `JimboPicker.stories.tsx` |
-| SwipeDeck | default, one-card, empty, callback payload on screen |
-| Layout | every named region filled so boundaries visible |
-
-**Done when:** both in Storybook; clean console.
+| SwipeDeck | `Default` · `OneCard` · `Empty` · `DecisionLog` (callback payload on screen) — spec met |
+| Layout | `Stack` · `StackGaps` · `Row` · `RowAlign` · `RowWrap` · `Composed`. The map said “every named region” — `JimboLayout` has no named regions, it is stack/row, so the stories cover the real API instead |
+| Proof | `pnpm build-storybook` completes |
 
 ---
 
@@ -176,7 +242,7 @@
 | P7a | In-app JAML authoring help | examples seed-finder / mcp — real hints from diagnostics, not a half-finished hunt |
 | P7b | Unify vocab: `jaml-codemirror` + `jaml-lsp` | one module for `listItems`; stop double-fix drift |
 | P7c | `JamlyzerView` ante-0 | today `1..n` only; ante 0 missing |
-| P7d | Jamlyzer ante perf cliff | **Motely C#** (`analyzeSeeds` ante 39 hang) — track here, fix in MotelyJAML if Nate opens that lane |
+| P7d | Jamlyzer ante perf cliff | **track only — not pickable.** Motely C# (`analyzeSeeds` ante 39 hang) lives in MotelyJAML, and P9 says do not cross. Nate opens that lane in that repo or it stays a note |
 
 **Done when:** that one ID ships with proof, or cancelled.
 
@@ -186,9 +252,9 @@
 
 | Step | Check |
 |------|--------|
-| 1 | P1–P6 merged |
+| 1 | P1–P6 **committed** (audit found P1's code and both handoff docs sitting uncommitted while the board said "clean") |
 | 2 | `pnpm build` |
-| 3 | `head -c 40 dist/index.js` and `dist/ui.js` start with `"use client";` |
+| 3 | banner check, cross-platform: `node -e "const fs=require('fs');for(const f of['dist/index.js','dist/ui.js'])if(!fs.readFileSync(f,'utf8').startsWith('\"use client\";'))throw new Error(f+' missing banner')"` |
 | 4 | `dist/motely.js` bannerless (see commit ee0bc9b) |
 | 5 | Bump **4.2.9**, commit message present-tense |
 | 6 | `npm publish` **only if Nate says go** |
@@ -227,13 +293,18 @@ Burn line:
 | Token | Claude starts |
 |-------|----------------|
 | **P0** | sanity build |
-| **P1** | JamlCodeEditor → Jimbo |
-| **P2** | JamlMapPreview → Jimbo |
-| **P3** | JamlIdeVisual → Jimbo |
-| **P4** | JamlIde shell → Jimbo |
-| **P5** | JamlMapEditor → Jimbo (last migrate) |
-| **P6** | SwipeDeck + Layout stories |
-| **P7a–d** | product gap (name the letter) |
+| **P0b** | JimboIconButton inline-flex fix (1 line, unblocks primitives layer) |
+| ~~P1~~ | ~~JamlCodeEditor → Jimbo~~ — done |
+| **P2** | JamlMapPreview → Jimbo (18) |
+| **P2.5** | extract shared JimboZoneRail (before P3) |
+| **P3** | JamlIdeVisual → Jimbo (43) |
+| **P4** | JamlIde shell → Jimbo (36) |
+| **P5** | JamlMapEditor → Jimbo (30) — soft deps, can run any time |
+| **P5b** | JamlyzerView → Jimbo (110, biggest file) |
+| **P5c** | JamlyzerBulk + Jamlyzer → Jimbo (68) |
+| **P5d** | json-render/components → Jimbo (70) |
+| ~~P6~~ | ~~SwipeDeck + Layout stories~~ — done |
+| **P7a–c** | product gap (name the letter; P7d = track only, not pickable) |
 | **P8** | release 4.2.9 (needs go) |
 | **B5** | stop |
 

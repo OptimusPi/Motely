@@ -4,7 +4,7 @@ import type { ButtonHTMLAttributes } from "react";
 
 export interface JimboButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "xs" | "sm" | "md" | "lg";
-  tone?: "orange" | "red" | "blue" | "green" | "grey";
+  tone?: "orange" | "red" | "blue" | "green";
   fullWidth?: boolean;
   label?: string;
 }

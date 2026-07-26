@@ -392,11 +392,6 @@
   --j-btn-shadow-color: var(--j-spectral-btn-dark);
 }
 
-.j-btn--grey {
-  --j-btn-face-color: var(--j-grey);
-  --j-btn-shadow-color: var(--j-dark-grey);
-}
-
 
 /* ── Badge ─────────────────────────────────────────────────────────────── */
 
@@ -962,6 +957,15 @@
   line-height: 1.6;
   color: #f6f0d5;
   margin: 0;
+}
+
+/* Host element for an editor view mounted by JS (CodeMirror). The view paints
+   its own chrome; this only fixes the background and the height floor so the
+   surface doesn't collapse before the view attaches. */
+.j-code-surface {
+  width: 100%;
+  min-height: var(--j-code-surface-min-height, 320px);
+  background: var(--j-darkest);
 }
 
 

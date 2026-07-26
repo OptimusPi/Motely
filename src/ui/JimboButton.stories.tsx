@@ -15,7 +15,6 @@ export const Tones: Story = {
       <JimboButton tone="red">Red</JimboButton>
       <JimboButton tone="blue">Blue</JimboButton>
       <JimboButton tone="green">Green</JimboButton>
-      <JimboButton tone="grey">Grey</JimboButton>
     </div>
   ),
 };

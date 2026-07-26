@@ -4,7 +4,9 @@ import { DeckSprite, DECK_SPRITE_POS, STAKE_SPRITE_POS } from "./DeckSprite.js";
 const meta: Meta<typeof DeckSprite> = {
   title: "Cards & Sprites/DeckSprite",
   component: DeckSprite,
-  args: { deck: "erratic", size: 50 },
+  /* size 142 = the sprite's own coordinate space (142x190) at 1:1 — the
+     in-game look. Integer ratios of 142 only; anything else resamples. */
+  args: { deck: "erratic", size: 142 },
 };
 export default meta;
 type Story = StoryObj<typeof DeckSprite>;
@@ -18,20 +20,19 @@ export const WithStake: Story = {
 export const Sizes: Story = {
   render: () => (
     <div style={{ display: "grid", gap: 12, gridAutoFlow: "column", justifyContent: "start", alignItems: "end" }}>
-      <DeckSprite deck="anaglyph" size={32} />
-      <DeckSprite deck="anaglyph" size={50} />
-      <DeckSprite deck="anaglyph" size={80} />
-      <DeckSprite deck="anaglyph" size={128} />
+      <DeckSprite deck="anaglyph" size={71} />
+      <DeckSprite deck="anaglyph" size={142} />
+      <DeckSprite deck="anaglyph" size={284} />
     </div>
   ),
 };
 
 export const AllDecks: Story = {
   render: () => (
-    <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(6, 64px)" }}>
+    <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(6, max-content)" }}>
       {Object.keys(DECK_SPRITE_POS).map((deck) => (
         <div key={deck} style={{ display: "grid", gap: 4, justifyItems: "center" }}>
-          <DeckSprite deck={deck} size={64} />
+          <DeckSprite deck={deck} size={142} />
           <span style={{ fontSize: 11 }}>{deck}</span>
         </div>
       ))}
@@ -41,10 +42,10 @@ export const AllDecks: Story = {
 
 export const AllStakes: Story = {
   render: () => (
-    <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(4, 64px)" }}>
+    <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(4, max-content)" }}>
       {Object.keys(STAKE_SPRITE_POS).map((stake) => (
         <div key={stake} style={{ display: "grid", gap: 4, justifyItems: "center" }}>
-          <DeckSprite deck="red" stake={stake} size={64} />
+          <DeckSprite deck="red" stake={stake} size={142} />
           <span style={{ fontSize: 11 }}>{stake}</span>
         </div>
       ))}
@@ -56,10 +57,10 @@ export const AllStakes: Story = {
 export const NameNormalization: Story = {
   render: () => (
     <div style={{ display: "grid", gap: 12, gridAutoFlow: "column", justifyContent: "start" }}>
-      <DeckSprite deck="Erratic Deck" size={64} />
-      <DeckSprite deck="ERRATIC" size={64} />
-      <DeckSprite deck="erratic" size={64} />
-      <DeckSprite deck="not-a-real-deck" size={64} />
+      <DeckSprite deck="Erratic Deck" size={142} />
+      <DeckSprite deck="ERRATIC" size={142} />
+      <DeckSprite deck="erratic" size={142} />
+      <DeckSprite deck="not-a-real-deck" size={142} />
     </div>
   ),
 };

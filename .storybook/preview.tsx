@@ -2,7 +2,6 @@ import type { Preview } from "@storybook/react-vite";
 import "../src/ui/jimbo.css";
 import "./preview.css";
 import { JimboBackground } from "../src/ui/JimboBackground.js";
-import { JimboBalatroFooter } from "../src/components/JimboBalatroFooter.js";
 
 const preview: Preview = {
   parameters: {
@@ -25,7 +24,6 @@ const preview: Preview = {
       <div className="story-root">
         <JimboBackground />
         <Story />
-        <JimboBalatroFooter />
       </div>
     ),
   ],
