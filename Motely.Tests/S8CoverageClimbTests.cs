@@ -47,8 +47,8 @@ public sealed class S8CoverageClimbTests
           - planetCard: Pluto
             antes: [1]
             sources:
-              shop: [0, 1, 2, 3]
-              packs: [0, 1]
+              shopItems: [0, 1, 2, 3]
+              boosterPacks: [0, 1]
         """;
 
     private static readonly string[] VoucherSeeds = ["5X5", "616", "696", "6J6", "7H7"];
@@ -71,9 +71,24 @@ public sealed class S8CoverageClimbTests
     public void Planet_Pluto_KnownSeedsMatch() =>
         ProofSearch.MustMatchAll(PlanetPluto, PlanetSeeds);
 
+    /// <summary>
+    /// R2 differential: default sources are shop slots 0-7, so all five seeds hit. Narrowing to
+    /// slots 0-3 (+ packs 0-1) is a real gate — only the two seeds whose Pluto sits in an early
+    /// shop slot survive. A test that asserted "still matches all five" would prove the gate is dead.
+    /// </summary>
     [Fact]
-    public void Planet_PackSources_StillMatchesKnownPlutoSeeds() =>
-        ProofSearch.MustMatchAll(PlanetPlutoPacks, PlanetSeeds);
+    public void Planet_NarrowedShopSlots_GateOutLateSlotSeeds()
+    {
+        ProofSearch.MustMatchAll(PlanetPluto, PlanetSeeds);
+
+        var (matching, matched) = ProofSearch.ListMatch(PlanetPlutoPacks, PlanetSeeds);
+        Assert.Equal(2L, matching);
+        Assert.Equal(
+            ["88", "I"],
+            matched.OrderBy(static s => s, StringComparer.Ordinal).ToArray()
+        );
+        Assert.True(matched.Count < PlanetSeeds.Length, "narrowed sources must be a strict subset");
+    }
 
     // ── Filter path execution via list (coverage without sequential) ──
 
