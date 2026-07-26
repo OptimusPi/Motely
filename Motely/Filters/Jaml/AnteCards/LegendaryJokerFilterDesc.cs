@@ -125,7 +125,9 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         foreach (var ante in normalizedClause.Antes)
             ctx.CacheBoosterPackStream(ante, force: true);
 
-        if (normalizedClause.Edition.HasValue && normalizedClause.Min == 1)
+        // Edition prefilter applies for any Min: keep lanes that see the edition on the soul
+        // stream somewhere (over-permissive for Min>1; scalar confirm enforces count).
+        if (normalizedClause.Edition.HasValue)
         {
             foreach (var ante in normalizedClause.Antes)
                 ctx.CacheLegendaryJokerStream(
@@ -152,10 +154,9 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             var clause = _clause;
 
             // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
-            // souls (see LegendarySoulMatcher). Edition-only vector prefilter (Min==1) matches
-            // Negative + soul joker SIMD prefilter (see NegativeLegendaryJokerSimdFilterDesc);
-            // pack/soul path runs as an additional filter so batches buffer before scalar work.
-            // we do not drop seeds where the first soul fails edition but a later soul matches.
+            // souls (see LegendarySoulMatcher). Edition-only vector prefilter (any Min) drops lanes
+            // with no matching edition on the soul stream; pack/soul path still confirms via scoring.
+            // Does not drop seeds where the first soul fails edition but a later soul matches.
             uint laneMask = 0;
             for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
             {
@@ -165,7 +166,7 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
 
             VectorMask candidateMask = new VectorMask(laneMask);
 
-            if (clause.Edition.HasValue && clause.Min == 1)
+            if (clause.Edition.HasValue)
             {
                 candidateMask = LegendarySoulEditionPrefilter.Apply(ref ctx, clause, laneMask);
                 if (candidateMask.IsAllFalse())

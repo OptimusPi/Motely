@@ -110,11 +110,7 @@ public struct VoucherFilterDesc(VoucherClause clause)
                 );
             }
 
-            var comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(Vector256.Create(clause.Min), Vector256.Create(1))
-            );
-            return new VectorMask(VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, clause.Min, clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -69,6 +69,11 @@ public static class JamlScoring
             StartingDrawClause => true,
             StandardCardClause => true,
             LegendaryJokerClause => true,
+            // Full vector roll walks — same law as scoring counts.
+            VoucherClause => true,
+            TagClause => true,
+            ErraticRankClause => true,
+            ErraticSuitClause => true,
             SpectralCardClause sc => SpecialSpectralCardFilterDesc.Handles(sc)
                 || sc.Sources is { RequireMegaPack: true }
                 || sc.Sources is { EtherealTag: true }
