@@ -140,6 +140,7 @@ public static class JamlSearchBuilder
             GlassDestroyClause c => new GlassDestroyFilterDesc(c),
             WheelStaysFlippedClause c => new WheelStaysFlippedFilterDesc(c),
             StartingDrawClause c => new StartingDrawFilterDesc(c),
+            PokerHandClause c => new PokerHandFilterDesc(c),
             AndClause c => new AndFilterDesc([.. c.Clauses.Select(ClauseToFilterDesc)]),
             OrClause c => new OrFilterDesc([.. c.Clauses.Select(ClauseToFilterDesc)], c.Min),
             _ => throw new InvalidOperationException(

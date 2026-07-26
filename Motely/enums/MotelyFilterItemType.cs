@@ -26,6 +26,7 @@ public enum MotelyFilterItemType
     CavendishExtinct, // Cavendish banana extinction check
     GrosMichelExtinct, // Gros Michel banana extinction check
     StartingDraw, // Starting hand draw filter
+    PokerHand, // Starting-hand poker category (Pair … StraightFlush)
     And, // Logical AND - all nested clauses must match
     Or, // Logical OR - at least one nested clause must match
 }

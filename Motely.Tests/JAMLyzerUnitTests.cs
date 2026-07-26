@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using Motely.Analysis;
 using Motely.Filters.Jaml;
-using Xunit.Abstractions;
 
 namespace Motely.Tests;
 
-public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
+public sealed class JAMLyzerUnitTests
 {
     private static JamlConfig SeedConfig(
         string seed,
@@ -322,48 +320,5 @@ public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
         var config = JamlConfigLoader.FromJaml("seeds: []");
         var antes = MotelyJamlyzer.ComputeAntes(config);
         Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8], antes);
-    }
-
-    // Scroll-pagination timing sweep — the "nerd interop graph". For each chunk size we scroll a
-    // fixed TOTAL of rolls via chained resume (TOTAL/chunk calls), timing the lot. Prints a table
-    // (chunk, calls, ms, rolls/ms). Expect a U/quadratic shape: tiny chunks pay per-call boot AND
-    // offset-replay (composite resume is O(offset)), big chunks amortize the boot. Bumping TOTAL to
-    // a million is only cheap if you scroll events-only (those resume O(1) via the state bag).
-    [Fact(
-        Skip = "Performance benchmark: too slow for the normal test run (composite resume is O(total^2))"
-    )]
-    public void Benchmark_ScrollPagination_ChunkSizeSweep()
-    {
-        const int total = 100000; // bounded: composite offset-replay is cumulatively O(total^2)
-        int[] chunks = [1, 10, 100, 1000, 10000];
-
-        output.WriteLine($"seed=UNITTEST  total={total} rolls per chunk size");
-        output.WriteLine("chunk |  calls |     ms | rolls/ms");
-        output.WriteLine("------+--------+--------+---------");
-
-        foreach (int chunk in chunks)
-        {
-            var sw = Stopwatch.StartNew();
-            int rolled = 0,
-                calls = 0;
-            MotelyJamlyzerStreamStates? state = null;
-            while (rolled < total)
-            {
-                int take = Math.Min(chunk, total - rolled);
-                var r = state is null
-                    ? MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: take)[0]
-                    : MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), state, eventRolls: take)[0];
-                state = r.StreamStates;
-                rolled += take;
-                calls++;
-            }
-            sw.Stop();
-
-            Assert.Equal(total, state!.RollOffset); // sanity: the scroll covered exactly TOTAL
-            double ms = sw.Elapsed.TotalMilliseconds;
-            output.WriteLine(
-                $"{chunk, 5} | {calls, 6} | {ms, 6:F1} | {total / Math.Max(ms, 0.001), 8:F1}"
-            );
-        }
     }
 }
