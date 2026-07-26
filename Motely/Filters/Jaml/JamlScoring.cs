@@ -67,6 +67,7 @@ public static class JamlScoring
         {
             BossClause => true,
             StartingDrawClause => true,
+            PokerHandClause => true,
             StandardCardClause => true,
             LegendaryJokerClause => true,
             // Full vector roll walks — same law as scoring counts.
@@ -218,6 +219,7 @@ public static class JamlScoring
             GlassDestroyClause c => CountGlassDestroyOccurrences(ref ctx, c),
             WheelStaysFlippedClause c => CountWheelStaysFlippedOccurrences(ref ctx, c),
             StartingDrawClause c => CountStartingDrawOccurrences(ref ctx, c),
+            PokerHandClause c => CountPokerHandOccurrences(ref ctx, c),
             AndClause c => CountAndOccurrences(ref ctx, c, runState),
             OrClause c => CountOrOccurrences(ref ctx, c, runState),
             _ => UnhandledClauseForScoring(clause),
@@ -1041,7 +1043,7 @@ public static class JamlScoring
             for (int i = 0; i < deck.Length; i++)
                 deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
 
-            ctx.Shuffle("nr1", deck);
+            ctx.Shuffle(MotelyPokerHandEval.ShuffleKeyForRound(ante), deck);
             int handSize = Math.Min(8, deck.Length);
             for (int i = 0; i < handSize; i++)
             {
@@ -1052,6 +1054,40 @@ public static class JamlScoring
                     !clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value;
                 if (matchRank && matchSuit)
                     count++;
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Count antes/rounds whose starting 8-card hand's best poker category is in the clause list.
+    /// Empty <c>antes</c> defaults to round 1 (same as a single starting-hand check).
+    /// </summary>
+    private static int CountPokerHandOccurrences(
+        ref MotelySingleSearchContext ctx,
+        PokerHandClause clause
+    )
+    {
+        int count = 0;
+        int[] antes = clause.Antes.Length > 0 ? clause.Antes : [1];
+        foreach (int ante in antes)
+        {
+            MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyStandardCard>.ValueCount];
+            for (int i = 0; i < deck.Length; i++)
+                deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
+
+            ctx.Shuffle(MotelyPokerHandEval.ShuffleKeyForRound(ante), deck);
+            int handSize = Math.Min(8, deck.Length);
+            Span<MotelyItem> hand = deck.AsSpan(deck.Length - handSize, handSize);
+            MotelyPokerHand best = MotelyPokerHandEval.BestScore(hand).Type;
+
+            for (int i = 0; i < clause.Hands.Length; i++)
+            {
+                if (clause.Hands[i] == best)
+                {
+                    count++;
+                    break;
+                }
             }
         }
         return count;
@@ -2076,6 +2112,7 @@ public static class JamlScoring
             ErraticRankClause c => ArrayMax(c.Antes),
             ErraticSuitClause c => ArrayMax(c.Antes),
             StartingDrawClause c => ArrayMax(c.Antes),
+            PokerHandClause c => ArrayMax(c.Antes),
             AndClause c => MaxNestedAnte(c.Clauses),
             OrClause c => MaxNestedAnte(c.Clauses),
             _ => 0,
