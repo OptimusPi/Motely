@@ -39,11 +39,11 @@
 | S3 | Kill teeth-pull quick-pick / “paste do P0” game in this file | **done** |
 | S4 | P2/P3 residual: shape-proof + shop-only docs | **done** |
 | S5 | WASM `npm test` | **done** — 48 pass / 0 fail |
-| S6 | Commit board+law; push master | **commit done** (`86d23c96` + prior). **Push blocked:** no gh/https/ssh auth in this environment — Nate runs `git push`. |
-| S7 | jaml-ui sibling | **unparked** — JamlyzerView + git (`jaml-ui` `3d2c939`); Motely wire via --jamlui |
+| S6 | Commit board+law; push master | **done** (Nate push) |
+| S7 | jaml-ui sibling | **wire done**; design cage nuked (positive CLAUDE.md; hook no-op). Visual pass = named goal only |
 | S8 | Coverage climb (P4) | **cancelled** — no target, not blocking ship |
 
-**Sprint status:** **closed in tree** — tests green, JsonRender law pinned, board sequential. **Nate:** `git push` (auth not available to the bot).
+**Sprint status:** **closed** on Motely ship path. jaml-ui: soft Claude gloves; hard Grok visual only when Nate names the look.
 
 ---
 
@@ -64,5 +64,5 @@
 
 ## After this sprint
 
-Next work only if Nate names it in one line (examples: “fix this jaml”, “bump cov on X”, “open jaml-ui file Y”).  
-No bot invents a new phase map.
+Next work only if Nate names it in one line (examples: “fix this jaml”, “whimsy jamlyzer”, “open jaml-ui file Y”).  
+No bot invents a new phase map. No ban-list design rules in sibling docs.
