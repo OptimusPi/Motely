@@ -67,6 +67,18 @@ export default defineConfig({
     },
     rollupOptions: {
       external: PEER_EXTERNALS,
+      // Rollup warns on every source file whose "use client" it strips (plus a
+      // paired sourcemap warning). The banner below re-adds the directive where
+      // it matters, so the warnings are pure noise.
+      onwarn(warning, warn) {
+        if (
+          warning.code === "MODULE_LEVEL_DIRECTIVE" ||
+          warning.code === "SOURCEMAP_ERROR"
+        ) {
+          return;
+        }
+        warn(warning);
+      },
       output: {
         preserveModules: false,
         entryFileNames: "[name].js",
