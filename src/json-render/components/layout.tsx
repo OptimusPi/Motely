@@ -3,6 +3,9 @@ import { JimboPanel } from "../../ui/JimboPanel.js";
 import { JimboText, type JimboTextSize, type JimboTextTone } from "../../ui/jimboText.js";
 import { JimboBadge, type JimboBadgeTone } from "../../ui/JimboBadge.js";
 import { JimboStack, type JimboGap } from "../../ui/JimboLayout.js";
+import { JimboGrid } from "../../ui/JimboGrid.js";
+import { JimboSpacer } from "../../ui/JimboSpacer.js";
+import { JimboDivider } from "../../ui/JimboDivider.js";
 import type { JimboSectionTone } from "../../ui/JimboSectionHeader.js";
 
 /**
@@ -10,11 +13,8 @@ import type { JimboSectionTone } from "../../ui/JimboSectionHeader.js";
  *
  * These are the node types the json-render engine maps to. They are thin adapters
  * over the real Jimbo primitives in src/ui/ — the design system with the classes
- * eyedropped from the game shader, the press-lip, the pixel fonts. An earlier pass
- * hand-rolled these with inline styles and invented tokens (--j-text-lg,
- * --j-space-4, --j-radius) that don't exist in jimbo-tokens.css, so every fontSize
- * resolved to invalid and the text fell back to a system font at the wrong size.
- * Delegating fixes the rendering and keeps one grammar instead of two.
+ * eyedropped from the game shader, the press-lip, the pixel fonts. Delegating
+ * keeps one grammar instead of two.
  */
 
 /* Map a pixel gap number onto the --j-space-* scale (xs 2 · sm 4 · md 8 · lg 12 · xl 16). */
@@ -80,19 +80,10 @@ export interface GridProps {
   children?: React.ReactNode;
 }
 
-// Grid is deterministic across host iframes (unlike flex), so it needs no primitive.
 export const Grid: React.FC<GridProps> = ({ columns = 3, gap = 16, className, children }) => (
-  <div
-    className={className}
-    style={{
-      display: "grid",
-      gridTemplateColumns: `repeat(${columns}, 1fr)`,
-      gap,
-      width: "100%",
-    }}
-  >
+  <JimboGrid columns={columns} gap={gapToken(gap)} className={className}>
     {children}
-  </div>
+  </JimboGrid>
 );
 
 /* ─── Text ─── */
@@ -130,9 +121,7 @@ export interface SpacerProps {
   size?: number;
 }
 
-export const Spacer: React.FC<SpacerProps> = ({ size = 16 }) => (
-  <div style={{ height: size, width: "100%" }} />
-);
+export const Spacer: React.FC<SpacerProps> = ({ size = 16 }) => <JimboSpacer size={size} />;
 
 /* ─── Divider ─── */
 export interface DividerProps {
@@ -140,15 +129,7 @@ export interface DividerProps {
 }
 
 export const Divider: React.FC<DividerProps> = ({ className }) => (
-  <div
-    className={className}
-    style={{
-      height: 2,
-      background: "var(--j-panel-edge)",
-      width: "100%",
-      margin: "var(--j-space-lg) 0",
-    }}
-  />
+  <JimboDivider className={className} />
 );
 
 /* ─── Badge ─── */
@@ -171,6 +152,10 @@ const BADGE_TONE: Record<BadgeTone, JimboBadgeTone> = {
   purple: "purple",
   grey: "grey",
 };
+
+export function badgeToneToJimbo(tone: BadgeTone): JimboBadgeTone {
+  return BADGE_TONE[tone];
+}
 
 export const Badge: React.FC<BadgeProps> = ({ label, tone = "grey", className }) => (
   <JimboBadge tone={BADGE_TONE[tone]} className={className}>

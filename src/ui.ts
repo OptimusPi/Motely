@@ -19,6 +19,32 @@ export {
   type JimboTextSize,
   type JimboTextTone,
 } from "./ui/jimboText.js";
+export { JimboBadge, type JimboBadgeProps, type JimboBadgeTone } from "./ui/JimboBadge.js";
+export { JimboIconButton, type JimboIconButtonProps, type JimboIconButtonTone } from "./ui/JimboIconButton.js";
+export {
+  JimboStack,
+  JimboRow,
+  type JimboLayoutProps,
+  type JimboRowProps,
+  type JimboGap,
+  type JimboAlign,
+  type JimboJustify,
+} from "./ui/JimboLayout.js";
+export { JimboGrid, type JimboGridProps } from "./ui/JimboGrid.js";
+export { JimboSpacer, type JimboSpacerProps } from "./ui/JimboSpacer.js";
+export { JimboDivider, type JimboDividerProps } from "./ui/JimboDivider.js";
+export { JimboStatusPill, type JimboStatusPillProps, type JimboStatus } from "./ui/JimboStatusPill.js";
+export { JimboErrorBlock, type JimboErrorBlockProps } from "./ui/JimboErrorBlock.js";
+export { JimboMascot, type JimboMascotProps } from "./ui/JimboMascot.js";
+export {
+  JimboOrbitalMenu,
+  type JimboOrbitalMenuProps,
+  type JimboOrbitalMenuItem,
+} from "./ui/JimboOrbitalMenu.js";
+export { JimboSeedCopyChip, type JimboSeedCopyChipProps } from "./ui/JimboSeedCopyChip.js";
+export { JimboSpinner, type JimboSpinnerProps } from "./ui/JimboSpinner.js";
+export { JimboTextInput, type JimboTextInputProps } from "./ui/JimboTextInput.js";
+export { JimboInnerPanel, type JimboInnerPanelProps, JimboModal, type JimboModalProps } from "./ui/panel.js";
 
 // Side-effect: design system CSS custom properties + component classes
 import "./ui/jimbo.css";

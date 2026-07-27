@@ -1,34 +1,23 @@
+"use client";
+
 import { type FC, useState } from "react";
-import { FiAlertTriangle, FiChevronLeft, FiChevronRight, FiX } from "react-icons/fi";
+import { FiAlertTriangle, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Panel, Stack, Text, Badge, type BadgeTone } from "./layout.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboButton } from "../../ui/JimboButton.js";
-import { JimboIconButton } from "../../ui/JimboIconButton.js";
+import { JimboInnerPanel } from "../../ui/panel.js";
+import { JimboGrid } from "../../ui/JimboGrid.js";
+import { JimboStatusPill, type JimboStatus } from "../../ui/JimboStatusPill.js";
+import { JimboErrorBlock } from "../../ui/JimboErrorBlock.js";
+import { JimboRow } from "../../ui/JimboLayout.js";
 
 /**
  * Domain components — SearchStats, ErrorBanner, LoadingPulse, SeedCard, etc.
  *
- * Balatro-specific json-render nodes. Layout is grid, never flex (host iframes
- * size flex differently per host — see CLAUDE.md rule #1), interactive controls
- * are the real Jimbo button primitives, and every spacing/radius value comes from
- * a real --j-* token. An earlier pass used flex, raw <button>s, an emoji, and
- * invented tokens (--j-radius, --j-space-3, --j-text-lg) that render as fallback.
+ * Balatro-specific json-render nodes, composed from Jimbo primitives.
+ * Interactive controls are the real Jimbo button primitives; status, error,
+ * and layout chrome come from src/ui/ so there is one grammar, not two.
  */
-
-/* Reusable grid rows — the no-flex replacements for the old flex rows. */
-const ROW: React.CSSProperties = {
-  display: "grid",
-  gridAutoFlow: "column",
-  gridAutoColumns: "max-content",
-  alignItems: "center",
-};
-// Wraps pills onto more rows without flex-wrap: auto-fit grid tracks sized to content.
-const PILLS: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(64px, max-content))",
-  gap: 6,
-  justifyContent: "start",
-};
 
 /* ─── SearchStats ─── */
 export interface SearchStatsProps {
@@ -40,6 +29,13 @@ export interface SearchStatsProps {
   className?: string;
 }
 
+const STATUS_PILL: Record<SearchStatsProps["status"], { pill: JimboStatus; label: string }> = {
+  idle: { pill: "idle", label: "Ready" },
+  running: { pill: "running", label: "Searching..." },
+  completed: { pill: "ok", label: "Done" },
+  error: { pill: "error", label: "Error" },
+};
+
 export const SearchStats: FC<SearchStatsProps> = ({
   status,
   seedsSearched,
@@ -48,75 +44,29 @@ export const SearchStats: FC<SearchStatsProps> = ({
   elapsed,
   className = "",
 }) => {
-  const statusColor =
-    status === "running"
-      ? "var(--j-blue)"
-      : status === "completed"
-        ? "var(--j-green)"
-        : status === "error"
-          ? "var(--j-red)"
-          : "var(--j-grey)";
-
-  const statusLabel =
-    status === "idle"
-      ? "Ready"
-      : status === "running"
-        ? "Searching..."
-        : status === "completed"
-          ? "Done"
-          : "Error";
+  const { pill, label } = STATUS_PILL[status];
+  const stats: { label: string; value: string }[] = [];
+  if (seedsSearched !== undefined) stats.push({ label: "Searched", value: seedsSearched });
+  if (matchesFound !== undefined) stats.push({ label: "Matches", value: String(matchesFound) });
+  if (seedsPerSecond !== undefined) stats.push({ label: "Speed", value: `${seedsPerSecond.toLocaleString()}/s` });
+  if (elapsed) stats.push({ label: "Time", value: elapsed });
 
   return (
     <Panel className={className} variant="accent">
       <Stack gap={8}>
-        <div style={{ ...ROW, gap: 8, justifyContent: "start" }}>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: statusColor,
-              boxShadow: `0 0 8px ${statusColor}`,
-            }}
-          />
-          <Text body={statusLabel} variant="accent" />
-          {status === "running" && (
-            <span style={{ animation: "pulse 1.5s infinite", color: "var(--j-blue)" }}>...</span>
-          )}
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-            gap: 12,
-          }}
-        >
-          {seedsSearched !== undefined && (
-            <div>
-              <Text body="Searched" variant="muted" />
-              <Text body={seedsSearched} variant="title" />
-            </div>
-          )}
-          {matchesFound !== undefined && (
-            <div>
-              <Text body="Matches" variant="muted" />
-              <Text body={String(matchesFound)} variant="title" />
-            </div>
-          )}
-          {seedsPerSecond !== undefined && (
-            <div>
-              <Text body="Speed" variant="muted" />
-              <Text body={`${seedsPerSecond.toLocaleString()}/s`} variant="title" />
-            </div>
-          )}
-          {elapsed && (
-            <div>
-              <Text body="Time" variant="muted" />
-              <Text body={elapsed} variant="title" />
-            </div>
-          )}
-        </div>
+        <JimboRow gap="sm" justify="start">
+          <JimboStatusPill status={pill} label={label} />
+        </JimboRow>
+        {stats.length > 0 && (
+          <JimboGrid minColWidth={120} gap="lg">
+            {stats.map((stat) => (
+              <Stack key={stat.label} gap={2}>
+                <Text body={stat.label} variant="muted" />
+                <Text body={stat.value} variant="title" />
+              </Stack>
+            ))}
+          </JimboGrid>
+        )}
       </Stack>
     </Panel>
   );
@@ -129,41 +79,14 @@ export interface ErrorBannerProps {
   className?: string;
 }
 
-export const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss, className = "" }) => {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
-
-  return (
-    <div
-      className={className}
-      style={{
-        border: "2px solid var(--j-red)",
-        borderRadius: "var(--j-radius-lg)",
-        background: "var(--j-dark-red)",
-        padding: "var(--j-space-lg) var(--j-space-xl)",
-        display: "grid",
-        gridTemplateColumns: "1fr auto",
-        alignItems: "center",
-        gap: 12,
-      }}
-    >
-      <div style={{ ...ROW, gap: 8 }}>
-        <FiAlertTriangle color="var(--j-red)" aria-hidden />
-        <Text body={message} variant="error" />
-      </div>
-      {onDismiss && (
-        <JimboIconButton
-          size="sm"
-          tone="destructive"
-          aria-label="Dismiss error"
-          onClick={() => setDismissed(true)}
-        >
-          <FiX />
-        </JimboIconButton>
-      )}
-    </div>
-  );
-};
+export const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss, className = "" }) => (
+  <JimboErrorBlock className={className} onDismiss={onDismiss ? () => {} : undefined}>
+    <JimboRow gap="sm" justify="start">
+      <FiAlertTriangle aria-hidden />
+      <Text body={message} variant="error" />
+    </JimboRow>
+  </JimboErrorBlock>
+);
 
 /* ─── LoadingPulse ─── */
 export interface LoadingPulseProps {
@@ -172,22 +95,9 @@ export interface LoadingPulseProps {
 }
 
 export const LoadingPulse: FC<LoadingPulseProps> = ({ text = "Loading...", className = "" }) => (
-  <div
-    className={className}
-    style={{ ...ROW, gap: 12, justifyContent: "center", padding: "var(--j-space-xl)" }}
-  >
-    <div
-      style={{
-        width: 16,
-        height: 16,
-        borderRadius: "50%",
-        background: "var(--j-blue)",
-        animation: "pulse 1.5s infinite",
-        boxShadow: "0 0 12px var(--j-blue)",
-      }}
-    />
-    <Text body={text} variant="muted" />
-  </div>
+  <JimboRow gap="md" justify="center" className={className}>
+    <JimboStatusPill status="running" label={text} />
+  </JimboRow>
 );
 
 /* ─── SeedCard ─── */
@@ -213,67 +123,45 @@ export const SeedCard: FC<SeedCardProps> = ({
   className = "",
 }) => {
   return (
-    <div
-      className={className}
+    <JimboInnerPanel
+      className={["j-stack", "j-stack--gap-sm", onClick ? "j-seed-card--interactive" : "", className]
+        .filter(Boolean)
+        .join(" ")}
       onClick={onClick ? () => navigator.clipboard?.writeText(seed) : undefined}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
-      style={{
-        border: "2px solid var(--j-panel-edge)",
-        borderRadius: "var(--j-radius-lg)",
-        background: "var(--j-surface-inset)",
-        padding: "var(--j-space-lg)",
-        cursor: onClick ? "pointer" : "default",
-        transition: "var(--j-transition)",
-        position: "relative",
-      }}
-      onMouseEnter={(e) => {
-        if (onClick) {
-          e.currentTarget.style.borderColor = "var(--j-blue)";
-          e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow = "var(--j-shadow)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (onClick) {
-          e.currentTarget.style.borderColor = "var(--j-panel-edge)";
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "none";
-        }
-      }}
+      title={onClick ? "Copy seed" : undefined}
     >
-      <Stack gap={8}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center" }}>
-          <div style={{ ...ROW, gap: 8 }}>
-            {rank !== undefined && (
-              <JimboText size="sm" tone="gold">
-                #{rank}
-              </JimboText>
-            )}
-            <Text body={seed} variant="accent" />
-          </div>
-          {score !== undefined && <Badge label={String(score)} tone="gold" />}
-        </div>
+      <JimboRow justify="between" align="center">
+        <JimboRow gap="sm" justify="start">
+          {rank !== undefined && (
+            <JimboText size="sm" tone="gold">
+              #{rank}
+            </JimboText>
+          )}
+          <Text body={seed} variant="accent" />
+        </JimboRow>
+        {score !== undefined && <Badge label={String(score)} tone="gold" />}
+      </JimboRow>
 
-        {edition && <Badge label={edition} tone="purple" />}
+      {edition && <Badge label={edition} tone="purple" />}
 
-        {highlights && highlights.length > 0 && (
-          <div style={PILLS}>
-            {highlights.map((h, i) => (
-              <Badge key={i} label={h} tone="green" />
-            ))}
-          </div>
-        )}
+      {highlights && highlights.length > 0 && (
+        <JimboRow wrap gap="sm" justify="start">
+          {highlights.map((h, i) => (
+            <Badge key={i} label={h} tone="green" />
+          ))}
+        </JimboRow>
+      )}
 
-        {jokers && jokers.length > 0 && (
-          <div style={PILLS}>
-            {jokers.map((j, i) => (
-              <Badge key={i} label={j} tone="blue" />
-            ))}
-          </div>
-        )}
-      </Stack>
-    </div>
+      {jokers && jokers.length > 0 && (
+        <JimboRow wrap gap="sm" justify="start">
+          {jokers.map((j, i) => (
+            <Badge key={i} label={j} tone="blue" />
+          ))}
+        </JimboRow>
+      )}
+    </JimboInnerPanel>
   );
 };
 
@@ -311,7 +199,7 @@ export const SeedList: FC<SeedListProps> = ({
       ))}
 
       {maxPage > 0 && (
-        <div style={{ ...ROW, gap: 12, justifyContent: "center", padding: "var(--j-space-lg) 0" }}>
+        <JimboRow gap="md" justify="center">
           <JimboButton
             size="sm"
             tone="blue"
@@ -329,7 +217,7 @@ export const SeedList: FC<SeedListProps> = ({
           >
             Next <FiChevronRight />
           </JimboButton>
-        </div>
+        </JimboRow>
       )}
     </Stack>
   );
@@ -359,10 +247,10 @@ export const JokerBadge: FC<JokerBadgeProps> = ({ name, edition, rarity, classNa
   };
 
   return (
-    <div className={className} style={{ ...ROW, gap: 6 }}>
+    <JimboRow gap="sm" justify="start" className={className}>
       <Badge label={name} tone={rarityTone[rarity ?? ""] ?? "grey"} />
       {edition && <Badge label={edition} tone={editionTone[edition] ?? "grey"} />}
-    </div>
+    </JimboRow>
   );
 };
 

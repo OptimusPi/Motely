@@ -1,6 +1,8 @@
 import { type FC } from "react";
 import { Badge, Panel, Stack, Text, Divider, type BadgeTone } from "./layout.js";
 import { JimboText } from "../../ui/jimboText.js";
+import { JimboInnerPanel } from "../../ui/panel.js";
+import { JimboRow } from "../../ui/JimboLayout.js";
 import {
   getJoker,
   getSynergies,
@@ -26,33 +28,10 @@ import {
 /**
  * Reference Components — Encyclopedia UI for Balatro entities.
  *
- * Grid layout only (no flex — host iframes reflow flex differently, CLAUDE.md
- * rule #1), real --j-* tokens only. Text is JimboText via the layout adapters.
+ * Composed from Jimbo primitives: JimboRow (between / wrap) for header and
+ * pill rows, JimboInnerPanel for the code snippet, Panel/Stack/Text/Badge/
+ * Divider from the layout adapters.
  */
-
-// Title on the left, badge(s) on the right — the no-flex version of the old
-// space-between header row.
-const HEADER: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr auto",
-  alignItems: "center",
-  gap: 8,
-};
-// A content-width row of chips.
-const ROW: React.CSSProperties = {
-  display: "grid",
-  gridAutoFlow: "column",
-  gridAutoColumns: "max-content",
-  alignItems: "center",
-  gap: 6,
-};
-// Pills that wrap without flex-wrap.
-const PILLS: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(64px, max-content))",
-  gap: 6,
-  justifyContent: "start",
-};
 
 /* ─── JokerCard ─── */
 export interface JokerCardProps {
@@ -85,9 +64,9 @@ export const JokerCard: FC<JokerCardProps> = ({ name, showSynergies = true, clas
   return (
     <Panel className={className}>
       <Stack gap={8}>
-        <div style={HEADER}>
+        <JimboRow justify="between" align="center">
           <Text body={joker.name} variant="title" />
-          <div style={ROW}>
+          <JimboRow gap="sm">
             <Badge
               label={joker.rarity}
               tone={
@@ -101,13 +80,13 @@ export const JokerCard: FC<JokerCardProps> = ({ name, showSynergies = true, clas
               }
             />
             <Badge label={`$${joker.cost}`} tone="gold" />
-          </div>
-        </div>
+          </JimboRow>
+        </JimboRow>
 
-        <div style={PILLS}>
+        <JimboRow wrap gap="sm" justify="start">
           <Badge label={joker.category} tone={categoryTone[joker.category]} />
           <Badge label={joker.jamlKey} tone="grey" />
-        </div>
+        </JimboRow>
 
         <Text body={joker.effect} variant="body" />
 
@@ -120,11 +99,11 @@ export const JokerCard: FC<JokerCardProps> = ({ name, showSynergies = true, clas
           <>
             <Divider />
             <Text body="Synergies" variant="accent" />
-            <div style={PILLS}>
+            <JimboRow wrap gap="sm" justify="start">
               {synergies.map((s) => (
                 <Badge key={s.name} label={s.name} tone="purple" />
               ))}
-            </div>
+            </JimboRow>
           </>
         )}
       </Stack>
@@ -158,16 +137,16 @@ export const SynergyCard: FC<SynergyCardProps> = ({ name, className = "" }) => {
   return (
     <Panel className={className} variant="accent">
       <Stack gap={10}>
-        <div style={HEADER}>
+        <JimboRow justify="between" align="center">
           <Text body={synergy.name} variant="title" />
           <Badge label={synergy.difficulty} tone={difficultyTone[synergy.difficulty]} />
-        </div>
+        </JimboRow>
 
-        <div style={PILLS}>
+        <JimboRow wrap gap="sm" justify="start">
           {synergy.jokers.map((j) => (
             <Badge key={j} label={j} tone="blue" />
           ))}
-        </div>
+        </JimboRow>
 
         <Text body={synergy.description} variant="body" />
 
@@ -181,31 +160,23 @@ export const SynergyCard: FC<SynergyCardProps> = ({ name, className = "" }) => {
         <Text body="Setup Steps" variant="accent" />
         <Stack gap={6}>
           {synergy.setup.map((step, i) => (
-            <div
-              key={i}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "auto 1fr",
-                gap: 8,
-                alignItems: "start",
-              }}
-            >
+            <JimboRow key={i} gap="sm" align="start" justify="start">
               <JimboText size="sm" tone="gold">
                 {i + 1}.
               </JimboText>
               <Text body={step} variant="muted" />
-            </div>
+            </JimboRow>
           ))}
         </Stack>
 
         <Divider />
 
         <Text body="Boss Counters" variant="accent" />
-        <div style={PILLS}>
+        <JimboRow wrap gap="sm" justify="start">
           {synergy.bossCounters.map((b) => (
             <Badge key={b} label={b} tone="red" />
           ))}
-        </div>
+        </JimboRow>
       </Stack>
     </Panel>
   );
@@ -245,13 +216,13 @@ export const BossBlindCard: FC<BossBlindCardProps> = ({ name, className = "" }) 
   return (
     <Panel className={className}>
       <Stack gap={8}>
-        <div style={HEADER}>
+        <JimboRow justify="between" align="center">
           <Text body={boss.name} variant="title" />
-          <div style={ROW}>
+          <JimboRow gap="sm">
             <Badge label={boss.category} tone={categoryTone[boss.category]} />
             <Badge label={boss.threatLevel} tone={threatTone[boss.threatLevel]} />
-          </div>
-        </div>
+          </JimboRow>
+        </JimboRow>
 
         <Badge label={boss.jamlKey} tone="grey" />
 
@@ -260,27 +231,20 @@ export const BossBlindCard: FC<BossBlindCardProps> = ({ name, className = "" }) 
         <Divider />
 
         <Text body="Counters" variant="accent" />
-        <div style={PILLS}>
+        <JimboRow wrap gap="sm" justify="start">
           {boss.counters.map((c) => (
             <Badge key={c} label={c} tone="green" />
           ))}
-        </div>
+        </JimboRow>
 
         <Divider />
 
         <Text body="JAML Filter" variant="accent" />
-        <div
-          style={{
-            background: "var(--j-surface-inset)",
-            padding: "8px 12px",
-            borderRadius: "var(--j-radius-lg)",
-            fontFamily: "var(--j-font-code)",
-            fontSize: 12,
-            color: "var(--j-grey)",
-          }}
-        >
-          {boss.jamlAvoid}
-        </div>
+        <JimboInnerPanel>
+          <JimboText size="sm" className="j-code-snippet">
+            {boss.jamlAvoid}
+          </JimboText>
+        </JimboInnerPanel>
       </Stack>
     </Panel>
   );
@@ -311,10 +275,10 @@ export const DeckCard: FC<DeckCardProps> = ({ name, className = "" }) => {
   return (
     <Panel className={className}>
       <Stack gap={8}>
-        <div style={HEADER}>
+        <JimboRow justify="between" align="center">
           <Text body={deck.name} variant="title" />
           <Badge label={deck.difficulty} tone={difficultyTone[deck.difficulty]} />
-        </div>
+        </JimboRow>
 
         <Badge label={deck.jamlKey} tone="grey" />
 
@@ -328,11 +292,11 @@ export const DeckCard: FC<DeckCardProps> = ({ name, className = "" }) => {
         <Divider />
 
         <Text body="Synergies" variant="accent" />
-        <div style={PILLS}>
+        <JimboRow wrap gap="sm" justify="start">
           {deck.synergies.map((s) => (
             <Badge key={s} label={s} tone="blue" />
           ))}
-        </div>
+        </JimboRow>
       </Stack>
     </Panel>
   );
@@ -364,10 +328,10 @@ export const StakeCard: FC<StakeCardProps> = ({ name, className = "" }) => {
   return (
     <Panel className={className}>
       <Stack gap={8}>
-        <div style={HEADER}>
+        <JimboRow justify="between" align="center">
           <Text body={stake.name} variant="title" />
           <Badge label={stake.difficulty} tone={difficultyTone[stake.difficulty]} />
-        </div>
+        </JimboRow>
 
         <Badge label={stake.jamlKey} tone="grey" />
 
@@ -410,11 +374,11 @@ export const StrategyAdvisor: FC<StrategyAdvisorProps> = ({ jokers, className = 
         {foundJokers.length > 0 && (
           <>
             <Text body="Detected Jokers" variant="accent" />
-            <div style={PILLS}>
+            <JimboRow wrap gap="sm" justify="start">
               {foundJokers.map((j) => (
                 <Badge key={j.name} label={j.name} tone="blue" />
               ))}
-            </div>
+            </JimboRow>
           </>
         )}
 
@@ -424,15 +388,15 @@ export const StrategyAdvisor: FC<StrategyAdvisorProps> = ({ jokers, className = 
             <Text body="Recommended Strategies" variant="accent" />
             <Stack gap={8}>
               {recommended.slice(0, 3).map((s) => (
-                <div key={s.name}>
+                <Stack key={s.name} gap={4}>
                   <Text body={s.name} variant="body" />
                   <Text body={s.description} variant="muted" />
-                  <div style={{ ...PILLS, marginTop: 4 }}>
+                  <JimboRow wrap gap="sm" justify="start">
                     {s.jokers.map((j) => (
                       <Badge key={j} label={j} tone="purple" />
                     ))}
-                  </div>
-                </div>
+                  </JimboRow>
+                </Stack>
               ))}
             </Stack>
           </>
@@ -442,11 +406,11 @@ export const StrategyAdvisor: FC<StrategyAdvisorProps> = ({ jokers, className = 
           <>
             <Divider />
             <Text body="Boss Blind Warnings" variant="accent" />
-            <div style={PILLS}>
+            <JimboRow wrap gap="sm" justify="start">
               {Array.from(bossWarnings).map((b) => (
                 <Badge key={b} label={b} tone="red" />
               ))}
-            </div>
+            </JimboRow>
           </>
         )}
 

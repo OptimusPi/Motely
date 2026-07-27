@@ -68,9 +68,8 @@ export function JimboIconButton({
       style={{
         width: side,
         height: side,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: "inline-grid",
+        placeItems: "center",
         background: hover && !disabled ? palette.hover : palette.rest,
         color: C.WHITE,
         border: `${borderWidth}px solid ${palette.border}`,

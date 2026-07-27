@@ -21,8 +21,9 @@
 | Git | `master` clean w/ origin (as of map write) |
 | Design system | **Jimbo** — `src/ui/jimbo.css`, `jimbo-tokens.css`, `Jimbo*` primitives |
 | Old design | deleted `92cc8c2` (“kimi revival”) — do not revive |
-| Jimbo migrate queue | defined by **per-file eslint baselines** on the phase map (repo total **430** at audit) — the `TODO(jimbo-primitives)` markers cover only P2–P5's 127 errors; P5b–P5d carry the other big files |
-| Done | **P1** (`JamlCodeEditor` → `JimboCodeSurface`) · **P6** (SwipeDeck + Layout stories already shipped) |
+| Jimbo migrate queue | defined by **per-file eslint baselines** on the phase map (repo total **430** at audit, **179** after P0b + P5b–P5d) — the `TODO(jimbo-primitives)` markers cover only P2–P5's 127 errors; P5b–P5d carried the other big files |
+| Done | **P0b** (IconButton grid) · **P1** (`JamlCodeEditor` → `JimboCodeSurface`) · **P5b** (`JamlyzerView`) · **P5c** (`Jamlyzer` + `JamlyzerBulk`) · **P5d** (json-render/components) · **P6** (SwipeDeck + Layout stories already shipped) |
+| New primitives (P5d) | `JimboGrid` · `JimboSpacer` · `JimboDivider` · `JimboStatusPill` · `JimboErrorBlock` · `JimboMascot` · `JimboOrbitalMenu` — all in `src/ui/` with stories, exported from `src/ui.ts` |
 | Detailed steps | also in `HANDOFFS.md` (this file = partner game + order + anti-soup) |
 
 ---
@@ -95,16 +96,13 @@
 
 ---
 
-### P0b — Fix `JimboIconButton` inline-flex (design system breaks rule 1)
+### P0b — Fix `JimboIconButton` inline-flex (design system breaks rule 1) — **done**
 
 | Field | Content |
 |--------|---------|
-| File | `src/ui/JimboIconButton.tsx` — line ~71, `display: "inline-flex"` |
-| Baseline | **1** eslint error |
-| Why first | rule 1 has no exemptions; nobody can rewrite a block touching this file without fixing it, so it blocks the primitives layer |
-| Fix | grid (`display: "inline-grid"` + `place-items: center`) per rule 1's own guidance |
-
-**Done when:** `npx eslint src/ui/JimboIconButton.tsx` → 0 · `pnpm build` green.
+| File | `src/ui/JimboIconButton.tsx` |
+| Shipped | `display: "inline-grid"` + `placeItems: "center"` replaces inline-flex (Kimi session, 2026-07-27) |
+| Proof | `npx eslint src/ui/JimboIconButton.tsx` → 0 · `pnpm build` green |
 
 ---
 
@@ -188,39 +186,34 @@
 
 ---
 
-### P5b — Migrate `JamlyzerView.tsx` → Jimbo
+### P5b — Migrate `JamlyzerView.tsx` → Jimbo — **done**
 
 | Field | Content |
 |--------|---------|
 | File | `src/components/JamlyzerView.tsx` |
-| Baseline | **110** eslint errors — the single worst file in the repo, bigger than P2+P3+P5 combined; it was missing from the original board |
-| Extra | ship `JamlyzerView` ante-0 fix here only if Nate merges P7c into this phase — otherwise pure migrate |
-
-**Done when:** `npx eslint src/components/JamlyzerView.tsx` → 0 · `pnpm build` green.
+| Shipped | full rebuild on Jimbo primitives (Kimi session, 2026-07-27): rail + 6 domain components extracted to `src/components/jamlyzer/` (`JamlyzerRail`, `JamlyzerItemCard`, `JamlyzerPackSection`, `JamlyzerPulls`, `JamlyzerEvents`, `JamlyzerErraticDeck`, + `names.ts`/`highlight.ts`); new `.j-jamlyzer-view` grid layout with narrow-host collapse; `JimboSeedCopyChip` in the seed header; sentence-case labels (killed MUST/SMALL/BOSS shouting) |
+| Proof | `npx eslint src/components/JamlyzerView.tsx src/components/jamlyzer/` → 0 (was **110**) · `pnpm typecheck` · `pnpm build` green |
 
 ---
 
-### P5c — Migrate `JamlyzerBulk.tsx` + `Jamlyzer.tsx` → Jimbo
+### P5c — Migrate `JamlyzerBulk.tsx` + `Jamlyzer.tsx` → Jimbo — **done**
 
 | Field | Content |
 |--------|---------|
-| Files | `src/components/JamlyzerBulk.tsx` (**41**) · `src/components/Jamlyzer.tsx` (**27**) |
-| Baseline | **68** eslint errors combined |
-| Depends | P5b soft — shares Jamlyzer chrome; reuse whatever P5b extracts |
-
-**Done when:** `npx eslint` → 0 for both files · `pnpm build` green.
+| Files | `src/components/JamlyzerBulk.tsx` (**41** → 0) · `src/components/Jamlyzer.tsx` (**27** → 0) |
+| Shipped | Bulk: `ClauseHitPanel` extraction, seed rows use `JimboSeedCopyChip`, dead `j-badge--gold` class removed (score is gold text per JimboBadge's no-gold rule). Jamlyzer: ante detail extracted to `jamlyzer/JamlyzerAnteDetails.tsx`; dead `pulse` animation and `j-jamlyzer__card-wrap` wrappers dropped |
+| Proof | `npx eslint` → 0 for both files · `pnpm typecheck` · `pnpm build` green |
 
 ---
 
-### P5d — Migrate `src/json-render/components/*` → Jimbo
+### P5d — Migrate `src/json-render/components/*` → Jimbo — **done**
 
 | Field | Content |
 |--------|---------|
-| Files | `domain.tsx` (**32**) · `reference.tsx` (**22**) · `mascot.tsx` (**10**) · `layout.tsx` (**6**) |
-| Baseline | **70** eslint errors combined |
-| Note | these are the json-render engine's own components — the package's headline feature renders through them |
-
-**Done when:** `npx eslint src/json-render/components/` → 0 · `pnpm build` green.
+| Files | `domain.tsx` (**32** → 0) · `reference.tsx` (**22** → 0) · `mascot.tsx` (**10** → 0) · `layout.tsx` (**6** → 0) |
+| Shipped | the missing React halves for CSS that already existed: `JimboDivider`, `JimboStatusPill`, `JimboErrorBlock` — plus `JimboGrid`, `JimboSpacer`, `JimboMascot`, `JimboOrbitalMenu` (mascot image moved to `src/ui/`); json-render components are now thin tone-mapping adapters over the primitives; all exported from `src/ui.ts` with stories |
+| Note | `badge--gold` dead class is gone from SeedCard; LoadingPulse's `pulse` animation never existed in CSS — now a real `JimboStatusPill` |
+| Proof | `npx eslint src/json-render/components/` → 0 · `pnpm typecheck` · `pnpm build` · `pnpm build-storybook` all green |
 
 ---
 
@@ -293,16 +286,16 @@ Burn line:
 | Token | Claude starts |
 |-------|----------------|
 | **P0** | sanity build |
-| **P0b** | JimboIconButton inline-flex fix (1 line, unblocks primitives layer) |
+| ~~P0b~~ | ~~JimboIconButton inline-flex fix~~ — done |
 | ~~P1~~ | ~~JamlCodeEditor → Jimbo~~ — done |
 | **P2** | JamlMapPreview → Jimbo (18) |
 | **P2.5** | extract shared JimboZoneRail (before P3) |
 | **P3** | JamlIdeVisual → Jimbo (43) |
 | **P4** | JamlIde shell → Jimbo (36) |
 | **P5** | JamlMapEditor → Jimbo (30) — soft deps, can run any time |
-| **P5b** | JamlyzerView → Jimbo (110, biggest file) |
-| **P5c** | JamlyzerBulk + Jamlyzer → Jimbo (68) |
-| **P5d** | json-render/components → Jimbo (70) |
+| ~~P5b~~ | ~~JamlyzerView → Jimbo~~ — done (was 110) |
+| ~~P5c~~ | ~~JamlyzerBulk + Jamlyzer → Jimbo~~ — done (was 68) |
+| ~~P5d~~ | ~~json-render/components → Jimbo~~ — done (was 70) |
 | ~~P6~~ | ~~SwipeDeck + Layout stories~~ — done |
 | **P7a–c** | product gap (name the letter; P7d = track only, not pickable) |
 | **P8** | release 4.2.9 (needs go) |

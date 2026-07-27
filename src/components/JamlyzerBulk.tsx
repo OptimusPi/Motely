@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { MotelyJamlyzerSeedResult, MotelyJamlyzerAnteResult } from "motely-wasm";
 import { JamlyzerView } from "./JamlyzerView.js";
 import { decodeMotelyItem } from "../decode/motelyItemDecoder.js";
+import { JimboPanel } from "../ui/JimboPanel.js";
+import { JimboInnerPanel } from "../ui/panel.js";
+import { JimboText } from "../ui/jimboText.js";
+import { JimboBadge } from "../ui/JimboBadge.js";
+import { JimboButton } from "../ui/JimboButton.js";
+import { JimboRow } from "../ui/JimboLayout.js";
+import { JimboSeedCopyChip } from "../ui/JimboSeedCopyChip.js";
 import {
   parseJamlClauses,
   type ParsedJamlClause,
@@ -61,6 +68,42 @@ function seedClauseMatches(
   return map;
 }
 
+export function ClauseHitPanel({
+  clause,
+  hitAntes,
+  tally,
+}: {
+  clause: ParsedJamlClause;
+  hitAntes: number[];
+  tally?: number;
+}) {
+  const label =
+    clause.kind === "must" ? `Must · ${clause.label}` : clause.kind === "mustNot" ? `Not · ${clause.label}` : clause.label;
+  const labelTone = clause.kind === "must" ? "red" : "grey";
+  const badgeTone = clause.kind === "must" ? "red" : clause.kind === "mustNot" ? "grey" : "green";
+  return (
+    <JimboInnerPanel className="j-stack j-stack--gap-xs">
+      <JimboText size="xs" tone={labelTone}>
+        {label}
+        {tally !== undefined && <JimboText size="xs" tone="green"> ({tally})</JimboText>}
+      </JimboText>
+      <JimboRow wrap gap="xs" align="center">
+        {hitAntes.length > 0 ? (
+          hitAntes.map((n) => (
+            <JimboBadge key={n} tone={badgeTone} size="sm">
+              Ante {n}
+            </JimboBadge>
+          ))
+        ) : (
+          <JimboText size="micro" tone="grey">
+            no hits
+          </JimboText>
+        )}
+      </JimboRow>
+    </JimboInnerPanel>
+  );
+}
+
 export function JamlyzerBulk({ results, jamlText, clauses: clausesProp, tallies, deck, stake }: JamlyzerBulkProps) {
   const [expandedSeed, setExpandedSeed] = useState<string | null>(null);
 
@@ -71,21 +114,21 @@ export function JamlyzerBulk({ results, jamlText, clauses: clausesProp, tallies,
   }, [clausesProp, jamlText]);
 
   const shouldClauses = useMemo(() => clauses.filter((c) => c.kind === "should"), [clauses]);
+  const otherClauses = useMemo(() => clauses.filter((c) => c.kind !== "should"), [clauses]);
 
   if (results.length === 0) {
     return (
-      <div className="j-panel j-text j-text--grey">
-        No seeds to analyze.
-      </div>
+      <JimboPanel body>
+        <JimboText tone="grey">No seeds to analyze.</JimboText>
+      </JimboPanel>
     );
   }
 
   return (
-    <div className="j-panel" style={{ gap: "var(--j-space-lg)" }}>
-      <div className="j-text j-text--xl j-text--gold">Bulk Seed Analysis</div>
-      <div className="j-text j-text--body j-text--grey">
+    <JimboPanel title="Bulk seed analysis" tone="gold">
+      <JimboText tone="grey">
         {results.length} seed{results.length === 1 ? "" : "s"} analyzed
-      </div>
+      </JimboText>
 
       {results.map((result, index) => {
         const matches = seedClauseMatches(result, clauses);
@@ -93,91 +136,60 @@ export function JamlyzerBulk({ results, jamlText, clauses: clausesProp, tallies,
         const seedTallies = tallies && index < tallies.length ? tallies[index] : undefined;
 
         return (
-          <div key={result.seed} className="j-panel" style={{ gap: "var(--j-space-md)" }}>
-            <div className="j-flex" style={{ alignItems: "center", gap: "var(--j-space-md)", flexWrap: "wrap" }}>
-              <div className="j-text j-text--lg j-text--white">{result.seed}</div>
-              <div className="j-badge j-badge--gold j-badge--md">Score: {result.score}</div>
-              <button
-                className="j-btn j-btn--xs"
+          <JimboPanel key={result.seed} body>
+            <JimboRow wrap gap="md" align="center">
+              <JimboSeedCopyChip value={result.seed} />
+              <JimboText tone="grey">
+                Score: <JimboText tone="gold">{result.score}</JimboText>
+              </JimboText>
+              <JimboButton
+                size="xs"
+                tone="blue"
                 onClick={() => setExpandedSeed(isExpanded ? null : result.seed)}
-              >
-                <span className="j-btn__face j-text j-text--micro">
-                  {isExpanded ? "Collapse" : "Expand"}
-                </span>
-              </button>
-            </div>
+                label={isExpanded ? "Collapse" : "Expand"}
+              />
+            </JimboRow>
 
             {shouldClauses.length > 0 && (
-              <div className="j-flex" style={{ gap: "var(--j-space-md)", flexWrap: "wrap" }}>
+              <JimboRow wrap gap="md" align="start">
                 {shouldClauses.map((clause, i) => {
-                  const hitAntes = matches.get(clause) ?? [];
                   const tally = seedTallies && i < seedTallies.length ? seedTallies[i] : undefined;
                   return (
-                    <div key={i} className="j-inner-panel" style={{ minWidth: 140 }}>
-                      <div className="j-text j-text--label j-text--grey" style={{ marginBottom: "var(--j-space-sm)" }}>
-                        {clause.label}
-                        {tally !== undefined && <span className="j-text--green"> ({tally})</span>}
-                      </div>
-                      <div className="j-flex" style={{ gap: "var(--j-space-xs)", flexWrap: "wrap" }}>
-                        {hitAntes.length > 0 ? (
-                          hitAntes.map((n) => (
-                            <span key={n} className="j-badge j-badge--green j-badge--sm">
-                              Ante {n}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="j-text j-text--micro j-text--grey">no hits</span>
-                        )}
-                      </div>
-                    </div>
+                    <ClauseHitPanel
+                      key={i}
+                      clause={clause}
+                      hitAntes={matches.get(clause) ?? []}
+                      tally={tally}
+                    />
                   );
                 })}
-              </div>
+              </JimboRow>
             )}
 
-            {clauses.filter((c) => c.kind !== "should").length > 0 && (
-              <div className="j-flex" style={{ gap: "var(--j-space-md)", flexWrap: "wrap" }}>
-                {clauses
-                  .filter((c) => c.kind !== "should")
-                  .map((clause, i) => {
-                    const hitAntes = matches.get(clause) ?? [];
-                    const color = clause.kind === "must" ? "red" : "grey";
-                    return (
-                      <div key={`other-${i}`} className="j-inner-panel" style={{ minWidth: 140 }}>
-                        <div className={`j-text j-text--label j-text--${clause.kind === "must" ? "red" : "grey"}`} style={{ marginBottom: "var(--j-space-sm)" }}>
-                          {clause.kind === "must" ? "MUST " : "NOT "}{clause.label}
-                        </div>
-                        <div className="j-flex" style={{ gap: "var(--j-space-xs)", flexWrap: "wrap" }}>
-                          {hitAntes.length > 0 ? (
-                            hitAntes.map((n) => (
-                              <span key={n} className={`j-badge j-badge--${color} j-badge--sm`}>
-                                Ante {n}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="j-text j-text--micro j-text--grey">no hits</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
+            {otherClauses.length > 0 && (
+              <JimboRow wrap gap="md" align="start">
+                {otherClauses.map((clause, i) => (
+                  <ClauseHitPanel
+                    key={`other-${i}`}
+                    clause={clause}
+                    hitAntes={matches.get(clause) ?? []}
+                  />
+                ))}
+              </JimboRow>
             )}
 
             {isExpanded && (
-              <div style={{ marginTop: "var(--j-space-md)" }}>
-                <JamlyzerView
-                  result={result}
-                  deck={deck}
-                  stake={stake}
-                  clauses={clauses}
-                  tallies={seedTallies ? [...seedTallies] : undefined}
-                />
-              </div>
+              <JamlyzerView
+                result={result}
+                deck={deck}
+                stake={stake}
+                clauses={clauses}
+                tallies={seedTallies ? [...seedTallies] : undefined}
+              />
             )}
-          </div>
+          </JimboPanel>
         );
       })}
-    </div>
+    </JimboPanel>
   );
 }

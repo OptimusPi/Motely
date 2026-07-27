@@ -4,29 +4,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   MotelyJaml,
   MotelyJamlyzer,
-  MotelyBossBlind,
-  MotelyVoucher,
-  MotelyTag,
-  MotelyBoosterPack,
   type MotelyJamlyzerSeedResult,
 } from "motely-wasm";
 import { ensureMotelyReady } from "../lib/motely/runtime.js";
 import { fromJaml } from "../lib/motely/jamlParse.js";
-import { JimboInnerPanel } from "../ui/panel.js";
 import { JimboPanel } from "../ui/JimboPanel.js";
 import { JimboText } from "../ui/jimboText.js";
+import { JimboStack } from "../ui/JimboLayout.js";
 import { JamlSeedSpinner } from "./JamlSeedSpinner.js";
-import { JimboSpinner } from "../ui/JimboSpinner.js";
-import { BOSSES, VOUCHERS, TAGS, BOOSTER_PACKS } from "../sprites/spriteData.js";
-import { MOTELY_ITEM_FORMATS_BY_VALUE } from "../decode/motelyItemFormats.js";
-import {
-  JamlBoss,
-  JamlVoucher,
-  JamlTag,
-  JamlGameCard,
-  resolveAnalyzerShopItem,
-  type AnalyzerResolvedItem
-} from "./GameCard.js";
+import { JamlyzerAnteDetails } from "./jamlyzer/JamlyzerAnteDetails.js";
 
 export interface JamlyzerProps {
   /** Full JAML document. Seeds come from the top-level `seeds:` array via Motely. */
@@ -44,54 +30,13 @@ function seedMatches(row: MotelyJamlyzerSeedResult): boolean {
   return (row.score ?? 0) >= 1;
 }
 
-function getBossDisplayName(bossVal: MotelyBossBlind): string {
-  const key = MotelyBossBlind[bossVal];
-  if (!key) return "Small Blind";
-  const normalizedKey = key.toLowerCase();
-  const found = BOSSES.find(b => b.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key;
-}
-
-function getVoucherDisplayName(voucherVal: MotelyVoucher): string {
-  const key = MotelyVoucher[voucherVal];
-  if (!key) return "";
-  const normalizedKey = key.toLowerCase();
-  const found = VOUCHERS.find(v => v.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key;
-}
-
-function getTagDisplayName(tagVal: MotelyTag): string {
-  const key = MotelyTag[tagVal];
-  if (!key) return "";
-  const normalizedKey = key.toLowerCase();
-  const found = TAGS.find(t => t.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key;
-}
-
-function getBoosterPackDisplayName(packVal: MotelyBoosterPack): string {
-  const key = MotelyBoosterPack[packVal];
-  if (!key) return "";
-  const normalizedKey = (key + "pack").toLowerCase();
-  const found = BOOSTER_PACKS.find(b => b.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key + " Pack";
-}
-
-function getResolvedItem(value: number, scale = 0.5): AnalyzerResolvedItem {
-  const format = MOTELY_ITEM_FORMATS_BY_VALUE[value as keyof typeof MOTELY_ITEM_FORMATS_BY_VALUE];
-  if (format) {
-    return resolveAnalyzerShopItem({
-      id: String(value),
-      name: format.displayName,
-      value: value
-    }, scale);
-  }
-  return { kind: "unknown", label: `Unknown #${value}` };
-}
+const MIN_ANTE = 1;
+const MAX_ANTE = 8;
 
 export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
   const [load, setLoad] = useState<JamlyzerLoadState>({ status: "loading" });
   const [index, setIndex] = useState(0);
-  const [selectedAnte, setSelectedAnte] = useState(1);
+  const [selectedAnte, setSelectedAnte] = useState(MIN_ANTE);
   const [lastJaml, setLastJaml] = useState(jaml);
 
   // Reset to loading the moment `jaml` changes — render-phase derivation
@@ -101,7 +46,7 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
     setLastJaml(jaml);
     setLoad({ status: "loading" });
     setIndex(0);
-    setSelectedAnte(1);
+    setSelectedAnte(MIN_ANTE);
   }
 
   useEffect(() => {
@@ -155,52 +100,49 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
 
   if (load.status === "loading") {
     return (
-      <div className={rootClass} style={style}>
+      <JimboStack gap="sm" align="stretch" className={rootClass} style={style}>
         <JimboPanel className="j-jamlyzer__panel j-jamlyzer__panel--hint">
           <JimboText size="sm" tone="white" className="j-text-center">
             Analyzing seeds…
           </JimboText>
         </JimboPanel>
-      </div>
+      </JimboStack>
     );
   }
 
   if (load.status === "error") {
     return (
-      <div className={rootClass} style={style}>
+      <JimboStack gap="sm" align="stretch" className={rootClass} style={style}>
         <JimboPanel className="j-jamlyzer__panel j-jamlyzer__panel--hint">
           <JimboText size="xs" tone="red" className="j-text-center">
             {load.message}
           </JimboText>
         </JimboPanel>
-      </div>
+      </JimboStack>
     );
   }
 
   const { elapsedMs } = load;
   const matchCount = rows.filter(seedMatches).length;
   const isMatch = current ? seedMatches(current) : false;
-  const tallyLine: string | null = null;
 
   const hasAnalysis = !!current?.antes?.length;
 
   return (
-    <div className={rootClass} style={style}>
+    <JimboStack gap="sm" align="stretch" className={rootClass} style={style}>
       <JimboText size="xs" tone="white" className="j-jamlyzer__stats j-text-center">
         {elapsedMs.toFixed(0)} ms · {rows.length} seeds · {matchCount} match
       </JimboText>
 
-      <div className="j-jamlyzer__spinner">
-        <JamlSeedSpinner
-          seeds={seedList}
-          value={activeSeed}
-          onChange={handleSeedChange}
-          label=""
-          placeholder="Add seeds: to JAML"
-          variant="dark"
-          aria-label="Jamlyzer seed"
-        />
-      </div>
+      <JamlSeedSpinner
+        seeds={seedList}
+        value={activeSeed}
+        onChange={handleSeedChange}
+        label=""
+        placeholder="Add seeds: to JAML"
+        variant="dark"
+        aria-label="Jamlyzer seed"
+      />
 
       {current ? (
         <>
@@ -216,170 +158,14 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
             </JimboText>
           </JimboPanel>
 
-          {tallyLine ? (
-            <JimboInnerPanel className="j-jamlyzer__tallies">
-              <JimboText size="xs" tone="white" className="j-text-center">
-                {tallyLine}
-              </JimboText>
-            </JimboInnerPanel>
-          ) : null}
-
           {hasAnalysis && current.antes && (
-            <JimboInnerPanel className="j-jamlyzer__details">
-              <JimboSpinner
-                value={`Ante ${selectedAnte}`}
-                onPrev={() => setSelectedAnte(a => Math.max(1, a - 1))}
-                onNext={() => setSelectedAnte(a => Math.min(8, a + 1))}
-                canPrev={selectedAnte > 1}
-                canNext={selectedAnte < 8}
-              />
-
-              {(() => {
-                const anteData = current.antes.find((a) => a.ante === selectedAnte);
-                if (!anteData) {
-                  return (
-                    <JimboText size="xs" tone="grey" className="j-text-center">
-                      No analysis for Ante {selectedAnte}
-                    </JimboText>
-                  );
-                }
-
-                return (
-                  <div className="j-stack j-stack--gap-sm">
-                    {/* Boss & Voucher */}
-                    <div className="j-jamlyzer__details-section">
-                      <JimboText size="xs" tone="gold" className="j-text-center">
-                        Boss & Voucher
-                      </JimboText>
-                      <div className="j-row j-row--gap-md j-row--justify-center j-row--align-center">
-                        <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className="j-jamlyzer__card-wrap">
-                            <JamlBoss bossName={getBossDisplayName(anteData.boss)} scale={0.5} />
-                          </div>
-                          <JimboText size="micro" tone="white" className="j-text-center">
-                            {getBossDisplayName(anteData.boss)}
-                          </JimboText>
-                        </div>
-                        <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className="j-jamlyzer__card-wrap">
-                            <JamlVoucher voucherName={getVoucherDisplayName(anteData.voucher)} scale={0.5} />
-                          </div>
-                          <JimboText size="micro" tone="white" className="j-text-center">
-                            {getVoucherDisplayName(anteData.voucher)}
-                          </JimboText>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="j-jamlyzer__details-section">
-                      <JimboText size="xs" tone="gold" className="j-text-center">
-                        Tags
-                      </JimboText>
-                      <div className="j-row j-row--gap-md j-row--justify-center j-row--align-center">
-                        <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className="j-jamlyzer__card-wrap">
-                            <JamlTag tagName={getTagDisplayName(anteData.smallBlindTag)} scale={0.5} />
-                          </div>
-                          <JimboText size="micro" tone="white" className="j-text-center">
-                            Small: {getTagDisplayName(anteData.smallBlindTag)}
-                          </JimboText>
-                        </div>
-                        <div className="j-stack j-stack--gap-xs j-stack--align-center">
-                          <div className="j-jamlyzer__card-wrap">
-                            <JamlTag tagName={getTagDisplayName(anteData.bigBlindTag)} scale={0.5} />
-                          </div>
-                          <JimboText size="micro" tone="white" className="j-text-center">
-                            Big: {getTagDisplayName(anteData.bigBlindTag)}
-                          </JimboText>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Shop Queue */}
-                    <div className="j-jamlyzer__details-section">
-                      <JimboText size="xs" tone="gold" className="j-text-center">
-                        Shop Queue
-                      </JimboText>
-                      {anteData.shopItems && anteData.shopItems.length > 0 ? (
-                        <div className="j-jamlyzer__cards-grid">
-                          {anteData.shopItems.map((item, idx) => {
-                            const resolved = getResolvedItem(item.value, 0.45);
-                            return (
-                              <div
-                                key={idx}
-                                className="j-jamlyzer__card-wrap"
-                              >
-                                {resolved.kind === "voucher" && (
-                                  <JamlVoucher voucherName={resolved.voucherName} scale={0.45} />
-                                )}
-                                {(resolved.kind === "joker" || resolved.kind === "consumable" || resolved.kind === "playing") && (
-                                  <JamlGameCard card={resolved.card} type={resolved.type} />
-                                )}
-                                {resolved.kind === "unknown" && (
-                                  <div className="j-game-card j-game-card--unknown" style={{ "--j-card-width": `${71 * 0.45}px` } as React.CSSProperties}>
-                                    <JimboText size="micro" tone="grey" className="j-text-center">?</JimboText>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <JimboText size="xs" tone="grey" className="j-text-center">
-                          Empty
-                        </JimboText>
-                      )}
-                    </div>
-
-                    {/* Packs */}
-                    <div className="j-jamlyzer__details-section">
-                      <JimboText size="xs" tone="gold" className="j-text-center">
-                        Booster Packs
-                      </JimboText>
-                      {anteData.packs && anteData.packs.length > 0 ? (
-                        <div className="j-stack j-stack--gap-sm">
-                          {anteData.packs.map((pack, packIdx) => (
-                            <div key={packIdx} className="j-stack j-stack--gap-xs">
-                              <JimboText size="xs" tone="white" className="j-text-center">
-                                {getBoosterPackDisplayName(pack.pack)}
-                              </JimboText>
-                              <div className="j-jamlyzer__cards-grid">
-                                {pack.items.map((item, itemIdx) => {
-                                  const resolved = getResolvedItem(item.value, 0.45);
-                                  return (
-                                    <div
-                                      key={itemIdx}
-                                      className="j-jamlyzer__card-wrap"
-                                    >
-                                      {resolved.kind === "voucher" && (
-                                        <JamlVoucher voucherName={resolved.voucherName} scale={0.45} />
-                                      )}
-                                      {(resolved.kind === "joker" || resolved.kind === "consumable" || resolved.kind === "playing") && (
-                                        <JamlGameCard card={resolved.card} type={resolved.type} />
-                                      )}
-                                      {resolved.kind === "unknown" && (
-                                        <div className="j-game-card j-game-card--unknown" style={{ "--j-card-width": `${71 * 0.45}px` } as React.CSSProperties}>
-                                          <JimboText size="micro" tone="grey" className="j-text-center">?</JimboText>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <JimboText size="xs" tone="grey" className="j-text-center">
-                          No packs opened
-                        </JimboText>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-            </JimboInnerPanel>
+            <JamlyzerAnteDetails
+              ante={current.antes.find((a) => a.ante === selectedAnte)}
+              selectedAnte={selectedAnte}
+              minAnte={MIN_ANTE}
+              maxAnte={MAX_ANTE}
+              onSelectAnte={setSelectedAnte}
+            />
           )}
         </>
       ) : (
@@ -389,7 +175,6 @@ export function Jamlyzer({ jaml, className = "", style }: JamlyzerProps) {
           </JimboText>
         </JimboPanel>
       )}
-    </div>
+    </JimboStack>
   );
 }
-
