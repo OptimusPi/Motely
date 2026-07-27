@@ -2,7 +2,7 @@
   "name": "jaml-language-support",
   "displayName": "JAML (Motely)",
   "description": "Motely.Lsp (engine diagnostics/hover/completion) + @jimbo chat participant for JAML seed filters.",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "publisher": "pifreak",
   "license": "MIT",
   "engines": {
@@ -48,7 +48,7 @@
         "commands": [
           {
             "name": "find",
-            "description": "Search seeds for the active or attached JAML (J2 wires Motely)"
+            "description": "Search seeds with Motely.CLI --collect (real engine)"
           },
           {
             "name": "validate",
@@ -95,6 +95,33 @@
             }
           }
         }
+      },
+      {
+        "name": "motely_search_seeds",
+        "toolReferenceName": "findSeeds",
+        "displayName": "Find Balatro seeds",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(search)",
+        "userDescription": "Search for matching Balatro seeds with Motely",
+        "modelDescription": "Run Motely.CLI seed search for a JAML filter (--collect N). Returns real seed strings and scores from the engine. Always validates JAML first. Prefer absolute filePath to a .jaml or full jamlText. collectN defaults to 1 (SIMD may return a few over). Never invent seeds. Local CPU only.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "jamlText": {
+              "type": "string",
+              "description": "Full JAML document text when not reading a file"
+            },
+            "filePath": {
+              "type": "string",
+              "description": "Absolute path to a .jaml file on disk"
+            },
+            "collectN": {
+              "type": "number",
+              "description": "Stop after about N matches (default 1, max 100)",
+              "default": 1
+            }
+          }
+        }
       }
     ],
     "configuration": {
@@ -104,6 +131,16 @@
           "type": "string",
           "default": "",
           "description": "Absolute path to the Motely.Lsp executable. Empty = bundled server/Motely.Lsp, else workspace `dotnet run --project Motely.Lsp`."
+        },
+        "jaml.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to Motely.CLI. Empty = bundled server/Motely.CLI, else workspace `dotnet run --project Motely.CLI`."
+        },
+        "jaml.searchTimeoutMs": {
+          "type": "number",
+          "default": 120000,
+          "description": "Kill Motely.CLI seed search after this many milliseconds (default 120s)."
         },
         "jaml.trace.server": {
           "type": "string",

@@ -1,22 +1,26 @@
 /**
- * @jimbo chat participant (J0 scaffold).
+ * @jimbo chat participant.
  *
  * Owns the Copilot Chat turn when the user @-mentions jimbo.
- * J1+ will call Motely tools (validate / search). This phase only proves
- * registration + streaming + slash command routing.
+ * J1 validate + J2 search call real Motely (Lsp --diagnose / CLI --collect).
  *
  * Shape follows Microsoft's Chat Participant API:
  * https://code.visualstudio.com/api/extension-guides/ai/chat
  */
 import * as vscode from "vscode";
-import { diagnoseJaml, formatDiagnoseMarkdown } from "./motelyEngine";
+import {
+  diagnoseJaml,
+  formatDiagnoseMarkdown,
+  formatSearchMarkdown,
+  searchSeeds,
+} from "./motelyEngine";
 
 export const JIMBO_PARTICIPANT_ID = "jaml.jimbo";
 
 const SYSTEM = [
   "You are Jimbo — Motely/JAML assistant for Balatro seed filters.",
-  "One grammar: Motely engine only. Do not invent seeds.",
-  "This is scaffold phase J0: tools are not wired yet.",
+  "One grammar: Motely engine only. Never invent seeds.",
+  "Prefer tools: validateJaml before findSeeds. Report only engine results.",
   "Be brief. Prefer tables and code blocks over fluff.",
 ].join(" ");
 
@@ -60,17 +64,55 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
       return { metadata: { command: "validate" } };
     }
 
+    // J2: real Motely.CLI --collect
     if (request.command === "find") {
-      stream.markdown(
-        [
-          "**`/find` (scaffold)**",
-          "",
-          "Next phase runs Motely search (`--collect N` / wasm) and returns **real** seeds.",
-          "No fake seeds in this stub.",
-          "",
-          request.prompt ? `Filter intent: ${request.prompt}` : "Pass a JAML path or paste intent after J2.",
-        ].join("\n"),
-      );
+      stream.progress("Running Motely.CLI --collect…");
+      try {
+        const editor = vscode.window.activeTextEditor;
+        const fromEditor =
+          editor &&
+          (editor.document.languageId === "jaml" || editor.document.fileName.endsWith(".jaml"))
+            ? editor.document.uri.scheme === "file"
+              ? { filePath: editor.document.uri.fsPath, label: editor.document.uri.fsPath }
+              : { jamlText: editor.document.getText(), label: editor.document.uri.toString() }
+            : undefined;
+
+        // Optional: "/find 5" or "/find collect 5" → collectN
+        let collectN = 1;
+        let promptBody = request.prompt?.trim() ?? "";
+        const nMatch = promptBody.match(/^(?:collect\s+)?(\d+)\s*$/i);
+        if (nMatch) {
+          collectN = Math.max(1, Math.min(Number(nMatch[1]), 100));
+          promptBody = "";
+        } else {
+          const embed = promptBody.match(/\bcollect\s+(\d+)\b/i);
+          if (embed) {
+            collectN = Math.max(1, Math.min(Number(embed[1]), 100));
+          }
+        }
+
+        const looksLikeJaml =
+          promptBody.includes("must:") ||
+          promptBody.includes("should:") ||
+          promptBody.includes("deck:") ||
+          promptBody.includes("\n- ");
+        const input = looksLikeJaml
+          ? { jamlText: promptBody, label: "(chat prompt as JAML)" }
+          : fromEditor;
+        if (!input) {
+          stream.markdown(
+            "Open a `.jaml` file (or paste full JAML after `/find`).\n\n" +
+              "Examples: `@jimbo /find` · `@jimbo /find 3`\n\n" +
+              "Engine: `Motely.CLI --collect N` (temp copy — does not rewrite your file).",
+          );
+          return { metadata: { command: "find" } };
+        }
+        const result = await searchSeeds(context, { ...input, collectN });
+        stream.markdown(formatSearchMarkdown(result, input.label));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        stream.markdown(`**Find failed:** ${msg}`);
+      }
       return { metadata: { command: "find" } };
     }
 

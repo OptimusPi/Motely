@@ -25,11 +25,16 @@ In **Copilot Chat** (or VS Code Chat with a model):
 
 | Phase | Status |
 |-------|--------|
-| J0 | Participant registered, stream + slash stubs |
-| **J1** | `motely_validate_jaml` tool + `@jimbo /validate` → `Motely.Lsp --diagnose` |
-| J2 | `motely_search_seeds` (real Motely collect) |
+| J0 | Participant registered |
+| J1 | `motely_validate_jaml` / `@jimbo /validate` → `Motely.Lsp --diagnose` |
+| **J2** | `motely_search_seeds` / `@jimbo /find` → `Motely.CLI --collect N` (real seeds) |
 
-Agent chat can `#validateJaml` or auto-invoke the tool. Slash: `@jimbo /validate` with a `.jaml` focused.
+| Chat | Tools |
+|------|--------|
+| `@jimbo /validate` | `#validateJaml` |
+| `@jimbo /find` · `/find 3` | `#findSeeds` |
+
+Search copies the filter to a **temp file** so CLI does not rewrite your on-disk `seeds:` block.
 
 F5 Extension Development Host → open Chat → `@jimbo`.
 
@@ -65,6 +70,8 @@ code --install-extension jaml-language-support-*.vsix
 | Setting | Meaning |
 |---------|---------|
 | `jaml.serverPath` | Absolute path to `Motely.Lsp` (or `.exe`) |
+| `jaml.cliPath` | Absolute path to `Motely.CLI` |
+| `jaml.searchTimeoutMs` | Kill search after N ms (default 120000) |
 | `jaml.trace.server` | `off` / `messages` / `verbose` LSP traffic |
 
 ## Smoke the server without VS Code
