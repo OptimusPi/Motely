@@ -80,7 +80,7 @@ ProofSearch.MustMatchNone(jaml, "NOPE"); // negative path
 | # | Verb | Gate | Status |
 |---|------|------|--------|
 | S8.0 | Re-read this board + `ProofSearch` + green `dotnet test` | 417+ pass | **ready** |
-| **S8.P1** | Hard climb: zero/low FilterDesc + loader paths → **≥ 85% line** | R1 on every new filter test; exclude still clean | **todo** |
+| **S8.P1** | Hard climb: zero/low FilterDesc + loader paths → **≥ 85% line** | R1 on every new filter test; exclude still clean | **done — 85.23% line / 76.69% branch, 733 green, commit `e8285a4a`** |
 | **S8.P2** | Harder climb: vector/context/search guts → **≥ 90% line**, **≥ 76% branch** | R1+R3; no exclude tampering | **todo** |
 | **S8.P3** | Final lock: **≥ 92% line**, **≥ 80% branch**, stryker smoke, coverlet threshold doc | R4 + threshold recipe in this file | **todo** |
 | S8.ship | Commit bite-sized; update this board; ordinary push OK | board reflects measured % | **todo** |
@@ -259,6 +259,15 @@ and should be credited by a wasm run, not by an exclude.
 | (this board) | S8 reopened for Claude with R1–R4 anti-fake |
 
 **Green baseline last measured:** 730 pass / 0 skip; line 84.20%; branch 75.90% (2026-07-27, commit `2fd03112`).
+
+### S8.P1 closed (2026-07-27) — four engine findings
+
+| # | Finding | Fix |
+|---|---------|-----|
+| 1 | Vector fixed-rarity joker streams lacked Joker category bits — raw shop-joker sources + `NegativeLegendaryJokerSimdFilterDesc` dead | `MotelyVectorSearchContext.Joker.cs` (`2fd03112`) |
+| 2 | Scalar must re-eval ignored all four raw shop-joker sources | `JamlScoring.cs` specialty counters (`2fd03112`) |
+| 3 | `charmTag: true` without `boosterPacks:` silently matches nothing by construction — loader validation candidate, parked | note only |
+| 4 | **`JamlSearchBuilder.CreateSettings` ignored `config.Deck`/`config.Stake`** — every direct caller searched Red/White regardless of the JAML; Ghost-deck spectral shop clauses dead. Scalar `PseudoHash` also aligned to the vector additional-filter cache law | `JamlSearchBuilder.cs`, `MotelySingleSearchContext.cs` (`e8285a4a`) |
 
 ### S8.P1 progress (2026-07-27)
 
