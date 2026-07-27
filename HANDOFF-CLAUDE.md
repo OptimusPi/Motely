@@ -82,7 +82,7 @@ ProofSearch.MustMatchNone(jaml, "NOPE"); // negative path
 | S8.0 | Re-read this board + `ProofSearch` + green `dotnet test` | 417+ pass | **ready** |
 | **S8.P1** | Hard climb: zero/low FilterDesc + loader paths → **≥ 85% line** | R1 on every new filter test; exclude still clean | **done — 85.23% line / 76.69% branch, 733 green, commit `e8285a4a`** |
 | **S8.P2** | Harder climb: vector/context/search guts → **≥ 90% line**, **≥ 76% branch** | R1+R3; no exclude tampering | **done — 90.05% line / 80.20% branch, 762 green, commits `2fa901af`+1. S8P2SearchGutsTests (settings/progress/async/providers/creation-context), S8P2RareJokerBranchTests (sticker/slot/pack-extension pinned sets), S8P2SpecialtyJokerSourceTests (9 specialty streams, pinned tallies), voucher stateless-overload parity. Finding 8 logged** |
-| **S8.P3** | Final lock: **≥ 92% line**, **≥ 80% branch**, stryker smoke, coverlet threshold doc | R4 + threshold recipe in this file | **todo** |
+| **S8.P3** | Final lock: **≥ 92% line**, **≥ 80% branch**, stryker smoke, coverlet threshold doc | R4 + threshold recipe in this file | **coverage gates met — 92.09% line / 83.96% branch, 857 green. Threshold gate below passed on this run. Stryker: scoped run started (result lands next session if wall-clock ran long). Findings 9–10 logged. MotelyVectorUtils hardware-dead exclude applied with operator go (AdvSimd path confirmed live on operator's ARM64 Mac — the merge verb in section D stands)** |
 | S8.ship | Commit bite-sized; update this board; ordinary push OK | board reflects measured % | **todo** |
 
 **Sprint status:** **open — Claude-owned S8**. No inventing a parallel grammar. No jaml-ui detour.
@@ -152,15 +152,16 @@ ProofSearch.MustMatchNone(jaml, "NOPE"); // negative path
 ### Work
 
 1. **Fill residual gaps** from the latest cobertura (classes &lt; 80% with ≥15 lines).
-2. **Lock coverlet threshold recipe** (document in this board after it passes once):
+2. **Coverlet threshold recipe — locked (passed 2026-07-27 at 92.09% / 83.96%):**
 
-```sh
-# After collector XML is produced, enforce with coverlet global tool OR msbuild props.
-# Example (adjust assembly path after build):
-#   coverlet Motely.Tests/bin/Debug/net10.0/Motely.dll \
-#     --target "dotnet" --targetargs "test Motely.Tests --no-build" \
-#     --threshold 92 --threshold-type line \
-#     --exclude "[Motely.DataLake]*,[Motely.DistributedWorker]*,[Motely.HelperAPI]*,[Motely.JsonRender]*,[Motely.TUI]*"
+```powershell
+# Run after the standard coverage command; fails the build when the gates slip.
+$xml = Get-ChildItem -Recurse ./TestResults -Filter coverage.cobertura.xml |
+  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+[xml]$x = Get-Content $xml.FullName
+if ([double]$x.coverage.'line-rate' -lt 0.92 -or [double]$x.coverage.'branch-rate' -lt 0.80) {
+  Write-Error "Coverage gate FAILED: line $($x.coverage.'line-rate') / branch $($x.coverage.'branch-rate')"; exit 1
+}
 ```
 
 3. **Stryker smoke (R4)** — mutation testing is the standard “test your tests” tool on .NET (MS Learn + Stryker.NET; Stryker targets **dotnet 10**):
