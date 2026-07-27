@@ -27,12 +27,14 @@ In **Copilot Chat** (or VS Code Chat with a model):
 |-------|--------|
 | J0 | Participant registered |
 | J1 | `motely_validate_jaml` / `@jimbo /validate` → `Motely.Lsp --diagnose` |
-| **J2** | `motely_search_seeds` / `@jimbo /find` → `Motely.CLI --collect N` (real seeds) |
+| J2 | `motely_search_seeds` / `@jimbo /find` → `Motely.CLI --collect N` |
+| **J3** | `motely_explain_jaml` / `@jimbo /explain` → `Motely.Lsp --explain` (JamlSchema) |
 
 | Chat | Tools |
 |------|--------|
 | `@jimbo /validate` | `#validateJaml` |
 | `@jimbo /find` · `/find 3` | `#findSeeds` |
+| `@jimbo /explain joker` | `#explainJaml` |
 
 Search copies the filter to a **temp file** so CLI does not rewrite your on-disk `seeds:` block.
 

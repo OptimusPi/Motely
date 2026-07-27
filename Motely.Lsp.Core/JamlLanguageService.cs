@@ -117,6 +117,155 @@ public static class JamlLanguageService
         return null;
     }
 
+    // ── Explain (schema dump for tools / @jimbo /explain) ─────────────────────────────
+
+    /// <summary>
+    /// Markdown explanation of a JAML word from the engine schema — discriminators, clause keys,
+    /// value enums, root keys, or vocabulary hits via <see cref="JamlSchema.ListItems"/>.
+    /// Returns null when the topic is empty or unknown.
+    /// </summary>
+    public static string? Explain(string topic)
+    {
+        var q = topic.Trim();
+        if (q.Length == 0)
+            return null;
+
+        // Bare kind: "joker" as discriminator vs listItems query "joker Blueprint"
+        var parts = q.Split([' ', '\t'], 2, StringSplitOptions.RemoveEmptyEntries);
+        var head = parts[0];
+        var rest = parts.Length > 1 ? parts[1].Trim() : null;
+
+        if (IsDiscriminator(head))
+        {
+            var disc = JamlSchema.Discriminators.First(d =>
+                d.Equals(head, StringComparison.OrdinalIgnoreCase)
+            );
+            var keys = JamlSchema.ClauseKeysFor(disc);
+            var valueEnum = JamlSchema.ValueEnumTypeFor(disc);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"**`{disc}`** — JAML clause discriminator (Motely engine schema)");
+            sb.AppendLine();
+            if (valueEnum is not null)
+            {
+                var names = Enum.GetNames(valueEnum);
+                sb.AppendLine($"**Value enum:** `{valueEnum.Name}` ({names.Length} names + `Any`)");
+                if (rest is { Length: > 0 })
+                {
+                    var hits = JamlSchema.ListItems(disc, rest);
+                    if (hits.Length > 0)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine($"**Matches for `{rest}`:**");
+                        foreach (var h in hits.Take(25))
+                            sb.AppendLine($"- `{h}`");
+                        if (hits.Length > 25)
+                            sb.AppendLine($"- … +{hits.Length - 25} more");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("Sample values: " + string.Join(", ", names.Take(12).Select(n => $"`{n}`")));
+                    if (names.Length > 12)
+                        sb.AppendLine($"… +{names.Length - 12} more (ask e.g. `{disc} lucky`)");
+                }
+            }
+            if (keys.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("**Clause keys:** " + string.Join(", ", keys.Select(k => $"`{k}`")));
+            }
+            if (JamlSchema.RollsAreInlineFor(disc))
+            {
+                sb.AppendLine();
+                sb.AppendLine("Rolls event — the clause value is the roll list.");
+            }
+            var sources = JamlSchema.SourceKeysFor(disc);
+            if (sources is { Length: > 0 })
+            {
+                sb.AppendLine();
+                sb.AppendLine("**Source keys:** " + string.Join(", ", sources.Select(k => $"`{k}`")));
+            }
+            sb.AppendLine();
+            sb.AppendLine(
+                "**must** = hard filter · **should** = scoring · **mustNot** = forbid. One grammar: FilterDesc → JamlSchema."
+            );
+            return sb.ToString().TrimEnd();
+        }
+
+        if (JamlConfig.RootKeys.Any(k => k.Equals(head, StringComparison.OrdinalIgnoreCase)))
+        {
+            var key = JamlConfig.RootKeys.First(k => k.Equals(head, StringComparison.OrdinalIgnoreCase));
+            return key switch
+            {
+                "must" =>
+                    "**`must`** — hard requirements. Seed fails if any must clause misses. List of clauses under `- disc: …`.",
+                "should" =>
+                    "**`should`** — soft scoring clauses. Matches add score (see `score:`). Do not alone fail the seed unless cutoff logic says so.",
+                "mustNot" =>
+                    "**`mustNot`** — forbidden patterns. Seed fails if a mustNot clause matches.",
+                "deck" =>
+                    "**`deck`** — MotelyDeck (Red, Blue, … Erratic).",
+                "stake" =>
+                    "**`stake`** — MotelyStake (White … Gold).",
+                "seeds" =>
+                    "**`seeds`** — optional saved seed list for list search / lake.",
+                "name" => "**`name`** — human filter title.",
+                "antes" =>
+                    "**`antes`** — optional root ante scope; many clauses also take per-clause `antes:`.",
+                _ => $"**`{key}`** — JAML root key (engine `JamlConfig.RootKeys`).",
+            };
+        }
+
+        // Enum vocabulary hit (joker name, voucher, …)
+        foreach (var (enumType, kind) in JamlSchema.ValueEnumKinds)
+        {
+            var exact = Enum.GetNames(enumType)
+                .FirstOrDefault(n => n.Equals(head, StringComparison.OrdinalIgnoreCase));
+            if (exact is not null)
+                return $"**`{exact}`** — {kind} (`{enumType.Name}`). Use under the matching clause discriminator.";
+        }
+
+        // ListItems kind + optional query — unknown kinds throw; treat as not found.
+        try
+        {
+            if (rest is not null)
+            {
+                var items = JamlSchema.ListItems(head, rest);
+                if (items.Length > 0)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine($"**`{head}`** vocabulary matches for `{rest}` ({items.Length}):");
+                    foreach (var h in items.Take(40))
+                        sb.AppendLine($"- `{h}`");
+                    if (items.Length > 40)
+                        sb.AppendLine($"- … +{items.Length - 40} more");
+                    return sb.ToString().TrimEnd();
+                }
+            }
+            else
+            {
+                var items = JamlSchema.ListItems(head, null);
+                if (items.Length > 0 && items.Length <= 80)
+                {
+                    return $"**`{head}`** — {items.Length} engine names:\n"
+                        + string.Join("\n", items.Take(40).Select(i => $"- `{i}`"))
+                        + (items.Length > 40 ? $"\n- … +{items.Length - 40} more" : "");
+                }
+                if (items.Length > 80)
+                {
+                    return $"**`{head}`** — {items.Length} engine names. Narrow with a query, e.g. `{head} lucky`.";
+                }
+            }
+        }
+        catch (ArgumentException)
+        {
+            // Unknown vocabulary kind — fall through to null.
+        }
+
+        return null;
+    }
+
     // ── Completion ──────────────────────────────────────────────────────────────────────
 
     /// <summary>Completion candidates at the cursor, already filtered by the typed prefix.</summary>

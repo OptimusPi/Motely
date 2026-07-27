@@ -2,10 +2,10 @@ using System.Text.Json;
 using Motely.Lsp;
 using Motely.Lsp.Core;
 
-// One-shot engine diagnose for tools / CI (does not open the stdio LSP loop).
-//   Motely.Lsp --diagnose <file.jaml>
-//   Motely.Lsp --diagnose -   # text on stdin
-// Exit 0 = clean document; 1 = one or more diagnostics; 2 = usage / IO error.
+// One-shot engine jobs (do not open the stdio LSP loop).
+//   Motely.Lsp --diagnose <file.jaml> | -
+//   Motely.Lsp --explain <topic words…>
+// Exit 0 = ok; diagnose 1 = has diagnostics; 2 = usage / IO / unknown topic.
 if (args is ["--diagnose", var pathArg])
 {
     try
@@ -37,12 +37,33 @@ if (args is ["--diagnose", var pathArg])
     }
 }
 
+if (args.Length >= 1 && args[0] == "--explain")
+{
+    var topic = string.Join(' ', args.AsSpan(1).ToArray()).Trim();
+    if (topic.Length == 0)
+    {
+        Console.Error.WriteLine("Usage: Motely.Lsp --explain <topic>");
+        return 2;
+    }
+    var md = JamlLanguageService.Explain(topic);
+    if (md is null)
+    {
+        Console.Out.WriteLine(
+            JsonSerializer.Serialize(new { ok = false, topic, markdown = (string?)null })
+        );
+        return 2;
+    }
+    Console.Out.WriteLine(JsonSerializer.Serialize(new { ok = true, topic, markdown = md }));
+    return 0;
+}
+
 if (args.Length > 0)
 {
     Console.Error.WriteLine(
         "Usage: Motely.Lsp                 # stdio language server\n"
             + "       Motely.Lsp --diagnose <file.jaml>\n"
-            + "       Motely.Lsp --diagnose -   # stdin"
+            + "       Motely.Lsp --diagnose -   # stdin\n"
+            + "       Motely.Lsp --explain <topic>"
     );
     return 2;
 }

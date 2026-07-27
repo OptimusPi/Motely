@@ -10,6 +10,7 @@
 import * as vscode from "vscode";
 import {
   diagnoseJaml,
+  explainTopic,
   formatDiagnoseMarkdown,
   formatSearchMarkdown,
   searchSeeds,
@@ -116,16 +117,45 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
       return { metadata: { command: "find" } };
     }
 
+    // J3: engine schema explain
     if (request.command === "explain") {
-      stream.markdown(
-        [
-          "**`/explain` (scaffold)**",
-          "",
-          "Next phase explains clauses via engine schema keys + your open document.",
-          "",
-          request.prompt ? `Topic: ${request.prompt}` : "Ask about a clause, e.g. `joker` / `must` chains.",
-        ].join("\n"),
-      );
+      stream.progress("Looking up Motely JAML schema…");
+      try {
+        let topic = request.prompt?.trim() ?? "";
+        if (!topic) {
+          const editor = vscode.window.activeTextEditor;
+          if (editor) {
+            const sel = editor.document.getText(editor.selection).trim();
+            if (sel) {
+              topic = sel;
+            } else {
+              const wordRange = editor.document.getWordRangeAtPosition(editor.selection.active);
+              if (wordRange) {
+                topic = editor.document.getText(wordRange);
+              }
+            }
+          }
+        }
+        if (!topic) {
+          stream.markdown(
+            "Usage: `@jimbo /explain joker` · `/explain must` · `/explain Perkeo`\n\n" +
+              "Or select a word in a `.jaml` file and run `/explain`.",
+          );
+          return { metadata: { command: "explain" } };
+        }
+        const result = await explainTopic(context, topic);
+        if (!result.ok || !result.markdown) {
+          stream.markdown(
+            `Unknown topic \`${topic}\` (via \`${result.via}\`).\n\n` +
+              "Try: `joker`, `voucher`, `pokerHand`, `must`, `Perkeo`, `joker blue`.",
+          );
+        } else {
+          stream.markdown(result.markdown + `\n\n_via \`${result.via}\`_`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        stream.markdown(`**Explain failed:** ${msg}`);
+      }
       return { metadata: { command: "explain" } };
     }
 

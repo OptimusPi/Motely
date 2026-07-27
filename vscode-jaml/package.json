@@ -2,7 +2,7 @@
   "name": "jaml-language-support",
   "displayName": "JAML (Motely)",
   "description": "Motely.Lsp (engine diagnostics/hover/completion) + @jimbo chat participant for JAML seed filters.",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "publisher": "pifreak",
   "license": "MIT",
   "engines": {
@@ -56,7 +56,7 @@
           },
           {
             "name": "explain",
-            "description": "Explain a clause or must/should chain"
+            "description": "Explain a clause, root key, or enum name from Motely schema"
           }
         ],
         "disambiguation": [
@@ -121,6 +121,25 @@
               "default": 1
             }
           }
+        }
+      },
+      {
+        "name": "motely_explain_jaml",
+        "toolReferenceName": "explainJaml",
+        "displayName": "Explain JAML",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(info)",
+        "userDescription": "Explain a JAML clause or name from the Motely engine schema",
+        "modelDescription": "Explain a JAML discriminator, root key, enum value, or vocabulary query using Motely JamlSchema (e.g. joker, must, Perkeo, voucher Overstock). Returns markdown from the real engine. Do not invent clause keys.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Word or short query: joker, must, pokerHand, Perkeo, joker blue"
+            }
+          },
+          "required": ["topic"]
         }
       }
     ],

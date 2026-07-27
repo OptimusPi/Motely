@@ -276,6 +276,43 @@ export function parseScoredSeeds(stdout: string): ScoredSeed[] {
   return out;
 }
 
+export interface ExplainResult {
+  ok: boolean;
+  topic: string;
+  markdown: string | null;
+  via: string;
+}
+
+/** Engine schema explain: Motely.Lsp --explain <topic> */
+export async function explainTopic(
+  context: vscode.ExtensionContext,
+  topic: string,
+): Promise<ExplainResult> {
+  const q = topic.trim();
+  if (!q) {
+    throw new Error("Empty topic. Try: joker, must, voucher, Perkeo, pokerHand.");
+  }
+  const proc = resolveMotelyLsp(context);
+  const args = [...proc.args, "--explain", ...q.split(/\s+/)];
+  const { stdout, stderr, code } = await run(proc.command, args);
+  const raw = stdout.trim();
+  if (!raw) {
+    throw new Error(`Motely.Lsp --explain returned empty (exit ${code}): ${stderr}`);
+  }
+  let parsed: { ok: boolean; topic: string; markdown: string | null };
+  try {
+    parsed = JSON.parse(raw) as { ok: boolean; topic: string; markdown: string | null };
+  } catch {
+    throw new Error(`Motely.Lsp --explain non-JSON: ${raw}`);
+  }
+  return {
+    ok: parsed.ok && !!parsed.markdown,
+    topic: parsed.topic ?? q,
+    markdown: parsed.markdown,
+    via: proc.display,
+  };
+}
+
 export function formatSearchMarkdown(result: SearchResult, label: string): string {
   if (result.seeds.length === 0) {
     return [

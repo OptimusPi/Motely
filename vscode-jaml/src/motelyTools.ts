@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import * as vscode from "vscode";
 import {
   diagnoseJaml,
+  explainTopic,
   formatDiagnoseMarkdown,
   formatSearchMarkdown,
   searchSeeds,
@@ -24,10 +25,15 @@ interface SearchParams {
   collectN?: number;
 }
 
+interface ExplainParams {
+  topic: string;
+}
+
 export function registerMotelyTools(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.lm.registerTool("motely_validate_jaml", new ValidateJamlTool(context)),
     vscode.lm.registerTool("motely_search_seeds", new SearchSeedsTool(context)),
+    vscode.lm.registerTool("motely_explain_jaml", new ExplainJamlTool(context)),
   );
 }
 
@@ -110,6 +116,47 @@ class SearchSeedsTool implements vscode.LanguageModelTool<SearchParams> {
       throw new Error(
         `motely_search_seeds failed: ${msg}. Validate JAML first. Need Motely.CLI (jaml.cliPath or MotelyJAML workspace).`,
       );
+    }
+  }
+}
+
+class ExplainJamlTool implements vscode.LanguageModelTool<ExplainParams> {
+  constructor(private readonly context: vscode.ExtensionContext) {}
+
+  async prepareInvocation(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<ExplainParams>,
+    _token: vscode.CancellationToken,
+  ) {
+    return {
+      invocationMessage: `Explain JAML: ${options.input.topic}`,
+      confirmationMessages: {
+        title: "Explain JAML",
+        message: new vscode.MarkdownString(
+          `Look up **${options.input.topic}** in the Motely engine schema? (local, no network.)`,
+        ),
+      },
+    };
+  }
+
+  async invoke(
+    options: vscode.LanguageModelToolInvocationOptions<ExplainParams>,
+    _token: vscode.CancellationToken,
+  ) {
+    try {
+      const result = await explainTopic(this.context, options.input.topic ?? "");
+      if (!result.ok || !result.markdown) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart(
+            `Unknown JAML topic \`${result.topic}\` (via \`${result.via}\`). Try a discriminator (\`joker\`, \`voucher\`), root key (\`must\`), or name (\`Perkeo\`).`,
+          ),
+        ]);
+      }
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(result.markdown + `\n\n_via \`${result.via}\`_`),
+      ]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`motely_explain_jaml failed: ${msg}`);
     }
   }
 }
