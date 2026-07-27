@@ -25,9 +25,11 @@ In **Copilot Chat** (or VS Code Chat with a model):
 
 | Phase | Status |
 |-------|--------|
-| **J0** | Participant registered, stream + slash stubs |
-| J1 | `motely_validate_jaml` tool |
+| J0 | Participant registered, stream + slash stubs |
+| **J1** | `motely_validate_jaml` tool + `@jimbo /validate` → `Motely.Lsp --diagnose` |
 | J2 | `motely_search_seeds` (real Motely collect) |
+
+Agent chat can `#validateJaml` or auto-invoke the tool. Slash: `@jimbo /validate` with a `.jaml` focused.
 
 F5 Extension Development Host → open Chat → `@jimbo`.
 

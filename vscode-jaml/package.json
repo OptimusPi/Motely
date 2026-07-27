@@ -2,7 +2,7 @@
   "name": "jaml-language-support",
   "displayName": "JAML (Motely)",
   "description": "Motely.Lsp (engine diagnostics/hover/completion) + @jimbo chat participant for JAML seed filters.",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "publisher": "pifreak",
   "license": "MIT",
   "engines": {
@@ -52,7 +52,7 @@
           },
           {
             "name": "validate",
-            "description": "Validate JAML with the Motely engine (J1 wires loader)"
+            "description": "Validate JAML with the Motely engine"
           },
           {
             "name": "explain",
@@ -71,6 +71,30 @@
             ]
           }
         ]
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "motely_validate_jaml",
+        "toolReferenceName": "validateJaml",
+        "displayName": "Validate JAML",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(check)",
+        "userDescription": "Validate JAML with the Motely engine loader",
+        "modelDescription": "Parse and validate a JAML Balatro seed filter with the real Motely engine (JamlConfigLoader via Motely.Lsp --diagnose). Use before search. Returns OK or a table of errors with line/column. Prefer absolute filePath to an open .jaml, or pass full jamlText. Do not invent diagnostics.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "jamlText": {
+              "type": "string",
+              "description": "Full JAML document text when not reading a file"
+            },
+            "filePath": {
+              "type": "string",
+              "description": "Absolute path to a .jaml file on disk"
+            }
+          }
+        }
       }
     ],
     "configuration": {

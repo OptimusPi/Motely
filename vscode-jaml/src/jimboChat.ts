@@ -9,6 +9,7 @@
  * https://code.visualstudio.com/api/extension-guides/ai/chat
  */
 import * as vscode from "vscode";
+import { diagnoseJaml, formatDiagnoseMarkdown } from "./motelyEngine";
 
 export const JIMBO_PARTICIPANT_ID = "jaml.jimbo";
 
@@ -29,20 +30,33 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
     const slash = request.command ? `/${request.command}` : "(none)";
     stream.progress(`Jimbo listening… command=${slash}`);
 
-    // Slash stubs until J1–J2 tools exist.
+    // J1: real engine validate via Motely.Lsp --diagnose
     if (request.command === "validate") {
-      stream.markdown(
-        [
-          "**`/validate` (scaffold)**",
-          "",
-          "Next phase wires this to Motely `JamlConfigLoader` / LSP diagnose.",
-          "Open a `.jaml` file and re-run after J1.",
-          "",
-          request.prompt ? `Your note: ${request.prompt}` : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      );
+      stream.progress("Running Motely engine validate…");
+      try {
+        const editor = vscode.window.activeTextEditor;
+        const fromEditor =
+          editor &&
+          (editor.document.languageId === "jaml" || editor.document.fileName.endsWith(".jaml"))
+            ? editor.document.uri.scheme === "file"
+              ? { filePath: editor.document.uri.fsPath, label: editor.document.uri.fsPath }
+              : { jamlText: editor.document.getText(), label: editor.document.uri.toString() }
+            : undefined;
+        const input = request.prompt?.trim()
+          ? { jamlText: request.prompt, label: "(chat prompt as JAML)" }
+          : fromEditor;
+        if (!input) {
+          stream.markdown(
+            "Open a `.jaml` file or paste JAML after `/validate`.\n\nEngine: `Motely.Lsp --diagnose`.",
+          );
+          return { metadata: { command: "validate" } };
+        }
+        const result = await diagnoseJaml(context, input);
+        stream.markdown(formatDiagnoseMarkdown(result, input.label));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        stream.markdown(`**Validate failed:** ${msg}`);
+      }
       return { metadata: { command: "validate" } };
     }
 
