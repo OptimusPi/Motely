@@ -45,7 +45,12 @@ public sealed class ChainedMustClauseSeedTests
             .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(threads)
             .WithQuietMode(true)
-            .WithSeedMatchCallback(matched.Add)
+            // Match callbacks arrive concurrently at threads > 1; List<T>.Add is not thread-safe.
+            .WithSeedMatchCallback(seed =>
+            {
+                lock (matched)
+                    matched.Add(seed);
+            })
             .Start();
         search.AwaitCompletion();
         return (search.MatchingSeeds, matched);

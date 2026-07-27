@@ -255,9 +255,14 @@ public sealed class VectorScalarParityTests
     }
 
     [Theory]
-    [InlineData(MotelyDeck.Red)]
-    [InlineData(MotelyDeck.Ghost)]
-    public void VectorStreams_MatchScalar_LaneForLane(MotelyDeck deck)
+    [InlineData(MotelyDeck.Red, MotelyStake.White)]
+    [InlineData(MotelyDeck.Ghost, MotelyStake.White)]
+    // Gold stake rolls the sticker streams (Eternal/Perishable/Rental), so sticker bits land in
+    // item.Value and any vector/scalar sticker divergence fails a lane. Caught the perishable
+    // upper-bound bug on eternal-incompatible jokers.
+    [InlineData(MotelyDeck.Red, MotelyStake.Gold)]
+    [InlineData(MotelyDeck.Ghost, MotelyStake.Gold)]
+    public void VectorStreams_MatchScalar_LaneForLane(MotelyDeck deck, MotelyStake stake)
     {
         var collector = new ParityCollector();
 
@@ -265,7 +270,7 @@ public sealed class VectorScalarParityTests
             new ParityFilterDesc(collector)
         )
             .WithDeck(deck)
-            .WithStake(MotelyStake.White)
+            .WithStake(stake)
             .WithListSearch(Seeds, Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true);

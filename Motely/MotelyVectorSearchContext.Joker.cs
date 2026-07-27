@@ -456,11 +456,14 @@ unsafe partial struct MotelyVectorSearchContext
         if (Stake < MotelyStake.Orange)
             return item;
 
-        // Only apply perishable if not eternal
+        // Only apply perishable if not eternal. Upper bound mirrors the scalar/game roll
+        // (poll > 0.4 && poll <= 0.7): without it, an eternal-incompatible joker rolling
+        // > 0.7 was wrongly marked perishable in SIMD only.
         Vector256<int> perishableMask =
             ~eternalMask
             & MotelyVectorUtils.ShrinkDoubleMaskToInt(
                 Vector512.GreaterThan(stickerPoll, Vector512.Create(0.4))
+                & Vector512.LessThanOrEqual(stickerPoll, Vector512.Create(0.7))
             );
         item = item.WithPerishable(perishableMask);
 
