@@ -81,7 +81,7 @@ ProofSearch.MustMatchNone(jaml, "NOPE"); // negative path
 |---|------|------|--------|
 | S8.0 | Re-read this board + `ProofSearch` + green `dotnet test` | 417+ pass | **ready** |
 | **S8.P1** | Hard climb: zero/low FilterDesc + loader paths → **≥ 85% line** | R1 on every new filter test; exclude still clean | **done — 85.23% line / 76.69% branch, 733 green, commit `e8285a4a`** |
-| **S8.P2** | Harder climb: vector/context/search guts → **≥ 90% line**, **≥ 76% branch** | R1+R3; no exclude tampering | **todo** |
+| **S8.P2** | Harder climb: vector/context/search guts → **≥ 90% line**, **≥ 76% branch** | R1+R3; no exclude tampering | **in progress — 85.76% line / 77.21% branch (branch gate met); multi-batch regression in; LegendarySoulMatcher 93.1%. Remaining: MotelyVectorSearchContext partials (~440), MotelySearch (~133), MotelyFilterCreationContext (~103), RareJokerFilter (~36)** |
 | **S8.P3** | Final lock: **≥ 92% line**, **≥ 80% branch**, stryker smoke, coverlet threshold doc | R4 + threshold recipe in this file | **todo** |
 | S8.ship | Commit bite-sized; update this board; ordinary push OK | board reflects measured % | **todo** |
 
@@ -268,6 +268,8 @@ and should be credited by a wasm run, not by an exclude.
 | 2 | Scalar must re-eval ignored all four raw shop-joker sources | `JamlScoring.cs` specialty counters (`2fd03112`) |
 | 3 | `charmTag: true` without `boosterPacks:` silently matches nothing by construction — loader validation candidate, parked | note only |
 | 4 | **`JamlSearchBuilder.CreateSettings` ignored `config.Deck`/`config.Stake`** — every direct caller searched Red/White regardless of the JAML; Ghost-deck spectral shop clauses dead. Scalar `PseudoHash` also aligned to the vector additional-filter cache law | `JamlSearchBuilder.cs`, `MotelySingleSearchContext.cs` (`e8285a4a`) |
+| 5 | `NegativeLegendaryJokerSimdFilterDesc.CreateFilter` cached only the edition stream variant; the type variant read with `isCached: true` tripped the partial-hash assert | `NegativeSoulJokerFilters.cs` (`5e109a8c`) |
+| 6 | Native front+soul-confirm composition has **no per-ante linkage**: Negative-at-ante-1 OR'd with Soul-at-ante-2 passes (seed 1946, jamlyzer-verified). Exact JAML soul route is the law; composition is a candidate generator. Ante-coherent SIMD front = future verb, operator call | documented in `NegativeLegendarySimdFront_ComposedWithSoulConfirm_FindsSeeds` |
 
 ### S8.P1 progress (2026-07-27)
 
