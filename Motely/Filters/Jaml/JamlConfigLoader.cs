@@ -142,9 +142,14 @@ public static partial class JamlConfigLoader
                     score,
                     label
                 );
+            case "erraticrank"
+                when node.GetString(discriminator) is null
+                    && node.GetStringArray(discriminator) is not null:
             case "erraticranks":
                 // Sugar: erraticRanks: [Ace, King] → Or of singular ErraticRank clauses.
-                // The singular wire (erraticRank) uses the normal Populate path.
+                // A scalar-valued erraticRank uses the normal Populate path; an array on the
+                // singular wire is the same sugar (it used to slip past both and load a
+                // corrupt Rank the writer then emitted as a bare numeral).
                 return WithMax(
                     new OrClause
                     {
