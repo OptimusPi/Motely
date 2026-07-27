@@ -1,6 +1,6 @@
 # JAML (Motely) — VS Code
 
-Real language support for `.jaml` files + **`@jimbo`** Copilot Chat participant (J0 scaffold).
+Real language support for `.jaml` files + **`@jimbo`** Copilot Chat participant.
 
 | Concern | Owner |
 |--------|--------|
@@ -8,7 +8,7 @@ Real language support for `.jaml` files + **`@jimbo`** Copilot Chat participant 
 | Schema / vocab | Generated `JamlSchema` + engine enums |
 | Protocol | `Motely.Lsp` (JSON-RPC 2.0 stdio) |
 | Editor glue | this package (`vscode-languageclient`) |
-| Chat | `@jimbo` — `src/jimboChat.ts` (J0: pong + slash stubs; tools later) |
+| Chat | `@jimbo` — `src/jimboChat.ts` (slashes + freeform LM tool loop) |
 
 There is no TypeScript reimplementation of the JAML grammar.
 
@@ -18,6 +18,7 @@ In **Copilot Chat** (or VS Code Chat with a model):
 
 ```
 @jimbo hi
+@jimbo validate this filter then find one seed
 @jimbo /validate
 @jimbo /find
 @jimbo /explain must vs should
@@ -28,15 +29,18 @@ In **Copilot Chat** (or VS Code Chat with a model):
 | J0 | Participant registered |
 | J1 | `motely_validate_jaml` / `@jimbo /validate` → `Motely.Lsp --diagnose` |
 | J2 | `motely_search_seeds` / `@jimbo /find` → `Motely.CLI --collect N` |
-| **J3** | `motely_explain_jaml` / `@jimbo /explain` → `Motely.Lsp --explain` (JamlSchema) |
+| J3 | `motely_explain_jaml` / `@jimbo /explain` → `Motely.Lsp --explain` (JamlSchema) |
+| **J4** | Freeform `@jimbo` LM loop: model calls Motely tools via `lm.invokeTool` (max 6 rounds) |
 
 | Chat | Tools |
 |------|--------|
-| `@jimbo /validate` | `#validateJaml` |
-| `@jimbo /find` · `/find 3` | `#findSeeds` |
-| `@jimbo /explain joker` | `#explainJaml` |
+| Freeform (J4) | model picks `#validateJaml` / `#findSeeds` / `#explainJaml` |
+| `@jimbo /validate` | direct engine (no model) |
+| `@jimbo /find` · `/find 3` | direct engine |
+| `@jimbo /explain joker` | direct engine |
 
 Search copies the filter to a **temp file** so CLI does not rewrite your on-disk `seeds:` block.
+Tool confirmation UI attaches to the chat turn via `toolInvocationToken`.
 
 F5 Extension Development Host → open Chat → `@jimbo`.
 

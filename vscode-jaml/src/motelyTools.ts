@@ -2,6 +2,8 @@
  * Language model tools (MS Tools API):
  *  J1 motely_validate_jaml
  *  J2 motely_search_seeds
+ *  J3 motely_explain_jaml
+ *  J4 freeform @jimbo invokes these via lm.invokeTool
  * https://code.visualstudio.com/api/extension-guides/ai/tools
  */
 import * as fs from "node:fs";

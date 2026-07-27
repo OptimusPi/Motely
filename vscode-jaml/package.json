@@ -2,7 +2,7 @@
   "name": "jaml-language-support",
   "displayName": "JAML (Motely)",
   "description": "Motely.Lsp (engine diagnostics/hover/completion) + @jimbo chat participant for JAML seed filters.",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "publisher": "pifreak",
   "license": "MIT",
   "engines": {

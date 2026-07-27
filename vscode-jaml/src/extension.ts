@@ -2,7 +2,7 @@
  * VS Code client for Motely.Lsp + @jimbo chat participant.
  *
  * Language: Motely.Lsp over stdio (engine grammar only — no TS reimplementation).
- * Chat: @jimbo (J0 scaffold) — tools/search come in later phases.
+ * Chat: @jimbo — slash engine paths + freeform LM tool loop (J4).
  */
 import * as vscode from "vscode";
 import {

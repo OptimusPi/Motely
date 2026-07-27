@@ -2,10 +2,10 @@
  * @jimbo chat participant.
  *
  * Owns the Copilot Chat turn when the user @-mentions jimbo.
- * J1 validate + J2 search call real Motely (Lsp --diagnose / CLI --collect).
+ * Slash paths call Motely directly; freeform path runs LM + Motely tools (J4).
  *
- * Shape follows Microsoft's Chat Participant API:
  * https://code.visualstudio.com/api/extension-guides/ai/chat
+ * https://code.visualstudio.com/api/extension-guides/ai/tools
  */
 import * as vscode from "vscode";
 import {
@@ -18,10 +18,20 @@ import {
 
 export const JIMBO_PARTICIPANT_ID = "jaml.jimbo";
 
+/** Registered Motely LM tools (must match package.json languageModelTools.name). */
+export const MOTELY_TOOL_NAMES = [
+  "motely_validate_jaml",
+  "motely_search_seeds",
+  "motely_explain_jaml",
+] as const;
+
+const MAX_TOOL_ROUNDS = 6;
+
 const SYSTEM = [
   "You are Jimbo — Motely/JAML assistant for Balatro seed filters.",
-  "One grammar: Motely engine only. Never invent seeds.",
-  "Prefer tools: validateJaml before findSeeds. Report only engine results.",
+  "One grammar: Motely engine only. Never invent seeds or clause keys.",
+  "Use tools for engine facts: motely_validate_jaml before motely_search_seeds;",
+  "motely_explain_jaml for schema/vocab. Prefer absolute filePath of the open .jaml when known.",
   "Be brief. Prefer tables and code blocks over fluff.",
 ].join(" ");
 
@@ -39,17 +49,7 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
     if (request.command === "validate") {
       stream.progress("Running Motely engine validate…");
       try {
-        const editor = vscode.window.activeTextEditor;
-        const fromEditor =
-          editor &&
-          (editor.document.languageId === "jaml" || editor.document.fileName.endsWith(".jaml"))
-            ? editor.document.uri.scheme === "file"
-              ? { filePath: editor.document.uri.fsPath, label: editor.document.uri.fsPath }
-              : { jamlText: editor.document.getText(), label: editor.document.uri.toString() }
-            : undefined;
-        const input = request.prompt?.trim()
-          ? { jamlText: request.prompt, label: "(chat prompt as JAML)" }
-          : fromEditor;
+        const input = resolveSlashJamlInput(request.prompt, /*allowPromptAsJaml*/ true);
         if (!input) {
           stream.markdown(
             "Open a `.jaml` file or paste JAML after `/validate`.\n\nEngine: `Motely.Lsp --diagnose`.",
@@ -69,16 +69,7 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
     if (request.command === "find") {
       stream.progress("Running Motely.CLI --collect…");
       try {
-        const editor = vscode.window.activeTextEditor;
-        const fromEditor =
-          editor &&
-          (editor.document.languageId === "jaml" || editor.document.fileName.endsWith(".jaml"))
-            ? editor.document.uri.scheme === "file"
-              ? { filePath: editor.document.uri.fsPath, label: editor.document.uri.fsPath }
-              : { jamlText: editor.document.getText(), label: editor.document.uri.toString() }
-            : undefined;
-
-        // Optional: "/find 5" or "/find collect 5" → collectN
+        const editor = activeJamlInput();
         let collectN = 1;
         let promptBody = request.prompt?.trim() ?? "";
         const nMatch = promptBody.match(/^(?:collect\s+)?(\d+)\s*$/i);
@@ -99,7 +90,7 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
           promptBody.includes("\n- ");
         const input = looksLikeJaml
           ? { jamlText: promptBody, label: "(chat prompt as JAML)" }
-          : fromEditor;
+          : editor;
         if (!input) {
           stream.markdown(
             "Open a `.jaml` file (or paste full JAML after `/find`).\n\n" +
@@ -159,39 +150,30 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
       return { metadata: { command: "explain" } };
     }
 
-    // Default: optional LM echo if the host gave us a model (Copilot chat).
+    // J4: freeform LM + Motely tools (validate / search / explain)
     const prompt = request.prompt?.trim() || "ping";
     if (request.model) {
       try {
-        const messages = [
-          vscode.LanguageModelChatMessage.User(SYSTEM),
-          ...historyAsMessages(chatContext),
-          vscode.LanguageModelChatMessage.User(prompt),
-        ];
-        const response = await request.model.sendRequest(messages, {}, token);
-        for await (const fragment of response.text) {
-          stream.markdown(fragment);
-        }
+        await runFreeformWithTools(request, chatContext, stream, token, prompt);
         return { metadata: { command: "chat" } };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        stream.markdown(`_Model request failed:_ ${msg}\n\n`);
+        stream.markdown(`_Model / tool loop failed:_ ${msg}\n\n`);
       }
     }
 
     stream.markdown(
       [
-        `**Jimbo J0 online.**`,
+        `**Jimbo online** (no language model on this request).`,
         "",
         `| | |`,
         `|--|--|`,
         `| you said | \`${escapePipes(prompt)}\` |`,
         `| slash | \`${slash}\` |`,
-        `| model | ${request.model ? "yes" : "none (install Copilot Chat for LM)"} |`,
+        `| model | none (install Copilot Chat for freeform + tools) |`,
         "",
-        "Try: `@jimbo /find` · `@jimbo /validate` · `@jimbo /explain`",
-        "",
-        "Scaffold only — seed search lands in J2.",
+        "Slashes (engine, no model): `@jimbo /find` · `/validate` · `/explain`",
+        "Tools: `#validateJaml` · `#findSeeds` · `#explainJaml`",
       ].join("\n"),
     );
     return { metadata: { command: "pong" } };
@@ -203,21 +185,215 @@ export function registerJimboChat(context: vscode.ExtensionContext): vscode.Chat
   participant.followupProvider = {
     provideFollowups(result) {
       const cmd = (result.metadata as { command?: string } | undefined)?.command;
-      if (cmd === "find" || cmd === "validate") {
+      if (cmd === "find") {
         return [
-          { prompt: "Explain must vs should", label: "Explain must/should" },
-          { prompt: "/find collect 1", label: "Find one seed (when J2 ships)" },
+          { prompt: "/validate", label: "Validate this filter" },
+          { prompt: "/find 3", label: "Find three seeds" },
+          { prompt: "/explain must", label: "Explain must" },
+        ];
+      }
+      if (cmd === "validate") {
+        return [
+          { prompt: "/find", label: "Find one seed" },
+          { prompt: "/explain must", label: "Explain must" },
+        ];
+      }
+      if (cmd === "explain") {
+        return [
+          { prompt: "/validate", label: "Validate JAML" },
+          { prompt: "/find", label: "Find seeds" },
         ];
       }
       return [
         { prompt: "/validate", label: "Validate JAML" },
         { prompt: "/find", label: "Find seeds" },
+        { prompt: "/explain joker", label: "Explain joker clause" },
       ];
     },
   };
 
   context.subscriptions.push(participant);
   return participant;
+}
+
+/**
+ * J4 freeform loop: stream LM text, invoke Motely tools via lm.invokeTool, re-prompt until done.
+ * Uses request.toolInvocationToken so confirmation UI attaches to the chat turn.
+ */
+async function runFreeformWithTools(
+  request: vscode.ChatRequest,
+  chatContext: vscode.ChatContext,
+  stream: vscode.ChatResponseStream,
+  token: vscode.CancellationToken,
+  prompt: string,
+): Promise<void> {
+  const model = request.model;
+  const motelyTools = vscode.lm.tools.filter((t) =>
+    (MOTELY_TOOL_NAMES as readonly string[]).includes(t.name),
+  );
+
+  const openHint = activeJamlHint();
+  const systemWithContext = openHint
+    ? `${SYSTEM}\nOpen JAML context: ${openHint}`
+    : SYSTEM;
+
+  const messages: vscode.LanguageModelChatMessage[] = [
+    vscode.LanguageModelChatMessage.User(systemWithContext),
+    ...historyAsMessages(chatContext),
+    vscode.LanguageModelChatMessage.User(prompt),
+  ];
+
+  const toolReferences = [...request.toolReferences];
+  let rounds = 0;
+
+  while (rounds < MAX_TOOL_ROUNDS) {
+    if (token.isCancellationRequested) {
+      return;
+    }
+
+    const options: vscode.LanguageModelChatRequestOptions = {
+      justification: "Jimbo answers JAML / Motely / Balatro seed questions with real engine tools.",
+    };
+
+    const forced = toolReferences.shift();
+    if (forced) {
+      options.toolMode = vscode.LanguageModelChatToolMode.Required;
+      options.tools = motelyTools
+        .filter((t) => t.name === forced.name)
+        .map(toChatTool);
+      if (options.tools.length === 0) {
+        // Unknown #tool — fall back to full Motely set
+        options.toolMode = vscode.LanguageModelChatToolMode.Auto;
+        options.tools = motelyTools.map(toChatTool);
+      }
+    } else {
+      options.toolMode = vscode.LanguageModelChatToolMode.Auto;
+      options.tools = motelyTools.map(toChatTool);
+    }
+
+    stream.progress(
+      rounds === 0
+        ? `Jimbo + ${options.tools?.length ?? 0} Motely tools…`
+        : `Tool round ${rounds + 1}…`,
+    );
+
+    const response = await model.sendRequest(messages, options, token);
+    const toolCalls: vscode.LanguageModelToolCallPart[] = [];
+    let assistantText = "";
+
+    for await (const part of response.stream) {
+      if (token.isCancellationRequested) {
+        return;
+      }
+      if (part instanceof vscode.LanguageModelTextPart) {
+        stream.markdown(part.value);
+        assistantText += part.value;
+      } else if (part instanceof vscode.LanguageModelToolCallPart) {
+        toolCalls.push(part);
+      }
+    }
+
+    if (toolCalls.length === 0) {
+      return;
+    }
+
+    // Assistant turn: tool call parts (text already streamed to user)
+    const assistantParts: Array<vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart> =
+      [];
+    if (assistantText) {
+      assistantParts.push(new vscode.LanguageModelTextPart(assistantText));
+    }
+    for (const call of toolCalls) {
+      assistantParts.push(call);
+      stream.progress(`Calling \`${call.name}\`…`);
+    }
+    messages.push(vscode.LanguageModelChatMessage.Assistant(assistantParts));
+
+    // User turn: tool results
+    const resultParts: vscode.LanguageModelToolResultPart[] = [];
+    for (const call of toolCalls) {
+      const result = await invokeMotelyTool(call, request, token);
+      resultParts.push(
+        new vscode.LanguageModelToolResultPart(call.callId, result.content),
+      );
+    }
+    messages.push(vscode.LanguageModelChatMessage.User(resultParts));
+
+    rounds++;
+  }
+
+  stream.markdown(
+    `\n\n_Stopped after ${MAX_TOOL_ROUNDS} tool rounds. Use \`/find\` / \`/validate\` for a direct engine call._`,
+  );
+}
+
+async function invokeMotelyTool(
+  call: vscode.LanguageModelToolCallPart,
+  request: vscode.ChatRequest,
+  token: vscode.CancellationToken,
+): Promise<vscode.LanguageModelToolResult> {
+  try {
+    return await vscode.lm.invokeTool(
+      call.name,
+      {
+        input: (call.input ?? {}) as object,
+        toolInvocationToken: request.toolInvocationToken,
+      },
+      token,
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return new vscode.LanguageModelToolResult([
+      new vscode.LanguageModelTextPart(`Tool \`${call.name}\` failed: ${msg}`),
+    ]);
+  }
+}
+
+function toChatTool(t: vscode.LanguageModelToolInformation): vscode.LanguageModelChatTool {
+  return {
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+  };
+}
+
+function activeJamlInput():
+  | { filePath: string; label: string }
+  | { jamlText: string; label: string }
+  | undefined {
+  const editor = vscode.window.activeTextEditor;
+  if (
+    !editor ||
+    !(editor.document.languageId === "jaml" || editor.document.fileName.endsWith(".jaml"))
+  ) {
+    return undefined;
+  }
+  if (editor.document.uri.scheme === "file") {
+    return { filePath: editor.document.uri.fsPath, label: editor.document.uri.fsPath };
+  }
+  return { jamlText: editor.document.getText(), label: editor.document.uri.toString() };
+}
+
+function activeJamlHint(): string | undefined {
+  const input = activeJamlInput();
+  if (!input) {
+    return undefined;
+  }
+  if ("filePath" in input) {
+    return `filePath=${input.filePath} (prefer this absolute path for tools)`;
+  }
+  return `untitled buffer (${input.label}); pass jamlText from editor if tools need it`;
+}
+
+function resolveSlashJamlInput(
+  prompt: string | undefined,
+  allowPromptAsJaml: boolean,
+): { jamlText?: string; filePath?: string; label: string } | undefined {
+  const trimmed = prompt?.trim() ?? "";
+  if (allowPromptAsJaml && trimmed) {
+    return { jamlText: trimmed, label: "(chat prompt as JAML)" };
+  }
+  return activeJamlInput();
 }
 
 function historyAsMessages(context: vscode.ChatContext): vscode.LanguageModelChatMessage[] {
@@ -237,7 +413,6 @@ function historyAsMessages(context: vscode.ChatContext): vscode.LanguageModelCha
       }
     }
   }
-  // Keep context bounded in scaffold.
   return out.slice(-8);
 }
 
