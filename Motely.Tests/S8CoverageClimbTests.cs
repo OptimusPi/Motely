@@ -544,6 +544,235 @@ public sealed class S8CoverageClimbTests
         Assert.Equal(FixtureSeeds.Length, (int)rawSearch.MatchingSeeds);
     }
 
+    /// <summary>
+    /// Every tarot source route against real seeds, with the full 22-card list so any tarot
+    /// draw counts. Emperor and purple-seal streams always yield tarots (8/8); shop slots and
+    /// arcana packs gate (6/8, 4/8 — the pack run also walks the ante-1 extension mask via
+    /// slots 4-5); charmTag routes the clause through the scalar exact path (8/8). charmTag
+    /// counts only alongside its boosterPacks companion — alone it matches nothing by
+    /// construction (board note).
+    /// </summary>
+    [Fact]
+    public void TarotSources_KnownSeedCounts()
+    {
+        static long Count(string body)
+        {
+            var jaml = $"""
+                name: s8-tarot-probe
+                deck: Red
+                stake: White
+                must:
+                {body}
+                """;
+            var (matching, _) = ProofSearch.ListMatch(jaml, FixtureSeeds);
+            return matching;
+        }
+        long shopAny = Count("""
+                  - tarotCard: [TheFool, TheMagician, TheHighPriestess, TheEmpress, TheEmperor, TheHierophant, TheLovers, TheChariot, Justice, TheHermit, TheWheelOfFortune, Strength, TheHangedMan, Death, Temperance, TheDevil, TheTower, TheStar, TheMoon, TheSun, Judgement, TheWorld]
+                    antes: [1, 2]
+                    sources:
+                      shopItems: [0, 1, 2, 3]
+                """);
+        long packAny = Count("""
+                  - tarotCard: [TheFool, TheMagician, TheHighPriestess, TheEmpress, TheEmperor, TheHierophant, TheLovers, TheChariot, Justice, TheHermit, TheWheelOfFortune, Strength, TheHangedMan, Death, Temperance, TheDevil, TheTower, TheStar, TheMoon, TheSun, Judgement, TheWorld]
+                    antes: [1]
+                    sources:
+                      boosterPacks: [0, 1, 2, 3, 4, 5]
+                """);
+        long emperorAny = Count("""
+                  - tarotCard: [TheFool, TheMagician, TheHighPriestess, TheEmpress, TheEmperor, TheHierophant, TheLovers, TheChariot, Justice, TheHermit, TheWheelOfFortune, Strength, TheHangedMan, Death, Temperance, TheDevil, TheTower, TheStar, TheMoon, TheSun, Judgement, TheWorld]
+                    antes: [1]
+                    sources:
+                      emperor: [0, 1]
+                """);
+        long sealAny = Count("""
+                  - tarotCard: [TheFool, TheMagician, TheHighPriestess, TheEmpress, TheEmperor, TheHierophant, TheLovers, TheChariot, Justice, TheHermit, TheWheelOfFortune, Strength, TheHangedMan, Death, Temperance, TheDevil, TheTower, TheStar, TheMoon, TheSun, Judgement, TheWorld]
+                    antes: [1]
+                    sources:
+                      purpleSealOrEightBall: [0, 1]
+                """);
+        long charm = Count("""
+                  - tarotCard: [TheFool, TheMagician, TheHighPriestess, TheEmpress, TheEmperor, TheHierophant, TheLovers, TheChariot, Justice, TheHermit, TheWheelOfFortune, Strength, TheHangedMan, Death, Temperance, TheDevil, TheTower, TheStar, TheMoon, TheSun, Judgement, TheWorld]
+                    antes: [1, 2]
+                    sources:
+                      boosterPacks: [0, 1, 2, 3]
+                      charmTag: true
+                """);
+        Assert.Equal(6, shopAny);
+        Assert.Equal(4, packAny);
+        Assert.Equal(8, emperorAny);
+        Assert.Equal(8, sealAny);
+        Assert.Equal(8, charm);
+    }
+
+    /// <summary>
+    /// Spectral source routes on the Ghost deck (spectrals reach the shop there), full
+    /// 16-card content list (Soul/BlackHole stay out — they route to the special desc).
+    /// Pack run uses slots 0-5 so ante-1 extension executes; etherealTag and omenGlobe
+    /// route through the scalar exact path.
+    /// </summary>
+    [Fact]
+    public void SpectralSources_KnownSeedCounts()
+    {
+        static long Count(string body)
+        {
+            var jaml = $"""
+                name: s8-spectral
+                deck: Ghost
+                stake: White
+                must:
+                {body}
+                """;
+            var (matching, _) = ProofSearch.ListMatch(jaml, FixtureSeeds);
+            return matching;
+        }
+        const string AllContent =
+            "[Familiar, Grim, Incantation, Talisman, Aura, Wraith, Sigil, Ouija, Ectoplasm, Immolate, Ankh, DejaVu, Hex, Trance, Medium, Cryptid]";
+        long shop = Count($"""
+                  - spectralCard: {AllContent}
+                    antes: [1, 2, 3, 4]
+                    sources:
+                      shopItems: [0, 1, 2, 3, 4, 5, 6, 7]
+                """);
+        long packs = Count($"""
+                  - spectralCard: {AllContent}
+                    antes: [1]
+                    sources:
+                      boosterPacks: [0, 1, 2, 3, 4, 5]
+                """);
+        long sixthSense = Count($"""
+                  - spectralCard: {AllContent}
+                    antes: [1, 2]
+                    sources:
+                      sixthSense: [0, 1]
+                """);
+        long seance = Count($"""
+                  - spectralCard: {AllContent}
+                    antes: [1, 2]
+                    sources:
+                      seance: [0, 1]
+                """);
+        long ethereal = Count($"""
+                  - spectralCard: {AllContent}
+                    antes: [1, 2]
+                    sources:
+                      boosterPacks: [0, 1, 2, 3]
+                      etherealTag: true
+                """);
+        var rawDesc = new SpectralCardFilterDesc(
+            new SpectralCardClause
+            {
+                Spectrals =
+                [
+                    MotelySpectralCard.Familiar, MotelySpectralCard.Grim, MotelySpectralCard.Incantation,
+                    MotelySpectralCard.Talisman, MotelySpectralCard.Aura, MotelySpectralCard.Wraith,
+                    MotelySpectralCard.Sigil, MotelySpectralCard.Ouija, MotelySpectralCard.Ectoplasm,
+                    MotelySpectralCard.Immolate, MotelySpectralCard.Ankh, MotelySpectralCard.DejaVu,
+                    MotelySpectralCard.Hex, MotelySpectralCard.Trance, MotelySpectralCard.Medium,
+                    MotelySpectralCard.Cryptid,
+                ],
+                Antes = [1, 2, 3, 4],
+                Sources = new SpectralCardSourceConfig { ShopItems = [0, 1, 2, 3, 4, 5, 6, 7] },
+            }
+        );
+        using var rawSearch = new MotelySearchSettings<SpectralCardFilterDesc.SpectralCardFilter>(
+            rawDesc
+        )
+            .WithDeck(MotelyDeck.Ghost)
+            .WithStake(MotelyStake.White)
+            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .Start();
+        rawSearch.AwaitCompletion();
+        long rawShop = rawSearch.MatchingSeeds;
+
+        using var addSearch = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+            new PassthroughFilterDesc()
+        )
+            .WithAdditionalFilter(rawDesc)
+            .WithDeck(MotelyDeck.Ghost)
+            .WithStake(MotelyStake.White)
+            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .Start();
+        addSearch.AwaitCompletion();
+        long addShop = addSearch.MatchingSeeds;
+
+        Assert.Equal(7, shop);
+        Assert.Equal(1, packs);
+        Assert.Equal(8, sixthSense);
+        Assert.Equal(8, seance);
+        Assert.Equal(8, ethereal);
+        Assert.Equal(7, rawShop);
+        Assert.Equal(7, addShop);
+    }
+
+    private struct ScalarProbeDesc : IMotelySeedFilterDesc<ScalarProbeDesc.ScalarProbeFilter>
+    {
+        public static readonly List<string> Log = [];
+        public static SpectralCardClause? Clause;
+
+        public readonly ScalarProbeFilter CreateFilter(ref MotelyFilterCreationContext ctx) =>
+            new();
+
+        public struct ScalarProbeFilter : IMotelySeedFilter
+        {
+            public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
+            {
+                return ctx.SearchIndividualSeeds(
+                    (MotelySingleSearchContext single) =>
+                    {
+                        var shopStream = single.CreateShopItemStream(2);
+                        var items = new List<string>();
+                        for (int slot = 0; slot < 4; slot++)
+                            items.Add(single.GetNextShopItem(ref shopStream).Type.ToString());
+                        bool meets = JamlScoring.ClauseMeetsMinForFilter(ref single, ScalarProbeDesc.Clause!);
+                        ScalarProbeDesc.Log.Add($"sigil0={items[0] == "Sigil"} meets={meets}");
+                        return 0;
+                    }
+                );
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ground truth pinned from an external analyzer run: ALEEB on Ghost/White has Sigil in
+    /// ante-2 shop slot 0. The scalar single context sees it, and the scalar must re-eval
+    /// (ClauseMeetsMinForFilter) agrees the shop-sourced spectral clause is met.
+    /// </summary>
+    [Fact]
+    public void AleebGhostShop_ScalarSeesSigil_GroundTruth()
+    {
+        ScalarProbeDesc.Log.Clear();
+        ScalarProbeDesc.Clause = new SpectralCardClause
+        {
+            Spectrals =
+            [
+                MotelySpectralCard.Familiar, MotelySpectralCard.Grim, MotelySpectralCard.Incantation,
+                MotelySpectralCard.Talisman, MotelySpectralCard.Aura, MotelySpectralCard.Wraith,
+                MotelySpectralCard.Sigil, MotelySpectralCard.Ouija, MotelySpectralCard.Ectoplasm,
+                MotelySpectralCard.Immolate, MotelySpectralCard.Ankh, MotelySpectralCard.DejaVu,
+                MotelySpectralCard.Hex, MotelySpectralCard.Trance, MotelySpectralCard.Medium,
+                MotelySpectralCard.Cryptid,
+            ],
+            Antes = [1, 2, 3, 4],
+            Sources = new SpectralCardSourceConfig { ShopItems = [0, 1, 2, 3, 4, 5, 6, 7] },
+        };
+        using var search = new MotelySearchSettings<ScalarProbeDesc.ScalarProbeFilter>(
+            new ScalarProbeDesc()
+        )
+            .WithDeck(MotelyDeck.Ghost)
+            .WithStake(MotelyStake.White)
+            .WithListSearch(["ALEEB"], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .Start();
+        search.AwaitCompletion();
+        Assert.Equal("sigil0=True meets=True", string.Join(" | ", ScalarProbeDesc.Log));
+    }
+
     [Fact]
     public void VectorMask_And_VectorUtils_ShiftLeft()
     {

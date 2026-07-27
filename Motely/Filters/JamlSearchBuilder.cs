@@ -73,6 +73,11 @@ public static class JamlSearchBuilder
                     new PassthroughFilterDesc()
                 );
 
+        // The JAML document names its own deck and stake; the settings carry them from here so
+        // every caller searches what the filter says. Callers may still override afterwards
+        // (the CLI applies --deck/--stake on top).
+        settings = settings.WithDeck(config.Deck).WithStake(config.Stake);
+
         // SIMD filter chain: must + mustNot cheapest-first so trivial clauses kill lanes before
         // expensive SearchIndividualSeeds arms. Does not mutate the config; scoring still sees
         // authored must/should order (tally columns + must re-eval).
