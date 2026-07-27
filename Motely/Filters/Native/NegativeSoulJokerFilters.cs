@@ -19,11 +19,19 @@ public readonly struct NegativeLegendaryJokerSimdFilterDesc(MotelyItemType? targ
     public readonly FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         for (int ante = MinAnte; ante <= MaxAnte; ante++)
+        {
+            // Filter reads two stream variants with isCached: true — register both key sets.
             ctx.CacheLegendaryJokerStream(
                 ante,
                 MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
                     | MotelyJokerFixedRarityStreamFlags.ExcludeStickers
             );
+            ctx.CacheLegendaryJokerStream(
+                ante,
+                MotelyJokerFixedRarityStreamFlags.ExcludeEdition
+                    | MotelyJokerFixedRarityStreamFlags.ExcludeStickers
+            );
+        }
 
         return new FilterStruct(targetJoker);
     }

@@ -124,6 +124,9 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
             var sources = clause.Sources ?? DefaultSources;
 
             // Charm-tag bonus pack is shop-order weighted; share one match core with scoring.
+            // charmTag counts only alongside a boosterPacks list — the bonus pack's contents
+            // are gated on its pack index being in boosterPacks, so charmTag alone matches
+            // nothing by construction.
             if (sources.CharmTag)
             {
                 return ctx.SearchIndividualSeeds(

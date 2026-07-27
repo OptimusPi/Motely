@@ -773,6 +773,140 @@ public sealed class S8CoverageClimbTests
         Assert.Equal("sigil0=True meets=True", string.Join(" | ", ScalarProbeDesc.Log));
     }
 
+    /// <summary>20 fixture seeds + 8 soul seeds found by a real CLI collect run
+    /// (soulCardOnly wildcard, antes 1-2) — positives for every legendary route.</summary>
+    private static readonly string[] WideSeeds =
+    [
+        "ALEEB", "MOTELY77", "UNITTEST", "5X5", "616", "696", "6J6", "7H7",
+        "99", "CC", "F", "Q", "R", "VV", "H", "I", "Z", "88", "AAAAAAAA", "MOTELY",
+        "474", "3X3", "GHG", "4C4", "2A2", "111", "CUC", "FMF",
+    ];
+
+    /// <summary>
+    /// Legendary soul routes over a 20-seed list (3 vector batches — the P2 multi-batch
+    /// regression). Split-mode arcana/spectral slots, soulCardOnly counting, the
+    /// requireMegaPack gate, legacy boosterPacks slots, and a named-face clause all walk
+    /// the same pack-order law.
+    /// </summary>
+    [Fact]
+    public void LegendarySoul_KnownSeedCounts_MultiBatch()
+    {
+        static long Count(string body)
+        {
+            var jaml = $"""
+                name: s8-legendary
+                deck: Red
+                stake: White
+                must:
+                {body}
+                """;
+            var (matching, _) = ProofSearch.ListMatch(jaml, WideSeeds);
+            return matching;
+        }
+        long split = Count("""
+                  - legendaryJoker: any
+                    antes: [1, 2]
+                    sources:
+                      arcanaPacks: [0, 1, 2, 3]
+                      spectralPacks: [0, 1, 2, 3]
+                """);
+        long soulOnly = Count("""
+                  - legendaryJoker: any
+                    soulCardOnly: true
+                    antes: [1, 2]
+                    sources:
+                      arcanaPacks: [0, 1, 2, 3]
+                      spectralPacks: [0, 1, 2, 3]
+                """);
+        long mega = Count("""
+                  - legendaryJoker: any
+                    soulCardOnly: true
+                    antes: [1, 2]
+                    sources:
+                      arcanaPacks: [0, 1, 2, 3]
+                      spectralPacks: [0, 1, 2, 3]
+                      requireMegaPack: true
+                """);
+        long legacy = Count("""
+                  - legendaryJoker: any
+                    antes: [1, 2]
+                    sources:
+                      boosterPacks: [0, 1, 2, 3]
+                """);
+        long perkeo = Count("""
+                  - legendaryJoker: Perkeo
+                    antes: [1, 2]
+                    sources:
+                      arcanaPacks: [0, 1, 2, 3]
+                      spectralPacks: [0, 1, 2, 3]
+                """);
+        long theSoulClause = Count("""
+                  - spectralCard: TheSoul
+                    antes: [1, 2]
+                """);
+        long ante0 = Count("""
+                  - voucher: Hieroglyph
+                    antes: [1]
+                  - legendaryJoker: Perkeo
+                    antes: [0]
+                """);
+        Assert.Equal(9, split);
+        Assert.Equal(9, soulOnly);
+        Assert.Equal(0, mega);
+        Assert.Equal(9, legacy);
+        Assert.Equal(0, perkeo);
+        Assert.Equal(8, theSoulClause);
+        Assert.Equal(0, ante0);
+    }
+
+    /// <summary>
+    /// The revived SIMD negative-legendary front (edition stream first — the ~0.3% event is
+    /// the killer check) composed with the shop-soul confirm, over 4000 seeds. Before the
+    /// category-bits fix this front could never pass a lane. The composition is a CANDIDATE
+    /// generator: it ORs "Negative edition at ante 1 or 2" with "Soul appears at ante 1 or 2"
+    /// without linking the two to the same ante. Seed 1946 proves both halves and the gap:
+    /// Negative edition rolls at ante 1, The Soul appears at ante 2 (jamlyzer-verified:
+    /// JumboArcana slot 2), so the in-game result is a plain Yorick — the exact JAML soul
+    /// route correctly rejects what the prefilter pair surfaces.
+    /// </summary>
+    [Fact]
+    public void NegativeLegendarySimdFront_ComposedWithSoulConfirm_FindsSeeds()
+    {
+        var seeds = Enumerable.Range(1, 4000).Select(static i => i.ToString()).ToArray();
+        var matched = new List<string>();
+        using var search = new MotelySearchSettings<NegativeLegendaryJokerSimdFilterDesc.FilterStruct>(
+            new NegativeLegendaryJokerSimdFilterDesc()
+        )
+            .WithAdditionalFilter(new LegendaryJokerShopSoulFilterDesc())
+            .WithDeck(MotelyDeck.Red)
+            .WithStake(MotelyStake.White)
+            .WithListSearch(seeds, seeds.Length)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .WithSeedMatchCallback(matched.Add)
+            .Start();
+        search.AwaitCompletion();
+        Assert.Equal(
+            "1946",
+            string.Join(",", matched.OrderBy(static s => s, StringComparer.Ordinal))
+        );
+
+        // The exact JAML soul route rejects the candidate: edition and soul-appearance
+        // must cohere per ante, and 1946's Negative roll (ante 1) has no Soul to redeem it.
+        ProofSearch.MustMatchNone(
+            """
+            name: s8-negative-legendary-xcheck
+            deck: Red
+            stake: White
+            must:
+              - legendaryJoker: any
+                edition: Negative
+                antes: [1, 2]
+            """,
+            "1946"
+        );
+    }
+
     [Fact]
     public void VectorMask_And_VectorUtils_ShiftLeft()
     {
