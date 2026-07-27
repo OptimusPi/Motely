@@ -92,7 +92,7 @@ export function JamlCodeEditor({
   const suppressEmitRef = useRef(false);
   const lastSyncedValueRef = useRef(value);
   const onChangeRef = useRef(onChange);
-  useEffect(() => { onChangeRef.current = onChange; });
+  onChangeRef.current = onChange;
 
   // React 19 ref-callback cleanup: the CodeMirror view's lifecycle is tied
   // directly to the element's, no separate mount effect needed.
