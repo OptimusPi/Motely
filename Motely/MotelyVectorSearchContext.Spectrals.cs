@@ -437,73 +437,36 @@ ref partial struct MotelyVectorSearchContext
         return hasTheSoul;
     }
 
+    // The pack a player opens is deduplicated (resample rolls replace repeats), so HasThe
+    // answers from the same contents walk the scalar engine uses — the raw stream diverges
+    // whenever a duplicate resamples into the target.
     public VectorMask GetNextSpectralPackHasThe(
         ref MotelyVectorSpectralStream spectralStream,
         MotelySpectralCard targetSpectral,
         MotelyBoosterPackSize size
     )
     {
-        int cardCount = MotelyBoosterPackType.Spectral.GetCardCount(size);
-        VectorMask hasTarget = VectorMask.NoBitsSet;
-
-        for (int i = 0; i < cardCount; i++)
-        {
-            var Spectral = GetNextSpectral(ref spectralStream);
-            // Extract Spectral card type using bit masking (similar to StandardcardSuit pattern)
-            var spectralType = new VectorEnum256<MotelySpectralCard>(
-                Vector256.BitwiseAnd(
-                    Spectral.Value,
-                    Vector256.Create(
-                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
-                    )
-                )
-            );
-            VectorMask isTarget = VectorEnum256.Equals(spectralType, targetSpectral);
-            hasTarget |= isTarget;
-
-            // Early exit optimization - if all lanes have found the target, no need to continue
-            if (hasTarget.IsAllTrue())
-                break;
-        }
-
-        return hasTarget;
+        var contents = GetNextSpectralPackContents(ref spectralStream, size);
+        return contents.Contains(
+            (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)targetSpectral)
+        );
     }
 
+    /// <inheritdoc cref="GetNextSpectralPackHasThe(ref MotelyVectorSpectralStream, MotelySpectralCard, MotelyBoosterPackSize)"/>
     public VectorMask GetNextSpectralPackHasThe(
         ref MotelyVectorSpectralStream spectralStream,
         MotelySpectralCard[] targetSpectrals,
         MotelyBoosterPackSize size
     )
     {
-        int cardCount = MotelyBoosterPackType.Spectral.GetCardCount(size);
+        var contents = GetNextSpectralPackContents(ref spectralStream, size);
         VectorMask hasAnyTarget = VectorMask.NoBitsSet;
-
-        for (int i = 0; i < cardCount; i++)
+        foreach (var target in targetSpectrals)
         {
-            var Spectral = GetNextSpectral(ref spectralStream);
-            // Extract Spectral card type using bit masking (similar to StandardcardSuit pattern)
-            var spectralType = new VectorEnum256<MotelySpectralCard>(
-                Vector256.BitwiseAnd(
-                    Spectral.Value,
-                    Vector256.Create(
-                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
-                    )
-                )
+            hasAnyTarget |= contents.Contains(
+                (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)target)
             );
-
-            VectorMask isAnyTarget = VectorMask.NoBitsSet;
-            foreach (var target in targetSpectrals)
-            {
-                isAnyTarget |= VectorEnum256.Equals(spectralType, target);
-            }
-
-            hasAnyTarget |= isAnyTarget;
-
-            // Early exit optimization - if all lanes have found any target, no need to continue
-            if (hasAnyTarget.IsAllTrue())
-                break;
         }
-
         return hasAnyTarget;
     }
 }
