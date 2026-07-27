@@ -81,7 +81,7 @@ ProofSearch.MustMatchNone(jaml, "NOPE"); // negative path
 |---|------|------|--------|
 | S8.0 | Re-read this board + `ProofSearch` + green `dotnet test` | 417+ pass | **ready** |
 | **S8.P1** | Hard climb: zero/low FilterDesc + loader paths → **≥ 85% line** | R1 on every new filter test; exclude still clean | **done — 85.23% line / 76.69% branch, 733 green, commit `e8285a4a`** |
-| **S8.P2** | Harder climb: vector/context/search guts → **≥ 90% line**, **≥ 76% branch** | R1+R3; no exclude tampering | **in progress — 85.76% line / 77.21% branch (branch gate met); multi-batch regression in; LegendarySoulMatcher 93.1%. Remaining: MotelyVectorSearchContext partials (~440), MotelySearch (~133), MotelyFilterCreationContext (~103), RareJokerFilter (~36)** |
+| **S8.P2** | Harder climb: vector/context/search guts → **≥ 90% line**, **≥ 76% branch** | R1+R3; no exclude tampering | **in progress — 87.21% line / 77.76% branch (branch gate met); RawStreamParityTests covers the uncalled vector surface. Remaining to 90% (~490 lines): MotelySearch (~338), MotelyFilterCreationContext (~160), vector Vouchers `GetAnteFirstVoucher` stateless overload, RareJokerFilter (~36)** |
 | **S8.P3** | Final lock: **≥ 92% line**, **≥ 80% branch**, stryker smoke, coverlet threshold doc | R4 + threshold recipe in this file | **todo** |
 | S8.ship | Commit bite-sized; update this board; ordinary push OK | board reflects measured % | **todo** |
 
@@ -270,6 +270,7 @@ and should be credited by a wasm run, not by an exclude.
 | 4 | **`JamlSearchBuilder.CreateSettings` ignored `config.Deck`/`config.Stake`** — every direct caller searched Red/White regardless of the JAML; Ghost-deck spectral shop clauses dead. Scalar `PseudoHash` also aligned to the vector additional-filter cache law | `JamlSearchBuilder.cs`, `MotelySingleSearchContext.cs` (`e8285a4a`) |
 | 5 | `NegativeLegendaryJokerSimdFilterDesc.CreateFilter` cached only the edition stream variant; the type variant read with `isCached: true` tripped the partial-hash assert | `NegativeSoulJokerFilters.cs` (`5e109a8c`) |
 | 6 | Native front+soul-confirm composition has **no per-ante linkage**: Negative-at-ante-1 OR'd with Soul-at-ante-2 passes (seed 1946, jamlyzer-verified). Exact JAML soul route is the law; composition is a candidate generator. Ante-coherent SIMD front = future verb, operator call | documented in `NegativeLegendarySimdFront_ComposedWithSoulConfirm_FindsSeeds` |
+| 7 | All six vector pack `HasThe` helpers walked the **raw stream without dedup-resample** — a duplicate that re-rolled into the target was missed vs the pack the player opens. Caught by `RawStreamParityTests` on its first run (UNITTEST ante-1 celestial mega). Now answer from deduplicated contents | `MotelyVectorSearchContext.{Tarot,Planets,Spectrals}.cs` (`94f2708e`) |
 
 ### S8.P1 progress (2026-07-27)
 
