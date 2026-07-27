@@ -1,19 +1,18 @@
 "use client";
 
-import {
-  MotelyBossBlind,
-  MotelyVoucher,
-  MotelyTag,
-  MotelyBoosterPack,
-  type MotelyJamlyzerAnteResult,
-} from "motely-wasm";
+import type { MotelyJamlyzerAnteResult } from "motely-wasm";
 import { JimboInnerPanel } from "../../ui/panel.js";
 import { JimboText } from "../../ui/jimboText.js";
 import { JimboBadge } from "../../ui/JimboBadge.js";
 import { JimboStack, JimboRow } from "../../ui/JimboLayout.js";
 import { JimboSpinner } from "../../ui/JimboSpinner.js";
-import { BOSSES, VOUCHERS, TAGS, BOOSTER_PACKS } from "../../sprites/spriteData.js";
 import { MOTELY_ITEM_FORMATS_BY_VALUE } from "../../decode/motelyItemFormats.js";
+import {
+  bossDisplayName,
+  voucherDisplayName,
+  tagDisplayName,
+  packDisplayName,
+} from "./names.js";
 import {
   JamlBoss,
   JamlVoucher,
@@ -22,38 +21,6 @@ import {
   resolveAnalyzerShopItem,
   type AnalyzerResolvedItem,
 } from "../GameCard.js";
-
-function getBossDisplayName(bossVal: MotelyBossBlind): string {
-  const key = MotelyBossBlind[bossVal];
-  if (!key) return "Small Blind";
-  const normalizedKey = key.toLowerCase();
-  const found = BOSSES.find((b) => b.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key;
-}
-
-function getVoucherDisplayName(voucherVal: MotelyVoucher): string {
-  const key = MotelyVoucher[voucherVal];
-  if (!key) return "";
-  const normalizedKey = key.toLowerCase();
-  const found = VOUCHERS.find((v) => v.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key;
-}
-
-function getTagDisplayName(tagVal: MotelyTag): string {
-  const key = MotelyTag[tagVal];
-  if (!key) return "";
-  const normalizedKey = key.toLowerCase();
-  const found = TAGS.find((t) => t.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key;
-}
-
-function getBoosterPackDisplayName(packVal: MotelyBoosterPack): string {
-  const key = MotelyBoosterPack[packVal];
-  if (!key) return "";
-  const normalizedKey = (key + "pack").toLowerCase();
-  const found = BOOSTER_PACKS.find((b) => b.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === normalizedKey);
-  return found ? found.name : key + " Pack";
-}
 
 function getResolvedItem(value: number, scale = 0.5): AnalyzerResolvedItem {
   const format = MOTELY_ITEM_FORMATS_BY_VALUE[value as keyof typeof MOTELY_ITEM_FORMATS_BY_VALUE];
@@ -130,15 +97,15 @@ export function JamlyzerAnteDetails({
             </JimboText>
             <JimboRow gap="md" justify="center" align="center">
               <JimboStack gap="xs" align="center">
-                <JamlBoss bossName={getBossDisplayName(ante.boss)} scale={0.5} />
+                <JamlBoss bossName={bossDisplayName(ante.boss)} scale={0.5} />
                 <JimboText size="micro" className="j-text-center">
-                  {getBossDisplayName(ante.boss)}
+                  {bossDisplayName(ante.boss)}
                 </JimboText>
               </JimboStack>
               <JimboStack gap="xs" align="center">
-                <JamlVoucher voucherName={getVoucherDisplayName(ante.voucher)} scale={0.5} />
+                <JamlVoucher voucherName={voucherDisplayName(ante.voucher)} scale={0.5} />
                 <JimboText size="micro" className="j-text-center">
-                  {getVoucherDisplayName(ante.voucher)}
+                  {voucherDisplayName(ante.voucher)}
                 </JimboText>
               </JimboStack>
             </JimboRow>
@@ -150,15 +117,15 @@ export function JamlyzerAnteDetails({
             </JimboText>
             <JimboRow gap="md" justify="center" align="center">
               <JimboStack gap="xs" align="center">
-                <JamlTag tagName={getTagDisplayName(ante.smallBlindTag)} scale={0.5} />
+                <JamlTag tagName={tagDisplayName(ante.smallBlindTag)} scale={0.5} />
                 <JimboText size="micro" className="j-text-center">
-                  Small: {getTagDisplayName(ante.smallBlindTag)}
+                  Small: {tagDisplayName(ante.smallBlindTag)}
                 </JimboText>
               </JimboStack>
               <JimboStack gap="xs" align="center">
-                <JamlTag tagName={getTagDisplayName(ante.bigBlindTag)} scale={0.5} />
+                <JamlTag tagName={tagDisplayName(ante.bigBlindTag)} scale={0.5} />
                 <JimboText size="micro" className="j-text-center">
-                  Big: {getTagDisplayName(ante.bigBlindTag)}
+                  Big: {tagDisplayName(ante.bigBlindTag)}
                 </JimboText>
               </JimboStack>
             </JimboRow>
@@ -190,7 +157,7 @@ export function JamlyzerAnteDetails({
                 {ante.packs.map((pack, packIdx) => (
                   <JimboStack key={packIdx} gap="xs" align="center">
                     <JimboText size="xs" className="j-text-center">
-                      {getBoosterPackDisplayName(pack.pack)}
+                      {packDisplayName(pack.pack)}
                     </JimboText>
                     <JimboRow wrap gap="xs" justify="center" align="start">
                       {pack.items.map((item, itemIdx) => (
