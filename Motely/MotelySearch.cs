@@ -1137,8 +1137,13 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                     t.Join();
         }
 
-        for (int i = 0; i < _plans.Length; i++)
-            _plans[i].Dispose();
+        // A constructor that threw (bad Mode, filter creation failure) still queues this
+        // object for finalization, so Dispose runs against partially-built state: _plans
+        // may be null or have null tail entries, and the native buffer may never have been
+        // allocated. Guard each piece; FreeHGlobal(0) is a no-op.
+        if (_plans is not null)
+            for (int i = 0; i < _plans.Length; i++)
+                _plans[i]?.Dispose();
         Marshal.FreeHGlobal((nint)_pseudoHashKeyLengths);
 
         // After the Join above, so no worker is still inside NoteMatchForStop calling Cancel().
