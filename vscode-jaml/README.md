@@ -1,6 +1,6 @@
 # JAML (Motely) — VS Code
 
-Real language support for `.jaml` files. The extension is a thin LSP client.
+Real language support for `.jaml` files + **`@jimbo`** Copilot Chat participant (J0 scaffold).
 
 | Concern | Owner |
 |--------|--------|
@@ -8,8 +8,28 @@ Real language support for `.jaml` files. The extension is a thin LSP client.
 | Schema / vocab | Generated `JamlSchema` + engine enums |
 | Protocol | `Motely.Lsp` (JSON-RPC 2.0 stdio) |
 | Editor glue | this package (`vscode-languageclient`) |
+| Chat | `@jimbo` — `src/jimboChat.ts` (J0: pong + slash stubs; tools later) |
 
 There is no TypeScript reimplementation of the JAML grammar.
+
+## @jimbo (chat)
+
+In **Copilot Chat** (or VS Code Chat with a model):
+
+```
+@jimbo hi
+@jimbo /validate
+@jimbo /find
+@jimbo /explain must vs should
+```
+
+| Phase | Status |
+|-------|--------|
+| **J0** | Participant registered, stream + slash stubs |
+| J1 | `motely_validate_jaml` tool |
+| J2 | `motely_search_seeds` (real Motely collect) |
+
+F5 Extension Development Host → open Chat → `@jimbo`.
 
 ## Install (dev, from this repo)
 

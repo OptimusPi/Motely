@@ -1,10 +1,8 @@
 /**
- * VS Code client for Motely.Lsp.
+ * VS Code client for Motely.Lsp + @jimbo chat participant.
  *
- * This extension does not reimplement JAML. It registers the language id, then
- * starts the real C# language server (Motely.Lsp) over stdio via
- * vscode-languageclient. Diagnostics, hover, and completion all come from the
- * Motely engine through that process.
+ * Language: Motely.Lsp over stdio (engine grammar only — no TS reimplementation).
+ * Chat: @jimbo (J0 scaffold) — tools/search come in later phases.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -15,10 +13,23 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
+import { registerJimboChat } from "./jimboChat";
 
 let client: LanguageClient | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  registerJimboChat(context);
+
+  try {
+    await startLanguageServer(context);
+  } catch (err) {
+    // Chat still works if LSP path is missing (e.g. opened outside MotelyJAML).
+    const msg = err instanceof Error ? err.message : String(err);
+    vscode.window.showWarningMessage(`JAML LSP: ${msg}`);
+  }
+}
+
+async function startLanguageServer(context: vscode.ExtensionContext): Promise<void> {
   const server = resolveServer(context);
   const serverOptions: ServerOptions = {
     run: { command: server.command, args: server.args, transport: TransportKind.stdio },
@@ -41,7 +52,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(client);
   await client.start();
-  vscode.window.setStatusBarMessage(`JAML: Motely.Lsp (${server.display})`, 4000);
+  vscode.window.setStatusBarMessage(`JAML: Motely.Lsp (${server.display}) + @jimbo`, 4000);
 }
 
 export async function deactivate(): Promise<void> {

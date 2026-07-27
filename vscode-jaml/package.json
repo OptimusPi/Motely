@@ -1,8 +1,8 @@
 {
   "name": "jaml-language-support",
   "displayName": "JAML (Motely)",
-  "description": "Real JAML language support: Motely.Lsp over stdio — engine diagnostics, hover, and completion.",
-  "version": "3.0.0",
+  "description": "Motely.Lsp (engine diagnostics/hover/completion) + @jimbo chat participant for JAML seed filters.",
+  "version": "3.1.0",
   "publisher": "pifreak",
   "license": "MIT",
   "engines": {
@@ -10,7 +10,9 @@
   },
   "categories": [
     "Programming Languages",
-    "Linters"
+    "Linters",
+    "AI",
+    "Chat"
   ],
   "repository": {
     "type": "git",
@@ -18,7 +20,8 @@
   },
   "main": "./out/extension.js",
   "activationEvents": [
-    "onLanguage:jaml"
+    "onLanguage:jaml",
+    "onChatParticipant:jaml.jimbo"
   ],
   "contributes": {
     "languages": [
@@ -33,6 +36,41 @@
           ".jaml"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "jaml.jimbo",
+        "name": "jimbo",
+        "fullName": "Jimbo",
+        "description": "JAML filters, Motely search, Balatro seed hunt",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "find",
+            "description": "Search seeds for the active or attached JAML (J2 wires Motely)"
+          },
+          {
+            "name": "validate",
+            "description": "Validate JAML with the Motely engine (J1 wires loader)"
+          },
+          {
+            "name": "explain",
+            "description": "Explain a clause or must/should chain"
+          }
+        ],
+        "disambiguation": [
+          {
+            "category": "jaml_seeds",
+            "description": "The user wants help with JAML filters, Motely, Balatro seed search, or Jimbo Ante Markup Language.",
+            "examples": [
+              "find a seed for this jaml filter",
+              "validate my jaml must chain",
+              "what does voucher Overstock mean in jaml",
+              "search balatro seeds with perkeo ante 1"
+            ]
+          }
+        ]
       }
     ],
     "configuration": {
