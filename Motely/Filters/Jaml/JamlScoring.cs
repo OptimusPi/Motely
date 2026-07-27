@@ -1811,6 +1811,54 @@ public static class JamlScoring
             }
         }
 
+        if (sources.CommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.CommonShopJokers);
+            var stream = ctx.CreateCommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.CommonShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
+        if (sources.UncommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.UncommonShopJokers);
+            var stream = ctx.CreateUncommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.UncommonShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
+        if (sources.RareShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.RareShopJokers);
+            var stream = ctx.CreateRareShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RareShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
+        if (sources.AllShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.AllShopJokers);
+            var stream = ctx.CreateShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.AllShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
         return count;
     }
 
@@ -1967,6 +2015,54 @@ public static class JamlScoring
                     int matches = MatchJokerWildcard(item, wildcardRarity, edition, stickers);
                     count += matches;
                 }
+            }
+        }
+
+        if (sources.CommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.CommonShopJokers);
+            var stream = ctx.CreateCommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.CommonShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+            }
+        }
+
+        if (sources.UncommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.UncommonShopJokers);
+            var stream = ctx.CreateUncommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.UncommonShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+            }
+        }
+
+        if (sources.RareShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.RareShopJokers);
+            var stream = ctx.CreateRareShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RareShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+            }
+        }
+
+        if (sources.AllShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.AllShopJokers);
+            var stream = ctx.CreateShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.AllShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
             }
         }
 

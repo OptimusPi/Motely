@@ -489,42 +489,28 @@ unsafe partial struct MotelyVectorSearchContext
 
         if (stream.DoesProvideJokerType)
         {
-            switch (stream.Rarity)
+            Vector256<int> rawJoker = stream.Rarity switch
             {
-                case MotelyJokerRarity.Legendary:
-                    item = new(
-                        GetNextJoker<MotelyJokerLegendary>(
-                            ref stream.JokerPrngStream,
-                            MotelyJokerRarity.Legendary
-                        )
-                    );
-                    break;
-                case MotelyJokerRarity.Rare:
-                    item = new(
-                        GetNextJoker<MotelyJokerRare>(
-                            ref stream.JokerPrngStream,
-                            MotelyJokerRarity.Rare
-                        )
-                    );
-                    break;
-                case MotelyJokerRarity.Uncommon:
-                    item = new(
-                        GetNextJoker<MotelyJokerUncommon>(
-                            ref stream.JokerPrngStream,
-                            MotelyJokerRarity.Uncommon
-                        )
-                    );
-                    break;
-                default:
-                    Debug.Assert(stream.Rarity == MotelyJokerRarity.Common);
-                    item = new(
-                        GetNextJoker<MotelyJokerCommon>(
-                            ref stream.JokerPrngStream,
-                            MotelyJokerRarity.Common
-                        )
-                    );
-                    break;
-            }
+                MotelyJokerRarity.Legendary => GetNextJoker<MotelyJokerLegendary>(
+                    ref stream.JokerPrngStream,
+                    MotelyJokerRarity.Legendary
+                ),
+                MotelyJokerRarity.Rare => GetNextJoker<MotelyJokerRare>(
+                    ref stream.JokerPrngStream,
+                    MotelyJokerRarity.Rare
+                ),
+                MotelyJokerRarity.Uncommon => GetNextJoker<MotelyJokerUncommon>(
+                    ref stream.JokerPrngStream,
+                    MotelyJokerRarity.Uncommon
+                ),
+                _ => GetNextJoker<MotelyJokerCommon>(
+                    ref stream.JokerPrngStream,
+                    MotelyJokerRarity.Common
+                ),
+            };
+            // Scalar parity: MotelyItem(MotelyJoker) carries the Joker category bits; the raw
+            // rarity|index vector needs the same bits or Type/TypeCategory matches never pass.
+            item = new(Vector256.Create((int)MotelyItemTypeCategory.Joker) | rawJoker);
         }
         else
         {

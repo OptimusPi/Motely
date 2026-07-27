@@ -382,6 +382,168 @@ public sealed class S8CoverageClimbTests
         Assert.Equal("Z", buf[2]);
     }
 
+    // ── UncommonJoker raw-stream sources (S8.P1) ──
+
+    private const string UncommonAnyRawStreams = """
+        name: s8-uncommon-any-streams
+        deck: Red
+        stake: White
+        must:
+          - uncommonJoker: any
+            antes: [1]
+            sources:
+              commonShopJokers: [0, 1]
+              uncommonShopJokers: [0, 1]
+              rareShopJokers: [0]
+              allShopJokers: [0, 1]
+        """;
+
+    private const string UncommonAnyRawStreamsNegative = """
+        name: s8-uncommon-any-negative
+        deck: Red
+        stake: White
+        must:
+          - uncommonJoker: any
+            edition: Negative
+            antes: [1]
+            sources:
+              commonShopJokers: [0, 1]
+              uncommonShopJokers: [0, 1]
+              rareShopJokers: [0]
+              allShopJokers: [0, 1]
+        """;
+
+    private const string UncommonAnyPackExtension = """
+        name: s8-uncommon-pack-extension
+        deck: Red
+        stake: White
+        must:
+          - uncommonJoker: any
+            antes: [1]
+            sources:
+              boosterPacks: [0, 1, 2, 3, 4, 5]
+        """;
+
+    private const string UncommonAnyStickers = """
+        name: s8-uncommon-stickers
+        deck: Red
+        stake: White
+        must:
+          - uncommonJoker: any
+            stickers: [Eternal, Perishable, Rental]
+            antes: [1]
+            sources:
+              uncommonShopJokers: [0, 1]
+        """;
+
+    /// <summary>
+    /// The uncommon raw stream always yields uncommon jokers, so a wildcard clause on
+    /// uncommonShopJokers[0] matches every seed — the point is the engine walks all four
+    /// raw-stream branches (common / uncommon / rare / all-rarity) on real seeds.
+    /// </summary>
+    [Fact]
+    public void UncommonAny_RawStreams_MatchesAllSeeds() =>
+        ProofSearch.MustMatchAll(UncommonAnyRawStreams, FixtureSeeds);
+
+    /// <summary>R2 differential vs the test above: the edition gate is live — same streams,
+    /// Negative edition required, zero fixture seeds survive.</summary>
+    [Fact]
+    public void UncommonAny_RawStreams_NegativeEditionGatesAll() =>
+        ProofSearch.MustMatchNone(UncommonAnyRawStreamsNegative, FixtureSeeds);
+
+    /// <summary>Pack slots 4-5 on ante 1 are reachable only via Hieroglyph/Petroglyph at
+    /// ante 2 (the ante-1 extension mask). Wildcard buffoon-pack uncommon across 6 slots.</summary>
+    [Fact]
+    public void UncommonAny_Ante1PackExtension_PinnedMatches()
+    {
+        var (matching, matched) = ProofSearch.ListMatch(
+            UncommonAnyPackExtension,
+            FixtureSeeds
+        );
+        Assert.Equal(
+            "616,696,6J6,MOTELY77,UNITTEST",
+            string.Join(",", matched.OrderBy(static s => s, StringComparer.Ordinal))
+        );
+        Assert.Equal(matching, matched.Count);
+    }
+
+    /// <summary>White stake produces no Eternal/Perishable/Rental stickers, so the sticker
+    /// gate rejects every seed while the sticker-matching switch still executes.</summary>
+    [Fact]
+    public void UncommonAny_Stickers_WhiteStakeMatchesNone() =>
+        ProofSearch.MustMatchNone(UncommonAnyStickers, FixtureSeeds);
+
+    /// <summary>Bad joker name under uncommonJoker refuses to load (TryEnumArray path).</summary>
+    [Fact]
+    public void Uncommon_BadJokerName_FailsLoad()
+    {
+        Assert.False(
+            JamlConfigLoader.TryLoad(
+                """
+                name: s8-uncommon-bad
+                deck: Red
+                stake: White
+                must:
+                  - uncommonJoker: NotARealJoker
+                    antes: [1]
+                """,
+                out _,
+                out var error
+            )
+        );
+        Assert.False(string.IsNullOrWhiteSpace(error));
+    }
+
+    /// <summary>
+    /// R3 parity lock for the raw-stream fix pair: the vector fixed-rarity streams carry the
+    /// Joker category bits, and the scalar must re-eval (JamlShouldScoreDesc) counts raw-stream
+    /// sources. The uncommon raw stream always yields an uncommon, so the wildcard matches all
+    /// eight seeds on every route: raw desc, JamlSearchBuilder, and JAML text agree.
+    /// commonShopJokers stays zero — a common-rarity stream can never satisfy an uncommon clause.
+    /// </summary>
+    [Fact]
+    public void RawStreams_VectorScalarBuilderParity()
+    {
+        static long Count(string sources)
+        {
+            var jaml = $"""
+                name: s8-parity
+                deck: Red
+                stake: White
+                must:
+                  - uncommonJoker: any
+                    antes: [1]
+                    sources:
+                {sources}
+                """;
+            var (matching, _) = ProofSearch.ListMatch(jaml, FixtureSeeds);
+            return matching;
+        }
+        Assert.Equal(8, Count("      uncommonShopJokers: [0]"));
+        Assert.Equal(3, Count("      allShopJokers: [0, 1]"));
+        Assert.Equal(0, Count("      commonShopJokers: [0, 1]"));
+
+        var rawDesc = new UncommonJokerFilterDesc(
+            new UncommonJokerClause
+            {
+                IsWildcard = true,
+                Antes = [1],
+                Sources = new JokerSourceConfig { UncommonShopJokers = [0] },
+            }
+        );
+        using var rawSearch = new MotelySearchSettings<UncommonJokerFilterDesc.UncommonJokerFilter>(
+            rawDesc
+        )
+            .WithDeck(MotelyDeck.Red)
+            .WithStake(MotelyStake.White)
+            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .Start();
+        rawSearch.AwaitCompletion();
+        Assert.Equal(FixtureSeeds.Length, (int)rawSearch.MatchingSeeds);
+    }
+
     [Fact]
     public void VectorMask_And_VectorUtils_ShiftLeft()
     {
