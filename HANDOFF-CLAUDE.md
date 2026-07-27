@@ -258,7 +258,17 @@ and should be credited by a wasm run, not by an exclude.
 | `86d23c96` | Prior Grok sprint closed |
 | (this board) | S8 reopened for Claude with R1–R4 anti-fake |
 
-**Green baseline last measured:** 417 pass / 1 skip; line 79.23%; branch 69.79%.
+**Green baseline last measured:** 730 pass / 0 skip; line 84.20%; branch 75.90% (2026-07-27, commit `2fd03112`).
+
+### S8.P1 progress (2026-07-27)
+
+| Item | State |
+|------|-------|
+| Engine bug 1 (found by climb) | Vector fixed-rarity joker streams lacked `MotelyItemTypeCategory.Joker` bits — every raw shop-joker source and `NegativeLegendaryJokerSimdFilterDesc` was dead. Fixed in `MotelyVectorSearchContext.Joker.cs`. |
+| Engine bug 2 (found by climb) | Scalar must re-eval (`JamlScoring` specialty sources) ignored `commonShopJokers`/`uncommonShopJokers`/`rareShopJokers`/`allShopJokers` — builder vetoed every SIMD raw-stream match. Fixed in both specialty counters. |
+| Parity lock | `RawStreams_VectorScalarBuilderParity` pins raw desc = builder = JAML text (8/8, 3/8, 0/8). |
+| UncommonJokerFilter | 53.5% → **91.0%** line |
+| Next to 85% overall (~140 lines) | `TarotCardFilter` (~80 uncovered), `SpectralCardFilter` (~63), `LegendarySoulMatcher` (~62), `RareJokerFilter` (~36) — same R1 recipe |
 
 ---
 
