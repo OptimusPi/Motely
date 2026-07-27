@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
-import { MotelyJoker, MotelyJokerCommon, MotelyJokerUncommon, MotelyJokerRare } from "../../lib/motely/motelyCompatEnums.js";
+import { Vocab } from "jaml-lang";
 import { JokerRarityTier } from "./jokerRarity.js";
 import { JimboSprite } from "../../ui/sprites.js";
 import { JimboText } from "../../ui/jimboText.js";
@@ -19,30 +19,27 @@ import type { SlotSelection } from "./MysterySlot.js";
 // JokerRarity re-aliases the local rarity tier — kept for public-API stability.
 export type JokerRarity = JokerRarityTier;
 
-// Rarity membership comes straight from motely-wasm's per-rarity joker enums, so
-// it can never drift from the engine. Engine keys are PascalCase ids (e.g.
-// "GreedyJoker"); our sprite names are spaced (e.g. "Greedy Joker"), so both are
-// normalized to lowercase-alphanumeric before matching. One spelling the engine
-// doesn't share: it writes "8 Ball" as "EightBall" — bridged explicitly below.
+// Rarity membership comes straight from jaml-lang's generated vocab — itself
+// generated from the Motely engine — so it can never drift from the engine.
+// Engine keys are PascalCase ids (e.g. "GreedyJoker"); our sprite names are
+// spaced (e.g. "Greedy Joker"), so both are normalized to lowercase-
+// alphanumeric before matching. One spelling the engine doesn't share: it
+// writes "8 Ball" as "EightBall" — bridged explicitly below.
 const normalizeJokerName = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const DISPLAY_NAME_ALIASES: Record<string, string> = {
   "8 Ball": "EightBall",
 };
 
-const enumNameKeys = (enumObj: object): string[] =>
-  Object.keys(enumObj).filter((key) => Number.isNaN(Number(key)));
+const normalizedKeySet = (names: readonly string[]): Set<string> =>
+  new Set(names.map(normalizeJokerName));
 
-const normalizedKeySet = (enumObj: object): Set<string> =>
-  new Set(enumNameKeys(enumObj).map(normalizeJokerName));
-
-const UNCOMMON_KEYS = normalizedKeySet(MotelyJokerUncommon);
-const RARE_KEYS = normalizedKeySet(MotelyJokerRare);
-const COMMON_KEYS = normalizedKeySet(MotelyJokerCommon);
+const UNCOMMON_KEYS = normalizedKeySet(Vocab.Enums.MotelyJokerUncommon);
+const RARE_KEYS = normalizedKeySet(Vocab.Enums.MotelyJokerRare);
+const COMMON_KEYS = normalizedKeySet(Vocab.Enums.MotelyJokerCommon);
 // Legendary jokers are the engine's full joker set minus the three named tiers.
 const LEGENDARY_KEYS = new Set(
-  enumNameKeys(MotelyJoker)
-    .map(normalizeJokerName)
+  Vocab.Enums.MotelyJoker.map(normalizeJokerName)
     .filter((key) => !COMMON_KEYS.has(key) && !UNCOMMON_KEYS.has(key) && !RARE_KEYS.has(key)),
 );
 
