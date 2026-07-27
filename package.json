@@ -1,6 +1,6 @@
 {
   "name": "jaml-ui",
-  "version": "4.2.8",
+  "version": "4.2.9",
   "description": "Zero-dependency json-render engine + Balatro card sprites for MCP Apps.",
   "type": "module",
   "main": "./dist/index.js",
