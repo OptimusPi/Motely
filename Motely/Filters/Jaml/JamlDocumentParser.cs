@@ -231,11 +231,45 @@ internal static class JamlDocumentParser
                 // A bare scalar list item — a one-line JAML clause ("Blueprint in ante 1"), a
                 // plain string (a seeds: entry), or a flow array token — JamlLine/ScalarValue
                 // consumers decide which. The tokenizer's only job is not to lose the text.
-                seq.Items.Add(new JScalar(content));
                 i++;
+
+                // A terse line carries continuation keys when deeper-indented "key: value" lines
+                // follow it ("- Negative Perkeo" then "    ante: 0"), which is how the line form
+                // stays usable for anything the one-liner has no spelling for. The line travels
+                // under TerseLineKey and the loader hands it to JamlLine, so both spellings stay
+                // one grammar.
+                int nextIndent = PeekIndent(lines, i);
+                if (nextIndent > lineIndent && HasKeyValueAt(lines, i))
+                {
+                    var mapping = ParseMapping(lines, ref i, nextIndent);
+                    mapping.Set(TerseLineKey, new JScalar(content), JamlSpan.OfLine(i - 1, content));
+                    seq.Items.Add(mapping);
+                }
+                else
+                {
+                    seq.Items.Add(new JScalar(content));
+                }
             }
         }
         return seq;
+    }
+
+    /// <summary>
+    /// Carries a terse one-line clause that also has continuation keys. Starts with a space so no
+    /// authored JAML key can collide with it, and so a stray copy of it fails key validation.
+    /// </summary>
+    public const string TerseLineKey = " line";
+
+    private static int PeekIndent(string[] lines, int i)
+    {
+        SkipBlankAndComments(lines, ref i);
+        return i < lines.Length ? IndentOf(lines[i]) : -1;
+    }
+
+    private static bool HasKeyValueAt(string[] lines, int i)
+    {
+        SkipBlankAndComments(lines, ref i);
+        return i < lines.Length && LooksLikeKeyValue(lines[i].AsSpan(IndentOf(lines[i])).ToString());
     }
 
     // A very small, deliberately permissive rule: "key: value" only when the FIRST colon is

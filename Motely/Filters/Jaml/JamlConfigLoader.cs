@@ -86,7 +86,64 @@ public static partial class JamlConfigLoader
     // ("Eternal Blueprint in antes 1 or 2"), turned into a real clause through the engine's own
     // line converter off MotelyItem identity — no second grammar.
     private static IJamlClause ParseClauseSource(ClauseSource source) =>
-        source.Line is { } line ? ParseLineClause(line) : ParseClause(source.Mapping!);
+        (source.Line, source.Mapping) switch
+        {
+            ({ } line, null) => ParseLineClause(line),
+            ({ } line, { } keys) => ApplyKeys(ParseLineClause(line), keys),
+            _ => ParseClause(source.Mapping!),
+        };
+
+    /// <summary>
+    /// Applies continuation keys to a clause the line converter already built, so the terse
+    /// spelling reaches every key its family owns ("- Negative Perkeo" then "    ante: 0").
+    /// Common keys land directly; the rest go through the clause's own desc, the same rail the
+    /// structured spelling uses.
+    /// </summary>
+    private static IJamlClause ApplyKeys(IJamlClause clause, NodeReader keys)
+    {
+        foreach (var key in keys.Keys)
+        {
+            if (key == JamlDocumentParser.TerseLineKey)
+                continue;
+
+            switch (key)
+            {
+                case "ante" or "antes":
+                    if (clause is IAnteScopedClause anteScoped)
+                        anteScoped.Antes = keys.GetIntArray(key) ?? anteScoped.Antes;
+                    else
+                        throw new InvalidOperationException(
+                            $"'{key}' is not a key of this clause: it is not ante-scoped."
+                        );
+                    break;
+                case "min":
+                    clause.Min = keys.GetInt(key) ?? clause.Min;
+                    break;
+                case "max":
+                    clause.Max = keys.GetInt(key) ?? clause.Max;
+                    break;
+                case "score":
+                    clause.Score = keys.GetInt(key) ?? clause.Score;
+                    break;
+                case "label":
+                    clause.Label = keys.GetString(key) ?? clause.Label;
+                    break;
+                default:
+                    if (
+                        !JamlClauseDescDispatch.TrySet(
+                            clause,
+                            key,
+                            JamlLoaderValueReader.FromScalar(keys.GetString(key))
+                        )
+                    )
+                        throw new InvalidOperationException(
+                            $"Unknown key '{key}' for a one-line clause of type {clause.GetType().Name}."
+                        );
+                    break;
+            }
+        }
+        return clause;
+    }
 
     private static IJamlClause ParseLineClause(string line)
     {
@@ -579,7 +636,15 @@ public static partial class JamlConfigLoader
                 switch (element)
                 {
                     case JMap map:
-                        items.Add(new ClauseSource(new NodeReader(map), null));
+                        // A terse line with continuation keys arrives as a mapping carrying the
+                        // line under TerseLineKey; both halves travel so the clause is built from
+                        // JamlLine and then the keys are applied on top.
+                        items.Add(
+                            new ClauseSource(
+                                new NodeReader(map),
+                                (map.Get(JamlDocumentParser.TerseLineKey) as JScalar)?.Value
+                            )
+                        );
                         break;
                     case JScalar { Value: { } raw }:
                         items.Add(new ClauseSource(null, raw));
