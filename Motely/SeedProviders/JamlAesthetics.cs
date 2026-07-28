@@ -15,13 +15,15 @@ public enum JamlAesthetic
     Gross,
     Funny,
     Balatro,
+    Nsfw,
 }
 
 /// <summary>
 /// Generation and counting of JAML <see cref="JamlAesthetic"/> seed spaces over Motely's alphabet
 /// and length rules. Palindrome/Echo/Mirror/Repeater/Step live here; keyword-backed aesthetics
 /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,
-/// <see cref="JamlAesthetic.Balatro"/>) delegate to <see cref="MotelySeedKeywordSequences"/>.
+/// <see cref="JamlAesthetic.Balatro"/>, <see cref="JamlAesthetic.Nsfw"/>) delegate to
+/// <see cref="MotelySeedKeywordSequences"/>.
 /// </summary>
 public static class JamlAesthetics
 {
@@ -34,8 +36,11 @@ public static class JamlAesthetics
             JamlAesthetic.Mirror => MirrorAestheticSeeds.SeedCount,
             JamlAesthetic.Repeater => RepeaterAestheticSeeds.SeedCount,
             JamlAesthetic.Step => StepAestheticSeeds.SeedCount,
-            JamlAesthetic.Gross or JamlAesthetic.Funny or JamlAesthetic.Balatro or JamlAesthetic.Leet =>
-                MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic),
+            JamlAesthetic.Gross
+                or JamlAesthetic.Funny
+                or JamlAesthetic.Balatro
+                or JamlAesthetic.Leet
+                or JamlAesthetic.Nsfw => MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
@@ -48,8 +53,13 @@ public static class JamlAesthetics
             JamlAesthetic.Mirror => MirrorAestheticSeeds.Enumerate(),
             JamlAesthetic.Repeater => RepeaterAestheticSeeds.Enumerate(),
             JamlAesthetic.Step => StepAestheticSeeds.Enumerate(),
-            JamlAesthetic.Gross or JamlAesthetic.Funny or JamlAesthetic.Balatro or JamlAesthetic.Leet =>
-                MotelySeedKeywordSequences.EnumerateAestheticSeeds(aesthetic),
+            JamlAesthetic.Gross
+                or JamlAesthetic.Funny
+                or JamlAesthetic.Balatro
+                or JamlAesthetic.Leet
+                or JamlAesthetic.Nsfw => MotelySeedKeywordSequences.EnumerateAestheticSeeds(
+                aesthetic
+            ),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 }

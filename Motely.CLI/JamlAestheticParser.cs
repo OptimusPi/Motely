@@ -22,6 +22,7 @@ public static class JamlAestheticParser
         ("gross", JamlAesthetic.Gross),
         ("funny", JamlAesthetic.Funny),
         ("balatro", JamlAesthetic.Balatro),
+        ("nsfw", JamlAesthetic.Nsfw),
     ];
 
     /// <summary>Strings for <c>enum</c> in the generated schema; order matches <see cref="Known"/>.</summary>
