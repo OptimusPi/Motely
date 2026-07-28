@@ -7,6 +7,6 @@
     "serve": "node serve.mjs"
   },
   "dependencies": {
-    "motely-wasm": "^24.0.0"
+    "motely-wasm": "file:.."
   }
 }
