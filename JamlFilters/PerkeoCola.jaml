@@ -1,0 +1,52 @@
+name: Perkeo-Cola
+author: nate
+description: >
+  Ghost White. Must: Ankh ante-1 shop slots 0-1 only (front counter, no pack),
+  Perkeo ante 1 Soul pack, Diet Cola somewhere in antes 2-7, Negative Tag ante 8.
+  Should pummel Blueprint + Brainstorm; front Ankh + early negs score.
+deck: Ghost
+stake: White
+must:
+  - tag: NegativeTag
+    antes: [8]
+  - spectralCard: Ankh
+    antes: [1]
+    sources:
+      shopItems: [0, 1]
+  - legendaryJoker: Perkeo
+    antes: [1]
+    sources:
+      boosterPacks: [1]
+  - joker: DietCola
+    antes: [2, 3, 4, 5, 6, 7]
+should:
+  - spectralCard: Ankh
+    antes: [1]
+    sources:
+      shopItems: [0]
+    score: 50
+    label: ankh_slot0
+  - joker: Blueprint
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 100
+    label: bp
+  - joker: Brainstorm
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 100
+    label: bs
+  - joker: DietCola
+    antes: [2, 3, 4]
+    score: 25
+    label: cola_early
+  - rareJoker: Any
+    antes: [8]
+    sources:
+      shopItems: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+    score: 5
+    label: a8rare
+
+seeds:
+  - CECDEW3L
+  - BNBENZ1E
+  - ALACL1EN
