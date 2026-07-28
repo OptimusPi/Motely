@@ -7,6 +7,7 @@ using Motely;
 using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
+using Motely.Lsp.Core;
 using Motely.SeedProviders;
 using JamlyzerEngine = Motely.Analysis.MotelyJamlyzer;
 
@@ -62,6 +63,33 @@ public static partial class MotelyWasm
         typeof(MotelyWasm)
             .Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion.Split('+')[0] ?? "0.0.0";
+}
+
+/// <summary>
+/// The language brain (<see cref="JamlLanguageService"/>) that the stdio server hosts, exported
+/// for browser and agent clients. An editor — or an agent writing JAML through MCP — gets the
+/// engine's own diagnostics, hover and completion instead of guessing at the grammar.
+/// </summary>
+public static partial class MotelyLsp
+{
+    /// <summary>Errors and warnings for a whole document, from the real loader.</summary>
+    [Export]
+    public static IReadOnlyList<JamlDiagnostic> Diagnose(string text) =>
+        JamlLanguageService.Diagnose(text);
+
+    /// <summary>Markdown for the word at a cursor position, or null when there is nothing to say.</summary>
+    [Export]
+    public static JamlHoverInfo? Hover(string text, int line, int character) =>
+        JamlLanguageService.Hover(text, line, character);
+
+    /// <summary>Completion candidates at a cursor position, already filtered by the typed prefix.</summary>
+    [Export]
+    public static IReadOnlyList<JamlCompletionItem> Complete(string text, int line, int character) =>
+        JamlLanguageService.Complete(text, line, character);
+
+    /// <summary>Schema explanation of a discriminator, key or vocabulary word.</summary>
+    [Export]
+    public static string? Explain(string topic) => JamlLanguageService.Explain(topic);
 }
 
 public static partial class MotelyJaml
