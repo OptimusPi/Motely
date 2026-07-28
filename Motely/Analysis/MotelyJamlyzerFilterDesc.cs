@@ -50,7 +50,7 @@ public sealed class MotelyJamlyzerFilterDesc(
             MotelyRunState voucherState = new();
             MotelySingleBossStream bossStream = ctx.CreateBossStream();
 
-            for (int ante = 1; ante <= maxAnte; ante++)
+            for (int ante = filterDesc._startAnte; ante <= maxAnte; ante++)
             {
                 MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, voucherState);
                 MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
@@ -446,6 +446,10 @@ public sealed class MotelyJamlyzerFilterDesc(
 
     private readonly int[] _antesToAnalyze = antesToAnalyze;
     private readonly int _maxAnte = antesToAnalyze.Length > 0 ? antesToAnalyze[^1] : 8;
+    // Ante 0 (the pre-run shop a JAML clause can target with `antes: [0]`) is real data
+    // the search already matches on — emit it when scoped instead of silently dropping it.
+    private readonly int _startAnte =
+        antesToAnalyze.Length > 0 && antesToAnalyze[0] == 0 ? 0 : 1;
     private readonly int _eventRolls = eventRolls;
     private readonly MotelyJamlyzerStreamStates? _resumeFrom = resumeFrom;
 }

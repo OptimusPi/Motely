@@ -1,7 +1,7 @@
 {
   "name": "motely-wasm",
   "type": "module",
-  "version": "25.0.2",
+  "version": "25.0.3",
   "description": "Balatro seed search + per-seed analysis via JAML. Same Motely engine as native, compiled to WebAssembly (Bootsharp).",
   "author": "Nathanial P. Howard",
   "license": "MIT",
