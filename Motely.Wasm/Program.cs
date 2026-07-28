@@ -50,18 +50,9 @@ public static class MotelyWasmRenaming
     [RenameModule]
     public static string Module(Type type, string @default) => "index";
 
-    [RenameMember]
-    public static string? Member(MemberInfo info, string @default) =>
-        info switch
-        {
-            MethodInfo m
-                when m.ReturnType.IsByRef
-                    || m.ReturnType.IsByRefLike
-                    || m.GetParameters()
-                        .Any(p => p.ParameterType.IsByRef || p.ParameterType.IsByRefLike) => null,
-            PropertyInfo p when p.PropertyType.IsByRef || p.PropertyType.IsByRefLike => null,
-            _ => @default,
-        };
+    // Byref/ref-struct members are handled by MotelySingleSearchContextSpecialization, not a
+    // shape sweep here: a global blocklist is a second, invisible API next to [Export], and it
+    // deletes members silently the moment an engine type grows a ref member.
 }
 
 public static partial class MotelyWasm

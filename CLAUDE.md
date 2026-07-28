@@ -101,6 +101,22 @@ Claim done only when all hold:
 - One truth remains; extra mirrors are deleted, not renamed.
 - Search correctness has a real engine/CLI run that finds a seed when claimed.
 
+## Bootsharp / motely-wasm (read before touching the wasm head)
+
+Docs live in this tree: `D:/bootsharp/docs/guide/*.md` (sponsor checkout — operator pays for it).
+Read them there; they are the source of truth for the boundary.
+
+| Fact | Law |
+|------|-----|
+| Marshalling | Immutable semantics (struct, record, read-only collection) serialize **by value**; class/interface passes **by reference** as an interop instance. BCL types are ignored on purpose. |
+| Ref structs / byref | `MotelyVectorSearchContext`, `MotelySingleSearchContext`, `VectorMask` never cross. The mechanism is **specialization** — `[SpecializeImport(typeof(T))]` / `[SpecializeExport(typeof(T))]` pairs (`docs/guide/specialization.md`), with `Unwrap()` for value types. `MotelySingleSearchContextSpecialization.cs` is that rail. |
+| Renaming | `[RenameModule]` folds namespaces into one `index`; `[RenameNode]`/`[RenameMember]` returning null **erases**. Erasure is for a named type, not a shape sweep — a global byref blocklist is a second invisible API next to `[Export]`. |
+| Big surfaces | `[assembly: Export(typeof(IFoo))]` interop modules over static `[Export]` methods (`docs/guide/interop-modules.md`); `Bootsharp.Inject` `AddBootsharp()` wires them, `RunBootsharp()` initializes exports. |
+| Enums | Marshal as numbers; Bootsharp emits name↔index maps JS-side. |
+| Publish | Release publish turns on NativeAOT-LLVM + trimming automatically (no csproj flags); Binaryen runs when `wasm-opt` is on PATH. Debug publish stays Mono for fast builds. |
+| Build knobs | `BootsharpName`, `BootsharpPublishDirectory`, `BootsharpPackageDirectory`, `BootsharpBinariesDirectory` (empty = base64-embedded binaries, ~30% bigger bundle). |
+| File system | `Bootsharp.FileSystem` is sponsor-feed only, so its `PackageReference` stays conditional on `EnableFileSystem`; JS side calls `fs.init(Bootsharp.FileSystem.FileMounter)` before `boot()`. |
+
 ## Commands
 
 ```sh
