@@ -3985,3 +3985,42 @@
 .j-story-stage {
   padding: 120px;
 }
+
+/* ── Outer tab — grabbable tear-off pane chrome (JimboOuterTab) ────────── */
+.j-outer-tab {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--j-surface-inset);
+  border: 2px solid var(--j-inner-border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font-family: var(--j-font-code);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--j-grey);
+  cursor: grab;
+  user-select: none;
+}
+.j-outer-tab:active { cursor: grabbing; }
+.j-outer-tab--active { border-color: var(--j-gold); color: var(--j-gold-text); }
+.j-outer-tab__grip { display: inline-grid; place-items: center; color: var(--j-grey); }
+.j-outer-tab__space { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.j-outer-tab__fs {
+  border: none;
+  background: none;
+  color: var(--j-grey);
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  padding: 2px;
+}
+.j-outer-tab__fs:hover { color: #fff; }
+.j-outer-tab--blue { color: var(--j-blue); }
+.j-outer-tab--red { color: var(--j-red); }
+.j-outer-tab--orange { color: var(--j-orange); }
+.j-outer-tab--green { color: var(--j-green-text); }
+.j-outer-tab--purple { color: var(--j-purple); }
+.j-outer-tab--gold { color: var(--j-gold-text); }
