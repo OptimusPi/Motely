@@ -9,11 +9,11 @@ write UI code.
 
 ## Package manager
 
-Package manager is **pnpm** (see `pnpm-lock.yaml`, `pnpm-workspace.yaml`). Never run
+Package manager is **pnpm** (see `pnpm-lock.yaml`). Never run
 `npm install <pkg>` to add/remove a dependency — it generates a stray `package-lock.json`
 that conflicts with the committed pnpm lockfile. Use:
 
-- `pnpm add -D <pkg>` (add `-w` if it errors about adding to the workspace root)
+- `pnpm add -D <pkg>`
 - `pnpm remove <pkg>`
 - `npm run build` / `npm publish` are fine — those just run existing package.json scripts.
 
