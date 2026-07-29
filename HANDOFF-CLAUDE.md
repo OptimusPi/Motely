@@ -83,9 +83,27 @@ ProofSearch.MustMatchNone(jaml, "NOPE"); // negative path
 | **S8.P1** | Hard climb: zero/low FilterDesc + loader paths → **≥ 85% line** | R1 on every new filter test; exclude still clean | **done — 85.23% line / 76.69% branch, 733 green, commit `e8285a4a`** |
 | **S8.P2** | Harder climb: vector/context/search guts → **≥ 90% line**, **≥ 76% branch** | R1+R3; no exclude tampering | **done — 90.05% line / 80.20% branch, 762 green, commits `2fa901af`+1. S8P2SearchGutsTests (settings/progress/async/providers/creation-context), S8P2RareJokerBranchTests (sticker/slot/pack-extension pinned sets), S8P2SpecialtyJokerSourceTests (9 specialty streams, pinned tallies), voucher stateless-overload parity. Finding 8 logged** |
 | **S8.P3** | Final lock: **≥ 92% line**, **≥ 80% branch**, stryker smoke, coverlet threshold doc | R4 + threshold recipe in this file | **coverage gates met — 92.09% line / 83.96% branch, 857 green. Threshold gate below passed on this run. Stryker (R4): **closed — not viable here** (operator delegated the call, 2026-07-27). We run the latest dotnet-stryker (4.16.0, July 2026); source-generator projects breaking Stryker is a known upstream limitation (stryker-net#1413 family) — its re-compilation trips our MOTJAML001 duplicate-wire guard even scoped to one file. R4's intent (tests observe real results) is carried by the R1 seed-proof rail + pinned sets. Revisit only if stryker-net ships generator support. Findings 9–10 logged. MotelyVectorUtils hardware-dead exclude applied with operator go (AdvSimd confirmed live on operator's ARM64 Mac — the merge verb in section D stands)** |
-| S8.ship | Commit bite-sized; update this board; ordinary push OK | board reflects measured % | **todo** |
+| S8.ship | Commit bite-sized; update this board; ordinary push OK | board reflects measured % | **done — re-measured on the shipped tree (2026-07-29): 92.27% line (16204/17560) / 83.99% branch (5285/6292), 865 green / 0 skip. Threshold gate PASSED. Cobertura packages: `Motely`, `Motely.Lsp`, `Motely.Lsp.Core` — exclude leak clean** |
 
-**Sprint status:** **open — Claude-owned S8**. No inventing a parallel grammar. No jaml-ui detour.
+**Sprint status:** **closed — S8 complete.** All gates measured on the tree as shipped, not on the phase-close snapshot.
+
+### S8 close-out (2026-07-29)
+
+| Check | Result |
+|-------|--------|
+| `dotnet build` | 0 warnings / 0 errors |
+| `dotnet test Motely.Tests` | **865 pass / 0 skip / 0 fail** |
+| Line | **92.27%** (gate 92%) |
+| Branch | **83.99%** (gate 80%) |
+| Exclude leak | clean — JsonRender / DataLake / DistributedWorker / HelperAPI / TUI absent from cobertura |
+| `coverage.runsettings` | byte-identical to the S8 baseline |
+
+Coverage rose against the phase-3 snapshot (92.09 → 92.27 line, 83.96 → 83.99 branch) while the
+denominator grew 17085 → 17560 lines: the post-P3 commits (`2442c73e` LSP-to-wasm, `2421dfcb`/`12a2e601`
+jamlyzer ante 0, `d4e91071`) landed with their own tests, so new surface arrived already covered.
+
+**Next verb is Grok's:** the § Exclude audit below — row **A/DataLake** first (own re-baseline commit),
+then **A/Filters/Native** (own re-baseline; +1915 mostly-uncovered lines move the denominator).
 
 ---
 
@@ -335,7 +353,7 @@ and should be credited by a wasm run, not by an exclude.
 | `86d23c96` | Prior Grok sprint closed |
 | (this board) | S8 reopened for Claude with R1–R4 anti-fake |
 
-**Green baseline last measured:** 762 pass / 0 skip; line 90.05%; branch 80.20% (2026-07-27, commit `2fa901af`+1).
+**Green baseline last measured:** 865 pass / 0 skip; line 92.27%; branch 83.99% (2026-07-29, commit `d4e91071`).
 
 ### S8.P1 closed (2026-07-27) — four engine findings
 
