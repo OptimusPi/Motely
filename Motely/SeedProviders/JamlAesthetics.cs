@@ -24,108 +24,87 @@ public enum JamlAesthetic
 /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,
 /// <see cref="JamlAesthetic.Balatro"/>, <see cref="JamlAesthetic.Nsfw"/>) delegate to
 /// <see cref="MotelySeedKeywordSequences"/>.
+/// <para>
+/// <b>Padding alphabet:</b> free / generated positions use <paramref name="paddingAlphabet"/> when
+/// provided (CLI <c>--padding</c>). Null keeps the full <see cref="MotelyGlobals.SeedDigits"/> space
+/// (historical full aesthetic). Collect's aesthetic prepass defaults to
+/// <see cref="QuickPaddingChars"/> so words stay visible and the stream is searchable.
+/// </para>
 /// </summary>
 public static class JamlAesthetics
 {
-    /// <summary>Returns how many seeds <paramref name="aesthetic"/> enumerates (Motely search space).</summary>
-    public static long GetSeedCount(JamlAesthetic aesthetic) =>
+    /// <summary>
+    /// Digit-only pad: free slots stay numeric so letter patterns (echo ABA…, keyword words)
+    /// stay readable. ~orders of magnitude smaller than full <see cref="MotelyGlobals.SeedDigits"/>.
+    /// </summary>
+    public static readonly char[] QuickPaddingChars = "123456789".ToCharArray();
+
+    /// <summary>Returns how many seeds <paramref name="aesthetic"/> enumerates.</summary>
+    /// <param name="paddingAlphabet">
+    /// Optional charset for free/generated positions. Null = full seed alphabet.
+    /// </param>
+    public static long GetSeedCount(JamlAesthetic aesthetic, char[]? paddingAlphabet = null) =>
         aesthetic switch
         {
-            JamlAesthetic.Palindrome => PalindromeAestheticSeeds.SeedCount,
-            JamlAesthetic.Echo => EchoAestheticSeeds.SeedCount,
-            JamlAesthetic.Mirror => MirrorAestheticSeeds.SeedCount,
-            JamlAesthetic.Repeater => RepeaterAestheticSeeds.SeedCount,
-            JamlAesthetic.Step => StepAestheticSeeds.SeedCount,
+            JamlAesthetic.Palindrome => PalindromeAestheticSeeds.GetSeedCount(paddingAlphabet),
+            JamlAesthetic.Echo => EchoAestheticSeeds.GetSeedCount(paddingAlphabet),
+            JamlAesthetic.Mirror => MirrorAestheticSeeds.GetSeedCount(paddingAlphabet),
+            JamlAesthetic.Repeater => RepeaterAestheticSeeds.GetSeedCount(paddingAlphabet),
+            JamlAesthetic.Step => StepAestheticSeeds.GetSeedCount(paddingAlphabet),
             JamlAesthetic.Gross
                 or JamlAesthetic.Funny
                 or JamlAesthetic.Balatro
                 or JamlAesthetic.Leet
-                or JamlAesthetic.Nsfw => MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic),
+                or JamlAesthetic.Nsfw => MotelySeedKeywordSequences.GetAestheticSeedCount(
+                aesthetic,
+                paddingAlphabet
+            ),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
 
-    /// <summary>Deterministic enumeration in the same order as <see cref="Motely.SeedProviders.MotelyPalindromeSeedProvider"/>.</summary>
-    public static IEnumerable<string> EnumerateSeeds(JamlAesthetic aesthetic) =>
+    /// <summary>Deterministic enumeration; order matches historical full-alphabet providers when pad is null.</summary>
+    public static IEnumerable<string> EnumerateSeeds(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet = null
+    ) =>
         aesthetic switch
         {
-            JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Enumerate(),
-            JamlAesthetic.Echo => EchoAestheticSeeds.Enumerate(),
-            JamlAesthetic.Mirror => MirrorAestheticSeeds.Enumerate(),
-            JamlAesthetic.Repeater => RepeaterAestheticSeeds.Enumerate(),
-            JamlAesthetic.Step => StepAestheticSeeds.Enumerate(),
+            JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Enumerate(paddingAlphabet),
+            JamlAesthetic.Echo => EchoAestheticSeeds.Enumerate(paddingAlphabet),
+            JamlAesthetic.Mirror => MirrorAestheticSeeds.Enumerate(paddingAlphabet),
+            JamlAesthetic.Repeater => RepeaterAestheticSeeds.Enumerate(paddingAlphabet),
+            JamlAesthetic.Step => StepAestheticSeeds.Enumerate(paddingAlphabet),
             JamlAesthetic.Gross
                 or JamlAesthetic.Funny
                 or JamlAesthetic.Balatro
                 or JamlAesthetic.Leet
                 or JamlAesthetic.Nsfw => MotelySeedKeywordSequences.EnumerateAestheticSeeds(
-                aesthetic
+                aesthetic,
+                paddingAlphabet
             ),
             _ => throw new ArgumentOutOfRangeException(nameof(aesthetic)),
         };
+
+    /// <summary>Resolve pad: null → full seed digits; empty after filter is invalid (caller uses full).</summary>
+    internal static char[] AlphabetOrFull(char[]? paddingAlphabet) =>
+        paddingAlphabet is { Length: > 0 } ? paddingAlphabet : MotelyGlobals.SeedDigits;
 }
 
-/// <summary>Palindrome seeds: mirror-generated halves over <see cref="MotelyGlobals.SeedDigits"/>, lengths 1..<see cref="MotelyGlobals.MaxSeedLength"/>.</summary>
+/// <summary>Palindrome seeds: mirror-generated halves over the pad alphabet, lengths 1..<see cref="MotelyGlobals.MaxSeedLength"/>.</summary>
 file static class PalindromeAestheticSeeds
 {
-    public static int SeedCount => CalculateSeedCount();
-
-    public static IEnumerable<string> Enumerate()
+    public static long GetSeedCount(char[]? paddingAlphabet)
     {
-        for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
-        {
-            foreach (var palindrome in OfLength(len))
-                yield return palindrome;
-        }
-    }
-
-    private static IEnumerable<string> OfLength(int length)
-    {
-        if (length == 1)
-        {
-            for (int i = 0; i < MotelyGlobals.SeedDigits.Length; i++)
-                yield return MotelyGlobals.SeedDigits[i].ToString();
-            yield break;
-        }
-
-        int halfLen = (length + 1) / 2;
-        foreach (var palindrome in GenerateRecursive(new char[length], 0, halfLen, length))
-            yield return palindrome;
-    }
-
-    private static IEnumerable<string> GenerateRecursive(
-        char[] buffer,
-        int pos,
-        int halfLen,
-        int totalLen
-    )
-    {
-        if (pos >= halfLen)
-        {
-            for (int i = 0; i < halfLen; i++)
-                buffer[totalLen - 1 - i] = buffer[i];
-            yield return new string(buffer, 0, totalLen);
-            yield break;
-        }
-
-        for (int i = 0; i < MotelyGlobals.SeedDigits.Length; i++)
-        {
-            buffer[pos] = MotelyGlobals.SeedDigits[i];
-            foreach (var result in GenerateRecursive(buffer, pos + 1, halfLen, totalLen))
-                yield return result;
-        }
-    }
-
-    private static int CalculateSeedCount()
-    {
+        char[] alphabet = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
         checked
         {
-            int total = 0;
-            int seedDigitCount = MotelyGlobals.SeedDigits.Length;
+            long total = 0;
+            int seedDigitCount = alphabet.Length;
 
             for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
             {
                 int halfLen = (len + 1) / 2;
-                int countForLength = 1;
+                long countForLength = 1;
 
                 for (int i = 0; i < halfLen; i++)
                     countForLength *= seedDigitCount;
@@ -136,21 +115,81 @@ file static class PalindromeAestheticSeeds
             return total;
         }
     }
+
+    public static IEnumerable<string> Enumerate(char[]? paddingAlphabet)
+    {
+        char[] alphabet = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
+        for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
+        {
+            foreach (var palindrome in OfLength(len, alphabet))
+                yield return palindrome;
+        }
+    }
+
+    private static IEnumerable<string> OfLength(int length, char[] alphabet)
+    {
+        if (length == 1)
+        {
+            for (int i = 0; i < alphabet.Length; i++)
+                yield return alphabet[i].ToString();
+            yield break;
+        }
+
+        int halfLen = (length + 1) / 2;
+        foreach (var palindrome in GenerateRecursive(new char[length], 0, halfLen, length, alphabet))
+            yield return palindrome;
+    }
+
+    private static IEnumerable<string> GenerateRecursive(
+        char[] buffer,
+        int pos,
+        int halfLen,
+        int totalLen,
+        char[] alphabet
+    )
+    {
+        if (pos >= halfLen)
+        {
+            for (int i = 0; i < halfLen; i++)
+                buffer[totalLen - 1 - i] = buffer[i];
+            yield return new string(buffer, 0, totalLen);
+            yield break;
+        }
+
+        for (int i = 0; i < alphabet.Length; i++)
+        {
+            buffer[pos] = alphabet[i];
+            foreach (var result in GenerateRecursive(buffer, pos + 1, halfLen, totalLen, alphabet))
+                yield return result;
+        }
+    }
 }
 
-/// <summary>Echo seeds: echo pattern ABAxBxxx where A,B are A-Z and x are 1-9,A-Z (always 8 chars).</summary>
+/// <summary>
+/// Echo seeds: pattern ABAxBxxx where A,B are A-Z and x are free pad positions (always 8 chars).
+/// Letter skeleton stays A–Z so the word shape stays visible; free slots take the pad alphabet.
+/// </summary>
 file static class EchoAestheticSeeds
 {
     private const string Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    public static int SeedCount => checked(26 * 26 * 35 * 35 * 35 * 35); // ~1.01 billion
-
-    public static IEnumerable<string> Enumerate()
+    public static long GetSeedCount(char[]? paddingAlphabet)
     {
-        // char[] (not ReadOnlySpan) so it can be held across the `yield return`s below.
-        char[] alphabet = MotelyGlobals.SeedDigits.ToArray();
-        // Reuse one 8-char buffer instead of interpolating a fresh string per seed (~1B of them).
-        // Pattern ABAxBxxx: positions 0,2 = a; positions 1,4 = b; positions 3,5,6,7 = x1..x4.
+        char[] free = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
+        checked
+        {
+            long freePow = 1;
+            for (int i = 0; i < 4; i++)
+                freePow *= free.Length;
+            return 26L * 26L * freePow;
+        }
+    }
+
+    public static IEnumerable<string> Enumerate(char[]? paddingAlphabet)
+    {
+        char[] alphabet = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
+        // Reuse one 8-char buffer instead of interpolating a fresh string per seed.
+        // Pattern ABAxBxxx: positions 0,2 = a; positions 1,4 = b; positions 3,5,6,7 = free.
         char[] buffer = new char[8];
 
         foreach (char a in Letters)
@@ -185,45 +224,60 @@ file static class EchoAestheticSeeds
 
 /// <summary>
 /// Mirror-symmetric seeds: composed only of chars that look the same in a mirror
-/// (A H I M O T U V W X Y 1 8). Lengths 1..MaxSeedLength.
+/// (A H I M O T U V W X Y 1 8), intersected with the pad alphabet when provided.
+/// Lengths 1..MaxSeedLength.
 /// </summary>
 file static class MirrorAestheticSeeds
 {
     private static readonly char[] MirrorChars = "AHIMOTUVWXY18".ToCharArray();
 
-    // Mirror chars count ^ 1 + count ^ 2 + ... + count ^ 8
-    // = (count ^ 9 - count) / (count - 1) with integer arithmetic
-    public static long SeedCount
+    private static char[] EffectiveAlphabet(char[]? paddingAlphabet)
     {
-        get
+        // Full aesthetic: all mirror-looking glyphs.
+        if (paddingAlphabet is not { Length: > 0 })
+            return MirrorChars;
+
+        // Quick / custom pad: only mirror glyphs that appear in the pad set (digits → 1,8).
+        var set = new HashSet<char>(paddingAlphabet);
+        var result = MirrorChars.Where(set.Contains).ToArray();
+        return result.Length > 0 ? result : MirrorChars;
+    }
+
+    public static long GetSeedCount(char[]? paddingAlphabet)
+    {
+        char[] alphabet = EffectiveAlphabet(paddingAlphabet);
+        checked
         {
-            checked
+            long total = 0;
+            int c = alphabet.Length;
+            if (c == 0)
+                return 0;
+            long pow = 1;
+            for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
             {
-                long total = 0;
-                int c = MirrorChars.Length; // 13
-                long pow = 1;
-                for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
-                {
-                    pow *= c;
-                    total += pow;
-                }
-                return total;
+                pow *= c;
+                total += pow;
             }
+            return total;
         }
     }
 
-    public static IEnumerable<string> Enumerate()
+    public static IEnumerable<string> Enumerate(char[]? paddingAlphabet)
     {
+        char[] alphabet = EffectiveAlphabet(paddingAlphabet);
+        if (alphabet.Length == 0)
+            yield break;
+
         char[] buf = new char[MotelyGlobals.MaxSeedLength];
 
         for (int len = 1; len <= MotelyGlobals.MaxSeedLength; len++)
         {
-            foreach (var seed in Generate(buf, 0, len))
+            foreach (var seed in Generate(buf, 0, len, alphabet))
                 yield return seed;
         }
     }
 
-    private static IEnumerable<string> Generate(char[] buf, int pos, int length)
+    private static IEnumerable<string> Generate(char[] buf, int pos, int length, char[] alphabet)
     {
         if (pos == length)
         {
@@ -231,59 +285,48 @@ file static class MirrorAestheticSeeds
             yield break;
         }
 
-        foreach (char c in MirrorChars)
+        foreach (char c in alphabet)
         {
             buf[pos] = c;
-            foreach (var seed in Generate(buf, pos + 1, length))
+            foreach (var seed in Generate(buf, pos + 1, length, alphabet))
                 yield return seed;
         }
     }
 }
 
 /// <summary>
-/// Repeater seeds: a base pattern repeated to fill 8 chars. Patterns are drawn from SeedDigits.
-/// E.g. "A" -> AAAAAAAA, "AB" -> ABABABAB, "ABC" -> ABCABCAB, "ABCD" -> ABCDABCD, "ABCDE" -> ABCDEABC.
+/// Repeater seeds: a base pattern repeated to fill 8 chars. Patterns drawn from the pad alphabet.
+/// Pattern lengths 1..7 only (length 8 is the identity full space — not an aesthetic).
 /// </summary>
 file static class RepeaterAestheticSeeds
 {
-    public static long SeedCount
+    public static long GetSeedCount(char[]? paddingAlphabet)
     {
-        get
+        char[] alphabet = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
+        checked
         {
-            checked
+            int c = alphabet.Length;
+            long total = 0;
+
+            for (int p = 1; p < MotelyGlobals.MaxSeedLength; p++)
             {
-                char[] alphabet = MotelyGlobals.SeedDigits;
-                int c = alphabet.Length;
-                long total = 0;
-
-                // Pattern lengths 1 through 7. For pattern length p there are c^p patterns, each
-                // producing exactly 1 seed (always padded to 8). Length 8 is excluded on purpose:
-                // a pattern that already fills the seed repeats zero times, so it is the identity —
-                // all 35^8 seeds, the entire search space, arriving one heap-allocated string at a
-                // time. That is not an aesthetic, and it starves every family queued behind it.
-                for (int p = 1; p < MotelyGlobals.MaxSeedLength; p++)
-                {
-                    long patterns = 1;
-                    for (int i = 0; i < p; i++)
-                        patterns *= c;
-                    total += patterns;
-                }
-
-                return total;
+                long patterns = 1;
+                for (int i = 0; i < p; i++)
+                    patterns *= c;
+                total += patterns;
             }
+
+            return total;
         }
     }
 
-    public static IEnumerable<string> Enumerate()
+    public static IEnumerable<string> Enumerate(char[]? paddingAlphabet)
     {
-        char[] alphabet = MotelyGlobals.SeedDigits;
+        char[] alphabet = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
         char[] buf = new char[MotelyGlobals.MaxSeedLength];
 
-        // 1 through 7, matching SeedCount above — a length-8 pattern repeats zero times and would
-        // enumerate the whole 35^8 space here, so the sweep would never reach the next aesthetic.
         for (int patternLen = 1; patternLen < MotelyGlobals.MaxSeedLength; patternLen++)
         {
-            // Build a pattern buffer then recursively fill it
             char[] pattern = new char[patternLen];
             foreach (var filled in GeneratePatterns(pattern, 0, alphabet, buf))
                 yield return filled;
@@ -299,7 +342,6 @@ file static class RepeaterAestheticSeeds
     {
         if (pos == pattern.Length)
         {
-            // Fill buf by repeating the pattern
             for (int i = 0; i < buf.Length; i++)
                 buf[i] = pattern[i % pattern.Length];
             yield return new string(buf);
@@ -316,23 +358,20 @@ file static class RepeaterAestheticSeeds
 }
 
 /// <summary>
-/// Step seeds: evenly-spaced alphabet steps. Always 8 chars. Each character equals (prev + step) mod 35
-/// over the SeedDigits ordering (1-9 then A-Z). Steps 1..34 produce unique sequences.
-/// Also includes constant-step for step 0 (all same char) and backward steps.
+/// Step seeds: evenly-spaced alphabet steps over the pad alphabet. Always 8 chars.
+/// |alphabet|² seeds (start × step).
 /// </summary>
 file static class StepAestheticSeeds
 {
-    // For step s starting at index i, the seed is: i, (i+s)%35, (i+2s)%35, ... repeated 8 times.
-    // Steps 1..34 each produce 35 seeds, plus step 0 which produces 35 seeds (all same char).
-    // But steps that are multiples of 5, 7 produce shorter cycles that still give distinct 8-char seeds.
-    // Total: 35 seeds for each of 35 steps = 35 * 35 = 1225 seeds. Nice and small.
-    public static long SeedCount => checked(
-        MotelyGlobals.SeedDigits.Length * MotelyGlobals.SeedDigits.Length
-    ); // 35 * 35 = 1225
-
-    public static IEnumerable<string> Enumerate()
+    public static long GetSeedCount(char[]? paddingAlphabet)
     {
-        char[] alphabet = MotelyGlobals.SeedDigits;
+        char[] alphabet = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
+        return checked((long)alphabet.Length * alphabet.Length);
+    }
+
+    public static IEnumerable<string> Enumerate(char[]? paddingAlphabet)
+    {
+        char[] alphabet = JamlAesthetics.AlphabetOrFull(paddingAlphabet);
         int n = alphabet.Length;
         char[] buf = new char[MotelyGlobals.MaxSeedLength];
 

@@ -65,7 +65,8 @@ public static class MotelySeedKeywordSequences
     public const long BalatroKeywordAestheticSeedCount = 6_938_858_608L;
     public const long LeetKeywordAestheticSeedCount = 7_908_676_849L;
     // Recomputed when NsfwKeywords changes (MotelyGlobals.GetPaddedSeedCountForKeywordsLong).
-    public const long NsfwKeywordAestheticSeedCount = 2_885_738_351L;
+    // 2026-07-29: dropped ASS/ASSY/ASSES/ASSMAN + ambiguous short pads (ROD/WET/BLOW/…).
+    public const long NsfwKeywordAestheticSeedCount = 1_563_469_676L;
 
     /// <summary>
     /// Lazy generator that yields every padded seed for the keyword-backed JAML aesthetics
@@ -73,17 +74,40 @@ public static class MotelySeedKeywordSequences
     /// <see cref="JamlAesthetic.Balatro"/>, <see cref="JamlAesthetic.Nsfw"/>). Palindrome and Echo
     /// aren't keyword sequences — they live next to their own generators.
     /// </summary>
-    public static IEnumerable<string> EnumerateAestheticSeeds(JamlAesthetic aesthetic)
+    /// <param name="paddingAlphabet">
+    /// Free-slot charset. Null = full seed alphabet (historical full aesthetic counts).
+    /// Digits-only pad keeps the keyword letters readable and collapses the stream.
+    /// </param>
+    public static IEnumerable<string> EnumerateAestheticSeeds(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet = null
+    )
     {
         foreach (
-            var seed in MotelyGlobals.GeneratePaddedSeedsForKeywords(KeywordsFor(aesthetic), null)
+            var seed in MotelyGlobals.GeneratePaddedSeedsForKeywords(
+                KeywordsFor(aesthetic),
+                paddingAlphabet
+            )
         )
             yield return seed;
     }
 
-    /// <summary>Baked seed count for the keyword-backed JAML aesthetics. See <see cref="EnumerateAestheticSeeds"/>.</summary>
-    public static long GetAestheticSeedCount(JamlAesthetic aesthetic) =>
-        aesthetic switch
+    /// <summary>
+    /// Seed count for keyword-backed aesthetics. Full alphabet uses baked constants;
+    /// any explicit pad is counted live via <see cref="MotelyGlobals.GetPaddedSeedCountForKeywordsLong"/>.
+    /// </summary>
+    public static long GetAestheticSeedCount(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet = null
+    )
+    {
+        if (paddingAlphabet is { Length: > 0 })
+            return MotelyGlobals.GetPaddedSeedCountForKeywordsLong(
+                KeywordsFor(aesthetic),
+                paddingAlphabet
+            );
+
+        return aesthetic switch
         {
             JamlAesthetic.Gross => GrossKeywordAestheticSeedCount,
             JamlAesthetic.Funny => FunnyKeywordAestheticSeedCount,
@@ -96,6 +120,7 @@ public static class MotelySeedKeywordSequences
                 "Not a keyword aesthetic."
             ),
         };
+    }
 
     private static string[] KeywordsFor(JamlAesthetic aesthetic) =>
         aesthetic switch
@@ -1446,10 +1471,7 @@ public static class MotelySeedKeywordSequences
     /// </summary>
     public static readonly string[] NsfwKeywords =
     [
-        "ASS",
-        "ASSY",
-        "ASSES",
-        "ASSMAN",
+        // Short bare "ASS" / pad-bloat duds dropped — keep compounds that actually read as nsfw.
         "CUM",
         "CUMS",
         "CUMMY",
@@ -1513,7 +1535,6 @@ public static class MotelySeedKeywordSequences
         "SUCKS",
         "SUCKER",
         "SUCKED",
-        "BLOW",
         "BLOWJOB",
         "HANDJOB",
         "RIMJOB",
@@ -1527,7 +1548,6 @@ public static class MotelySeedKeywordSequences
         "WANKED",
         "PRICK",
         "PRICKS",
-        "NUTS",
         "NUTTED",
         "BONER",
         "BONERS",
@@ -1558,8 +1578,6 @@ public static class MotelySeedKeywordSequences
         "WEENIE",
         "DONG",
         "DONGS",
-        "ROD",
-        "RODS",
         "CLIT",
         "CLITS",
         "BUTTSEX",
@@ -1579,20 +1597,10 @@ public static class MotelySeedKeywordSequences
         "MOAN",
         "MOANS",
         "MOANER",
-        "RIDE",
-        "RIDER",
-        "MOUNT",
         "POUND",
         "POUNDER",
         "THROB",
         "THROBS",
-        "WET",
-        "WETTY",
-        "DRIP",
-        "DRIPS",
-        "LOAD",
-        "LOADS",
-        "SEEDY",
         "SEMEN",
         "SPERM",
         "SPERMY",
@@ -1617,11 +1625,8 @@ public static class MotelySeedKeywordSequences
         "BUGGERY",
         "SODOMY",
         "SODOM",
-        "FIST",
-        "FISTS",
         "FISTED",
         "FISTING",
-        "PEG",
         "PEGGED",
         "PEGGING",
         "RIDEIT",
@@ -1636,8 +1641,6 @@ public static class MotelySeedKeywordSequences
         "CHOKED",
         "GAGME",
         "GAGGED",
-        "BOUND",
-        "TIEME",
         "SLAVE",
         "MASTER",
         "DADDY",

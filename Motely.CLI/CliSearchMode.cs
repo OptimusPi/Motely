@@ -233,7 +233,13 @@ internal static class CliSearchMode
         }
         else if (explicitAesthetic.HasValue)
         {
-            updated = updated.WithAestheticSearch(explicitAesthetic.Value);
+            // --padding mixes with --aesthetic: free slots / keyword pads use that charset.
+            // Default when omitted: full alphabet (explicit single-family hunt). Collect's
+            // multi-family prepass defaults to digit pad separately in Program.
+            char[]? aestheticPad = !string.IsNullOrWhiteSpace(input.PaddingCharsOption)
+                ? MotelyGlobals.ParsePaddingChars(input.PaddingCharsOption)
+                : null;
+            updated = updated.WithAestheticSearch(explicitAesthetic.Value, aestheticPad);
         }
         // The JAML seeds: replay and the sequential sweep are the *default* modes — they apply
         // only when the caller picked no explicit search input above. An explicit mode

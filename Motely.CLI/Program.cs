@@ -257,7 +257,7 @@ partial class Program
         );
         var paddingOption = app.Option<string>(
             "--padding <CHARS>",
-            "Restrict padding chars for --keyword/--keywords (e.g. \"67Z\" uses only 6, 7, Z as padding)",
+            "Restrict free-slot / pad chars for --keyword/--keywords and --aesthetic (e.g. \"123456789\" digits-only — words stay visible). Collect's aesthetic prepass defaults to 123456789 when this flag is omitted.",
             CommandOptionType.SingleValue
         );
         var nativeOption = app.Option<string>(
@@ -698,61 +698,90 @@ partial class Program
                 }
                 else if (collectLimit > 0)
                 {
-                    // Every aesthetic first, in declaration order, as one continuous seed stream —
-                    // palindromes and echoes and the rest are a tiny, pretty corner of the space, so
-                    // sweeping all of them costs almost nothing next to the sequential grind, and a
-                    // seed like AAABBBAA is a better answer than the first one counting finds.
-                    // StopAfter(N) ends once N matches are booked (SIMD may deliver a few over; see
-                    // StopAfterMatches). An explicit --aesthetic narrows the sweep to that family.
-                    var aesthetics =
-                        aestheticOption.HasValue()
-                        && JamlAestheticParser.TryParse(aestheticOption.ParsedValue.Trim(), out var onlyOne)
-                            ? [onlyOne]
-                            : Enum.GetValues<JamlAesthetic>();
-                    settings = settings
-                        .WithProviderSearch(
-                            new MotelySeedListProvider(
-                                aesthetics.SelectMany(JamlAesthetics.EnumerateSeeds),
-                                aesthetics.Sum(JamlAesthetics.GetSeedCount)
-                            )
-                        )
-                        .StopAfter(collectLimit);
+                    // CliSearchMode already installed keyword / aesthetic / source / random /
+                    // drown / inline-seeds providers onto settings. --collect must StopAfter that
+                    // intent — stomping it with the multi-aesthetic prepass is the pigeonhole
+                    // (CUM hunt silently became "pretty seeds" and wiped operator seed lists).
+                    // JAML seeds: alone still takes the default aesthetic collect path.
+                    bool namedExplicitSeedInput =
+                        keywordOption.HasValue()
+                        || keywordsOption.HasValue()
+                        || aestheticOption.HasValue()
+                        || sourceOption.HasValue()
+                        || seedsOption.HasValue()
+                        || randomOption.HasValue()
+                        || drown;
 
-                    var aestheticPass = settings.Start(_cts.Token);
-                    cancelled = await RunPass(aestheticPass);
-
-                    // Still short after aesthetics → sequential for the remainder.
-                    long remaining = collectLimit - aestheticPass.MatchingSeeds;
-                    if (!cancelled && remaining > 0)
+                    if (namedExplicitSeedInput)
                     {
-                        aestheticPass.Dispose();
-                        if (!quietOption.HasValue())
+                        settings = settings.StopAfter(collectLimit);
+                        search = settings.Start(_cts.Token);
+                        cancelled = await RunPass(search);
+                    }
+                    else
+                    {
+                        // Default collect: every aesthetic first (digit-pad free slots), then sequential.
+                        // Full-alphabet free slots are not a "tiny corner". Override pad with --padding.
+                        var aesthetics =
+                            aestheticOption.HasValue()
+                            && JamlAestheticParser.TryParse(
+                                aestheticOption.ParsedValue.Trim(),
+                                out var onlyOne
+                            )
+                                ? new[] { onlyOne }
+                                : Enum.GetValues<JamlAesthetic>();
+                        char[] collectPad = paddingOption.HasValue()
+                            ? MotelyGlobals.ParsePaddingChars(paddingOption.ParsedValue)
+                                ?? JamlAesthetics.QuickPaddingChars
+                            : JamlAesthetics.QuickPaddingChars;
+                        settings = settings
+                            .WithProviderSearch(
+                                new MotelySeedListProvider(
+                                    aesthetics.SelectMany(a =>
+                                        JamlAesthetics.EnumerateSeeds(a, collectPad)
+                                    ),
+                                    aesthetics.Sum(a =>
+                                        JamlAesthetics.GetSeedCount(a, collectPad)
+                                    )
+                                )
+                            )
+                            .StopAfter(collectLimit);
+
+                        var aestheticPass = settings.Start(_cts.Token);
+                        cancelled = await RunPass(aestheticPass);
+
+                        long remaining = collectLimit - aestheticPass.MatchingSeeds;
+                        if (!cancelled && remaining > 0)
                         {
-                            if (aestheticPass.MatchingSeeds == 0)
-                                Console.Error.WriteLine(
-                                    "No aesthetic seed matched — falling back to the sequential sweep."
-                                );
-                            else
-                                Console.Error.WriteLine(
-                                    $"Collected {aestheticPass.MatchingSeeds}/{collectLimit} from aesthetics — sequential for the rest."
-                                );
+                            aestheticPass.Dispose();
+                            if (!quietOption.HasValue())
+                            {
+                                if (aestheticPass.MatchingSeeds == 0)
+                                    Console.Error.WriteLine(
+                                        "No aesthetic seed matched — falling back to the sequential sweep."
+                                    );
+                                else
+                                    Console.Error.WriteLine(
+                                        $"Collected {aestheticPass.MatchingSeeds}/{collectLimit} from aesthetics — sequential for the rest."
+                                    );
+                            }
+
+                            settings = settings
+                                .WithSequentialSearch()
+                                .WithBatchCharacterCount(batchCharCount)
+                                .StopAfter(remaining);
+                            aestheticPass = settings.Start(_cts.Token);
+                            cancelled = await RunPass(aestheticPass);
+                        }
+                        else if (!cancelled && !quietOption.HasValue())
+                        {
+                            Console.Error.WriteLine(
+                                $"Collected {aestheticPass.MatchingSeeds} from aesthetics — no sequential sweep needed."
+                            );
                         }
 
-                        settings = settings
-                            .WithSequentialSearch()
-                            .WithBatchCharacterCount(batchCharCount)
-                            .StopAfter(remaining);
-                        aestheticPass = settings.Start(_cts.Token);
-                        cancelled = await RunPass(aestheticPass);
+                        search = aestheticPass;
                     }
-                    else if (!cancelled && !quietOption.HasValue())
-                    {
-                        Console.Error.WriteLine(
-                            $"Collected {aestheticPass.MatchingSeeds} from aesthetics — no sequential sweep needed."
-                        );
-                    }
-
-                    search = aestheticPass;
                 }
                 else
                 {

@@ -132,6 +132,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithAdditionalFilter(IMotelySeedFilterDesc filterDesc);
     IMotelySearchSettings WithThreadCount(int threadCount);
     IMotelySearchSettings WithBatchCharacterCount(int batchCharacterCount);
+    IMotelySearchSettings WithProviderBatchSeedCount(int seedCount);
     IMotelySearchSettings WithStartBatchIndex(long startBatchIndex);
     IMotelySearchSettings WithEndBatchIndex(long endBatchIndex);
     IMotelySearchSettings WithSeedScoreProvider(IMotelySeedScoreDesc seedScoreDesc);
@@ -139,7 +140,10 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedRouter(IMotelySeedRouterDesc desc);
     IMotelySearchSettings WithListSearch(IEnumerable<string> seeds, int seedCount = -1);
     IMotelySearchSettings WithRandomSearch(int count);
-    IMotelySearchSettings WithAestheticSearch(JamlAesthetic aesthetic);
+    IMotelySearchSettings WithAestheticSearch(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet = null
+    );
     IMotelySearchSettings WithProviderSearch(IMotelySeedProvider provider);
     IMotelySearchSettings WithSequentialSearch();
     IMotelySearchSettings WithDeck(MotelyDeck deck);
@@ -202,12 +206,20 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public IMotelySeedProvider? SeedProvider { get; set; }
 
     /// <summary>
-    /// The number of seed characters each batch contains.
+    /// The number of seed characters each sequential batch contains.
     ///
     /// For example, with a value of 3 one batch would go through 35^3 seeds.
-    /// Only meaningful when `Mode` is set to `Sequential`.
+    /// Only meaningful when `Mode` is set to `Sequential` — partial-hash cache benefit.
     /// </summary>
     public int SequentialBatchCharacterCount { get; set; } = 3;
+
+    /// <summary>
+    /// How many seeds a provider-mode plan processes before one progress report / cutoff gate.
+    /// SIMD width stays <see cref="MotelyGlobals.MaxVectorWidth"/> (8); this only amortizes
+    /// interop and chatter over a large provider stream (aesthetics, keywords, lakes).
+    /// Default <see cref="MotelyGlobals.DefaultProviderBatchSeedCount"/> (35³). Cap at 35⁴ if needed.
+    /// </summary>
+    public int ProviderBatchSeedCount { get; set; } = MotelyGlobals.DefaultProviderBatchSeedCount;
 
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
@@ -277,6 +289,18 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
+    /// <summary>
+    /// Provider-mode only: seeds per progress/report batch (not SIMD width). See
+    /// <see cref="ProviderBatchSeedCount"/>.
+    /// </summary>
+    public MotelySearchSettings<TBaseFilter> WithProviderBatchSeedCount(int seedCount)
+    {
+        if (seedCount < MotelyGlobals.MaxVectorWidth)
+            seedCount = MotelyGlobals.MaxVectorWidth;
+        ProviderBatchSeedCount = seedCount;
+        return this;
+    }
+
     public MotelySearchSettings<TBaseFilter> WithListSearch(
         IEnumerable<string> seeds,
         int seedCount = -1
@@ -290,9 +314,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return WithProviderSearch(new MotelyRandomSeedProvider(count));
     }
 
-    public MotelySearchSettings<TBaseFilter> WithAestheticSearch(JamlAesthetic aesthetic)
+    public MotelySearchSettings<TBaseFilter> WithAestheticSearch(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet = null
+    )
     {
-        return WithProviderSearch(new MotelyAestheticSeedProvider(aesthetic));
+        return WithProviderSearch(new MotelyAestheticSeedProvider(aesthetic, paddingAlphabet));
     }
 
     public MotelySearchSettings<TBaseFilter> WithProviderSearch(IMotelySeedProvider provider)
@@ -353,6 +380,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithBatchCharacterCount(int count) =>
         WithBatchCharacterCount(count);
 
+    IMotelySearchSettings IMotelySearchSettings.WithProviderBatchSeedCount(int seedCount) =>
+        WithProviderBatchSeedCount(seedCount);
+
     IMotelySearchSettings IMotelySearchSettings.WithStartBatchIndex(long index) =>
         WithStartBatchIndex(index);
 
@@ -377,8 +407,10 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithRandomSearch(int count) =>
         WithRandomSearch(count);
 
-    IMotelySearchSettings IMotelySearchSettings.WithAestheticSearch(JamlAesthetic aesthetic) =>
-        WithAestheticSearch(aesthetic);
+    IMotelySearchSettings IMotelySearchSettings.WithAestheticSearch(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet
+    ) => WithAestheticSearch(aesthetic, paddingAlphabet);
 
     IMotelySearchSettings IMotelySearchSettings.WithProviderSearch(IMotelySeedProvider provider) =>
         WithProviderSearch(provider);
@@ -708,6 +740,8 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private readonly Action<MotelyScoredSeedResult>? _scoredResultCallback;
     private readonly bool _autoScoreCutoff;
     private readonly long _progressReportIntervalMs;
+    /// <summary>Provider-mode: seeds to chew per report batch (SIMD still 8-wide).</summary>
+    private readonly int _providerBatchSeedCount;
 
     private readonly Stopwatch _elapsedTime = new();
     private long _lastProgressReportElapsedMs = -1;
@@ -723,6 +757,10 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         _scoredResultCallback = settings.ScoredResultCallback;
         _autoScoreCutoff = settings.AutoScoreCutoff;
         _stopAfterMatches = settings.StopAfterMatches;
+        _providerBatchSeedCount = Math.Max(
+            MotelyGlobals.MaxVectorWidth,
+            settings.ProviderBatchSeedCount
+        );
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
         {
@@ -1364,11 +1402,12 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
 
         /// <summary>
-        /// Runs one provider batch. Returns false when the search is finished — disposed,
+        /// Runs one provider <b>report</b> batch: many SIMD packs (8 seeds each) until
+        /// <see cref="MotelySearch{TBaseFilter}._providerBatchSeedCount"/> seeds are chewed,
+        /// the provider is empty, or cancel fires. Returns false when finished — disposed,
         /// cancelled, or the provider is exhausted — at which point the caller flushes.
-        /// Mirror of <see cref="TryExecuteSequentialBatch"/> so the browser pump can drive
-        /// provider mode a single batch at a time and await between them for a repaint; the
-        /// native driver (<see cref="RunProviderPlan"/>) just calls it in a tight loop.
+        /// Sequential's batchCharCount is a different machine (space partition + partial hash);
+        /// here batch size only amortizes progress chat and interop over huge provider streams.
         /// </summary>
         internal bool TryExecuteProviderBatch()
         {
@@ -1381,17 +1420,40 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             if (_providerExhausted)
                 return false;
 
-            SearchProviderBatch();
-            _localBatchesCompleted++;
+            long target = Search._providerBatchSeedCount;
+            long chewed = 0;
+            while (
+                chewed < target
+                && !_providerExhausted
+                && Volatile.Read(ref Search._isDisposed) == 0
+                && !Search._cancellationToken.IsCancellationRequested
+            )
+            {
+                long before = _localSeedsSearched;
+                SearchProviderBatch();
+                long got = _localSeedsSearched - before;
+                if (got <= 0)
+                    break;
+                chewed += got;
+            }
 
-            // Provider drained this batch: stop and flush without another progress report.
-            if (_providerExhausted)
+            // Nothing ran (already empty on entry) — stop without counting a report batch.
+            if (chewed == 0)
                 return false;
 
-            // Report progress
+            _localBatchesCompleted++;
+
+            if (Search._autoScoreCutoff)
+                UpdateAutoCutoffGate();
+
+            // Always report after a non-empty chew — including the drain batch — so progress
+            // can hit 100% on short lists and StopAfter races still see a final tick.
             Search.PrintReport();
 
-            return true;
+            // Exhausted after this report batch → caller flushes and exits.
+            return !_providerExhausted
+                && Volatile.Read(ref Search._isDisposed) == 0
+                && !Search._cancellationToken.IsCancellationRequested;
         }
 
         /// <summary>Flush any seeds still sitting in filter batches when the search ends.</summary>
@@ -1865,15 +1927,18 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
 
             SeedProvider = settings.SeedProvider;
 
-            // Calculate MaxBatch - handle unknown seed count (-1) by using a large estimate
-            // This is only used for progress reporting, not actual batch termination
+            // Progress denominator uses report-batch size (many SIMD packs), not 8-lane width.
+            // Unknown seed count (-1) → large estimate for progress only; termination is provider empty.
             long seedCount = SeedProvider.SeedCount;
+            long reportBatch = Math.Max(
+                MotelyGlobals.MaxVectorWidth,
+                (long)search._providerBatchSeedCount
+            );
             MaxBatch =
                 seedCount >= 0
-                    ? (seedCount + (long)(MotelyGlobals.MaxVectorWidth - 1))
-                        / (long)MotelyGlobals.MaxVectorWidth
-                    : long.MaxValue / MotelyGlobals.MaxVectorWidth; // Large estimate for unknown count
-            SeedsPerBatch = (long)MotelyGlobals.MaxVectorWidth;
+                    ? (seedCount + reportBatch - 1) / reportBatch
+                    : long.MaxValue / reportBatch;
+            SeedsPerBatch = reportBatch;
 
             _hashes = (Vector512<double>*)
                 Marshal.AllocHGlobal(sizeof(Vector512<double>) * search._pseudoHashKeyLengthCount);

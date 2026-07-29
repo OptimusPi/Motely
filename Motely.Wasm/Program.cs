@@ -181,9 +181,9 @@ public static partial class MotelySearch
         );
 
     /// <summary>
-    /// CLI <c>--collect N</c> shape: aesthetics first (all families), then sequential for the
-    /// remainder. <paramref name="stopAfter"/> is N (JS BigInt / C# <c>long</c>). SIMD may
-    /// deliver a few over the limit.
+    /// CLI <c>--collect N</c> shape: aesthetics first (all families, digit-pad free slots —
+    /// same as CLI when <c>--padding</c> is omitted), then sequential for the remainder.
+    /// <paramref name="stopAfter"/> is N (JS BigInt / C# <c>long</c>). SIMD may deliver a few over.
     /// </summary>
     [Export]
     public static async Task<MotelyScoredSeedResult[]> Collect(JamlConfig config, long stopAfter)
@@ -192,14 +192,17 @@ public static partial class MotelySearch
 
         List<MotelyScoredSeedResult> results = [];
         var aesthetics = Enum.GetValues<JamlAesthetic>();
+        char[] collectPad = JamlAesthetics.QuickPaddingChars;
         await RunIntoAsync(
             config,
             results,
             s =>
                 s.WithProviderSearch(
                         new MotelySeedListProvider(
-                            aesthetics.SelectMany(JamlAesthetics.EnumerateSeeds),
-                            aesthetics.Sum(JamlAesthetics.GetSeedCount)
+                            aesthetics.SelectMany(a =>
+                                JamlAesthetics.EnumerateSeeds(a, collectPad)
+                            ),
+                            aesthetics.Sum(a => JamlAesthetics.GetSeedCount(a, collectPad))
                         )
                     )
                     .StopAfter(stopAfter)

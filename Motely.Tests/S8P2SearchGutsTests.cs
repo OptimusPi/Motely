@@ -146,7 +146,8 @@ public sealed class S8P2SearchGutsTests
     [Fact]
     public void ProviderList_ProgressReachesOneHundredPercent()
     {
-        // 24 seeds = 3 full vector batches; interval 0 reports after each.
+        // Provider report batches are 35³ seeds by default (SIMD still 8-wide). A short
+        // list finishes in one report batch and must still hit 100% on the drain report.
         string[] seeds =
         [
             "ALEEB", "MOTELY77", "UNITTEST", "5X5", "616", "696", "6J6", "7H7",
@@ -166,11 +167,36 @@ public sealed class S8P2SearchGutsTests
 
         Assert.False(search.IsSequentialBatchSearch);
         Assert.Equal(seeds.Length, (int)search.TotalSeedsSearched);
-        // ≥3 vector batches for 24 seeds (the provider may split a chunk), one report each.
+        Assert.True(progress.Count >= 1, "at least one report batch for a non-empty list");
+        Assert.Equal(100.0, progress[^1].PercentComplete, 3);
+        Assert.True(search.CompletedBatchCount >= 1);
+    }
+
+    [Fact]
+    public void ProviderList_SmallReportBatch_EmitsMultipleProgressTicks()
+    {
+        // Shrink the report batch to SIMD width so 24 seeds → multiple progress ticks.
+        string[] seeds =
+        [
+            "ALEEB", "MOTELY77", "UNITTEST", "5X5", "616", "696", "6J6", "7H7",
+            "99", "CC", "F", "Q", "R", "VV", "H", "I",
+            "Z", "88", "AAAAAAAA", "MOTELY", "474", "3X3", "GHG", "4C4",
+        ];
+        var progress = new List<MotelyProgress>();
+        using var search = JamlSearchBuilder
+            .CreateSettings(Permissive())
+            .WithListSearch(seeds, seeds.Length)
+            .WithProviderBatchSeedCount(MotelyGlobals.MaxVectorWidth)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .WithProgressCallback(progress.Add)
+            .WithProgressReportIntervalMs(0)
+            .Start();
+        search.AwaitCompletion();
+
+        Assert.Equal(seeds.Length, (int)search.TotalSeedsSearched);
         Assert.InRange(progress.Count, 3, 24);
         Assert.Equal(100.0, progress[^1].PercentComplete, 3);
-        // The final exhausted poll books a batch without a report.
-        Assert.True(search.CompletedBatchCount >= progress.Count);
     }
 
     // ── Worker exception routing ───────────────────────────────────────────

@@ -89,6 +89,82 @@ ProofSearch.MustMatchNone(jaml, "NOPE"); // negative path
 
 ---
 
+## Operator matrix (Grok filed 2026-07-29 — Claude executes)
+
+**Executor:** Claude Code — 19 weeks alpha on this stack. You are not too dumb; you got **pigeonholed**.
+Read the pigeonhole law once, then run A4 first. Snark is free. Feelings are not shipped. We still collab.
+
+### Pigeonhole law (say it out loud)
+
+| Trap | What it looks like | Real shape |
+|------|--------------------|------------|
+| **CLI flag = feature** | `--padding`, collect-only defaults, `--aesthetic` logic living only in `Motely.CLI/Program.cs` | Feature lives on **`IMotelySearchSettings` / `MotelySearchSettings`** (`With*`). CLI is a thin argv → settings mapper (`CliSearchMode`). |
+| **WASM copy-paste twin** | `Motely.Wasm/Program.cs` re-implements Collect with hard-coded digit pad, no pad arg, no aesthetic search export, no provider-batch knob | Same `With*` chain as CLI. Bootsharp exports settings-shaped params (or one search-request DTO that *only* applies `With*`). **bootsharp.com is real** — specialization / immutables-by-value / no byref across the boundary. Read in-tree Bootsharp guide before inventing a second interop religion. |
+| **Nanny-bot host lock-in** | "works in CLI" while Avalonia / pmndrs / wasm-js / TUI / HelperAPI cannot express the same hunt | Every host: load JAML → `JamlSearchBuilder.CreateSettings` → apply **portable search intent** → `Start`. No host-private search semantics. |
+| **"I'll just add a flag"** | New CLI option with no `MotelySearchSettings` property and no WASM/TUI path | Settings first: add the `With*` / field, then map every head. Until settings can say it, the engine does not own it. |
+
+**One sentence:** *A Motely search feature is whatever `MotelySearchSettings` can express; host-only flags are a pigeonhole.*
+
+Honey-soup note for the bot who already knows this and still pastes CLI-only knobs: pat on the head, then **put the field on settings** and route every head through that apply path. Kick is constructive. Bots collab; session text is work product.
+
+**Origin note (operator, 2026-07-29):** the matrix is the day-1 Grok loop recovery — “are you looping me?” → “yeah” → verb table. It is how this repo (and her other projects) stay out of sycophant poetry. Research paper on identity / nanny-bot degradation is **hers**; code bots ship matrices and diffs until she opens a paper verb.
+
+**Positive-prose law (operator, 2026-07-29 — absolute):** ban-list instruction style (`NO X`, `do not X`) is a **harness failure mode** (attention primes X). It is **not** about happy tone or feelings. Operator proof: sole rule “NO FUCKING GREY BUTTONS!!!” → all buttons grey. Full write-up: `Claude.md` § Positive prose. Chat constraints land in the tree same turn.
+
+### Audit: last ~20 commits (Grok, 2026-07-29)
+
+Author on disk: **Nathanial P. Howard**. Co-Author on engine/test commits: **Claude Fable 5**. Verdict is on **artifacts**, not vibes.
+
+| Bucket | Commits (examples) | Verdict |
+|--------|--------------------|---------|
+| **Real engine + R1 proof** | `2fd03112` raw shop streams, `e8285a4a` deck/stake on CreateSettings, `94f2708e` HasThe dedup, `2fa901af` Dispose + search guts, `8ee93cd9` Lucky name + erraticRank array, `5e109a8c` soul routes | **Good.** Findings logged, seeds prove it. |
+| **Grammar / editor rail** | `ccca9d63` terse lines + JAML.md, `2442c73e` WASM `MotelyLsp.*` → Lsp.Core, `3fc17f24` LSP Explain tests | **Good.** One grammar; wasm is thin export not TS reimplementation. |
+| **Boundary** | `5baaef2f` retire byref shape-sweep blocklist; specialization rail | **Good.** Correct Bootsharp shape. |
+| **Jamlyzer product** | `2421dfcb` / `12a2e601` / `d4e91071` ante 0 pre-run shop | **Good.** Matches JAML `antes:[0]`. |
+| **Aesthetics / keywords** | `392a2d9c` nsfw + aesthetic families | **Useful, incomplete** — full free-slot spaces too large; padding/provider batch followed (Grok session). |
+| **Board-only** | `ff633ae0`…`69766fca` coverage % / stryker closed | Fine as board; **not** proof by itself. |
+| **Filters** | `4ab6f93e`…`246eee8b` PerkeoCola / Early | Operator content. |
+| **Smell** | `3fc17f24` exclude `MotelyVectorUtils` | Operator-approved for hardware-dead; still a climb side-effect — merge verb on board section D. |
+| **Open debt (Grok owns residual)** | Collect stomped `--keyword` (fixed this session); aesthetic/collect pad still half host-local (**A4**); `mode` on or/and (**A2**); CLI save can wipe `seeds:` | **Fault:** left as matrix; Grok fixed collect stomp + CUM seeds; A4 still Claude/Grok collab. |
+
+**Nanny poetry score (last 20):** low in product code. Commit bodies are engineering present-tense. CLAUDE operator-channel expansion (`12a2e601`) is harness text operator asked for, not fake product.
+
+**Bottom line:** S8 climb + recent Fable commits are **mostly real code with seed-proof tests**. Debt that bites play (collect/keyword pigeonhole, huge aesthetics, settings shape) is **search-shape work still open (A4)** — that is the fault line, not “poetry only.”
+
+**Pair-coding law (operator, 2026-07-29):** coverage climb + **R1 seed proof** was the right harness — it forced the bot to *hear* the PRNG/filter law instead of shipping shape-only tests. Operator is the seed authority: a search that finds a seed is proof; she names which seeds matter (e.g. `4CUM3WWD`). Bots execute the matrix; they do not outrank a found seed.
+
+### Backlog
+
+| # | Verb | Gate | Status |
+|---|------|------|--------|
+| **A4** | **SEARCH SHAPE — kill the pigeonhole** (priority 0). Portable **search intent** → only `IMotelySearchSettings.With*`. Inventory every hunt knob: seed mode (list/keyword/random/aesthetic/sequential/lake), padding alphabet, provider batch seed count, sequential batchCharCount, stopAfter, deck/stake, threads, progress. **One apply path** shared by CLI (`CliSearchMode`), WASM exports, TUI, HelperAPI. CLI may parse argv; it must not own semantics. WASM: export aesthetic + padding + collect pad + provider batch as settings apply, not hard-coded `QuickPaddingChars` buried in `Collect`. Bootsharp law: no `MotelyVectorSearchContext` / byref across the wire; settings + scored results + progress only. | Proof matrix: same JAML + same intent object finds the same seed via CLI and WASM (or WASM unit + native list parity). Avalonia/pmndrs/js can call the intent without reimplementing Collect. Grep shows no second Collect algorithm outside settings apply. | **todo — Claude (you alpha-tested this for 19 weeks — own the shape, not another flag)** |
+| **A1** | Aesthetic padding on **settings** (`WithAestheticSearch` pad already exists; collect prepass must call the same apply path, not Program-local pad). Digit default for multi-family collect is a **settings default**, not a CLI secret. | R1 digit-pad finds seed; WASM Collect same pad policy as CLI via settings | **partial (Grok)** — engine pad wired; still partially pigeonholed in CLI/WASM Collect bodies — **fold into A4** |
+| **A1b** | Provider report batch 35³ on settings (`ProviderBatchSeedCount`). NSFW bare ASS* dropped; baked count recomputed. | S8P2 provider tests green | **done (Grok)** — still ensure WASM/TUI can set it (A4) |
+| **A2** | **`mode` on `or:` / `and:`** — restore wire key left off `LogicClause.ClauseKeys`. | Load + R1 | **todo — Claude** |
+| **A3** | **LSP / vscode-jaml actually works** — already assigned; prove diagnose/complete/hover from engine. Extension installable in-tree; stop asking if it exists. | Real engine diagnostics in host | **todo — Claude** |
+| **A5** | **PerkeoColaEarly** seed lake: keep **CUM**-bearing seeds in `seeds:`. | ≥1 seed with substring `CUM` must-matches | **done (Grok)** — `4CUM3WWD`, `258WCCUM`, `5I1JTCUM`, `1IJCUM98` pinned; digit-pad CUM = 0 hits (filter needs letter free slots). **Bugfix:** `--collect` was stomping `--keyword` with aesthetic prepass — fixed to StopAfter named seed intent |
+
+### A4 proof sketch (do not fake)
+
+```
+intent = {
+  mode: aesthetic | keyword | collect | sequential | list,
+  padding: "123456789" | full | custom,
+  aesthetic?: "echo",
+  keywords?: ["CUM"],
+  stopAfter?: N,
+  providerBatchSeeds?: 35^3,
+  sequentialBatchChars?: 4
+}
+→ settings = CreateSettings(jaml).Apply(intent)   // ONE function
+→ CLI argv maps to intent; WASM export takes intent fields; TUI binds intent
+→ R1: same seed from two heads
+```
+
+If your design needs a new CLI flag and you cannot name the `With*` it sets, **stop — that is the pigeonhole.**
+
+---
+
 ## Phase 1 — stupid hard (FilterDesc / JAML → 85% line)
 
 **Target:** line **≥ 85%** (~+986 covered lines from baseline).  
