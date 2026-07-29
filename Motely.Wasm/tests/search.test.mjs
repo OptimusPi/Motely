@@ -12,7 +12,7 @@ function ante1Voucher(seed) {
     const [a] = MotelyJamlyzer.analyzeSeeds(
         parse(`name: t\ndeck: Red\nstake: White\nseeds: [${seed}]\n`)
     );
-    return MotelyVoucher[a.antes[0].voucher];
+    return MotelyVoucher[a.antes[1].voucher]; // antes[0] is ante 0, the pre-run shop
 }
 
 // Proof = the engine finds a known seed. Shape-regex is not proof.

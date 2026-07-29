@@ -1,6 +1,6 @@
 # Handoff — MotelyJAML (Claude-owned S8 coverage climb)
 
-**Operator:** Nate  
+**Operator:** Nat  
 **Executor:** Claude Code — runs the whole S8 backlog top→bottom. No poetry. No phase pick menu.  
 **Law:** `CLAUDE.md` (one grammar, FilterDesc → JamlSchema, **proof = real search finds a seed**).  
 **Author of this board:** Grok (baseline + rails + anti-fake law). Claude ships the tests.

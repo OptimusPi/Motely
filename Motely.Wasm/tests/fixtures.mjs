@@ -23,6 +23,15 @@ deck: Red
 stake: White
 seeds: [UNITTEST]
 `,
+    // Ante 0 is the pre-run shop: a clause scoped to it analyzes it like any other ante.
+    anteZero: `name: t
+deck: Red
+stake: White
+seeds: [UNITTEST]
+must:
+  - legendaryJoker: Perkeo
+    antes: [0, 1]
+`,
     invalid: "not yaml !@#",
 };
 
