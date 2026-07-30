@@ -146,7 +146,13 @@ public static partial class JamlConfigLoader
             RareJokerClause c => WriteJokerFamily("rareJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
             LegendaryJokerClause c => WriteLegendary(c),
             VoucherClause c => WriteItems("voucher", c.Vouchers, c, rolls: c.Rolls, rollsDefault: [0]),
-            TarotCardClause c => WriteConsumable("tarotCard", c.Tarots, c.Sources, c),
+            TarotCardClause c => WriteConsumable(
+                "tarotCard",
+                c.IsWildcard,
+                c.Tarots,
+                c.Sources,
+                c
+            ),
             SpectralCardClause c => WriteConsumable("spectralCard", c.Spectrals, c.Sources, c),
             PlanetCardClause c => WriteConsumable("planetCard", c.Planets, c.Sources, c),
             StandardCardClause c => WriteStandardCard(c),
@@ -250,10 +256,23 @@ public static partial class JamlConfigLoader
         object? sources,
         IJamlClause clause
     )
+        where TEnum : struct, Enum => WriteConsumable(discriminator, isWildcard: false, items, sources, clause);
+
+    private static JMap WriteConsumable<TEnum>(
+        string discriminator,
+        bool isWildcard,
+        TEnum[] items,
+        object? sources,
+        IJamlClause clause
+    )
         where TEnum : struct, Enum
     {
         var mapping = new JMap();
-        mapping.Set(discriminator, EnumArrayNode(items), default);
+        mapping.Set(
+            discriminator,
+            isWildcard ? StringArrayNode(["Any"]) : EnumArrayNode(items),
+            default
+        );
         WriteCommonKeys(mapping, clause);
         WriteAntes(mapping, clause);
         var sourcesNode = sources switch

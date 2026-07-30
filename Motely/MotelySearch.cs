@@ -1954,10 +1954,10 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         {
             // Batch retrieve seeds in one lock operation - much faster!
             // Use thread-local buffer to avoid allocations per batch
-            int actualSeedCount = SeedProvider.NextSeeds(_seedBatchBuffer);
+            int fetched = SeedProvider.NextSeeds(_seedBatchBuffer);
 
             // If we got no seeds at all, this thread is exhausted
-            if (actualSeedCount == 0)
+            if (fetched == 0)
             {
                 // Mark this thread exhausted so ThreadMain idles it (and we only decrement once)
                 _providerExhausted = true;
@@ -1965,14 +1965,16 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 return;
             }
 
-            // The length of all the seeds
+            // Valid seeds only, packed into dense lanes 0..validCount-1.
+            // Motely charset has no '0' — list providers often feed decimal strings ("10", "20")
+            // that must be dropped. Leaving a hole in seedLengths and still iterating `fetched`
+            // made the scalar path read stack garbage as a length and OOB the seed stackalloc
+            // (S8CoverageClimbTests.NegativeLegendarySimdFront_ComposedWithSoulConfirm_FindsSeeds).
             int* seedLengths = stackalloc int[MotelyGlobals.MaxVectorWidth];
-
-            // Are all the seeds the same length?
             bool homogeneousSeedLength = true;
+            int validCount = 0;
 
-            // Process the batched seeds
-            for (int seedIdx = 0; seedIdx < actualSeedCount; seedIdx++)
+            for (int seedIdx = 0; seedIdx < fetched; seedIdx++)
             {
                 ReadOnlySpan<char> seed = _seedBatchBuffer[seedIdx].AsSpan();
 
@@ -1982,60 +1984,44 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                     || seed.IndexOf('0') >= 0
                 )
                 {
-                    // Invalid seed - skip it
                     continue;
                 }
 
-                // Bounds check for seedLengths array
-                if (seedIdx < MotelyGlobals.MaxVectorWidth)
-                {
-                    seedLengths[seedIdx] = seed.Length;
+                int lane = validCount;
+                if (lane >= MotelyGlobals.MaxVectorWidth)
+                    break;
 
-                    if (seedIdx > 0 && seedLengths[0] != seed.Length)
-                        homogeneousSeedLength = false;
+                seedLengths[lane] = seed.Length;
+                if (lane > 0 && seedLengths[0] != seed.Length)
+                    homogeneousSeedLength = false;
+
+                for (int i = 0; i < seed.Length; i++)
+                {
+                    ((double*)_seedCharacterMatrix)[i * MotelyGlobals.MaxVectorWidth + lane] =
+                        seed[i];
+                }
+                for (int i = seed.Length; i < MotelyGlobals.MaxSeedLength; i++)
+                {
+                    ((double*)_seedCharacterMatrix)[i * MotelyGlobals.MaxVectorWidth + lane] = 0;
                 }
 
-                // Bounds check for seed length and matrix access
-                int seedLen = Math.Min(seed.Length, MotelyGlobals.MaxSeedLength);
-                for (int i = 0; i < seedLen; i++)
-                {
-                    int matrixIndex = i * MotelyGlobals.MaxVectorWidth + seedIdx;
-                    if (
-                        matrixIndex >= 0
-                        && matrixIndex < MotelyGlobals.MaxSeedLength * MotelyGlobals.MaxVectorWidth
-                    )
-                    {
-                        ((double*)_seedCharacterMatrix)[matrixIndex] = seed[i];
-                    }
-                }
-                for (int i = seedLen; i < MotelyGlobals.MaxSeedLength; i++)
-                {
-                    int matrixIndex = i * MotelyGlobals.MaxVectorWidth + seedIdx;
-                    if (
-                        matrixIndex >= 0
-                        && matrixIndex < MotelyGlobals.MaxSeedLength * MotelyGlobals.MaxVectorWidth
-                    )
-                    {
-                        ((double*)_seedCharacterMatrix)[matrixIndex] = 0;
-                    }
-                }
+                validCount++;
             }
-            if (actualSeedCount < MotelyGlobals.MaxVectorWidth)
+
+            // Entire fetch was invalid (e.g. all decimal seeds containing '0'). Advance to the
+            // next provider batch — do not treat the thread as exhausted.
+            if (validCount == 0)
+                return;
+
+            for (int lane = validCount; lane < MotelyGlobals.MaxVectorWidth; lane++)
             {
-                for (int lane = actualSeedCount; lane < MotelyGlobals.MaxVectorWidth; lane++)
+                for (int i = 0; i < MotelyGlobals.MaxSeedLength; i++)
                 {
-                    for (int i = 0; i < MotelyGlobals.MaxSeedLength; i++)
-                    {
-                        ((double*)_seedCharacterMatrix)[i * MotelyGlobals.MaxVectorWidth + lane] =
-                            0;
-                    }
+                    ((double*)_seedCharacterMatrix)[i * MotelyGlobals.MaxVectorWidth + lane] = 0;
                 }
             }
 
-            if (actualSeedCount > 0)
-            {
-                _localSeedsSearched += actualSeedCount;
-            }
+            _localSeedsSearched += validCount;
 
             if (homogeneousSeedLength)
             {
@@ -2087,7 +2073,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 // Otherwise, we need to search all the seeds individually
                 Span<char> seed = stackalloc char[MotelyGlobals.MaxSeedLength];
 
-                for (int i = 0; i < actualSeedCount; i++)
+                for (int i = 0; i < validCount; i++)
                 {
                     int seedLength = seedLengths[i];
 

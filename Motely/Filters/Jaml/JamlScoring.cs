@@ -2151,6 +2151,8 @@ public static class JamlScoring
 
     private static int MatchTarot(MotelyItem item, TarotCardClause clause)
     {
+        if (clause.IsWildcard)
+            return item.TypeCategory == MotelyItemTypeCategory.TarotCard ? 1 : 0;
         for (int i = 0; i < clause.Tarots.Length; i++)
             if (
                 item.Type
