@@ -9,15 +9,18 @@ namespace Motely.Wasm;
 /// No DTO, no second grammar, no reimplemented Collect.
 /// </summary>
 /// <remarks>
-/// Two Bootsharp 0.9 generator gaps make the erasures below necessary today. Both are upstream
-/// fixes, not facts about Motely:
+/// Observed on Bootsharp 0.9.0, 2026-07-30, by building and reading the emitted output:
 ///
-/// 1. Byref parameters are emitted with the CLR spelling (<c>MotelyVectorSearchContext&amp;</c>)
-///    instead of the C# spelling (<c>ref</c> / <c>in</c>), which does not parse.
-/// 2. <c>Binary&lt;T&gt;</c> in the generated serializer lacks <c>allows ref struct</c> (C# 13 /
-///    .NET 10), so a <c>ReadOnlySpan&lt;char&gt;</c> return trips CS9244.
+/// 1. A byref type reaches JavaScript under its CLR name and the trailing <c>&amp;</c> is not a legal
+///    identifier — the bundle contained <c>export const MotelyVectorSearchContext&amp; = {</c> and the
+///    page died with "Missing initializer in const declaration". Hence the node erasures below.
+/// 2. Erasure cannot substitute for a specialization. <c>TypeInspector.Collect()</c> applies
+///    renames *after* collecting types, so an erased node that another collected type references
+///    leaves a dangling serializer entry (CS0103). A type that has a <c>[Specialize*]</c> pair must
+///    therefore NOT also appear here — see <c>IMotelySeedFilterDesc</c>, deliberately absent.
 ///
-/// When those land, the node erasures here can shrink to whatever genuinely cannot cross.
+/// Not verified: whether either is considered an upstream defect. Do not repeat that claim without
+/// checking — it was carried in this comment for weeks and no one had.
 /// </remarks>
 public static class Interop
 {

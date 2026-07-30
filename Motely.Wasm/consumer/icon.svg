@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Seed Finder: lucky 88 on the pi-lover's felt. -->
-  <rect width="512" height="512" rx="96" fill="#1d2733"/>
-  <circle cx="256" cy="256" r="170" fill="none" stroke="#5a6b7d" stroke-width="10"/>
-  <text x="256" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="200"
-        font-weight="bold" fill="#f3f6fa" text-anchor="middle">88</text>
-  <text x="256" y="404" font-family="Georgia, 'Times New Roman', serif" font-size="72"
-        fill="#1e7a3c" text-anchor="middle">&#960;</text>
-</svg>
