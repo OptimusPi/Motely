@@ -188,6 +188,6 @@ WASM (when present): from `Motely.Wasm/`, `npm test` / `npm run test:ui`.
 - **Motely.JsonRender** — jamlyzer report CLI (JSON / HTML / jaml-ui dialect). Not a second grammar.
 - **vscode-jaml** — languageclient host only; no TS grammar.
 - **motely-wasm** — same engine surface as native (T7 done).
-- **jaml-ui** — sibling product UI repo; not Motely. Open only when operator names a concrete file/goal.
+- **jaml-ui** — git submodule (`https://github.com/OptimusPi/jaml-ui.git`); product UI, not Motely core. Open only when operator names a concrete file/goal. Init: `git submodule update --init jaml-ui`.
 
 Dependency points inward to Motely.

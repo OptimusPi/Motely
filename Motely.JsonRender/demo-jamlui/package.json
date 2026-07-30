@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "jaml-ui": "file:../../../jaml-ui",
+    "jaml-ui": "file:../../jaml-ui",
     "motely-wasm": "file:../../Motely.Wasm",
 
     "react": "^19.2.0",
