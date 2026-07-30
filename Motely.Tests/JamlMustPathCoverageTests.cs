@@ -20,7 +20,7 @@ public sealed class JamlMustPathCoverageTests
 
         var settings = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch(Seeds, Seeds.Length)
+            .WithSeedGenerator(Seeds, Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true);
 

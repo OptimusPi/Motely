@@ -27,7 +27,7 @@ public static class ProofSearch
         using var search = JamlSearchBuilder
             .CreateSettings(config, cutoff)
             .WithAutoScoreCutoff(false)
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(threads)
             .WithQuietMode(true)
             .WithSeedMatchCallback(matched.Add)

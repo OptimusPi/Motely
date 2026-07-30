@@ -92,7 +92,7 @@ public sealed class S8P3BuffoonDedupTests
         using var search = new MotelySearchSettings<DedupProbeDesc.DedupProbeFilter>(
             new DedupProbeDesc()
         )
-            .WithListSearch(Seeds, Seeds.Length)
+            .WithSeedGenerator(Seeds, Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();

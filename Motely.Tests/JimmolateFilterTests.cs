@@ -27,7 +27,7 @@ public sealed class JimmolateFilterTests
         )
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithJimmolate(predicate)

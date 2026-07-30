@@ -138,7 +138,14 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithSeedScoreProvider(IMotelySeedScoreDesc seedScoreDesc);
     IMotelySearchSettings WithSeedAnalyzeProvider(IMotelySeedAnalyzeDesc seedAnalyzeDesc);
     IMotelySearchSettings WithSeedRouter(IMotelySeedRouterDesc desc);
-    IMotelySearchSettings WithListSearch(IEnumerable<string> seeds, int seedCount = -1);
+    /// <summary>Lazy seed sequence; <paramref name="seedCount"/> may be an estimate.</summary>
+    IMotelySearchSettings WithSeedGenerator(IEnumerable<string> seeds, int seedCount = -1);
+
+    /// <summary>
+    /// A materialized seed list — every seed known, count exact. This is the shape that can cross
+    /// a serialization boundary, since a deferred sequence has no value to hand a serializer.
+    /// </summary>
+    IMotelySearchSettings WithSeedList(string[] seeds);
     IMotelySearchSettings WithRandomSearch(int count);
     IMotelySearchSettings WithAestheticSearch(
         JamlAesthetic aesthetic,
@@ -186,8 +193,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     public IMotelySeedFilterDesc<TBaseFilter> BaseFilterDesc { get; set; } = baseFilterDesc;
 
-    // Interface implementation
-    IMotelySeedFilterDesc IMotelySearchSettings.BaseFilterDescBase => BaseFilterDesc;
+    /// <summary>The base desc as the non-generic engine type. Native callers only.</summary>
+    public IMotelySeedFilterDesc BaseFilterDescBase => BaseFilterDesc;
 
     public IList<IMotelySeedFilterDesc>? AdditionalFilters { get; set; } = null;
 
@@ -301,12 +308,18 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
-    public MotelySearchSettings<TBaseFilter> WithListSearch(
+    public MotelySearchSettings<TBaseFilter> WithSeedGenerator(
         IEnumerable<string> seeds,
         int seedCount = -1
     )
     {
         return WithProviderSearch(new MotelySeedListProvider(seeds, seedCount));
+    }
+
+    /// <summary>Materialized seed list; count is exact. See <see cref="IMotelySearchSettings.WithSeedList"/>.</summary>
+    public MotelySearchSettings<TBaseFilter> WithSeedList(string[] seeds)
+    {
+        return WithSeedGenerator(seeds, seeds.Length);
     }
 
     public MotelySearchSettings<TBaseFilter> WithRandomSearch(int count)
@@ -399,10 +412,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithSeedRouter(IMotelySeedRouterDesc desc) =>
         WithSeedRouter(desc);
 
-    IMotelySearchSettings IMotelySearchSettings.WithListSearch(
+    IMotelySearchSettings IMotelySearchSettings.WithSeedGenerator(
         IEnumerable<string> seeds,
         int seedCount
-    ) => WithListSearch(seeds, seedCount);
+    ) => WithSeedGenerator(seeds, seedCount);
+
+    IMotelySearchSettings IMotelySearchSettings.WithSeedList(string[] seeds) => WithSeedList(seeds);
 
     IMotelySearchSettings IMotelySearchSettings.WithRandomSearch(int count) =>
         WithRandomSearch(count);

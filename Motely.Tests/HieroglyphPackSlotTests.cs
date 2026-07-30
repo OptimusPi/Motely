@@ -32,7 +32,7 @@ public class HieroglyphPackSlotTests
 
         var settings = JamlSearchBuilder
             .CreateSettings(config!)
-            .WithListSearch([seed], 1)
+            .WithSeedGenerator([seed], 1)
             .WithThreadCount(1)
             .WithQuietMode(true);
 

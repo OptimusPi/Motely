@@ -79,7 +79,7 @@ public sealed class JamlMaxAndOmenGlobeTests
             var hits = new HashSet<string>();
             var settings = JamlSearchBuilder
                 .CreateSettings(config)
-                .WithListSearch(seeds, seeds.Length)
+                .WithSeedGenerator(seeds, seeds.Length)
                 .WithThreadCount(1)
                 .WithQuietMode(true);
             if (must)

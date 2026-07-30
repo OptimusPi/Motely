@@ -166,7 +166,7 @@ public static partial class MotelySearch
 
     [Export]
     public static Task<MotelyScoredSeedResult[]> SearchList(JamlConfig config) =>
-        RunAsync(config, s => s.WithListSearch(config.Seeds, config.Seeds.Count));
+        RunAsync(config, s => s.WithSeedList([.. config.Seeds]));
 
     [Export]
     public static Task<MotelyScoredSeedResult[]> SearchRandom(JamlConfig config, int count) =>

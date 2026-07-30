@@ -84,16 +84,16 @@ public sealed class DuckDbResultsSeedProvider : IMotelySeedProvider, IDisposable
         return Path.Combine(root, filterId, "results.csv");
     }
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_gate)
         {
             ThrowIfDisposed();
             if (!EnsureBuffered())
-                return ReadOnlySpan<char>.Empty;
+                return string.Empty;
 
             _currentSeed = _buffer.Dequeue();
-            return _currentSeed.AsSpan();
+            return _currentSeed;
         }
     }
 

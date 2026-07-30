@@ -106,12 +106,12 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     public static SeedSourceProvider FromLake(string lakeFile, string filterId) =>
         new(lakeFile, distinct: true);
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_lock)
         {
             if (_disposed)
-                return ReadOnlySpan<char>.Empty;
+                return string.Empty;
 
             while (_reader.Read())
             {
@@ -119,7 +119,7 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
                 if (!string.IsNullOrEmpty(seed))
                     return seed;
             }
-            return ReadOnlySpan<char>.Empty;
+            return string.Empty;
         }
     }
 

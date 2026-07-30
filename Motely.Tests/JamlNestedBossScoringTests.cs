@@ -24,7 +24,7 @@ public class JamlNestedBossScoringTests
         int? score = null;
         var settings = JamlSearchBuilder
             .CreateSettings(config!)
-            .WithListSearch([Seed], 1)
+            .WithSeedGenerator([Seed], 1)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithScoredResultCallback(result => score = result.Score);

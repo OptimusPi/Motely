@@ -42,7 +42,7 @@ public sealed class ChainedMustClauseSeedTests
     {
         var matched = new List<string>();
         using var search = settings
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(threads)
             .WithQuietMode(true)
             // Match callbacks arrive concurrently at threads > 1; List<T>.Add is not thread-safe.

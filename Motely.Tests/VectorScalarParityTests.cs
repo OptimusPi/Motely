@@ -271,7 +271,7 @@ public sealed class VectorScalarParityTests
         )
             .WithDeck(deck)
             .WithStake(stake)
-            .WithListSearch(Seeds, Seeds.Length)
+            .WithSeedGenerator(Seeds, Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true);
 

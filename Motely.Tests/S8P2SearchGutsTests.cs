@@ -72,7 +72,7 @@ public sealed class S8P2SearchGutsTests
         Assert.Equal(MotelySearchMode.Sequential, concrete.Mode);
         Assert.Null(concrete.SeedProvider);
 
-        s = s.WithListSearch(FixtureSeeds, FixtureSeeds.Length);
+        s = s.WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length);
         Assert.Equal(MotelySearchMode.Provider, concrete.Mode);
         Assert.NotNull(concrete.SeedProvider);
     }
@@ -94,7 +94,7 @@ public sealed class S8P2SearchGutsTests
     {
         using var search = JamlSearchBuilder
             .CreateSettings(Permissive())
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .CreateSearch();
@@ -157,7 +157,7 @@ public sealed class S8P2SearchGutsTests
         var progress = new List<MotelyProgress>();
         using var search = JamlSearchBuilder
             .CreateSettings(Permissive())
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithProgressCallback(progress.Add)
@@ -185,7 +185,7 @@ public sealed class S8P2SearchGutsTests
         var progress = new List<MotelyProgress>();
         using var search = JamlSearchBuilder
             .CreateSettings(Permissive())
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithProviderBatchSeedCount(MotelyGlobals.MaxVectorWidth)
             .WithThreadCount(1)
             .WithQuietMode(true)
@@ -218,7 +218,7 @@ public sealed class S8P2SearchGutsTests
         using var search = new MotelySearchSettings<ThrowingFilterDesc.ThrowingFilter>(
             new ThrowingFilterDesc()
         )
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .CreateSearch();
@@ -279,7 +279,7 @@ public sealed class S8P2SearchGutsTests
         )
             .WithSeedAnalyzeProvider(analyzeDesc)
             .WithSeedRouter(routerDesc)
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true);
 
@@ -309,7 +309,7 @@ public sealed class S8P2SearchGutsTests
         var settings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
             new PassthroughFilterDesc()
         )
-            .WithListSearch(["ALEEB"], 1)
+            .WithSeedGenerator(["ALEEB"], 1)
             .WithThreadCount(1)
             .WithQuietMode(true);
         using var search = (MotelySearch<PassthroughFilterDesc.PassthroughFilter>)
@@ -369,7 +369,7 @@ public sealed class S8P2SearchGutsTests
         var scored = new List<MotelyScoredSeedResult>();
         using var search = JamlSearchBuilder
             .CreateSettings(ProofSearch.LoadOrThrow(jaml))
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithAutoScoreCutoff(true)
@@ -594,7 +594,7 @@ public sealed class S8P2SearchGutsTests
         using var search = new MotelySearchSettings<VoucherParityDesc.VoucherParityFilter>(
             new VoucherParityDesc()
         )
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();

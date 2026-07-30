@@ -58,7 +58,7 @@ public sealed class JamlSimdPackSupportTests
         var hits = new HashSet<string>();
         var settings = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch(Seeds, Seeds.Length)
+            .WithSeedGenerator(Seeds, Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(s => hits.Add(s));
@@ -80,7 +80,7 @@ public sealed class JamlSimdPackSupportTests
         var hits = new HashSet<string>();
         var settings = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch(Seeds, Seeds.Length)
+            .WithSeedGenerator(Seeds, Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithScoredResultCallback(r =>
@@ -170,7 +170,7 @@ public sealed class JamlSimdPackSupportTests
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var err), err);
         var settings = JamlSearchBuilder
             .CreateSettings(config!)
-            .WithListSearch([seed], 1)
+            .WithSeedGenerator([seed], 1)
             .WithThreadCount(1)
             .WithQuietMode(true);
         using var search = settings.Start();

@@ -61,12 +61,13 @@ public static class Interop
 
     /// <summary>
     /// Settings members typed against the erased plumbing above. JavaScript reaches the same
-    /// capability through the value-shaped doors: <c>WithListSearch</c>, <c>WithRandomSearch</c>,
+    /// capability through the value-shaped doors: <c>WithSeedList</c>, <c>WithRandomSearch</c>,
     /// <c>WithAestheticSearch</c>, <c>WithSequentialSearch</c>.
     /// </summary>
     private static readonly (string Type, string Member)[] EngineOnlyMembers =
     [
         ("IMotelySearchSettings", "WithAdditionalFilter"),
+        ("IMotelySearchSettings", "AdditionalFilters"),
         ("IMotelySearchSettings", "BaseFilterDescBase"),
         ("IMotelySearchSettings", "WithSeedScoreProvider"),
         ("IMotelySearchSettings", "WithSeedAnalyzeProvider"),

@@ -23,13 +23,13 @@ public sealed class SeedProviderTests
         while (true)
         {
             var seed = provider.NextSeed();
-            if (seed.IsEmpty)
+            if (seed.Length == 0)
                 break;
             AssertValidSeed(seed);
             generated++;
         }
         Assert.Equal(5, generated);
-        Assert.True(provider.NextSeed().IsEmpty);
+        Assert.True(provider.NextSeed().Length == 0);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class SeedProviderTests
         var buffer = new string[5];
         Assert.Equal(1, provider.NextSeeds(buffer));
         Assert.Equal("MOTELY77", buffer[0]);
-        Assert.True(provider.NextSeed().IsEmpty);
+        Assert.True(provider.NextSeed().Length == 0);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public sealed class SeedProviderTests
         Assert.Equal(-1, provider.SeedCount);
         Assert.Equal("ONE", provider.NextSeed().ToString());
         Assert.Equal("TWO", provider.NextSeed().ToString());
-        Assert.True(provider.NextSeed().IsEmpty);
+        Assert.True(provider.NextSeed().Length == 0);
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public sealed class SeedProviderTests
         Assert.Equal("A2", buffer[0]);
         Assert.Equal("A3", buffer[1]);
         Assert.Null(buffer[2]);
-        Assert.True(provider.NextSeed().IsEmpty);
+        Assert.True(provider.NextSeed().Length == 0);
 
         provider.Dispose();
 
@@ -228,7 +228,7 @@ public sealed class SeedProviderTests
         var provider = new MotelyAsyncSeedListProvider(GetSeedsAsync());
         Assert.Equal("B1", provider.NextSeed().ToString());
         provider.Dispose();
-        Assert.True(provider.NextSeed().IsEmpty);
+        Assert.True(provider.NextSeed().Length == 0);
 
         async IAsyncEnumerable<string> GetSeedsAsync()
         {

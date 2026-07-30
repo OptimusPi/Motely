@@ -23,7 +23,7 @@ public class LuckyEventLuckTests
         int? tally = null;
         var settings = JamlSearchBuilder
             .CreateSettings(config!)
-            .WithListSearch([DifferentialSeed], 1)
+            .WithSeedGenerator([DifferentialSeed], 1)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithScoredResultCallback(result =>
@@ -185,7 +185,7 @@ public class LuckyEventLuckTests
         var matches = new HashSet<string>(StringComparer.Ordinal);
         var settings = JamlSearchBuilder
             .CreateSettings(config!)
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(seed => matches.Add(seed));

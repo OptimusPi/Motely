@@ -44,7 +44,7 @@ public class JummyEquivalenceTests
         var matched = new List<string>();
         var settings = JamlSearchBuilder
             .CreateSettings(config!)
-            .WithListSearch(config.Seeds, config.Seeds.Count)
+            .WithSeedGenerator(config.Seeds, config.Seeds.Count)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(matched.Add);

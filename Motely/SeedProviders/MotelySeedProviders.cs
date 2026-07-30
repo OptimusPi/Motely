@@ -3,7 +3,7 @@ namespace Motely.SeedProviders;
 public interface IMotelySeedProvider
 {
     public long SeedCount { get; }
-    public ReadOnlySpan<char> NextSeed();
+    public string NextSeed();
 
     /// <summary>
     /// Batch retrieve multiple seeds in one lock operation - much faster for multi-threaded access.
@@ -17,10 +17,10 @@ public sealed class MotelyRandomSeedProvider(int seedCount) : IMotelySeedProvide
     public long SeedCount { get; } = seedCount;
     private int _seedsGenerated;
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         if (Interlocked.Increment(ref _seedsGenerated) > SeedCount)
-            return [];
+            return string.Empty;
 
         return string.Create(
             MotelyGlobals.MaxSeedLength,
@@ -68,15 +68,15 @@ public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
             .GetEnumerator();
     }
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_enumeratorLock)
         {
             if (_palindromeEnumerator.MoveNext())
             {
-                return _palindromeEnumerator.Current.AsSpan();
+                return _palindromeEnumerator.Current;
             }
-            return ReadOnlySpan<char>.Empty;
+            return string.Empty;
         }
     }
 
@@ -115,15 +115,15 @@ public sealed class MotelyEchoSeedProvider : IMotelySeedProvider
         _echoEnumerator = JamlAesthetics.EnumerateSeeds(JamlAesthetic.Echo).GetEnumerator();
     }
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_enumeratorLock)
         {
             if (_echoEnumerator.MoveNext())
             {
-                return _echoEnumerator.Current.AsSpan();
+                return _echoEnumerator.Current;
             }
-            return ReadOnlySpan<char>.Empty;
+            return string.Empty;
         }
     }
 
@@ -160,13 +160,13 @@ public sealed class MotelyAestheticSeedProvider : IMotelySeedProvider
         _enumerator = JamlAesthetics.EnumerateSeeds(aesthetic, paddingAlphabet).GetEnumerator();
     }
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_enumeratorLock)
         {
             if (_enumerator.MoveNext())
-                return _enumerator.Current.AsSpan();
-            return ReadOnlySpan<char>.Empty;
+                return _enumerator.Current;
+            return string.Empty;
         }
     }
 
@@ -205,15 +205,15 @@ public sealed class MotelyKeywordSeedProvider : IMotelySeedProvider
             .GetEnumerator();
     }
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_enumeratorLock)
         {
             if (_enumerator.MoveNext())
             {
-                return _enumerator.Current.AsSpan();
+                return _enumerator.Current;
             }
-            return ReadOnlySpan<char>.Empty;
+            return string.Empty;
         }
     }
 
@@ -273,7 +273,7 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
         return -1;
     }
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_enumeratorLock)
         {
@@ -281,9 +281,9 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
             if (_seedEnumerator.MoveNext())
             {
                 _currentSeed = _seedEnumerator.Current;
-                return _currentSeed.AsSpan();
+                return _currentSeed;
             }
-            return ReadOnlySpan<char>.Empty;
+            return string.Empty;
         }
     }
 
@@ -333,12 +333,12 @@ public sealed class MotelyChainedSeedProvider(IMotelySeedProvider first, IMotely
             ? first.SeedCount + second.SeedCount
             : -1;
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         if (!_firstExhausted)
         {
-            var seed = first.NextSeed();
-            if (!seed.IsEmpty)
+            string seed = first.NextSeed();
+            if (seed.Length != 0)
                 return seed;
             _firstExhausted = true;
         }
@@ -373,7 +373,7 @@ public sealed class MotelyChainedSeedProvider(IMotelySeedProvider first, IMotely
 /// <summary>
 /// Optional <see cref="IMotelySeedProvider"/> for <see cref="IAsyncEnumerable{T}"/> sources.
 /// Pass to <see cref="MotelySearchSettings{TBaseFilter}.WithProviderSearch"/>; do not use unless you
-/// truly need async streaming — prefer <see cref="MotelySeedListProvider"/> / <see cref="MotelySearchSettings{TBaseFilter}.WithListSearch"/>.
+/// truly need async streaming — prefer <see cref="MotelySeedListProvider"/> / <see cref="MotelySearchSettings{TBaseFilter}.WithSeedGenerator"/>.
 /// </summary>
 public sealed class MotelyAsyncSeedListProvider : IMotelySeedProvider, IDisposable, IAsyncDisposable
 {
@@ -409,19 +409,19 @@ public sealed class MotelyAsyncSeedListProvider : IMotelySeedProvider, IDisposab
         return enumerator.MoveNextAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
-    public ReadOnlySpan<char> NextSeed()
+    public string NextSeed()
     {
         lock (_enumeratorLock)
         {
             if (_disposed)
-                return ReadOnlySpan<char>.Empty;
+                return string.Empty;
 
             var enumerator = EnsureEnumerator();
             if (!MoveNextSync(enumerator))
-                return ReadOnlySpan<char>.Empty;
+                return string.Empty;
 
             _currentSeed = enumerator.Current;
-            return _currentSeed.AsSpan();
+            return _currentSeed;
         }
     }
 

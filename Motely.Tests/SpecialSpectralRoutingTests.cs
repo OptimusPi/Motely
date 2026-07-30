@@ -86,7 +86,7 @@ public class SpecialSpectralRoutingTests
 
         var settings = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(seed =>
@@ -119,7 +119,7 @@ public class SpecialSpectralRoutingTests
         var settings = new MotelySearchSettings<LegendarySoulEditionFilterDesc.LegendarySoulEditionFilter>(
             new LegendarySoulEditionFilterDesc(clause)
         )
-            .WithListSearch(["ALEEB"], 1)
+            .WithSeedGenerator(["ALEEB"], 1)
             .WithThreadCount(1)
             .WithQuietMode(true);
 

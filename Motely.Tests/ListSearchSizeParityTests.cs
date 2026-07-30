@@ -21,7 +21,7 @@ public sealed class ListSearchSizeParityTests
             .WithAdditionalFilter(new LegendaryJokerShopSoulFilterDesc())
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(matched.Add)

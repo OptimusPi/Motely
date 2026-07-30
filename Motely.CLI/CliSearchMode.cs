@@ -204,7 +204,7 @@ internal static class CliSearchMode
         }
         else if (explicitSeeds != null)
         {
-            updated = updated.WithListSearch(explicitSeeds, explicitSeeds.Length);
+            updated = updated.WithSeedGenerator(explicitSeeds, explicitSeeds.Length);
         }
         else if (hasKeywordMode)
         {
@@ -260,7 +260,7 @@ internal static class CliSearchMode
         if (input.JamlSeeds is { Count: > 0 } && !hasExplicitSequentialRange)
         {
             // A JAML `seeds:` array front-runs the search as a seed list by default.
-            updated = updated.WithListSearch(input.JamlSeeds, input.JamlSeeds.Count);
+            updated = updated.WithSeedGenerator(input.JamlSeeds, input.JamlSeeds.Count);
         }
         else
         {

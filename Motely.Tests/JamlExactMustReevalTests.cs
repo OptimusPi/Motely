@@ -113,7 +113,7 @@ public sealed class JamlExactMustReevalTests
         var seeds = new[] { "ALEEB", "MOTELY77", "AAAAAAAA", "11111111" };
         var settings = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(s => hits.Add(s));

@@ -336,7 +336,7 @@ public sealed class RawStreamParityTests
         )
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.Black)
-            .WithListSearch(Seeds, Seeds.Length)
+            .WithSeedGenerator(Seeds, Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();

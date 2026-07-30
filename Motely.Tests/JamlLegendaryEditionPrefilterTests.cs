@@ -27,7 +27,7 @@ public sealed class JamlLegendaryEditionPrefilterTests
         Assert.True(JamlConfigLoader.TryLoad(jaml, out var config, out var err), err);
         var settings = JamlSearchBuilder
             .CreateSettings(config!)
-            .WithListSearch([seed], 1)
+            .WithSeedGenerator([seed], 1)
             .WithThreadCount(1)
             .WithQuietMode(true);
         using var search = settings.Start();
@@ -57,7 +57,7 @@ public sealed class JamlLegendaryEditionPrefilterTests
 
         var settings = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch(["ALEEB", "MOTELY77", "AAAAAAAA", "11111111"], 4)
+            .WithSeedGenerator(["ALEEB", "MOTELY77", "AAAAAAAA", "11111111"], 4)
             .WithThreadCount(1)
             .WithQuietMode(true);
         using var search = settings.Start();

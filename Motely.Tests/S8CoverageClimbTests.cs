@@ -107,7 +107,7 @@ public sealed class S8CoverageClimbTests
         config.Must.Add(clause);
         using var search = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch(seeds, seeds.Length)
+            .WithSeedGenerator(seeds, seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();
@@ -152,7 +152,7 @@ public sealed class S8CoverageClimbTests
         )
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();
@@ -369,7 +369,7 @@ public sealed class S8CoverageClimbTests
         Assert.Equal("A", chained.NextSeed().ToString());
         Assert.Equal("B", chained.NextSeed().ToString());
         Assert.Equal("C", chained.NextSeed().ToString());
-        Assert.True(chained.NextSeed().IsEmpty);
+        Assert.True(chained.NextSeed().Length == 0);
 
         var batch = new MotelyChainedSeedProvider(
             new MotelySeedListProvider(["X"]),
@@ -536,7 +536,7 @@ public sealed class S8CoverageClimbTests
         )
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();
@@ -680,7 +680,7 @@ public sealed class S8CoverageClimbTests
         )
             .WithDeck(MotelyDeck.Ghost)
             .WithStake(MotelyStake.White)
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();
@@ -693,7 +693,7 @@ public sealed class S8CoverageClimbTests
             .WithAdditionalFilter(rawDesc)
             .WithDeck(MotelyDeck.Ghost)
             .WithStake(MotelyStake.White)
-            .WithListSearch(FixtureSeeds, FixtureSeeds.Length)
+            .WithSeedGenerator(FixtureSeeds, FixtureSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();
@@ -765,7 +765,7 @@ public sealed class S8CoverageClimbTests
         )
             .WithDeck(MotelyDeck.Ghost)
             .WithStake(MotelyStake.White)
-            .WithListSearch(["ALEEB"], 1)
+            .WithSeedGenerator(["ALEEB"], 1)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .Start();
@@ -911,7 +911,7 @@ public sealed class S8CoverageClimbTests
             .WithAdditionalFilter(new LegendaryJokerShopSoulFilterDesc())
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
-            .WithListSearch(NegativeLegendaryAnte12Seeds, NegativeLegendaryAnte12Seeds.Length)
+            .WithSeedGenerator(NegativeLegendaryAnte12Seeds, NegativeLegendaryAnte12Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(matched.Add)

@@ -32,7 +32,7 @@ public class DefaultFallbackTests
         long matching = 0;
         var settings = JamlSearchBuilder
             .CreateSettings(config)
-            .WithListSearch([Seed], 1)
+            .WithSeedGenerator([Seed], 1)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithScoredResultCallback(result => score = result.Score);
