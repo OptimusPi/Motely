@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "storybook": {
+      "type": "http",
+      "url": "http://localhost:3141/mcp"
+    },
+    "jaml": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["scripts/jaml-mcp-server.mjs"]
+    }
+  }
+}

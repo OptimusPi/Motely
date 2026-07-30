@@ -1,0 +1,4026 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   jimbo.css — Jimbo Design System (component classes)
+   Tokens live in jimbo-tokens.css (sole :root source of truth).
+   Eyedropped from actual game shader output — not Lua hex values.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import './jimbo-tokens.css';
+
+/* Global Scrollbar Hide */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+}
+
+
+/* ── Base Text ─────────────────────────────────────────────────────────── */
+
+.j-text {
+  font-family: var(--j-font);
+  font-weight: 400;
+  line-height: 1.2;
+  text-shadow: var(--j-text-shadow);
+  color: var(--j-white);
+}
+
+.j-text--no-shadow {
+  text-shadow: none;
+}
+
+.j-text--upper {
+
+  letter-spacing: 0.08em;
+}
+
+/* Font Dance Animation */
+.j-text--dance-container {
+  display: inline-block;
+  white-space: pre-wrap;
+}
+
+.j-font-dance-char {
+  display: inline-block;
+  animation: j-font-dance 1.5s infinite steps(2, end);
+}
+
+@keyframes j-font-dance {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(1px, -1px);
+  }
+
+  50% {
+    transform: translate(0, -2px);
+  }
+
+  75% {
+    transform: translate(-1px, -1px);
+  }
+}
+
+/* Sizes (snapped to m6x11 [16,32,48] and m6x11plus [18,36,54] pixel grids) */
+.j-text--display {
+  font-size: 32px;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.j-text--xl {
+  font-size: 24px;
+  letter-spacing: 0.04em;
+}
+
+.j-text--lg {
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.j-text--heading {
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.j-text--md {
+  font-size: 16px;
+}
+
+.j-text--sm {
+  font-size: 14px;
+}
+
+.j-text--body {
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+}
+
+.j-text--xs {
+  font-size: 12px;
+}
+
+.j-text--label {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.j-text--micro {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+/* Tones */
+.j-text--default {
+  color: var(--j-white);
+}
+
+.j-text--mult,
+.j-text--red {
+  color: var(--j-red);
+}
+
+.j-text--chips,
+.j-text--blue {
+  color: var(--j-blue);
+}
+
+.j-text--gold {
+  color: var(--j-gold-text);
+}
+
+.j-text--green {
+  color: var(--j-green-text);
+}
+
+.j-text--orange {
+  color: var(--j-orange-text);
+}
+
+.j-text--purple {
+  color: var(--j-purple);
+}
+
+.j-text--grey {
+  color: var(--j-grey);
+}
+
+.j-text--white {
+  color: var(--j-white);
+}
+
+
+/* ── Panel ─────────────────────────────────────────────────────────────── */
+
+.j-panel {
+  /* Rounded rectangle, light solid outline, no dashed border, no soft
+     shadow — matches IMG_3678 / IMG_3725 / IMG_3693 panel chrome. The
+     corner radius is intentionally generous (--j-radius-lg) so the panel
+     reads as a Balatro card-modal, not a 4px-rounded utility surface.
+     NOTE: overflow is intentionally visible (NOT hidden). In Balatro,
+     content frequently spills slightly past the panel edges — joker
+     stickers, card stacks, hovered cards lifting up. Clipping with
+     overflow:hidden was decapitating those bleed-outs. */
+  background-color: var(--j-dark-grey);
+  border: var(--j-panel-border-width) solid var(--j-border-silver);
+  border-radius: var(--j-radius-lg);
+  box-shadow: 0 var(--j-panel-south-edge-width) 0 0 var(--j-border-south),
+    0 calc(var(--j-surface-shadow-depth) + var(--j-panel-south-edge-width)) 0 0 rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  padding: var(--j-space-lg);
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: stretch;
+  overflow: visible;
+  position: relative;
+  isolation: isolate;
+}
+
+/* No glass-sheen overlay. Balatro panels are flat solid color with a
+   chunky border + drop shadow — no diagonal sheen pass. */
+
+.j-textarea {
+  background-color: var(--j-darkest);
+  color: var(--j-text-color, #fff);
+  border: var(--j-panel-border-width) solid var(--j-border-silver);
+  border-radius: var(--j-radius-md, var(--j-radius-lg));
+  padding: var(--j-space-sm, 8px);
+  font-family: var(--j-font-code);
+  font-size: 13px;
+  resize: vertical;
+}
+
+.j-textarea:focus {
+  outline: 2px solid var(--j-blue);
+  outline-offset: -2px;
+}
+
+.j-panel__body {
+  overflow: auto;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-md);
+}
+
+.j-panel__back {
+  margin-top: var(--j-space-md);
+  padding-top: var(--j-space-sm);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.j-back-btn .j-btn__face {
+  padding-top: 4px;
+  padding-bottom: 6px;
+}
+
+.j-back-btn-wrap {
+  padding: 0;
+}
+
+.j-inner-panel {
+  /* Subtle sunken inset on the outer panel face — NOT another framed modal.
+     Balatro never nests modal-style frames; content sections sit flat or
+     drop into a darker well. No silver border, no sheen — those belong to
+     the outer .j-panel alone. */
+  background-color: var(--j-surface-inset);
+  border-radius: var(--j-radius-md);
+  padding: var(--j-space-md);
+}
+
+
+/* ── Button ────────────────────────────────────────────────────────────── */
+/* Chunky 3D press: black underside via drop shadow,
+   press sinks the face +3px and collapses the shadow. */
+
+.j-btn {
+  /* Reserve room INSIDE the wrapper for the face's drop-shadow lip — so when
+     the parent (e.g. .j-app, .j-panel) uses overflow:hidden the lip doesn't
+     get clipped off, and the empty space below the face is part of the
+     button's own box, not the surrounding gap. */
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  border: none;
+  padding: 0 0 calc(var(--j-press-y) + 2px) 0;
+  background: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Invisible stable hit target to prevent hover jitter when the child transforms */
+.j-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  z-index: 10;
+}
+
+.j-btn--full {
+  width: 100%;
+}
+
+.j-btn--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.j-btn__face {
+  position: relative;
+  border-radius: var(--j-radius-md);
+  background: var(--j-btn-face-color, var(--j-orange));
+  color: var(--j-white);
+  text-align: center;
+  line-height: 1;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  /* Drop shadow at 30% opacity per design. Stacked solid offset, no blur. */
+  box-shadow: 0 calc(var(--j-press-y) + 2px) 0 0 rgba(0, 0, 0, 0.3);
+  transform: translate(0, 0);
+  transition: transform var(--j-press-speed) linear, box-shadow var(--j-press-speed) linear, background-color var(--j-press-speed) linear;
+  /* No overflow:hidden — it sheared pixel-font ascenders whenever padding ran
+     tight. Nothing inside the face bleeds, so clipping bought nothing. */
+  overflow: visible;
+  isolation: isolate;
+}
+
+.j-btn__face::before {
+  content: none;
+}
+
+.j-btn__face > * {
+  position: relative;
+  z-index: 1;
+}
+
+.j-btn[data-pressed="true"] .j-btn__face,
+.j-btn:active:not(:disabled):not(.j-btn--disabled) .j-btn__face {
+  background: var(--j-btn-shadow-color, var(--j-dark-orange));
+  transform: translateY(var(--j-press-y));
+  box-shadow: none;
+}
+
+.j-btn:not(.j-btn--disabled):hover .j-btn__face {
+  background: var(--j-btn-shadow-color, var(--j-dark-orange));
+}
+
+/* Sizes. Text anchors to the TOP of the face: the smaller pad goes on top and
+   the slack sits under the glyphs, matching the in-game buttons where the label
+   hugs the top edge above the pressed lip. */
+.j-btn--xs .j-btn__face {
+  padding-top: 3px;
+  padding-right: 8px;
+  padding-bottom: 6px;
+  padding-left: 8px;
+  font-size: 11px;
+}
+
+.j-btn--sm .j-btn__face {
+  padding-top: 5px;
+  padding-right: 12px;
+  padding-bottom: 6px;
+  padding-left: 12px;
+  font-size: 13px;
+}
+
+.j-btn--md .j-btn__face {
+  padding-top: 6px;
+  padding-right: 18px;
+  padding-bottom: 9px;
+  padding-left: 18px;
+  font-size: 16px;
+}
+
+.j-btn--lg .j-btn__face {
+  padding-top: 6px;
+  padding-right: 18px;
+  padding-bottom: 11px;
+  padding-left: 18px;
+  font-size: 20px;
+}
+
+/* Tone colors — set via CSS custom properties */
+.j-btn--orange {
+  --j-btn-face-color: var(--j-orange);
+  --j-btn-shadow-color: var(--j-dark-orange);
+}
+
+.j-btn--red {
+  --j-btn-face-color: var(--j-red);
+  --j-btn-shadow-color: var(--j-dark-red);
+}
+
+.j-btn--blue {
+  --j-btn-face-color: var(--j-blue);
+  --j-btn-shadow-color: var(--j-dark-blue);
+}
+
+.j-btn--green {
+  --j-btn-face-color: var(--j-green);
+  --j-btn-shadow-color: var(--j-dark-green);
+}
+
+.j-btn--tarot {
+  --j-btn-face-color: var(--j-tarot-btn);
+  --j-btn-shadow-color: var(--j-tarot-btn-dark);
+}
+
+.j-btn--planet {
+  --j-btn-face-color: var(--j-planet-btn);
+  --j-btn-shadow-color: var(--j-planet-btn-dark);
+}
+
+.j-btn--spectral {
+  --j-btn-face-color: var(--j-spectral-btn);
+  --j-btn-shadow-color: var(--j-spectral-btn-dark);
+}
+
+
+/* ── Badge ─────────────────────────────────────────────────────────────── */
+
+.j-badge {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  border-radius: var(--j-radius-sm);
+  font-family: var(--j-font);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  border: none;
+}
+
+.j-badge--sm {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.j-badge--md {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Badge tones — flat, no shadow, no edges */
+.j-badge--dark {
+  background: var(--j-darkest);
+  color: var(--j-white);
+}
+
+.j-badge--blue {
+  background: var(--j-blue);
+  color: var(--j-white);
+}
+
+.j-badge--red {
+  background: var(--j-red);
+  color: var(--j-white);
+}
+
+.j-badge--green {
+  background: var(--j-green);
+  color: var(--j-white);
+}
+
+.j-badge--orange {
+  background: var(--j-orange);
+  color: var(--j-white);
+}
+
+.j-badge--purple {
+  background: var(--j-purple);
+  color: var(--j-white);
+}
+
+.j-badge--grey {
+  background: var(--j-teal-grey);
+  color: var(--j-white);
+}
+
+
+/* ── Tabs ──────────────────────────────────────────────────────────────── */
+
+.j-tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: var(--j-space-sm);
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  /* No overflow clipping. Setting overflow-x:auto forces overflow-y to clip
+     too (CSS spec), which decapitates the bouncing arrow at its apex. The
+     tab row is sized to fit 320px, so horizontal scroll is not needed. */
+  overflow: visible;
+  /* Headroom for the arrow's apex (-6px translate) plus a hair of cushion. */
+  padding-top: 10px;
+}
+
+.j-tab {
+  /* Stack: indicator arrow on top, JimboButton below. The button does its
+     own styling — this wrapper just positions the indicator above it. */
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  position: relative;
+  gap: 2px;
+}
+
+.j-tab__indicator {
+  height: 10px;
+  margin-bottom: 3px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.j-tab__indicator svg {
+  fill: var(--j-red);
+  display: block;
+}
+
+.j-tab__indicator[data-active="true"] {
+  /* Arrow rests on top of the tab for ~30% of the cycle, then pops up and
+     falls back. Per-keyframe easing gives it gravity (fast off the rest,
+     slow at apex, fast on the fall) instead of a sleepy linear sine. */
+  animation: jimbo-bounce 0.55s infinite;
+}
+
+.j-tab__indicator[data-active="false"] {
+  visibility: hidden;
+}
+
+/* Tabs render real JimboButtons (.j-btn--sm .j-btn--red) — no bespoke tab
+   button. The selected tab is marked only by the bouncing arrow above it;
+   the buttons themselves hold still so the row reads as a fixed baseline. */
+
+@keyframes jimbo-bounce {
+
+  /* Rest on top of the tab for the first ~30% of the cycle. */
+  0%,
+  30% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
+  }
+
+  /* Apex — pops up fast, decelerates into the top. */
+  65% {
+    transform: translateY(-6px);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
+  }
+
+  /* Fall back down to rest. */
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes j-surface-sheen {
+
+  0%,
+  100% {
+    background-position: 0% 0%, 10% 20%;
+    opacity: 0.52;
+  }
+
+  50% {
+    background-position: 100% 100%, 88% 74%;
+    opacity: 0.8;
+  }
+}
+
+@keyframes j-idle-bob {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
+/* Vertical tabs */
+.j-vtabs {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+.j-vtab {
+  border: none;
+  cursor: pointer;
+  border-radius: 8px 0 0 8px;
+  padding: 16px 8px;
+  background-color: transparent;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  transition: none;
+}
+
+.j-vtab[data-active="true"] {
+  background-color: var(--j-gold, #e4b643);
+  color: var(--j-black, #000000);
+}
+
+
+/* ── Toggle List ──────────────────────────────────────────────────────── */
+
+.j-toggle-list {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+.j-toggle-list__title {
+  font-family: var(--j-font);
+  font-size: 12px;
+  color: var(--j-grey);
+
+  letter-spacing: 0.04em;
+  margin-bottom: var(--j-space-sm);
+}
+
+.j-toggle-item {
+  /* Plain seated row inside the outer panel. No row backdrop — items rest
+     directly on the panel surface; the checkbox alone carries the visual
+     weight. Label fills, checkbox pinned right so columns align. */
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--j-space-md);
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--j-font);
+  color: var(--j-white);
+  text-align: left;
+}
+
+.j-toggle-item__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.j-toggle-item[data-variant="stacked"] {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--j-space-xs);
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+}
+
+.j-toggle-item[data-variant="stacked"] .j-toggle-item__label {
+  text-align: center;
+
+  letter-spacing: 0.04em;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.j-toggle-check {
+  /* Balatro checkbox: white outer square frame, dark inner well that fills
+     red when on with a white checkmark on top. The white outline IS the
+     box; the inner well sits inset from it so it reads as a chunky frame
+     around the empty/checked state. */
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: var(--j-white);
+  padding: 2px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.j-toggle-check::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: var(--j-teal-grey);
+  border-radius: 3px;
+}
+
+.j-toggle-check[data-on="true"]::before {
+  background: var(--j-red);
+}
+
+.j-toggle-check[data-on="true"]::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 92% 92% no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><polyline points='3,9 7,13 13,4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 92% 92% no-repeat;
+  background: var(--j-white);
+}
+
+
+/* ── Tooltip ──────────────────────────────────────────────────────────── */
+
+.j-tooltip {
+  position: fixed;
+  max-width: 280px;
+  padding: 6px 10px;
+  border-radius: var(--j-radius-md);
+  background: var(--j-darkest);
+  border: var(--j-panel-border-width) solid var(--j-border-silver);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+  color: var(--j-white);
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 120ms ease;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  gap: 4px;
+}
+
+.j-tooltip--dark { background: var(--j-darkest); color: var(--j-white); }
+
+.j-tooltip--card {
+  background: var(--j-white);
+  color: var(--j-darkest);
+  border-color: var(--j-border-silver);
+  text-shadow: none;
+}
+
+.j-tooltip__body {
+  width: 100%;
+  text-align: center;
+  font-family: var(--j-font);
+}
+
+.j-tooltip--card .j-tooltip__body { color: var(--j-darkest); }
+
+.j-tooltip__badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--j-radius-sm);
+  font-family: var(--j-font);
+  font-size: 11px;
+  color: var(--j-white);
+  text-shadow: var(--j-text-shadow);
+  letter-spacing: 1px;
+  margin-bottom: -2px;
+}
+
+
+
+/* ── Layout Utilities ─────────────────────────────────────────────────── */
+
+.j-flex {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+}
+
+.j-flex-col {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+}
+
+.j-items-center {
+  align-items: center;
+}
+
+.j-items-start {
+  align-items: flex-start;
+}
+
+.j-justify-center {
+  justify-content: center;
+}
+
+.j-justify-between {
+  justify-content: space-between;
+}
+
+.j-gap-xs { gap: var(--j-space-xs); }
+.j-gap-sm { gap: var(--j-space-sm); }
+.j-gap-md { gap: var(--j-space-md); }
+.j-gap-lg { gap: var(--j-space-lg); }
+
+.j-w-full { width: 100%; }
+.j-h-full { height: 100%; }
+
+.j-text-center { text-align: center; }
+
+
+/* ── Flank Nav ────────────────────────────────────────────────────────── */
+
+.j-flank {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--j-space-md);
+  width: 100%;
+  position: relative;
+}
+
+.j-flank__content {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+}
+
+.j-flank__btn {
+  /* The flanking buttons span the FULL height of the content beside them —
+     no top/bottom margin. align-items:stretch on .j-flank then makes them
+     match content height exactly. */
+  align-self: stretch;
+  width: 40px;
+  border: none;
+  border-radius: var(--j-radius-lg);
+  cursor: pointer;
+  background-color: var(--j-red);
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 var(--j-press-y) 0 0 var(--j-dark-red);
+  transition: transform var(--j-press-speed) ease,
+    box-shadow var(--j-press-speed) ease,
+    background-color var(--j-press-speed) ease;
+}
+
+.j-flank__btn[data-pressed="true"] {
+  transform: translateY(var(--j-press-y));
+  box-shadow: none;
+}
+
+.j-flank__btn:disabled {
+  background-color: var(--j-dark-red);
+  cursor: default;
+  box-shadow: none;
+}
+
+
+/* ── Copy Row ─────────────────────────────────────────────────────────── */
+
+.j-copy-row {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+.j-copy-row__field {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: var(--j-space-md);
+}
+
+.j-copy-row__value {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--j-darkest);
+  border: var(--j-panel-border-width) solid var(--j-panel-edge);
+  border-radius: var(--j-radius-sm);
+  word-break: break-all;
+}
+
+.j-copy-row__btn {
+  font-family: var(--j-font);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  border-radius: var(--j-radius-sm);
+  padding: 4px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.j-copy-row__btn[data-copied="false"] {
+  /* Red, not gold — there are no gold buttons in Balatro. */
+  color: var(--j-white);
+  background: var(--j-red);
+  border: none;
+}
+
+.j-copy-row__btn[data-copied="true"] {
+  color: var(--j-green-text);
+  background: rgba(53, 189, 134, 0.12);
+  border: 1px solid var(--j-green-text);
+}
+
+
+/* ── Code Block ───────────────────────────────────────────────────────── */
+
+.j-code-block {
+  background-color: var(--j-darkest);
+  border: var(--j-panel-border-width) solid var(--j-panel-edge);
+  border-radius: var(--j-radius-lg);
+  box-shadow: 0 3px 0 0 rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+}
+
+.j-code-block__header {
+  padding: 8px 12px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--j-inner-border);
+}
+
+.j-code-block__meta {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 8px;
+  align-items: center;
+}
+
+.j-code-block__filename {
+  /* JimboText handles the size + grey color now — this is just letter-spacing
+     and a small alignment hint. */
+  letter-spacing: 0.04em;
+}
+
+.j-code-block__lang {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Legacy hand-rolled copy button styles — no longer used; JimboCodeBlock
+   now renders a JimboIconButton. Left as a dead rule until a sweep removes
+   it (kept so any leftover usages don't break visually overnight). */
+.j-code-block__copy--legacy {
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+}
+
+.j-code-block__copy[data-copied="false"] {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.j-code-block__copy[data-copied="true"] {
+  color: #4ade80;
+}
+
+.j-code-block__pre {
+  padding: 12px;
+  overflow-x: auto;
+  font-family: var(--j-font-code);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #f6f0d5;
+  margin: 0;
+}
+
+/* Host element for an editor view mounted by JS (CodeMirror). The view paints
+   its own chrome; this only fixes the background and the height floor so the
+   surface doesn't collapse before the view attaches. */
+.j-code-surface {
+  width: 100%;
+  min-height: var(--j-code-surface-min-height, 320px);
+  background: var(--j-darkest);
+}
+
+
+/* ── Filter Bar ───────────────────────────────────────────────────────── */
+
+.j-filter-bar {
+  display: grid;
+  grid-auto-flow: row;
+  gap: 24px;
+  padding: var(--j-space-xl);
+  background-color: var(--j-dark-grey);
+  border: 4px solid var(--j-border-silver);
+  box-shadow: 0 3px 0 0 var(--j-border-south);
+  border-radius: var(--j-radius-lg);
+  position: relative;
+  grid-template-columns: repeat(auto-fill, max-content);
+}
+
+.j-filter-bar__field {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+  margin-top: 10px;
+}
+
+.j-filter-bar__pill {
+  position: absolute;
+  top: -14px;
+  left: 16px;
+  background-color: var(--j-red);
+  border: 2px solid var(--j-dark-red);
+  border-radius: var(--j-radius-md);
+  padding: 4px 12px;
+  z-index: 2;
+}
+
+.j-filter-bar__input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  background-color: var(--j-darkest);
+  border: none;
+  border-bottom: 4px solid var(--j-panel-edge);
+  border-radius: var(--j-radius-lg);
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  outline: none;
+}
+
+.j-filter-bar__search-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--j-blue);
+  z-index: 1;
+}
+
+.j-filter-bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--j-orange);
+  color: var(--j-white);
+  border: none;
+  border-bottom: 4px solid var(--j-dark-orange);
+  border-radius: var(--j-radius-lg);
+  cursor: pointer;
+  font-family: var(--j-font);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  padding: 14px 48px 14px 24px;
+  min-width: 200px;
+  text-align: center;
+  outline: none;
+}
+
+.j-filter-bar__sort-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--j-white);
+  opacity: 0.85;
+}
+
+/* ── Modal ────────────────────────────────────────────────────────────── */
+
+@keyframes jimbo-modal-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.j-modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  padding: var(--j-space-md);
+  background: rgba(8, 18, 22, 0.55);
+}
+
+.j-modal {
+  width: 100%;
+  max-width: 345px;
+  max-height: calc(100% - 32px);
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  overflow: hidden;
+  border-radius: var(--j-radius-lg);
+  animation: jimbo-modal-in 140ms cubic-bezier(0.2, 0, 0.2, 1.4) both;
+}
+
+.j-modal .j-panel__body {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.j-modal__title {
+  margin: 0 0 var(--j-space-sm);
+  font-family: var(--j-font);
+  font-size: var(--j-text-lg);
+  color: var(--j-white);
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.j-input-modal__message {
+  display: block;
+  margin-bottom: var(--j-space-md);
+}
+
+.j-text-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--j-darkest);
+  color: var(--j-white);
+  border: 1px solid var(--j-panel-edge);
+  border-radius: var(--j-radius-sm);
+  font-size: 13px;
+  font-family: var(--j-font);
+  letter-spacing: 1px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.j-text-input[aria-invalid="true"],
+.j-text-input[data-invalid="true"] {
+  border-color: var(--j-red);
+}
+
+.j-text-input--code {
+  font-family: var(--j-font-code);
+  font-size: 11px;
+}
+
+/* Jimmolate: JS predicate editor for post-SIMD seed filtering. */
+.j-jimmolate { gap: var(--j-space-sm); }
+.j-jimmolate__sig { opacity: 0.6; }
+.j-jimmolate__input { width: 100%; font-family: var(--j-font-code); font-size: 11px; }
+
+/* Inline-edit: borderless transparent input that reads as text. */
+.j-inline-edit {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--j-font);
+  letter-spacing: 1px;
+  line-height: 1.35;
+  outline: none;
+}
+.j-inline-edit::placeholder {
+  color: var(--j-grey);
+  opacity: 0.7;
+}
+.j-inline-edit:focus-visible {
+  outline: 2px solid var(--j-gold);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+.j-inline-edit--xs { font-size: 11px; }
+.j-inline-edit--sm { font-size: 12px; }
+.j-inline-edit--md { font-size: 14px; }
+.j-inline-edit--lg { font-size: 18px; }
+.j-inline-edit--white { color: var(--j-white); }
+.j-inline-edit--gold  { color: var(--j-gold-text); }
+.j-inline-edit--grey  { color: var(--j-grey); }
+.j-inline-edit--dim   { opacity: 0.8; }
+
+/* JamlIdeVisual: filter metadata header (name / byline / description). */
+.j-jaml-ide-visual__top-matter {
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+.j-jaml-ide-visual__byline {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 8px;
+  align-items: center;
+}
+.j-jaml-ide-visual__by-label {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-white);
+}
+
+.j-input-modal__error {
+  display: block;
+  margin-top: 6px;
+}
+
+.j-input-modal__actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  justify-content: flex-end;
+  gap: var(--j-space-md);
+  margin-top: 14px;
+}
+
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+
+.j-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 9998;
+  pointer-events: auto;
+}
+
+.j-footer__bar {
+  width: 100%;
+  background: var(--j-black);
+  padding: 4px 8px 5px;
+  text-align: center;
+}
+
+.j-footer__line {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: white;
+  margin: 0;
+  line-height: 1.15;
+  position: relative;
+  z-index: 1;
+}
+
+.j-footer__line--wrap {
+  display: grid;
+  grid-auto-flow: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  grid-template-columns: repeat(auto-fill, max-content);
+}
+
+.j-footer__chunk {
+  white-space: nowrap;
+}
+
+.j-footer__chunk--credit {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 0.25rem;
+}
+
+.j-footer__sep {
+  color: var(--j-grey);
+}
+
+/* JimboLink — canonical external link styling. j-footer__link kept as an alias
+   for back-compat; new uses should be `j-link` via the JimboLink primitive. */
+.j-link,
+.j-footer__link {
+  color: var(--j-gold);
+  text-decoration: none;
+}
+
+.j-link:hover,
+.j-footer__link:hover {
+  text-decoration: underline;
+}
+
+.j-footer__extra {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  margin-left: 0.25rem;
+}
+
+@media (max-width: 320px) {
+  .j-footer__bar {
+    padding: 4px 6px 5px;
+  }
+
+  .j-footer__line,
+  .j-footer__line--wrap {
+    font-size: 9px;
+  }
+}
+
+
+/* ── Floating ─────────────────────────────────────────────────────────── */
+
+.j-floating {
+  position: absolute;
+  z-index: 20;
+}
+
+
+/* ── Background (canvas is styled inline because it's fixed fullscreen) ── */
+
+
+/* ── GlowRing ─────────────────────────────────────────────────────────── */
+
+.j-glow--must {
+  box-shadow: 0 0 0 2px var(--j-blue), 0 0 10px var(--j-blue);
+  animation: j-glow-pulse 1.6s ease-in-out infinite;
+}
+
+.j-glow--should {
+  box-shadow: 0 0 0 2px var(--j-gold), 0 0 10px var(--j-gold);
+  animation: j-glow-pulse 1.6s ease-in-out infinite;
+}
+
+.j-glow--match {
+  box-shadow: 0 0 0 2px var(--j-green-text), 0 0 18px var(--j-green-text), 0 0 36px var(--j-green-text);
+  animation: j-glow-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes j-glow-pulse {
+
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+
+/* ── Utility (extras not in the Layout Utilities block) ───────────────── */
+
+.j-flex-wrap { flex-wrap: wrap; }
+.j-gap-xl { gap: var(--j-space-xl); }
+.j-mt-sm { margin-top: var(--j-space-sm); }
+.j-shrink-0 { flex-shrink: 0; }
+.j-flex-1 { flex: 1; }
+.j-min-w-0 { min-width: 0; }
+.j-overflow-hidden { overflow: hidden; }
+.j-overflow-auto { overflow: auto; }
+.j-relative { position: relative; }
+
+/* Tone border utilities */
+.j-border--red {
+  border-color: var(--j-red);
+}
+
+.j-border--blue {
+  border-color: var(--j-blue);
+}
+
+.j-border--green {
+  border-color: var(--j-green);
+}
+
+.j-border--gold {
+  border-color: var(--j-gold);
+}
+
+.j-border--orange {
+  border-color: var(--j-orange);
+}
+
+.j-border--purple {
+  border-color: var(--j-purple);
+}
+
+/* Tone background utilities */
+.j-bg--red {
+  background-color: var(--j-red);
+}
+
+.j-bg--blue {
+  background-color: var(--j-blue);
+}
+
+.j-bg--green {
+  background-color: var(--j-green);
+}
+
+.j-bg--gold {
+  background-color: var(--j-gold);
+}
+
+.j-bg--orange {
+  background-color: var(--j-orange);
+}
+
+.j-bg--purple {
+  background-color: var(--j-purple);
+}
+
+.j-bg--dark-grey {
+  background-color: var(--j-dark-grey);
+}
+
+.j-bg--darkest {
+  background-color: var(--j-darkest);
+}
+
+/* ── App Shell ────────────────────────────────────────────────────────── */
+/* The MCP App embed target. 320×(568 − footer) hard-locked. No fluid, no
+   responsive, no reflow. The swirl behind shows in the surrounding viewport;
+   the JimboBalatroFooter sits below this rectangle (fixed, viewport-pinned)
+   and is excluded from j-app's height so the two never overlap. */
+
+.j-background-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -10;
+  pointer-events: none;
+}
+
+.j-app {
+  width: var(--j-app-w);
+  max-width: var(--j-app-w);
+  min-width: var(--j-app-w);
+  height: var(--j-app-h);
+  max-height: var(--j-app-h);
+  min-height: var(--j-app-h);
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--j-font);
+  color: var(--j-white);
+  overflow: hidden;
+  position: relative;
+}
+
+.j-app__content {
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--j-space-lg) var(--j-space-lg) var(--j-space-md);
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+}
+
+.j-app__scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--j-space-lg) var(--j-space-lg) var(--j-space-md);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-md);
+}
+
+/* When a JimboPanel is rendered as the primary content of an app scroll
+   or content area, fill the available height instead of shrink-wrapping
+   to content. Panels should not bounce vertically as content inside them
+   changes — Balatro panels are sized to their slot, not their payload. */
+.j-app__scroll > .j-panel,
+.j-app__content > .j-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.j-app__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.j-app__footer {
+  padding: var(--j-space-md) var(--j-space-lg) var(--j-space-md);
+  border-top: var(--j-panel-border-width) solid var(--j-black);
+  background: var(--j-dark-grey);
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+/* ── Section Header ──────────────────────────────────────────────────── */
+/* Colored tag + horizontal rule — reusable section divider. */
+
+.j-section-header {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: var(--j-space-md);
+  margin-bottom: var(--j-space-md);
+}
+
+.j-section-header__tag {
+  font-family: var(--j-font);
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  color: var(--j-white);
+  border-radius: 3px;
+  text-shadow: var(--j-text-shadow);
+  flex-shrink: 0;
+  background: var(--j-blue);
+}
+
+.j-section-header__tag--red { background: var(--j-red); }
+.j-section-header__tag--orange { background: var(--j-orange); }
+.j-section-header__tag--blue { background: var(--j-blue); }
+.j-section-header__tag--green { background: var(--j-green); }
+.j-section-header__tag--purple { background: var(--j-purple); }
+.j-section-header__tag--gold {
+  background: var(--j-gold);
+  color: var(--j-darkest);
+  text-shadow: none;
+}
+.j-section-header__tag--grey { background: var(--j-dark-grey); color: var(--j-grey); }
+
+.j-section-header__rule {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0.45;
+  background: var(--j-blue);
+}
+
+.j-section-header__rule--red { background: var(--j-red); }
+.j-section-header__rule--orange { background: var(--j-orange); }
+.j-section-header__rule--blue { background: var(--j-blue); }
+.j-section-header__rule--green { background: var(--j-green); }
+.j-section-header__rule--purple { background: var(--j-purple); }
+.j-section-header__rule--gold { background: var(--j-gold); }
+.j-section-header__rule--grey { background: var(--j-grey); }
+
+/* ── Fluid page shell (fan sites / seedfinder marketing) ──────────────── */
+/* Not the 320×540 embed. Full viewport, Jimbo type + spacing, no SaaS card. */
+
+.j-page {
+  min-height: 100vh;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  font-family: var(--j-font);
+  color: var(--j-white);
+  position: relative;
+}
+
+.j-page__main {
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: var(--j-space-xl) var(--j-space-lg);
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-xl);
+  box-sizing: border-box;
+}
+
+.j-page__footer {
+  flex-shrink: 0;
+}
+
+.j-page__row {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-lg);
+}
+
+@media (min-width: 720px) {
+  .j-page__row {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .j-page__row > .j-panel {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* Code / copy row inside a panel */
+.j-copy-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: var(--j-space-sm);
+  min-width: 0;
+}
+
+.j-copy-row__code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--j-font-code);
+  font-size: 12px;
+  color: var(--j-white);
+  letter-spacing: 0;
+}
+
+
+/* ── Stepper ─────────────────────────────────────────────────────────── */
+/* < value > control matching Balatro settings rows. */
+
+.j-spinner-wrap {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  gap: var(--j-space-xs);
+}
+
+.j-spinner__label {
+  text-align: center;
+}
+
+.j-spinner {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: stretch;
+  gap: var(--j-space-sm);
+}
+
+.j-spinner__value {
+  min-width: 96px;
+  padding: 4px 12px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  background: var(--j-red);
+  border-radius: var(--j-radius-md);
+  box-shadow: 0 3px 0 var(--j-dark-red);
+}
+
+
+/* ── Stepper (page-dots) ─────────────────────────────────────────────── */
+/* Row of small dots. Active page = filled white circle; other pages = a
+   dim grey circle. Carousel page indicator pattern. */
+
+.j-stepper {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.j-stepper__hit {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+}
+
+.j-stepper__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--j-teal-grey);
+}
+
+.j-stepper__dot[data-active="true"] {
+  background: var(--j-white);
+}
+
+
+/* ── Slider ──────────────────────────────────────────────────────────── */
+
+.j-slider-wrap {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: stretch;
+  gap: var(--j-space-xs);
+  width: 100%;
+}
+
+.j-slider__label {
+  text-align: center;
+}
+
+/* Slider — track is the dark inset surface, fill is bright red (filled
+   portion), and the JimboValueBadge sits as the thumb at the fill boundary.
+   Matches Balatro audio settings (IMG_3679): red fill on dark trough, red
+   value pill riding the boundary. */
+.j-slider {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  height: 28px;
+  /* Reserve half-badge width on each side so the thumb doesn't clip when
+     value is at min or max. */
+  padding: 0 20px;
+}
+
+.j-slider__track {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  background: var(--j-surface-inset);
+  border-radius: var(--j-radius-pill);
+  overflow: hidden;
+}
+
+.j-slider__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--j-red);
+  border-radius: var(--j-radius-pill) 0 0 var(--j-radius-pill);
+}
+
+.j-slider__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Absolute thumb wrapper positioned at the fill boundary. The badge inside
+   centers via translateX(-50%) so the pill straddles the boundary line. */
+.j-slider__thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+
+/* ── Value Badge ─────────────────────────────────────────────────────── */
+/* Red pill displaying a numeric value. Click to edit inline. */
+
+.j-value-badge {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 2px 8px;
+  background: var(--j-red);
+  color: var(--j-white);
+  border: none;
+  border-radius: var(--j-radius-pill);
+  cursor: pointer;
+  font-family: var(--j-font);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.j-value-badge--static {
+  cursor: default;
+}
+
+.j-value-badge--editing {
+  padding: 0;
+}
+
+.j-value-badge__input {
+  width: 56px;
+  padding: 2px 8px;
+  background: var(--j-red);
+  color: var(--j-white);
+  border: none;
+  border-radius: var(--j-radius-pill);
+  font-family: var(--j-font);
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.j-value-badge__input::-webkit-outer-spin-button,
+.j-value-badge__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
+/* ── Dual Chip ───────────────────────────────────────────────────────── */
+/* Two stat halves joined into one pill — used for Hands × Discards. */
+
+.j-dual-chip {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: stretch;
+  border-radius: var(--j-radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 0 var(--j-black);
+}
+
+.j-dual-chip__half {
+  min-width: 40px;
+  padding: 6px 14px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  color: var(--j-white);
+}
+
+.j-dual-chip__half--left {
+  border-right: 1px solid var(--j-black);
+}
+
+.j-dual-chip__half--blue { background: var(--j-blue); }
+.j-dual-chip__half--red { background: var(--j-red); }
+.j-dual-chip__half--green { background: var(--j-green); }
+.j-dual-chip__half--gold { background: var(--j-gold); color: var(--j-black); }
+.j-dual-chip__half--dark { background: var(--j-darkest); }
+
+
+/* ── Stat Grid ───────────────────────────────────────────────────────── */
+/* 3-column stat bar — reusable primitive. */
+
+.j-stat-grid {
+  background: var(--j-surface-inset);
+  border-radius: var(--j-radius-md);
+  padding: var(--j-space-md);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--j-space-md);
+  text-align: center;
+}
+
+.j-stat-grid__value {
+  font-family: var(--j-font);
+  font-size: 16px;
+  color: var(--j-gold-text);
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-stat-grid__label {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-white);
+  letter-spacing: 1px;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+
+/* ── Info Card ───────────────────────────────────────────────────────── */
+/* Generic clickable row card — used for filter lists, seed lists, etc. */
+
+.j-info-card {
+  background: var(--j-surface-inset);
+  border-radius: var(--j-radius-md);
+  padding: var(--j-space-md);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: var(--j-space-md);
+  cursor: pointer;
+}
+
+.j-info-card:hover {
+  filter: brightness(1.08);
+}
+
+.j-info-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.j-info-card__title {
+  font-family: var(--j-font);
+  font-size: 13px;
+  color: var(--j-white);
+  letter-spacing: 1px;
+  text-shadow: var(--j-text-shadow);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.j-info-card__sub {
+  font-family: var(--j-font);
+  font-size: 9px;
+  color: var(--j-gold-text);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.j-info-card__aside {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+
+/* ── Inset Box ───────────────────────────────────────────────────────── */
+/* Dark recessed content area — for log output, recent finds, etc. */
+
+.j-inset {
+  background: var(--j-surface-inset);
+  border-radius: var(--j-radius-md);
+  padding: var(--j-space-md) var(--j-space-md);
+  font-family: var(--j-font);
+  font-size: 11px;
+  color: var(--j-grey);
+  letter-spacing: 1px;
+  line-height: 1.7;
+}
+
+
+/* ── Wordmark ────────────────────────────────────────────────────────── */
+/* Title + subtitle hero block. */
+
+.j-wordmark {
+  text-align: center;
+  margin-bottom: var(--j-space-xl);
+}
+
+.j-wordmark__title {
+  font-family: var(--j-font);
+  font-size: 32px;
+  letter-spacing: 3px;
+  line-height: 1.15;
+  color: var(--j-gold-text);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+}
+
+.j-wordmark__sub {
+  font-family: var(--j-font);
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: var(--j-grey);
+  margin-top: 4px;
+  text-shadow: var(--j-text-shadow);
+}
+
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+
+.j-game-card {
+  width: var(--j-card-width, 71px);
+}
+
+.j-game-card--unknown {
+  aspect-ratio: 0.75;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.j-card-renderer {
+  --j-card-aspect: 0.75;
+  --j-card-glare-x: 50%;
+  --j-card-glare-y: 50%;
+  aspect-ratio: var(--j-card-aspect);
+  width: 100%;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  position: relative;
+  perspective: 900px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.j-card-renderer__canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--j-radius-md);
+  image-rendering: pixelated;
+  pointer-events: none;
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32);
+  will-change: transform;
+}
+
+.j-card-renderer[data-hover-tilt="true"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--j-radius-md);
+  background:
+    radial-gradient(circle at var(--j-card-glare-x) var(--j-card-glare-y), rgba(255, 255, 255, 0.28), transparent 32%),
+    linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.08) 42%, transparent 68%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 120ms linear;
+  mix-blend-mode: screen;
+}
+
+.j-card-renderer[data-hover-tilt="true"][data-hovered="true"]::before {
+  opacity: 0.72;
+}
+
+.j-card-renderer[data-hover-tilt="true"][data-hovered="true"] .j-card-renderer__canvas {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.42);
+}
+
+.j-card-renderer__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.j-card-renderer[data-hover-tilt="true"] .j-card-renderer__hit {
+  cursor: pointer;
+}
+
+
+/* ── Panel Spinner ───────────────────────────────────────────────────── */
+
+.j-panel-spinner {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-xs);
+  width: min(100%, 320px);
+  max-width: 320px;
+}
+
+.j-panel-spinner__label {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+}
+
+.j-panel-spinner__row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  align-items: stretch;
+  gap: var(--j-space-sm);
+  width: 100%;
+}
+
+.j-panel-spinner__arrow {
+  /* Arrows match the fixed panel height so they flank the entire face,
+     not just the top half. */
+  align-self: stretch;
+  height: 140px;
+  width: 30px;
+}
+
+.j-panel-spinner__arrow .j-btn__face {
+  height: 100%;
+  min-height: 140px;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 var(--j-panel-border-width-heavy) 0 0 rgba(0, 0, 0, 0.3);
+}
+
+.j-panel-spinner__arrow--left {
+  border-radius: var(--j-radius-md);
+}
+
+.j-panel-spinner__arrow--right {
+  border-radius: var(--j-radius-md);
+}
+
+.j-panel-spinner__panel {
+  /* Fixed height — the panel does NOT grow or shrink based on description
+     length. Cards with a 1-line description stay the same height as cards
+     with a 4-line description, so flipping through decks/stakes doesn't
+     wiggle the whole modal up and down. The description below clamps its
+     own height (and uses its own overflow:hidden for the ellipsis), so the
+     panel itself can keep overflow:visible — sprites can bleed slightly. */
+  min-width: 0;
+  height: 140px;
+  min-height: 140px;
+  max-height: 140px;
+  overflow: visible;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  justify-content: center;
+  gap: var(--j-space-xs);
+  min-height: 92px;
+  padding: 8px 10px;
+  background: var(--j-darkest);
+  border: var(--j-panel-border-width) solid var(--j-panel-edge);
+  border-radius: var(--j-radius-md);
+  text-align: center;
+  box-shadow: 0 var(--j-panel-border-width-heavy) 0 0 var(--j-black);
+  box-sizing: border-box;
+}
+
+.j-panel-spinner__media {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.j-panel-spinner__title,
+.j-panel-spinner__meta,
+.j-panel-spinner__description {
+  width: 100%;
+  min-width: 0;
+}
+
+.j-panel-spinner__description {
+  /* Clamp to 2 lines max so a long description (Green deck, Plasma deck)
+     can't push the spinner panel taller. Excess gets ellipsised; the full
+     text should live in a JimboTooltip per the design rules. */
+  max-height: 32px;
+  overflow: hidden;
+}
+
+.j-panel-spinner__description .j-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+
+/* ── IDE ─────────────────────────────────────────────────────────────── */
+
+.j-ide {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  /* Grow to fill a fixed-height flex parent (e.g. the 320x540 .j-app shell)
+     so the IDE never leaves dead space below it; min-height stays as the
+     floor for standalone (non-flex-parent) usage so it can't collapse. */
+  min-height: 420px;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  border-radius: var(--j-radius-lg);
+  border: var(--j-panel-border-width) solid var(--j-border-silver);
+  background: var(--j-darkest);
+  color: var(--j-white);
+  box-shadow: 0 var(--j-panel-south-edge-width) 0 0 var(--j-border-south),
+    0 calc(var(--j-surface-shadow-depth) + var(--j-panel-south-edge-width)) 0 0 rgba(0, 0, 0, 0.55);
+}
+
+.j-ide__header {
+  display: grid;
+  grid-auto-flow: row;
+  align-items: center;
+  justify-content: space-between;
+  grid-template-columns: repeat(auto-fill, max-content);
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: var(--j-panel-border-width) solid var(--j-panel-edge);
+  background: var(--j-darkest);
+}
+
+.j-ide__header--compact {
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.j-ide__header-copy {
+  min-width: 0;
+}
+
+.j-ide__title {
+  font-family: var(--j-font);
+  font-size: 16px;
+  color: var(--j-gold-text);
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-ide__subtitle {
+  margin-top: 2px;
+  font-family: var(--j-font);
+  font-size: 11px;
+  color: var(--j-grey);
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-ide__actions {
+  display: grid;
+  grid-auto-flow: row;
+  align-items: center;
+  justify-content: flex-end;
+  grid-template-columns: repeat(auto-fill, max-content);
+  gap: 8px;
+}
+
+.j-ide-toolbar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px 6px;
+  border-bottom: var(--j-panel-border-width) solid var(--j-panel-edge);
+  background: var(--j-dark-grey);
+  min-width: 0;
+}
+
+.j-ide-toolbar__tabs {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 3px;
+  overflow: hidden;
+}
+
+.j-ide-toolbar__action {
+  flex-shrink: 0;
+}
+
+.j-ide__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--j-darkest);
+}
+
+.j-ide__body--map {
+  overflow: hidden;
+}
+
+.j-ide__results {
+  padding: 12px;
+}
+
+.j-ide-results {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+.j-ide-results__bridge {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: stretch;
+  gap: var(--j-space-xs);
+}
+
+.j-ide-results__bridge-hint {
+  text-align: center;
+  line-height: 1.2;
+}
+
+
+/* ── Seed Input ───────────────────────────────────────────────────────── */
+
+.j-seed-input {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-xs);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.j-seed-input--normal {
+  --j-seed-shell-bg: var(--j-dark-grey);
+  --j-seed-shell-border: var(--j-border-silver);
+  --j-seed-shell-border-bottom: var(--j-border-south);
+  --j-seed-field-bg: var(--j-darkest);
+}
+
+.j-seed-input--dark {
+  --j-seed-shell-bg: var(--j-darkest);
+  --j-seed-shell-border: var(--j-panel-edge);
+  --j-seed-shell-border-bottom: var(--j-black);
+  --j-seed-field-bg: var(--j-darkest);
+}
+
+.j-seed-input--alt {
+  --j-seed-shell-bg: var(--j-teal-grey);
+  --j-seed-shell-border: var(--j-border-silver);
+  --j-seed-shell-border-bottom: var(--j-panel-edge);
+  --j-seed-field-bg: var(--j-dark-grey);
+}
+
+.j-seed-input__shell {
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px;
+  border-radius: var(--j-radius-md);
+  border: var(--j-panel-border-width) solid var(--j-seed-shell-border);
+  background: var(--j-seed-shell-bg);
+  box-shadow: 0 var(--j-panel-border-width-heavy) 0 0 var(--j-seed-shell-border-bottom),
+    0 calc(var(--j-surface-shadow-depth) + var(--j-panel-border-width-heavy)) 0 0 rgba(0, 0, 0, 0.55);
+  cursor: text;
+}
+
+.j-seed-input__shell[data-valid="true"] {
+  border-color: var(--j-green);
+  border-bottom-color: var(--j-dark-green);
+}
+
+.j-seed-input__field {
+  width: calc(8ch + 16px);
+  min-width: calc(8ch + 16px);
+  max-width: calc(8ch + 16px);
+  padding: 6px 8px 8px;
+  border-radius: calc(var(--j-radius-md) - 2px);
+  border: var(--j-panel-border-width) solid var(--j-panel-edge);
+  background: var(--j-seed-field-bg);
+  color: var(--j-gold-text);
+  font-size: 18px;
+  font-family: var(--j-font);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-shadow: var(--j-text-shadow);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.j-seed-input__field::placeholder {
+  color: var(--j-grey);
+  letter-spacing: 0.08em;
+  font-size: 18px;
+  opacity: 1;
+}
+
+.j-seed-input__field:focus {
+  border-color: var(--j-gold);
+}
+
+.j-seed-spinner {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-xs);
+  width: 100%;
+  max-width: 100%;
+}
+
+.j-seed-spinner__meta {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--j-space-sm);
+}
+
+.j-seed-spinner__label {
+  font-family: var(--j-font);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--j-grey);
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-seed-spinner__nav {
+  width: 100%;
+}
+
+.j-seed-spinner__nav .j-flank__content {
+  justify-content: center;
+}
+
+.j-seed-spinner__nav .j-seed-input {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .j-panel::before,
+  .j-inner-panel::before,
+  .j-btn__face::before,
+  .j-tab__btn::before,
+  .j-footer__bar::before,
+  .j-seed-input__shell::before,
+  .j-tab__btn[data-active="true"] {
+    animation: none;
+  }
+}
+
+
+/* ── Aesthetic Selector ──────────────────────────────────────────────── */
+
+.j-aesthetic-selector {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+.j-aesthetic-selector__list {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, max-content);
+  gap: var(--j-space-sm);
+}
+
+.j-aesthetic-pill {
+  padding: 4px 10px;
+  border-radius: var(--j-radius-md);
+  border: 2px solid var(--j-panel-edge);
+  background: var(--j-darkest);
+  color: var(--j-grey);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--j-font);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-shadow: var(--j-text-shadow);
+  transition: border-color 100ms ease, background 100ms ease, color 100ms ease;
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.3);
+}
+
+.j-aesthetic-pill:hover {
+  border-color: var(--j-gold);
+  color: var(--j-gold-text);
+}
+
+.j-aesthetic-pill[data-active="true"] {
+  border-color: var(--j-gold);
+  background: rgba(228, 182, 67, 0.13);
+  color: var(--j-gold-text);
+  box-shadow: 0 0 0 1px var(--j-gold), 0 2px 0 0 rgba(0, 0, 0, 0.3);
+}
+
+
+/* ── Showcase ─────────────────────────────────────────────────────────── */
+
+.j-showcase {
+  width: 100%;
+  height: 100%;
+  background: var(--j-darkest);
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  font-family: var(--j-font);
+  color: var(--j-white);
+  overflow: hidden;
+}
+
+.j-showcase__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 14px 10px;
+}
+
+.j-showcase__wordmark {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.j-showcase__wordmark-title {
+  font-size: 32px;
+  letter-spacing: 3px;
+  line-height: 1.15;
+  color: var(--j-gold-text);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+}
+
+.j-showcase__wordmark-sub {
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: var(--j-grey);
+  margin-top: 4px;
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-showcase__stats {
+  background: var(--j-surface-inset);
+  border-radius: var(--j-radius-md);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--j-space-md);
+  text-align: center;
+  margin-bottom: var(--j-space-xl);
+}
+
+.j-showcase__stat-value {
+  font-size: 16px;
+  color: var(--j-gold-text);
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-showcase__stat-label {
+  font-size: 9px;
+  color: var(--j-grey);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+.j-showcase__section-header {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: var(--j-space-md);
+  margin-bottom: var(--j-space-md);
+}
+
+.j-showcase__section-tag {
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  color: var(--j-white);
+  border-radius: 3px;
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-showcase__section-rule {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.j-showcase__filter-list {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-md);
+  margin-bottom: var(--j-space-xl);
+}
+
+.j-showcase__filter-card {
+  background: var(--j-surface-inset);
+  border-radius: var(--j-radius-md);
+  padding: 10px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.j-showcase__filter-sprites {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 2px;
+}
+
+.j-showcase__filter-sprite {
+  width: 30px;
+  height: 40px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+}
+
+.j-showcase__filter-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.j-showcase__filter-name {
+  font-size: 13px;
+  color: var(--j-white);
+  letter-spacing: 1px;
+  text-shadow: var(--j-text-shadow);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.j-showcase__filter-author {
+  font-size: 9px;
+  color: var(--j-gold-text);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.j-showcase__filter-hits {
+  text-align: right;
+}
+
+.j-showcase__filter-hits-value {
+  font-size: 14px;
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-showcase__filter-hits-label {
+  font-size: 8px;
+  color: var(--j-grey);
+  letter-spacing: 1px;
+}
+
+.j-showcase__recent {
+  background: var(--j-surface-inset);
+  border-radius: var(--j-radius-md);
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--j-grey);
+  letter-spacing: 1px;
+  line-height: 1.7;
+}
+
+.j-showcase__actions {
+  padding: 8px 10px 10px;
+  border-top: 2px solid var(--j-black);
+  background: var(--j-dark-grey);
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: 6px;
+}
+
+
+/* ── Footer suit animation ────────────────────────────────────────────── */
+
+.j-footer__suits {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+}
+
+.j-footer__suit-stage {
+  position: relative;
+  display: inline-block;
+  width: 1.5em;
+  height: 1em;
+  vertical-align: middle;
+}
+
+.j-footer__suit-char {
+  position: absolute;
+  inset: 0;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation-duration: 5s;
+  animation-delay: 0s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+}
+
+/* Suit colors — the game's inks, not inventions: hearts/diamonds red,
+   spades/clubs black (G.C BLACK #374244, see balatro-lua-notes.md). The dark
+   suits keep legible on the dark bar via the house hard-offset edge, flipped
+   light — recoloring them white is not an option. */
+.j-footer__suit-char--red {
+  color: var(--j-red);
+}
+
+.j-footer__suit-char--black {
+  color: #374244;
+  filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, 0.35));
+}
+
+.j-footer__suit-char svg {
+  display: block;
+  width: 0.95em;
+  height: 0.95em;
+}
+
+
+/* ── Copy row label ───────────────────────────────────────────────────── */
+
+.j-copy-row__label {
+  letter-spacing: 2px;
+}
+
+/* WeeJoker harvest — tap icon + seed, green flash on copy. */
+.j-seed-copy {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  gap: var(--j-space-sm);
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: var(--j-panel-border-width) solid var(--j-panel-edge);
+  border-radius: var(--j-radius-sm);
+  background: var(--j-darkest);
+  color: var(--j-white);
+  font-family: var(--j-font);
+  cursor: pointer;
+  text-shadow: var(--j-text-shadow);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.j-seed-copy:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.j-seed-copy__icon {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--j-radius-sm);
+  color: rgba(255, 255, 255, 0.65);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.j-seed-copy[data-copied="true"] .j-seed-copy__icon {
+  background: var(--j-green);
+  color: var(--j-white);
+}
+
+.j-seed-copy__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.j-seed-copy[data-copied="true"] .j-seed-copy__text {
+  color: var(--j-green-text);
+}
+
+
+/* ── Motely version badge ─────────────────────────────────────────────── */
+
+.j-motely-badge {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 6px;
+}
+
+.j-motely-badge--chip {
+  padding: 3px 8px;
+  border-radius: var(--j-radius-sm);
+  background: var(--j-darkest);
+  border: 1px solid var(--j-panel-edge);
+}
+
+/* ── Jamlyzer ─────────────────────────────────────────────────────────── */
+
+.j-jamlyzer {
+  min-height: 0;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  justify-content: center;
+  gap: var(--j-space-sm);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: var(--j-space-sm) 0;
+}
+
+.j-jamlyzer__stats {
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+
+.j-jamlyzer__spinner {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.j-jamlyzer__panel {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.j-jamlyzer__panel .j-panel__body {
+  padding: var(--j-space-sm) var(--j-space-md);
+}
+
+.j-jamlyzer__panel--verdict .j-panel__body {
+  padding: var(--j-space-md);
+}
+
+.j-jamlyzer__panel--match {
+  background: var(--j-dark-green);
+}
+
+.j-jamlyzer__panel--miss {
+  background: var(--j-darkest);
+}
+
+.j-jamlyzer__panel--hint .j-panel__body {
+  padding: var(--j-space-md) var(--j-space-sm);
+}
+
+.j-jamlyzer__tallies {
+  flex-shrink: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.j-jamlyzer__details {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+  margin-top: var(--j-space-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.j-jamlyzer__details-section {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-xs);
+  background: var(--j-surface-inset);
+  padding: var(--j-space-sm);
+  border-radius: var(--j-radius-md);
+  border: 1px solid var(--j-panel-edge);
+}
+
+.j-jamlyzer__cards-grid {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, max-content);
+  gap: var(--j-space-xs);
+  justify-content: center;
+}
+
+.j-jamlyzer__card-wrap {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  border-radius: var(--j-radius-sm);
+  box-sizing: border-box;
+  padding: 2px;
+}
+
+.j-jamlyzer__card-wrap--matched {
+  box-shadow: 0 0 10px var(--j-gold), inset 0 0 3px var(--j-gold);
+  border: 1px solid var(--j-gold);
+  animation: j-card-pulse 2s infinite ease-in-out;
+  border-radius: var(--j-radius-sm);
+}
+
+@keyframes j-card-pulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 1px var(--j-gold)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 5px var(--j-gold)); }
+}
+
+
+.j-ide__jamlyzer {
+  min-height: 0;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  padding: var(--j-space-sm) var(--j-space-md);
+  overflow: hidden;
+}
+
+/* ── Filter Browser ──────────────────────────────────────────────────── */
+
+.j-filter-browser {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--j-space-md);
+}
+
+.j-filter-browser__list-panel {
+  min-height: 0;
+}
+
+.j-filter-browser__list-panel .j-panel__body {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  min-height: 0;
+}
+
+.j-filter-browser__list {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+/* Canonical clickable list row primitive — used by JimboListItem.
+   .j-filter-browser__item is kept as an alias for backward-compat with
+   consumers that style filter rows directly. */
+.j-list-item,
+.j-filter-browser__item {
+  width: 100%;
+  border: none;
+  border-radius: var(--j-radius-md);
+  background: var(--j-darkest);
+  color: var(--j-white);
+  box-shadow: 0 var(--j-press-y) 0 var(--j-black);
+  cursor: pointer;
+  padding: var(--j-space-sm) var(--j-space-md);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--j-space-xs);
+  text-align: left;
+  font-family: var(--j-font);
+}
+
+.j-list-item[data-active="true"],
+.j-list-item:hover,
+.j-filter-browser__item[data-active="true"],
+.j-filter-browser__item:hover {
+  background: var(--j-dark-red);
+  box-shadow: 0 var(--j-press-y) 0 var(--j-darkest);
+}
+
+.j-filter-browser__item-main {
+  min-width: 0;
+}
+
+.j-filter-browser__deck-stake,
+.j-filter-browser__name {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.j-filter-browser__targets {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, max-content);
+  gap: var(--j-space-xs);
+}
+
+.j-filter-browser__target {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  padding: 2px 5px;
+  border-radius: var(--j-radius-sm);
+  background: var(--j-teal-grey);
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 10px;
+  text-shadow: var(--j-text-shadow);
+}
+
+.j-filter-browser__pager {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  justify-content: center;
+  padding-top: var(--j-space-md);
+}
+
+.j-filter-browser__page-chip {
+  min-width: 110px;
+  padding: 6px 16px;
+  border-radius: var(--j-radius-md);
+  background: var(--j-red);
+  box-shadow: 0 3px 0 var(--j-dark-red);
+  text-align: center;
+}
+
+.j-filter-browser__details {
+  flex-shrink: 0;
+  min-height: 160px;
+  justify-content: center;
+}
+
+.j-filter-browser__details-body,
+.j-filter-browser__meta,
+.j-filter-browser__actions {
+  width: 100%;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  gap: var(--j-space-sm);
+}
+
+.j-filter-browser__targets--details {
+  justify-content: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.j-filter-browser__actions .j-btn {
+  width: 100%;
+}
+
+.j-filter-browser__meta {
+  opacity: 0.78;
+  gap: var(--j-space-xs);
+}
+
+/* ── Pickers ─────────────────────────────────────────────────────────── */
+
+.j-picker {
+  max-height: 80vh;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+}
+
+.j-picker__section {
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--j-panel-edge);
+}
+
+.j-picker__section-title {
+  display: block;
+  margin-bottom: var(--j-space-md);
+}
+
+.j-picker__search {
+  padding: 6px 10px 4px;
+}
+
+.j-picker__search-field {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  padding: 6px 10px;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 13px;
+}
+
+.j-picker__hint {
+  margin: 4px 10px 6px;
+  padding: 6px 10px;
+}
+
+.j-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--j-space-sm);
+  padding: 12px 8px 18px;
+  overflow-y: auto;
+  flex: 1;
+  align-content: start;
+  scroll-padding: 12px 0 18px;
+  mask-image: linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 18px), transparent 100%);
+}
+
+.j-picker__grid--legendary {
+  padding: 0;
+  overflow: visible;
+  mask-image: none;
+}
+
+.j-picker__item {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--j-radius-sm);
+  cursor: pointer;
+  position: relative;
+}
+
+.j-picker__item[data-muted="true"] {
+  opacity: 0.35;
+}
+
+.j-picker__item-label {
+  width: 100%;
+  color: var(--j-white);
+  text-align: center;
+  overflow-wrap: anywhere;
+  line-height: 1.05;
+}
+
+.j-picker__pair {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: var(--j-space-sm);
+}
+
+.j-picker__empty {
+  grid-column: 1 / -1;
+  padding: var(--j-space-xl);
+  text-align: center;
+}
+
+.j-story-phone {
+  width: var(--j-app-w);
+  height: var(--j-app-h);
+}
+
+.j-story-panel-grid {
+  width: var(--j-app-w);
+}
+
+.j-story-card-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--j-space-md);
+  justify-items: center;
+}
+
+/* ── Font Dance Animation ─────────────────────────────────────────────── */
+
+@keyframes j-font-dance {
+  0% {
+    transform: translateY(0);
+  }
+
+  25% {
+    transform: translateY(-1px);
+  }
+
+  50% {
+    transform: translateY(0);
+  }
+
+  75% {
+    transform: translateY(1px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.j-text--dance-container {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+}
+
+.j-font-dance-char {
+  display: inline-block;
+  animation: j-font-dance 3s infinite ease-in-out;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.j-juice-hover {
+  transition: transform 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.j-juice-hover:hover {
+  transform: translateY(-2px);
+  z-index: 5;
+}
+
+
+/* ── Layout primitives — JimboStack / JimboRow ─────────────────────────── */
+/* Grid-based, not flex. The 320×568 canvas is fixed; we compose the surface
+   with named tracks rather than guess-and-checking flexbox flow.            */
+
+.j-stack { display: grid; grid-auto-flow: row; grid-auto-rows: max-content; }
+.j-row   { display: grid; grid-auto-flow: column; grid-auto-columns: max-content; }
+
+.j-stack--gap-xs, .j-row--gap-xs { gap: var(--j-space-xs); }
+.j-stack--gap-sm, .j-row--gap-sm { gap: var(--j-space-sm); }
+.j-stack--gap-md, .j-row--gap-md { gap: var(--j-space-md); }
+.j-stack--gap-lg, .j-row--gap-lg { gap: var(--j-space-lg); }
+.j-stack--gap-xl, .j-row--gap-xl { gap: var(--j-space-xl); }
+
+.j-stack--align-start,   .j-row--align-start   { align-items: start; }
+.j-stack--align-center,  .j-row--align-center  { align-items: center; }
+.j-stack--align-end,     .j-row--align-end     { align-items: end; }
+.j-stack--align-stretch, .j-row--align-stretch { align-items: stretch; }
+
+.j-stack--justify-start,   .j-row--justify-start   { justify-content: start; }
+.j-stack--justify-center,  .j-row--justify-center  { justify-content: center; }
+.j-stack--justify-end,     .j-row--justify-end     { justify-content: end; }
+.j-stack--justify-between, .j-row--justify-between { justify-content: space-between; }
+
+/* Row-only: opt-in soft wrap. Stack is column-flow so wrap is meaningless. */
+.j-row--wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, max-content); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   jimbo-addons.css — additions to the canonical jimbo.css
+   New primitives: StatCallout, SectionHeader, SidewaysLabel, PriceTag,
+   Toggle, Tooltip, Marquee, Toast, ProgressBar, ConfirmPrompt, ErrorBlock,
+   Stack/Row/Divider layout helpers.
+
+   All flat fills, m6x11plus font, design-token colors. No gradients,
+   no glass, no neumorphism. Balatro is chunky and pixel.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Spinner — `< value >` cycler. Value is a display badge, NOT a button. ── */
+.j-spinner-wrap {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.j-spinner__label {
+  text-align: center;
+  font-family: var(--j-font);
+  font-size: 12px;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-spinner {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+/* Value badge — flat red fill with dark-red south edge. No hover, no click. */
+.j-spinner__value {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 4px 14px 6px;
+  background: var(--j-red);
+  border: none;
+  border-bottom: 3px solid var(--j-dark-red);
+  border-radius: var(--j-radius-md);
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 14px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  user-select: none;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Layout helpers ───────────────────────────────────────────────────── */
+.j-stack--xs { gap: 2px; }
+.j-stack--sm { gap: 4px; }
+.j-stack--md { gap: 8px; }
+.j-stack--lg { gap: 12px; }
+.j-stack--xl { gap: 16px; }
+
+.j-row { display: grid; grid-auto-flow: column;
+  grid-auto-columns: max-content; align-items: center; }
+.j-row--xs { gap: 2px; }
+.j-row--sm { gap: 4px; }
+.j-row--md { gap: 8px; }
+.j-row--lg { gap: 12px; }
+.j-row--xl { gap: 16px; }
+.j-row--center { justify-content: center; }
+.j-row--end { justify-content: flex-end; }
+.j-row--between { justify-content: space-between; }
+
+.j-divider {
+  border: none;
+  height: 1px;
+  background: var(--j-border-south);
+  opacity: 0.4;
+  margin: 4px 0;
+}
+.j-divider--vert {
+  width: 1px;
+  height: auto;
+  align-self: stretch;
+  margin: 0 4px;
+}
+
+/* ── Stat Callout — label strip + big pixel number ────────────────────── */
+.j-stat {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: stretch;
+  background: var(--j-darkest);
+  border-radius: var(--j-radius-md);
+  overflow: hidden;
+  min-width: 56px;
+}
+.j-stat__label {
+  padding: 2px 6px;
+  font-family: var(--j-font);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-stat__label--red    { background: var(--j-red); }
+.j-stat__label--blue   { background: var(--j-blue); }
+.j-stat__label--green  { background: var(--j-green); }
+.j-stat__label--orange { background: var(--j-orange); }
+.j-stat__label--gold   { background: var(--j-gold); color: #1e1e1e; text-shadow: none; }
+.j-stat__label--purple { background: var(--j-purple); }
+.j-stat__label--grey   { background: var(--j-teal-grey); }
+.j-stat__value {
+  padding: 4px 8px 6px;
+  font-family: var(--j-font);
+  font-size: 22px;
+  line-height: 1;
+  text-align: center;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+}
+.j-stat__value--gold { color: var(--j-gold-text); }
+.j-stat__value--red  { color: var(--j-red); }
+.j-stat__value--blue { color: var(--j-blue); }
+
+/* ── Section Header — red strip + title + downward triangle ──────────── */
+.j-section-header {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  align-items: center;
+  width: 100%;
+}
+.j-section-header__bar {
+  width: 100%;
+  background: var(--j-red);
+  padding: 6px 12px;
+  text-align: center;
+  border-radius: var(--j-radius-md) var(--j-radius-md) 0 0;
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+}
+.j-section-header__bar--orange  { background: var(--j-orange); }
+.j-section-header__bar--blue    { background: var(--j-blue); }
+.j-section-header__bar--green   { background: var(--j-green); }
+.j-section-header__bar--purple  { background: var(--j-purple); }
+.j-section-header__bar--gold    { background: var(--j-gold); color: #1e1e1e; text-shadow: none; }
+.j-section-header__triangle {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--j-red);
+}
+.j-section-header__triangle--orange { border-top-color: var(--j-orange); }
+.j-section-header__triangle--blue   { border-top-color: var(--j-blue); }
+.j-section-header__triangle--green  { border-top-color: var(--j-green); }
+.j-section-header__triangle--purple { border-top-color: var(--j-purple); }
+.j-section-header__triangle--gold   { border-top-color: var(--j-gold); }
+
+/* ── Sideways Label — vertical ALL-CAPS edge label ───────────────────── */
+.j-sideways-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--j-font);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--j-grey);
+  white-space: nowrap;
+  padding: 4px 2px;
+  user-select: none;
+}
+
+/* ── Price Tag — yellow $X badge ─────────────────────────────────────── */
+.j-price-tag {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  background: var(--j-gold);
+  color: #1e1e1e;
+  font-family: var(--j-font);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: var(--j-radius-sm);
+  text-shadow: none;
+  white-space: nowrap;
+}
+.j-price-tag--float {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* ── Toggle / Checkbox ───────────────────────────────────────────────── */
+.j-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--j-darkest);
+  border: 2px solid var(--j-border-south);
+  border-radius: var(--j-radius-sm);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: background 60ms linear;
+}
+.j-toggle[data-on="true"] {
+  background: var(--j-blue);
+  border-color: var(--j-dark-blue);
+}
+.j-toggle[data-on="true"]::after {
+  content: '✓';
+  font-family: var(--j-font);
+  font-size: 14px;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  line-height: 1;
+}
+.j-toggle--green[data-on="true"]  { background: var(--j-green); border-color: var(--j-dark-green); }
+.j-toggle--red[data-on="true"]    { background: var(--j-red); border-color: var(--j-dark-red); }
+.j-toggle--orange[data-on="true"] { background: var(--j-orange); border-color: var(--j-dark-orange); }
+
+.j-toggle-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+/* ── Tooltip ─────────────────────────────────────────────────────────── */
+.j-tooltip {
+  position: relative;
+  display: inline-block;
+}
+.j-tooltip__bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--j-darkest);
+  border: 2px solid var(--j-border-silver);
+  border-radius: var(--j-radius-md);
+  padding: 6px 10px;
+  min-width: 80px;
+  max-width: 200px;
+  font-family: var(--j-font);
+  font-size: 11px;
+  color: var(--j-white);
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 100;
+}
+.j-tooltip__pointer {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--j-border-silver);
+}
+.j-tooltip__pointer::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--j-darkest);
+}
+
+/* ── Marquee — SHOP sign with bulbs ──────────────────────────────────── */
+.j-marquee {
+  position: relative;
+  background: var(--j-red);
+  border-radius: var(--j-radius-md);
+  padding: 14px 24px 10px;
+  text-align: center;
+}
+.j-marquee__bulbs {
+  position: absolute;
+  inset: 4px;
+  border: 2px dotted var(--j-white);
+  border-radius: var(--j-radius-sm);
+  pointer-events: none;
+}
+.j-marquee__title {
+  font-family: var(--j-font);
+  font-size: 26px;
+  color: var(--j-gold-text);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+  letter-spacing: 0.06em;
+  position: relative;
+  z-index: 1;
+}
+.j-marquee__sub {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-white);
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+.j-toast-host {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+.j-toast {
+  background: var(--j-darkest);
+  border: 2px solid var(--j-border-silver);
+  border-radius: var(--j-radius-md);
+  padding: 6px 12px;
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 12px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  white-space: nowrap;
+  animation: j-toast-in 200ms ease-out;
+}
+.j-toast--green  { border-color: var(--j-green);  background: var(--j-dark-green); }
+.j-toast--red    { border-color: var(--j-red);    background: var(--j-dark-red); }
+.j-toast--blue   { border-color: var(--j-blue);   background: var(--j-dark-blue); }
+.j-toast--orange { border-color: var(--j-orange); background: var(--j-dark-orange); }
+@keyframes j-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Progress Bar ────────────────────────────────────────────────────── */
+.j-progress {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: 2px;
+  width: 100%;
+}
+.j-progress__track {
+  width: 100%;
+  height: 12px;
+  background: var(--j-darkest);
+  border-radius: var(--j-radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+.j-progress__fill {
+  height: 100%;
+  background: var(--j-blue);
+  transition: width 200ms ease;
+}
+.j-progress__fill--red    { background: var(--j-red); }
+.j-progress__fill--green  { background: var(--j-green); }
+.j-progress__fill--orange { background: var(--j-orange); }
+.j-progress__fill--gold   { background: var(--j-gold); }
+.j-progress__caption {
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-grey);
+  text-align: right;
+}
+
+/* ── Error Block ─────────────────────────────────────────────────────── */
+.j-error-block {
+  background: var(--j-dark-red);
+  border: var(--j-panel-border-width) solid var(--j-red);
+  border-radius: var(--j-radius-md);
+  padding: 12px;
+  color: var(--j-white);
+  font-family: var(--j-font);
+  font-size: 12px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-error-block__title {
+  font-size: 14px;
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Status Pill (specialization of badge — short single-word state) ── */
+.j-status-pill {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--j-radius-pill);
+  font-family: var(--j-font);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--j-white);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.j-status-pill--idle    { background: var(--j-teal-grey); }
+.j-status-pill--running { background: var(--j-blue); }
+.j-status-pill--ok      { background: var(--j-green); }
+.j-status-pill--error   { background: var(--j-red); }
+.j-status-pill--paused  { background: var(--j-grey); }
+
+/* ── Seed Row and Results Scroll (Curator V3) ────────────────────────── */
+.j-seed-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #1e2b2d;
+  border: 2px solid #334461;
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+  animation: j-row-in 200ms ease-out;
+  transition: background 100ms ease, border-color 100ms ease;
+  text-decoration: none;
+}
+.j-seed-row:hover {
+  background: #3a5055;
+  border-color: #b9c2d2;
+}
+@keyframes j-row-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.j-seed-row__code {
+  font-family: var(--j-font-m6x11);
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: 1.5px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  flex: 1;
+}
+.j-seed-row__score {
+  font-family: var(--j-font-m6x11);
+  font-size: 16px;
+  color: #e4b643;
+}
+.j-results-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: 4px;
+}
+.j-results-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Jamlyzer Stream Layout (Curator V3) ─────────────────────────────── */
+.j-ante-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  scroll-snap-type: y mandatory;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: 8px;
+}
+.j-ante-scroll::-webkit-scrollbar {
+  display: none;
+}
+.j-ante-section {
+  scroll-snap-align: start;
+  background: #1e2b2d;
+  border: 2px solid #334461;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+  gap: 4px;
+}
+.j-ante-section__head {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.j-ante-section__title {
+  font-family: var(--j-font-m6x11);
+  font-size: 16px;
+  color: #e4b643;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+}
+.j-stream {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  background: #0b1416;
+}
+.j-stream--hit {
+  background: rgba(228, 182, 67, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(228, 182, 67, 0.4);
+}
+.j-stream__label {
+  font-family: var(--j-font-m6x11);
+  font-size: 8px;
+  color: #708386;
+  width: 56px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.j-stream__items {
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(auto-fill, max-content);
+}
+.j-stream-item {
+  background: #0b1416;
+  border: 1px solid #334461;
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-family: var(--j-font-m6x11);
+  font-size: 8px;
+  color: #b9c2d2;
+  white-space: nowrap;
+}
+.j-stream-item--hit {
+  background: rgba(228, 182, 67, 0.25);
+  color: #fff;
+  border-color: #e4b643;
+  box-shadow: 0 0 4px rgba(228, 182, 67, 0.5);
+}
+.j-stream-item--must-hit {
+  background: rgba(0, 147, 255, 0.3);
+  border-color: #0093ff;
+}
+.j-stream-item--should-hit {
+  background: rgba(255, 76, 64, 0.3);
+  border-color: #ff4c40;
+}
+
+/* Mystery Slot Component */
+.j-mystery-slot {
+  position: relative;
+  width: var(--j-mystery-slot-w);
+  height: var(--j-mystery-slot-h);
+  cursor: var(--j-mystery-slot-cursor, default);
+}
+
+.j-mystery-slot__card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: var(--j-mystery-slot-border);
+  background: var(--j-mystery-slot-bg);
+  transform: var(--j-mystery-slot-transform);
+  transform-style: preserve-3d;
+  transition: var(--j-mystery-slot-transition);
+  box-shadow: var(--j-mystery-slot-shadow);
+  z-index: var(--j-mystery-slot-z-index, 1);
+  pointer-events: none;
+}
+
+.j-mystery-slot__clear {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ff4c40; /* C.RED */
+  color: #fff; /* C.WHITE */
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-family: var(--j-font);
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: translateZ(10px);
+  pointer-events: auto; /* let it be clickable */
+}
+
+.j-mystery-slot__label {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(10px);
+  font-family: var(--j-font);
+  font-size: 10px;
+  color: var(--j-mystery-slot-label-color);
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+
+.j-mystery-slot img,
+.j-mystery-slot canvas {
+  transition: opacity 200ms, filter 200ms;
+}
+
+/* ── Jammy mascot motion (class names used by json-render mascot) ───────── */
+
+@keyframes jammy-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+
+@keyframes jammy-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-16px) scale(1.08); }
+  60% { transform: translateY(4px) scale(0.96); }
+}
+
+@keyframes jammy-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-3deg); }
+  40% { transform: translateX(4px) rotate(3deg); }
+  60% { transform: translateX(-3px) rotate(-2deg); }
+  80% { transform: translateX(3px) rotate(2deg); }
+}
+
+.jammy-idle { animation: jammy-idle 2.5s ease-in-out infinite; }
+.jammy-bounce { animation: jammy-bounce 0.6s ease-out; }
+.jammy-shake { animation: jammy-shake 0.4s ease-in-out; }
+
+.j-mystery-slot__sprite--empty {
+  opacity: 0.5 !important;
+  filter: saturate(0.3) !important;
+}
+
+
+/* ── JamlyzerView layout ─────────────────────────────────────────────────
+   Two named tracks: ante rail on the left, ante detail on the right.
+   The rail scrolls independently; below 560px (narrow MCP host iframes)
+   the view collapses to one column and the rail becomes a short strip. */
+.j-jamlyzer-view {
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--j-space-lg);
+  align-items: start;
+}
+
+.j-jamlyzer-view__rail {
+  max-height: 26rem;
+  min-width: 4.5rem;
+}
+
+@media (max-width: 560px) {
+  .j-jamlyzer-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .j-jamlyzer-view__rail {
+    max-height: 12rem;
+    min-width: 0;
+  }
+}
+
+
+/* ── Orbital menu + mascot (JimboOrbitalMenu / JimboMascot) ────────────── */
+.j-orbital-menu {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.j-orbital-menu__item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(calc(-50% + var(--j-orbit-x, 0px)), calc(-50% + var(--j-orbit-y, 0px)));
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.j-mascot {
+  position: relative;
+  display: inline-block;
+  width: var(--j-mascot-size, 96px);
+  height: var(--j-mascot-size, 96px);
+}
+.j-mascot__hit {
+  width: 100%;
+  height: 100%;
+}
+.j-mascot__hit--interactive {
+  cursor: pointer;
+}
+.j-mascot__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* ── Interactive seed card (json-render SeedCard) ──────────────────────── */
+.j-seed-card--interactive {
+  cursor: pointer;
+  transition: var(--j-transition);
+}
+.j-seed-card--interactive:hover {
+  border: 1px solid var(--j-blue);
+  transform: translateY(-2px);
+  box-shadow: var(--j-shadow);
+}
+
+/* ── Code snippet (inline JAML / filter fragments) ─────────────────────── */
+.j-code-snippet {
+  font-family: var(--j-font-code);
+  font-size: 12px;
+  color: var(--j-grey);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+
+/* ── Storybook stage — breathing room for overlays in docs stories ─────── */
+.j-story-stage {
+  padding: 120px;
+}
+
+/* ── Outer tab — grabbable tear-off pane chrome (JimboOuterTab) ────────── */
+.j-outer-tab {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--j-surface-inset);
+  border: 2px solid var(--j-inner-border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font-family: var(--j-font-code);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--j-grey);
+  cursor: grab;
+  user-select: none;
+}
+.j-outer-tab:active { cursor: grabbing; }
+.j-outer-tab--active { border-color: var(--j-gold); color: var(--j-gold-text); }
+.j-outer-tab__grip { display: inline-grid; place-items: center; color: var(--j-grey); }
+.j-outer-tab__space { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.j-outer-tab__fs {
+  border: none;
+  background: none;
+  color: var(--j-grey);
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  padding: 2px;
+}
+.j-outer-tab__fs:hover { color: #fff; }
+.j-outer-tab--blue { color: var(--j-blue); }
+.j-outer-tab--red { color: var(--j-red); }
+.j-outer-tab--orange { color: var(--j-orange); }
+.j-outer-tab--green { color: var(--j-green-text); }
+.j-outer-tab--purple { color: var(--j-purple); }
+.j-outer-tab--gold { color: var(--j-gold-text); }
