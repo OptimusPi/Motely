@@ -5,6 +5,8 @@
 **Law:** `CLAUDE.md` (one grammar, FilterDesc → JamlSchema, **proof = real search finds a seed**).  
 **Author of this board:** Grok (baseline + rails + anti-fake law). Claude ships the tests.
 
+**Any / jaml-ui bite queue (not S8):** `CLAUDE-BITES-MATRIX.md` — engine `E01+`, UI `U01+`. One ticket per turn.
+
 ## Product call (fixed)
 
 | Keep | Park |
