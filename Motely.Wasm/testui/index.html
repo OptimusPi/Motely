@@ -67,7 +67,7 @@
 
 <script type="module">
   import bootsharp, * as Motely from "/dist/index.mjs";
-  const { MotelyWasm, MotelyJaml, MotelySearch, IFileMounter, MotelyFileSystem } = Motely;
+  const { MotelyWasm, MotelyJaml, MotelyLsp, MotelySearch, IFileMounter, MotelyFileSystem } = Motely;
   Object.assign(globalThis, Motely);
 
   // FS is optional: default dist (EnableFileSystem=false) exports neither IFileMounter
@@ -83,6 +83,10 @@
   import { autocompletion } from "https://esm.sh/@codemirror/autocomplete@6.18.4";
   import { linter, lintGutter } from "https://esm.sh/@codemirror/lint@6.8.4";
 
+  // One editor binding, shared with consumer/. It takes CodeMirror as arguments instead of
+  // importing it, so both pages keep their own pins and only one instance ever loads.
+  import { jamlEditorExtensions } from "/shared/jaml-editor.mjs";
+
   const $ = (id) => document.getElementById(id);
 
   // Subscribe events before boot — the bridge forms at boot().
@@ -92,61 +96,11 @@
 
   await bootsharp.boot();
 
-  // Value complete via existing listItems only (written key = kind). No key phone book.
-  function tryList(kind, query) {
-    try { return MotelyJaml.listItems(kind, query || null); }
-    catch { return null; }
-  }
-
-  function jamlComplete(context) {
-    const line = context.state.doc.lineAt(context.pos);
-    const before = line.text.slice(0, context.pos - line.from);
-    const valueMatch = before.match(/([A-Za-z]+):\s*([A-Za-z]*)$/);
-    if (!valueMatch) return null;
-    const partial = valueMatch[2];
-    const names = tryList(valueMatch[1], partial || null);
-    if (!names) return null;
-    return {
-      from: context.pos - partial.length,
-      options: names.map((label) => ({ label, type: "constant" })),
-    };
-  }
-
-  // ---- live lint: engine validate + listItems value check ----
-  function jamlLint(view) {
-    const text = view.state.doc.toString();
-    const diagnostics = [];
-
-    const error = MotelyJaml.validate(text);
+  const setStatus = (text, kind) => {
     const out = $("validation");
-    if (error) {
-      diagnostics.push({ from: 0, to: view.state.doc.line(1).to, severity: "error", message: error });
-      out.textContent = error;
-      out.className = "error";
-    } else {
-      out.textContent = "valid ✓";
-      out.className = "ok";
-    }
-
-    for (let n = 1; n <= view.state.doc.lines; n++) {
-      const line = view.state.doc.line(n);
-      const m = line.text.match(/^\s*-?\s*([A-Za-z]+):\s*([A-Za-z]+)\s*$/);
-      if (!m || m[2] === "Any") continue;
-      const kind = m[1];
-      const names = tryList(kind, m[2]);
-      if (names === null) continue;
-      const exact = names.some((x) => x.toLowerCase() === m[2].toLowerCase());
-      if (!exact) {
-        const near = tryList(kind, m[2].slice(0, 4))?.[0];
-        const at = line.from + line.text.indexOf(m[2], m[0].indexOf(":"));
-        diagnostics.push({
-          from: at, to: at + m[2].length, severity: "error",
-          message: `Unknown ${kind} "${m[2]}"${near ? ` — did you mean ${near}?` : ""}`,
-        });
-      }
-    }
-    return diagnostics;
-  }
+    out.textContent = text;
+    out.className = kind === "ok" ? "ok" : "error";
+  };
 
   const view = new EditorView({
     doc: `name: testui
@@ -161,9 +115,16 @@ should:
     extensions: [
       basicSetup,
       yaml(),
-      autocompletion({ override: [jamlComplete], activateOnTyping: true }),
-      lintGutter(),
-      linter(jamlLint, { delay: 300 }),
+      // Diagnostics and completion from MotelyLsp — the engine's own JamlLanguageService,
+      // the same brain Motely.Lsp hosts over stdio for the VS Code client.
+      ...jamlEditorExtensions({
+        lsp: MotelyLsp,
+        autocompletion,
+        linter,
+        lintGutter,
+        onStatus: setStatus,
+        delay: 300,
+      }),
     ],
   });
 

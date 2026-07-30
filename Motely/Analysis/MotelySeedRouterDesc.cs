@@ -16,7 +16,7 @@ public sealed class MotelySeedRouterDesc : IMotelySeedRouterDesc, IDisposable
         var settings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(filterDesc)
             .WithDeck(deck)
             .WithStake(stake)
-            .WithSeedGenerator([seed])
+            .WithSeedList([seed])
             .WithThreadCount(1)
             .WithSeedRouter(this);
         _ownedSearch = settings.CreateSearch();

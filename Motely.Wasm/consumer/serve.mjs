@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const pkg = join(here, "node_modules", "motely-wasm", "dist");
+// The editor binding is shared with testui — one copy, served from the parent directory.
+const shared = fileURLToPath(new URL("../shared/", import.meta.url));
 const port = Number(process.env.PORT ?? 4180);
 
 const types = {
@@ -23,10 +25,12 @@ createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname === "/" ? "/index.html" : url.pathname;
 
-  // Anything under /motely/ is the installed package; everything else is this app.
+  // /motely/ is the installed package, /shared/ is the editor binding, the rest is this app.
   const [root, rel] = path.startsWith("/motely/")
     ? [pkg, path.slice("/motely/".length)]
-    : [here, path.slice(1)];
+    : path.startsWith("/shared/")
+      ? [shared, path.slice("/shared/".length)]
+      : [here, path.slice(1)];
 
   const file = normalize(join(root, rel));
   if (!file.startsWith(normalize(root))) {

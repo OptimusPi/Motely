@@ -13,5 +13,5 @@
     "node:crypto": false,
     "node:process": false
   },
-  "version": "25.0.3"
+  "version": "25.1.0"
 }

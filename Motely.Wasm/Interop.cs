@@ -42,7 +42,10 @@ public static class Interop
     /// </summary>
     private static readonly string[] EngineOnlyNodes =
     [
-        "IMotelySeedFilterDesc",
+        // IMotelySeedFilterDesc is NOT erased: BoundarySpecializations.cs gives it a specialization
+        // pair, which is what makes it cross as an opaque handle. Erasing it as well leaves the
+        // collected Binary<IMotelySeedFilterDesc[]> pointing at an element id that Rename deleted
+        // (TypeInspector.Collect renames after collecting) — CS0103 in Serializer.g.cs.
         "IMotelySeedFilter",
         "IMotelySeedScoreDesc",
         "IMotelySeedScoreProvider",
@@ -67,14 +70,21 @@ public static class Interop
     private static readonly (string Type, string Member)[] EngineOnlyMembers =
     [
         ("IMotelySearchSettings", "WithAdditionalFilter"),
-        ("IMotelySearchSettings", "AdditionalFilters"),
-        ("IMotelySearchSettings", "BaseFilterDescBase"),
         ("IMotelySearchSettings", "WithSeedScoreProvider"),
         ("IMotelySearchSettings", "WithSeedAnalyzeProvider"),
         ("IMotelySearchSettings", "WithSeedRouter"),
         // The engine's own remark on Jimmolate: there is no cross-boundary version and cannot
         // usefully be one — a JS predicate would marshal once per seed plus once per context read.
         ("IMotelySearchSettings", "WithJimmolate"),
+        // WithSeedGenerator is declared on the interface (MotelySearch.cs:142), and Bootsharp walks
+        // IMotelySearchSettings.GetMethods() — so the member it sees declares IMotelySearchSettings.
+        // Matched by the class name it never fires.
+        ("IMotelySearchSettings", "WithSeedGenerator"),
+        // These two are declared only on the implementation (MotelySearch.cs:196), so they must be
+        // matched by the class name: Bare() of MotelySearchSettings<TBaseFilter> is
+        // "MotelySearchSettings". Aimed at the interface they matched nothing, silently.
+        ("MotelySearchSettings", "AdditionalFilters"),
+        ("MotelySearchSettings", "BaseFilterDescBase"),
     ];
 
     [RenameNode]

@@ -157,7 +157,7 @@ public static partial class MotelyUnitTestAnalyzer
                 )
                     .WithDeck(cfg.Deck)
                     .WithStake(cfg.Stake)
-                    .WithSeedGenerator([cfg.Seed]) // Single seed analysis
+                    .WithSeedList([cfg.Seed]) // Single seed analysis
                     .WithThreadCount(1);
 
             using var search = searchSettings.CreateSearch();

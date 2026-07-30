@@ -181,7 +181,7 @@ public static class MotelyJamlyzer
             )
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
-                .WithSeedGenerator([seed])
+                .WithSeedList([seed])
                 .WithThreadCount(1);
             // One bounded seed, synchronous API: run inline so AwaitCompletion below is safe
             // everywhere — the browser pump would deadlock the single thread instead.
