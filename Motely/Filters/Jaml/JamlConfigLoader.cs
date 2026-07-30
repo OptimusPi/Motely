@@ -406,7 +406,7 @@ public static partial class JamlConfigLoader
     private static MotelyStandardcardRank? ParseOptionalRank(string? value, JamlSpan span = default) =>
         value is null ? null : ParseRank(value, span);
 
-    private static MotelyStandardcardRank ParseRank(string value, JamlSpan span = default)
+    internal static MotelyStandardcardRank ParseRank(string value, JamlSpan span = default)
     {
         // Pips count up from Two, so the enum's own order is the table: 2 → Two … 10 → Ten.
         if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var pip))
@@ -430,7 +430,7 @@ public static partial class JamlConfigLoader
     private static T? ParseOptionalEnum<T>(string? value, JamlSpan span = default)
         where T : struct, Enum => value is null ? null : ParseEnum<T>(value, span);
 
-    private static T ParseEnum<T>(string value, JamlSpan span = default)
+    internal static T ParseEnum<T>(string value, JamlSpan span = default)
         where T : struct, Enum
     {
         if (Enum.TryParse<T>(value, ignoreCase: true, out var parsed))

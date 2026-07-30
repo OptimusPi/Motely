@@ -9,9 +9,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyVoucher), RollsDefault = new[] { 0 })]
 public sealed class VoucherClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
-    /// <summary>Clause keys mirror VoucherFilterDesc's — the desc owns the grammar.</summary>
-    public static readonly string[] ClauseKeys = VoucherFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }

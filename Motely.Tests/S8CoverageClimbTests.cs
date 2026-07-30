@@ -860,19 +860,50 @@ public sealed class S8CoverageClimbTests
     }
 
     /// <summary>
-    /// The revived SIMD negative-legendary front (edition stream first — the ~0.3% event is
-    /// the killer check) composed with the shop-soul confirm, over 4000 seeds. Before the
-    /// category-bits fix this front could never pass a lane. The composition is a CANDIDATE
-    /// generator: it ORs "Negative edition at ante 1 or 2" with "Soul appears at ante 1 or 2"
-    /// without linking the two to the same ante. Seed 1946 proves both halves and the gap:
-    /// Negative edition rolls at ante 1, The Soul appears at ante 2 (jamlyzer-verified:
-    /// JumboArcana slot 2), so the in-game result is a plain Yorick — the exact JAML soul
-    /// route correctly rejects what the prefilter pair surfaces.
+    /// Real 8-character seeds over Balatro's own 1-9A-Z alphabet, collected by a live CLI run of
+    /// the exact JAML below. Decimal strings are not seeds: the provider drops every one holding
+    /// a '0', and 1-4 characters is not the shape the game hands out.
+    /// </summary>
+    private static readonly string[] NegativeLegendaryAnte12Seeds =
+    [
+        "ACA1C895",
+        "AGA7G779",
+        "AHA8H549",
+        "AHA9H739",
+        "AIA7I647",
+        "AJA2J169",
+        "AJA7J641",
+    ];
+
+    private const string NegativeLegendaryAnte12 = """
+        name: s8-negative-legendary
+        deck: Red
+        stake: White
+        must:
+          - legendaryJoker: any
+            edition: Negative
+            antes: [1, 2]
+        """;
+
+    /// <summary>
+    /// The exact JAML route accepts these seeds — that is what "real seed" means here, and it is
+    /// the ground truth the prefilter is measured against.
     /// </summary>
     [Fact]
-    public void NegativeLegendarySimdFront_ComposedWithSoulConfirm_FindsSeeds()
+    public void NegativeLegendaryAnte12_ExactJamlRoute_MatchesRealSeeds()
     {
-        var seeds = Enumerable.Range(1, 4000).Select(static i => i.ToString()).ToArray();
+        ProofSearch.MustMatchAll(NegativeLegendaryAnte12, NegativeLegendaryAnte12Seeds);
+    }
+
+    /// <summary>
+    /// The SIMD front composed with the shop-soul confirm is a CANDIDATE generator: it ORs
+    /// "Negative edition at ante 1 or 2" with "Soul appears at ante 1 or 2" without linking the
+    /// two to the same ante. Over-permissive is allowed; dropping a seed the exact route accepts
+    /// is not. So the prefilter's output is a superset — every exact match survives it.
+    /// </summary>
+    [Fact]
+    public void NegativeLegendarySimdFront_IsASupersetOfTheExactRoute()
+    {
         var matched = new List<string>();
         using var search = new MotelySearchSettings<NegativeLegendaryJokerSimdFilterDesc.FilterStruct>(
             new NegativeLegendaryJokerSimdFilterDesc()
@@ -880,30 +911,17 @@ public sealed class S8CoverageClimbTests
             .WithAdditionalFilter(new LegendaryJokerShopSoulFilterDesc())
             .WithDeck(MotelyDeck.Red)
             .WithStake(MotelyStake.White)
-            .WithListSearch(seeds, seeds.Length)
+            .WithListSearch(NegativeLegendaryAnte12Seeds, NegativeLegendaryAnte12Seeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithSeedMatchCallback(matched.Add)
             .Start();
         search.AwaitCompletion();
-        Assert.Equal(
-            "1946",
-            string.Join(",", matched.OrderBy(static s => s, StringComparer.Ordinal))
-        );
 
-        // The exact JAML soul route rejects the candidate: edition and soul-appearance
-        // must cohere per ante, and 1946's Negative roll (ante 1) has no Soul to redeem it.
-        ProofSearch.MustMatchNone(
-            """
-            name: s8-negative-legendary-xcheck
-            deck: Red
-            stake: White
-            must:
-              - legendaryJoker: any
-                edition: Negative
-                antes: [1, 2]
-            """,
-            "1946"
+        var dropped = NegativeLegendaryAnte12Seeds.Except(matched).ToArray();
+        Assert.True(
+            dropped.Length == 0,
+            $"Prefilter dropped seeds the exact route accepts: {string.Join(", ", dropped)}"
         );
     }
 

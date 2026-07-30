@@ -5,9 +5,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("startingDraw")]
 public sealed class StartingDrawClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Clause keys mirror StartingDrawFilterDesc's — the desc owns the grammar.</summary>
-    public static readonly string[] ClauseKeys = StartingDrawFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }

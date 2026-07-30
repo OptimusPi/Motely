@@ -18,13 +18,15 @@ public static class ProofSearch
     public static (long Matching, List<string> Matched) ListMatch(
         string jaml,
         string[] seeds,
-        int threads = 1
+        int threads = 1,
+        int cutoff = 0
     )
     {
         var config = LoadOrThrow(jaml);
         var matched = new List<string>();
         using var search = JamlSearchBuilder
-            .CreateSettings(config)
+            .CreateSettings(config, cutoff)
+            .WithAutoScoreCutoff(false)
             .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(threads)
             .WithQuietMode(true)

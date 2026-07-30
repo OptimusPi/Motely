@@ -104,11 +104,23 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
 
         if (typeof(TEnum) == typeof(MotelyStandardcardRank))
         {
-            value = (TEnum)(object)ParseRank(_text);
+            value = (TEnum)(object)JamlConfigLoader.ParseRank(_text, Span);
             return true;
         }
 
-        value = ParseEnum<TEnum>(_text);
+        value = JamlConfigLoader.ParseEnum<TEnum>(_text, Span);
+        return true;
+    }
+
+    public bool TryRank(out MotelyStandardcardRank value)
+    {
+        if (string.IsNullOrWhiteSpace(_text))
+        {
+            value = default;
+            return false;
+        }
+
+        value = JamlConfigLoader.ParseRank(_text, Span);
         return true;
     }
 
@@ -127,54 +139,10 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
         for (int i = 0; i < parts.Length; i++)
         {
             if (typeof(TEnum) == typeof(MotelyStandardcardRank))
-                value[i] = (TEnum)(object)ParseRank(parts[i]);
+                value[i] = (TEnum)(object)JamlConfigLoader.ParseRank(parts[i], Span);
             else
-                value[i] = ParseEnum<TEnum>(parts[i]);
+                value[i] = JamlConfigLoader.ParseEnum<TEnum>(parts[i], Span);
         }
         return true;
-    }
-
-    private TEnum ParseEnum<TEnum>(string raw) where TEnum : struct, Enum
-    {
-        if (Enum.TryParse<TEnum>(raw, ignoreCase: true, out var parsed))
-            return parsed;
-
-        var normalized = raw
-            .Replace(" ", "", StringComparison.Ordinal)
-            .Replace("-", "", StringComparison.Ordinal)
-            .Replace("_", "", StringComparison.Ordinal);
-        if (Enum.TryParse<TEnum>(normalized, ignoreCase: true, out parsed))
-            return parsed;
-
-        throw new JamlSemanticException(JamlEnumMessages.CannotParse(raw, typeof(TEnum)), Span);
-    }
-
-    private MotelyStandardcardRank ParseRank(string value)
-    {
-        if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var pip))
-        {
-            return pip switch
-            {
-                2 => MotelyStandardcardRank.Two,
-                3 => MotelyStandardcardRank.Three,
-                4 => MotelyStandardcardRank.Four,
-                5 => MotelyStandardcardRank.Five,
-                6 => MotelyStandardcardRank.Six,
-                7 => MotelyStandardcardRank.Seven,
-                8 => MotelyStandardcardRank.Eight,
-                9 => MotelyStandardcardRank.Nine,
-                10 => MotelyStandardcardRank.Ten,
-                _ => throw new JamlSemanticException($"Unsupported rank pip value: {pip}.", Span),
-            };
-        }
-
-        return value.ToUpperInvariant() switch
-        {
-            "J" => MotelyStandardcardRank.Jack,
-            "Q" => MotelyStandardcardRank.Queen,
-            "K" => MotelyStandardcardRank.King,
-            "A" => MotelyStandardcardRank.Ace,
-            _ => ParseEnum<MotelyStandardcardRank>(value),
-        };
     }
 }

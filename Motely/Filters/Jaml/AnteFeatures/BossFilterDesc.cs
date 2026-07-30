@@ -6,11 +6,6 @@ namespace Motely.Filters.Jaml;
 [JamlDiscriminator("boss", "bosses", ValueEnum = typeof(MotelyBossBlind))]
 public sealed class BossClause : IJamlClause, IAnteScopedClause
 {
-    /// <summary>Clause keys mirror BossFilterDesc's — the desc owns the grammar, the clause
-    /// carries the field so key validation and schema generation can read it. No Rolls yet
-    /// (see below).</summary>
-    public static readonly string[] ClauseKeys = BossFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }

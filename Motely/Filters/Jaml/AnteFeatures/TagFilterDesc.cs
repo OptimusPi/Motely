@@ -13,10 +13,6 @@ namespace Motely.Filters.Jaml;
     ValueEnum = typeof(MotelyTag), RollsDefault = new[] { 1 })]
 public sealed class TagClause : IJamlClause, IAnteScopedClause, IRollScopedClause
 {
-    /// <summary>Clause keys mirror TagFilterDesc's — the desc owns the grammar; shared by
-    /// tag/smallBlindTag/bigBlindTag, all backed by this same TagClause type.</summary>
-    public static readonly string[] ClauseKeys = TagFilterDesc.ClauseKeys;
-
     public string? Label { get; set; }
     public int Min { get; set; } = 1;
     public int? Max { get; set; }

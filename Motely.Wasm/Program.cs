@@ -11,6 +11,10 @@ using Motely.Lsp.Core;
 using Motely.SeedProviders;
 using JamlyzerEngine = Motely.Analysis.MotelyJamlyzer;
 
+// Bootsharp marshals an interface by reference as an interop instance, so JS drives the same
+// chainable With* surface the CLI does.
+[assembly: Export(typeof(IMotelySearchSettings), typeof(IMotelySearch))]
+
 /// <summary>
 /// WASM head for Motely: same engine path as native (JamlConfigLoader + JamlSearchBuilder +
 /// MotelySearch). One grammar — JAML text only. Flat <c>index</c> module for JS imports.
@@ -154,6 +158,11 @@ public static partial class MotelySearch
 
     [Export]
     public static event Action<MotelyScoredSeedResult>? OnScoredResult;
+
+    /// <summary>The engine's settings, for JS to drive directly. Config comes from MotelyJaml.FromJaml.</summary>
+    [Export]
+    public static IMotelySearchSettings Settings(JamlConfig config) =>
+        JamlSearchBuilder.CreateSettings(config);
 
     [Export]
     public static Task<MotelyScoredSeedResult[]> SearchList(JamlConfig config) =>
