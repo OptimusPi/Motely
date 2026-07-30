@@ -11,5 +11,6 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "../../sample-out"]
+  "include": ["src", "fixtures"]
 }
+

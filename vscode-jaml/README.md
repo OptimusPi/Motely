@@ -1,6 +1,6 @@
 # JAML (Motely) — VS Code
 
-Real language support for `.jaml` files. The extension is a thin LSP client.
+Real language support for `.jaml` files + **`@jimbo`** Copilot Chat participant.
 
 | Concern | Owner |
 |--------|--------|
@@ -8,8 +8,41 @@ Real language support for `.jaml` files. The extension is a thin LSP client.
 | Schema / vocab | Generated `JamlSchema` + engine enums |
 | Protocol | `Motely.Lsp` (JSON-RPC 2.0 stdio) |
 | Editor glue | this package (`vscode-languageclient`) |
+| Chat | `@jimbo` — `src/jimboChat.ts` (slashes + freeform LM tool loop) |
 
 There is no TypeScript reimplementation of the JAML grammar.
+
+## @jimbo (chat)
+
+In **Copilot Chat** (or VS Code Chat with a model):
+
+```
+@jimbo hi
+@jimbo validate this filter then find one seed
+@jimbo /validate
+@jimbo /find
+@jimbo /explain must vs should
+```
+
+| Phase | Status |
+|-------|--------|
+| J0 | Participant registered |
+| J1 | `motely_validate_jaml` / `@jimbo /validate` → `Motely.Lsp --diagnose` |
+| J2 | `motely_search_seeds` / `@jimbo /find` → `Motely.CLI --collect N` |
+| J3 | `motely_explain_jaml` / `@jimbo /explain` → `Motely.Lsp --explain` (JamlSchema) |
+| **J4** | Freeform `@jimbo` LM loop: model calls Motely tools via `lm.invokeTool` (max 6 rounds) |
+
+| Chat | Tools |
+|------|--------|
+| Freeform (J4) | model picks `#validateJaml` / `#findSeeds` / `#explainJaml` |
+| `@jimbo /validate` | direct engine (no model) |
+| `@jimbo /find` · `/find 3` | direct engine |
+| `@jimbo /explain joker` | direct engine |
+
+Search copies the filter to a **temp file** so CLI does not rewrite your on-disk `seeds:` block.
+Tool confirmation UI attaches to the chat turn via `toolInvocationToken`.
+
+F5 Extension Development Host → open Chat → `@jimbo`.
 
 ## Install (dev, from this repo)
 
@@ -17,24 +50,25 @@ There is no TypeScript reimplementation of the JAML grammar.
 # 1. Language server
 dotnet build Motely.Lsp
 
-# 2. Extension
+# 2. Extension host
 cd vscode-jaml
 npm install
 npm run compile
-# F5 in VS Code (Run Extension), or:
-code --install-extension .
+# F5 in VS Code: Run Extension (Extension Development Host)
 ```
 
 With the MotelyJAML workspace open, the extension runs:
 
 `dotnet run --project Motely.Lsp`
 
-## Bundle a self-contained server (ship)
+## Bundle a .vsix (ship)
 
 ```sh
 dotnet publish Motely.Lsp -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o vscode-jaml/server
 # win-x64 / linux-x64 as needed
-cd vscode-jaml && npm run package
+cd vscode-jaml
+npm run package          # npx @vscode/vsce package → jaml-language-support-*.vsix
+code --install-extension jaml-language-support-*.vsix
 ```
 
 ## Settings
@@ -42,6 +76,8 @@ cd vscode-jaml && npm run package
 | Setting | Meaning |
 |---------|---------|
 | `jaml.serverPath` | Absolute path to `Motely.Lsp` (or `.exe`) |
+| `jaml.cliPath` | Absolute path to `Motely.CLI` |
+| `jaml.searchTimeoutMs` | Kill search after N ms (default 120000) |
 | `jaml.trace.server` | `off` / `messages` / `verbose` LSP traffic |
 
 ## Smoke the server without VS Code

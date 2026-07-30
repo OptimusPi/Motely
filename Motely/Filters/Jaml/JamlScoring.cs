@@ -32,6 +32,117 @@ public static class JamlScoring
                 maxBossAnte = clauseMaxBossAnte;
         }
 
+        ApplyPrepareRunState(ref ctx, runState, maxAnte, maxBossAnte);
+    }
+
+    /// <summary>
+    /// Single match core for SIMD filter confirmation (<c>SearchIndividualSeeds</c> arms).
+    /// Same voucher/boss prepare + raw occurrence count as should-scoring for this clause, so
+    /// FilterDesc scalar confirm paths cannot drift from <see cref="CountRawOccurrences"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool ClauseMeetsMinForFilter(
+        ref MotelySingleSearchContext ctx,
+        IJamlClause clause
+    )
+    {
+        Debug.Assert(clause.Min > 0, "Clause.Min must be > 0 — loader bug.");
+        var runState = new MotelyRunState();
+        ApplyPrepareRunState(
+            ref ctx,
+            runState,
+            GetMaxAnte(clause),
+            GetMaxBossAnte(clause)
+        );
+        int raw = CountRawOccurrences(ref ctx, clause, runState);
+        return MeetsOccurrenceBounds(raw, clause);
+    }
+
+    /// <summary>
+    /// True when the SIMD filter confirm path is the same law as scoring (no over-permissive
+    /// vector prefilter). Scoring may skip must re-eval when every must clause is exact.
+    /// </summary>
+    internal static bool IsExactFilterConfirm(IJamlClause clause) =>
+        clause switch
+        {
+            BossClause => true,
+            StartingDrawClause => true,
+            PokerHandClause => true,
+            StandardCardClause => true,
+            LegendaryJokerClause => true,
+            // Full vector roll walks — same law as scoring counts.
+            VoucherClause => true,
+            TagClause => true,
+            ErraticRankClause => true,
+            ErraticSuitClause => true,
+            SpectralCardClause sc => SpecialSpectralCardFilterDesc.Handles(sc)
+                || sc.Sources is { RequireMegaPack: true }
+                || sc.Sources is { EtherealTag: true }
+                || sc.Sources is { OmenGlobe: true },
+            TarotCardClause tc => tc.Sources is { CharmTag: true },
+            JokerClause jc => JokerUsesLegendaryExactPath(jc),
+            AndClause a => AllExactFilterConfirm(a.Clauses),
+            OrClause o => AllExactFilterConfirm(o.Clauses),
+            // Roll-scoped event filters are full vector counts (no coarse pack walk).
+            LuckyMoneyClause
+            or LuckyMultClause
+            or MisprintMultClause
+            or WheelOfFortuneClause
+            or CavendishExtinctClause
+            or GrosMichelExtinctClause
+            or SpaceLevelupClause
+            or BusinessPayoutClause
+            or BloodstoneTriggerClause
+            or ParkingPayoutClause
+            or GlassDestroyClause
+            or WheelStaysFlippedClause => true,
+            _ => false,
+        };
+
+    private static bool AllExactFilterConfirm(IJamlClause[] clauses)
+    {
+        if (clauses.Length == 0)
+            return false;
+        for (int i = 0; i < clauses.Length; i++)
+            if (!IsExactFilterConfirm(clauses[i]))
+                return false;
+        return true;
+    }
+
+    private static bool JokerUsesLegendaryExactPath(JokerClause clause)
+    {
+        if (clause.IsWildcard)
+            return true;
+        for (int i = 0; i < clause.Jokers.Length; i++)
+        {
+            if (
+                ((MotelyJokerRarity)((int)clause.Jokers[i] & MotelyGlobals.JokerRarityMask))
+                == MotelyJokerRarity.Legendary
+            )
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// True when every must clause already had an exact SIMD confirm — scoring re-eval of must
+    /// would only re-pay the same CountRawOccurrences law.
+    /// </summary>
+    internal static bool CanSkipMustReeval(IJamlClause[] mustClauses)
+    {
+        if (mustClauses.Length == 0)
+            return true;
+        return AllExactFilterConfirm(mustClauses);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ApplyPrepareRunState(
+        ref MotelySingleSearchContext ctx,
+        MotelyRunState runState,
+        int maxAnte,
+        int maxBossAnte
+    )
+    {
         int maxVoucherAnte = maxAnte < 8 ? maxAnte + 1 : maxAnte;
         for (int ante = 1; ante <= maxVoucherAnte; ante++)
         {
@@ -108,6 +219,7 @@ public static class JamlScoring
             GlassDestroyClause c => CountGlassDestroyOccurrences(ref ctx, c),
             WheelStaysFlippedClause c => CountWheelStaysFlippedOccurrences(ref ctx, c),
             StartingDrawClause c => CountStartingDrawOccurrences(ref ctx, c),
+            PokerHandClause c => CountPokerHandOccurrences(ref ctx, c),
             AndClause c => CountAndOccurrences(ref ctx, c, runState),
             OrClause c => CountOrOccurrences(ref ctx, c, runState),
             _ => UnhandledClauseForScoring(clause),
@@ -117,6 +229,22 @@ public static class JamlScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int CapScoreCountForTesting(int count, IJamlClause clause) =>
         CapScoreCount(count, clause);
+
+    /// <summary>
+    /// Match bounds contract: <see cref="IJamlClause.Min"/> is the lower gate;
+    /// <see cref="IJamlClause.Max"/> when set is the upper gate for must / filter confirm.
+    /// Score tallies still use <see cref="CapScoreCount"/> so should columns cap contribution.
+    /// SIMD prefilters may stay over-permissive on Max; scoring / exact confirm enforce it.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool MeetsOccurrenceBounds(int raw, IJamlClause clause)
+    {
+        if (raw < clause.Min)
+            return false;
+        if (clause.Max is { } max && max > 0 && raw > max)
+            return false;
+        return true;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CapScoreCount(int count, IJamlClause clause)
@@ -466,7 +594,7 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        var sources = ResolveSpectralSources(clause);
         int maxShop = ArrayMax(sources.ShopItems);
         int userMaxPack = ArrayMax(sources.BoosterPacks);
         int maxSixthSense = ArrayMax(sources.SixthSense);
@@ -545,6 +673,10 @@ public static class JamlScoring
                 }
             }
 
+            // Omen Globe: 20% of Arcana pack cards become Spectral (voucher assumed when source is set).
+            if (sources.OmenGlobe)
+                count += CountOmenGlobeArcanaSpectrals(ref ctx, clause, sources, ante, runState);
+
             if (sources.SixthSense.Length > 0)
             {
                 var sixthSenseStream = ctx.CreateSixthSenseSpectralStream(ante);
@@ -585,6 +717,66 @@ public static class JamlScoring
         return count;
     }
 
+    /// <summary>
+    /// Omen Globe: each Arcana pack card has a 1/5 chance to be generated as Spectral instead of
+    /// Tarot. Source flag assumes the voucher is owned. Pack slots follow <paramref name="sources"/>.BoosterPacks
+    /// when set; otherwise the full late-ante pack range.
+    /// </summary>
+    private static int CountOmenGlobeArcanaSpectrals(
+        ref MotelySingleSearchContext ctx,
+        SpectralCardClause clause,
+        SpectralCardSourceConfig sources,
+        int ante,
+        MotelyRunState runState
+    )
+    {
+        int userMaxPack =
+            sources.BoosterPacks.Length > 0
+                ? ArrayMax(sources.BoosterPacks)
+                : MotelyGlobals.LateAntesMaxPackSlot;
+        int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, runState);
+
+        var packStream = ctx.CreateBoosterPackStream(ante);
+        var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
+        var spectralStream = ctx.CreateArcanaOmenSpectralStream(ante);
+        var omenStream = ctx.CreateOmenGlobePrngStream();
+
+        int count = 0;
+
+        for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+        {
+            var pack = ctx.GetNextBoosterPack(ref packStream);
+            if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
+                continue;
+
+            bool slotWanted =
+                sources.BoosterPacks.Length == 0
+                || ArrayContains(sources.BoosterPacks, packIndex);
+            var packSize = pack.GetPackSize();
+            int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(packSize);
+            var packSet = new MotelySingleItemSet();
+
+            for (int c = 0; c < cardCount; c++)
+            {
+                // Balatro: type Tarot → 20% becomes Spectral via omen_globe before create_card.
+                if (ctx.GetNextOmenGlobeSpectral(ref omenStream))
+                {
+                    var spectral = ctx.GetNextSpectral(ref spectralStream, packSet);
+                    packSet.Append(spectral);
+                    if (slotWanted)
+                        count += MatchSpectral(spectral, clause);
+                }
+                else
+                {
+                    var tarot = ctx.GetNextTarot(ref tarotStream, packSet);
+                    packSet.Append(tarot);
+                }
+            }
+        }
+
+        return count;
+    }
+
     /// <summary>Whether a spectral clause names <paramref name="card"/> as a target.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool SpectralClauseTargets(SpectralCardClause clause, MotelySpectralCard card)
@@ -596,6 +788,19 @@ public static class JamlScoring
     }
 
     /// <summary>
+    /// Explicit <c>sources:</c> wins. Null sources: shop-only for ordinary spectrals; pack slots
+    /// for Soul/BlackHole (they never appear in shop).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static SpectralCardSourceConfig ResolveSpectralSources(SpectralCardClause clause) =>
+        clause.Sources
+        ?? (
+            TargetsSpecialSpectral(clause)
+                ? SpectralCardFilterDesc.DefaultSpecialSources
+                : SpectralCardFilterDesc.DefaultSources
+        );
+
+    /// <summary>
     /// True when the clause names TheSoul and/or BlackHole — the "special" spectrals that need the
     /// Arcana/Celestial pack sources. Used to route <c>spectralCard:</c> to <see cref="SpecialSpectralCardFilterDesc"/>.
     /// </summary>
@@ -603,14 +808,18 @@ public static class JamlScoring
         SpectralClauseTargets(clause, MotelySpectralCard.TheSoul)
         || SpectralClauseTargets(clause, MotelySpectralCard.BlackHole);
 
-    /// <summary>Scalar spectral count for the SIMD filter's per-seed confirmation pass (mirrors the should-scoring count).</summary>
+    /// <summary>
+    /// Scalar spectral count for the SIMD filter's per-seed confirmation pass.
+    /// Same prepare + count as <see cref="ClauseMeetsMinForFilter"/> / should-scoring.
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int CountSpectralCardOccurrencesForFilter(
         ref MotelySingleSearchContext ctx,
         SpectralCardClause clause
     )
     {
-        var runState = CreatePermissivePackRunState(clause.Antes);
+        var runState = new MotelyRunState();
+        ApplyPrepareRunState(ref ctx, runState, GetMaxAnte(clause), GetMaxBossAnte(clause));
         return CountSpectralCardOccurrences(ref ctx, clause, runState);
     }
 
@@ -626,7 +835,7 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        var sources = ResolveSpectralSources(clause);
         int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
@@ -666,7 +875,7 @@ public static class JamlScoring
     )
     {
         int count = 0;
-        var sources = clause.Sources ?? SpectralCardFilterDesc.DefaultSources;
+        var sources = ResolveSpectralSources(clause);
         int userMaxPack = ArrayMax(sources.BoosterPacks);
 
         foreach (int ante in clause.Antes)
@@ -834,7 +1043,7 @@ public static class JamlScoring
             for (int i = 0; i < deck.Length; i++)
                 deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
 
-            ctx.Shuffle("nr1", deck);
+            ctx.Shuffle(MotelyPokerHandEval.ShuffleKeyForRound(ante), deck);
             int handSize = Math.Min(8, deck.Length);
             for (int i = 0; i < handSize; i++)
             {
@@ -845,6 +1054,40 @@ public static class JamlScoring
                     !clause.Suit.HasValue || card.StandardcardSuit == clause.Suit.Value;
                 if (matchRank && matchSuit)
                     count++;
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Count antes/rounds whose starting 8-card hand's best poker category is in the clause list.
+    /// Empty <c>antes</c> defaults to round 1 (same as a single starting-hand check).
+    /// </summary>
+    private static int CountPokerHandOccurrences(
+        ref MotelySingleSearchContext ctx,
+        PokerHandClause clause
+    )
+    {
+        int count = 0;
+        int[] antes = clause.Antes.Length > 0 ? clause.Antes : [1];
+        foreach (int ante in antes)
+        {
+            MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyStandardCard>.ValueCount];
+            for (int i = 0; i < deck.Length; i++)
+                deck[i] = new(MotelyEnum<MotelyStandardCard>.Values[i]);
+
+            ctx.Shuffle(MotelyPokerHandEval.ShuffleKeyForRound(ante), deck);
+            int handSize = Math.Min(8, deck.Length);
+            Span<MotelyItem> hand = deck.AsSpan(deck.Length - handSize, handSize);
+            MotelyPokerHand best = MotelyPokerHandEval.BestScore(hand).Type;
+
+            for (int i = 0; i < clause.Hands.Length; i++)
+            {
+                if (clause.Hands[i] == best)
+                {
+                    count++;
+                    break;
+                }
             }
         }
         return count;
@@ -1323,12 +1566,17 @@ public static class JamlScoring
         );
     }
 
+    /// <summary>
+    /// Scalar joker count for the SIMD filter's per-seed confirmation pass.
+    /// Same prepare + count as <see cref="ClauseMeetsMinForFilter"/> / should-scoring.
+    /// </summary>
     internal static int CountJokerClauseOccurrencesForFilter(
         ref MotelySingleSearchContext ctx,
         JokerClause clause
     )
     {
-        var runState = CreatePermissivePackRunState(clause.Antes);
+        var runState = new MotelyRunState();
+        ApplyPrepareRunState(ref ctx, runState, GetMaxAnte(clause), GetMaxBossAnte(clause));
         return CountJokerClauseOccurrences(ref ctx, clause, runState);
     }
 
@@ -1563,6 +1811,54 @@ public static class JamlScoring
             }
         }
 
+        if (sources.CommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.CommonShopJokers);
+            var stream = ctx.CreateCommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.CommonShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
+        if (sources.UncommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.UncommonShopJokers);
+            var stream = ctx.CreateUncommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.UncommonShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
+        if (sources.RareShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.RareShopJokers);
+            var stream = ctx.CreateRareShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RareShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
+        if (sources.AllShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.AllShopJokers);
+            var stream = ctx.CreateShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.AllShopJokers, roll))
+                    count += MatchJoker(item, targetTypes, edition, stickers);
+            }
+        }
+
         return count;
     }
 
@@ -1722,6 +2018,54 @@ public static class JamlScoring
             }
         }
 
+        if (sources.CommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.CommonShopJokers);
+            var stream = ctx.CreateCommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.CommonShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+            }
+        }
+
+        if (sources.UncommonShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.UncommonShopJokers);
+            var stream = ctx.CreateUncommonShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.UncommonShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+            }
+        }
+
+        if (sources.RareShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.RareShopJokers);
+            var stream = ctx.CreateRareShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.RareShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+            }
+        }
+
+        if (sources.AllShopJokers.Length > 0)
+        {
+            int max = ArrayMax(sources.AllShopJokers);
+            var stream = ctx.CreateShopJokerStream(ante);
+            for (int roll = 0; roll <= max; roll++)
+            {
+                var item = ctx.GetNextJoker(ref stream);
+                if (ArrayContains(sources.AllShopJokers, roll))
+                    count += MatchJokerWildcard(item, wildcardRarity, edition, stickers);
+            }
+        }
+
         return count;
     }
 
@@ -1807,6 +2151,8 @@ public static class JamlScoring
 
     private static int MatchTarot(MotelyItem item, TarotCardClause clause)
     {
+        if (clause.IsWildcard)
+            return item.TypeCategory == MotelyItemTypeCategory.TarotCard ? 1 : 0;
         for (int i = 0; i < clause.Tarots.Length; i++)
             if (
                 item.Type
@@ -1864,6 +2210,7 @@ public static class JamlScoring
             ErraticRankClause c => ArrayMax(c.Antes),
             ErraticSuitClause c => ArrayMax(c.Antes),
             StartingDrawClause c => ArrayMax(c.Antes),
+            PokerHandClause c => ArrayMax(c.Antes),
             AndClause c => MaxNestedAnte(c.Clauses),
             OrClause c => MaxNestedAnte(c.Clauses),
             _ => 0,
@@ -1905,15 +2252,6 @@ public static class JamlScoring
                 max = nestedMax;
         }
         return max;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static MotelyRunState CreatePermissivePackRunState(int[] antes)
-    {
-        var runState = new MotelyRunState();
-        for (int i = 0; i < antes.Length; i++)
-            runState.ActivateExtendedPackAnte(antes[i]);
-        return runState;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

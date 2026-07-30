@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using Motely.Analysis;
 using Motely.Filters.Jaml;
-using Xunit.Abstractions;
 
 namespace Motely.Tests;
 
-public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
+public sealed class JAMLyzerUnitTests
 {
     private static JamlConfig SeedConfig(
         string seed,
@@ -24,12 +22,27 @@ public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
     [InlineData("UNITTEST")]
     [InlineData("ALEEB")]
     [InlineData("1234567")]
-    public void Analyze_ReturnsSeedWithEightAntes(string seed)
+    public void Analyze_ReturnsSeedWithNineAntes(string seed)
     {
         var results = MotelyJamlyzer.Analyze(SeedConfig(seed));
         Assert.Single(results);
         Assert.Equal(seed, results[0].Seed);
-        Assert.Equal(8, results[0].Antes.Count);
+        Assert.Equal(9, results[0].Antes.Count);
+    }
+
+    [Fact]
+    public void Analyze_ScopedAnteZeroEmitsAnteZeroRow()
+    {
+        var config = JamlConfigLoader.FromJaml(
+            "must:\n  - legendaryJoker: Perkeo\n    antes: [0, 1]\nseeds: [UNITTEST]"
+        );
+        var results = MotelyJamlyzer.Analyze(config);
+        Assert.Single(results);
+        Assert.Equal(2, results[0].Antes.Count);
+        Assert.Equal(0, results[0].Antes[0].Ante);
+        Assert.Equal(1, results[0].Antes[1].Ante);
+        Assert.Equal(4, results[0].Antes[0].Packs.Count);
+        Assert.Equal(15, results[0].Antes[0].ShopItems.Count);
     }
 
     [Fact]
@@ -37,13 +50,14 @@ public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
     {
         var results = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"));
         Assert.Equal(4, results[0].Antes[0].Packs.Count);
+        Assert.Equal(4, results[0].Antes[1].Packs.Count);
     }
 
     [Fact]
     public void Analyze_AnteTwoPlusSixPacks()
     {
         var results = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"));
-        for (int i = 1; i < 8; i++)
+        for (int i = 2; i < 9; i++)
             Assert.Equal(6, results[0].Antes[i].Packs.Count);
     }
 
@@ -51,8 +65,8 @@ public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
     public void Analyze_AnteNumbersAreSequential()
     {
         var results = MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"));
-        for (int i = 0; i < 8; i++)
-            Assert.Equal(i + 1, results[0].Antes[i].Ante);
+        for (int i = 0; i < 9; i++)
+            Assert.Equal(i, results[0].Antes[i].Ante);
     }
 
     [Fact]
@@ -66,7 +80,8 @@ public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
         Assert.Equal(rolls, events.Misprint.Length);
 
         // Per-ante pulls + shop-source queues are also rolls-length (Emperor is 2 per use).
-        var ante1 = results[0].Antes[0];
+        var ante1 = results[0].Antes[1];
+        Assert.Equal(0, results[0].Antes[0].Ante);
         Assert.Equal(rolls, ante1.Pulls.JudgementJokers.Count);
         Assert.Equal(rolls * 2, ante1.Pulls.EmperorTarots.Count);
         Assert.Equal(rolls, ante1.ShopStreams.ShopJokers.Count);
@@ -313,57 +328,14 @@ public sealed class JAMLyzerUnitTests(ITestOutputHelper output)
             SeedConfig("KK1XD111", MotelyDeck.Ghost, MotelyStake.Black)
         );
         Assert.Single(results);
-        Assert.Equal(8, results[0].Antes.Count);
+        Assert.Equal(9, results[0].Antes.Count);
     }
 
     [Fact]
-    public void ComputeAntes_NoAnteClause_ReturnsAllEight()
+    public void ComputeAntes_NoAnteClause_ReturnsZeroThroughEight()
     {
         var config = JamlConfigLoader.FromJaml("seeds: []");
         var antes = MotelyJamlyzer.ComputeAntes(config);
-        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8], antes);
-    }
-
-    // Scroll-pagination timing sweep — the "nerd interop graph". For each chunk size we scroll a
-    // fixed TOTAL of rolls via chained resume (TOTAL/chunk calls), timing the lot. Prints a table
-    // (chunk, calls, ms, rolls/ms). Expect a U/quadratic shape: tiny chunks pay per-call boot AND
-    // offset-replay (composite resume is O(offset)), big chunks amortize the boot. Bumping TOTAL to
-    // a million is only cheap if you scroll events-only (those resume O(1) via the state bag).
-    [Fact(
-        Skip = "Performance benchmark: too slow for the normal test run (composite resume is O(total^2))"
-    )]
-    public void Benchmark_ScrollPagination_ChunkSizeSweep()
-    {
-        const int total = 100000; // bounded: composite offset-replay is cumulatively O(total^2)
-        int[] chunks = [1, 10, 100, 1000, 10000];
-
-        output.WriteLine($"seed=UNITTEST  total={total} rolls per chunk size");
-        output.WriteLine("chunk |  calls |     ms | rolls/ms");
-        output.WriteLine("------+--------+--------+---------");
-
-        foreach (int chunk in chunks)
-        {
-            var sw = Stopwatch.StartNew();
-            int rolled = 0,
-                calls = 0;
-            MotelyJamlyzerStreamStates? state = null;
-            while (rolled < total)
-            {
-                int take = Math.Min(chunk, total - rolled);
-                var r = state is null
-                    ? MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), eventRolls: take)[0]
-                    : MotelyJamlyzer.Analyze(SeedConfig("UNITTEST"), state, eventRolls: take)[0];
-                state = r.StreamStates;
-                rolled += take;
-                calls++;
-            }
-            sw.Stop();
-
-            Assert.Equal(total, state!.RollOffset); // sanity: the scroll covered exactly TOTAL
-            double ms = sw.Elapsed.TotalMilliseconds;
-            output.WriteLine(
-                $"{chunk, 5} | {calls, 6} | {ms, 6:F1} | {total / Math.Max(ms, 0.001), 8:F1}"
-            );
-        }
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 8], antes);
     }
 }

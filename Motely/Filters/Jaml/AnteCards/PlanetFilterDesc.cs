@@ -13,9 +13,9 @@ public sealed class PlanetCardClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyPlanetCard[] Planets { get; set; }
+    public MotelyPlanetCard[] Planets { get; set; } = [];
 
-    // null = the author wrote no `sources:` block → PlanetCardFilterDesc.DefaultSources
+    // null = no sources: in JAML → filter DefaultSources at CreateFilter/score (not parse).
     // applies. Any explicit block (even partial) is used verbatim — defaults never merge in.
     public PlanetSourceConfig? Sources { get; set; }
 }
@@ -46,13 +46,12 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Applied only when <c>Sources</c> is null, so a
-    /// terse clause like <c>planet: Pluto</c> just works; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null. Shop only; packs need explicit sources:.
+    /// </summary>
     internal static readonly PlanetSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public PlanetCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
@@ -104,6 +103,20 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
             var shopIndices = sources.ShopItems;
             var boosterPacks = sources.BoosterPacks;
 
+            VectorMask ante1Extended = VectorMask.NoBitsSet;
+            if (boosterPacks.Length > 0 && JamlSimdPackSupport.NeedsAnte1Extension(maxBoosterPack))
+            {
+                bool hasAnte1 = false;
+                for (int i = 0; i < clause.Antes.Length; i++)
+                    if (clause.Antes[i] == 1)
+                    {
+                        hasAnte1 = true;
+                        break;
+                    }
+                if (hasAnte1)
+                    ante1Extended = JamlSimdPackSupport.Ante1PackExtensionMask(ref ctx);
+            }
+
             foreach (var ante in clause.Antes)
             {
                 // ── Shop items SIMD ──
@@ -148,6 +161,7 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
                 }
 
                 // ── Celestial packs SIMD ──
+                // Per-lane size (Normal=3, Jumbo/Mega=5) + ante-1 slot reachability.
                 if (boosterPacks.Length > 0)
                 {
                     var packStream = ctx.CreateBoosterPackStream(ante);
@@ -166,48 +180,59 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
                             }
                         }
 
+                        VectorMask reachable = JamlSimdPackSupport.SlotReachableMask(
+                            ante,
+                            p,
+                            ante1Extended
+                        );
+                        VectorMask countLanes = isTarget
+                            ? reachable
+                            : VectorMask.NoBitsSet;
+
                         var packType = pack.GetPackType();
                         VectorMask isCelestial = VectorEnum256.Equals(
                             packType,
                             MotelyBoosterPackType.Celestial
                         );
-                        if (isCelestial.IsPartiallyTrue())
-                        {
-                            var contents = ctx.GetNextCelestialPackContents(
-                                ref planetStream,
-                                MotelyBoosterPackSize.Normal
-                            );
+                        if (isCelestial.IsAllFalse())
+                            continue;
 
-                            if (isTarget)
+                        VectorMask isNormal = VectorEnum256.Equals(
+                            pack.GetPackSize(),
+                            MotelyBoosterPackSize.Normal
+                        );
+                        VectorMask baseLanes = isCelestial;
+                        VectorMask extraLanes = isCelestial & ~isNormal;
+                        var baseMask = JamlSimdPackSupport.ToPrngMask(baseLanes);
+                        var extraMask = JamlSimdPackSupport.ToPrngMask(extraLanes);
+
+                        for (int c = 0; c < 3; c++)
+                        {
+                            var card = ctx.GetNextPlanet(ref planetStream, baseMask);
+                            if (countLanes.IsPartiallyTrue())
+                                JamlSimdPackSupport.AddMatchCounts(
+                                    MatchPlanets(card, clause) & countLanes & baseLanes,
+                                    ref matchCounts
+                                );
+                        }
+
+                        if (extraLanes.IsPartiallyTrue())
+                        {
+                            for (int c = 0; c < 2; c++)
                             {
-                                for (int i = 0; i < contents.Length; i++)
-                                {
-                                    VectorMask match = MatchPlanets(contents[i], clause);
-                                    if (match.IsPartiallyTrue())
-                                    {
-                                        matchCounts = Vector256.Add(
-                                            matchCounts,
-                                            Vector256.ConditionalSelect(
-                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(
-                                                    match
-                                                ),
-                                                Vector256.Create(1),
-                                                Vector256<int>.Zero
-                                            )
-                                        );
-                                    }
-                                }
+                                var card = ctx.GetNextPlanet(ref planetStream, extraMask);
+                                if (countLanes.IsPartiallyTrue())
+                                    JamlSimdPackSupport.AddMatchCounts(
+                                        MatchPlanets(card, clause) & countLanes & extraLanes,
+                                        ref matchCounts
+                                    );
                             }
                         }
                     }
                 }
             }
 
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, needed, clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

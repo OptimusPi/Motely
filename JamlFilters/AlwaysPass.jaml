@@ -1,4 +1,4 @@
-name: Always Pass (any joker) - speed test
+name: Always Pass (any joker) - smoke test
 deck: Red
 stake: White
 must:
@@ -6,3 +6,7 @@ must:
 should:
   - joker: Any
     score: 1
+
+seeds:
+  - D
+  - X

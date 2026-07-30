@@ -9,8 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "jaml-ui": "file:/Users/nate/Documents/GitHub/jaml-ui",
-    "motely-wasm": "^24.5.0",
+    "jaml-ui": "file:../../jaml-ui",
+    "motely-wasm": "file:../../Motely.Wasm",
+
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

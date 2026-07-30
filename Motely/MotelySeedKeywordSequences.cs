@@ -64,35 +64,63 @@ public static class MotelySeedKeywordSequences
     public const long FunnyKeywordAestheticSeedCount = 5_228_371_963L;
     public const long BalatroKeywordAestheticSeedCount = 6_938_858_608L;
     public const long LeetKeywordAestheticSeedCount = 7_908_676_849L;
+    // Recomputed when NsfwKeywords changes (MotelyGlobals.GetPaddedSeedCountForKeywordsLong).
+    // 2026-07-29: dropped ASS/ASSY/ASSES/ASSMAN + ambiguous short pads (ROD/WET/BLOW/…).
+    public const long NsfwKeywordAestheticSeedCount = 1_563_469_676L;
 
     /// <summary>
     /// Lazy generator that yields every padded seed for the keyword-backed JAML aesthetics
     /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,
-    /// <see cref="JamlAesthetic.Balatro"/>). Palindrome and Echo aren't keyword
-    /// sequences — they live next to their own generators.
+    /// <see cref="JamlAesthetic.Balatro"/>, <see cref="JamlAesthetic.Nsfw"/>). Palindrome and Echo
+    /// aren't keyword sequences — they live next to their own generators.
     /// </summary>
-    public static IEnumerable<string> EnumerateAestheticSeeds(JamlAesthetic aesthetic)
+    /// <param name="paddingAlphabet">
+    /// Free-slot charset. Null = full seed alphabet (historical full aesthetic counts).
+    /// Digits-only pad keeps the keyword letters readable and collapses the stream.
+    /// </param>
+    public static IEnumerable<string> EnumerateAestheticSeeds(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet = null
+    )
     {
         foreach (
-            var seed in MotelyGlobals.GeneratePaddedSeedsForKeywords(KeywordsFor(aesthetic), null)
+            var seed in MotelyGlobals.GeneratePaddedSeedsForKeywords(
+                KeywordsFor(aesthetic),
+                paddingAlphabet
+            )
         )
             yield return seed;
     }
 
-    /// <summary>Baked seed count for the keyword-backed JAML aesthetics. See <see cref="EnumerateAestheticSeeds"/>.</summary>
-    public static long GetAestheticSeedCount(JamlAesthetic aesthetic) =>
-        aesthetic switch
+    /// <summary>
+    /// Seed count for keyword-backed aesthetics. Full alphabet uses baked constants;
+    /// any explicit pad is counted live via <see cref="MotelyGlobals.GetPaddedSeedCountForKeywordsLong"/>.
+    /// </summary>
+    public static long GetAestheticSeedCount(
+        JamlAesthetic aesthetic,
+        char[]? paddingAlphabet = null
+    )
+    {
+        if (paddingAlphabet is { Length: > 0 })
+            return MotelyGlobals.GetPaddedSeedCountForKeywordsLong(
+                KeywordsFor(aesthetic),
+                paddingAlphabet
+            );
+
+        return aesthetic switch
         {
             JamlAesthetic.Gross => GrossKeywordAestheticSeedCount,
             JamlAesthetic.Funny => FunnyKeywordAestheticSeedCount,
             JamlAesthetic.Balatro => BalatroKeywordAestheticSeedCount,
             JamlAesthetic.Leet => LeetKeywordAestheticSeedCount,
+            JamlAesthetic.Nsfw => NsfwKeywordAestheticSeedCount,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(aesthetic),
                 aesthetic,
                 "Not a keyword aesthetic."
             ),
         };
+    }
 
     private static string[] KeywordsFor(JamlAesthetic aesthetic) =>
         aesthetic switch
@@ -101,6 +129,7 @@ public static class MotelySeedKeywordSequences
             JamlAesthetic.Funny => FunnyKeywords,
             JamlAesthetic.Balatro => BalatroKeywords,
             JamlAesthetic.Leet => LeetKeywords,
+            JamlAesthetic.Nsfw => NsfwKeywords,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(aesthetic),
                 aesthetic,
@@ -1433,5 +1462,209 @@ public static class MotelySeedKeywordSequences
         "Y337",
         "YO7O",
         "YOR1CK",
+    ];
+
+    /// <summary>
+    /// Crude / NSFW keyword pad list (length 3–8, Motely alphabet only).
+    /// For spotting seeds you might not want in a public Balatro server.
+    /// Disability-targeted tokens are not included.
+    /// </summary>
+    public static readonly string[] NsfwKeywords =
+    [
+        // Short bare "ASS" / pad-bloat duds dropped — keep compounds that actually read as nsfw.
+        "CUM",
+        "CUMS",
+        "CUMMY",
+        "CUMSHOT",
+        "FUCK",
+        "FUCKS",
+        "FUCKER",
+        "FUCKED",
+        "FUCKING",
+        "SHIT",
+        "SHITS",
+        "SHITTY",
+        "BULLSHIT",
+        "COCK",
+        "COCKS",
+        "COCKY",
+        "TWAT",
+        "TWATS",
+        "FAGS",
+        "FAG",
+        "DICK",
+        "DICKS",
+        "DICKY",
+        "PISS",
+        "PISSY",
+        "PISSED",
+        "TITS",
+        "TITTY",
+        "TITTIES",
+        "BOOB",
+        "BOOBS",
+        "BOOBY",
+        "BOOBIES",
+        "PUSSY",
+        "CUNT",
+        "CUNTS",
+        "SEX",
+        "SEXY",
+        "SEXED",
+        "PORN",
+        "PORNO",
+        "ANAL",
+        "ANALS",
+        "BITCH",
+        "BITCHY",
+        "BITCHES",
+        "WHORE",
+        "WHORES",
+        "SLUT",
+        "SLUTS",
+        "SLUTTY",
+        "BALLS",
+        "BALLSY",
+        "DILDO",
+        "DILDOS",
+        "PENIS",
+        "PENISES",
+        "VAGINA",
+        "HORNY",
+        "SUCK",
+        "SUCKS",
+        "SUCKER",
+        "SUCKED",
+        "BLOWJOB",
+        "HANDJOB",
+        "RIMJOB",
+        "JIZZ",
+        "JIZZY",
+        "SPUNK",
+        "SPUNKY",
+        "WANK",
+        "WANKY",
+        "WANKER",
+        "WANKED",
+        "PRICK",
+        "PRICKS",
+        "NUTTED",
+        "BONER",
+        "BONERS",
+        "HARDON",
+        "ORGASM",
+        "ORGY",
+        "ORGIES",
+        "NAKED",
+        "NUDE",
+        "NUDES",
+        "HOOTERS",
+        "MILF",
+        "DILF",
+        "THOT",
+        "THOTS",
+        "NSFW",
+        "LEWD",
+        "LEWDS",
+        "KINK",
+        "KINKY",
+        "KINKED",
+        "FETISH",
+        "BDMS",
+        "BDSM",
+        "PECKER",
+        "SCHLONG",
+        "WIENER",
+        "WEENIE",
+        "DONG",
+        "DONGS",
+        "CLIT",
+        "CLITS",
+        "BUTTSEX",
+        "BUTTFUCK",
+        "FUCKASS",
+        "DICKASS",
+        "CUMFACE",
+        "CUMDUMP",
+        "SEXTOY",
+        "TOYBOY",
+        "GAYSEX",
+        "RAWDOG",
+        "CREAMPIE",
+        "FACIAL",
+        "SQUIRT",
+        "SQUIRTY",
+        "MOAN",
+        "MOANS",
+        "MOANER",
+        "POUND",
+        "POUNDER",
+        "THROB",
+        "THROBS",
+        "SEMEN",
+        "SPERM",
+        "SPERMY",
+        "TESTES",
+        "GONADS",
+        "PHALLUS",
+        "VULVA",
+        "LABIA",
+        "RECTUM",
+        "ANUS",
+        "ARSE",
+        "ARSES",
+        "ARSEHOLE",
+        "ASSHOLE",
+        "ASSHOLES",
+        "DAMN",
+        "DAMNIT",
+        "HELL",
+        "HELLISH",
+        "BASTARD",
+        "BUGGER",
+        "BUGGERY",
+        "SODOMY",
+        "SODOM",
+        "FISTED",
+        "FISTING",
+        "PEGGED",
+        "PEGGING",
+        "RIDEIT",
+        "SUCKIT",
+        "EATME",
+        "LICKME",
+        "SPANK",
+        "SPANKY",
+        "SPANKED",
+        "WHIPME",
+        "CHOKE",
+        "CHOKED",
+        "GAGME",
+        "GAGGED",
+        "SLAVE",
+        "MASTER",
+        "DADDY",
+        "MOMMY",
+        "SISSY",
+        "SISSIES",
+        "TRAP",
+        "TRAPS",
+        "FUTA",
+        "HENTAI",
+        "RULE34",
+        "PORNIFY",
+        "XXX",
+        "XXXX",
+        "XXXXX",
+        "SEXPERT",
+        "SEXLESS",
+        "SEXIEST",
+        "HOTTIE",
+        "HOTTIES",
+        "CUTIE",
+        "BABE",
+        "BABES",
+        "WAIFU",
+        "HUSBANDO",
     ];
 }

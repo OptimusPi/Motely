@@ -13,9 +13,9 @@ public sealed class SpectralCardClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelySpectralCard[] Spectrals { get; set; }
+    public MotelySpectralCard[] Spectrals { get; set; } = [];
 
-    // null = no `sources:` block → SpectralCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    // null = no sources: in JAML → filter DefaultSources at CreateFilter/score (not parse).
     public SpectralCardSourceConfig? Sources { get; set; }
 }
 
@@ -45,12 +45,22 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Specialty sources (Sixth Sense, Seance) stay off
-    /// by default. Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null for ordinary spectrals. Shop only;
+    /// packs/specialty need explicit <c>sources:</c>.
+    /// </summary>
     internal static readonly SpectralCardSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+    };
+
+    /// <summary>
+    /// Null-sources default for TheSoul / BlackHole: those cards never appear in shop —
+    /// only Arcana/Celestial/Spectral packs. Shop-only <see cref="DefaultSources"/> would
+    /// make <c>spectralCard: TheSoul</c> match nothing.
+    /// </summary>
+    internal static readonly SpectralCardSourceConfig DefaultSpecialSources = new()
+    {
         BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
@@ -129,19 +139,31 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
             var sources = clause.Sources ?? DefaultSources;
-            if (sources.RequireMegaPack)
+            // Mega / Ethereal / OmenGlobe: Arcana or pack-size rules live in scoring.
+            if (sources.RequireMegaPack || sources.EtherealTag || sources.OmenGlobe)
                 return ctx.SearchIndividualSeeds(
                     (MotelySingleSearchContext single) =>
-                        JamlScoring.CountSpectralCardOccurrencesForFilter(ref single, clause)
-                        >= needed
-                            ? 1
-                            : 0
+                        JamlScoring.ClauseMeetsMinForFilter(ref single, clause) ? 1 : 0
                 );
 
             var shopIndices = sources.ShopItems;
             var boosterPacks = sources.BoosterPacks;
             var sixthSenseRolls = sources.SixthSense;
             var seanceRolls = sources.Seance;
+
+            VectorMask ante1Extended = VectorMask.NoBitsSet;
+            if (boosterPacks.Length > 0 && JamlSimdPackSupport.NeedsAnte1Extension(maxBoosterPack))
+            {
+                bool hasAnte1 = false;
+                for (int i = 0; i < clause.Antes.Length; i++)
+                    if (clause.Antes[i] == 1)
+                    {
+                        hasAnte1 = true;
+                        break;
+                    }
+                if (hasAnte1)
+                    ante1Extended = JamlSimdPackSupport.Ante1PackExtensionMask(ref ctx);
+            }
 
             foreach (var ante in clause.Antes)
             {
@@ -187,8 +209,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                 }
 
                 // ── Spectral packs SIMD ──
-                // Note: GetNextSpectralPackContents takes scalar MotelyBoosterPackSize.
-                // Pack size varies per lane, so we use Normal as baseline.
+                // Per-lane size (Normal=2, Jumbo/Mega=4) + ante-1 slot reachability.
                 if (boosterPacks.Length > 0)
                 {
                     var packStream = ctx.CreateBoosterPackStream(ante);
@@ -207,39 +228,52 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                             }
                         }
 
+                        VectorMask reachable = JamlSimdPackSupport.SlotReachableMask(
+                            ante,
+                            p,
+                            ante1Extended
+                        );
+                        VectorMask countLanes = isTarget
+                            ? reachable
+                            : VectorMask.NoBitsSet;
+
                         var packType = pack.GetPackType();
                         VectorMask isSpectral = VectorEnum256.Equals(
                             packType,
                             MotelyBoosterPackType.Spectral
                         );
-                        if (isSpectral.IsPartiallyTrue())
-                        {
-                            // Spectral Normal = 2 cards, Jumbo/Mega = 4.
-                            // Use Normal as baseline.
-                            var contents = ctx.GetNextSpectralPackContents(
-                                ref spectralStream,
-                                MotelyBoosterPackSize.Normal
-                            );
+                        if (isSpectral.IsAllFalse())
+                            continue;
 
-                            if (isTarget)
+                        VectorMask isNormal = VectorEnum256.Equals(
+                            pack.GetPackSize(),
+                            MotelyBoosterPackSize.Normal
+                        );
+                        VectorMask baseLanes = isSpectral;
+                        VectorMask extraLanes = isSpectral & ~isNormal;
+                        var baseMask = JamlSimdPackSupport.ToPrngMask(baseLanes);
+                        var extraMask = JamlSimdPackSupport.ToPrngMask(extraLanes);
+
+                        for (int c = 0; c < 2; c++)
+                        {
+                            var card = ctx.GetNextSpectral(ref spectralStream, baseMask);
+                            if (countLanes.IsPartiallyTrue())
+                                JamlSimdPackSupport.AddMatchCounts(
+                                    MatchSpectrals(card, clause) & countLanes & baseLanes,
+                                    ref matchCounts
+                                );
+                        }
+
+                        if (extraLanes.IsPartiallyTrue())
+                        {
+                            for (int c = 0; c < 2; c++)
                             {
-                                for (int i = 0; i < contents.Length; i++)
-                                {
-                                    VectorMask match = MatchSpectrals(contents[i], clause);
-                                    if (match.IsPartiallyTrue())
-                                    {
-                                        matchCounts = Vector256.Add(
-                                            matchCounts,
-                                            Vector256.ConditionalSelect(
-                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(
-                                                    match
-                                                ),
-                                                Vector256.Create(1),
-                                                Vector256<int>.Zero
-                                            )
-                                        );
-                                    }
-                                }
+                                var card = ctx.GetNextSpectral(ref spectralStream, extraMask);
+                                if (countLanes.IsPartiallyTrue())
+                                    JamlSimdPackSupport.AddMatchCounts(
+                                        MatchSpectrals(card, clause) & countLanes & extraLanes,
+                                        ref matchCounts
+                                    );
                             }
                         }
                     }
@@ -318,11 +352,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                 }
             }
 
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, needed, clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -350,7 +380,16 @@ public sealed record SpectralCardSourceConfig
 {
     /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
     public static readonly string[] SourceKeys =
-        ["shopItems", "boosterPacks", "sixthSense", "seance", "etherealTag", "requireMega", "requireMegaPack"];
+    [
+        "shopItems",
+        "boosterPacks",
+        "sixthSense",
+        "seance",
+        "etherealTag",
+        "requireMega",
+        "requireMegaPack",
+        "omenGlobe",
+    ];
 
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
@@ -363,8 +402,10 @@ public sealed record SpectralCardSourceConfig
     /// </summary>
     public bool EtherealTag { get; set; }
 
-    // TODO: OmenGlobe — voucher that allows Spectral cards to appear in Arcana packs.
-    // This is voucher-state-gated AND changes the Arcana pack PRNG path (not a simple slot array).
-    // Much more complex than other sources — needs voucher state tracking + pack stream branching.
-    // Do not implement naively.
+    /// <summary>
+    /// When true, count Spectral substitutes from Arcana packs under Omen Globe (20% per card).
+    /// Uses <c>boosterPacks</c> slots when set; otherwise walks the full late-ante pack range.
+    /// Assumes Omen Globe is owned for the clause (source means search that path).
+    /// </summary>
+    public bool OmenGlobe { get; set; }
 }

@@ -347,6 +347,24 @@ public static class FormatUtils
             words.RemoveAt(0);
         }
 
+        // Before treating the next word as an enhancement, try the remaining tail as a
+        // type: display names can start with an enhancement word ("Lucky Cat"), and the
+        // greedy strip would otherwise leave an unresolvable "Cat".
+        if (
+            edition != MotelyItemEdition.None
+            && TryResolveMotelyTypeTail(
+                string.Join(' ', words),
+                edition,
+                MotelyItemEnhancement.None,
+                seal,
+                eternal,
+                perishable,
+                rental,
+                out item
+            )
+        )
+            return true;
+
         if (
             words.Count > 0
             && TryParseEnumMemberName(words[0], out MotelyItemEnhancement eh)

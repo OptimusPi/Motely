@@ -9,6 +9,14 @@ public static partial class MotelyGlobals
     public const int MaxVectorWidth = 8;
 
     /// <summary>
+    /// Default seeds per provider-mode report batch: <c>35³</c>. SIMD still processes
+    /// <see cref="MaxVectorWidth"/> lanes at a time; this is how many seeds a provider plan
+    /// chews before progress / auto-cutoff chat. Sequential batch size is different — it
+    /// partitions the seed space by character count for partial-hash reuse.
+    /// </summary>
+    public const int DefaultProviderBatchSeedCount = 35 * 35 * 35; // 42_875
+
+    /// <summary>
     /// Canonical seed normalization: uppercase and replace '0' with 'O'.
     /// Call this everywhere user-provided seeds enter the engine.
     /// </summary>

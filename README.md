@@ -1,8 +1,22 @@
 # Motely
 
-Motely is a fast Balatro seed searching library. It uses your CPU's 512-bit registers with SIMD to search 8 seeds at once per thread.
-It performs very well compared to current GPU-based Balatro seed searches (better on a lot of systems), and is the fastest general-purpose CPU-based searcher I know of.
+CPU Balatro seed search: AVX-512 lanes (8 seeds), JAML filters, CLI + WASM + LSP.
 
-Filters are written in JAML (Jimbo's Ante Markup Language). The C# engine owns the grammar: load a filter and it becomes a typed `JamlConfig` the search runs. Clauses can be one-line natural language ("Blueprint in ante 1") or structured documents — both are JAML.
+| Piece | Role |
+|-------|------|
+| `Motely` | Engine (SIMD search, JAML loader, FilterDescs) |
+| `Motely.CLI` | Search entry; seed lake under `Seeds/` |
+| `Motely.Lsp` | stdio JSON-RPC; answers from engine only |
+| `vscode-jaml` | languageclient host only |
+| `Motely.Wasm` / `motely-wasm` | same search surface for JS |
 
-Thank you so much to [@OptimusPi](https://github.com/OptimusPi/) for commissioning the development of this library. It started out as a personal project, and their support is what gave it the capabilities it has today.
+## Quick start
+
+```sh
+dotnet build
+dotnet run --project Motely.CLI -- --jaml JamlFilters/AlwaysPass.jaml --collect 1
+```
+
+Filters are JAML text → `JamlConfig`. Clause families live on FilterDescs; `JamlSchema` is the generated index. Docs for WASM: `Motely.Wasm/README.md`.
+
+Commission support: [@OptimusPi](https://github.com/OptimusPi/).

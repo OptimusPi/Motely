@@ -32,6 +32,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <!-- The same protocol-free language brain the stdio server uses. Browser editors get
+         diagnostics, hover and completion from the engine's own grammar instead of a
+         hand-maintained TypeScript copy. -->
+    <ProjectReference Include="..\Motely.Lsp.Core\Motely.Lsp.Core.csproj" />
   </ItemGroup>
 
   <Target Name="SyncNpmPackageVersion" BeforeTargets="Build">

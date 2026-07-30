@@ -89,4 +89,35 @@ public sealed class JamlCostModelTests
         Assert.Equal(new[] { "A", "B" }, ordered.Take(2).Select(c => c.Label ?? "").ToArray());
         Assert.Same(wide, ordered[2]);
     }
+
+    [Fact]
+    public void CreateSettings_WiresMustAndMustNot_CheapestFirst()
+    {
+        // wide must (5 antes) then narrow mustNot (1 ante) → filter chain installs narrow first.
+        var wide = new JokerClause { IsWildcard = true, Antes = [1, 2, 3, 4, 5], Label = "wide" };
+        var narrow = new TagClause
+        {
+            Tags = [MotelyTag.RareTag],
+            Rolls = [0],
+            Antes = [1],
+            Label = "narrow",
+        };
+
+        var config = new JamlConfig
+        {
+            Id = "cheap-first",
+            Deck = MotelyDeck.Red,
+            Stake = MotelyStake.White,
+        };
+        config.Must.Add(wide);
+        config.MustNot.Add(narrow);
+
+        var settings = JamlSearchBuilder.CreateSettings(config);
+        Assert.NotNull(settings.AdditionalFilters);
+        Assert.Equal(2, settings.AdditionalFilters!.Count);
+
+        // First filter is mustNot (NegationFilterDesc wrapping Tag); second is must (Joker).
+        Assert.IsType<NegationFilterDesc>(settings.AdditionalFilters[0]);
+        Assert.IsType<JokerFilterDesc>(settings.AdditionalFilters[1]);
+    }
 }

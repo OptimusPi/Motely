@@ -54,9 +54,9 @@ public static partial class JamlConfigLoader
         };
 
         if (root.GetString("deck") is { } deck)
-            config.Deck = ParseEnum<MotelyDeck>(deck);
+            config.Deck = ParseEnum<MotelyDeck>(deck, root.ValueSpan("deck"));
         if (root.GetString("stake") is { } stake)
-            config.Stake = ParseEnum<MotelyStake>(stake);
+            config.Stake = ParseEnum<MotelyStake>(stake, root.ValueSpan("stake"));
 
         config.Seeds.AddRange(root.GetStringArray("seeds") ?? []);
         if (root.GetString("filter") is { Length: > 0 } filterName)
@@ -64,8 +64,9 @@ public static partial class JamlConfigLoader
             if (!MotelyNativeFilterNames.TryParse(filterName, out _))
             {
                 string valid = string.Join(", ", MotelyNativeFilterNames.DisplayNames);
-                throw new InvalidOperationException(
-                    $"Unknown native filter '{filterName}'. Valid filters: {valid}"
+                throw new JamlSemanticException(
+                    $"Unknown native filter '{filterName}'. Valid filters: {valid}",
+                    root.ValueSpan("filter")
                 );
             }
             config.Filter = filterName;
@@ -86,7 +87,67 @@ public static partial class JamlConfigLoader
     // ("Eternal Blueprint in antes 1 or 2"), turned into a real clause through the engine's own
     // line converter off MotelyItem identity — no second grammar.
     private static IJamlClause ParseClauseSource(ClauseSource source) =>
-        source.Line is { } line ? ParseLineClause(line) : ParseClause(source.Mapping!);
+        (source.Line, source.Mapping) switch
+        {
+            ({ } line, null) => ParseLineClause(line),
+            ({ } line, { } keys) => ApplyKeys(ParseLineClause(line), keys),
+            _ => ParseClause(source.Mapping!),
+        };
+
+    /// <summary>
+    /// Applies continuation keys to a clause the line converter already built, so the terse
+    /// spelling reaches every key its family owns ("- Negative Perkeo" then "    ante: 0").
+    /// Common keys land directly; the rest go through the clause's own desc, the same rail the
+    /// structured spelling uses.
+    /// </summary>
+    private static IJamlClause ApplyKeys(IJamlClause clause, NodeReader keys)
+    {
+        foreach (var key in keys.Keys)
+        {
+            if (key == JamlDocumentParser.TerseLineKey)
+                continue;
+
+            switch (key)
+            {
+                case "ante" or "antes":
+                    if (clause is IAnteScopedClause anteScoped)
+                        anteScoped.Antes = keys.GetIntArray(key) ?? anteScoped.Antes;
+                    else
+                        throw new InvalidOperationException(
+                            $"'{key}' is not a key of this clause: it is not ante-scoped."
+                        );
+                    break;
+                case "min":
+                    clause.Min = keys.GetInt(key) ?? clause.Min;
+                    break;
+                case "max":
+                    clause.Max = keys.GetInt(key) ?? clause.Max;
+                    break;
+                case "score":
+                    clause.Score = keys.GetInt(key) ?? clause.Score;
+                    break;
+                case "label":
+                    clause.Label = keys.GetString(key) ?? clause.Label;
+                    break;
+                default:
+                    if (
+                        !JamlClauseDescDispatch.TrySet(
+                            clause,
+                            key,
+                            JamlLoaderValueReader.FromScalar(
+                                keys.GetString(key),
+                                keys.ValueSpan(key)
+                            )
+                        )
+                    )
+                        throw new InvalidOperationException(
+                            $"Unknown key '{key}' for a one-line clause of type {clause.GetType().Name}."
+                        );
+                    break;
+            }
+        }
+        return clause;
+    }
 
     private static IJamlClause ParseLineClause(string line)
     {
@@ -116,11 +177,8 @@ public static partial class JamlConfigLoader
         var score = data.GetInt("score") ?? 1;
         var label = data.GetString("label");
 
-        // Families migrated to the sane path build themselves off their descriptor; the switch
-        // below is the shrinking legacy fallback for the ones not yet moved.
-        if (DescBuilders.TryGetValue(Normalize(discriminator), out var descBuild))
-            return descBuild(discriminator, node, data, antes, min, max, score, label);
-
+        // One construction path for every desc family. Logic + the multi-rank erratic
+        // sugar stay special; everything else is Populate → optional disc value.
         switch (Normalize(discriminator))
         {
             case "and":
@@ -145,48 +203,14 @@ public static partial class JamlConfigLoader
                     score,
                     label
                 );
-            case "joker":
-            case "jokers":
-                return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
-            case "commonjoker":
-            case "commonjokers":
-                return PopulateJokerFamily<MotelyJokerCommon>(discriminator, node, data, antes, min, max, score, label);
-            case "uncommonjoker":
-            case "uncommonjokers":
-                return PopulateJokerFamily<MotelyJokerUncommon>(discriminator, node, data, antes, min, max, score, label);
-            case "rarejoker":
-            case "rarejokers":
-                return PopulateJokerFamily<MotelyJokerRare>(discriminator, node, data, antes, min, max, score, label);
-            case "legendaryjoker":
-            case "legendaryjokers":
-                return PopulateJokerFamily<MotelyJoker>(discriminator, node, data, antes, min, max, score, label);
-            case "voucher":
-            case "vouchers":
-                return PopulateAndCast<VoucherClause>(discriminator, node, data, antes, min, max, score, label);
-            case "tarotcard":
-            case "tarotcards":
-                return PopulateAndCast<TarotCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "spectralcard":
-            case "spectralcards":
-                return PopulateAndCast<SpectralCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "planetcard":
-            case "planetcards":
-                return PopulateAndCast<PlanetCardClause>(discriminator, node, data, antes, min, max, score, label);
-            case "standardcard":
-            case "standardcards":
-                return PopulateAndCast<StandardCardClause>(
-                    discriminator, node, data, antes, min, max, score, label, applyDiscriminatorValue: false);
-            case "boss":
-            case "bosses":
-                return PopulateAndCast<BossClause>(discriminator, node, data, antes, min, max, score, label);
-            case "tag":
-            case "tags":
-            case "smallblindtag":
-            case "bigblindtag":
-                return PopulateAndCast<TagClause>(discriminator, node, data, antes, min, max, score, label);
-            case "erraticrank":
-                return PopulateAndCast<ErraticRankClause>(discriminator, node, data, antes, min, max, score, label);
+            case "erraticrank"
+                when node.GetString(discriminator) is null
+                    && node.GetStringArray(discriminator) is not null:
             case "erraticranks":
+                // Sugar: erraticRanks: [Ace, King] → Or of singular ErraticRank clauses.
+                // A scalar-valued erraticRank uses the normal Populate path; an array on the
+                // singular wire is the same sugar (it used to slip past both and load a
+                // corrupt Rank the writer then emitted as a bare numeral).
                 return WithMax(
                     new OrClause
                     {
@@ -195,7 +219,7 @@ public static partial class JamlConfigLoader
                                 (IJamlClause)
                                     new ErraticRankClause
                                     {
-                                        Rank = ParseRank(v),
+                                        Rank = ParseRank(v, node.ValueSpan(discriminator)),
                                         Antes = antes,
                                         Min = 1,
                                     }
@@ -209,30 +233,50 @@ public static partial class JamlConfigLoader
                     },
                     max
                 );
-            case "erraticsuit":
-            case "erraticsuits":
-                return PopulateAndCast<ErraticSuitClause>(discriminator, node, data, antes, min, max, score, label);
-            case "startingdraw":
-                return PopulateAndCast<StartingDrawClause>(
-                    discriminator, node, data, antes, min, max, score, label, applyDiscriminatorValue: false);
-            case "luckymoney":
-            case "luckymult":
-            case "misprintmult":
-            case "wheeloffortune":
-            case "grosmichelextinct":
-            case "cavendishextinct":
-            case "spacelevelup":
-            case "businesspayout":
-            case "bloodstonetrigger":
-            case "parkingpayout":
-            case "glassdestroy":
-            case "wheelstaysflipped":
-                return Populate(discriminator, node, data, antes, min, max, score, label);
             default:
-                throw new InvalidOperationException(
-                    $"Unhandled JAML discriminator '{discriminator}'."
+                return PopulateDescClause(
+                    discriminator,
+                    node,
+                    data,
+                    antes,
+                    min,
+                    max,
+                    score,
+                    label
                 );
         }
+    }
+
+    /// <summary>
+    /// Single door for every <c>[JamlDiscriminator]</c> family: construct via
+    /// <see cref="Populate"/>, then apply the bare disc value when the schema says the
+    /// wire owns a value enum (<c>joker: Blueprint</c>). Property-shaped families
+    /// (standardCard, startingDraw) and roll-inline events skip that step — keys / rolls
+    /// already filled the clause.
+    /// </summary>
+    private static IJamlClause PopulateDescClause(
+        string discriminator,
+        NodeReader node,
+        IReader data,
+        int[] antes,
+        int min,
+        int? max,
+        int score,
+        string? label
+    )
+    {
+        var clause = Populate(discriminator, node, data, antes, min, max, score, label);
+
+        // ValueEnum on the attribute is the one true signal that the disc carries payload.
+        // Rolls-inline events put ints under the disc key; Populate already ate those.
+        if (JamlSchema.ValueEnumTypeFor(discriminator) is not null)
+        {
+            var discReader = DiscriminatorValueReader(node, discriminator);
+            if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
+                throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
+        }
+
+        return clause;
     }
 
     private static IJamlClause ParseLogic(
@@ -302,11 +346,13 @@ public static partial class JamlConfigLoader
         ValidateKeys(with, JamlClause.WithBlockKeys, "with");
         var result = new JamlWith();
         if (with.GetString("luck") is { } luckText)
-            result.Luck = ParseLuck(luckText);
+            result.Luck = ParseLuck(luckText, with.ValueSpan("luck"));
         else if (with.GetInt("luck") is { } luckInt)
-            result.Luck = ParseLuck(luckInt);
+            result.Luck = ParseLuck(luckInt, with.ValueSpan("luck"));
         if (with.GetStringArray("vouchers") is { } vouchers)
-            result.Vouchers = vouchers.Select(ParseEnum<MotelyVoucher>).ToArray();
+            result.Vouchers = vouchers
+                .Select(v => ParseEnum<MotelyVoucher>(v, with.ValueSpan("vouchers")))
+                .ToArray();
         return result;
     }
 
@@ -318,8 +364,11 @@ public static partial class JamlConfigLoader
     }
 
     private static TEnum[] ParseEnumArray<TEnum>(NodeReader node, string key)
-        where TEnum : struct, Enum =>
-        ParseStringArray(node, key).Select(ParseEnum<TEnum>).ToArray();
+        where TEnum : struct, Enum
+    {
+        var span = node.ValueSpan(key);
+        return ParseStringArray(node, key).Select(v => ParseEnum<TEnum>(v, span)).ToArray();
+    }
 
     private static TEnum[] ParseEnumArray<TEnum>(IReader node, string key, bool allowMissing)
         where TEnum : struct, Enum
@@ -327,7 +376,8 @@ public static partial class JamlConfigLoader
         var values = node.GetStringArray(key);
         if (values is null)
             return allowMissing ? [] : throw MissingValue(key);
-        return values.Select(ParseEnum<TEnum>).ToArray();
+        var span = node.ValueSpan(key);
+        return values.Select(v => ParseEnum<TEnum>(v, span)).ToArray();
     }
 
     private static string[] ParseStringArray(NodeReader node, string key) =>
@@ -353,36 +403,34 @@ public static partial class JamlConfigLoader
     private static bool IsDiscriminator(string key) =>
         JamlSchema.IsKnownDiscriminator(key);
 
-    private static MotelyStandardcardRank ParseRank(string value)
+    private static MotelyStandardcardRank? ParseOptionalRank(string? value, JamlSpan span = default) =>
+        value is null ? null : ParseRank(value, span);
+
+    private static MotelyStandardcardRank ParseRank(string value, JamlSpan span = default)
     {
+        // Pips count up from Two, so the enum's own order is the table: 2 → Two … 10 → Ten.
         if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var pip))
         {
-            return pip switch
-            {
-                2 => MotelyStandardcardRank.Two,
-                3 => MotelyStandardcardRank.Three,
-                4 => MotelyStandardcardRank.Four,
-                5 => MotelyStandardcardRank.Five,
-                6 => MotelyStandardcardRank.Six,
-                7 => MotelyStandardcardRank.Seven,
-                8 => MotelyStandardcardRank.Eight,
-                9 => MotelyStandardcardRank.Nine,
-                10 => MotelyStandardcardRank.Ten,
-                _ => throw new InvalidOperationException($"Unsupported rank pip value: {pip}."),
-            };
+            if (pip is >= 2 and <= 10)
+                return MotelyStandardcardRank.Two + (pip - 2);
+            throw new JamlSemanticException($"Unsupported rank pip value: {pip}.", span);
         }
 
+        // Card shorthand, the one thing the enum names cannot spell.
         return value.ToUpperInvariant() switch
         {
             "J" => MotelyStandardcardRank.Jack,
             "Q" => MotelyStandardcardRank.Queen,
             "K" => MotelyStandardcardRank.King,
             "A" => MotelyStandardcardRank.Ace,
-            _ => ParseEnum<MotelyStandardcardRank>(value),
+            _ => ParseEnum<MotelyStandardcardRank>(value, span),
         };
     }
 
-    private static T ParseEnum<T>(string value)
+    private static T? ParseOptionalEnum<T>(string? value, JamlSpan span = default)
+        where T : struct, Enum => value is null ? null : ParseEnum<T>(value, span);
+
+    private static T ParseEnum<T>(string value, JamlSpan span = default)
         where T : struct, Enum
     {
         if (Enum.TryParse<T>(value, ignoreCase: true, out var parsed))
@@ -395,12 +443,10 @@ public static partial class JamlConfigLoader
         if (Enum.TryParse<T>(normalized, ignoreCase: true, out parsed))
             return parsed;
 
-        throw new InvalidOperationException(
-            $"Cannot parse '{value}' as {typeof(T).Name}. Known values: {string.Join(", ", Enum.GetNames<T>())}."
-        );
+        throw new JamlSemanticException(JamlEnumMessages.CannotParse(value, typeof(T)), span);
     }
 
-    private static MotelyLuck ParseLuck(string value)
+    private static MotelyLuck ParseLuck(string value, JamlSpan span = default)
     {
         if (
             int.TryParse(
@@ -410,23 +456,16 @@ public static partial class JamlConfigLoader
                 out var numeric
             )
         )
-            return ParseLuck(numeric);
-        return ParseEnum<MotelyLuck>(value);
+            return ParseLuck(numeric, span);
+        return ParseEnum<MotelyLuck>(value, span);
     }
 
-    private static MotelyLuck ParseLuck(int value) =>
-        value switch
-        {
-            1 => MotelyLuck.X1,
-            2 => MotelyLuck.X2,
-            4 => MotelyLuck.X4,
-            5 => MotelyLuck.X5,
-            8 => MotelyLuck.X8,
-            16 => MotelyLuck.X16,
-            32 => MotelyLuck.X32,
-            64 => MotelyLuck.X64,
-            _ => throw new InvalidOperationException($"Unsupported luck multiplier: {value}."),
-        };
+    // MotelyLuck's backing value IS the multiplier, so the enum is the whole table —
+    // a new Oops tier lands in JAML the moment it lands in the enum.
+    private static MotelyLuck ParseLuck(int value, JamlSpan span = default) =>
+        Enum.IsDefined((MotelyLuck)value)
+            ? (MotelyLuck)value
+            : throw new JamlSemanticException($"Unsupported luck multiplier: {value}.", span);
 
     private static bool IsAny(string value) =>
         string.Equals(value, "any", StringComparison.OrdinalIgnoreCase);
@@ -447,6 +486,7 @@ public static partial class JamlConfigLoader
     {
         IReadOnlyList<string> Keys { get; }
         JamlSpan KeySpan(string key);
+        JamlSpan ValueSpan(string key);
         string? GetString(string key);
         int? GetInt(string key);
         bool? GetBool(string key);
@@ -466,6 +506,9 @@ public static partial class JamlConfigLoader
         // and fall back only when the primary never saw the key (empty span).
         public JamlSpan KeySpan(string key) =>
             primary.KeySpan(key) is { IsEmpty: false } span ? span : fallback.KeySpan(key);
+
+        public JamlSpan ValueSpan(string key) =>
+            primary.ValueSpan(key) is { IsEmpty: false } span ? span : fallback.ValueSpan(key);
 
         public string? GetString(string key) => primary.GetString(key) ?? fallback.GetString(key);
 
@@ -498,6 +541,15 @@ public static partial class JamlConfigLoader
         public IReadOnlyList<string> Keys => _map.Keys;
 
         public JamlSpan KeySpan(string key) => _map.KeySpan(key);
+
+        /// <summary>Value token span when stamped; otherwise the key span (same line for inline values).</summary>
+        public JamlSpan ValueSpan(string key)
+        {
+            var value = _map.ValueSpan(key);
+            if (!value.IsEmpty)
+                return value;
+            return _map.KeySpan(key);
+        }
 
         public string? GetString(string key) => Scalar(_map.Get(key));
 
@@ -593,7 +645,15 @@ public static partial class JamlConfigLoader
                 switch (element)
                 {
                     case JMap map:
-                        items.Add(new ClauseSource(new NodeReader(map), null));
+                        // A terse line with continuation keys arrives as a mapping carrying the
+                        // line under TerseLineKey; both halves travel so the clause is built from
+                        // JamlLine and then the keys are applied on top.
+                        items.Add(
+                            new ClauseSource(
+                                new NodeReader(map),
+                                (map.Get(JamlDocumentParser.TerseLineKey) as JScalar)?.Value
+                            )
+                        );
                         break;
                     case JScalar { Value: { } raw }:
                         items.Add(new ClauseSource(null, raw));

@@ -24,21 +24,32 @@ const EVENT_MEMBERS = [
 ];
 
 describe("MotelyJamlyzer", () => {
-    it("analyzeSeeds returns one result per seed, each with 8 antes", () => {
+    it("analyzeSeeds returns one result per seed, each with 9 antes (0..8)", () => {
         const results = MotelyJamlyzer.analyzeSeeds(parse(jaml.seeds));
         assert.equal(results.length, 2);
         assert.equal(results[0].seed, "UNITTEST");
         assert.equal(results[1].seed, "ALEEB");
-        assert.equal(results[0].antes.length, 8);
+        assert.equal(results[0].antes.length, 9);
+        assert.equal(results[0].antes[0].ante, 0, "unscoped analysis opens on the pre-run shop");
     });
 
-    it("ante structure: ante 1 has 4 packs, antes 2-8 have 6, numbers run 1..8", () => {
+    it("ante structure: antes 0-1 have 4 packs, antes 2-8 have 6, numbers run 0..8", () => {
         const [r] = MotelyJamlyzer.analyzeSeeds(parse(jaml.oneSeed));
-        assert.equal(r.antes[0].packs.length, 4, "ante 1 -> 4 packs");
-        for (let i = 1; i < 8; i++)
-            assert.equal(r.antes[i].packs.length, 6, `ante ${i + 1} -> 6 packs`);
-        for (let i = 0; i < 8; i++)
-            assert.equal(r.antes[i].ante, i + 1, "ante numbers are sequential");
+        assert.equal(r.antes[0].packs.length, 4, "ante 0 -> 4 packs");
+        assert.equal(r.antes[1].packs.length, 4, "ante 1 -> 4 packs");
+        for (let i = 2; i < 9; i++)
+            assert.equal(r.antes[i].packs.length, 6, `ante ${i} -> 6 packs`);
+        for (let i = 0; i < 9; i++)
+            assert.equal(r.antes[i].ante, i, "ante numbers are sequential");
+    });
+
+    it("a clause scoped to ante 0 emits the ante-0 row", () => {
+        const [r] = MotelyJamlyzer.analyzeSeeds(parse(jaml.anteZero));
+        assert.equal(r.antes.length, 2, "antes [0, 1] -> two rows");
+        assert.equal(r.antes[0].ante, 0);
+        assert.equal(r.antes[1].ante, 1);
+        assert.equal(r.antes[0].packs.length, 4, "ante 0 -> 4 packs");
+        assert.equal(r.antes[0].shopItems.length, 15, "ante 0 -> 15 shop items");
     });
 
     it("paged window sizes every stream to the roll count (Emperor x2)", () => {
@@ -46,7 +57,7 @@ describe("MotelyJamlyzer", () => {
         const [r] = MotelyJamlyzer.analyzeSeedsPaged(parse(jaml.oneSeed), rolls);
         for (const m of EVENT_MEMBERS)
             assert.equal(r.events[m].length, rolls, `events.${m} length`);
-        const a1 = r.antes[0];
+        const a1 = r.antes[1]; // antes[0] is ante 0, the pre-run shop
         for (const m of PULLS_MEMBERS) {
             const want = m === "emperorTarots" ? rolls * 2 : rolls;
             assert.equal(a1.pulls[m].length, want, `pulls.${m} length`);
@@ -78,11 +89,11 @@ describe("MotelyJamlyzer", () => {
             for (const m of PULLS_MEMBERS)
                 assert.deepEqual(
                     [...p1.antes[a].pulls[m], ...p2.antes[a].pulls[m]],
-                    [...full.antes[a].pulls[m]], `ante${a + 1} pulls.${m}`);
+                    [...full.antes[a].pulls[m]], `ante${a} pulls.${m}`);
             for (const m of SHOP_MEMBERS)
                 assert.deepEqual(
                     [...p1.antes[a].shopStreams[m], ...p2.antes[a].shopStreams[m]],
-                    [...full.antes[a].shopStreams[m]], `ante${a + 1} shopStreams.${m}`);
+                    [...full.antes[a].shopStreams[m]], `ante${a} shopStreams.${m}`);
         }
 
         // Stitched end-state == full window's end-state (the decisive no-drift check).
@@ -104,8 +115,8 @@ describe("MotelyJamlyzer", () => {
             [...a.events.misprint, ...b.events.misprint, ...c.events.misprint],
             [...full.events.misprint], "misprint across 3 pages");
         assert.deepEqual(
-            [...a.antes[7].pulls.emperorTarots, ...b.antes[7].pulls.emperorTarots, ...c.antes[7].pulls.emperorTarots],
-            [...full.antes[7].pulls.emperorTarots], "ante8 emperorTarots across 3 pages");
+            [...a.antes[8].pulls.emperorTarots, ...b.antes[8].pulls.emperorTarots, ...c.antes[8].pulls.emperorTarots],
+            [...full.antes[8].pulls.emperorTarots], "ante8 emperorTarots across 3 pages");
     });
 
     it("drives like a scrolling frontend: many small uneven pages reconstruct a big window", () => {
@@ -120,7 +131,7 @@ describe("MotelyJamlyzer", () => {
                 ? MotelyJamlyzer.analyzeSeedsPaged(parse(jaml.oneSeed), take)[0]
                 : MotelyJamlyzer.resumeSeeds(parse(jaml.oneSeed), state, take)[0];
             misprint.push(...page.events.misprint);                       // event stream (State double)
-            emperorAnte8.push(...page.antes[7].pulls.emperorTarots);      // composite (offset-replay)
+            emperorAnte8.push(...page.antes[8].pulls.emperorTarots);      // composite (offset-replay)
             rolled += take;
             assert.equal(page.streamStates.rollOffset, rolled, `page ${pages} offset tracks the scroll`);
             state = page.streamStates;
@@ -130,7 +141,7 @@ describe("MotelyJamlyzer", () => {
         assert.ok(pages >= 17, "drove the scroll in many small pages");
         assert.equal(state.rollOffset, TOTAL, "scrolled exactly the whole window");
         assert.deepEqual(misprint, [...full.events.misprint], "scrolled misprint == full window");
-        assert.deepEqual(emperorAnte8, [...full.antes[7].pulls.emperorTarots], "scrolled ante8 Emperor == full window");
+        assert.deepEqual(emperorAnte8, [...full.antes[8].pulls.emperorTarots], "scrolled ante8 Emperor == full window");
         assert.deepEqual(state, full.streamStates, "end-state lands exactly on the full window");
     });
 
@@ -143,7 +154,7 @@ describe("MotelyJamlyzer", () => {
         // Learn AAAAAAAA's real ante-1 voucher, then score by it: AAAAAAAA has it (score 1),
         // BBBBBBBB doesn't (score 0). Proves the score reflects the seed, not a constant.
         const [a] = MotelyJamlyzer.analyzeSeeds(parse("name: t\ndeck: Red\nstake: White\nseeds: [AAAAAAAA]\n"));
-        const voucherName = MotelyVoucher[a.antes[0].voucher];
+        const voucherName = MotelyVoucher[a.antes[1].voucher]; // antes[0] is ante 0
         const yaml = `name: t
 deck: Red
 stake: White

@@ -168,7 +168,8 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
         var items = new JsonArray();
         if (text is not null)
             foreach (var item in JamlLanguageService.Complete(text, line, character))
-                items.Add(new JsonObject
+            {
+                var obj = new JsonObject
                 {
                     ["label"] = item.Label,
                     // LSP CompletionItemKind: Property=10, EnumMember=20, Class=7.
@@ -179,7 +180,15 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
                         _ => 10,
                     },
                     ["detail"] = item.Detail,
-                });
+                };
+                // textEdit replaces the typed prefix so "Lu" → "LuckyCat" overtypes cleanly.
+                obj["textEdit"] = new JsonObject
+                {
+                    ["range"] = Range(item.ReplaceSpan),
+                    ["newText"] = item.Label,
+                };
+                items.Add(obj);
+            }
         return items;
     }
 

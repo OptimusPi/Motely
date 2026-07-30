@@ -71,13 +71,10 @@ public struct SpecialSpectralCardFilterDesc(SpectralCardClause clause)
             if (relevant.IsAllFalse())
                 return VectorMask.NoBitsSet;
 
-            int min = clause.Min;
             return ctx.SearchIndividualSeeds(
                 relevant,
                 (MotelySingleSearchContext single) =>
-                    JamlScoring.CountSpectralCardOccurrencesForFilter(ref single, clause) >= min
-                        ? 1
-                        : 0
+                    JamlScoring.ClauseMeetsMinForFilter(ref single, clause) ? 1 : 0
             );
         }
     }

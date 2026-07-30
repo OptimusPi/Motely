@@ -50,9 +50,24 @@ public sealed class MotelyJamlyzerFilterDesc(
             MotelyRunState voucherState = new();
             MotelySingleBossStream bossStream = ctx.CreateBossStream();
 
-            for (int ante = 1; ante <= maxAnte; ante++)
+            for (int ante = filterDesc._startAnte; ante <= maxAnte; ante++)
             {
-                MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, voucherState);
+                // Ante 0 is the pre-run shop, reached by ante reduction (Hieroglyph / Petroglyph):
+                // its shop, packs and tags are exactly what a JAML `antes: [0]` clause searches.
+                // Its boss reads off an isolated stream + run state, because the run state the
+                // search chains (voucher tiers, seen-boss pool) opens at ante 1 — sharing it here
+                // would shift every ante 1..8 boss and upgrade ante 1's voucher.
+                bool isPreRunShop = ante == 0;
+                MotelyBossBlind boss;
+                if (isPreRunShop)
+                {
+                    MotelyRunState preRunState = new();
+                    MotelySingleBossStream preRunBossStream = ctx.CreateBossStream();
+                    boss = ctx.GetBossForAnte(ref preRunBossStream, ante, preRunState);
+                }
+                else
+                    boss = ctx.GetBossForAnte(ref bossStream, ante, voucherState);
+
                 MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
 
                 AnteAnalysisState state = new()
@@ -98,7 +113,10 @@ public sealed class MotelyJamlyzerFilterDesc(
 
                 // Activate voucher AFTER collecting pulls streams so voucher sequence
                 // resampling uses the correct state (pre-activation for this ante).
-                voucherState.ActivateVoucher(voucher);
+                // Ante 0 reports its voucher without entering the chain — the search starts the
+                // chain at ante 1, so the analyzer reports the same ante-1 voucher it matches.
+                if (!isPreRunShop)
+                    voucherState.ActivateVoucher(voucher);
 
                 filterDesc.Antes.Add(
                     new(ante, boss, voucher, smallTag, bigTag, shopItems, packs, pulls, shopStreams)
@@ -446,6 +464,10 @@ public sealed class MotelyJamlyzerFilterDesc(
 
     private readonly int[] _antesToAnalyze = antesToAnalyze;
     private readonly int _maxAnte = antesToAnalyze.Length > 0 ? antesToAnalyze[^1] : 8;
+    // Ante 0 (the pre-run shop a JAML clause can target with `antes: [0]`) is real data
+    // the search already matches on — emit it when scoped instead of silently dropping it.
+    private readonly int _startAnte =
+        antesToAnalyze.Length > 0 && antesToAnalyze[0] == 0 ? 0 : 1;
     private readonly int _eventRolls = eventRolls;
     private readonly MotelyJamlyzerStreamStates? _resumeFrom = resumeFrom;
 }

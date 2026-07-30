@@ -30,6 +30,15 @@ public interface IRollScopedClause : IJamlClause
     int[] Rolls { get; set; }
 }
 
+/// <summary>
+/// Capability for clauses that accept a <c>with:</c> luck/voucher block. Populate assigns
+/// through this interface — no per-type ApplyWith switch.
+/// </summary>
+public interface IWithScopedClause : IJamlClause
+{
+    JamlWith With { get; set; }
+}
+
 public static class JamlClause
 {
     /// <summary>Allowed keys inside a clause's own <c>with:</c> block (JamlWith modifiers) —

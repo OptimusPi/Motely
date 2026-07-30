@@ -267,73 +267,36 @@ ref partial struct MotelyVectorSearchContext
         );
     }
 
+    // The pack a player opens is deduplicated (resample rolls replace repeats), so HasThe
+    // answers from the same contents walk the scalar engine uses — the raw stream diverges
+    // whenever a duplicate resamples into the target.
     public VectorMask GetNextArcanaPackHasThe(
         ref MotelyVectorTarotStream tarotStream,
         MotelyTarotCard targetTarot,
         MotelyBoosterPackSize size
     )
     {
-        int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
-        VectorMask hasTarget = VectorMask.NoBitsSet;
-
-        for (int i = 0; i < cardCount; i++)
-        {
-            var Tarot = GetNextTarot(ref tarotStream);
-            // Extract Tarot card type using bit masking (similar to StandardcardSuit pattern)
-            var tarotType = new VectorEnum256<MotelyTarotCard>(
-                Vector256.BitwiseAnd(
-                    Tarot.Value,
-                    Vector256.Create(
-                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
-                    )
-                )
-            );
-            VectorMask isTarget = VectorEnum256.Equals(tarotType, targetTarot);
-            hasTarget |= isTarget;
-
-            // Early exit optimization - if all lanes have found the target, no need to continue
-            if (hasTarget.IsAllTrue())
-                break;
-        }
-
-        return hasTarget;
+        var contents = GetNextArcanaPackContents(ref tarotStream, size);
+        return contents.Contains(
+            (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)targetTarot)
+        );
     }
 
+    /// <inheritdoc cref="GetNextArcanaPackHasThe(ref MotelyVectorTarotStream, MotelyTarotCard, MotelyBoosterPackSize)"/>
     public VectorMask GetNextArcanaPackHasThe(
         ref MotelyVectorTarotStream tarotStream,
         MotelyTarotCard[] targetTarots,
         MotelyBoosterPackSize size
     )
     {
-        int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
+        var contents = GetNextArcanaPackContents(ref tarotStream, size);
         VectorMask hasAnyTarget = VectorMask.NoBitsSet;
-
-        for (int i = 0; i < cardCount; i++)
+        foreach (var target in targetTarots)
         {
-            var Tarot = GetNextTarot(ref tarotStream);
-            // Extract Tarot card type using bit masking (similar to StandardcardSuit pattern)
-            var tarotType = new VectorEnum256<MotelyTarotCard>(
-                Vector256.BitwiseAnd(
-                    Tarot.Value,
-                    Vector256.Create(
-                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
-                    )
-                )
+            hasAnyTarget |= contents.Contains(
+                (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)target)
             );
-
-            VectorMask isAnyTarget = VectorMask.NoBitsSet;
-            foreach (var target in targetTarots)
-            {
-                isAnyTarget |= VectorEnum256.Equals(tarotType, target);
-            }
-
-            hasAnyTarget |= isAnyTarget;
-
-            // Early exit optimization - if all lanes have found any target, no need to continue
-            if (hasAnyTarget.IsAllTrue())
-                break;
         }
-
         return hasAnyTarget;
     }
 }

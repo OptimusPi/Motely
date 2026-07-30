@@ -13,9 +13,11 @@ public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
     public int? Max { get; set; }
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
-    public required MotelyTarotCard[] Tarots { get; set; }
+    public MotelyTarotCard[] Tarots { get; set; } = [];
+    /// <summary>JAML <c>tarotCard: Any</c> — match any tarot at the named sources/antes.</summary>
+    public bool IsWildcard { get; set; }
 
-    // null = no `sources:` block → TarotCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    // null = no sources: in JAML → filter DefaultSources at CreateFilter/score (not parse).
     public TarotCardSourceConfig? Sources { get; set; }
 }
 
@@ -40,18 +42,22 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(TarotCardClause clause, IJamlValueReader value)
     {
+        if (value.IsAny)
+        {
+            clause.IsWildcard = true;
+            return true;
+        }
         if (!value.TryEnumArray<MotelyTarotCard>(out var tarots)) return false;
         clause.Tarots = tarots;
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Specialty sources (Emperor, Purple Seal) stay off
-    /// by default. Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null. Shop only; packs/specialty need explicit sources:.
+    /// </summary>
     internal static readonly TarotCardSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public TarotCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
@@ -112,7 +118,7 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.Tarots.Length > 0);
+            Debug.Assert(_clause.IsWildcard || _clause.Tarots.Length > 0);
             var clause = _clause;
             int maxShopItem = _maxShopItem;
             int maxBoosterPack = _maxBoosterPack;
@@ -123,10 +129,37 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
 
             Vector256<int> matchCounts = Vector256<int>.Zero;
             var sources = clause.Sources ?? DefaultSources;
+
+            // Charm-tag bonus pack is shop-order weighted; share one match core with scoring.
+            // charmTag counts only alongside a boosterPacks list — the bonus pack's contents
+            // are gated on its pack index being in boosterPacks, so charmTag alone matches
+            // nothing by construction.
+            if (sources.CharmTag)
+            {
+                return ctx.SearchIndividualSeeds(
+                    (MotelySingleSearchContext single) =>
+                        JamlScoring.ClauseMeetsMinForFilter(ref single, clause) ? 1 : 0
+                );
+            }
+
             var shopIndices = sources.ShopItems;
             var boosterPacks = sources.BoosterPacks;
             var emperorRolls = sources.Emperor;
             var sealRolls = sources.PurpleSealOrEightBall;
+
+            VectorMask ante1Extended = VectorMask.NoBitsSet;
+            if (boosterPacks.Length > 0 && JamlSimdPackSupport.NeedsAnte1Extension(maxBoosterPack))
+            {
+                bool hasAnte1 = false;
+                for (int i = 0; i < clause.Antes.Length; i++)
+                    if (clause.Antes[i] == 1)
+                    {
+                        hasAnte1 = true;
+                        break;
+                    }
+                if (hasAnte1)
+                    ante1Extended = JamlSimdPackSupport.Ante1PackExtensionMask(ref ctx);
+            }
 
             foreach (var ante in clause.Antes)
             {
@@ -172,16 +205,12 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                 }
 
                 // ── Arcana packs SIMD ──
-                // Note: GetNextArcanaPackContents takes scalar MotelyBoosterPackSize.
-                // Pack size varies per lane, so we process each size variant separately.
+                // Per-lane pack size (Normal=3, Jumbo/Mega=5) + ante-1 slot reachability.
                 if (boosterPacks.Length > 0)
                 {
                     var packStream = ctx.CreateBoosterPackStream(ante);
                     var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
 
-                    // SIMD prefilter is intentionally over-permissive: iterating past ante 1's real
-                    // pack count (4) yields phantom matches from the PRNG stream, but those are
-                    // rejected in the scoring phase which re-verifies scalar per-ante.
                     for (int p = 0; p <= maxBoosterPack; p++)
                     {
                         var pack = ctx.GetNextBoosterPack(ref packStream);
@@ -195,39 +224,53 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                             }
                         }
 
+                        VectorMask reachable = JamlSimdPackSupport.SlotReachableMask(
+                            ante,
+                            p,
+                            ante1Extended
+                        );
+                        VectorMask countLanes = isTarget
+                            ? reachable
+                            : VectorMask.NoBitsSet;
+
                         var packType = pack.GetPackType();
                         VectorMask isArcana = VectorEnum256.Equals(
                             packType,
                             MotelyBoosterPackType.Arcana
                         );
-                        if (isArcana.IsPartiallyTrue())
-                        {
-                            // Use Normal size (3 cards) as the baseline — all Arcana packs
-                            // have at least 3 cards. Jumbo/Mega have 5.
-                            var contents = ctx.GetNextArcanaPackContents(
-                                ref tarotStream,
-                                MotelyBoosterPackSize.Normal
-                            );
+                        if (isArcana.IsAllFalse())
+                            continue;
 
-                            if (isTarget)
+                        VectorMask isNormal = VectorEnum256.Equals(
+                            pack.GetPackSize(),
+                            MotelyBoosterPackSize.Normal
+                        );
+                        // Cards 0–2: every Arcana lane. Cards 3–4: Jumbo/Mega only.
+                        VectorMask baseLanes = isArcana;
+                        VectorMask extraLanes = isArcana & ~isNormal;
+                        var baseMask = JamlSimdPackSupport.ToPrngMask(baseLanes);
+                        var extraMask = JamlSimdPackSupport.ToPrngMask(extraLanes);
+
+                        for (int c = 0; c < 3; c++)
+                        {
+                            var card = ctx.GetNextTarot(ref tarotStream, baseMask);
+                            if (countLanes.IsPartiallyTrue())
+                                JamlSimdPackSupport.AddMatchCounts(
+                                    MatchTarots(card, clause) & countLanes & baseLanes,
+                                    ref matchCounts
+                                );
+                        }
+
+                        if (extraLanes.IsPartiallyTrue())
+                        {
+                            for (int c = 0; c < 2; c++)
                             {
-                                for (int i = 0; i < contents.Length; i++)
-                                {
-                                    VectorMask match = MatchTarots(contents[i], clause);
-                                    if (match.IsPartiallyTrue())
-                                    {
-                                        matchCounts = Vector256.Add(
-                                            matchCounts,
-                                            Vector256.ConditionalSelect(
-                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(
-                                                    match
-                                                ),
-                                                Vector256.Create(1),
-                                                Vector256<int>.Zero
-                                            )
-                                        );
-                                    }
-                                }
+                                var card = ctx.GetNextTarot(ref tarotStream, extraMask);
+                                if (countLanes.IsPartiallyTrue())
+                                    JamlSimdPackSupport.AddMatchCounts(
+                                        MatchTarots(card, clause) & countLanes & extraLanes,
+                                        ref matchCounts
+                                    );
                             }
                         }
                     }
@@ -315,16 +358,15 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                 }
             }
 
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, needed, clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static VectorMask MatchTarots(MotelyItemVector items, TarotCardClause clause)
         {
+            if (clause.IsWildcard)
+                return VectorEnum256.Equals(items.TypeCategory, MotelyItemTypeCategory.TarotCard);
+
             VectorMask mask = VectorMask.NoBitsSet;
             var itemTypes = items.Type;
 

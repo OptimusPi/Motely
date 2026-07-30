@@ -88,6 +88,10 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
     /// Spectral packs gate The Soul). Shop stays empty (shops never offer legendaries). The single-seed
     /// scoring path narrows this per ante via <c>ClampBoosterPackSlotForAnte</c> (Hieroglyph/Petroglyph
     /// pack-count routing). Applied only when <c>Sources</c> is null; an explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null. Legendaries default to booster pack slots only
+    /// (no shop). Soul/arcana/spectral/mega need explicit sources:. Loader leaves Sources null.
+    /// </summary>
     internal static readonly LegendaryJokerSourceConfig DefaultSources = new()
     {
         BoosterPacks = [0, 1, 2, 3, 4, 5],
@@ -96,8 +100,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         var src = _clause.Sources ?? DefaultSources;
-
-        int maxBoosterPack = src.MaxReferencedBoosterSlot();
 
         var normalizedClause = new LegendaryJokerClause
         {
@@ -123,7 +125,9 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         foreach (var ante in normalizedClause.Antes)
             ctx.CacheBoosterPackStream(ante, force: true);
 
-        if (normalizedClause.Edition.HasValue && normalizedClause.Min == 1)
+        // Edition prefilter applies for any Min: keep lanes that see the edition on the soul
+        // stream somewhere (over-permissive for Min>1; scalar confirm enforces count).
+        if (normalizedClause.Edition.HasValue)
         {
             foreach (var ante in normalizedClause.Antes)
                 ctx.CacheLegendaryJokerStream(
@@ -134,30 +138,25 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                 );
         }
 
-        return new LegendaryJokerFilter(normalizedClause, maxBoosterPack);
+        return new LegendaryJokerFilter(normalizedClause);
     }
 
-    public struct LegendaryJokerFilter(LegendaryJokerClause clause, int maxBoosterPack)
-        : IMotelySeedFilter
+    public struct LegendaryJokerFilter(LegendaryJokerClause clause) : IMotelySeedFilter
     {
         private readonly LegendaryJokerClause _clause = clause;
-        private readonly int _maxBoosterPack = maxBoosterPack;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.SoulCardOnly || _clause.IsWildcard || _clause.Jokers.Length > 0);
+            Debug.Assert(_clause.Min > 0, "LegendaryJokerClause.Min must be > 0 — loader bug.");
 
             var clause = _clause;
-            var maxBoosterPack = _maxBoosterPack;
-            int needed = clause.Min;
-            Debug.Assert(needed > 0, "LegendaryJokerClause.Min must be > 0 — loader bug.");
 
             // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
-            // souls (see LegendarySoulMatcher). Edition-only vector prefilter (Min==1) matches
-            // Negative + soul joker SIMD prefilter (see NegativeLegendaryJokerSimdFilterDesc);
-            // pack/soul path runs as an additional filter so batches buffer before scalar work.
-            // we do not drop seeds where the first soul fails edition but a later soul matches.
+            // souls (see LegendarySoulMatcher). Edition-only vector prefilter (any Min) drops lanes
+            // with no matching edition on the soul stream; pack/soul path still confirms via scoring.
+            // Does not drop seeds where the first soul fails edition but a later soul matches.
             uint laneMask = 0;
             for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
             {
@@ -167,38 +166,19 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
 
             VectorMask candidateMask = new VectorMask(laneMask);
 
-            if (clause.Edition.HasValue && clause.Min == 1)
+            if (clause.Edition.HasValue)
             {
                 candidateMask = LegendarySoulEditionPrefilter.Apply(ref ctx, clause, laneMask);
                 if (candidateMask.IsAllFalse())
                     return candidateMask;
             }
 
+            // Single match core: same PrepareRunState + LegendarySoulMatcher count as should-scoring
+            // (includes Hieroglyph/Petroglyph pack-slot clamp). Edition prefilter above stays vector.
             return ctx.SearchIndividualSeeds(
                 candidateMask,
                 (MotelySingleSearchContext singleCtx) =>
-                {
-                    int matchCount = 0;
-
-                    foreach (var ante in clause.Antes)
-                    {
-                        if (
-                            LegendarySoulMatcher.MatchAnte(
-                                ref singleCtx,
-                                ante,
-                                clause,
-                                maxBoosterPack
-                            )
-                        )
-                        {
-                            matchCount++;
-                            if (matchCount >= needed)
-                                return 1;
-                        }
-                    }
-
-                    return 0;
-                }
+                    JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
             );
         }
     }

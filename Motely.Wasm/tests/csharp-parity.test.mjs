@@ -104,7 +104,8 @@ should:
         assert.deepEqual(missing.rows[0].tallies, [0]);
     });
 
-    it("sourceless wildcard joker defaults match explicit all-ante shop/pack sources", async () => {
+    it("sourceless wildcard joker defaults match explicit shop-only sources", async () => {
+        // Filter default (null sources:) is shop slots only — packs need an explicit block.
         const implicit = await searchList(`name: default-fallback
 deck: Red
 stake: White
@@ -121,7 +122,6 @@ should:
     antes: [1, 2, 3, 4, 5, 6, 7, 8]
     sources:
       shopItems: [0, 1, 2, 3, 4, 5, 6, 7]
-      boosterPacks: [0, 1, 2, 3, 4, 5]
 `, ["MOTELY77"]);
 
         assert.equal(implicit.scoredMatches.length, 1);

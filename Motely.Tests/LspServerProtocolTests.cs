@@ -145,6 +145,64 @@ public class LspServerProtocolTests
         Assert.Equal(1, d.Span.StartLine);
     }
 
+    [Fact]
+    public void DidClose_ClearsPublishedDiagnostics()
+    {
+        var (_, messages) = RunSession(
+            Request(1, "initialize", new JsonObject()),
+            DidOpen("boses: []\n"),
+            Notification("textDocument/didClose", new JsonObject
+            {
+                ["textDocument"] = new JsonObject { ["uri"] = DocumentUri },
+            }),
+            Request(2, "shutdown"),
+            Notification("exit")
+        );
+
+        var publishes = messages
+            .Where(m => m["method"]?.GetValue<string>() == "textDocument/publishDiagnostics")
+            .ToList();
+        Assert.Equal(2, publishes.Count);
+        Assert.NotEmpty((JsonArray)publishes[0]["params"]!["diagnostics"]!);
+        Assert.Empty((JsonArray)publishes[1]["params"]!["diagnostics"]!);
+        Assert.Equal(DocumentUri, publishes[1]["params"]!["uri"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void ExitWithoutShutdown_ReturnsNonZero()
+    {
+        var (exitCode, _) = RunSession(
+            Request(1, "initialize", new JsonObject()),
+            Notification("exit")
+        );
+        Assert.Equal(1, exitCode);
+    }
+
+    [Fact]
+    public void Completion_IncludesTextEditForTypedPrefix()
+    {
+        var (_, messages) = RunSession(
+            Request(1, "initialize", new JsonObject()),
+            DidOpen("must:\n  - joker: Lu"),
+            Request(2, "textDocument/completion", new JsonObject
+            {
+                ["textDocument"] = new JsonObject { ["uri"] = DocumentUri },
+                ["position"] = new JsonObject { ["line"] = 1, ["character"] = 13 },
+            }),
+            Request(3, "shutdown"),
+            Notification("exit")
+        );
+
+        var items = (JsonArray)ResponseTo(messages, 2)["result"]!;
+        var lucky = Assert.Single(items, i => i!["label"]!.GetValue<string>() == "LuckyCat");
+        var edit = lucky!["textEdit"]!;
+        Assert.Equal("LuckyCat", edit["newText"]!.GetValue<string>());
+        Assert.Equal(1, edit["range"]!["start"]!["line"]!.GetValue<int>());
+        // "Lu" is the typed prefix — start column lands on L of Lu.
+        Assert.Equal(11, edit["range"]!["start"]!["character"]!.GetValue<int>());
+        Assert.Equal(13, edit["range"]!["end"]!["character"]!.GetValue<int>());
+    }
+
     // ── Session plumbing ────────────────────────────────────────────────────────────────
 
     private static (int ExitCode, List<JsonNode> Messages) RunSession(params JsonObject[] client)

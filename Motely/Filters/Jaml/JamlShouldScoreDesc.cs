@@ -4,8 +4,9 @@ using System.Runtime.CompilerServices;
 namespace Motely.Filters.Jaml;
 
 /// <summary>
-/// Per-seed scoring pass: <c>must</c> clauses are re-evaluated precisely (SIMD is coarse),
-/// then <c>should</c> clauses contribute score and CSV tallies.
+/// Per-seed scoring pass: <c>must</c> clauses re-evaluated when SIMD was coarse;
+/// skipped when every must already used an exact confirm path. Then <c>should</c>
+/// clauses contribute score and CSV tallies.
 /// </summary>
 public struct JamlShouldScoreDesc
     : IMotelySeedScoreDesc<JamlShouldScoreDesc.JamlShouldScoreProvider>
@@ -14,6 +15,7 @@ public struct JamlShouldScoreDesc
     private readonly IJamlClause[] _shouldClauses;
     private readonly Action<string>? _seedMatchCallback;
     private readonly int _minimumTotalScore;
+    private readonly bool _skipMustReeval;
 
     public JamlShouldScoreDesc(
         IJamlClause[] mustClauses,
@@ -26,6 +28,7 @@ public struct JamlShouldScoreDesc
         _shouldClauses = shouldClauses;
         _seedMatchCallback = seedMatchCallback;
         _minimumTotalScore = minimumTotalScore;
+        _skipMustReeval = JamlScoring.CanSkipMustReeval(mustClauses);
     }
 
     public JamlShouldScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx) =>
@@ -33,7 +36,8 @@ public struct JamlShouldScoreDesc
             _mustClauses,
             _shouldClauses,
             _seedMatchCallback ?? ctx.SeedMatchCallback,
-            _minimumTotalScore
+            _minimumTotalScore,
+            _skipMustReeval
         );
 
     public struct JamlShouldScoreProvider : IMotelySeedScoreProvider
@@ -42,12 +46,14 @@ public struct JamlShouldScoreDesc
         private readonly IJamlClause[] _shouldClauses;
         private readonly Action<string>? _seedMatchCallback;
         private readonly int _minimumTotalScore;
+        private readonly bool _skipMustReeval;
 
         public JamlShouldScoreProvider(
             IJamlClause[] mustClauses,
             IJamlClause[] shouldClauses,
             Action<string>? seedMatchCallback,
-            int minimumTotalScore = 0
+            int minimumTotalScore = 0,
+            bool skipMustReeval = false
         )
         {
             Debug.Assert(
@@ -63,6 +69,7 @@ public struct JamlShouldScoreDesc
             _shouldClauses = shouldClauses;
             _seedMatchCallback = seedMatchCallback;
             _minimumTotalScore = minimumTotalScore;
+            _skipMustReeval = skipMustReeval;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -80,32 +87,63 @@ public struct JamlShouldScoreDesc
             var shouldClauses = _shouldClauses;
             var seedMatchCallback = _seedMatchCallback;
             int cutoff = Math.Max(_minimumTotalScore, scoreThreshold);
+            bool skipMust = _skipMustReeval;
+
+            // Must-only + exact SIMD confirm + no score cutoff: identity is enough.
+            if (skipMust && shouldClauses.Length == 0 && cutoff <= 0)
+            {
+                return searchContext.SearchIndividualSeeds(
+                    baseFilterMask,
+                    (MotelySingleSearchContext singleCtx) =>
+                    {
+                        ref var tally = ref buffer[singleCtx.VectorLane];
+                        tally.Reset(string.Empty);
+                        tally.Score = 0;
+                        char* seedPtr = stackalloc char[MotelyGlobals.MaxSeedLength];
+                        int seedLength = singleCtx.GetSeed(seedPtr);
+                        string seedStr = new string(seedPtr, 0, seedLength);
+                        tally.Seed = seedStr;
+                        seedMatchCallback?.Invoke(seedStr);
+                        return 1;
+                    }
+                );
+            }
 
             return searchContext.SearchIndividualSeeds(
                 baseFilterMask,
                 (MotelySingleSearchContext singleCtx) =>
                 {
                     var runState = new MotelyRunState();
-                    JamlScoring.PrepareRunState(
-                        ref singleCtx,
-                        CombineForPrepareRunState(mustClauses, shouldClauses),
-                        runState
-                    );
+                    IJamlClause[] prepareClauses = skipMust
+                        ? (
+                            shouldClauses.Length > 0
+                                ? shouldClauses
+                                : mustClauses
+                        )
+                        : CombineForPrepareRunState(mustClauses, shouldClauses);
+
+                    // Should-only prepare still needs a non-empty array; must-only with skip
+                    // already returned above when cutoff <= 0. Must-only with cutoff uses must.
+                    if (prepareClauses.Length > 0)
+                        JamlScoring.PrepareRunState(ref singleCtx, prepareClauses, runState);
 
                     int totalScore = 0;
                     ref var tally = ref buffer[singleCtx.VectorLane];
                     tally.Reset(string.Empty);
 
-                    for (int i = 0; i < mustClauses.Length; i++)
+                    if (!skipMust)
                     {
-                        int raw = JamlScoring.CountRawOccurrences(
-                            ref singleCtx,
-                            mustClauses[i],
-                            runState
-                        );
+                        for (int i = 0; i < mustClauses.Length; i++)
+                        {
+                            int raw = JamlScoring.CountRawOccurrences(
+                                ref singleCtx,
+                                mustClauses[i],
+                                runState
+                            );
 
-                        if (raw < mustClauses[i].Min)
-                            return 0;
+                            if (!JamlScoring.MeetsOccurrenceBounds(raw, mustClauses[i]))
+                                return 0;
+                        }
                     }
 
                     for (int i = 0; i < shouldClauses.Length; i++)

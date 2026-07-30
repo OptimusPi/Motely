@@ -81,70 +81,13 @@ public static partial class JamlConfigLoader
     }
 
     private static IJamlClause CreateClause(string discriminator) =>
-        Normalize(discriminator) switch
-        {
-            "joker" or "jokers" => new JokerClause(),
-            "commonjoker" or "commonjokers" => new CommonJokerClause(),
-            "uncommonjoker" or "uncommonjokers" => new UncommonJokerClause(),
-            "rarejoker" or "rarejokers" => new RareJokerClause(),
-            "legendaryjoker" or "legendaryjokers" => new LegendaryJokerClause(),
-            "voucher" or "vouchers" => new VoucherClause { Vouchers = [], Rolls = [] },
-            "tarotcard" or "tarotcards" => new TarotCardClause { Tarots = [] },
-            "spectralcard" or "spectralcards" => new SpectralCardClause { Spectrals = [] },
-            "planetcard" or "planetcards" => new PlanetCardClause { Planets = [] },
-            "standardcard" or "standardcards" => new StandardCardClause(),
-            "boss" or "bosses" => new BossClause { Bosses = [] },
-            "tag" or "tags" or "smallblindtag" or "bigblindtag" => new TagClause { Tags = [], Rolls = [] },
-            "erraticrank" or "erraticranks" => new ErraticRankClause { Rank = default },
-            "erraticsuit" or "erraticsuits" => new ErraticSuitClause { Suit = default },
-            "startingdraw" => new StartingDrawClause(),
-            "luckymoney" => new LuckyMoneyClause(),
-            "luckymult" => new LuckyMultClause(),
-            "misprintmult" => new MisprintMultClause(),
-            "wheeloffortune" => new WheelOfFortuneClause(),
-            "grosmichelextinct" => new GrosMichelExtinctClause(),
-            "cavendishextinct" => new CavendishExtinctClause(),
-            "spacelevelup" => new SpaceLevelupClause(),
-            "businesspayout" => new BusinessPayoutClause(),
-            "bloodstonetrigger" => new BloodstoneTriggerClause(),
-            "parkingpayout" => new ParkingPayoutClause(),
-            "glassdestroy" => new GlassDestroyClause(),
-            "wheelstaysflipped" => new WheelStaysFlippedClause(),
-            _ => throw new InvalidOperationException(
-                $"Populator: cannot construct clause for discriminator '{discriminator}'."
-            ),
-        };
+        JamlSchema.CreateClause(discriminator);
 
     private static void ApplyWith(IJamlClause clause, IReader data)
     {
-        // Only families that list "with" in ClauseKeys own a With property.
-        switch (clause)
-        {
-            case LuckyMoneyClause c:
-                c.With = ParseWith(data);
-                break;
-            case LuckyMultClause c:
-                c.With = ParseWith(data);
-                break;
-            case WheelOfFortuneClause c:
-                c.With = ParseWith(data);
-                break;
-            case GrosMichelExtinctClause c:
-                c.With = ParseWith(data);
-                break;
-            case CavendishExtinctClause c:
-                c.With = ParseWith(data);
-                break;
-            case SpaceLevelupClause c:
-                c.With = ParseWith(data);
-                break;
-            case GlassDestroyClause c:
-                c.With = ParseWith(data);
-                break;
-            case WheelStaysFlippedClause c:
-                c.With = ParseWith(data);
-                break;
-        }
+        // Families that list "with" in ClauseKeys implement IWithScopedClause.
+        if (clause is IWithScopedClause withScoped)
+            withScoped.With = ParseWith(data);
     }
 
     private static void ApplySources(IJamlClause clause, IReader data)
@@ -186,15 +129,22 @@ public static partial class JamlConfigLoader
 
     private static JamlLoaderValueReader ValueReaderForKey(IReader data, string key)
     {
+        var span = data.ValueSpan(key);
         if (data.GetStringArray(key) is { } strings)
-            return JamlLoaderValueReader.FromStrings(strings);
+            return JamlLoaderValueReader.FromStrings(strings, span);
         if (data.GetIntArray(key) is { } ints)
-            return JamlLoaderValueReader.FromStrings(Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            return JamlLoaderValueReader.FromStrings(
+                Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                span
+            );
         if (data.GetInt(key) is { } i)
-            return JamlLoaderValueReader.FromScalar(i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return JamlLoaderValueReader.FromScalar(
+                i.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                span
+            );
         if (data.GetBool(key) is { } b)
-            return JamlLoaderValueReader.FromScalar(b ? "true" : "false");
-        return JamlLoaderValueReader.FromScalar(data.GetString(key));
+            return JamlLoaderValueReader.FromScalar(b ? "true" : "false", span);
+        return JamlLoaderValueReader.FromScalar(data.GetString(key), span);
     }
 
     private static JokerSourceConfig? PopulateJokerSources(IReader data)
@@ -271,6 +221,7 @@ public static partial class JamlConfigLoader
                 block.GetBool("requireMegaPack")
                 ?? block.GetBool("requireMega")
                 ?? false,
+            OmenGlobe = block.GetBool("omenGlobe") ?? false,
         };
     }
 
@@ -311,56 +262,16 @@ public static partial class JamlConfigLoader
         : string.Equals(key, "value", StringComparison.OrdinalIgnoreCase) ? "mult"
         : key;
 
-    private static IJamlClause PopulateJokerFamily<TEnum>(
-        string discriminator,
-        NodeReader node,
-        IReader data,
-        int[] antes,
-        int min,
-        int? max,
-        int score,
-        string? label
-    )
-        where TEnum : struct, Enum
-    {
-        var clause = Populate(discriminator, node, data, antes, min, max, score, label);
-        var discReader = DiscriminatorValueReader(node, discriminator);
-        if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
-            throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
-        return clause;
-    }
-
-    private static TClause PopulateAndCast<TClause>(
-        string discriminator,
-        NodeReader node,
-        IReader data,
-        int[] antes,
-        int min,
-        int? max,
-        int score,
-        string? label,
-        bool applyDiscriminatorValue = true
-    )
-        where TClause : class, IJamlClause
-    {
-        var clause = (TClause)Populate(discriminator, node, data, antes, min, max, score, label);
-        if (applyDiscriminatorValue)
-        {
-            var discReader = DiscriminatorValueReader(node, discriminator);
-            if (!JamlClauseDescDispatch.TrySetDiscriminatorValue(clause, discReader))
-                throw new InvalidOperationException($"'{discriminator}' clause requires a value.");
-        }
-        return clause;
-    }
-
     private static JamlLoaderValueReader DiscriminatorValueReader(NodeReader node, string discriminator)
     {
+        var span = node.ValueSpan(discriminator);
         if (node.GetStringArray(discriminator) is { } arr)
-            return JamlLoaderValueReader.FromStrings(arr);
+            return JamlLoaderValueReader.FromStrings(arr, span);
         if (node.GetIntArray(discriminator) is { } ints)
             return JamlLoaderValueReader.FromStrings(
-                Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                span
             );
-        return JamlLoaderValueReader.FromScalar(node.GetString(discriminator));
+        return JamlLoaderValueReader.FromScalar(node.GetString(discriminator), span);
     }
 }

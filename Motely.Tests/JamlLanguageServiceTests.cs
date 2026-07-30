@@ -47,6 +47,28 @@ public sealed class JamlLanguageServiceTests
         var d = Assert.Single(diagnostics);
         Assert.Equal(JamlDiagnosticSeverity.Error, d.Severity);
         Assert.StartsWith("JAML", d.Code);
+        Assert.Equal(0, d.Span.StartLine);
+        Assert.Contains("NotARealDeck", d.Message);
+        Assert.Contains("… +", d.Message); // capped known list, not every MotelyDeck name inline
+    }
+
+    [Fact]
+    public void Diagnose_UnknownJokerValue_UnderlinesTheValueToken()
+    {
+        const string text = """
+            deck: Red
+            stake: White
+            must:
+              - joker: NotARealJoker
+            """;
+        var d = Assert.Single(JamlLanguageService.Diagnose(text));
+        Assert.Equal(3, d.Span.StartLine);
+        Assert.Contains("NotARealJoker", d.Message);
+        Assert.Contains("… +", d.Message); // capped known list
+        // Full MotelyJoker dump is huge; capped message stays short.
+        Assert.True(d.Message.Length < 400, $"message too long ({d.Message.Length}): {d.Message}");
+        // Value starts after "  - joker: "
+        Assert.True(d.Span.StartColumn >= 10, $"expected value column, got {d.Span.StartColumn}");
     }
 
     [Fact]
@@ -90,6 +112,17 @@ public sealed class JamlLanguageServiceTests
         var diagnostic = Assert.Single(JamlLanguageService.Diagnose(text));
         Assert.Contains("NotARealBoss", diagnostic.Message);
         Assert.Equal(1, diagnostic.Span.StartLine);
+    }
+
+    [Fact]
+    public void Complete_ValuePrefix_ReplaceSpanCoversTypedText()
+    {
+        var text = "must:\n  - joker: Lu";
+        var items = JamlLanguageService.Complete(text, 1, text.Split('\n')[1].Length);
+        var lucky = Assert.Single(items, i => i.Label == "LuckyCat");
+        Assert.Equal(1, lucky.ReplaceSpan.StartLine);
+        Assert.Equal(11, lucky.ReplaceSpan.StartColumn); // 'L' of Lu
+        Assert.Equal(13, lucky.ReplaceSpan.EndColumn);
     }
 
     // ── Hover ───────────────────────────────────────────────────────────────────────────

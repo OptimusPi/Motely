@@ -31,4 +31,19 @@ public sealed class JamlWildcardTests
         Assert.False(JamlConfigLoader.TryLoad(Doc("*any*"), out _, out var error));
         Assert.Contains("*any*", error);
     }
+
+    private static string TarotDoc(string token) =>
+        $"name: tarot-wildcard-probe\ndeck: Red\nstake: White\nshould:\n  - tarotCard: {token}\n    score: 1\n";
+
+    [Theory]
+    [InlineData("Any")]
+    [InlineData("any")]
+    [InlineData("ANY")]
+    public void AnyIsTheTarotWildcard(string token)
+    {
+        Assert.True(JamlConfigLoader.TryLoad(TarotDoc(token), out var config, out var error), error);
+        var clause = Assert.IsType<TarotCardClause>(config!.Should[0]);
+        Assert.True(clause.IsWildcard);
+        Assert.Empty(clause.Tarots);
+    }
 }

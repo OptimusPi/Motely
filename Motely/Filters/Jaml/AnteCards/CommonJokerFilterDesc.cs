@@ -49,13 +49,10 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — 8 shop slots + 6 packs.
-    /// Specialty sources stay off by default. Applied only when <c>Sources</c> is null.</summary>
-    internal static readonly JokerSourceConfig DefaultSources = new()
-    {
-        ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
-    };
+    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — shop slots only.
+    /// Packs and specialty streams need an explicit <c>sources:</c> block. Applied only when <c>Sources</c> is null.</summary>
+    /// <inheritdoc cref="JokerFilterDesc.DefaultSources"/>
+    internal static readonly JokerSourceConfig DefaultSources = JokerFilterDesc.DefaultSources;
 
     public CommonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
@@ -81,7 +78,7 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
             }
         }
 
-        // null sources → default shop+packs (loader no longer normalizes).
+        // null sources → filter default (shop only). Loader never fills Sources.
         var sources = _clause.Sources ?? DefaultSources;
         var shopIndices = sources.ShopItems;
         var boosterIndices = sources.BoosterPacks;
@@ -133,6 +130,20 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
             var shopIndices = _shopIndices;
             var boosterIndices = _boosterIndices;
 
+            VectorMask ante1Extended = VectorMask.NoBitsSet;
+            if (boosterIndices.Length > 0 && JamlSimdPackSupport.NeedsAnte1Extension(_maxBoosterPack))
+            {
+                bool hasAnte1 = false;
+                for (int i = 0; i < _clause.Antes.Length; i++)
+                    if (_clause.Antes[i] == 1)
+                    {
+                        hasAnte1 = true;
+                        break;
+                    }
+                if (hasAnte1)
+                    ante1Extended = JamlSimdPackSupport.Ante1PackExtensionMask(ref ctx);
+            }
+
             foreach (var ante in _clause.Antes)
             {
                 // ── Shop items SIMD ──
@@ -172,6 +183,7 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
                 }
 
                 // ── Buffoon packs SIMD ──
+                // Per-lane size (Normal=2, Jumbo/Mega=4) + ante-1 slot reachability.
                 if (boosterIndices.Length > 0)
                 {
                     var packStream = ctx.CreateBoosterPackStream(ante);
@@ -190,63 +202,58 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
                             }
                         }
 
+                        VectorMask reachable = JamlSimdPackSupport.SlotReachableMask(
+                            ante,
+                            p,
+                            ante1Extended
+                        );
+                        VectorMask countLanes = isTarget
+                            ? reachable
+                            : VectorMask.NoBitsSet;
+
                         VectorMask isBuffoon = VectorEnum256.Equals(
                             pack.GetPackType(),
                             MotelyBoosterPackType.Buffoon
                         );
+                        if (isBuffoon.IsAllFalse())
+                            continue;
 
-                        if (isBuffoon.IsPartiallyTrue())
+                        VectorMask isNormal = VectorEnum256.Equals(
+                            pack.GetPackSize(),
+                            MotelyBoosterPackSize.Normal
+                        );
+                        VectorMask baseLanes = isBuffoon;
+                        VectorMask extraLanes = isBuffoon & ~isNormal;
+                        var baseMask = JamlSimdPackSupport.ToPrngMask(baseLanes);
+                        var extraMask = JamlSimdPackSupport.ToPrngMask(extraLanes);
+
+                        for (int c = 0; c < 2; c++)
                         {
-                            VectorMask isNormalSize = VectorEnum256.Equals(
-                                pack.GetPackSize(),
-                                MotelyBoosterPackSize.Normal
-                            );
-                            VectorMask isJumboSize = VectorEnum256.Equals(
-                                pack.GetPackSize(),
-                                MotelyBoosterPackSize.Jumbo
-                            );
-                            VectorMask isMegaSize = VectorEnum256.Equals(
-                                pack.GetPackSize(),
-                                MotelyBoosterPackSize.Mega
-                            );
-
-                            if ((isBuffoon & isNormalSize).IsPartiallyTrue())
-                            {
-                                var contents = ctx.GetNextBuffoonPackContents(
-                                    ref jokerStream,
-                                    MotelyBoosterPackSize.Normal
+                            var joker = ctx.GetNextJoker(ref jokerStream, baseMask);
+                            if (countLanes.IsPartiallyTrue())
+                                JamlSimdPackSupport.AddMatchCounts(
+                                    MatchJokers(joker) & countLanes & baseLanes,
+                                    ref matchCounts
                                 );
-                                MatchBuffoonContents(contents, isTarget, ref matchCounts);
-                            }
+                        }
 
-                            if ((isBuffoon & isJumboSize).IsPartiallyTrue())
+                        if (extraLanes.IsPartiallyTrue())
+                        {
+                            for (int c = 0; c < 2; c++)
                             {
-                                var contents = ctx.GetNextBuffoonPackContents(
-                                    ref jokerStream,
-                                    MotelyBoosterPackSize.Jumbo
-                                );
-                                MatchBuffoonContents(contents, isTarget, ref matchCounts);
-                            }
-
-                            if ((isBuffoon & isMegaSize).IsPartiallyTrue())
-                            {
-                                var contents = ctx.GetNextBuffoonPackContents(
-                                    ref jokerStream,
-                                    MotelyBoosterPackSize.Mega
-                                );
-                                MatchBuffoonContents(contents, isTarget, ref matchCounts);
+                                var joker = ctx.GetNextJoker(ref jokerStream, extraMask);
+                                if (countLanes.IsPartiallyTrue())
+                                    JamlSimdPackSupport.AddMatchCounts(
+                                        MatchJokers(joker) & countLanes & extraLanes,
+                                        ref matchCounts
+                                    );
                             }
                         }
                     }
                 }
             }
 
-            Vector256<int> minVec = Vector256.Create(_clause.Min);
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(minVec, Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, _clause.Min, _clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -296,30 +303,6 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
             }
 
             return jokerMatch;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private readonly void MatchBuffoonContents(
-            in MotelyVectorItemSet contents,
-            bool isTarget,
-            ref Vector256<int> matchCounts
-        )
-        {
-            if (!isTarget)
-                return;
-
-            for (int i = 0; i < contents.Length; i++)
-            {
-                VectorMask match = MatchJokers(contents[i]);
-                matchCounts = Vector256.Add(
-                    matchCounts,
-                    Vector256.ConditionalSelect(
-                        VectorMaskToConditionalSelectMask(match),
-                        Vector256.Create(1),
-                        Vector256<int>.Zero
-                    )
-                );
-            }
         }
     }
 }

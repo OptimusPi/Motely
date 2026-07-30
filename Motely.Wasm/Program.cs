@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using Bootsharp;
 using Bootsharp.Inject;
@@ -6,6 +7,7 @@ using Motely;
 using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.Jaml;
+using Motely.Lsp.Core;
 using Motely.SeedProviders;
 using JamlyzerEngine = Motely.Analysis.MotelyJamlyzer;
 
@@ -49,18 +51,9 @@ public static class MotelyWasmRenaming
     [RenameModule]
     public static string Module(Type type, string @default) => "index";
 
-    [RenameMember]
-    public static string? Member(MemberInfo info, string @default) =>
-        info switch
-        {
-            MethodInfo m
-                when m.ReturnType.IsByRef
-                    || m.ReturnType.IsByRefLike
-                    || m.GetParameters()
-                        .Any(p => p.ParameterType.IsByRef || p.ParameterType.IsByRefLike) => null,
-            PropertyInfo p when p.PropertyType.IsByRef || p.PropertyType.IsByRefLike => null,
-            _ => @default,
-        };
+    // Byref/ref-struct members are handled by MotelySingleSearchContextSpecialization, not a
+    // shape sweep here: a global blocklist is a second, invisible API next to [Export], and it
+    // deletes members silently the moment an engine type grows a ref member.
 }
 
 public static partial class MotelyWasm
@@ -70,6 +63,33 @@ public static partial class MotelyWasm
         typeof(MotelyWasm)
             .Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion.Split('+')[0] ?? "0.0.0";
+}
+
+/// <summary>
+/// The language brain (<see cref="JamlLanguageService"/>) that the stdio server hosts, exported
+/// for browser and agent clients. An editor — or an agent writing JAML through MCP — gets the
+/// engine's own diagnostics, hover and completion instead of guessing at the grammar.
+/// </summary>
+public static partial class MotelyLsp
+{
+    /// <summary>Errors and warnings for a whole document, from the real loader.</summary>
+    [Export]
+    public static IReadOnlyList<JamlDiagnostic> Diagnose(string text) =>
+        JamlLanguageService.Diagnose(text);
+
+    /// <summary>Markdown for the word at a cursor position, or null when there is nothing to say.</summary>
+    [Export]
+    public static JamlHoverInfo? Hover(string text, int line, int character) =>
+        JamlLanguageService.Hover(text, line, character);
+
+    /// <summary>Completion candidates at a cursor position, already filtered by the typed prefix.</summary>
+    [Export]
+    public static IReadOnlyList<JamlCompletionItem> Complete(string text, int line, int character) =>
+        JamlLanguageService.Complete(text, line, character);
+
+    /// <summary>Schema explanation of a discriminator, key or vocabulary word.</summary>
+    [Export]
+    public static string? Explain(string topic) => JamlLanguageService.Explain(topic);
 }
 
 public static partial class MotelyJaml
@@ -88,36 +108,10 @@ public static partial class MotelyJaml
     [Export]
     public static string[] NativeFilterNames() => MotelyNativeFilterNames.DisplayNames;
 
-    /// <summary>
-    /// Engine enum vocabulary for editors/agents. Case-insensitive substring filter
-    /// ("luck" finds LuckyCat). Same names the SIMD path executes.
-    /// </summary>
+    /// <summary>Thin export of generated <see cref="JamlSchema.ListItems"/>.</summary>
     [Export]
-    public static string[] ListItems(string kind, string? query = null)
-    {
-        string[] names = kind.ToLowerInvariant() switch
-        {
-            "joker" or "jokers" => Enum.GetNames<MotelyJoker>(),
-            "voucher" or "vouchers" => Enum.GetNames<MotelyVoucher>(),
-            "tag" or "tags" => Enum.GetNames<MotelyTag>(),
-            "boss" or "bosses" => Enum.GetNames<MotelyBossBlind>(),
-            "deck" or "decks" => Enum.GetNames<MotelyDeck>(),
-            "stake" or "stakes" => Enum.GetNames<MotelyStake>(),
-            "edition" or "editions" => Enum.GetNames<MotelyItemEdition>(),
-            "seal" or "seals" => Enum.GetNames<MotelyItemSeal>(),
-            "tarotcard" or "tarotcards" or "tarot" => Enum.GetNames<MotelyTarotCard>(),
-            "spectralcard" or "spectralcards" or "spectral" => Enum.GetNames<MotelySpectralCard>(),
-            "planetcard" or "planetcards" or "planet" => Enum.GetNames<MotelyPlanetCard>(),
-            _ => throw new ArgumentException(
-                $"Unknown vocabulary kind '{kind}'. Kinds: joker, voucher, tag, boss, deck, stake, edition, seal, tarotCard, spectralCard, planetCard."
-            ),
-        };
-
-        if (string.IsNullOrWhiteSpace(query))
-            return names;
-
-        return [.. names.Where(n => n.Contains(query, StringComparison.OrdinalIgnoreCase))];
-    }
+    public static string[] ListItems(string kind, string? query = null) =>
+        JamlSchema.ListItems(kind, query);
 
     [Export]
     public static string? ValidateLine(string line) => JamlLine.Validate(line);
@@ -187,27 +181,79 @@ public static partial class MotelySearch
         );
 
     /// <summary>
-    /// Sequential sweep that stops at the first match — the WASM twin of the CLI's
-    /// <c>--findone</c>, same engine chain plus <c>StopAfter(1)</c>. The vector batch in
-    /// flight drains when the limit trips, so the array can carry a few bonus matches;
-    /// callers wanting exactly one take <c>[0]</c>. Empty array = the range held nothing.
+    /// CLI <c>--collect N</c> shape: aesthetics first (all families, digit-pad free slots —
+    /// same as CLI when <c>--padding</c> is omitted), then sequential for the remainder.
+    /// <paramref name="stopAfter"/> is N (JS BigInt / C# <c>long</c>). SIMD may deliver a few over.
     /// </summary>
     [Export]
-    public static Task<MotelyScoredSeedResult[]> FindOne(
+    public static async Task<MotelyScoredSeedResult[]> Collect(JamlConfig config, long stopAfter)
+    {
+        Debug.Assert(stopAfter >= 1, "stopAfter must be >= 1.");
+
+        List<MotelyScoredSeedResult> results = [];
+        var aesthetics = Enum.GetValues<JamlAesthetic>();
+        char[] collectPad = JamlAesthetics.QuickPaddingChars;
+        await RunIntoAsync(
+            config,
+            results,
+            s =>
+                s.WithProviderSearch(
+                        new MotelySeedListProvider(
+                            aesthetics.SelectMany(a =>
+                                JamlAesthetics.EnumerateSeeds(a, collectPad)
+                            ),
+                            aesthetics.Sum(a => JamlAesthetics.GetSeedCount(a, collectPad))
+                        )
+                    )
+                    .StopAfter(stopAfter)
+        );
+
+        long remaining = stopAfter - results.Count;
+        if (remaining > 0)
+        {
+            await RunIntoAsync(
+                config,
+                results,
+                s =>
+                    s.WithSequentialSearch()
+                        .WithBatchCharacterCount(4)
+                        .StopAfter(remaining)
+            );
+        }
+
+        return [.. results];
+    }
+
+    /// <summary>
+    /// Collect with an explicit sequential range only (CLI <c>--collect N</c> + start/end batch).
+    /// No aesthetic pass. Batch indices are JS BigInt.
+    /// </summary>
+    [Export]
+    public static Task<MotelyScoredSeedResult[]> CollectSequential(
         JamlConfig config,
+        long stopAfter,
         long startBatchIndex,
         long endBatchIndex,
         int batchCharacterCount
-    ) =>
-        RunAsync(
+    )
+    {
+        Debug.Assert(stopAfter >= 1, "stopAfter must be >= 1.");
+
+        return RunAsync(
             config,
             s =>
                 s.WithSequentialSearch()
                     .WithBatchCharacterCount(batchCharacterCount)
                     .WithStartBatchIndex(startBatchIndex)
                     .WithEndBatchIndex(endBatchIndex)
-                    .StopAfter(1)
+                    .StopAfter(stopAfter)
         );
+    }
+
+    /// <summary>CLI <c>--collect 1</c> — <see cref="Collect"/>(config, 1).</summary>
+    [Export]
+    public static Task<MotelyScoredSeedResult[]> FindOne(JamlConfig config) =>
+        Collect(config, stopAfter: 1);
 
     private static async Task<MotelyScoredSeedResult[]> RunAsync(
         JamlConfig config,
@@ -215,6 +261,16 @@ public static partial class MotelySearch
     )
     {
         List<MotelyScoredSeedResult> results = [];
+        await RunIntoAsync(config, results, withMode);
+        return [.. results];
+    }
+
+    private static async Task RunIntoAsync(
+        JamlConfig config,
+        List<MotelyScoredSeedResult> results,
+        Func<IMotelySearchSettings, IMotelySearchSettings> withMode
+    )
+    {
         IMotelySearchSettings settings = JamlSearchBuilder
             .CreateSettings(config)
             .WithDeck(config.Deck)
@@ -231,7 +287,6 @@ public static partial class MotelySearch
         settings = withMode(settings);
         using IMotelySearch search = settings.CreateSearch();
         await search.RunSearchAsync();
-        return [.. results];
     }
 }
 

@@ -154,10 +154,10 @@ public sealed class MotelyAestheticSeedProvider : IMotelySeedProvider
     private readonly IEnumerator<string> _enumerator;
     private readonly object _enumeratorLock = new();
 
-    public MotelyAestheticSeedProvider(JamlAesthetic aesthetic)
+    public MotelyAestheticSeedProvider(JamlAesthetic aesthetic, char[]? paddingAlphabet = null)
     {
-        SeedCount = JamlAesthetics.GetSeedCount(aesthetic);
-        _enumerator = JamlAesthetics.EnumerateSeeds(aesthetic).GetEnumerator();
+        SeedCount = JamlAesthetics.GetSeedCount(aesthetic, paddingAlphabet);
+        _enumerator = JamlAesthetics.EnumerateSeeds(aesthetic, paddingAlphabet).GetEnumerator();
     }
 
     public ReadOnlySpan<char> NextSeed()

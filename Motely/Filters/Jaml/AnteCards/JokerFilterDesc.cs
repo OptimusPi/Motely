@@ -72,13 +72,14 @@ public struct JokerFilterDesc(JokerClause clause)
         return true;
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Specialty/legendary sources stay off by default.
-    /// Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when <see cref="JokerClause.Sources"/> is null (no <c>sources:</c> in JAML).
+    /// The loader leaves Sources null — this is not parse/language. Shop slots only; packs and
+    /// specialty streams require an explicit <c>sources:</c> block (wholesale, no merge).
+    /// </summary>
     internal static readonly JokerSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public JokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
@@ -105,8 +106,7 @@ public struct JokerFilterDesc(JokerClause clause)
             }
         }
 
-        // null sources → default shop+packs; resolved here (and in JamlScoring) since the loader
-        // no longer normalizes. Specialty/legendary sources stay off by default.
+        // null sources → filter default (shop only). Loader never fills Sources.
         var sources = _clause.Sources ?? DefaultSources;
         var shopIndices = sources.ShopItems;
         var boosterIndices = sources.BoosterPacks;
@@ -164,10 +164,7 @@ public struct JokerFilterDesc(JokerClause clause)
                 var clause = _clause;
                 return ctx.SearchIndividualSeeds(
                     (MotelySingleSearchContext singleCtx) =>
-                        JamlScoring.CountJokerClauseOccurrencesForFilter(ref singleCtx, clause)
-                        >= needed
-                            ? 1
-                            : 0
+                        JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
                 );
             }
 
@@ -175,6 +172,20 @@ public struct JokerFilterDesc(JokerClause clause)
 
             var shopIndices = _shopIndices;
             var boosterIndices = _boosterIndices;
+
+            VectorMask ante1Extended = VectorMask.NoBitsSet;
+            if (boosterIndices.Length > 0 && JamlSimdPackSupport.NeedsAnte1Extension(_maxBoosterPack))
+            {
+                bool hasAnte1 = false;
+                for (int i = 0; i < _clause.Antes.Length; i++)
+                    if (_clause.Antes[i] == 1)
+                    {
+                        hasAnte1 = true;
+                        break;
+                    }
+                if (hasAnte1)
+                    ante1Extended = JamlSimdPackSupport.Ante1PackExtensionMask(ref ctx);
+            }
 
             foreach (var ante in _clause.Antes)
             {
@@ -215,6 +226,7 @@ public struct JokerFilterDesc(JokerClause clause)
                 }
 
                 // ── Buffoon packs SIMD ──
+                // Per-lane size (Normal=2, Jumbo/Mega=4) + ante-1 slot reachability.
                 if (boosterIndices.Length > 0)
                 {
                     var packStream = ctx.CreateBoosterPackStream(ante);
@@ -233,63 +245,58 @@ public struct JokerFilterDesc(JokerClause clause)
                             }
                         }
 
+                        VectorMask reachable = JamlSimdPackSupport.SlotReachableMask(
+                            ante,
+                            p,
+                            ante1Extended
+                        );
+                        VectorMask countLanes = isTarget
+                            ? reachable
+                            : VectorMask.NoBitsSet;
+
                         VectorMask isBuffoon = VectorEnum256.Equals(
                             pack.GetPackType(),
                             MotelyBoosterPackType.Buffoon
                         );
+                        if (isBuffoon.IsAllFalse())
+                            continue;
 
-                        if (isBuffoon.IsPartiallyTrue())
+                        VectorMask isNormal = VectorEnum256.Equals(
+                            pack.GetPackSize(),
+                            MotelyBoosterPackSize.Normal
+                        );
+                        VectorMask baseLanes = isBuffoon;
+                        VectorMask extraLanes = isBuffoon & ~isNormal;
+                        var baseMask = JamlSimdPackSupport.ToPrngMask(baseLanes);
+                        var extraMask = JamlSimdPackSupport.ToPrngMask(extraLanes);
+
+                        for (int c = 0; c < 2; c++)
                         {
-                            VectorMask isNormalSize = VectorEnum256.Equals(
-                                pack.GetPackSize(),
-                                MotelyBoosterPackSize.Normal
-                            );
-                            VectorMask isJumboSize = VectorEnum256.Equals(
-                                pack.GetPackSize(),
-                                MotelyBoosterPackSize.Jumbo
-                            );
-                            VectorMask isMegaSize = VectorEnum256.Equals(
-                                pack.GetPackSize(),
-                                MotelyBoosterPackSize.Mega
-                            );
-
-                            if ((isBuffoon & isNormalSize).IsPartiallyTrue())
-                            {
-                                var contents = ctx.GetNextBuffoonPackContents(
-                                    ref jokerStream,
-                                    MotelyBoosterPackSize.Normal
+                            var joker = ctx.GetNextJoker(ref jokerStream, baseMask);
+                            if (countLanes.IsPartiallyTrue())
+                                JamlSimdPackSupport.AddMatchCounts(
+                                    MatchJokers(joker) & countLanes & baseLanes,
+                                    ref matchCounts
                                 );
-                                MatchBuffoonContents(contents, isTarget, ref matchCounts);
-                            }
+                        }
 
-                            if ((isBuffoon & isJumboSize).IsPartiallyTrue())
+                        if (extraLanes.IsPartiallyTrue())
+                        {
+                            for (int c = 0; c < 2; c++)
                             {
-                                var contents = ctx.GetNextBuffoonPackContents(
-                                    ref jokerStream,
-                                    MotelyBoosterPackSize.Jumbo
-                                );
-                                MatchBuffoonContents(contents, isTarget, ref matchCounts);
-                            }
-
-                            if ((isBuffoon & isMegaSize).IsPartiallyTrue())
-                            {
-                                var contents = ctx.GetNextBuffoonPackContents(
-                                    ref jokerStream,
-                                    MotelyBoosterPackSize.Mega
-                                );
-                                MatchBuffoonContents(contents, isTarget, ref matchCounts);
+                                var joker = ctx.GetNextJoker(ref jokerStream, extraMask);
+                                if (countLanes.IsPartiallyTrue())
+                                    JamlSimdPackSupport.AddMatchCounts(
+                                        MatchJokers(joker) & countLanes & extraLanes,
+                                        ref matchCounts
+                                    );
                             }
                         }
                     }
                 }
             }
 
-            Vector256<int> minVec = Vector256.Create(_clause.Min);
-            Vector256<int> comparison = Vector256.GreaterThan(
-                matchCounts,
-                Vector256.Subtract(minVec, Vector256.Create(1))
-            );
-            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
+            return JamlSimdPackSupport.MeetsMinMaxMask(matchCounts, _clause.Min, _clause.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -332,30 +339,6 @@ public struct JokerFilterDesc(JokerClause clause)
             }
 
             return jokerMatch;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private readonly void MatchBuffoonContents(
-            in MotelyVectorItemSet contents,
-            bool isTarget,
-            ref Vector256<int> matchCounts
-        )
-        {
-            if (!isTarget)
-                return;
-
-            for (int i = 0; i < contents.Length; i++)
-            {
-                VectorMask match = MatchJokers(contents[i]);
-                matchCounts = Vector256.Add(
-                    matchCounts,
-                    Vector256.ConditionalSelect(
-                        VectorMaskToConditionalSelectMask(match),
-                        Vector256.Create(1),
-                        Vector256<int>.Zero
-                    )
-                );
-            }
         }
 
         private static bool UsesLegendaryPath(JokerClause clause)

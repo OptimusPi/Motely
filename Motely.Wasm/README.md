@@ -83,15 +83,22 @@ Events stream alongside for live UIs: `onProgress` ticks while the search runs,
 `onSeedMatch` delivers each bare seed as it's found, `onScoredResult` delivers each typed
 result incrementally.
 
-Available modes:
+Available modes (same shape as CLI):
 
 ```js
 const fromList = await MotelySearch.searchList(jaml);
 const fromRandom = await MotelySearch.searchRandom(jaml, 1000);
 const fromWalk = await MotelySearch.searchSequential(jaml, 0n, 1n, 1);
+
+// CLI --collect N: aesthetics first, then sequential for the remainder
+const batch = await MotelySearch.collect(jaml, 100n);
+const first = await MotelySearch.findOne(jaml); // collect(jaml, 1n)
+
+// CLI --collect N + --startBatch/--endBatch: sequential range only
+const slice = await MotelySearch.collectSequential(jaml, 5n, 0n, 1n, 1);
 ```
 
-`searchSequential` uses bigint batch indices because the C# parameters are `long`.
+`stopAfter` and batch indices are JS BigInt (C# `long`).
 
 ## The fleet — one engine per web worker
 
@@ -153,12 +160,13 @@ MotelyJaml.validateLine("Eternal Blueprint in antes 1 or 2"); // null
 MotelyJaml.canonicalizeLine("Showman in antes 1, 2");         // "Showman in antes 1 or 2"
 ```
 
-## Vocabulary
+## Enum lists (`listItems`)
 
-`MotelyJaml.listItems(kind, query)` serves the real engine vocabulary — jokers, vouchers, tags, bosses, and the rest — for autocomplete and agent grounding. Names come straight from the engine enums, so the vocabulary stays in lockstep with the engine by construction.
+`MotelyJaml.listItems(kind, query)` is a thin export of generated `JamlSchema.ListItems`. Kind is a discriminator wire (`joker`, `tarotCard`, …) or an enum-typed property key (`edition`, `deck`, …). Short nicknames like `tarot` / `planet` are not kinds.
 
 ```js
 MotelyJaml.listItems("joker", "lucky"); // ["LuckyCat", ...] — case-insensitive substring match
+MotelyJaml.listItems("planetCard");     // canonical wire, not "planet"
 ```
 
 ## Utilities
@@ -177,13 +185,13 @@ MotelyUtilities.repeatCharKeywords(3)[0];          // "AAA"
 From `Motely.Wasm/`:
 
 ```sh
-npm test        # publishes the Release build, then runs the Node suite against dist/index.mjs
-npm run test:ui # Playwright drives the real test UI in Chromium against the same artifact
+npm test        # pretest = Debug publish, then Node suite against dist/index.mjs
+npm run test:ui # Playwright: Chromium + testui (Search / Mount / Save / Load)
 npm run serve   # hand-drive the test UI at http://127.0.0.1:4173/
 npm run pack:check
 ```
 
-The test UI (`testui/index.html`) is a plain ES-module page with a CodeMirror 6 editor: live engine-driven lint and completion while you type, and a results table — feedback is continuous — live linting validates every keystroke, which is why the UI stays button-free. The Playwright specs in `tests-ui/` prove the package where UX lives: a real browser.
+The test UI (`testui/index.html`) is a plain ES-module page with CodeMirror 6: live engine lint and completion, a results table, and buttons for list search plus optional folder mount/save/load when the FS-enabled build is present. Playwright specs in `tests-ui/` pin known default-doc seeds (`AAAAAAAA`, `BBBBBBBB`) in a real browser.
 
 Releasing, from `Motely.Wasm/`: sync `"version"` in `package.json` to `<MotelyVersion>` in the repo-root `Directory.Packages.props`, run `npm test` and `npm run test:ui` green, then `npm publish`.
 
@@ -194,7 +202,7 @@ The package test suite mirrors the C# behavior tests that are meaningful through
 - boot/runtime and version export
 - JAML parse and validation strictness
 - JAMLyzer ante structure, event windows, score-by-analysis, and stream-state resume
-- real list/random/sequential searches
+- real list/random/sequential searches that pin known seeds (or random: walk count + search-index roundtrip)
 - AND scoring, default source fallback, Hieroglyph pack-slot reachability, and luck-source regressions
 - One-line JAML canonicalization
 - seed math and keyword utility parity

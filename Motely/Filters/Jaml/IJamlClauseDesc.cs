@@ -13,9 +13,8 @@ namespace Motely.Filters.Jaml;
 /// down, which is what makes it survive NativeAOT-LLVM rather than merely be annotated for it.
 /// </summary>
 /// <typeparam name="TClause">The clause this desc runs.</typeparam>
-// No `new()` constraint: several clause types use `required` members filled by
-// SetDiscriminatorValue after construction. The desc mutates a clause the loader built;
-// it does not construct one via Activator on this interface.
+// Clauses construct via generated <c>JamlSchema.CreateClause</c> (empty shell). The desc
+// mutates that shell through Set/SetDiscriminatorValue — no Activator, trimmer-safe.
 public interface IJamlClauseDesc<TClause> where TClause : class, IJamlClause
 {
     /// <summary>Every wire spelling that selects this clause — "joker" and "jokers" both.</summary>

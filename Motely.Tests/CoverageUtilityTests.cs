@@ -89,6 +89,14 @@ public sealed class CoverageUtilityTests
             MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount,
             MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Balatro)
         );
+        Assert.Equal(
+            MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount,
+            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Nsfw)
+        );
+        Assert.Equal(
+            MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount,
+            MotelyGlobals.GetPaddedSeedCountForKeywordsLong(MotelySeedKeywordSequences.NsfwKeywords)
+        );
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Palindrome)
         );
@@ -99,6 +107,7 @@ public sealed class CoverageUtilityTests
                 MotelySeedKeywordSequences.GrossKeywords,
                 MotelySeedKeywordSequences.FunnyKeywords,
                 MotelySeedKeywordSequences.BalatroKeywords,
+                MotelySeedKeywordSequences.NsfwKeywords,
             }
         )
         {

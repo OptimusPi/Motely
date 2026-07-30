@@ -194,73 +194,36 @@ ref partial struct MotelyVectorSearchContext
         );
     }
 
+    // The pack a player opens is deduplicated (resample rolls replace repeats), so HasThe
+    // answers from the same contents walk the scalar engine uses — the raw stream diverges
+    // whenever a duplicate resamples into the target.
     public VectorMask GetNextCelestialPackHasThe(
         ref MotelyVectorPlanetStream planetStream,
         MotelyPlanetCard targetPlanet,
         MotelyBoosterPackSize size
     )
     {
-        int cardCount = MotelyBoosterPackType.Celestial.GetCardCount(size);
-        VectorMask hasTarget = VectorMask.NoBitsSet;
-
-        for (int i = 0; i < cardCount; i++)
-        {
-            var Planet = GetNextPlanet(ref planetStream);
-            // Extract Planet card type using bit masking (similar to StandardcardSuit pattern)
-            var planetType = new VectorEnum256<MotelyPlanetCard>(
-                Vector256.BitwiseAnd(
-                    Planet.Value,
-                    Vector256.Create(
-                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
-                    )
-                )
-            );
-            VectorMask isTarget = VectorEnum256.Equals(planetType, targetPlanet);
-            hasTarget |= isTarget;
-
-            // Early exit optimization - if all lanes have found the target, no need to continue
-            if (hasTarget.IsAllTrue())
-                break;
-        }
-
-        return hasTarget;
+        var contents = GetNextCelestialPackContents(ref planetStream, size);
+        return contents.Contains(
+            (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)targetPlanet)
+        );
     }
 
+    /// <inheritdoc cref="GetNextCelestialPackHasThe(ref MotelyVectorPlanetStream, MotelyPlanetCard, MotelyBoosterPackSize)"/>
     public VectorMask GetNextCelestialPackHasThe(
         ref MotelyVectorPlanetStream planetStream,
         MotelyPlanetCard[] targetPlanets,
         MotelyBoosterPackSize size
     )
     {
-        int cardCount = MotelyBoosterPackType.Celestial.GetCardCount(size);
+        var contents = GetNextCelestialPackContents(ref planetStream, size);
         VectorMask hasAnyTarget = VectorMask.NoBitsSet;
-
-        for (int i = 0; i < cardCount; i++)
+        foreach (var target in targetPlanets)
         {
-            var Planet = GetNextPlanet(ref planetStream);
-            // Extract Planet card type using bit masking (similar to StandardcardSuit pattern)
-            var planetType = new VectorEnum256<MotelyPlanetCard>(
-                Vector256.BitwiseAnd(
-                    Planet.Value,
-                    Vector256.Create(
-                        MotelyGlobals.ItemTypeMask & ~MotelyGlobals.ItemTypeCategoryMask
-                    )
-                )
+            hasAnyTarget |= contents.Contains(
+                (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)target)
             );
-
-            VectorMask isAnyTarget = VectorMask.NoBitsSet;
-            foreach (var target in targetPlanets)
-            {
-                isAnyTarget |= VectorEnum256.Equals(planetType, target);
-            }
-
-            hasAnyTarget |= isAnyTarget;
-
-            // Early exit optimization - if all lanes have found any target, no need to continue
-            if (hasAnyTarget.IsAllTrue())
-                break;
         }
-
         return hasAnyTarget;
     }
 }

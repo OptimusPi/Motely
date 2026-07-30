@@ -73,13 +73,26 @@ public static class JamlSearchBuilder
                     new PassthroughFilterDesc()
                 );
 
-        foreach (var clause in config.Must)
-            settings = settings.WithAdditionalFilter(ClauseToFilterDesc(clause));
+        // The JAML document names its own deck and stake; the settings carry them from here so
+        // every caller searches what the filter says. Callers may still override afterwards
+        // (the CLI applies --deck/--stake on top).
+        settings = settings.WithDeck(config.Deck).WithStake(config.Stake);
 
-        foreach (var clause in config.MustNot)
+        // SIMD filter chain: must + mustNot cheapest-first so trivial clauses kill lanes before
+        // expensive SearchIndividualSeeds arms. Does not mutate the config; scoring still sees
+        // authored must/should order (tally columns + must re-eval).
+        foreach (
+            var (clause, negate) in config
+                .Must.Select(c => (clause: c, negate: false))
+                .Concat(config.MustNot.Select(c => (clause: c, negate: true)))
+                .OrderBy(x => x.clause.EstimateCrunches())
+        )
+        {
+            var desc = ClauseToFilterDesc(clause);
             settings = settings.WithAdditionalFilter(
-                new NegationFilterDesc(ClauseToFilterDesc(clause))
+                negate ? new NegationFilterDesc(desc) : desc
             );
+        }
 
         if (config.Must.Count + config.Should.Count > 0)
         {
@@ -132,6 +145,7 @@ public static class JamlSearchBuilder
             GlassDestroyClause c => new GlassDestroyFilterDesc(c),
             WheelStaysFlippedClause c => new WheelStaysFlippedFilterDesc(c),
             StartingDrawClause c => new StartingDrawFilterDesc(c),
+            PokerHandClause c => new PokerHandFilterDesc(c),
             AndClause c => new AndFilterDesc([.. c.Clauses.Select(ClauseToFilterDesc)]),
             OrClause c => new OrFilterDesc([.. c.Clauses.Select(ClauseToFilterDesc)], c.Min),
             _ => throw new InvalidOperationException(

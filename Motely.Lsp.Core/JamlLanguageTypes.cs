@@ -23,5 +23,12 @@ public sealed record JamlDiagnostic(
 public sealed record JamlHoverInfo(JamlSpan Span, string Markdown);
 
 /// <summary>One completion candidate. <see cref="Kind"/> is a coarse category the shells map
-/// onto their own item kinds: "key", "value", "discriminator".</summary>
-public sealed record JamlCompletionItem(string Label, string Kind, string? Detail = null);
+/// onto their own item kinds: "key", "value", "discriminator". When
+/// <see cref="ReplaceSpan"/> is non-empty, the client replaces that range with
+/// <see cref="Label"/> (typed prefix overtype).</summary>
+public sealed record JamlCompletionItem(
+    string Label,
+    string Kind,
+    string? Detail = null,
+    JamlSpan ReplaceSpan = default
+);

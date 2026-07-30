@@ -9,7 +9,7 @@ namespace Motely.Filters.Jaml;
 ///
 /// <b>KEEP — real SIMD, not dead code.</b> The live <c>legendaryJoker:</c> path applies the same
 /// work via <see cref="LegendarySoulEditionPrefilter"/> inside <see cref="LegendaryJokerFilterDesc"/>
-/// (edition + Min==1). This desc is the standalone composition form of that prefilter for callers
+/// (edition set, any Min). This desc is the standalone composition form of that prefilter for callers
 /// that want edition-only soul-stream filtering without the full legendary match; leave it on the tree.
 /// </summary>
 public struct LegendarySoulEditionFilterDesc(LegendaryJokerClause clause)

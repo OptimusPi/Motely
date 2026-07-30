@@ -24,7 +24,9 @@ public static class JamlLine
         clause switch
         {
             JokerClause j => FromJoker(j),
-            TarotCardClause t => FromConsumable(t.Tarots, t.Antes),
+            TarotCardClause t => t.IsWildcard
+                ? Wildcard + AnteTail(t.Antes)
+                : FromConsumable(t.Tarots, t.Antes),
             SpectralCardClause s => FromConsumable(s.Spectrals, s.Antes),
             PlanetCardClause p => FromConsumable(p.Planets, p.Antes),
             StandardCardClause s => FromStandardCard(s),

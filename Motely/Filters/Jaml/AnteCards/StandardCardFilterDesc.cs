@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Motely.Filters.Jaml;
@@ -18,7 +17,7 @@ public sealed class StandardCardClause : IJamlClause, IAnteScopedClause
     public MotelyItemSeal? Seal { get; set; }
     public MotelyItemEdition? Edition { get; set; }
 
-    // null = no `sources:` block → StandardCardFilterDesc.DefaultSources. Explicit block used verbatim.
+    // null = no sources: in JAML → filter DefaultSources at CreateFilter/score (not parse).
     public StandardCardSourceConfig? Sources { get; set; }
 }
 
@@ -64,166 +63,38 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         }
     }
 
-    /// <summary>Defaults when a clause specifies no <c>sources:</c> block — a normal shop run
-    /// (8 shop slots) plus the 6 booster packs. Deferred specialty sources stay off by default.
-    /// Applied only when <c>Sources</c> is null; any explicit block overrides wholesale.</summary>
+    /// <summary>
+    /// Filter-layer default when Sources is null. Shop only; packs/specialty need explicit sources:.
+    /// </summary>
     internal static readonly StandardCardSourceConfig DefaultSources = new()
     {
         ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
-        BoosterPacks = [0, 1, 2, 3, 4, 5],
     };
 
     public StandardCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var sources = _clause.Sources ?? DefaultSources;
-
         foreach (var ante in _clause.Antes)
         {
             ctx.CacheShopStream(ante);
             ctx.CacheBoosterPackStream(ante);
         }
 
-        int maxShopItem = 0;
-        for (int i = 0; i < sources.ShopItems.Length; i++)
-        {
-            if (sources.ShopItems[i] > maxShopItem)
-                maxShopItem = sources.ShopItems[i];
-        }
-
-        int maxBoosterPack = 0;
-        for (int i = 0; i < sources.BoosterPacks.Length; i++)
-        {
-            if (sources.BoosterPacks[i] > maxBoosterPack)
-                maxBoosterPack = sources.BoosterPacks[i];
-        }
-
-        return new StandardCardFilter(_clause, maxShopItem, maxBoosterPack);
+        return new StandardCardFilter(_clause);
     }
 
-    public struct StandardCardFilter(StandardCardClause clause, int maxShopItem, int maxBoosterPack)
-        : IMotelySeedFilter
+    public struct StandardCardFilter(StandardCardClause clause) : IMotelySeedFilter
     {
         private readonly StandardCardClause _clause = clause;
-        private readonly int _maxShopItem = maxShopItem;
-        private readonly int _maxBoosterPack = maxBoosterPack;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
+            // Single match core: same PrepareRunState + count as should-scoring.
             var clause = _clause;
-            int maxShopItem = _maxShopItem;
-            int maxBoosterPack = _maxBoosterPack;
-
             return ctx.SearchIndividualSeeds(
                 (MotelySingleSearchContext singleCtx) =>
-                {
-                    int needed = clause.Min;
-                    Debug.Assert(needed > 0, "StandardCardClause.Min must be > 0 — loader bug.");
-
-                    int count = 0;
-                    var sources = clause.Sources ?? DefaultSources;
-                    var shopItems = sources.ShopItems;
-                    var boosterPacks = sources.BoosterPacks;
-
-                    foreach (var ante in clause.Antes)
-                    {
-                        // ── Shop items ──
-                        if (shopItems.Length > 0)
-                        {
-                            var shopStream = singleCtx.CreateShopItemStream(ante);
-
-                            for (int slot = 0; slot <= maxShopItem; slot++)
-                            {
-                                var item = singleCtx.GetNextShopItem(ref shopStream);
-                                bool isTarget = false;
-                                for (int i = 0; i < shopItems.Length; i++)
-                                {
-                                    if (shopItems[i] == slot)
-                                    {
-                                        isTarget = true;
-                                        break;
-                                    }
-                                }
-
-                                if (
-                                    isTarget
-                                    && item.TypeCategory == MotelyItemTypeCategory.Standardcard
-                                    && MatchesStandardCard(item, clause)
-                                )
-                                {
-                                    count++;
-                                }
-                            }
-                        }
-
-                        // ── Standard packs ──
-                        if (boosterPacks.Length > 0)
-                        {
-                            var packStream = singleCtx.CreateBoosterPackStream(ante);
-                            var cardStream = singleCtx.CreateStandardPackCardStream(ante);
-
-                            // SIMD prefilter over-permissive by design; scoring re-verifies per-ante.
-                            for (int p = 0; p <= maxBoosterPack; p++)
-                            {
-                                var pack = singleCtx.GetNextBoosterPack(ref packStream);
-                                bool isTarget = false;
-                                for (int i = 0; i < boosterPacks.Length; i++)
-                                {
-                                    if (boosterPacks[i] == p)
-                                    {
-                                        isTarget = true;
-                                        break;
-                                    }
-                                }
-
-                                if (
-                                    isTarget
-                                    && pack.GetPackType() == MotelyBoosterPackType.Standard
-                                )
-                                {
-                                    var contents = singleCtx.GetNextStandardPackContents(
-                                        ref cardStream,
-                                        pack.GetPackSize()
-                                    );
-                                    for (int i = 0; i < contents.Length; i++)
-                                    {
-                                        if (MatchesStandardCard(contents[i], clause))
-                                            count++;
-                                    }
-                                }
-                                else if (pack.GetPackType() == MotelyBoosterPackType.Standard)
-                                {
-                                    singleCtx.GetNextStandardPackContents(
-                                        ref cardStream,
-                                        pack.GetPackSize()
-                                    );
-                                }
-                            }
-                        }
-
-                        if (count >= needed)
-                            break;
-                    }
-
-                    return (count >= needed) ? 1 : 0;
-                }
+                    JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
             );
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool MatchesStandardCard(MotelyItem item, StandardCardClause clause)
-        {
-            if (clause.Rank.HasValue && item.StandardcardRank != clause.Rank.Value)
-                return false;
-            if (clause.Suit.HasValue && item.StandardcardSuit != clause.Suit.Value)
-                return false;
-            if (clause.Enhancement.HasValue && item.Enhancement != clause.Enhancement.Value)
-                return false;
-            if (clause.Seal.HasValue && item.Seal != clause.Seal.Value)
-                return false;
-            if (clause.Edition.HasValue && item.Edition != clause.Edition.Value)
-                return false;
-            return true;
         }
     }
 }

@@ -1,11 +1,8 @@
 namespace Motely.Tests;
 
 /// <summary>
-/// Drives the scalar JamlScoring paths the golden tests never reach: per-source counting
-/// (Emperor, purple seal, charm/ethereal closure packs, Sixth Sense, Seance), logic clauses
-/// (and/or, scored and unscored), event counters with spread roll indices and Max caps, and
-/// the Ghost-deck shop spectral branch. Assertions are structural — the search runs and the
-/// scoring path executes; behavior pinning lives in the golden/behavior tests.
+/// Smoke: scalar JamlScoring paths golden tests skip. Asserts list batch ran and scored callback
+/// fired. Exact scores/seeds live in golden/behavior tests.
 /// </summary>
 public sealed class JamlScoringCoverageTests
 {
@@ -33,6 +30,7 @@ public sealed class JamlScoringCoverageTests
 
         using var search = settings.Start();
         search.AwaitCompletion();
+        Assert.True(search.TotalSeedsSearched >= 1, "scoring smoke must run the list batch");
         return score;
     }
 
@@ -54,7 +52,7 @@ public sealed class JamlScoringCoverageTests
                 },
             }
         );
-        Assert.True(score >= 0);
+        Assert.True(score >= 0, "scoring callback must fire");
     }
 
     [Theory]
@@ -78,7 +76,7 @@ public sealed class JamlScoringCoverageTests
             },
             deck
         );
-        Assert.True(score >= 0);
+        Assert.True(score >= 0, "scoring callback must fire");
     }
 
     [Fact]
@@ -96,18 +94,14 @@ public sealed class JamlScoringCoverageTests
                 },
             }
         );
-        Assert.True(score >= 0);
+        Assert.True(score >= 0, "scoring callback must fire");
     }
 
     [Fact]
     public void SpecialSpectrals_SoulAndBlackHole_Score()
     {
-        Assert.True(
-            RunShould(new SpectralCardClause { Spectrals = [MotelySpectralCard.TheSoul], Antes = [1, 2] }) >= 0
-        );
-        Assert.True(
-            RunShould(new SpectralCardClause { Spectrals = [MotelySpectralCard.BlackHole], Antes = [1, 2] }) >= 0
-        );
+        Assert.True(RunShould(new SpectralCardClause { Spectrals = [MotelySpectralCard.TheSoul], Antes = [1, 2] }) >= 0, "scoring callback must fire");
+        Assert.True(RunShould(new SpectralCardClause { Spectrals = [MotelySpectralCard.BlackHole], Antes = [1, 2] }) >= 0, "scoring callback must fire");
     }
 
     [Fact]
@@ -125,7 +119,7 @@ public sealed class JamlScoringCoverageTests
                 ],
             }
         );
-        Assert.True(scored >= 0);
+        Assert.True(scored >= 0, "scoring callback must fire");
 
         // Score stays 0 inside the child so CountOrOccurrences takes the matched-count branch.
         var unscoredChildren = RunShould(
@@ -139,7 +133,7 @@ public sealed class JamlScoringCoverageTests
                 ],
             }
         );
-        Assert.True(unscoredChildren >= 0);
+        Assert.True(unscoredChildren >= 0, "scoring callback must fire");
     }
 
     [Fact]
@@ -157,7 +151,7 @@ public sealed class JamlScoringCoverageTests
                 ],
             }
         );
-        Assert.True(score >= 0);
+        Assert.True(score >= 0, "scoring callback must fire");
     }
 
     [Fact]
@@ -182,7 +176,7 @@ public sealed class JamlScoringCoverageTests
                 ],
             }
         );
-        Assert.True(score >= 0);
+        Assert.True(score >= 0, "scoring callback must fire");
     }
 
     [Fact]
@@ -207,7 +201,7 @@ public sealed class JamlScoringCoverageTests
         ];
 
         foreach (var clause in clauses)
-            Assert.True(RunShould(clause) >= 0);
+            Assert.True(RunShould(clause) >= 0, "scoring callback must fire");
     }
 
     [Fact]
@@ -221,7 +215,7 @@ public sealed class JamlScoringCoverageTests
                 Antes = [1, 2],
             }
         );
-        Assert.True(score >= 0);
+        Assert.True(score >= 0, "scoring callback must fire");
     }
 
     [Fact]
@@ -231,6 +225,6 @@ public sealed class JamlScoringCoverageTests
         var score = RunShould(
             new TarotCardClause { Tarots = [MotelyTarotCard.Death], Antes = [1, 2, 3] }
         );
-        Assert.True(score >= 0);
+        Assert.True(score >= 0, "scoring callback must fire");
     }
 }

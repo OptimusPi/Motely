@@ -21,16 +21,22 @@ public sealed class JamlDiscriminatorAliasTests
     [MemberData(nameof(AllDiscriminators))]
     public void EverySchemaDiscriminator_IsRecognisedByTheLoader(string discriminator)
     {
-        // A clause whose only key is the discriminator. Some kinds will still reject this
-        // minimal shape for a missing value — that's fine; the one error that must never
-        // appear is the loader failing to recognise the discriminator at all.
+        // Minimal shape may still fail for a bad value — fine. Schema wire must not die as
+        // "unknown" or "unhandled": those mean FindDiscriminator or the construct switch drifted.
         var jaml = $"must:\n  - {discriminator}: 1\n";
         JamlConfigLoader.TryLoad(jaml, out _, out var error);
 
         Assert.False(
-            error?.Contains("no recognised discriminator", StringComparison.OrdinalIgnoreCase) ?? false,
-            $"'{discriminator}' is in JamlSchema but the loader does not recognise it: {error}");
+            IsLoaderWireMiss(error),
+            $"'{discriminator}' is in JamlSchema but the loader has no construct path: {error}");
     }
+
+    /// <summary>True when the loader never got past recognising/dispatching the wire itself.</summary>
+    private static bool IsLoaderWireMiss(string? error) =>
+        error is not null
+        && (error.Contains("no recognised discriminator", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("Unhandled JAML discriminator", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("cannot construct clause for discriminator", StringComparison.OrdinalIgnoreCase));
 
     [Theory]
     [InlineData("tags", "[NegativeTag, CharmTag]")]
@@ -141,5 +147,56 @@ public sealed class JamlDiscriminatorAliasTests
             .GetField("SourceKeys", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
             .GetValue(null)!;
         Assert.Equal(keys, JamlSchema.SourceKeysFor(discriminator));
+    }
+
+    // Property type on the shape IS the vocabulary — generated KeyValueEnumTypeFor, no hand table.
+
+    [Theory]
+    [InlineData("deck", typeof(MotelyDeck))]
+    [InlineData("stake", typeof(MotelyStake))]
+    [InlineData("edition", typeof(MotelyItemEdition))]
+    [InlineData("seal", typeof(MotelyItemSeal))]
+    [InlineData("enhancement", typeof(MotelyItemEnhancement))]
+    [InlineData("rank", typeof(MotelyStandardcardRank))]
+    [InlineData("suit", typeof(MotelyStandardcardSuit))]
+    [InlineData("stickers", typeof(MotelyJokerSticker))]
+    [InlineData("luck", typeof(MotelyLuck))]
+    public void SchemaKeyValueEnum_ComesFromPropertyType(string key, Type expectedEnum)
+    {
+        Assert.Equal(expectedEnum, JamlSchema.KeyValueEnumTypeFor(key));
+        Assert.Equal(expectedEnum, JamlSchema.EnumTypeForKind(key));
+    }
+
+    /// <summary>
+    /// Path B: short nicknames are not wires. Canonical forms only (tarotCard / spectralCard / planetCard).
+    /// </summary>
+    [Theory]
+    [InlineData("tarot")]
+    [InlineData("spectral")]
+    [InlineData("planet")]
+    public void ShortNicknames_AreNotDiscriminators(string nickname)
+    {
+        Assert.False(
+            JamlSchema.IsKnownDiscriminator(nickname),
+            $"'{nickname}' must not be a schema wire; use the Card-suffixed canonical form.");
+        Assert.Null(JamlSchema.ValueEnumTypeFor(nickname));
+    }
+
+    [Theory]
+    [InlineData("tarotCard", typeof(MotelyTarotCard))]
+    [InlineData("spectralCard", typeof(MotelySpectralCard))]
+    [InlineData("planetCard", typeof(MotelyPlanetCard))]
+    public void CanonicalConsumableWires_ExposeValueEnum(string wire, Type expectedEnum)
+    {
+        Assert.True(JamlSchema.IsKnownDiscriminator(wire));
+        Assert.Equal(expectedEnum, JamlSchema.ValueEnumTypeFor(wire));
+        Assert.Equal(expectedEnum, JamlSchema.EnumTypeForKind(wire));
+    }
+
+    [Fact]
+    public void SchemaListItems_EditionNamesMatchEngineEnum()
+    {
+        Assert.Equal(Enum.GetNames<MotelyItemEdition>(), JamlSchema.ListItems("edition"));
+        Assert.Contains("LuckyCat", JamlSchema.ListItems("joker", "luckyc"));
     }
 }

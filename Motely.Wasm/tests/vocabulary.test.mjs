@@ -18,7 +18,7 @@ describe("MotelyJaml — vocabulary (listItems)", () => {
         assert.ok(MotelyJaml.listItems("stake").includes("Gold"));
         assert.ok(MotelyJaml.listItems("voucher").includes("Telescope"));
         assert.ok(MotelyJaml.listItems("edition").includes("Negative"));
-        assert.ok(MotelyJaml.listItems("tarot").length > 0);
+        assert.ok(MotelyJaml.listItems("tarotCard").length > 0);
     });
 
     it("matches case-insensitively by substring", () => {
@@ -27,5 +27,11 @@ describe("MotelyJaml — vocabulary (listItems)", () => {
 
     it("rejects unknown kinds loudly, naming the valid ones", () => {
         assert.throws(() => MotelyJaml.listItems("pokemon")); // the throw crosses; C# exception text stays engine-side
+    });
+
+    it("short nicknames are not vocabulary kinds (path B)", () => {
+        assert.throws(() => MotelyJaml.listItems("planet"));
+        assert.throws(() => MotelyJaml.listItems("tarot"));
+        assert.ok(MotelyJaml.listItems("planetCard").length > 0);
     });
 });

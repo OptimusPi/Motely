@@ -17,8 +17,22 @@ namespace Motely.Tests;
 // nothing is lost, plus the classic single-seed chained repro.
 public sealed class ChainedMustClauseSeedTests
 {
+    // Explicit shop+pack sources: post shop-only defaults, multi-batch vector cache bugs only
+    // fire when the filter actually walks pack streams (dynamic pseudohash keys per batch).
     private static JokerFilterDesc JokerDesc(MotelyJoker joker, int[] antes) =>
-        new(new JokerClause { Jokers = [joker], Antes = antes, Min = 1 });
+        new(
+            new JokerClause
+            {
+                Jokers = [joker],
+                Antes = antes,
+                Min = 1,
+                Sources = new JokerSourceConfig
+                {
+                    ShopItems = [0, 1, 2, 3, 4, 5, 6, 7],
+                    BoosterPacks = [0, 1, 2, 3, 4, 5],
+                },
+            }
+        );
 
     private static (long Matching, List<string> Matched) Run(
         IMotelySearchSettings settings,
@@ -31,7 +45,12 @@ public sealed class ChainedMustClauseSeedTests
             .WithListSearch(seeds, seeds.Length)
             .WithThreadCount(threads)
             .WithQuietMode(true)
-            .WithSeedMatchCallback(matched.Add)
+            // Match callbacks arrive concurrently at threads > 1; List<T>.Add is not thread-safe.
+            .WithSeedMatchCallback(seed =>
+            {
+                lock (matched)
+                    matched.Add(seed);
+            })
             .Start();
         search.AwaitCompletion();
         return (search.MatchingSeeds, matched);

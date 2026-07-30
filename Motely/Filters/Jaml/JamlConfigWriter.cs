@@ -146,7 +146,13 @@ public static partial class JamlConfigLoader
             RareJokerClause c => WriteJokerFamily("rareJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
             LegendaryJokerClause c => WriteLegendary(c),
             VoucherClause c => WriteItems("voucher", c.Vouchers, c, rolls: c.Rolls, rollsDefault: [0]),
-            TarotCardClause c => WriteConsumable("tarotCard", c.Tarots, c.Sources, c),
+            TarotCardClause c => WriteConsumable(
+                "tarotCard",
+                c.IsWildcard,
+                c.Tarots,
+                c.Sources,
+                c
+            ),
             SpectralCardClause c => WriteConsumable("spectralCard", c.Spectrals, c.Sources, c),
             PlanetCardClause c => WriteConsumable("planetCard", c.Planets, c.Sources, c),
             StandardCardClause c => WriteStandardCard(c),
@@ -155,6 +161,7 @@ public static partial class JamlConfigLoader
             ErraticRankClause c => WriteErraticRank(c),
             ErraticSuitClause c => WriteErraticSuit(c),
             StartingDrawClause c => WriteStartingDraw(c),
+            PokerHandClause c => WriteItems("pokerHand", c.Hands, c),
             LuckyMoneyClause c => WriteInlineRollEvent("luckyMoney", c, c.With),
             LuckyMultClause c => WriteInlineRollEvent("luckyMult", c, c.With),
             MisprintMultClause c => WriteMisprint(c),
@@ -249,10 +256,23 @@ public static partial class JamlConfigLoader
         object? sources,
         IJamlClause clause
     )
+        where TEnum : struct, Enum => WriteConsumable(discriminator, isWildcard: false, items, sources, clause);
+
+    private static JMap WriteConsumable<TEnum>(
+        string discriminator,
+        bool isWildcard,
+        TEnum[] items,
+        object? sources,
+        IJamlClause clause
+    )
         where TEnum : struct, Enum
     {
         var mapping = new JMap();
-        mapping.Set(discriminator, EnumArrayNode(items), default);
+        mapping.Set(
+            discriminator,
+            isWildcard ? StringArrayNode(["Any"]) : EnumArrayNode(items),
+            default
+        );
         WriteCommonKeys(mapping, clause);
         WriteAntes(mapping, clause);
         var sourcesNode = sources switch
@@ -430,6 +450,8 @@ public static partial class JamlConfigLoader
             mapping.Set("etherealTag", JScalar.Of(true), default);
         if (sources.RequireMegaPack)
             mapping.Set("requireMegaPack", JScalar.Of(true), default);
+        if (sources.OmenGlobe)
+            mapping.Set("omenGlobe", JScalar.Of(true), default);
         return mapping;
     }
 
