@@ -8,7 +8,9 @@ internal abstract class JNode
     // Where this node sits in the source. The parser knows every position as it walks the lines;
     // keeping it here is what lets a diagnostic point at the character instead of the document.
     // Nodes the writer builds from scratch leave this default (IsEmpty) — they have no source.
-    public JamlSpan Span { get; init; }
+    // settable so the mapping loop can stamp a value span after a multi-line collect;
+    // writer-built trees leave default (IsEmpty).
+    public JamlSpan Span { get; set; }
 }
 
 internal sealed class JMap : JNode
@@ -39,6 +41,10 @@ internal sealed class JMap : JNode
 
     /// <summary>The span of the key itself as written, or an empty span for a synthesized node.</summary>
     public JamlSpan KeySpan(string key) => _keySpans.TryGetValue(key, out var s) ? s : default;
+
+    /// <summary>The value node's source span when the parser stamped one; empty otherwise.</summary>
+    public JamlSpan ValueSpan(string key) =>
+        Get(key) is { Span: { IsEmpty: false } span } ? span : default;
 }
 
 internal sealed class JSeq : JNode
@@ -119,13 +125,20 @@ internal static class JamlDocumentParser
             if (lineIndent > indent)
                 throw new JamlSyntaxException($"Unexpected indent (expected {indent} spaces).", JamlSpan.OfLine(i, lines[i]));
 
-            var (key, inlineValue, keySpan) = SplitKeyValue(lines[i], i);
+            var (key, inlineValue, keySpan, valueSpan) = SplitKeyValue(lines[i], i);
             int keyLineIndent = lineIndent;
             i++;
 
             if (inlineValue is "|" or ">")
             {
-                map.Set(key, new JScalar(ParseBlockScalar(lines, ref i, keyLineIndent, inlineValue[0])), keySpan);
+                map.Set(
+                    key,
+                    new JScalar(ParseBlockScalar(lines, ref i, keyLineIndent, inlineValue[0]))
+                    {
+                        Span = valueSpan.IsEmpty ? keySpan : valueSpan,
+                    },
+                    keySpan
+                );
             }
             else if (inlineValue is "|-" or ">-" or "|+" or ">+")
             {
@@ -144,11 +157,13 @@ internal static class JamlDocumentParser
                 // items and the closing "]" continue on following lines (real corpus files write
                 // long shopItems:/seeds: arrays this way for readability). `i` already points at
                 // the line right after the key line; the collector picks up from there.
-                map.Set(key, ParseMultilineFlowArray(lines, ref i, inlineValue), keySpan);
+                var multi = ParseMultilineFlowArray(lines, ref i, inlineValue);
+                multi.Span = valueSpan.IsEmpty ? keySpan : valueSpan;
+                map.Set(key, multi, keySpan);
             }
             else if (inlineValue is { Length: > 0 })
             {
-                map.Set(key, ParseScalarOrFlow(inlineValue, i - 1), keySpan);
+                map.Set(key, ParseScalarOrFlow(inlineValue, i - 1, valueSpan), keySpan);
             }
             else
             {
@@ -285,8 +300,12 @@ internal static class JamlDocumentParser
 
     // Also reports where the key itself sits on the line. "Unknown key 'jokerz'" has to underline
     // jokerz — the column is free here (it's just how far in the text was trimmed) and impossible
-    // to recover later, once the key is a bare string detached from its line.
-    private static (string Key, string? Value, JamlSpan KeySpan) SplitKeyValue(string line, int lineIndex)
+    // to recover later, once the key is a bare string detached from its line. Same for the value:
+    // "Cannot parse 'NotARealJoker'" underlines the token after the colon.
+    private static (string Key, string? Value, JamlSpan KeySpan, JamlSpan ValueSpan) SplitKeyValue(
+        string line,
+        int lineIndex
+    )
     {
         string uncommented = StripComment(line);
         string trimmed = uncommented.TrimStart();
@@ -300,7 +319,16 @@ internal static class JamlDocumentParser
         string value = trimmed[(idx + 1)..].Trim();
         // The key as written, before Trim() collapsed any padding between it and the colon.
         int keyLength = trimmed[..idx].TrimEnd().Length;
-        return (key, value.Length == 0 ? null : value, JamlSpan.OnLine(lineIndex, keyColumn, keyLength));
+        var keySpan = JamlSpan.OnLine(lineIndex, keyColumn, keyLength);
+        JamlSpan valueSpan = default;
+        if (value.Length > 0)
+        {
+            int afterColon = keyColumn + idx + 1;
+            while (afterColon < uncommented.Length && char.IsWhiteSpace(uncommented[afterColon]))
+                afterColon++;
+            valueSpan = JamlSpan.OnLine(lineIndex, afterColon, value.Length);
+        }
+        return (key, value.Length == 0 ? null : value, keySpan, valueSpan);
     }
 
     // Collects a flow array "[a, b, c]" that spans multiple lines — either "key: [" left open at
@@ -390,7 +418,7 @@ internal static class JamlDocumentParser
     // line) that would otherwise tempt someone to reach for a fancier YAML form. Block scalars
     // are a separate path — see ParseBlockScalar, reached from ParseMapping when a key's value
     // is '|' or '>'.
-    private static JNode ParseScalarOrFlow(string text, int lineIndex)
+    private static JNode ParseScalarOrFlow(string text, int lineIndex, JamlSpan valueSpan = default)
     {
         text = text.Trim();
         // "{}" — an explicit empty mapping. Real meaning: "sources: {}" overrides with
@@ -398,21 +426,21 @@ internal static class JamlDocumentParser
         // tells the two apart by whether GetObject("sources") returns a map at all, so "{}" must
         // become a real (empty) JMap here, not fall through to a bare scalar string "{}".
         if (text == "{}")
-            return new JMap();
+            return new JMap { Span = valueSpan };
         if (text.StartsWith('[') && text.EndsWith(']'))
         {
-            var seq = new JSeq();
+            var seq = new JSeq { Span = valueSpan };
             string inner = text[1..^1];
             if (inner.Trim().Length > 0)
                 foreach (var token in inner.Split(','))
-                    seq.Items.Add(new JScalar(token.Trim()));
+                    seq.Items.Add(new JScalar(token.Trim()) { Span = valueSpan });
             return seq;
         }
         // Strip a matching pair of quotes if present — JAML authors sometimes quote scalars out
         // of YAML habit; there's no escaping grammar to honor beyond that.
         if (text.Length >= 2 && ((text[0] == '"' && text[^1] == '"') || (text[0] == '\'' && text[^1] == '\'')))
             text = text[1..^1];
-        return new JScalar(text);
+        return new JScalar(text) { Span = valueSpan };
     }
 
     private static int IndentOf(string line)

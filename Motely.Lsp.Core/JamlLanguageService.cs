@@ -211,8 +211,6 @@ public static class JamlLanguageService
                 "seeds" =>
                     "**`seeds`** — optional saved seed list for list search / lake.",
                 "name" => "**`name`** — human filter title.",
-                "antes" =>
-                    "**`antes`** — optional root ante scope; many clauses also take per-clause `antes:`.",
                 _ => $"**`{key}`** — JAML root key (engine `JamlConfig.RootKeys`).",
             };
         }
@@ -227,6 +225,7 @@ public static class JamlLanguageService
         }
 
         // ListItems kind + optional query — unknown kinds throw; treat as not found.
+        // Runs before clause-key explain so "edition" / "edition foil" hit vocabulary, not "key of commonJoker".
         try
         {
             if (rest is not null)
@@ -260,7 +259,24 @@ public static class JamlLanguageService
         }
         catch (ArgumentException)
         {
-            // Unknown vocabulary kind — fall through to null.
+            // Unknown vocabulary kind — fall through to clause-key / null.
+        }
+
+        // Clause keys (antes, sources, min, …) live on FilterDescs via JamlSchema — not root.
+        var clauseOwners = JamlSchema.Discriminators
+            .Where(d =>
+                JamlSchema.ClauseKeysFor(d)
+                    .Any(k => k.Equals(head, StringComparison.OrdinalIgnoreCase))
+            )
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (clauseOwners.Length > 0)
+        {
+            var sample = clauseOwners.Take(12).Select(d => $"`{d}`");
+            var more =
+                clauseOwners.Length > 12 ? $", … +{clauseOwners.Length - 12} more" : "";
+            return $"**`{head}`** — clause key on: {string.Join(", ", sample)}{more}.\n\n"
+                + "Per-clause wire key from FilterDesc → JamlSchema (not a document root key).";
         }
 
         return null;
@@ -273,7 +289,8 @@ public static class JamlLanguageService
     {
         var lines = SplitLines(text);
         var current = line >= 0 && line < lines.Length ? lines[line] : "";
-        var prefix = current[..Math.Min(Math.Max(character, 0), current.Length)];
+        var endCol = Math.Min(Math.Max(character, 0), current.Length);
+        var prefix = current[..endCol];
 
         var indent = CountIndent(prefix);
         var body = prefix.TrimStart();
@@ -283,64 +300,77 @@ public static class JamlLanguageService
 
         var colon = body.IndexOf(':');
         if (colon >= 0)
-            return CompleteValue(lines, line, body[..colon].Trim(), body[(colon + 1)..].TrimStart());
-        return CompleteKey(lines, line, indent, isListItem, body);
+        {
+            var valuePrefix = body[(colon + 1)..].TrimStart();
+            var replace = TokenReplaceSpan(line, endCol, valuePrefix);
+            return CompleteValue(lines, line, body[..colon].Trim(), valuePrefix, replace);
+        }
+
+        var replaceKey = TokenReplaceSpan(line, endCol, body);
+        return CompleteKey(lines, line, indent, isListItem, body, replaceKey);
+    }
+
+    /// <summary>Span of the incomplete token ending at <paramref name="endColumn"/>.</summary>
+    private static JamlSpan TokenReplaceSpan(int line, int endColumn, string typed)
+    {
+        var start = Math.Max(0, endColumn - typed.Length);
+        return JamlSpan.OnLine(line, start, endColumn - start);
     }
 
     private static IReadOnlyList<JamlCompletionItem> CompleteValue(
-        string[] lines, int line, string key, string valuePrefix)
+        string[] lines, int line, string key, string valuePrefix, JamlSpan replace)
     {
         // Discriminator value first (adds "Any" wildcard). Property/root keys second.
         if (IsDiscriminator(key) && JamlSchema.ValueEnumTypeFor(key) is { } valueEnum)
         {
             var names = Enum.GetNames(valueEnum).ToList();
             names.Add("Any");
-            return FilterNames(names, valuePrefix, "value", valueEnum.Name);
+            return FilterNames(names, valuePrefix, "value", valueEnum.Name, replace);
         }
 
         if (JamlSchema.EnumTypeForKind(key) is { } keyEnum)
-            return FilterNames(Enum.GetNames(keyEnum), valuePrefix, "value", keyEnum.Name);
+            return FilterNames(Enum.GetNames(keyEnum), valuePrefix, "value", keyEnum.Name, replace);
 
         return [];
     }
 
     private static IReadOnlyList<JamlCompletionItem> CompleteKey(
-        string[] lines, int line, int indent, bool isListItem, string typed)
+        string[] lines, int line, int indent, bool isListItem, string typed, JamlSpan replace)
     {
         if (indent == 0 && !isListItem)
-            return FilterNames(JamlConfig.RootKeys, typed, "key", "JAML root key");
+            return FilterNames(JamlConfig.RootKeys, typed, "key", "JAML root key", replace);
 
         var context = ContextAt(lines, line);
 
         if (isListItem && context.InClauseList)
             return FilterNames(
                 JamlSchema.Discriminators.Distinct(StringComparer.OrdinalIgnoreCase),
-                typed, "discriminator", "JAML clause");
+                typed, "discriminator", "JAML clause", replace);
 
         if (context.BlockKey is "sources" && context.Discriminator is { } srcDisc)
             return FilterNames(
-                JamlSchema.SourceKeysFor(srcDisc) ?? [], typed, "key", $"{srcDisc} source key");
+                JamlSchema.SourceKeysFor(srcDisc) ?? [], typed, "key", $"{srcDisc} source key", replace);
 
         if (context.BlockKey is "with")
-            return FilterNames(JamlClause.WithBlockKeys, typed, "key", "with-block key");
+            return FilterNames(JamlClause.WithBlockKeys, typed, "key", "with-block key", replace);
 
         if (context.Discriminator is { } disc)
-            return FilterNames(JamlSchema.ClauseKeysFor(disc), typed, "key", $"{disc} clause key");
+            return FilterNames(JamlSchema.ClauseKeysFor(disc), typed, "key", $"{disc} clause key", replace);
 
         return [];
     }
 
     private static IReadOnlyList<JamlCompletionItem> FilterNames(
-        IEnumerable<string> names, string typed, string kind, string detail)
+        IEnumerable<string> names, string typed, string kind, string detail, JamlSpan replace)
     {
         var starts = new List<JamlCompletionItem>();
         var contains = new List<JamlCompletionItem>();
         foreach (var name in names)
         {
             if (typed.Length == 0 || name.StartsWith(typed, StringComparison.OrdinalIgnoreCase))
-                starts.Add(new JamlCompletionItem(name, kind, detail));
+                starts.Add(new JamlCompletionItem(name, kind, detail, replace));
             else if (name.Contains(typed, StringComparison.OrdinalIgnoreCase))
-                contains.Add(new JamlCompletionItem(name, kind, detail));
+                contains.Add(new JamlCompletionItem(name, kind, detail, replace));
         }
         starts.AddRange(contains);
         return starts;

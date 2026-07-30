@@ -96,7 +96,7 @@ public sealed class JamlLoaderValueReaderTests
     {
         var reader = JamlLoaderValueReader.FromStrings(["1", "notanumber"]);
 
-        var ex = Assert.Throws<InvalidOperationException>(() => reader.TryIntArray(out _));
+        var ex = Assert.ThrowsAny<InvalidOperationException>(() => reader.TryIntArray(out _));
         Assert.Contains("notanumber", ex.Message);
     }
 
@@ -170,11 +170,12 @@ public sealed class JamlLoaderValueReaderTests
     {
         var reader = JamlLoaderValueReader.FromScalar("NotAVoucher");
 
-        var ex = Assert.Throws<InvalidOperationException>(
+        var ex = Assert.ThrowsAny<InvalidOperationException>(
             () => reader.TryEnum<MotelyVoucher>(out _)
         );
         Assert.Contains("NotAVoucher", ex.Message);
         Assert.Contains(nameof(MotelyVoucher.Overstock), ex.Message);
+        Assert.Contains("… +", ex.Message); // capped known list
     }
 
     [Fact]
@@ -229,7 +230,7 @@ public sealed class JamlLoaderValueReaderTests
     {
         var reader = JamlLoaderValueReader.FromScalar(text);
 
-        var ex = Assert.Throws<InvalidOperationException>(
+        var ex = Assert.ThrowsAny<InvalidOperationException>(
             () => reader.TryEnum<MotelyStandardcardRank>(out _)
         );
         Assert.Contains("rank pip", ex.Message);

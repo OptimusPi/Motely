@@ -84,7 +84,7 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
             for (int i = 0; i < _array.Length; i++)
             {
                 if (!int.TryParse(_array[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out list[i]))
-                    throw new InvalidOperationException($"Cannot parse '{_array[i]}' as int.");
+                    throw new JamlSemanticException($"Cannot parse '{_array[i]}' as int.", Span);
             }
             value = list;
             return true;
@@ -134,7 +134,7 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
         return true;
     }
 
-    private static TEnum ParseEnum<TEnum>(string raw) where TEnum : struct, Enum
+    private TEnum ParseEnum<TEnum>(string raw) where TEnum : struct, Enum
     {
         if (Enum.TryParse<TEnum>(raw, ignoreCase: true, out var parsed))
             return parsed;
@@ -146,12 +146,10 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
         if (Enum.TryParse<TEnum>(normalized, ignoreCase: true, out parsed))
             return parsed;
 
-        throw new InvalidOperationException(
-            $"Cannot parse '{raw}' as {typeof(TEnum).Name}. Known values: {string.Join(", ", Enum.GetNames<TEnum>())}."
-        );
+        throw new JamlSemanticException(JamlEnumMessages.CannotParse(raw, typeof(TEnum)), Span);
     }
 
-    private static MotelyStandardcardRank ParseRank(string value)
+    private MotelyStandardcardRank ParseRank(string value)
     {
         if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var pip))
         {
@@ -166,7 +164,7 @@ internal sealed class JamlLoaderValueReader : IJamlValueReader
                 8 => MotelyStandardcardRank.Eight,
                 9 => MotelyStandardcardRank.Nine,
                 10 => MotelyStandardcardRank.Ten,
-                _ => throw new InvalidOperationException($"Unsupported rank pip value: {pip}."),
+                _ => throw new JamlSemanticException($"Unsupported rank pip value: {pip}.", Span),
             };
         }
 

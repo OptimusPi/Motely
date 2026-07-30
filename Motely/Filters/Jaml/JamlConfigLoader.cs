@@ -54,9 +54,9 @@ public static partial class JamlConfigLoader
         };
 
         if (root.GetString("deck") is { } deck)
-            config.Deck = ParseEnum<MotelyDeck>(deck);
+            config.Deck = ParseEnum<MotelyDeck>(deck, root.ValueSpan("deck"));
         if (root.GetString("stake") is { } stake)
-            config.Stake = ParseEnum<MotelyStake>(stake);
+            config.Stake = ParseEnum<MotelyStake>(stake, root.ValueSpan("stake"));
 
         config.Seeds.AddRange(root.GetStringArray("seeds") ?? []);
         if (root.GetString("filter") is { Length: > 0 } filterName)
@@ -64,8 +64,9 @@ public static partial class JamlConfigLoader
             if (!MotelyNativeFilterNames.TryParse(filterName, out _))
             {
                 string valid = string.Join(", ", MotelyNativeFilterNames.DisplayNames);
-                throw new InvalidOperationException(
-                    $"Unknown native filter '{filterName}'. Valid filters: {valid}"
+                throw new JamlSemanticException(
+                    $"Unknown native filter '{filterName}'. Valid filters: {valid}",
+                    root.ValueSpan("filter")
                 );
             }
             config.Filter = filterName;
@@ -133,7 +134,10 @@ public static partial class JamlConfigLoader
                         !JamlClauseDescDispatch.TrySet(
                             clause,
                             key,
-                            JamlLoaderValueReader.FromScalar(keys.GetString(key))
+                            JamlLoaderValueReader.FromScalar(
+                                keys.GetString(key),
+                                keys.ValueSpan(key)
+                            )
                         )
                     )
                         throw new InvalidOperationException(
@@ -215,7 +219,7 @@ public static partial class JamlConfigLoader
                                 (IJamlClause)
                                     new ErraticRankClause
                                     {
-                                        Rank = ParseRank(v),
+                                        Rank = ParseRank(v, node.ValueSpan(discriminator)),
                                         Antes = antes,
                                         Min = 1,
                                     }
@@ -341,11 +345,13 @@ public static partial class JamlConfigLoader
         ValidateKeys(with, JamlClause.WithBlockKeys, "with");
         var result = new JamlWith();
         if (with.GetString("luck") is { } luckText)
-            result.Luck = ParseLuck(luckText);
+            result.Luck = ParseLuck(luckText, with.ValueSpan("luck"));
         else if (with.GetInt("luck") is { } luckInt)
-            result.Luck = ParseLuck(luckInt);
+            result.Luck = ParseLuck(luckInt, with.ValueSpan("luck"));
         if (with.GetStringArray("vouchers") is { } vouchers)
-            result.Vouchers = vouchers.Select(ParseEnum<MotelyVoucher>).ToArray();
+            result.Vouchers = vouchers
+                .Select(v => ParseEnum<MotelyVoucher>(v, with.ValueSpan("vouchers")))
+                .ToArray();
         return result;
     }
 
@@ -357,8 +363,11 @@ public static partial class JamlConfigLoader
     }
 
     private static TEnum[] ParseEnumArray<TEnum>(NodeReader node, string key)
-        where TEnum : struct, Enum =>
-        ParseStringArray(node, key).Select(ParseEnum<TEnum>).ToArray();
+        where TEnum : struct, Enum
+    {
+        var span = node.ValueSpan(key);
+        return ParseStringArray(node, key).Select(v => ParseEnum<TEnum>(v, span)).ToArray();
+    }
 
     private static TEnum[] ParseEnumArray<TEnum>(IReader node, string key, bool allowMissing)
         where TEnum : struct, Enum
@@ -366,7 +375,8 @@ public static partial class JamlConfigLoader
         var values = node.GetStringArray(key);
         if (values is null)
             return allowMissing ? [] : throw MissingValue(key);
-        return values.Select(ParseEnum<TEnum>).ToArray();
+        var span = node.ValueSpan(key);
+        return values.Select(v => ParseEnum<TEnum>(v, span)).ToArray();
     }
 
     private static string[] ParseStringArray(NodeReader node, string key) =>
@@ -392,10 +402,10 @@ public static partial class JamlConfigLoader
     private static bool IsDiscriminator(string key) =>
         JamlSchema.IsKnownDiscriminator(key);
 
-    private static MotelyStandardcardRank? ParseOptionalRank(string? value) =>
-        value is null ? null : ParseRank(value);
+    private static MotelyStandardcardRank? ParseOptionalRank(string? value, JamlSpan span = default) =>
+        value is null ? null : ParseRank(value, span);
 
-    private static MotelyStandardcardRank ParseRank(string value)
+    private static MotelyStandardcardRank ParseRank(string value, JamlSpan span = default)
     {
         if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var pip))
         {
@@ -410,7 +420,7 @@ public static partial class JamlConfigLoader
                 8 => MotelyStandardcardRank.Eight,
                 9 => MotelyStandardcardRank.Nine,
                 10 => MotelyStandardcardRank.Ten,
-                _ => throw new InvalidOperationException($"Unsupported rank pip value: {pip}."),
+                _ => throw new JamlSemanticException($"Unsupported rank pip value: {pip}.", span),
             };
         }
 
@@ -420,14 +430,14 @@ public static partial class JamlConfigLoader
             "Q" => MotelyStandardcardRank.Queen,
             "K" => MotelyStandardcardRank.King,
             "A" => MotelyStandardcardRank.Ace,
-            _ => ParseEnum<MotelyStandardcardRank>(value),
+            _ => ParseEnum<MotelyStandardcardRank>(value, span),
         };
     }
 
-    private static T? ParseOptionalEnum<T>(string? value)
-        where T : struct, Enum => value is null ? null : ParseEnum<T>(value);
+    private static T? ParseOptionalEnum<T>(string? value, JamlSpan span = default)
+        where T : struct, Enum => value is null ? null : ParseEnum<T>(value, span);
 
-    private static T ParseEnum<T>(string value)
+    private static T ParseEnum<T>(string value, JamlSpan span = default)
         where T : struct, Enum
     {
         if (Enum.TryParse<T>(value, ignoreCase: true, out var parsed))
@@ -440,12 +450,10 @@ public static partial class JamlConfigLoader
         if (Enum.TryParse<T>(normalized, ignoreCase: true, out parsed))
             return parsed;
 
-        throw new InvalidOperationException(
-            $"Cannot parse '{value}' as {typeof(T).Name}. Known values: {string.Join(", ", Enum.GetNames<T>())}."
-        );
+        throw new JamlSemanticException(JamlEnumMessages.CannotParse(value, typeof(T)), span);
     }
 
-    private static MotelyLuck ParseLuck(string value)
+    private static MotelyLuck ParseLuck(string value, JamlSpan span = default)
     {
         if (
             int.TryParse(
@@ -455,11 +463,11 @@ public static partial class JamlConfigLoader
                 out var numeric
             )
         )
-            return ParseLuck(numeric);
-        return ParseEnum<MotelyLuck>(value);
+            return ParseLuck(numeric, span);
+        return ParseEnum<MotelyLuck>(value, span);
     }
 
-    private static MotelyLuck ParseLuck(int value) =>
+    private static MotelyLuck ParseLuck(int value, JamlSpan span = default) =>
         value switch
         {
             1 => MotelyLuck.X1,
@@ -470,7 +478,7 @@ public static partial class JamlConfigLoader
             16 => MotelyLuck.X16,
             32 => MotelyLuck.X32,
             64 => MotelyLuck.X64,
-            _ => throw new InvalidOperationException($"Unsupported luck multiplier: {value}."),
+            _ => throw new JamlSemanticException($"Unsupported luck multiplier: {value}.", span),
         };
 
     private static bool IsAny(string value) =>
@@ -492,6 +500,7 @@ public static partial class JamlConfigLoader
     {
         IReadOnlyList<string> Keys { get; }
         JamlSpan KeySpan(string key);
+        JamlSpan ValueSpan(string key);
         string? GetString(string key);
         int? GetInt(string key);
         bool? GetBool(string key);
@@ -509,6 +518,9 @@ public static partial class JamlConfigLoader
 
         public JamlSpan KeySpan(string key) =>
             primary.KeySpan(key) is { IsEmpty: false } span ? span : fallback.KeySpan(key);
+
+        public JamlSpan ValueSpan(string key) =>
+            primary.ValueSpan(key) is { IsEmpty: false } span ? span : fallback.ValueSpan(key);
 
         public string? GetString(string key) => primary.GetString(key) ?? fallback.GetString(key);
 
@@ -541,6 +553,15 @@ public static partial class JamlConfigLoader
         public IReadOnlyList<string> Keys => _map.Keys;
 
         public JamlSpan KeySpan(string key) => _map.KeySpan(key);
+
+        /// <summary>Value token span when stamped; otherwise the key span (same line for inline values).</summary>
+        public JamlSpan ValueSpan(string key)
+        {
+            var value = _map.ValueSpan(key);
+            if (!value.IsEmpty)
+                return value;
+            return _map.KeySpan(key);
+        }
 
         public string? GetString(string key) => Scalar(_map.Get(key));
 

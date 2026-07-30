@@ -129,15 +129,22 @@ public static partial class JamlConfigLoader
 
     private static JamlLoaderValueReader ValueReaderForKey(IReader data, string key)
     {
+        var span = data.ValueSpan(key);
         if (data.GetStringArray(key) is { } strings)
-            return JamlLoaderValueReader.FromStrings(strings);
+            return JamlLoaderValueReader.FromStrings(strings, span);
         if (data.GetIntArray(key) is { } ints)
-            return JamlLoaderValueReader.FromStrings(Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            return JamlLoaderValueReader.FromStrings(
+                Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                span
+            );
         if (data.GetInt(key) is { } i)
-            return JamlLoaderValueReader.FromScalar(i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return JamlLoaderValueReader.FromScalar(
+                i.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                span
+            );
         if (data.GetBool(key) is { } b)
-            return JamlLoaderValueReader.FromScalar(b ? "true" : "false");
-        return JamlLoaderValueReader.FromScalar(data.GetString(key));
+            return JamlLoaderValueReader.FromScalar(b ? "true" : "false", span);
+        return JamlLoaderValueReader.FromScalar(data.GetString(key), span);
     }
 
     private static JokerSourceConfig? PopulateJokerSources(IReader data)
@@ -257,12 +264,14 @@ public static partial class JamlConfigLoader
 
     private static JamlLoaderValueReader DiscriminatorValueReader(NodeReader node, string discriminator)
     {
+        var span = node.ValueSpan(discriminator);
         if (node.GetStringArray(discriminator) is { } arr)
-            return JamlLoaderValueReader.FromStrings(arr);
+            return JamlLoaderValueReader.FromStrings(arr, span);
         if (node.GetIntArray(discriminator) is { } ints)
             return JamlLoaderValueReader.FromStrings(
-                Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                Array.ConvertAll(ints, i => i.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                span
             );
-        return JamlLoaderValueReader.FromScalar(node.GetString(discriminator));
+        return JamlLoaderValueReader.FromScalar(node.GetString(discriminator), span);
     }
 }

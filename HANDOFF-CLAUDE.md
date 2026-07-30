@@ -270,7 +270,17 @@ dotnet stryker
 
 Accept: mutation score reported; if wall-clock too long, scope to `Filters/Jaml/**` for one report and file the score on this board. **Do not** ship a stryker config that excludes everything.
 
-4. **LSP residual** only if cheap (`Motely.Lsp` branch ~66%) — protocol tests that send real JSON-RPC and assert engine-backed answers (no second grammar table).
+4. **LSP residual** — **done (Grok, 2026-07-29)** audit fix matrix:
+
+| # | Verb | Gate | Status |
+|---|------|------|--------|
+| L1 | Value spans on enum parse (`JamlSemanticException` + parser stamp) | bad `joker:` underlines token | **done** |
+| L2 | Cap “Known values” (`JamlEnumMessages`, 12 + “… +N more”) | diagnose message &lt; ~400 chars for jokers | **done** |
+| L3 | Explain `antes` / clause keys via `JamlSchema.ClauseKeysFor` | `--explain antes` ok | **done** |
+| L4 | Completion `textEdit` for typed prefix | protocol test LuckyCat range | **done** |
+| L5 | Protocol: didClose clear + exit-without-shutdown + textEdit | green | **done** |
+
+Proof: `Motely.Lsp --diagnose` on multi-line bad joker → `startLine: 3`; suite green.
 
 ### Phase 3 done checklist
 

@@ -67,12 +67,22 @@ public sealed class S8P3LspExplainTests
     {
         var uncased = JamlConfig.RootKeys.FirstOrDefault(k =>
             k is not ("must" or "should" or "mustNot" or "deck" or "stake"
-                or "seeds" or "name" or "antes")
+                or "seeds" or "name")
         );
         Assert.False(string.IsNullOrEmpty(uncased), "every root key has a bespoke arm");
         var md = JamlLanguageService.Explain(uncased);
         Assert.NotNull(md);
         Assert.Contains("JAML root key", md);
+    }
+
+    [Fact]
+    public void Explain_Antes_AsClauseKeyFromSchema()
+    {
+        var md = JamlLanguageService.Explain("antes");
+        Assert.NotNull(md);
+        Assert.Contains("`antes`", md);
+        Assert.Contains("clause key", md);
+        Assert.Contains("`joker`", md); // engine-owned owners list
     }
 
     // ── Explain: vocabulary ─────────────────────────────────────────────────
