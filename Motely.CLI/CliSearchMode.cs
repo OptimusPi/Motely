@@ -248,21 +248,11 @@ internal static class CliSearchMode
         if (explicitSearchModeCount > 0)
             return true;
 
-        // An explicit batch/range option means the caller asked for a real sequential sweep —
-        // don't let a JAML file's saved `seeds:` list silently replace it with just those seeds.
-        bool hasExplicitSequentialRange =
-            input.BatchCharacterCount.HasValue
-            || input.StartBatch.HasValue
-            || input.EndBatch.HasValue
-            || input.StartPercent.HasValue
-            || hasSeedIndexOptions;
-
-        if (input.JamlSeeds is { Count: > 0 } && !hasExplicitSequentialRange)
-        {
-            // A JAML `seeds:` array front-runs the search as a seed list by default.
-            updated = updated.WithSeedGenerator(input.JamlSeeds, input.JamlSeeds.Count);
-        }
-        else
+        // Sequential is the default, always. A JAML `seeds:` block is saved *output* — the engine
+        // writes it back after a run — so treating its presence as an instruction meant a filter
+        // silently stopped sweeping the moment it had ever found anything. Replaying that list is
+        // an explicit request with an existing door: `--source <file>.jaml`, which SeedSourceProvider
+        // already reads (it regex-extracts the seeds: block). Nothing is lost by not guessing.
         {
             int batchCharacterCount = input.BatchCharacterCount ?? DefaultBatchCharacterCount;
             updated = updated.WithSequentialSearch();
