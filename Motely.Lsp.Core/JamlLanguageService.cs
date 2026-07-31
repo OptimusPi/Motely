@@ -287,6 +287,141 @@ public static class JamlLanguageService
         return null;
     }
 
+    // ── Semantic tokens ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The legend for <see cref="SemanticTokens"/>, in index order. Standard LSP token types on
+    /// purpose: every shipped VS Code theme maps them through the Semantic Token Scope Map, so
+    /// JAML colours without a TextMate grammar and without per-theme rules.
+    /// </summary>
+    public static readonly string[] SemanticTokenTypes =
+    [
+        "keyword", // 0 — document root keys (must, should, deck, …)
+        "type", // 1 — clause discriminators (joker, legendaryJoker, …)
+        "property", // 2 — clause / source / with keys (antes, score, edition, …)
+        "enumMember", // 3 — engine enum values (Perkeo, Negative, Gold, …)
+        "number", // 4 — numeric literals
+        "comment", // 5 — '#' to end of line
+    ];
+
+    /// <summary>No modifiers are emitted; the legend still has to be declared.</summary>
+    public static readonly string[] SemanticTokenModifiers = [];
+
+    /// <summary>
+    /// Highlighting straight off the engine grammar — the same <c>JamlSchema</c> that answers
+    /// completion and hover, so a colour and a diagnostic can never disagree about what a word is.
+    /// Returns the LSP relative encoding: five ints per token
+    /// (deltaLine, deltaStartChar, length, typeIndex, modifierMask).
+    /// </summary>
+    public static IReadOnlyList<int> SemanticTokens(string text)
+    {
+        var data = new List<int>();
+        if (string.IsNullOrEmpty(text))
+            return data;
+
+        var lines = SplitLines(text);
+
+        // Collected first, encoded after sorting: the relative encoding requires tokens in
+        // position order, and a line's comment is found before the key/value on that same line.
+        var found = new List<(int Line, int Start, int Length, int Type)>();
+        void Emit(int line, int start, int length, int type)
+        {
+            if (length > 0)
+                found.Add((line, start, length, type));
+        }
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var raw = lines[i];
+
+            // Same rule as JamlDocumentParser.StripComment: a '#' opens a comment only at the
+            // start of a token. Matching it exactly keeps the colour and the parse in agreement.
+            var content = raw;
+            for (var j = 0; j < raw.Length; j++)
+                if (raw[j] == '#' && (j == 0 || char.IsWhiteSpace(raw[j - 1])))
+                {
+                    content = raw[..j];
+                    Emit(i, j, raw.Length - j, 5);
+                    break;
+                }
+
+            var body = content.TrimStart();
+            if (body.Length == 0)
+                continue;
+
+            var indent = content.Length - body.Length;
+            if (body.StartsWith("- ", StringComparison.Ordinal))
+            {
+                indent += 2;
+                body = body[2..];
+            }
+
+            var colon = body.IndexOf(':');
+            if (colon <= 0)
+                continue;
+
+            var key = body[..colon].Trim();
+            var keyStart = indent + body.IndexOf(key, StringComparison.Ordinal);
+
+            if (IsDiscriminator(key))
+                Emit(i, keyStart, key.Length, 1);
+            else if (JamlConfig.RootKeys.Any(k => k.Equals(key, StringComparison.OrdinalIgnoreCase)))
+                Emit(i, keyStart, key.Length, 0);
+            else
+                Emit(i, keyStart, key.Length, 2);
+
+            // Values: comma/bracket separated words. Enum names colour as enumMember, bare digits
+            // as number; anything the engine does not recognise stays uncoloured rather than
+            // guessing — an unknown word looking plain is the same signal the diagnostic gives.
+            var valueStart = colon + 1;
+            var scan = indent + valueStart;
+            var value = body[valueStart..];
+            for (var v = 0; v < value.Length; )
+            {
+                if (!char.IsLetterOrDigit(value[v]) && value[v] != '_')
+                {
+                    v++;
+                    continue;
+                }
+                var start = v;
+                while (v < value.Length && (char.IsLetterOrDigit(value[v]) || value[v] == '_'))
+                    v++;
+                var word = value[start..v];
+                if (word.All(char.IsDigit))
+                    Emit(i, scan + start, word.Length, 4);
+                else if (IsEnumValue(word))
+                    Emit(i, scan + start, word.Length, 3);
+            }
+        }
+
+        int lastLine = 0;
+        int lastStart = 0;
+        foreach (var (line, start, length, type) in found.OrderBy(t => t.Line).ThenBy(t => t.Start))
+        {
+            var deltaLine = line - lastLine;
+            data.Add(deltaLine);
+            data.Add(deltaLine == 0 ? start - lastStart : start);
+            data.Add(length);
+            data.Add(type);
+            data.Add(0);
+            lastLine = line;
+            lastStart = start;
+        }
+
+        return data;
+    }
+
+    private static bool IsEnumValue(string word)
+    {
+        foreach (var (enumType, _) in JamlSchema.ValueEnumKinds)
+            if (
+                Enum.GetNames(enumType)
+                    .Any(n => n.Equals(word, StringComparison.OrdinalIgnoreCase))
+            )
+                return true;
+        return false;
+    }
+
     // ── Completion ──────────────────────────────────────────────────────────────────────
 
     /// <summary>Completion candidates at the cursor, already filtered by the typed prefix.</summary>

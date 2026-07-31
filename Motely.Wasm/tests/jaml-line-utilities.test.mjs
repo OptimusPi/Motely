@@ -114,10 +114,14 @@ describe("MotelyUtilities", () => {
 
     it("pins keyword aesthetic counts and keyword validity", () => {
         // Counts from MotelySeedKeywordSequences (engine SoT).
-        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Gross), 1252817510n);
-        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Funny), 5228371963n);
-        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Balatro), 6938858608n);
-        assert.throws(() => MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Palindrome));
+        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Gross), 307252260n);
+        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Funny), 493728588n);
+        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Balatro), 913677733n);
+        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Leet), 1525175581n);
+        assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Nsfw), 302944676n);
+        // Every enum member resolves — pattern aesthetics have counts too.
+        assert.ok(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Palindrome) > 0n);
+        assert.ok(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Echo) > 0n);
 
         for (const keywords of [MotelyUtilities.grossKeywords(), MotelyUtilities.funnyKeywords(), MotelyUtilities.balatroKeywords()]) {
             assert.ok(keywords.length > 0);

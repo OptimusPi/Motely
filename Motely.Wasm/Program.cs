@@ -360,9 +360,12 @@ public static partial class MotelyUtilities
     public static string[] MirrorPatternKeywords(int length) =>
         [.. MotelySeedKeywordSequences.MirrorPatternKeywords(length)];
 
+    /// <summary>Seed count for any <see cref="JamlAesthetic"/>. Routes through
+    /// <see cref="JamlAesthetics.GetSeedCount"/>, which covers all ten — the keyword-only
+    /// helper throws on the five pattern aesthetics, which is an internal seam, not an API.</summary>
     [Export]
     public static long GetAestheticSeedCount(JamlAesthetic aesthetic) =>
-        MotelySeedKeywordSequences.GetAestheticSeedCount(aesthetic);
+        JamlAesthetics.GetSeedCount(aesthetic);
 
     [Export]
     public static string[] GrossKeywords() => MotelySeedKeywordSequences.GrossKeywords;

@@ -276,7 +276,6 @@ public class MainMenuWindow : View
 
                 var searchWindow = new SearchWindow(
                     selected.FullPath,
-                    selected.Format,
                     TuiSettings.DefaultSource,
                     TuiSettings.DefaultSink
                 );

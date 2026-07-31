@@ -263,15 +263,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// </summary>
     public Action<MotelyScoredSeedResult>? ScoredResultCallback { get; set; }
 
-    /// <summary>
-    /// Run the whole workload synchronously on the calling thread — no worker threads, no
-    /// browser pump. For small bounded analyses (Jamlyzer) that must complete inside a
-    /// synchronous call on every platform: the browser pump yields to the event loop between
-    /// batches, so a blocking <see cref="IMotelySearch.AwaitCompletion"/> on the same single
-    /// thread would deadlock. Internal: hosts should use the async pump for real searches.
-    /// </summary>
-    internal bool RunInline { get; set; }
-
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
         ThreadCount = threadCount;
@@ -838,7 +829,11 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
 
         _threadCount = Math.Max(1, settings.ThreadCount);
-        _runInline = settings.RunInline;
+        // A materialized seed list is the whole workload, known up front — there is nothing to
+        // pump between. Run it on the calling thread so the synchronous AwaitCompletion() works
+        // on every platform, including the browser's single thread where the pump would deadlock
+        // it. Generative providers (sequential, random, aesthetic) are open-ended and still pump.
+        _runInline = settings.SeedProvider is MotelySeedListProvider;
         _singleBatchConsumer = OperatingSystem.IsBrowser() || _threadCount == 1;
         _plans = new MotelySearchPlan[_threadCount];
         for (int i = 0; i < _threadCount; i++)

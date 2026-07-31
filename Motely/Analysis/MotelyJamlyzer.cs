@@ -183,9 +183,6 @@ public static class MotelyJamlyzer
                 .WithStake(config.Stake)
                 .WithSeedList([seed])
                 .WithThreadCount(1);
-            // One bounded seed, synchronous API: run inline so AwaitCompletion below is safe
-            // everywhere — the browser pump would deadlock the single thread instead.
-            settings.RunInline = true;
 
             int score = 0;
             if (hasScore)

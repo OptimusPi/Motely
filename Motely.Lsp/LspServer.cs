@@ -115,6 +115,9 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
             case "textDocument/completion":
                 Respond(id, CompletionResult(@params));
                 break;
+            case "textDocument/semanticTokens/full":
+                Respond(id, SemanticTokensResult(@params));
+                break;
             default:
                 if (id is not null)
                     RespondError(id, -32601, $"Method not found: {method}");
@@ -133,6 +136,22 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
             {
                 ["triggerCharacters"] = new JsonArray(":", " ", "-"),
             },
+            // Highlighting from the engine grammar instead of a TextMate copy of it. Standard
+            // token types mean shipped themes colour JAML with no per-theme rules and no
+            // syntaxes/*.tmLanguage.json to drift out of sync with JamlSchema.
+            ["semanticTokensProvider"] = new JsonObject
+            {
+                ["legend"] = new JsonObject
+                {
+                    ["tokenTypes"] = new JsonArray(
+                        [.. JamlLanguageService.SemanticTokenTypes.Select(t => (JsonNode)t!)]
+                    ),
+                    ["tokenModifiers"] = new JsonArray(
+                        [.. JamlLanguageService.SemanticTokenModifiers.Select(t => (JsonNode)t!)]
+                    ),
+                },
+                ["full"] = true,
+            },
         },
         ["serverInfo"] = new JsonObject
         {
@@ -142,6 +161,22 @@ public sealed class LspServer(Stream input, Stream output, TextWriter log)
                 .InformationalVersion.Split('+')[0] ?? "0.0.0",
         },
     };
+
+    /// <summary>
+    /// <c>textDocument/semanticTokens/full</c>. An unknown document answers with an empty token
+    /// list rather than an error — the client asks before <c>didOpen</c> settles often enough that
+    /// erroring would just paint the Output panel red for a race that resolves itself.
+    /// </summary>
+    private JsonNode SemanticTokensResult(JsonNode? @params)
+    {
+        var uri = @params?["textDocument"]?["uri"]?.GetValue<string>();
+        var text = uri is not null && _documents.TryGetValue(uri, out var t) ? t : "";
+        var data = JamlLanguageService.SemanticTokens(text);
+        return new JsonObject
+        {
+            ["data"] = new JsonArray([.. data.Select(v => (JsonNode)v)]),
+        };
+    }
 
     private JsonNode? HoverResult(JsonNode? @params)
     {

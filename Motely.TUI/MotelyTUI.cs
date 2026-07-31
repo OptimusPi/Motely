@@ -212,10 +212,10 @@ public static class MotelyTUI
             }
             _desktop.Add(statusBar);
 
-            if (!string.IsNullOrEmpty(configName) && !string.IsNullOrEmpty(configFormat))
+            if (!string.IsNullOrEmpty(configName))
             {
                 // Direct search mode (CLI arg) — show search window immediately
-                var searchWindow = new SearchWindow(configName, configFormat);
+                var searchWindow = new SearchWindow(configName);
                 _desktop.Add(searchWindow);
             }
             else

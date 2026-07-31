@@ -36,6 +36,71 @@ public class LspServerProtocolTests
     }
 
     [Fact]
+    public void SemanticTokens_ClassifyFromTheEngineGrammarInPositionOrder()
+    {
+        const string doc = """
+            name: probe
+            deck: Red
+            must:
+              - legendaryJoker: Perkeo   # legendary
+                antes: [1, 2]
+            """;
+
+        var (_, messages) = RunSession(
+            Request(1, "initialize", new JsonObject()),
+            Notification("initialized"),
+            DidOpen(doc),
+            Request(2, "textDocument/semanticTokens/full", new JsonObject
+            {
+                ["textDocument"] = new JsonObject { ["uri"] = DocumentUri },
+            }),
+            Request(3, "shutdown"),
+            Notification("exit")
+        );
+
+        var legend = ResponseTo(messages, 1)["result"]!["capabilities"]!["semanticTokensProvider"]!
+            ["legend"]!["tokenTypes"]!.AsArray()
+            .Select(n => n!.GetValue<string>())
+            .ToArray();
+        Assert.Equal(JamlLanguageService.SemanticTokenTypes, legend);
+
+        var data = ResponseTo(messages, 2)["result"]!["data"]!.AsArray()
+            .Select(n => n!.GetValue<int>())
+            .ToArray();
+        Assert.Equal(0, data.Length % 5);
+
+        // Decode the relative encoding back to absolute positions. deltaStartChar is never
+        // negative in a well-formed stream — it was, before the tokens were sorted, because a
+        // line's trailing comment is discovered before the key and value that precede it.
+        var decoded = new List<(int Line, int Start, int Length, string Type)>();
+        int line = 0,
+            start = 0;
+        for (var i = 0; i < data.Length; i += 5)
+        {
+            Assert.True(data[i + 1] >= 0, $"negative deltaStartChar at token {i / 5}");
+            line += data[i];
+            start = data[i] == 0 ? start + data[i + 1] : data[i + 1];
+            decoded.Add((line, start, data[i + 2], JamlLanguageService.SemanticTokenTypes[data[i + 3]]));
+        }
+
+        Assert.Equal(
+            [
+                (0, 0, 4, "keyword"), // name
+                (1, 0, 4, "keyword"), // deck
+                (1, 6, 3, "enumMember"), // Red
+                (2, 0, 4, "keyword"), // must
+                (3, 4, 14, "type"), // legendaryJoker — a discriminator, not a root key
+                (3, 20, 6, "enumMember"), // Perkeo
+                (3, 29, 11, "comment"), // # legendary
+                (4, 4, 5, "property"), // antes — a clause key
+                (4, 12, 1, "number"),
+                (4, 15, 1, "number"),
+            ],
+            decoded
+        );
+    }
+
+    [Fact]
     public void DidOpen_PublishesDiagnosticsForATypo()
     {
         var (_, messages) = RunSession(

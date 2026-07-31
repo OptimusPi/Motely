@@ -49,6 +49,7 @@ public static class Interop
         // pair, which is what makes it cross as an opaque handle. Erasing it as well leaves the
         // collected Binary<IMotelySeedFilterDesc[]> pointing at an element id that Rename deleted
         // (TypeInspector.Collect renames after collecting) — CS0103 in Serializer.g.cs.
+        // Verified empirically 2026-07-31: adding it here produces exactly that CS0103.
         "IMotelySeedFilter",
         "IMotelySeedScoreDesc",
         "IMotelySeedScoreProvider",

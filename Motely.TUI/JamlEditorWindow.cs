@@ -320,7 +320,6 @@ public class JamlEditorWindow : Window
 
         var searchWindow = new SearchWindow(
             _filePath,
-            "jaml",
             TuiSettings.DefaultSource,
             TuiSettings.DefaultSink
         );

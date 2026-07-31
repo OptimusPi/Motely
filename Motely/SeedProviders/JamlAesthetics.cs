@@ -296,7 +296,7 @@ file static class MirrorAestheticSeeds
 
 /// <summary>
 /// Repeater seeds: a base pattern repeated to fill 8 chars. Patterns drawn from the pad alphabet.
-/// Pattern lengths 1..7 only (length 8 is the identity full space — not an aesthetic).
+/// Pattern lengths 4..7 only (length 8 is the identity full space — not an aesthetic).
 /// </summary>
 file static class RepeaterAestheticSeeds
 {

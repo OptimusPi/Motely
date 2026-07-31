@@ -1,5 +1,6 @@
 using System.Data;
 using Motely;
+using Motely.DataLake;
 using Motely.Filters;
 
 namespace Motely.TUI;
@@ -7,8 +8,9 @@ namespace Motely.TUI;
 public class SearchWindow : Window
 {
     private readonly string _configPath;
-    private readonly string _configFormat;
     private readonly string? _source;
+    private readonly string? _sink;
+    private SeedLakeSink? _lakeSink;
     private readonly Label _statusLabel;
     private readonly Label _progressLabel;
     private readonly TextField _cutoffField;
@@ -31,17 +33,11 @@ public class SearchWindow : Window
     private int _cutoffFixed = int.MinValue;
     private int _currentHigh = int.MinValue;
 
-    public SearchWindow(
-        string configPath,
-        string configFormat,
-        string? source = null,
-        string? sink = null
-    )
+    public SearchWindow(string configPath, string? source = null, string? sink = null)
     {
         _configPath = configPath;
-        _configFormat = configFormat;
         _source = string.IsNullOrWhiteSpace(source) ? null : source;
-        _ = sink;
+        _sink = string.IsNullOrWhiteSpace(sink) ? null : sink;
 
         Title = $"Search: {Path.GetFileNameWithoutExtension(configPath)}";
         // Tile on the left half so the editor / results browser can sit next to it.
@@ -247,7 +243,7 @@ public class SearchWindow : Window
             _searchRunning = true;
 
             if (
-                !TryLoadConfig(_configPath, _configFormat, out var config, out var configError)
+                !JamlFileSource.TryLoadFromFile(_configPath, out var config, out var configError)
                 || config == null
             )
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
@@ -349,8 +345,14 @@ public class SearchWindow : Window
 
             Application.Invoke(() => EnsureTallyColumns(scoreTallyColumns));
 
+            // Same contract as Motely.CLI: found seeds land in the seed lake so --drown can
+            // replay them. Without this the sink setting is inert and TUI runs write nothing.
+            if (_sink is not null)
+                _lakeSink = new SeedLakeSink(_sink, config.Id);
+
             settings.WithScoredResultCallback(tally =>
             {
+                _lakeSink?.OnScored(in tally);
                 var resultCount = Interlocked.Increment(ref _resultCount);
                 var seed = tally.Seed;
                 var score = tally.Score;
@@ -530,11 +532,7 @@ public class SearchWindow : Window
         _stopBtn.Enabled = false;
         _stopBtn.Text = "Stopping...";
 
-        try
-        {
-            _cts?.Cancel();
-        }
-        catch { }
+        _cts?.Cancel();
 
         OnSearchStopped();
     }
@@ -544,56 +542,19 @@ public class SearchWindow : Window
         if (_searchRunning)
             StopSearch();
 
-        try
-        {
-            _search?.Dispose();
-        }
-        catch { }
+        _search?.Dispose();
 
         MotelyTUI.CloseWindow(this);
     }
 
     protected override void Dispose(bool disposing)
     {
-        try
-        {
-            _search?.Dispose();
-        }
-        catch { }
-
-        try
-        {
-            _cts?.Dispose();
-        }
-        catch { }
+        _search?.Dispose();
+        _cts?.Dispose();
+        _lakeSink?.Dispose();
+        _lakeSink = null;
 
         base.Dispose(disposing);
     }
 
-    private static bool TryLoadConfig(
-        string path,
-        string configFormat,
-        out JamlConfig? config,
-        out string? error
-    )
-    {
-        config = null;
-        error = null;
-
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            error = "Config path is required.";
-            return false;
-        }
-
-        if (!File.Exists(path))
-        {
-            error = $"Config file not found: {path}";
-            return false;
-        }
-
-        var content = File.ReadAllText(path);
-        _ = configFormat;
-        return JamlConfigLoader.TryLoad(content, out config, out error);
-    }
 }

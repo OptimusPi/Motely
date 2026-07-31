@@ -77,26 +77,32 @@ public sealed class CoverageUtilityTests
     [Fact]
     public void KeywordSequences_AestheticCountsAndValidationArePinned()
     {
-        Assert.Equal(
+        // Each baked constant must be recomputed from its own keyword array. Comparing the
+        // constant to GetAestheticSeedCount(aesthetic) is a tautology for the null-pad case —
+        // that call returns the constant — so the live count is the only real pin.
+        var baked = string.Join(
+            " ",
             MotelySeedKeywordSequences.GrossKeywordAestheticSeedCount,
-            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Gross)
-        );
-        Assert.Equal(
             MotelySeedKeywordSequences.FunnyKeywordAestheticSeedCount,
-            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Funny)
-        );
-        Assert.Equal(
             MotelySeedKeywordSequences.BalatroKeywordAestheticSeedCount,
-            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Balatro)
+            MotelySeedKeywordSequences.LeetKeywordAestheticSeedCount,
+            MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount
         );
-        Assert.Equal(
-            MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount,
-            MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Nsfw)
-        );
-        Assert.Equal(
-            MotelySeedKeywordSequences.NsfwKeywordAestheticSeedCount,
+        var live = string.Join(
+            " ",
+            MotelyGlobals.GetPaddedSeedCountForKeywordsLong(
+                MotelySeedKeywordSequences.GrossKeywords
+            ),
+            MotelyGlobals.GetPaddedSeedCountForKeywordsLong(
+                MotelySeedKeywordSequences.FunnyKeywords
+            ),
+            MotelyGlobals.GetPaddedSeedCountForKeywordsLong(
+                MotelySeedKeywordSequences.BalatroKeywords
+            ),
+            MotelyGlobals.GetPaddedSeedCountForKeywordsLong(MotelySeedKeywordSequences.LeetKeywords),
             MotelyGlobals.GetPaddedSeedCountForKeywordsLong(MotelySeedKeywordSequences.NsfwKeywords)
         );
+        Assert.Equal(baked, live);
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             MotelySeedKeywordSequences.GetAestheticSeedCount(JamlAesthetic.Palindrome)
         );
