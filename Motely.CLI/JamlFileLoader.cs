@@ -44,7 +44,13 @@ public static class JamlFileLoader
             return false;
         }
 
-        return JamlConfigLoader.TryLoad(content, out config, out error);
+        if (JamlConfigLoader.TryLoad(content, out config, out error))
+            return true;
+
+        // TryLoad only knows the text, so the resolved path lives here — and --jaml takes a bare
+        // name, which means without this the message never says which file it means.
+        error = $"{path}: {error}";
+        return false;
     }
 
     /// <summary>

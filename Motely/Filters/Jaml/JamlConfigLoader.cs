@@ -1,16 +1,29 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace Motely.Filters.Jaml;
 
 public static partial class JamlConfigLoader
 {
-    public static bool TryLoad(string content, out JamlConfig? config, out string? error)
+    public static bool TryLoad(
+        string content,
+        [NotNullWhen(true)] out JamlConfig? config,
+        out string? error
+    )
     {
         try
         {
             config = FromJaml(content);
             error = null;
             return true;
+        }
+        // The span is the only thing that tells a caller *where* the bad key is; flattening
+        // straight to ex.Message threw it away and left every shell printing a bare sentence.
+        catch (JamlSemanticException ex) when (!ex.Span.IsEmpty)
+        {
+            config = null;
+            error = $"line {ex.Span.StartLine + 1}, col {ex.Span.StartColumn + 1}: {ex.Message}";
+            return false;
         }
         catch (Exception ex)
         {

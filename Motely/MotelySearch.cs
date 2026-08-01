@@ -1141,7 +1141,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         _lastReportSeeds = seedsSearched;
 
         long? etaMs = null;
-        if (thisPortionFinished >= 0.0001)
+        if (thisPortionFinished >= 0.0000001)
         {
             double totalTimeEstimate = elapsedMS / thisPortionFinished;
             double timeLeftMs = totalTimeEstimate - elapsedMS;
@@ -1149,7 +1149,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 !double.IsNaN(timeLeftMs)
                 && !double.IsInfinity(timeLeftMs)
                 && timeLeftMs >= 0
-                && timeLeftMs <= 30.0 * 24 * 60 * 60 * 1000
+                && timeLeftMs <= 365.0 * 24 * 60 * 60 * 1000
             )
                 etaMs = (long)timeLeftMs;
         }

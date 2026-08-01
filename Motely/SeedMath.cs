@@ -122,9 +122,16 @@ public static class SeedMath
         if (prefixLen <= 0)
             return 0;
 
-        string prefix = seed.Substring(0, prefixLen);
-        // Return index relative to the start of all possible prefixes of this length
-        return SeedToSearchIndex(prefix);
+        // The engine writes batch digits into the LAST prefixLen characters, least significant
+        // first — MotelySearch.SearchSequentialBatch, _digits[MaxSeedLength - i - 1]. Reading the
+        // head instead landed --startSeed and the resume hint at the mirrored point in the space:
+        // asking for DWIQ6W31 started the sweep among seeds ending in D.
+        long index = 0;
+        for (int i = seed.Length - 1; i >= batchSize; i--)
+            index =
+                index * MotelyGlobals.SeedDigits.Length
+                + MotelyGlobals.SeedDigits.IndexOf(seed[i]);
+        return index;
     }
 
     public static string BatchIndexToSeedPrefix(long batchIndex, int batchSize)
