@@ -56,7 +56,7 @@ public sealed class JamlWildcardTests
     }
 
     [Fact]
-    public void YamlAliasSyntaxIsRejected()
+    public void AliasSyntaxIsRejected()
     {
         Assert.False(
             JamlConfigLoader.TryLoad(Block("joker").Replace("joker: []", "joker: *any*"), out _, out var error)
