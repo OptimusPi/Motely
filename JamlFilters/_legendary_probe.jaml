@@ -2,7 +2,7 @@ name: Legendary probe
 deck: Red
 stake: White
 must:
-  - legendaryJoker: Any
+  - legendaryJoker: []
 should:
   - legendaryJoker: Canio
     score: 1

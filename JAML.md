@@ -38,6 +38,25 @@ find the same seeds.
 | `- Boss The Wall` | `- boss: TheWall` |
 | `- 2 of Clubs` | `- standardCard:`<br>`  rank: Two`<br>`  suit: Clubs` |
 
+### Category any (no `Any` token)
+
+There is **no** wire word `Any`. Empty discriminator list (or empty props for playing cards)
+means “this category, with optional filters.”
+
+```yaml
+must:
+  - joker: []                 # any joker (shop 0–7 by default)
+    edition: Negative         # …but only Negative
+  - tarotCard: []
+    antes: [4, 5]
+  - spectralCard: []          # ordinary spectrals only; name TheSoul/BlackHole to use special path
+  - planetCard: []
+  - standardCard:             # any playing card
+    suit: Hearts              # …or only Hearts
+```
+
+Category any is **block form only** — there is no one-line spelling for “any joker.”
+
 The line form reads like the game reads: **stickers, then edition, then the thing.** Same order
 the card shows it to you.
 

@@ -29,7 +29,7 @@ should:
     score: 40
   - tag: NegativeTag
     score: 35
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 35
   - rareJoker: Blueprint

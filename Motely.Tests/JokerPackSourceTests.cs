@@ -35,7 +35,7 @@ public sealed class JokerPackSourceTests
         deck: Red
         stake: White
         must:
-          - uncommonJoker: any
+          - uncommonJoker: []
             antes: [1, 2, 3]
             sources:
               boosterPacks: [0, 1, 2]
@@ -46,7 +46,7 @@ public sealed class JokerPackSourceTests
         deck: Red
         stake: White
         must:
-          - uncommonJoker: any
+          - uncommonJoker: []
             antes: [1, 2, 3]
             edition: Negative
             sources:
@@ -126,7 +126,7 @@ public sealed class JokerPackSourceTests
         deck: Red
         stake: White
         must:
-          - commonJoker: any
+          - commonJoker: []
             antes: [2, 3]
             stickers: [Eternal]
             sources:
@@ -139,7 +139,7 @@ public sealed class JokerPackSourceTests
         deck: Red
         stake: White
         must:
-          - commonJoker: any
+          - commonJoker: []
             antes: [2, 3]
             sources:
               shopItems: [0, 1, 2, 3]

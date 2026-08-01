@@ -34,7 +34,7 @@ should:
   - jokers: [Baron, Mime, InvisibleJoker, Brainstorm, Blueprint]
     antes: [1,2,3,4]
 
-  - legendaryJoker: any
+  - legendaryJoker: []
     antes: [1,2]
     sources:
       boosterPacks: [0,1,2,3]

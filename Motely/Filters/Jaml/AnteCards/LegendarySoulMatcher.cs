@@ -252,9 +252,10 @@ internal static class LegendarySoulMatcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool TypeMatchesLegendary(LegendaryJokerClause clause, MotelyItemType ty)
     {
-        for (int i = 0; i < clause.Jokers.Length; i++)
+        var jokers = JamlDisc.OrEmpty(clause.Jokers);
+        for (int i = 0; i < jokers.Length; i++)
         {
-            if (ty == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.Jokers[i]))
+            if (ty == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokers[i]))
                 return true;
         }
 
@@ -267,10 +268,7 @@ internal static class LegendarySoulMatcher
         Motely.MotelyItem joker
     )
     {
-        if (clause.IsWildcard)
-            return !clause.Edition.HasValue || joker.Edition == clause.Edition.Value;
-
-        if (clause.Jokers.Length == 0)
+        if (JamlDisc.IsCategoryAny(clause.Jokers))
             return !clause.Edition.HasValue || joker.Edition == clause.Edition.Value;
 
         if (!TypeMatchesLegendary(clause, joker.Type))

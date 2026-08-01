@@ -27,7 +27,7 @@ should:
   - spectralCard: Ankh
     antes: [1, 2, 3, 4, 5, 6]
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 25
   - uncommonJoker: Showman

@@ -15,7 +15,7 @@ should:
   - joker: Showman
     antes: [1, 2]
     score: 20
-  - uncommonJoker: Any
+  - uncommonJoker: []
     edition: Negative
     score: 57
   - tarotCard: Temperance

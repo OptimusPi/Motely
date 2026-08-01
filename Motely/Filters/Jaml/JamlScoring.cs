@@ -69,7 +69,8 @@ public static class JamlScoring
             StartingDrawClause => true,
             PokerHandClause => true,
             StandardCardClause => true,
-            LegendaryJokerClause => true,
+            // Legendary filter is pure SIMD edition (or passthrough) — pack/Soul confirm is score-only.
+            LegendaryJokerClause => false,
             // Full vector roll walks — same law as scoring counts.
             VoucherClause => true,
             TagClause => true,
@@ -111,12 +112,13 @@ public static class JamlScoring
 
     private static bool JokerUsesLegendaryExactPath(JokerClause clause)
     {
-        if (clause.IsWildcard)
+        if (JamlDisc.IsCategoryAny(clause.Jokers))
             return true;
-        for (int i = 0; i < clause.Jokers.Length; i++)
+        var jokers = clause.Jokers!;
+        for (int i = 0; i < jokers.Length; i++)
         {
             if (
-                ((MotelyJokerRarity)((int)clause.Jokers[i] & MotelyGlobals.JokerRarityMask))
+                ((MotelyJokerRarity)((int)jokers[i] & MotelyGlobals.JokerRarityMask))
                 == MotelyJokerRarity.Legendary
             )
                 return true;
@@ -781,8 +783,9 @@ public static class JamlScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool SpectralClauseTargets(SpectralCardClause clause, MotelySpectralCard card)
     {
-        for (int i = 0; i < clause.Spectrals.Length; i++)
-            if (clause.Spectrals[i] == card)
+        var spectrals = JamlDisc.OrEmpty(clause.Spectrals);
+        for (int i = 0; i < spectrals.Length; i++)
+            if (spectrals[i] == card)
                 return true;
         return false;
     }
@@ -1489,7 +1492,7 @@ public static class JamlScoring
     )
     {
         var sources = clause.Sources ?? CommonJokerFilterDesc.DefaultSources;
-        if (clause.IsWildcard)
+        if (JamlDisc.IsCategoryAny(clause.Jokers))
             return CountJokerOccurrencesWildcard(
                 ref ctx,
                 clause.Antes,
@@ -1517,7 +1520,7 @@ public static class JamlScoring
     )
     {
         var sources = clause.Sources ?? UncommonJokerFilterDesc.DefaultSources;
-        if (clause.IsWildcard)
+        if (JamlDisc.IsCategoryAny(clause.Jokers))
             return CountJokerOccurrencesWildcard(
                 ref ctx,
                 clause.Antes,
@@ -1545,7 +1548,7 @@ public static class JamlScoring
     )
     {
         var sources = clause.Sources ?? RareJokerFilterDesc.DefaultSources;
-        if (clause.IsWildcard)
+        if (JamlDisc.IsCategoryAny(clause.Jokers))
             return CountJokerOccurrencesWildcard(
                 ref ctx,
                 clause.Antes,
@@ -1587,7 +1590,7 @@ public static class JamlScoring
     )
     {
         var sources = clause.Sources ?? JokerFilterDesc.DefaultSources;
-        if (clause.IsWildcard)
+        if (JamlDisc.IsCategoryAny(clause.Jokers))
         {
             int normalWildcard = CountJokerOccurrencesWildcard(
                 ref ctx,
@@ -1604,7 +1607,6 @@ public static class JamlScoring
                 Label = clause.Label,
                 Score = clause.Score,
                 Jokers = [],
-                IsWildcard = true,
                 Edition = clause.Edition,
                 Sources = clause.LegendarySources ?? LegendaryJokerFilterDesc.DefaultSources,
                 Antes = clause.Antes,
@@ -1616,15 +1618,16 @@ public static class JamlScoring
                 + CountLegendaryJokerOccurrences(ref ctx, legendaryWildcard, runState);
         }
 
-        var nonLegendary = clause
-            .Jokers.Where(static j =>
+        var jokers = JamlDisc.OrEmpty(clause.Jokers);
+        var nonLegendary = jokers
+            .Where(static j =>
                 ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask))
                 != MotelyJokerRarity.Legendary
             )
             .ToArray();
 
-        var legendary = clause
-            .Jokers.Where(static j =>
+        var legendary = jokers
+            .Where(static j =>
                 ((MotelyJokerRarity)((int)j & MotelyGlobals.JokerRarityMask))
                 == MotelyJokerRarity.Legendary
             )
@@ -1652,7 +1655,6 @@ public static class JamlScoring
                 Label = clause.Label,
                 Score = clause.Score,
                 Jokers = legendary,
-                IsWildcard = false,
                 Edition = clause.Edition,
                 Sources = clause.LegendarySources ?? LegendaryJokerFilterDesc.DefaultSources,
                 Antes = clause.Antes,
@@ -2151,12 +2153,13 @@ public static class JamlScoring
 
     private static int MatchTarot(MotelyItem item, TarotCardClause clause)
     {
-        if (clause.IsWildcard)
+        var tarots = JamlDisc.OrEmpty(clause.Tarots);
+        if (JamlDisc.IsCategoryAny(tarots))
             return item.TypeCategory == MotelyItemTypeCategory.TarotCard ? 1 : 0;
-        for (int i = 0; i < clause.Tarots.Length; i++)
+        for (int i = 0; i < tarots.Length; i++)
             if (
                 item.Type
-                == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.Tarots[i])
+                == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)tarots[i])
             )
                 return 1;
         return 0;
@@ -2164,9 +2167,12 @@ public static class JamlScoring
 
     private static int MatchSpectral(MotelyItem item, SpectralCardClause clause)
     {
-        for (int i = 0; i < clause.Spectrals.Length; i++)
+        var spectrals = JamlDisc.OrEmpty(clause.Spectrals);
+        if (JamlDisc.IsCategoryAny(spectrals))
+            return item.TypeCategory == MotelyItemTypeCategory.SpectralCard ? 1 : 0;
+        for (int i = 0; i < spectrals.Length; i++)
         {
-            var Spectral = clause.Spectrals[i];
+            var Spectral = spectrals[i];
             if (
                 item.Type
                 == (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)Spectral)
@@ -2182,10 +2188,13 @@ public static class JamlScoring
 
     private static int MatchPlanet(MotelyItem item, PlanetCardClause clause)
     {
-        for (int i = 0; i < clause.Planets.Length; i++)
+        var planets = JamlDisc.OrEmpty(clause.Planets);
+        if (JamlDisc.IsCategoryAny(planets))
+            return item.TypeCategory == MotelyItemTypeCategory.PlanetCard ? 1 : 0;
+        for (int i = 0; i < planets.Length; i++)
             if (
                 item.Type
-                == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.Planets[i])
+                == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)planets[i])
             )
                 return 1;
         return 0;

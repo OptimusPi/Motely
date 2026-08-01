@@ -38,7 +38,7 @@ should:
     score: 35
   - uncommonJoker: Showman
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 35
   - tag: NegativeTag

@@ -140,21 +140,30 @@ public static partial class JamlConfigLoader
         {
             AndClause logic => WriteLogic("and", logic),
             OrClause logic => WriteLogic("or", logic),
-            JokerClause c => WriteJokerFamily("joker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
-            CommonJokerClause c => WriteJokerFamily("commonJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
-            UncommonJokerClause c => WriteJokerFamily("uncommonJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
-            RareJokerClause c => WriteJokerFamily("rareJoker", c.IsWildcard, c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            JokerClause c => WriteJokerFamily("joker", c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            CommonJokerClause c => WriteJokerFamily("commonJoker", c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            UncommonJokerClause c => WriteJokerFamily("uncommonJoker", c.Jokers, c.Edition, c.Stickers, c.Sources, c),
+            RareJokerClause c => WriteJokerFamily("rareJoker", c.Jokers, c.Edition, c.Stickers, c.Sources, c),
             LegendaryJokerClause c => WriteLegendary(c),
             VoucherClause c => WriteItems("voucher", c.Vouchers, c, rolls: c.Rolls, rollsDefault: [0]),
             TarotCardClause c => WriteConsumable(
                 "tarotCard",
-                c.IsWildcard,
                 c.Tarots,
                 c.Sources,
                 c
             ),
-            SpectralCardClause c => WriteConsumable("spectralCard", c.Spectrals, c.Sources, c),
-            PlanetCardClause c => WriteConsumable("planetCard", c.Planets, c.Sources, c),
+            SpectralCardClause c => WriteConsumable(
+                "spectralCard",
+                c.Spectrals,
+                c.Sources,
+                c
+            ),
+            PlanetCardClause c => WriteConsumable(
+                "planetCard",
+                c.Planets,
+                c.Sources,
+                c
+            ),
             StandardCardClause c => WriteStandardCard(c),
             BossClause c => WriteItems("boss", c.Bosses, c),
             TagClause c => WriteItems("tag", c.Tags, c, rolls: c.Rolls, rollsDefault: [0, 1]),
@@ -189,7 +198,6 @@ public static partial class JamlConfigLoader
 
     private static JMap WriteJokerFamily<TEnum>(
         string discriminator,
-        bool isWildcard,
         TEnum[] jokers,
         MotelyItemEdition? edition,
         MotelyJokerSticker[] stickers,
@@ -199,7 +207,8 @@ public static partial class JamlConfigLoader
         where TEnum : struct, Enum
     {
         var mapping = new JMap();
-        mapping.Set(discriminator, isWildcard ? StringArrayNode(["Any"]) : EnumArrayNode(jokers), default);
+        // Empty jokers = category any → write empty array (no "Any" token).
+        mapping.Set(discriminator, EnumArrayNode(jokers), default);
         WriteCommonKeys(mapping, clause);
         WriteAntes(mapping, clause);
         if (edition is { } ed)
@@ -216,7 +225,7 @@ public static partial class JamlConfigLoader
         var mapping = new JMap();
         mapping.Set(
             "legendaryJoker",
-            c.IsWildcard ? StringArrayNode(["Any"]) : EnumArrayNode(c.Jokers),
+            EnumArrayNode(c.Jokers),
             default
         );
         WriteCommonKeys(mapping, c);
@@ -256,21 +265,12 @@ public static partial class JamlConfigLoader
         object? sources,
         IJamlClause clause
     )
-        where TEnum : struct, Enum => WriteConsumable(discriminator, isWildcard: false, items, sources, clause);
-
-    private static JMap WriteConsumable<TEnum>(
-        string discriminator,
-        bool isWildcard,
-        TEnum[] items,
-        object? sources,
-        IJamlClause clause
-    )
         where TEnum : struct, Enum
     {
         var mapping = new JMap();
         mapping.Set(
             discriminator,
-            isWildcard ? StringArrayNode(["Any"]) : EnumArrayNode(items),
+            EnumArrayNode(items),
             default
         );
         WriteCommonKeys(mapping, clause);

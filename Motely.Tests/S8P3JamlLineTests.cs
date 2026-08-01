@@ -10,7 +10,6 @@ public sealed class S8P3JamlLineTests
 {
     [Theory]
     [InlineData("Blueprint", typeof(JokerClause))]
-    [InlineData("Any", typeof(JokerClause))]
     [InlineData("Negative Blueprint", typeof(JokerClause))]
     [InlineData("Eternal Blueprint", typeof(JokerClause))]
     [InlineData("Voucher Overstock", typeof(VoucherClause))]

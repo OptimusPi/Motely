@@ -228,12 +228,13 @@ public sealed class JamlLanguageServiceTests
     }
 
     [Fact]
-    public void Complete_DiscriminatorValue_OffersEnumPlusAny()
+    public void Complete_DiscriminatorValue_OffersEnumNames_NotAnyToken()
     {
         var text = "must:\n  - voucher: ";
         var items = JamlLanguageService.Complete(text, 1, text.Length - text.IndexOf('\n') - 1);
         Assert.Contains(items, i => i.Label == "Hieroglyph");
-        Assert.Contains(items, i => i.Label == "Any");
+        // Category any is empty disc / props-only — no "Any" token on the wire.
+        Assert.DoesNotContain(items, i => i.Label == "Any");
     }
 
     [Fact]

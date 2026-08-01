@@ -101,27 +101,27 @@ public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
 }
 
 /// <summary>
-/// Generates echo seeds lazily via <see cref="JamlAesthetics.EnumerateSeeds"/> (echo pattern: ABAxBxxx, ~1 billion seeds).
+/// Generates psychosis seeds lazily via <see cref="JamlAesthetics.EnumerateSeeds"/> (ABAxBxxx pattern, ~1 billion seeds).
 /// </summary>
-public sealed class MotelyEchoSeedProvider : IMotelySeedProvider
+public sealed class MotelyPsychosisSeedProvider : IMotelySeedProvider
 {
-    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Echo);
+    public long SeedCount { get; } = JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis);
 
-    private readonly IEnumerator<string> _echoEnumerator;
+    private readonly IEnumerator<string> _psychosisEnumerator;
     private readonly object _enumeratorLock = new();
 
-    public MotelyEchoSeedProvider()
+    public MotelyPsychosisSeedProvider()
     {
-        _echoEnumerator = JamlAesthetics.EnumerateSeeds(JamlAesthetic.Echo).GetEnumerator();
+        _psychosisEnumerator = JamlAesthetics.EnumerateSeeds(JamlAesthetic.Psychosis).GetEnumerator();
     }
 
     public string NextSeed()
     {
         lock (_enumeratorLock)
         {
-            if (_echoEnumerator.MoveNext())
+            if (_psychosisEnumerator.MoveNext())
             {
-                return _echoEnumerator.Current;
+                return _psychosisEnumerator.Current;
             }
             return string.Empty;
         }
@@ -137,9 +137,9 @@ public sealed class MotelyEchoSeedProvider : IMotelySeedProvider
             int count = 0;
             for (int i = 0; i < seeds.Length; i++)
             {
-                if (!_echoEnumerator.MoveNext())
+                if (!_psychosisEnumerator.MoveNext())
                     break;
-                seeds[i] = _echoEnumerator.Current;
+                seeds[i] = _psychosisEnumerator.Current;
                 count++;
             }
             return count;

@@ -37,7 +37,7 @@ public sealed class S8P3CommonUncommonBranchTests
             deck: Red
             stake: Gold
             must:
-              - commonJoker: Any
+              - commonJoker: []
                 antes: [1, 2]
                 stickers: [Eternal]
             """
@@ -58,7 +58,7 @@ public sealed class S8P3CommonUncommonBranchTests
             deck: Red
             stake: Gold
             must:
-              - uncommonJoker: Any
+              - uncommonJoker: []
                 antes: [1, 2]
                 stickers: [Rental, Perishable]
             """
@@ -75,7 +75,7 @@ public sealed class S8P3CommonUncommonBranchTests
             deck: Red
             stake: White
             must:
-              - commonJoker: Any
+              - commonJoker: []
                 antes: [1]
                 sources:
                   boosterPacks: [0, 1, 2, 3, 4, 5]
@@ -94,7 +94,7 @@ public sealed class S8P3CommonUncommonBranchTests
             deck: Red
             stake: White
             must:
-              - uncommonJoker: Any
+              - uncommonJoker: []
                 antes: [1]
                 sources:
                   boosterPacks: [0, 1, 2, 3, 4, 5]

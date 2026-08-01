@@ -15,7 +15,8 @@ public sealed class JamlExactMustReevalTests
                 [new BossClause { Bosses = [MotelyBossBlind.TheClub], Antes = [1] }]
             )
         );
-        Assert.True(
+        // Legendary SIMD is edition/passthrough only — pack/Soul confirm is scoring must re-eval.
+        Assert.False(
             JamlScoring.CanSkipMustReeval(
                 [
                     new LegendaryJokerClause
@@ -54,10 +55,22 @@ public sealed class JamlExactMustReevalTests
                 [new JokerClause { Jokers = [MotelyJoker.Blueprint], Antes = [1] }]
             )
         );
-        // Wildcard joker is legendary-path exact confirm — may skip.
+        // Empty joker list still routes through JokerFilterDesc exact confirm today — may skip.
         Assert.True(
             JamlScoring.CanSkipMustReeval(
-                [new JokerClause { IsWildcard = true, Antes = [1] }]
+                [new JokerClause { Antes = [1] }]
+            )
+        );
+        Assert.False(
+            JamlScoring.CanSkipMustReeval(
+                [
+                    new LegendaryJokerClause
+                    {
+                        Jokers = [],
+                        Edition = MotelyItemEdition.Negative,
+                        Antes = [1, 2],
+                    },
+                ]
             )
         );
         Assert.False(

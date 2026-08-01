@@ -2,7 +2,7 @@ name: 2Ethereal4u
 author: Opus 4.6 and pi
 must:
 must:
-  - legendaryJoker: any
+  - legendaryJoker: []
     sources:
       spectralPacks: [0]
     edition: Negative
@@ -17,7 +17,7 @@ must:
     ante: 2
 
 should:
-  - legendaryJoker: any
+  - legendaryJoker: []
     edition: Negative
 
   - smallBlindTag: EtherealTag
@@ -43,7 +43,7 @@ should:
     antes: [4, 5, 6, 7]
     score: 100
 
-  - tarotCard: any
+  - tarotCard: []
     score: 1
 
 seeds:

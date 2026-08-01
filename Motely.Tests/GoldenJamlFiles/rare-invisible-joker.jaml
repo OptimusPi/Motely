@@ -31,7 +31,7 @@ should:
     score: 45
   - rareJoker: Stuntman
     score: 35
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 40
   - tag: NegativeTag

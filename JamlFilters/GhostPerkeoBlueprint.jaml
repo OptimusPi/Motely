@@ -62,7 +62,7 @@ should:
     antes: [1, 2, 3, 4, 5, 6, 7, 8]
     score: 5
 
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [1, 2, 3, 4, 5, 6, 7, 8]
     edition: Negative
     score: 3
@@ -77,7 +77,7 @@ should:
       shopItems: [0, 1]
     score: 4
 
-  - joker: Any
+  - joker: []
     edition: Negative
     sources:
       judgement: [0, 1]

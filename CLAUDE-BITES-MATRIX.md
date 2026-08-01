@@ -1,10 +1,11 @@
 # CLAUDE BITES MATRIX — MotelyJAML + jaml-ui
 
 **Operator:** Nat  
-**Capture author:** Grok (2026-07-30) — session audit: joker/Any, sources shop-default, spectral hole, IsWildcard dual-state, with: luck axis, one LSP brain, jaml-ui Jimbo queue  
+**Capture author:** Grok (2026-07-30) · **healed 2026-07-31:** token `Any` killed; empty disc list = category any  
 **Executor:** Claude Code **Haiku or Sonnet** — **one ticket per turn**  
 **Law:** table or real diff. No poetry. No honey-soup.  
-**Repos:** `WORK-ANY-MATRIX.md` (engine phases W0–W4) · `jaml-ui/HANDOFF-CLAUDE.md` (UI P2–P8) · this file = **unified bite queue**
+**Engine law:** empty `joker: []` / props-only (standardCard shape). **No `Any` token. No `IsWildcard`.**  
+**Repos:** `WORK-ANY-MATRIX.md` (empty-list law — shipped) · `jaml-ui/HANDOFF-CLAUDE.md` (UI P2–P8) · this file = **unified bite queue**
 
 ---
 
@@ -31,13 +32,13 @@
 
 | Law | Meaning |
 |-----|---------|
-| `*: Any` | category match (wildcard). Not an enum member. Loader string `"any"` CI |
+| Category any | empty disc list `joker: []` / `tarotCard: []` / … — **not** the word `Any` |
 | Default **sources** (tarot/joker/ordinary spectral) | **shop 0–7 only** if `sources:` omitted |
 | Default **antes** | empty → builder fills `1..8` |
 | Named antes `[4,5]` | only those antes; still shop-default unless `sources:` |
 | `with: { luck, vouchers }` | **event clauses only** — not cards |
-| `spectralCard: Any` / `planetCard: Any` | **engine hole today** (parse fails) |
-| `IsWildcard` bool | dual-state crap; kill in W2 after W1 ships holes |
+| `spectralCard: []` / `planetCard: []` | **shipped** (empty list; Soul/BH still named-only) |
+| `IsWildcard` bool | **deleted** — empty list is the only wildcard signal |
 | LSP | **one brain** `Motely.Lsp.Core`; hosts `Motely.Lsp` + Wasm; vscode client; jaml-ui uses `motely-wasm` |
 | jaml-ui | **git submodule** `jaml-ui` → `OptimusPi/jaml-ui`; Jimbo design: **no flex** |
 | UI parse drift | `parseClauses.ts` keys are `tarot` not `tarotCard` — visual layer ≠ engine wire |

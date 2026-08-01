@@ -25,12 +25,12 @@ should:
     score: 30
   - legendaryJoker: Perkeo
     score: 40
-  - legendaryJoker: Any
+  - legendaryJoker: []
     score: 30
   - tag: NegativeTag
     score: 45
   - tag: RareTag
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 30

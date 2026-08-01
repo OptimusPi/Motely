@@ -29,7 +29,7 @@ should:
     score: 35
   - legendaryJoker: Perkeo
     score: 35
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 30
   - legendaryJoker: Chicot

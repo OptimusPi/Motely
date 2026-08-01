@@ -54,7 +54,7 @@ should:
   - smallBlindTag: NegativeTag
     antes: [2,3,4]
     score: 2
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 1
   - voucher: Hieroglyph

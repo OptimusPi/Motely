@@ -2,7 +2,7 @@ name: Zerkeo
 deck: Anaglyph
 stake: White
 must:
-  - legendaryJoker: Any
+  - legendaryJoker: []
     edition: Negative
     sources:
       boosterPacks: [0,1]

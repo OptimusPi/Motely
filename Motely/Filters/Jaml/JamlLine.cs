@@ -10,7 +10,6 @@ namespace Motely.Filters.Jaml;
 /// </summary>
 public static class JamlLine
 {
-    private const string Wildcard = "Any";
     private const string VoucherPrefix = "Voucher ";
     private const string TagPrefix = "Tag ";
     private const string SmallBlindTagPrefix = "Small Blind Tag ";
@@ -24,9 +23,7 @@ public static class JamlLine
         clause switch
         {
             JokerClause j => FromJoker(j),
-            TarotCardClause t => t.IsWildcard
-                ? Wildcard + AnteTail(t.Antes)
-                : FromConsumable(t.Tarots, t.Antes),
+            TarotCardClause t => FromConsumable(t.Tarots, t.Antes),
             SpectralCardClause s => FromConsumable(s.Spectrals, s.Antes),
             PlanetCardClause p => FromConsumable(p.Planets, p.Antes),
             StandardCardClause s => FromStandardCard(s),
@@ -61,21 +58,12 @@ public static class JamlLine
 
     private static string? FromJoker(JokerClause clause)
     {
-        string head;
-        if (clause.IsWildcard)
-        {
-            head = Wildcard;
-        }
-        else if (clause.Jokers.Length == 1)
-        {
-            var item = new MotelyItem(clause.Jokers[0], clause.Edition ?? MotelyItemEdition.None);
-            item = ApplyStickers(item, clause.Stickers);
-            head = FormatUtils.FormatItem(item);
-        }
-        else
-        {
+        // Category wildcard (empty jokers) has no line spelling — block form only.
+        if (clause.Jokers.Length != 1)
             return null;
-        }
+        var item = new MotelyItem(clause.Jokers[0], clause.Edition ?? MotelyItemEdition.None);
+        item = ApplyStickers(item, clause.Stickers);
+        string head = FormatUtils.FormatItem(item);
 
         return head + AnteTail(clause.Antes);
     }
@@ -275,11 +263,7 @@ public static class JamlLine
         if (error != null)
             return false;
 
-        if (string.Equals(withoutAnte, Wildcard, StringComparison.OrdinalIgnoreCase))
-        {
-            clause = new JokerClause { IsWildcard = true, Antes = antes };
-            return true;
-        }
+        // No bare "Any" token — category match is empty disc in block form only.
 
         if (!FormatUtils.TryParseMotelyItem(withoutAnte, out var item))
         {

@@ -41,6 +41,9 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(PlanetCardClause clause, IJamlValueReader value)
     {
+        // Empty disc (null / "" / []) = category match. No "Any" token.
+        if (string.IsNullOrWhiteSpace(value.Text))
+            return true;
         if (!value.TryEnumArray<MotelyPlanetCard>(out var planets)) return false;
         clause.Planets = planets;
         return true;
@@ -91,7 +94,7 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.Planets.Length > 0);
+            // empty Planets = category any
             var clause = _clause;
             int maxShopItem = _maxShopItem;
             int maxBoosterPack = _maxBoosterPack;
@@ -238,12 +241,16 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static VectorMask MatchPlanets(MotelyItemVector items, PlanetCardClause clause)
         {
+            var planets = JamlDisc.OrEmpty(clause.Planets);
+            if (JamlDisc.IsCategoryAny(planets))
+                return VectorEnum256.Equals(items.TypeCategory, MotelyItemTypeCategory.PlanetCard);
+
             VectorMask mask = VectorMask.NoBitsSet;
             var itemTypes = items.Type;
 
-            for (int i = 0; i < clause.Planets.Length; i++)
+            for (int i = 0; i < planets.Length; i++)
             {
-                var targetType = (int)MotelyItemTypeCategory.PlanetCard | (int)clause.Planets[i];
+                var targetType = (int)MotelyItemTypeCategory.PlanetCard | (int)planets[i];
                 mask |= VectorEnum256.Equals(itemTypes, (MotelyItemType)targetType);
             }
 

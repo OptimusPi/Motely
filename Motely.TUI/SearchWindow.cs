@@ -294,8 +294,8 @@ public class SearchWindow : Window
                     settings.WithProviderSearch(new MotelyPalindromeSeedProvider());
                     break;
 
-                case SearchMode.Echo:
-                    settings.WithProviderSearch(new MotelyEchoSeedProvider());
+                case SearchMode.Psychosis:
+                    settings.WithProviderSearch(new MotelyPsychosisSeedProvider());
                     break;
 
                 case SearchMode.Keyword:

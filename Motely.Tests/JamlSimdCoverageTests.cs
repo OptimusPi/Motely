@@ -69,17 +69,16 @@ public class JamlSimdCoverageTests
     public void Jokers_AllRarities_FilterAndScore()
     {
         ExerciseBoth(
-            new JokerClause { IsWildcard = true, Antes = [1, 2] },
+            new JokerClause { Antes = [1, 2] },
             new JokerClause { Jokers = [MotelyJoker.Blueprint], Antes = [1, 2] }
         );
         ExerciseBoth(
-            new CommonJokerClause { IsWildcard = true, Antes = [1] },
-            new CommonJokerClause { IsWildcard = true, Antes = [1] }
+            new CommonJokerClause { Antes = [1] },
+            new CommonJokerClause { Antes = [1] }
         );
         ExerciseBoth(
             new UncommonJokerClause
             {
-                IsWildcard = true,
                 Antes = [1],
                 // exercise the fast-path rarity stream branch
                 Sources = new JokerSourceConfig
@@ -89,22 +88,20 @@ public class JamlSimdCoverageTests
                     UncommonShopJokers = [0],
                 },
             },
-            new UncommonJokerClause { IsWildcard = true, Antes = [1] }
+            new UncommonJokerClause { Antes = [1] }
         );
         ExerciseBoth(
-            new RareJokerClause { IsWildcard = true, Antes = [1] },
-            new RareJokerClause { IsWildcard = true, Antes = [1] }
+            new RareJokerClause { Antes = [1] },
+            new RareJokerClause { Antes = [1] }
         );
         ExerciseBoth(
             new LegendaryJokerClause
             {
-                IsWildcard = true,
                 Antes = [1],
                 Sources = new LegendaryJokerSourceConfig { ArcanaPacks = [0], SpectralPacks = [0] },
             },
             new LegendaryJokerClause
             {
-                IsWildcard = true,
                 Antes = [1],
                 Sources = new LegendaryJokerSourceConfig { ArcanaPacks = [0], SpectralPacks = [0] },
             }

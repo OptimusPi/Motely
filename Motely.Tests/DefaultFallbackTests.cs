@@ -48,14 +48,13 @@ public class DefaultFallbackTests
     {
         // No antes, no sources — the clause as the loader hands it over.
         var (implicitMatching, implicitScore) = Score(
-            new JokerClause { IsWildcard = true, Score = 1 }
+            new JokerClause { Score = 1 }
         );
 
         // The same clause with shop-only defaults written out longhand (no packs).
         var (_, explicitScore) = Score(
             new JokerClause
             {
-                IsWildcard = true,
                 Score = 1,
                 Antes = [1, 2, 3, 4, 5, 6, 7, 8],
                 Sources = new JokerSourceConfig
@@ -80,14 +79,13 @@ public class DefaultFallbackTests
         var (_, narrowScore) = Score(
             new JokerClause
             {
-                IsWildcard = true,
                 Score = 1,
                 Antes = [1],
                 Sources = new JokerSourceConfig { ShopItems = [0] }, // one slot, one ante
             }
         );
 
-        var (_, wideScore) = Score(new JokerClause { IsWildcard = true, Score = 1 }); // defaulted
+        var (_, wideScore) = Score(new JokerClause { Score = 1 }); // defaulted
 
         Assert.True(
             wideScore >= narrowScore,

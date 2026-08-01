@@ -40,6 +40,9 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(SpectralCardClause clause, IJamlValueReader value)
     {
+        // Empty disc (null / "" / []) = category match. No "Any" token.
+        if (string.IsNullOrWhiteSpace(value.Text))
+            return true;
         if (!value.TryEnumArray<MotelySpectralCard>(out var spectrals)) return false;
         clause.Spectrals = spectrals;
         return true;
@@ -128,7 +131,7 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.Spectrals.Length > 0);
+            // empty Spectrals = category any
             var clause = _clause;
             int maxShopItem = _maxShopItem;
             int maxBoosterPack = _maxBoosterPack;
@@ -358,13 +361,17 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static VectorMask MatchSpectrals(MotelyItemVector items, SpectralCardClause clause)
         {
+            var spectrals = JamlDisc.OrEmpty(clause.Spectrals);
+            if (JamlDisc.IsCategoryAny(spectrals))
+                return VectorEnum256.Equals(items.TypeCategory, MotelyItemTypeCategory.SpectralCard);
+
             VectorMask mask = VectorMask.NoBitsSet;
             var itemTypes = items.Type;
 
-            for (int i = 0; i < clause.Spectrals.Length; i++)
+            for (int i = 0; i < spectrals.Length; i++)
             {
                 var targetType =
-                    (int)MotelyItemTypeCategory.SpectralCard | (int)clause.Spectrals[i];
+                    (int)MotelyItemTypeCategory.SpectralCard | (int)spectrals[i];
                 mask |= VectorEnum256.Equals(itemTypes, (MotelyItemType)targetType);
             }
 

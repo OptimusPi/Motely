@@ -33,6 +33,6 @@ should:
     score: 45
   - tag: RareTag
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 30

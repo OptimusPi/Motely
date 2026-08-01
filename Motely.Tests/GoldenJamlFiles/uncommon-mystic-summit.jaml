@@ -27,7 +27,7 @@ should:
     score: 35
   - rareJoker: Brainstorm
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 30
   - legendaryJoker: Chicot

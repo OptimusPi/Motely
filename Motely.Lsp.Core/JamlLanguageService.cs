@@ -153,7 +153,9 @@ public static class JamlLanguageService
             if (valueEnum is not null)
             {
                 var names = Enum.GetNames(valueEnum);
-                sb.AppendLine($"**Value enum:** `{valueEnum.Name}` ({names.Length} names + `Any`)");
+                sb.AppendLine(
+                    $"**Value enum:** `{valueEnum.Name}` ({names.Length} names; empty list = category any)"
+                );
                 if (rest is { Length: > 0 })
                 {
                     var hits = JamlSchema.ListItems(disc, rest);
@@ -460,11 +462,10 @@ public static class JamlLanguageService
     private static IReadOnlyList<JamlCompletionItem> CompleteValue(
         string[] lines, int line, string key, string valuePrefix, JamlSpan replace)
     {
-        // Discriminator value first (adds "Any" wildcard). Property/root keys second.
+        // Discriminator value: enum names only. Category any is empty disc (`joker: []`), not a token.
         if (IsDiscriminator(key) && JamlSchema.ValueEnumTypeFor(key) is { } valueEnum)
         {
             var names = Enum.GetNames(valueEnum).ToList();
-            names.Add("Any");
             return FilterNames(names, valuePrefix, "value", valueEnum.Name, replace);
         }
 

@@ -19,7 +19,7 @@ public class StopAfterTests(ITestOutputHelper output)
         deck: Red
         stake: White
         must:
-          - joker: Any
+          - joker: []
             antes: [1]
         """;
 

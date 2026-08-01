@@ -10,35 +10,35 @@ must:
     edition: Negative
 
 should:
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [1]
     edition: Negative
     score: 10
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [2]
     edition: Negative
     score: 8
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [3]
     edition: Negative
     score: 8
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [4]
     edition: Negative
     score: 8
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [5]
     edition: Negative
     score: 8
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [6]
     edition: Negative
     score: 8
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [7]
     edition: Negative
     score: 8
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [8]
     edition: Negative
     score: 10

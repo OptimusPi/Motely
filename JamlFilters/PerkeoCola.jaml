@@ -52,7 +52,7 @@ should:
     score: 25
     label: cola_early
   # Cashout shop after Neg — front-mid slots only (not 0–30 full walk)
-  - rareJoker: Any
+  - rareJoker: []
     antes: [8]
     sources:
       shopItems: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]

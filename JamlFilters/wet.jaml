@@ -22,6 +22,6 @@ should:
     score: 10
   - tag: NegativeTag
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 25

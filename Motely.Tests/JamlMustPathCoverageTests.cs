@@ -64,7 +64,6 @@ public sealed class JamlMustPathCoverageTests
         RunMust(
                 new UncommonJokerClause
                 {
-                    IsWildcard = true,
                     Edition = MotelyItemEdition.Foil,
                     Antes = [1, 2],
                 }
@@ -78,7 +77,6 @@ public sealed class JamlMustPathCoverageTests
         RunMust(
                 new RareJokerClause
                 {
-                    IsWildcard = true,
                     Edition = MotelyItemEdition.Negative,
                     Antes = [1],
                 }
@@ -92,7 +90,6 @@ public sealed class JamlMustPathCoverageTests
         RunMust(
                 new CommonJokerClause
                 {
-                    IsWildcard = true,
                     Edition = MotelyItemEdition.Holographic,
                     Antes = [1],
                 }
@@ -112,7 +109,6 @@ public sealed class JamlMustPathCoverageTests
         RunMust(
                 new JokerClause
                 {
-                    IsWildcard = true,
                     Edition = MotelyItemEdition.Polychrome,
                     Antes = [1, 2],
                 }
@@ -164,14 +160,13 @@ public sealed class JamlMustPathCoverageTests
         RunMust(
                 new LegendaryJokerClause
                 {
-                    IsWildcard = true,
                     Antes = [1, 2],
                     Sources = new LegendaryJokerSourceConfig { SpectralPacks = [0, 1] },
                 }
             );
         // Min > 1 forces the matcher to keep counting after the first hit.
         RunMust(
-                new LegendaryJokerClause { IsWildcard = true, Antes = [1, 2, 3, 4], Min = 2 }
+                new LegendaryJokerClause { Antes = [1, 2, 3, 4], Min = 2 }
             );
     }
 

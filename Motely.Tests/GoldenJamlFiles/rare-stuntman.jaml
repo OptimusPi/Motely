@@ -15,7 +15,7 @@ should:
     score: 70
   - voucher: Antimatter
     score: 60
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 55
   - tag: NegativeTag

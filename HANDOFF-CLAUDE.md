@@ -170,7 +170,7 @@ Author on disk: **Nathanial P. Howard**. Co-Author on engine/test commits: **Cla
 intent = {
   mode: aesthetic | keyword | collect | sequential | list,
   padding: "123456789" | full | custom,
-  aesthetic?: "echo",
+  aesthetic?: "psychosis",
   keywords?: ["CUM"],
   stopAfter?: N,
   providerBatchSeeds?: 35^3,

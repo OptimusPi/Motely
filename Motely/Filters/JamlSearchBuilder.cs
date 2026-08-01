@@ -43,7 +43,7 @@ public static class JamlSearchBuilder
     /// names its column.
     /// </summary>
     private static IJamlClause LabelRenderable(IJamlClause clause) =>
-        clause is LegendaryJokerClause { IsWildcard: false } lj
+        clause is LegendaryJokerClause { Jokers.Length: > 0 } lj
             ? new JokerClause
             {
                 Jokers = lj.Jokers,

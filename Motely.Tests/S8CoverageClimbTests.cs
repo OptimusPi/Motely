@@ -270,7 +270,6 @@ public sealed class S8CoverageClimbTests
         RunClause(
             new LegendaryJokerClause
             {
-                IsWildcard = true,
                 Antes = [1, 2],
                 Sources = new LegendaryJokerSourceConfig { SpectralPacks = [0, 1, 2] },
             },
@@ -389,7 +388,7 @@ public sealed class S8CoverageClimbTests
         deck: Red
         stake: White
         must:
-          - uncommonJoker: any
+          - uncommonJoker: []
             antes: [1]
             sources:
               commonShopJokers: [0, 1]
@@ -403,7 +402,7 @@ public sealed class S8CoverageClimbTests
         deck: Red
         stake: White
         must:
-          - uncommonJoker: any
+          - uncommonJoker: []
             edition: Negative
             antes: [1]
             sources:
@@ -418,7 +417,7 @@ public sealed class S8CoverageClimbTests
         deck: Red
         stake: White
         must:
-          - uncommonJoker: any
+          - uncommonJoker: []
             antes: [1]
             sources:
               boosterPacks: [0, 1, 2, 3, 4, 5]
@@ -429,7 +428,7 @@ public sealed class S8CoverageClimbTests
         deck: Red
         stake: White
         must:
-          - uncommonJoker: any
+          - uncommonJoker: []
             stickers: [Eternal, Perishable, Rental]
             antes: [1]
             sources:
@@ -511,7 +510,7 @@ public sealed class S8CoverageClimbTests
                 deck: Red
                 stake: White
                 must:
-                  - uncommonJoker: any
+                  - uncommonJoker: []
                     antes: [1]
                     sources:
                 {sources}
@@ -526,7 +525,6 @@ public sealed class S8CoverageClimbTests
         var rawDesc = new UncommonJokerFilterDesc(
             new UncommonJokerClause
             {
-                IsWildcard = true,
                 Antes = [1],
                 Sources = new JokerSourceConfig { UncommonShopJokers = [0] },
             }
@@ -804,14 +802,14 @@ public sealed class S8CoverageClimbTests
             return matching;
         }
         long split = Count("""
-                  - legendaryJoker: any
+                  - legendaryJoker: []
                     antes: [1, 2]
                     sources:
                       arcanaPacks: [0, 1, 2, 3]
                       spectralPacks: [0, 1, 2, 3]
                 """);
         long soulOnly = Count("""
-                  - legendaryJoker: any
+                  - legendaryJoker: []
                     soulCardOnly: true
                     antes: [1, 2]
                     sources:
@@ -819,7 +817,7 @@ public sealed class S8CoverageClimbTests
                       spectralPacks: [0, 1, 2, 3]
                 """);
         long mega = Count("""
-                  - legendaryJoker: any
+                  - legendaryJoker: []
                     soulCardOnly: true
                     antes: [1, 2]
                     sources:
@@ -828,7 +826,7 @@ public sealed class S8CoverageClimbTests
                       requireMegaPack: true
                 """);
         long legacy = Count("""
-                  - legendaryJoker: any
+                  - legendaryJoker: []
                     antes: [1, 2]
                     sources:
                       boosterPacks: [0, 1, 2, 3]
@@ -880,7 +878,7 @@ public sealed class S8CoverageClimbTests
         deck: Red
         stake: White
         must:
-          - legendaryJoker: any
+          - legendaryJoker: []
             edition: Negative
             antes: [1, 2]
         """;

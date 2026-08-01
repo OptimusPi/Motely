@@ -18,7 +18,7 @@ public sealed class S8P2SearchGutsTests
         deck: Red
         stake: White
         must:
-          - joker: Any
+          - joker: []
             antes: [1]
         """;
 
@@ -360,7 +360,7 @@ public sealed class S8P2SearchGutsTests
             deck: Red
             stake: White
             must:
-              - joker: Any
+              - joker: []
                 antes: [1]
             should:
               - voucher: Overstock
