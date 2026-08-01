@@ -2,45 +2,25 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Motely.Wasm</AssemblyName>
+    <RootNamespace>Motely.Wasm</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- The JSExport source generator emits unsafe marshalling stubs (SYSLIB1075). -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <IsPackable>false</IsPackable>
-    <Version>$(MotelyVersion)</Version>
-    <BootsharpName>motely-wasm</BootsharpName>
-    <BootsharpPackageDirectory>$(MSBuildProjectDirectory)/obj</BootsharpPackageDirectory>
-    <BootsharpPublishDirectory>$(MSBuildProjectDirectory)/dist</BootsharpPublishDirectory>
+    <!-- The JS host boots the runtime and pulls [JSExport]s; no Bootsharp, no sponsor feed,
+         nothing outside the in-box System.Runtime.InteropServices.JavaScript interop. -->
+    <WasmMainJSPath>host/main.mjs</WasmMainJSPath>
   </PropertyGroup>
-
-  <!--
-    Bootsharp.FileSystem is sponsor-feed only (not nuget.org). Unconditional reference
-    makes the project unbuildable without that feed. Opt in where the feed exists:
-
-      dotnet publish Motely.Wasm.csproj -c Release -p:EnableFileSystem=true
-
-    Without the flag the engine is complete; there is no folder picker.
-  -->
-  <PropertyGroup>
-    <EnableFileSystem Condition="'$(EnableFileSystem)' == ''">false</EnableFileSystem>
-    <DefineConstants Condition="'$(EnableFileSystem)' == 'true'">$(DefineConstants);BOOTSHARP_FILESYSTEM</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Bootsharp" />
-    <PackageReference Include="Bootsharp.Inject" />
-    <PackageReference Include="Bootsharp.FileSystem" Condition="'$(EnableFileSystem)' == 'true'" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <!-- The same protocol-free language brain the stdio server uses. Browser editors get
-         diagnostics, hover and completion from the engine's own grammar instead of a
-         hand-maintained TypeScript copy. -->
+    <!-- Same protocol-free language brain the stdio LSP server uses: diagnostics, hover and
+         completion come from the engine's own grammar, never a hand-written JS copy. -->
     <ProjectReference Include="..\Motely.Lsp.Core\Motely.Lsp.Core.csproj" />
   </ItemGroup>
 
-  <Target Name="SyncNpmPackageVersion" BeforeTargets="Build">
-    <Exec Command="node &quot;$(MSBuildProjectDirectory)/scripts/stamp-npm-version.mjs&quot; $(MotelyVersion)"
-          WorkingDirectory="$(MSBuildProjectDirectory)"
-          StandardOutputImportance="low" />
-  </Target>
+  <ItemGroup>
+    <WasmExtraFilesToDeploy Include="host/index.html" />
+  </ItemGroup>
 </Project>
