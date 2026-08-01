@@ -1,6 +1,6 @@
 name: Legendary sweep 1-20
 must:
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [2,3,4,5]
     edition: Negative
 should:

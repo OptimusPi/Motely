@@ -3,7 +3,7 @@ author: Waterbear #0027
 must:
   - GrosMichel in ante 1
   - GrosMichelExtinct: [0] # break banana on first shot
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [1]
 should:
   - jokers: [Cavendish, Blueprint, Brainstorm]

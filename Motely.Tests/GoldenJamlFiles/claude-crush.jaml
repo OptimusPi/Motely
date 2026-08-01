@@ -49,7 +49,7 @@ should:
     score: 45
   - legendaryJoker: Perkeo
     score: 45
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 40
   - voucher: CrystalBall

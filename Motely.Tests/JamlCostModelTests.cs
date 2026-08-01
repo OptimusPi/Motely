@@ -12,14 +12,14 @@ public sealed class JamlCostModelTests
     [Fact]
     public void FlatClause_CostsItsAnteSpan()
     {
-        Assert.Equal(3, new JokerClause { IsWildcard = true, Antes = [1, 2, 3] }.EstimateCrunches());
-        Assert.Equal(1, new JokerClause { IsWildcard = true, Antes = [4] }.EstimateCrunches());
+        Assert.Equal(3, new JokerClause { Antes = [1, 2, 3] }.EstimateCrunches());
+        Assert.Equal(1, new JokerClause { Antes = [4] }.EstimateCrunches());
     }
 
     [Fact]
     public void FlatClause_EmptyAntes_NormalizesToAllEight()
     {
-        Assert.Equal(8, new JokerClause { IsWildcard = true, Antes = [] }.EstimateCrunches());
+        Assert.Equal(8, new JokerClause { Antes = [] }.EstimateCrunches());
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public sealed class JamlCostModelTests
         {
             Clauses =
             [
-                new JokerClause { IsWildcard = true, Antes = [1, 2] },
+                new JokerClause { Antes = [1, 2] },
                 new TagClause { Tags = [MotelyTag.RareTag], Rolls = [0], Antes = [1, 2, 3] },
             ],
         };
@@ -54,7 +54,7 @@ public sealed class JamlCostModelTests
         var config = new JamlConfig { Id = "cost", Deck = MotelyDeck.Red, Stake = MotelyStake.White };
         Assert.Equal(1, config.EstimateFilterCrunches());
 
-        config.Must.Add(new JokerClause { IsWildcard = true, Antes = [1, 2] });
+        config.Must.Add(new JokerClause { Antes = [1, 2] });
         config.MustNot.Add(new TagClause { Tags = [MotelyTag.RareTag], Rolls = [0], Antes = [3] });
         Assert.Equal(3, config.EstimateFilterCrunches());
     }
@@ -63,7 +63,7 @@ public sealed class JamlCostModelTests
     public void SimdCost_AmortizesAcrossLanes()
     {
         var config = new JamlConfig { Id = "cost", Deck = MotelyDeck.Red, Stake = MotelyStake.White };
-        config.Must.Add(new JokerClause { IsWildcard = true, Antes = [1, 2, 3, 4] });
+        config.Must.Add(new JokerClause { Antes = [1, 2, 3, 4] });
 
         Assert.Equal(4.0 / MotelyGlobals.MaxVectorWidth, config.SimdCostPerSeed());
         Assert.Equal(
@@ -79,9 +79,9 @@ public sealed class JamlCostModelTests
     [Fact]
     public void CheapestFirst_OrdersByCost_StableForTies()
     {
-        IJamlClause wide = new JokerClause { IsWildcard = true, Antes = [1, 2, 3, 4, 5] };
-        IJamlClause narrowA = new JokerClause { IsWildcard = true, Antes = [1], Label = "A" };
-        IJamlClause narrowB = new JokerClause { IsWildcard = true, Antes = [2], Label = "B" };
+        IJamlClause wide = new JokerClause { Antes = [1, 2, 3, 4, 5] };
+        IJamlClause narrowA = new JokerClause { Antes = [1], Label = "A" };
+        IJamlClause narrowB = new JokerClause { Antes = [2], Label = "B" };
 
         IReadOnlyList<IJamlClause> clauses = [wide, narrowA, narrowB];
         var ordered = clauses.CheapestFirst().ToArray();
@@ -94,7 +94,7 @@ public sealed class JamlCostModelTests
     public void CreateSettings_WiresMustAndMustNot_CheapestFirst()
     {
         // wide must (5 antes) then narrow mustNot (1 ante) → filter chain installs narrow first.
-        var wide = new JokerClause { IsWildcard = true, Antes = [1, 2, 3, 4, 5], Label = "wide" };
+        var wide = new JokerClause { Antes = [1, 2, 3, 4, 5], Label = "wide" };
         var narrow = new TagClause
         {
             Tags = [MotelyTag.RareTag],

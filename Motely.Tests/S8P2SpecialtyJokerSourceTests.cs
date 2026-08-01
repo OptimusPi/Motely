@@ -21,42 +21,42 @@ public sealed class S8P2SpecialtyJokerSourceTests
         deck: Red
         stake: White
         must:
-          - joker: Any
+          - joker: []
             antes: [1]
         should:
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               judgement: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               wraith: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               riffRaff: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               rareTag: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               uncommonTag: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               commonShopJokers: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               uncommonShopJokers: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               rareShopJokers: [0, 1]
-          - joker: Any
+          - joker: []
             antes: [1, 2]
             sources:
               allShopJokers: [0, 1]

@@ -8,7 +8,7 @@ public sealed class ProofSearchSmokeTests
         deck: Red
         stake: White
         must:
-          - joker: Any
+          - joker: []
             antes: [1]
         """;
 

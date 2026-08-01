@@ -32,7 +32,7 @@ should:
     max: 1
   - uncommonJoker: Bloodstone
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 30
   - tag: NegativeTag

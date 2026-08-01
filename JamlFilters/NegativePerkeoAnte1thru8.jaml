@@ -19,7 +19,7 @@ should:
   - voucher: Hieroglyph
   - bigBlindTag: VoucherTag
     antes: [1]
-  - legendaryJoker: Any
+  - legendaryJoker: []
     antes: [1, 2, 3, 4, 5, 6, 7, 8]
     edition: Negative
     score: 100

@@ -17,7 +17,7 @@ should:
     score: 55
   - rareJoker: Brainstorm
     score: 45
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 45
   - legendaryJoker: Perkeo

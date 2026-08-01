@@ -3,5 +3,5 @@ description: Throwaway JAML the analyzer.mjs uses to set deck=Erratic / stake=Wh
 deck: Erratic
 stake: White
 must:
-  - joker: Any
+  - joker: []
     antes: [1]

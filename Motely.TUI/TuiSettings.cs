@@ -8,7 +8,7 @@ public enum SearchMode
     Sequential,
     Random,
     Palindrome,
-    Echo,
+    Psychosis,
     Keyword,
     FileSource,
 }

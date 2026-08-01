@@ -7,7 +7,8 @@ namespace Motely.SeedProviders;
 public enum JamlAesthetic
 {
     Palindrome,
-    Echo,
+    /// <summary>ABAxBxxx letter skeleton (A,B free pad).</summary>
+    Psychosis,
     Mirror,
     Repeater,
     Step,
@@ -20,7 +21,7 @@ public enum JamlAesthetic
 
 /// <summary>
 /// Generation and counting of JAML <see cref="JamlAesthetic"/> seed spaces over Motely's alphabet
-/// and length rules. Palindrome/Echo/Mirror/Repeater/Step live here; keyword-backed aesthetics
+/// and length rules. Palindrome/Psychosis/Mirror/Repeater/Step live here; keyword-backed aesthetics
 /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,
 /// <see cref="JamlAesthetic.Balatro"/>, <see cref="JamlAesthetic.Nsfw"/>) delegate to
 /// <see cref="MotelySeedKeywordSequences"/>.
@@ -34,7 +35,7 @@ public enum JamlAesthetic
 public static class JamlAesthetics
 {
     /// <summary>
-    /// Digit-only pad: free slots stay numeric so letter patterns (echo ABA…, keyword words)
+    /// Digit-only pad: free slots stay numeric so letter patterns (psychosis ABA…, keyword words)
     /// stay readable. ~orders of magnitude smaller than full <see cref="MotelyGlobals.SeedDigits"/>.
     /// </summary>
     public static readonly char[] QuickPaddingChars = "123456789".ToCharArray();
@@ -47,7 +48,7 @@ public static class JamlAesthetics
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.GetSeedCount(paddingAlphabet),
-            JamlAesthetic.Echo => EchoAestheticSeeds.GetSeedCount(paddingAlphabet),
+            JamlAesthetic.Psychosis => PsychosisAestheticSeeds.GetSeedCount(paddingAlphabet),
             JamlAesthetic.Mirror => MirrorAestheticSeeds.GetSeedCount(paddingAlphabet),
             JamlAesthetic.Repeater => RepeaterAestheticSeeds.GetSeedCount(paddingAlphabet),
             JamlAesthetic.Step => StepAestheticSeeds.GetSeedCount(paddingAlphabet),
@@ -70,7 +71,7 @@ public static class JamlAesthetics
         aesthetic switch
         {
             JamlAesthetic.Palindrome => PalindromeAestheticSeeds.Enumerate(paddingAlphabet),
-            JamlAesthetic.Echo => EchoAestheticSeeds.Enumerate(paddingAlphabet),
+            JamlAesthetic.Psychosis => PsychosisAestheticSeeds.Enumerate(paddingAlphabet),
             JamlAesthetic.Mirror => MirrorAestheticSeeds.Enumerate(paddingAlphabet),
             JamlAesthetic.Repeater => RepeaterAestheticSeeds.Enumerate(paddingAlphabet),
             JamlAesthetic.Step => StepAestheticSeeds.Enumerate(paddingAlphabet),
@@ -166,10 +167,10 @@ file static class PalindromeAestheticSeeds
 }
 
 /// <summary>
-/// Echo seeds: pattern ABAxBxxx where A,B are A-Z and x are free pad positions (always 8 chars).
+/// Psychosis seeds: pattern ABAxBxxx where A,B are A-Z and x are free pad positions (always 8 chars).
 /// Letter skeleton stays A–Z so the word shape stays visible; free slots take the pad alphabet.
 /// </summary>
-file static class EchoAestheticSeeds
+file static class PsychosisAestheticSeeds
 {
     private const string Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 

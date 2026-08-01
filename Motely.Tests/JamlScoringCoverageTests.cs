@@ -114,7 +114,7 @@ public sealed class JamlScoringCoverageTests
                 Min = 1,
                 Clauses =
                 [
-                    new JokerClause { IsWildcard = true, Antes = [1] },
+                    new JokerClause { Antes = [1] },
                     new TagClause { Tags = [MotelyTag.RareTag], Rolls = [0], Antes = [1] },
                 ],
             }
@@ -129,7 +129,7 @@ public sealed class JamlScoringCoverageTests
                 Clauses =
                 [
                     new VoucherClause { Vouchers = [MotelyVoucher.Overstock], Rolls = [0], Antes = [1] },
-                    new JokerClause { IsWildcard = true, Antes = [1] },
+                    new JokerClause { Antes = [1] },
                 ],
             }
         );
@@ -146,7 +146,7 @@ public sealed class JamlScoringCoverageTests
                 Score = 3,
                 Clauses =
                 [
-                    new JokerClause { IsWildcard = true, Antes = [1] },
+                    new JokerClause { Antes = [1] },
                     new TagClause { Tags = [MotelyTag.NegativeTag], Rolls = [0, 1], Antes = [1, 2] },
                 ],
             }
@@ -163,7 +163,7 @@ public sealed class JamlScoringCoverageTests
                 Score = 2,
                 Clauses =
                 [
-                    new JokerClause { IsWildcard = true, Antes = [1] },
+                    new JokerClause { Antes = [1] },
                     new OrClause
                     {
                         Min = 1,

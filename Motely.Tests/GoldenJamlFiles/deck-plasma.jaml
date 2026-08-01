@@ -29,7 +29,7 @@ should:
     score: 45
   - tag: NegativeTag
     score: 40
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 35
   - legendaryJoker: Perkeo

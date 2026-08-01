@@ -31,7 +31,7 @@ should:
     score: 35
   - spectralCard: Ankh
     score: 30
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 40
   - tag: NegativeTag

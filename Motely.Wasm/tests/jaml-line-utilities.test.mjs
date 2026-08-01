@@ -20,12 +20,11 @@ describe("MotelyJaml — one-line JAML", () => {
         assert.equal(MotelyJaml.canonicalizeLine("Showman in antes 1, 2"), "Showman in antes 1 or 2");
     });
 
-    it("round-trips modifiers, wildcard, and consumables", () => {
+    it("round-trips modifiers and consumables (no Any token — category any is block form)", () => {
         for (const line of [
             "Negative Blueprint in ante 1",
             "Eternal Perishable Showman in antes 2 or 3",
             "Foil Oops! All 6s in ante 1",
-            "Any in ante 1",
             "The Fool in ante 1",
             "The Emperor in antes 1 or 2",
             "Aura in ante 1",
@@ -33,6 +32,7 @@ describe("MotelyJaml — one-line JAML", () => {
             "Pluto in ante 1",
             "Planet X in antes 1-3",
         ]) assert.equal(MotelyJaml.canonicalizeLine(line), line);
+        assert.notEqual(MotelyJaml.validateLine("Any in ante 1"), null);
     });
 
     it("round-trips standard cards, starting draw, vouchers, tags, bosses, and events", () => {
@@ -121,7 +121,7 @@ describe("MotelyUtilities", () => {
         assert.equal(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Nsfw), 302944676n);
         // Every enum member resolves — pattern aesthetics have counts too.
         assert.ok(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Palindrome) > 0n);
-        assert.ok(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Echo) > 0n);
+        assert.ok(MotelyUtilities.getAestheticSeedCount(JamlAesthetic.Psychosis) > 0n);
 
         for (const keywords of [MotelyUtilities.grossKeywords(), MotelyUtilities.funnyKeywords(), MotelyUtilities.balatroKeywords()]) {
             assert.ok(keywords.length > 0);

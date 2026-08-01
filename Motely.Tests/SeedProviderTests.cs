@@ -116,9 +116,9 @@ public sealed class SeedProviderTests
     }
 
     [Fact]
-    public void EchoSeedProvider_YieldsFirstEchoSeeds()
+    public void PsychosisSeedProvider_YieldsFirstPsychosisSeeds()
     {
-        var provider = new MotelyEchoSeedProvider();
+        var provider = new MotelyPsychosisSeedProvider();
         Assert.Equal(1_014_422_500, provider.SeedCount);
 
         Assert.Equal("AAA1A111", provider.NextSeed().ToString());
@@ -149,16 +149,16 @@ public sealed class SeedProviderTests
     {
         char[] pad = JamlAesthetics.QuickPaddingChars;
 
-        // Digit free slots: echo free^4 only, letter skeleton A–Z stays.
-        Assert.Equal(26L * 26L * (long)Math.Pow(9, 4), JamlAesthetics.GetSeedCount(JamlAesthetic.Echo, pad));
+        // Digit free slots: psychosis free^4 only, letter skeleton A–Z stays.
+        Assert.Equal(26L * 26L * (long)Math.Pow(9, 4), JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis, pad));
         Assert.Equal(14_760, JamlAesthetics.GetSeedCount(JamlAesthetic.Palindrome, pad));
         Assert.Equal(81, JamlAesthetics.GetSeedCount(JamlAesthetic.Step, pad));
 
         // Full alphabet still matches historical baked sizes when pad is null.
-        Assert.Equal(1_014_422_500, JamlAesthetics.GetSeedCount(JamlAesthetic.Echo));
+        Assert.Equal(1_014_422_500, JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis));
 
-        var provider = new MotelyAestheticSeedProvider(JamlAesthetic.Echo, pad);
-        Assert.Equal(JamlAesthetics.GetSeedCount(JamlAesthetic.Echo, pad), provider.SeedCount);
+        var provider = new MotelyAestheticSeedProvider(JamlAesthetic.Psychosis, pad);
+        Assert.Equal(JamlAesthetics.GetSeedCount(JamlAesthetic.Psychosis, pad), provider.SeedCount);
         var first = provider.NextSeed().ToString();
         Assert.Equal(8, first.Length);
         // Free slots (indices 3,5,6,7) are digits only under quick pad.

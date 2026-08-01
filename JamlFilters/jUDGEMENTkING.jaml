@@ -5,7 +5,7 @@ deck: Plasma
 stake: White
 description: FIND A NEGATIVE BARON 15 ROLLS IN ANTE 2 IG
 must:
-  - legendaryJoker: Any
+  - legendaryJoker: []
     edition: Negative
     antes: [0]
     sources:

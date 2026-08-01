@@ -13,7 +13,7 @@ must:
 should:
   - tag: NegativeTag
     score: 80
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 75
   - spectralCard: Ectoplasm

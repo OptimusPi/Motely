@@ -15,14 +15,14 @@ should:
     score: 55
   - rareJoker: Brainstorm
     score: 50
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 45
   - tag: NegativeTag
     score: 40
   - legendaryJoker: Perkeo
     score: 40
-  - rareJoker: Any
+  - rareJoker: []
     score: 30
   - legendaryJoker: Chicot
     score: 25
@@ -30,5 +30,5 @@ should:
     score: 25
   - tag: FoilTag
     score: 20
-  - legendaryJoker: Any
+  - legendaryJoker: []
     score: 20

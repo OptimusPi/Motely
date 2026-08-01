@@ -43,7 +43,7 @@ describe("MotelySearch — list / sequential / collect", () => {
     });
 
     // Random draws are non-deterministic; proof = walk count + each hit is a real engine seed
-    // (search-index roundtrip). joker:Any matches densely so 8 draws always hit.
+    // (search-index roundtrip). joker: [] matches densely so 8 draws always hit.
     it("searchRandom finds real seeds and walks exactly `count`", async () => {
         let progress = null;
         const onP = (p) => {
@@ -57,7 +57,7 @@ describe("MotelySearch — list / sequential / collect", () => {
 deck: Red
 stake: White
 must:
-  - joker: Any
+  - joker: []
 `),
                 8
             );
@@ -66,7 +66,7 @@ must:
         }
         assert.ok(progress, "progress fired");
         assert.equal(Number(progress.seedsSearched), 8, "searched exactly the requested count");
-        assert.ok(results.length >= 1, "random + Any must find at least one seed");
+        assert.ok(results.length >= 1, "random + empty joker must find at least one seed");
         for (const r of results) {
             const idx = MotelyUtilities.seedToSearchIndex(r.seed);
             assert.equal(
@@ -111,13 +111,13 @@ must:
         );
     });
 
-    // CLI --collect N: aesthetics first. joker:Any fills on length-1 palindromes.
+    // CLI --collect N: aesthetics first. joker: [] fills on length-1 palindromes.
     it("collect(config, N) finds aesthetic seed 1", async () => {
         const config = parse(`name: t
 deck: Red
 stake: White
 must:
-  - joker: Any
+  - joker: []
 `);
         const results = await MotelySearch.collect(config, 5n);
         const seeds = results.map((r) => r.seed);
@@ -146,7 +146,7 @@ must:
 deck: Red
 stake: White
 must:
-  - joker: Any
+  - joker: []
 `);
         const results = await MotelySearch.findOne(config);
         const seeds = results.map((r) => r.seed);

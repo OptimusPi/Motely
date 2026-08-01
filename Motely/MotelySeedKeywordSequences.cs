@@ -74,7 +74,7 @@ public static class MotelySeedKeywordSequences
     /// <summary>
     /// Lazy generator that yields every padded seed for the keyword-backed JAML aesthetics
     /// (<see cref="JamlAesthetic.Gross"/>, <see cref="JamlAesthetic.Funny"/>,
-    /// <see cref="JamlAesthetic.Balatro"/>, <see cref="JamlAesthetic.Nsfw"/>). Palindrome and Echo
+    /// <see cref="JamlAesthetic.Balatro"/>, <see cref="JamlAesthetic.Nsfw"/>). Palindrome and Psychosis
     /// aren't keyword sequences — they live next to their own generators.
     /// </summary>
     /// <param name="paddingAlphabet">

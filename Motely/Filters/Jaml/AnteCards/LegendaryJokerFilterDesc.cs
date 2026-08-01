@@ -14,7 +14,6 @@ public sealed class LegendaryJokerClause : IJamlClause, IAnteScopedClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public MotelyJoker[] Jokers { get; set; } = [];
-    public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     /// <summary>Null = apply <see cref="LegendaryJokerFilterDesc.DefaultSources"/>; an explicit block
     /// overrides wholesale (same convention as every other clause's <c>Sources</c>).</summary>
@@ -72,11 +71,9 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(LegendaryJokerClause clause, IJamlValueReader value)
     {
-        if (value.IsAny)
-        {
-            clause.IsWildcard = true;
+        // Empty disc (null / "" / []) = category match. No "Any" token.
+        if (string.IsNullOrWhiteSpace(value.Text))
             return true;
-        }
         if (!value.TryEnumArray<MotelyJoker>(out var jokers))
             return false;
         clause.Jokers = jokers;
@@ -106,7 +103,6 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             Label = _clause.Label,
             Score = _clause.Score,
             Jokers = _clause.Jokers,
-            IsWildcard = _clause.IsWildcard,
             Edition = _clause.Edition,
             Antes = _clause.Antes,
             Min = _clause.Min,
@@ -148,15 +144,15 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.SoulCardOnly || _clause.IsWildcard || _clause.Jokers.Length > 0);
+            // empty Jokers = any legendary; SoulCardOnly is separate
             Debug.Assert(_clause.Min > 0, "LegendaryJokerClause.Min must be > 0 — loader bug.");
 
-            var clause = _clause;
-
-            // Do not prefilter on "soul stream before packs" — that order is invalid for legendary
-            // souls (see LegendarySoulMatcher). Edition-only vector prefilter (any Min) drops lanes
-            // with no matching edition on the soul stream; pack/soul path still confirms via scoring.
-            // Does not drop seeds where the first soul fails edition but a later soul matches.
+            // Pure SIMD additional-filter link only. Never SearchIndividualSeeds here —
+            // pack/Soul/face exact law runs last in JamlShouldScoreDesc must re-eval.
+            //
+            // Slice 1: soul edition stream (when edition: is set). Negative ~0.3% — kills almost
+            // every lane before score. No edition → all valid lanes; scoring does the full walk.
+            // Do not prefilter soul face before packs (order-dependent; see LegendarySoulMatcher).
             uint laneMask = 0;
             for (int lane = 0; lane < MotelyGlobals.MaxVectorWidth; lane++)
             {
@@ -164,22 +160,10 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                     laneMask |= 1u << lane;
             }
 
-            VectorMask candidateMask = new VectorMask(laneMask);
+            if (_clause.Edition.HasValue)
+                return LegendarySoulEditionPrefilter.Apply(ref ctx, _clause, laneMask);
 
-            if (clause.Edition.HasValue)
-            {
-                candidateMask = LegendarySoulEditionPrefilter.Apply(ref ctx, clause, laneMask);
-                if (candidateMask.IsAllFalse())
-                    return candidateMask;
-            }
-
-            // Single match core: same PrepareRunState + LegendarySoulMatcher count as should-scoring
-            // (includes Hieroglyph/Petroglyph pack-slot clamp). Edition prefilter above stays vector.
-            return ctx.SearchIndividualSeeds(
-                candidateMask,
-                (MotelySingleSearchContext singleCtx) =>
-                    JamlScoring.ClauseMeetsMinForFilter(ref singleCtx, clause) ? 1 : 0
-            );
+            return new VectorMask(laneMask);
         }
     }
 }

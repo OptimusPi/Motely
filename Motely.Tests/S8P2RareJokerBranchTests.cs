@@ -31,7 +31,7 @@ public sealed class S8P2RareJokerBranchTests
         deck: Red
         stake: Gold
         must:
-          - rareJoker: Any
+          - rareJoker: []
             antes: [1, 2, 3, 4]
         """;
 
@@ -60,7 +60,7 @@ public sealed class S8P2RareJokerBranchTests
             deck: Red
             stake: Gold
             must:
-              - rareJoker: Any
+              - rareJoker: []
                 antes: [1, 2, 3, 4]
                 stickers: [Eternal]
             """
@@ -79,7 +79,7 @@ public sealed class S8P2RareJokerBranchTests
             deck: Red
             stake: Gold
             must:
-              - rareJoker: Any
+              - rareJoker: []
                 antes: [1, 2, 3, 4]
                 stickers: [Perishable, Rental]
             """
@@ -98,7 +98,7 @@ public sealed class S8P2RareJokerBranchTests
             deck: Red
             stake: White
             must:
-              - rareJoker: Any
+              - rareJoker: []
                 antes: [1, 2, 3, 4]
                 sources:
                   shopItems: [2, 5]
@@ -120,7 +120,7 @@ public sealed class S8P2RareJokerBranchTests
             deck: Red
             stake: White
             must:
-              - rareJoker: Any
+              - rareJoker: []
                 antes: [1]
                 sources:
                   boosterPacks: [0, 1, 2, 3, 4, 5]

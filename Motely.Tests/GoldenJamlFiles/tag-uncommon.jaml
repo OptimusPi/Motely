@@ -31,7 +31,7 @@ should:
     score: 50
   - uncommonJoker: SockAndBuskin
     score: 45
-  - uncommonJoker: Any
+  - uncommonJoker: []
     score: 25
   - tag: UncommonTag
     score: 30

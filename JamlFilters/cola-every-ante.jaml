@@ -32,7 +32,7 @@ must:
 
 should:
   # Every rare in the ante-8 shop is a free Negative joker. Reach the whole shop.
-  - rareJoker: Any
+  - rareJoker: []
     antes: [8]
     sources:
       shopItems: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,

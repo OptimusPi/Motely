@@ -14,8 +14,6 @@ public sealed class TarotCardClause : IJamlClause, IAnteScopedClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public MotelyTarotCard[] Tarots { get; set; } = [];
-    /// <summary>JAML <c>tarotCard: Any</c> — match any tarot at the named sources/antes.</summary>
-    public bool IsWildcard { get; set; }
 
     // null = no sources: in JAML → filter DefaultSources at CreateFilter/score (not parse).
     public TarotCardSourceConfig? Sources { get; set; }
@@ -42,11 +40,9 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(TarotCardClause clause, IJamlValueReader value)
     {
-        if (value.IsAny)
-        {
-            clause.IsWildcard = true;
+        // Empty disc (null / "" / []) = category match. No "Any" token.
+        if (string.IsNullOrWhiteSpace(value.Text))
             return true;
-        }
         if (!value.TryEnumArray<MotelyTarotCard>(out var tarots)) return false;
         clause.Tarots = tarots;
         return true;
@@ -118,7 +114,7 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.IsWildcard || _clause.Tarots.Length > 0);
+            // empty Tarots = category any
             var clause = _clause;
             int maxShopItem = _maxShopItem;
             int maxBoosterPack = _maxBoosterPack;
@@ -364,15 +360,16 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static VectorMask MatchTarots(MotelyItemVector items, TarotCardClause clause)
         {
-            if (clause.IsWildcard)
+            var tarots = JamlDisc.OrEmpty(clause.Tarots);
+            if (JamlDisc.IsCategoryAny(tarots))
                 return VectorEnum256.Equals(items.TypeCategory, MotelyItemTypeCategory.TarotCard);
 
             VectorMask mask = VectorMask.NoBitsSet;
             var itemTypes = items.Type;
 
-            for (int i = 0; i < clause.Tarots.Length; i++)
+            for (int i = 0; i < tarots.Length; i++)
             {
-                var targetType = (int)MotelyItemTypeCategory.TarotCard | (int)clause.Tarots[i];
+                var targetType = (int)MotelyItemTypeCategory.TarotCard | (int)tarots[i];
                 mask |= VectorEnum256.Equals(itemTypes, (MotelyItemType)targetType);
             }
 

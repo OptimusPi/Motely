@@ -110,14 +110,14 @@ should:
 deck: Red
 stake: White
 should:
-  - joker: Any
+  - joker: []
     score: 1
 `, ["MOTELY77"]);
         const explicit = await searchList(`name: explicit-fallback
 deck: Red
 stake: White
 should:
-  - joker: Any
+  - joker: []
     score: 1
     antes: [1, 2, 3, 4, 5, 6, 7, 8]
     sources:
@@ -134,7 +134,7 @@ should:
 deck: Red
 stake: White
 should:
-  - joker: Any
+  - joker: []
     score: 1
     antes: [1]
     sources:
@@ -144,7 +144,7 @@ should:
 deck: Red
 stake: White
 should:
-  - joker: Any
+  - joker: []
     score: 1
 `, ["MOTELY77"]);
 

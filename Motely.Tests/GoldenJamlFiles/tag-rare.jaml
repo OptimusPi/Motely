@@ -25,7 +25,7 @@ should:
     score: 45
   - rareJoker: Stuntman
     score: 40
-  - rareJoker: Any
+  - rareJoker: []
     score: 30
   - tag: RareTag
     score: 45
@@ -35,6 +35,6 @@ should:
     score: 60
   - legendaryJoker: Perkeo
     score: 40
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 30

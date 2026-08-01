@@ -21,7 +21,7 @@ should:
     score: 35
   - spectralCard: Hex
     score: 35
-  - joker: any
+  - joker: []
     edition: Negative
     score: 40
   - tag: NegativeTag

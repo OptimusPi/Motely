@@ -17,7 +17,6 @@ public sealed class JokerClause : IJamlClause, IAnteScopedClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public MotelyJoker[] Jokers { get; set; } = [];
-    public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
     public JokerSourceConfig? Sources { get; set; }
@@ -61,11 +60,9 @@ public struct JokerFilterDesc(JokerClause clause)
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(JokerClause clause, IJamlValueReader value)
     {
-        if (value.IsAny)
-        {
-            clause.IsWildcard = true;
+        // Empty disc (null / "" / []) = category match. No "Any" token.
+        if (string.IsNullOrWhiteSpace(value.Text))
             return true;
-        }
         if (!value.TryEnumArray<MotelyJoker>(out var jokers))
             return false;
         clause.Jokers = jokers;
@@ -91,17 +88,18 @@ public struct JokerFilterDesc(JokerClause clause)
         }
 
         // Pre-calculate target item types to avoid bitwise logic in the hot loop
-        var targetTypes = new MotelyItemType[_clause.Jokers.Length];
-        for (int i = 0; i < _clause.Jokers.Length; i++)
+        var jokers = JamlDisc.OrEmpty(_clause.Jokers);
+        var targetTypes = new MotelyItemType[jokers.Length];
+        for (int i = 0; i < jokers.Length; i++)
         {
-            if (Enum.TryParse(_clause.Jokers[i].ToString(), out MotelyItemType type))
+            if (Enum.TryParse(jokers[i].ToString(), out MotelyItemType type))
             {
                 targetTypes[i] = type;
             }
             else
             {
                 throw new InvalidOperationException(
-                    $"Joker {_clause.Jokers[i]} not found in MotelyItemType"
+                    $"Joker {jokers[i]} not found in MotelyItemType"
                 );
             }
         }
@@ -155,7 +153,7 @@ public struct JokerFilterDesc(JokerClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
+            // empty Jokers = category any
             int needed = _clause.Min;
             Debug.Assert(needed > 0, "JokerClause.Min must be > 0 — loader bug.");
 
@@ -303,7 +301,7 @@ public struct JokerFilterDesc(JokerClause clause)
         private readonly VectorMask MatchJokers(in MotelyItemVector item)
         {
             VectorMask jokerMatch;
-            if (_clause.IsWildcard)
+            if (JamlDisc.IsCategoryAny(_clause.Jokers))
             {
                 jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
             }
@@ -343,13 +341,14 @@ public struct JokerFilterDesc(JokerClause clause)
 
         private static bool UsesLegendaryPath(JokerClause clause)
         {
-            if (clause.IsWildcard)
+            if (JamlDisc.IsCategoryAny(clause.Jokers))
                 return true;
 
-            for (int i = 0; i < clause.Jokers.Length; i++)
+            var jokers = clause.Jokers!;
+            for (int i = 0; i < jokers.Length; i++)
             {
                 if (
-                    ((MotelyJokerRarity)((int)clause.Jokers[i] & MotelyGlobals.JokerRarityMask))
+                    ((MotelyJokerRarity)((int)jokers[i] & MotelyGlobals.JokerRarityMask))
                     == MotelyJokerRarity.Legendary
                 )
                     return true;
@@ -372,7 +371,6 @@ public sealed class CommonJokerClause : IJamlClause, IAnteScopedClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public MotelyJokerCommon[] Jokers { get; set; } = [];
-    public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
     public JokerSourceConfig? Sources { get; set; }
@@ -388,7 +386,6 @@ public sealed class UncommonJokerClause : IJamlClause, IAnteScopedClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public MotelyJokerUncommon[] Jokers { get; set; } = [];
-    public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
     public JokerSourceConfig? Sources { get; set; }
@@ -404,7 +401,6 @@ public sealed class RareJokerClause : IJamlClause, IAnteScopedClause
     public int Score { get; set; }
     public int[] Antes { get; set; } = [];
     public MotelyJokerRare[] Jokers { get; set; } = [];
-    public bool IsWildcard { get; set; }
     public MotelyItemEdition? Edition { get; set; }
     public MotelyJokerSticker[] Stickers { get; set; } = [];
     public JokerSourceConfig? Sources { get; set; }

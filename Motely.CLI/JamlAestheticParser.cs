@@ -14,7 +14,7 @@ public static class JamlAestheticParser
     private static readonly (string Jaml, JamlAesthetic Value)[] Known =
     [
         ("palindrome", JamlAesthetic.Palindrome),
-        ("echo", JamlAesthetic.Echo),
+        ("psychosis", JamlAesthetic.Psychosis),
         ("mirror", JamlAesthetic.Mirror),
         ("repeater", JamlAesthetic.Repeater),
         ("step", JamlAesthetic.Step),

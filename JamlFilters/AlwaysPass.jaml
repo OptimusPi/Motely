@@ -2,9 +2,9 @@ name: Always Pass (any joker) - smoke test
 deck: Red
 stake: White
 must:
-  - joker: Any
+  - joker: []
 should:
-  - joker: Any
+  - joker: []
     score: 1
 
 seeds:

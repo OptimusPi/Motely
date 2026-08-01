@@ -38,11 +38,9 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
     /// <inheritdoc/>
     public static bool SetDiscriminatorValue(UncommonJokerClause clause, IJamlValueReader value)
     {
-        if (value.IsAny)
-        {
-            clause.IsWildcard = true;
+        // Empty disc (null / "" / []) = category match. No "Any" token.
+        if (string.IsNullOrWhiteSpace(value.Text))
             return true;
-        }
         if (!value.TryEnumArray<MotelyJokerUncommon>(out var jokers))
             return false;
         clause.Jokers = jokers;
@@ -72,17 +70,18 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
         }
 
         // Pre-calculate target item types to avoid bitwise logic in the hot loop
-        var targetTypes = new MotelyItemType[_clause.Jokers.Length];
-        for (int i = 0; i < _clause.Jokers.Length; i++)
+        var jokers = JamlDisc.OrEmpty(_clause.Jokers);
+        var targetTypes = new MotelyItemType[jokers.Length];
+        for (int i = 0; i < jokers.Length; i++)
         {
-            if (Enum.TryParse(_clause.Jokers[i].ToString(), out MotelyItemType type))
+            if (Enum.TryParse(jokers[i].ToString(), out MotelyItemType type))
             {
                 targetTypes[i] = type;
             }
             else
             {
                 throw new InvalidOperationException(
-                    $"Uncommon joker {_clause.Jokers[i]} not found in MotelyItemType"
+                    $"Uncommon joker {jokers[i]} not found in MotelyItemType"
                 );
             }
         }
@@ -178,7 +177,7 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
+            // empty Jokers = category any
             int needed = _clause.Min;
             Debug.Assert(needed > 0, "UncommonJokerClause.Min must be > 0 — loader bug.");
             Vector256<int> matchCounts = Vector256<int>.Zero;
@@ -464,7 +463,7 @@ public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
         private readonly VectorMask MatchJokers(in MotelyItemVector item)
         {
             VectorMask jokerMatch;
-            if (_clause.IsWildcard)
+            if (JamlDisc.IsCategoryAny(_clause.Jokers))
             {
                 jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
                 var rarityVec = new VectorEnum256<MotelyJokerRarity>(

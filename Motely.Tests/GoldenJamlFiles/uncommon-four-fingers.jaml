@@ -37,6 +37,6 @@ should:
     score: 35
   - rareJoker: Brainstorm
     score: 25
-  - joker: Any
+  - joker: []
     edition: Negative
     score: 30

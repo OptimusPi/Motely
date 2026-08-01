@@ -125,11 +125,14 @@ public class JamlLineTests
     }
 
     [Fact]
-    public void Wildcard_roundTrips()
+    public void CategoryWildcard_HasNoLineSpelling()
     {
-        Assert.True(JamlLine.TryToClause("Any in ante 1", out var clause, out _));
-        Assert.True(Assert.IsType<JokerClause>(clause).IsWildcard);
-        Assert.Equal("Any in ante 1", JamlLine.FromClause(clause!));
+        // Empty jokers = category any in block form only — no bare "Any" token on the line.
+        Assert.False(JamlLine.TryToClause("Any in ante 1", out _, out var error));
+        Assert.Contains("Unrecognized", error);
+        Assert.Null(
+            JamlLine.FromClause(new JokerClause { Jokers = [], Antes = [1] })
+        );
     }
 
     // ── The whole joker universe round-trips ──────────────────────────────────

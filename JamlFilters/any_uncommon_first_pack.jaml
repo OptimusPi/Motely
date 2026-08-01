@@ -2,7 +2,7 @@ name: Any Uncommon First Pack
 deck: Red
 stake: White
 must:
-  - uncommonJoker: Any
+  - uncommonJoker: []
     antes: [1]
     sources:
       boosterPacks: [0]
