@@ -3,9 +3,6 @@ must:
   - legendaryJoker:
     antes: [2,3,4,5]
     edition: Negative
-    min: 2
-  - legendaryJoker: Perkeo
-    antes: [1,2,3,4,5]
 should:
   - legendaryJoker: Perkeo
     antes: [1,2,3,4,5,6]
@@ -2379,33 +2376,3 @@ seeds:
   - P7CWBW31
   - ASEXBW31
   - KEAYBW31
-  - W784411Z
-  - 7KHC611Z
-  - SJH8121Z
-  - EDNYODYD
-  - SLUTX8S3
-  - G5QC8DZD
-  - A6253KXD
-  - 99AEZIZD
-  - IRHUFJ41
-  - GSI4C221
-  - 4T93ZC1Z
-  - 5EXGJF1Z
-  - 9FQ2WI1Z
-  - KD5DUI1Z
-  - MOVERK1Z
-  - 3TA1LM1Z
-  - AQDYGP1Z
-  - C9Y5AQ1Z
-  - XG2ZEQ1Z
-  - D16GFU1Z
-  - 8RGACX1Z
-  - L7PQFY1Z
-  - 3V4B822Z
-  - GUGHZ52Z
-  - AWFBR82Z
-  - KAEH692Z
-  - 1IJZA92Z
-  - BQXY6C2Z
-  - OZ2KSC2Z
-  - K8NFHH2Z

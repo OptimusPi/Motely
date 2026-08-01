@@ -1,0 +1,17 @@
+{
+  "name": "motely",
+  "type": "module",
+  "exports": {
+    ".": "./bin/motely/index.mjs",
+    "./*": "./bin/motely/generated/modules/*.g.mjs"
+  },
+  "browser": {
+    "node:fs": false,
+    "node:url": false,
+    "node:path": false,
+    "node:module": false,
+    "node:crypto": false,
+    "node:process": false
+  },
+  "version": "25.1.0"
+}

@@ -443,7 +443,6 @@ internal static class JamlDocumentParser
         return new JScalar(text) { Span = valueSpan };
     }
 
-
     private static int IndentOf(string line)
     {
         int i = 0;

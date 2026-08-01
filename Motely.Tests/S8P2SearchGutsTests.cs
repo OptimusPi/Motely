@@ -46,6 +46,7 @@ public sealed class S8P2SearchGutsTests
             .WithDeck(MotelyDeck.Ghost)
             .WithStake(MotelyStake.Gold)
             .WithProgressCallback(progress.Add)
+            .WithProgressReportIntervalMs(-5)
             .WithCsvOutput(true)
             .WithQuietMode(true)
             .WithSeedMatchCallback(_ => { })
@@ -62,6 +63,8 @@ public sealed class S8P2SearchGutsTests
         Assert.Equal(9, concrete.EndBatchIndex);
         Assert.Equal(MotelyDeck.Ghost, concrete.Deck);
         Assert.Equal(MotelyStake.Gold, concrete.Stake);
+        // Negative interval clamps to 0 (report every batch).
+        Assert.Equal(0, concrete.ProgressReportIntervalMs);
         Assert.True(concrete.CsvOutput);
         Assert.True(concrete.QuietMode);
         Assert.True(concrete.AutoScoreCutoff);
@@ -115,6 +118,7 @@ public sealed class S8P2SearchGutsTests
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithProgressCallback(p => { lock (progress) progress.Add(p); })
+            .WithProgressReportIntervalMs(0)
             .CreateSearch();
 
         var task = search.RunSearchAsync();
@@ -157,6 +161,7 @@ public sealed class S8P2SearchGutsTests
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithProgressCallback(progress.Add)
+            .WithProgressReportIntervalMs(0)
             .Start();
         search.AwaitCompletion();
 
@@ -185,6 +190,7 @@ public sealed class S8P2SearchGutsTests
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithProgressCallback(progress.Add)
+            .WithProgressReportIntervalMs(0)
             .Start();
         search.AwaitCompletion();
 

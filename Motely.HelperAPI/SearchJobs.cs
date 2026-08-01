@@ -173,6 +173,7 @@ public sealed class SearchJob : IDisposable
                 .WithEndBatchIndex(EndBatch)
                 .WithSequentialSearch()
                 .WithQuietMode(true)
+                .WithProgressReportIntervalMs(500)
                 .WithProgressCallback(p =>
                 {
                     _seedsSearched = p.SeedsSearched;

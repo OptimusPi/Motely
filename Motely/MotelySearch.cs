@@ -156,6 +156,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithDeck(MotelyDeck deck);
     IMotelySearchSettings WithStake(MotelyStake stake);
     IMotelySearchSettings WithProgressCallback(Action<MotelyProgress> callback);
+    IMotelySearchSettings WithProgressReportIntervalMs(long intervalMs);
     IMotelySearchSettings WithCsvOutput(bool csvOutput);
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
@@ -248,6 +249,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// Receives MotelyProgress object with all progress data
     /// </summary>
     public Action<MotelyProgress>? ProgressCallback { get; set; }
+
+    public long ProgressReportIntervalMs { get; set; } = 800;
 
     /// <summary>
     /// Callback invoked when a seed matches all filters (no score provider).
@@ -428,6 +431,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<MotelyProgress> callback
     ) => WithProgressCallback(callback);
 
+    IMotelySearchSettings IMotelySearchSettings.WithProgressReportIntervalMs(long intervalMs) =>
+        WithProgressReportIntervalMs(intervalMs);
+
     IMotelySearchSettings IMotelySearchSettings.WithCsvOutput(bool csvOutput) =>
         WithCsvOutput(csvOutput);
 
@@ -473,6 +479,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public MotelySearchSettings<TBaseFilter> WithProgressCallback(Action<MotelyProgress> callback)
     {
         ProgressCallback = callback;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithProgressReportIntervalMs(long intervalMs)
+    {
+        ProgressReportIntervalMs = Math.Max(0, intervalMs);
         return this;
     }
 
@@ -539,14 +551,6 @@ public interface IMotelySearch : IDisposable
     bool IsSequentialBatchSearch { get; }
     long BatchIndex { get; }
     long CompletedBatchCount { get; }
-
-    /// <summary>
-    /// Sequential mode: the batch index a resume must restart from — the lowest batch not known
-    /// to be finished. Distinct from <see cref="CompletedBatchCount"/>, which is a count: with
-    /// threads finishing out of order, a batch abandoned mid-flight sits below the highest
-    /// finished index, and resuming at the count would skip it. -1 in provider mode.
-    /// </summary>
-    long ResumeBatchIndex { get; }
 
     /// <summary>
     /// True when the run ended because <see cref="MotelySearchSettings{TBaseFilter}.StopAfterMatches"/>
@@ -658,58 +662,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
     }
 
-    /// <inheritdoc />
-    public long ResumeBatchIndex
-    {
-        get
-        {
-            if (_isProviderMode)
-                return -1;
-
-            Span<long> inFlight = _plans.Length <= 64 ? stackalloc long[_plans.Length] : new long[_plans.Length];
-            for (int i = 0; i < _plans.Length; i++)
-                inFlight[i] = Volatile.Read(ref _plans[i]._currentBatch);
-
-            return ComputeResumeBatchIndex(
-                inFlight,
-                Volatile.Read(ref _batchIndex),
-                Math.Min(_endBatchIndex, _plans[0].MaxBatch)
-            );
-        }
-    }
-
-    /// <summary>
-    /// The lowest batch index that is not known to be finished. Batches dispatch in order but
-    /// finish out of order, so anything below the lowest in-flight index is complete; that index
-    /// is where a resume must restart. With nothing in flight, everything dispatched is done and
-    /// the answer is one past the last dispatched index (<paramref name="lastDispatched"/> is
-    /// pre-incremented, starting at startBatch - 1, so this is startBatch before the first batch).
-    /// Split out from the property so it can be tested without parking real threads.
-    /// </summary>
-    internal static long ComputeResumeBatchIndex(
-        ReadOnlySpan<long> inFlight,
-        long lastDispatched,
-        long maxBatch
-    )
-    {
-        long lowest = long.MaxValue;
-        for (int i = 0; i < inFlight.Length; i++)
-        {
-            long batch = inFlight[i];
-            if (batch >= 0 && batch < lowest)
-                lowest = batch;
-        }
-
-        // Overshoot is only wasted work; a skip is lost seeds. When in doubt, resume lower.
-        long resume = lowest == long.MaxValue ? lastDispatched + 1 : lowest;
-
-        if (resume < 0)
-            resume = 0;
-        if (resume > maxBatch)
-            resume = maxBatch;
-        return resume;
-    }
-
     public long TotalSeedsSearched
     {
         get
@@ -793,6 +745,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private readonly Action<string>? _seedMatchCallback;
     private readonly Action<MotelyScoredSeedResult>? _scoredResultCallback;
     private readonly bool _autoScoreCutoff;
+    private readonly long _progressReportIntervalMs;
     /// <summary>Provider-mode: seeds to chew per report batch (SIMD still 8-wide).</summary>
     private readonly int _providerBatchSeedCount;
 
@@ -800,17 +753,12 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
     private long _lastProgressReportElapsedMs = -1;
     private long _lastReportSeeds;
 
-    /// <summary>Last measured throughput, held while the current sampling window is too short.</summary>
-    private double _lastSeedsPerMs;
-
-    /// <summary>Shortest wall-clock window worth dividing by for a throughput number.</summary>
-    private const long MIN_THROUGHPUT_WINDOW_MS = 250;
-
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
         _isProviderMode = settings.Mode == MotelySearchMode.Provider;
         _searchParameters = new() { Deck = settings.Deck, Stake = settings.Stake };
         _progressCallback = settings.ProgressCallback;
+        _progressReportIntervalMs = settings.ProgressReportIntervalMs;
         _seedMatchCallback = settings.SeedMatchCallback;
         _scoredResultCallback = settings.ScoredResultCallback;
         _autoScoreCutoff = settings.AutoScoreCutoff;
@@ -1138,11 +1086,17 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             return;
 
         long elapsedMS = _elapsedTime.ElapsedMilliseconds;
+        if (
+            _progressReportIntervalMs > 0
+            && _lastProgressReportElapsedMs >= 0
+            && elapsedMS - _lastProgressReportElapsedMs < _progressReportIntervalMs
+        )
+            return;
 
-        // Save previous report state for windowed (instantaneous) throughput. The window is only
-        // closed further down, once it is long enough to divide by.
+        // Save previous report state for windowed (instantaneous) throughput before updating.
         long prevReportSeeds = _lastReportSeeds;
         long prevReportMs = _lastProgressReportElapsedMs;
+        _lastProgressReportElapsedMs = elapsedMS;
 
         long thisCompletedCount = CompletedBatchCount;
         long totalBatches = _plans[0].MaxBatch;
@@ -1161,56 +1115,30 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         }
         else
         {
-            // Percent and ETA come from seeds, not completed batches. With 16 threads on a
-            // batchCharCount-4 run, 16 batches — 24M seeds — sit in flight and uncounted for
-            // seconds at a time, so a batch-count percent reads 0.0% long after real work has
-            // happened and the ETA swings with batch-boundary luck. Seeds are counted per vector
-            // (see _localSeedsSearched), which moves smoothly. Same denominator either way:
-            // MaxBatch * SeedsPerBatch is the whole 35^8 space.
-            long seedsPerBatch = _plans[0].SeedsPerBatch;
-            long totalSeedsInSpace = totalBatches * seedsPerBatch;
-            long lastBatch = Math.Min(_endBatchIndex, totalBatches);
-            long seedsToDo = Math.Max(0, lastBatch - _startBatchIndex) * seedsPerBatch;
-
-            totalPortionFinished =
-                totalSeedsInSpace > 0
-                    ? (double)(_startBatchIndex * seedsPerBatch + seedsSearched) / totalSeedsInSpace
-                    : 0;
-            percentComplete = Math.Min(100.0, totalPortionFinished * 100.0);
-            thisPortionFinished = seedsToDo > 0 ? (double)seedsSearched / seedsToDo : 0.0;
+            long batchesSinceStart = thisCompletedCount - _startBatchIndex;
+            long totalBatchesToDo = _plans[0].MaxBatch - _startBatchIndex;
+            totalPortionFinished = totalBatches > 0 ? (double)thisCompletedCount / totalBatches : 0;
+            percentComplete = totalPortionFinished * 100.0;
+            thisPortionFinished =
+                totalBatchesToDo > 0 ? (double)batchesSinceStart / totalBatchesToDo : 0.0;
         }
 
         // Windowed throughput: seeds processed since the last report, divided by wall time
         // since the last report. Gives actual current speed instead of the misleading
         // lifetime average (which starts slow due to JIT/cache warmup and climbs forever).
-        //
-        // The window has to be wide enough to divide by. At batchCharCount 1 a batch is 35 seeds
-        // and 16 threads report several times per millisecond, so a report-to-report window is
-        // routinely 0ms — that read as "0/s" flickering against real numbers. Carry the last
-        // measured rate until enough wall time has accrued to measure a new one.
         double seedsPerMs;
-        if (prevReportMs < 0)
+        if (prevReportMs >= 0)
         {
-            // First report: no previous window, fall back to the lifetime average.
-            seedsPerMs = elapsedMS > 1 ? (double)seedsSearched / elapsedMS : 0;
-            _lastReportSeeds = seedsSearched;
-            _lastProgressReportElapsedMs = elapsedMS;
-            _lastSeedsPerMs = seedsPerMs;
-        }
-        else if (elapsedMS - prevReportMs >= MIN_THROUGHPUT_WINDOW_MS)
-        {
-            seedsPerMs = (double)(seedsSearched - prevReportSeeds) / (elapsedMS - prevReportMs);
-            if (seedsPerMs < 0)
-                seedsPerMs = _lastSeedsPerMs; // racing reporters can read counters out of order
-            _lastReportSeeds = seedsSearched;
-            _lastProgressReportElapsedMs = elapsedMS;
-            _lastSeedsPerMs = seedsPerMs;
+            long deltaSeeds = seedsSearched - prevReportSeeds;
+            long deltaMs = elapsedMS - prevReportMs;
+            seedsPerMs = deltaMs > 0 ? (double)deltaSeeds / deltaMs : 0;
         }
         else
         {
-            // Window still open — report the last measured rate rather than a division artifact.
-            seedsPerMs = _lastSeedsPerMs;
+            // First report: no previous data, fall back to lifetime average.
+            seedsPerMs = elapsedMS > 1 ? (double)seedsSearched / elapsedMS : 0;
         }
+        _lastReportSeeds = seedsSearched;
 
         long? etaMs = null;
         if (thisPortionFinished >= 0.0000001)
@@ -1308,12 +1236,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         internal long _localMatchingSeeds = 0;
         internal long _localBatchesCompleted = 0;
         internal long _localSeedsSearched = 0;
-
-        // The sequential batch this plan is currently inside, or -1 when it holds none. Written
-        // twice per batch (never per seed), read by MotelySearch.ResumeBatchIndex. A batch the
-        // thread abandoned on cancel deliberately keeps its index here — that abandoned index is
-        // the whole point, see TryExecuteSequentialBatch.
-        internal long _currentBatch = -1;
         private readonly AutoCutoffState _autoCutoffState = new() { LearnedCutoff = int.MinValue };
 
         // Per-plan auto-cutoff rate gate state. A class (not struct) on purpose: the field
@@ -1443,11 +1365,6 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
             if (batchIdx >= Search._endBatchIndex || batchIdx >= MaxBatch)
                 return false;
 
-            // Publish the index before searching it: this is the only record that batch 4 was
-            // handed to a thread, and MotelySearch.ResumeBatchIndex resumes from the lowest such
-            // index rather than from a count that cannot see it.
-            Volatile.Write(ref _currentBatch, batchIdx);
-
             SearchSequentialBatch(batchIdx);
 
             // Only book a batch that ran to the end. SearchVector returns early on cancellation and
@@ -1458,14 +1375,7 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
                 Volatile.Read(ref Search._isDisposed) == 0
                 && !Search._cancellationToken.IsCancellationRequested
             )
-            {
                 _localBatchesCompleted++;
-
-                // Clear only on the same condition. Clearing unconditionally would erase the index
-                // of the batch this thread abandoned mid-flight — the exact seeds a resume must
-                // re-cover.
-                Volatile.Write(ref _currentBatch, -1);
-            }
 
             // Check for timed-out filter batches
             if (Search._additionalFilters.Length != 0)
