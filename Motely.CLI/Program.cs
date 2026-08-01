@@ -868,13 +868,12 @@ partial class Program
             Console.WriteLine($"  Batch: {search.CompletedBatchCount:N0} / {max:N0} ({pct:F4}%)");
             if (cancelled)
             {
-                long nextBatch = search.CompletedBatchCount;
+                // Position, not count: see IMotelySearch.ResumeBatchIndex.
+                long nextBatch = search.ResumeBatchIndex;
                 Console.WriteLine($"  Resume: --startBatch {nextBatch}");
                 if (nextBatch >= 0 && nextBatch < max)
                 {
-                    string prefix = SeedMath.BatchIndexToSeedPrefix(nextBatch, batchCharCount);
-                    string minSeedInBatch =
-                        prefix + new string(MotelyGlobals.SeedDigits[0], batchCharCount);
+                    string minSeedInBatch = SeedMath.BatchIndexToMinSeed(nextBatch, batchCharCount);
                     Console.WriteLine($"  Resume: --startSeed {minSeedInBatch}");
                 }
             }
@@ -920,15 +919,16 @@ partial class Program
 
     // Cached latest progress so 'p' key can print on demand even under --quiet.
     static MotelyProgress? _latestProgress;
-    static int _lastProgressPercent = -1;
 
+    /// <summary>
+    /// Draws the progress line on every report — the engine reports once per completed batch
+    /// (MotelySearch.PrintReport), so this is one line per batch and nothing is skipped. It used
+    /// to redraw only when the whole-number percent ticked over, which on a 2.25-trillion-seed
+    /// sweep is once an hour: the search looked hung.
+    /// </summary>
     static void WriteProgressLineToStderr(MotelyProgress p)
     {
         _latestProgress = p;
-        int pct = (int)p.PercentComplete;
-        if (pct <= _lastProgressPercent)
-            return;
-        _lastProgressPercent = pct;
         FormatProgressToStderr(p);
     }
 
@@ -954,8 +954,12 @@ partial class Program
         string elapsed = TimeSpan
             .FromMilliseconds(p.ElapsedMilliseconds)
             .ToString(@"hh\:mm\:ss\.f");
+        // Full-space sweeps sit below 1% for hours; F1 pins them at "0.0%" and hides the fact
+        // that anything is moving at all. Widen the decimals only where they carry information.
+        string pct =
+            p.PercentComplete >= 1.0 ? $"{p.PercentComplete:F2}" : $"{p.PercentComplete:F5}";
         StickyProgress.Update(
-            $"Progress: {p.PercentComplete:F1}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}"
+            $"Progress: {pct}% | {p.SeedsSearched:N0} searched | {p.MatchingSeeds:N0} matches | {speed}{eta} | {elapsed}"
         );
     }
 

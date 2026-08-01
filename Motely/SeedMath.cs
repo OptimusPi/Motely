@@ -134,6 +134,27 @@ public static class SeedMath
         return index;
     }
 
+    /// <summary>
+    /// True inverse of <see cref="SeedToBatchIndex"/>: the lowest full seed in a batch.
+    /// The batch digits are a SUFFIX (positions batchCharCount..7, least significant first),
+    /// matching MotelySearch.SearchSequentialBatch's _digits[MaxSeedLength - i - 1] writes.
+    /// Positions 0..batchCharCount-1 are the per-lane varying chars, minimised.
+    /// </summary>
+    public static string BatchIndexToMinSeed(long batchIndex, int batchCharCount)
+    {
+        char[] seed = new char[MotelyGlobals.MaxSeedLength];
+        for (int p = 0; p < batchCharCount; p++)
+            seed[p] = MotelyGlobals.SeedDigits[0];
+
+        long b = batchIndex;
+        for (int p = batchCharCount; p < MotelyGlobals.MaxSeedLength; p++)
+        {
+            seed[p] = MotelyGlobals.SeedDigits[(int)(b % MotelyGlobals.SeedDigits.Length)];
+            b /= MotelyGlobals.SeedDigits.Length;
+        }
+        return new string(seed);
+    }
+
     public static string BatchIndexToSeedPrefix(long batchIndex, int batchSize)
     {
         int prefixLen = 8 - batchSize;
