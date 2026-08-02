@@ -212,7 +212,7 @@ partial class Program
         );
         var aestheticOption = app.Option<string>(
             "--aesthetic <NAME>",
-            $"Search seeds from an aesthetic provider ({JamlAestheticParser.KnownJamlStringsDescription()})",
+            $"Search seeds from an aesthetic provider ({JamlAestheticParser.KnownJamlStringsDescription()}). 'all' concatenates every family in order",
             CommandOptionType.SingleValue
         );
         var collectOption = app.Option<long>(

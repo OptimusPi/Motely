@@ -57,17 +57,27 @@ internal static class CliSearchMode
         }
 
         JamlAesthetic? explicitAesthetic = null;
+        bool aestheticAll = false;
         if (!string.IsNullOrWhiteSpace(input.AestheticName))
         {
             var trimmed = input.AestheticName.Trim();
-            if (!JamlAestheticParser.TryParse(trimmed, out var aesthetic))
+            if (JamlAestheticParser.IsAllToken(trimmed))
+            {
+                aestheticAll = true;
+            }
+            else if (!JamlAestheticParser.TryParse(trimmed, out var aesthetic))
             {
                 error =
                     $"Error: unknown --aesthetic value '{trimmed}'. Known: {JamlAestheticParser.KnownJamlStringsDescription()}.";
                 return false;
             }
-            explicitAesthetic = aesthetic;
+            else
+            {
+                explicitAesthetic = aesthetic;
+            }
         }
+
+        bool hasAestheticMode = explicitAesthetic.HasValue || aestheticAll;
 
         bool hasSeedIndexOptions =
             input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;
@@ -79,7 +89,7 @@ internal static class CliSearchMode
                 || hasDrownMode
                 || input.KeywordInputs.Count > 0
                 || input.RandomCount.HasValue
-                || explicitAesthetic.HasValue
+                || hasAestheticMode
             )
             {
                 error = "Error: --startSeed/--stopSeed apply only to default sequential search.";
@@ -99,7 +109,7 @@ internal static class CliSearchMode
             explicitSearchModeCount++;
         if (input.RandomCount.HasValue)
             explicitSearchModeCount++;
-        if (explicitAesthetic.HasValue)
+        if (hasAestheticMode)
             explicitSearchModeCount++;
 
         if (explicitSearchModeCount > 1)
@@ -230,6 +240,22 @@ internal static class CliSearchMode
         else if (input.RandomCount.HasValue)
         {
             updated = updated.WithRandomSearch(input.RandomCount.Value);
+        }
+        else if (aestheticAll)
+        {
+            // --aesthetic all: concat every family (palindrome → … → nsfw). Same pad law as
+            // single --aesthetic: full alphabet unless --padding. (Default --collect without
+            // --aesthetic still uses digit pad + sequential fallback in Program.)
+            char[]? aestheticPad = !string.IsNullOrWhiteSpace(input.PaddingCharsOption)
+                ? MotelyGlobals.ParsePaddingChars(input.PaddingCharsOption)
+                : null;
+            var aesthetics = JamlAestheticParser.AllAesthetics();
+            updated = updated.WithProviderSearch(
+                new MotelySeedListProvider(
+                    aesthetics.SelectMany(a => JamlAesthetics.EnumerateSeeds(a, aestheticPad)),
+                    aesthetics.Sum(a => JamlAesthetics.GetSeedCount(a, aestheticPad))
+                )
+            );
         }
         else if (explicitAesthetic.HasValue)
         {
