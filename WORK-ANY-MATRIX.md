@@ -1,9 +1,10 @@
 # WORK — Category any matrix (empty list law)
 
 **Operator:** Nat  
-**Author:** Grok (healed 2026-07-31)  
+**Author:** Grok (healed 2026-07-31) · **folded 2026-08-01** into `CLAUDE-BITES-MATRIX.md` (E01–E21 SHIPPED; open work = U/H/X tracks there)  
 **Law:** one grammar; **empty disc list / empty props = category match**. No `Any` token. No `IsWildcard` flag.  
-**Proof:** `dotnet test Motely.Tests` green + real seed for empty spectral/planet/joker paths.
+**Proof:** `dotnet test Motely.Tests` green + real seed for empty spectral/planet/joker paths.  
+**Executor queue:** do **not** invent a parallel Grok matrix — open bites live in `CLAUDE-BITES-MATRIX.md` only.
 
 ---
 

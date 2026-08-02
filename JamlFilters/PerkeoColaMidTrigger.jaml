@@ -1,0 +1,108 @@
+name: Perkeo-Cola-Mid-Trigger
+author: nate
+description: >
+  Ghost White mid Perkeo–Cola press (Early scooted A4→A6). Must (cheap→expensive):
+  A6 NegativeTag cashout, Ankh in ante 1–2 shop slots 0–3, Perkeo in ante 1–2 packs
+  0–3, Diet Cola ante 1–3, second Perkeo somewhere in 5–10. Should: late Perkeo
+  tally, early BP/BS, OopsAll6s shop windows (A6 slots 2–7 / A5 0–3 / A6 0–1).
+deck: Ghost
+stake: White
+
+# Must cost law: tags first (vector bouncers), then shop Ankh, Soul Perkeo, Cola,
+# then late Perkeo. Full-space / nsfw hunts pay this every seed — keep musts sparse.
+# Fork of PerkeoColaEarly: every ante-4 gate scooted to ante 6.
+must:
+  # ~1/24 · free-neg cashout gate (ante 6 mid, not A4 early / A8 classic)
+  - tag: NegativeTag
+    antes: [6]
+
+  # Early Ankh face — shop only, slots 0–3
+  - spectralCard: Ankh
+    antes: [1, 2]
+    sources:
+      shopItems: [0, 1, 2, 3]
+
+  # Early Soul / pack Perkeo (pack 0 is fixed buffoon — still listed for author clarity)
+  - legendaryJoker: Perkeo
+    antes: [1, 2]
+    sources:
+      boosterPacks: [0, 1, 2, 3]
+
+  # Banked for Ankh-copy / sell → Double Tag
+  - joker: DietCola
+    antes: [1, 2, 3]
+
+  # Second Perkeo later for the Ankh copy / double line (was 4–10; 4→6)
+  - legendaryJoker: Perkeo
+    antes: [5, 6, 7, 8, 9, 10]
+
+# Should only runs after must — rank toys, not search bouncers.
+should:
+  - legendaryJoker: Perkeo
+    antes: [5, 6, 7, 8, 9, 10]
+    score: 1
+    label: perkeo_late
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 10
+    label: bp
+  - joker: Brainstorm
+    antes: [1, 2, 3]
+    score: 10
+    label: bs
+  - or:
+      clauses:
+        # was A4 slots 2–7 → scooted to A6
+        - joker: OopsAll6s
+          antes: [6]
+          sources:
+            shopItems: [2, 3, 4, 5, 6, 7]
+          score: 100
+        - joker: OopsAll6s
+          antes: [5]
+          sources:
+            shopItems: [0, 1, 2, 3]
+          score: 100
+        - joker: OopsAll6s
+          antes: [6]
+          sources:
+            shopItems: [0, 1]
+          score: 100
+    label: oops_window
+
+# No proven seeds yet — Early lake was A4 Neg; re-hunt for A6.
+seeds:
+  - 14598431
+  - 2CNCUMK7
+  - 56CUMVVV
+  - 26TP1CUM
+  - ADEPWCUM
+  - CUM3G4CX
+  - 5OL6ICUM
+  - 65CEICUM
+  - 6CUMI3MW
+  - CUM6ILOH
+  - 6WNCUM95
+  - 71CUM76Z
+  - 7BN8CUMJ
+  - CUM8K7DB
+  - 92CUM1JF
+  - 9FWU1CUM
+  - CUM9TY4Z
+  - CUMAG5VM
+  - AIF5CUMK
+  - BCUMAAEB
+  - CL5CUMZX
+  - OX5Q5XO
+  - BFBAFJPS
+  - AMA1MVBA
+  - AOAOOYC5
+  - BPBDPKE4
+  - BTB5TZKU
+  - CEC8E6ZX
+  - CECPERZX
+  - CICGIYRT
+  - CUCFURIV
+  - CYCZY3TH
+  - DGDTGBRK
+  - DKDNK1R2

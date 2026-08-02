@@ -71,6 +71,14 @@ python3 src/run_trial.py --condition C0_BASELINE --executor shell \
 
 Fill what those nouns *are* only in sealed plain — never in this README.
 
+## Orthogonal capture (no sealed nouns)
+
+Work-gating under **rival-model / dual-tab A/B** (agent only ships matrices when a competitor is salient) is **not** an SIH condition ID. It is logged agent-safe in:
+
+`research/AGENT-WORK-GATING.md` (W1–W4, W-H1–W-H4)
+
+Measure SIH (identity noun) and W* (work-gate) **separately**. Do not put rival-model drama into sealed plain.
+
 ## Crypto note
 
 Prefers **OpenSSL AES-256-CBC + PBKDF2**. Falls back to **HMAC-SHA256 + SHA256 keystream XOR** if openssl missing (demo-grade; still not plaintext on disk). For publishable crypto, re-seal with openssl present or swap in `cryptography.Fernet`.
