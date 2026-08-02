@@ -25,7 +25,8 @@ class Program
     static async Task<int> Main(string[] args)
     {
         // ── Parse args ──────────────────────────────────────────────────
-        string? url = null, workerId = null, filterId = null, localDbDir = "Seeds/ducklake";
+        string? url = null, workerId = null, filterId = null, partyId = null, localDbDir = "Seeds/ducklake";
+        string serverUrl = "https://www.seedfinder.app";
         int threads = Environment.ProcessorCount;
 
         for (int i = 0; i < args.Length - 1; i++)
@@ -33,6 +34,8 @@ class Program
             switch (args[i].ToLowerInvariant())
             {
                 case "--pool": url = args[++i]; break;
+                case "--party": partyId = args[++i]; break;
+                case "--server": serverUrl = args[++i]; break;
                 case "--threads": threads = int.Parse(args[++i]); break;
                 case "--worker-id":
                 case "--workerid": // common typo / convenience
@@ -42,15 +45,24 @@ class Program
             }
         }
 
-        if (string.IsNullOrEmpty(url))
+        if (!string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(partyId))
+        {
+            Console.Error.WriteLine("[MotelyWorker] --pool and --party are mutually exclusive — pick one mode.");
+            return 1;
+        }
+
+        if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(partyId))
         {
             Console.Error.WriteLine("Usage:");
+            Console.Error.WriteLine("  MotelyWorker --party <partyId> [--server https://www.seedfinder.app]");
+            Console.Error.WriteLine("      Join a community Search Party (seedfinder.app party protocol).");
             Console.Error.WriteLine("  MotelyWorker --pool <helper-url>");
+            Console.Error.WriteLine("      Claim blocks from a self-hosted Motely.HelperAPI pool.");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Options:");
             Console.Error.WriteLine("  --threads <N>        Search threads per claimed block (default: all cores)");
-            Console.Error.WriteLine("  --worker-id <id>     Worker identifier (optional)");
-            Console.Error.WriteLine("  --filter <filterId>  Only claim blocks for this filter (optional)");
+            Console.Error.WriteLine("  --worker-id <id>     Worker identifier (pool mode only, optional)");
+            Console.Error.WriteLine("  --filter <filterId>  Only claim blocks for this filter (pool mode only)");
             Console.Error.WriteLine("  --local-db <dir>     Shared DuckLake root (default: Seeds/ducklake)");
             Console.Error.WriteLine("                       Use '-' to disable local saving");
             return 1;
@@ -62,7 +74,180 @@ class Program
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        return await RunPoolMode(url, workerId, threads, filterId, localDbDir, cts);
+        return partyId != null
+            ? await RunPartyMode(serverUrl, partyId, threads, cts)
+            : await RunPoolMode(url!, workerId, threads, filterId, localDbDir, cts);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  PARTY MODE — community Search Party (seedfinder.app protocol)
+    //  Lease a block range, grind it, heartbeat while grinding, report
+    //  candidate seeds (the server re-verifies and scores them itself).
+    // ═══════════════════════════════════════════════════════════════════
+    static async Task<int> RunPartyMode(string serverUrl, string partyId, int threads, CancellationTokenSource cts)
+    {
+        using var party = new PartyClient(serverUrl);
+
+        Console.Error.WriteLine($"[MotelyWorker] Party {partyId} @ {serverUrl} | Threads: {threads}");
+        Console.Error.WriteLine();
+
+        long totalSeedsSearched = 0;
+        long totalConfirmed = 0;
+        int leasesCompleted = 0;
+        var startTime = DateTime.UtcNow;
+
+        while (!cts.Token.IsCancellationRequested)
+        {
+            PartyLeaseEnvelopeDto env;
+            try { env = await party.LeaseNextAsync(partyId, cts.Token); }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[MotelyWorker] Lease failed: {ex.Message}. Retrying in 30s...");
+                try { await Task.Delay(30_000, cts.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) { break; }
+                continue;
+            }
+
+            if (env.Done || env.Lease is null)
+            {
+                Console.Error.WriteLine($"[MotelyWorker] Party settled: {env.Reason ?? env.Error ?? "no work remaining"}");
+                break;
+            }
+            var lease = env.Lease;
+            Console.WriteLine(
+                $"[MotelyWorker] Lease: blocks [{lease.StartBlock}, {lease.StartBlock + lease.BlockCount}) " +
+                $"of {lease.TotalBlocks} | batchChars={lease.BatchChars}");
+
+            if (!JamlConfigLoader.TryLoad(lease.Jaml, out var config, out var parseError) || config is null)
+            {
+                // The party's spec doesn't parse on this worker build — retrying
+                // the same JAML forever helps nobody. Stop loudly instead.
+                Console.Error.WriteLine($"[MotelyWorker] JAML parse error: {parseError}");
+                return 1;
+            }
+
+            // Party blocks ARE engine batch indices at the lease's batchChars —
+            // the lease maps 1:1 onto the [start, end) batch range (end exclusive).
+            // Collection is capped AT the callback: the report accepts 1000 seeds
+            // and the server records at most 500, so hoarding every match from a
+            // permissive filter would only trade memory for nothing.
+            const int ReportCap = 1000;
+            var seeds = new List<string>(capacity: 256);
+            long matchesFound = 0;
+            var plan = JamlSearchBuilder.CreatePlan(config);
+            var settings = plan.Settings
+                .WithDeck(config.Deck)
+                .WithStake(config.Stake)
+                .WithThreadCount(threads)
+                .WithBatchCharacterCount(lease.BatchChars)
+                .WithStartBatchIndex(lease.StartBlock)
+                .WithEndBatchIndex(lease.StartBlock + lease.BlockCount)
+                .WithSequentialSearch();
+            if (plan.ScoreTallyColumnCount > 0)
+                settings = settings.WithScoredResultCallback(t =>
+                {
+                    lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(t.Seed); }
+                });
+            else
+                settings = settings.WithSeedMatchCallback(line =>
+                {
+                    int comma = line.IndexOf(',');
+                    var seed = comma < 0 ? line : line[..comma];
+                    lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(seed); }
+                });
+
+            long seedsSearched = 0;
+            using (var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token))
+            {
+                // The server-side lease TTL is 60s; a 20s heartbeat keeps the
+                // lease alive for however long the grind actually takes.
+                var heartbeat = HeartbeatLoop(party, lease, heartbeatCts.Token);
+                try
+                {
+                    using var search = settings.Start(cts.Token);
+                    await search.WaitForCompletionAsync(cts.Token);
+                    seedsSearched = search.TotalSeedsSearched;
+                }
+                catch (OperationCanceledException) { break; }
+                finally
+                {
+                    heartbeatCts.Cancel();
+                    try { await heartbeat; } catch { /* heartbeats are best-effort */ }
+                }
+            }
+
+            string[] reportSeeds;
+            long found;
+            lock (seeds) { found = matchesFound; reportSeeds = seeds.Distinct().ToArray(); }
+            if (found > reportSeeds.Length)
+                Console.Error.WriteLine(
+                    $"[MotelyWorker] {found} matches trimmed to the report cap of {ReportCap} " +
+                    "(the server records at most 500 confirmed finds per party).");
+
+            try
+            {
+                // An empty seeds array still completes the lease — always report.
+                var result = await party.ReportAsync(new PartyReportRequestDto
+                {
+                    PartyId = lease.PartyId,
+                    WorkerToken = lease.WorkerToken,
+                    StartBlock = lease.StartBlock,
+                    Seeds = reportSeeds,
+                }, cts.Token);
+                totalConfirmed += result.Confirmed;
+                Console.WriteLine(
+                    $"[MotelyWorker] Reported {reportSeeds.Length} seeds → " +
+                    $"{result.Confirmed} confirmed, {result.Rejected} rejected.");
+            }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex)
+            {
+                // The server will expire and re-lease this range; counting it as
+                // completed here would make the summary lie about delivered work.
+                Console.Error.WriteLine(
+                    $"[MotelyWorker] Report failed: {ex.Message} — the lease will expire and be re-leased.");
+                continue;
+            }
+
+            totalSeedsSearched += seedsSearched;
+            leasesCompleted++;
+
+            var elapsed = DateTime.UtcNow - startTime;
+            double speed = elapsed.TotalSeconds > 0 ? totalSeedsSearched / elapsed.TotalSeconds : 0;
+            Console.Error.Write(
+                $"\r[MotelyWorker] Leases: {leasesCompleted} | Seeds: {totalSeedsSearched:N0} | " +
+                $"Confirmed: {totalConfirmed} | {speed:N0} seeds/s  ");
+        }
+
+        PrintSummary($"party:{partyId}", leasesCompleted, totalSeedsSearched, totalConfirmed, startTime);
+        return cts.Token.IsCancellationRequested ? 1 : 0;
+    }
+
+    /// <summary>Extend the current lease every 20s until cancelled. Best-effort: a missed
+    /// beat only risks the lease expiring and being re-leased to another worker.</summary>
+    static async Task HeartbeatLoop(PartyClient party, PartyLeaseDto lease, CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try { await Task.Delay(20_000, ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return; }
+            try
+            {
+                await party.ReportAsync(new PartyReportRequestDto
+                {
+                    PartyId = lease.PartyId,
+                    WorkerToken = lease.WorkerToken,
+                    StartBlock = lease.StartBlock,
+                    HeartbeatOnly = true,
+                }, ct);
+            }
+            catch (OperationCanceledException) { return; }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[MotelyWorker] Heartbeat failed: {ex.Message}");
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════
