@@ -45,6 +45,12 @@ class Program
             }
         }
 
+        if (!string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(partyId))
+        {
+            Console.Error.WriteLine("[MotelyWorker] --pool and --party are mutually exclusive — pick one mode.");
+            return 1;
+        }
+
         if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(partyId))
         {
             Console.Error.WriteLine("Usage:");
@@ -123,7 +129,12 @@ class Program
 
             // Party blocks ARE engine batch indices at the lease's batchChars —
             // the lease maps 1:1 onto the [start, end) batch range (end exclusive).
-            var seeds = new List<string>();
+            // Collection is capped AT the callback: the report accepts 1000 seeds
+            // and the server records at most 500, so hoarding every match from a
+            // permissive filter would only trade memory for nothing.
+            const int ReportCap = 1000;
+            var seeds = new List<string>(capacity: 256);
+            long matchesFound = 0;
             var plan = JamlSearchBuilder.CreatePlan(config);
             var settings = plan.Settings
                 .WithDeck(config.Deck)
@@ -134,13 +145,16 @@ class Program
                 .WithEndBatchIndex(lease.StartBlock + lease.BlockCount)
                 .WithSequentialSearch();
             if (plan.ScoreTallyColumnCount > 0)
-                settings = settings.WithScoredResultCallback(t => { lock (seeds) seeds.Add(t.Seed); });
+                settings = settings.WithScoredResultCallback(t =>
+                {
+                    lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(t.Seed); }
+                });
             else
                 settings = settings.WithSeedMatchCallback(line =>
                 {
                     int comma = line.IndexOf(',');
                     var seed = comma < 0 ? line : line[..comma];
-                    lock (seeds) seeds.Add(seed);
+                    lock (seeds) { matchesFound++; if (seeds.Count < ReportCap) seeds.Add(seed); }
                 });
 
             long seedsSearched = 0;
@@ -164,11 +178,11 @@ class Program
             }
 
             string[] reportSeeds;
-            int found;
-            lock (seeds) { found = seeds.Count; reportSeeds = seeds.Distinct().Take(1000).ToArray(); }
+            long found;
+            lock (seeds) { found = matchesFound; reportSeeds = seeds.Distinct().ToArray(); }
             if (found > reportSeeds.Length)
                 Console.Error.WriteLine(
-                    $"[MotelyWorker] {found} matches trimmed to the report cap of 1000 " +
+                    $"[MotelyWorker] {found} matches trimmed to the report cap of {ReportCap} " +
                     "(the server records at most 500 confirmed finds per party).");
 
             try
@@ -189,8 +203,11 @@ class Program
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
+                // The server will expire and re-lease this range; counting it as
+                // completed here would make the summary lie about delivered work.
                 Console.Error.WriteLine(
                     $"[MotelyWorker] Report failed: {ex.Message} — the lease will expire and be re-leased.");
+                continue;
             }
 
             totalSeedsSearched += seedsSearched;
