@@ -57,6 +57,29 @@ must:
 
 Category any is **block form only** — there is no one-line spelling for “any joker.”
 
+### Default sources when you omit `sources:`
+
+Leaving `sources:` off does **not** mean “look everywhere.” Each family has a fixed default, and
+it is not the same one for every family:
+
+| Clause | Default when `sources:` is omitted |
+|--------|------------------------------------|
+| `joker` / `commonJoker` / `uncommonJoker` / `rareJoker` | shop slots **0–7**; **no** booster packs |
+| `tarotCard` | shop slots **0–7** |
+| `planetCard` | shop slots **0–7** |
+| `standardCard` | shop slots **0–7** |
+| `spectralCard` (ordinary) | shop slots **0–7** |
+| `spectralCard` naming **TheSoul** or **BlackHole** | booster packs **0–5**; **no** shop |
+| `legendaryJoker` | booster packs **0–5**; **no** shop |
+
+The two pack-only rows are the ones that surprise people. Shops never offer legendaries, and
+The Soul / Black Hole only turn up in packs — so for those a shop-slot default would match
+nothing. Everything else defaults to the shop and **will not open packs for you**: if you want
+pack contents counted, author `sources:` explicitly.
+
+Omitting `antes:` is separate and uniform — an empty ante list is filled with `1..8` by the search
+builder, not by the loader, so a clause loaded straight from YAML still reports `Antes` empty.
+
 The line form reads like the game reads: **stickers, then edition, then the thing.** Same order
 the card shows it to you.
 

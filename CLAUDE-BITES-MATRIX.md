@@ -33,7 +33,8 @@
 | Law | Meaning |
 |-----|---------|
 | Category any | empty disc list `joker: []` / `tarotCard: []` / … — **not** the word `Any` |
-| Default **sources** (tarot/joker/ordinary spectral) | **shop 0–7 only** if `sources:` omitted |
+| Default **sources** (tarot/joker/planet/standard/ordinary spectral) | **shop 0–7 only** if `sources:` omitted — never opens packs |
+| Default **sources** (`legendaryJoker`, spectral naming TheSoul/BlackHole) | **boosterPacks 0–5 only, NO shop** — shops never offer legendaries; Soul/BH only appear in packs |
 | Default **antes** | empty → builder fills `1..8` |
 | Named antes `[4,5]` | only those antes; still shop-default unless `sources:` |
 | `with: { luck, vouchers }` | **event clauses only** — not cards |
@@ -162,11 +163,13 @@ pnpm build
 
 | ID | Status | Owner note |
 |----|--------|------------|
-| E01–E03 | open | pin law |
-| E04–E12 | open | product Any holes |
-| E13–E19 | open | kill IsWildcard |
-| E20–E21 | open | docs / omit |
+| E01–E03 | **done** | law pinned in `JamlWildcardTests` — empty list, null Sources, named antes, `with:` rejected on tarot, token `Any` rejected |
+| E04–E12 | **done** | spectral + planet empty-list shipped; proof searches green (`ALEEB` Ghost, `UNITTEST`) |
+| E13–E19 | **done** | `rg IsWildcard` **zero** hits in Motely/; `EnumOrAny.cs` deleted (dead — no refs, its own doc pointed at a converter that no longer exists) |
+| E20 | **done** | `JAML.md` "Default sources when you omit `sources:`" — per-family table. **Law corrected:** shop 0–7 is NOT universal; `legendaryJoker` and `spectralCard`→TheSoul/BlackHole default to boosterPacks 0–5, no shop. Verified by 2-agent adversarial pass, all claims `file:line`-cited. |
+| E21 | open | omit syntax — bare `joker:` |
 | E22 | parked | perf |
+| — | **BROKEN** | `CoverageUtilityTests.SeedMath_BatchAndRangeHelpersUseInclusiveSearchIndices` fails on main (expected 1, actual 62501031251). Pre-existing, unrelated to E-track. |
 | U01–U08 | open | Jimbo migrate queue |
 | U09–U14 | open | Any parity + help |
 | U15–U18 | open / gate | polish + release |
