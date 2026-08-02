@@ -10,6 +10,10 @@ const bundle = process.argv[2];
 const port = 8123;
 
 function findChromium() {
+  // 1) explicit override, 2) preinstalled browsers dir, 3) undefined so
+  // playwright-core resolves its own registry/cache (npx playwright install chromium).
+  if (process.env.CHROMIUM_PATH && existsSync(process.env.CHROMIUM_PATH))
+    return process.env.CHROMIUM_PATH;
   const roots = [process.env.PLAYWRIGHT_BROWSERS_PATH ?? "/opt/pw-browsers"];
   for (const root of roots) {
     if (!existsSync(root)) continue;
@@ -22,7 +26,7 @@ function findChromium() {
         if (existsSync(candidate)) return candidate;
     }
   }
-  throw new Error("no chromium found under /opt/pw-browsers");
+  return undefined;
 }
 
 const server = spawn(process.execPath, [join(import.meta.dirname, "serve.mjs"), bundle, String(port)], {

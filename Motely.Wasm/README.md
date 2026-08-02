@@ -37,8 +37,12 @@ from the engine's grammar.
 
 ```sh
 cd Motely.Wasm/tests && npm install
+npx playwright install chromium   # once, if no browser is preinstalled
 node smoke.mjs ../bin/Release/net10.0/browser-wasm/AppBundle
 ```
+
+Chromium resolution order: `CHROMIUM_PATH` env var → `PLAYWRIGHT_BROWSERS_PATH`
+(default `/opt/pw-browsers`) → playwright's own browser cache.
 
 Serves the bundle, loads it in headless Chromium, exercises every export, and asserts the
 page's self-reported verdict.
