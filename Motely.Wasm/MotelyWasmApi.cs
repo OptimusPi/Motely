@@ -1,8 +1,5 @@
 using System.Reflection;
-using System.Runtime.InteropServices.JavaScript;
-using System.Runtime.Versioning;
-using System.Text.Json;
-using Motely.Enums;
+using Bootsharp;
 using Motely.Filters;
 using Motely.Filters.Jaml;
 using Motely.Lsp.Core;
@@ -10,26 +7,31 @@ using Motely.Lsp.Core;
 namespace Motely.Wasm;
 
 /// <summary>
-/// The browser surface of the Motely engine: parse/validate JAML, expose the engine's own
-/// vocabulary, run the language service (diagnostics/hover/completion), and score known seed
-/// lists — all through in-box <c>[JSExport]</c> interop. Strings in, JSON strings out; the
-/// shapes live in <see cref="WasmDtos"/> and serialize through the source-generated context.
+/// The browser surface of the Motely engine. Every member returns an engine type — Bootsharp
+/// generates the TypeScript declarations from these signatures and serializes records, enums and
+/// dictionaries across the boundary itself.
+/// <para>
+/// Nothing here restates the engine. The vocabulary is enumerated from the generated
+/// <see cref="JamlSchema"/>, which Motely.Generators builds from the <c>[JamlDiscriminator]</c>
+/// attributes on the FilterDescs — the descs that actually run the criteria. A desc added tomorrow
+/// appears in the browser without this file changing. That is the only arrangement in which the
+/// head cannot drift from the engine.
+/// </para>
 /// </summary>
-[SupportedOSPlatform("browser")]
 public static partial class MotelyWasmApi
 {
-    [JSExport]
+    /// <summary>Engine informational version, as stamped on the assembly.</summary>
+    [Export]
     public static string Version() =>
         typeof(JamlConfigLoader).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion ?? "0.0.0";
 
     /// <summary>Validate a JAML document with the one true loader. Never throws.</summary>
-    [JSExport]
-    public static string ParseJaml(string text)
-    {
-        ParseResultDto dto = JamlConfigLoader.TryLoad(text, out var config, out var error)
-            ? new(
+    [Export]
+    public static ParseResult ParseJaml(string text) =>
+        JamlConfigLoader.TryLoad(text, out var config, out var error)
+            ? new ParseResult(
                 Ok: true,
                 Error: null,
                 Name: config.Name,
@@ -37,118 +39,93 @@ public static partial class MotelyWasmApi
                 Stake: config.Stake.ToString(),
                 Must: config.Must.Count,
                 Should: config.Should.Count,
-                MustNot: config.MustNot.Count
-            )
-            : new(false, error, null, null, null, 0, 0, 0);
-        return JsonSerializer.Serialize(dto, WasmJson.Default.ParseResultDto);
-    }
+                MustNot: config.MustNot.Count)
+            : new ParseResult(false, error, null, null, null, 0, 0, 0);
 
-    /// <summary>The engine's enums, verbatim — the one true vocabulary, never a JS copy.</summary>
-    [JSExport]
-    public static string Vocabulary() =>
-        JsonSerializer.Serialize(
-            new VocabularyDto(
-                Decks: Enum.GetNames<MotelyDeck>(),
-                Stakes: Enum.GetNames<MotelyStake>(),
-                Jokers: Enum.GetNames<MotelyJoker>(),
-                LegendaryJokers: Enum.GetNames<MotelyJokerLegendary>(),
-                Vouchers: Enum.GetNames<MotelyVoucher>(),
-                TarotCards: Enum.GetNames<MotelyTarotCard>(),
-                SpectralCards: Enum.GetNames<MotelySpectralCard>(),
-                PlanetCards: Enum.GetNames<MotelyPlanetCard>(),
-                Bosses: Enum.GetNames<MotelyBossBlind>(),
-                Tags: Enum.GetNames<MotelyTag>(),
-                Editions: Enum.GetNames<MotelyItemEdition>(),
-                Enhancements: Enum.GetNames<MotelyItemEnhancement>(),
-                Seals: Enum.GetNames<MotelyItemSeal>()
-            ),
-            WasmJson.Default.VocabularyDto
-        );
+    /// <summary>
+    /// Every vocabulary kind the grammar knows, mapped to its member names. Enumerated from
+    /// <see cref="JamlSchema.ValueEnumKinds"/> — generated from the FilterDescs, so this covers
+    /// every enum the engine actually uses, including the ones nobody remembered to list.
+    /// Crosses to JavaScript as a <c>Map</c>.
+    /// </summary>
+    [Export]
+    public static IReadOnlyDictionary<string, string[]> Vocabulary() =>
+        JamlSchema.ValueEnumKinds.ToDictionary(
+            kind => kind.Kind,
+            kind => JamlSchema.ListItems(kind.Kind));
 
-    [JSExport]
-    public static string Diagnostics(string text) =>
-        JsonSerializer.Serialize(
-            JamlLanguageService
-                .Diagnose(text)
-                .Select(d => new DiagnosticDto(
-                    ToSpanDto(d.Span),
-                    d.Message,
-                    d.Severity.ToString(),
-                    d.Code
-                ))
-                .ToArray(),
-            WasmJson.Default.DiagnosticDtoArray
-        );
+    /// <summary>
+    /// Every clause wire the loader will construct — "joker", "voucher", "luckyMoney", and the
+    /// rest of the event clauses. This is the grammar's other axis: a discriminator is a desc, not
+    /// a member of any enum, so <see cref="Vocabulary"/> can never surface one. Generated from the
+    /// <c>[JamlDiscriminator]</c> attributes themselves.
+    /// </summary>
+    [Export]
+    public static string[] Discriminators() => JamlSchema.Discriminators;
 
-    /// <summary>Hover markdown for the word at (line, character), or JSON null.</summary>
-    [JSExport]
-    public static string Hover(string text, int line, int character)
-    {
-        var hover = JamlLanguageService.Hover(text, line, character);
-        return hover is null
-            ? "null"
-            : JsonSerializer.Serialize(
-                new HoverDto(ToSpanDto(hover.Span), hover.Markdown),
-                WasmJson.Default.HoverDto
-            );
-    }
+    /// <summary>The keys a given clause accepts, e.g. "min"/"max"/"score" — or empty when unknown.</summary>
+    [Export]
+    public static string[] ClauseKeys(string discriminator) =>
+        JamlSchema.ClauseKeysFor(discriminator);
 
-    [JSExport]
-    public static string Complete(string text, int line, int character) =>
-        JsonSerializer.Serialize(
-            JamlLanguageService
-                .Complete(text, line, character)
-                .Select(c => new CompletionDto(
-                    c.Label,
-                    c.Kind,
-                    c.Detail,
-                    c.ReplaceSpan.IsEmpty ? null : ToSpanDto(c.ReplaceSpan)
-                ))
-                .ToArray(),
-            WasmJson.Default.CompletionDtoArray
-        );
+    /// <summary>Squiggles with spans and stable codes. Severity crosses as the enum it is.</summary>
+    [Export]
+    public static IReadOnlyList<JamlDiagnostic> Diagnostics(string text) =>
+        JamlLanguageService.Diagnose(text);
+
+    /// <summary>Hover content for the word at (line, character), or null.</summary>
+    [Export]
+    public static JamlHoverInfo? Hover(string text, int line, int character) =>
+        JamlLanguageService.Hover(text, line, character);
+
+    /// <summary>Completion candidates with kinds and replace spans.</summary>
+    [Export]
+    public static IReadOnlyList<JamlCompletionItem> Complete(string text, int line, int character) =>
+        JamlLanguageService.Complete(text, line, character);
+
+    /// <summary>Prose for a grammar topic, or null when the topic is unknown.</summary>
+    [Export]
+    public static string? Explain(string topic) => JamlLanguageService.Explain(topic);
+
+    /// <summary>LSP semantic tokens, in the standard 5-int-per-token encoding.</summary>
+    [Export]
+    public static IReadOnlyList<int> SemanticTokens(string text) =>
+        JamlLanguageService.SemanticTokens(text);
+
+    /// <summary>The token types <see cref="SemanticTokens"/> indexes into.</summary>
+    [Export]
+    public static string[] SemanticTokenTypes() => JamlLanguageService.SemanticTokenTypes;
 
     /// <summary>
     /// List-mode search: gate the given seeds through the filter's must clauses and rank the
-    /// survivors by should score, best first. Runs on the engine's single-threaded browser
-    /// pump, so the page stays responsive while it grinds.
+    /// survivors by should score, best first. Runs on the engine's single-threaded browser pump,
+    /// so the page stays responsive while it grinds.
     /// </summary>
-    [JSExport]
-    public static async Task<string> ScoreSeeds(string jaml, string[] seeds)
+    [Export]
+    public static async Task<ScoreRun> ScoreSeeds(string jaml, string[] seeds)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            return JsonSerializer.Serialize(
-                new ScoreRunDto(false, error, 0, 0, 0, 0, []),
-                WasmJson.Default.ScoreRunDto
-            );
+            return new ScoreRun(false, error, 0, 0, 0, 0, []);
 
-        List<ScoredSeedDto> scored = [];
+        List<ScoredSeed> scored = [];
         var settings = JamlSearchBuilder
             .CreateSettings(config)
             .WithSeedList([.. seeds.Where(s => !string.IsNullOrWhiteSpace(s))])
             .WithThreadCount(1)
             .WithQuietMode(true)
             .WithScoredResultCallback(tally =>
-                scored.Add(new ScoredSeedDto(tally.Seed, tally.Score, [.. tally.Tally.Select(b => (int)b)]))
-            );
+                scored.Add(new ScoredSeed(tally.Seed, tally.Score, [.. tally.Tally.Select(b => (int)b)])));
 
         using var search = settings.CreateSearch();
         await search.Start().WaitForCompletionAsync();
 
-        return JsonSerializer.Serialize(
-            new ScoreRunDto(
-                Ok: true,
-                Error: null,
-                TotalSeeds: search.TotalSeedsSearched,
-                MatchingSeeds: search.MatchingSeeds,
-                FilteredSeeds: search.FilteredSeeds,
-                ElapsedMs: search.ElapsedMs,
-                Results: [.. scored.OrderByDescending(s => s.Score)]
-            ),
-            WasmJson.Default.ScoreRunDto
-        );
+        return new ScoreRun(
+            Ok: true,
+            Error: null,
+            TotalSeeds: search.TotalSeedsSearched,
+            MatchingSeeds: search.MatchingSeeds,
+            FilteredSeeds: search.FilteredSeeds,
+            ElapsedMs: search.ElapsedMs,
+            Results: [.. scored.OrderByDescending(s => s.Score)]);
     }
-
-    private static SpanDto ToSpanDto(JamlSpan span) =>
-        new(span.StartLine, span.StartColumn, span.EndLine, span.EndColumn);
 }
