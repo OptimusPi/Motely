@@ -1,0 +1,28 @@
+name: Oops NegTag ante 2
+deck: Anaglyph
+stake: White
+must:
+  - luckyMoney: [0,1]
+    min: 2
+  - legendaryJoker: Perkeo
+    antes: [1]
+    sources:
+      boosterPacks: [0,1]
+  - tarotCard: TheMagician
+    antes: [1]
+    sources:
+      boosterPacks: [0,1]
+  - uncommonJoker: Showman
+    antes: [2]
+    sources:
+      shopItems: [2,3]
+  - smallBlindTag: NegativeTag
+    antes: [2]
+should:
+  - and:
+    - smallBlindTag: EtherealTag
+    - legendaryJoker:
+      edition: Negative
+      sources:
+        spectralPacks: [0,1,2,3,4,5]
+    antes: [2,3,4,5,6,7,8]
