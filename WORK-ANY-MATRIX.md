@@ -1,10 +1,13 @@
-# WORK — Category any matrix (empty list law)
+# WORK — Category any matrix — ARCHIVE
+
+> **Open queue + law summary:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §5  
+> This file keeps the full empty-list writeup and examples.
 
 **Operator:** Nat  
-**Author:** Grok (healed 2026-07-31) · **folded 2026-08-01** into `CLAUDE-BITES-MATRIX.md` (E01–E21 SHIPPED; open work = U/H/X tracks there)  
+**Author:** Grok (healed 2026-07-31) · folded into bites · **2026-08-05 remash → HARDOFF**  
 **Law:** one grammar; **empty disc list / empty props = category match**. No `Any` token. No `IsWildcard` flag.  
 **Proof:** `dotnet test Motely.Tests` green + real seed for empty spectral/planet/joker paths.  
-**Executor queue:** do **not** invent a parallel Grok matrix — open bites live in `CLAUDE-BITES-MATRIX.md` only.
+**Executor queue:** open bites live in **HARDOFF-MATRIX.md** only.
 
 ---
 

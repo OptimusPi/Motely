@@ -1,7 +1,10 @@
-# IT'S NOT REAL — the WASM head is hand-typed, not exported
+# IT'S NOT REAL — ARCHIVE (WASM audit essay)
+
+> **Open WASM work:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §7  
+> Wave 1 later ported schema export to Bootsharp; host/smoke still open. This essay is the original charge sheet.
 
 **Date:** 2026-08-03
-**Scope:** `Motely.Wasm/` — audit only. **No files were changed. Nothing was built. Nothing was published.**
+**Scope:** `Motely.Wasm/` — audit only at write time.
 
 ---
 

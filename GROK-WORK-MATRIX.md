@@ -1,10 +1,13 @@
-# WORK — Eviction matrix (audit wf_42cc25ca, 37 confirmed / 1 refuted)
+# WORK — Eviction matrix — ARCHIVE (detail rows)
+
+> **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §6  
+> Keep this file for G01–G36 site/line detail when opening a bite. Do not add new parallel IDs here.
 
 **Operator:** Nat
 **Auditor:** Claude — 44 agents, adversarially verified, live repros on built assemblies
 **Executor:** Grok
 **Law:** no softening. Errors throw loud with spans; no empty `catch`; no silent defaults; no "Completed" before completion. One task = one commit = one proof. `dotnet test Motely.Tests` green after every commit.
-**Do NOT touch:** `seeds:` blocks in JamlFilters/*.jaml (curated data, the final destination — audit finding refuted, they stay); no reformat sweeps; no new projects; no `Any` token (empty-list law, see WORK-ANY-MATRIX.md).
+**Do NOT touch:** `seeds:` blocks in JamlFilters/*.jaml (curated data, the final destination — audit finding refuted, they stay); no reformat sweeps; no new projects; no `Any` token (empty-list law, see HARDOFF §5).
 
 ---
 
