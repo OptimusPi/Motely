@@ -5,22 +5,24 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>Motely.Wasm</AssemblyName>
     <RootNamespace>Motely.Wasm</RootNamespace>
+    <!-- Bootsharp's default. ICU stays out of the bundle; JAML is invariant anyway. -->
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- The JSExport source generator emits unsafe marshalling stubs (SYSLIB1075). -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- The JS host boots the runtime and pulls [JSExport]s; no Bootsharp, no sponsor feed,
-         nothing outside the in-box System.Runtime.InteropServices.JavaScript interop. -->
-    <WasmMainJSPath>host/main.mjs</WasmMainJSPath>
+    <!-- Names the emitted ES module + WASM binary, so the bundle matches the npm package. -->
+    <BootsharpName>motely-wasm</BootsharpName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Bootsharp generates the TypeScript head (.g.d.mts) from [Export] at build time and
+         serializes records/enums across the boundary itself. Nothing in this project restates
+         an engine type: no DTO twins, no JSON strings, no hand-typed vocabulary. -->
+    <PackageReference Include="Bootsharp" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <!-- Same protocol-free language brain the stdio LSP server uses: diagnostics, hover and
          completion come from the engine's own grammar, never a hand-written JS copy. -->
     <ProjectReference Include="..\Motely.Lsp.Core\Motely.Lsp.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <WasmExtraFilesToDeploy Include="host/index.html" />
   </ItemGroup>
 </Project>

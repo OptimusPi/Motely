@@ -1,11 +1,16 @@
-using System.Text.Json.Serialization;
-
 namespace Motely.Wasm;
 
-// Every export returns one JSON string built from these DTOs through the source-generated
-// context below — no reflection serialization, so trimming the browser bundle stays safe.
+// Result shapes only. No engine type is restated here.
+//
+// Spans, diagnostics, hover and completion cross as their real types — JamlSpan, JamlDiagnostic,
+// JamlHoverInfo, JamlCompletionItem — because Bootsharp serializes records and enums itself. The
+// four DTO twins that used to live in this file existed only to be renamed to camelCase and to
+// stringify JamlDiagnosticSeverity, i.e. to lose type information on the way out.
+//
+// What remains are shapes with no engine equivalent: a parse verdict and a search run.
 
-public sealed record ParseResultDto(
+/// <summary>Outcome of validating a JAML document, with the header facts worth showing.</summary>
+public sealed record ParseResult(
     bool Ok,
     string? Error,
     string? Name,
@@ -16,47 +21,16 @@ public sealed record ParseResultDto(
     int MustNot
 );
 
-public sealed record VocabularyDto(
-    string[] Decks,
-    string[] Stakes,
-    string[] Jokers,
-    string[] LegendaryJokers,
-    string[] Vouchers,
-    string[] TarotCards,
-    string[] SpectralCards,
-    string[] PlanetCards,
-    string[] Bosses,
-    string[] Tags,
-    string[] Editions,
-    string[] Enhancements,
-    string[] Seals
-);
+/// <summary>One scored seed: its score and the per-should-clause tally behind it.</summary>
+public sealed record ScoredSeed(string Seed, int Score, int[] Tally);
 
-public sealed record SpanDto(int StartLine, int StartColumn, int EndLine, int EndColumn);
-
-public sealed record DiagnosticDto(SpanDto Span, string Message, string Severity, string Code);
-
-public sealed record HoverDto(SpanDto Span, string Markdown);
-
-public sealed record CompletionDto(string Label, string Kind, string? Detail, SpanDto? ReplaceSpan);
-
-public sealed record ScoredSeedDto(string Seed, int Score, int[] Tally);
-
-public sealed record ScoreRunDto(
+/// <summary>A completed list-mode run: counters, elapsed time, and the ranked survivors.</summary>
+public sealed record ScoreRun(
     bool Ok,
     string? Error,
     long TotalSeeds,
     long MatchingSeeds,
     long FilteredSeeds,
     long ElapsedMs,
-    ScoredSeedDto[] Results
+    ScoredSeed[] Results
 );
-
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(ParseResultDto))]
-[JsonSerializable(typeof(VocabularyDto))]
-[JsonSerializable(typeof(DiagnosticDto[]))]
-[JsonSerializable(typeof(HoverDto))]
-[JsonSerializable(typeof(CompletionDto[]))]
-[JsonSerializable(typeof(ScoreRunDto))]
-internal sealed partial class WasmJson : JsonSerializerContext;
