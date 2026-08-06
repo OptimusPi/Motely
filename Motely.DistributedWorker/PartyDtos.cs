@@ -6,11 +6,7 @@ namespace Motely.DistributedWorker;
 // seedfinder.app (app/api/party/*.ts + lib/party/coordinator.ts) exactly.
 // The protocol contract is documented in README.md, and the server keeps its
 // mirrored copy at lib/party/PROTOCOL.md.
-
-[JsonSerializable(typeof(PartyLeaseEnvelopeDto))]
-[JsonSerializable(typeof(PartyReportRequestDto))]
-[JsonSerializable(typeof(PartyReportResponseDto))]
-public partial class WorkerJsonContext;
+// JSON registration: WorkerJsonContext in WorkerDtos.cs (one attribute site only).
 
 /// <summary>GET /api/party/next?partyId= — exactly one of Lease / Done / Error is meaningful.</summary>
 public sealed class PartyLeaseEnvelopeDto

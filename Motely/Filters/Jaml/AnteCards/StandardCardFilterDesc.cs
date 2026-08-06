@@ -104,11 +104,25 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
 /// </summary>
 public sealed record StandardCardSourceConfig
 {
+    /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
     public static readonly string[] SourceKeys =
-        ["shopItems", "boosterPacks", "certificate", "incantation", "familiar", "grim", "deckDraw"];
+    [
+        "shopItems",
+        "boosterPacks",
+        "certificate",
+        "incantation",
+        "familiar",
+        "grim",
+        "deckDraw",
+        "requireMega",
+        "requireMegaPack",
+    ];
 
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
+
+    /// <summary>When true, only Mega-sized Standard packs count (Normal/Jumbo still advance the stream).</summary>
+    public bool RequireMegaPack { get; set; }
 
     public int[] Certificate { get; set; } = [];
     public int[] Incantation { get; set; } = [];

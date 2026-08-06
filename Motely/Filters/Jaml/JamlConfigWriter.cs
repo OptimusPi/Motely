@@ -406,6 +406,8 @@ public static partial class JamlConfigLoader
         WriteIntArrayIfAny(mapping, "uncommonShopJokers", sources.UncommonShopJokers);
         WriteIntArrayIfAny(mapping, "rareShopJokers", sources.RareShopJokers);
         WriteIntArrayIfAny(mapping, "allShopJokers", sources.AllShopJokers);
+        if (sources.RequireMegaPack)
+            mapping.Set("requireMegaPack", JScalar.Of(true), default);
         return mapping;
     }
 
@@ -434,6 +436,8 @@ public static partial class JamlConfigLoader
         WriteIntArrayIfAny(mapping, "purpleSealOrEightBall", sources.PurpleSealOrEightBall);
         if (sources.CharmTag)
             mapping.Set("charmTag", JScalar.Of(true), default);
+        if (sources.RequireMegaPack)
+            mapping.Set("requireMegaPack", JScalar.Of(true), default);
         return mapping;
     }
 
@@ -462,6 +466,8 @@ public static partial class JamlConfigLoader
         var mapping = new JMap();
         WriteIntArrayIfAny(mapping, "shopItems", sources.ShopItems);
         WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        if (sources.RequireMegaPack)
+            mapping.Set("requireMegaPack", JScalar.Of(true), default);
         return mapping;
     }
 
@@ -472,6 +478,8 @@ public static partial class JamlConfigLoader
         var mapping = new JMap();
         WriteIntArrayIfAny(mapping, "shopItems", sources.ShopItems);
         WriteIntArrayIfAny(mapping, "boosterPacks", sources.BoosterPacks);
+        if (sources.RequireMegaPack)
+            mapping.Set("requireMegaPack", JScalar.Of(true), default);
         WriteIntArrayIfAny(mapping, "certificate", sources.Certificate);
         WriteIntArrayIfAny(mapping, "incantation", sources.Incantation);
         WriteIntArrayIfAny(mapping, "familiar", sources.Familiar);
