@@ -8,27 +8,81 @@ description: >
 deck: Anaglyph
 stake: White
 must:
-  - joker: DietCola
-    antes: [1, 2, 3]
-  - joker: OopsAll6s
-    antes: [1, 2, 3, 4]
-  - tag: NegativeTag
-    antes: [1, 2, 3, 4]
-    min: 1
+  - voucher: Hieroglyph
+    antes: [1,2]
+  - voucher: Petroglyph
+    antes: [1,2]
 should:
-  - joker: OopsAll6s
-    antes: [1, 2, 3, 4, 5, 6]
-    score: 15
-    label: oops
   - tag: NegativeTag
     antes: [1, 2, 3, 4, 5, 6]
     score: 10
-    label: neg
-  - joker: DietCola
-    antes: [1, 2, 3]
-    score: 5
 
 seeds:
-  - 2CFC2
-  - 7K7
-  - NAN
+  - M58KERYV
+  - O4M7KWVV
+  - DPESBXVV
+  - E94J94WV
+  - W594Q9WV
+  - 5IMJ5AWV
+  - JOXLOAWV
+  - FZ4JCFWV
+  - TIFODKWV
+  - 1CSSZPWV
+  - 4YDU1RWV
+  - SNPIYWWV
+  - FWOTQAXV
+  - IDHI9BXV
+  - Y1AWBFXV
+  - FXVEEPXV
+  - 5GU47VXV
+  - PTB7HWXV
+  - SSVAE7YV
+  - PE9DBAYV
+  - HIO9LGYV
+  - 5KAJYIYV
+  - RIYR7KYV
+  - W5NX8LYV
+  - S7COVVVV
+  - VCC39WVV
+  - LIWC3WVV
+  - W9W3EWVV
+  - 7571IWVV
+  - M8F2ZVVV
+  - 3324YVVV
+  - VWN3WVVV
+  - G6T3VVVV
+  - CZS41WVV
+  - 8F45WVVV
+  - 4L19XVVV
+  - R6MBZVVV
+  - L5DDXVVV
+  - IRSH1WVV
+  - BAPFWVVV
+  - 539I1WVV
+  - 8O8IXVVV
+  - 7SYIXVVV
+  - RYHJXVVV
+  - ZQMKWVVV
+  - C18N2WVV
+  - MBOMWVVV
+  - F8JOZVVV
+  - SH4OVVVV
+  - YB11YVVV
+  - MZ51VVVV
+  - B8J12WVV
+  - LHC1YVVV
+  - OZM12WVV
+  - KZZ1XVVV
+  - OXJ1WVVV
+  - YPB22WVV
+  - 9J11WVVV
+  - LB11YVVV
+  - 6G31VVVV
+  - 1641ZVVV
+  - W7711WVV
+  - RK21WVVV
+  - O211XVVV
+  - U711VVVV
+  - 13112WVV
+  - P811YVVV
+  - C9111WVV

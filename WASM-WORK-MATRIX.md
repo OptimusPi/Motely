@@ -2,6 +2,8 @@
 
 > **Open WASM queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §7  
 > Detail rows + Wave 1 proof paste stay below for tickets W17–W22.
+>
+> **Non-operative archive:** use these rows only as detail for a ticket already opened on HARDOFF; no work begins from this file.
 
 **Operator:** Nat
 **Auditor:** Claude — file-level audit, no build run, gaps listed in §Unverified

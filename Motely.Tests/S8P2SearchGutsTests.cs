@@ -387,6 +387,45 @@ public sealed class S8P2SearchGutsTests
         Assert.True(search.StoppedOnMatchLimit);
     }
 
+    [Fact]
+    public void SearchIntent_AppliesBoundedAestheticSearchThroughSettings()
+    {
+        var intent = new MotelySearchIntent(
+            Mode: MotelySearchInputMode.Aesthetic,
+            Aesthetic: JamlAesthetic.Palindrome,
+            ThreadCount: 1,
+            StopAfterMatches: 1
+        );
+
+        using var search = intent.ApplyTo(JamlSearchBuilder.CreateSettings(Permissive()))
+            .WithQuietMode(true)
+            .Start();
+        search.AwaitCompletion();
+
+        Assert.True(search.MatchingSeeds >= 1, "no palindrome seed matched a permissive filter");
+        Assert.True(search.StoppedOnMatchLimit);
+    }
+
+    [Fact]
+    public void SearchIntent_AppliesBoundedKeywordSearchThroughSettings()
+    {
+        var intent = new MotelySearchIntent(
+            Mode: MotelySearchInputMode.Keyword,
+            Keywords: ["ALEEB"],
+            PaddingAlphabet: "1",
+            ThreadCount: 1,
+            StopAfterMatches: 1
+        );
+
+        using var search = intent.ApplyTo(JamlSearchBuilder.CreateSettings(Permissive()))
+            .WithQuietMode(true)
+            .Start();
+        search.AwaitCompletion();
+
+        Assert.True(search.MatchingSeeds >= 1, "no keyword seed matched a permissive filter");
+        Assert.True(search.StoppedOnMatchLimit);
+    }
+
     // ── Auto score cutoff (disengaged path: every candidate reported, bar only rises) ──
 
     [Fact]

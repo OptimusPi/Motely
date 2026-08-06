@@ -689,10 +689,10 @@ partial class Program
 
                 if (collectLimit > 0 && collectSequentialOnly)
                 {
-                    settings = settings
-                        .WithSequentialSearch()
-                        .WithBatchCharacterCount(batchCharCount)
-                        .StopAfter(collectLimit);
+                    settings = new MotelySearchIntent(
+                        SequentialBatchCharacterCount: batchCharCount,
+                        StopAfterMatches: collectLimit
+                    ).ApplyTo(settings);
                     search = settings.Start(_cts.Token);
                     cancelled = await RunPass(search);
                 }
@@ -734,18 +734,12 @@ partial class Program
                             ? MotelyGlobals.ParsePaddingChars(paddingOption.ParsedValue)
                                 ?? JamlAesthetics.QuickPaddingChars
                             : JamlAesthetics.QuickPaddingChars;
-                        settings = settings
-                            .WithProviderSearch(
-                                new MotelySeedListProvider(
-                                    aesthetics.SelectMany(a =>
-                                        JamlAesthetics.EnumerateSeeds(a, collectPad)
-                                    ),
-                                    aesthetics.Sum(a =>
-                                        JamlAesthetics.GetSeedCount(a, collectPad)
-                                    )
-                                )
-                            )
-                            .StopAfter(collectLimit);
+                        settings = new MotelySearchIntent(
+                            Mode: MotelySearchInputMode.Aesthetic,
+                            Aesthetics: aesthetics,
+                            PaddingAlphabet: new string(collectPad),
+                            StopAfterMatches: collectLimit
+                        ).ApplyTo(settings);
 
                         var aestheticPass = settings.Start(_cts.Token);
                         cancelled = await RunPass(aestheticPass);
@@ -766,10 +760,10 @@ partial class Program
                                     );
                             }
 
-                            settings = settings
-                                .WithSequentialSearch()
-                                .WithBatchCharacterCount(batchCharCount)
-                                .StopAfter(remaining);
+                            settings = new MotelySearchIntent(
+                                SequentialBatchCharacterCount: batchCharCount,
+                                StopAfterMatches: remaining
+                            ).ApplyTo(settings);
                             aestheticPass = settings.Start(_cts.Token);
                             cancelled = await RunPass(aestheticPass);
                         }

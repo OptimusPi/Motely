@@ -2,6 +2,8 @@
 
 > **Open first:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
 > This file is history. Cage law lives in HARDOFF §0–3. Do not maintain a second queue here.
+>
+> **Non-operative archive:** no task may be opened or executed from the rules below. They are retained only as historical context; HARDOFF is the only work order.
 
 **Operator:** Nat (pifreak)  
 **Architect:** Grok — chat, matrix, review, git *plan*  

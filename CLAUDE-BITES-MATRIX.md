@@ -2,6 +2,8 @@
 
 > **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
 > U/E/H/X tables below are historical detail. New open work is filed on HARDOFF only.
+>
+> **Non-operative archive:** statuses and ticket IDs below are historical. Open and execute work only from HARDOFF.
 
 **Operator:** Nat  
 **Capture author:** Grok (2026-07-30) · healed 2026-08-01 · **2026-08-05 remash → HARDOFF**  

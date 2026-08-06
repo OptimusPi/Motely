@@ -2,6 +2,8 @@
 
 > **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §6  
 > Keep this file for G01–G36 site/line detail when opening a bite. Do not add new parallel IDs here.
+>
+> **Non-operative archive:** the rows below supply site detail only after HARDOFF opens the matching ticket; they are not an executable queue.
 
 **Operator:** Nat
 **Auditor:** Claude — 44 agents, adversarially verified, live repros on built assemblies

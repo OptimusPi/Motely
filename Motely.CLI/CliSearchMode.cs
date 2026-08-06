@@ -214,58 +214,47 @@ internal static class CliSearchMode
         }
         else if (explicitSeeds != null)
         {
-            updated = updated.WithSeedGenerator(explicitSeeds, explicitSeeds.Length);
+            updated = new MotelySearchIntent(
+                Mode: MotelySearchInputMode.SeedList,
+                Seeds: explicitSeeds
+            ).ApplyTo(updated);
         }
         else if (hasKeywordMode)
         {
-            char[]? paddingChars = !string.IsNullOrWhiteSpace(input.PaddingCharsOption)
-                ? input
-                    .PaddingCharsOption!.ToUpperInvariant()
-                    .Where(static c => MotelyGlobals.SeedDigits.Contains(c))
-                    .Distinct()
-                    .ToArray()
-                : null;
-            var prov = MotelyGlobals.GeneratePaddedSeedsForKeywords(
-                input.KeywordInputs,
-                paddingChars
-            );
-            long keywordSeedCount = MotelyGlobals.GetPaddedSeedCountForKeywordsLong(
-                input.KeywordInputs,
-                paddingChars
-            );
-            updated = updated.WithProviderSearch(
-                new MotelySeedListProvider(prov, keywordSeedCount)
-            );
+            updated = new MotelySearchIntent(
+                Mode: MotelySearchInputMode.Keyword,
+                Keywords: [.. input.KeywordInputs],
+                PaddingAlphabet: input.PaddingCharsOption
+            ).ApplyTo(updated);
         }
         else if (input.RandomCount.HasValue)
         {
-            updated = updated.WithRandomSearch(input.RandomCount.Value);
+            updated = new MotelySearchIntent(
+                Mode: MotelySearchInputMode.Random,
+                RandomSeedCount: input.RandomCount.Value
+            ).ApplyTo(updated);
         }
         else if (aestheticAll)
         {
             // --aesthetic all: concat every family (palindrome → … → nsfw). Same pad law as
             // single --aesthetic: full alphabet unless --padding. (Default --collect without
             // --aesthetic still uses digit pad + sequential fallback in Program.)
-            char[]? aestheticPad = !string.IsNullOrWhiteSpace(input.PaddingCharsOption)
-                ? MotelyGlobals.ParsePaddingChars(input.PaddingCharsOption)
-                : null;
-            var aesthetics = JamlAestheticParser.AllAesthetics();
-            updated = updated.WithProviderSearch(
-                new MotelySeedListProvider(
-                    aesthetics.SelectMany(a => JamlAesthetics.EnumerateSeeds(a, aestheticPad)),
-                    aesthetics.Sum(a => JamlAesthetics.GetSeedCount(a, aestheticPad))
-                )
-            );
+            updated = new MotelySearchIntent(
+                Mode: MotelySearchInputMode.Aesthetic,
+                Aesthetics: [.. JamlAestheticParser.AllAesthetics()],
+                PaddingAlphabet: input.PaddingCharsOption
+            ).ApplyTo(updated);
         }
         else if (explicitAesthetic.HasValue)
         {
             // --padding mixes with --aesthetic: free slots / keyword pads use that charset.
             // Default when omitted: full alphabet (explicit single-family hunt). Collect's
             // multi-family prepass defaults to digit pad separately in Program.
-            char[]? aestheticPad = !string.IsNullOrWhiteSpace(input.PaddingCharsOption)
-                ? MotelyGlobals.ParsePaddingChars(input.PaddingCharsOption)
-                : null;
-            updated = updated.WithAestheticSearch(explicitAesthetic.Value, aestheticPad);
+            updated = new MotelySearchIntent(
+                Mode: MotelySearchInputMode.Aesthetic,
+                Aesthetic: explicitAesthetic.Value,
+                PaddingAlphabet: input.PaddingCharsOption
+            ).ApplyTo(updated);
         }
         // The JAML seeds: replay and the sequential sweep are the *default* modes — they apply
         // only when the caller picked no explicit search input above. An explicit mode
@@ -281,8 +270,9 @@ internal static class CliSearchMode
         // already reads (it regex-extracts the seeds: block). Nothing is lost by not guessing.
         {
             int batchCharacterCount = input.BatchCharacterCount ?? DefaultBatchCharacterCount;
-            updated = updated.WithSequentialSearch();
-            updated = updated.WithBatchCharacterCount(batchCharacterCount);
+            updated = new MotelySearchIntent(
+                SequentialBatchCharacterCount: batchCharacterCount
+            ).ApplyTo(updated);
 
             bool hasSeedRange =
                 input.StartSeedSearchIndex.HasValue || input.StopSeedSearchIndex.HasValue;

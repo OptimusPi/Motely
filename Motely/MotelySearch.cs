@@ -147,6 +147,10 @@ public interface IMotelySearchSettings
     /// </summary>
     IMotelySearchSettings WithSeedList(string[] seeds);
     IMotelySearchSettings WithRandomSearch(int count);
+    IMotelySearchSettings WithKeywordSearch(
+        IReadOnlyList<string> keywords,
+        char[]? paddingAlphabet = null
+    );
     IMotelySearchSettings WithAestheticSearch(
         JamlAesthetic aesthetic,
         char[]? paddingAlphabet = null
@@ -318,6 +322,20 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return WithProviderSearch(new MotelyRandomSeedProvider(count));
     }
 
+    public MotelySearchSettings<TBaseFilter> WithKeywordSearch(
+        IReadOnlyList<string> keywords,
+        char[]? paddingAlphabet = null
+    )
+    {
+        var seedCount = MotelyGlobals.GetPaddedSeedCountForKeywordsLong(keywords, paddingAlphabet);
+        return WithProviderSearch(
+            new MotelySeedListProvider(
+                MotelyGlobals.GeneratePaddedSeedsForKeywords(keywords, paddingAlphabet),
+                seedCount
+            )
+        );
+    }
+
     public MotelySearchSettings<TBaseFilter> WithAestheticSearch(
         JamlAesthetic aesthetic,
         char[]? paddingAlphabet = null
@@ -412,6 +430,11 @@ public sealed class MotelySearchSettings<TBaseFilter>(
 
     IMotelySearchSettings IMotelySearchSettings.WithRandomSearch(int count) =>
         WithRandomSearch(count);
+
+    IMotelySearchSettings IMotelySearchSettings.WithKeywordSearch(
+        IReadOnlyList<string> keywords,
+        char[]? paddingAlphabet
+    ) => WithKeywordSearch(keywords, paddingAlphabet);
 
     IMotelySearchSettings IMotelySearchSettings.WithAestheticSearch(
         JamlAesthetic aesthetic,
