@@ -2,7 +2,12 @@ using System.Text.Json.Serialization;
 
 namespace Motely.DistributedWorker;
 
-/// <summary>AOT-safe JSON context for all DTOs used by the coordination API.</summary>
+/// <summary>AOT-safe JSON context for all DTOs used by the coordination API (pool + party).</summary>
+/// <remarks>
+/// All [JsonSerializable] attributes must live on this single partial declaration.
+/// Splitting them across files makes JsonSourceGenerator emit duplicate hintNames
+/// (e.g. WorkerJsonContext.Boolean.g.cs) and fail with CS8785.
+/// </remarks>
 [JsonSerializable(typeof(SubmitResultsDto))]
 [JsonSerializable(typeof(SubmitResponseDto))]
 [JsonSerializable(typeof(SeedResultDto))]
@@ -10,6 +15,9 @@ namespace Motely.DistributedWorker;
 [JsonSerializable(typeof(PoolClaimRequestDto))]
 [JsonSerializable(typeof(PoolClaimResponseDto))]
 [JsonSerializable(typeof(ErrorDto))]
+[JsonSerializable(typeof(PartyLeaseEnvelopeDto))]
+[JsonSerializable(typeof(PartyReportRequestDto))]
+[JsonSerializable(typeof(PartyReportResponseDto))]
 public partial class WorkerJsonContext : JsonSerializerContext { }
 
 public sealed class SubmitResultsDto

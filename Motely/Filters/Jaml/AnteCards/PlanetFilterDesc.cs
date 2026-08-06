@@ -200,6 +200,14 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
                         if (isCelestial.IsAllFalse())
                             continue;
 
+                        if (sources.RequireMegaPack)
+                        {
+                            countLanes &= VectorEnum256.Equals(
+                                pack.GetPackSize(),
+                                MotelyBoosterPackSize.Mega
+                            );
+                        }
+
                         VectorMask isNormal = VectorEnum256.Equals(
                             pack.GetPackSize(),
                             MotelyBoosterPackSize.Normal
@@ -264,8 +272,13 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
 /// </summary>
 public sealed record PlanetSourceConfig
 {
-    public static readonly string[] SourceKeys = ["shopItems", "boosterPacks"];
+    /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
+    public static readonly string[] SourceKeys =
+        ["shopItems", "boosterPacks", "requireMega", "requireMegaPack"];
 
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
+
+    /// <summary>When true, only Mega-sized Celestial packs count (Normal/Jumbo still advance the stream).</summary>
+    public bool RequireMegaPack { get; set; }
 }

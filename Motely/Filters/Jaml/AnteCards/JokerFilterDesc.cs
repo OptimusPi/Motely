@@ -130,7 +130,8 @@ public struct JokerFilterDesc(JokerClause clause)
             [.. shopIndices],
             [.. boosterIndices],
             maxShopItem,
-            maxBoosterPack
+            maxBoosterPack,
+            sources.RequireMegaPack
         );
     }
 
@@ -140,7 +141,8 @@ public struct JokerFilterDesc(JokerClause clause)
         int[] shopIndices,
         int[] boosterIndices,
         int maxShopItem,
-        int maxBoosterPack
+        int maxBoosterPack,
+        bool requireMegaPack
     ) : IMotelySeedFilter
     {
         private readonly JokerClause _clause = clause;
@@ -149,6 +151,7 @@ public struct JokerFilterDesc(JokerClause clause)
         private readonly int[] _boosterIndices = boosterIndices;
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
+        private readonly bool _requireMegaPack = requireMegaPack;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
@@ -258,6 +261,14 @@ public struct JokerFilterDesc(JokerClause clause)
                         );
                         if (isBuffoon.IsAllFalse())
                             continue;
+
+                        if (_requireMegaPack)
+                        {
+                            countLanes &= VectorEnum256.Equals(
+                                pack.GetPackSize(),
+                                MotelyBoosterPackSize.Mega
+                            );
+                        }
 
                         VectorMask isNormal = VectorEnum256.Equals(
                             pack.GetPackSize(),
@@ -417,15 +428,20 @@ public sealed record JokerSourceConfig
     /// ValidateKeys and Motely.Schema both read. <c>emperor</c> lives on
     /// <see cref="TarotCardSourceConfig"/>, not here.
     /// </summary>
+    /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
     public static readonly string[] SourceKeys =
     [
         "shopItems", "boosterPacks", "judgement", "wraith", "riffRaff", "rareTag", "uncommonTag",
         "commonShopJokers", "uncommonShopJokers", "rareShopJokers", "allShopJokers",
+        "requireMega", "requireMegaPack",
     ];
 
     /// <summary>Assembled shop slots via the full shop item stream (any item type).</summary>
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
+
+    /// <summary>When true, only Mega-sized Buffoon packs count (Normal/Jumbo still advance the stream).</summary>
+    public bool RequireMegaPack { get; set; }
 
     /// <summary>Ante-1 pack-slot cap. Default 3 (normal gameplay). Raise to 5 for Hieroglyph scans.</summary>
     public int[] Judgement { get; set; } = [];

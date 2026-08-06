@@ -237,6 +237,14 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                         if (isArcana.IsAllFalse())
                             continue;
 
+                        if (sources.RequireMegaPack)
+                        {
+                            countLanes &= VectorEnum256.Equals(
+                                pack.GetPackSize(),
+                                MotelyBoosterPackSize.Mega
+                            );
+                        }
+
                         VectorMask isNormal = VectorEnum256.Equals(
                             pack.GetPackSize(),
                             MotelyBoosterPackSize.Normal
@@ -383,8 +391,17 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
 /// </summary>
 public sealed record TarotCardSourceConfig
 {
+    /// <summary>requireMega/requireMegaPack: both real aliases for RequireMegaPack below.</summary>
     public static readonly string[] SourceKeys =
-        ["shopItems", "boosterPacks", "emperor", "purpleSealOrEightBall", "charmTag"];
+    [
+        "shopItems",
+        "boosterPacks",
+        "emperor",
+        "purpleSealOrEightBall",
+        "charmTag",
+        "requireMega",
+        "requireMegaPack",
+    ];
 
     public int[] ShopItems { get; set; } = [];
     public int[] BoosterPacks { get; set; } = [];
@@ -395,4 +412,7 @@ public sealed record TarotCardSourceConfig
     /// When true, booster arcana scoring may consume the Charm-tag bonus pack (second weighted slot, no natural Arcana).
     /// </summary>
     public bool CharmTag { get; set; }
+
+    /// <summary>When true, only Mega-sized Arcana packs count (Normal/Jumbo still advance the stream).</summary>
+    public bool RequireMegaPack { get; set; }
 }

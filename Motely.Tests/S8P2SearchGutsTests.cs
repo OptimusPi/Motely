@@ -103,6 +103,43 @@ public sealed class S8P2SearchGutsTests
         search.AwaitCompletion();
     }
 
+    /// <summary>
+    /// G01 host contract: sequential/provider Start is non-blocking (worker threads).
+    /// TUI polls IsCompleted; calling complete/dispose immediately after Start is wrong.
+    /// Note: MotelySeedListProvider runs inline on the caller (Jamlyzer/browser); sequential does not.
+    /// Gate blocks workers so IsCompleted stays false until the host allows finish.
+    /// </summary>
+    [Fact]
+    public void Start_IsNonBlocking_IsCompletedFalseUntilWorkersFinish()
+    {
+        using var gate = new ManualResetEventSlim(false);
+        using var search = JamlSearchBuilder
+            .CreateSettings(Permissive())
+            .WithSequentialSearch()
+            .WithBatchCharacterCount(2)
+            .WithStartBatchIndex(0)
+            .WithEndBatchIndex(1)
+            .WithThreadCount(1)
+            .WithQuietMode(true)
+            .WithJimmolate(_ =>
+            {
+                gate.Wait();
+                return 1;
+            })
+            .Start();
+
+        Assert.False(
+            search.IsCompleted,
+            "Start must return before workers finish — hosts poll or await completion"
+        );
+
+        gate.Set();
+        search.AwaitCompletion();
+        Assert.True(search.IsCompleted);
+        Assert.Equal(35L * 35, search.TotalSeedsSearched); // one batch of length-2
+        Assert.Equal(search.TotalSeedsSearched, search.MatchingSeeds);
+    }
+
     // ── Sequential slice: progress, counters, async completion ─────────────
 
     [Fact]
