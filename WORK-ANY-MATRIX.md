@@ -2,6 +2,8 @@
 
 > **Open queue + law summary:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §5  
 > This file keeps the full empty-list writeup and examples.
+>
+> **Non-operative archive:** this records shipped law and historical proof. HARDOFF is the only work queue.
 
 **Operator:** Nat  
 **Author:** Grok (healed 2026-07-31) · folded into bites · **2026-08-05 remash → HARDOFF**  

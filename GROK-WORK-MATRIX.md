@@ -2,6 +2,8 @@
 
 > **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §6  
 > Keep this file for G01–G36 site/line detail when opening a bite. Do not add new parallel IDs here.
+>
+> **Non-operative archive:** the rows below supply site detail only after HARDOFF opens the matching ticket; they are not an executable queue.
 
 **Operator:** Nat
 **Auditor:** Claude — 44 agents, adversarially verified, live repros on built assemblies
@@ -15,7 +17,7 @@
 
 | ID | Site | Defect | Fix | Proof |
 |----|------|--------|-----|-------|
-| G01 | Motely.TUI/SearchWindow.cs:400 | `OnSearchComplete()` called right after non-blocking `Start()`; disposes running search, paints green "Completed" at ~1% | Delete the unconditional call; let the existing AddTimeout poll (line 391 already checks `IsCompleted`) drive completion, or await `WaitForCompletionAsync` then `Application.Invoke`. Surface Dispose failures — no `catch { }` | Long sequential search in TUI reaches full `TotalSeedsSearched`; test pins Start-is-nonblocking assumption |
+| G01 | Motely.TUI/SearchWindow.cs:400 | `OnSearchComplete()` called right after non-blocking `Start()`; disposes running search, paints green "Completed" at ~1% | Delete the unconditional call; let the existing AddTimeout poll (line 391 already checks `IsCompleted`) drive completion, or await `WaitForCompletionAsync` then `Application.Invoke`. Surface Dispose failures — no `catch { }` | Long sequential search in TUI reaches full `TotalSeedsSearched`; test pins Start-is-nonblocking assumption | **done (Grok)** — unconditional complete deleted; dispose errors surfaced; `Start_IsNonBlocking_IsCompletedFalseUntilWorkersFinish` |
 | G02 | Motely.DistributedWorker/Program.cs:151 | Seed-match callback parsed as CSV; engine sends bare seed → pool receives Score=0 for every scored filter | Delete CSV parse; mirror PoolWorkerHostedService.cs:94-99 — branch on `plan.ScoreTallyColumnCount`, hook `WithScoredResultCallback` | Test: scored JAML block submits nonzero scores |
 | G03 | Motely.DistributedWorker/Program.cs:205 | "SAVE TO LOCAL DUCKLAKE" section is empty; failure message claims results saved locally — seeds dropped | Wire SeedLakeSink (as CLI does, Motely.CLI/Program.cs:594-599) before submit, or delete `--local-db` and make the message say results were lost | Kill pool mid-run: seeds present in local lake |
 | G04 | Motely/Filters/Jaml/JamlConfigLoader.cs:335 | Second discriminator key in one clause validates then silently vanishes (`joker:` + `voucher:` → voucher dropped) | ValidateClauseKeys allows only the chosen discriminator's aliases; or FindDiscriminator throws positioned JamlSemanticException on a second one | Test: two-discriminator clause throws with span |

@@ -372,6 +372,9 @@ public class SearchWindow : Window
             var search = settings.Start(_cts.Token);
             _search = search;
 
+            // Start is non-blocking: workers run on engine threads. Completion is driven only by
+            // this poll (or cancel). Do not call OnSearchComplete here — that disposed the search
+            // at ~1% and painted green "Completed" while work was still running (G01).
             Application.AddTimeout(
                 TimeSpan.FromMilliseconds(1000),
                 () =>
@@ -396,8 +399,6 @@ public class SearchWindow : Window
                     return true;
                 }
             );
-
-            OnSearchComplete();
         }
         catch (OperationCanceledException)
         {
@@ -495,19 +496,42 @@ public class SearchWindow : Window
         _spinner.Visible = false;
         _stopBtn.Visible = false;
 
-        if (_search != null)
+        if (_search is null)
+            return;
+
+        // Snapshot before Dispose — counters stay valid post-dispose today, but hosts must not
+        // depend on that. Surface dispose failures (no empty catch).
+        var searched = _search.TotalSeedsSearched;
+        var matches = _search.MatchingSeeds;
+        var elapsed = TimeSpan.FromMilliseconds(_search.ElapsedMs);
+        _progressLabel.Text =
+            $"Done: {searched:N0} seeds | {matches} matches | {elapsed:hh\\:mm\\:ss}";
+
+        try
         {
+            _search.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _statusLabel.Text = "Completed (dispose error)";
+            _statusLabel.ColorScheme = new ColorScheme
+            {
+                Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+            };
+            _progressLabel.Text = $"{_progressLabel.Text} | dispose: {ex.Message}";
             try
             {
-                _search.Dispose();
+                File.WriteAllText(
+                    Motely.Program.CrashLogPath,
+                    $"{DateTime.UtcNow:O} [SearchWindow.OnSearchComplete.Dispose]\n{ex}"
+                );
             }
-            catch { }
-
-            var searched = _search.TotalSeedsSearched;
-            var matches = _search.MatchingSeeds;
-            var elapsed = TimeSpan.FromMilliseconds(_search.ElapsedMs);
-            _progressLabel.Text =
-                $"Done: {searched:N0} seeds | {matches} matches | {elapsed:hh\\:mm\\:ss}";
+            catch (Exception logEx)
+            {
+                Console.Error.WriteLine(
+                    $"Search dispose failed and crash log write failed: {ex}; log: {logEx}"
+                );
+            }
         }
     }
 

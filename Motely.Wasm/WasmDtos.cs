@@ -24,7 +24,7 @@ public sealed record ParseResult(
 /// <summary>One scored seed: its score and the per-should-clause tally behind it.</summary>
 public sealed record ScoredSeed(string Seed, int Score, int[] Tally);
 
-/// <summary>A completed list-mode run: counters, elapsed time, and the ranked survivors.</summary>
+/// <summary>A completed search run: counters, elapsed time, and the ranked survivors.</summary>
 public sealed record ScoreRun(
     bool Ok,
     string? Error,

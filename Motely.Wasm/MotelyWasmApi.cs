@@ -128,4 +128,66 @@ public static partial class MotelyWasmApi
             ElapsedMs: search.ElapsedMs,
             Results: [.. scored.OrderByDescending(s => s.Score)]);
     }
+
+    /// <summary>
+    /// Find matching seeds from an engine-owned search intent. Sequential and aesthetic searches
+    /// require a match limit so a browser call cannot accidentally sweep the entire seed space.
+    /// </summary>
+    [Export]
+    public static async Task<ScoreRun> FindSeeds(string jaml, MotelySearchIntent intent)
+    {
+        if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+            return new ScoreRun(false, error, 0, 0, 0, 0, []);
+
+        if (
+            intent.Mode is MotelySearchInputMode.Sequential or MotelySearchInputMode.Aesthetic
+            && (!intent.StopAfterMatches.HasValue || intent.StopAfterMatches.Value < 1)
+        )
+        {
+            return new ScoreRun(
+                false,
+                "Sequential and aesthetic searches require StopAfterMatches >= 1.",
+                0,
+                0,
+                0,
+                0,
+                []
+            );
+        }
+
+        List<ScoredSeed> results = [];
+        object resultsLock = new();
+        var settings = intent
+            .ApplyTo(JamlSearchBuilder.CreateSettings(config))
+            .WithQuietMode(true)
+            .WithSeedMatchCallback(seed =>
+            {
+                lock (resultsLock)
+                    results.Add(new ScoredSeed(seed, 0, []));
+            })
+            .WithScoredResultCallback(tally =>
+            {
+                lock (resultsLock)
+                    results.Add(
+                        new ScoredSeed(
+                            tally.Seed,
+                            tally.Score,
+                            [.. tally.Tally.Select(value => (int)value)]
+                        )
+                    );
+            });
+
+        using var search = settings.CreateSearch();
+        await search.Start().WaitForCompletionAsync();
+
+        return new ScoreRun(
+            Ok: true,
+            Error: null,
+            TotalSeeds: search.TotalSeedsSearched,
+            MatchingSeeds: search.MatchingSeeds,
+            FilteredSeeds: search.FilteredSeeds,
+            ElapsedMs: search.ElapsedMs,
+            Results: [.. results.OrderByDescending(result => result.Score)]
+        );
+    }
 }

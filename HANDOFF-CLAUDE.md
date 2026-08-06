@@ -2,6 +2,8 @@
 
 > **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
 > S8 is **closed**. A4/search-shape lives as **H-A4** on HARDOFF. Keep this file for coverage rails history and A4 proof sketch.
+>
+> **Non-operative archive:** historical backlogs and status labels below cannot open work. HARDOFF owns all current tickets.
 
 **Operator:** Nat  
 **Executor:** Claude Code — historical S8 backlog.  
