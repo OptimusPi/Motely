@@ -74,6 +74,7 @@ public static class JamlScoring
             // Full vector roll walks — same law as scoring counts.
             VoucherClause => true,
             TagClause => true,
+            BoosterPackClause => true,
             ErraticRankClause => true,
             ErraticSuitClause => true,
             SpectralCardClause sc => SpecialSpectralCardFilterDesc.Handles(sc)
@@ -212,6 +213,7 @@ public static class JamlScoring
             PlanetCardClause c => CountPlanetCardOccurrences(ref ctx, c, runState),
             BossClause c => CountBossOccurrences(c, runState),
             TagClause c => CountTagOccurrences(ref ctx, c, runState),
+            BoosterPackClause c => CountBoosterPackOccurrences(ref ctx, c, runState),
             StandardCardClause c => CountStandardCardOccurrences(ref ctx, c, runState),
             ErraticRankClause c => CountErraticRankOccurrences(ref ctx, c),
             ErraticSuitClause c => CountErraticSuitOccurrences(ref ctx, c),
@@ -1053,6 +1055,46 @@ public static class JamlScoring
                     if (rolled == clause.Tags[i])
                     {
                         count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Shop pack offers (kind+size enum). Rolls = pack slot indices. Empty Packs = any pack.
+    /// </summary>
+    private static int CountBoosterPackOccurrences(
+        ref MotelySingleSearchContext ctx,
+        BoosterPackClause clause,
+        MotelyRunState runState
+    )
+    {
+        int count = 0;
+        int userMaxPack = MapFeatureRolls.MaxRollIndex(clause.Rolls);
+        bool anyPack = JamlDisc.IsCategoryAny(clause.Packs);
+
+        foreach (int ante in clause.Antes)
+        {
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, runState);
+            var packStream = ctx.CreateBoosterPackStream(ante);
+            for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                if (!ArrayContains(clause.Rolls, packIndex))
+                    continue;
+                if (anyPack)
+                {
+                    count++;
+                    continue;
+                }
+                for (int i = 0; i < clause.Packs.Length; i++)
+                {
+                    if (pack == clause.Packs[i])
+                    {
+                        count++;
+                        break;
                     }
                 }
             }
@@ -2249,6 +2291,7 @@ public static class JamlScoring
             PlanetCardClause c => ArrayMax(c.Antes),
             BossClause c => ArrayMax(c.Antes),
             TagClause c => ArrayMax(c.Antes),
+            BoosterPackClause c => ArrayMax(c.Antes),
             StandardCardClause c => ArrayMax(c.Antes),
             ErraticRankClause c => ArrayMax(c.Antes),
             ErraticSuitClause c => ArrayMax(c.Antes),

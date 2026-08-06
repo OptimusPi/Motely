@@ -167,6 +167,13 @@ public static partial class JamlConfigLoader
             StandardCardClause c => WriteStandardCard(c),
             BossClause c => WriteItems("boss", c.Bosses, c),
             TagClause c => WriteItems("tag", c.Tags, c, rolls: c.Rolls, rollsDefault: [0, 1]),
+            BoosterPackClause c => WriteItems(
+                "boosterPack",
+                c.Packs,
+                c,
+                rolls: c.Rolls,
+                rollsDefault: [0, 1]
+            ),
             ErraticRankClause c => WriteErraticRank(c),
             ErraticSuitClause c => WriteErraticSuit(c),
             StartingDrawClause c => WriteStartingDraw(c),
