@@ -2,6 +2,8 @@
 
 > **Open WASM work:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §7  
 > Wave 1 later ported schema export to Bootsharp; host/smoke still open. This essay is the original charge sheet.
+>
+> **Non-operative archive:** this is an evidence record, not a task list. HARDOFF is the only current WASM work order.
 
 **Date:** 2026-08-03
 **Scope:** `Motely.Wasm/` — audit only at write time.
