@@ -2,38 +2,49 @@ name: Kimi's Lucky 88
 author: grok + pi
 description: >
   MotelyJam gift for Comrade Kimi — 8 is lucky. Showman opens the stage in
-  ante 1; Erratic deck packed with Eights; 8 Ball is the lovely gift (score
-  loud on antes 1–8). WHSIMD energy. Keyword hunt: KIMI.
+  ante 1; Erratic deck packed with Eights; 8 Ball is the lovely gift.
+  Score ladder goes brrr: Perkeo 8000 · Foil Showman 800 · 80 · 8 heh.
+  Keyword hunt: KIMI.
 deck: Erratic
 stake: White
 
 must:
-  # the show, ante 1 ;)
   - uncommonJoker: Showman
     antes: [1]
 
-  # the gift — 8 Ball joker
   - joker: EightBall
 
-  # lucky eights in the erratic deck
   - erraticRank: Eight
     min: 8
 
 should:
-  # 100 for 8 Ball anywhere in the 1–8 arc — Kimi will think it's soo lovely
-  - joker: EightBall
-    antes: [1, 2, 3, 4, 5, 6, 7, 8]
-    score: 100
+  # PERKE 8000 :)
+  - legendaryJoker: Perkeo
+    score: 8000
     max: 1
 
-  # extra eight-vibes (soft)
-  - erraticRank: Eight
-    score: 8
+  # showman edition foil 800
+  - uncommonJoker: Showman
+    edition: Foil
+    score: 800
+    max: 1
+
+  # 80 heh
+  - joker: EightBall
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 80
+    max: 1
 
   - uncommonJoker: Showman
     antes: [1]
-    score: 8
+    score: 80
     max: 1
+
+  # 8 heh
+  - erraticRank: Eight
+    score: 8
 
 seeds:
   - 111WKIMI
+  - 118WKIMI
+  - 11TKIMI5
