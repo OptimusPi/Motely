@@ -1,12 +1,13 @@
-# CLAUDE BITES MATRIX — MotelyJAML + jaml-ui
+# CLAUDE BITES MATRIX — ARCHIVE
+
+> **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
+> U/E/H/X tables below are historical detail. New open work is filed on HARDOFF only.
 
 **Operator:** Nat  
-**Capture author:** Grok (2026-07-30) · **healed 2026-08-01:** Grok work folded in; dead `Any`/`IsWildcard` tickets closed  
+**Capture author:** Grok (2026-07-30) · healed 2026-08-01 · **2026-08-05 remash → HARDOFF**  
 **Executor:** Claude Code **Haiku or Sonnet** — **one ticket per turn**  
 **Law:** table or real diff. No poetry. No honey-soup. No re-research of shipped law.  
-**Engine law:** empty `joker: []` / props-only (standardCard shape). **No `Any` token. No `IsWildcard`.**  
-**Source of truth for empty-list product law:** `WORK-ANY-MATRIX.md` (shipped)  
-**Related:** `HANDOFF-CLAUDE.md` (A2/A3/A4 + S8 closed) · `GROK-WORK-MATRIX.md` (G01+ eviction — Grok) · this file = **Claude/UI/H open bite queue**
+**Engine law:** empty `joker: []` / props-only (standardCard shape). **No `Any` token. No `IsWildcard`.**
 
 ---
 

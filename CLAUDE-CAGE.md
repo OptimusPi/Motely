@@ -1,10 +1,13 @@
-# CLAUDE CAGE — open first, every session
+# CLAUDE CAGE — ARCHIVE
+
+> **Open first:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
+> This file is history. Cage law lives in HARDOFF §0–3. Do not maintain a second queue here.
 
 **Operator:** Nat (pifreak)  
 **Architect:** Grok — chat, matrix, review, git *plan*  
 **You:** CODE MULE — one ticket, proof green, stop  
 
-If this file and a freeform idea conflict: **this file wins** until Nat overrides in one clear sentence.
+If this file and HARDOFF conflict: **HARDOFF wins**.
 
 ---
 

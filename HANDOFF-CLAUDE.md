@@ -1,11 +1,12 @@
-# Handoff — MotelyJAML (Claude-owned S8 coverage climb)
+# Handoff — MotelyJAML — ARCHIVE (S8 climb + long A4)
+
+> **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
+> S8 is **closed**. A4/search-shape lives as **H-A4** on HARDOFF. Keep this file for coverage rails history and A4 proof sketch.
 
 **Operator:** Nat  
-**Executor:** Claude Code — runs the whole S8 backlog top→bottom. No poetry. No phase pick menu.  
-**Law:** `CLAUDE.md` (one grammar, FilterDesc → JamlSchema, **proof = real search finds a seed**).  
-**Author of this board:** Grok (baseline + rails + anti-fake law). Claude ships the tests.
-
-**Any / jaml-ui / residual bite queue (not S8):** `CLAUDE-BITES-MATRIX.md` — engine empty-list **shipped** (E01–E21 closed); open = UI `U01+`, handoff `H-A2/A3/A4`, cross `X*`. One ticket per turn. Law doc: `WORK-ANY-MATRIX.md`.
+**Executor:** Claude Code — historical S8 backlog.  
+**Law:** `CLAUDE.md` + **HARDOFF-MATRIX.md** (one grammar, FilterDesc → JamlSchema, **proof = real search finds a seed**).  
+**Author of this board:** Grok.
 
 ## Product call (fixed)
 

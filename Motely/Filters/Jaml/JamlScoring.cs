@@ -74,14 +74,22 @@ public static class JamlScoring
             // Full vector roll walks — same law as scoring counts.
             VoucherClause => true,
             TagClause => true,
+            BoosterPackClause => true,
             ErraticRankClause => true,
             ErraticSuitClause => true,
             SpectralCardClause sc => SpecialSpectralCardFilterDesc.Handles(sc)
                 || sc.Sources is { RequireMegaPack: true }
                 || sc.Sources is { EtherealTag: true }
                 || sc.Sources is { OmenGlobe: true },
-            TarotCardClause tc => tc.Sources is { CharmTag: true },
-            JokerClause jc => JokerUsesLegendaryExactPath(jc),
+            TarotCardClause tc => tc.Sources is { CharmTag: true }
+                || tc.Sources is { RequireMegaPack: true },
+            PlanetCardClause pc => pc.Sources is { RequireMegaPack: true },
+            // StandardCardClause is already exact (true above).
+            JokerClause jc => JokerUsesLegendaryExactPath(jc)
+                || jc.Sources is { RequireMegaPack: true },
+            CommonJokerClause cjc => cjc.Sources is { RequireMegaPack: true },
+            UncommonJokerClause ujc => ujc.Sources is { RequireMegaPack: true },
+            RareJokerClause rjc => rjc.Sources is { RequireMegaPack: true },
             AndClause a => AllExactFilterConfirm(a.Clauses),
             OrClause o => AllExactFilterConfirm(o.Clauses),
             // Roll-scoped event filters are full vector counts (no coarse pack walk).
@@ -205,6 +213,7 @@ public static class JamlScoring
             PlanetCardClause c => CountPlanetCardOccurrences(ref ctx, c, runState),
             BossClause c => CountBossOccurrences(c, runState),
             TagClause c => CountTagOccurrences(ref ctx, c, runState),
+            BoosterPackClause c => CountBoosterPackOccurrences(ref ctx, c, runState),
             StandardCardClause c => CountStandardCardOccurrences(ref ctx, c, runState),
             ErraticRankClause c => CountErraticRankOccurrences(ref ctx, c),
             ErraticSuitClause c => CountErraticSuitOccurrences(ref ctx, c),
@@ -465,11 +474,15 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Standard)
                         continue;
+                    var packSize = pack.GetPackSize();
                     var contents = ctx.GetNextStandardPackContents(
                         ref cardStream,
-                        pack.GetPackSize()
+                        packSize
                     );
-                    if (!ArrayContains(sources.BoosterPacks, packIndex))
+                    if (
+                        !ArrayContains(sources.BoosterPacks, packIndex)
+                        || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                    )
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                         count += MatchStandardCard(contents[i], clause);
@@ -534,11 +547,17 @@ public static class JamlScoring
                     if (packType == MotelyBoosterPackType.Arcana)
                     {
                         hadNaturalArcanaPack = true;
+                        // Charm Tag opens Mega Arcana (5 cards). Shop Arcana uses rolled size.
+                        // requireMega only gates whether the open counts, not stream advance.
+                        var packSize = pack.GetPackSize();
                         var contents = ctx.GetNextArcanaPackContents(
                             ref tarotStream,
-                            pack.GetPackSize()
+                            packSize
                         );
-                        if (!ArrayContains(sources.BoosterPacks, packIndex))
+                        if (
+                            !ArrayContains(sources.BoosterPacks, packIndex)
+                            || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                        )
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchTarot(contents[i], clause);
@@ -547,13 +566,18 @@ public static class JamlScoring
 
                     // Charm: extra Arcana on the second real shop pack (after Buffoon) only if the two
                     // weighted rolls had no Arcana — uses pack stream order, not ante-scaled indices.
+                    // Game law: Charm is always Mega Arcana (size 5 / pick 2).
                     if (charmWant && !hadNaturalArcanaPack && weightedShopDrawNumber == 2)
                     {
+                        var packSize = MotelyBoosterPackSize.Mega;
                         var contents = ctx.GetNextArcanaPackContents(
                             ref tarotStream,
-                            pack.GetPackSize()
+                            packSize
                         );
-                        if (!ArrayContains(sources.BoosterPacks, packIndex))
+                        if (
+                            !ArrayContains(sources.BoosterPacks, packIndex)
+                            || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                        )
                             continue;
                         for (int i = 0; i < contents.Length; i++)
                             count += MatchTarot(contents[i], clause);
@@ -942,11 +966,15 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Celestial)
                         continue;
+                    var packSize = pack.GetPackSize();
                     var contents = ctx.GetNextCelestialPackContents(
                         ref planetStream,
-                        pack.GetPackSize()
+                        packSize
                     );
-                    if (!ArrayContains(sources.BoosterPacks, packIndex))
+                    if (
+                        !ArrayContains(sources.BoosterPacks, packIndex)
+                        || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                    )
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                         count += MatchPlanet(contents[i], clause);
@@ -1027,6 +1055,46 @@ public static class JamlScoring
                     if (rolled == clause.Tags[i])
                     {
                         count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Shop pack offers (kind+size enum). Rolls = pack slot indices. Empty Packs = any pack.
+    /// </summary>
+    private static int CountBoosterPackOccurrences(
+        ref MotelySingleSearchContext ctx,
+        BoosterPackClause clause,
+        MotelyRunState runState
+    )
+    {
+        int count = 0;
+        int userMaxPack = MapFeatureRolls.MaxRollIndex(clause.Rolls);
+        bool anyPack = JamlDisc.IsCategoryAny(clause.Packs);
+
+        foreach (int ante in clause.Antes)
+        {
+            int maxPack = ClampBoosterPackSlotForAnte(ante, userMaxPack, runState);
+            var packStream = ctx.CreateBoosterPackStream(ante);
+            for (int packIndex = 0; packIndex <= maxPack; packIndex++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                if (!ArrayContains(clause.Rolls, packIndex))
+                    continue;
+                if (anyPack)
+                {
+                    count++;
+                    continue;
+                }
+                for (int i = 0; i < clause.Packs.Length; i++)
+                {
+                    if (pack == clause.Packs[i])
+                    {
+                        count++;
+                        break;
                     }
                 }
             }
@@ -1714,11 +1782,15 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Buffoon)
                         continue;
+                    var packSize = pack.GetPackSize();
                     var contents = ctx.GetNextBuffoonPackContents(
                         ref jokerStream,
-                        pack.GetPackSize()
+                        packSize
                     );
-                    if (!ArrayContains(boosterPacks, packIndex))
+                    if (
+                        !ArrayContains(boosterPacks, packIndex)
+                        || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                    )
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                     {
@@ -1906,11 +1978,15 @@ public static class JamlScoring
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() != MotelyBoosterPackType.Buffoon)
                         continue;
+                    var packSize = pack.GetPackSize();
                     var contents = ctx.GetNextBuffoonPackContents(
                         ref jokerStream,
-                        pack.GetPackSize()
+                        packSize
                     );
-                    if (!ArrayContains(boosterPacks, packIndex))
+                    if (
+                        !ArrayContains(boosterPacks, packIndex)
+                        || (sources.RequireMegaPack && packSize != MotelyBoosterPackSize.Mega)
+                    )
                         continue;
                     for (int i = 0; i < contents.Length; i++)
                     {
@@ -2215,6 +2291,7 @@ public static class JamlScoring
             PlanetCardClause c => ArrayMax(c.Antes),
             BossClause c => ArrayMax(c.Antes),
             TagClause c => ArrayMax(c.Antes),
+            BoosterPackClause c => ArrayMax(c.Antes),
             StandardCardClause c => ArrayMax(c.Antes),
             ErraticRankClause c => ArrayMax(c.Antes),
             ErraticSuitClause c => ArrayMax(c.Antes),

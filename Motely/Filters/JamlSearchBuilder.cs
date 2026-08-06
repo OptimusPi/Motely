@@ -129,6 +129,7 @@ public static class JamlSearchBuilder
             PlanetCardClause c => new PlanetCardFilterDesc(c),
             BossClause c => new BossFilterDesc(c),
             TagClause c => new TagFilterDesc(c),
+            BoosterPackClause c => new BoosterPackFilterDesc(c),
             StandardCardClause c => new StandardCardFilterDesc(c),
             ErraticRankClause c => new ErraticRankFilterDesc(c),
             ErraticSuitClause c => new ErraticSuitFilterDesc(c),

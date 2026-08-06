@@ -166,6 +166,10 @@ public static partial class JamlConfigLoader
             UncommonShopJokers = block.GetIntArray("uncommonShopJokers") ?? [],
             RareShopJokers = block.GetIntArray("rareShopJokers") ?? [],
             AllShopJokers = block.GetIntArray("allShopJokers") ?? [],
+            RequireMegaPack =
+                block.GetBool("requireMegaPack")
+                ?? block.GetBool("requireMega")
+                ?? false,
         };
     }
 
@@ -201,6 +205,10 @@ public static partial class JamlConfigLoader
             Emperor = block.GetIntArray("emperor") ?? [],
             PurpleSealOrEightBall = block.GetIntArray("purpleSealOrEightBall") ?? [],
             CharmTag = block.GetBool("charmTag") ?? false,
+            RequireMegaPack =
+                block.GetBool("requireMegaPack")
+                ?? block.GetBool("requireMega")
+                ?? false,
         };
     }
 
@@ -235,6 +243,10 @@ public static partial class JamlConfigLoader
         {
             ShopItems = block.GetIntArray("shopItems") ?? [],
             BoosterPacks = block.GetIntArray("boosterPacks") ?? [],
+            RequireMegaPack =
+                block.GetBool("requireMegaPack")
+                ?? block.GetBool("requireMega")
+                ?? false,
         };
     }
 
@@ -253,6 +265,10 @@ public static partial class JamlConfigLoader
             Familiar = block.GetIntArray("familiar") ?? [],
             Grim = block.GetIntArray("grim") ?? [],
             DeckDraw = block.GetIntArray("deckDraw") ?? [],
+            RequireMegaPack =
+                block.GetBool("requireMegaPack")
+                ?? block.GetBool("requireMega")
+                ?? false,
         };
     }
 

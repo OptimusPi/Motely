@@ -98,7 +98,8 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
             [.. shopIndices],
             [.. boosterIndices],
             maxShopItem,
-            maxBoosterPack
+            maxBoosterPack,
+            sources.RequireMegaPack
         );
     }
 
@@ -108,7 +109,8 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         int[] shopIndices,
         int[] boosterIndices,
         int maxShopItem,
-        int maxBoosterPack
+        int maxBoosterPack,
+        bool requireMegaPack
     ) : IMotelySeedFilter
     {
         private readonly CommonJokerClause _clause = clause;
@@ -117,6 +119,7 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         private readonly int[] _boosterIndices = boosterIndices;
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
+        private readonly bool _requireMegaPack = requireMegaPack;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
@@ -216,6 +219,14 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
                         );
                         if (isBuffoon.IsAllFalse())
                             continue;
+
+                        if (_requireMegaPack)
+                        {
+                            countLanes &= VectorEnum256.Equals(
+                                pack.GetPackSize(),
+                                MotelyBoosterPackSize.Mega
+                            );
+                        }
 
                         VectorMask isNormal = VectorEnum256.Equals(
                             pack.GetPackSize(),
