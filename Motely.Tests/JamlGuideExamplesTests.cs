@@ -9,8 +9,8 @@ namespace Motely.Tests;
 /// </summary>
 public sealed partial class JamlGuideExamplesTests
 {
-    [GeneratedRegex(@"```yaml\r?\n(.*?)```", RegexOptions.Singleline)]
-    private static partial Regex YamlBlock();
+    [GeneratedRegex(@"```jaml\r?\n(.*?)```", RegexOptions.Singleline)]
+    private static partial Regex JamlBlock();
 
     private static string GuidePath()
     {
@@ -22,10 +22,10 @@ public sealed partial class JamlGuideExamplesTests
     }
 
     [Fact]
-    public void EveryYamlBlockInTheGuideLoads()
+    public void EveryJamlBlockInTheGuideLoads()
     {
         var text = File.ReadAllText(GuidePath());
-        var blocks = YamlBlock().Matches(text).Select(m => m.Groups[1].Value).ToArray();
+        var blocks = JamlBlock().Matches(text).Select(m => m.Groups[1].Value).ToArray();
 
         Assert.True(blocks.Length >= 10, $"guide has only {blocks.Length} examples — did it move?");
 

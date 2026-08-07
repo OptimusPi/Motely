@@ -31,7 +31,7 @@
 
 ## Wire examples
 
-```yaml
+```jaml
 # any joker, shop default, antes 1–8 after builder fill
 must:
   - joker: []

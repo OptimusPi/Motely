@@ -9,7 +9,7 @@ This page is for people. Every example here loads.
 
 ## The shortest filter that works
 
-```yaml
+```jaml
 must:
   - Perkeo
 ```
@@ -43,7 +43,7 @@ find the same seeds.
 There is **no** wire word `Any`. Empty discriminator list (or empty props for playing cards)
 means “this category, with optional filters.”
 
-```yaml
+```jaml
 must:
   - joker: []                 # any joker (shop 0–7 by default)
     edition: Negative         # …but only Negative
@@ -78,14 +78,14 @@ nothing. Everything else defaults to the shop and **will not open packs for you*
 pack contents counted, author `sources:` explicitly.
 
 Omitting `antes:` is separate and uniform — an empty ante list is filled with `1..8` by the search
-builder, not by the loader, so a clause loaded straight from YAML still reports `Antes` empty.
+builder, not by the loader, so a clause loaded straight from JAML still reports `Antes` empty.
 
 The line form reads like the game reads: **stickers, then edition, then the thing.** Same order
 the card shows it to you.
 
 A line can also carry keys underneath it, when the one-liner has no spelling for what you want:
 
-```yaml
+```jaml
 must:
   - Negative Perkeo
     ante: 1
@@ -95,7 +95,7 @@ must:
 
 ## The three lists
 
-```yaml
+```jaml
 must:      # every clause here has to hit, or the seed is rejected
 should:    # each hit adds score; used for ranking, never rejection
 mustNot:   # if this hits, the seed is rejected
@@ -109,7 +109,7 @@ A `should` clause without a `score:` is worth 1.
 
 By default a clause looks everywhere reasonable. Narrow it when you care:
 
-```yaml
+```jaml
 must:
   - joker: Blueprint
     antes: [1]
@@ -123,7 +123,7 @@ Ranges work too: `shopItems: [0-7]`.
 Other source keys exist per family — tag streams, Judgement, Wraith, Riff-Raff, and the
 rarity-specific shop streams:
 
-```yaml
+```jaml
     sources:
       rareShopJokers: [0, 1]
       judgement: [0]
@@ -133,7 +133,7 @@ rarity-specific shop streams:
 
 ## Antes
 
-```yaml
+```jaml
     ante: 1            # one
     antes: [1, 2, 3]   # several
     antes: [1-8]       # a range
@@ -145,7 +145,7 @@ Leave antes off entirely and the clause means "any ante, 1 through 8."
 
 ## Counting
 
-```yaml
+```jaml
     min: 2    # at least two of them (default 1)
     max: 3    # no more than three
 ```
@@ -154,7 +154,7 @@ Leave antes off entirely and the clause means "any ante, 1 through 8."
 
 ## Deck and stake
 
-```yaml
+```jaml
 deck: Ghost
 stake: Gold
 ```
@@ -166,7 +166,7 @@ Default is Red / White.
 
 ## A real filter
 
-```yaml
+```jaml
 name: negative perkeo, early
 deck: Red
 stake: White
@@ -196,7 +196,7 @@ Observatory voucher and an early Blueprint, and throw out any where The Wall is 
 
 Some clauses are about rolls rather than antes — the luck-based effects:
 
-```yaml
+```jaml
 must:
   - luckyMoney: [0, 1, 2]     # rolls 0, 1 and 2 all pay out
     with:
@@ -213,7 +213,7 @@ The line form for these keeps the rolls inline: `- Lucky Money rolls 0-2 with lu
 
 ## Logic
 
-```yaml
+```jaml
 must:
   - or:
       - Perkeo
