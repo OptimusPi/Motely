@@ -38,6 +38,13 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "grammars": [
+      {
+        "language": "jaml",
+        "scopeName": "source.jaml",
+        "path": "./syntaxes/jaml.tmLanguage.json"
+      }
+    ],
     "chatParticipants": [
       {
         "id": "jaml.jimbo",

@@ -176,17 +176,18 @@ Full site/line detail: archive `GROK-WORK-MATRIX.md` if a bite needs the origina
 ## 7. OPEN — WASM head (W)
 
 **Wave 1 (schema from JamlSchema / Bootsharp module):** treated **done** on Debug publish path (see archive for proof paste).  
-**Still product-real:** host + smoke + README must match Bootsharp API; Release AOT still unproven.
+**W17–W22 closed 2026-08-05–06:** host/smoke/README rewritten to real Bootsharp API; `SMOKE PASS` (all 12 checks) on live tree re-verified 2026-08-06; `MotelyEventType.cs` deleted (0 code refs, build 0 warn 0 err); `MotelyVersion` 25.1.0 moved to `Directory.Build.props` (W21); Release NativeAOT-LLVM publish exit 0 (W22).  
+**Upstream bug (open, affects any async record export):** Bootsharp 0.9.0 emits `Task<Int64>` → no .NET marshaler. In-repo fix: async exports reshaped to `Task` + sync `TakeRun()`. Don't re-add async record exports.
 
 | ID | Verb | Status |
 |----|------|--------|
 | **W01–W05** | hand-typed vocab / DTO twins → JamlSchema | **done** (Wave 1) |
-| **W17** | delete dead `MotelyEventType` if still unreferenced | **open** |
-| **W18** | host `index.html` / `main.mjs` → `bootsharp.boot()` (or delete dead host) | **open** |
-| **W19** | smoke.mjs vs current API | **open** |
-| **W20** | README matches Bootsharp + real exports | **open** |
-| **W21** | `Version()` stamps Motely version | **open** |
-| **W22** | Release publish / NativeAOT-LLVM proof | **open** |
+| **W17** | delete dead `MotelyEventType` if still unreferenced | **done** (0 refs, build green) |
+| **W18** | host `index.html` / `main.mjs` → `bootsharp.boot()` | **done** |
+| **W19** | smoke.mjs vs current API | **done** (`SMOKE PASS`, 12/12) |
+| **W20** | README matches Bootsharp + real exports | **done** |
+| **W21** | `Version()` stamps Motely version | **done** (25.1.0+sha) |
+| **W22** | Release publish / NativeAOT-LLVM proof | **done** (exit 0) |
 | **G20 / H-A4** | search intent export | **open** |
 
 **Done means a child can check:** page loads Motely → parse Whimsy → score `TPZZOLBB` → **245** → vocab includes event clauses without hand lists.

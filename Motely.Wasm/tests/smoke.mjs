@@ -1,12 +1,14 @@
-// End-to-end smoke: serve the AppBundle, load it in headless Chromium, and assert the page's
-// own verdict (index.html stamps document.title MOTELY-WASM-OK / MOTELY-WASM-FAIL).
-// Usage: node smoke.mjs <appbundle-dir>
+// End-to-end smoke: serve the repo root, load host/index.html in headless Chromium, and
+// assert the page's own verdict (it stamps document.title MOTELY-WASM-OK / MOTELY-WASM-FAIL).
+// The repo root is served so the page can import ../bin/motely-wasm (dotnet publish output)
+// and fetch /JamlFilters/Whimsy_Dicetricks.jaml for the flagship 245 check.
+// Usage: node smoke.mjs [repo-root]   (defaults to this repo)
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 
-const bundle = process.argv[2];
+const root = process.argv[2] ?? join(import.meta.dirname, "..", "..");
 const port = 8123;
 
 function findChromium() {
@@ -29,7 +31,7 @@ function findChromium() {
   return undefined;
 }
 
-const server = spawn(process.execPath, [join(import.meta.dirname, "serve.mjs"), bundle, String(port)], {
+const server = spawn(process.execPath, [join(import.meta.dirname, "serve.mjs"), root, String(port)], {
   stdio: "inherit",
 });
 
@@ -40,7 +42,7 @@ try {
   });
   const page = await browser.newPage();
   page.on("console", (msg) => console.log("[page]", msg.text()));
-  await page.goto(`http://127.0.0.1:${port}/index.html`);
+  await page.goto(`http://127.0.0.1:${port}/Motely.Wasm/host/index.html`);
   await page.waitForFunction(() => document.title.startsWith("MOTELY-WASM"), null, {
     timeout: 120_000,
   });

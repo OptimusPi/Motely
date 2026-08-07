@@ -17,13 +17,25 @@ namespace Motely.Wasm;
 /// appears in the browser without this file changing. That is the only arrangement in which the
 /// head cannot drift from the engine.
 /// </para>
+/// <para>
+/// Async exports return plain <see cref="Task"/> and results are collected with the synchronous
+/// <see cref="TakeRun"/>. Bootsharp packs serialized values into an <c>Int64</c>, and the .NET
+/// runtime implements that marshaling for synchronous returns but not for <c>Task&lt;Int64&gt;</c>
+/// (<c>ToJSNotImplemented</c> on Mono; opaque failure on NativeAOT-LLVM) — so an async export
+/// returning a record can never reach JavaScript. The host recomposes the two calls into one
+/// awaitable, so pages still write <c>await motely.scoreSeeds(...)</c>.
+/// </para>
 /// </summary>
 public static partial class MotelyWasmApi
 {
-    /// <summary>Engine informational version, as stamped on the assembly.</summary>
+    /// <summary>
+    /// Engine version. Motely.dll deliberately carries no assembly info, so the stamp is read
+    /// from this assembly, which inherits the repo MotelyVersion via Directory.Build.props —
+    /// the same arrangement Motely.HelperAPI uses.
+    /// </summary>
     [Export]
     public static string Version() =>
-        typeof(JamlConfigLoader).Assembly
+        typeof(MotelyWasmApi).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion ?? "0.0.0";
 
@@ -97,54 +109,90 @@ public static partial class MotelyWasmApi
     public static string[] SemanticTokenTypes() => JamlLanguageService.SemanticTokenTypes;
 
     /// <summary>
-    /// List-mode search: gate the given seeds through the filter's must clauses and rank the
-    /// survivors by should score, best first. Runs on the engine's single-threaded browser pump,
-    /// so the page stays responsive while it grinds.
+    /// Outcome of the most recently completed run, parked here because async exports cannot
+    /// return serialized values (see class remarks). The engine pump is single-threaded in the
+    /// browser, so one slot is the honest capacity — there is never a second run in flight.
+    /// </summary>
+    private static ScoreRun? _completedRun;
+
+    /// <summary>
+    /// Collect the outcome of the last run started by <see cref="RunScoreSeeds"/> or
+    /// <see cref="RunFindSeeds"/>. Taking clears the slot; taking with nothing completed
+    /// returns a not-ok run that says so.
     /// </summary>
     [Export]
-    public static async Task<ScoreRun> ScoreSeeds(string jaml, string[] seeds)
+    public static ScoreRun TakeRun()
+    {
+        var run = _completedRun
+            ?? new ScoreRun(false, "No completed run to take. Await RunScoreSeeds or RunFindSeeds first.", 0, 0, 0, 0, []);
+        _completedRun = null;
+        return run;
+    }
+
+    /// <summary>
+    /// List-mode search: gate the given seeds through the filter's must clauses and rank the
+    /// survivors by should score, best first. Runs on the engine's single-threaded browser pump,
+    /// so the page stays responsive while it grinds. Await, then <see cref="TakeRun"/>.
+    /// </summary>
+    [Export]
+    public static async Task RunScoreSeeds(string jaml, string[] seeds)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            return new ScoreRun(false, error, 0, 0, 0, 0, []);
+        {
+            _completedRun = new ScoreRun(false, error, 0, 0, 0, 0, []);
+            return;
+        }
 
-        List<ScoredSeed> scored = [];
-        var settings = JamlSearchBuilder
-            .CreateSettings(config)
-            .WithSeedList([.. seeds.Where(s => !string.IsNullOrWhiteSpace(s))])
-            .WithThreadCount(1)
-            .WithQuietMode(true)
-            .WithScoredResultCallback(tally =>
-                scored.Add(new ScoredSeed(tally.Seed, tally.Score, [.. tally.Tally.Select(b => (int)b)])));
+        try
+        {
+            List<ScoredSeed> scored = [];
+            var settings = JamlSearchBuilder
+                .CreateSettings(config)
+                .WithSeedList([.. seeds.Where(s => !string.IsNullOrWhiteSpace(s))])
+                .WithThreadCount(1)
+                .WithQuietMode(true)
+                .WithScoredResultCallback(tally =>
+                    scored.Add(new ScoredSeed(tally.Seed, tally.Score, [.. tally.Tally.Select(b => (int)b)])));
 
-        using var search = settings.CreateSearch();
-        await search.Start().WaitForCompletionAsync();
+            using var search = settings.CreateSearch();
+            await search.Start().WaitForCompletionAsync();
 
-        return new ScoreRun(
-            Ok: true,
-            Error: null,
-            TotalSeeds: search.TotalSeedsSearched,
-            MatchingSeeds: search.MatchingSeeds,
-            FilteredSeeds: search.FilteredSeeds,
-            ElapsedMs: search.ElapsedMs,
-            Results: [.. scored.OrderByDescending(s => s.Score)]);
+            _completedRun = new ScoreRun(
+                Ok: true,
+                Error: null,
+                TotalSeeds: search.TotalSeedsSearched,
+                MatchingSeeds: search.MatchingSeeds,
+                FilteredSeeds: search.FilteredSeeds,
+                ElapsedMs: search.ElapsedMs,
+                Results: [.. scored.OrderByDescending(s => s.Score)]);
+        }
+        catch (Exception searchException)
+        {
+            // Honest error over opaque interop crash: the browser gets the real reason.
+            _completedRun = new ScoreRun(false, searchException.ToString(), 0, 0, 0, 0, []);
+        }
     }
 
     /// <summary>
     /// Find matching seeds from an engine-owned search intent. Sequential and aesthetic searches
     /// require a match limit so a browser call cannot accidentally sweep the entire seed space.
+    /// Await, then <see cref="TakeRun"/>.
     /// </summary>
     [Export]
-    public static async Task<ScoreRun> FindSeeds(string jaml, MotelySearchIntent intent)
+    public static async Task RunFindSeeds(string jaml, MotelySearchIntent intent)
     {
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error))
-            return new ScoreRun(false, error, 0, 0, 0, 0, []);
+        {
+            _completedRun = new ScoreRun(false, error, 0, 0, 0, 0, []);
+            return;
+        }
 
         if (
             intent.Mode is MotelySearchInputMode.Sequential or MotelySearchInputMode.Aesthetic
             && (!intent.StopAfterMatches.HasValue || intent.StopAfterMatches.Value < 1)
         )
         {
-            return new ScoreRun(
+            _completedRun = new ScoreRun(
                 false,
                 "Sequential and aesthetic searches require StopAfterMatches >= 1.",
                 0,
@@ -153,41 +201,50 @@ public static partial class MotelyWasmApi
                 0,
                 []
             );
+            return;
         }
 
-        List<ScoredSeed> results = [];
-        object resultsLock = new();
-        var settings = intent
-            .ApplyTo(JamlSearchBuilder.CreateSettings(config))
-            .WithQuietMode(true)
-            .WithSeedMatchCallback(seed =>
-            {
-                lock (resultsLock)
-                    results.Add(new ScoredSeed(seed, 0, []));
-            })
-            .WithScoredResultCallback(tally =>
-            {
-                lock (resultsLock)
-                    results.Add(
-                        new ScoredSeed(
-                            tally.Seed,
-                            tally.Score,
-                            [.. tally.Tally.Select(value => (int)value)]
-                        )
-                    );
-            });
+        try
+        {
+            List<ScoredSeed> results = [];
+            object resultsLock = new();
+            var settings = intent
+                .ApplyTo(JamlSearchBuilder.CreateSettings(config))
+                .WithQuietMode(true)
+                .WithSeedMatchCallback(seed =>
+                {
+                    lock (resultsLock)
+                        results.Add(new ScoredSeed(seed, 0, []));
+                })
+                .WithScoredResultCallback(tally =>
+                {
+                    lock (resultsLock)
+                        results.Add(
+                            new ScoredSeed(
+                                tally.Seed,
+                                tally.Score,
+                                [.. tally.Tally.Select(value => (int)value)]
+                            )
+                        );
+                });
 
-        using var search = settings.CreateSearch();
-        await search.Start().WaitForCompletionAsync();
+            using var search = settings.CreateSearch();
+            await search.Start().WaitForCompletionAsync();
 
-        return new ScoreRun(
-            Ok: true,
-            Error: null,
-            TotalSeeds: search.TotalSeedsSearched,
-            MatchingSeeds: search.MatchingSeeds,
-            FilteredSeeds: search.FilteredSeeds,
-            ElapsedMs: search.ElapsedMs,
-            Results: [.. results.OrderByDescending(result => result.Score)]
-        );
+            _completedRun = new ScoreRun(
+                Ok: true,
+                Error: null,
+                TotalSeeds: search.TotalSeedsSearched,
+                MatchingSeeds: search.MatchingSeeds,
+                FilteredSeeds: search.FilteredSeeds,
+                ElapsedMs: search.ElapsedMs,
+                Results: [.. results.OrderByDescending(result => result.Score)]
+            );
+        }
+        catch (Exception searchException)
+        {
+            // Honest error over opaque interop crash: the browser gets the real reason.
+            _completedRun = new ScoreRun(false, searchException.ToString(), 0, 0, 0, 0, []);
+        }
     }
 }
