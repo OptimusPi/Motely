@@ -277,3 +277,126 @@ The loader tells you the line and what it expected. The two most common:
 - **`Unexpected indent`** — continuation keys under a clause line go two spaces in from the `-`.
 - **`Unknown key 'x'`** — that key belongs to a different family; the message lists the ones this
   clause takes.
+
+---
+
+## Operator notes (real landmines — not theory)
+
+These are how people who live in the PRNG write filters. Agents re-derive them badly; paste from
+here when a bot invents a third tool or hedges `[]`.
+
+### Legendary / The Soul
+
+Balatro has five legendary faces: **Canio, Triboulet, Yorick, Chicot, Perkeo**.
+
+A `legendaryJoker:` clause is **not** a shop joker. Path is:
+
+1. Arcana or Spectral pack has **The Soul**
+2. The ante’s **legendary stream** rolls one face
+
+```yaml
+must:
+  - legendaryJoker: Perkeo   # named face — not legendaryJoker: []
+    antes: [1, 2, 3]
+    sources:
+      boosterPacks: [0, 1, 2, 3]
+```
+
+**Do not** use `legendaryJoker: []` as a hedge. Empty disc means “any legendary”; bots love it
+and it is almost never what you meant.
+
+**CLI `--analyze` (unit-test analyzer)** prints the Immolate-style text sheet. Packs show
+**The Soul** as a card name. They do **not** resolve the face (`… → Perkeo`). Filter and sheet
+are different layers. Jamlyzer / seed view is the structured dump; `--analyze` is the legacy
+string for parity with old tools.
+
+A shop has **two** booster packs → when you mean “the packs in the shop,” use
+`boosterPacks: [0, 1]`, not only `[0]`.
+
+### Two Perkeos without two cursed clauses
+
+Splitting “early Perkeo must” and “late Perkeo must” fights the soul stream and confuses
+everyone. Operator workaround that **loads and finds**:
+
+```yaml
+must:
+  - legendaryJoker: Perkeo
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    min: 2
+    sources:
+      boosterPacks: [0, 1, 2, 3, 4, 5]
+```
+
+`min: 2` = at least two Soul→Perkeo hits over that ante window (grand master for the Ankh burn
+**plus** a refill after). Prefer timing with **should**, not a second must:
+
+```yaml
+should:
+  - legendaryJoker: Perkeo
+    antes: [1, 2]
+    score: 80
+  - legendaryJoker: Perkeo
+    antes: [3]
+    sources:
+      boosterPacks: [0, 1]   # both shop packs
+    score: 40
+```
+
+**Caveat (known):** if the legendary face stream **resets** per check instead of advancing once
+per Soul, tallies can read Perkeo/Perkeo/Perkeo without two real souls. Treat `min: 2` as the
+best authored workaround until the stream is proven continuous — not as gospel math.
+
+### Negative Tag and shop slots
+
+**Negative** small-blind tag → free + Negative shop that ante. Front slots **0–1** are the
+free/neg row. Dice / paid row for Oops and friends is usually **shopItems: [2, 3, 4, …]**.
+
+```yaml
+must:
+  - smallBlindTag: NegativeTag
+    antes: [3]                 # exact ante when that is the cashout
+  - joker: OopsAll6s
+    antes: [3]
+    sources:
+      shopItems: [2, 3, 4, 5, 6, 7, 8]
+```
+
+Put the **cheap tag first** in `must` when you can. Cost model still reorders for SIMD, but
+humans and agents both read “bouncer first” correctly. Expensive Soul last is fine in the file.
+
+### Ghost Ankh + Perkeo press (play line, not a solver)
+
+Typical Ghost hybrid (see `JamlFilters/GhostColaDicetrick.jaml`):
+
+1. **Ankh** early (shop) — hold it  
+2. **Diet Cola** banked before the Neg cashout — don’t sell early  
+3. **Perkeo** via Soul — grand master  
+4. Burn into the loop: Ankh / dupe path so you get twin souls, not one pet you coddle  
+5. **Fool** + Ghost = Ankh factory when the press is online  
+6. **Neg tag** ante → free-neg shop → **Oops** on slots 2+
+
+That is confab + filter must. Economy still kills runs. Motely finds seeds that *contain* the
+pieces; it does not play the hand for you.
+
+### Score vs seed view
+
+- **Search / `ScoreSeeds`** — must gate + should tallies. Fast. No full shop sheet.  
+- **Jamlyzer** — filter that dumps antes/shops/packs/events; can attach score in the same pass.  
+- **Unit-test `--analyze`** — legacy text sheet only.
+
+Do not invent a third “guide CLI.” Use `--analyze` or Jamlyzer / JsonRender. If interop needs
+score + sheet for one seed, chain Jamlyzer **after** scoring and return the captured dump — do
+not re-simulate for free mid-SIMD.
+
+### Daily door (CLI)
+
+```sh
+dotnet run -c Release --project Motely.CLI -- \
+  --jaml JamlFilters/GhostColaDicetrick.jaml \
+  --aesthetic nsfw \
+  --cutoff auto \
+  --threads 7
+```
+
+Release config. Sequential is the fast path. Aesthetic / list modes are different providers.
+`--cutoff auto` only prints at/above the running max (log looks empty; search still runs).

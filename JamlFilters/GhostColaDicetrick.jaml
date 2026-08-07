@@ -2,10 +2,11 @@ name: Ghost Cola Dicetrick
 author: for pi + Lola — Kitty bones, Ghost Diet-Cola hybrid, give up on pure Anaglyph kitty
 description: >
   Ghost / White. Diet-Cola hybrid: Ankh in ante 1–2 shop slots 0–3, Diet Cola
-  banked before the cashout, Negative small-blind tag EXACTLY ante 3 (Neg+free
-  burns shop 0–1). Must Perkeo early (packs) so the soul can duplicate the
-  Ankh/press. Should only scores the dice crew on ante 3: OopsAll6s @ 100 and
-  support jokers @ 10 in shop slots 2–8. Hot/base lucky money streams for rank.
+  banked before the cashout, Negative small-blind tag EXACTLY ante 3. Perkeo
+  law (operator workaround — do NOT use legendaryJoker: [] and do NOT split
+  two Perkeo musts): ONE named legendaryJoker Perkeo on antes 1–8 with min: 2
+  so the soul stream can deliver grand-master + refill after the Ankh burn.
+  Should prefers early Perkeo (and A3 only first pack). Dice crew A3 only.
 deck: Ghost
 stake: White
 
@@ -24,13 +25,30 @@ must:
   - joker: DietCola
     antes: [1, 2]
 
-  # soul to duplicate that thaang (Ankh / press)
+  # TWO Perkeos across the run (named face — never legendaryJoker: [])
+  # min:2 counts Soul→Perkeo hits over these antes; works when dual-clause is cursed
   - legendaryJoker: Perkeo
-    antes: [1, 2, 3]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    min: 2
     sources:
-      boosterPacks: [0, 1, 2, 3]
+      boosterPacks: [0, 1, 2, 3, 4, 5]
 
 should:
+  # prefer grand master early (press online before Neg cashout)
+  - legendaryJoker: Perkeo
+    antes: [1, 2]
+    score: 80
+    label: earlyperkeo
+    sources:
+      boosterPacks: [0, 1, 2, 3]
+  # A3 Soul in the two shop packs (operator: not only slot 0)
+  - legendaryJoker: Perkeo
+    antes: [3]
+    score: 40
+    label: a3firstpack
+    sources:
+      boosterPacks: [0, 1]
+
   # ONLY ante 3 — Neg+free row is 2–8
   - joker: OopsAll6s
     antes: [3]
@@ -69,3 +87,8 @@ should:
 
 seeds:
   - AIAXIUVW
+  - HELLDA6R
+  - BP7ZCUMS
+  - 99CUMS85
+  - 3CUMSQSH
+  - FFSULVAK
