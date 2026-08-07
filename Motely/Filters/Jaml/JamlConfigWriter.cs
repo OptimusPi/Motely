@@ -200,6 +200,10 @@ public static partial class JamlConfigLoader
         var mapping = new JMap();
         mapping.Set(discriminator, ClauseListNode(logic.Clauses), default);
         WriteCommonKeys(mapping, logic);
+        if (logic.Mode != JamlLogicScoreMode.Sum)
+            mapping.Set("mode", new JScalar(logic.Mode.ToString().ToLowerInvariant()), default);
+        if (logic.Antes.Length > 0)
+            mapping.Set("antes", IntArrayNode(logic.Antes), default);
         return mapping;
     }
 

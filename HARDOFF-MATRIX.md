@@ -59,7 +59,7 @@ Swipe = human judgment on a found seed. It is **not** JAML must/mustNot.
 
 **KEEP** stays available when the seed string is present. DB blip → retry sync in background; surface an error — **do not** disable KEEP as the only reaction.
 
-**Positive-prose law:** ban-list instructions (`NO grey buttons`) prime the failure. Write the **desired** state: “KEEP stays enabled while seed text is non-empty.”
+**UI priming (not soft tone):** ban-list copy (`NO grey buttons`) primes the failure. Spec the **desired control state**: “KEEP stays enabled while seed text is non-empty.” Does **not** mean kid gloves with Nat.
 
 ---
 
@@ -137,7 +137,7 @@ Priority when scheduled: **H-A4** (search shape). Then truth bugs. Then perf.
 | ID | Verb | Proof | Status |
 |----|------|-------|--------|
 | **H-A4** | Portable **search intent** → only `IMotelySearchSettings.With*`. One apply path: CLI, WASM, TUI, HelperAPI. Collect/aesthetic/pad are settings, not Program-private. | same JAML+intent → same seed on two heads; one Collect path | **open · priority 0** |
-| **H-A2** | Wire key `mode` on `or:` / `and:` (`LogicClause.ClauseKeys`) | load + R1 seed | **open** |
+| **H-A2** | Wire key `mode` on `or:` / `and:` (`LogicClause.ClauseKeys`) — `sum` totals arms, `max` best arm only (shop chunks / multi-window) | load + MOTELY77 R1 (`JamlOrModeScoringTests`) | **done** (2026-08-07) |
 | **H-A3** | LSP / vscode-jaml: diagnose/complete/hover from engine; extension installable | real diagnostics in host | **open** |
 | **H-A1** | Fold aesthetic/collect pad into A4 | R1 digit-pad; same pad policy WASM/CLI | **fold into H-A4** |
 | **H-A1b** | Provider batch on settings | — | **done** |

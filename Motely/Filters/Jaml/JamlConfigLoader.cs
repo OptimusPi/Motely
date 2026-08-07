@@ -305,25 +305,63 @@ public static partial class JamlConfigLoader
     {
         var sources = data.GetClauseList("clauses") ?? data.GetClauseList(discriminator) ?? [];
         var children = sources.Select(ParseClauseSource).ToArray();
+        clause.Antes = antes;
         HoistAntes(children, antes);
         clause.Clauses = children;
         clause.Min = min;
         clause.Max = max;
         clause.Score = score;
         clause.Label = label;
+        clause.Mode = ParseLogicScoreMode(data);
         return clause;
     }
 
-    private static void HoistAntes(IJamlClause[] clauses, int[] antes)
+    /// <summary>
+    /// <c>mode: sum|max</c> on <c>or:</c>/<c>and:</c>. Omitted → sum (historic or aggregate).
+    /// </summary>
+    private static JamlLogicScoreMode ParseLogicScoreMode(IReader data)
+    {
+        var text = data.GetString("mode");
+        if (text is null || text.Length == 0)
+            return JamlLogicScoreMode.Sum;
+
+        if (text.Equals("sum", StringComparison.OrdinalIgnoreCase))
+            return JamlLogicScoreMode.Sum;
+        if (text.Equals("max", StringComparison.OrdinalIgnoreCase))
+            return JamlLogicScoreMode.Max;
+
+        throw new JamlSemanticException(
+            $"Unknown logic mode '{text}'. Use mode: sum (total all arms) or mode: max (best arm only).",
+            data.ValueSpan("mode")
+        );
+    }
+
+    /// <summary>
+    /// Parent <paramref name="antes"/> pass into every nested arm with empty antes, including
+    /// nested <c>and:</c>/<c>or:</c> (re-applied down the tree). A child that set its own
+    /// <c>antes</c> keeps them and blocks further hoist into that subtree only when it is
+    /// ante-scoped; nested logic always continues hoist with the same parent scope so bare
+    /// grandchildren still inherit unless they override.
+    /// </summary>
+    internal static void HoistAntes(IJamlClause[] clauses, int[] antes)
     {
         if (antes.Length == 0)
             return;
         foreach (var clause in clauses)
         {
-            if (clause is IAnteScopedClause { Antes.Length: 0 } anteScoped)
-                anteScoped.Antes = antes;
+            if (clause is IAnteScopedClause anteScoped)
+            {
+                if (anteScoped.Antes.Length == 0)
+                    anteScoped.Antes = antes;
+                // override or filled — do not push parent past an explicit leaf scope
+            }
             else if (clause is LogicClause logic)
-                HoistAntes(logic.Clauses, antes);
+            {
+                // Nested logic: if it has no own parent antes, inherit; then hoist into its arms.
+                if (logic.Antes.Length == 0)
+                    logic.Antes = antes;
+                HoistAntes(logic.Clauses, logic.Antes.Length > 0 ? logic.Antes : antes);
+            }
         }
     }
 

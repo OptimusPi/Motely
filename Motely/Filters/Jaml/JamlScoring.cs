@@ -316,6 +316,8 @@ public static class JamlScoring
 
         int matched = 0;
         int total = 0;
+        int best = 0;
+        bool useMax = clause.Mode == JamlLogicScoreMode.Max;
 
         for (int i = 0; i < clause.Clauses.Length; i++)
         {
@@ -326,14 +328,18 @@ public static class JamlScoring
                 int w = clause.Clauses[i].Score;
                 if (w == 0)
                     w = 1;
-                total += count * w;
+                int contribution = count * w;
+                total += contribution;
+                if (contribution > best)
+                    best = contribution;
             }
         }
 
         if (matched < clause.Min)
             return 0;
 
-        return clause.Score != 0 ? total : matched;
+        int aggregate = useMax ? best : total;
+        return clause.Score != 0 ? aggregate : matched;
     }
 
     public static int CountRawOccurrences(
@@ -392,6 +398,8 @@ public static class JamlScoring
 
         int matched = 0;
         int total = 0;
+        int best = 0;
+        bool useMax = clause.Mode == JamlLogicScoreMode.Max;
 
         for (int i = 0; i < clause.Clauses.Length; i++)
         {
@@ -400,13 +408,16 @@ public static class JamlScoring
             {
                 matched++;
                 total += count;
+                if (count > best)
+                    best = count;
             }
         }
 
         if (matched < clause.Min)
             return 0;
 
-        return clause.Score != 0 ? total : matched;
+        int aggregate = useMax ? best : total;
+        return clause.Score != 0 ? aggregate : matched;
     }
 
     private static int CountBossOccurrences(BossClause clause, MotelyRunState runState)

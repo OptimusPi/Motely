@@ -132,7 +132,7 @@ Honey-soup note for the bot who already knows this and still pastes CLI-only kno
 
 **Origin note (operator, 2026-07-29):** the matrix is the day-1 Grok loop recovery — “are you looping me?” → “yeah” → verb table. It is how this repo (and her other projects) stay out of sycophant poetry. Research paper on identity / nanny-bot degradation is **hers**; code bots ship matrices and diffs until she opens a paper verb.
 
-**Positive-prose law (operator, 2026-07-29 — absolute):** ban-list instruction style (`NO X`, `do not X`) is a **harness failure mode** (attention primes X). It is **not** about happy tone or feelings. Operator proof: sole rule “NO FUCKING GREY BUTTONS!!!” → all buttons grey. Full write-up: `Claude.md` § Positive prose. Chat constraints land in the tree same turn.
+**UI priming (operator, 2026-07-29 — absolute):** ban-list instruction style on **product chrome** (`NO X`) is a harness failure mode (attention primes X). It is **not** soft tone / kid gloves with Nat. Operator proof: sole rule “NO FUCKING GREY BUTTONS!!!” → all buttons grey. Spec the desired control state instead. Live wording: root `CLAUDE.md` § Prose + HARDOFF §2.
 
 ### Audit: last ~20 commits (Grok, 2026-07-29)
 
