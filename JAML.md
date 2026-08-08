@@ -364,19 +364,27 @@ must:
 Put the **cheap tag first** in `must` when you can. Cost model still reorders for SIMD, but
 humans and agents both read “bouncer first” correctly. Expensive Soul last is fine in the file.
 
-### Ghost Ankh + Perkeo press (play line, not a solver)
+### Ghost Ankh + Perkeo + Diet Cola press (play line, not a solver)
 
-Typical Ghost hybrid (see `JamlFilters/GhostColaDicetrick.jaml`):
+**NL trap:** “60 negative jokers” is **not** a Motely clause. It is a **tag economy** after a
+cola/Ankh loop. Full bot law: `docs/BALATRO-SEED-FINDING-CONFUSIONS.md` §8.
 
-1. **Ankh** early (shop) — hold it  
-2. **Diet Cola** banked before the Neg cashout — don’t sell early  
-3. **Perkeo** via Soul — grand master  
-4. Burn into the loop: Ankh / dupe path so you get twin souls, not one pet you coddle  
-5. **Fool** + Ghost = Ankh factory when the press is online  
-6. **Neg tag** ante → free-neg shop → **Oops** on slots 2+
+Typical Ghost hybrid (see `JamlFilters/GhostColaDicetrick.jaml`, `PerkeoCola*.jaml`,
+`DietCola_Ghost_Ankh.jaml`):
 
-That is confab + filter must. Economy still kills runs. Motely finds seeds that *contain* the
-pieces; it does not play the hand for you.
+1. **`deck: Ghost`** — only deck that puts **Ankh in shopItems** so you can **pocket** it  
+   (pack-open Ankh is often **eaten on open** — different tool)  
+2. **Ankh** early in **shop** — hold / Perkeo-copy  
+3. **Diet Cola** banked — sell → **Double Tag** (stack colas → stack doubles)  
+4. **Perkeo #1** early (A1 dream) — consumable copier; often **sacrificed** when Ankh keeps cola  
+5. Loop: Ankh (survive as cola) → sell cola → double tag → Ankh → cola…  
+6. **NegativeTag** on a chosen ante in **2–8** (legal band — not ante 1; “late” = e.g. A8, not the whole 2–8 list) + doubles → **many free negative jokers**  
+7. **Ultimate wish:** **Perkeo #2 after the sacrifice** (later ante band) — two Soul/Perkeo hits, not one forever pet  
+
+Ante **0** = hiero/petro / pre-run slot — not Neg territory.
+
+That is confab + filter must on **enablers**. Economy still kills runs. Motely finds seeds that
+*contain* the pieces; it does not play the hand for you.
 
 ### Score vs seed view
 
