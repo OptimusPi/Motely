@@ -4,7 +4,7 @@ Real language support for `.jaml` files + **`@jimbo`** Copilot Chat participant.
 
 | Concern | Owner |
 |--------|--------|
-| Parse / validate | `Motely` engine via `JamlConfigLoader` |
+| Parse / validate | `motely-wasm@25.0.3` (the Motely engine in-process) |
 | Schema / vocab | Generated `JamlSchema` + engine enums |
 | Protocol | `Motely.Lsp` (JSON-RPC 2.0 stdio) |
 | Editor glue | this package (`vscode-languageclient`) |
@@ -39,7 +39,9 @@ In **Copilot Chat** (or VS Code Chat with a model):
 | `@jimbo /find` · `/find 3` | direct engine |
 | `@jimbo /explain joker` | direct engine |
 
-Search copies the filter to a **temp file** so CLI does not rewrite your on-disk `seeds:` block.
+`#validateJaml` validates with the pinned WASM engine, including the active file. Search copies
+the filter to a **temp file** so CLI does not rewrite your on-disk `seeds:` block. `@jimbo /find`
+uses the native CLI for long-running multi-core searches; results are always engine-produced.
 Tool confirmation UI attaches to the chat turn via `toolInvocationToken`.
 
 F5 Extension Development Host → open Chat → `@jimbo`.

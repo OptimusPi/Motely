@@ -146,7 +146,9 @@
               "description": "Word or short query: joker, must, pokerHand, Perkeo, joker blue"
             }
           },
-          "required": ["topic"]
+          "required": [
+            "topic"
+          ]
         }
       }
     ],
@@ -188,6 +190,7 @@
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
+    "motely-wasm": "25.0.3",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
@@ -197,4 +200,3 @@
     "typescript": "^5.6.0"
   }
 }
-

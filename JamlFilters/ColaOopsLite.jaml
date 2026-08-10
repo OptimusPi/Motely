@@ -5,26 +5,35 @@ description: >
   sell Diet Cola for another Double; Double copies Negative Tags → free negative jokers.
   Must: Diet Cola by ante 3, at least one Oops! early (luck pile), and one Negative Tag
   somewhere early to seed the farm. Should ranks more Oops + more Negatives.
-deck: Anaglyph
+deck: Ghost
 stake: White
 must:
   - voucher: Hieroglyph
     antes: [1,2]
   - voucher: Petroglyph
     antes: [1,2]
+  - smallBlindTag: NegativeTag
+    antes: [4]
   - legendaryJoker: Perkeo
     score: 100
-    antes: [0]
+    antes: [0,1,2]
     sources: { boosterPacks: [0,1]}
+  - spectralCard: Ankh
+    antes: [1,2]
+    sources:
+      shopItems: [0,1,2,3]
+  - legendaryJoker:
+    antes: [5,6,7,8]
+  - legendaryJoker: Perkeo
+    antes: [1,2,3,4,5,6,7,8]
+    sources: { boosterPacks: [0,1,2,3,4,5]}
 should:
-  - tag: DoubleTag
-    antes: [1, 2, 3, 4, 5, 6]
-    score: 1
-  - smallBlindTag: NegativeTag
-    antes: [7, 8]
-    score: 11
-  - luckyMoney: [0,1]
-    score: 3
+  - luckyMoney: [0]
+    score: 10
+  - luckyMoney: [1]
+    score: 10
+  - luckyMoney: [2]
+    score: 10
 seeds:
   - M58KERYV
   - O4M7KWVV
@@ -512,3 +521,9 @@ seeds:
   - 9CRXRC9
   - 7VOOV7
   - 95BKB59
+  - MS8DU111
+  - T9QX4111
+  - W7VY4111
+  - N58H2111
+  - AI2TW611
+  - 8TL4SB11

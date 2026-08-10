@@ -14,12 +14,18 @@ import {
 import { registerJimboChat } from "./jimboChat";
 import { resolveMotelyLsp } from "./motelyEngine";
 import { registerMotelyTools } from "./motelyTools";
+import { wasmVersion } from "./motelyWasm";
 
 let client: LanguageClient | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   registerJimboChat(context);
   registerMotelyTools(context);
+
+  void wasmVersion().then(
+    (version) => vscode.window.setStatusBarMessage(`JAML: Motely WASM ${version} + @jimbo`, 4000),
+    () => undefined,
+  );
 
   try {
     await startLanguageServer(context);

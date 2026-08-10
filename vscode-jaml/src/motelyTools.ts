@@ -15,6 +15,7 @@ import {
   formatSearchMarkdown,
   searchSeeds,
 } from "./motelyEngine";
+import { validateWithWasm } from "./motelyWasm";
 
 interface ValidateParams {
   jamlText?: string;
@@ -66,9 +67,16 @@ class ValidateJamlTool implements vscode.LanguageModelTool<ValidateParams> {
   ) {
     try {
       const input = await resolveJamlInput(options.input);
-      const result = await diagnoseJaml(this.context, input);
-      const md = formatDiagnoseMarkdown(result, input.label);
-      return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(md)]);
+      const jamlText = input.jamlText ?? fs.readFileSync(input.filePath!, "utf8");
+      const error = await validateWithWasm(jamlText);
+      if (!error) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart(`**JAML valid** (Motely WASM engine)\n\nSource: \`${input.label}\``),
+        ]);
+      }
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(`**JAML invalid** (Motely WASM engine)\n\n${error}`),
+      ]);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       throw new Error(
