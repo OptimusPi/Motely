@@ -38,7 +38,32 @@ should:
     antes: [4]
     sources:
       shopItems: [2,3,4,5,6,7,8]
+  - joker: OopsAll6s
+    score: 8
+    antes: [5]
+    sources:
+      shopItems: [0,1,2,3]
+  - joker: OopsAll6s
+    score: 7
+    antes: [6]
+    sources:
+      shopItems: [0,1]
 
+  - jokers: [HangingChad, Photograph, Baron, Mime, LuckyCat, InvisibleJoker, Blueprint, Brainstorm]
+    score: 10
+    antes: [4]
+    sources:
+      shopItems: [2,3,4,5,6,7,8]
+  - jokers: [HangingChad, Photograph, Baron, Mime, LuckyCat, InvisibleJoker, Blueprint, Brainstorm]
+    score: 8
+    antes: [5]
+    sources:
+      shopItems: [0,1,2,3]
+  - jokers: [HangingChad, Photograph, Baron, Mime, LuckyCat, InvisibleJoker, Blueprint, Brainstorm]
+    score: 7
+    antes: [6]
+    sources:
+      shopItems: [0,1]
 seeds:
   - M58KERYV
   - O4M7KWVV
@@ -562,3 +587,64 @@ seeds:
   - 4O9D7111
   - 2KEM5111
   - NHMQ8111
+  - WTA9A311
+  - Q8TLN411
+  - YJH6O411
+  - UDYX5511
+  - PPINC111
+  - PCX3K111
+  - 8T4CA211
+  - RRMK7211
+  - LX7RF211
+  - VC5AJ311
+  - FJ9FC411
+  - L1AX8411
+  - ZPIPH411
+  - ZP7HA511
+  - WKZLM511
+  - L3MOR511
+  - 65OPP511
+  - FXV5T511
+  - 5A82Z511
+  - 6QK93611
+  - 953MC711
+  - 58LZK711
+  - 5H6HS811
+  - ZJ8P8K43
+  - RRK54NS1
+  - ZKSBBJ61
+  - 8LLFWG12
+  - L6B45ZF1
+  - 857AF192
+  - 4DYATXL1
+  - XAEA4OJ2
+  - SZTHIYO1
+  - E6GWGTT2
+  - 4JVYZPQ1
+  - WV1UOJ23
+  - JIVXEB31
+  - NJNWJ2L1
+  - HGEEKWE1
+  - 5LULZ7DH
+  - ABIEBOOM
+  - 43NERDNY
+  - ZIHAHAUS
+  - B3FROFLV
+  - SEROFL4M
+  - ABRUHLKN
+  - LZ4ODAFT
+  - QCDODOMH
+  - 1T7NERD7
+  - EGSAGEEK
+  - TWYNRIZZ
+  - AWCHADHV
+  - 3XBCOPED
+  - DRIP4MX6
+  - HHHOHO3S
+  - HOHOTP6S
+  - QFPEEPYR
+  - ZSMOPEEK
+  - AHADHRAH
+  - QQQMQ1E4
+  - 6HKBUTT2
+  - GFARTD1M
