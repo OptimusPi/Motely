@@ -1,4 +1,4 @@
-# HARDOFF MATRIX — one board
+# HANDOFF MATRIX — one board
 
 **Operator:** Nat (pifreak)  
 **Remash:** Grok · 2026-08-05  
@@ -268,4 +268,4 @@ If an archive row is richer than this board, **copy the detail into the ticket w
 4. **P-KEEP** / one U-file when jaml-ui is reopened.  
 5. **CLI sequential Release** when you want seeds tonight.
 
-**End of hardoff.** One board. One ticket. Proof. Stop.
+**End of handoff.** One board. One ticket. Proof. Stop.

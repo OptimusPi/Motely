@@ -8,16 +8,12 @@ description: >
 deck: Ghost
 stake: White
 must:
-  - voucher: Hieroglyph
-    antes: [1,2]
-  - voucher: Petroglyph
-    antes: [1,2]
   - smallBlindTag: NegativeTag
     antes: [4]
   - legendaryJoker: Perkeo
     score: 100
-    antes: [0,1,2]
-    sources: { boosterPacks: [0,1]}
+    antes: [1,2]
+    sources: { boosterPacks: [0,1,2,3]}
   - spectralCard: Ankh
     antes: [1,2]
     sources:
@@ -27,13 +23,22 @@ must:
   - legendaryJoker: Perkeo
     antes: [1,2,3,4,5,6,7,8]
     sources: { boosterPacks: [0,1,2,3,4,5]}
+    min: 2
+  - joker: DietCola
+    antes: [1,2,3]
 should:
-  - luckyMoney: [0]
+  - voucher: Hieroglyph
+    antes: [1,2]
+    score: 1
+  - voucher: Petroglyph
+    antes: [1,2]
+    score: 1|
+  - joker: OopsAll6s
     score: 10
-  - luckyMoney: [1]
-    score: 10
-  - luckyMoney: [2]
-    score: 10
+    antes: [4]
+    sources:
+      shopItems: [2,3,4,5,6,7,8]
+
 seeds:
   - M58KERYV
   - O4M7KWVV
@@ -527,3 +532,33 @@ seeds:
   - N58H2111
   - AI2TW611
   - 8TL4SB11
+  - SZLXMA11
+  - YZ94NP11
+  - JXVH6Q11
+  - P9GX5921
+  - 5TBRIA21
+  - 2OHYOA21
+  - 4IPWZD21
+  - INVINQ21
+  - 9ZAZDS21
+  - LD1AD231
+  - JJN7G111
+  - 2QREU211
+  - T8612311
+  - KRG8D311
+  - E8C1V311
+  - 2TRC3411
+  - YOQ8C411
+  - 56AAH411
+  - 141PY411
+  - QRMM3611
+  - NDD6H611
+  - QQ815711
+  - H3XSU711
+  - CPLW3111
+  - C7FW1111
+  - MIK2E111
+  - SOV56111
+  - 4O9D7111
+  - 2KEM5111
+  - NHMQ8111

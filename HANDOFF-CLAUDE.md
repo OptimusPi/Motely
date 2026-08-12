@@ -1,13 +1,13 @@
 # Handoff — MotelyJAML — ARCHIVE (S8 climb + long A4)
 
-> **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
-> S8 is **closed**. A4/search-shape lives as **H-A4** on HARDOFF. Keep this file for coverage rails history and A4 proof sketch.
+> **Open queue:** [HANDOFF-MATRIX.md](HANDOFF-MATRIX.md)  
+> S8 is **closed**. A4/search-shape lives as **H-A4** on HANDOFF. Keep this file for coverage rails history and A4 proof sketch.
 >
-> **Non-operative archive:** historical backlogs and status labels below cannot open work. HARDOFF owns all current tickets.
+> **Non-operative archive:** historical backlogs and status labels below cannot open work. HANDOFF owns all current tickets.
 
 **Operator:** Nat  
 **Executor:** Claude Code — historical S8 backlog.  
-**Law:** `CLAUDE.md` + **HARDOFF-MATRIX.md** (one grammar, FilterDesc → JamlSchema, **proof = real search finds a seed**).  
+**Law:** `CLAUDE.md` + **HANDOFF-MATRIX.md** (one grammar, FilterDesc → JamlSchema, **proof = real search finds a seed**).  
 **Author of this board:** Grok.
 
 ## Product call (fixed)
@@ -132,7 +132,7 @@ Honey-soup note for the bot who already knows this and still pastes CLI-only kno
 
 **Origin note (operator, 2026-07-29):** the matrix is the day-1 Grok loop recovery — “are you looping me?” → “yeah” → verb table. It is how this repo (and her other projects) stay out of sycophant poetry. Research paper on identity / nanny-bot degradation is **hers**; code bots ship matrices and diffs until she opens a paper verb.
 
-**UI priming (operator, 2026-07-29 — absolute):** ban-list instruction style on **product chrome** (`NO X`) is a harness failure mode (attention primes X). It is **not** soft tone / kid gloves with Nat. Operator proof: sole rule “NO FUCKING GREY BUTTONS!!!” → all buttons grey. Spec the desired control state instead. Live wording: root `CLAUDE.md` § Prose + HARDOFF §2.
+**UI priming (operator, 2026-07-29 — absolute):** ban-list instruction style on **product chrome** (`NO X`) is a harness failure mode (attention primes X). It is **not** soft tone / kid gloves with Nat. Operator proof: sole rule “NO FUCKING GREY BUTTONS!!!” → all buttons grey. Spec the desired control state instead. Live wording: root `CLAUDE.md` § Prose + HANDOFF §2.
 
 ### Audit: last ~20 commits (Grok, 2026-07-29)
 

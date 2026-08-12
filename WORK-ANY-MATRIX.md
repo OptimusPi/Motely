@@ -1,15 +1,15 @@
 # WORK — Category any matrix — ARCHIVE
 
-> **Open queue + law summary:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §5  
+> **Open queue + law summary:** [HANDOFF-MATRIX.md](HANDOFF-MATRIX.md) §5  
 > This file keeps the full empty-list writeup and examples.
 >
-> **Non-operative archive:** this records shipped law and historical proof. HARDOFF is the only work queue.
+> **Non-operative archive:** this records shipped law and historical proof. HANDOFF is the only work queue.
 
 **Operator:** Nat  
-**Author:** Grok (healed 2026-07-31) · folded into bites · **2026-08-05 remash → HARDOFF**  
+**Author:** Grok (healed 2026-07-31) · folded into bites · **2026-08-05 remash → HANDOFF**  
 **Law:** one grammar; **empty disc list / empty props = category match**. No `Any` token. No `IsWildcard` flag.  
 **Proof:** `dotnet test Motely.Tests` green + real seed for empty spectral/planet/joker paths.  
-**Executor queue:** open bites live in **HARDOFF-MATRIX.md** only.
+**Executor queue:** open bites live in **HANDOFF-MATRIX.md** only.
 
 ---
 

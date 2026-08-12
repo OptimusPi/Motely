@@ -1,12 +1,12 @@
 # CLAUDE BITES MATRIX — ARCHIVE
 
-> **Open queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md)  
-> U/E/H/X tables below are historical detail. New open work is filed on HARDOFF only.
+> **Open queue:** [HANDOFF-MATRIX.md](HANDOFF-MATRIX.md)  
+> U/E/H/X tables below are historical detail. New open work is filed on HANDOFF only.
 >
-> **Non-operative archive:** statuses and ticket IDs below are historical. Open and execute work only from HARDOFF.
+> **Non-operative archive:** statuses and ticket IDs below are historical. Open and execute work only from HANDOFF.
 
 **Operator:** Nat  
-**Capture author:** Grok (2026-07-30) · healed 2026-08-01 · **2026-08-05 remash → HARDOFF**  
+**Capture author:** Grok (2026-07-30) · healed 2026-08-01 · **2026-08-05 remash → HANDOFF**  
 **Executor:** Claude Code **Haiku or Sonnet** — **one ticket per turn**  
 **Law:** table or real diff. No poetry. No honey-soup. No re-research of shipped law.  
 **Engine law:** empty `joker: []` / props-only (standardCard shape). **No `Any` token. No `IsWildcard`.**

@@ -228,7 +228,7 @@ Use **LSP (vscode-jaml)** for clause keys/enums — sticker names and stake are 
 |-----|-----|
 | `docs/BALATRO-SEED-FINDING-CONFUSIONS.md` | Curse of knowledge + bot fails |
 | `JAML.md` | How to write filters |
-| `HARDOFF-MATRIX.md` | Agent law, open tickets, CLI door |
+| `HANDOFF-MATRIX.md` | Agent law, open tickets, CLI door |
 | `vscode-jaml` / Motely.Lsp | Completions + diagnostics — **use it** when editing `.jaml` |
 | `~/Documents/GitHub/seedfinder-app/corpus/` | Game-item RAG chunks (not Motely grammar) |
 

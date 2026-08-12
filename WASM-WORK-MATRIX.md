@@ -1,15 +1,15 @@
 # WASM — Eviction matrix — ARCHIVE
 
-> **Open WASM queue:** [HARDOFF-MATRIX.md](HARDOFF-MATRIX.md) §7  
+> **Open WASM queue:** [HANDOFF-MATRIX.md](HANDOFF-MATRIX.md) §7  
 > Detail rows + Wave 1 proof paste stay below for tickets W17–W22.
 >
-> **Non-operative archive:** use these rows only as detail for a ticket already opened on HARDOFF; no work begins from this file.
+> **Non-operative archive:** use these rows only as detail for a ticket already opened on HANDOFF; no work begins from this file.
 
 **Operator:** Nat
 **Auditor:** Claude — file-level audit, no build run, gaps listed in §Unverified
 **Law:** the FilterDesc is the source of truth. Nothing in the head restates what `JamlSchema`
 already generates. One ticket = one commit = one proof, `exit 0`.
-**Headline (historical):** hand-typed vocab was “not real.” Wave 1 Bootsharp path addressed schema export; host/smoke/README still open on HARDOFF. Full essay: [HANDOFF-WASM-NOT-REAL.md](HANDOFF-WASM-NOT-REAL.md).
+**Headline (historical):** hand-typed vocab was “not real.” Wave 1 Bootsharp path addressed schema export; host/smoke/README still open on HANDOFF. Full essay: [HANDOFF-WASM-NOT-REAL.md](HANDOFF-WASM-NOT-REAL.md).
 
 ---
 

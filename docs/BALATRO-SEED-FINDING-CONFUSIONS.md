@@ -264,7 +264,7 @@ Before you say “find me a seed”:
 
 - Guide: `docs/BALATRO-SEED-FINDING-GUIDE.md`  
 - Filter grammar: `JAML.md`  
-- Agent board: `HARDOFF-MATRIX.md`  
+- Agent board: `HANDOFF-MATRIX.md`
 - Example package filter: `JamlFilters/NegTag_FourOops.jaml`  
 - Example god-shaped seed: **`1F5WEAYR`** Anaglyph/White (Perkeo, Showman, Neg, multi Oops) — re-prove after edits  
 
