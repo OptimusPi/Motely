@@ -31,7 +31,7 @@ public sealed class SeedLakeSinkTests : IDisposable
     public void LakePath_IsPerFilter_NotShared()
     {
         Assert.Equal(
-            Path.Combine(_root, "perkeo.csv"),
+            Path.Combine(_root, "perkeo.duckdb"),
             SeedLakeSink.LakePath(_root, "perkeo")
         );
         Assert.NotEqual(
@@ -41,7 +41,7 @@ public sealed class SeedLakeSinkTests : IDisposable
     }
 
     [Fact]
-    public void TwoDifferentFilters_GetSeparateFiles()
+    public void TwoDifferentFilters_GetSeparateDatabases()
     {
         using (var sink = new SeedLakeSink(_root, "perkeo"))
             sink.OnScored(Result("AAAAAAAA", 42));
@@ -49,11 +49,13 @@ public sealed class SeedLakeSinkTests : IDisposable
         using (var sink = new SeedLakeSink(_root, "observatory"))
             sink.OnScored(Result("BBBBBBBB", 7));
 
-        var perkeoSeeds = File.ReadAllLines(SeedLakeSink.LakePath(_root, "perkeo"));
-        var observatorySeeds = File.ReadAllLines(SeedLakeSink.LakePath(_root, "observatory"));
+        using var perkeoSeeds = SeedSourceProvider.FromLake(SeedLakeSink.LakePath(_root, "perkeo"), "perkeo");
+        using var observatorySeeds = SeedSourceProvider.FromLake(SeedLakeSink.LakePath(_root, "observatory"), "observatory");
 
-        Assert.Equal(["AAAAAAAA"], perkeoSeeds);
-        Assert.Equal(["BBBBBBBB"], observatorySeeds);
+        Assert.Equal(1, perkeoSeeds.SeedCount);
+        Assert.Equal("AAAAAAAA", perkeoSeeds.NextSeed());
+        Assert.Equal(1, observatorySeeds.SeedCount);
+        Assert.Equal("BBBBBBBB", observatorySeeds.NextSeed());
     }
 
     [Fact]

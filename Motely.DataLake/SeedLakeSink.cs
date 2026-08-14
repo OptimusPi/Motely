@@ -1,26 +1,25 @@
 using Motely;
 using Motely.Filters;
+using DuckDB.NET.Data;
 
 namespace Motely.DataLake;
 
 /// <summary>
-/// The seed lake: bare seeds, one per line, appended live to Seeds/&lt;filterId&gt;.csv.
-/// Every find hits the disk the moment it happens — tail it mid-run, grep it, drown it.
-/// Seeds are the data; scores live in the console output and the JAML seeds: save-back.
+/// The seed lake: a per-filter DuckDB database with a deduplicated <c>seeds</c> table.
+/// Every find reaches the disk immediately; scores live in console output and JAML save-back.
 /// </summary>
 public sealed class SeedLakeSink : IMotelyResultSink
 {
     private readonly object _gate = new();
     private readonly string _path;
-    private readonly HashSet<string> _seen = new(StringComparer.Ordinal);
-    private StreamWriter? _writer;
+    private DuckDBConnection? _connection;
     private bool _disposed;
 
-    /// <summary>Seeds/&lt;filterId&gt;.csv — root via --results-path or MOTELY_DATALAKE_PATH.</summary>
+    /// <summary>Seeds/&lt;filterId&gt;.duckdb — root via --results-path or MOTELY_DATALAKE_PATH.</summary>
     public static string LakePath(string? root, string filterId)
     {
         root ??= Environment.GetEnvironmentVariable("MOTELY_DATALAKE_PATH");
-        return Path.Combine(string.IsNullOrWhiteSpace(root) ? "Seeds" : root, filterId + ".csv");
+        return Path.Combine(string.IsNullOrWhiteSpace(root) ? "Seeds" : root, filterId + ".duckdb");
     }
 
     public SeedLakeSink(string? root, string filterId)
@@ -40,18 +39,26 @@ public sealed class SeedLakeSink : IMotelyResultSink
 
         lock (_gate)
         {
-            if (_disposed || !_seen.Add(seed))
+            if (_disposed)
                 return;
 
-            if (_writer is null)
+            if (_connection is null)
             {
                 var dir = Path.GetDirectoryName(Path.GetFullPath(_path));
                 if (!string.IsNullOrEmpty(dir))
                     Directory.CreateDirectory(dir);
-                _writer = new StreamWriter(_path, append: true) { AutoFlush = true };
+
+                _connection = new DuckDBConnection($"Data Source={_path}");
+                _connection.Open();
+                using var create = _connection.CreateCommand();
+                create.CommandText = "CREATE TABLE IF NOT EXISTS seeds (seed VARCHAR PRIMARY KEY)";
+                create.ExecuteNonQuery();
             }
 
-            _writer.WriteLine(seed);
+            using var insert = _connection.CreateCommand();
+            insert.CommandText = "INSERT OR IGNORE INTO seeds VALUES (?)";
+            insert.Parameters.Add(new DuckDBParameter { Value = seed });
+            insert.ExecuteNonQuery();
         }
     }
 
@@ -62,8 +69,8 @@ public sealed class SeedLakeSink : IMotelyResultSink
             if (_disposed)
                 return;
             _disposed = true;
-            _writer?.Dispose();
-            _writer = null;
+            _connection?.Dispose();
+            _connection = null;
         }
     }
 }

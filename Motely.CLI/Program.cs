@@ -227,12 +227,12 @@ partial class Program
         );
         var drownOption = app.Option(
             "--makeitrain",
-            "Make it rain: re-search every seed saved for this JAML filter, read straight from its DuckLake catalog (<results-path>/<filterId>.catalog).",
+            "Make it rain: re-search every seed saved for this JAML filter, read straight from its DuckDB lake (<results-path>/<filterId>.duckdb).",
             CommandOptionType.NoValue
         );
         var resultsPathOption = app.Option<string>(
             "--results-path <PATH>",
-            "Root folder of the seed lake (default: .seeds; env MOTELY_DATALAKE_PATH).",
+            "Root folder of the seed lake (default: Seeds; env MOTELY_DATALAKE_PATH).",
             CommandOptionType.SingleValue
         );
         var seedsOption = app.Option<string>(
