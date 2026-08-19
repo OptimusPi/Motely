@@ -597,6 +597,15 @@ partial class Program
                             config.Id
                         )
                     );
+                    // Also write the full scored rows (seed, score, tallies) straight to disk —
+                    // no more copying results out of a scrolling terminal by hand.
+                    resultSinks.Add(
+                        new ScoredResultsCsvSink(
+                            resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null,
+                            config.Id,
+                            plan.TallyLabels
+                        )
+                    );
                 }
                 using var resultSink = new CompositeMotelyResultSink(resultSinks);
                 int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
