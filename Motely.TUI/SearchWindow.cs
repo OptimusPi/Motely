@@ -10,7 +10,8 @@ public class SearchWindow : Window
     private readonly string _configPath;
     private readonly string? _source;
     private readonly string? _sink;
-    private SeedLakeSink? _lakeSink;
+    private JamlSeedPersistence? _persistence;
+    private bool _saved;
     private readonly Label _statusLabel;
     private readonly Label _progressLabel;
     private readonly TextField _cutoffField;
@@ -25,13 +26,13 @@ public class SearchWindow : Window
     private int _resultCount = 0;
     private int _tallyColumnCount = 0;
 
-    // --cutoff semantics (match Motely.CLI):
+    // --cutoff semantics — one shared gate with Motely.CLI (MotelyScoreCutoff):
     //   auto     → running maximum: emit every seed at-or-above the best so far.
     //   <int>    → fixed floor: skip anything below this score.
-    //   (blank)  → no cutoff.
-    private bool _cutoffAuto = true;
-    private int _cutoffFixed = int.MinValue;
-    private int _currentHigh = int.MinValue;
+    //   off/blank→ no cutoff.
+    // The field holds the *configured* cutoff; a fresh runtime gate is built per run so the
+    // running-maximum state does not carry across searches.
+    private MotelyScoreCutoff _cutoff = MotelyScoreCutoff.Auto();
 
     public SearchWindow(string configPath, string? source = null, string? sink = null)
     {
@@ -243,15 +244,20 @@ public class SearchWindow : Window
             _searchRunning = true;
 
             if (
-                !JamlFileSource.TryLoadFromFile(_configPath, out var config, out var configError)
+                !MotelyJamlFile.TryLoad(_configPath, out var config, out var configError)
                 || config == null
             )
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
 
-            // Push fixed cutoff into the engine (matches Motely.CLI behaviour): the scorer
-            // drops below-threshold seeds before any callback fires. Auto runs caller-side
-            // via PassesCutoff() because the engine threshold is fixed per-plan.
-            int engineCutoff = (!_cutoffAuto && _cutoffFixed > int.MinValue) ? _cutoffFixed : 0;
+            // One runtime gate per run so auto's running-maximum starts fresh. Fixed floors are
+            // pushed into the engine (the scorer drops below-threshold seeds before any callback);
+            // auto/off gate caller-side because the engine threshold is fixed per-plan.
+            var cutoff = _cutoff.IsAuto
+                ? MotelyScoreCutoff.Auto()
+                : _cutoff.EngineCutoff > 0
+                    ? MotelyScoreCutoff.Fixed(_cutoff.EngineCutoff)
+                    : MotelyScoreCutoff.Off();
+            int engineCutoff = cutoff.EngineCutoff;
             var plan = JamlSearchBuilder.CreatePlan(config, engineCutoff);
             var settings = JamlSearchBuilder
                 .CreateSettings(config, engineCutoff)
@@ -259,7 +265,7 @@ public class SearchWindow : Window
                 .WithStake(config.Stake)
                 .WithThreadCount(TuiSettings.ThreadCount)
                 .WithQuietMode(true)
-                .WithAutoScoreCutoff(_cutoffAuto);
+                .WithAutoScoreCutoff(cutoff.IsAuto);
 
             switch (TuiSettings.SearchMode)
             {
@@ -342,23 +348,49 @@ public class SearchWindow : Window
             }
 
             int scoreTallyColumns = plan.ScoreTallyColumnCount;
+            bool hasStructuredScores = scoreTallyColumns > 0;
 
             Application.Invoke(() => EnsureTallyColumns(scoreTallyColumns));
 
-            // Same contract as Motely.CLI: found seeds land in the seed lake so --drown can
-            // replay them. Without this the sink setting is inert and TUI runs write nothing.
-            if (_sink is not null)
-                _lakeSink = new SeedLakeSink(_sink, config.Id);
+            // Durability + save-back in one place (same spine as Motely.CLI). Every accepted seed
+            // reaches the seed lake immediately — a crash or a Stop mid-sweep never discards what is
+            // already on screen — and the top seeds are merged into the JAML seeds: block when the
+            // run ends. The lake root falls back to the configured DataLakePath so a search always
+            // persists, even when no explicit sink was passed (this was the TUI data-loss bug).
+            string lakeRoot = _sink
+                ?? (string.IsNullOrWhiteSpace(TuiSettings.DataLakePath) ? null : TuiSettings.DataLakePath)
+                ?? SeedLakeSink.LakeRoot(null);
+            _persistence = new JamlSeedPersistence(
+                lakeRoot,
+                config.Id,
+                hasStructuredScores,
+                cutoff
+            );
+            // Capture the instance locally so result callbacks (which fire on worker threads and
+            // may arrive during teardown) never observe the field after Dispose nulls it.
+            var persistence = _persistence;
 
-            settings.WithScoredResultCallback(tally =>
+            if (hasStructuredScores)
             {
-                _lakeSink?.OnScored(in tally);
-                var resultCount = Interlocked.Increment(ref _resultCount);
-                var seed = tally.Seed;
-                var score = tally.Score;
-                var tallyValues = tally.TallyValuesSpan.ToArray();
-                Application.Invoke(() => AppendRow(resultCount, seed, score, tallyValues));
-            });
+                persistence.OnScoredAccepted = tally =>
+                {
+                    var resultCount = Interlocked.Increment(ref _resultCount);
+                    var seed = tally.Seed;
+                    var score = tally.Score;
+                    var tallyValues = tally.TallyValuesSpan.ToArray();
+                    Application.Invoke(() => AppendRow(resultCount, seed, score, tallyValues));
+                };
+                settings.WithScoredResultCallback(tally => persistence.OnScored(in tally));
+            }
+            else
+            {
+                persistence.OnSeedAccepted = seed =>
+                {
+                    var resultCount = Interlocked.Increment(ref _resultCount);
+                    Application.Invoke(() => AppendRow(resultCount, seed, 0, System.Array.Empty<int>()));
+                };
+                settings.WithSeedMatchCallback(seed => persistence.OnSeed(seed));
+            }
 
             Application.Invoke(() =>
             {
@@ -420,47 +452,21 @@ public class SearchWindow : Window
         }
     }
 
-    /// <summary>Cutoff gate — matches Motely.CLI --cutoff semantics.</summary>
-    private bool PassesCutoff(int score)
-    {
-        if (_cutoffAuto)
-        {
-            // Running maximum: emit every seed at-or-above the best so far (ties included).
-            if (score < _currentHigh)
-                return false;
-            _currentHigh = Math.Max(_currentHigh, score);
-            return true;
-        }
-        if (_cutoffFixed > int.MinValue && score < _cutoffFixed)
-            return false;
-        return true;
-    }
-
     private void ApplyCutoffInput()
     {
-        var raw = (_cutoffField.Text?.ToString() ?? "").Trim();
-        if (string.Equals(raw, "auto", StringComparison.OrdinalIgnoreCase))
+        var raw = _cutoffField.Text?.ToString() ?? "";
+        if (MotelyScoreCutoff.TryParse(raw, out var parsed, out var error))
         {
-            _cutoffAuto = true;
-            _cutoffFixed = int.MinValue;
-            _currentHigh = int.MinValue;
-            _statusLabel.Text = "Cutoff: auto (running max).";
-        }
-        else if (string.IsNullOrEmpty(raw))
-        {
-            _cutoffAuto = false;
-            _cutoffFixed = int.MinValue;
-            _statusLabel.Text = "Cutoff: off.";
-        }
-        else if (int.TryParse(raw, out var n))
-        {
-            _cutoffAuto = false;
-            _cutoffFixed = n;
-            _statusLabel.Text = $"Cutoff: ≥ {n}.";
+            _cutoff = parsed;
+            _statusLabel.Text = parsed.IsAuto
+                ? "Cutoff: auto (running max). Applies on next search."
+                : parsed.EngineCutoff > 0
+                    ? $"Cutoff: ≥ {parsed.EngineCutoff}. Applies on next search."
+                    : "Cutoff: off. Applies on next search.";
         }
         else
         {
-            _statusLabel.Text = $"Invalid cutoff '{raw}' — use 'auto', an integer, or leave blank.";
+            _statusLabel.Text = error ?? "Invalid cutoff.";
         }
     }
 
@@ -495,6 +501,8 @@ public class SearchWindow : Window
         _spinner.AutoSpin = false;
         _spinner.Visible = false;
         _stopBtn.Visible = false;
+
+        SaveSeedsBack();
 
         if (_search is null)
             return;
@@ -546,6 +554,30 @@ public class SearchWindow : Window
         _spinner.AutoSpin = false;
         _spinner.Visible = false;
         _stopBtn.Visible = false;
+
+        SaveSeedsBack();
+    }
+
+    /// <summary>
+    /// Merge the seeds found this run into the JAML seeds: block on disk. Called on both completion
+    /// and stop so a cancelled sweep never loses what it already found. Idempotent (guarded by
+    /// <see cref="_saved"/> and de-duped in the seeds: block); seeds also already reached the seed
+    /// lake as they were found, so this is the second, curated layer of durability.
+    /// </summary>
+    private void SaveSeedsBack()
+    {
+        if (_saved || _persistence is null)
+            return;
+        _saved = true;
+
+        var seeds = _persistence.SeedsToSave();
+        if (seeds.Count == 0)
+            return;
+
+        if (_persistence.SaveBack(_configPath, out var error))
+            _progressLabel.Text = $"{_progressLabel.Text} | saved {seeds.Count:N0} seed(s) to JAML";
+        else
+            _progressLabel.Text = $"{_progressLabel.Text} | save-back failed: {error}";
     }
 
     private void StopSearch()
@@ -573,10 +605,22 @@ public class SearchWindow : Window
 
     protected override void Dispose(bool disposing)
     {
+        // Last-resort save-back: if the window is torn down without a clean Complete/Stop (e.g. the
+        // app is shutting down), still flush the finds to the JAML seeds: block before the lake sink
+        // closes. No-op when already saved.
+        try
+        {
+            SaveSeedsBack();
+        }
+        catch
+        {
+            // Never throw from Dispose during teardown.
+        }
+
         _search?.Dispose();
         _cts?.Dispose();
-        _lakeSink?.Dispose();
-        _lakeSink = null;
+        _persistence?.Dispose();
+        _persistence = null;
 
         base.Dispose(disposing);
     }

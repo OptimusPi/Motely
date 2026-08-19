@@ -19,4 +19,6 @@ dotnet run --project Motely.CLI -- --jaml JamlFilters/AlwaysPass.jaml --collect 
 
 Filters are JAML text → `JamlConfig`. Clause families live on FilterDescs; `JamlSchema` is the generated index. Docs for WASM: `Motely.Wasm/README.md`.
 
+Which seeds get searched (sequential, `--source`, `--keyword`, `--random`, `--aesthetic`, `--collect`, `--drown` the whole seed lake, `--replay` a JAML's own seeds) and which entry points expose each: `docs/SEED-INPUT-MODES.md`.
+
 Commission support: [@OptimusPi](https://github.com/OptimusPi/).

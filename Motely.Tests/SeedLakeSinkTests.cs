@@ -49,8 +49,8 @@ public sealed class SeedLakeSinkTests : IDisposable
         using (var sink = new SeedLakeSink(_root, "observatory"))
             sink.OnScored(Result("BBBBBBBB", 7));
 
-        using var perkeoSeeds = SeedSourceProvider.FromLake(SeedLakeSink.LakePath(_root, "perkeo"), "perkeo");
-        using var observatorySeeds = SeedSourceProvider.FromLake(SeedLakeSink.LakePath(_root, "observatory"), "observatory");
+        using var perkeoSeeds = SeedSourceProvider.FromLake(SeedLakeSink.LakePath(_root, "perkeo"));
+        using var observatorySeeds = SeedSourceProvider.FromLake(SeedLakeSink.LakePath(_root, "observatory"));
 
         Assert.Equal(1, perkeoSeeds.SeedCount);
         Assert.Equal("AAAAAAAA", perkeoSeeds.NextSeed());
@@ -72,11 +72,55 @@ public sealed class SeedLakeSinkTests : IDisposable
         }
 
         var lakePath = SeedLakeSink.LakePath(_root, "perkeo");
-        using var provider = SeedSourceProvider.FromLake(lakePath, "perkeo");
+        using var provider = SeedSourceProvider.FromLake(lakePath);
 
         Assert.Equal(2, provider.SeedCount);
         Assert.Equal("AAAAAAAA", provider.NextSeed().ToString());
         Assert.Equal("BBBBBBBB", provider.NextSeed().ToString());
+    }
+
+    [Fact]
+    public void FromLakeRoot_DrownsInEveryFiltersSeeds_Deduped()
+    {
+        using (var sink = new SeedLakeSink(_root, "perkeo"))
+        {
+            sink.OnScored(Result("AAAAAAAA", 42));
+            sink.OnScored(Result("BBBBBBBB", 99));
+        }
+        using (var sink = new SeedLakeSink(_root, "observatory"))
+        {
+            sink.OnScored(Result("BBBBBBBB", 1)); // shared with perkeo — must dedupe
+            sink.OnScored(Result("CCCCCCCC", 1));
+        }
+        // Legacy CSV lakes sitting in the root pour in too (header row is shape-tested out).
+        File.WriteAllLines(Path.Combine(_root, "old.csv"), ["Seed,Score", "DDDDDDDD,5"]);
+
+        using var provider = SeedSourceProvider.FromLakeRoot(_root);
+
+        Assert.Equal(4, provider.SeedCount);
+        var seeds = new HashSet<string>();
+        for (string s; (s = provider.NextSeed()) != string.Empty; )
+            seeds.Add(s);
+        Assert.Equal(["AAAAAAAA", "BBBBBBBB", "CCCCCCCC", "DDDDDDDD"], seeds.Order());
+    }
+
+    [Fact]
+    public void LakeCanBeWrittenWhileAProviderReadsIt()
+    {
+        // The --drown contract: read the lake, then keep writing finds into that same lake
+        // during the run. The provider must not hold the file lock after construction.
+        using (var sink = new SeedLakeSink(_root, "perkeo"))
+            sink.OnScored(Result("AAAAAAAA", 42));
+
+        using var provider = SeedSourceProvider.FromLakeRoot(_root);
+        Assert.Equal(1, provider.SeedCount);
+
+        using (var sink = new SeedLakeSink(_root, "perkeo"))
+            sink.OnScored(Result("BBBBBBBB", 7)); // throws if the provider still holds the file
+
+        Assert.Equal("AAAAAAAA", provider.NextSeed());
+        using var after = SeedSourceProvider.FromLake(SeedLakeSink.LakePath(_root, "perkeo"));
+        Assert.Equal(2, after.SeedCount);
     }
 
     [Fact]

@@ -15,6 +15,8 @@ internal static class CliSearchMode
         string? SourcePath,
         string? SeedsArgument,
         bool Drown,
+        bool Replay,
+        string? JamlPath,
         string? ResultsRootPath,
         string? FilterId,
         IReadOnlyList<string>? JamlSeeds,
@@ -49,6 +51,7 @@ internal static class CliSearchMode
         bool hasSource = !string.IsNullOrWhiteSpace(input.SourcePath);
         bool hasSeedsArg = !string.IsNullOrWhiteSpace(input.SeedsArgument);
         bool hasDrownMode = input.Drown;
+        bool hasReplayMode = input.Replay;
 
         if (hasSource && hasSeedsArg)
         {
@@ -87,6 +90,7 @@ internal static class CliSearchMode
                 hasSource
                 || hasSeedsArg
                 || hasDrownMode
+                || hasReplayMode
                 || input.KeywordInputs.Count > 0
                 || input.RandomCount.HasValue
                 || hasAestheticMode
@@ -105,6 +109,8 @@ internal static class CliSearchMode
             explicitSearchModeCount++;
         if (hasDrownMode)
             explicitSearchModeCount++;
+        if (hasReplayMode)
+            explicitSearchModeCount++;
         if (hasKeywordMode)
             explicitSearchModeCount++;
         if (input.RandomCount.HasValue)
@@ -115,7 +121,7 @@ internal static class CliSearchMode
         if (explicitSearchModeCount > 1)
         {
             error =
-                "Error: choose only one search input mode: --source, --seeds, --makeitrain, --keyword, --keywords, --random, or --aesthetic.";
+                "Error: choose only one search input mode: --source, --seeds, --drown, --replay, --keyword, --keywords, --random, or --aesthetic.";
             return false;
         }
 
@@ -124,22 +130,60 @@ internal static class CliSearchMode
 
         if (hasDrownMode)
         {
-            if (string.IsNullOrWhiteSpace(input.FilterId))
+            // Cannonball: every seed ever saved under the lake root, every filter, deduped.
+            string lakeRoot = SeedLakeSink.LakeRoot(input.ResultsRootPath);
+            if (!Directory.Exists(lakeRoot))
             {
-                error = "Error: --makeitrain requires a resolved filterId (use --jaml).";
+                error = $"Error: no seed lake at '{lakeRoot}'. Run a search first.";
                 return false;
             }
 
-            string lakeFile = SeedLakeSink.LakePath(input.ResultsRootPath, input.FilterId!);
-            if (!File.Exists(lakeFile))
+            try
             {
-                error = $"Error: no saved seeds at '{lakeFile}'. Run a search first.";
+                var drownProvider = SeedSourceProvider.FromLakeRoot(lakeRoot);
+                if (drownProvider.SeedCount == 0)
+                {
+                    drownProvider.Dispose();
+                    error = $"Error: the seed lake at '{lakeRoot}' is empty. Run a search first.";
+                    return false;
+                }
+                updated = updated.WithProviderSearch(drownProvider);
+                sourceLifetime = drownProvider;
+            }
+            catch (Exception ex)
+            {
+                error = $"Error: could not read seed lake '{lakeRoot}': {ex.Message}";
+                return false;
+            }
+            return true;
+        }
+
+        if (hasReplayMode)
+        {
+            // Replay / verify: only the seeds: block of this JAML file, nothing else.
+            if (string.IsNullOrWhiteSpace(input.JamlPath))
+            {
+                error = "Error: --replay requires --jaml (it replays that file's seeds: block).";
                 return false;
             }
 
-            var drownProvider = SeedSourceProvider.FromLake(lakeFile, input.FilterId!);
-            updated = updated.WithProviderSearch(drownProvider);
-            sourceLifetime = drownProvider;
+            try
+            {
+                var replayProvider = new SeedSourceProvider(input.JamlPath!);
+                if (replayProvider.SeedCount == 0)
+                {
+                    replayProvider.Dispose();
+                    error = $"Error: '{input.JamlPath}' has no seeds: block to replay.";
+                    return false;
+                }
+                updated = updated.WithProviderSearch(replayProvider);
+                sourceLifetime = replayProvider;
+            }
+            catch (Exception ex)
+            {
+                error = $"Error: could not read seeds from '{input.JamlPath}': {ex.Message}";
+                return false;
+            }
             return true;
         }
 

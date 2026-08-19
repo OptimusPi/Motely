@@ -226,8 +226,18 @@ partial class Program
             CommandOptionType.SingleValue
         );
         var drownOption = app.Option(
-            "--makeitrain",
-            "Make it rain: re-search every seed saved for this JAML filter, read straight from its DuckDB lake (<results-path>/<filterId>.duckdb).",
+            "--drown",
+            "Cannonball into the seed lake: re-search EVERY seed ever saved under <results-path> (all filters' *.duckdb lakes plus any CSV/TXT there), deduped.",
+            CommandOptionType.NoValue
+        );
+        var replayOption = app.Option(
+            "--replay",
+            "Replay only the seeds: block of the given --jaml file — verify what's already saved, nothing more.",
+            CommandOptionType.NoValue
+        );
+        var verifySeedsOption = app.Option(
+            "--verify-seeds",
+            "Alias for --replay.",
             CommandOptionType.NoValue
         );
         var resultsPathOption = app.Option<string>(
@@ -324,12 +334,10 @@ partial class Program
             // Reading values into a parameter list would quietly destroy that distinction.
             async Task<int> RunNativeMode()
             {
-                // --drown needs a normalized filterId from a JAML file.
-                if (drownOption.HasValue())
+                // --replay replays a JAML's seeds: block; there is no such block in native mode.
+                if (replayOption.HasValue() || verifySeedsOption.HasValue())
                 {
-                    Console.Error.WriteLine(
-                        "Error: --makeitrain currently requires --jaml so the CLI can resolve the normalized filterId."
-                    );
+                    Console.Error.WriteLine("Error: --replay/--verify-seeds requires --jaml.");
                     return 1;
                 }
 
@@ -385,7 +393,9 @@ partial class Program
                         new CliSearchMode.Input(
                             SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
                             SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
-                            Drown: false,
+                            Drown: drownOption.HasValue(),
+                            Replay: false,
+                            JamlPath: null,
                             ResultsRootPath: resultsPathOption.HasValue()
                                 ? resultsPathOption.ParsedValue
                                 : null,
@@ -467,6 +477,7 @@ partial class Program
                 var deck = config.Deck;
                 var stake = config.Stake;
                 bool drown = drownOption.HasValue();
+                bool replay = replayOption.HasValue() || verifySeedsOption.HasValue();
                 int threads = threadsOption.HasValue()
                     ? threadsOption.ParsedValue
                     : Environment.ProcessorCount;
@@ -479,18 +490,18 @@ partial class Program
 
                 // Default is auto: without --cutoff we self-tune the score gate instead of
                 // emitting every seed. An explicit integer turns auto off and pins the gate.
-                bool cutoffAuto = true;
-                int cutoffFixed = int.MinValue;
+                // One shared gate implementation with the TUI (MotelyScoreCutoff).
+                MotelyScoreCutoff cutoff = MotelyScoreCutoff.Auto();
                 if (cutoffOption.HasValue())
                 {
                     var cutoffValue = cutoffOption.ParsedValue.Trim();
                     if (string.Equals(cutoffValue, "auto", StringComparison.OrdinalIgnoreCase))
                     {
-                        cutoffAuto = true;
+                        cutoff = MotelyScoreCutoff.Auto();
                     }
-                    else if (int.TryParse(cutoffValue, out cutoffFixed))
+                    else if (int.TryParse(cutoffValue, out var cutoffFixedValue))
                     {
-                        cutoffAuto = false;
+                        cutoff = MotelyScoreCutoff.Fixed(cutoffFixedValue);
                     }
                     else
                     {
@@ -499,7 +510,7 @@ partial class Program
                     }
                 }
 
-                int engineCutoff = (!cutoffAuto && cutoffFixed > int.MinValue) ? cutoffFixed : 0;
+                int engineCutoff = cutoff.EngineCutoff;
                 JamlSearchPlan plan;
                 try
                 {
@@ -545,6 +556,8 @@ partial class Program
                             SourcePath: sourceOption.HasValue() ? sourceOption.ParsedValue : null,
                             SeedsArgument: seedsOption.HasValue() ? seedsOption.ParsedValue : null,
                             Drown: drown,
+                            Replay: replay,
+                            JamlPath: jamlOption.ParsedValue,
                             ResultsRootPath: resultsPathOption.HasValue()
                                 ? resultsPathOption.ParsedValue
                                 : null,
@@ -608,7 +621,6 @@ partial class Program
                     );
                 }
                 using var resultSink = new CompositeMotelyResultSink(resultSinks);
-                int cliLearnedCutoff = cutoffAuto ? int.MinValue : engineCutoff;
                 var saveSeedsCollector = new MotelyTopSeedSink.Collector(int.MaxValue);
                 var saveSeedMatches = new List<string>();
                 var saveSeedMatchSet = new HashSet<string>(StringComparer.Ordinal);
@@ -619,15 +631,13 @@ partial class Program
                     .WithProgressCallback(
                         quietOption.HasValue() ? CaptureProgress : WriteProgressLineToStderr
                     )
-                    .WithAutoScoreCutoff(cutoffAuto);
+                    .WithAutoScoreCutoff(cutoff.IsAuto);
 
                 if (hasStructuredScores)
                 {
                     settings = settings.WithScoredResultCallback(tally =>
                     {
-                        if (
-                            !ShouldEmitScore(tally.Score, cutoffAuto, cutoffFixed, ref cliLearnedCutoff)
-                        )
+                        if (!cutoff.ShouldEmit(tally.Score))
                             return;
 
                         resultSink.OnScored(in tally);
@@ -655,7 +665,7 @@ partial class Program
                 if (!quietOption.HasValue())
                 {
                     Console.Error.WriteLine(
-                        $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| makeitrain=Seeds CSV via DuckDB" : "(sequential only)")}"
+                        $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} | batchCharCount={batchCharCount} {(drown ? "| drown=entire seed lake" : replay ? "| replay=JAML seeds: block" : "(sequential only)")}"
                     );
                 }
 
@@ -719,7 +729,8 @@ partial class Program
                         || sourceOption.HasValue()
                         || seedsOption.HasValue()
                         || randomOption.HasValue()
-                        || drown;
+                        || drown
+                        || replay;
 
                     if (namedExplicitSeedInput)
                     {
@@ -966,32 +977,5 @@ partial class Program
     {
         var rem = TimeSpan.FromMilliseconds(milliseconds);
         return rem.TotalHours >= 24 ? rem.ToString(@"d\.hh\:mm\:ss") : rem.ToString(@"hh\:mm\:ss");
-    }
-
-    static bool ShouldEmitScore(
-        int score,
-        bool cutoffAuto,
-        int cutoffFixed,
-        ref int cliLearnedCutoff
-    )
-    {
-        if (!cutoffAuto)
-            return cutoffFixed == int.MinValue || score >= cutoffFixed;
-
-        int observed = Volatile.Read(ref cliLearnedCutoff);
-        while (true)
-        {
-            if (score < observed)
-                return false;
-
-            if (score == observed)
-                return true;
-
-            int original = Interlocked.CompareExchange(ref cliLearnedCutoff, score, observed);
-            if (original == observed)
-                return true;
-
-            observed = original;
-        }
     }
 }

@@ -1,4 +1,3 @@
-using Motely;
 using Motely.Filters;
 using DuckDB.NET.Data;
 
@@ -15,12 +14,16 @@ public sealed class SeedLakeSink : IMotelyResultSink
     private DuckDBConnection? _connection;
     private bool _disposed;
 
-    /// <summary>Seeds/&lt;filterId&gt;.duckdb — root via --results-path or MOTELY_DATALAKE_PATH.</summary>
-    public static string LakePath(string? root, string filterId)
+    /// <summary>The lake root: --results-path, else MOTELY_DATALAKE_PATH, else "Seeds".</summary>
+    public static string LakeRoot(string? root)
     {
         root ??= Environment.GetEnvironmentVariable("MOTELY_DATALAKE_PATH");
-        return Path.Combine(string.IsNullOrWhiteSpace(root) ? "Seeds" : root, filterId + ".duckdb");
+        return string.IsNullOrWhiteSpace(root) ? "Seeds" : root;
     }
+
+    /// <summary>&lt;LakeRoot&gt;/&lt;filterId&gt;.duckdb — one filter's lake file.</summary>
+    public static string LakePath(string? root, string filterId) =>
+        Path.Combine(LakeRoot(root), filterId + ".duckdb");
 
     public SeedLakeSink(string? root, string filterId)
     {
@@ -48,11 +51,24 @@ public sealed class SeedLakeSink : IMotelyResultSink
                 if (!string.IsNullOrEmpty(dir))
                     Directory.CreateDirectory(dir);
 
-                _connection = new DuckDBConnection($"Data Source={_path}");
-                _connection.Open();
-                using var create = _connection.CreateCommand();
-                create.CommandText = "CREATE TABLE IF NOT EXISTS seeds (seed VARCHAR PRIMARY KEY)";
-                create.ExecuteNonQuery();
+                // Publish the connection only once it is fully open with the table in place.
+                // Caching one whose Open() threw makes every later write fail with
+                // "ExecuteNonQuery requires an open connection" instead of the real error.
+                var connection = new DuckDBConnection($"Data Source={_path}");
+                try
+                {
+                    connection.Open();
+                    using var create = connection.CreateCommand();
+                    create.CommandText =
+                        "CREATE TABLE IF NOT EXISTS seeds (seed VARCHAR PRIMARY KEY)";
+                    create.ExecuteNonQuery();
+                }
+                catch
+                {
+                    connection.Dispose();
+                    throw;
+                }
+                _connection = connection;
             }
 
             using var insert = _connection.CreateCommand();
