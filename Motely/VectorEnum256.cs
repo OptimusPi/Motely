@@ -1,0 +1,86 @@
+using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+
+namespace Motely;
+
+public static unsafe class VectorEnum256
+{
+    public static VectorEnum256<T> Create<T>(T value)
+        where T : unmanaged, Enum
+    {
+        return new(Vector256.Create(Unsafe.As<T, int>(ref value)));
+    }
+
+    /// <summary>
+    /// Table-lookup: each lane of <paramref name="indices"/> selects
+    /// <c>values[index]</c> into an 8-lane <see cref="Vector256{T}"/> of the enum's
+    /// underlying int. On AVX2 this is a single
+    /// <c>_mm256_i32gather_epi32</c> (scale 4); elsewhere eight scalar loads.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static VectorEnum256<T> Create<T>(Vector256<int> indices, T[] values)
+        where T : unmanaged, Enum
+    {
+        // 8-lane enum path: AVX2 gather (not the 16-lane mm512 form from the old comment).
+        // T is always 4 bytes (enforced by VectorEnum256<T>'s static ctor).
+        if (Avx2.IsSupported)
+        {
+            fixed (T* p = values)
+            {
+                return new(Avx2.GatherVector256((int*)p, indices, scale: 4));
+            }
+        }
+
+        return new(
+            Vector256.Create(
+                Unsafe.As<T, int>(ref values[indices[0]]),
+                Unsafe.As<T, int>(ref values[indices[1]]),
+                Unsafe.As<T, int>(ref values[indices[2]]),
+                Unsafe.As<T, int>(ref values[indices[3]]),
+                Unsafe.As<T, int>(ref values[indices[4]]),
+                Unsafe.As<T, int>(ref values[indices[5]]),
+                Unsafe.As<T, int>(ref values[indices[6]]),
+                Unsafe.As<T, int>(ref values[indices[7]])
+            )
+        );
+    }
+
+    public static Vector256<int> Equals<T>(in VectorEnum256<T> a, T b)
+        where T : unmanaged, Enum
+    {
+        return Vector256.Equals(a.HardwareVector, Vector256.Create(Unsafe.As<T, int>(ref b)));
+    }
+
+    public static Vector256<int> Equals<T>(in VectorEnum256<T> a, in VectorEnum256<T> b)
+        where T : unmanaged, Enum
+    {
+        return Vector256.Equals(a.HardwareVector, b.HardwareVector);
+    }
+}
+
+public unsafe struct VectorEnum256<T>(Vector256<int> hardwareVector)
+    where T : unmanaged, Enum
+{
+    public Vector256<int> HardwareVector = hardwareVector;
+
+    static VectorEnum256()
+    {
+        if (sizeof(T) != 4)
+            throw new ArgumentException($"Size of {nameof(T)} must be 4 bytes.");
+    }
+
+    public readonly T this[int i]
+    {
+        get
+        {
+            int value = HardwareVector[i];
+            return Unsafe.As<int, T>(ref value);
+        }
+    }
+
+    public override readonly string ToString()
+    {
+        return $"<{this[0]}, {this[1]}, {this[2]}, {this[3]}, {this[4]}, {this[5]}, {this[6]}, {this[7]}>";
+    }
+}

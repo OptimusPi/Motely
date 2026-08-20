@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
+    <EnableAVX2>true</EnableAVX2>
+    <EnableAVX512F>true</EnableAVX512F>
+    <EnableAVX512BW>true</EnableAVX512BW>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AssemblyName>MotelyHelperAPI</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot Condition="'$(RuntimeIdentifier)' != 'browser-wasm' and '$(DesignTimeBuild)' != 'true'">true</PublishAot>
+    <!-- true: Version / MotelyVersion from Directory.Build.props → AssemblyInformationalVersion (read in Program.cs). -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.DistributedWorker\Motely.DistributedWorker.csproj" />
+    <ProjectReference Include="..\Motely.ServiceDefaults\Motely.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <!-- DuckDB.NET uses P/Invoke (fully AOT-safe) but triggers static analysis warnings. Suppress them. -->
+  <PropertyGroup>
+    <SuppressAotAnalysisWarnings>true</SuppressAotAnalysisWarnings>
+  </PropertyGroup>
+
+  <!-- Copy Vite build output from TestWebsite into wwwroot before build. -->
+  <Target Name="CopyTestWebsiteToWwwroot" BeforeTargets="Build"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\Motely.TestWebsite\dist\index.html')">
+    <ItemGroup>
+      <_ViteDistFiles Include="$(MSBuildThisFileDirectory)..\Motely.TestWebsite\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ViteDistFiles)"
+          DestinationFolder="$(MSBuildThisFileDirectory)wwwroot\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>

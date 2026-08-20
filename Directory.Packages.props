@@ -1,0 +1,53 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- MotelyVersion is defined in Directory.Build.props (first import) so Version resolves. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1603</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Bootsharp" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.Common" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.Inject" Version="0.9.0" />
+    <PackageVersion Include="Bootsharp.FileSystem" Version="2026.4.30.1559" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.8.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+    <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
+    <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.3" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageVersion Include="Terminal.Gui" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="coverlet.collector" Version="8.0.1" />
+    <PackageVersion Include="Verify.Xunit" Version="28.6.0" />
+    <PackageVersion Include="Verify.DiffPlex" Version="3.1.2" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
+    <!-- Motely.Generators. Referenced at the floor, not the SDK's Roslyn: this DLL loads into
+         whatever Roslyn the host carries, and Rider/VS ship their own on their own schedule. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <!-- Direct pin lifts the Swashbuckle transitive past GHSA-v5pm-xwqc-g5wc (2.4.1 audit break). -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.9.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.5" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <!-- Motely.MCP — verified current via `dotnet package search ModelContextProtocol` (2026-08-19). -->
+    <PackageVersion Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
+    <!-- Motely.AppHost — pinned to the Aspire.AppHost.Sdk version (13.5.0) in Motely.AppHost.csproj. -->
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.0" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.5.0" />
+  </ItemGroup>
+</Project>

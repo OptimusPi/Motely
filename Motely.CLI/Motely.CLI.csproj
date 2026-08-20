@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Performance optimizations -->
+    <Optimize>true</Optimize>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
+    <EnableAVX2>true</EnableAVX2>
+    <EnableAVX>true</EnableAVX>
+    <EnableAVX512F>true</EnableAVX512F>
+    <EnableAVX512BW>true</EnableAVX512BW>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn)</NoWarn>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- AOT publish is ON by default. Pass -p:EnableCliAot=false to opt out. -->
+    <EnableCliAot Condition="'$(EnableCliAot)' == ''">true</EnableCliAot>
+    <PublishAot
+      Condition="'$(EnableCliAot)' == 'true' and '$(RuntimeIdentifier)' != 'browser-wasm' and '$(DesignTimeBuild)' != 'true'"
+      >true</PublishAot
+    >
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <SuppressAotAnalysisWarnings>true</SuppressAotAnalysisWarnings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+    <!-- SeedSourceProvider / SeedLakeSink — DuckDB-backed seed sources and result lake. -->
+    <ProjectReference Include="..\Motely.DataLake\Motely.DataLake.csproj" />
+  </ItemGroup>
+</Project>

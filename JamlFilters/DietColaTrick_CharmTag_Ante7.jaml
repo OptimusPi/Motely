@@ -1,0 +1,167 @@
+name: Cola Faucet — Ghost Charm Neg Legendary
+author: Pifreak
+deck: Ghost
+stake: White
+must:
+  - tag: CharmTag
+    antes: [7]
+  - legendaryJoker: Perkeo
+    antes: [1,2,3]
+  - legendaryJoker: Perkeo
+    antes: [7,8]
+  - spectralCard: Ankh
+    antes: [1,2,3,4]
+    sources:
+      shopItems: [0,1,2,3,4,5]
+should:
+  - jokers: [Blueprint, Brainstorm]
+    antes: [2]
+    score: 10
+  - jokers: [Blueprint, Brainstorm]
+    antes: [3]
+    score: 9
+  - jokers: [Blueprint, Brainstorm]
+    antes: [4]
+    score: 8
+  - jokers: [Blueprint, Brainstorm]
+    antes: [2]
+    score: 7
+  - jokers: [Blueprint, Brainstorm]
+    antes: [8,9,10,11]
+    score: 5
+  - legendaryJoker: []
+    antes: [8,9,10,11,12,13,14,15]
+    score: 2
+  - joker: DietCola
+    antes: [2, 3, 4, 5,6]
+  - legendaryJoker: []
+    edition: Negative
+    antes: [7]
+    sources:
+      arcanaPacks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
+    score: 1100
+  - legendaryJoker: []
+    edition: Polychrome
+    antes: [7]
+    sources:
+      arcanaPacks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58]
+    score: 110
+  - legendaryJoker: []
+    edition: Foil
+    antes: [7]
+    sources:
+      arcanaPacks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58]
+    score: 19
+  - legendaryJoker: []
+    edition: Holographic
+    antes: [7]
+    sources:
+      arcanaPacks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58]
+    score: 18
+  - legendaryJoker: []
+    antes: [7]
+    sources:
+      arcanaPacks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58]
+    score: 10
+
+seeds:
+  - U2FXWR41
+  - JD77BT41
+  - GAOA8R51
+  - ZM4MB281
+  - NI8ZMO11
+  - E1IW4X11
+  - L8OGFK31
+  - 9ZRWXN31
+  - BUY1X441
+  - EB4JPT51
+  - S4B8KA61
+  - OBJHHA61
+  - 63RWNE61
+  - UZFQZE61
+  - 1DECFN61
+  - JFLVOZ71
+  - J5MPIH81
+  - NYUZVR81
+  - YGV4R211
+  - P2D7I111
+  - LKP3I111
+  - KC11B111
+  - WAF1F111
+  - 1I214111
+  - 3BTTUNTX
+  - YCLODK6T
+  - SLGFOPUS
+  - OPUSRK1H
+  - E2BWOPUS
+  - OPUSB96G
+  - BWFABLEX
+  - 68467TUN
+  - 3QTUNPBC
+  - 7TUNZZYM
+  - TUN2DTUH
+  - TUN56U9Q
+  - TUN7RYLS
+  - 88LVLTUN
+  - 7JTUN72Y
+  - 6NXRCLOD
+  - SP5CLODN
+  - TUN1A1SP
+  - TUN2AFF9
+  - 629TTUN5
+  - 7TUWUTUN
+  - TUN3LMCU
+  - 4TUNJLOB
+  - 1TUN7XFW
+  - 18MTUNXH
+  - 1ITUNZQM
+  - 1OBJ7TUN
+  - 2TUNAFG1
+  - 2VTLTUN9
+  - TUN2YSCV
+  - TUN31NTC
+  - 3TUN1PDZ
+  - 3DTUN548
+  - 4OTUN1MM
+  - 5H3TUN5U
+  - 5KCTUNYD
+  - 5YTUNHI4
+  - 6AZPTUNL
+  - 7TUN9PAW
+  - RBEKXTUN
+  - ATUNET3Y
+  - JOKMKTUN
+  - FY27TUN8
+  - TUNOMPE4
+  - PMDTUTUN
+  - TUNYYDU7
+  - SCSWPTUN
+  - ULTUNWPN
+  - CRTUN6I9
+  - TUNV5VES
+  - VTUNM926
+  - TUN9LDG7
+  - FFX2RTUN
+  - STUNKIV8
+  - AGQOOTUN
+  - BLTUNVJF
+  - JWGTUN86
+  - LPTUNP84
+  - W9TUN8Y3
+  - ELTUNRVT
+  - GVPNTUNW
+  - RITUNN4O
+  - TUNTLFXQ
+  - TVOITUNY
+  - N7TUN3WD
+  - G3ZTUNB4
+  - A9MJTUNJ
+  - CTUNR28N
+  - G1C5TUNI
+  - KLZUTUNH
+  - LTUNQ6VK
+  - LVTUNUEU
+  - TJF9TUN4
+  - TUND5YRC
+  - RKUTUNMI
+  - V1MTUNZ5
