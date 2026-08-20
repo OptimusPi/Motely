@@ -1139,7 +1139,12 @@ public sealed unsafe partial class MotelySearch<TBaseFilter> : IInternalMotelySe
         else
         {
             long batchesSinceStart = thisCompletedCount - _startBatchIndex;
-            long totalBatchesToDo = _plans[0].MaxBatch - _startBatchIndex;
+            // Only the batches this run was actually asked for, which is where the ETA below gets
+            // its denominator. Counting to MaxBatch instead ignored --endBatch/--stopSeed entirely
+            // and quoted the rest of the *space*: a one-batch range that finished in twelve seconds
+            // reported an ETA of 148 days. Both ends are exclusive, so the difference is a count.
+            long lastBatchToDo = Math.Min(_endBatchIndex, _plans[0].MaxBatch);
+            long totalBatchesToDo = lastBatchToDo - _startBatchIndex;
             totalPortionFinished = totalBatches > 0 ? (double)thisCompletedCount / totalBatches : 0;
             percentComplete = totalPortionFinished * 100.0;
             thisPortionFinished =

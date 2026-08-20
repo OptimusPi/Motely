@@ -10,7 +10,9 @@ public struct MotelySingleTagStream(MotelySingleResampleStream resampleStream, i
 
 public partial class MotelySingleSearchContext
 {
-    private static readonly MotelyTag[] DisallowedAnteOneTags =
+    // Internal rather than private so the rarity model sizes the ante-1 tag pool from the same
+    // list the resample loop uses, instead of carrying a copy that can drift.
+    internal static readonly MotelyTag[] DisallowedAnteOneTags =
     [
         MotelyTag.NegativeTag,
         MotelyTag.StandardTag,

@@ -285,6 +285,11 @@ partial class Program
             "Suppress per-batch progress lines and the startup preamble on stderr (stdout results unaffected).",
             CommandOptionType.NoValue
         );
+        var estimateOption = app.Option(
+            "--estimate",
+            "Print how rare the filter is and how long it should take, then exit without searching. Computed from the game's odds, so it returns immediately.",
+            CommandOptionType.NoValue
+        );
         threadsOption.DefaultValue = Environment.ProcessorCount;
         // No DefaultValue here (unlike threadsOption above): CommandOption.HasValue() reports
         // true forever once a DefaultValue is set, so it could never again distinguish "user
@@ -525,11 +530,6 @@ partial class Program
                     return 1;
                 }
 
-                Console.WriteLine(
-                    $"  Cost:  ~{config.SimdCostPerSeed():0.#} crunches/seed "
-                        + $"({config.EstimateFilterCrunches():N0} per {MotelyGlobals.MaxVectorWidth}-seed batch, worst case)"
-                );
-
                 IMotelySearchSettings settings = plan
                     .Settings.WithDeck(deck)
                     .WithStake(stake)
@@ -548,6 +548,84 @@ partial class Program
                     Console.Error.WriteLine(jSeedOptError);
                     return 1;
                 }
+
+                // --collect is parsed here rather than beside the branches that consume it: the
+                // block below has to know whether this run stops after N matches or sweeps, and by
+                // the time those branches run they have already rewritten the settings.
+                long collectLimit = 0;
+                if (collectOption.HasValue())
+                {
+                    collectLimit = collectOption.ParsedValue;
+                    if (collectLimit < 1)
+                    {
+                        Console.Error.WriteLine("--collect N requires N >= 1.");
+                        return 1;
+                    }
+                }
+
+                // Naming an explicit sequential range (--startBatch/--endBatch/--startPercent/
+                // --startSeed/--stopSeed) says you want the sweep itself, so --collect skips the
+                // aesthetic pass entirely rather than answering a different question than you asked.
+                bool collectSequentialOnly =
+                    startBatchOption.HasValue()
+                    || endBatchOption.HasValue()
+                    || startPercentOption.HasValue()
+                    || startSeedOption.HasValue()
+                    || stopSeedOption.HasValue();
+
+                bool namedExplicitSeedInput =
+                    keywordOption.HasValue()
+                    || keywordsOption.HasValue()
+                    || aestheticOption.HasValue()
+                    || sourceOption.HasValue()
+                    || seedsOption.HasValue()
+                    || randomOption.HasValue()
+                    || drown
+                    || replay;
+
+                // Only the untouched sequential sweep can state its size. Every other mode draws
+                // from a list whose length is not known until it loads, or from a slice this block
+                // would have to re-derive from batch indices — so they name the mode instead of
+                // inventing a count, and the report drops the odds lines rather than guessing.
+                JamlSearchSpace searchSpace =
+                    namedExplicitSeedInput
+                        ? new JamlSearchSpace(
+                            -1,
+                            drown ? "the entire seed lake"
+                            : replay ? "the JAML seeds: block"
+                            : "an explicitly named seed set"
+                        )
+                    : collectSequentialOnly ? new JamlSearchSpace(-1, "a narrowed sequential range")
+                    : collectLimit > 0 ? new JamlSearchSpace(-1, "every aesthetic, then sequential")
+                    : new JamlSearchSpace(
+                        JamlRarityReport.FullSequentialSeedSpace,
+                        "full sequential sweep"
+                    );
+
+                // stderr, not stdout: `--jaml x -q > seeds.txt` must produce seeds and nothing else.
+                // --estimate prints even under --quiet, since printing this is the whole request.
+                if (estimateOption.HasValue() || !quietOption.HasValue())
+                {
+                    foreach (
+                        string line in JamlRarityReport.Render(
+                            JamlRarityEstimator.Estimate(config),
+                            searchSpace,
+                            seedsPerSecond: null,
+                            speedIsMeasured: false,
+                            config.SimdCostPerSeed(),
+                            config.EstimateFilterCrunches(),
+                            collectLimit
+                        )
+                    )
+                    {
+                        Console.Error.WriteLine(line);
+                    }
+                }
+
+                // Nothing disposable exists yet, so this exit unwinds cleanly — and it is genuinely
+                // instant, because the estimate never visits a seed.
+                if (estimateOption.HasValue())
+                    return 0;
 
                 if (
                     !CliSearchMode.TryApplySearchMode(
@@ -695,27 +773,6 @@ partial class Program
                     }
                 }
 
-                // Naming an explicit sequential range (--startBatch/--endBatch/--startPercent/
-                // --startSeed/--stopSeed) says you want the sweep itself, so --collect skips the
-                // aesthetic pass entirely rather than answering a different question than you asked.
-                bool collectSequentialOnly =
-                    startBatchOption.HasValue()
-                    || endBatchOption.HasValue()
-                    || startPercentOption.HasValue()
-                    || startSeedOption.HasValue()
-                    || stopSeedOption.HasValue();
-
-                long collectLimit = 0;
-                if (collectOption.HasValue())
-                {
-                    collectLimit = collectOption.ParsedValue;
-                    if (collectLimit < 1)
-                    {
-                        Console.Error.WriteLine("--collect N requires N >= 1.");
-                        return 1;
-                    }
-                }
-
                 if (collectLimit > 0 && collectSequentialOnly)
                 {
                     settings = new MotelySearchIntent(
@@ -732,16 +789,6 @@ partial class Program
                     // intent — stomping it with the multi-aesthetic prepass is the pigeonhole
                     // (CUM hunt silently became "pretty seeds" and wiped operator seed lists).
                     // JAML seeds: alone still takes the default aesthetic collect path.
-                    bool namedExplicitSeedInput =
-                        keywordOption.HasValue()
-                        || keywordsOption.HasValue()
-                        || aestheticOption.HasValue()
-                        || sourceOption.HasValue()
-                        || seedsOption.HasValue()
-                        || randomOption.HasValue()
-                        || drown
-                        || replay;
-
                     if (namedExplicitSeedInput)
                     {
                         settings = settings.StopAfter(collectLimit);
@@ -896,9 +943,10 @@ partial class Program
                 Console.WriteLine($"  Resume: --startBatch {nextBatch}");
                 if (nextBatch >= 0 && nextBatch < max)
                 {
-                    string prefix = SeedMath.BatchIndexToSeedPrefix(nextBatch, batchCharCount);
-                    string minSeedInBatch =
-                        prefix + new string(MotelyGlobals.SeedDigits[0], batchCharCount);
+                    string minSeedInBatch = SeedMath.BatchIndexToFirstSeed(
+                        nextBatch,
+                        batchCharCount
+                    );
                     Console.WriteLine($"  Resume: --startSeed {minSeedInBatch}");
                 }
             }

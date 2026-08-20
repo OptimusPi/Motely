@@ -287,7 +287,7 @@ public static class JamlRarityReport
         if (rarity.IsEmpty)
             lines.Add(Line("Rare:", $"unknown — no rarity model yet for: {NameList(rarity.UnknownFamilies)}"));
         else if (p <= 0.0)
-            lines.Add(Line("Rare:", "impossible — this filter can never match at Red/White"));
+            lines.Add(Line("Rare:", "impossible — this filter can never match on this deck and stake"));
         else if (!usable)
             lines.Add(Line("Rare:", "unknown — the model returned no usable share"));
         else if (bounded)

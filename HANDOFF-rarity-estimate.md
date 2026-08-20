@@ -1,124 +1,101 @@
 # Handoff — pre-run rarity and time-to-find
 
-## Read this first: the approved plan is wrong
+## State (2026-08-20, end of day)
 
-The plan at `~/.claude/plans/whimsical-wonderiong-what-is-curious-waffle.md` designs an **analytic**
-rarity model — `EstimateRarity` per clause family, 29 overrides, four waves. **Do not build it as
-the primary path.**
+Rarity is analytic, instant, and validated against the engine, end to end:
 
-It was chosen on a false premise I introduced and never rechecked:
+```
+clause → desc.EstimateRarity(clause, ctx) → JamlRarityEstimator → JamlRarityReport → --estimate
+```
 
-> "a 1-in-165M filter can't be measured by sampling in any reasonable pre-flight"
+```
+$ ... --jaml Whimsy_Dicetricks314 --estimate
+  Cost:  ~0.6 crunches/seed (5 per 8-seed batch, worst case)
+  Rare:  ~1 in 127.88K  (model: 3/3 clauses)
+  Space: 2.25T seeds — full sequential sweep
+  Odds:  >99.9% at least one here — expect ~17.61M
+  Find:  unknown until a run has been timed on this machine
+```
 
-That is wrong, because the deliverable is not a number — it is a **verdict**. A short pre-flight
-sample produces the verdict for every filter, exactly, with no per-family math:
+Hand check of that number: NegativeTag@4 = 1/24 · Perkeo@1 ≈ 0.00289 (four weighted pack slots,
+The Soul 0.003/card, 1 of 5) · Showman@1–3 ≈ 0.0648 (24 shop slots, 20/28 · 0.25 · 1/64) → 1 in 127.9K.
+The run that measured 1 in 75.8M was gated by the score cutoff as well, so must-only must come out
+more common than that; it does.
 
-| Filter | 10s sample (~hundreds of M seeds) | Verdict produced |
+## Coverage — 28 of 29 families
+
+| tier | families | how |
 |---|---|---|
-| 1 in 165M | several real hits | measured rate, real time-to-find |
-| 1 in 40T | zero hits | "rarer than 1 in N — you will not find this in 2.25T" |
+| events (12) | luckyMoney … wheelStaysFlipped | `JamlRollRarity.Window` — binomial over distinct rolls at the game's constant |
+| ante features | tag, voucher, boss, boosterPack | pool sizes read off the engine: ante-1 tag re-roll list, 16 base vouchers, boss eligibility + no-repeat, pack weights, ante-1 fixed Buffoon |
+| jokers | joker, common/uncommon/rare, legendaryJoker | `JamlJokerRarity` — shop weight 20/total, rarity poll 0.7/0.25/0.05, pool, edition bands, stake-gated stickers, buffoon packs, specialty streams; soul path 0.003/card then 1 of 5 |
+| consumables | tarotCard, planetCard, spectralCard, standardCard | shop weights by deck, pack cards with the soul/black-hole diversion, Emperor/purple-seal/sixth-sense/séance rolls |
+| deck | erraticRank, erraticSuit, startingDraw | Binomial(52, ·) with replacement; hypergeometric 8 of 52 |
+| **unmodelled** | **pokerHand** | best-5-of-8 needs an enumerated table — honest NaN |
 
-Both are the actionable answer. The second one is the whole reason the feature exists.
+Also NaN by design (state this model does not follow): `charmTag`, `etherealTag`, `omenGlobe`
+sources, and the `certificate`/`incantation`/`familiar`/`grim`/`deckDraw` standard-card sources.
+A clause using one is reported as "no model yet for: …" rather than undercounted — the report's
+"rarer than 1 in N" wording depends on every *modelled* clause counting every source the runtime
+counts.
 
-## Why sampling wins outright
+## Where the code is
 
-- **It measures the real thing.** No binomial approximation over correlated PRNG streams, no
-  hypergeometric-as-binomial, no per-family pool arithmetic to get wrong.
-- **It cannot go stale.** The analytic model hard-codes engine internals (shop rates, edition
-  bands, pool sizes, ante-1 pack quirks). Every engine change silently invalidates it. A sampler
-  re-measures whatever the engine currently does.
-- **One pass gives both unknowns.** Rarity *and* the machine's seeds/sec fall out of the same run,
-  which removes the entire calibration tier-1/tier-2/tier-3 design and the calibration file.
-- **Coverage is 100% on day one.** No NaN families, no partial-coverage bound labels, no
-  "model: 2/5 clauses" — all of which exist only to manage the analytic model's incompleteness.
-- **It already exists.** `Motely.Tests\RarityAndTimeToFindSweepTests.cs` measures exactly this,
-  today, correctly (`SearchUntilEnoughHits` `:200`, `RunSequentialSlice` `:223`).
-
-## What to build instead
-
-Lift the sweep harness into `Motely` and run it as a pre-flight:
-
-1. **Sample.** Run the real configured filter over a bounded slice — escalating batches, stop on
-   `enoughHits` (8 is what the sweep uses) or a wall-clock budget (~5–10s, make it a flag).
-2. **Derive.** `p̂ = matches / searched`; `seedsPerSecond` from the same run. Zero matches gives a
-   one-sided bound `p < 1/searched`, which is sufficient and honest.
-3. **Report.** Feed both into `JamlRarityReport.Render` — already written, tested, and unchanged
-   by this pivot.
-
-### Sampling design points that actually matter
-
-- **Do not sample from batch 0.** Sequential seeds from the start of the space are not a uniform
-  sample. Scatter the slices across the batch range, or sample the range the run will actually
-  search.
-- **Budget by wall-clock, not seed count.** A heavy scalar filter runs at K/s, not M/s; a fixed
-  seed budget would take minutes. A fixed time budget self-scales — and a filter slow enough to
-  sample poorly also has a long time-to-find, so the weak bound arrives attached to the case where
-  it matters least.
-- **Report the bound honestly when dry.** Zero hits means "rarer than 1 in {searched}", never
-  "impossible" and never an extrapolated number.
-- **The sample is not free.** It is wall-clock the user did not ask for. Gate it: skip when the
-  space is tiny, allow `--no-estimate`, and make sure `Ctrl-C` during the sample cancels cleanly.
-
-## What is already on disk and worth keeping
-
-| File | Status |
+| file | what |
 |---|---|
-| `Motely\Filters\Jaml\JamlRarityReport.cs` | **Keep — unaffected by the pivot.** Notation, odds math, and `Render`. It takes a probability and a speed; it does not care where they came from. |
-| `Motely.Tests\JamlRarityReportTests.cs` | **Keep.** 28 tests, green. Includes the NaN sanitation matrix and regression pins on two real bugs (below). |
-| `Motely.Tests\RarityAndTimeToFindSweepTests.cs` | **Edited, NOT yet verified.** Its three private formatters were replaced with calls to `JamlRarityReport`. This edit was made immediately before the handoff and the test run was interrupted — **run it before trusting it.** |
-| `~/.claude/plans/whimsical-wonderiong-what-is-curious-waffle.md` | Superseded as a whole. Its CLI/seam/flag analysis is still good (see below). |
+| `Motely/Filters/Jaml/JamlRarityContext.cs` | deck + stake, and the shop item-type rates they imply (mirrors `CreateShopItemStream` with the deck's default run state) |
+| `Motely/Filters/Jaml/JamlCountDistribution.cs` | the pmf toolkit: Bernoulli, Binomial, Hypergeometric, Mixture, Convolve, Window (Window mirrors `MeetsOccurrenceBounds`: Max ≤ 0 = no ceiling) |
+| `Motely/Filters/Jaml/JamlPoolRarity.cs` | shared odds: edition bands, sticker gates, pack weights/card counts, ante-1 slot rules |
+| `Motely/Filters/Jaml/JamlJokerRarity.cs` | the five joker families incl. the soul path and the `joker:`→legendary split |
+| `Motely/Filters/Jaml/JamlRollRarity.cs` | the twelve events |
+| `Motely/Filters/Jaml/JamlRarityEstimator.cs` | composes must × mustNot, and/or groups |
+| `Motely/Filters/Jaml/JamlRarityReport.cs` | the printed block |
+| each `*FilterDesc.cs` | `EstimateRarity(clause, in ctx)` — the family states its own pool/sources; maths lives in the helpers |
 
-### Two real bugs found and fixed in passing
+Engine visibility widened to `internal` so the model reads the engine's own constants instead of
+copies: `MotelySingleSearchContext.ShopJokerRate`, `.DisallowedAnteOneTags`, `.CanBeEternal`;
+`MotelyWeightedPool.Items` / `.Probability` expose the declared pack weights (the native table
+inflates the last weight as a guard — never read that).
 
-- `EstimateTimeToFind` used `TimeSpan.ToString(@"hh\:mm\:ss")`, whose `hh` is the hours-*within-day*
-  component. Every sweep row taking longer than a day printed a number up to 24× too small,
-  silently. `JamlRarityReport.Duration` fixes it.
-- `Humanize` stopped at `B`, so 40 trillion rendered as `40200B`. Now runs to `T` and scientific.
+## Tests
 
-### Two real bugs found and NOT yet fixed
+| file | what |
+|---|---|
+| `Motely.Tests/JamlRollRarityTests.cs` | events, hand values |
+| `Motely.Tests/JamlPoolRarityTests.cs` | every other family, hand values; toolkit; coverage (every discriminator but `pokerHand` and `and`/`or` is modelled) |
+| `Motely.Tests/JamlRarityEstimatorTests.cs` | composition: product, mustNot inversion, unmodelled-is-skipped, at-least-N |
+| `Motely.Tests/JamlRarityReportTests.cs` | rendering |
+| `Motely.Tests/JamlRarityValidationTests.cs` | **the oracle** — 26 clauses run through the real engine over 3×35³ seeds, analytic within 1.5× of measured (all landed within 5%; the modelled-impossible rows found zero). ~25 s. |
 
-- **`Program.cs:528-531` writes `Cost:` to stdout, ungated by `--quiet`.** So
-  `--jaml x -q > seeds.txt` puts a cost line in the seed file. Worth fixing regardless of which
-  design ships. Grepped: that write site is the only occurrence of the string in the repo.
-- **There is no `.git` directory in `D:\MotelyJAML`.** `.gitignore`, `.gitattributes`, `.gitmodules`
-  and `.github/` are all present; `.git` is gone. Origin is
-  `https://github.com/OptimusPi/MotelyJAML.git`, so history is recoverable. **Nothing in this
-  session is under version control.**
+## Things the model surfaced that are engine behaviour, not model choices
 
-## Still-valid analysis from the superseded plan
+- **A shop-only `standardCard:` can never match.** Shop playing cards exist only under Magic Trick,
+  and every scoring path builds its shop stream from `Deck.GetDefaultRunState()`, which no deck
+  seeds with it. The default `standardCard:` sources are shop-only, so the default clause prints
+  "impossible" — and the engine finds none. Either the default sources should be packs, or shop
+  streams should see the run state; that is a design call, not made here.
+- **A wildcard `joker:` counts legendaries too** (default six pack slots), even when it asks for
+  stickers the soul path never applies. `CountJokerClauseOccurrences` does exactly that; the model
+  follows it and `JamlPoolRarityTests.Joker_Wildcard_CountsLegendariesToo` pins it.
+- A `spectralCard:` with shop-only sources is impossible off the Ghost deck.
 
-These were verified against source and survive the pivot:
+## Still open
 
-- **Print seam: `Program.cs:675-680`** — the one choke point after mode/space/deck/stake/threads are
-  final and before all five `Start()` sites. `Program.cs:528` is too early (space unknown).
-- **`--collect` hazard**: the collect branches at `:719-814` *rewrite* the settings via
-  `MotelySearchIntent.ApplyTo`, so a space captured earlier is stale exactly when `--collect` is
-  active. Hoist collect parsing above the seam.
-- **Search space is 35^8 = 2,251,875,390,625.** Not the 2,318,107,019,761 in `SeedMath.cs:22` —
-  that is the global bijective offset including shorter seeds.
-- **`--estimate` flag** (print the block and exit without searching) is a good idea and becomes
-  *more* useful under sampling, since it is then a real measurement on demand.
-- The odds constants inventory in the plan is accurate and stays useful for documentation, even
-  though the model that needed it is not being built.
+1. **`Find:` is always "unknown until a run has been timed"** — `seedsPerSecond: null` at the call
+   site in `Program.cs`. Either a sub-second warm-up or reading the live rate off the running
+   search; the report already renders a real number. A measured rate to sanity-check against:
+   ~61.9M seeds/s on this machine for `Whimsy_Dicetricks314` (release, full threads).
+2. `pokerHand` needs an enumerated best-of-8 table.
+3. Narrowed sequential ranges report no size (see `Program.cs` around the `JamlSearchSpace`).
+4. The prefilter/confirm roll-index divergence noted in the previous handoff
+   (`JamlScoring.cs` per-entry `rollIndex` advance vs the vector filters' distinct walk) is untouched.
+5. Ante-1 pack slots 4–5 under Hieroglyph/Petroglyph are not followed (understates a clause that
+   names them at ante 1 by the small chance that voucher was awarded).
 
-## Verified corrections to note
+## Known test-suite noise
 
-If anyone revives analytic estimation for any reason, these were wrong in my briefs and are right
-here (all re-verified against source):
-
-- Edition bands are **ordered and disjoint** (`MotelySingleSearchContext.Jokers.cs:401-411`).
-  At `editionRate=1`: Negative 0.003, **Polychrome 0.003** (not 0.006 — Negative eats its top
-  band), Holographic 0.014, Foil 0.02, None 0.96.
-- `startingDraw` is `8 × |Antes|` trials, not `|Antes|` (`JamlScoring.cs:1116-1142`).
-- `pokerHand` is best-5-of-8, wildly non-uniform — **not** 1/9 (`JamlScoring.cs:1148-1176`).
-- `erraticRank`/`erraticSuit` **ignore `Antes` entirely** — 52 with-replacement draws
-  (`JamlScoring.cs:1178-1189`).
-- Ante-1 pack slot 0 is a deterministic Buffoon Normal, no PRNG draw (`Packs.cs:14, 26-34`).
-- Shop standard rate 4 comes from **MagicTrick**, not Wasteful (`Shop.cs:113-116`).
-
-## Immediate next steps
-
-1. Run `dotnet test Motely.Tests/Motely.Tests.csproj --filter "FullyQualifiedName~RarityAndTimeToFind"`
-   — the sweep edit is unverified.
-2. Restore git before anything else lands.
-3. Build the sampler; keep `JamlRarityReport` as the presentation layer unchanged.
+`SeedMath_BatchAndRangeHelpersUseInclusiveSearchIndices` fails on `master` and predates this work
+(batch order is the digit-reversal of lexicographic order; see the previous handoff). Three tests —
+`Explain_Antes_AsClauseKeyFromSchema`, `JamlFiltersCorpus_LoadsAllJamlFiles`,
+`ToJaml_RoundTripsEveryCorpusFile` — fail under the parallel full run and pass in isolation. A
+`testhost` is sometimes left behind after a run and locks the test DLLs; kill it before building.

@@ -144,6 +144,42 @@ public static class SeedMath
     }
 
     /// <summary>
+    /// The lowest seed inside a batch — what <c>--startSeed</c> must be given to resume there.
+    /// <para>
+    /// The batch digits do not sit at the head of the seed and are not in reading order.
+    /// <see cref="BatchIndexToSeedPrefix"/> returns them most-significant-first, while the engine
+    /// writes them into the <em>tail</em> most-significant-<em>last</em> —
+    /// <c>_digits[MaxSeedLength - i - 1]</c>, so <c>seed[7]</c> carries the high digit and
+    /// <c>seed[batchSize]</c> the low one. That is also what <see cref="SeedToBatchIndex"/> reads
+    /// back, so this is the only assembly the pair round-trips: batch 409387 at
+    /// <c>batchSize = 4</c> is <c>1111S7KA</c>, not <c>AK7S1111</c> — and the latter, read off the
+    /// tail, is batch 0, which silently restarts a resumed search from the beginning of the space.
+    /// </para>
+    /// </summary>
+    /// <param name="batchIndex">The batch to resume at, as printed by the search.</param>
+    /// <param name="batchSize">Characters varying <em>within</em> a batch — the remaining
+    /// <c>8 - batchSize</c> are the batch digits.</param>
+    public static string BatchIndexToFirstSeed(long batchIndex, int batchSize)
+    {
+        if (batchSize is < 1 or > 7)
+            throw new ArgumentOutOfRangeException(nameof(batchSize));
+
+        string digits = BatchIndexToSeedPrefix(batchIndex, batchSize);
+        if (digits.Length != 8 - batchSize)
+            throw new ArgumentOutOfRangeException(
+                nameof(batchIndex),
+                $"Batch {batchIndex} is outside the {Math.Pow(35, 8 - batchSize):N0} batches of a {batchSize}-character batch."
+            );
+
+        char[] seed = new char[8];
+        for (int i = 0; i < batchSize; i++)
+            seed[i] = MotelyGlobals.SeedDigits[0];
+        for (int i = 0; i < digits.Length; i++)
+            seed[7 - i] = digits[i];
+        return new string(seed);
+    }
+
+    /// <summary>
     /// Largest Motely search index for a fixed seed length (inclusive). For length 8 this is 35^8 − 1.
     /// </summary>
     public static long MaxSearchIndexInclusive(int length)
@@ -185,10 +221,12 @@ public static class SeedMath
             );
         }
 
-        string startSeed = SearchIndexToSeed(startSearchIndexInclusive, 8);
-        string stopSeed = SearchIndexToSeed(stopSearchIndexInclusive, 8);
-        long startBatch = SeedToBatchIndex(startSeed, batchCharCount);
-        long stopBatch = SeedToBatchIndex(stopSeed, batchCharCount);
+        long batchSpan = 1;
+        for (int i = 0; i < batchCharCount; i++)
+            batchSpan *= 35;
+
+        long startBatch = startSearchIndexInclusive / batchSpan;
+        long stopBatch = stopSearchIndexInclusive / batchSpan;
         return (startBatch, stopBatch + 1);
     }
 }

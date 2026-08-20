@@ -16,6 +16,11 @@ internal static class JamlClauseDescDispatch
         where TClause : class, IJamlClause =>
         TDesc.Set(clause, key, value);
 
+    private static double Estimate<TDesc, TClause>(TClause clause, in JamlRarityContext ctx)
+        where TDesc : IJamlClauseDesc<TClause>
+        where TClause : class, IJamlClause =>
+        TDesc.EstimateRarity(clause, in ctx);
+
     /// <summary>
     /// Apply a non-common clause key via the family's <c>Set</c>.
     /// Returns <c>false</c> when this family does not claim the key (caller may fall back).
@@ -92,5 +97,55 @@ internal static class JamlClauseDescDispatch
             GlassDestroyClause c => SetDisc<GlassDestroyFilterDesc, GlassDestroyClause>(c, value),
             WheelStaysFlippedClause c => SetDisc<WheelStaysFlippedFilterDesc, WheelStaysFlippedClause>(c, value),
             _ => false,
+        };
+
+    /// <summary>
+    /// The share of seeds this clause lets through, asked of the family that owns the odds.
+    /// <para>
+    /// Every family gets an arm, including the ones with no model yet: those inherit
+    /// <see cref="IJamlClauseDesc{TClause}.EstimateRarity"/>'s NaN default, so coverage grows by a
+    /// family declaring its own odds rather than by anyone remembering to add it here. A clause
+    /// type that is not a desc family at all — And/Or/Not — is also NaN; composing those is the
+    /// caller's job, not a lookup.
+    /// </para>
+    /// <para>
+    /// Returns double rather than the <c>bool</c>-and-<c>out</c> the neighbouring <c>Try*</c>
+    /// methods use, because NaN is already the declared "not modelled" sentinel and a second way
+    /// to say it would only invite the two to disagree.
+    /// </para>
+    /// </summary>
+    public static double EstimateRarity(IJamlClause clause, in JamlRarityContext ctx) =>
+        clause switch
+        {
+            JokerClause c => Estimate<JokerFilterDesc, JokerClause>(c, in ctx),
+            CommonJokerClause c => Estimate<CommonJokerFilterDesc, CommonJokerClause>(c, in ctx),
+            UncommonJokerClause c => Estimate<UncommonJokerFilterDesc, UncommonJokerClause>(c, in ctx),
+            RareJokerClause c => Estimate<RareJokerFilterDesc, RareJokerClause>(c, in ctx),
+            LegendaryJokerClause c => Estimate<LegendaryJokerFilterDesc, LegendaryJokerClause>(c, in ctx),
+            VoucherClause c => Estimate<VoucherFilterDesc, VoucherClause>(c, in ctx),
+            TarotCardClause c => Estimate<TarotCardFilterDesc, TarotCardClause>(c, in ctx),
+            SpectralCardClause c => Estimate<SpectralCardFilterDesc, SpectralCardClause>(c, in ctx),
+            PlanetCardClause c => Estimate<PlanetCardFilterDesc, PlanetCardClause>(c, in ctx),
+            StandardCardClause c => Estimate<StandardCardFilterDesc, StandardCardClause>(c, in ctx),
+            BossClause c => Estimate<BossFilterDesc, BossClause>(c, in ctx),
+            TagClause c => Estimate<TagFilterDesc, TagClause>(c, in ctx),
+            BoosterPackClause c => Estimate<BoosterPackFilterDesc, BoosterPackClause>(c, in ctx),
+            ErraticRankClause c => Estimate<ErraticRankFilterDesc, ErraticRankClause>(c, in ctx),
+            ErraticSuitClause c => Estimate<ErraticSuitFilterDesc, ErraticSuitClause>(c, in ctx),
+            StartingDrawClause c => Estimate<StartingDrawFilterDesc, StartingDrawClause>(c, in ctx),
+            PokerHandClause c => Estimate<PokerHandFilterDesc, PokerHandClause>(c, in ctx),
+            LuckyMoneyClause c => Estimate<LuckyMoneyFilterDesc, LuckyMoneyClause>(c, in ctx),
+            LuckyMultClause c => Estimate<LuckyMultFilterDesc, LuckyMultClause>(c, in ctx),
+            MisprintMultClause c => Estimate<MisprintMultFilterDesc, MisprintMultClause>(c, in ctx),
+            WheelOfFortuneClause c => Estimate<WheelOfFortuneFilterDesc, WheelOfFortuneClause>(c, in ctx),
+            GrosMichelExtinctClause c => Estimate<GrosMichelExtinctFilterDesc, GrosMichelExtinctClause>(c, in ctx),
+            CavendishExtinctClause c => Estimate<CavendishExtinctFilterDesc, CavendishExtinctClause>(c, in ctx),
+            SpaceLevelupClause c => Estimate<SpaceLevelupFilterDesc, SpaceLevelupClause>(c, in ctx),
+            BusinessPayoutClause c => Estimate<BusinessPayoutFilterDesc, BusinessPayoutClause>(c, in ctx),
+            BloodstoneTriggerClause c => Estimate<BloodstoneTriggerFilterDesc, BloodstoneTriggerClause>(c, in ctx),
+            ParkingPayoutClause c => Estimate<ParkingPayoutFilterDesc, ParkingPayoutClause>(c, in ctx),
+            GlassDestroyClause c => Estimate<GlassDestroyFilterDesc, GlassDestroyClause>(c, in ctx),
+            WheelStaysFlippedClause c => Estimate<WheelStaysFlippedFilterDesc, WheelStaysFlippedClause>(c, in ctx),
+            _ => double.NaN,
         };
 }

@@ -263,7 +263,7 @@ public sealed class RarityAndTimeToFindSweepTests(ITestOutputHelper output)
     {
         string oneIn = OneInNotation(matches, searched);
         string time = matches > 0
-            ? EstimateTimeToFind(matches, searched, elapsed)
+            ? MeasuredTimeToFind(matches, searched, elapsed)
             : $"(0 in {searched:N0})";
         return $"{name,-38} {oneIn,-16} {matches}/{searched,-14:N0} {time}";
     }
@@ -283,7 +283,7 @@ public sealed class RarityAndTimeToFindSweepTests(ITestOutputHelper output)
     /// table that took longer than 24h to find printed a number 24 hours too small, silently.
     /// </para>
     /// </summary>
-    private static string EstimateTimeToFind(long matches, long searched, TimeSpan elapsed)
+    private static string MeasuredTimeToFind(long matches, long searched, TimeSpan elapsed)
     {
         double seedsPerSec = elapsed.TotalSeconds > 0 ? searched / elapsed.TotalSeconds : 0;
         if (seedsPerSec <= 0)

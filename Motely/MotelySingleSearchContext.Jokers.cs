@@ -410,8 +410,10 @@ public unsafe partial class MotelySingleSearchContext
             return MotelyItemEdition.None;
     }
 
+    // Internal rather than private so the rarity model applies the same exclusion list the
+    // sticker roll does, instead of carrying a copy that can drift.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool CanBeEternal(MotelyItem item)
+    internal static bool CanBeEternal(MotelyItem item)
     {
         // Jokers that self-destruct or activate on sell cannot receive the Eternal Sticker
         MotelyItemType joker = item.Type;
