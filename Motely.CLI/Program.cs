@@ -227,7 +227,7 @@ partial class Program
         );
         var drownOption = app.Option(
             "--drown",
-            "Cannonball into the seed lake: re-search EVERY seed ever saved under <results-path> (all filters' *.duckdb lakes plus any CSV/TXT there), deduped.",
+            "Cannonball into the seed lake: re-search EVERY seed ever saved — all filters' *.duckdb lakes plus any CSV/TXT under <results-path>, plus this JAML's own seeds: block — deduped. With nothing saved anywhere yet it runs the normal sequential sweep (which fills the lake).",
             CommandOptionType.NoValue
         );
         var replayOption = app.Option(
@@ -482,6 +482,23 @@ partial class Program
                 var deck = config.Deck;
                 var stake = config.Stake;
                 bool drown = drownOption.HasValue();
+                if (drown)
+                {
+                    // --drown with nothing saved anywhere (no lake files, no seeds: block) has
+                    // no haystack; CliSearchMode degrades it to the sequential sweep. Decide
+                    // that here too, so the space label and banner describe the run that
+                    // actually happens rather than "the entire seed lake".
+                    string drownRoot = SeedLakeSink.LakeRoot(
+                        resultsPathOption.HasValue() ? resultsPathOption.ParsedValue : null
+                    );
+                    if (!SeedSourceProvider.HasLakeFiles(drownRoot) && config.Seeds.Count == 0)
+                    {
+                        drown = false;
+                        Console.Error.WriteLine(
+                            $"Note: nothing to drown in yet — the seed lake at '{drownRoot}' holds no seeds and the JAML has no seeds: block. Running the default sequential sweep instead; every find lands in the lake for the next --drown."
+                        );
+                    }
+                }
                 bool replay = replayOption.HasValue() || verifySeedsOption.HasValue();
                 int threads = threadsOption.HasValue()
                     ? threadsOption.ParsedValue

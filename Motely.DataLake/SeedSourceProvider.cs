@@ -22,6 +22,14 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     /// is data. JSON and JAML sources always shape-test — they mix seeds with structure.
     /// </summary>
     public SeedSourceProvider(string path, bool distinct = false)
+        : this(path, distinct, extraSeeds: null) { }
+
+    /// <summary>
+    /// <paramref name="extraSeeds"/> pours an in-memory seed list into the --drown haystack
+    /// alongside the lake — the JAML's own <c>seeds:</c> block, which is saved output too.
+    /// With extras, the lake directory need not exist yet (a fresh filter's first drown).
+    /// </summary>
+    private SeedSourceProvider(string path, bool distinct, IReadOnlyList<string>? extraSeeds)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         path = path.Replace('\\', '/');
@@ -36,6 +44,7 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
             extCmd.ExecuteNonQuery();
         }
 
+        bool hasExtras = extraSeeds is { Count: > 0 };
         bool wholeLake = false;
         if (Directory.Exists(path))
         {
@@ -53,6 +62,16 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
                 path = path.TrimEnd('/') + "/*.csv";
             }
         }
+        else if (distinct && hasExtras)
+        {
+            // No lake on disk yet, but the caller brought saved seeds of its own: the
+            // haystack is just those. The lake table must exist for the FROM clause below.
+            EnsureLakeTable();
+            wholeLake = true;
+        }
+
+        if (wholeLake && hasExtras)
+            ImportSeedList(extraSeeds!);
 
         var ext = wholeLake ? ".lake" : Path.GetExtension(path).ToLowerInvariant();
         // JSON/JAML sources carry structure around their seeds, so the shape test is
@@ -121,8 +140,35 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     /// <summary>One filter's lake file, deduped and shape-tested.</summary>
     public static SeedSourceProvider FromLake(string lakeFile) => new(lakeFile, distinct: true);
 
-    /// <summary>--drown: every seed ever saved under the lake root, across every filter.</summary>
-    public static SeedSourceProvider FromLakeRoot(string lakeRoot) => new(lakeRoot, distinct: true);
+    /// <summary>--drown: every seed ever saved under the lake root, across every filter, plus
+    /// any <paramref name="extraSeeds"/> the caller already holds (the JAML's seeds: block).
+    /// The lake root may be missing when extras are supplied.</summary>
+    public static SeedSourceProvider FromLakeRoot(
+        string lakeRoot,
+        IReadOnlyList<string>? extraSeeds = null
+    ) => new(lakeRoot, distinct: true, extraSeeds);
+
+    /// <summary>File extensions <see cref="FromLakeRoot"/> pours from the lake root.</summary>
+    private static readonly string[] LakeFileExtensions =
+    [
+        ".duckdb",
+        ".db",
+        ".sqlite",
+        ".sqlite3",
+        ".csv",
+        ".txt",
+    ];
+
+    private static bool IsLakeFile(string file) =>
+        Array.IndexOf(LakeFileExtensions, Path.GetExtension(file).ToLowerInvariant()) >= 0;
+
+    /// <summary>Cheap pre-check: does the lake root hold any non-empty file --drown would pour?
+    /// Mirrors the scan in <see cref="FromLakeRoot"/> without opening DuckDB.</summary>
+    public static bool HasLakeFiles(string lakeRoot) =>
+        Directory.Exists(lakeRoot)
+        && Directory
+            .EnumerateFiles(lakeRoot)
+            .Any(f => IsLakeFile(f) && new FileInfo(f).Length > 0);
 
     public string NextSeed()
     {
@@ -183,10 +229,7 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
         EnsureLakeTable();
         var files = Directory
             .EnumerateFiles(root)
-            .Where(f =>
-                Path.GetExtension(f).ToLowerInvariant()
-                    is ".duckdb" or ".db" or ".sqlite" or ".sqlite3" or ".csv" or ".txt"
-            )
+            .Where(IsLakeFile)
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in files)
@@ -204,6 +247,24 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
             {
                 ImportDatabaseSeeds(normalized);
             }
+        }
+    }
+
+    /// <summary>Pour an in-memory seed list (the JAML's seeds: block) into <see cref="LakeTable"/>.
+    /// No shape test here: the distinct SELECT over the table applies it for everything.</summary>
+    private void ImportSeedList(IReadOnlyList<string> seeds)
+    {
+        EnsureLakeTable();
+        using var insert = _connection.CreateCommand();
+        insert.CommandText = $"INSERT INTO {LakeTable} VALUES (?)";
+        var param = new DuckDBParameter();
+        insert.Parameters.Add(param);
+        foreach (var seed in seeds)
+        {
+            if (string.IsNullOrWhiteSpace(seed))
+                continue;
+            param.Value = seed;
+            insert.ExecuteNonQuery();
         }
     }
 

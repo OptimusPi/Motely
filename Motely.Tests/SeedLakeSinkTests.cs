@@ -151,4 +151,56 @@ public sealed class SeedLakeSinkTests : IDisposable
 
         Assert.Equal(config.Seeds.Count, provider.SeedCount);
     }
+
+    [Fact]
+    public void FromLakeRoot_AlsoPoursExtraSeeds_DedupedAgainstTheLake()
+    {
+        using (var sink = new SeedLakeSink(_root, "perkeo"))
+        {
+            sink.OnScored(Result("AAAAAAAA", 42));
+            sink.OnScored(Result("BBBBBBBB", 99));
+        }
+
+        // The JAML's seeds: block rides along — overlap dedupes, junk is shape-tested out.
+        using var provider = SeedSourceProvider.FromLakeRoot(
+            _root,
+            ["BBBBBBBB", "CCCCCCCC", " CCCCCCCC ", "Seed", "", "not-a-seed"]
+        );
+
+        Assert.Equal(3, provider.SeedCount);
+        var seeds = new HashSet<string>();
+        for (string s; (s = provider.NextSeed()) != string.Empty; )
+            seeds.Add(s);
+        Assert.Equal(["AAAAAAAA", "BBBBBBBB", "CCCCCCCC"], seeds.Order());
+    }
+
+    [Fact]
+    public void FromLakeRoot_WithNoLakeDirectoryYet_DrownsInTheExtraSeedsAlone()
+    {
+        // A fresh filter's first --drown: no lake on disk, but the JAML already saved finds.
+        Assert.False(Directory.Exists(_root));
+        Assert.False(SeedSourceProvider.HasLakeFiles(_root));
+
+        using var provider = SeedSourceProvider.FromLakeRoot(_root, ["AAAAAAAA", "BBBBBBBB"]);
+
+        Assert.Equal(2, provider.SeedCount);
+        Assert.Equal("AAAAAAAA", provider.NextSeed());
+        Assert.Equal("BBBBBBBB", provider.NextSeed());
+        Assert.Equal(string.Empty, provider.NextSeed());
+    }
+
+    [Fact]
+    public void HasLakeFiles_SeesOnlyNonEmptyLakeShapedFiles()
+    {
+        Directory.CreateDirectory(_root);
+        Assert.False(SeedSourceProvider.HasLakeFiles(_root)); // empty directory
+
+        File.WriteAllText(Path.Combine(_root, "notes.md"), "not a lake");
+        File.WriteAllText(Path.Combine(_root, "empty.csv"), "");
+        Assert.False(SeedSourceProvider.HasLakeFiles(_root)); // wrong shape / zero bytes
+
+        using (var sink = new SeedLakeSink(_root, "perkeo"))
+            sink.OnScored(Result("AAAAAAAA", 1));
+        Assert.True(SeedSourceProvider.HasLakeFiles(_root));
+    }
 }
