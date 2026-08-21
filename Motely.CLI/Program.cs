@@ -939,39 +939,26 @@ partial class Program
         Console.WriteLine();
         Console.WriteLine(cancelled ? "STOPPED" : "COMPLETED");
         var elapsed = TimeSpan.FromMilliseconds(search.ElapsedMs);
+        long seeds = search.TotalSeedsSearched;
+        long matches = search.MatchingSeeds;
 
-        // A run that stopped on the match limit quit on purpose, part-way through a batch. Seeds
-        // searched and seeds/sec describe a sweep that never happened — the honest number for a
-        // find-one run is how long it took to find one.
+        // Three separate numbers, never divided into each other: seeds looked at, wall-clock the
+        // run took, and throughput — the sum of each thread's own seeds ÷ its own running time,
+        // so idle/waiting threads don't dilute it. A StopAfter run quit on purpose mid-batch;
+        // its seeds and rate are still real, it just also gets a "found" line.
         if (search.StoppedOnMatchLimit)
-        {
-            Console.WriteLine($"  Found: {search.MatchingSeeds:N0} seed(s) (StopAfter; SIMD/thread overshoot ok)");
-            Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
-        }
-        else
-        {
-            Console.WriteLine(
-                $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds:N0} matched"
-            );
-            Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
-            if (elapsed.TotalSeconds >= 1.0)
-            {
-                double speed = search.TotalSeedsSearched / elapsed.TotalSeconds;
-                Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
-            }
-            else
-            {
-                Console.WriteLine("  Speed: (too short to measure)");
-            }
-        }
+            Console.WriteLine($"  Found: {matches:N0} seed(s) (StopAfter; SIMD/thread overshoot ok)");
+        Console.WriteLine($"  Seeds: {seeds:N0} searched, {matches:N0} matched");
+        Console.WriteLine($"  Time:  {elapsed:hh\\:mm\\:ss\\.fff}");
+        Console.WriteLine($"  Speed: {JamlRarityReport.Speed(search.SeedsPerSecond)}");
         if (search.IsSequentialBatchSearch)
         {
-            long max = (long)Math.Pow(35, 8 - batchCharCount);
+            long max = search.TotalBatchCount;
             double pct = max > 0 ? (double)search.CompletedBatchCount * 100.0 / max : 0;
             Console.WriteLine($"  Batch: {search.CompletedBatchCount:N0} / {max:N0} ({pct:F4}%)");
             if (cancelled)
             {
-                long nextBatch = search.CompletedBatchCount;
+                long nextBatch = search.ResumeBatchIndex;
                 Console.WriteLine($"  Resume: --startBatch {nextBatch}");
                 if (nextBatch >= 0 && nextBatch < max)
                 {
@@ -1046,11 +1033,8 @@ partial class Program
 
     static void FormatProgressToStderr(MotelyProgress p)
     {
-        double perSec = p.SeedsPerMillisecond * 1000.0;
-        string speed =
-            perSec >= 1_000_000 ? $"{perSec / 1_000_000:F2} M/s"
-            : perSec >= 1_000 ? $"{perSec / 1_000:F1} K/s"
-            : $"{perSec:F0}/s";
+        // Same formatter as the rarity projection and the final summary, so the three agree.
+        string speed = JamlRarityReport.Speed(p.SeedsPerMillisecond * 1000.0);
         string eta =
             p.EstimatedTimeRemainingMilliseconds is long etaMs && etaMs > 0
                 ? $" | ETA {FormatEtaMs(etaMs)}"

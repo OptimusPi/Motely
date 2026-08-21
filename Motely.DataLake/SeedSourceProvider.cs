@@ -124,15 +124,29 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
                 $"read_csv('{EscapeSql(path)}', header = false, null_padding = true, all_varchar = true, strict_mode = false, ignore_errors = true)",
         };
 
-        var sql = $"{select} {seedExpr} AS seed FROM {from}{seedShape}";
-        var countSql = $"SELECT {count} FROM {from}{seedShape}";
+        string streamSql = $"{select} {seedExpr} AS seed FROM {from}{seedShape}";
+        string countSql = $"SELECT {count} FROM {from}{seedShape}";
+
+        if (distinct)
+        {
+            // Dedupe once, up front, into a plain table. A streaming SELECT DISTINCT builds its
+            // hash aggregate lazily on the first Read() — i.e. under the provider lock, after the
+            // search clock has started, with every other thread queued behind it — and
+            // COUNT(DISTINCT …) was a second full pass over the same rows for the same answer.
+            // The staged table makes the count trivial and the stream a flat scan.
+            using var stage = _connection.CreateCommand();
+            stage.CommandText = $"CREATE TEMP TABLE {StreamTable} AS {streamSql}";
+            stage.ExecuteNonQuery();
+            streamSql = $"SELECT seed FROM {StreamTable}";
+            countSql = $"SELECT COUNT(*) FROM {StreamTable}";
+        }
 
         using var countCmd = _connection.CreateCommand();
         countCmd.CommandText = countSql;
         SeedCount = Convert.ToInt64(countCmd.ExecuteScalar());
 
         var cmd = _connection.CreateCommand();
-        cmd.CommandText = sql;
+        cmd.CommandText = streamSql;
         cmd.UseStreamingMode = true;
         _reader = cmd.ExecuteReader();
     }
@@ -213,6 +227,9 @@ public sealed class SeedSourceProvider : IMotelySeedProvider, IDisposable
     /// otherwise pin a READ_ONLY lock on the lake for the whole run, and SeedLakeSink (which
     /// writes finds back into that same lake) could never open it read-write.</summary>
     private const string LakeTable = "lake_seeds";
+
+    /// <summary>Deduped, shape-tested seeds staged once before the search starts (distinct sources only).</summary>
+    private const string StreamTable = "seed_stream";
 
     private void EnsureLakeTable()
     {
