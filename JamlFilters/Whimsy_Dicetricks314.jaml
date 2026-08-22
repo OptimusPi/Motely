@@ -16,6 +16,8 @@ must:
     antes: [1]
   - joker: Showman
     antes: [1,2,3]
+  - joker: Blueprint
+    antes: [2,3]
 should:
   - joker: OopsAll6s
     antes: [4]
@@ -9188,7 +9190,6 @@ seeds:
   - RP32B6QT
   - S8YUQHXT
   - CYT8LLYT
-  - K17GOZ4U
   - ZROBADDU
   - O668J8JU
   - 5XPZP1SU
@@ -9400,3 +9401,4 @@ seeds:
   - 9N8L21IG
   - VJW8C5IG
   - GKRYTE21
+  - CUC2U954
